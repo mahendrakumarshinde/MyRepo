@@ -2,6 +2,9 @@
 
 ## Infinite Uptime Productivity (Bluetooth Machine Monitoring Module)
 
+  * /BLEMonitor  
+    Android Application for machine monitoring using BLE
+	
   * /Productivity  
     Firmware for Productivity - currently calculating vibration energy and 3 thresholds for a 4-level monitoring display. BLE only for state-change communication.
 	
