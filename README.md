@@ -77,4 +77,4 @@
   * `rest_count`: in-between sample gaps. 400 means 400 samples will be ignored until energy is re-calculated. Default is 0; no waiting in between energy calculation.
 
 ###Two-way Communication Protocol
-####WIP
+####Not yet documented
