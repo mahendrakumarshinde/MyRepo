@@ -11,7 +11,7 @@ Infinite Uptime BLE Module Firmware
 /* I2S digital audio */
 #include <i2s.h>
 
-/* CMSIS-DSP library for CFFT */
+/* CMSIS-DSP library for RFFT */
 #define ARM_MATH_CM4
 #include <arm_math.h>
 
@@ -33,7 +33,7 @@ uint16_t TARGET_AUDIO_SAMPLE = AUDIO_FREQ_RUN;          // Audio frequency
 const uint16_t TARGET_ACCEL_SAMPLE = 1000;              // Accel frequency
 const uint32_t RESTING_INTERVAL = 0;                    // Inter-batch gap
 
-// NOTE: Do NOT change the following variables
+// NOTE: Do NOT change the following variables unless you know what you're doing
 const uint16_t RUN_ACCEL_AUDIO_RATIO = AUDIO_FREQ_RUN / TARGET_ACCEL_SAMPLE;
 uint16_t ACCEL_COUNTER_TARGET = TARGET_AUDIO_SAMPLE/TARGET_ACCEL_SAMPLE;
 uint16_t DOWNSAMPLE_MAX = 48000/TARGET_AUDIO_SAMPLE;
@@ -45,6 +45,8 @@ uint32_t accel_counter = 0;
 //==============================================================================
 
 // TIME DOMAIN FEATURES
+// NOTE: Intervals are checked based on AUDIO, not ACCEL. Read vibration energy
+//       code to understand the sampling mechanism.
 
 // Vbiration Energy
 const uint32_t ENERGY_INTERVAL_ACCEL = 128;
@@ -55,8 +57,10 @@ const uint32_t MCR_INTERVAL_ACCEL = 128;
 const uint32_t MCR_INTERVAL_AUDIO = MCR_INTERVAL_ACCEL * RUN_ACCEL_AUDIO_RATIO;
 
 // FREQUENCY DOMAIN FEATURES
+// NOTE: Most of these variables are for accessing calculation results.
+//       Read any of frequency domain feature calculation flow to understand.
 
-/*
+/* Deprecated, but keeping this just in case we will need again.
 // Spectral Flux
 double sp_flux_x = 0;
 double sp_flux_y = 0;
@@ -73,7 +77,7 @@ double sp_flat_x = 0;
 double sp_flat_y = 0;
 double sp_flat_z = 0;
 
-/*
+/* Deprecated, but keeping this just in case we will need again.
 // Spectral Crest
 float sp_crest_x = 0;
 float sp_crest_y = 0;
@@ -102,8 +106,8 @@ double sp_spread_aud = 0;
   CANCELLED: Spectral Flux
   CANCELLED: Spectral Crest
 */
-const uint8_t NUM_FEATURES = 6;
-const uint8_t NUM_TD_FEATURES = 2;
+const uint8_t NUM_FEATURES = 6;    // Total number of features
+const uint8_t NUM_TD_FEATURES = 2; // Total number of frequency domain features
 
 typedef float (* FeatureFuncPtr) (); // this is a typedef to feature functions
 FeatureFuncPtr features[NUM_FEATURES] = {feature_energy,
@@ -125,15 +129,25 @@ FeatureCalcPtr calc_features[NUM_FEATURES] = {NULL,
                                               calculate_spectral_spread_accel,
                                               calculate_spectral_spread_audio};
 
+// NOTE: DO NOT CHANGE THIS UNLESS YOU KNOW WHAT YOU'RE DOING
 const uint16_t MAX_INTERVAL_ACCEL = 512;
 const uint16_t MAX_INTERVAL_AUDIO = 4086;
 
+// Byte representing which features are enabled. Feature index 0 is enabled by default.
 byte enabledFeatures[(NUM_FEATURES - 1)/8 + 1] = {B10000000};
+
+// These should only change when list of features are changed.
 const byte audioFDFeatures[(NUM_FEATURES - 1)/8 + 1] = {B00000100};
 const byte accelFDFeatures[(NUM_FEATURES - 1)/8 + 1] = {B00111000};
-bool audioFDCompute = true;
-bool accelFDCompute = true;
 
+// NOTE: By default, FD features are turned off. Turn these on if you want to
+//       force FD computation for debugging.
+bool audioFDCompute = false;
+bool accelFDCompute = false;
+
+// Array of intervals for every features; currently, every FD feature is expected
+// to have half-second interval. Add new variables and change this when you want
+// smaller interval for frequency domain features.
 uint32_t featureIntervals[NUM_FEATURES]= {ENERGY_INTERVAL_AUDIO,
                                           MCR_INTERVAL_AUDIO,
                                           //MAX_INTERVAL_AUDIO,
@@ -142,6 +156,9 @@ uint32_t featureIntervals[NUM_FEATURES]= {ENERGY_INTERVAL_AUDIO,
                                           //MAX_INTERVAL_AUDIO,
                                           MAX_INTERVAL_AUDIO,
                                           MAX_INTERVAL_AUDIO};
+
+// Array of thresholds; add new array and change code accordingly if you want
+// more states.
 float featureWarningThreshold[NUM_FEATURES] = {100,
                                                 10000,
                                                 //10000,
@@ -159,12 +176,18 @@ float featureDangerThreshold[NUM_FEATURES] = {1000,
                                                 210,
                                                 -3000};
 
+// NOTE: These variables are responsible for "buffer-switching" mechanism.
+//       Change these only if you know what you're doing.
 bool compute_feature_now[2] = {false, false};
 bool record_feature_now[2] = {true, true};
 uint8_t buffer_compute_index = 0;
 uint8_t buffer_record_index = 0;
 
+// TODO: Fix the default value to ENERGY_INTERVAL_AUDIO after computation results
+//       are verified. This variable will determine the sampling batch size
+//       and should change according to which features are enabled currently.
 uint32_t featureBatchSize = MAX_INTERVAL_AUDIO;
+
 uint32_t audioSamplingCount = 0;
 uint32_t accelSamplingCount = 0;
 uint32_t restCount = 0;
