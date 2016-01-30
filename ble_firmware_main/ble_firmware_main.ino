@@ -11,314 +11,12 @@ Infinite Uptime BLE Module Firmware
 /* I2S digital audio */
 #include <i2s.h>
 
-// See MS5637-02BA03 Low Voltage Barometric Pressure Sensor Data Sheet http://www.meas-spec.com/downloads/MS5637-02BA03.pdf
-#define MS5637_RESET      0x1E
-#define MS5637_CONVERT_D1 0x40
-#define MS5637_CONVERT_D2 0x50
-#define MS5637_ADC_READ   0x00
+/* CMSIS-DSP library for CFFT */
+#define ARM_MATH_CM4
+#include <arm_math.h>
 
-// BMX055 data sheet http://ae-bst.resource.bosch.com/media/products/dokumente/bmx055/BST-BMX055-DS000-01v2.pdf
-// The BMX055 is a conglomeration of three separate motion sensors packaged together but
-// addressed and communicated with separately by design
-// Accelerometer registers
-#define BMX055_ACC_WHOAMI        0x00   // should return 0xFA
-//#define BMX055_ACC_Reserved    0x01
-#define BMX055_ACC_D_X_LSB       0x02
-#define BMX055_ACC_D_X_MSB       0x03
-#define BMX055_ACC_D_Y_LSB       0x04
-#define BMX055_ACC_D_Y_MSB       0x05
-#define BMX055_ACC_D_Z_LSB       0x06
-#define BMX055_ACC_D_Z_MSB       0x07
-#define BMX055_ACC_D_TEMP        0x08
-#define BMX055_ACC_INT_STATUS_0  0x09
-#define BMX055_ACC_INT_STATUS_1  0x0A
-#define BMX055_ACC_INT_STATUS_2  0x0B
-#define BMX055_ACC_INT_STATUS_3  0x0C
-//#define BMX055_ACC_Reserved    0x0D
-#define BMX055_ACC_FIFO_STATUS   0x0E
-#define BMX055_ACC_PMU_RANGE     0x0F
-#define BMX055_ACC_PMU_BW        0x10
-#define BMX055_ACC_PMU_LPW       0x11
-#define BMX055_ACC_PMU_LOW_POWER 0x12
-#define BMX055_ACC_D_HBW         0x13
-#define BMX055_ACC_BGW_SOFTRESET 0x14
-//#define BMX055_ACC_Reserved    0x15
-#define BMX055_ACC_INT_EN_0      0x16
-#define BMX055_ACC_INT_EN_1      0x17
-#define BMX055_ACC_INT_EN_2      0x18
-#define BMX055_ACC_INT_MAP_0     0x19
-#define BMX055_ACC_INT_MAP_1     0x1A
-#define BMX055_ACC_INT_MAP_2     0x1B
-//#define BMX055_ACC_Reserved    0x1C
-//#define BMX055_ACC_Reserved    0x1D
-#define BMX055_ACC_INT_SRC       0x1E
-//#define BMX055_ACC_Reserved    0x1F
-#define BMX055_ACC_INT_OUT_CTRL  0x20
-#define BMX055_ACC_INT_RST_LATCH 0x21
-#define BMX055_ACC_INT_0         0x22
-#define BMX055_ACC_INT_1         0x23
-#define BMX055_ACC_INT_2         0x24
-#define BMX055_ACC_INT_3         0x25
-#define BMX055_ACC_INT_4         0x26
-#define BMX055_ACC_INT_5         0x27
-#define BMX055_ACC_INT_6         0x28
-#define BMX055_ACC_INT_7         0x29
-#define BMX055_ACC_INT_8         0x2A
-#define BMX055_ACC_INT_9         0x2B
-#define BMX055_ACC_INT_A         0x2C
-#define BMX055_ACC_INT_B         0x2D
-#define BMX055_ACC_INT_C         0x2E
-#define BMX055_ACC_INT_D         0x2F
-#define BMX055_ACC_FIFO_CONFIG_0 0x30
-//#define BMX055_ACC_Reserved    0x31
-#define BMX055_ACC_PMU_SELF_TEST 0x32
-#define BMX055_ACC_TRIM_NVM_CTRL 0x33
-#define BMX055_ACC_BGW_SPI3_WDT  0x34
-//#define BMX055_ACC_Reserved    0x35
-#define BMX055_ACC_OFC_CTRL      0x36
-#define BMX055_ACC_OFC_SETTING   0x37
-#define BMX055_ACC_OFC_OFFSET_X  0x38
-#define BMX055_ACC_OFC_OFFSET_Y  0x39
-#define BMX055_ACC_OFC_OFFSET_Z  0x3A
-#define BMX055_ACC_TRIM_GPO      0x3B
-#define BMX055_ACC_TRIM_GP1      0x3C
-//#define BMX055_ACC_Reserved    0x3D
-#define BMX055_ACC_FIFO_CONFIG_1 0x3E
-#define BMX055_ACC_FIFO_DATA     0x3F
-
-// BMX055 Gyroscope Registers
-#define BMX055_GYRO_WHOAMI           0x00  // should return 0x0F
-//#define BMX055_GYRO_Reserved       0x01
-#define BMX055_GYRO_RATE_X_LSB       0x02
-#define BMX055_GYRO_RATE_X_MSB       0x03
-#define BMX055_GYRO_RATE_Y_LSB       0x04
-#define BMX055_GYRO_RATE_Y_MSB       0x05
-#define BMX055_GYRO_RATE_Z_LSB       0x06
-#define BMX055_GYRO_RATE_Z_MSB       0x07
-//#define BMX055_GYRO_Reserved       0x08
-#define BMX055_GYRO_INT_STATUS_0  0x09
-#define BMX055_GYRO_INT_STATUS_1  0x0A
-#define BMX055_GYRO_INT_STATUS_2  0x0B
-#define BMX055_GYRO_INT_STATUS_3  0x0C
-//#define BMX055_GYRO_Reserved    0x0D
-#define BMX055_GYRO_FIFO_STATUS   0x0E
-#define BMX055_GYRO_RANGE         0x0F
-#define BMX055_GYRO_BW            0x10
-#define BMX055_GYRO_LPM1          0x11
-#define BMX055_GYRO_LPM2          0x12
-#define BMX055_GYRO_RATE_HBW      0x13
-#define BMX055_GYRO_BGW_SOFTRESET 0x14
-#define BMX055_GYRO_INT_EN_0      0x15
-#define BMX055_GYRO_INT_EN_1      0x16
-#define BMX055_GYRO_INT_MAP_0     0x17
-#define BMX055_GYRO_INT_MAP_1     0x18
-#define BMX055_GYRO_INT_MAP_2     0x19
-#define BMX055_GYRO_INT_SRC_1     0x1A
-#define BMX055_GYRO_INT_SRC_2     0x1B
-#define BMX055_GYRO_INT_SRC_3     0x1C
-//#define BMX055_GYRO_Reserved    0x1D
-#define BMX055_GYRO_FIFO_EN       0x1E
-//#define BMX055_GYRO_Reserved    0x1F
-//#define BMX055_GYRO_Reserved    0x20
-#define BMX055_GYRO_INT_RST_LATCH 0x21
-#define BMX055_GYRO_HIGH_TH_X     0x22
-#define BMX055_GYRO_HIGH_DUR_X    0x23
-#define BMX055_GYRO_HIGH_TH_Y     0x24
-#define BMX055_GYRO_HIGH_DUR_Y    0x25
-#define BMX055_GYRO_HIGH_TH_Z     0x26
-#define BMX055_GYRO_HIGH_DUR_Z    0x27
-//#define BMX055_GYRO_Reserved    0x28
-//#define BMX055_GYRO_Reserved    0x29
-//#define BMX055_GYRO_Reserved    0x2A
-#define BMX055_GYRO_SOC           0x31
-#define BMX055_GYRO_A_FOC         0x32
-#define BMX055_GYRO_TRIM_NVM_CTRL 0x33
-#define BMX055_GYRO_BGW_SPI3_WDT  0x34
-//#define BMX055_GYRO_Reserved    0x35
-#define BMX055_GYRO_OFC1          0x36
-#define BMX055_GYRO_OFC2          0x37
-#define BMX055_GYRO_OFC3          0x38
-#define BMX055_GYRO_OFC4          0x39
-#define BMX055_GYRO_TRIM_GP0      0x3A
-#define BMX055_GYRO_TRIM_GP1      0x3B
-#define BMX055_GYRO_BIST          0x3C
-#define BMX055_GYRO_FIFO_CONFIG_0 0x3D
-#define BMX055_GYRO_FIFO_CONFIG_1 0x3E
-
-// BMX055 magnetometer registers
-#define BMX055_MAG_WHOAMI         0x40  // should return 0x32
-#define BMX055_MAG_Reserved       0x41
-#define BMX055_MAG_XOUT_LSB       0x42
-#define BMX055_MAG_XOUT_MSB       0x43
-#define BMX055_MAG_YOUT_LSB       0x44
-#define BMX055_MAG_YOUT_MSB       0x45
-#define BMX055_MAG_ZOUT_LSB       0x46
-#define BMX055_MAG_ZOUT_MSB       0x47
-#define BMX055_MAG_ROUT_LSB       0x48
-#define BMX055_MAG_ROUT_MSB       0x49
-#define BMX055_MAG_INT_STATUS     0x4A
-#define BMX055_MAG_PWR_CNTL1      0x4B
-#define BMX055_MAG_PWR_CNTL2      0x4C
-#define BMX055_MAG_INT_EN_1       0x4D
-#define BMX055_MAG_INT_EN_2       0x4E
-#define BMX055_MAG_LOW_THS        0x4F
-#define BMX055_MAG_HIGH_THS       0x50
-#define BMX055_MAG_REP_XY         0x51
-#define BMX055_MAG_REP_Z          0x52
-/* Trim Extended Registers */
-#define BMM050_DIG_X1             0x5D // needed for magnetic field calculation
-#define BMM050_DIG_Y1             0x5E
-#define BMM050_DIG_Z4_LSB         0x62
-#define BMM050_DIG_Z4_MSB         0x63
-#define BMM050_DIG_X2             0x64
-#define BMM050_DIG_Y2             0x65
-#define BMM050_DIG_Z2_LSB         0x68
-#define BMM050_DIG_Z2_MSB         0x69
-#define BMM050_DIG_Z1_LSB         0x6A
-#define BMM050_DIG_Z1_MSB         0x6B
-#define BMM050_DIG_XYZ1_LSB       0x6C
-#define BMM050_DIG_XYZ1_MSB       0x6D
-#define BMM050_DIG_Z3_LSB         0x6E
-#define BMM050_DIG_Z3_MSB         0x6F
-#define BMM050_DIG_XY2            0x70
-#define BMM050_DIG_XY1            0x71
-
-// EM7180 SENtral register map
-// see http://www.emdeveloper.com/downloads/7180/EMSentral_EM7180_Register_Map_v1_3.pdf
-//
-#define EM7180_QX                 0x00  // this is a 32-bit normalized floating point number read from registers 0x00-03
-#define EM7180_QY                 0x04  // this is a 32-bit normalized floating point number read from registers 0x04-07
-#define EM7180_QZ                 0x08  // this is a 32-bit normalized floating point number read from registers 0x08-0B
-#define EM7180_QW                 0x0C  // this is a 32-bit normalized floating point number read from registers 0x0C-0F
-#define EM7180_QTIME              0x10  // this is a 16-bit unsigned integer read from registers 0x10-11
-#define EM7180_MX                 0x12  // int16_t from registers 0x12-13
-#define EM7180_MY                 0x14  // int16_t from registers 0x14-15
-#define EM7180_MZ                 0x16  // int16_t from registers 0x16-17
-#define EM7180_MTIME              0x18  // uint16_t from registers 0x18-19
-#define EM7180_AX                 0x1A  // int16_t from registers 0x1A-1B
-#define EM7180_AY                 0x1C  // int16_t from registers 0x1C-1D
-#define EM7180_AZ                 0x1E  // int16_t from registers 0x1E-1F
-#define EM7180_ATIME              0x20  // uint16_t from registers 0x20-21
-#define EM7180_GX                 0x22  // int16_t from registers 0x22-23
-#define EM7180_GY                 0x24  // int16_t from registers 0x24-25
-#define EM7180_GZ                 0x26  // int16_t from registers 0x26-27
-#define EM7180_GTIME              0x28  // uint16_t from registers 0x28-29
-#define EM7180_QRateDivisor       0x32  // uint8_t
-#define EM7180_EnableEvents       0x33
-#define EM7180_HostControl        0x34
-#define EM7180_EventStatus        0x35
-#define EM7180_SensorStatus       0x36
-#define EM7180_SentralStatus      0x37
-#define EM7180_AlgorithmStatus    0x38
-#define EM7180_FeatureFlags       0x39
-#define EM7180_ParamAcknowledge   0x3A
-#define EM7180_SavedParamByte0    0x3B
-#define EM7180_SavedParamByte1    0x3C
-#define EM7180_SavedParamByte2    0x3D
-#define EM7180_SavedParamByte3    0x3E
-#define EM7180_ActualMagRate      0x45
-#define EM7180_ActualAccelRate    0x46
-#define EM7180_ActualGyroRate     0x47
-#define EM7180_ErrorRegister      0x50
-#define EM7180_AlgorithmControl   0x54
-#define EM7180_MagRate            0x55
-#define EM7180_AccelRate          0x56
-#define EM7180_GyroRate           0x57
-#define EM7180_LoadParamByte0     0x60
-#define EM7180_LoadParamByte1     0x61
-#define EM7180_LoadParamByte2     0x62
-#define EM7180_LoadParamByte3     0x63
-#define EM7180_ParamRequest       0x64
-#define EM7180_ROMVersion1        0x70
-#define EM7180_ROMVersion2        0x71
-#define EM7180_RAMVersion1        0x72
-#define EM7180_RAMVersion2        0x73
-#define EM7180_ProductID          0x90
-#define EM7180_RevisionID         0x91
-#define EM7180_RunStatus          0x92
-#define EM7180_UploadAddress      0x94 // uint16_t registers 0x94 (MSB)-5(LSB)
-#define EM7180_UploadData         0x96
-#define EM7180_CRCHost            0x97  // uint32_t from registers 0x97-9A
-#define EM7180_ResetRequest       0x9B
-#define EM7180_PassThruStatus     0x9E
-#define EM7180_PassThruControl    0xA0
-
-// Using the Teensy Mini Add-On board, BMX055 SDO1 = SDO2 = CSB3 = GND as designed
-// Seven-bit BMX055 device addresses are ACC = 0x18, GYRO = 0x68, MAG = 0x10
-#define BMX055_ACC_ADDRESS  0x18   // Address of BMX055 accelerometer
-#define BMX055_GYRO_ADDRESS 0x68   // Address of BMX055 gyroscope
-#define BMX055_MAG_ADDRESS  0x10   // Address of BMX055 magnetometer
-#define MS5637_ADDRESS      0x76   // Address of MS5637 altimeter
-#define EM7180_ADDRESS      0x28   // Address of the EM7180 SENtral sensor hub
-#define M24512DFM_DATA_ADDRESS   0x50   // Address of the 500 page M24512DFM EEPROM data buffer, 1024 bits (128 8-bit bytes) per page
-#define M24512DFM_IDPAGE_ADDRESS 0x58   // Address of the single M24512DFM lockable EEPROM ID page
-
-#define SerialDebug false  // set to true to get Serial output for debugging
-
-// Set initial input parameters
-// define X055 ACC full scale options
-#define AFS_2G  0x03
-#define AFS_4G  0x05
-#define AFS_8G  0x08
-#define AFS_16G 0x0C
-
-enum ACCBW {    // define BMX055 accelerometer bandwidths
-  ABW_8Hz,      // 7.81 Hz,  64 ms update time
-  ABW_16Hz,     // 15.63 Hz, 32 ms update time
-  ABW_31Hz,     // 31.25 Hz, 16 ms update time
-  ABW_63Hz,     // 62.5  Hz,  8 ms update time
-  ABW_125Hz,    // 125   Hz,  4 ms update time
-  ABW_250Hz,    // 250   Hz,  2 ms update time
-  ABW_500Hz,    // 500   Hz,  1 ms update time
-  ABW_1000Hz     // 1000  Hz,  0.5 ms update time
-};
-
-enum Gscale {
-  GFS_2000DPS = 0,
-  GFS_1000DPS,
-  GFS_500DPS,
-  GFS_250DPS,
-  GFS_125DPS
-};
-
-enum GODRBW {
-  G_2000Hz523Hz = 0, // 2000 Hz ODR and unfiltered (bandwidth 523Hz)
-  G_2000Hz230Hz,
-  G_1000Hz116Hz,
-  G_400Hz47Hz,
-  G_200Hz23Hz,
-  G_100Hz12Hz,
-  G_200Hz64Hz,
-  G_100Hz32Hz  // 100 Hz ODR and 32 Hz bandwidth
-};
-
-enum MODR {
-  MODR_10Hz = 0,   // 10 Hz ODR
-  MODR_2Hz     ,   // 2 Hz ODR
-  MODR_6Hz     ,   // 6 Hz ODR
-  MODR_8Hz     ,   // 8 Hz ODR
-  MODR_15Hz    ,   // 15 Hz ODR
-  MODR_20Hz    ,   // 20 Hz ODR
-  MODR_25Hz    ,   // 25 Hz ODR
-  MODR_30Hz        // 30 Hz ODR
-};
-
-enum Mmode {
-  lowPower         = 0,   // rms noise ~1.0 microTesla, 0.17 mA power
-  Regular             ,   // rms noise ~0.6 microTesla, 0.5 mA power
-  enhancedRegular     ,   // rms noise ~0.5 microTesla, 0.8 mA power
-  highAccuracy            // rms noise ~0.3 microTesla, 4.9 mA power
-};
-
-// MS5637 pressure sensor sample rates
-#define ADC_256  0x00 // define pressure and temperature conversion rates
-#define ADC_512  0x02
-#define ADC_1024 0x04
-#define ADC_2048 0x06
-#define ADC_4096 0x08
-#define ADC_8192 0x0A
-#define ADC_D1   0x40
-#define ADC_D2   0x50
+/* Register addresses and hamming window presets  */
+#include "constants.h"
 
 //==============================================================================
 //====================== Module Configuration Variables ========================
@@ -326,13 +24,19 @@ enum Mmode {
 
 #define CLOCK_TYPE         (I2S_CLOCK_48K_INTERNAL)     // I2S clock
 bool statusLED = true;                                  // Status LED ON/OFF
-const uint16_t TARGET_AUDIO_SAMPLE = 8000;              // Audio frequency
+
+// Reduce RUN frequency if needed.
+const uint16_t AUDIO_FREQ_RUN = 8000;
+const uint16_t AUDIO_FREQ_DATA = 8000;
+
+uint16_t TARGET_AUDIO_SAMPLE = AUDIO_FREQ_RUN;          // Audio frequency
 const uint16_t TARGET_ACCEL_SAMPLE = 1000;              // Accel frequency
 const uint32_t RESTING_INTERVAL = 0;                    // Inter-batch gap
 
 // NOTE: Do NOT change the following variables
-const uint16_t ACCEL_COUNTER_TARGET = TARGET_AUDIO_SAMPLE/TARGET_ACCEL_SAMPLE;
-const uint16_t DOWNSAMPLE_MAX = 48000/TARGET_AUDIO_SAMPLE;
+const uint16_t RUN_ACCEL_AUDIO_RATIO = AUDIO_FREQ_RUN / TARGET_ACCEL_SAMPLE;
+uint16_t ACCEL_COUNTER_TARGET = TARGET_AUDIO_SAMPLE/TARGET_ACCEL_SAMPLE;
+uint16_t DOWNSAMPLE_MAX = 48000/TARGET_AUDIO_SAMPLE;
 uint32_t subsample_counter = 0;
 uint32_t accel_counter = 0;
 
@@ -340,38 +44,127 @@ uint32_t accel_counter = 0;
 //====================== Feature Computation Variables =========================
 //==============================================================================
 
-// Energy Variables
-const uint32_t ENERGY_INTERVAL_ACCEL = 100;
-const uint32_t ENERGY_INTERVAL_AUDIO = ENERGY_INTERVAL_ACCEL * ACCEL_COUNTER_TARGET;
-float ave_x = 0;
-float ave_y = 0;
-float ave_z = 0;
-float ene = 0;
+// TIME DOMAIN FEATURES
+
+// Vbiration Energy
+const uint32_t ENERGY_INTERVAL_ACCEL = 128;
+const uint32_t ENERGY_INTERVAL_AUDIO = ENERGY_INTERVAL_ACCEL * RUN_ACCEL_AUDIO_RATIO;
+
+// Mean Crossing Rate
+const uint32_t MCR_INTERVAL_ACCEL = 128;
+const uint32_t MCR_INTERVAL_AUDIO = MCR_INTERVAL_ACCEL * RUN_ACCEL_AUDIO_RATIO;
+
+// FREQUENCY DOMAIN FEATURES
+
+/*
+// Spectral Flux
+double sp_flux_x = 0;
+double sp_flux_y = 0;
+double sp_flux_z = 0;
+*/
+
+// Spectral Centroid
+double sp_cent_x = 0;
+double sp_cent_y = 0;
+double sp_cent_z = 0;
+
+// Spectral Flatness
+double sp_flat_x = 0;
+double sp_flat_y = 0;
+double sp_flat_z = 0;
+
+/*
+// Spectral Crest
+float sp_crest_x = 0;
+float sp_crest_y = 0;
+float sp_crest_z = 0;
+*/
+
+// Spectral Spread ACCEL
+double sp_spread_x = 0;
+double sp_spread_y = 0;
+double sp_spread_z = 0;
+
+// Spectral Spread AUDIO
+double sp_spread_aud = 0;
+
 
 /*
   By default, only energy feature is turned on.
 
-  0: Energy
+  0: Signal Energy
+  1: Mean Crossing Rate
+  2: Spectral Centroid
+  3: Spectral Flatness
+  4: Accel Spectral Spread
+  5: Audio Spectral Spread
+
+  CANCELLED: Spectral Flux
+  CANCELLED: Spectral Crest
 */
-const uint8_t NUM_FEATURES = 1;
+const uint8_t NUM_FEATURES = 6;
+const uint8_t NUM_TD_FEATURES = 2;
 
 typedef float (* FeatureFuncPtr) (); // this is a typedef to feature functions
-FeatureFuncPtr features[NUM_FEATURES] = {feature_energy};
+FeatureFuncPtr features[NUM_FEATURES] = {feature_energy,
+                                          feature_mcr,
+                                          //feature_spectral_flux,
+                                          feature_spectral_centroid,
+                                          feature_spectral_flatness,
+                                          //feature_spectral_crest,
+                                          feature_spectral_spread_accel,
+                                          feature_spectral_spread_audio};
 
-const uint32_t MAX_INTERVAL = ENERGY_INTERVAL_AUDIO;
-// This bitwise boolean is saved backwards.
-// 0th feature is the least significant bit.
-byte enabledFeatures[NUM_FEATURES/8 + 1] = {B00000001};
-uint32_t featureIntervals[NUM_FEATURES]= {ENERGY_INTERVAL_AUDIO};
-float featureWarningThreshold[NUM_FEATURES] = {100};
-float featureDangerThreshold[NUM_FEATURES] = {1000};
+typedef void (* FeatureCalcPtr) (int); // this is a typedef to FD calculation functions
+FeatureCalcPtr calc_features[NUM_FEATURES] = {NULL,
+                                              NULL,
+                                              //calculate_spectral_flux,
+                                              calculate_spectral_centroid,
+                                              calculate_spectral_flatness,
+                                              //calculate_spectral_crest,
+                                              calculate_spectral_spread_accel,
+                                              calculate_spectral_spread_audio};
+
+const uint16_t MAX_INTERVAL_ACCEL = 512;
+const uint16_t MAX_INTERVAL_AUDIO = 4086;
+
+byte enabledFeatures[(NUM_FEATURES - 1)/8 + 1] = {B10000000};
+const byte audioFDFeatures[(NUM_FEATURES - 1)/8 + 1] = {B00000100};
+const byte accelFDFeatures[(NUM_FEATURES - 1)/8 + 1] = {B00111000};
+bool audioFDCompute = true;
+bool accelFDCompute = true;
+
+uint32_t featureIntervals[NUM_FEATURES]= {ENERGY_INTERVAL_AUDIO,
+                                          MCR_INTERVAL_AUDIO,
+                                          //MAX_INTERVAL_AUDIO,
+                                          MAX_INTERVAL_AUDIO,
+                                          MAX_INTERVAL_AUDIO,
+                                          //MAX_INTERVAL_AUDIO,
+                                          MAX_INTERVAL_AUDIO,
+                                          MAX_INTERVAL_AUDIO};
+float featureWarningThreshold[NUM_FEATURES] = {100,
+                                                10000,
+                                                //10000,
+                                                6,
+                                                0.4,
+                                                //10000,
+                                                200,
+                                                -6000};
+float featureDangerThreshold[NUM_FEATURES] = {1000,
+                                                100000,
+                                                //100000,
+                                                8,
+                                                0.45,
+                                                //100000,
+                                                210,
+                                                -3000};
 
 bool compute_feature_now[2] = {false, false};
 bool record_feature_now[2] = {true, true};
 uint8_t buffer_compute_index = 0;
 uint8_t buffer_record_index = 0;
 
-uint32_t featureBatchSize = ENERGY_INTERVAL_AUDIO;
+uint32_t featureBatchSize = MAX_INTERVAL_AUDIO;
 uint32_t audioSamplingCount = 0;
 uint32_t accelSamplingCount = 0;
 uint32_t restCount = 0;
@@ -380,12 +173,30 @@ uint8_t current_danger_level = 0;
 float feature_value = 0;
 
 // Acceleration Buffers
-float accel_x_batch[2][MAX_INTERVAL / ACCEL_COUNTER_TARGET];
-float accel_y_batch[2][MAX_INTERVAL / ACCEL_COUNTER_TARGET];
-float accel_z_batch[2][MAX_INTERVAL / ACCEL_COUNTER_TARGET];
+q15_t accel_x_batch[2][MAX_INTERVAL_ACCEL];
+q15_t accel_y_batch[2][MAX_INTERVAL_ACCEL];
+q15_t accel_z_batch[2][MAX_INTERVAL_ACCEL];
 
 // Audio Buffers
-int32_t audio_batch[2][MAX_INTERVAL];
+q15_t audio_batch[2][MAX_INTERVAL_AUDIO];
+
+// RFFT Variables
+const uint16_t ACCEL_NFFT = 512;
+const uint16_t AUDIO_NFFT = 2048;
+
+const uint8_t ACCEL_RESCALE = 8;
+const uint8_t AUDIO_RESCALE = 10;
+
+// RFFT Output and Magnitude Buffers
+q15_t rfft_audio_buffer [AUDIO_NFFT*2];
+q15_t rfft_accel_buffer [ACCEL_NFFT*2];
+
+//TODO: May be able to use just one instance. Check later.
+arm_rfft_instance_q15 audio_rfft_instance;
+arm_cfft_radix4_instance_q15 audio_cfft_instance;
+
+arm_rfft_instance_q15 accel_rfft_instance;
+arm_cfft_radix4_instance_q15 accel_cfft_instance;
 
 //==============================================================================
 //============================ Internal Variables ==============================
@@ -459,10 +270,42 @@ void changeStatusLED(LEDColors color);
 boolean silent = true;
 unsigned char bytes[4];
 
-// String for Serial communication
-String bleBuffer = "";
-String wireBuffer = "";
-char characterRead;
+// Two-way Communication Protocol Constants
+const String THRESH_START_FLAG = "THBG";
+const String THRESH_SUCCESS = "THRESH_OK";
+const String THRESH_FAIL = "THRESH_FAIL";
+
+const String FEATURE_SET_START_FLAG = "FEBG";
+const String FEATURE_SET_SUCCESS = "FEATURE_SET_OK";
+const String FEATURE_SET_FAIL = "FEATURE_SET_FAIL";
+const uint8_t FEATURE_SET_BYTELEN = (((NUM_FEATURES - 1)/8)/4 + 1) * 4;
+
+// Hard-wired communication buffers
+String wireBuffer = ""; // Serial only expects string literals
+char characterRead; // Holder variable for newline check
+
+// Two-way Communication Variables
+char bleBuffer[5] = "doge";
+byte bleFeaturesBuffer[(NUM_FEATURES - 1)/8 + 1] = {B00000000};
+uint8_t bleBufferIndex = 0;
+uint8_t bleBytesRead = 0;
+uint16_t bleFeatureIndex = 0;
+
+// THRESH
+uint16_t bleFeatureType = 0;
+float bleFeatureValue = 0;
+
+// FEATURE_SET
+uint32_t largestBatchSize = 0;
+
+// Communication state enum
+enum CommState {
+  COMM_IDLE           = 0,
+  THRESH              = 1,
+  FEATURE_SET         = 2
+};
+
+CommState currComm = COMM_IDLE;
 
 
 /*==============================================================================
@@ -474,14 +317,43 @@ void compute_features(){
   record_feature_now[buffer_compute_index] = false;
   highest_danger_level = 0;
 
-  for (int i=0; i < NUM_FEATURES; i++){
-    // Compute feature only when corresponding bit is turned on.
-    if ((enabledFeatures[i/8] >> (i%8)) & 1){
+  for (int i=0; i < NUM_TD_FEATURES; i++){
+    // Compute time domain feature only when corresponding bit is turned on.
+    if ((enabledFeatures[i/8] << (i%8)) & B10000000){
       feature_value = features[i]();
       current_danger_level = threshold_feature(i, feature_value);
       // TODO: Variable is separated for possible feature value output.
       //       AKA, when danger level is 2, output feature index, etc.
       highest_danger_level = max(highest_danger_level, current_danger_level);
+    }
+  }
+
+  if (audioFDCompute){
+    audio_rfft();
+    for (int i=NUM_TD_FEATURES; i < NUM_FEATURES; i++){
+      // Compute audio frequency domain feature only when the feature IS audio FD
+      // And the bit is turned on for enabledFeatures.
+      if ((enabledFeatures[i/8] << (i%8)) & (audioFDFeatures[i/8] << (i%8)) & B10000000){
+        feature_value = features[i]();
+        current_danger_level = threshold_feature(i, feature_value);
+        // TODO: Variable is separated for possible feature value output.
+        //       AKA, when danger level is 2, output feature index, etc.
+        highest_danger_level = max(highest_danger_level, current_danger_level);
+      }
+    }
+  }
+  if (accelFDCompute){
+    accel_rfft();
+    for (int i=NUM_TD_FEATURES; i < NUM_FEATURES; i++){
+      // Compute accel frequency domain feature only when the feature IS accel FD
+      // And the bit is turned on for enabledFeatures.
+      if ((enabledFeatures[i/8] << (i%8)) & (accelFDFeatures[i/8] << (i%8)) & B10000000){
+        feature_value = features[i]();
+        current_danger_level = threshold_feature(i, feature_value);
+        // TODO: Variable is separated for possible feature value output.
+        //       AKA, when danger level is 2, output feature index, etc.
+        highest_danger_level = max(highest_danger_level, current_danger_level);
+      }
     }
   }
 
@@ -539,6 +411,359 @@ uint8_t threshold_feature(int index, float featureVal){
   }
 }
 
+// Single instance of RFFT calculation on audio data.
+// ORIGINAL TIME SERIES DATA WILL BE MODIFIED! CALCULATE TIME DOMAIN FEATURES FIRST
+void audio_rfft(){
+  // Apply Hamming window in-place
+  arm_mult_q15(audio_batch[buffer_compute_index],
+                hamming_window_2048,
+                audio_batch[buffer_compute_index],
+                AUDIO_NFFT);
+
+  arm_mult_q15(&audio_batch[buffer_compute_index][AUDIO_NFFT],
+                hamming_window_2048,
+                &audio_batch[buffer_compute_index][AUDIO_NFFT],
+                AUDIO_NFFT);
+
+
+  // TODO: Computation time verification
+  // Since input vector is 2048, perform FFT twice.
+  // First FFT, 0 to 2047
+  arm_rfft_init_q15(&audio_rfft_instance,
+                    &audio_cfft_instance,
+                    AUDIO_NFFT,
+                    0,
+                    1);
+
+  arm_rfft_q15(&audio_rfft_instance,
+                audio_batch[buffer_compute_index],
+                rfft_audio_buffer);
+
+  arm_shift_q15(rfft_audio_buffer,
+                AUDIO_RESCALE,
+                rfft_audio_buffer,
+                AUDIO_NFFT*2);
+
+  // NOTE: OUTPUT FORMAT IS IN 2.14
+  arm_cmplx_mag_q15(rfft_audio_buffer,
+                audio_batch[buffer_compute_index],
+                AUDIO_NFFT);
+
+  arm_q15_to_float(audio_batch[buffer_compute_index],
+                  (float*)rfft_audio_buffer,
+                  magsize_2048);
+
+  // TODO: REDUCE VECTOR CALCULATION BY COMING UP WITH SINGLE FACTOR
+
+  // Div by K
+  arm_scale_f32((float*)rfft_audio_buffer,
+                hamming_K_2048,
+                (float*)rfft_audio_buffer,
+                magsize_2048);
+
+  // Div by wlen
+  arm_scale_f32((float*)rfft_audio_buffer,
+                inverse_wlen_2048,
+                (float*)rfft_audio_buffer,
+                magsize_2048);
+
+  // Fix 2.14 format from cmplx_mag
+  arm_scale_f32((float*)rfft_audio_buffer,
+                2.0,
+                (float*)rfft_audio_buffer,
+                magsize_2048);
+
+  // Correction of the DC & Nyquist component, including Nyquist point.
+  arm_scale_f32(&((float*)rfft_audio_buffer)[1],
+                2.0,
+                &((float*)rfft_audio_buffer)[1],
+                magsize_2048-2);
+
+  /* DEBUGGING ROUTINE; FREQUENCY CHECKER
+   *  TODO: REMOVE THIS WHEN DONE
+  q15_t joj;
+  uint32_t ind;
+  arm_max_q15(audio_batch[buffer_compute_index],
+              magsize_2048,
+              &joj,
+              &ind);
+  Serial.println(joj*2);
+  Serial.println((ind+1)*TARGET_AUDIO_SAMPLE / (double)AUDIO_NFFT);
+  */
+
+  for (int i=NUM_TD_FEATURES; i < NUM_FEATURES; i++){
+    // Update audio frequency domain feature variables only when the feature IS
+    // audio FD and the bit is turned on for enabledFeatures.
+    if ((enabledFeatures[i/8] << (i%8)) & (audioFDFeatures[i/8] << (i%8)) & B10000000){
+      calc_features[i](0);
+    }
+  }
+
+  // Second FFT, 2048 to 4095
+  arm_rfft_init_q15(&audio_rfft_instance,
+                    &audio_cfft_instance,
+                    AUDIO_NFFT,
+                    0,
+                    1);
+
+  arm_rfft_q15(&audio_rfft_instance,
+                &audio_batch[buffer_compute_index][AUDIO_NFFT],
+                rfft_audio_buffer);
+
+  arm_shift_q15(rfft_audio_buffer,
+                AUDIO_RESCALE,
+                rfft_audio_buffer,
+                AUDIO_NFFT*2);
+
+  // NOTE: OUTPUT FORMAT IS IN 2.14
+  arm_cmplx_mag_q15(rfft_audio_buffer,
+                audio_batch[buffer_compute_index],
+                AUDIO_NFFT);
+
+  arm_q15_to_float(audio_batch[buffer_compute_index],
+                  (float*)rfft_audio_buffer,
+                  magsize_2048);
+
+  // TODO: REDUCE VECTOR CALCULATION BY COMING UP WITH SINGLE FACTOR
+
+  // Div by K
+  arm_scale_f32((float*)rfft_audio_buffer,
+                hamming_K_2048,
+                (float*)rfft_audio_buffer,
+                magsize_2048);
+
+  // Div by wlen
+  arm_scale_f32((float*)rfft_audio_buffer,
+                inverse_wlen_2048,
+                (float*)rfft_audio_buffer,
+                magsize_2048);
+
+  // Fix 2.14 format from cmplx_mag
+  arm_scale_f32((float*)rfft_audio_buffer,
+                2.0,
+                (float*)rfft_audio_buffer,
+                magsize_2048);
+
+  // Correction of the DC & Nyquist component, including Nyquist point.
+  arm_scale_f32(&((float*)rfft_audio_buffer)[1],
+                2.0,
+                &((float*)rfft_audio_buffer)[1],
+                magsize_2048-2);
+
+  for (int i=NUM_TD_FEATURES; i < NUM_FEATURES; i++){
+    // Update audio frequency domain feature variables only when the feature IS
+    // audio FD and the bit is turned on for enabledFeatures.
+    if ((enabledFeatures[i/8] << (i%8)) & (audioFDFeatures[i/8] << (i%8)) & B10000000){
+      calc_features[i](0);
+    }
+  }
+}
+
+// Single instance of RFFT calculation on accel data.
+// ORIGINAL TIME SERIES DATA WILL BE MODIFIED! CALCULATE TIME DOMAIN FEATURES FIRST
+void accel_rfft(){
+  // TODO: Figure out a way to update every frequency domain feature for accel
+  // without using multiple buffers
+  // NOTE: Internally update all frequency domain variables
+
+  // Apply Hamming window in-place
+  arm_mult_q15(accel_x_batch[buffer_compute_index],
+                hamming_window_512,
+                accel_x_batch[buffer_compute_index],
+                ACCEL_NFFT);
+  arm_mult_q15(accel_y_batch[buffer_compute_index],
+                hamming_window_512,
+                accel_y_batch[buffer_compute_index],
+                ACCEL_NFFT);
+  arm_mult_q15(accel_z_batch[buffer_compute_index],
+                hamming_window_512,
+                accel_z_batch[buffer_compute_index],
+                ACCEL_NFFT);
+
+  // First FFT, X axis
+  arm_rfft_init_q15(&accel_rfft_instance,
+                    &accel_cfft_instance,
+                    ACCEL_NFFT,
+                    0,
+                    1);
+
+  arm_rfft_q15(&accel_rfft_instance,
+                accel_x_batch[buffer_compute_index],
+                rfft_accel_buffer);
+
+  arm_shift_q15(rfft_accel_buffer,
+                ACCEL_RESCALE,
+                rfft_accel_buffer,
+                ACCEL_NFFT*2);
+
+  // NOTE: OUTPUT FORMAT IS IN 2.14
+  arm_cmplx_mag_q15(rfft_accel_buffer,
+                accel_x_batch[buffer_compute_index],
+                ACCEL_NFFT);
+
+  arm_q15_to_float(accel_x_batch[buffer_compute_index],
+                    (float*)rfft_accel_buffer,
+                    magsize_512);
+
+  // Div by K
+  arm_scale_f32((float*)rfft_accel_buffer,
+                hamming_K_512,
+                (float*)rfft_accel_buffer,
+                magsize_512);
+
+  // Div by wlen
+  arm_scale_f32((float*)rfft_accel_buffer,
+                inverse_wlen_512,
+                (float*)rfft_accel_buffer,
+                magsize_512);
+
+  // Fix 2.14 format from cmplx_mag
+  arm_scale_f32((float*)rfft_accel_buffer,
+                2.0,
+                (float*)rfft_accel_buffer,
+                magsize_512);
+
+  // Correction of the DC & Nyquist component, including Nyquist point.
+  arm_scale_f32(&((float*)rfft_accel_buffer)[1],
+                2.0,
+                &((float*)rfft_accel_buffer)[1],
+                magsize_512-2);
+
+  /* DEBUGGING ROUTINE; FFT BIN CHECKER
+  TODO: Remove this when done
+  float sum = 0;
+  for (int i=0; i<magsize_512; i++){
+    Serial.print(((float*)rfft_accel_buffer)[i], 8);
+    sum += ((float*)rfft_accel_buffer)[i];
+    Serial.print(" ");
+  }
+  Serial.println();
+  Serial.println(sum, 8);
+  */
+
+  for (int i=NUM_TD_FEATURES; i < NUM_FEATURES; i++){
+    // Update accel frequency domain feature variables only when the feature IS
+    // accel FD and the bit is turned on for enabledFeatures.
+    if ((enabledFeatures[i/8] << (i%8)) & (accelFDFeatures[i/8] << (i%8)) & B10000000){
+      calc_features[i](0);
+    }
+  }
+
+  // Second FFT, Y axis
+  arm_rfft_init_q15(&accel_rfft_instance,
+                    &accel_cfft_instance,
+                    ACCEL_NFFT,
+                    0,
+                    1);
+
+  arm_rfft_q15(&accel_rfft_instance,
+                accel_y_batch[buffer_compute_index],
+                rfft_accel_buffer);
+
+  arm_shift_q15(rfft_accel_buffer,
+                ACCEL_RESCALE,
+                rfft_accel_buffer,
+                ACCEL_NFFT*2);
+
+  // NOTE: OUTPUT FORMAT IS IN 2.14
+  arm_cmplx_mag_q15(rfft_accel_buffer,
+                accel_y_batch[buffer_compute_index],
+                ACCEL_NFFT);
+
+  arm_q15_to_float(accel_y_batch[buffer_compute_index],
+                    (float*)rfft_accel_buffer,
+                    magsize_512);
+
+  // Div by K
+  arm_scale_f32((float*)rfft_accel_buffer,
+                hamming_K_512,
+                (float*)rfft_accel_buffer,
+                magsize_512);
+
+  // Div by wlen
+  arm_scale_f32((float*)rfft_accel_buffer,
+                inverse_wlen_512,
+                (float*)rfft_accel_buffer,
+                magsize_512);
+
+  // Correction of the DC & Nyquist component, including Nyquist point.
+  arm_scale_f32(&((float*)rfft_accel_buffer)[1],
+                2.0,
+                &((float*)rfft_accel_buffer)[1],
+                magsize_512-2);
+
+  // Fix 2.14 format from cmplx_mag
+  arm_scale_f32((float*)rfft_accel_buffer,
+                2.0,
+                (float*)rfft_accel_buffer,
+                magsize_512);
+
+  for (int i=NUM_TD_FEATURES; i < NUM_FEATURES; i++){
+    // Update accel frequency domain feature variables only when the feature IS
+    // accel FD and the bit is turned on for enabledFeatures.
+    if ((enabledFeatures[i/8] << (i%8)) & (accelFDFeatures[i/8] << (i%8)) & B10000000){
+      calc_features[i](1);
+    }
+  }
+
+  // Third FFT, Z axis
+  arm_rfft_init_q15(&accel_rfft_instance,
+                    &accel_cfft_instance,
+                    ACCEL_NFFT,
+                    0,
+                    1);
+
+  arm_rfft_q15(&accel_rfft_instance,
+                accel_z_batch[buffer_compute_index],
+                rfft_accel_buffer);
+
+  arm_shift_q15(rfft_accel_buffer,
+                ACCEL_RESCALE,
+                rfft_accel_buffer,
+                ACCEL_NFFT*2);
+
+  // NOTE: OUTPUT FORMAT IS IN 2.14
+  arm_cmplx_mag_q15(rfft_accel_buffer,
+                accel_z_batch[buffer_compute_index],
+                ACCEL_NFFT);
+
+  arm_q15_to_float(accel_z_batch[buffer_compute_index],
+                    (float*)rfft_accel_buffer,
+                    magsize_512);
+
+  // Div by K
+  arm_scale_f32((float*)rfft_accel_buffer,
+                hamming_K_512,
+                (float*)rfft_accel_buffer,
+                magsize_512);
+
+  // Div by wlen
+  arm_scale_f32((float*)rfft_accel_buffer,
+                inverse_wlen_512,
+                (float*)rfft_accel_buffer,
+                magsize_512);
+
+  // Fix 2.14 format from cmplx_mag
+  arm_scale_f32((float*)rfft_accel_buffer,
+                2.0,
+                (float*)rfft_accel_buffer,
+                magsize_512);
+
+  // Correction of the DC & Nyquist component, including Nyquist point.
+  arm_scale_f32(&((float*)rfft_accel_buffer)[1],
+                2.0,
+                &((float*)rfft_accel_buffer)[1],
+                magsize_512-2);
+
+  for (int i=NUM_TD_FEATURES; i < NUM_FEATURES; i++){
+    // Update accel frequency domain feature variables only when the feature IS
+    // accel FD and the bit is turned on for enabledFeatures.
+    if ((enabledFeatures[i/8] << (i%8)) & (accelFDFeatures[i/8] << (i%8)) & B10000000){
+      calc_features[i](2);
+    }
+  }
+}
+
 /*==============================================================================
   ====================== Feature Computation Functions =========================
 
@@ -550,30 +775,288 @@ uint8_t threshold_feature(int index, float featureVal){
   You can assume that buffers are correctly populated as feature requires.
 ==============================================================================*/
 
-// Energy, index 0
-float feature_energy (){
-  ave_x=0;
-  ave_y=0;
-  ave_z=0;
-  for (int i=featureBatchSize/ACCEL_COUNTER_TARGET - ENERGY_INTERVAL_ACCEL; i<featureBatchSize/ACCEL_COUNTER_TARGET; i++){
-    ave_x += accel_x_batch[buffer_compute_index][i];
-    ave_y += accel_y_batch[buffer_compute_index][i];
-    ave_z += accel_z_batch[buffer_compute_index][i];
-  }
-  ave_x /= ENERGY_INTERVAL_ACCEL;
-  ave_y /= ENERGY_INTERVAL_ACCEL;
-  ave_z /= ENERGY_INTERVAL_ACCEL;
+// TIME DOMAIN FEATURES
 
-  ene = 0; //initialize the energy feature
-  for (int i=featureBatchSize/ACCEL_COUNTER_TARGET - ENERGY_INTERVAL_ACCEL; i<featureBatchSize/ACCEL_COUNTER_TARGET; i++){
-    ene += sq(accel_x_batch[buffer_compute_index][i]-ave_x)
-          +  sq(accel_y_batch[buffer_compute_index][i]-ave_y)
-          +  sq(accel_z_batch[buffer_compute_index][i]-ave_z);
+// Signal Energy ACCEL, index 0
+// Simple loops  : 4200 microseconds
+// All CMSIS-DSP : 2840 microseconds
+// Partial       : 2730 microseconds (current)
+float feature_energy (){
+  // Take q15_t buffer as float buffer for computation
+  float* compBuffer = (float*)&rfft_accel_buffer;
+  // Reduce re-computation of variables
+  int zind = ENERGY_INTERVAL_ACCEL*2;
+
+  // Copy from accel batches to compBuffer
+  arm_q15_to_float(&accel_x_batch[buffer_compute_index][featureBatchSize/ACCEL_COUNTER_TARGET - ENERGY_INTERVAL_ACCEL],
+                    compBuffer,
+                    ENERGY_INTERVAL_ACCEL);
+  arm_q15_to_float(&accel_y_batch[buffer_compute_index][featureBatchSize/ACCEL_COUNTER_TARGET - ENERGY_INTERVAL_ACCEL],
+                    &compBuffer[ENERGY_INTERVAL_ACCEL],
+                    ENERGY_INTERVAL_ACCEL);
+  arm_q15_to_float(&accel_z_batch[buffer_compute_index][featureBatchSize/ACCEL_COUNTER_TARGET - ENERGY_INTERVAL_ACCEL],
+                    &compBuffer[zind],
+                    ENERGY_INTERVAL_ACCEL);
+
+  // Scale all entries by aRes AND 2^15; the entries were NOT in q1.15 format.
+  arm_scale_f32(compBuffer, aRes*32768, compBuffer, ENERGY_INTERVAL_ACCEL*3);
+
+  // Apply accel biases
+  arm_offset_f32(compBuffer, accelBias[0], compBuffer, ENERGY_INTERVAL_ACCEL);
+  arm_offset_f32(&compBuffer[ENERGY_INTERVAL_ACCEL], accelBias[1], &compBuffer[ENERGY_INTERVAL_ACCEL], ENERGY_INTERVAL_ACCEL);
+  arm_offset_f32(&compBuffer[zind], accelBias[2], &compBuffer[zind], ENERGY_INTERVAL_ACCEL);
+
+  float ave_x=0;
+  float ave_y=0;
+  float ave_z=0;
+
+  // Calculate average
+  arm_mean_f32(compBuffer, ENERGY_INTERVAL_ACCEL, &ave_x);
+  arm_mean_f32(&compBuffer[ENERGY_INTERVAL_ACCEL], ENERGY_INTERVAL_ACCEL, &ave_y);
+  arm_mean_f32(&compBuffer[zind], ENERGY_INTERVAL_ACCEL, &ave_z);
+
+  // Calculate energy.
+  // NOTE: Using CMSIS-DSP functions to perform the following operation performed 2840 microseconds,
+  //       while just using simple loop performed 2730 microseconds. Keep the latter.
+  float ene = 0;
+  for (int i=0; i<ENERGY_INTERVAL_ACCEL; i++){
+    ene += sq(compBuffer[i]-ave_x)
+          +  sq(compBuffer[ENERGY_INTERVAL_ACCEL + i]-ave_y)
+          +  sq(compBuffer[zind + i]-ave_z);
   }
   ene *= ENERGY_INTERVAL_ACCEL;
 
   return ene;
 }
+
+// Mean Crossing Rate ACCEL, index 1
+float feature_mcr (){
+  //TODO: Reduce redundant work; aka float conversion and bias application
+
+  // Take q15_t buffer as float buffer for computation
+  float* compBuffer = (float*)&rfft_accel_buffer;
+  // Reduce re-computation of variables
+  int zind = MCR_INTERVAL_ACCEL*2;
+
+  // Copy from accel batches to compBuffer
+  arm_q15_to_float(&accel_x_batch[buffer_compute_index][featureBatchSize/ACCEL_COUNTER_TARGET - MCR_INTERVAL_ACCEL],
+                    compBuffer,
+                    MCR_INTERVAL_ACCEL);
+  arm_q15_to_float(&accel_y_batch[buffer_compute_index][featureBatchSize/ACCEL_COUNTER_TARGET - MCR_INTERVAL_ACCEL],
+                    &compBuffer[MCR_INTERVAL_ACCEL],
+                    MCR_INTERVAL_ACCEL);
+  arm_q15_to_float(&accel_z_batch[buffer_compute_index][featureBatchSize/ACCEL_COUNTER_TARGET - MCR_INTERVAL_ACCEL],
+                    &compBuffer[zind],
+                    MCR_INTERVAL_ACCEL);
+
+  // Scale all entries by aRes AND 2^15; the entries were NOT in q1.15 format.
+  arm_scale_f32(compBuffer, aRes*32768, compBuffer, MCR_INTERVAL_ACCEL*3);
+
+  // Apply accel biases
+  arm_offset_f32(compBuffer, accelBias[0], compBuffer, MCR_INTERVAL_ACCEL);
+  arm_offset_f32(&compBuffer[MCR_INTERVAL_ACCEL], accelBias[1], &compBuffer[MCR_INTERVAL_ACCEL], MCR_INTERVAL_ACCEL);
+  arm_offset_f32(&compBuffer[zind], accelBias[2], &compBuffer[zind], MCR_INTERVAL_ACCEL);
+
+  float ave_x=0;
+  float ave_y=0;
+  float ave_z=0;
+
+  // Calculate average
+  arm_mean_f32(compBuffer, MCR_INTERVAL_ACCEL, &ave_x);
+  arm_mean_f32(&compBuffer[MCR_INTERVAL_ACCEL], MCR_INTERVAL_ACCEL, &ave_y);
+  arm_mean_f32(&compBuffer[zind], MCR_INTERVAL_ACCEL, &ave_z);
+
+  // Calculate mean crossing rates.
+  bool prevX = compBuffer[0] < ave_x;
+  bool prevY = compBuffer[MCR_INTERVAL_ACCEL] < ave_y;
+  bool prevZ = compBuffer[zind] < ave_y;
+  bool curr;
+
+  int x_crossing = 0;
+  int y_crossing = 0;
+  int z_crossing = 0;
+
+  for (int i=1; i<MCR_INTERVAL_ACCEL; i++){
+    curr = compBuffer[i] < ave_x;
+    if (prevX != curr)
+      x_crossing ++;
+    prevX = curr;
+
+    curr = compBuffer[MCR_INTERVAL_ACCEL + i] < ave_y;
+    if (prevY != curr)
+      y_crossing ++;
+    prevY = curr;
+
+    curr = compBuffer[zind + i] < ave_z;
+    if (prevZ != curr)
+      z_crossing ++;
+    prevZ = curr;
+  }
+
+  float x_mcr = x_crossing / (float) MCR_INTERVAL_ACCEL;
+  float y_mcr = y_crossing / (float) MCR_INTERVAL_ACCEL;
+  float z_mcr = z_crossing / (float) MCR_INTERVAL_ACCEL;
+
+  return sqrt(sq(x_mcr) + sq(y_mcr) + sq(z_mcr));
+}
+
+
+// FREQUENCY DOMAIN FEATURES
+
+/* CANCELLED
+// Spectral Flux ACCEL, index 2
+void calculate_spectral_flux(int axis){
+  float* buff = (float*) rfft_accel_buffer;
+
+  double logSum = 0;
+  double sum = 0;
+
+  for (int i=0; i<magsize_512; i++){
+    sum += buff[i];
+    logSum += log(buff[i]);
+  }
+
+  double flux = exp((logSum / magsize_512)) / (sum / magsize_512);
+
+  switch(axis){
+    case 0: sp_flux_x = flux; break;
+    case 1: sp_flux_y = flux; break;
+    case 2: sp_flux_z = flux; break;
+  }
+}
+
+float feature_spectral_flux(){
+  return (float)sp_flux_x;
+}
+*/
+
+// Spectral Centroid ACCEL, index 2
+void calculate_spectral_centroid(int axis){
+  // TODO: Could use a LOT of CMSIS-DSP functions. Maybe optimize it later.
+  float* buff = (float*) rfft_accel_buffer;
+
+  double sqSum = 0;
+  double sqwSum = 0;
+  double sqd = 0;
+  for (int i=0; i<magsize_512; i++){
+    sqd = sq(buff[i] * 2);
+    sqSum += sqd;
+    sqwSum += sqd * (i+1);
+  }
+
+  double centroid = sqwSum / sqSum;
+
+  switch(axis){
+    case 0: sp_cent_x = centroid; break;
+    case 1: sp_cent_y = centroid; break;
+    case 2: sp_cent_z = centroid; break;
+  }
+}
+
+float feature_spectral_centroid(){
+  return (float) sqrt(sq(sp_cent_x) + sq(sp_cent_y) + sq(sp_cent_z));
+}
+
+// Spectral Flatness ACCEL, index 3
+void calculate_spectral_flatness(int axis){
+  float* buff = (float*) rfft_accel_buffer;
+
+  double logSum = 0;
+  double sum = 0;
+  for (int i=0; i<magsize_512; i++){
+    logSum += log10(buff[0]);
+    sum += buff[0];
+  }
+
+  double flatness = logSum*10/magsize_512 - log10(sum/magsize_512);
+
+  switch(axis){
+    case 0: sp_flat_x = flatness; break;
+    case 1: sp_flat_y = flatness; break;
+    case 2: sp_flat_z = flatness; break;
+  }
+}
+
+float feature_spectral_flatness(){
+  return (float) sqrt(sq(sp_flat_x) + sq(sp_flat_y) + sq(sp_flat_z));
+}
+
+/* CANCELLED
+// Spectral Crest ACCEL, index 5
+void calculate_spectral_crest(int axis){
+  float* buff = (float*) rfft_accel_buffer;
+
+  float sqSum = 0;
+  float maxVal = 0;
+  uint32_t maxInd = 0;
+  arm_dot_prod_f32(buff, buff, magsize_512, &sqSum);
+  arm_max_f32(buff, magsize_512, &maxVal, &maxInd);
+
+  float crest = maxVal / sqSum;
+
+  switch(axis){
+    case 0: sp_crest_x = crest; break;
+    case 1: sp_crest_y = crest; break;
+    case 2: sp_crest_z = crest; break;
+  }
+}
+
+float feature_spectral_crest(){
+  return sp_crest_x;
+}
+*/
+
+// Spectral Spread ACCEL, index 4
+void calculate_spectral_spread_accel(int axis){
+  // TODO: Could use more CMSIS-DSP functions. Maybe optimize it later.
+  float* buff = (float*) rfft_accel_buffer;
+
+  float sqSum = 0;
+  float wSum = 0;
+  double SC = ACCEL_NFFT / (double)4;
+
+  arm_dot_prod_f32(buff, buff, magsize_512, &sqSum);
+
+  for (int i=0; i<magsize_512; i++){
+    wSum += buff[i] * sq(i+1 - SC);
+  }
+
+  double spread = sqrt(wSum / sqSum);
+
+  switch(axis){
+    case 0: sp_spread_x = spread; break;
+    case 1: sp_spread_y = spread; break;
+    case 2: sp_spread_z = spread; break;
+  }
+}
+
+float feature_spectral_spread_accel(){
+  return (float) sqrt(sq(sp_spread_x) + sq(sp_spread_y) + sq(sp_spread_z));
+}
+
+// Spectral Spread AUDIO, index 5
+void calculate_spectral_spread_audio(int axis){
+  // TODO: Could use more CMSIS-DSP functions. Maybe optimize it later.
+  float* buff = (float*) rfft_audio_buffer;
+
+  float sqSum = 0;
+  float wSum = 0;
+  double SC = AUDIO_NFFT / (double)4;
+
+  arm_dot_prod_f32(buff, buff, magsize_2048, &sqSum);
+
+  for (int i=0; i<magsize_2048; i++){
+    wSum += buff[i] * sq(i+1 - SC);
+  }
+
+  sp_spread_aud = sqrt(wSum / sqSum);
+}
+
+float feature_spectral_spread_audio(){
+  //NOTE: Audio Spectral Spread has reversed thresholds; keep as negative values.
+  return -(float) sp_spread_aud;
+}
+
 
 //==============================================================================
 //================================= Main Code ==================================
@@ -599,6 +1082,8 @@ void i2s_rx_callback( int32_t *pBuf )
   if (currMode == RUN){
     // If feature computation is lagging behind, reset all sampling routine and
     // Don't run any data collection.
+    // TODO: Whenever this happens and STFT features are turned on, reset STFT
+    // TODO: May want to do timing checks to save STFT resets
     if (audioSamplingCount == 0 && !record_feature_now[buffer_record_index]){
       return;
     }
@@ -637,20 +1122,20 @@ void i2s_rx_callback( int32_t *pBuf )
       // perform the data extraction for single channel mic
       extractdata_inplace(&pBuf[0]);
 
-      // Save audio sample into buffer
-      audio_batch[buffer_record_index][audioSamplingCount] = pBuf[0];
+      byte* ptr = (byte*)&audio_batch[buffer_record_index][audioSamplingCount];
+      ptr[0] = (pBuf[0] >> 8) & 0xFF;
+      ptr[1] = (pBuf[0] >> 16) & 0xFF;
+
+      //audio_batch[buffer_record_index][audioSamplingCount] =
+      //                (((pBuf[0] >> 8) & 0xFF) << 8) | ((pBuf[0] >> 16) & 0xFF);
       audioSamplingCount ++;
 
       if (accel_counter == ACCEL_COUNTER_TARGET){
         readAccelData(accelCount);
 
-        ax = (float)accelCount[0] * aRes + accelBias[0];
-        ay = (float)accelCount[1] * aRes + accelBias[1];
-        az = (float)accelCount[2] * aRes + accelBias[2];
-
-        accel_x_batch[buffer_record_index][accelSamplingCount] = ax;
-        accel_y_batch[buffer_record_index][accelSamplingCount] = ay;
-        accel_z_batch[buffer_record_index][accelSamplingCount] = az;
+        accel_x_batch[buffer_record_index][accelSamplingCount] = accelCount[0];
+        accel_y_batch[buffer_record_index][accelSamplingCount] = accelCount[1];
+        accel_z_batch[buffer_record_index][accelSamplingCount] = accelCount[2];
         accelSamplingCount ++;
 
         accel_counter = 0;
@@ -808,12 +1293,12 @@ void setup()
 
 void loop()
 {
-  // USB Connection Check
-  if (bitRead(USB0_OTGSTAT,5)){
+  /* -------------------------- USB Connection Check ----------------------- */
+  if (!bitRead(USB0_OTGSTAT,5)){
     // Disconnected; this flag will briefly come up when USB gets disconnected.
     // Immediately put into RUN mode.
     if (currMode != RUN){
-      resetSampling();
+      resetSampling(true);
       currMode = RUN;
 
       LEDColors c = BLUE_NOOP;
@@ -845,24 +1330,148 @@ void loop()
     }
   }
 
-  // Two-way Communication via BLE, only on RUN mode.
-  // TODO: Currently assuming the entire batch will arrive atomically. This may
-  //       not be true.
-  // TODO: CONFIRMED! Data still arrives 4 bytes by 4 bytes; may not happen in single loop()
-  while(Serial2.available() > 0){
-    characterRead = Serial2.read();
-    bleBuffer.concat(characterRead);
-  }
-  if (bleBuffer.length() > 0){
-    if (currMode == RUN){
-      //TODO: Two-way Communication Protocol
+  /* ----------- Two-way Communication via BLE, only on RUN mode. ----------- */
+  if (currMode == RUN){
+    bleBufferIndex = 0;
+    while(Serial2.available() > 0){
+      bleBuffer[bleBufferIndex] = Serial2.read();
+      Serial.println(char(bleBuffer[bleBufferIndex]));
+      bleBufferIndex ++;
+      // NOTE: BLE communication may come in 8 bytes, not 4 bytes, due to
+      //       interrupt delays. When it goes OVER 4 bytes, just cut it at 4.
+      if (bleBufferIndex == 4){
+        break;
+      }
+      Serial.println(bleBufferIndex);
     }
-    Serial.println(bleBuffer);
-    // Clear BLE buffer
-    bleBuffer = "";
+    if (bleBufferIndex == 4){
+      //Two-way Communication Protocol
+      switch(currComm){
+        case COMM_IDLE:
+          if (String(bleBuffer) == THRESH_START_FLAG){
+            currComm = THRESH;
+          } else if (String(bleBuffer) == FEATURE_SET_START_FLAG){
+            currComm = FEATURE_SET;
+          }
+          break;
+        case THRESH:
+          if (bleBytesRead == 0){
+            bleFeatureIndex = (*(uint16_t *)(&bleBuffer[0]));
+            bleFeatureType = (*(uint16_t *)(&bleBuffer[2]));
+
+            // Unexpected input; reset communication
+            if (bleFeatureType != 0 && bleFeatureType != 1){
+              Serial2.print(THRESH_FAIL);
+              Serial2.flush();
+              bleBytesRead = 0;
+              bleFeatureIndex = 0;
+              currComm = COMM_IDLE;
+              break;
+            }
+            if (bleFeatureIndex < 0 || bleFeatureIndex >= NUM_FEATURES){
+              Serial2.print(THRESH_FAIL);
+              Serial2.flush();
+              bleBytesRead = 0;
+              bleFeatureIndex = 0;
+              currComm = COMM_IDLE;
+              break;
+            }
+
+            Serial.println(bleFeatureIndex);
+            Serial.println(bleFeatureType);
+            bleBytesRead = 4;
+          } else if (bleBytesRead == 4){
+            // THRESH communication completed.
+            if (bleFeatureType == 0){
+              featureWarningThreshold[bleFeatureIndex] = (*(float *)(&bleBuffer[0]));
+            } else if (bleFeatureType == 1){
+              featureDangerThreshold[bleFeatureIndex] = (*(float *)(&bleBuffer[0]));
+            }
+            // Transmit THRESH_SUCCESS
+            Serial2.print(THRESH_SUCCESS);
+            Serial2.flush();
+
+            // Reset Variables
+            bleBytesRead = 0;
+            bleFeatureIndex = 0;
+            currComm = COMM_IDLE;
+          }
+          break;
+        case FEATURE_SET:
+          if (bleBytesRead < FEATURE_SET_BYTELEN){
+            bleBufferIndex = 0;
+            while (bleFeatureIndex < ((NUM_FEATURES - 1)/8 + 1) && bleBufferIndex < 4){
+              bleFeaturesBuffer[bleFeatureIndex] = bleBuffer[bleBufferIndex];
+
+              bleFeatureIndex ++;
+              bleBufferIndex ++;
+            }
+            bleBytesRead += 4;
+          } else if (bleBytesRead == FEATURE_SET_BYTELEN){
+            // FEATURE_SET communication completed.
+            Serial2.print(FEATURE_SET_SUCCESS);
+            Serial2.flush();
+
+            // Copy over to enabledFeatures
+            for (int i=0; i<(NUM_FEATURES - 1)/8 + 1; i++){
+              enabledFeatures[i] = bleFeaturesBuffer[i];
+            }
+
+            // Set the FFT flags according to the new feature set
+            for (int i=NUM_TD_FEATURES; i < NUM_FEATURES; i++){
+              if ((enabledFeatures[i/8] << (i%8)) & (audioFDFeatures[i/8] << (i%8)) & B10000000){
+                audioFDCompute = true;
+              }
+            }
+            for (int i=NUM_TD_FEATURES; i < NUM_FEATURES; i++){
+              if ((enabledFeatures[i/8] << (i%8)) & (accelFDFeatures[i/8] << (i%8)) & B10000000){
+                accelFDCompute = true;
+              }
+            }
+
+            largestBatchSize = 0;
+            for (int i=0; i < NUM_FEATURES; i++){
+              // Consider batch size only when corresponding bit is turned on.
+              if ((enabledFeatures[i/8] << (i%8)) & B10000000){
+                largestBatchSize = max(largestBatchSize, featureIntervals[i]);
+              }
+            }
+
+            featureBatchSize = largestBatchSize;
+            resetSampling(true);
+
+            // Reset Variables
+            bleBytesRead = 0;
+            bleFeatureIndex = 0;
+            currComm = COMM_IDLE;
+          } else{
+            //NOTE: this should not happen if all BLE transmissions are 4 bytes aligned.
+            Serial2.print(FEATURE_SET_FAIL);
+            Serial2.flush();
+            bleBytesRead = 0;
+            bleFeatureIndex = 0;
+            currComm = COMM_IDLE;
+          }
+          break;
+      }
+    } else{
+      //Incorrect bytes received; invalidate current communication.
+      switch(currComm){
+        case THRESH:
+          Serial2.print(THRESH_FAIL);
+          break;
+        case FEATURE_SET:
+          Serial2.print(FEATURE_SET_FAIL);
+          break;
+      }
+      Serial2.flush();
+      bleBytesRead = 0;
+      bleFeatureIndex = 0;
+      currComm = COMM_IDLE;
+    }
   }
 
-  // Listen for Serial input from RPi, only on CHARGING/DATA_COLLECTION modes.
+  /* ------------- Hardwire Serial for DATA_COLLECTION commands ------------- */
   while(Serial.available() > 0){
     characterRead = Serial.read();
     if (characterRead != '\n')
@@ -876,7 +1485,7 @@ void loop()
         changeStatusLED(c);
 
         Serial.print(START_CONFIRM);
-        resetSampling();
+        resetSampling(false);
         currMode = DATA_COLLECTION;
       }
     } else if (currMode == DATA_COLLECTION){
@@ -901,7 +1510,7 @@ void loop()
 
 // Function for resetting the data collection routine.
 // Need to call this before entering RUN and DATA_COLLECTION modes
-void resetSampling(){
+void resetSampling(bool run_mode){
   // Reset downsampling variables
   subsample_counter = 0;
   accel_counter = 0;
@@ -909,10 +1518,6 @@ void resetSampling(){
   // Reset feature variables
   audioSamplingCount = 0;
   accelSamplingCount = 0;
-  ave_x = 0;
-  ave_y = 0;
-  ave_z = 0;
-  ene = 0;
   restCount = 0;
 
   // Reset buffer management variables
@@ -922,6 +1527,48 @@ void resetSampling(){
   compute_feature_now[1] = false;
   record_feature_now[0] = true;
   record_feature_now[1] = true;
+
+  if (run_mode){
+    TARGET_AUDIO_SAMPLE = AUDIO_FREQ_RUN;
+  } else{
+    TARGET_AUDIO_SAMPLE = AUDIO_FREQ_DATA;
+  }
+
+  ACCEL_COUNTER_TARGET = TARGET_AUDIO_SAMPLE/TARGET_ACCEL_SAMPLE;
+  DOWNSAMPLE_MAX = 48000/TARGET_AUDIO_SAMPLE;
+}
+
+// Re-format 24 bit signed integer to float for CFFT -- DEPRECATED.
+// Expects input to be in 24 bit signed integer in Big Endian, as microphone does.
+float signed24ToFloat(byte* input_ptr){
+  byte ptr[4] = {0x00, 0x00, 0x00, 0x00};
+
+  // Little-endian order; ARM uses little-endian
+  ptr[0] = input_ptr[2];
+  ptr[1] = input_ptr[1];
+  ptr[2] = input_ptr[0] & B01111111;
+  ptr[3] = input_ptr[0] & B10000000;
+
+  // Read the raw bytes as signed 32 bit integer then cast to float
+  int32_t* int_ptr = (int32_t *)&ptr[0];
+  return (float)(*int_ptr);
+}
+
+// Function to estimate memory availability programmatically.
+uint32_t FreeRam(){
+    uint32_t stackTop;
+    uint32_t heapTop;
+
+    // current position of the stack.
+    stackTop = (uint32_t) &stackTop;
+
+    // current position of heap.
+    void* hTop = malloc(1);
+    heapTop = (uint32_t) hTop;
+    free(hTop);
+
+    // The difference is the free, available ram.
+    return stackTop - heapTop;
 }
 
 // Function that reflects LEDColors into statusLED.
