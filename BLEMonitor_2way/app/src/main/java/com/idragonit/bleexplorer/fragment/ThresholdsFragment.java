@@ -6,6 +6,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import com.github.mikephil.charting.charts.HorizontalBarChart;
 import com.github.mikephil.charting.data.BarData;
@@ -25,6 +26,14 @@ import java.util.ArrayList;
 
 public class ThresholdsFragment extends Fragment implements IReceiveData {
     /** The main series that will include all the data. */
+    View mView;
+    TextView mThreshold1text;
+
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        mView = inflater.inflate(R.layout.fragment_thresholds, container, false);
+
+        return mView;
+    }
 
     @Override
     public void onResume() {
