@@ -1,7 +1,7 @@
 package com.idragonit.bleexplorer;
 
 public interface IReceiveData {
-    void readData(String data, long readTime);
+    void readData(int status, long readTime);
 
     final static int STATUS_NONE = 0;
     final static int STATUS_IDLE = 1;

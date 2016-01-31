@@ -14,6 +14,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.Button;
@@ -106,7 +107,13 @@ public class DeviceScanActivity extends Activity {
 
             viewholder.deviceName.setText(scanDevice[position].Name);
             viewholder.deviceAddress.setText(scanDevice[position].Address);
-            viewholder.deviceRSSI.setText(String.format("%d dBm", scanDevice[position].RSSI));
+
+            if (scanDevice[position].RSSI < 65)
+                viewholder.deviceRSSI.setText("High");
+            else if (scanDevice[position].RSSI < 75)
+                viewholder.deviceRSSI.setText("Medium");
+            else
+                viewholder.deviceRSSI.setText("Low");
 
             return view;
         }
@@ -247,6 +254,8 @@ public class DeviceScanActivity extends Activity {
         super.onCreate(bundle);
 
         setContentView(R.layout.activity_scan);
+
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         mListView = (ListView) findViewById(R.id.list_devices);
         mBtnScan = (Button) findViewById(R.id.btn_scan);

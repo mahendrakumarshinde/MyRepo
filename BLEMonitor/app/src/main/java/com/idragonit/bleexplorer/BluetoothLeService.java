@@ -2,20 +2,35 @@ package com.idragonit.bleexplorer;
 
 import android.annotation.TargetApi;
 import android.app.Service;
-import android.bluetooth.*;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothGatt;
+import android.bluetooth.BluetoothGattCallback;
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattDescriptor;
+import android.bluetooth.BluetoothGattService;
+import android.bluetooth.BluetoothManager;
+import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 import android.widget.Toast;
-import android.os.*;
 
-import java.util.*;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.UUID;
 
 @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
 public class BluetoothLeService extends Service {
+    public static final int TRANSPORT_LE = 2;
+
     public static final String ACTION_DATA_AVAILABLE = "com.idragonit.bleexplorer.ACTION_DATA_AVAILABLE";
     public static final String ACTION_GATT_CONNECTED = "com.idragonit.bleexplorer.ACTION_GATT_CONNECTED";
     public static final String ACTION_GATT_DISCONNECTED = "com.idragonit.bleexplorer.ACTION_GATT_DISCONNECTED";
@@ -103,8 +118,7 @@ public class BluetoothLeService extends Service {
                     if (BluetoothLeService.mTimeoutHandler != null) {
                         BluetoothLeService.mTimeoutHandler.removeCallbacks(BluetoothLeService.mTimeoutRunnable);
                         BluetoothLeService.mTimeoutRunnable = null;
-                        BluetoothLeService.mTimeoutHandler = null; had the issue  now
-
+                        BluetoothLeService.mTimeoutHandler = null;
                     }
                 }
                 broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
@@ -208,12 +222,41 @@ public class BluetoothLeService extends Service {
             return false;
         }
 
-        if (IsDualMode) {
-            Log.d(TAG, "try connect Dual Mode");
-            mBluetoothGatt = bluetoothdevice.connectGatt(this, true, mGattCallback);
-            CreateTimeoutHandler();
-        } else {
-            mBluetoothGatt = bluetoothdevice.connectGatt(this, false, mGattCallback);
+        if(isLollipopOrAbove()) {
+            // Little hack with reflect to use the connect gatt with defined transport in Lollipop
+            Method connectGattMethod = null;
+
+            try {
+                connectGattMethod = bluetoothdevice.getClass().getMethod("connectGatt", Context.class, boolean.class, BluetoothGattCallback.class, int.class);
+            } catch (NoSuchMethodException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                if (IsDualMode) {
+                    Log.d(TAG, "try connect Dual Mode");
+                    mBluetoothGatt = (BluetoothGatt) connectGattMethod.invoke(bluetoothdevice, BluetoothLeService.this, true, mGattCallback, TRANSPORT_LE);
+                    CreateTimeoutHandler();
+                } else {
+                    mBluetoothGatt = (BluetoothGatt) connectGattMethod.invoke(bluetoothdevice, BluetoothLeService.this, false, mGattCallback, TRANSPORT_LE);
+                }
+
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            } catch (IllegalArgumentException e) {
+                e.printStackTrace();
+            } catch (InvocationTargetException e) {
+                e.printStackTrace();
+            }
+        }
+        else {
+            if (IsDualMode) {
+                Log.d(TAG, "try connect Dual Mode");
+                mBluetoothGatt = bluetoothdevice.connectGatt(this, true, mGattCallback);
+                CreateTimeoutHandler();
+            } else {
+                mBluetoothGatt = bluetoothdevice.connectGatt(this, false, mGattCallback);
+            }
         }
 
         Log.d(TAG, "Trying to create a new connection.");
@@ -231,6 +274,14 @@ public class BluetoothLeService extends Service {
         } else {
             mBluetoothGatt.disconnect();
             IsTimerShouldCancel = true;
+        }
+    }
+
+    public static Boolean isLollipopOrAbove() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            return true;
+        } else {
+            return false;
         }
     }
 
