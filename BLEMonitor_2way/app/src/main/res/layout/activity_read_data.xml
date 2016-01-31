@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    android:orientation="vertical"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:background="@color/white"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <LinearLayout
+        android:id="@+id/layout_top"
+        android:orientation="vertical"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content">
+
+        <ImageView
+            android:layout_marginTop="32dip"
+            android:id="@+id/img_logo"
+            android:layout_alignParentTop="true"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_logo"
+            android:scaleType="fitCenter"/>
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="16.0dip"
+            android:layout_marginRight="16.0dip"
+            android:layout_marginTop="4.0dip"
+            android:layout_marginBottom="4.0dip">
+
+            <TextView
+                android:textSize="18.0sp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/label_device_name" />
+
+            <Space
+                android:layout_width="5.0dip"
+                android:layout_height="wrap_content" />
+
+            <TextView
+                android:textSize="18.0sp"
+                android:id="@+id/device_name"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="16.0dip"
+            android:layout_marginRight="16.0dip"
+            android:layout_marginTop="4.0dip"
+            android:layout_marginBottom="4.0dip">
+
+            <TextView
+                android:textSize="18.0sp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/label_state" />
+
+            <Space
+                android:layout_width="5.0dip"
+                android:layout_height="wrap_content" />
+
+            <TextView
+                android:textSize="18.0sp"
+                android:id="@+id/connection_state"
+                android:layout_width="140.0dip"
+                android:layout_height="wrap_content"
+                android:text="@string/disconnected" />
+
+            <Button
+                android:textSize="18.0sp"
+                android:id="@+id/btn_connect"
+                android:layout_width="144.0dip"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="@string/menu_connect" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="fill_parent"
+            android:layout_height="0dip"
+            android:layout_marginLeft="16.0dip"
+            android:layout_marginRight="16.0dip"
+            android:layout_marginTop="4.0dip"
+            android:layout_marginBottom="4.0dip">
+
+            <TextView
+                android:textSize="18.0sp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/label_data" />
+
+            <Space
+                android:layout_width="5.0dip"
+                android:layout_height="wrap_content" />
+
+            <TextView
+                android:textSize="18.0sp"
+                android:id="@+id/data_value"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/no_data" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_below="@+id/layout_top"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <ExpandableListView
+            android:id="@+id/gatt_services_list"
+            android:layout_width="fill_parent"
+            android:layout_height="match_parent"/>
+
+        <LinearLayout
+            android:id="@+id/layout_chart"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <android.support.design.widget.TabLayout
+                android:id="@+id/tab_layout"
+                android:layout_marginTop="8dip"
+                android:layout_marginLeft="16dip"
+                android:layout_marginRight="16dip"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?attr/colorPrimary"
+                android:minHeight="?attr/actionBarSize"
+                android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"/>
+
+            <android.support.v4.view.ViewPager
+                android:id="@+id/pager"
+                android:layout_marginLeft="16dip"
+                android:layout_marginRight="16dip"
+                android:layout_marginBottom="16dip"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"/>
+
+        </LinearLayout>
+
+    </FrameLayout>
+
+</RelativeLayout>
