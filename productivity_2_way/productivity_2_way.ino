@@ -2,7 +2,7 @@
 #include <i2c_t3.h>
 #include <SPI.h>
 
-/* I2S digital audio */
+/* I2S digital audio  */
 #include <i2s.h>
 
 // Accelerometer registers
@@ -190,6 +190,12 @@ float accel_z[intvl];
 float thres = 100;
 float thres2 = 750;
 float thres3 = 1500;
+float incThres = 0; // increment for threshold 0
+float incThres2 = 0; // increment for threshold 1
+float incThres3 = 0; // increment for threshold 2
+float thresprev = 0;
+float thresprev2 = 0;
+float thresprev3 = 0;
 float ave_x=0;
 float ave_y=0;
 float ave_z=0;
@@ -197,6 +203,14 @@ float ene=0;
 float state=0;
 float stateprev=0;
 boolean over = false;
+int led20State = HIGH;
+int led21State = HIGH;
+int led22State = HIGH;
+int bluestart=0; //timer to know how long it has been idle
+int blue=0;
+int millisnow=0;
+int bluesleep=5000;
+int sleepmode = 0;
 
 boolean silent = true;
 unsigned char bytes[4];
@@ -268,33 +282,75 @@ void i2s_rx_callback( int32_t *pBuf )
       }
       ene = ene*intvl;
       Serial.println(ene);
-
       if(ene < thres){
+        
         // blue: normal cutting
-        digitalWrite(22, LOW);
-        digitalWrite(21, HIGH);
-        digitalWrite(20, LOW);
+        
+        if (blue == 0){
+        bluestart=millis();
+        blue = 1;
+      }
+      if (blue == 1){
+        millisnow = millis();
+        if (millisnow - bluestart >= bluesleep){
+          sleepmode=1;
+          led22State = HIGH;
+          led21State = HIGH;
+          led20State = HIGH;
+          digitalWrite(22, led22State);
+          digitalWrite(21, led21State);
+          digitalWrite(20, led20State);
+          blue=0;
+        }
+      }
+        
+        if (sleepmode==0){
+          led22State = LOW;
+          led21State = HIGH;
+          led20State = LOW;
+        }
+        digitalWrite(22, led22State);
+        digitalWrite(21, led21State);
+        digitalWrite(20, led20State);
         state=0;
       }
       else if(ene < thres2){
+        blue=0;
+        sleepmode=0;
         // green: normal cutting
-        digitalWrite(22, HIGH);
-        digitalWrite(21, HIGH);
-        digitalWrite(20, LOW);
+        
+        led22State = HIGH;
+        led21State = HIGH;
+        led20State = LOW;
+        digitalWrite(22, led22State);
+        digitalWrite(21, led21State);
+        digitalWrite(20, led20State);
         state=1;
       }
       else if(ene < thres3){
+        blue=0;
+        sleepmode=0;
         // yellow: warning
-        digitalWrite(22, HIGH);
-        digitalWrite(21, LOW);
-        digitalWrite(20, LOW);
+        
+        led22State = HIGH;
+        led21State = LOW;
+        led20State = LOW;
+        
+        digitalWrite(22, led22State);
+        digitalWrite(21, led21State);
+        digitalWrite(20, led20State);
         state=2;
       }
       else{
         // red: bad cutting
-        digitalWrite(22, HIGH);
-        digitalWrite(21, LOW);
-        digitalWrite(20, HIGH);
+        blue=0;
+        sleepmode=0;
+        led22State = HIGH;
+        led21State = LOW;
+        led20State = HIGH;
+        digitalWrite(22, led22State);
+        digitalWrite(21, led21State);
+        digitalWrite(20, led20State);        
         state=3;
       }
 
@@ -318,11 +374,20 @@ void i2s_rx_callback( int32_t *pBuf )
         }
         stateprev=state;
       }
-      
+      if (thres==thresprev)
+      {
+        Serial.print(char(Serial2.read()));
+      }
+      else
+      {
+        Serial2.print("\nDanger!\n"); // want to change this eventually...once software is working.
+        thresprev=thres;
+        }
+      }
     }
       
   }
-}
+
 
 /* ----------------------- begin -------------------- */
 
@@ -421,12 +486,24 @@ void loop()
     if (bleBufferIndex == 4){
       break;
     }
+    // not yet sure how the signal from incrementing/decrementing the thresholds will work but...
+    Serial.print(bleBuffer);
+    // case 0: increment of thres
+    // incThres = Serial2.read() + some format thereof...
+    // thres += incThres
+    // case 1: increment of thres2
+    // thres2 += incThres2
+    // case 3: increment of thres3
+    // thres3 += incThres3
   }
+  
+    
 }
 
 //===================================================================================================================
 //====== Set of useful function to access acceleration. gyroscope, magnetometer, and temperature data
 //===================================================================================================================
+
 
 void getAres() {
   switch (Ascale)
