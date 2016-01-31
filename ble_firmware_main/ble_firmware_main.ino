@@ -1,7 +1,5 @@
 /*
-
 Infinite Uptime BLE Module Firmware
-
 */
 
 //#include "Wire.h"

@@ -11,7 +11,9 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Message;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
@@ -20,11 +22,14 @@ import android.support.v4.app.FragmentStatePagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.util.Log;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ExpandableListView;
 import android.widget.SimpleExpandableListAdapter;
 import android.widget.TextView;
 
+import com.idragonit.bleexplorer.dao.BLEStatus;
+import com.idragonit.bleexplorer.dao.DaoUtils;
 import com.idragonit.bleexplorer.fragment.MonitoringFragment;
 import com.idragonit.bleexplorer.fragment.UtilizationFragment;
 
@@ -34,9 +39,12 @@ import java.util.List;
 import java.util.UUID;
 
 @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
-public class ReadDataActivity extends FragmentActivity {
+public class ReadDataActivity extends FragmentActivity implements IReceiveData {
     public static final String EXTRAS_DEVICE_ADDRESS = "DEVICE_ADDRESS";
     public static final String EXTRAS_DEVICE_NAME = "DEVICE_NAME";
+    public static final long MONITOR_TIME = 1000L;
+    public static final int REFRESH_MONITOR = 1;
+
     private static final String TAG = ReadDataActivity.class.getSimpleName();
     private final String LIST_NAME = "NAME";
     private final String LIST_PERMISSION = "PERMISSION";
@@ -59,6 +67,13 @@ public class ReadDataActivity extends FragmentActivity {
 
     public static int uartIndex = -1;
 
+    public ArrayList<BLEStatus> mStatusList = new ArrayList<BLEStatus>();
+    public BLEStatus mLastStatus = null;
+    public long[] mDurations = new long[4];
+
+    public Thread mMonitorThread = null;
+    public boolean isRunning = false;
+
     private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
@@ -71,6 +86,7 @@ public class ReadDataActivity extends FragmentActivity {
                 mTargetCharacteristic = null;
                 updateConnectionState(R.string.disconnected);
                 clearUI();
+                disconnect();
             } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action))
                 displayGattServices(mBluetoothLeService.getSupportedGattServices());
             else if (DeviceScanActivity.DEVICE_DATA_AVAILABLE.equals(action)) {
@@ -143,6 +159,23 @@ public class ReadDataActivity extends FragmentActivity {
         }
     };
 
+    Handler mHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            if (msg.what == REFRESH_MONITOR) {
+                if (mLastStatus != null) {
+                    long curTime = System.currentTimeMillis();
+                    mLastStatus.setEndTime(curTime);
+
+                    if (mMonitoringListener != null)
+                        mMonitoringListener.readData(mLastStatus.getStatus(), curTime);
+                    if (mUtilizationListener != null)
+                        mUtilizationListener.readData(mLastStatus.getStatus(), curTime);
+                }
+            }
+        }
+    };
+
     public ReadDataActivity() {
         mGattCharacteristics = new ArrayList();
         mConnected = false;
@@ -152,15 +185,118 @@ public class ReadDataActivity extends FragmentActivity {
         mGattServicesList.setAdapter((SimpleExpandableListAdapter) null);
     }
 
+    public long getStatusDuration(int status) {
+        long duration = mDurations[status - 1];
+        for (int i = 0; i < mStatusList.size(); i++) {
+            BLEStatus bleData = mStatusList.get(i);
+
+            if (bleData.getStatus() == status)
+                duration += bleData.getEndTime() - bleData.getStartTime();
+        }
+
+        return duration;
+    }
+
+    public long getTotalDuration() {
+        long duration = 0;
+        for (int i = 0; i < 4; i++)
+            duration += getStatusDuration(i + 1);
+
+        return duration;
+    }
+
+    public int getStatusPercent(int status) {
+        long totalDuration = getTotalDuration();
+        long duration = getStatusDuration(status);
+
+        if (totalDuration == 0)
+            return 0;
+
+        return (int) (duration * 100L / totalDuration);
+    }
+
+    private void startMonitorThread() {
+        if (mMonitorThread != null)
+            return;
+
+        mMonitorThread = new Thread() {
+            public void run() {
+                while (isRunning) {
+                    try {
+                        sleep(MONITOR_TIME);
+                    }
+                    catch (Exception e) {
+
+                    }
+
+                    if (mLastStatus != null) {
+                        mHandler.sendEmptyMessage(REFRESH_MONITOR);
+                    }
+                }
+
+                mMonitorThread = null;
+            }
+        };
+
+        isRunning = true;
+        mMonitorThread.start();
+    }
+
+    private void endMonitorThread() {
+        if (mMonitorThread == null)
+            return;
+
+        isRunning = false;
+    }
+
+    private void disconnect() {
+        if (mLastStatus != null) {
+            mLastStatus.setEndTime(System.currentTimeMillis());
+            mLastStatus = null;
+        }
+
+        addStatus();
+    }
+
     private void displayData(String data) {
         long curTime = System.currentTimeMillis();
+        int status = STATUS_NONE;
 
-        if (mMonitoringListener != null)
-            mMonitoringListener.readData(data, curTime);
-        if (mUtilizationListener != null)
-            mUtilizationListener.readData(data, curTime);
+        if (data.contains(STATUS_IDLE_NAME)) {
+            status = STATUS_IDLE;
+        }
+        else if (data.contains(STATUS_NORMAL_CUTTING_NAME)) {
+            status = STATUS_NORMAL_CUTTING;
+        }
+        else if (data.contains(STATUS_WARNING_NAME)) {
+            status = STATUS_WARNING;
+        }
+        else if (data.contains(STATUS_DANGER_NAME)) {
+            status = STATUS_DANGER;
+        }
 
-        mTxtData.setText(data);
+        if (status != STATUS_NONE) {
+            mLastStatus = new BLEStatus(mDeviceName, mDeviceAddress, status, curTime, curTime);
+            mStatusList.add(mLastStatus);
+
+            if (mMonitoringListener != null)
+                mMonitoringListener.readData(status, curTime);
+            if (mUtilizationListener != null)
+                mUtilizationListener.readData(status, curTime);
+
+            mTxtData.setText(data);
+        }
+    }
+
+    public void addStatus() {
+        for (int i = 0; i < mStatusList.size(); i++) {
+            BLEStatus status = mStatusList.get(i);
+            mDurations[status.getStatus() - 1] += status.getEndTime() - status.getStartTime();
+        }
+
+        DaoUtils.addBLEStatus(this, mStatusList);
+        mStatusList.clear();
+        mLastStatus = null;
     }
 
     private void displayGattServices(List gattList) {
@@ -291,10 +427,14 @@ public class ReadDataActivity extends FragmentActivity {
 
         setContentView(R.layout.activity_read_data);
 
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
         Intent intent = getIntent();
 
         mDeviceName = intent.getStringExtra(EXTRAS_DEVICE_NAME);
         mDeviceAddress = intent.getStringExtra(EXTRAS_DEVICE_ADDRESS);
+
+        mDurations = DaoUtils.getStatusDuration(this, mDeviceName, mDeviceAddress);
 
         ((TextView) findViewById(R.id.device_name)).setText(mDeviceName);
 
@@ -358,6 +498,13 @@ public class ReadDataActivity extends FragmentActivity {
     protected void onPause() {
         super.onPause();
 
+        endMonitorThread();
+
+        if (mLastStatus != null) {
+            mLastStatus.setEndTime(System.currentTimeMillis());
+        }
+
+        addStatus();
         unregisterReceiver(mGattUpdateReceiver);
     }
 
@@ -370,6 +517,13 @@ public class ReadDataActivity extends FragmentActivity {
             boolean result = mBluetoothLeService.connect(mDeviceAddress);
             Log.d(TAG, "Connect request result=" + result);
         }
+
+        startMonitorThread();
+    }
+
+    @Override
+    public void readData(int status, long readTime) {
+
     }
 
     public class PagerAdapter extends FragmentStatePagerAdapter {

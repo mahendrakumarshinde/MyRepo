@@ -87,7 +87,7 @@
         <LinearLayout
             android:orientation="horizontal"
             android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="0dip"
             android:layout_marginLeft="16.0dip"
             android:layout_marginRight="16.0dip"
             android:layout_marginTop="4.0dip"
