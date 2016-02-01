@@ -133,8 +133,8 @@
             <android.support.design.widget.TabLayout
                 android:id="@+id/tab_layout"
                 android:layout_marginTop="8dip"
-                android:layout_marginLeft="16dip"
-                android:layout_marginRight="16dip"
+                android:layout_marginLeft="8dip"
+                android:layout_marginRight="8dip"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="?attr/colorPrimary"
@@ -143,9 +143,9 @@
 
             <android.support.v4.view.ViewPager
                 android:id="@+id/pager"
-                android:layout_marginLeft="16dip"
-                android:layout_marginRight="16dip"
-                android:layout_marginBottom="16dip"
+                android:layout_marginLeft="8dip"
+                android:layout_marginRight="8dip"
+                android:layout_marginBottom="8dip"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"/>
