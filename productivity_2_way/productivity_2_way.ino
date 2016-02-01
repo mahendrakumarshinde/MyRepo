@@ -1,4 +1,4 @@
-//#include "Wire.h"
+//include communication modules//
 #include <i2c_t3.h>
 #include <SPI.h>
 
@@ -62,6 +62,7 @@
 #define BMX055_ACC_FIFO_CONFIG_1 0x3E
 #define BMX055_ACC_FIFO_DATA     0x3F
 
+//Sensor Hub registers
 #define EM7180_AlgorithmStatus    0x38
 #define EM7180_AlgorithmControl   0x54
 #define EM7180_PassThruStatus     0x9E
@@ -93,7 +94,7 @@ enum ACCBW {    // define BMX055 accelerometer bandwidths
   ABW_1000Hz     // 1000  Hz,  0.5 ms update time
 };
 
-enum Gscale {
+enum Gscale {   // Define g scale
   GFS_2000DPS = 0,
   GFS_1000DPS,
   GFS_500DPS,
@@ -154,27 +155,17 @@ float accelBias[3] = {0, 0, 0}; // Bias corrections for gyro, accelerometer, mag
 
 float ax, ay, az, gx, gy, gz, mx, my, mz; // variables to hold latest sensor data values
 float aRes; //resolution of accelerometer
-int count;
-int delt_t;
 
-long init_time;
+char bleBuffer[5] = "iuhq"; //reading bluetooth data buffer initialization
+uint8_t bleBufferIndex = 0; //reading bluetooth data buffer index initialization
 
-bool passThru = true;
-
-int datai = 0;
-long last_wakeup;
-long this_wakeup;
-long dt;
-
-char bleBuffer[5] = "iuhq";
-uint8_t bleBufferIndex = 0;
 // set 48kHz sampling rate
 #define CLOCK_TYPE                  (I2S_CLOCK_48K_INTERNAL)
 
 // allocate  data buffer
 #define bufferSize 8000*3
 const uint16_t target_sample = 8000;
-const uint16_t inter = 48000/target_sample;
+const uint16_t inter = 48000 / target_sample;
 uint32_t subsample_counter = 0;
 uint32_t accel_counter = 0;
 unsigned char audio_buffer[bufferSize];
@@ -183,34 +174,31 @@ uint32_t nRX = 0;
 const uint32_t intvl = 100;
 uint32_t totCount = 0;
 uint32_t localCount = 0;
-//unit32_t nStep = 10;
+
 float accel_x[intvl];
 float accel_y[intvl];
 float accel_z[intvl];
 float thres = 100;
 float thres2 = 750;
 float thres3 = 1500;
-float incThres = 0; // increment for threshold 0
-float incThres2 = 0; // increment for threshold 1
-float incThres3 = 0; // increment for threshold 2
-float thresprev = 0;
-float thresprev2 = 0;
-float thresprev3 = 0;
-float ave_x=0;
-float ave_y=0;
-float ave_z=0;
-float ene=0;
-float state=0;
-float stateprev=0;
+float ave_x = 0;
+float ave_y = 0;
+float ave_z = 0;
+float ene = 0; //vibration sugnal energy value
+float state = 0;
+float stateprev = 0;
 boolean over = false;
-int led20State = HIGH;
-int led21State = HIGH;
-int led22State = HIGH;
-int bluestart=0; //timer to know how long it has been idle
-int blue=0;
-int millisnow=0;
-int bluesleep=5000;
-int sleepmode = 0;
+int led20State = HIGH; //boot color
+int led21State = HIGH; //boot color
+int led22State = HIGH; //boot color
+int bluestart = 0; //timer to know how long it has been idle
+int blue = 0; //toggle to know how if idle
+int millisnow = 0;
+int bluesleep = 5000; //threshold for sleep mode
+int sleepmode = 0; //initialize to not in sleep mode
+int currentmillis = 0; //battery monitoring
+int prevmillis = 0; //battery monitoring
+int batlimit = 1000; //battery monitoring
 
 boolean silent = true;
 unsigned char bytes[4];
@@ -219,7 +207,7 @@ unsigned char bytes[4];
 void extractdata_inplace(int32_t  *pBuf) {
   // set highest bit to zero, then bitshift right 7 times
   // do not omit the first part (!)
-  pBuf[0] = (pBuf[0] & 0x7fffffff) >>7;
+  pBuf[0] = (pBuf[0] & 0x7fffffff) >> 7;
 }
 
 
@@ -228,21 +216,22 @@ void extractdata_inplace(int32_t  *pBuf) {
 void i2s_rx_callback( int32_t *pBuf )
 {
   // Downsampling routine; only take every 6th sample.
-  if (subsample_counter != inter-2){
+  if (subsample_counter != inter - 2) {
     subsample_counter ++;
     return;
-  } else{
+  } else {
     subsample_counter = 0;
     accel_counter++;
   }
-  
-  // perform the data extraction for single channel
+
+  // perform the audio data extraction for single channel
   extractdata_inplace(&pBuf[0]);
 
-  if (accel_counter == 8){
+  if (accel_counter == 8) {
+    //Perform accelerometer data extraction
     readAccelData(accelCount);
-    
-    ax = (float)accelCount[0] * aRes + accelBias[0]; 
+
+    ax = (float)accelCount[0] * aRes + accelBias[0];
     ay = (float)accelCount[1] * aRes + accelBias[1];
     az = (float)accelCount[2] * aRes + accelBias[2];
 
@@ -252,59 +241,59 @@ void i2s_rx_callback( int32_t *pBuf )
     accel_counter = 0;
 
     // Feature Calculation
-    
+
     accel_x[localCount] = ax;
     accel_y[localCount] = ay;
     accel_z[localCount] = az;
     totCount = totCount + 1;
     localCount = localCount + 1;
-    localCount = localCount%intvl;
-    if(totCount > intvl){
+    localCount = localCount % intvl;
+    if (totCount > intvl) {
       totCount = intvl + 1;
       over = true;
     }
-    if (over){
+    if (over) {
       // Calculate the mean only if we have at least 100 data points
-      ave_x=0;
-      ave_y=0;
-      ave_z=0;
-      for (int i=0;i<intvl;i++){
+      ave_x = 0;
+      ave_y = 0;
+      ave_z = 0;
+      for (int i = 0; i < intvl; i++) {
         ave_x = ave_x + accel_x[i];
         ave_y = ave_y + accel_y[i];
         ave_z = ave_z  + accel_z[i];
       }
-      ave_x = ave_x/intvl;
-      ave_y = ave_y/intvl;
-      ave_z = ave_z/intvl;
-      ene=0; //initialize the energy feature
-      for (int i=0;i<intvl;i++){ 
-        ene = ene + (accel_x[i]-ave_x)*(accel_x[i]-ave_x) + (accel_y[i]-ave_y)*(accel_y[i]-ave_y) + (accel_z[i]-ave_z)*(accel_z[i]-ave_z);
+      ave_x = ave_x / intvl;
+      ave_y = ave_y / intvl;
+      ave_z = ave_z / intvl;
+      ene = 0; //initialize the energy feature
+      for (int i = 0; i < intvl; i++) {
+        ene = ene + (accel_x[i] - ave_x) * (accel_x[i] - ave_x) + (accel_y[i] - ave_y) * (accel_y[i] - ave_y) + (accel_z[i] - ave_z) * (accel_z[i] - ave_z);
       }
-      ene = ene*intvl;
-      Serial.println(ene);
-      if(ene < thres){
-        
+      ene = ene * intvl; //Signal energy integrated
+
+      if (ene < thres) {
+
         // blue: normal cutting
-        
-        if (blue == 0){
-        bluestart=millis();
-        blue = 1;
-      }
-      if (blue == 1){
-        millisnow = millis();
-        if (millisnow - bluestart >= bluesleep){
-          sleepmode=1;
-          led22State = HIGH;
-          led21State = HIGH;
-          led20State = HIGH;
-          digitalWrite(22, led22State);
-          digitalWrite(21, led21State);
-          digitalWrite(20, led20State);
-          blue=0;
+
+        if (blue == 0) {
+          bluestart = millis();
+          blue = 1;
         }
-      }
-        
-        if (sleepmode==0){
+        if (blue == 1) {
+          millisnow = millis();
+          if (millisnow - bluestart >= bluesleep) { //sleep mode
+            sleepmode = 1;
+            led22State = HIGH;
+            led21State = HIGH;
+            led20State = HIGH;
+            digitalWrite(22, led22State);
+            digitalWrite(21, led21State);
+            digitalWrite(20, led20State);
+            blue = 0;
+          }
+        }
+
+        if (sleepmode == 0) {
           led22State = LOW;
           led21State = HIGH;
           led20State = LOW;
@@ -312,81 +301,73 @@ void i2s_rx_callback( int32_t *pBuf )
         digitalWrite(22, led22State);
         digitalWrite(21, led21State);
         digitalWrite(20, led20State);
-        state=0;
+        state = 0;
       }
-      else if(ene < thres2){
-        blue=0;
-        sleepmode=0;
+      else if (ene < thres2) {
+        blue = 0;
+        sleepmode = 0;
         // green: normal cutting
-        
+
         led22State = HIGH;
         led21State = HIGH;
         led20State = LOW;
         digitalWrite(22, led22State);
         digitalWrite(21, led21State);
         digitalWrite(20, led20State);
-        state=1;
+        state = 1;
       }
-      else if(ene < thres3){
-        blue=0;
-        sleepmode=0;
+      else if (ene < thres3) {
+        blue = 0;
+        sleepmode = 0;
         // yellow: warning
-        
+
         led22State = HIGH;
         led21State = LOW;
         led20State = LOW;
-        
+
         digitalWrite(22, led22State);
         digitalWrite(21, led21State);
         digitalWrite(20, led20State);
-        state=2;
+        state = 2;
       }
-      else{
+      else {
         // red: bad cutting
-        blue=0;
-        sleepmode=0;
+        blue = 0;
+        sleepmode = 0;
         led22State = HIGH;
         led21State = LOW;
         led20State = HIGH;
         digitalWrite(22, led22State);
         digitalWrite(21, led21State);
-        digitalWrite(20, led20State);        
-        state=3;
+        digitalWrite(20, led20State);
+        state = 3;
       }
 
-      
-      if (state==stateprev)
-      {        
+
+      if (state == stateprev)
+      {
       }
       else
       {
-        if (state==0){
+        if (state == 0) {
           Serial2.print("\nIdle!\n");
         }
-        if (state==1){
+        if (state == 1) {
           Serial2.print("\nNormal Cutting\n");
         }
-        if (state==2){
+        if (state == 2) {
           Serial2.print("\nWarning!\n");
         }
-        if (state==3){
+        if (state == 3) {
           Serial2.print("\nDanger!\n");
         }
-        stateprev=state;
+        stateprev = state;
       }
-      if (thres==thresprev)
-      {
-        Serial.print(char(Serial2.read()));
-      }
-      else
-      {
-        Serial2.print("\nDanger!\n"); // want to change this eventually...once software is working.
-        thresprev=thres;
-        }
-      }
-    }
       
+    }
   }
+
+}
 
 
 /* ----------------------- begin -------------------- */
@@ -403,7 +384,7 @@ void setup()
 
   delay(1000);
   I2Cscan(); // should detect SENtral at 0x28
-  
+
   // Set up the SENtral as sensor bus in normal operating mode
 
   // ld pass thru
@@ -444,60 +425,65 @@ void setup()
     //Serial.println(c, HEX);
     while (1) ; // Loop forever if communication doesn't happen
   }
-  last_wakeup = micros();
-
-  init_time = millis();
-  //Serial.print(init_time);
 
   // << nothing before the first delay will be printed to the serial
   delay(1500);
 
-  if(!silent){
+  if (!silent) {
     Serial.print("Pin configuration setting: ");
     Serial.println( I2S_PIN_PATTERN , HEX );
     Serial.println( "Initializing." );
   }
 
-  if(!silent) Serial.println( "Initialized I2C Codec" );
-  
+  if (!silent) Serial.println( "Initialized I2C Codec" );
+
   // prepare I2S RX with interrupts
   I2SRx0.begin( CLOCK_TYPE, i2s_rx_callback );
-  if(!silent) Serial.println( "Initialized I2S RX without DMA" );
-  
+  if (!silent) Serial.println( "Initialized I2S RX without DMA" );
+
   // fill the buffer with something to see if the RX callback is activated at all
   audio_buffer[0] = 0x42424242;
-  
+
   delay(5000);
   // start the I2S RX
   I2SRx0.start();
   //I2STx0.start();
-  if(!silent) Serial.println( "Started I2S RX" );
+  if (!silent) Serial.println( "Started I2S RX" );
+
+  //For Battery Monitoring//
+  analogReference(EXTERNAL);
+  analogReadResolution(12);
+  analogReadAveraging(32);
 
   Serial2.begin(9600); //This has to be at the end of the Setup to enable two way communication!
 }
 
 void loop()
 {
-    bleBufferIndex = 0;
-  while(Serial2.available() > 0){
-    bleBuffer[bleBufferIndex]=Serial2.read();
+  bleBufferIndex = 0;
+  while (Serial2.available() > 0) {
+    bleBuffer[bleBufferIndex] = Serial2.read();
     Serial2.print(char(bleBuffer[bleBufferIndex]));
     bleBufferIndex ++;
-    if (bleBufferIndex == 4){
+    if (bleBufferIndex == 4) {
       break;
     }
-    // not yet sure how the signal from incrementing/decrementing the thresholds will work but...
-    Serial.print(bleBuffer);
-    // case 0: increment of thres
-    // incThres = Serial2.read() + some format thereof...
-    // thres += incThres
-    // case 1: increment of thres2
-    // thres2 += incThres2
-    // case 3: increment of thres3
-    // thres3 += incThres3
   }
-  
-    
+
+  //Battery status
+currentmillis=millis();
+if (currentmillis - prevmillis >= batlimit){
+  prevmillis = currentmillis;
+  uint32_t bat;
+  bat = getInputVoltage();
+}
+}
+
+//Battery Status calculation function
+  uint32_t getInputVoltage(){
+  uint32_t x = analogRead(39);
+  Serial2.println(x);
+  Serial2.println(x/1515*100);
 }
 
 //===================================================================================================================
