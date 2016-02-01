@@ -461,29 +461,38 @@ void setup()
 void loop()
 {
   bleBufferIndex = 0;
+  int newThresLow = 0;
   while (Serial2.available() > 0) {
     bleBuffer[bleBufferIndex] = Serial2.read();
     Serial2.print(char(bleBuffer[bleBufferIndex]));
+    Serial.print(newThresLow, DEC);
+    Serial.print('\n');
+    //Serial.print(char(bleBuffer[bleBufferIndex]));
     bleBufferIndex ++;
-    if (bleBufferIndex == 4) {
-      break;
-    }
+   // if (bleBufferIndex == 4) {
+     // break;
+    //}
+    
   }
-
+  thres
   //Battery status
 currentmillis=millis();
 if (currentmillis - prevmillis >= batlimit){
   prevmillis = currentmillis;
   uint32_t bat;
   bat = getInputVoltage();
+ // Serial2.println(bat);
 }
 }
 
 //Battery Status calculation function
-  uint32_t getInputVoltage(){
+uint32_t getInputVoltage(){
   uint32_t x = analogRead(39);
-  Serial2.println(x);
-  Serial2.println(x/1515*100);
+  Serial2.print(x);
+  Serial2.print('\n');
+  Serial2.print(x/1515*100);
+  Serial2.print('\n');
+  return (178*x*x + 2688743864 - 1182047 * x) / 371794;
 }
 
 //===================================================================================================================

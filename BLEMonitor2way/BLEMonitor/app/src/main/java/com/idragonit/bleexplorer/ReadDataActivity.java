@@ -31,8 +31,8 @@ import android.widget.TextView;
 import com.idragonit.bleexplorer.dao.BLEStatus;
 import com.idragonit.bleexplorer.dao.DaoUtils;
 import com.idragonit.bleexplorer.fragment.MonitoringFragment;
+import com.idragonit.bleexplorer.fragment.ThresholdFragment;
 import com.idragonit.bleexplorer.fragment.UtilizationFragment;
-import com.idragonit.bleexplorer.fragment.ThresholdsFragment;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -65,7 +65,6 @@ public class ReadDataActivity extends FragmentActivity implements IReceiveData {
 
     private IReceiveData mMonitoringListener = null;
     private IReceiveData mUtilizationListener = null;
-    private IReceiveData mThresholdsListener = null;
 
     public static int uartIndex = -1;
 
@@ -173,8 +172,6 @@ public class ReadDataActivity extends FragmentActivity implements IReceiveData {
                         mMonitoringListener.readData(mLastStatus.getStatus(), curTime);
                     if (mUtilizationListener != null)
                         mUtilizationListener.readData(mLastStatus.getStatus(), curTime);
-                    if (mThresholdsListener != null)
-                        mThresholdsListener.readData(mLastStatus.getStatus(), curTime);
                 }
             }
         }
@@ -287,8 +284,6 @@ public class ReadDataActivity extends FragmentActivity implements IReceiveData {
                 mMonitoringListener.readData(status, curTime);
             if (mUtilizationListener != null)
                 mUtilizationListener.readData(status, curTime);
-            if (mThresholdsListener != null)
-                mThresholdsListener.readData(status, curTime);
 
             mTxtData.setText(data);
         }
@@ -465,11 +460,13 @@ public class ReadDataActivity extends FragmentActivity implements IReceiveData {
                 }
             }
         });
+//        mLayoutChart.setVisibility(View.VISIBLE);
+//        mGattServicesList.setVisibility(View.GONE);
 
         TabLayout tabLayout = (TabLayout) findViewById(R.id.tab_layout);
         tabLayout.addTab(tabLayout.newTab().setText("Monitoring"));
         tabLayout.addTab(tabLayout.newTab().setText("Utilization"));
-        tabLayout.addTab(tabLayout.newTab().setText("Thresholds"));
+        tabLayout.addTab(tabLayout.newTab().setText("Threshold"));
         tabLayout.setTabGravity(TabLayout.GRAVITY_FILL);
 
         final ViewPager viewPager = (ViewPager) findViewById(R.id.pager);
@@ -533,6 +530,25 @@ public class ReadDataActivity extends FragmentActivity implements IReceiveData {
 
     }
 
+    public void sendData(int[] threshold) {
+        String data = String.valueOf(threshold[1]);
+        for (int i = 2; i < 4; i++) {
+            data += "-" + String.valueOf(threshold[i]);
+        }
+
+        if (mBluetoothLeService != null) {
+            if (mBluetoothLeService.writeRXCharacteristic(data.getBytes())) {
+                Log.d(TAG, "Sent Data=" + data);
+                for (int i = 1; i < 4; i++) {
+                    AppData.setThresholdValue(this, i, threshold[i]);
+                }
+            }
+            else {
+                Log.d(TAG, "Fail Data=" + data);
+            }
+        }
+    }
+
     public class PagerAdapter extends FragmentStatePagerAdapter {
         int mNumOfTabs;
 
@@ -554,9 +570,8 @@ public class ReadDataActivity extends FragmentActivity implements IReceiveData {
                     mUtilizationListener = utilizationFragment;
                     return utilizationFragment;
                 case 2:
-                    ThresholdsFragment thresholdsFragment = new ThresholdsFragment();
-                    mThresholdsListener = thresholdsFragment;
-                    return thresholdsFragment;
+                    ThresholdFragment thresholdFragment = new ThresholdFragment();
+                    return thresholdFragment;
                 default:
                     return null;
             }

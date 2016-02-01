@@ -22,6 +22,7 @@ import android.widget.Toast;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -397,39 +398,41 @@ public class BluetoothLeService extends Service {
 //        boolean status = mBluetoothGatt.writeCharacteristic(characteristic);
 //        Log.d(TAG, "write status=" + status);
 //    }
-//
-//    public void writeRXCharacteristic(byte data[]) {
-//        BluetoothGattService bluetoothgattservice = mBluetoothGatt.getService(UUID.fromString(((UartChar) GattAttributes.uarts.get(CharacteristicUartActivity.uartIndex)).Service));
-//        Log.d(TAG, "writeRXCharacteristic");
-//
-//        if (bluetoothgattservice == null) {
-//            Log.d(TAG, "Rx service not found!");
-//            broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_UART);
-//            return;
-//        }
-//
-//        BluetoothGattCharacteristic characteristic = bluetoothgattservice.getCharacteristic(UUID.fromString(((UartChar) GattAttributes.uarts.get(CharacteristicUartActivity.uartIndex)).RxChar));
-//        if (characteristic == null) {
-//            Log.d(TAG, "Rx charateristic not found!");
-//            broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_UART);
-//            return;
-//        }
-//
-//        packetPayload = Arrays.copyOf(data, data.length);
-//        packetStartPos = 0;
-//
-//        int len;
-//        if (data.length - packetStartPos > 20)
-//            len = 20;
-//        else
-//            len = data.length - packetStartPos;
-//        packetLength = len;
-//
-//        Log.d(TAG, "Total Length = " + data.length + ", Packet Length = " + packetLength);
-//
-//        characteristic.setValue(Arrays.copyOfRange(data, packetStartPos, packetLength));
-//
-//        boolean status = mBluetoothGatt.writeCharacteristic(characteristic);
-//        Log.d(TAG, "write Nordic RXchar - status=" + status);
-//    }
+
+    public boolean writeRXCharacteristic(byte data[]) {
+        BluetoothGattService bluetoothgattservice = mBluetoothGatt.getService(UUID.fromString(((UartChar) GattAttributes.uarts.get(ReadDataActivity.uartIndex)).Service));
+        Log.d(TAG, "writeRXCharacteristic");
+
+        if (bluetoothgattservice == null) {
+            Log.d(TAG, "Rx service not found!");
+            broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_UART);
+            return false;
+        }
+
+        BluetoothGattCharacteristic characteristic = bluetoothgattservice.getCharacteristic(UUID.fromString(((UartChar) GattAttributes.uarts.get(ReadDataActivity.uartIndex)).RxChar));
+        if (characteristic == null) {
+            Log.d(TAG, "Rx charateristic not found!");
+            broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_UART);
+            return false;
+        }
+
+        packetPayload = Arrays.copyOf(data, data.length);
+        packetStartPos = 0;
+
+        int len;
+        if (data.length - packetStartPos > 20)
+            len = 20;
+        else
+            len = data.length - packetStartPos;
+        packetLength = len;
+
+        Log.d(TAG, "Total Length = " + data.length + ", Packet Length = " + packetLength);
+
+        characteristic.setValue(Arrays.copyOfRange(data, packetStartPos, packetLength));
+
+        boolean status = mBluetoothGatt.writeCharacteristic(characteristic);
+        Log.d(TAG, "write Nordic RXchar - status=" + status);
+
+        return true;
+    }
 }
