@@ -1,0 +1,3 @@
+LE Scan ...
+68:9E:19:07:F2:47 (unknown)
+68:9E:19:07:F2:47 HMSoft

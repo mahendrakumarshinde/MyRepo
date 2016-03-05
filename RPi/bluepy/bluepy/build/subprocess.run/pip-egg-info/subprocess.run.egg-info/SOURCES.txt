@@ -1,0 +1,11 @@
+LICENSE
+MANIFEST.in
+README.rst
+setup.cfg
+subprocess.run.pth
+pip-egg-info/subprocess.run.egg-info/PKG-INFO
+pip-egg-info/subprocess.run.egg-info/SOURCES.txt
+pip-egg-info/subprocess.run.egg-info/dependency_links.txt
+pip-egg-info/subprocess.run.egg-info/not-zip-safe
+pip-egg-info/subprocess.run.egg-info/top_level.txt
+run/__init__.py
