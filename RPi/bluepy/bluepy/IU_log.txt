@@ -157,3 +157,10 @@
 2016-03-05 03:23:00.445043  Threshold update failed: device not found -68:9E:19:07:DE:98
 2016-03-05 03:23:00.445569  Threshold update failed: device not found -68:9E:19:07:DE:98
 Error: 2016-03-05 03:26:03.555529  Data collection stopped.
+2016-03-09 06:28:58.127988  No devices assigned.
+2016-03-09 06:28:59.156371  Threshold written: 0000-0030-0600-1200
+2016-03-09 06:28:59.531891  Threshold written: 0001-0100-0500-1000
+2016-03-09 06:28:59.831165  Threshold written: 0002-0006-0007-0008
+2016-03-09 06:29:00.206734  Threshold written: 0003-0040-0042-0045
+2016-03-09 06:29:00.618556  Threshold written: 0004-0200-0205-0210
+2016-03-09 06:29:00.956590  Threshold written: 0005-0500-1000-1500

@@ -52,6 +52,8 @@ def getserial():
         f.close()
     except:
         cpuserial="ERROR00000000000"
+        report_error("RPi serial number could not be found.")
+        raise
     return cpuserial
 
 # Scans for nearby Infinite Uptime devices and connects to those labeled "HMSoft".
@@ -163,7 +165,10 @@ def check_for_thresholds(devices):
     global tableStatus
     x.execute(macAddrs)
     macAddrs = x.fetchall()
-    macAddrs = list(list(zip(*macAddrs))[0])
+    if not macAddrs:
+        log_message("No devices assigned.")
+    else:
+        macAddrs = list(list(zip(*macAddrs))[0])
     	
     for device in devices:
 	if device.deviceAddr not in macAddrs:
@@ -282,6 +287,7 @@ try:
 except btle.BTLEException:
     print("Device disappeared, rescanning")
     devices = scanForIUDevices()
+
 
 # Start data collection loop
 try:    
