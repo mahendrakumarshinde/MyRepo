@@ -89,7 +89,6 @@ def update_mapping(db_name=None):
 def remove_database():
     show_databases()
     db_name=raw_input("Enter a database to remove: ")
-    print(db_name)
     resp=raw_input("Are you sure you would like to remove '%s'? y/n: " % db_name)
     if (resp == 'Y' or resp == 'y'):
         master_x.execute("DROP DATABASE %s" % db_name)
@@ -99,12 +98,13 @@ def remove_database():
 
 def add_user():
     show_databases()
-    db_name=raw_input("Which database is the user being added to?")
+    db_name=raw_input("Enter the database that the user is being added to: ")
     user=raw_input("Username to add: ")
     pwd=raw_input("Password: ")
     conn=sql_connect("InfiniteUptime")
     x=conn.cursor()
-    x.execute("INSERT INTO UserInformation (user_name, password, dbname) VALUES (%s, %s, %s)" % user, pwd, db_name)
+    x.execute("INSERT INTO UserInformation (user_name, password, dbname) VALUES ('%s', '%s', '%s')" % (user, pwd, db_name))
+    conn.commit()
     print("New user added.")
 
 help_string = "\nType a number to execute a SQL command:\n" \
@@ -134,3 +134,4 @@ if __name__ == '__main__':
         print("Error: command not properly specified. Enter a number 1-6.\n")
         exit(1)
     fn()
+    print("\n")
