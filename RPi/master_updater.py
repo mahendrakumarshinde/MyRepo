@@ -107,13 +107,70 @@ def add_user():
     conn.commit()
     print("New user added.")
 
+def inspect_table():
+    show_databases()
+    db_name=raw_input("Enter a database to look in: ")
+    show_tables(db_name)
+    table_name=raw_input("Enter a table to inspect: ")
+    conn=sql_connect(db_name)
+    x=conn.cursor()
+
+    x.execute("DESC %s" % table_name)
+
+    print("\nTable: %s" % table_name)
+
+    formatted_table(x)
+
+    x.execute("SELECT * FROM %s" % table_name)
+
+    print("\nValues: ")
+
+    formatted_table(x)
+
+def formatted_table(x):
+    results = x.fetchall()
+    widths = []
+    columns = []
+    tavnit = '|'
+    separator = '+'
+
+    for cd in x.description:
+        widths.append(max(cd[2], len(cd[0])))
+        columns.append(cd[0])
+
+    for w in widths:
+        tavnit += " %-"+"%ss |" % (w,)
+        separator += '-'*w + '--+'
+
+    print(separator)
+    print(tavnit % tuple(columns))
+    print(separator)
+    for row in results:
+        print(tavnit % row)
+    print(separator)
+
+def clear_data():
+    show_databases()
+    db_name=raw_input("Enter a database to clear data from: ")
+    resp=raw_input("Clearing IU device data from %s. Are you sure? y/n: " % db_name)
+    if resp == 'y' or resp == 'Y':
+        conn=sql_connect(db_name)
+        x=conn.cursor()
+        x.execute("TRUNCATE TABLE IU_device_data")
+        print("Data cleared. ")
+    else:
+        print("No data cleared. ")
+
+
 help_string = "\nType a number to execute a SQL command:\n" \
             + "1. Create database\n" \
             + "2. Update this RPi's mapping\n" \
             + "3. Add user credential for database\n" \
             + "4. Delete database\n" \
             + "5. Show databases\n" \
-            + "6. Show tables\n"
+            + "6. Show tables\n" \
+            + "7. Inspect table\n" \
+            + "8. Clear IU device data\n"
 
 function_mapping={
     1: create_database,
@@ -121,7 +178,9 @@ function_mapping={
     3: add_user,
     4: remove_database,
     5: show_databases,
-    6: show_tables
+    6: show_tables,
+    7: inspect_table,
+    8: clear_data
 }
 
 if __name__ == '__main__':
