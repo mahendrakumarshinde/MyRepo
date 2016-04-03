@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merger version="3"><dataSet config="main"><source path="/Users/pocui/Work/BLE Monitor/CloudMonitor/MPChartLib/assets"/></dataSet><dataSet config="debug"><source path="/Users/pocui/Work/BLE Monitor/CloudMonitor/MPChartLib/src/debug/assets"/></dataSet></merger>

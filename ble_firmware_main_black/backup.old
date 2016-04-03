@@ -1,0 +1,23 @@
+float feature_energy (){
+  ave_x=0;
+  ave_y=0;
+  ave_z=0;
+  for (int i=featureBatchSize/ACCEL_COUNTER_TARGET - ENERGY_INTERVAL_ACCEL; i<featureBatchSize/ACCEL_COUNTER_TARGET; i++){
+    ave_x += accel_x_batch[buffer_compute_index][i];
+    ave_y += accel_y_batch[buffer_compute_index][i];
+    ave_z += accel_z_batch[buffer_compute_index][i];
+  }
+  ave_x /= ENERGY_INTERVAL_ACCEL;
+  ave_y /= ENERGY_INTERVAL_ACCEL;
+  ave_z /= ENERGY_INTERVAL_ACCEL;
+
+  ene = 0; //initialize the energy feature
+  for (int i=featureBatchSize/ACCEL_COUNTER_TARGET - ENERGY_INTERVAL_ACCEL; i<featureBatchSize/ACCEL_COUNTER_TARGET; i++){
+    ene += sq(accel_x_batch[buffer_compute_index][i]-ave_x)
+          +  sq(accel_y_batch[buffer_compute_index][i]-ave_y)
+          +  sq(accel_z_batch[buffer_compute_index][i]-ave_z);
+  }
+  ene *= ENERGY_INTERVAL_ACCEL;
+
+  return ene;
+}
