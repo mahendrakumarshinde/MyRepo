@@ -1,0 +1,44 @@
+line 250: some config variables accelCount, accelBias
+line 378: time domain feature
+line 403: freq domain feature
+line 1881: setting aRes
+line 1902: (possibly most important): readAccelData
+line 1935: initializing BMX055
+line 2020: fastcompaccelBMX055
+
+constants used:
+line 1391: ACC_ADDRESS, WHOAMI (== 0xFA)
+line 1905:
+    0x02 BMX055_ACC_D_X_LSB (burst mode access of all 3 16-bit values)
+    ACC_ADDRESS
+line 1935: initBMX055
+    ACC_ADDRESS
+    0x14 ACC_BGW_SOFTRESET (write 0xB6 to soft reset)
+    0x0F ACC_PMU_RANGE (write Ascale (choose 2g) & 0x0F; 0x0F is a mask)
+    0x10 ACC_PMU_BW (write bandwidth of 1000Hz (0b01111) to PMU_BW)
+    0x13 ACC_D_HBW (pick 0 (filtered) and 0 (shadowing))
+
+line 2020: fastcompaccelBMX055
+    ACC_ADDRESS
+    0x36 ACC_OFC_CTRL
+    0x37 ACC_OFC_SETTING
+    0x38 ACC_OFC_OFFSET_X
+    0x39 ACC_OFC_OFFSET_Y
+    0x40 ACC_OFC_OFFSET_Z
+
+Update sequence:
+- replace register numbers (constants.h)
+- replace accel scales from 2048 to 32768 (getAres())
+- replace AFS_2G; 3 bits to 2 bits ()
+- replace WHO_AM_I check on accelerometer in setup() and rename methods from BMX055 -> MPU
+- copy pasted initMPU9250 from Kris Winer's github
+- temporarily removed fastcompaccelMPU9250 (we can reimplement compensation later)
+- copy pasted readAccelData from Kris Winer's github
+
+
+
+Notes:
+- why was aRes / 2048 = 2^11 when vals are 2^12?
+- keeping Ascale = 2G's
+- we are using LPF for BMX055 right?
+- do we do wake-on-motion interrupt?
