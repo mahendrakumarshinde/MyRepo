@@ -5,7 +5,6 @@ Infinite Uptime BLE Module Firmware
 //#include "Wire.h"
 #include <i2c_t3.h>
 #include <SPI.h>
-
 /* I2S digital audio */
 #include <i2s.h>
 
@@ -107,6 +106,18 @@ const uint8_t NUM_FEATURES = 6;    // Total number of features
 const uint8_t NUM_TD_FEATURES = 2; // Total number of frequency domain features
 int chosen_features = 0;
 
+float feature_energy();
+float feature_mcr();
+float feature_spectral_centroid();
+float feature_spectral_flatness();
+float feature_spectral_spread_accel();
+float feature_spectral_spread_audio();
+
+void calculate_spectral_centroid(int axis);
+void calculate_spectral_flatness(int axis);
+void calculate_spectral_spread_accel(int axis);
+void calculate_spectral_spread_audio(int axis);
+
 typedef float (* FeatureFuncPtr) (); // this is a typedef to feature functions
 FeatureFuncPtr features[NUM_FEATURES] = {feature_energy,
                                          feature_mcr,
@@ -115,8 +126,7 @@ FeatureFuncPtr features[NUM_FEATURES] = {feature_energy,
                                          feature_spectral_flatness,
                                          //feature_spectral_crest,
                                          feature_spectral_spread_accel,
-                                         feature_spectral_spread_audio
-                                        };
+                                         feature_spectral_spread_audio};
 
 typedef void (* FeatureCalcPtr) (int); // this is a typedef to FD calculation functions
 FeatureCalcPtr calc_features[NUM_FEATURES] = {NULL,
@@ -126,8 +136,7 @@ FeatureCalcPtr calc_features[NUM_FEATURES] = {NULL,
                                               calculate_spectral_flatness,
                                               //calculate_spectral_crest,
                                               calculate_spectral_spread_accel,
-                                              calculate_spectral_spread_audio
-                                             };
+                                              calculate_spectral_spread_audio};
 
 // NOTE: DO NOT CHANGE THIS UNLESS YOU KNOW WHAT YOU'RE DOING
 const uint16_t MAX_INTERVAL_ACCEL = 512;
@@ -1233,6 +1242,25 @@ float feature_spectral_spread_audio() {
   return (float) sp_spread_aud;
 }
 
+//typedef float (* FeatureFuncPtr) (); // this is a typedef to feature functions
+//FeatureFuncPtr features[NUM_FEATURES] = {feature_energy,
+//                                         feature_mcr,
+//                                         //feature_spectral_flux,
+//                                         feature_spectral_centroid,
+//                                         feature_spectral_flatness,
+//                                         //feature_spectral_crest,
+//                                         feature_spectral_spread_accel,
+//                                         feature_spectral_spread_audio};
+//
+//typedef void (* FeatureCalcPtr) (int); // this is a typedef to FD calculation functions
+//FeatureCalcPtr calc_features[NUM_FEATURES] = {NULL,
+//                                              NULL,
+//                                              //calculate_spectral_flux,
+//                                              calculate_spectral_centroid,
+//                                              calculate_spectral_flatness,
+//                                              //calculate_spectral_crest,
+//                                              calculate_spectral_spread_accel,
+//                                              calculate_spectral_spread_audio};
 
 //==============================================================================
 //================================= Main Code ==================================
