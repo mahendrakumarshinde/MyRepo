@@ -4,31 +4,31 @@
 
   * /BLEMonitor  
     Android Application for machine monitoring using BLE
-	
+
   * /Productivity  
     Firmware for Productivity - currently calculating vibration energy and 3 thresholds for a 4-level monitoring display. BLE only for state-change communication.
-	
+
   * /android_demo  
     Demo firmware designed to work with IU Android application.
 
   * /battery_level_check  
     Example code for programatically checking battery voltage level.
-  
+
   * /ble_firmware_main  
     Main firmware for BLE sensor module; separate descriptions for this [below](#main-ble-firmware).
 
   * /energy_feature_basic  
     Test code for energy feature based monitoring, statemachine for operating status, and two-way communication. Also used for power consumption tests.
-  
+
   * /led_test  
     Example code for PWM based LED coloring.  
 
   * /libraries  
     All libraries that are referenced by one or more firmwares in this directory
-  
-  * /test_firmware_total 
+
+  * /test_firmware_total
     Firmware for functionality check; used mainly for the modules sent over to India, with Android application [BLE UUID Explorer](https://play.google.com/store/apps/details?id=ghostysoft.bleuuidexplorer). Separate documentation for functionality check procedure listed [below](#data-collection-procedure).
-  
+
   * ble.js  
 	node.js script for checking BLE communication with the module; this script was used to run end-to-end battery test. After BLE pairing, this module will print connection timestamp and disconnction timestamp.
 
@@ -43,7 +43,7 @@
     `BAD_CUTTING = 2`: Bad cutting
 * `CHARGING`:  
   Charging mode. Can enter this mode by simply connecting the USB. The module will only listen to Serial (via USB), for entering `DATA_COLLECTION` mode. `i2s_rx_callback( int32_t *pBuf )` is forced to return immediately during this mode, therefore no data collection nor feature calculation.
-  
+
 * `DATA_COLLECTION`:  
   Data collection mode. Can enter this mode ONLY from `CHARGING` mode. Commands to send over Serial is:
   * `IUCMD_START`: Enters into `DATA_COLLECTION` mode from `CHARGING` mode. The module will print `IUOK_START` and then dump raw data bytes.
@@ -77,4 +77,12 @@
   * `rest_count`: in-between sample gaps. 400 means 400 samples will be ignored until energy is re-calculated. Default is 0; no waiting in between energy calculation.
 
 ###Two-way Communication Protocol
-####Not yet documented
+* Two-way Communication via BLE is only valid on `RUN` mode. First of all, Get the number of bytes (characters) available for reading from the serial port. There are only 19 characters. Then, parse them into four decimal integers separated by three dash lines. i.e. `&bleFeatureIndex-&newThres-&newThres2-&newThres3`
+
+* Set "Rubbish data" when there are more than 6 features or thresholds are over their limits.
+
+###Flowchart for visualizing two main functions: `i2s_rx_callback` and `loop`.
+
+* ![i2s_rx_callback](https://raw.githubusercontent.com/username/projectname/branch/path/to/img.png)
+
+* ![loop](https://raw.githubusercontent.com/username/projectname/branch/path/to/img.png)
