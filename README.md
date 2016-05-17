@@ -83,6 +83,6 @@
 
 ###Flowchart for visualizing two main functions: `i2s_rx_callback` and `loop`.
 
-* ![i2s_rx_callback](https://raw.githubusercontent.com/username/projectname/branch/path/to/img.png)
+* ![i2s_rx_callback](https://github.com/infinite-uptime/productivity/blob/master/flowchart/flowchart_callback.png)
 
-* ![loop](https://raw.githubusercontent.com/username/projectname/branch/path/to/img.png)
+* ![loop](https://github.com/infinite-uptime/productivity/blob/master/flowchart/flowchart_loop.png)
