@@ -22,7 +22,7 @@ Infinite Uptime BLE Module Firmware
 
 #define CLOCK_TYPE         (I2S_CLOCK_48K_INTERNAL)     // I2S clock
 bool statusLED = true;                                  // Status LED ON/OFF
-String  MAC_ADDRESS = "7C:EC:79:69:8B:B0";
+String  MAC_ADDRESS = "7C:EC:79:69:7D:53";
 // Reduce RUN frequency if needed.
 const uint16_t AUDIO_FREQ_RUN = 8000;
 const uint16_t AUDIO_FREQ_DATA = 8000;
@@ -106,6 +106,18 @@ float sp_spread_aud = 0;
 const uint8_t NUM_FEATURES = 6;    // Total number of features
 const uint8_t NUM_TD_FEATURES = 2; // Total number of frequency domain features
 int chosen_features = 0;
+
+float feature_energy();
+float feature_mcr();
+float feature_spectral_centroid();
+float feature_spectral_flatness();
+float feature_spectral_spread_accel();
+float feature_spectral_spread_audio();
+
+void calculate_spectral_centroid(int axis);
+void calculate_spectral_flatness(int axis);
+void calculate_spectral_spread_accel(int axis);
+void calculate_spectral_spread_audio(int axis);
 
 typedef float (* FeatureFuncPtr) (); // this is a typedef to feature functions
 FeatureFuncPtr features[NUM_FEATURES] = {feature_energy,

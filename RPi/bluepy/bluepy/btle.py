@@ -9,9 +9,8 @@ import time
 import subprocess
 import binascii
 import select
-import pdb
+import struct
 
-#Debugging = True
 Debugging = False
 script_path = os.path.join(os.path.abspath(os.path.dirname(__file__)))
 helperExe = os.path.join(script_path, "bluepy-helper")
@@ -36,6 +35,8 @@ class BTLEException(Exception):
     DISCONNECTED = 1
     COMM_ERROR = 2
     INTERNAL_ERROR = 3
+    GATT_ERROR = 4
+    MGMT_ERROR = 5
 
     def __init__(self, code, message):
         self.code = code
@@ -101,12 +102,12 @@ class Service:
         self.chars = None
 
     def getCharacteristics(self, forUUID=None):
-	if not self.chars: # Unset, or empty
+        if not self.chars: # Unset, or empty
             self.chars = self.peripheral.getCharacteristics(self.hndStart, self.hndEnd)
         if forUUID is not None:
             u = UUID(forUUID)
             return [ch for ch in self.chars if ch.uuid==u]
-	return self.chars
+        return self.chars
 
     def __str__(self):
         return "Service <uuid=%s handleStart=%s handleEnd=%s>" % (self.uuid.getCommonName(),
@@ -174,7 +175,7 @@ class Descriptor:
 
     def __str__(self):
         return "Descriptor <%s>" % self.uuid.getCommonName()
-
+        
 class DefaultDelegate:
     def __init__(self):
         pass
@@ -182,33 +183,27 @@ class DefaultDelegate:
     def handleNotification(self, cHandle, data):
         DBG("Notification:", cHandle, "sent data", binascii.b2a_hex(data))
 
+    def handleDiscovery(self, scanEntry, isNewDev, isNewData):
+        DBG("Discovered device", scanEntry.addr)
 
-class Peripheral:
-    def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC):
+class BluepyHelper:
+    def __init__(self):
         self._helper = None
         self._poller = None
         self._stderr = None
-        self.services = {} # Indexed by UUID
-        self.addrType = addrType
-        self.discoveredAllServices = False
         self.delegate = DefaultDelegate()
-        if deviceAddr is not None:
-            self.connect(deviceAddr, addrType)
 
-    def __enter__(self):
+    def withDelegate(self, delegate_):
+        self.delegate = delegate_
         return self
 
-    def __exit__(self, type, value, traceback):
-        self.disconnect()
-
-    def setDelegate(self, delegate_):
-        self.delegate = delegate_
-
-    def _startHelper(self):
+    def _startHelper(self,iface=None):
         if self._helper is None:
             DBG("Running ", helperExe)
-            self._stderr = open(os.devnull, "w") 
-            self._helper = subprocess.Popen([helperExe],
+            self._stderr = open(os.devnull, "w")
+            args=[helperExe]
+            if iface is not None: args.append(str(iface))
+            self._helper = subprocess.Popen(args,
                                             stdin=subprocess.PIPE,
                                             stdout=subprocess.PIPE,
                                             stderr=self._stderr,
@@ -236,6 +231,13 @@ class Peripheral:
         self._helper.stdin.write(cmd)
         self._helper.stdin.flush()
 
+    def _mgmtCmd(self, cmd):
+        self._writeCmd(cmd + '\n')
+        rsp = self._waitResp('mgmt')
+        if rsp['code'][0] != 'success':
+            self._stopHelper()
+            raise BTLEException(BTLEException.DISCONNECTED,
+                                "Failed to execute mgmt cmd '%s'" % (cmd))
 
     @staticmethod
     def parseResp(line):
@@ -260,9 +262,7 @@ class Peripheral:
                 resp[tag].append(val)
         return resp
 
-    def _getResp(self, wantType, timeout=None):
-        if isinstance(wantType, list) is not True:
-            wantType = [wantType]
+    def _waitResp(self, wantType, timeout=None):
         while True:
             if self._helper.poll() is not None:
                 raise BTLEException(BTLEException.INTERNAL_ERROR, "Helper exited")
@@ -275,29 +275,14 @@ class Peripheral:
 
             rv = self._helper.stdout.readline()
             DBG("Got:", repr(rv))
-            if rv.startswith('#'):
+            if rv.startswith('#') or rv == '\n':
                 continue
 
-            resp = Peripheral.parseResp(rv)
+            resp = BluepyHelper.parseResp(rv)
             if 'rsp' not in resp:
-                raise BTLEException(BTLEException.INTERNAL_ERROR,
-                                "No response type indicator")
-            respType = resp['rsp'][0]
-            if respType == 'ntfy':
-                hnd = resp['hnd'][0]
-                data = resp['d'][0]
-                if self.delegate is not None:
-                    self.delegate.handleNotification(hnd, data)
-                if respType not in wantType:
-                    continue
-                    
-            if respType == 'ind':
-                hnd = resp['hnd'][0]
-                data = resp['d'][0]
-                self.delegate.handleNotification(hnd, data)
-                if respType not in wantType:
-                    continue
+                raise BTLEException(BTLEException.INTERNAL_ERROR, "No response type indicator")
 
+            respType = resp['rsp'][0]
             if respType in wantType:
                 return resp
             elif respType == 'stat' and resp['state'][0] == 'disc':
@@ -305,22 +290,74 @@ class Peripheral:
                 raise BTLEException(BTLEException.DISCONNECTED, "Device disconnected")
             elif respType == 'err':
                 errcode=resp['code'][0]
-                raise BTLEException(BTLEException.COMM_ERROR, "Error from Bluetooth stack (%s)" % errcode)
+                if errcode=='nomgmt':
+                    raise BTLEException(BTLEException.MGMT_ERROR, "Management not available (permissions problem?)")
+                else:
+                    raise BTLEException(BTLEException.COMM_ERROR, "Error from Bluetooth stack (%s)" % errcode)
+            elif respType == 'scan':
+                # Scan response when we weren't interested. Ignore it
+                continue
             else:
                 raise BTLEException(BTLEException.INTERNAL_ERROR, "Unexpected response (%s)" % respType)
 
     def status(self):
         self._writeCmd("stat\n")
-        return self._getResp('stat')
+        return self._waitResp(['stat'])
 
-    def connect(self, addr, addrType):
+
+class Peripheral(BluepyHelper):
+    def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC, iface=None):
+        BluepyHelper.__init__(self)
+        self.services = {} # Indexed by UUID
+        self.discoveredAllServices = False
+        (self.addr, self.addrType, self.iface) = (None, None, None)
+
+        if isinstance(deviceAddr, ScanEntry):
+            self.connect(deviceAddr.addr, deviceAddr.addrType, deviceAddr.iface)
+        elif deviceAddr is not None:
+            self.connect(deviceAddr, addrType, iface)
+
+    def setDelegate(self, delegate_): # same as withDelegate(), deprecated
+        return self.withDelegate(delegate_)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.disconnect()
+
+    def _getResp(self, wantType, timeout=None):
+        if isinstance(wantType, list) is not True:
+            wantType = [wantType]
+
+        while True:
+            resp = self._waitResp(wantType + ['ntfy', 'ind'], timeout)
+            if resp is None:
+                return None
+
+            respType = resp['rsp'][0]
+            if respType == 'ntfy' or respType == 'ind':
+                hnd = resp['hnd'][0]
+                data = resp['d'][0]
+                if self.delegate is not None:
+                    self.delegate.handleNotification(hnd, data)
+                if respType not in wantType:
+                    continue
+            return resp
+
+    def connect(self, addr, addrType=ADDR_TYPE_PUBLIC, iface=None):
         if len(addr.split(":")) != 6:
             raise ValueError("Expected MAC address, got %s" % repr(addr))
         if addrType not in (ADDR_TYPE_PUBLIC, ADDR_TYPE_RANDOM):
             raise ValueError("Expected address type public or random, got {}".format(addrType))
         self._startHelper()
         self.deviceAddr = addr
-        self._writeCmd("conn %s %s\n" % (addr, addrType))
+        self.addrType = addrType
+        self.iface = iface
+        if iface is not None:
+            self._writeCmd("conn %s %s %s\n" % (addr, addrType, iface))
+        else:
+            self._writeCmd("conn %s %s\n" % (addr, addrType))
         rsp = self._getResp('stat')
         while rsp['state'][0] == 'tryconn':
             rsp = self._getResp('stat')
@@ -364,6 +401,8 @@ class Peripheral:
             return self.services[uuid]
         self._writeCmd("svcs %s\n" % uuid)
         rsp = self._getResp('find')
+        if 'hstart' not in rsp:
+            raise BTLEException(BTLEException.GATT_ERROR, "Service %s not found" % (uuid.getCommonName()))
         svc = Service(self, uuid, rsp['hstart'][0], rsp['hend'][0])
         self.services[uuid] = svc
         return svc
@@ -403,7 +442,7 @@ class Peripheral:
         return descriptors
 
     def readCharacteristic(self, handle):
-	self._writeCmd("rd %X\n" % handle)
+        self._writeCmd("rd %X\n" % handle)
         resp = self._getResp('rd')
         return resp['d'][0]
 
@@ -413,6 +452,8 @@ class Peripheral:
         return self._getResp('rd')
 
     def writeCharacteristic(self, handle, val, withResponse=False):
+        # Without response, a value too long for one packet will be truncated,
+        # but with response, it will be sent as a queued write
         cmd = "wrr" if withResponse else "wr"
         self._writeCmd("%s %X %s\n" % (cmd, handle, binascii.b2a_hex(val).decode('utf-8')))
         return self._getResp('wr')
@@ -420,6 +461,9 @@ class Peripheral:
     def setSecurityLevel(self, level):
         self._writeCmd("secu %s\n" % level)
         return self._getResp('stat')
+
+    def unpair(self, address):
+        self._mgmtCmd("unpair %s" % (address))
 
     def setMTU(self, mtu):
         self._writeCmd("mtu %x\n" % mtu)
@@ -429,65 +473,166 @@ class Peripheral:
          resp = self._getResp('ntfy', timeout)
          return (resp != None)
 
-    def waitUntilMessageComplete(self, timeout):
-         resp = self._getUntilMessage('ntfy', timeout)
-         return (resp != None)
-
-    def _getUntilMessage(self, wantType, timeout=None):
-        if isinstance(wantType, list) is not True:
-            wantType = [wantType]
-        while True:
-            if self._helper.poll() is not None:
-                raise BTLEException(BTLEException.INTERNAL_ERROR, "Helper exited")
-
-            if timeout:
-                fds = self._poller.poll(timeout*1000)
-                if len(fds) == 0:
-                    DBG("Select timeout")
-                    return None
-
-            rv = self._helper.stdout.readline()
-            DBG("Got:", repr(rv))
-            if rv.startswith('#'):
-                continue
-
-            resp = Peripheral.parseResp(rv)
-            if 'rsp' not in resp:
-                raise BTLEException(BTLEException.INTERNAL_ERROR,
-                                "No response type indicator")
-            respType = resp['rsp'][0]
-            messageDone = None
-            if respType == 'ntfy':
-                hnd = resp['hnd'][0]
-                data = resp['d'][0]
-                if self.delegate is not None:
-                    messageDone = self.delegate.handleNotification(hnd, data)
-                if respType not in wantType:
-                    continue
-                    
-            if respType == 'ind':
-                hnd = resp['hnd'][0]
-                data = resp['d'][0]
-                messageDone = self.delegate.handleNotification(hnd, data)
-                if respType not in wantType:
-                    continue
-
-            if respType in wantType:
-                if messageDone:
-                    return None
-                else:
-                    return resp
-            elif respType == 'stat' and resp['state'][0] == 'disc':
-                self._stopHelper()
-                raise BTLEException(BTLEException.DISCONNECTED, "Device disconnected")
-            elif respType == 'err':
-                errcode=resp['code'][0]
-                raise BTLEException(BTLEException.COMM_ERROR, "Error from Bluetooth stack (%s)" % errcode)
-            else:
-                raise BTLEException(BTLEException.INTERNAL_ERROR, "Unexpected response (%s)" % respType)
-
     def __del__(self):
         self.disconnect()
+
+class ScanEntry:
+    addrTypes = { 1 : ADDR_TYPE_PUBLIC,
+                  2 : ADDR_TYPE_RANDOM
+                }
+
+    dataTags = {
+        1 : 'Flags',
+        2 : 'Incomplete 16b Services',
+        3 : 'Complete 16b Services',
+        4 : 'Incomplete 32b Services',
+        5 : 'Complete 32b Services',
+        6 : 'Incomplete 128b Services',
+        7 : 'Complete 128b Services',
+        8 : 'Short Local Name',
+        9 : 'Complete Local Name',
+        0xA : 'Tx Power',
+        0x14 : '16b Service Solicitation',
+        0x1F : '32b Service Solicitation',
+        0x15 : '128b Service Solicitation',
+        0x16 : '16b Service Data',
+        0x20 : '32b Service Data',
+        0x21 : '128b Service Data',
+        0x17 : 'Public Target Address',
+        0x18 : 'Random Target Address',
+        0x19 : 'Appearance',
+        0x1A : 'Advertising Interval',
+        0xFF : 'Manufacturer',
+    }
+
+    def __init__(self, addr, iface):
+        self.addr = addr
+        self.iface = iface
+        self.addrType = None
+        self.rssi = None
+        self.connectable = False
+        self.rawData = None
+        self.scanData = {}
+        self.updateCount = 0
+
+    def _update(self, resp):
+        addrType = self.addrTypes.get(resp['type'][0], None)
+        if (self.addrType is not None) and (addrType != self.addrType):
+            raise BTLEException("Address type changed during scan, for address %s" % self.addr)
+        self.addrType = addrType
+        self.rssi = -resp['rssi'][0]
+        self.connectable = ((resp['flag'][0] & 0x4) == 0)
+        data = resp.get('d', [''])[0]
+        self.rawData = data
+        
+        # Note: bluez is notifying devices twice: once with advertisement data,
+        # then with scan response data. Also, the device may update the
+        # advertisement or scan data
+        isNewData = False
+        while len(data) >= 2:
+            sdlen, sdid = struct.unpack_from('<BB', data)
+            val = data[2 : sdlen + 1]
+            if (sdid not in self.scanData) or (val != self.scanData[sdid]):
+                isNewData = True
+            self.scanData[sdid] = val
+            data = data[sdlen + 1:]
+
+        self.updateCount += 1
+        return isNewData
+        
+    def getDescription(self, sdid):
+        return self.dataTags.get(sdid, hex(sdid))
+
+    def getValueText(self, sdid):
+        val = self.scanData.get(sdid, None)
+        if val is None:
+            return None
+        if (sdid==8) or (sdid==9):
+            return val.decode('utf-8')
+        else:
+            return binascii.b2a_hex(val).decode('utf-8')
+
+    def getScanData(self):
+        '''Returns list of tuples [(tag, description, value)]'''
+        return [ (sdid, self.getDescription(sdid), self.getValueText(sdid))
+                    for sdid in self.scanData.keys() ]
+         
+ 
+class Scanner(BluepyHelper):
+    def __init__(self,iface=0):
+        BluepyHelper.__init__(self)
+        self.scanned = {}
+        self.iface=iface
+    
+    def start(self):
+        self._startHelper(iface=self.iface)
+        self._mgmtCmd("le on")
+        self._writeCmd("scan\n")
+        rsp = self._waitResp("mgmt")
+        if rsp["code"][0] == "success":
+            return
+        # Sometimes previous scan still ongoing
+        if rsp["code"][0] == "busy":
+            self._mgmtCmd("scanend")
+            rsp = self._waitResp("stat")
+            assert rsp["state"][0] == "disc"
+            self._mgmtCmd("scan")
+
+    def stop(self):
+        self._mgmtCmd("scanend")
+        self._stopHelper()
+
+    def clear(self):
+        self.scanned = {}
+
+    def process(self, timeout=10.0):
+        if self._helper is None:
+            raise BTLEException(BTLEException.INTERNAL_ERROR,
+                                "Helper not started (did you call start()?)")
+        start = time.time()
+        while True:
+            if timeout:
+                remain = start + timeout - time.time()
+                if remain <= 0.0: 
+                    break
+            else:
+                remain = None
+            resp = self._waitResp(['scan', 'stat'], remain)
+            if resp is None:
+                break
+
+            respType = resp['rsp'][0]
+            if respType == 'stat':
+                # if scan ended, restart it
+                if resp['state'][0] == 'disc':
+                    self._mgmtCmd("scan")
+
+            elif respType == 'scan':
+                # device found
+                addr = binascii.b2a_hex(resp['addr'][0]).decode('utf-8')
+                addr = ':'.join([addr[i:i+2] for i in range(0,12,2)])
+                if addr in self.scanned:
+                    dev = self.scanned[addr]
+                else:
+                    dev = ScanEntry(addr, self.iface)
+                    self.scanned[addr] = dev
+                isNewData = dev._update(resp)
+                if self.delegate is not None:
+                    self.delegate.handleDiscovery(dev, (dev.updateCount <= 1), isNewData)
+                 
+            else:
+                raise BTLEException(BTLEException.INTERNAL_ERROR, "Unexpected response: " + respType)
+
+    def getDevices(self):
+        return self.scanned.values()
+
+    def scan(self, timeout=10):
+        self.clear()
+        self.start()
+        self.process(timeout)
+        self.stop()
+        return self.getDevices()
+
 
 def capitaliseName(descr):
     words = descr.split(" ")
@@ -513,15 +658,12 @@ class _UUIDNameMap:
 
 def get_json_uuid():
     import json
-    uuid_data = json.load(file(os.path.join(script_path, 'uuids.json')))
-    all_uuids = reduce(lambda a,b: a+b, (uuid_data[x] for x in ['service_UUIDs',
-                                                        'characteristic_UUIDs',
-                                                        'descriptor_UUIDs']))
-
-
-    for number,cname,name in all_uuids:
-        yield UUID(number, cname)
-        yield UUID(number, name)
+    with open(os.path.join(script_path, 'uuids.json'),"rb") as fp:
+        uuid_data = json.loads(fp.read().decode("utf-8"))
+    for k in ['service_UUIDs', 'characteristic_UUIDs', 'descriptor_UUIDs' ]:
+        for number,cname,name in uuid_data[k]:
+            yield UUID(number, cname)
+            yield UUID(number, name)
 
 AssignedNumbers = _UUIDNameMap( list(get_json_uuid() ))
 
@@ -538,13 +680,12 @@ if __name__ == '__main__':
     else:
         addrType = ADDR_TYPE_PUBLIC
     print("Connecting to: {}, address type: {}".format(devAddr, addrType))
-    pdb.set_trace()
     conn = Peripheral(devAddr, addrType)
     try:
         for svc in conn.getServices():
             print(str(svc), ":")
             for ch in svc.getCharacteristics():
-                print("    {}, supports {}".format(ch, ch.propertiesToString()))
+                print("    {}, hnd={}, supports {}".format(ch, hex(ch.handle), ch.propertiesToString()))
                 chName = AssignedNumbers.getCommonName(ch.uuid)
                 if (ch.supportsRead()):
                     try:

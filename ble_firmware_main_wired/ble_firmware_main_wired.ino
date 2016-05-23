@@ -107,6 +107,18 @@ const uint8_t NUM_FEATURES = 6;    // Total number of features
 const uint8_t NUM_TD_FEATURES = 2; // Total number of frequency domain features
 int chosen_features = 0;
 
+float feature_energy();
+float feature_mcr();
+float feature_spectral_centroid();
+float feature_spectral_flatness();
+float feature_spectral_spread_accel();
+float feature_spectral_spread_audio();
+
+void calculate_spectral_centroid(int axis);
+void calculate_spectral_flatness(int axis);
+void calculate_spectral_spread_accel(int axis);
+void calculate_spectral_spread_audio(int axis);
+
 typedef float (* FeatureFuncPtr) (); // this is a typedef to feature functions
 FeatureFuncPtr features[NUM_FEATURES] = {feature_energy,
                                          feature_mcr,

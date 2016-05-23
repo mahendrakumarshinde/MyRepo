@@ -1,5 +1,5 @@
 /*
-Infinite Uptime BLE Module Firmware
+  Infinite Uptime BLE Module Firmware
 */
 
 //#include "Wire.h"
@@ -58,10 +58,10 @@ const uint32_t MCR_INTERVAL_AUDIO = MCR_INTERVAL_ACCEL * RUN_ACCEL_AUDIO_RATIO;
 //       Read any of frequency domain feature calculation flow to understand.
 
 /* Deprecated, but keeping this just in case we will need again.
-// Spectral Flux
-double sp_flux_x = 0;
-double sp_flux_y = 0;
-double sp_flux_z = 0;
+  // Spectral Flux
+  double sp_flux_x = 0;
+  double sp_flux_y = 0;
+  double sp_flux_z = 0;
 */
 
 // Spectral Centroid
@@ -75,10 +75,10 @@ double sp_flat_y = 0;
 double sp_flat_z = 0;
 
 /* Deprecated, but keeping this just in case we will need again.
-// Spectral Crest
-float sp_crest_x = 0;
-float sp_crest_y = 0;
-float sp_crest_z = 0;
+  // Spectral Crest
+  float sp_crest_x = 0;
+  float sp_crest_y = 0;
+  float sp_crest_z = 0;
 */
 
 // Spectral Spread ACCEL
@@ -374,10 +374,10 @@ int bluetimerstart = 0;
 
 //Special feature variables
 boolean buffcounter = false;
-  float paddedbuff[5];
+float paddedbuff[5];
 /*==============================================================================
   ====================== Feature Computation Caller ============================
-==============================================================================*/
+  ==============================================================================*/
 void compute_features() {
   // Turn the boolean off immediately.
   compute_feature_now[buffer_compute_index] = false;
@@ -633,15 +633,15 @@ void audio_rfft() {
                 magsize_2048 - 2);
 
   /* DEBUGGING ROUTINE; FREQUENCY CHECKER
-   *  TODO: REMOVE THIS WHEN DONE
-  q15_t joj;
-  uint32_t ind;
-  arm_max_q15(audio_batch[buffer_compute_index],
+      TODO: REMOVE THIS WHEN DONE
+    q15_t joj;
+    uint32_t ind;
+    arm_max_q15(audio_batch[buffer_compute_index],
               magsize_2048,
               &joj,
               &ind);
-  Serial.println(joj*2);
-  Serial.println((ind+1)*TARGET_AUDIO_SAMPLE / (double)AUDIO_NFFT);
+    Serial.println(joj*2);
+    Serial.println((ind+1)*TARGET_AUDIO_SAMPLE / (double)AUDIO_NFFT);
   */
 
   for (int i = NUM_TD_FEATURES; i < NUM_FEATURES; i++) {
@@ -783,15 +783,15 @@ void accel_rfft() {
                 magsize_512 - 2);
 
   /* DEBUGGING ROUTINE; FFT BIN CHECKER
-  TODO: Remove this when done
-  float sum = 0;
-  for (int i=0; i<magsize_512; i++){
+    TODO: Remove this when done
+    float sum = 0;
+    for (int i=0; i<magsize_512; i++){
     Serial.print(((float*)rfft_accel_buffer)[i], 8);
     sum += ((float*)rfft_accel_buffer)[i];
     Serial.print(" ");
-  }
-  Serial.println();
-  Serial.println(sum, 8);
+    }
+    Serial.println();
+    Serial.println(sum, 8);
   */
 
   for (int i = NUM_TD_FEATURES; i < NUM_FEATURES; i++) {
@@ -926,7 +926,7 @@ void accel_rfft() {
   (3) Return danger level according to the thresholds
 
   You can assume that buffers are correctly populated as feature requires.
-==============================================================================*/
+  ==============================================================================*/
 
 // TIME DOMAIN FEATURES
 
@@ -1057,8 +1057,8 @@ float feature_mcr () {
 // FREQUENCY DOMAIN FEATURES
 
 /* CANCELLED
-// Spectral Flux ACCEL, index 2
-void calculate_spectral_flux(int axis){
+  // Spectral Flux ACCEL, index 2
+  void calculate_spectral_flux(int axis){
   float* buff = (float*) rfft_accel_buffer;
 
   double logSum = 0;
@@ -1076,11 +1076,11 @@ void calculate_spectral_flux(int axis){
     case 1: sp_flux_y = flux; break;
     case 2: sp_flux_z = flux; break;
   }
-}
+  }
 
-float feature_spectral_flux(){
+  float feature_spectral_flux(){
   return (float)sp_flux_x;
-}
+  }
 */
 
 // Spectral Centroid ACCEL, index 2
@@ -1135,8 +1135,8 @@ float feature_spectral_flatness() {
 }
 
 /* CANCELLED
-// Spectral Crest ACCEL, index 5
-void calculate_spectral_crest(int axis){
+  // Spectral Crest ACCEL, index 5
+  void calculate_spectral_crest(int axis){
   float* buff = (float*) rfft_accel_buffer;
 
   float sqSum = 0;
@@ -1152,11 +1152,11 @@ void calculate_spectral_crest(int axis){
     case 1: sp_crest_y = crest; break;
     case 2: sp_crest_z = crest; break;
   }
-}
+  }
 
-float feature_spectral_crest(){
+  float feature_spectral_crest(){
   return sp_crest_x;
-}
+  }
 */
 
 // Spectral Spread ACCEL, index 4
@@ -1184,7 +1184,7 @@ void calculate_spectral_spread_accel(int axis) {
 }
 
 float feature_spectral_spread_accel() {
-  return (float) sqrt(sq(sp_spread_x) + sq(sp_spread_y) + sq(sp_spread_z))/(float)100;
+  return (float) sqrt(sq(sp_spread_x) + sq(sp_spread_y) + sq(sp_spread_z)) / (float)100;
 }
 
 // Spectral Spread AUDIO, index 5
@@ -1209,32 +1209,32 @@ void calculate_spectral_spread_audio(int axis) {
     sp_spread_aud_fake += sq(buff[i]);
   }
   sp_spread_aud_fake = sp_spread_aud_fake * float(1000000); //if it needs to be scaled!
-//  Serial.println("Sp_fake is");
-//  Serial.print(sp_spread_aud_fake);
-//  Serial.print("\n");
-//  if (!buffcounter) {
-//    for (int i = 0; i < 5; i++) {
-//      paddedbuff[i] = sp_spread_aud_fake;
-//    }
-//  }
-//float data[6];
-//for (int j=0; j < 5; j++){
-//  data[j] = (float)paddedbuff[j];
-//}
-//data[5]=sp_spread_aud_fake;
+  //  Serial.println("Sp_fake is");
+  //  Serial.print(sp_spread_aud_fake);
+  //  Serial.print("\n");
+  //  if (!buffcounter) {
+  //    for (int i = 0; i < 5; i++) {
+  //      paddedbuff[i] = sp_spread_aud_fake;
+  //    }
+  //  }
+  //float data[6];
+  //for (int j=0; j < 5; j++){
+  //  data[j] = (float)paddedbuff[j];
+  //}
+  //data[5]=sp_spread_aud_fake;
 
-sp_spread_aud = sp_spread_aud_fake;
+  sp_spread_aud = sp_spread_aud_fake;
 
-    Serial.println("sp_spread_aud is");
-    Serial.print(sp_spread_aud);
-    Serial.print("\n");
-    
-//  for (int j = 0; j < 4; j++) {
-//    paddedbuff[j] = paddedbuff[j + 1];
-//  }
-//  paddedbuff[4] = sp_spread_aud;
-//
-//  buffcounter = true;
+  Serial.println("sp_spread_aud is");
+  Serial.print(sp_spread_aud);
+  Serial.print("\n");
+
+  //  for (int j = 0; j < 4; j++) {
+  //    paddedbuff[j] = paddedbuff[j + 1];
+  //  }
+  //  paddedbuff[4] = sp_spread_aud;
+  //
+  //  buffcounter = true;
 }
 
 float feature_spectral_spread_audio() {
@@ -1500,66 +1500,66 @@ void loop()
 
 
   /* -------------------------- USB Connection Check ----------------------- */
-    if (bitRead(USB0_OTGSTAT, 5)) {
-      // Disconnected; this flag will briefly come up when USB gets disconnected.
-      // Immediately put into RUN mode.
-      if (currMode != RUN) { //If disconnected and NOT in RUN mode, set to run mode with idle state initialized
-        Serial2.begin(9600);
+  if (bitRead(USB0_OTGSTAT, 5)) {
+    // Disconnected; this flag will briefly come up when USB gets disconnected.
+    // Immediately put into RUN mode.
+    if (currMode != RUN) { //If disconnected and NOT in RUN mode, set to run mode with idle state initialized
+      Serial2.begin(9600);
+      Serial2.flush();
+      resetSampling(true);
+      currMode = RUN;
+      LEDColors c = BLUE_NOOP;
+      changeStatusLED(c);
+
+      // Reset state
+      currState = NOT_CUTTING;
+    } else { //If disconnected and in RUN mode, continue in run mode
+    }
+  } else {
+    // Connected
+    if (currMode == RUN) {
+      // NOTE: Assume the battery will start charging when USB is connected.
+      if (digitalRead(chargerCHG) == 1) { //If connected, charging and in RUN mode, set to CHARGING mode
         Serial2.flush();
-        resetSampling(true);
-        currMode = RUN;
-        LEDColors c = BLUE_NOOP;
+        Serial2.end();
+        LEDColors c = PURPLE_CHARGE;
         changeStatusLED(c);
-  
-        // Reset state
-        currState = NOT_CUTTING;
-      } else { //If disconnected and in RUN mode, continue in run mode
-      }
-    } else {
-      // Connected
-      if (currMode == RUN) {
-        // NOTE: Assume the battery will start charging when USB is connected.
-        if (digitalRead(chargerCHG) == 1) { //If connected, charging and in RUN mode, set to CHARGING mode
+        currMode = CHARGING;
+      } else {
+        if (didThresChange) { //Weirdly, the logic for chargerCHG switches once ble data is received!
           Serial2.flush();
           Serial2.end();
           LEDColors c = PURPLE_CHARGE;
           changeStatusLED(c);
           currMode = CHARGING;
-        } else {
-          if (didThresChange) { //Weirdly, the logic for chargerCHG switches once ble data is received!
-            Serial2.flush();
-            Serial2.end();
-            LEDColors c = PURPLE_CHARGE;
-            changeStatusLED(c);
-            currMode = CHARGING;
-          }
-       }
-      } else if (currMode == CHARGING) { //If already in charging mode
-        // CHARGE mode and battery is NOT charging.
-        // Display white LED to notify charge completion.
-        if (digitalRead(chargerCHG) == 0) {
-          if (didThresChange) {//Weirdly, the logic for chargerCHG switches once ble data is received!
-            LEDColors c = PURPLE_CHARGE;
-            changeStatusLED(c);
-          }
-          else {
-            LEDColors c = WHITE_NONE;
-            changeStatusLED(c);
-          }
-  
-        } else {
-          if (didThresChange) { //Weirdly, the logic for chargerCHG switches once ble data is received!
-            LEDColors c = WHITE_NONE;
-            changeStatusLED(c);
-          }
-          else {
-            LEDColors c = PURPLE_CHARGE;
-            changeStatusLED(c);
-          }
         }
-      } else {
       }
+    } else if (currMode == CHARGING) { //If already in charging mode
+      // CHARGE mode and battery is NOT charging.
+      // Display white LED to notify charge completion.
+      if (digitalRead(chargerCHG) == 0) {
+        if (didThresChange) {//Weirdly, the logic for chargerCHG switches once ble data is received!
+          LEDColors c = PURPLE_CHARGE;
+          changeStatusLED(c);
+        }
+        else {
+          LEDColors c = WHITE_NONE;
+          changeStatusLED(c);
+        }
+
+      } else {
+        if (didThresChange) { //Weirdly, the logic for chargerCHG switches once ble data is received!
+          LEDColors c = WHITE_NONE;
+          changeStatusLED(c);
+        }
+        else {
+          LEDColors c = PURPLE_CHARGE;
+          changeStatusLED(c);
+        }
+      }
+    } else {
     }
+  }
 
   /* ----------- Two-way Communication via BLE, only on RUN mode. ----------- */
 

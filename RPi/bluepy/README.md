@@ -12,19 +12,25 @@ There is also code which uses this to talk to a TI SensorTag (www.ti.com/sensort
 Installation
 ------------
 
-The code needs an executable 'bluepy-helper' to be compiled from C source. Currently the Makefile is configured to build for ARM Linux; you will need to set the ARCH variable in it  appropriately for other platforms. The sources need glib and dbus headers to compile.
+The code needs an executable `bluepy-helper` to be compiled from C source. This is done
+automatically if you use the recommended pip installation method (see below). Otherwise,
+you can rebuild it using the Makefile in the `bluepy` directory.
 
-There are general instructions for setting up BlueZ on the Raspberry Pi at http://www.elinux.org/RPi_Bluetooth_LE.
+To install the current released version, on most Debian-based systems:
 
-To build on the Pi:
+    $ sudo apt-get install python-pip libglib2.0-dev
+    $ sudo pip install bluepy
+    
+To install the source and build locally:
 
-    $ sudo apt-get install build-essential libglib2.0-dev libdbus-1-dev
+    $ sudo apt-get install git build-essential libglib2.0-dev
     $ git clone https://github.com/IanHarvey/bluepy.git
     $ cd bluepy
-    $ make
+    $ python setup.py build
+    $ python setup.py install
 
-Once 'bluepy-helper' is built, you can copy it and the two .py files to somewhere
-convenient on your Python path (e.g. /usr/local/lib/python2.7/site-packages/).
+I would recommend having command-line tools from BlueZ available for debugging. There
+are instructions for building BlueZ on the Raspberry Pi at http://www.elinux.org/RPi_Bluetooth_LE.
 
 Documentation
 -------------
@@ -43,6 +49,26 @@ The Python files are released into the public domain by their author, Ian Harvey
 
 Release Notes
 -------------
+
+Release 1.0.3
+- Now available on PyPI as `bluepy`. Installs via pip.
+
+Release 0.9.12
+- Support for CC2650 sensortag
+- Documentation fixes
+- Bug fix: DefaultDelegate has a handleDiscovery method
+- Bug fix: keypress now works with both V1.4 and V1.5 firmware 
+
+
+Release 0.9.11
+
+- Minor consistency improvements & bug fixes
+- Scanner now has getDevices() call
+- Docs updated
+
+Release 0.9.10
+
+- Now with Scan functionality
 
 Release 0.9.9
 
@@ -89,9 +115,8 @@ TO DO list
 ----------
 
 The following are still missing from the current release:
-- Build into easily installable package
-- Implement 'hcitool lescan' functionality
-- Reading RSSI
 - Unit test 
+- Peripheral role support
+
 
 

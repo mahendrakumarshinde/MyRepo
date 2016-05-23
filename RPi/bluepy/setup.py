@@ -3,19 +3,22 @@
 from setuptools.command.install import install
 from setuptools.command.develop import develop
 from setuptools import setup
-from subprocess import Popen, PIPE
+import subprocess
 import shlex
 import sys
+import os
 
 
 def pre_install():
     """Do the custom compiling of the bluepy-helper executable from the makefile"""
-    cmd = shlex.split("make -C ./bluepy")
-    proc = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=False)
-    proc.wait()
-    if proc.returncode != 0:
-        print("Bluez build failed. Exiting install. Make output:")
-        print(proc.stdout.read())
+    cmd = "make -C ./bluepy"
+    try:
+        msgs = subprocess.check_output(shlex.split(cmd), stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as e:
+        print("Failed to compile bluepy-helper. Exiting install.")
+        print("Command was " + repr(cmd) + " in " + os.getcwd())
+        print("Return code was %d" % e.returncode)
+        print("Output was:\n" + e.output)
         sys.exit(1)
 
 def post_install():
@@ -44,21 +47,27 @@ class BluepyDevelop(develop):
 
 setup (
     name='bluepy',
-    version='0.9.0',
+    version='1.0.3',
     description='Python module for interfacing with BLE devices through Bluez',
     author='Ian Harvey',
+    author_email='website-contact@fenditton.org',
     url='https://github.com/IanHarvey/bluepy',
+    download_url='https://github.com/IanHarvey/bluepy/tarball/v/1.0.3',
+    keywords=[ 'Bluetooth', 'Bluetooth Smart', 'BLE', 'Bluetooth Low Energy' ],
     classifiers=[
-        'Programming Language :: Python :: 2.7'
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.4',
     ],
     packages=['bluepy'],
     package_data={
-        'bluepy': ['bluepy-helper', '*.json']
+        'bluepy': ['bluepy-helper', '*.json', 'bluez-src.tgz', 'bluepy-helper.c', 'Makefile']
     },
     cmdclass={'install': BluepyInstall, 'develop': BluepyDevelop},
     entry_points={
         'console_scripts': [
             'sensortag=bluepy.sensortag:main',
+            'blescan=bluepy.blescan:main',
         ]
     }
 )

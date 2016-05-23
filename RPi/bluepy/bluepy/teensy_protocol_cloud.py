@@ -87,7 +87,7 @@ def scanForIUDevices():
             templine=line.split('HMSoft')
 	    templine[0]=templine[0].strip()
     	    address.append(templine[0])
-    
+
     p=[]
     i=0
     if len(address)<=0:
@@ -104,12 +104,12 @@ def scanForIUDevices():
                 success = True
             except:
                 print("Failed; retrying")
-                pass
+                os.system("sudo hciconfig hci0 down; sudo hciconfig hci0 up")
         p.append(peri)
         p[i].setDelegate(TeensyDelegate())
         i+=1
         print(addr)
-        
+
     print "Initializing and Connecting..."
     return p
 
@@ -119,7 +119,7 @@ class TeensyDelegate(btle.DefaultDelegate):
     def __init__(self):
 	self.buffer = ""
         btle.DefaultDelegate.__init__(self)
-    
+
     def handleNotification(self, cHandle, data):
 	print("Start handleNotification: " + str(time.time() - time_start))
         self.buffer = self.buffer + data
@@ -134,7 +134,7 @@ class TeensyDelegate(btle.DefaultDelegate):
 	    f = open(SENSOR_OUTPUT, "a")
 	    f.write("[" + d8 + "] " + ' '.join(msg) + '\n')
 	    f.close()
-	    
+
 	    print("handleNotfication: sending to SQL at Time: " + str(time.time() - time_start) + " Message: " + str(msg))
 	    try:
 	        addsqldata="""INSERT INTO IU_device_data (`Timestamp_Pi`, `MAC_ADDRESS`, `State`, `Battery_Level`, `Feature_Value_0`, `Feature_Value_1`, `Feature_Value_2`, `Feature_Value_3`, `Feature_Value_4`, `Feature_Value_5`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
@@ -157,7 +157,7 @@ class TeensyDelegate(btle.DefaultDelegate):
 	print("End handleNotification: " + str(time.time() - time_start))
 
 # Updates the locally kept list of thresholds based on the SQL database.
-# Enters any new devices into the Feature Dictionary. 
+# Enters any new devices into the Feature Dictionary.
 # Also updates STATUS for all devices based on whether they have been found.
 def check_for_thresholds(devices):
     macAddrs = """SELECT DISTINCT MAC_ADDRESS FROM Feature_Dictionary"""
@@ -169,7 +169,7 @@ def check_for_thresholds(devices):
         log_message("No devices assigned.")
     else:
         macAddrs = list(list(zip(*macAddrs))[0])
-    	
+
     for device in devices:
 	if device.deviceAddr not in macAddrs:
 	    print("Set up " + str(device.deviceAddr))
@@ -201,7 +201,7 @@ def check_for_thresholds(devices):
         if statusFlag != latestStatus: #change status in database only if status has changed
             x.execute(setStatus,(str(statusFlag), macaddress))
 	    print(printStatus)
-    conn.commit()   
+    conn.commit()
 
 # Given a list of devices, check if any thresholds have been updated in the database. If so, update using send_threshold().
 def update_thresholds(devices):
@@ -209,7 +209,7 @@ def update_thresholds(devices):
     global x
     x.execute(thresholds)
     tbl=x.fetchall()
-    global table    
+    global table
     for row in tbl:
         if table is None or not contains(table, row):
             device = [y for y in devices if y.deviceAddr == row[0]]
@@ -290,7 +290,7 @@ except btle.BTLEException:
 
 
 # Start data collection loop
-try:    
+try:
     while True:
 	print("Start while: " + str(time.time() - time_start))
 	try:

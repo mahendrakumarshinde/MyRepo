@@ -7,3 +7,5 @@
 7. sudo apt-get install libmysqlclient-dev
 8. sudo apt-get install python-dev
 9. sudo pip install MySQL-python
+10. sudo apt-get install gnome-schedule
+11. set cron job: sudo python work/productivity/RPi/bluepy/bluepy/teensy_protocol_cloud.py

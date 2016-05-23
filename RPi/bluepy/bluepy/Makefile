@@ -1,4 +1,4 @@
-BLUEZ_PATH=../bluez-5.29
+BLUEZ_PATH=./bluez-5.29
 
 BLUEZ_SRCS  = lib/bluetooth.c lib/hci.c lib/sdp.c lib/uuid.c
 BLUEZ_SRCS += attrib/att.c attrib/gatt.c attrib/gattrib.c attrib/utils.c
@@ -13,16 +13,28 @@ CC = gcc
 CFLAGS = -Os -g -Wall -Werror
 
 CPPFLAGS = -DHAVE_CONFIG_H
+ifneq ($(DEBUGGING),)
+CFLAGS += -DBLUEPY_DEBUG=1
+endif
 
 CPPFLAGS += -I$(BLUEZ_PATH)/attrib -I$(BLUEZ_PATH) -I$(BLUEZ_PATH)/lib -I$(BLUEZ_PATH)/src -I$(BLUEZ_PATH)/gdbus -I$(BLUEZ_PATH)/btio
 
-CPPFLAGS += `pkg-config glib-2.0 dbus-1 --cflags`
-LDLIBS += `pkg-config glib-2.0 --libs`
+CPPFLAGS += $(shell pkg-config glib-2.0 --cflags)
+LDLIBS += $(shell pkg-config glib-2.0 --libs)
 
 all: bluepy-helper 
 
 bluepy-helper: $(LOCAL_SRCS) $(IMPORT_SRCS)
 	$(CC) -L. $(CFLAGS) $(CPPFLAGS) -o $@ $(LOCAL_SRCS) $(IMPORT_SRCS) $(LDLIBS)
+
+$(IMPORT_SRCS): bluez-src.tgz
+	tar xzf $<
+	touch $(IMPORT_SRCS)
+
+.PHONY: bluez-tarfile
+
+bluez-tarfile:
+	(cd ..; tar czf bluepy/bluez-src.tgz bluez-5.29)
 
 GET_SERVICES=get_services.py
 
@@ -33,6 +45,7 @@ TAGS: *.c $(BLUEZ_PATH)/attrib/*.[ch] $(BLUEZ_PATH)/btio/*.[ch]
 	etags $^
 
 clean:
-	rm -f *.o bluepy-helper TAGS
+	rm -rf *.o bluepy-helper TAGS ./bluez-5.29
+
 
 

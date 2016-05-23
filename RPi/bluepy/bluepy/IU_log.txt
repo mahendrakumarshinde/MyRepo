@@ -1,166 +1,1675 @@
-2016-02-24 04:38:28.221941  SQL connection failed, retrying
-2016-02-25 01:45:51.455298  Data collection stopped.
-2016-02-25 01:48:41.876261  Data collection stopped.
-2016-02-25 01:59:19.420517  Data collection stopped.
-2016-02-25 02:06:54.876475  SQL connection failed, retrying
-2016-02-25 02:06:55.696666  SQL connection failed, retrying
-2016-02-25 02:06:56.515692  SQL connection failed, retrying
-2016-02-25 02:06:57.193069  SQL connection failed, retrying
-2016-02-25 02:06:59.077953  SQL connection failed, retrying
-2016-02-25 02:06:59.741531  SQL connection failed, retrying
-2016-02-25 02:07:01.102575  SQL connection failed, retrying
-2016-02-25 02:07:01.836893  SQL connection failed, retrying
-2016-02-25 02:07:02.676764  SQL connection failed, retrying
-2016-02-25 02:07:03.373333  SQL connection failed, retrying
-2016-02-25 02:07:04.815159  SQL connection failed, retrying
-2016-02-25 02:07:05.622977  SQL connection failed, retrying
-2016-02-25 02:07:07.363126  SQL connection failed, retrying
-2016-02-25 02:07:09.504409  SQL connection failed, retrying
-2016-02-25 02:07:11.564207  SQL connection failed, retrying
-2016-02-25 02:07:13.626598  SQL connection failed, retrying
-2016-02-25 02:07:15.728359  SQL connection failed, retrying
-2016-02-25 02:07:21.474085  SQL connection failed, retrying
-2016-02-25 02:07:22.296343  SQL connection failed, retrying
-2016-02-25 02:07:23.171766  SQL connection failed, retrying
-2016-02-25 02:07:23.675208  Data collection stopped.
-2016-02-25 02:09:19.253000  SQL connection failed, retrying
-2016-02-25 02:09:20.303621  SQL connection failed, retrying
-2016-02-25 02:09:20.990006  SQL connection failed, retrying
-2016-02-25 02:09:21.128400  SQL connection failed permanently.
-2016-02-25 02:09:21.129072  Data collection stopped.
-2016-02-25 02:10:41.599555  SQL connection failed, retrying
-2016-02-25 02:10:42.319513  SQL connection failed, retrying
-2016-02-25 02:10:42.977575  SQL connection failed, retrying
-2016-02-25 02:10:44.222874  SQL connection failed, retrying
-2016-02-25 02:10:46.286563  SQL connection failed, retrying
-2016-02-25 02:10:48.386909  SQL connection failed, retrying
-2016-02-25 02:10:50.543591  SQL connection failed, retrying
-2016-02-25 02:10:52.555306  SQL connection failed, retrying
-2016-02-25 02:12:09.760527  Data collection stopped.
-2016-02-25 02:12:36.802715  SQL connection failed, retrying
-2016-02-25 02:12:37.468688  SQL connection failed, retrying
-2016-02-25 02:12:38.900895  SQL connection failed, retrying
-2016-02-25 02:12:39.907586  Data collection stopped.
-2016-02-25 02:24:44.139523  SQL connection failed, retrying
-2016-02-25 02:24:46.273151  SQL connection failed, retrying
-2016-02-25 02:24:48.625116  SQL connection failed, retrying
-2016-02-25 02:24:49.299805  SQL connection failed, retrying
-2016-02-25 02:24:50.684261  SQL connection failed, retrying
-2016-02-25 02:24:52.800238  SQL connection failed, retrying
-2016-02-25 02:24:54.850767  SQL connection failed, retrying
-2016-02-25 02:24:55.900151  SQL connection failed, retrying
-2016-02-25 02:24:56.178467  SQL connection failed permanently.
-2016-02-25 02:24:56.179104  Data collection stopped.
-2016-02-25 02:26:55.787187  Data collection stopped.
-2016-02-25 04:55:41.040284  Data collection stopped.
-2016-02-25 05:01:44.340356  Data collection stopped.
-2016-02-25 05:10:25.547566  Data collection stopped.
-2016-02-25 05:12:09.865643  Data collection stopped.
-2016-02-25 05:18:23.720731  Data collection stopped.
-2016-02-25 05:24:58.101241  Data collection stopped.
-2016-02-25 06:35:34.492525  Data collection stopped.
-2016-02-25 06:36:58.732068  Data collection stopped.
-2016-02-25 06:46:54.962466  Data collection stopped.
-2016-02-25 06:52:17.915724  Data collection stopped.
-2016-02-25 07:27:54.862376  Data collection stopped.
-2016-02-25 07:34:30.598721  Data collection stopped.
-2016-02-25 07:35:49.466192  Data collection stopped.
-2016-02-25 07:37:30.039447  Data collection stopped.
-2016-02-25 07:42:31.094404  Data collection stopped.
-2016-02-25 07:45:51.481228  Data collection stopped.
-2016-02-25 07:47:44.039954  Data collection stopped.
-2016-02-25 07:49:37.472020  Data collection stopped.
-2016-02-25 07:50:30.100048  Data collection stopped.
-2016-02-25 07:51:27.422327  Data collection stopped.
-2016-02-25 07:52:11.695903  Data collection stopped.
-2016-02-25 08:30:14.372696  Data collection stopped.
-2016-02-25 08:49:33.155453  Data collection stopped.
-2016-02-25 08:52:24.077950  Data collection stopped.
-2016-02-25 08:55:24.818990  Data collection stopped.
-2016-02-25 08:58:35.743582  Data collection stopped.
-2016-02-25 08:59:18.044428  Data collection stopped.
-2016-02-25 09:13:38.027973  Data collection stopped.
-2016-02-27 23:20:16.000524  Data collection stopped.
-2016-02-27 23:46:11.406910  Data collection stopped.
-2016-02-27 23:55:49.114368  Data collection stopped.
-2016-02-28 00:03:03.661427  Data collection stopped.
-2016-02-28 00:15:32.908230  Data collection stopped
-2016-02-28 00:18:34.524908  Data collection stopped
-2016-02-28 00:21:49.963289  Data collection stopped
-2016-02-28 00:22:14.010845  Data collection stopped
-2016-02-28 00:22:54.240497  Data collection stopped
-2016-02-28 00:24:55.442458  Data collection stopped
-2016-02-28 00:26:53.446172  Data collection stopped
-2016-02-28 00:28:57.508425  Data collection stopped
-2016-02-28 00:43:04.330780  Data collection stopped
-2016-02-28 00:49:36.178615  Data collection stopped
-2016-02-28 00:55:16.971046  Data collection stopped
-2016-02-28 00:55:57.346240  Data collection stopped
-2016-02-28 04:29:05.400211  Data collection stopped
-2016-02-28 04:37:14.053709  Data collection stopped
-2016-02-28 04:52:54.797703  Data collection stopped
-2016-02-28 05:07:26.662553  Data collection stopped
-2016-02-28 05:08:14.889039  Data collection stopped
-2016-02-28 05:08:48.019911  Data collection stopped
-2016-02-28 05:10:26.116932  Data collection stopped
-2016-02-28 05:24:12.513672  Data collection stopped
-2016-02-28 05:27:57.848431  Data collection stopped
-2016-02-28 07:20:26.392591  Data collection stopped
-2016-02-28 07:21:48.896550  Data collection stopped
-2016-02-28 07:24:16.851964  Data collection stopped
-2016-02-28 07:26:05.543306  Data collection stopped
-2016-02-28 07:29:33.760232  Data collection stopped
-2016-02-28 07:41:10.313820  Data collection stopped
-2016-02-28 07:58:27.298992  Data collection stopped
-2016-02-28 07:59:52.634295  Data collection stopped
-2016-02-28 08:09:02.444715  Data collection stopped
-2016-02-28 08:21:42.028975  Data collection stopped
-2016-03-02 01:59:50.917681  Data collection stopped
-2016-03-02 02:00:50.507081  Data collection stopped
-2016-03-02 02:02:46.300047  Data collection stopped
-2016-03-02 02:07:47.518938  Data collection stopped
-2016-03-02 02:25:40.767987  Data collection stopped
-2016-03-03 03:28:03.703857  Data collection stopped
-2016-03-03 03:35:44.797243  Data collection stopped
-2016-03-03 03:55:24.642089  Data collection stopped
-2016-03-03 03:57:38.086851  Data collection stopped
-2016-03-03 04:00:28.003472  Data collection stopped
-2016-03-03 04:03:22.889330  Data collection stopped
-2016-03-03 04:08:07.331603  Data collection stopped
-2016-03-03 04:28:45.532504  Data collection stopped
-2016-03-03 04:32:14.338179  Data collection stopped
-2016-03-03 04:44:31.792964  Data collection stopped
-2016-03-05 02:08:07.344264  Could not open config file
-2016-03-05 02:45:35.363893  Data collection stopped
-2016-03-05 03:22:58.126053  Threshold update failed: device not found -68:9E:19:07:DE:F6
-2016-03-05 03:22:58.126814  Threshold update failed: device not found -68:9E:19:07:DE:F6
-2016-03-05 03:22:58.127332  Threshold update failed: device not found -68:9E:19:07:DE:F6
-2016-03-05 03:22:58.127716  Threshold update failed: device not found -68:9E:19:07:DE:F6
-2016-03-05 03:22:58.128114  Threshold update failed: device not found -68:9E:19:07:DE:F6
-2016-03-05 03:22:58.128555  Threshold update failed: device not found -68:9E:19:07:DE:F6
-2016-03-05 03:22:58.749703  Threshold written: 0000-0111-0891-1500
-2016-03-05 03:22:59.161675  Threshold written: 0001-0397-1452-1608
-2016-03-05 03:22:59.462061  Threshold written: 0002-0006-0007-0008
-2016-03-05 03:22:59.762302  Threshold written: 0003-0040-0042-0045
-2016-03-05 03:23:00.061824  Threshold written: 0004-0200-0205-0210
-2016-03-05 03:23:00.437374  Threshold written: 0005-0500-1000-1500
-2016-03-05 03:23:00.439248  Threshold update failed: device not found -68:9E:19:07:EE:26
-2016-03-05 03:23:00.439949  Threshold update failed: device not found -68:9E:19:07:EE:26
-2016-03-05 03:23:00.440536  Threshold update failed: device not found -68:9E:19:07:EE:26
-2016-03-05 03:23:00.441088  Threshold update failed: device not found -68:9E:19:07:EE:26
-2016-03-05 03:23:00.441625  Threshold update failed: device not found -68:9E:19:07:EE:26
-2016-03-05 03:23:00.442158  Threshold update failed: device not found -68:9E:19:07:EE:26
-2016-03-05 03:23:00.442686  Threshold update failed: device not found -68:9E:19:07:DE:98
-2016-03-05 03:23:00.443351  Threshold update failed: device not found -68:9E:19:07:DE:98
-2016-03-05 03:23:00.443954  Threshold update failed: device not found -68:9E:19:07:DE:98
-2016-03-05 03:23:00.444505  Threshold update failed: device not found -68:9E:19:07:DE:98
-2016-03-05 03:23:00.445043  Threshold update failed: device not found -68:9E:19:07:DE:98
-2016-03-05 03:23:00.445569  Threshold update failed: device not found -68:9E:19:07:DE:98
-Error: 2016-03-05 03:26:03.555529  Data collection stopped.
-2016-03-09 06:28:58.127988  No devices assigned.
-2016-03-09 06:28:59.156371  Threshold written: 0000-0030-0600-1200
-2016-03-09 06:28:59.531891  Threshold written: 0001-0100-0500-1000
-2016-03-09 06:28:59.831165  Threshold written: 0002-0006-0007-0008
-2016-03-09 06:29:00.206734  Threshold written: 0003-0040-0042-0045
-2016-03-09 06:29:00.618556  Threshold written: 0004-0200-0205-0210
-2016-03-09 06:29:00.956590  Threshold written: 0005-0500-1000-1500
+2016-05-21 03:36:16.799566  No devices assigned.
+2016-05-21 03:41:23.244110  No devices assigned.
+2016-05-21 03:46:03.643201  No devices assigned.
+2016-05-21 03:50:23.319016  No devices assigned.
+2016-05-21 03:51:44.185443  No devices assigned.
+2016-05-21 03:54:07.959044  No devices assigned.
+2016-05-21 03:56:04.870527  No devices assigned.
+2016-05-21 04:12:31.710204  Threshold written: 0000-0030-0600-1200
+2016-05-21 04:13:54.549966  Threshold written: 0000-0030-0600-1200
+2016-05-21 04:13:54.850460  Threshold written: 0001-0100-0500-1000
+2016-05-21 04:13:55.149702  Threshold written: 0002-0006-0007-0008
+2016-05-21 04:13:55.448600  Threshold written: 0003-0040-0042-0045
+2016-05-21 04:13:55.749154  Threshold written: 0004-0200-0205-0210
+2016-05-21 04:13:56.048428  Threshold written: 0005-0500-1000-1500
+2016-05-21 04:13:56.349273  Threshold written: 0000-0030-0600-1200
+2016-05-21 04:13:56.648419  Threshold written: 0001-0100-0500-1000
+2016-05-21 04:13:56.948962  Threshold written: 0002-0006-0007-0008
+2016-05-21 04:13:57.248213  Threshold written: 0003-0040-0042-0045
+2016-05-21 04:13:57.548777  Threshold written: 0004-0200-0205-0210
+2016-05-21 04:13:57.849340  Threshold written: 0005-0500-1000-1500
+2016-05-21 04:13:58.148654  Threshold written: 0000-0030-0600-1200
+2016-05-21 04:13:58.449145  Threshold written: 0001-0100-0500-1000
+2016-05-21 04:13:58.785946  Threshold written: 0002-0006-0007-0008
+2016-05-21 04:13:59.086496  Threshold written: 0003-0040-0042-0045
+2016-05-21 04:13:59.385812  Threshold written: 0004-0200-0205-0210
+2016-05-21 04:13:59.687607  Threshold written: 0005-0500-1000-1500
+2016-05-21 04:13:59.988170  Threshold written: 0000-0030-0600-1200
+2016-05-21 04:14:00.287841  Threshold written: 0001-0100-0500-1000
+2016-05-21 04:14:00.587957  Threshold written: 0002-0006-0007-0008
+2016-05-21 04:14:00.887278  Threshold written: 0003-0040-0042-0045
+2016-05-21 04:14:01.187825  Threshold written: 0004-0200-0205-0210
+2016-05-21 04:14:01.487078  Threshold written: 0005-0500-1000-1500
+2016-05-21 04:14:01.787617  Threshold written: 0000-0030-0600-1200
+2016-05-21 04:14:02.088166  Threshold written: 0001-0100-0500-1000
+2016-05-21 04:14:02.387490  Threshold written: 0002-0006-0007-0008
+2016-05-21 04:14:02.687999  Threshold written: 0003-0040-0042-0045
+2016-05-21 04:14:02.987261  Threshold written: 0004-0200-0205-0210
+2016-05-21 04:14:03.287817  Threshold written: 0005-0500-1000-1500
+2016-05-21 04:14:03.477685  Error: Data collection stopped.
+2016-05-21 04:25:12.531514  No devices assigned.
+2016-05-21 04:27:11.692328  Threshold written: 0000-0030-0600-1200
+2016-05-21 04:27:11.991372  Threshold written: 0001-0100-0500-1000
+2016-05-21 04:27:12.292038  Threshold written: 0002-0006-0007-0008
+2016-05-21 04:27:12.592392  Threshold written: 0003-0040-0042-0045
+2016-05-21 04:27:12.891735  Threshold written: 0004-0200-0205-0210
+2016-05-21 04:27:13.192259  Threshold written: 0005-0500-1000-1500
+2016-05-21 04:27:13.305448  Error: Data collection stopped.
+2016-05-21 04:31:58.908019  Threshold written: 0000-0030-0600-1200
+2016-05-21 04:31:59.208548  Threshold written: 0001-0100-0500-1000
+2016-05-21 04:31:59.508050  Threshold written: 0002-0006-0007-0008
+2016-05-21 04:31:59.808615  Threshold written: 0003-0040-0042-0045
+2016-05-21 04:32:00.109135  Threshold written: 0004-0200-0205-0210
+2016-05-21 04:32:00.408452  Threshold written: 0005-0500-1000-1500
+2016-05-21 04:34:16.608698  Threshold written: 0000-0030-0600-1200
+2016-05-21 04:34:16.908910  Threshold written: 0001-0100-0500-1000
+2016-05-21 04:34:17.208617  Threshold written: 0002-0006-0007-0008
+2016-05-21 04:34:17.508694  Threshold written: 0003-0040-0042-0045
+2016-05-21 04:34:17.807997  Threshold written: 0004-0200-0205-0210
+2016-05-21 04:34:18.108515  Threshold written: 0005-0500-1000-1500
+2016-05-21 04:57:01.205363  Threshold written: 0000-0030-0600-1200
+2016-05-21 04:57:01.479185  Threshold written: 0001-0100-0500-1000
+2016-05-21 04:57:01.748654  Threshold written: 0002-0006-0007-0008
+2016-05-21 04:57:02.019013  Threshold written: 0003-0040-0042-0045
+2016-05-21 04:57:02.288457  Threshold written: 0004-0200-0205-0210
+2016-05-21 04:57:02.666751  Threshold written: 0005-0500-1000-1500
+2016-05-21 04:57:02.993859  Threshold written: 0000-0030-0600-1200
+2016-05-21 04:57:03.263112  Threshold written: 0001-0100-0500-1000
+2016-05-21 04:57:03.533675  Threshold written: 0002-0006-0007-0008
+2016-05-21 04:57:03.804384  Threshold written: 0003-0040-0042-0045
+2016-05-21 04:57:04.073870  Threshold written: 0004-0200-0205-0210
+2016-05-21 04:57:04.343414  Threshold written: 0005-0500-1000-1500
+2016-05-21 05:07:50.263267  Threshold written: 0000-0030-0600-1200
+2016-05-21 05:07:50.532582  Threshold written: 0001-0100-0500-1000
+2016-05-21 05:07:50.803079  Threshold written: 0002-0006-0007-0008
+2016-05-21 05:07:51.072384  Threshold written: 0003-0040-0042-0045
+2016-05-21 05:07:51.342808  Threshold written: 0004-0200-0205-0210
+2016-05-21 05:07:51.645865  Threshold written: 0005-0500-1000-1500
+2016-05-21 05:07:51.980105  Threshold written: 0000-0030-0600-1200
+2016-05-21 05:07:52.250871  Threshold written: 0001-0100-0500-1000
+2016-05-21 05:07:52.520113  Threshold written: 0002-0006-0007-0008
+2016-05-21 05:07:52.790650  Threshold written: 0003-0040-0042-0045
+2016-05-21 05:07:53.059820  Threshold written: 0004-0200-0205-0210
+2016-05-21 05:07:53.330339  Threshold written: 0005-0500-1000-1500
+2016-05-21 05:10:18.595718  Threshold written: 0000-0030-0600-1200
+2016-05-21 05:10:18.864917  Threshold written: 0001-0100-0500-1000
+2016-05-21 05:10:19.135668  Threshold written: 0002-0006-0007-0008
+2016-05-21 05:10:19.405950  Threshold written: 0003-0040-0042-0045
+2016-05-21 05:10:19.675228  Threshold written: 0004-0200-0205-0210
+2016-05-21 05:10:19.945803  Threshold written: 0005-0500-1000-1500
+2016-05-21 05:10:20.278412  Threshold written: 0000-0030-0600-1200
+2016-05-21 05:10:20.549046  Threshold written: 0001-0100-0500-1000
+2016-05-21 05:10:20.818307  Threshold written: 0002-0006-0007-0008
+2016-05-21 05:10:21.088938  Threshold written: 0003-0040-0042-0045
+2016-05-21 05:10:21.359339  Threshold written: 0004-0200-0205-0210
+2016-05-21 05:10:21.628672  Threshold written: 0005-0500-1000-1500
+2016-05-22 22:42:48.055770  No devices assigned.
+2016-05-22 22:44:02.048642  Threshold written: 0000-0030-0600-1200
+2016-05-22 22:44:02.348899  Threshold written: 0001-0100-0500-1000
+2016-05-22 22:44:02.648354  Threshold written: 0002-0006-0007-0008
+2016-05-22 22:44:02.948716  Threshold written: 0003-0040-0042-0045
+2016-05-22 22:44:03.249250  Threshold written: 0004-0200-0205-0210
+2016-05-22 22:44:03.548556  Threshold written: 0005-0500-1000-1500
+2016-05-22 23:22:49.772224  Threshold written: 0000-0030-0600-1200
+2016-05-22 23:22:50.072115  Threshold written: 0001-0100-0500-1000
+2016-05-22 23:22:50.371506  Threshold written: 0002-0006-0007-0008
+2016-05-22 23:22:50.672429  Threshold written: 0003-0040-0042-0045
+2016-05-22 23:22:50.970104  Threshold written: 0004-0200-0205-0210
+2016-05-22 23:22:51.270623  Threshold written: 0005-0500-1000-1500
+2016-05-22 23:22:51.866110  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:51.866949  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:51.870535  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:51.871144  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:51.871955  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:51.872507  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:52.472909  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:52.473711  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:52.474283  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:52.474786  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:52.475288  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:52.475758  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:53.067384  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:53.068235  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:53.068836  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:53.069342  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:53.069830  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:53.070422  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:53.661453  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:53.662208  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:53.662779  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:53.663263  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:53.663714  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:53.664252  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:54.268298  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:54.269091  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:54.269631  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:54.270144  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:54.270608  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:54.271070  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:54.868322  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:54.869395  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:54.870146  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:54.870845  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:54.871590  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:54.872261  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:55.464426  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:55.465452  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:55.466186  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:55.466892  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:55.467582  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:55.468588  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:56.060104  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:56.060900  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:56.061515  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:56.062079  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:56.062583  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:56.063158  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:56.656194  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:56.657001  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:56.657601  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:56.658411  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:56.658936  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:56.659505  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:57.255272  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:57.256186  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:57.256905  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:57.257433  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:57.258191  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:57.258817  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:57.858336  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:57.859109  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:57.859746  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:57.860225  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:57.860803  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:57.861276  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:58.451297  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:58.452141  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:58.452684  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:58.453271  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:58.453828  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:58.454324  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:59.045256  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:59.046128  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:59.046688  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:59.047252  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:59.047869  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:59.048589  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:59.651147  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:59.651939  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:59.652545  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:59.653054  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:59.653637  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:22:59.654158  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:00.245207  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:00.246060  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:00.246579  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:00.247144  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:00.247681  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:00.248334  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:00.839443  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:00.840298  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:00.840879  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:00.841425  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:00.841931  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:00.842487  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:01.438407  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:01.439251  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:01.439878  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:01.440436  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:01.440973  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:01.441530  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:02.032164  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:02.032976  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:02.033528  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:02.034074  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:02.034562  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:02.035138  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:02.625407  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:02.626215  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:02.626765  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:02.627344  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:02.628007  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:02.628580  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:03.224133  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:03.224916  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:03.225579  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:03.226098  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:03.226643  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:03.227210  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:03.817397  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:03.818297  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:03.818909  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:03.819507  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:03.820007  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:03.820577  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:04.412466  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:04.413315  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:04.413914  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:04.414460  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:04.414971  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:04.415545  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:05.010255  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:05.011034  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:05.011717  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:05.012252  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:05.012787  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:05.013328  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:05.616736  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:05.617468  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:05.618163  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:05.618743  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:05.619333  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:05.619877  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:06.222960  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:06.223772  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:06.224389  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:06.224904  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:06.225464  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:06.226005  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:06.815506  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:06.816235  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:06.816799  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:06.817293  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:06.817918  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:06.818536  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:07.409860  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:07.410686  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:07.411242  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:07.411816  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:07.412328  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:07.412846  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:08.007648  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:08.012078  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:08.012819  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:08.013414  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:08.013961  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:08.014557  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:08.605744  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:08.606533  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:08.607176  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:08.607661  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:08.608394  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:08.608933  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:09.202471  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:09.203300  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:09.203924  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:09.204455  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:09.205009  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:09.205517  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:09.798270  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:09.799077  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:09.799663  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:09.800193  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:09.800683  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:09.801275  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:10.394180  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:10.395077  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:10.395627  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:10.396235  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:10.396739  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:10.397328  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:10.987746  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:10.988655  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:10.989202  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:10.989771  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:10.990290  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:10.990803  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:11.586807  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:11.587645  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:11.588364  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:11.588940  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:11.589487  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:11.590036  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:12.190380  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:12.191194  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:12.191783  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:12.192308  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:12.192837  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:12.193349  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:12.785494  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:12.786328  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:12.786915  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:12.787449  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:12.788072  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:12.788688  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:13.392843  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:13.393614  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:13.394219  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:13.394774  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:13.395338  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:13.395837  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:13.988968  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:13.989774  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:13.990398  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:13.990938  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:13.991480  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:13.992033  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:14.586815  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:14.587623  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:14.588321  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:14.588901  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:14.589433  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:14.589969  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:15.184406  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:15.185218  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:15.185821  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:15.186340  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:15.186938  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:15.187416  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:15.784344  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:15.785138  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:15.785759  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:15.786266  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:15.786823  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:15.787333  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:16.380343  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:16.381212  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:16.381776  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:16.382303  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:16.382789  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:16.383327  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:16.974094  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:16.974938  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:16.975498  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:16.976070  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:16.976588  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:16.977181  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:17.568249  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:17.568992  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:17.569590  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:17.570104  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:17.570644  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:17.571179  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:18.166043  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:18.166755  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:18.167371  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:18.168063  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:18.168673  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:18.169199  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:18.762949  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:18.766906  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:18.767857  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:18.768548  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:18.769084  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:18.769658  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:19.362503  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:19.363291  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:19.363879  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:19.364388  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:19.364946  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:19.365500  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:19.962840  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:19.963694  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:19.964240  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:19.964804  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:19.965348  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:19.965857  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:20.557125  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:20.558083  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:20.558746  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:20.559270  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:20.559806  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:20.560352  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:21.159239  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:21.160090  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:21.160653  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:21.161245  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:21.161774  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:21.162272  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:21.759719  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:21.760576  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:21.761180  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:21.761718  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:21.762215  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:21.762809  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:22.355255  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:22.356069  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:22.356693  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:22.357209  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:22.357962  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:22.358544  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:22.949790  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:22.950584  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:22.951127  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:22.951709  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:22.952224  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:22.952807  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:23.570363  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:23.571148  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:23.571782  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:23.572306  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:23.572864  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:23.573370  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:24.164666  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:24.169284  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:24.170084  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:24.170653  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:24.171202  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:24.171792  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:24.762241  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:24.763053  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:24.763599  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:24.764198  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:24.764674  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:24.765210  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:25.368059  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:25.368812  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:25.369495  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:25.370037  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:25.370594  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:25.371101  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:25.966508  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:25.967276  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:25.967989  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:25.968571  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:25.969139  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:25.969698  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:26.560234  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:26.561077  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:26.561650  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:26.562210  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:26.562706  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:26.563269  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:27.159684  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:27.160427  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:27.161043  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:27.161608  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:27.162176  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:27.162695  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:27.756880  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:27.757837  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:27.758507  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:27.759035  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:27.759605  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:27.760081  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:28.355497  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:28.356347  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:28.356934  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:28.357504  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:28.358197  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:28.358845  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:28.950533  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:28.951362  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:28.951917  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:28.952490  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:28.952991  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:28.953556  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:29.545490  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:29.546440  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:29.547025  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:29.547590  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:29.548209  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:29.548821  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:30.140353  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:30.141222  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:30.141790  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:30.142371  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:30.142928  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:30.143430  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:30.735759  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:30.736602  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:30.737181  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:30.737955  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:30.738556  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:30.739115  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:31.334182  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:31.335037  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:31.335561  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:31.336136  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:31.336667  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:31.337171  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:31.927855  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:31.928628  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:31.929269  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:31.929792  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:31.930357  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:31.930865  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:32.521975  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:32.522835  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:32.523390  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:32.523956  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:32.524463  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:32.524998  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:33.116816  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:33.117629  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:33.118364  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:33.118941  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:33.119481  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:33.120032  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:33.711767  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:33.712564  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:33.713167  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:33.713673  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:33.714222  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:33.714734  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:34.307293  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:34.308246  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:34.308830  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:34.309450  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:34.309923  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:34.310500  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:34.905670  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:34.910001  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:34.910864  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:34.911489  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:34.912040  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:34.912589  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:35.506232  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:35.507130  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:35.507820  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:35.508418  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:35.508930  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:35.509499  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:36.105299  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:36.106094  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:36.106702  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:36.107269  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:36.107893  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:36.108500  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:36.700387  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:36.701154  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:36.701750  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:36.702279  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:36.702811  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:36.703385  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:37.295540  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:37.296338  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:37.296992  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:37.297536  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:37.298213  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:37.298826  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:37.890568  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:37.891376  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:37.891995  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:37.892540  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:37.893055  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:37.893640  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:38.488773  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:38.489584  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:38.490162  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:38.490707  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:38.491259  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:38.491778  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:39.120265  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:39.121137  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:39.121691  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:39.122235  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:39.122774  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:39.123310  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:39.714803  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:39.715554  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:39.716161  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:39.716627  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:39.717146  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:39.717676  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:40.313125  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:40.317101  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:40.317991  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:40.318639  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:40.319237  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:40.319759  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:40.913293  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:40.914132  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:40.914691  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:40.915289  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:40.915752  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:40.916328  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:41.507882  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:41.508832  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:41.509435  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:41.509979  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:41.510539  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:41.511068  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:42.112358  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:42.113191  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:42.113788  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:42.114336  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:42.114837  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:42.115416  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:42.708400  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:42.709258  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:42.709811  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:42.710417  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:42.710932  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:42.711542  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:43.304646  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:43.305454  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:43.306008  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:43.306628  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:43.307100  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:43.307769  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:43.899931  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:43.900741  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:43.901287  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:43.901847  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:43.902359  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:43.902926  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:44.496274  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:44.497126  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:44.497672  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:44.498373  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:44.498879  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:44.499462  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:45.092649  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:45.093497  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:45.094077  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:45.094656  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:45.095164  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:45.095723  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:45.687560  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:45.688502  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:45.689112  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:45.689679  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:45.690191  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:45.690784  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:46.281262  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:46.282093  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:46.282630  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:46.283161  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:46.283689  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:46.284221  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:46.874387  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:46.875198  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:46.875817  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:46.876352  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:46.876936  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:46.877459  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:47.468510  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:47.469373  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:47.469996  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:47.470513  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:47.471113  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:47.471601  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:48.062637  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:48.063532  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:48.064087  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:48.064679  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:48.065235  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:48.065718  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:48.655128  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:48.655945  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:48.656530  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:48.657076  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:48.657622  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:48.658392  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:49.248812  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:49.249601  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:49.250191  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:49.250685  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:49.251234  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:49.251741  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:49.843130  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:49.844180  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:49.844982  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:49.845689  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:49.846430  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:49.847134  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:50.439220  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:50.440123  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:50.440680  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:50.441271  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:50.441775  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:50.442307  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:51.034406  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:51.038496  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:51.039358  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:51.040005  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:51.040576  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:51.041079  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:51.631934  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:51.632733  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:51.633274  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:51.633825  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:51.634356  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:51.634885  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:52.231342  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:52.232099  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:52.232671  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:52.233180  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:52.233735  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:52.234271  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:52.826496  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:52.827281  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:52.828018  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:52.828586  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:52.829171  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:52.829694  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:53.420561  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:53.421350  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:53.422040  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:53.422597  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:53.423138  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:53.423659  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:54.015399  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:54.016186  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:54.016771  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:54.017273  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:54.017959  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:54.018486  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:54.610021  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:54.610836  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:54.611393  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:54.611952  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:54.612452  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:54.613033  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:55.219482  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:55.220265  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:55.220887  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:55.221402  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:55.221962  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:55.222470  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:55.826040  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:55.826855  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:55.827438  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:55.828093  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:55.828633  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:55.829198  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:56.432289  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:56.433056  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:56.433610  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:56.434168  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:56.434718  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:56.435253  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:57.031592  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:57.032410  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:57.032910  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:57.033490  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:57.034001  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:57.034595  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:57.638105  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:57.638899  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:57.639483  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:57.640057  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:57.640573  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:57.641191  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:58.237773  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:58.238621  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:58.239176  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:58.239746  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:58.240265  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:58.240801  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:58.831917  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:58.832728  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:58.833263  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:58.833816  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:58.834375  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:58.834969  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:59.431038  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:59.431841  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:59.432525  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:59.433049  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:59.433587  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:23:59.434093  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:00.025414  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:00.026252  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:00.026894  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:00.027440  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:00.028071  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:00.028665  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:00.618157  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:00.619007  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:00.619554  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:00.620113  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:00.620621  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:00.621158  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:01.211657  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:01.212438  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:01.213056  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:01.213576  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:01.214144  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:01.214653  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:01.802866  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:01.808857  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:01.809674  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:01.810265  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:01.810818  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:01.811370  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:02.412344  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:02.413175  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:02.413755  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:02.414318  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:02.414822  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:02.415370  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:03.009124  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:03.009887  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:03.010491  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:03.011031  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:03.011606  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:03.012149  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:03.601510  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:03.602345  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:03.602968  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:03.603474  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:03.603996  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:03.604533  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:04.194603  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:04.195450  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:04.196016  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:04.196530  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:04.197084  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:04.197584  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:04.794852  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:04.795733  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:04.796296  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:04.796882  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:04.797416  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:04.798084  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:05.388898  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:05.389729  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:05.390427  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:05.390976  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:05.391513  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:05.392086  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:05.983239  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:05.983958  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:05.984590  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:05.985115  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:05.985676  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:05.986205  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:06.620920  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:06.621707  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:06.622340  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:06.622863  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:06.623414  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:06.623911  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:07.231381  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:07.235305  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:07.235809  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:07.236218  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:07.236614  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:07.237012  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:07.827985  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:07.828732  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:07.829254  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:07.829744  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:07.830218  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:07.830709  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:08.422919  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:08.423727  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:08.424291  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:08.424879  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:08.425352  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:08.425965  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:09.017188  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:09.018112  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:09.018754  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:09.019277  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:09.019877  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:09.020359  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:09.611784  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:09.612585  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:09.613157  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:09.613699  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:09.614226  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:09.614803  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:10.351477  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:10.352302  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:10.352911  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:10.353432  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:10.354000  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:10.354530  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:11.238587  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:11.239461  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:11.240032  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:11.240600  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:11.241168  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:11.241673  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:11.974184  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:11.974775  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:11.975301  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:11.975703  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:11.976071  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:11.976450  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:12.865853  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:12.866523  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:12.866890  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:12.867266  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:12.867653  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:12.868138  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:13.490171  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:13.490773  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:13.491234  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:13.491626  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:13.491960  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:13.492365  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:14.080387  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:14.081011  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:14.081414  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:14.081783  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:14.082172  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:14.082528  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:14.817057  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:14.817928  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:14.818581  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:14.819108  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:14.819684  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:14.820165  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:15.411438  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:15.412211  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:15.412907  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:15.413425  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:15.413977  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:15.414516  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:16.170813  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:16.171603  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:16.172172  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:16.172738  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:16.173279  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:16.173823  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:16.766266  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:16.767008  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:16.767623  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:16.768386  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:16.769026  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:16.769563  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:17.503771  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:17.504537  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:17.505145  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:17.505629  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:17.506105  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:17.506608  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:18.098936  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:18.099665  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:18.100218  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:18.100693  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:18.101195  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:18.101701  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:18.694364  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:18.695155  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:18.695781  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:18.696302  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:18.696773  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:18.697282  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:19.437323  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:19.438482  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:19.439294  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:19.440070  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:19.440776  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:19.441505  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:20.033108  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:20.034055  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:20.034805  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:20.035569  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:20.036242  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:20.037227  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:20.781093  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:20.782036  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:20.782728  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:20.783379  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:20.784012  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:20.784686  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:21.375706  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:21.376667  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:21.377373  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:21.378192  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:21.378899  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:21.379590  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:21.974506  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:21.975367  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:21.975920  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:21.976497  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:21.977004  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:21.977585  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:22.720507  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:22.721446  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:22.724196  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:22.724837  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:22.725572  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:22.726146  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:23.316217  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:23.316989  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:23.317558  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:23.318270  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:23.318855  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:23.319398  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:23.910259  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:23.911084  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:23.911692  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:23.912209  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:23.912754  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:23.913269  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:24.504797  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:24.505664  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:24.506213  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:24.506799  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:24.507306  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:24.508027  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:25.097987  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:25.098721  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:25.099311  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:25.099897  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:25.100491  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:25.101030  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:25.691930  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:25.692724  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:25.693319  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:25.693867  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:25.694425  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:25.694938  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:26.290408  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:26.291443  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:26.292256  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:26.292976  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:26.293641  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:26.294426  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:26.905859  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:26.906636  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:26.907277  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:26.907880  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:26.908490  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:26.909025  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:27.500388  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:27.501187  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:27.501751  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:27.502337  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:27.502806  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:27.503420  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:28.099729  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:28.100607  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:28.103690  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:28.104280  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:28.104908  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:28.105501  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:28.695858  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:28.696666  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:28.697288  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:28.697932  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:28.698577  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:28.699087  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:29.288939  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:29.289797  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:29.290353  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:29.290902  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:29.291429  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:29.291932  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:29.884426  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:29.885283  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:29.885860  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:29.886478  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:29.886993  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:29.887579  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:30.479917  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:30.480704  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:30.481369  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:30.481876  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:30.482440  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:30.482940  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:31.073277  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:31.074143  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:31.074740  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:31.075395  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:31.075918  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:31.076516  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:31.666991  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:31.667945  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:31.668564  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:31.669126  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:31.669655  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:31.670219  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:32.265508  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:32.266296  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:32.266886  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:32.267386  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:32.268135  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:32.268757  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:32.858061  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:32.858886  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:32.859451  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:32.859999  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:32.860533  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:32.861116  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:33.453038  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:33.454089  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:33.454894  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:33.455673  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:33.456352  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:33.457114  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:34.047866  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:34.048867  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:34.049637  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:34.050412  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:34.051147  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:34.051886  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:34.642673  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:34.643704  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:34.644536  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:34.645293  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:34.646034  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:34.646764  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:35.240190  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:35.241626  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:35.242487  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:35.243261  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:35.243952  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:35.244901  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:35.839648  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:35.840420  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:35.840996  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:35.841469  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:35.842029  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:35.842842  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:36.433559  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:36.434300  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:36.434852  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:36.435335  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:36.435878  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:36.436358  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:37.025741  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:37.026553  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:37.027076  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:37.027678  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:37.028393  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:37.028890  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:37.621321  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:37.622097  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:37.622648  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:37.623085  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:37.623640  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:37.624469  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:38.215529  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:38.216339  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:38.216874  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:38.217435  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:38.218077  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:38.218719  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:38.809844  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:38.813527  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:38.814159  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:38.814925  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:38.815460  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:38.816013  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:39.410119  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:39.410952  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:39.411555  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:39.412071  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:39.412647  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:39.413151  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:40.002258  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:40.003104  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:40.003718  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:40.004259  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:40.004794  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:40.005349  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:40.596347  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:40.597165  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:40.597878  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:40.598425  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:40.598997  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:40.599467  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:41.190311  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:41.191104  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:41.191735  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:41.192279  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:41.192848  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:41.193358  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:41.784415  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:41.785240  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:41.785797  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:41.786354  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:41.786899  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:41.787946  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:42.379768  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:42.380605  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:42.381195  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:42.381739  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:42.382274  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:42.382829  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:42.985430  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:42.986201  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:42.986824  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:42.987467  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:42.988192  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:42.988746  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:43.592893  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:43.593680  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:43.594300  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:43.594808  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:43.595407  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:43.595915  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:44.202041  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:44.206762  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:44.207602  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:44.208451  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:44.208961  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:44.209569  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:44.801309  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:44.802173  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:44.802732  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:44.803315  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:44.803822  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:44.804383  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:45.396244  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:45.397069  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:45.397659  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:45.398386  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:45.398900  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:45.399497  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:46.004549  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:46.005332  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:46.005959  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:46.006487  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:46.007055  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:46.007563  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:46.598283  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:46.599052  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:46.599661  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:46.600151  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:46.600724  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:24:46.601240  Thresholds not updated7C:EC:79:61:8B:7A
+2016-05-22 23:30:27.724738  Threshold written: 0000-0030-0600-1200
+2016-05-22 23:30:28.024095  Threshold written: 0001-0100-0500-1000
+2016-05-22 23:30:28.324657  Threshold written: 0002-0006-0007-0008
+2016-05-22 23:30:28.625180  Threshold written: 0003-0040-0042-0045
+2016-05-22 23:30:28.924509  Threshold written: 0004-0200-0205-0210
+2016-05-22 23:30:29.225021  Threshold written: 0005-0500-1000-1500
+2016-05-22 23:30:29.819531  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:29.820624  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:29.821381  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:29.822151  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:29.822847  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:29.823594  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:30.454722  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:30.455799  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:30.456550  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:30.457326  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:30.458298  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:30.459140  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:31.050361  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:31.051466  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:31.052385  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:31.053158  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:31.053864  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:31.054598  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:31.646968  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:31.652616  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:31.653703  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:31.654491  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:31.655239  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:31.655983  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:32.258328  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:32.259088  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:32.259652  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:32.260155  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:32.260654  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:32.261163  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:32.852518  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:32.853274  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:32.853812  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:32.854304  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:32.854795  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:32.855289  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:33.447110  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:33.447912  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:33.448471  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:33.448964  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:33.449460  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:33.449965  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:34.041927  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:34.042888  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:34.043600  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:34.044256  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:34.044915  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:34.045577  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:34.638083  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:34.639052  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:34.639765  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:34.640440  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:34.641102  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:34.641769  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:35.240966  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:35.241920  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:35.242640  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:35.243299  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:35.243967  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:35.244631  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:35.895262  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:35.896054  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:35.896676  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:35.897177  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:35.897854  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:35.898407  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:36.489613  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:36.490480  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:36.491040  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:36.491617  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:36.492229  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:36.492834  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:37.084120  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:37.088233  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:37.089132  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:37.089695  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:37.090316  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:37.090834  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:37.687958  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:37.688715  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:37.689325  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:37.689842  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:37.690416  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:37.690929  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:38.283993  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:38.284824  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:38.285448  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:38.285998  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:38.286542  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:38.287101  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:38.880364  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:38.881160  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:38.881702  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:38.882248  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:38.882745  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:38.883300  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:39.492631  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:39.493486  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:39.494089  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:39.494640  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:39.495148  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:39.495729  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:40.087435  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:40.088561  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:40.089401  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:40.090091  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:40.090828  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:40.091525  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:40.683194  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:40.684241  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:40.685037  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:40.685801  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:40.686536  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:40.687263  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:41.282842  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:41.283890  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:41.284716  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:41.285441  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:41.286200  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:41.286919  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:41.879841  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:41.880842  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:41.881604  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:41.882332  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:41.883000  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:41.883842  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:42.476384  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:42.477503  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:42.478476  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:42.479246  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:42.479982  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:42.480701  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:43.073174  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:43.074350  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:43.075158  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:43.075933  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:43.076674  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:43.077406  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:43.674458  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:43.675218  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:43.675752  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:43.676254  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:43.676758  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:43.677628  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:44.283832  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:44.284550  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:44.285098  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:44.285592  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:44.286089  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:44.286623  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:44.879355  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:44.880135  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:44.880619  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:44.881089  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:44.881597  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:44.882070  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:45.474298  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:45.475357  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:45.476131  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:45.476880  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:45.477642  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:45.478613  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:46.070048  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:46.071097  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:46.071913  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:46.072684  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:46.073354  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:46.074115  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:46.669994  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:46.671044  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:46.671809  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:46.672541  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:46.673247  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:46.673982  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:47.427467  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:47.428110  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:47.428526  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:47.428875  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:47.429168  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:47.429488  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:48.018521  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:48.021736  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:48.022183  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:48.022635  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:48.023042  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:48.023383  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:48.777796  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:48.778426  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:48.778767  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:48.779128  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:48.779486  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:48.779790  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:49.371559  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:49.372328  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:49.372860  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:49.373361  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:49.373881  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:49.374347  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:50.122224  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:50.123034  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:50.123631  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:50.124218  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:50.124729  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:50.125304  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:50.715852  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:50.716700  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:50.717215  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:50.717945  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:50.718499  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:50.719097  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:51.319156  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:51.320063  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:51.320617  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:51.321209  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:51.321743  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:51.322268  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:52.058761  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:52.059559  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:52.060156  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:52.060669  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:52.061240  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:52.061755  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:52.658765  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:52.659650  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:52.660202  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:52.660769  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:52.661278  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:52.661814  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:53.397620  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:53.398283  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:53.398694  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:53.399066  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:53.399415  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:53.399839  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:53.990373  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:53.990957  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:53.991472  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:53.991922  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:53.992281  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:53.992629  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:54.730174  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:54.730949  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:54.731530  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:54.732059  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:54.732558  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:54.733124  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:55.329602  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:55.330615  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:55.331373  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:55.332098  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:55.332779  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:55.333505  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:55.928267  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:55.929352  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:55.930139  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:55.930806  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:55.931547  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:55.932234  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:56.682231  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:56.682994  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:56.683553  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:56.684066  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:56.684549  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:56.685073  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:57.281071  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:57.281798  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:57.282334  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:57.282802  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:57.283686  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:57.284576  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:58.028586  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:58.029316  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:58.029832  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:58.030288  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:58.030768  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:58.031254  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:58.644764  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:58.645543  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:58.646161  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:58.646721  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:58.647286  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:58.647926  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:59.240070  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:59.240928  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:59.241544  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:59.242105  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:59.242640  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:59.243153  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:59.849485  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:59.850293  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:59.850883  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:59.851557  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:59.852103  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:30:59.852680  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:00.446346  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:00.447106  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:00.447754  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:00.448292  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:00.448886  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:00.449378  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:01.105637  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:01.106463  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:01.107051  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:01.107644  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:01.108338  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:01.108938  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:01.702722  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:01.703464  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:01.704098  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:01.704583  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:01.705170  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:01.705641  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:02.297937  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:02.298667  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:02.299268  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:02.299787  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:02.300354  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:02.300867  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:02.893984  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:02.894723  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:02.895355  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:02.895863  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:02.896392  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:02.896919  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:03.494596  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:03.495452  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:03.496000  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:03.496546  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:03.497094  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:03.497609  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:04.089716  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:04.090643  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:04.094798  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:04.095457  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:04.096109  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:04.096689  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:04.688751  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:04.689615  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:04.690199  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:04.690745  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:04.691247  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:04.691804  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:05.288951  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:05.289803  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:05.290407  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:05.290933  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:05.291433  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:05.292085  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:05.885947  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:05.886765  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:05.887349  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:05.888033  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:05.888634  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:05.889144  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:06.483001  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:06.483836  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:06.484449  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:06.484959  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:06.485481  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:06.486016  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:07.104309  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:07.105123  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:07.105764  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:07.106238  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:07.106762  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:07.107287  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:07.699834  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:07.700635  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:07.701244  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:07.701767  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:07.702323  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:07.702861  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:08.311400  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:08.312275  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:08.312828  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:08.313374  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:08.313944  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:08.314429  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:08.908440  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:08.909497  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:08.910285  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:08.911038  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:08.911715  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:08.912441  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:09.506372  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:09.507442  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:09.508379  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:09.509214  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:09.509952  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:09.510634  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:10.103533  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:10.104800  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:10.105558  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:10.106339  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:10.107012  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:10.107868  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:10.716875  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:10.718066  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:10.718942  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:10.719636  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:10.720398  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:10.721116  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:11.320661  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:11.321475  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:11.322003  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:11.322677  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:11.323143  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:11.323621  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:11.913403  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:11.914180  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:11.914681  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:11.915185  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:11.915645  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:11.916117  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:12.506003  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:12.506813  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:12.507344  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:12.507957  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:12.508513  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:12.509031  Thresholds not updated for: 7C:EC:79:61:8B:7A
+2016-05-22 23:31:13.049710  Error: Data collection stopped.
