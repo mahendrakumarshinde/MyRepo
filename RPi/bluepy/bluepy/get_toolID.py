@@ -5,28 +5,32 @@ import time
 import re
 
 
-def get_toolID():
+def get_toolID(device):
 
 	Toolid = []
 	
-	AgentAddress = 'http://192.168.1.254:5000/current'
+	try:
+	    AgentAddress = 'http://192.168.1.254:5000/current'
+	except:
+	    print("Cannot connect to internet / agent address")
 
 	try:
 	    xml = urllib2.urlopen(AgentAddress)
+	    xml = urllib2.urlopen(AgentAddress)
+	    xml = xml.read()
+	    data = ET.ElementTree(ET.fromstring(xml))
+	    test = data.getroot()
+	    yolo = test.findall('.//')
 	except urllib2.URLError:
-		sys.exit("Invalid MTConnect Agent Address! Please connect device to internet.")
+	    print("Invalid MTConnect Agent Address! Please connect device to internet.")
 
-	xml = urllib2.urlopen(AgentAddress)
-	xml = xml.read()
-	data = ET.ElementTree(ET.fromstring(xml))
-	test = data.getroot()
-	yolo = test.findall('.//')
-	for yolos in yolo:
+	
+	try:
+	    for yolos in yolo:
 		if (yolos.tag == '{urn:mtconnect.org:MTConnectStreams:1.3}ToolId'):
-			Toolid.append(yolos.text)
+		    Toolid.append(yolos.text)
 
-	print(Toolid[0])
-
-
-
-get_toolID()
+	    print("Tool ID is: " + str(Toolid[0]))
+	    return int(Toolid[0])
+	except:
+	    return 1

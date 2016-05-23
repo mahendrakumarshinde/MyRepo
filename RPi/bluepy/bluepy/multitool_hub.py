@@ -8,6 +8,7 @@ import os
 import signal
 import RPi.GPIO as GPIO
 from time import sleep
+from get_toolID import *
 
 """
 GPIO SETUP (Green LED)
@@ -290,8 +291,8 @@ def log_message(message):
     f.close()
 
 #Extract current tool ID
-def get_toolID(device):
-    return 1
+#def get_toolID(device):
+#    return 1
 
 """
 ================
@@ -324,7 +325,7 @@ try:
     for device in devices:
 	tool_ID[device.deviceAddr]=get_toolID(device.deviceAddr) #default tool 1
 except:
-    report_error("Could not get tool ID for " + device)
+    report_error("Could not get tool ID for " + str(device.deviceAddr))
     raise
 
 check_for_thresholds(devices, tool_ID)
