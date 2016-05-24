@@ -1,5 +1,5 @@
 LE Scan ...
 7C:EC:79:61:8B:7A (unknown)
 7C:EC:79:61:8B:7A HMSoft
-EE:C7:23:20:44:24 (unknown)
-EE:C7:23:20:44:24 Surge
+7D:0B:0B:25:E9:7C (unknown)
+7D:0B:0B:25:E9:7C (unknown)

@@ -8,7 +8,7 @@ import os
 import signal
 import RPi.GPIO as GPIO
 from time import sleep
-from get_toolID import *
+#from get_toolID import *
 
 """
 GPIO SETUP (Green LED)
@@ -17,7 +17,10 @@ GPIO SETUP (Green LED)
 GPIO.setmode(GPIO.BOARD)
 GPIO.setwarnings(False)
 
-GPIO.setup(40, GPIO.OUT)
+GPIO.setup(40, GPIO.OUT) # All errors (master diagnostics)
+GPIO.setup(36, GPIO.OUT) # Bluetooth errors
+GPIO.setup(32, GPIO.OUT) # Wifi errors
+GPIO.setup(22, GPIO.OUT) # Multi-tool errors
 GPIO.output(40, True)
 sleep(1)
 GPIO.output(40, False)
@@ -31,6 +34,12 @@ sleep(1)
 STARTUP CODE
 """
 
+GPIO.output(40, True)
+GPIO.output(36, True)
+GPIO.output(32, True)
+GPIO.output(22, True)
+sleep(1)
+
 global x
 
 LOG_FILE = "IU_log.txt"
@@ -40,6 +49,7 @@ try:
     x =conn.cursor()
 except:
     report_error("Unable to access hub dictionary.")
+    GPIO.output(32, False)
     raise
 table={}
 time_start = time.time()
@@ -66,7 +76,8 @@ def scanForIUDevices():
         os.system("sudo hciconfig hci0 down; sudo hciconfig hci0 up")
     except:
         report_error("Could not configure hcitool")
-        raise
+        GPIO.output(36, False)
+	raise
     try:
         os.system("hcitool lescan > IU_config.txt & sleep 10; pkill --signal SIGINT hcitool")
     except:
@@ -107,13 +118,15 @@ def scanForIUDevices():
                 success = True
             except:
                 print("Failed to connect to device peripheral; retrying")
-                os.system("sudo hciconfig hci0 down; sudo hciconfig hci0 up")
+                GPIO.output(36, False)
+		os.system("sudo hciconfig hci0 down; sudo hciconfig hci0 up")
         p.append(peri)
         p[i].setDelegate(TeensyDelegate())
         i+=1
         print(addr)
 
     print "Initializing and Connecting..."
+    GPIO.output(36, True)
     return p
 
 # Subclass from btle.py. handleNotification processes incoming BLE messasges, 20 bytes at a time.
@@ -144,8 +157,9 @@ class TeensyDelegate(btle.DefaultDelegate):
 	        x.execute(addsqldata,(d8,msg[0], tool_ID[msg[0]], msg[1],msg[2],msg[4],msg[6],msg[8],msg[10],msg[12],msg[14]))
          	print('write to database=' + str(time.time()-time_start))
 	    except:
-		raise
 		report_error("Could not access SQL database - check internet connectivity")
+		GPIO.output(32, False)
+		raise
 		print("Retrying...")
 		try:
                     global conn
@@ -154,6 +168,7 @@ class TeensyDelegate(btle.DefaultDelegate):
                     x = conn.cursor()
                 except:
                     report_error("Reconnect failed.")
+		    GPIO.output(32, False)
                     raise
 	    conn.commit()
             return 'done'
@@ -291,8 +306,8 @@ def log_message(message):
     f.close()
 
 #Extract current tool ID
-#def get_toolID(device):
-#    return 1
+def get_toolID(device):
+    return 1
 
 """
 ================
@@ -307,6 +322,7 @@ try:
     db_name = x.fetchall()[0][0]
 except:
     report_error("Could not find database for serial number: " + serial)
+    GPIO.output(32, False)
     raise
 
 # Switch connection to the appropriate database, if found.
@@ -315,6 +331,7 @@ try:
     x =conn.cursor()
 except:
     report_error("Connection to database failed.")
+    GPIO.output(32, False)
     raise
 
 # Find Infinite Uptime devices in the area by calling scanForIUDevices, and update their thresholds using check_for_thresholds and update_thresholds.
@@ -326,6 +343,7 @@ try:
 	tool_ID[device.deviceAddr]=get_toolID(device.deviceAddr) #default tool 1
 except:
     report_error("Could not get tool ID for " + str(device.deviceAddr))
+    GPIO.output(22, False)
     raise
 
 check_for_thresholds(devices, tool_ID)
@@ -334,6 +352,7 @@ try:
 except btle.BTLEException:
     print("Device disappeared, rescanning")
     devices = scanForIUDevices()
+    GPIO.output(36, False)
 
 
 # Start data collection loop
@@ -356,6 +375,7 @@ try:
 			tool_ID[device.deviceAddr]=get_toolID(device.deviceAddr) #default tool 1
 		except:
     			report_error("Could not get tool ID for " + str(device.deviceAddr))
+			GPIO.output(22, False)
 			raise
 		check_for_thresholds(devices, tool_ID)
 		update_thresholds(devices, tool_ID)
