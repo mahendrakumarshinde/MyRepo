@@ -8,7 +8,6 @@ import os
 import signal
 import RPi.GPIO as GPIO
 from time import sleep
-from get_toolID import * # Comment only for testing / debugging!
 
 """
 GPIO SETUP (Green LED)
@@ -37,7 +36,6 @@ STARTUP CODE
 GPIO.output(40, True)
 GPIO.output(36, True)
 GPIO.output(32, True)
-GPIO.output(22, True)
 sleep(1)
 
 global x
@@ -176,7 +174,7 @@ class TeensyDelegate(btle.DefaultDelegate):
 
 # Updates the locally kept list of thresholds based on the SQL database.
 # Enters any new devices into the Feature Dictionary.
-# Also updates STATUS for all devices based on whether they have been found.
+# Also updates Device_Status for all devices based on whether they have been found.
 def check_for_thresholds(devices, tool_ID):
     macAddrs = """SELECT DISTINCT MAC_ADDRESS FROM Feature_Dictionary"""
     global x
@@ -219,33 +217,6 @@ def check_for_thresholds(devices, tool_ID):
         if statusFlag != latestStatus: #change status in database only if status has changed
             x.execute(setStatus,(str(statusFlag), macaddress))
 	    print(printStatus)
-    conn.commit()
-
-    for device in devices:
-	tools="""SELECT DISTINCT Tool_ID from Feature_Dictionary WHERE MAC_ADDRESS=(%s)"""
-	x.execute(tools,[device.deviceAddr])
-	tool_IDs = x.fetchall()
-	tool_IDs = list(list(zip(*tool_IDs))[0])
-	if tool_ID[device.deviceAddr] not in tool_IDs:
-	    newDeviceThresholds = """INSERT INTO Feature_Dictionary (MAC_ADDRESS, Tool_ID, Tool_Status, Feature_ID, Feature_Name, Threshold_1, Threshold_2, Threshold_3, Device_Status, Machine_Name) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
-	    x.execute(newDeviceThresholds,(device.deviceAddr, tool_ID[device.deviceAddr], "1", "0","Signal Energy", "30","600","1200", "1", device.deviceAddr))
-            newDeviceThresholds = """INSERT INTO Feature_Dictionary (MAC_ADDRESS, Tool_ID, Tool_Status, Feature_ID, Feature_Name, Threshold_1, Threshold_2, Threshold_3, Device_Status, Machine_Name) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
-	    x.execute(newDeviceThresholds,[device.deviceAddr, tool_ID[device.deviceAddr], "1", "1","Mean Crossing Rate", "100","500","1000", "1", device.deviceAddr])
-	    newDeviceThresholds = """INSERT INTO Feature_Dictionary (MAC_ADDRESS, Tool_ID, Tool_Status, Feature_ID, Feature_Name, Threshold_1, Threshold_2, Threshold_3, Device_Status, Machine_Name) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
-	    x.execute(newDeviceThresholds,[device.deviceAddr, tool_ID[device.deviceAddr], "1", "2","Spectral Centroid", "6","7","8", "1", device.deviceAddr])
-	    newDeviceThresholds = """INSERT INTO Feature_Dictionary (MAC_ADDRESS, Tool_ID, Tool_Status, Feature_ID, Feature_Name, Threshold_1, Threshold_2, Threshold_3, Device_Status, Machine_Name) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
-	    x.execute(newDeviceThresholds,[device.deviceAddr, tool_ID[device.deviceAddr], "1", "3","Spectral Flatness", "40","42","45", "1", device.deviceAddr])
-            newDeviceThresholds = """INSERT INTO Feature_Dictionary (MAC_ADDRESS, Tool_ID, Tool_Status, Feature_ID, Feature_Name, Threshold_1, Threshold_2, Threshold_3, Device_Status, Machine_Name) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
-	    x.execute(newDeviceThresholds,[device.deviceAddr, tool_ID[device.deviceAddr], "1", "4","Accel Spectral Spread", "200","205","210", "1", device.deviceAddr])
-	    newDeviceThresholds = """INSERT INTO Feature_Dictionary (MAC_ADDRESS, Tool_ID, Tool_Status, Feature_ID, Feature_Name, Threshold_1, Threshold_2, Threshold_3, Device_Status, Machine_Name) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
-	    x.execute(newDeviceThresholds,[device.deviceAddr, tool_ID[device.deviceAddr], "1", "5","Audio Spectral Spread", "500","1000","1500", "1", device.deviceAddr])
-	    toolstatusupdate = """UPDATE Feature_Dictionary SET Tool_Status = (%s) WHERE MAC_ADDRESS=(%s) AND Tool_ID <> (%s)"""
-	    x.execute(toolstatusupdate,('0',device,tool_ID[device.deviceAddr]))
-	else:
-	    toolstatusonupdate = """UPDATE Feature_Dictionary SET Tool_Status = (%s) WHERE MAC_ADDRESS=(%s) AND Tool_ID = (%s)"""
-	    x.execute(toolstatusonupdate,('1',device.deviceAddr,tool_ID[device.deviceAddr]))
-	    toolstatusoffupdate = """UPDATE Feature_Dictionary SET Tool_Status = (%s) WHERE MAC_ADDRESS=(%s) AND Tool_ID <> (%s)"""
-	    x.execute(toolstatusoffupdate,('0',device.deviceAddr,tool_ID[device.deviceAddr]))
     conn.commit()
 
 
@@ -305,9 +276,17 @@ def log_message(message):
     f.write(str(datetime.datetime.now()) + "  " + message + '\n')
     f.close()
 
-#Extract current tool ID - Only for testing / debugging!
-#def get_toolID(device):
-#    return 1
+#Extract current tool ID - only for testing / debugging!
+def get_toolID(device):
+    try:
+	toolsearch = """SELECT DISTINCT Tool_ID FROM Feature_Dictionary WHERE MAC_ADDRESS = (%s) AND TOOL_STATUS = (%s)"""
+	x.execute(toolsearch,(device.deviceaddr, '1'))
+	toolfound = x.fetchall()
+	toolfound = int(toolfound[0])
+    except:
+        return 1
+	print("Tool ID return failed at main thread")
+	GPIO.output(22, False)
 
 """
 ================
