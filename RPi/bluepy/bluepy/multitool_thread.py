@@ -33,11 +33,11 @@ sleep(1)
 STARTUP CODE
 """
 
+sleep(5)
 GPIO.output(40, True)
-GPIO.output(36, True)
-GPIO.output(32, True)
-GPIO.output(22, True)
-sleep(1)
+GPIO.output(36, False)
+GPIO.output(32, False)
+GPIO.output(22, False)
 
 global x
 
@@ -46,6 +46,7 @@ SENSOR_OUTPUT = "sensor-data.txt"
 try:
     conn = MySQLdb.connect(host="173.194.252.192", user="infinite-uptime", passwd="infiniteuptime", db="Hub_Dictionary")
     x =conn.cursor()
+    GPIO.output(32, True)
 except:
     report_error("Unable to access hub dictionary.")
     GPIO.output(32, False)
@@ -73,6 +74,7 @@ def getserial():
 def scanForIUDevices():
     try:
         os.system("sudo hciconfig hci0 down; sudo hciconfig hci0 up")
+        GPIO.output(36, True)
     except:
         report_error("Could not configure hcitool")
         GPIO.output(36, False)
@@ -81,6 +83,7 @@ def scanForIUDevices():
         os.system("hcitool lescan > IU_config.txt & sleep 10; pkill --signal SIGINT hcitool")
     except:
         report_error("Could not write scanned addresses to config file")
+        GPIO.output(36, False)
 	raise
     os.system("sudo close(IU_config.txt)")
 
@@ -91,6 +94,7 @@ def scanForIUDevices():
 	        contents.append(line)
     except:
         report_error("Could not open config file")
+        GPIO.output(36, False)
         raise
     contents=map(str.strip,contents)
 
@@ -126,6 +130,8 @@ def scanForIUDevices():
 
     print "Initializing and Connecting..."
     GPIO.output(36, True)
+    GPIO.output(32, True)
+    GPIO.output(22, True)
     return p
 
 # Subclass from btle.py. handleNotification processes incoming BLE messasges, 20 bytes at a time.
