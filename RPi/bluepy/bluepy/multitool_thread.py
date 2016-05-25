@@ -36,6 +36,7 @@ STARTUP CODE
 GPIO.output(40, True)
 GPIO.output(36, True)
 GPIO.output(32, True)
+GPIO.output(22, True)
 sleep(1)
 
 global x
@@ -277,16 +278,18 @@ def log_message(message):
     f.close()
 
 #Extract current tool ID - only for testing / debugging!
-def get_toolID(device):
-    try:
-	toolsearch = """SELECT DISTINCT Tool_ID FROM Feature_Dictionary WHERE MAC_ADDRESS = (%s) AND TOOL_STATUS = (%s)"""
-	x.execute(toolsearch,(device.deviceaddr, '1'))
-	toolfound = x.fetchall()
-	toolfound = int(toolfound[0])
+def get_toolID_of(device):
+    try:    
+	print("Getting Tool ID for " + str(device))
+        toolsearch = """SELECT DISTINCT Tool_ID FROM Feature_Dictionary WHERE MAC_ADDRESS = (%s) AND Tool_Status = (%s)"""
+        x.execute(toolsearch,(device, '1'))
+        toolfound = x.fetchall()[0][0]
+        print("tool found is: " + str(toolfound))
+        return toolfound
     except:
-        return 1
 	print("Tool ID return failed at main thread")
 	GPIO.output(22, False)
+        return 1
 
 """
 ================
@@ -319,7 +322,7 @@ devices = scanForIUDevices()
 tool_ID={}
 try:
     for device in devices:
-	tool_ID[device.deviceAddr]=get_toolID(device.deviceAddr) #default tool 1
+	tool_ID[device.deviceAddr]=get_toolID_of(device.deviceAddr) #default tool 1
 except:
     report_error("Could not get tool ID for " + str(device.deviceAddr))
     GPIO.output(22, False)
@@ -351,14 +354,16 @@ try:
 	    if len(devices)>0:
 		try:
     		    for device in devices:
-			tool_ID[device.deviceAddr]=get_toolID(device.deviceAddr) #default tool 1
+			tool_ID[device.deviceAddr]=get_toolID_of(device.deviceAddr) #default tool 1
 		except:
     			report_error("Could not get tool ID for " + str(device.deviceAddr))
 			GPIO.output(22, False)
 			raise
 		check_for_thresholds(devices, tool_ID)
 		update_thresholds(devices, tool_ID)
-		    
+	    else:
+		print("Length of devices is 0")
+
 	except btle.BTLEException:
 	    reset = 1
 	if reset:
