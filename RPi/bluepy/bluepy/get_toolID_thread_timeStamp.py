@@ -5,6 +5,7 @@ import re
 import btle
 import time
 import datetime
+from datetime import datetime
 import MySQLdb
 import pdb
 from subprocess import Popen, PIPE
@@ -14,80 +15,105 @@ import RPi.GPIO as GPIO
 from time import sleep
 
 
+toolID_timestamp_reference = {}
+toolID_timestamp_reference['7C:EC:79:61:8B:7A'] = [[1, "00:00:12"], [2, "00:00:19.005"], [3, "00:00:21.005"], [4, "00:00:25.005"], [3, "00:00:28.005"], [14, "00:00:31.005"]]
+float_toolID_timestamp_reference={}
+
+#============================ HELPER FUNCTION SECTION ==========================================================
+
+# This function returns the current time
+def get_currentTime():
+    
+    current_time = 0
+    try:
+	current_time = time.time()
+        return current_time
+    except:
+        print("Error: Cannot get current time.")
+        return 1
 
 
-def get_ToolTime(toolID_timestamp_array):
+# This function returns True if the machine is "ACTIVE", otherwise, returns False.
+def detect_start(device):
+	Execution = []
+	
+	try:
+	    AgentAddress = 'http://192.168.1.254:5000/current'
+	except:
+	    print("Cannot connect to internet / agent address")
 
-    for n in range(len(toolID_timestamp_array)):
+	try:
+	    xml = urllib2.urlopen(AgentAddress)
+	    xml = urllib2.urlopen(AgentAddress)
+	    xml = xml.read()
+	    data = ET.ElementTree(ET.fromstring(xml))
+	    test = data.getroot()
+	    yolo = test.findall('.//')
+	except urllib2.URLError:
+	    print("Invalid MTConnect Agent Address! Please connect device to internet.")
+	    GPIO.output(22, False)
+	
+	try:
+	    for yolos in yolo:
+		if (yolos.tag == '{urn:mtconnect.org:MTConnectStreams:1.3}Execution'):
+		    Execution.append(yolos.text)
 
-        # parse the timestamp string, then calculate the value in millisecond
-        # i.e. [[2, '00:45:23'], [1, '23:11:01']] becomes [[2, 45023], [1,1391001]]
-        try:
-            parse_timestamp = toolID_timestamp_array[n][1].split(":")
-            parse_timestamp = [int(i) for i in parse_timestamp]
-            parse_timestamp = parse_timestamp[0] * 60000 + parse_timestamp[1] * 1000 + parse_timestamp[2]
-            toolID_timestamp_array[n][1] = parse_timestamp
-        except:
-            print("Having trouble parsing the timestamp string!")
+	    print("Execution mode for " + device + " is: " + str(Execution[0]))
+	    if(Execution[0] == ACTIVE):
+                return True
+            else:
+                return False
+	except:
+	    return False 
 
-    # calculate the time needed for running each tool
-    toolID = []
-    timestamp = []
-    time_for_each_tool = []
-    result = []
+
+# This function returns False if we reach the time where the last tool started
+def detect_end(device, time_since_start):
+    device_list = float_toolID_timestamp_reference.get(device) 
+    last_element_time = device_list[len(device_list) - 1][1]
+
+    if ( time_since_start > last_element_time ):
+        return False 
+    else:
+        return True
+
+# This function parse a timestamp string and convert it into a float number (unit is seconds)
+# i.e. [[1, "00:00:25.005"], [1, "00:00:35.005"]] becomes [[1, 25.005], [1, 35.005]]
+def parse_string(device):
+    list = []
 
     try:
-        # put toolID and timestamp into two different lists
-        for i in range(len(toolID_timestamp_array)):
-            toolID.append(toolID_timestamp_array[i][0])
-            timestamp.append(toolID_timestamp_array[i][1])
-    except:
-        print("Having trouble splitting the input list into two separate lists!")
+        for item in toolID_timestamp_reference[device]:
+	    parse_timestamp = item[1].split(":")
+	    hour = int(parse_timestamp[0])
+	    minutes = int(parse_timestamp[1])
+	    seconds = float(parse_timestamp[2])
+            tool_time = hour * 3600 + minutes * 60 + seconds
+	    list.append([item[0], tool_time])
+        float_toolID_timestamp_reference[device] = list
 
+    except:
+        print("\n Error: Cannot parse the timestamp string! \n") 
+
+
+#============================ get_toolID FUNCTION ====================================================================
+# Given the time since start, this function returns the toolID that is currently running
+def get_toolID(device, time_since_start): 
 
     try:
-        # get time difference between two adjencent tools
-        for i in range (len(timestamp)):
-            next_i = i+1
-            if (next_i < len(timestamp)):
-                time_for_each_tool.append(timestamp[next_i] - timestamp[i])
-        time_for_each_tool.append("")
+        for i in range(len(float_toolID_timestamp_reference[device])):	
+            for item in float_toolID_timestamp_reference[device]:
+                if (time_since_start <= item[1]):
+		
+		    #print("\nCurrently running tool is tool " + str(item[0]))
+                    return item[0]
+                else:
+                    continue    	
     except:
-        print("Having trouble find the time difference!")
+        return 1
 
+#=============================== MAIN CODE =============================================================================
 
-    try:
-        # Now, create a list that contains all the tools with its corresponding running time
-        # Here, we use set() because it will remove duplicates automatically
-        result = set(zip(toolID, time_for_each_tool))
-        result = dict((y,x) for x, y in result)
-
-    except:
-        print("Having trouble 'zip' the toolID list and time difference list!")
-
-
-    print(result) # print to show the result since "result" is not visible outside the function
-    return result
-
-# uncomment below to test the function
-# get_ToolTime([[2, "00:00:12"], [1, "00:00:25"], [1, "00:00:39"], [3, "00:00:53"]])
-
-
-
-#================================================================================================
-
-def get_toolID(toolID_timestamp_array, tool_running_time):
-    toolID_dict = get_ToolTime(toolID_timestamp_array)
-    toolID = toolID_dict.get(tool_running_time)
-    print(toolID)
-    return toolID
-
-
-# uncomment below to test the function
-# get_toolID([[2, "00:00:12"], [1, "00:00:25"], [1, "00:00:39"], [3, "00:00:53"]], 13)
-
-
-#================================================================================================
 
 def update_toolID(device, toolID):
 	tools="""SELECT DISTINCT Tool_ID from Feature_Dictionary WHERE MAC_ADDRESS=(%s)"""
@@ -132,6 +158,8 @@ def getserial():
         raise
     return cpuserial
 
+
+
 global x
 GPIO.setmode(GPIO.BOARD)
 GPIO.setup(22,GPIO.OUT)
@@ -167,24 +195,45 @@ except:
     GPIO.output(32, False)
     raise
 
+
+
+# initialize later used variables
 tool_ID={}
+started = {}
+initial_time = {}
+x.execute("SELECT DISTINCT MAC_ADDRESS FROM Feature_Dictionary WHERE Device_Status = '1'")
+devices = x.fetchall()
+devices = list(list(zip(*devices))[0])
+for device in devices:
+    started[device]= False
+    initial_time[device] = 0
+    parse_string(device)
+
 
 while True:
-    try:
-        x.execute("SELECT DISTINCT MAC_ADDRESS FROM Feature_Dictionary")
-        devices = x.fetchall()
-	devices = list(list(zip(*devices))[0])
-	for device in devices:
-	    #activetool="""SELECT DISTINCT Tool_ID FROM Feature_Dictionary WHERE MAC_ADDRESS = (%s) AND Tool_Status = (%s)"""
-	    #toolactive = x.execute(activetool,(device,'1'))
-	    #toolactive = x.fetchall()[0][0]
-	    #tool_ID[device] = toolactive
-	    toolid = get_toolID([[2, "00:00:12"], [1, "00:00:25"], [1, "00:00:39"], [3, "00:00:53"]], 13)
-	    print("wrote tool ID as " + str(toolid) + " for " + device)
-	    update_toolID(device,toolid)
-	    
-    except:
-        print('Tool ID update failed')
-        GPIO.output(22, False)
-	raise
+    x.execute("SELECT DISTINCT MAC_ADDRESS FROM Feature_Dictionary WHERE Device_Status = '1'")
+    devices = x.fetchall()
+    devices = list(list(zip(*devices))[0])
 
+# If a device is not started, continuesly checking whether the device is started .
+# if a device is started, get current tool ID number and update.   
+    for device in devices:       
+	if(not started[device]):
+	    try:
+	        started[device] = detect_start(device)
+	        initial_time[device] = get_currentTime()
+            except:
+	        print("Error: Having trouble detecting the start time for " + str(device))
+        if(started[device]):
+            try:
+	        time_since_start = get_currentTime()-initial_time[device]
+                print("\n time since start is: " + str(time_since_start) + " for " + str(device))
+                toolid = get_toolID(device, time_since_start)
+                if (toolid != None):
+                    print("wrote tool ID as " + str(toolid) + " for " + device)
+	            update_toolID(device,toolid)
+	        started[device] = detect_end(device, time_since_start)            
+            except:
+                print('Tool ID update failed for ' + str(device))
+                GPIO.output(22, False)
+	        raise

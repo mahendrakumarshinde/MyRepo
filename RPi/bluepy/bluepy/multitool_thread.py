@@ -251,7 +251,7 @@ def send_threshold(device, threshold):
     characs = device.getCharacteristics()
     for charac in characs:
         if (len(charac.propertiesToString().split()) > 3):
-            data = "%04d"%threshold[0] + "-%04d"%threshold[1] + "-%04d"%threshold[2] + "-%04d"%threshold[3]
+            data = "%04d"%threshold[0] + "-" + "%04d"%threshold[1] + "-" + "%04d"%threshold[2] + "-" + "%04d"%threshold[3]
             log_message("Threshold written: " + data)
             # print("sent thresholds to device " + str(device.deviceAddr) + " for tool " + str(tool_ID[device.deviceAddr]))
 	    charac.write(data)
@@ -341,6 +341,47 @@ except btle.BTLEException:
     print("Device disappeared, rescanning")
     devices = scanForIUDevices()
     GPIO.output(36, False)
+
+
+#DEBUGGING#
+while True:
+	print("Start while: " + str(time.time() - time_start))
+	try:
+            GPIO.output(40, True)
+	    for i in range(len(devices)):
+               while devices[i].waitForNotifications(0.001):
+                    print("Received data " + str(i+1))
+	    reset = """SELECT reset_value FROM Env_variables"""
+	    x.execute(reset)
+	    reset = x.fetchall()
+	    conn.commit()
+	    reset = int(list(list(zip(*reset))[0])[0])
+	    if len(devices)>0:
+		try:
+    		    for device in devices:
+			tool_ID[device.deviceAddr]=get_toolID_of(device.deviceAddr) #default tool 1
+		except:
+    			report_error("Could not get tool ID for " + str(device.deviceAddr))
+			GPIO.output(22, False)
+			raise
+		check_for_thresholds(devices, tool_ID)
+		update_thresholds(devices, tool_ID)
+	    else:
+		print("Length of devices is 0")
+
+	except btle.BTLEException:
+	    reset = 1
+	if reset:
+	    print('Syncing...hold on')
+	    devices = scanForIUDevices()
+	    check_for_thresholds(devices, tool_ID)
+	    update_thresholds(devices, tool_ID)
+	    resetReset = """UPDATE Env_variables SET reset_value=(%s)"""
+	    x.execute(resetReset,['0'])
+	    conn.commit()
+
+#DEBUGGING#
+
 
 
 # Start data collection loop
