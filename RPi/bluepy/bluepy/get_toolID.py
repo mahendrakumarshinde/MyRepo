@@ -16,7 +16,6 @@ def get_toolID(device):
 
 	try:
 	    xml = urllib2.urlopen(AgentAddress)
-	    xml = urllib2.urlopen(AgentAddress)
 	    xml = xml.read()
 	    data = ET.ElementTree(ET.fromstring(xml))
 	    test = data.getroot()

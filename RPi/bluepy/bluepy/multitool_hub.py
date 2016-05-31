@@ -41,6 +41,24 @@ GPIO.output(32, False)
 GPIO.output(22, False)
 
 global x
+firstmessage = True
+
+
+# Report an error and shut off the LED.
+def report_error(message):
+    print(message)
+    f = open(LOG_FILE, "a")
+    f.write(str(datetime.datetime.now()) + "  Error: " + message + '\n')
+    f.close()
+    GPIO.output(40, False)
+
+# Report a message without shutting off the LED.
+def log_message(message):
+    print(message)
+    f = open(LOG_FILE, "a")
+    f.write(str(datetime.datetime.now()) + "  " + message + '\n')
+    f.close()
+
 
 LOG_FILE = "IU_log.txt"
 SENSOR_OUTPUT = "sensor-data.txt"
@@ -141,16 +159,23 @@ class TeensyDelegate(btle.DefaultDelegate):
 	self.buffer = ""
         btle.DefaultDelegate.__init__(self)
 
-    def handleNotification(self, cHandle, data):
+    def handleNotification(self, cHandle, data, datatimestamp):
 	#print("Start handleNotification: " + str(time.time() - time_start))
-        self.buffer = self.buffer + data
+        global firstmessage
+	global d8
+	if(firstmessage): # Define firstmessage and get d8 at the moment the new message comes in to prevent 4 msec latency
+	    d8 = str(datetime.datetime.now())
+	    print("Pi Timestamp : " + d8)
+	    print("BTLE timestamp : " + str(datatimestamp))
+	    firstmessage = False
+	self.buffer = self.buffer + data
         if (";" in self.buffer):
 	    two = self.buffer.split(";");
 	    self.buffer = two[1]
 	    msg = two[0]
             msg= msg.replace("\r\n","")
             msg = msg.split(",")
-	    d8 = str(datetime.datetime.now())
+	    firstmessage = True
 	    f = open(SENSOR_OUTPUT, "a")
 	    f.write("[" + d8 + "] " + ' '.join(msg) + '\n')
 	    f.close()
@@ -282,6 +307,22 @@ def send_threshold(device, threshold):
             # print("sent thresholds to device " + str(device.deviceAddr) + " for tool " + str(tool_ID[device.deviceAddr]))
 	    charac.write(data)
 
+# Given a changed set of thresholds, update the appropriate device.
+def sync_time(devices):
+    for device in devices:
+        characs = device.getCharacteristics()
+        for charac in characs:
+            if (len(charac.propertiesToString().split()) > 3):
+                data = str(datetime.datetime.now())
+		data = data.split(" ")
+		data1 = "1111-111-" + str(data[0])
+                log_message("Date updated : " + data1 + " to " + str(device.deviceAddr))
+                charac.write(data1)
+                data2 = "222-" + str(data[1])
+                log_message("Time updated : " + data2 + " to " + str(device.deviceAddr))
+                charac.write(data2)
+
+
 def contains(table, row):
     for tup in table:
         found = True
@@ -293,21 +334,6 @@ def contains(table, row):
         if found:
             return True
     return False
-
-# Report an error and shut off the LED.
-def report_error(message):
-    print(message)
-    f = open(LOG_FILE, "a")
-    f.write(str(datetime.datetime.now()) + "  Error: " + message + '\n')
-    f.close()
-    GPIO.output(40, False)
-
-# Report a message without shutting off the LED.
-def log_message(message):
-    print(message)
-    f = open(LOG_FILE, "a")
-    f.write(str(datetime.datetime.now()) + "  " + message + '\n')
-    f.close()
 
 #Extract current tool ID - Only for testing / debugging!
 #def get_toolID(device):
@@ -363,6 +389,8 @@ except btle.BTLEException:
 
 # Start data collection loop
 try:
+    sync_time(devices)
+    sleep(1)
     while True:
 	#print("Start while: " + str(time.time() - time_start))
 	print(". ")
@@ -379,7 +407,7 @@ try:
 	    if len(devices)>0:
 		try:
     		    for device in devices:
-			tool_ID[device.deviceAddr]=get_toolID(device.deviceAddr) #default tool 1
+		        tool_ID[device.deviceAddr]=get_toolID(device.deviceAddr) #default tool 1
 		except:
     			report_error("Could not get tool ID for " + str(device.deviceAddr))
 			GPIO.output(22, False)
@@ -417,7 +445,9 @@ while True:
 	if len(devices)>0:
 	    try:
     		for device in devices:
+		    print("getting tool ID")
 		    tool_ID[device.deviceAddr]=get_toolID(device.deviceAddr) #default tool 1
+		    print("got tool ID")
 	    except:
     		report_error("Could not get tool ID for " + str(device.deviceAddr))
 		GPIO.output(22, False)

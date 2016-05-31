@@ -10,7 +10,6 @@ import subprocess
 import binascii
 import select
 import struct
-import datetime
 
 Debugging = False
 script_path = os.path.join(os.path.abspath(os.path.dirname(__file__)))
@@ -146,7 +145,7 @@ class Characteristic:
         return self.peripheral.readCharacteristic(self.valHandle)
 
     def write(self, val, withResponse=False):
-        return self.peripheral.writeCharacteristic(self.valHandle, val, withResponse)
+        self.peripheral.writeCharacteristic(self.valHandle, val, withResponse)
 
     # TODO: descriptors
 
@@ -340,9 +339,8 @@ class Peripheral(BluepyHelper):
             if respType == 'ntfy' or respType == 'ind':
                 hnd = resp['hnd'][0]
                 data = resp['d'][0]
-                datatimestamp = datetime.datetime.now()
                 if self.delegate is not None:
-                    self.delegate.handleNotification(hnd, data, datatimestamp)
+                    self.delegate.handleNotification(hnd, data)
                 if respType not in wantType:
                     continue
             return resp
@@ -357,7 +355,7 @@ class Peripheral(BluepyHelper):
         self.addrType = addrType
         self.iface = iface
         if iface is not None:
-            self._writeCmd("conn %s %s %s\n" % (addr, addrType, "hci"+str(iface)))
+            self._writeCmd("conn %s %s %s\n" % (addr, addrType, iface))
         else:
             self._writeCmd("conn %s %s\n" % (addr, addrType))
         rsp = self._getResp('stat')
@@ -472,7 +470,7 @@ class Peripheral(BluepyHelper):
         return self._getResp('stat')
 
     def waitForNotifications(self, timeout):
-         resp = self._getResp(['ntfy','ind'], timeout)
+         resp = self._getResp('ntfy', timeout)
          return (resp != None)
 
     def __del__(self):
