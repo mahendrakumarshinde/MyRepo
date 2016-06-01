@@ -8,7 +8,6 @@ import os
 import signal
 import RPi.GPIO as GPIO
 from time import sleep
-from get_toolID import * # Comment only for testing / debugging!
 
 """
 GPIO SETUP (Green LED)
@@ -41,24 +40,6 @@ GPIO.output(32, False)
 GPIO.output(22, False)
 
 global x
-firstmessage = True
-
-
-# Report an error and shut off the LED.
-def report_error(message):
-    print(message)
-    f = open(LOG_FILE, "a")
-    f.write(str(datetime.datetime.now()) + "  Error: " + message + '\n')
-    f.close()
-    GPIO.output(40, False)
-
-# Report a message without shutting off the LED.
-def log_message(message):
-    print(message)
-    f = open(LOG_FILE, "a")
-    f.write(str(datetime.datetime.now()) + "  " + message + '\n')
-    f.close()
-
 
 LOG_FILE = "IU_log.txt"
 SENSOR_OUTPUT = "sensor-data.txt"
@@ -102,6 +83,7 @@ def scanForIUDevices():
         os.system("hcitool lescan > IU_config.txt & sleep 10; pkill --signal SIGINT hcitool")
     except:
         report_error("Could not write scanned addresses to config file")
+        GPIO.output(36, False)
 	raise
     os.system("sudo close(IU_config.txt)")
 
@@ -112,6 +94,7 @@ def scanForIUDevices():
 	        contents.append(line)
     except:
         report_error("Could not open config file")
+        GPIO.output(36, False)
         raise
     contents=map(str.strip,contents)
 
@@ -128,7 +111,6 @@ def scanForIUDevices():
         print("Could not find any IU devices")
 	print("Rescanning")
 	GPIO.output(40, False)
-	GPIO.output(36, False)
         p = scanForIUDevices()
 	return p
     for addr in address:
@@ -159,28 +141,22 @@ class TeensyDelegate(btle.DefaultDelegate):
 	self.buffer = ""
         btle.DefaultDelegate.__init__(self)
 
-    def handleNotification(self, cHandle, data, datatimestamp):
-	#print("Start handleNotification: " + str(time.time() - time_start))
-        global firstmessage
-	global d8
-	if(firstmessage): # Define firstmessage and get d8 at the moment the new message comes in to prevent 4 msec latency
-	    d8 = str(datetime.datetime.now())
-	    print("Pi Timestamp : " + d8)
-	    print("BTLE timestamp : " + str(datatimestamp))
-	    firstmessage = False
-	self.buffer = self.buffer + data
+    def handleNotification(self, cHandle, data):
+	print("Start handleNotification: " + str(time.time() - time_start))
+        self.buffer = self.buffer + data
         if (";" in self.buffer):
 	    two = self.buffer.split(";");
 	    self.buffer = two[1]
 	    msg = two[0]
             msg= msg.replace("\r\n","")
             msg = msg.split(",")
-	    firstmessage = True
+	    d8 = str(datetime.datetime.now())
+	    #msg[0] = '68:9E:19:07:'+msg[0]
 	    f = open(SENSOR_OUTPUT, "a")
 	    f.write("[" + d8 + "] " + ' '.join(msg) + '\n')
 	    f.close()
 
-	    #print("handleNotfication: sending to SQL at Time: " + str(time.time() - time_start) + " Message: " + str(msg))
+	    print("handleNotfication: sending to SQL at Time: " + str(time.time() - time_start) + " Message: " + str(msg))
 	    try:
 	        addsqldata="""INSERT INTO IU_device_data (`Timestamp_Pi`, `MAC_ADDRESS`, `Tool_ID`, `State`, `Battery_Level`, `Feature_Value_0`, `Feature_Value_1`, `Feature_Value_2`, `Feature_Value_3`, `Feature_Value_4`, `Feature_Value_5`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
 	        x.execute(addsqldata,(d8,msg[0], tool_ID[msg[0]], msg[1],msg[2],msg[4],msg[6],msg[8],msg[10],msg[12],msg[14]))
@@ -201,11 +177,11 @@ class TeensyDelegate(btle.DefaultDelegate):
                     raise
 	    conn.commit()
             return 'done'
-	#print("End handleNotification: " + str(time.time() - time_start))
+	print("End handleNotification: " + str(time.time() - time_start))
 
 # Updates the locally kept list of thresholds based on the SQL database.
 # Enters any new devices into the Feature Dictionary.
-# Also updates STATUS for all devices based on whether they have been found.
+# Also updates Device_Status for all devices based on whether they have been found.
 def check_for_thresholds(devices, tool_ID):
     macAddrs = """SELECT DISTINCT MAC_ADDRESS FROM Feature_Dictionary"""
     global x
@@ -250,33 +226,6 @@ def check_for_thresholds(devices, tool_ID):
 	    print(printStatus)
     conn.commit()
 
-    for device in devices:
-	tools="""SELECT DISTINCT Tool_ID from Feature_Dictionary WHERE MAC_ADDRESS=(%s)"""
-	x.execute(tools,[device.deviceAddr])
-	tool_IDs = x.fetchall()
-	tool_IDs = list(list(zip(*tool_IDs))[0])
-	if tool_ID[device.deviceAddr] not in tool_IDs:
-	    newDeviceThresholds = """INSERT INTO Feature_Dictionary (MAC_ADDRESS, Tool_ID, Tool_Status, Feature_ID, Feature_Name, Threshold_1, Threshold_2, Threshold_3, Device_Status, Machine_Name) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
-	    x.execute(newDeviceThresholds,(device.deviceAddr, tool_ID[device.deviceAddr], "1", "0","Signal Energy", "30","600","1200", "1", device.deviceAddr))
-            newDeviceThresholds = """INSERT INTO Feature_Dictionary (MAC_ADDRESS, Tool_ID, Tool_Status, Feature_ID, Feature_Name, Threshold_1, Threshold_2, Threshold_3, Device_Status, Machine_Name) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
-	    x.execute(newDeviceThresholds,[device.deviceAddr, tool_ID[device.deviceAddr], "1", "1","Mean Crossing Rate", "100","500","1000", "1", device.deviceAddr])
-	    newDeviceThresholds = """INSERT INTO Feature_Dictionary (MAC_ADDRESS, Tool_ID, Tool_Status, Feature_ID, Feature_Name, Threshold_1, Threshold_2, Threshold_3, Device_Status, Machine_Name) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
-	    x.execute(newDeviceThresholds,[device.deviceAddr, tool_ID[device.deviceAddr], "1", "2","Spectral Centroid", "6","7","8", "1", device.deviceAddr])
-	    newDeviceThresholds = """INSERT INTO Feature_Dictionary (MAC_ADDRESS, Tool_ID, Tool_Status, Feature_ID, Feature_Name, Threshold_1, Threshold_2, Threshold_3, Device_Status, Machine_Name) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
-	    x.execute(newDeviceThresholds,[device.deviceAddr, tool_ID[device.deviceAddr], "1", "3","Spectral Flatness", "40","42","45", "1", device.deviceAddr])
-            newDeviceThresholds = """INSERT INTO Feature_Dictionary (MAC_ADDRESS, Tool_ID, Tool_Status, Feature_ID, Feature_Name, Threshold_1, Threshold_2, Threshold_3, Device_Status, Machine_Name) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
-	    x.execute(newDeviceThresholds,[device.deviceAddr, tool_ID[device.deviceAddr], "1", "4","Accel Spectral Spread", "200","205","210", "1", device.deviceAddr])
-	    newDeviceThresholds = """INSERT INTO Feature_Dictionary (MAC_ADDRESS, Tool_ID, Tool_Status, Feature_ID, Feature_Name, Threshold_1, Threshold_2, Threshold_3, Device_Status, Machine_Name) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
-	    x.execute(newDeviceThresholds,[device.deviceAddr, tool_ID[device.deviceAddr], "1", "5","Audio Spectral Spread", "500","1000","1500", "1", device.deviceAddr])
-	    toolstatusupdate = """UPDATE Feature_Dictionary SET Tool_Status = (%s) WHERE MAC_ADDRESS=(%s) AND Tool_ID <> (%s)"""
-	    x.execute(toolstatusupdate,('0',device,tool_ID[device.deviceAddr]))
-	else:
-	    toolstatusonupdate = """UPDATE Feature_Dictionary SET Tool_Status = (%s) WHERE MAC_ADDRESS=(%s) AND Tool_ID = (%s)"""
-	    x.execute(toolstatusonupdate,('1',device.deviceAddr,tool_ID[device.deviceAddr]))
-	    toolstatusoffupdate = """UPDATE Feature_Dictionary SET Tool_Status = (%s) WHERE MAC_ADDRESS=(%s) AND Tool_ID <> (%s)"""
-	    x.execute(toolstatusoffupdate,('0',device.deviceAddr,tool_ID[device.deviceAddr]))
-    conn.commit()
-
 
 # Given a list of devices, check if any thresholds have been updated in the database. If so, update using send_threshold().
 def update_thresholds(devices, tool_ID):
@@ -292,8 +241,8 @@ def update_thresholds(devices, tool_ID):
 		send_threshold(device, row)
 	    elif not contains(table[device.deviceAddr], row):
             	send_threshold(device, row)
-            #else:
-                #log_message("Thresholds not updated for: " + device.deviceAddr)
+            else:
+                log_message("Thresholds not updated for: " + device.deviceAddr)
     	table[device.deviceAddr] = tbl
 
 
@@ -302,26 +251,10 @@ def send_threshold(device, threshold):
     characs = device.getCharacteristics()
     for charac in characs:
         if (len(charac.propertiesToString().split()) > 3):
-            data = "%04d"%threshold[0] + "-%04d"%threshold[1] + "-%04d"%threshold[2] + "-%04d"%threshold[3]
-            log_message("Threshold written: " + data + " to " + str(device.deviceAddr))
+            data = "%04d"%threshold[0] + "-" + "%04d"%threshold[1] + "-" + "%04d"%threshold[2] + "-" + "%04d"%threshold[3]
+            log_message("Threshold written: " + data)
             # print("sent thresholds to device " + str(device.deviceAddr) + " for tool " + str(tool_ID[device.deviceAddr]))
 	    charac.write(data)
-
-# Given a changed set of thresholds, update the appropriate device.
-def sync_time(devices):
-    for device in devices:
-        characs = device.getCharacteristics()
-        for charac in characs:
-            if (len(charac.propertiesToString().split()) > 3):
-                data = str(datetime.datetime.now())
-		data = data.split(" ")
-		data1 = "1111-111-" + str(data[0])
-                log_message("Date updated : " + data1 + " to " + str(device.deviceAddr))
-                charac.write(data1)
-                data2 = "222-" + str(data[1])
-                log_message("Time updated : " + data2 + " to " + str(device.deviceAddr))
-                charac.write(data2)
-
 
 def contains(table, row):
     for tup in table:
@@ -335,9 +268,34 @@ def contains(table, row):
             return True
     return False
 
-#Extract current tool ID - Only for testing / debugging!
-#def get_toolID(device):
-#    return 1
+# Report an error and shut off the LED.
+def report_error(message):
+    print(message)
+    f = open(LOG_FILE, "a")
+    f.write(str(datetime.datetime.now()) + "  Error: " + message + '\n')
+    f.close()
+    GPIO.output(40, False)
+
+# Report a message without shutting off the LED.
+def log_message(message):
+    print(message)
+    f = open(LOG_FILE, "a")
+    f.write(str(datetime.datetime.now()) + "  " + message + '\n')
+    f.close()
+
+#Extract current tool ID - only for testing / debugging!
+def get_toolID_of(device):
+    try:    
+	print("Getting Tool ID for " + str(device))
+        toolsearch = """SELECT DISTINCT Tool_ID FROM Feature_Dictionary WHERE MAC_ADDRESS = (%s) AND Tool_Status = (%s)"""
+        x.execute(toolsearch,(device, '1'))
+        toolfound = x.fetchall()[0][0]
+        print("tool found is: " + str(toolfound))
+        return toolfound
+    except:
+	print("Tool ID return failed at main thread")
+	GPIO.output(22, False)
+        return 1
 
 """
 ================
@@ -367,38 +325,32 @@ except:
 # Find Infinite Uptime devices in the area by calling scanForIUDevices, and update their thresholds using check_for_thresholds and update_thresholds.
 devices = scanForIUDevices()
 
-#Initialize and fill up the tool_ID dictionary for devices
 tool_ID={}
 try:
     for device in devices:
-	tool_ID[device.deviceAddr]=get_toolID(device.deviceAddr) #default tool 1
+	tool_ID[device.deviceAddr]=get_toolID_of(device.deviceAddr) #default tool 1
 except:
     report_error("Could not get tool ID for " + str(device.deviceAddr))
     GPIO.output(22, False)
     raise
 
-# Check and update thresholds for a device with a given active tool_ID
 check_for_thresholds(devices, tool_ID)
 try:
     update_thresholds(devices, tool_ID)
 except btle.BTLEException:
     print("Device disappeared, rescanning")
-    GPIO.output(36, False)
     devices = scanForIUDevices()
+    GPIO.output(36, False)
 
 
-# Start data collection loop
-try:
-    sync_time(devices)
-    sleep(1)
-    while True:
-	#print("Start while: " + str(time.time() - time_start))
-	print(". ")
+#DEBUGGING#
+while True:
+	print("Start while: " + str(time.time() - time_start))
 	try:
             GPIO.output(40, True)
 	    for i in range(len(devices)):
                while devices[i].waitForNotifications(0.001):
-                    print("Received data for " + str(devices[i].deviceAddr))
+                    print("Received data " + str(i+1))
 	    reset = """SELECT reset_value FROM Env_variables"""
 	    x.execute(reset)
 	    reset = x.fetchall()
@@ -407,14 +359,58 @@ try:
 	    if len(devices)>0:
 		try:
     		    for device in devices:
-		        tool_ID[device.deviceAddr]=get_toolID(device.deviceAddr) #default tool 1
+			tool_ID[device.deviceAddr]=get_toolID_of(device.deviceAddr) #default tool 1
 		except:
     			report_error("Could not get tool ID for " + str(device.deviceAddr))
 			GPIO.output(22, False)
 			raise
 		check_for_thresholds(devices, tool_ID)
 		update_thresholds(devices, tool_ID)
-		    
+	    else:
+		print("Length of devices is 0")
+
+	except btle.BTLEException:
+	    reset = 1
+	if reset:
+	    print('Syncing...hold on')
+	    devices = scanForIUDevices()
+	    check_for_thresholds(devices, tool_ID)
+	    update_thresholds(devices, tool_ID)
+	    resetReset = """UPDATE Env_variables SET reset_value=(%s)"""
+	    x.execute(resetReset,['0'])
+	    conn.commit()
+
+#DEBUGGING#
+
+
+
+# Start data collection loop
+try:
+    while True:
+	print("Start while: " + str(time.time() - time_start))
+	try:
+            GPIO.output(40, True)
+	    for i in range(len(devices)):
+               while devices[i].waitForNotifications(0.001):
+                    print("Received data " + str(i+1))
+	    reset = """SELECT reset_value FROM Env_variables"""
+	    x.execute(reset)
+	    reset = x.fetchall()
+	    conn.commit()
+	    reset = int(list(list(zip(*reset))[0])[0])
+	    if len(devices)>0:
+		try:
+    		    for device in devices:
+			tool_ID[device.deviceAddr]=get_toolID_of(device.deviceAddr) #default tool 1
+		except:
+    			report_error("Could not get tool ID for " + str(device.deviceAddr))
+			GPIO.output(22, False)
+			raise
+		check_for_thresholds(devices, tool_ID)
+		update_thresholds(devices, tool_ID)
+	    else:
+		print("Length of devices is 0")
+
 	except btle.BTLEException:
 	    reset = 1
 	if reset:
@@ -427,42 +423,3 @@ try:
 	    conn.commit()
 except:
     report_error("Data collection stopped.")
-
-
-#FOR DEBUGGING#
-while True:
-    print("Start while: " + str(time.time() - time_start))
-    try:
-        GPIO.output(40, True)
-	for i in range(len(devices)):
-            while devices[i].waitForNotifications(0.001):
-                print("Received data " + str(i+1))
-	reset = """SELECT reset_value FROM Env_variables"""
-	x.execute(reset)
-	reset = x.fetchall()
-	conn.commit()
-	reset = int(list(list(zip(*reset))[0])[0])
-	if len(devices)>0:
-	    try:
-    		for device in devices:
-		    print("getting tool ID")
-		    tool_ID[device.deviceAddr]=get_toolID(device.deviceAddr) #default tool 1
-		    print("got tool ID")
-	    except:
-    		report_error("Could not get tool ID for " + str(device.deviceAddr))
-		GPIO.output(22, False)
-		raise
-	    check_for_thresholds(devices, tool_ID)
-	    update_thresholds(devices, tool_ID)
-		    
-    except btle.BTLEException:
-	reset = 1
-    if reset:
-	print('Syncing...hold on')
-	devices = scanForIUDevices()
-	check_for_thresholds(devices, tool_ID)
-	update_thresholds(devices, tool_ID)
-	resetReset = """UPDATE Env_variables SET reset_value=(%s)"""
-	x.execute(resetReset,['0'])
-	conn.commit()
-#FOR DEBUGGING#

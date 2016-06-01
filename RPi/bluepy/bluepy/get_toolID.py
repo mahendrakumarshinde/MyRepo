@@ -16,7 +16,6 @@ def get_toolID(device):
 
 	try:
 	    xml = urllib2.urlopen(AgentAddress)
-	    xml = urllib2.urlopen(AgentAddress)
 	    xml = xml.read()
 	    data = ET.ElementTree(ET.fromstring(xml))
 	    test = data.getroot()
@@ -30,7 +29,8 @@ def get_toolID(device):
 		if (yolos.tag == '{urn:mtconnect.org:MTConnectStreams:1.3}ToolId'):
 		    Toolid.append(yolos.text)
 
-	    print("Tool ID is: " + str(Toolid[0]))
+	    print("Tool ID is: " + str(Toolid[0]) + " for " + str(device))
 	    return int(Toolid[0])
 	except:
+	    print("Couldn't extract Tool ID, returning default Tool ID 1 for " + str(device.deviceAddr))
 	    return 1
