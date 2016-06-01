@@ -1,5 +1,5 @@
 /*
-Infinite Uptime BLE Module Firmware
+  Infinite Uptime BLE Module Firmware
 */
 
 //#include "Wire.h"
@@ -22,7 +22,7 @@ Infinite Uptime BLE Module Firmware
 
 #define CLOCK_TYPE         (I2S_CLOCK_48K_INTERNAL)     // I2S clock
 bool statusLED = true;                                  // Status LED ON/OFF
-String  MAC_ADDRESS = "7C:EC:79:61:8B:7A";
+String  MAC_ADDRESS = "7C:EC:79:F0:A0:31";
 // Reduce RUN frequency if needed.
 const uint16_t AUDIO_FREQ_RUN = 8000;
 const uint16_t AUDIO_FREQ_DATA = 8000;
@@ -59,10 +59,10 @@ const uint32_t MCR_INTERVAL_AUDIO = MCR_INTERVAL_ACCEL * RUN_ACCEL_AUDIO_RATIO;
 //       Read any of frequency domain feature calculation flow to understand.
 
 /* Deprecated, but keeping this just in case we will need again.
-// Spectral Flux
-double sp_flux_x = 0;
-double sp_flux_y = 0;
-double sp_flux_z = 0;
+  // Spectral Flux
+  double sp_flux_x = 0;
+  double sp_flux_y = 0;
+  double sp_flux_z = 0;
 */
 
 // Spectral Centroid
@@ -76,10 +76,10 @@ double sp_flat_y = 0;
 double sp_flat_z = 0;
 
 /* Deprecated, but keeping this just in case we will need again.
-// Spectral Crest
-float sp_crest_x = 0;
-float sp_crest_y = 0;
-float sp_crest_z = 0;
+  // Spectral Crest
+  float sp_crest_x = 0;
+  float sp_crest_y = 0;
+  float sp_crest_z = 0;
 */
 
 // Spectral Spread ACCEL
@@ -341,7 +341,22 @@ int newThres2 = 0;
 int newThres3 = 0;
 boolean didThresChange = false;
 int args_assigned = 0;
+int args_assigned2 = 0;
+//int args_assigned3 = 0;
 boolean rubbish = false;
+int date = 0;
+int dateset = 0;
+double dateyear = 0;
+int dateyear1 = 0;
+//int datemonth = 0;
+//int dateday = 0;
+//int tme = 0;
+//int timehours = 0;
+//int timeminutes = 0;
+//int timeseconds = 0;
+//int timemicroseconds = 0;
+//boolean timeready = false;
+//boolean dateready = false;
 
 // THRESH
 uint16_t bleFeatureType = 0;
@@ -367,6 +382,8 @@ boolean datasendtime = false;
 int datasendlimit = 1500;
 int currentmillis = 0;
 int prevmillis = 0;
+int currenttime = 0;
+int prevtime = 0;
 
 //Sleep mode variables
 int blue = 0;
@@ -377,10 +394,10 @@ int bluetimerstart = 0;
 
 //Special feature variables
 boolean buffcounter = false;
-  float paddedbuff[5];
+float paddedbuff[5];
 /*==============================================================================
   ====================== Feature Computation Caller ============================
-==============================================================================*/
+  ==============================================================================*/
 void compute_features() {
   // Turn the boolean off immediately.
   compute_feature_now[buffer_compute_index] = false;
@@ -444,6 +461,8 @@ void compute_features() {
             Serial2.print(",");
             Serial2.print(feature_value[i]);
           }
+          Serial2.print(",");
+          Serial2.print(gettimestamp());
           Serial2.print(";");
           Serial2.flush();
         }
@@ -486,6 +505,8 @@ void compute_features() {
           Serial2.print(",");
           Serial2.print(feature_value[i]);
         }
+        Serial2.print(",");
+        Serial2.print(gettimestamp());
         Serial2.print(";");
         Serial2.flush();
       }
@@ -508,6 +529,8 @@ void compute_features() {
           Serial2.print(",");
           Serial2.print(feature_value[i]);
         }
+        Serial2.print(",");
+        Serial2.print(gettimestamp());
         Serial2.print(";");
         Serial2.flush();
       }
@@ -530,6 +553,8 @@ void compute_features() {
           Serial2.print(",");
           Serial2.print(feature_value[i]);
         }
+        Serial2.print(",");
+        Serial2.print(gettimestamp());
         Serial2.print(";");
         Serial2.flush();
       }
@@ -636,15 +661,15 @@ void audio_rfft() {
                 magsize_2048 - 2);
 
   /* DEBUGGING ROUTINE; FREQUENCY CHECKER
-   *  TODO: REMOVE THIS WHEN DONE
-  q15_t joj;
-  uint32_t ind;
-  arm_max_q15(audio_batch[buffer_compute_index],
+      TODO: REMOVE THIS WHEN DONE
+    q15_t joj;
+    uint32_t ind;
+    arm_max_q15(audio_batch[buffer_compute_index],
               magsize_2048,
               &joj,
               &ind);
-  Serial.println(joj*2);
-  Serial.println((ind+1)*TARGET_AUDIO_SAMPLE / (double)AUDIO_NFFT);
+    Serial.println(joj*2);
+    Serial.println((ind+1)*TARGET_AUDIO_SAMPLE / (double)AUDIO_NFFT);
   */
 
   for (int i = NUM_TD_FEATURES; i < NUM_FEATURES; i++) {
@@ -786,15 +811,15 @@ void accel_rfft() {
                 magsize_512 - 2);
 
   /* DEBUGGING ROUTINE; FFT BIN CHECKER
-  TODO: Remove this when done
-  float sum = 0;
-  for (int i=0; i<magsize_512; i++){
+    TODO: Remove this when done
+    float sum = 0;
+    for (int i=0; i<magsize_512; i++){
     Serial.print(((float*)rfft_accel_buffer)[i], 8);
     sum += ((float*)rfft_accel_buffer)[i];
     Serial.print(" ");
-  }
-  Serial.println();
-  Serial.println(sum, 8);
+    }
+    Serial.println();
+    Serial.println(sum, 8);
   */
 
   for (int i = NUM_TD_FEATURES; i < NUM_FEATURES; i++) {
@@ -929,7 +954,7 @@ void accel_rfft() {
   (3) Return danger level according to the thresholds
 
   You can assume that buffers are correctly populated as feature requires.
-==============================================================================*/
+  ==============================================================================*/
 
 // TIME DOMAIN FEATURES
 
@@ -1053,15 +1078,15 @@ float feature_mcr () {
   float y_mcr = y_crossing / (float) MCR_INTERVAL_ACCEL;
   float z_mcr = z_crossing / (float) MCR_INTERVAL_ACCEL;
 
-  return 1000*sqrt(sq(x_mcr) + sq(y_mcr) + sq(z_mcr));
+  return sqrt(sq(x_mcr) + sq(y_mcr) + sq(z_mcr));
 }
 
 
 // FREQUENCY DOMAIN FEATURES
 
 /* CANCELLED
-// Spectral Flux ACCEL, index 2
-void calculate_spectral_flux(int axis){
+  // Spectral Flux ACCEL, index 2
+  void calculate_spectral_flux(int axis){
   float* buff = (float*) rfft_accel_buffer;
 
   double logSum = 0;
@@ -1079,11 +1104,11 @@ void calculate_spectral_flux(int axis){
     case 1: sp_flux_y = flux; break;
     case 2: sp_flux_z = flux; break;
   }
-}
+  }
 
-float feature_spectral_flux(){
+  float feature_spectral_flux(){
   return (float)sp_flux_x;
-}
+  }
 */
 
 // Spectral Centroid ACCEL, index 2
@@ -1117,14 +1142,14 @@ float feature_spectral_centroid() {
 void calculate_spectral_flatness(int axis) {
   float* buff = (float*) rfft_accel_buffer;
 
-  float flatness = 0;
-  float sp_flatness_fake = 0;
-
-  for (int i = 0; i < 100; i++) {
-    sp_flatness_fake += sq(buff[i]);
+  double logSum = 0;
+  double sum = 0;
+  for (int i = 0; i < magsize_512; i++) {
+    logSum += log10(buff[0]);
+    sum += buff[0];
   }
-  sp_flatness_fake = sp_flatness_fake * float(1000000); //if it needs to be scaled!
-  flatness = sp_flatness_fake;
+
+  double flatness = logSum * 10 / magsize_512 - log10(sum / magsize_512);
 
   switch (axis) {
     case 0: sp_flat_x = flatness; break;
@@ -1134,13 +1159,12 @@ void calculate_spectral_flatness(int axis) {
 }
 
 float feature_spectral_flatness() {
-  //Serial.println((float) sqrt(sq(sp_flat_x) + sq(sp_flat_y) + sq(sp_flat_z)));
   return (float) sqrt(sq(sp_flat_x) + sq(sp_flat_y) + sq(sp_flat_z));
 }
 
 /* CANCELLED
-// Spectral Crest ACCEL, index 5
-void calculate_spectral_crest(int axis){
+  // Spectral Crest ACCEL, index 5
+  void calculate_spectral_crest(int axis){
   float* buff = (float*) rfft_accel_buffer;
 
   float sqSum = 0;
@@ -1156,11 +1180,11 @@ void calculate_spectral_crest(int axis){
     case 1: sp_crest_y = crest; break;
     case 2: sp_crest_z = crest; break;
   }
-}
+  }
 
-float feature_spectral_crest(){
+  float feature_spectral_crest(){
   return sp_crest_x;
-}
+  }
 */
 
 // Spectral Spread ACCEL, index 4
@@ -1168,31 +1192,44 @@ void calculate_spectral_spread_accel(int axis) {
   // TODO: Could use more CMSIS-DSP functions. Maybe optimize it later.
   float* buff = (float*) rfft_accel_buffer;
 
-  float sp_spread_accel = 0;
-  float sp_spread_accel_fake = 0;
+  float sqSum = 0;
+  float wSum = 0;
+  double SC = ACCEL_NFFT / (double)4;
 
-  for (int i = 100; i < 200; i++) {
-    sp_spread_accel_fake += sq(buff[i]);
+  arm_dot_prod_f32(buff, buff, magsize_512, &sqSum);
+
+  for (int i = 0; i < magsize_512; i++) {
+    wSum += buff[i] * sq(i + 1 - SC);
   }
-  sp_spread_accel_fake = sp_spread_accel_fake * float(1000000); //if it needs to be scaled!
-  sp_spread_accel = sp_spread_accel_fake;
+
+  double spread = sqrt(wSum / sqSum);
 
   switch (axis) {
-    case 0: sp_spread_x = sp_spread_accel; break;
-    case 1: sp_spread_y = sp_spread_accel; break;
-    case 2: sp_spread_z = sp_spread_accel; break;
+    case 0: sp_spread_x = spread; break;
+    case 1: sp_spread_y = spread; break;
+    case 2: sp_spread_z = spread; break;
   }
 }
 
 float feature_spectral_spread_accel() {
-  //Serial.println((float) sqrt(sq(sp_spread_x) + sq(sp_spread_y) + sq(sp_spread_z)));
-  return (float) sqrt(sq(sp_spread_x) + sq(sp_spread_y) + sq(sp_spread_z));
+  return (float) sqrt(sq(sp_spread_x) + sq(sp_spread_y) + sq(sp_spread_z)) / (float)100;
 }
 
 // Spectral Spread AUDIO, index 5
 void calculate_spectral_spread_audio(int axis) {
   float* buff = (float*) rfft_audio_buffer;
 
+  //  float sqSum = 0;
+  //  float wSum = 0;
+  //  double SC = AUDIO_NFFT / (double)4;
+  //
+  //  arm_dot_prod_f32(buff, buff, magsize_2048, &sqSum);
+  //
+  //  for (int i = 0; i < magsize_2048; i++) {
+  //    wSum += buff[i] * sq(i + 1 - SC);
+  //  }
+  //
+  //  sp_spread_aud = sqrt(wSum / sqSum); //deprecated
   sp_spread_aud = 0;
   float sp_spread_aud_fake = 0;
 
@@ -1200,7 +1237,32 @@ void calculate_spectral_spread_audio(int axis) {
     sp_spread_aud_fake += sq(buff[i]);
   }
   sp_spread_aud_fake = sp_spread_aud_fake * float(1000000); //if it needs to be scaled!
+  //  Serial.println("Sp_fake is");
+  //  Serial.print(sp_spread_aud_fake);
+  //  Serial.print("\n");
+  //  if (!buffcounter) {
+  //    for (int i = 0; i < 5; i++) {
+  //      paddedbuff[i] = sp_spread_aud_fake;
+  //    }
+  //  }
+  //float data[6];
+  //for (int j=0; j < 5; j++){
+  //  data[j] = (float)paddedbuff[j];
+  //}
+  //data[5]=sp_spread_aud_fake;
+
   sp_spread_aud = sp_spread_aud_fake;
+
+  //Serial.println("sp_spread_aud is");
+  //Serial.print(sp_spread_aud);
+  //Serial.print("\n");
+
+  //  for (int j = 0; j < 4; j++) {
+  //    paddedbuff[j] = paddedbuff[j + 1];
+  //  }
+  //  paddedbuff[4] = sp_spread_aud;
+  //
+  //  buffcounter = true;
 }
 
 float feature_spectral_spread_audio() {
@@ -1329,6 +1391,14 @@ void i2s_tx_callback( int32_t *pBuf )
   // This function won't be used at all; leave it empty.
 }
 
+/* --- Time functions --- */
+
+double gettimestamp() {
+  Serial.print("gettimestamp called : ");
+  Serial.println(dateyear);
+  return dateyear;
+}
+
 /* ----------------------- begin -------------------- */
 
 void setup()
@@ -1445,113 +1515,110 @@ void loop()
     datasendtime = true;
   }
 
+  currenttime = millis();
+  if (currenttime - prevtime >= 1) {
+    prevtime = currenttime;
+    dateyear = dateyear + 0.001;
+  }
 
   /* -------------------------- USB Connection Check ----------------------- */
-//    if (bitRead(USB0_OTGSTAT, 5)) {
-//      // Disconnected; this flag will briefly come up when USB gets disconnected.
-//      // Immediately put into RUN mode.
-//      if (currMode != RUN) { //If disconnected and NOT in RUN mode, set to run mode with idle state initialized
-//        Serial2.begin(9600);
-//        Serial2.flush();
-//        resetSampling(true);
-//        currMode = RUN;
-//        LEDColors c = BLUE_NOOP;
-//        changeStatusLED(c);
-//  
-//        // Reset state
-//        currState = NOT_CUTTING;
-//      } else { //If disconnected and in RUN mode, continue in run mode
-//      }
-//    } else {
-//      // Connected
-//      if (currMode == RUN) {
-//        // NOTE: Assume the battery will start charging when USB is connected.
-//        if (digitalRead(chargerCHG) == 1) { //If connected, charging and in RUN mode, set to CHARGING mode
-//          Serial2.flush();
-//          Serial2.end();
-//          LEDColors c = PURPLE_CHARGE;
-//          changeStatusLED(c);
-//          currMode = CHARGING;
-//        } else {
-//          if (didThresChange) { //Weirdly, the logic for chargerCHG switches once ble data is received!
-//            Serial2.flush();
-//            Serial2.end();
-//            LEDColors c = PURPLE_CHARGE;
-//            changeStatusLED(c);
-//            currMode = CHARGING;
-//          }
-//       }
-//      } else if (currMode == CHARGING) { //If already in charging mode
-//        // CHARGE mode and battery is NOT charging.
-//        // Display white LED to notify charge completion.
-//        if (digitalRead(chargerCHG) == 0) {
-//          if (didThresChange) {//Weirdly, the logic for chargerCHG switches once ble data is received!
-//            LEDColors c = PURPLE_CHARGE;
-//            changeStatusLED(c);
-//          }
-//          else {
-//            LEDColors c = WHITE_NONE;
-//            changeStatusLED(c);
-//          }
-//  
-//        } else {
-//          if (didThresChange) { //Weirdly, the logic for chargerCHG switches once ble data is received!
-//            LEDColors c = WHITE_NONE;
-//            changeStatusLED(c);
-//          }
-//          else {
-//            LEDColors c = PURPLE_CHARGE;
-//            changeStatusLED(c);
-//          }
-//        }
-//      } else {
-//      }
-//    }
+  //    if (bitRead(USB0_OTGSTAT, 5)) {
+  //      // Disconnected; this flag will briefly come up when USB gets disconnected.
+  //      // Immediately put into RUN mode.
+  //      if (currMode != RUN) { //If disconnected and NOT in RUN mode, set to run mode with idle state initialized
+  //        Serial2.begin(9600);
+  //        Serial2.flush();
+  //        resetSampling(true);
+  //        currMode = RUN;
+  //        LEDColors c = BLUE_NOOP;
+  //        changeStatusLED(c);
+  //
+  //        // Reset state
+  //        currState = NOT_CUTTING;
+  //      } else { //If disconnected and in RUN mode, continue in run mode
+  //      }
+  //    } else {
+  //      // Connected
+  //      if (currMode == RUN) {
+  //        // NOTE: Assume the battery will start charging when USB is connected.
+  //        if (digitalRead(chargerCHG) == 1) { //If connected, charging and in RUN mode, set to CHARGING mode
+  //          Serial2.flush();
+  //          Serial2.end();
+  //          LEDColors c = PURPLE_CHARGE;
+  //          changeStatusLED(c);
+  //          currMode = CHARGING;
+  //        } else {
+  //          if (didThresChange) { //Weirdly, the logic for chargerCHG switches once ble data is received!
+  //            Serial2.flush();
+  //            Serial2.end();
+  //            LEDColors c = PURPLE_CHARGE;
+  //            changeStatusLED(c);
+  //            currMode = CHARGING;
+  //          }
+  //       }
+  //      } else if (currMode == CHARGING) { //If already in charging mode
+  //        // CHARGE mode and battery is NOT charging.
+  //        // Display white LED to notify charge completion.
+  //        if (digitalRead(chargerCHG) == 0) {
+  //          if (didThresChange) {//Weirdly, the logic for chargerCHG switches once ble data is received!
+  //            LEDColors c = PURPLE_CHARGE;
+  //            changeStatusLED(c);
+  //          }
+  //          else {
+  //            LEDColors c = WHITE_NONE;
+  //            changeStatusLED(c);
+  //          }
+  //
+  //        } else {
+  //          if (didThresChange) { //Weirdly, the logic for chargerCHG switches once ble data is received!
+  //            LEDColors c = WHITE_NONE;
+  //            changeStatusLED(c);
+  //          }
+  //          else {
+  //            LEDColors c = PURPLE_CHARGE;
+  //            changeStatusLED(c);
+  //          }
+  //        }
+  //      } else {
+  //      }
+  //    }
 
   /* ----------- Two-way Communication via BLE, only on RUN mode. ----------- */
 
   if (currMode == RUN) {
     while (Serial2.available() > 0) {
       bleBuffer[bleBufferIndex] = Serial2.read();
-      //Serial2.print(char(bleBuffer[bleBufferIndex])); //Good for debugging
       bleBufferIndex++;
-      //Serial2.println(bleBufferIndex);
-    }
 
-    if (bleBufferIndex > 18) {
-      args_assigned = sscanf(bleBuffer, "%d-%d-%d-%d", &bleFeatureIndex, &newThres, &newThres2, &newThres3);
-      Serial.print(bleBuffer);
-      didThresChange = true;
-      bleBufferIndex = 0;
-      if (bleFeatureIndex > 5 || newThres > 9999 || newThres2 > 9999 || newThres3 > 9999) {
-        //Serial.println("Rubbish data");
-        rubbish = true;
-      }
-      if (!rubbish) {
-        //Comment this once debugging is done!
-        //        Serial.print("\nFeature Index =");
-        //        Serial.print(bleFeatureIndex);
-        //        Serial.print("\n");
-        //        Serial.print("\nNew low threshold =");
-        //        Serial.print(newThres);
-        //        Serial.print("\n");
-        //        Serial.print("\nNew med threshold =");
-        //        Serial.print(newThres2);
-        //        Serial.print("\n");
-        //        Serial.print("\nNew danger threshold =");
-        //        Serial.print(newThres3);
-        //        Serial.print("\n");
-        //Comment till here!
-        featureNormalThreshold[bleFeatureIndex] = newThres;
-        featureWarningThreshold[bleFeatureIndex] = newThres2;
-        featureDangerThreshold[bleFeatureIndex] = newThres3;
-        newThres = 0;
-        newThres2 = 0;
-        newThres3 = 0;
-      }
-      rubbish = false;
-    }
+      if (bleBufferIndex > 18) {
+        Serial.println(bleBuffer);
+        if (bleBuffer[0] == '0') {
+          args_assigned = sscanf(bleBuffer, "%d-%d-%d-%d", &bleFeatureIndex, &newThres, &newThres2, &newThres3);
+          didThresChange = true;
+          if (bleFeatureIndex > 5 || newThres > 9999 || newThres2 > 9999 || newThres3 > 9999 || newThres < 1 || newThres2 < 1 || newThres3 < 1) {
+            //Serial.println("Rubbish data");
+            rubbish = true;
+          }
+          if (!rubbish) {
+            featureNormalThreshold[bleFeatureIndex] = newThres;
+            featureWarningThreshold[bleFeatureIndex] = newThres2;
+            featureDangerThreshold[bleFeatureIndex] = newThres3;
+            newThres = 0;
+            newThres2 = 0;
+            newThres3 = 0;
+          }
+          rubbish = false;
+        }
 
+        // receive the timestamp data from the hub 
+        if (bleBuffer[0] == '1') {
+          args_assigned2 = sscanf(bleBuffer, "%d:%d.%d", &date, &dateset, &dateyear1);
+          dateyear = double(dateset) + double(dateyear1) / double(1000000);
+          Serial.println(dateyear);
+        }
+        bleBufferIndex = 0;
+      }
+    }
   }
 
   //  if (currMode == RUN) {
@@ -1918,78 +1985,6 @@ void initBMX055()
   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_PMU_BW, ACCBW & 0x0F);     // Set accelerometer bandwidth
   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_D_HBW, 0x00);              // Use filtered data
 
-  // //   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_INT_EN_1, 0x10);           // Enable ACC data ready interrupt
-  // //   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_INT_OUT_CTRL, 0x04);       // Set interrupts push-pull, active high for INT1 and INT2
-  // //   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_INT_MAP_1, 0x02);        // Define INT1 (intACC1) as ACC data ready interrupt
-  // //   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_INT_MAP_1, 0x80);          // Define INT2 (intACC2) as ACC data ready interrupt
-
-  // //   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_BGW_SPI3_WDT, 0x06);       // Set watchdog timer for 50 ms
-
-  // // Configure Gyro
-  // // start by resetting gyro, better not since it ends up in sleep mode?!
-  // // writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_BGW_SOFTRESET, 0xB6); // reset gyro
-  // // delay(100);
-  // // Three power modes, 0x00 Normal,
-  // // set bit 7 to 1 for suspend mode, set bit 5 to 1 for deep suspend mode
-  // // sleep duration in fast-power up from suspend mode is set by bits 1 - 3
-  // // 000 for 2 ms, 111 for 20 ms, etc.
-  // //  writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_LPM1, 0x00);  // set GYRO normal mode
-  // //  set GYRO sleep duration for fast power-up mode to 20 ms, for duty cycle of 50%
-  // //  writeByte(BMX055_ACC_ADDRESS, BMX055_GYRO_LPM1, 0x0E);
-  // // set bit 7 to 1 for fast-power-up mode,  gyro goes quickly to normal mode upon wake up
-  // // can set external wake-up interrupts on bits 5 and 4
-  // // auto-sleep wake duration set in bits 2-0, 001 4 ms, 111 40 ms
-  // //  writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_LPM2, 0x00);  // set GYRO normal mode
-  // // set gyro to fast wake up mode, will sleep for 20 ms then run normally for 20 ms
-  // // and collect data for an effective ODR of 50 Hz, other duty cycles are possible but there
-  // // is a minimum wake duration determined by the bandwidth duration, e.g.,  > 10 ms for 23Hz gyro bandwidth
-  // //  writeByte(BMX055_ACC_ADDRESS, BMX055_GYRO_LPM2, 0x87);
-
-  // writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_RANGE, Gscale);  // set GYRO FS range
-  // writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_BW, GODRBW);     // set GYRO ODR and Bandwidth
-
-  // // writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_INT_EN_0, 0x80);  // enable data ready interrupt
-  // // writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_INT_EN_1, 0x04);  // select push-pull, active high interrupts
-  // // writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_INT_MAP_1, 0x80); // select INT3 (intGYRO1) as GYRO data ready interrupt
-
-  // // writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_BGW_SPI3_WDT, 0x06); // Enable watchdog timer for I2C with 50 ms window
-
-
-  // // Configure magnetometer
-  // writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_PWR_CNTL1, 0x82);  // Softreset magnetometer, ends up in sleep mode
-  // delay(100);
-  // writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_PWR_CNTL1, 0x01); // Wake up magnetometer
-  // delay(100);
-
-  // writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_PWR_CNTL2, MODR << 3); // Normal mode
-  // //writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_PWR_CNTL2, MODR << 3 | 0x02); // Forced mode
-
-  // //writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_INT_EN_2, 0x84); // Enable data ready pin interrupt, active high
-
-  // // Set up four standard configurations for the magnetometer
-  // switch (Mmode)
-  // {
-  //   case lowPower:
-  //     // Low-power
-  //     writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_XY, 0x01);  // 3 repetitions (oversampling)
-  //     writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_Z,  0x02);  // 3 repetitions (oversampling)
-  //     break;
-  //   case Regular:
-  //     // Regular
-  //     writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_XY, 0x04);  //  9 repetitions (oversampling)
-  //     writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_Z,  0x16);  // 15 repetitions (oversampling)
-  //     break;
-  //   case enhancedRegular:
-  //     // Enhanced Regular
-  //     writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_XY, 0x07);  // 15 repetitions (oversampling)
-  //     writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_Z,  0x22);  // 27 repetitions (oversampling)
-  //     break;
-  //   case highAccuracy:
-  //     // High Accuracy
-  //     writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_XY, 0x17);  // 47 repetitions (oversampling)
-  //     writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_Z,  0x51);  // 83 repetitions (oversampling)
-  //     break;
-  // }
 }
 
 void fastcompaccelBMX055(float * dest1)
@@ -2027,89 +2022,6 @@ void fastcompaccelBMX055(float * dest1)
   dest1[2] = (float) compz / 128.; // accleration bias in g
 }
 
-
-// I2C communication with the M24512DFM EEPROM is a little different from I2C communication with the usual motion sensor
-// since the address is defined by two bytes
-
-
-// I2C communication with the MS5637 is a little different from that with the MPU9250 and most other sensors
-// For the MS5637, we write commands, and the MS5637 sends data in response, rather than directly reading
-// MS5637 registers
-
-//void MS5637Reset()
-//{
-//  Wire.beginTransmission(MS5637_ADDRESS);  // Initialize the Tx buffer
-//  Wire.write(MS5637_RESET);                // Put reset command in Tx buffer
-//  Wire.endTransmission();                  // Send the Tx buffer
-//}
-
-//void MS5637PromRead(uint16_t * destination)
-//{
-//  uint8_t data[2] = {0, 0};
-//  for (uint8_t ii = 0; ii < 7; ii++) {
-//    Wire.beginTransmission(MS5637_ADDRESS);  // Initialize the Tx buffer
-//    Wire.write(0xA0 | ii << 1);              // Put PROM address in Tx buffer
-//    Wire.endTransmission(I2C_NOSTOP);        // Send the Tx buffer, but send a restart to keep connection alive
-//    uint8_t i = 0;
-//    Wire.requestFrom(MS5637_ADDRESS, 2);   // Read two bytes from slave PROM address
-//    while (Wire.available()) {
-//      data[i++] = Wire.read();
-//    }               // Put read results in the Rx buffer
-//    destination[ii] = (uint16_t) (((uint16_t) data[0] << 8) | data[1]); // construct PROM data for return to main program
-//  }
-//}
-
-//uint32_t MS5637Read(uint8_t CMD, uint8_t OSR)  // temperature data read
-//{
-//  uint8_t data[3] = {0, 0, 0};
-//  Wire.beginTransmission(MS5637_ADDRESS);  // Initialize the Tx buffer
-//  Wire.write(CMD | OSR);                  // Put pressure conversion command in Tx buffer
-//  Wire.endTransmission(I2C_NOSTOP);        // Send the Tx buffer, but send a restart to keep connection alive
-//
-//  switch (OSR)
-//  {
-//    case ADC_256: delay(1); break;  // delay for conversion to complete
-//    case ADC_512: delay(3); break;
-//    case ADC_1024: delay(4); break;
-//    case ADC_2048: delay(6); break;
-//    case ADC_4096: delay(10); break;
-//    case ADC_8192: delay(20); break;
-//  }
-//
-//  Wire.beginTransmission(MS5637_ADDRESS);  // Initialize the Tx buffer
-//  Wire.write(0x00);                        // Put ADC read command in Tx buffer
-//  Wire.endTransmission(I2C_NOSTOP);        // Send the Tx buffer, but send a restart to keep connection alive
-//  uint8_t i = 0;
-//  Wire.requestFrom(MS5637_ADDRESS, 3);     // Read three bytes from slave PROM address
-//  while (Wire.available()) {
-//    data[i++] = Wire.read();
-//  }               // Put read results in the Rx buffer
-//  return (uint32_t) (((uint32_t) data[0] << 16) | (uint32_t) data[1] << 8 | data[2]); // construct PROM data for return to main program
-//}
-
-
-
-//unsigned char MS5637checkCRC(uint16_t * n_prom)  // calculate checksum from PROM register contents
-//{
-//  int cnt;
-//  unsigned int n_rem = 0;
-//  unsigned char n_bit;
-//
-//  n_prom[0] = ((n_prom[0]) & 0x0FFF);  // replace CRC byte by 0 for checksum calculation
-//  n_prom[7] = 0;
-//  for (cnt = 0; cnt < 16; cnt++)
-//  {
-//    if (cnt % 2 == 1) n_rem ^= (unsigned short) ((n_prom[cnt >> 1]) & 0x00FF);
-//    else         n_rem ^= (unsigned short)  (n_prom[cnt >> 1] >> 8);
-//    for (n_bit = 8; n_bit > 0; n_bit--)
-//    {
-//      if (n_rem & 0x8000)    n_rem = (n_rem << 1) ^ 0x3000;
-//      else                  n_rem = (n_rem << 1);
-//    }
-//  }
-//  n_rem = ((n_rem >> 12) & 0x000F);
-//  return (n_rem ^ 0x00);
-//}
 
 // simple function to scan for I2C devices on the bus
 void I2Cscan()
