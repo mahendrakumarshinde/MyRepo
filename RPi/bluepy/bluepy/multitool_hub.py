@@ -161,13 +161,6 @@ class TeensyDelegate(btle.DefaultDelegate):
 
     def handleNotification(self, cHandle, data, datatimestamp):
 	#print("Start handleNotification: " + str(time.time() - time_start))
-        global firstmessage
-	global d8
-	if(firstmessage): # Define firstmessage and get d8 at the moment the new message comes in to prevent 4 msec latency
-	    d8 = str(datetime.datetime.now())
-	    print("Pi Timestamp : " + d8)
-	    print("BTLE timestamp : " + str(datatimestamp))
-	    firstmessage = False
 	self.buffer = self.buffer + data
         if (";" in self.buffer):
 	    two = self.buffer.split(";");
@@ -175,15 +168,18 @@ class TeensyDelegate(btle.DefaultDelegate):
 	    msg = two[0]
             msg= msg.replace("\r\n","")
             msg = msg.split(",")
-	    firstmessage = True
 	    f = open(SENSOR_OUTPUT, "a")
-	    f.write("[" + d8 + "] " + ' '.join(msg) + '\n')
+	    f.write("[" + msg[15] + "] " + ' '.join(msg) + '\n')           
 	    f.close()
+	    print("Message from IU Productivity : " + msg[15])
 
-	    #print("handleNotfication: sending to SQL at Time: " + str(time.time() - time_start) + " Message: " + str(msg))
+            # receive the timestamp from the hub, then send to database with correct format   
 	    try:
+                timestamp_tuple = datetime.datetime.fromtimestamp(float(msg[15]))
+                timestamp_final = timestamp_tuple.strftime("%Y-%m-%d %H:%M:%S.%f")
+                print("Time into database : " + timestamp_final)
 	        addsqldata="""INSERT INTO IU_device_data (`Timestamp_Pi`, `MAC_ADDRESS`, `Tool_ID`, `State`, `Battery_Level`, `Feature_Value_0`, `Feature_Value_1`, `Feature_Value_2`, `Feature_Value_3`, `Feature_Value_4`, `Feature_Value_5`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
-	        x.execute(addsqldata,(d8,msg[0], tool_ID[msg[0]], msg[1],msg[2],msg[4],msg[6],msg[8],msg[10],msg[12],msg[14]))
+	        x.execute(addsqldata,(timestamp_final,msg[0], tool_ID[msg[0]], msg[1],msg[2],msg[4],msg[6],msg[8],msg[10],msg[12],msg[14]))
          	print('write to database=' + str(time.time()-time_start))
 	    except:
 		report_error("Could not access SQL database - check internet connectivity")
@@ -201,7 +197,6 @@ class TeensyDelegate(btle.DefaultDelegate):
                     raise
 	    conn.commit()
             return 'done'
-	#print("End handleNotification: " + str(time.time() - time_start))
 
 # Updates the locally kept list of thresholds based on the SQL database.
 # Enters any new devices into the Feature Dictionary.
@@ -292,8 +287,6 @@ def update_thresholds(devices, tool_ID):
 		send_threshold(device, row)
 	    elif not contains(table[device.deviceAddr], row):
             	send_threshold(device, row)
-            #else:
-                #log_message("Thresholds not updated for: " + device.deviceAddr)
     	table[device.deviceAddr] = tbl
 
 
@@ -304,7 +297,6 @@ def send_threshold(device, threshold):
         if (len(charac.propertiesToString().split()) > 3):
             data = "%04d"%threshold[0] + "-%04d"%threshold[1] + "-%04d"%threshold[2] + "-%04d"%threshold[3]
             log_message("Threshold written: " + data + " to " + str(device.deviceAddr))
-            # print("sent thresholds to device " + str(device.deviceAddr) + " for tool " + str(tool_ID[device.deviceAddr]))
 	    charac.write(data)
 
 # Given a changed set of thresholds, update the appropriate device.
@@ -313,15 +305,10 @@ def sync_time(devices):
         characs = device.getCharacteristics()
         for charac in characs:
             if (len(charac.propertiesToString().split()) > 3):
-                data = str(datetime.datetime.now())
-		data = data.split(" ")
-		data1 = "1111-111-" + str(data[0])
-                log_message("Date updated : " + data1 + " to " + str(device.deviceAddr))
-                charac.write(data1)
-                data2 = "222-" + str(data[1])
-                log_message("Time updated : " + data2 + " to " + str(device.deviceAddr))
-                charac.write(data2)
-
+		int_data = time.time()
+                data1 = "1:" + repr(int_data)
+		log_message("Date updated : " + data1 + " to " + str(device.deviceAddr))
+		charac.write(data1)
 
 def contains(table, row):
     for tup in table:

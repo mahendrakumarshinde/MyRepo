@@ -30,7 +30,11 @@ def get_toolID(device):
 		    Toolid.append(yolos.text)
 
 	    print("Tool ID is: " + str(Toolid[0]) + " for " + str(device))
-	    return int(Toolid[0])
+	    if(Toolid[0] == "UNAVAILABLE"):
+                return 1
+            else:
+                return int(Toolid[0])
+              
 	except:
 	    print("Couldn't extract Tool ID, returning default Tool ID 1 for " + str(device.deviceAddr))
 	    return 1
