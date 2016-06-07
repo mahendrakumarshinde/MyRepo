@@ -22,7 +22,7 @@ Infinite Uptime BLE Module Firmware
 
 #define CLOCK_TYPE         (I2S_CLOCK_48K_INTERNAL)     // I2S clock
 bool statusLED = true;                                  // Status LED ON/OFF
-String  MAC_ADDRESS = "7C:EC:79:61:8B:7A";
+String  MAC_ADDRESS = "7C:EC:79:F0:A0:6A";
 // Reduce RUN frequency if needed.
 const uint16_t AUDIO_FREQ_RUN = 8000;
 const uint16_t AUDIO_FREQ_DATA = 8000;
@@ -1022,38 +1022,24 @@ float feature_mcr () {
   arm_mean_f32(&compBuffer[MCR_INTERVAL_ACCEL], MCR_INTERVAL_ACCEL, &ave_y);
   arm_mean_f32(&compBuffer[zind], MCR_INTERVAL_ACCEL, &ave_z);
 
-  // Calculate mean crossing rates.
-  bool prevX = compBuffer[0] < ave_x;
-  bool prevY = compBuffer[MCR_INTERVAL_ACCEL] < ave_y;
-  bool prevZ = compBuffer[zind] < ave_y;
-  bool curr;
+  
+  float std_x = 0;
+  float std_y = 0;
+  float std_z = 0;
 
-  int x_crossing = 0;
-  int y_crossing = 0;
-  int z_crossing = 0;
+  // Calculate average
+  arm_std_f32(compBuffer, MCR_INTERVAL_ACCEL, &std_x);
+  arm_std_f32(&compBuffer[MCR_INTERVAL_ACCEL], MCR_INTERVAL_ACCEL, &std_y);
+  arm_std_f32(&compBuffer[zind], MCR_INTERVAL_ACCEL, &std_z);
 
-  for (int i = 1; i < MCR_INTERVAL_ACCEL; i++) {
-    curr = compBuffer[i] < ave_x;
-    if (prevX != curr)
-      x_crossing ++;
-    prevX = curr;
-
-    curr = compBuffer[MCR_INTERVAL_ACCEL + i] < ave_y;
-    if (prevY != curr)
-      y_crossing ++;
-    prevY = curr;
-
-    curr = compBuffer[zind + i] < ave_z;
-    if (prevZ != curr)
-      z_crossing ++;
-    prevZ = curr;
+  float kurtosis = 0;
+  for (int i = 0; i < ENERGY_INTERVAL_ACCEL; i++) {
+    kurtosis += sq(sq(compBuffer[i] - ave_x))/sq(std_x)
+           +  sq(sq(compBuffer[ENERGY_INTERVAL_ACCEL + i] - ave_y))/sq(std_y)
+           +  sq(sq(compBuffer[zind + i] - ave_z))/sq(std_z);
   }
 
-  float x_mcr = x_crossing / (float) MCR_INTERVAL_ACCEL;
-  float y_mcr = y_crossing / (float) MCR_INTERVAL_ACCEL;
-  float z_mcr = z_crossing / (float) MCR_INTERVAL_ACCEL;
-
-  return 1000*sqrt(sq(x_mcr) + sq(y_mcr) + sq(z_mcr));
+  return kurtosis;
 }
 
 
@@ -1091,16 +1077,14 @@ void calculate_spectral_centroid(int axis) {
   // TODO: Could use a LOT of CMSIS-DSP functions. Maybe optimize it later.
   float* buff = (float*) rfft_accel_buffer;
 
-  double sqSum = 0;
-  double sqwSum = 0;
-  double sqd = 0;
-  for (int i = 0; i < magsize_512; i++) {
-    sqd = sq(buff[i] * 2);
-    sqSum += sqd;
-    sqwSum += sqd * (i + 1);
-  }
+  float centroid = 0;
+  float sp_centroid_fake = 0;
 
-  double centroid = sqwSum / sqSum;
+  for (int i = 0; i < 50; i++) {
+    sp_centroid_fake += sq(buff[i]);
+  }
+  sp_centroid_fake = sp_centroid_fake * float(1000000); //if it needs to be scaled!
+  centroid = sp_centroid_fake;
 
   switch (axis) {
     case 0: sp_cent_x = centroid; break;
@@ -1120,7 +1104,7 @@ void calculate_spectral_flatness(int axis) {
   float flatness = 0;
   float sp_flatness_fake = 0;
 
-  for (int i = 0; i < 100; i++) {
+  for (int i = 50; i < 100; i++) {
     sp_flatness_fake += sq(buff[i]);
   }
   sp_flatness_fake = sp_flatness_fake * float(1000000); //if it needs to be scaled!
@@ -1171,7 +1155,7 @@ void calculate_spectral_spread_accel(int axis) {
   float sp_spread_accel = 0;
   float sp_spread_accel_fake = 0;
 
-  for (int i = 100; i < 200; i++) {
+  for (int i = 100; i < 240; i++) {
     sp_spread_accel_fake += sq(buff[i]);
   }
   sp_spread_accel_fake = sp_spread_accel_fake * float(1000000); //if it needs to be scaled!
