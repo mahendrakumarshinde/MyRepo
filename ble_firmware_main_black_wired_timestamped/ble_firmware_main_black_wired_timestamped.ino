@@ -22,7 +22,7 @@
 
 #define CLOCK_TYPE         (I2S_CLOCK_48K_INTERNAL)     // I2S clock
 bool statusLED = true;                                  // Status LED ON/OFF
-String  MAC_ADDRESS = "7C:EC:79:69:82:76";
+String  MAC_ADDRESS = "68:9E:19:07:EE:26";
 // Reduce RUN frequency if needed.
 const uint16_t AUDIO_FREQ_RUN = 8000;
 const uint16_t AUDIO_FREQ_DATA = 8000;
@@ -389,7 +389,7 @@ int prevtime = 0;
 int blue = 0;
 boolean sleepmode = false;
 int bluemillisnow = 0;
-int bluesleeplimit = 10000;
+int bluesleeplimit = 60000;
 int bluetimerstart = 0;
 
 //Special feature variables
