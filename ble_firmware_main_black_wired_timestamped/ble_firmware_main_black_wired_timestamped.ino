@@ -342,21 +342,11 @@ int newThres3 = 0;
 boolean didThresChange = false;
 int args_assigned = 0;
 int args_assigned2 = 0;
-//int args_assigned3 = 0;
 boolean rubbish = false;
 int date = 0;
 int dateset = 0;
 double dateyear = 0;
 int dateyear1 = 0;
-//int datemonth = 0;
-//int dateday = 0;
-//int tme = 0;
-//int timehours = 0;
-//int timeminutes = 0;
-//int timeseconds = 0;
-//int timemicroseconds = 0;
-//boolean timeready = false;
-//boolean dateready = false;
 
 // THRESH
 uint16_t bleFeatureType = 0;
@@ -384,6 +374,11 @@ int currentmillis = 0;
 int prevmillis = 0;
 int currenttime = 0;
 int prevtime = 0;
+
+//Data reception robustness variables
+int buffnow = 0;
+int buffprev = 0;
+int datareceptiontimeout = 2000;
 
 //Sleep mode variables
 int blue = 0;
@@ -1519,6 +1514,16 @@ void loop()
   if (currenttime - prevtime >= 1) {
     prevtime = currenttime;
     dateyear = dateyear + 0.001;
+  }
+
+  //Robustness for data reception//
+  buffnow = millis();
+  if (bleBufferIndex > 0){
+    if (buffnow -  buffprev > datareceptiontimeout){
+      bleBufferIndex = 0;
+    }
+  }else{
+    buffprev = buffnow;
   }
 
   /* -------------------------- USB Connection Check ----------------------- */
