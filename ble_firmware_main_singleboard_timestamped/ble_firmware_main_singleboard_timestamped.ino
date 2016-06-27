@@ -22,7 +22,7 @@
 
 #define CLOCK_TYPE         (I2S_CLOCK_48K_INTERNAL)     // I2S clock
 bool statusLED = true;                                  // Status LED ON/OFF
-String  MAC_ADDRESS = "68:9E:19:07:EE:26";
+String MAC_ADDRESS = "20:91:48:42:4A:F4";
 // Reduce RUN frequency if needed.
 const uint16_t AUDIO_FREQ_RUN = 8000;
 const uint16_t AUDIO_FREQ_DATA = 8000;
@@ -113,7 +113,6 @@ float feature_spectral_centroid();
 float feature_spectral_flatness();
 float feature_spectral_spread_accel();
 float feature_spectral_spread_audio();
-
 void calculate_spectral_centroid(int axis);
 void calculate_spectral_flatness(int axis);
 void calculate_spectral_spread_accel(int axis);
@@ -312,7 +311,8 @@ enum LEDColors {
 // Explicit function declaration for enum argument
 void changeStatusLED(LEDColors color);
 
-boolean silent = true;
+
+boolean silent = false;
 unsigned char bytes[4];
 
 // Two-way Communication Protocol Constants
@@ -384,7 +384,7 @@ int datareceptiontimeout = 2000;
 int blue = 0;
 boolean sleepmode = false;
 int bluemillisnow = 0;
-int bluesleeplimit = 60000;
+int bluesleeplimit = 10000;
 int bluetimerstart = 0;
 
 //Special feature variables
@@ -447,20 +447,20 @@ void compute_features() {
       else {
         if (currState != NOT_CUTTING || datasendtime) {
           currState = NOT_CUTTING;
-          Serial2.print(MAC_ADDRESS);
-          Serial2.print(",00,");
-          Serial2.print(bat);
+          BLEport.print(MAC_ADDRESS);
+          BLEport.print(",00,");
+          BLEport.print(bat);
           for (int i = 0; i < chosen_features; i++) {
-            Serial2.print(",");
-            Serial2.print("000");
-            Serial2.print(FeatureID[i] + 1);
-            Serial2.print(",");
-            Serial2.print(feature_value[i]);
+            BLEport.print(",");
+            BLEport.print("000");
+            BLEport.print(FeatureID[i] + 1);
+            BLEport.print(",");
+            BLEport.print(feature_value[i]);
           }
-          Serial2.print(",");
-          Serial2.print(gettimestamp());
-          Serial2.print(";");
-          Serial2.flush();
+          BLEport.print(",");
+          BLEport.print(gettimestamp());
+          BLEport.print(";");
+          BLEport.flush();
         }
       }
 
@@ -491,20 +491,20 @@ void compute_features() {
     case 1:
       if (currState != NORMAL_CUTTING || datasendtime) {
         currState = NORMAL_CUTTING;
-        Serial2.print(MAC_ADDRESS);
-        Serial2.print(",01,");
-        Serial2.print(bat);
+        BLEport.print(MAC_ADDRESS);
+        BLEport.print(",01,");
+        BLEport.print(bat);
         for (int i = 0; i < chosen_features; i++) {
-          Serial2.print(",");
-          Serial2.print("000");
-          Serial2.print(FeatureID[i] + 1);
-          Serial2.print(",");
-          Serial2.print(feature_value[i]);
+          BLEport.print(",");
+          BLEport.print("000");
+          BLEport.print(FeatureID[i] + 1);
+          BLEport.print(",");
+          BLEport.print(feature_value[i]);
         }
-        Serial2.print(",");
-        Serial2.print(gettimestamp());
-        Serial2.print(";");
-        Serial2.flush();
+        BLEport.print(",");
+        BLEport.print(gettimestamp());
+        BLEport.print(";");
+        BLEport.flush();
       }
       c = GREEN_OK;
       changeStatusLED(c);
@@ -515,20 +515,20 @@ void compute_features() {
     case 2:
       if (currState != WARNING_CUTTING || datasendtime) {
         currState = WARNING_CUTTING;
-        Serial2.print(MAC_ADDRESS);
-        Serial2.print(",02,");
-        Serial2.print(bat);
+        BLEport.print(MAC_ADDRESS);
+        BLEport.print(",02,");
+        BLEport.print(bat);
         for (int i = 0; i < chosen_features; i++) {
-          Serial2.print(",");
-          Serial2.print("000");
-          Serial2.print(FeatureID[i] + 1);
-          Serial2.print(",");
-          Serial2.print(feature_value[i]);
+          BLEport.print(",");
+          BLEport.print("000");
+          BLEport.print(FeatureID[i] + 1);
+          BLEport.print(",");
+          BLEport.print(feature_value[i]);
         }
-        Serial2.print(",");
-        Serial2.print(gettimestamp());
-        Serial2.print(";");
-        Serial2.flush();
+        BLEport.print(",");
+        BLEport.print(gettimestamp());
+        BLEport.print(";");
+        BLEport.flush();
       }
       c = ORANGE_WARNING;
       changeStatusLED(c);
@@ -539,20 +539,20 @@ void compute_features() {
     case 3:
       if (currState != BAD_CUTTING || datasendtime) {
         currState = BAD_CUTTING;
-        Serial2.print(MAC_ADDRESS);
-        Serial2.print(",03,");
-        Serial2.print(bat);
+        BLEport.print(MAC_ADDRESS);
+        BLEport.print(",03,");
+        BLEport.print(bat);
         for (int i = 0; i < chosen_features; i++) {
-          Serial2.print(",");
-          Serial2.print("000");
-          Serial2.print(FeatureID[i] + 1);
-          Serial2.print(",");
-          Serial2.print(feature_value[i]);
+          BLEport.print(",");
+          BLEport.print("000");
+          BLEport.print(FeatureID[i] + 1);
+          BLEport.print(",");
+          BLEport.print(feature_value[i]);
         }
-        Serial2.print(",");
-        Serial2.print(gettimestamp());
-        Serial2.print(";");
-        Serial2.flush();
+        BLEport.print(",");
+        BLEport.print(gettimestamp());
+        BLEport.print(";");
+        BLEport.flush();
       }
       c = RED_BAD;
       changeStatusLED(c);
@@ -1279,12 +1279,194 @@ void extractdata_inplace(int32_t  *pBuf) {
 }
 
 
+#define bufferSize 8000*3
+const uint16_t target_sample = 8000;
+const uint16_t inter = 48000 / target_sample;
+/*uint32_t subsample_counter = 0;*/
+/*uint32_t accel_counter = 0;*/
+unsigned char audio_buffer[bufferSize];
+uint32_t nTX = 0;
+uint32_t nRX = 0;
+const uint32_t intvl = 100;
+uint32_t totCount = 0;
+uint32_t localCount = 0;
+float accel_x[intvl];
+float accel_y[intvl];
+float accel_z[intvl];
+float thres = 100;
+float thres2 = 750;
+float thres3 = 1500;
+float ave_x = 0;
+float ave_y = 0;
+float ave_z = 0;
+float ene = 0; //vibration sugnal energy value
+float state = 0;
+float stateprev = 0;
+boolean over = false;
+/*int greenPin = 27;*/
+/*int redPin = 29;*/
+/*int bluePin = 28;*/
+int greenPinState = HIGH; //boot color; GREEN PIN
+int redPinState = HIGH; //boot color; RED PIN
+int bluePinState = HIGH; //boot color; BLUE PIN
+int bluestart = 0; //timer to know how long it has been idle
+/*int blue = 0; //toggle to know how if idle*/
+int millisnow = 0;
+int bluesleep = 5000; //threshold for sleep mode
+/*int sleepmode = 0; //initialize to not in sleep mode*/
+/*int currentmillis = 0; //battery monitoring*/
+/*int prevmillis = 0; //battery monitoring*/
+int batlimit = 1000; //battery monitoring
+int overallcounter = 0;
+/*int newThres = 0;*/
+/*int newThres2 = 0;*/
+/*int newThres3 = 0;*/
+/*int args_assigned = 0;*/
+/*boolean silent = false;*/
+/*unsigned char bytes[4];*/
+
 /* --- Direct I2S Receive, we get callback to read 2 words from the FIFO --- */
+
+//void i2s_rx_callback( int32_t *pBuf )
+//{
+//  //digitalWrite(28,HIGH);
+//  //Serial.print(accel_counter);
+//  // Downsampling routine; only take every 6th sample.
+//  Serial.print("Starting callback...\n");
+//  if (subsample_counter != inter - 2) {
+//    subsample_counter ++;
+//    Serial.printf("Subsample counter: Value: %d\n", subsample_counter);
+//    return;
+//  } else {
+//    subsample_counter = 0;
+//    accel_counter++;
+//    Serial.printf("Accel counter: Value: %d\n", accel_counter);
+//  }
+//  extractdata_inplace(&pBuf[0]);
+//
+//  if (accel_counter == 8) {
+//    //Perform accelerometer data extraction
+//    readAccelData(accelCount);
+//    getAres();
+//    ax = (float)accelCount[0] * aRes;// + accelBias[0];
+//    ay = (float)accelCount[1] * aRes;// + accelBias[1];
+//    az = (float)accelCount[2] * aRes;// + accelBias[2];
+//
+//    byte* axb = (byte *) &ax;
+//    byte* ayb = (byte *) &ay;
+//    byte* azb = (byte *) &az;
+//    accel_counter = 0;
+//    //Serial.print("ax="); Serial.print(ax); Serial.print("\n");
+//    // Feature Calculation
+//
+//    accel_x[localCount] = ax;
+//    accel_y[localCount] = ay;
+//    accel_z[localCount] = az;
+//    totCount = totCount + 1;
+//    localCount = localCount + 1;
+//    localCount = localCount % intvl;
+//    if (totCount > intvl) {
+//      totCount = intvl + 1;
+//      over = true;
+//    }
+//    if (over) {
+//      // Calculate the mean only if we have at least 100 data points
+//      ave_x = 0;
+//      ave_y = 0;
+//      ave_z = 0;
+//      for (int i = 0; i < intvl; i++) {
+//        ave_x = ave_x + accel_x[i];
+//        ave_y = ave_y + accel_y[i];
+//        ave_z = ave_z  + accel_z[i];
+//      }
+//      ave_x = ave_x / intvl;
+//      ave_y = ave_y / intvl;
+//      ave_z = ave_z / intvl;
+//      ene = 0; //initialize the energy feature
+//      for (int i = 0; i < intvl; i++) {
+//        ene = ene + (accel_x[i] - ave_x) * (accel_x[i] - ave_x) + (accel_y[i] - ave_y) * (accel_y[i] - ave_y) + (accel_z[i] - ave_z) * (accel_z[i] - ave_z);
+//      }
+//      ene = ene * intvl; //Signal energy integrated
+//
+//      if (ene < thres) {
+//
+//        // blue: normal cutting
+//
+//        if (blue == 0) {
+//          bluestart = millis();
+//          blue = 1;
+//        }
+//        if (blue == 1) {
+//          millisnow = millis();
+//          if (millisnow - bluestart >= bluesleeplimit) { //sleep mode
+//            sleepmode = true;
+//            greenPinState = HIGH;
+//            redPinState = HIGH;
+//            bluePinState = HIGH;
+//            digitalWrite(greenPin, greenPinState);
+//            digitalWrite(redPin, redPinState);
+//            digitalWrite(bluePin, bluePinState);
+//            blue = 0;
+//          }
+//        }
+//
+//        if (sleepmode == 0) {
+//          bluePinState = LOW;
+//          redPinState = HIGH;
+//          greenPinState = LOW;
+//        }
+//        digitalWrite(greenPin, greenPinState);
+//        digitalWrite(redPin, redPinState);
+//        digitalWrite(bluePin, bluePinState);
+//        currState = NOT_CUTTING;
+//      }
+//      else if (ene < thres2) {
+//        blue = 0;
+//        sleepmode = 0;
+//        // green: normal cutting
+//
+//        bluePinState = HIGH;
+//        redPinState = HIGH;
+//        greenPinState = LOW;
+//        digitalWrite(greenPin, greenPinState);
+//        digitalWrite(redPin, redPinState);
+//        digitalWrite(bluePin, bluePinState);
+//        currState = NORMAL_CUTTING;
+//      }
+//      else if (ene < thres3) {
+//        blue = 0;
+//        sleepmode = 0;
+//        // yellow: warning
+//
+//        bluePinState = HIGH;
+//        redPinState = LOW;
+//        greenPinState = LOW;
+//        digitalWrite(greenPin, greenPinState);
+//        digitalWrite(redPin, redPinState);
+//        digitalWrite(bluePin, bluePinState);
+//        currState = WARNING_CUTTING;
+//      }
+//      else {
+//        // red: bad cutting
+//        blue = 0;
+//        sleepmode = 0;
+//        bluePinState = HIGH;
+//        redPinState = LOW;
+//        greenPinState = HIGH;
+//        digitalWrite(greenPin, greenPinState);
+//        digitalWrite(redPin, redPinState);
+//        digitalWrite(bluePin, bluePinState);
+//        currState = BAD_CUTTING;
+//      }
+//    }
+//  }
+//}
 
 void i2s_rx_callback( int32_t *pBuf )
 {
   // Don't do anything if CHARGING
   if (currMode == CHARGING) {
+    //Serial.print("Returning on charge\n");
     return;
   }
 
@@ -1294,6 +1476,7 @@ void i2s_rx_callback( int32_t *pBuf )
     // TODO: Whenever this happens and STFT features are turned on, reset STFT
     // TODO: May want to do timing checks to save STFT resets
     if (audioSamplingCount == 0 && !record_feature_now[buffer_record_index]) {
+      //Serial.print("Returning on other\n");
       return;
     }
 
@@ -1325,6 +1508,7 @@ void i2s_rx_callback( int32_t *pBuf )
   }
 
   if (currMode == RUN) {
+    //Serial.print("currMode=RUN\n");
     if (restCount < RESTING_INTERVAL) {
       restCount ++;
     } else {
@@ -1351,6 +1535,7 @@ void i2s_rx_callback( int32_t *pBuf )
       }
     }
   } else if (currMode == DATA_COLLECTION) {
+    //Serial.print("currMode=DATA COLLECTION\n");
     // perform the data extraction for single channel mic
     extractdata_inplace(&pBuf[0]);
 
@@ -1377,6 +1562,10 @@ void i2s_rx_callback( int32_t *pBuf )
 
       accel_counter = 0;
     }
+  }
+  else {
+    //Serial.print("DIDNT FIND A MODE");
+    //Serial.print(currMode);
   }
 }
 
@@ -1420,20 +1609,21 @@ void setup()
   // should see all the devices on the I2C bus including two from the EEPROM (ID page and data pages)
   I2Cscan();
 
-  // LED G=20, R=21, B=22
   if (statusLED) {
-    pinMode(20, OUTPUT);
-    pinMode(21, OUTPUT);
-    pinMode(22, OUTPUT);
+    pinMode(27, OUTPUT);
+    pinMode(28, OUTPUT);
+    pinMode(29, OUTPUT);
   }
 
   // Read the BMX-055 WHO_AM_I registers, this is a good test of communication
   //Serial.println("BMX055 accelerometer...");
-  byte c = readByte(BMX055_ACC_ADDRESS, BMX055_ACC_WHOAMI);  // Read ACC WHO_AM_I register for BMX055
-  //Serial.print("BMX055 ACC"); Serial.print(" I AM 0x"); Serial.print(c, HEX); Serial.print(" I should be 0x"); Serial.println(0xFA, HEX);
 
-  if (c == 0xFA) // WHO_AM_I should always be ACC = 0xFA, GYRO = 0x0F, MAG = 0x32
-  {
+  //DEPRECATED
+  /*byte c = readByte(BMX055_ACC_ADDRESS, BMX055_ACC_WHOAMI);  // Read ACC WHO_AM_I register for BMX055
+    //Serial.print("BMX055 ACC"); Serial.print(" I AM 0x"); Serial.print(c, HEX); Serial.print(" I should be 0x"); Serial.println(0xFA, HEX);
+
+    if (c == 0xFA) // WHO_AM_I should always be ACC = 0xFA, GYRO = 0x0F, MAG = 0x32
+    {
     //Serial.println("BMX055 is online...");
 
     initBMX055();
@@ -1443,11 +1633,20 @@ void setup()
 
     fastcompaccelBMX055(accelBias);
     //Serial.println("accel biases (mg)"); Serial.println(1000.*accelBias[0]); Serial.println(1000.*accelBias[1]); Serial.println(1000.*accelBias[2]);
+    }*/
+  byte c = readByte(MPU9250_ADDRESS, WHO_AM_I_MPU9250); // Read WHO_AM_I register on MPU
+  if (c == 0x71) { //WHO_AM_I should always be 0x71 for the entire chip
+    initMPU9250();
+
+    getAres();
+
+    // Leaving this out for now (will allow 1g bias temporarily)
+    /*fastcompaccelMPU9250(accelBias);*/
   }
   else
   {
-    //Serial.print("Could not connect to BMX055: 0x");
-    //Serial.println(c, HEX);
+    Serial.print("Could not connect to MPU9250: 0x");
+    Serial.println(c, HEX);
     while (1) ; // Loop forever if communication doesn't happen
   }
 
@@ -1496,12 +1695,13 @@ void setup()
   // Enable LiPo charger's CHG read.
   pinMode(chargerCHG, INPUT_PULLUP);
 
-  // Make sure to initialize Serial2 at the end of setup
-  Serial2.begin(9600);
+  // Make sure to initialize BLEport at the end of setup
+  BLEport.begin(9600);
 }
 
 void loop()
 {
+  //Serial.print("Entering loop..");
   bat = getInputVoltage();
 
   //Timer to send data regularly//
@@ -1519,81 +1719,81 @@ void loop()
 
   //Robustness for data reception//
   buffnow = millis();
-  if (bleBufferIndex > 0){
-    if (buffnow -  buffprev > datareceptiontimeout){
+  if (bleBufferIndex > 0) {
+    if (buffnow -  buffprev > datareceptiontimeout) {
       bleBufferIndex = 0;
     }
-  }else{
+  } else {
     buffprev = buffnow;
   }
 
   /* -------------------------- USB Connection Check ----------------------- */
-  //    if (bitRead(USB0_OTGSTAT, 5)) {
-  //      // Disconnected; this flag will briefly come up when USB gets disconnected.
-  //      // Immediately put into RUN mode.
-  //      if (currMode != RUN) { //If disconnected and NOT in RUN mode, set to run mode with idle state initialized
-  //        Serial2.begin(9600);
-  //        Serial2.flush();
+  /*if (bitRead(USB0_OTGSTAT, 5)) {*/
+  //  if (1==1) {
+  ////      // Disconnected; this flag will briefly come up when USB gets disconnected.
+  ////      // Immediately put into RUN mode.
+  //    if (currMode != RUN) { //If disconnected and NOT in RUN mode, set to run mode with idle state initialized
+  //        BLEport.begin(9600);
+  //        BLEport.flush();
   //        resetSampling(true);
   //        currMode = RUN;
   //        LEDColors c = BLUE_NOOP;
   //        changeStatusLED(c);
-  //
-  //        // Reset state
+  ////
+  ////        // Reset state
   //        currState = NOT_CUTTING;
-  //      } else { //If disconnected and in RUN mode, continue in run mode
-  //      }
-  //    } else {
-  //      // Connected
-  //      if (currMode == RUN) {
-  //        // NOTE: Assume the battery will start charging when USB is connected.
-  //        if (digitalRead(chargerCHG) == 1) { //If connected, charging and in RUN mode, set to CHARGING mode
-  //          Serial2.flush();
-  //          Serial2.end();
+  //    }
+  //} else {
+  ////      // Connected
+  //    if (currMode == RUN) {
+  //      // NOTE: Assume the battery will start charging when USB is connected.
+  //      if (digitalRead(chargerCHG) == 1) { //If connected, charging and in RUN mode, set to CHARGING mode
+  //        BLEport.flush();
+  //        BLEport.end();
+  //        LEDColors c = PURPLE_CHARGE;
+  //        changeStatusLED(c);
+  //        currMode = CHARGING;
+  //      } else {
+  //        if (didThresChange) { //Weirdly, the logic for chargerCHG switches once ble data is received!
+  //          BLEport.flush();
+  //          BLEport.end();
   //          LEDColors c = PURPLE_CHARGE;
   //          changeStatusLED(c);
   //          currMode = CHARGING;
-  //        } else {
-  //          if (didThresChange) { //Weirdly, the logic for chargerCHG switches once ble data is received!
-  //            Serial2.flush();
-  //            Serial2.end();
-  //            LEDColors c = PURPLE_CHARGE;
-  //            changeStatusLED(c);
-  //            currMode = CHARGING;
-  //          }
-  //       }
-  //      } else if (currMode == CHARGING) { //If already in charging mode
-  //        // CHARGE mode and battery is NOT charging.
-  //        // Display white LED to notify charge completion.
-  //        if (digitalRead(chargerCHG) == 0) {
-  //          if (didThresChange) {//Weirdly, the logic for chargerCHG switches once ble data is received!
-  //            LEDColors c = PURPLE_CHARGE;
-  //            changeStatusLED(c);
-  //          }
-  //          else {
-  //            LEDColors c = WHITE_NONE;
-  //            changeStatusLED(c);
-  //          }
-  //
-  //        } else {
-  //          if (didThresChange) { //Weirdly, the logic for chargerCHG switches once ble data is received!
-  //            LEDColors c = WHITE_NONE;
-  //            changeStatusLED(c);
-  //          }
-  //          else {
-  //            LEDColors c = PURPLE_CHARGE;
-  //            changeStatusLED(c);
-  //          }
   //        }
+  //     }
+  //    } else if (currMode == CHARGING) { //If already in charging mode
+  //      // CHARGE mode and battery is NOT charging.
+  //      // Display white LED to notify charge completion.
+  //      if (digitalRead(chargerCHG) == 0) {
+  //        if (didThresChange) {//Weirdly, the logic for chargerCHG switches once ble data is received!
+  //          LEDColors c = PURPLE_CHARGE;
+  //          changeStatusLED(c);
+  //        }
+  //        else {
+  //          LEDColors c = WHITE_NONE;
+  //          changeStatusLED(c);
+  //        }
+  //
   //      } else {
+  //        if (didThresChange) { //Weirdly, the logic for chargerCHG switches once ble data is received!
+  //          LEDColors c = WHITE_NONE;
+  //          changeStatusLED(c);
+  //        }
+  //        else {
+  //          LEDColors c = PURPLE_CHARGE;
+  //          changeStatusLED(c);
+  //        }
   //      }
   //    }
+  //}
+  /*Serial.print("USB connection check complete. Starting BLE\n");*/
 
   /* ----------- Two-way Communication via BLE, only on RUN mode. ----------- */
 
   if (currMode == RUN) {
-    while (Serial2.available() > 0) {
-      bleBuffer[bleBufferIndex] = Serial2.read();
+    while (BLEport.available() > 0) {
+      bleBuffer[bleBufferIndex] = BLEport.read();
       bleBufferIndex++;
 
       if (bleBufferIndex > 18) {
@@ -1601,6 +1801,7 @@ void loop()
         if (bleBuffer[0] == '0') {
           args_assigned = sscanf(bleBuffer, "%d-%d-%d-%d", &bleFeatureIndex, &newThres, &newThres2, &newThres3);
           didThresChange = true;
+          bleBufferIndex = 0;
           if (bleFeatureIndex > 5 || newThres > 9999 || newThres2 > 9999 || newThres3 > 9999 || newThres < 1 || newThres2 < 1 || newThres3 < 1) {
             //Serial.println("Rubbish data");
             rubbish = true;
@@ -1616,7 +1817,7 @@ void loop()
           rubbish = false;
         }
 
-        // receive the timestamp data from the hub 
+        // receive the timestamp data from the hub
         if (bleBuffer[0] == '1') {
           args_assigned2 = sscanf(bleBuffer, "%d:%d.%d", &date, &dateset, &dateyear1);
           dateyear = double(dateset) + double(dateyear1) / double(1000000);
@@ -1626,11 +1827,13 @@ void loop()
       }
     }
   }
+  
+  /*Serial.print("BLE complete.\n");*/
 
   //  if (currMode == RUN) {
   //    bleBufferIndex = 0;
-  //    while (Serial2.available() > 0) {
-  //      bleBuffer[bleBufferIndex] = Serial2.read();
+  //    while (BLEport.available() > 0) {
+  //      bleBuffer[bleBufferIndex] = BLEport.read();
   //      Serial.println(char(bleBuffer[bleBufferIndex]));
   //      bleBufferIndex ++;
   //      // NOTE: BLE communication may come in 8 bytes, not 4 bytes, due to
@@ -1657,16 +1860,16 @@ void loop()
   //
   //            // Unexpected input; reset communication
   //            if (bleFeatureType != 0 && bleFeatureType != 1) {
-  //              Serial2.print(THRESH_FAIL);
-  //              Serial2.flush();
+  //              BLEport.print(THRESH_FAIL);
+  //              BLEport.flush();
   //              bleBytesRead = 0;
   //              bleFeatureIndex = 0;
   //              currComm = COMM_IDLE;
   //              break;
   //            }
   //            if (bleFeatureIndex < 0 || bleFeatureIndex >= NUM_FEATURES) {
-  //              Serial2.print(THRESH_FAIL);
-  //              Serial2.flush();
+  //              BLEport.print(THRESH_FAIL);
+  //              BLEport.flush();
   //              bleBytesRead = 0;
   //              bleFeatureIndex = 0;
   //              currComm = COMM_IDLE;
@@ -1684,8 +1887,8 @@ void loop()
   //              featureDangerThreshold[bleFeatureIndex] = (*(float *)(&bleBuffer[0]));
   //            }
   //            // Transmit THRESH_SUCCESS
-  //            Serial2.print(THRESH_SUCCESS);
-  //            Serial2.flush();
+  //            BLEport.print(THRESH_SUCCESS);
+  //            BLEport.flush();
   //
   //            // Reset Variables
   //            bleBytesRead = 0;
@@ -1705,8 +1908,8 @@ void loop()
   //            bleBytesRead += 4;
   //          } else if (bleBytesRead == FEATURE_SET_BYTELEN) {
   //            // FEATURE_SET communication completed.
-  //            Serial2.print(FEATURE_SET_SUCCESS);
-  //            Serial2.flush();
+  //            BLEport.print(FEATURE_SET_SUCCESS);
+  //            BLEport.flush();
   //
   //            // Copy over to enabledFeatures
   //            for (int i = 0; i < (NUM_FEATURES - 1) / 8 + 1; i++) {
@@ -1742,8 +1945,8 @@ void loop()
   //            currComm = COMM_IDLE;
   //          } else {
   //            //NOTE: this should not happen if all BLE transmissions are 4 bytes aligned.
-  //            Serial2.print(FEATURE_SET_FAIL);
-  //            Serial2.flush();
+  //            BLEport.print(FEATURE_SET_FAIL);
+  //            BLEport.flush();
   //            bleBytesRead = 0;
   //            bleFeatureIndex = 0;
   //            currComm = COMM_IDLE;
@@ -1754,13 +1957,13 @@ void loop()
   //      //Incorrect bytes received; invalidate current communication.
   //      switch (currComm) {
   //        case THRESH:
-  //          Serial2.print(THRESH_FAIL);
+  //          BLEport.print(THRESH_FAIL);
   //          break;
   //        case FEATURE_SET:
-  //          Serial2.print(FEATURE_SET_FAIL);
+  //          BLEport.print(FEATURE_SET_FAIL);
   //          break;
   //      }
-  //      Serial2.flush();
+  //      BLEport.flush();
   //      bleBytesRead = 0;
   //      bleFeatureIndex = 0;
   //      currComm = COMM_IDLE;
@@ -1873,50 +2076,54 @@ uint32_t FreeRam() {
   return stackTop - heapTop;
 }
 
+int greenPin = 27;
+int redPin = 29;
+int bluePin = 28;
+
 // Function that reflects LEDColors into statusLED.
 // Will not have effect if statusLED is turned off.
 void changeStatusLED(LEDColors color) {
   if (!statusLED) return;
   switch (color) {
     case RED_BAD:
-      digitalWrite(21, LOW);
-      digitalWrite(20, HIGH);
-      digitalWrite(22, HIGH);
+      digitalWrite(redPin, LOW);
+      digitalWrite(greenPin, HIGH);
+      digitalWrite(bluePin, HIGH);
       break;
     case BLUE_NOOP:
-      digitalWrite(21, HIGH);
-      digitalWrite(20, LOW);
-      digitalWrite(22, HIGH);
+      digitalWrite(redPin, HIGH);
+      digitalWrite(greenPin, HIGH);
+      digitalWrite(bluePin, LOW);
       break;
     case GREEN_OK:
-      digitalWrite(21, HIGH);
-      digitalWrite(20, HIGH);
-      digitalWrite(22, LOW);
+      digitalWrite(redPin, HIGH);
+      digitalWrite(greenPin, LOW);
+      digitalWrite(bluePin, HIGH);
       break;
     case ORANGE_WARNING:
-      digitalWrite(21, LOW);
-      digitalWrite(20, HIGH);
-      digitalWrite(22, LOW);
+      digitalWrite(redPin, LOW);
+      digitalWrite(greenPin, LOW);
+      digitalWrite(bluePin, HIGH);
       break;
     case PURPLE_CHARGE:
-      digitalWrite(21, LOW);
-      digitalWrite(20, LOW);
-      digitalWrite(22, HIGH);
+      digitalWrite(redPin, LOW);
+      digitalWrite(greenPin, HIGH);
+      digitalWrite(bluePin, LOW);
       break;
     case CYAN_DATA:
-      digitalWrite(21, HIGH);
-      digitalWrite(20, LOW);
-      digitalWrite(22, LOW);
+      digitalWrite(redPin, HIGH);
+      digitalWrite(greenPin, LOW);
+      digitalWrite(bluePin, LOW);
       break;
     case WHITE_NONE:
-      digitalWrite(21, HIGH);
-      digitalWrite(20, HIGH);
-      digitalWrite(22, LOW);
+      digitalWrite(redPin, LOW);
+      digitalWrite(greenPin, LOW);
+      digitalWrite(bluePin, LOW);
       break;
     case SLEEP_MODE:
-      digitalWrite(21, HIGH);
-      digitalWrite(20, HIGH);
-      digitalWrite(22, HIGH);
+      digitalWrite(redPin, HIGH);
+      digitalWrite(greenPin, HIGH);
+      digitalWrite(bluePin, HIGH);
       break;
   }
 }
@@ -1932,17 +2139,18 @@ void getAres() {
     // Possible accelerometer scales (and their register bit settings) are:
     // 2 Gs (0011), 4 Gs (0101), 8 Gs (1000), and 16 Gs  (1100).
     // BMX055 ACC data is signed 12 bit
+    // CHANGE: MPU data is signed 16 bit
     case AFS_2G:
-      aRes = 2.0 / 2048.0;
+      aRes = 2.0 / 32768.0; // change from 2^11 to 2^15
       break;
     case AFS_4G:
-      aRes = 4.0 / 2048.0;
+      aRes = 4.0 / 32768.0; // is this even right? should it be 2^16?
       break;
     case AFS_8G:
-      aRes = 8.0 / 2048.0;
+      aRes = 8.0 / 32768.0;
       break;
     case AFS_16G:
-      aRes = 16.0 / 2048.0;
+      aRes = 16.0 / 32768.0;
       break;
   }
 }
@@ -1950,13 +2158,24 @@ void getAres() {
 void readAccelData(int16_t * destination)
 {
   uint8_t rawData[6];  // x/y/z accel register data stored here
+  readBytes(MPU9250_ADDRESS, ACCEL_XOUT_H, 6, &rawData[0]);  // Read the six raw data registers into data array
+  destination[0] = ((int16_t)rawData[0] << 8) | rawData[1] ;  // Turn the MSB and LSB into a signed 16-bit value
+  destination[1] = ((int16_t)rawData[2] << 8) | rawData[3] ;
+  destination[2] = ((int16_t)rawData[4] << 8) | rawData[5] ;
+  //Serial.printf("Accel data read: %d, %d, %d", destination[0], destination[1], destination[2]);
+}
+
+// DEPRECATED
+/*void readAccelData(int16_t * destination)
+  {
+  uint8_t rawData[6];  // x/y/z accel register data stored here
   readBytes(BMX055_ACC_ADDRESS, BMX055_ACC_D_X_LSB, 6, &rawData[0]);       // Read the six raw data registers into data array
   if ((rawData[0] & 0x01) && (rawData[2] & 0x01) && (rawData[4] & 0x01)) { // Check that all 3 axes have new data
     destination[0] = (int16_t) (((int16_t)rawData[1] << 8) | rawData[0]) >> 4;  // Turn the MSB and LSB into a signed 12-bit value
     destination[1] = (int16_t) (((int16_t)rawData[3] << 8) | rawData[2]) >> 4;
     destination[2] = (int16_t) (((int16_t)rawData[5] << 8) | rawData[4]) >> 4;
   }
-}
+  }*/
 
 void SENtralPassThroughMode()
 {
@@ -1979,11 +2198,83 @@ void SENtralPassThroughMode()
 
 }
 
-
-void initBMX055()
+void initMPU9250()
 {
+  // wake up device
+  writeByte(MPU9250_ADDRESS, PWR_MGMT_1, 0x00); // Clear sleep mode bit (6), enable all sensors
+  delay(100); // Wait for all registers to reset
+
+  // get stable time source
+  writeByte(MPU9250_ADDRESS, PWR_MGMT_1, 0x01);  // Auto select clock source to be PLL gyroscope reference if ready else
+  delay(200);
+
+  // disable gyroscope
+  writeByte(MPU9250_ADDRESS, PWR_MGMT_2, 0x07);
+
+  // Configure Gyro and Thermometer
+  // Disable FSYNC and set thermometer and gyro bandwidth to 41 and 42 Hz, respectively;
+  // minimum delay time for this setting is 5.9 ms, which means sensor fusion update rates cannot
+  // be higher than 1 / 0.0059 = 170 Hz
+  // DLPF_CFG = bits 2:0 = 011; this limits the sample rate to 1000 Hz for both
+  // With the MPU9250, it is possible to get gyro sample rates of 32 kHz (!), 8 kHz, or 1 kHz
+
+  //DISABLED FOR NOW
+  /*writeByte(MPU9250_ADDRESS, CONFIG, 0x03);*/
+
+  // Set sample rate = gyroscope output rate/(1 + SMPLRT_DIV)
+  writeByte(MPU9250_ADDRESS, SMPLRT_DIV, 0x00);  // Use a 200 Hz rate; a rate consistent with the filter update rate
+  // determined inset in CONFIG above
+
+  // DISABLED FOR NOW
+  // Set gyroscope full scale range
+  // Range selects FS_SEL and AFS_SEL are 0 - 3, so 2-bit values are left-shifted into positions 4:3
+
+  /*uint8_t c = readByte(MPU9250_ADDRESS, GYRO_CONFIG); // get current GYRO_CONFIG register value*/
+
+  // c = c & ~0xE0; // Clear self-test bits [7:5]
+
+  /*c = c & ~0x02; // Clear Fchoice bits [1:0]
+    c = c & ~0x18; // Clear AFS bits [4:3]
+    c = c | Gscale << 3; // Set full scale range for the gyro*/
+
+  // c =| 0x00; // Set Fchoice for the gyro to 11 by writing its inverse to bits 1:0 of GYRO_CONFIG
+
+  /*writeByte(MPU9250_ADDRESS, GYRO_CONFIG, c ); // Write new GYRO_CONFIG value to register*/
+
+  // Set accelerometer full-scale range configuration
+  byte c = readByte(MPU9250_ADDRESS, ACCEL_CONFIG); // get current ACCEL_CONFIG register value
+  // c = c & ~0xE0; // Clear self-test bits [7:5]
+  c = c & ~0x18;  // Clear accelerometer full scale bits [4:3]
+  c = c | Ascale << 3; // Set full scale range for the accelerometer
+  writeByte(MPU9250_ADDRESS, ACCEL_CONFIG, c); // Write new ACCEL_CONFIG register value
+
+  // Set accelerometer sample rate configuration
+  // It is possible to get a 4 kHz sample rate from the accelerometer by choosing 1 for
+  // accel_fchoice_b bit [3]; in this case the bandwidth is 1.13 kHz
+
+  //MODIFIED SAMPLE RATE
+  c = readByte(MPU9250_ADDRESS, ACCEL_CONFIG2); // get current ACCEL_CONFIG2 register value
+  c = c & ~0x0F; // Clear accel_fchoice_b (bit 3) and A_DLPFG (bits [2:0])
+  c = c | 0x03;  // MODIFIED: Instead of 1k rate, 41hz bandwidth: we are doing 4k rate, 1.13K bandwidth
+  writeByte(MPU9250_ADDRESS, ACCEL_CONFIG2, c); // Write new ACCEL_CONFIG2 register value
+  // The accelerometer, gyro, and thermometer are set to 1 kHz sample rates,
+  // but all these rates are further reduced by a factor of 5 to 200 Hz because of the SMPLRT_DIV setting
+
+  // Configure Interrupts and Bypass Enable
+  // Set interrupt pin active high, push-pull, hold interrupt pin level HIGH until interrupt cleared,
+  // clear on read of INT_STATUS, and enable I2C_BYPASS_EN so additional chips
+  // can join the I2C bus and all can be controlled by the Arduino as master
+  writeByte(MPU9250_ADDRESS, INT_PIN_CFG, 0x22);
+  writeByte(MPU9250_ADDRESS, INT_ENABLE, 0x01);  // Enable data ready (bit 0) interrupt
+  delay(100);
+  Serial.print("MPU-9250 initialized successfully.\n\n\n");
+}
+
+// DEPRECATED
+/*void initBMX055()
+  {
   // start with all sensors in default mode with all registers reset
-  writeByte(BMX055_ACC_ADDRESS,  BMX055_ACC_BGW_SOFTRESET, 0xB6);  // reset accelerometer
+  writeByte(MPU9250_ADDRESS,  BMX055_ACC_BGW_SOFTRESET, 0xB6);  // reset accelerometer
   delay(1000); // Wait for all registers to reset
 
   // Configure accelerometer
@@ -1991,10 +2282,83 @@ void initBMX055()
   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_PMU_BW, ACCBW & 0x0F);     // Set accelerometer bandwidth
   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_D_HBW, 0x00);              // Use filtered data
 
-}
+  // //   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_INT_EN_1, 0x10);           // Enable ACC data ready interrupt
+  // //   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_INT_OUT_CTRL, 0x04);       // Set interrupts push-pull, active high for INT1 and INT2
+  // //   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_INT_MAP_1, 0x02);        // Define INT1 (intACC1) as ACC data ready interrupt
+  // //   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_INT_MAP_1, 0x80);          // Define INT2 (intACC2) as ACC data ready interrupt
 
-void fastcompaccelBMX055(float * dest1)
-{
+  // //   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_BGW_SPI3_WDT, 0x06);       // Set watchdog timer for 50 ms
+
+  // // Configure Gyro
+  // // start by resetting gyro, better not since it ends up in sleep mode?!
+  // // writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_BGW_SOFTRESET, 0xB6); // reset gyro
+  // // delay(100);
+  // // Three power modes, 0x00 Normal,
+  // // set bit 7 to 1 for suspend mode, set bit 5 to 1 for deep suspend mode
+  // // sleep duration in fast-power up from suspend mode is set by bits 1 - 3
+  // // 000 for 2 ms, 111 for 20 ms, etc.
+  // //  writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_LPM1, 0x00);  // set GYRO normal mode
+  // //  set GYRO sleep duration for fast power-up mode to 20 ms, for duty cycle of 50%
+  // //  writeByte(BMX055_ACC_ADDRESS, BMX055_GYRO_LPM1, 0x0E);
+  // // set bit 7 to 1 for fast-power-up mode,  gyro goes quickly to normal mode upon wake up
+  // // can set external wake-up interrupts on bits 5 and 4
+  // // auto-sleep wake duration set in bits 2-0, 001 4 ms, 111 40 ms
+  // //  writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_LPM2, 0x00);  // set GYRO normal mode
+  // // set gyro to fast wake up mode, will sleep for 20 ms then run normally for 20 ms
+  // // and collect data for an effective ODR of 50 Hz, other duty cycles are possible but there
+  // // is a minimum wake duration determined by the bandwidth duration, e.g.,  > 10 ms for 23Hz gyro bandwidth
+  // //  writeByte(BMX055_ACC_ADDRESS, BMX055_GYRO_LPM2, 0x87);
+
+  // writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_RANGE, Gscale);  // set GYRO FS range
+  // writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_BW, GODRBW);     // set GYRO ODR and Bandwidth
+
+  // // writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_INT_EN_0, 0x80);  // enable data ready interrupt
+  // // writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_INT_EN_1, 0x04);  // select push-pull, active high interrupts
+  // // writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_INT_MAP_1, 0x80); // select INT3 (intGYRO1) as GYRO data ready interrupt
+
+  // // writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_BGW_SPI3_WDT, 0x06); // Enable watchdog timer for I2C with 50 ms window
+
+
+  // // Configure magnetometer
+  // writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_PWR_CNTL1, 0x82);  // Softreset magnetometer, ends up in sleep mode
+  // delay(100);
+  // writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_PWR_CNTL1, 0x01); // Wake up magnetometer
+  // delay(100);
+
+  // writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_PWR_CNTL2, MODR << 3); // Normal mode
+  // //writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_PWR_CNTL2, MODR << 3 | 0x02); // Forced mode
+
+  // //writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_INT_EN_2, 0x84); // Enable data ready pin interrupt, active high
+
+  // // Set up four standard configurations for the magnetometer
+  // switch (Mmode)
+  // {
+  //   case lowPower:
+  //     // Low-power
+  //     writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_XY, 0x01);  // 3 repetitions (oversampling)
+  //     writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_Z,  0x02);  // 3 repetitions (oversampling)
+  //     break;
+  //   case Regular:
+  //     // Regular
+  //     writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_XY, 0x04);  //  9 repetitions (oversampling)
+  //     writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_Z,  0x16);  // 15 repetitions (oversampling)
+  //     break;
+  //   case enhancedRegular:
+  //     // Enhanced Regular
+  //     writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_XY, 0x07);  // 15 repetitions (oversampling)
+  //     writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_Z,  0x22);  // 27 repetitions (oversampling)
+  //     break;
+  //   case highAccuracy:
+  //     // High Accuracy
+  //     writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_XY, 0x17);  // 47 repetitions (oversampling)
+  //     writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_Z,  0x51);  // 83 repetitions (oversampling)
+  //     break;
+  // }
+  }*/
+
+//DEPRECATED
+/*void fastcompaccelBMX055(float * dest1)
+  {
   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_OFC_CTRL, 0x80); // set all accel offset compensation registers to zero
   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_OFC_SETTING, 0x20);  // set offset targets to 0, 0, and +1 g for x, y, z axes
   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_OFC_CTRL, 0x20); // calculate x-axis offset
@@ -2026,8 +2390,91 @@ void fastcompaccelBMX055(float * dest1)
   dest1[0] = (float) compx / 128.; // accleration bias in g
   dest1[1] = (float) compy / 128.; // accleration bias in g
   dest1[2] = (float) compz / 128.; // accleration bias in g
-}
+  }*/
 
+
+// I2C communication with the M24512DFM EEPROM is a little different from I2C communication with the usual motion sensor
+// since the address is defined by two bytes
+
+
+// I2C communication with the MS5637 is a little different from that with the MPU9250 and most other sensors
+// For the MS5637, we write commands, and the MS5637 sends data in response, rather than directly reading
+// MS5637 registers
+
+//void MS5637Reset()
+//{
+//  Wire.beginTransmission(MS5637_ADDRESS);  // Initialize the Tx buffer
+//  Wire.write(MS5637_RESET);                // Put reset command in Tx buffer
+//  Wire.endTransmission();                  // Send the Tx buffer
+//}
+
+//void MS5637PromRead(uint16_t * destination)
+//{
+//  uint8_t data[2] = {0, 0};
+//  for (uint8_t ii = 0; ii < 7; ii++) {
+//    Wire.beginTransmission(MS5637_ADDRESS);  // Initialize the Tx buffer
+//    Wire.write(0xA0 | ii << 1);              // Put PROM address in Tx buffer
+//    Wire.endTransmission(I2C_NOSTOP);        // Send the Tx buffer, but send a restart to keep connection alive
+//    uint8_t i = 0;
+//    Wire.requestFrom(MS5637_ADDRESS, 2);   // Read two bytes from slave PROM address
+//    while (Wire.available()) {
+//      data[i++] = Wire.read();
+//    }               // Put read results in the Rx buffer
+//    destination[ii] = (uint16_t) (((uint16_t) data[0] << 8) | data[1]); // construct PROM data for return to main program
+//  }
+//}
+
+//uint32_t MS5637Read(uint8_t CMD, uint8_t OSR)  // temperature data read
+//{
+//  uint8_t data[3] = {0, 0, 0};
+//  Wire.beginTransmission(MS5637_ADDRESS);  // Initialize the Tx buffer
+//  Wire.write(CMD | OSR);                  // Put pressure conversion command in Tx buffer
+//  Wire.endTransmission(I2C_NOSTOP);        // Send the Tx buffer, but send a restart to keep connection alive
+//
+//  switch (OSR)
+//  {
+//    case ADC_256: delay(1); break;  // delay for conversion to complete
+//    case ADC_512: delay(3); break;
+//    case ADC_1024: delay(4); break;
+//    case ADC_2048: delay(6); break;
+//    case ADC_4096: delay(10); break;
+//    case ADC_8192: delay(20); break;
+//  }
+//
+//  Wire.beginTransmission(MS5637_ADDRESS);  // Initialize the Tx buffer
+//  Wire.write(0x00);                        // Put ADC read command in Tx buffer
+//  Wire.endTransmission(I2C_NOSTOP);        // Send the Tx buffer, but send a restart to keep connection alive
+//  uint8_t i = 0;
+//  Wire.requestFrom(MS5637_ADDRESS, 3);     // Read three bytes from slave PROM address
+//  while (Wire.available()) {
+//    data[i++] = Wire.read();
+//  }               // Put read results in the Rx buffer
+//  return (uint32_t) (((uint32_t) data[0] << 16) | (uint32_t) data[1] << 8 | data[2]); // construct PROM data for return to main program
+//}
+
+
+
+//unsigned char MS5637checkCRC(uint16_t * n_prom)  // calculate checksum from PROM register contents
+//{
+//  int cnt;
+//  unsigned int n_rem = 0;
+//  unsigned char n_bit;
+//
+//  n_prom[0] = ((n_prom[0]) & 0x0FFF);  // replace CRC byte by 0 for checksum calculation
+//  n_prom[7] = 0;
+//  for (cnt = 0; cnt < 16; cnt++)
+//  {
+//    if (cnt % 2 == 1) n_rem ^= (unsigned short) ((n_prom[cnt >> 1]) & 0x00FF);
+//    else         n_rem ^= (unsigned short)  (n_prom[cnt >> 1] >> 8);
+//    for (n_bit = 8; n_bit > 0; n_bit--)
+//    {
+//      if (n_rem & 0x8000)    n_rem = (n_rem << 1) ^ 0x3000;
+//      else                  n_rem = (n_rem << 1);
+//    }
+//  }
+//  n_rem = ((n_rem >> 12) & 0x000F);
+//  return (n_rem ^ 0x00);
+//}
 
 // simple function to scan for I2C devices on the bus
 void I2Cscan()
