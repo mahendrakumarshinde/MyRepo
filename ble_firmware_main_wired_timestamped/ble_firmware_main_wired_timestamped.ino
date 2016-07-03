@@ -22,7 +22,7 @@ Infinite Uptime BLE Module Firmware
 
 #define CLOCK_TYPE         (I2S_CLOCK_48K_INTERNAL)     // I2S clock
 bool statusLED = true;                                  // Status LED ON/OFF
-String  MAC_ADDRESS = "7C:EC:79:D7:09:10";
+String  MAC_ADDRESS = "68:9E:19:07:EE:26";
 // Reduce RUN frequency if needed.
 const uint16_t AUDIO_FREQ_RUN = 8000;
 const uint16_t AUDIO_FREQ_DATA = 8000;
@@ -374,6 +374,11 @@ int currentmillis = 0;
 int prevmillis = 0;
 int currenttime = 0;
 int prevtime = 0;
+
+//Data reception robustness variables
+int buffnow = 0;
+int buffprev = 0;
+int datareceptiontimeout = 2000;
 
 //Sleep mode variables
 int blue = 0;
@@ -1509,6 +1514,16 @@ void loop()
   if (currenttime - prevtime >= 1) {
     prevtime = currenttime;
     dateyear = dateyear + 0.001;
+  }
+
+  //Robustness for data reception//
+  buffnow = millis();
+  if (bleBufferIndex > 0){
+    if (buffnow -  buffprev > datareceptiontimeout){
+      bleBufferIndex = 0;
+    }
+  }else{
+    buffprev = buffnow;
   }
 
 

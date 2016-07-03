@@ -175,8 +175,8 @@ uint32_t featureIntervals[NUM_FEATURES] = {ENERGY_INTERVAL_AUDIO,
 float featureNormalThreshold[NUM_FEATURES] = {30,
                                               10000,
                                               //10000,
-                                              6,
-                                              0.4,
+                                              60,
+                                              40,
                                               //10000,
                                               200,
                                               500
@@ -184,8 +184,8 @@ float featureNormalThreshold[NUM_FEATURES] = {30,
 float featureWarningThreshold[NUM_FEATURES] = {600,
                                                50000,
                                                //10000,
-                                               7,
-                                               0.4,
+                                               70,
+                                               50,
                                                //10000,
                                                205,
                                                1000
@@ -193,8 +193,8 @@ float featureWarningThreshold[NUM_FEATURES] = {600,
 float featureDangerThreshold[NUM_FEATURES] = {1200,
                                               100000,
                                               //100000,
-                                              8,
-                                              0.45,
+                                              80,
+                                              60,
                                               //100000,
                                               210,
                                               1500
@@ -1034,33 +1034,34 @@ float feature_mcr () {
   arm_offset_f32(&compBuffer[MCR_INTERVAL_ACCEL], accelBias[1], &compBuffer[MCR_INTERVAL_ACCEL], MCR_INTERVAL_ACCEL);
   arm_offset_f32(&compBuffer[zind], accelBias[2], &compBuffer[zind], MCR_INTERVAL_ACCEL);
 
-  float ave_x = 0;
-  float ave_y = 0;
-  float ave_z = 0;
+  float max_r = 0;
+  float max_temp = 0;
+  float max_x = 0;
+  float max_y = 0;
+  float max_z = 0;
+  float min_x = 0;
+  float min_y = 0;
+  float min_z = 0;
+  uint32_t index = 0;
 
   // Calculate average
-  arm_mean_f32(compBuffer, MCR_INTERVAL_ACCEL, &ave_x);
-  arm_mean_f32(&compBuffer[MCR_INTERVAL_ACCEL], MCR_INTERVAL_ACCEL, &ave_y);
-  arm_mean_f32(&compBuffer[zind], MCR_INTERVAL_ACCEL, &ave_z);
+  arm_max_f32(compBuffer, 64, &max_x, &index);
+  arm_max_f32(&compBuffer[MCR_INTERVAL_ACCEL], 64, &max_y, &index);
+  arm_max_f32(&compBuffer[zind], 64, &max_z, &index);
+  arm_min_f32(compBuffer, 64, &min_x, &index);
+  arm_min_f32(&compBuffer[MCR_INTERVAL_ACCEL], 64, &min_y, &index);
+  arm_min_f32(&compBuffer[zind], 64, &min_z, &index);
 
-  
-  float std_x = 0;
-  float std_y = 0;
-  float std_z = 0;
+  min_x = abs(min_x); min_y = abs(min_y); min_y = abs(min_y);
+  max_x = abs(max_x); max_y = abs(max_y); max_y = abs(max_y);
+  max_x = max(max_x, min_x);
+  max_y = max(max_y, min_y);
+  max_z = max(max_z, min_z);
 
-  // Calculate average
-  arm_std_f32(compBuffer, MCR_INTERVAL_ACCEL, &std_x);
-  arm_std_f32(&compBuffer[MCR_INTERVAL_ACCEL], MCR_INTERVAL_ACCEL, &std_y);
-  arm_std_f32(&compBuffer[zind], MCR_INTERVAL_ACCEL, &std_z);
-
-  float kurtosis = 0;
-  for (int i = 0; i < ENERGY_INTERVAL_ACCEL; i++) {
-    kurtosis += sq(sq(compBuffer[i] - ave_x))/sq(std_x)
-           +  sq(sq(compBuffer[ENERGY_INTERVAL_ACCEL + i] - ave_y))/sq(std_y)
-           +  sq(sq(compBuffer[zind + i] - ave_z))/sq(std_z);
-  }
-
-  return kurtosis;
+  max_temp = max(max_x, max_y);
+  max_r = max(max_temp, max_z);
+  Serial.print("max value = "); Serial.println(max_r);
+  return max_r*100;
 }
 
 
