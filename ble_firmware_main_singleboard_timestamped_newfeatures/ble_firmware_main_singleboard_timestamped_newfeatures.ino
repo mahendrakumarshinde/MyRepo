@@ -1675,65 +1675,65 @@ void loop()
   }
 
   /* -------------------------- USB Connection Check ----------------------- */
-  /*if (bitRead(USB0_OTGSTAT, 5)) {*/
-  //  if (1==1) {
-  ////      // Disconnected; this flag will briefly come up when USB gets disconnected.
-  ////      // Immediately put into RUN mode.
-  //    if (currMode != RUN) { //If disconnected and NOT in RUN mode, set to run mode with idle state initialized
-  //        BLEport.begin(9600);
-  //        BLEport.flush();
-  //        resetSampling(true);
-  //        currMode = RUN;
-  //        LEDColors c = BLUE_NOOP;
-  //        changeStatusLED(c);
-  ////
-  ////        // Reset state
-  //        currState = NOT_CUTTING;
-  //    }
-  //} else {
-  ////      // Connected
-  //    if (currMode == RUN) {
-  //      // NOTE: Assume the battery will start charging when USB is connected.
-  //      if (digitalRead(chargerCHG) == 1) { //If connected, charging and in RUN mode, set to CHARGING mode
-  //        BLEport.flush();
-  //        BLEport.end();
-  //        LEDColors c = PURPLE_CHARGE;
-  //        changeStatusLED(c);
-  //        currMode = CHARGING;
-  //      } else {
-  //        if (didThresChange) { //Weirdly, the logic for chargerCHG switches once ble data is received!
-  //          BLEport.flush();
-  //          BLEport.end();
-  //          LEDColors c = PURPLE_CHARGE;
-  //          changeStatusLED(c);
-  //          currMode = CHARGING;
-  //        }
-  //     }
-  //    } else if (currMode == CHARGING) { //If already in charging mode
-  //      // CHARGE mode and battery is NOT charging.
-  //      // Display white LED to notify charge completion.
-  //      if (digitalRead(chargerCHG) == 0) {
-  //        if (didThresChange) {//Weirdly, the logic for chargerCHG switches once ble data is received!
-  //          LEDColors c = PURPLE_CHARGE;
-  //          changeStatusLED(c);
-  //        }
-  //        else {
-  //          LEDColors c = WHITE_NONE;
-  //          changeStatusLED(c);
-  //        }
+  if (bitRead(USB0_OTGSTAT, 5)) {
+    //if (1==1) {
+  //      // Disconnected; this flag will briefly come up when USB gets disconnected.
+  //      // Immediately put into RUN mode.
+      if (currMode != RUN) { //If disconnected and NOT in RUN mode, set to run mode with idle state initialized
+          BLEport.begin(9600);
+          BLEport.flush();
+          resetSampling(true);
+          currMode = RUN;
+          LEDColors c = BLUE_NOOP;
+          changeStatusLED(c);
   //
-  //      } else {
-  //        if (didThresChange) { //Weirdly, the logic for chargerCHG switches once ble data is received!
-  //          LEDColors c = WHITE_NONE;
-  //          changeStatusLED(c);
-  //        }
-  //        else {
-  //          LEDColors c = PURPLE_CHARGE;
-  //          changeStatusLED(c);
-  //        }
-  //      }
-  //    }
-  //}
+  //        // Reset state
+          currState = NOT_CUTTING;
+      }
+  } else {
+  //      // Connected
+      if (currMode == RUN) {
+        // NOTE: Assume the battery will start charging when USB is connected.
+        if (digitalRead(chargerCHG) == 1) { //If connected, charging and in RUN mode, set to CHARGING mode
+          //BLEport.flush();
+          //BLEport.end();
+          //LEDColors c = PURPLE_CHARGE;
+          //changeStatusLED(c);
+          //currMode = CHARGING;
+        } else {
+          if (didThresChange) { //Weirdly, the logic for chargerCHG switches once ble data is received!
+            //BLEport.flush();
+            //BLEport.end();
+            //LEDColors c = PURPLE_CHARGE;
+            //changeStatusLED(c);
+            //currMode = CHARGING;
+          }
+       }
+      } else if (currMode == CHARGING) { //If already in charging mode
+        // CHARGE mode and battery is NOT charging.
+        // Display white LED to notify charge completion.
+        if (digitalRead(chargerCHG) == 0) {
+          if (didThresChange) {//Weirdly, the logic for chargerCHG switches once ble data is received!
+            //LEDColors c = PURPLE_CHARGE;
+            //changeStatusLED(c);
+          }
+          else {
+            //LEDColors c = WHITE_NONE;
+            //changeStatusLED(c);
+          }
+  
+        } else {
+          if (didThresChange) { //Weirdly, the logic for chargerCHG switches once ble data is received!
+            //LEDColors c = WHITE_NONE;
+            //changeStatusLED(c);
+          }
+          else {
+            //LEDColors c = PURPLE_CHARGE;
+            //changeStatusLED(c);
+          }
+        }
+      }
+  }
   /*Serial.print("USB connection check complete. Starting BLE\n");*/
 
   /* ----------- Two-way Communication via BLE, only on RUN mode. ----------- */
@@ -1924,7 +1924,8 @@ void loop()
       wireBuffer.concat(characterRead);
   }
   if (wireBuffer.length() > 0) {
-    if (currMode == CHARGING) {
+    //if (currMode == CHARGING) {
+    if (currMode == RUN) {
       // Check the received info; iff data collection request, change the mode
       if (wireBuffer == START_COLLECTION) {
         LEDColors c = CYAN_DATA;
@@ -1937,11 +1938,13 @@ void loop()
     } else if (currMode == DATA_COLLECTION) {
       // Check the received info; iff data collection finished, change the mode
       if (wireBuffer == END_COLLECTION) {
-        LEDColors c = PURPLE_CHARGE;
+        //LEDColors c = PURPLE_CHARGE;
+        LEDColors c = BLUE_NOOP;
         changeStatusLED(c);
 
         Serial.print(END_CONFIRM);
-        currMode = CHARGING;
+        //currMode = CHARGING;
+        currMode = RUN;
       }
     }
     // Clear wire buffer
