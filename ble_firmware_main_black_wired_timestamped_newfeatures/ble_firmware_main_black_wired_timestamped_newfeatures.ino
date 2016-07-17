@@ -22,7 +22,7 @@
 
 #define CLOCK_TYPE         (I2S_CLOCK_48K_INTERNAL)     // I2S clock
 bool statusLED = true;                                  // Status LED ON/OFF
-String  MAC_ADDRESS = "7C:EC:79:D7:CE:84";
+String  MAC_ADDRESS = "7C:EC:79:69:86:64";
 // Reduce RUN frequency if needed.
 const uint16_t AUDIO_FREQ_RUN = 8000;
 const uint16_t AUDIO_FREQ_DATA = 8000;
@@ -347,6 +347,7 @@ int date = 0;
 int dateset = 0;
 double dateyear = 0;
 int dateyear1 = 0;
+int parametertag = 0;
 
 // THRESH
 uint16_t bleFeatureType = 0;
@@ -1567,6 +1568,13 @@ void loop()
           args_assigned2 = sscanf(bleBuffer, "%d:%d.%d", &date, &dateset, &dateyear1);
           dateyear = double(dateset) + double(dateyear1) / double(1000000);
           Serial.println(dateyear);
+        }
+
+        // Wireless parameter setting 
+        if (bleBuffer[0] == '2') {
+          args_assigned2 = sscanf(bleBuffer, "%d:%d-%d-%d", &parametertag, &datasendlimit, &bluesleeplimit, &datareceptiontimeout);
+          Serial.print("Data send limit is : ");
+          Serial.println(datasendlimit);
         }
         bleBufferIndex = 0;
       }

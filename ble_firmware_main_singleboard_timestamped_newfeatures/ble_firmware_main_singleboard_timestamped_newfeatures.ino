@@ -22,7 +22,7 @@
 
 #define CLOCK_TYPE         (I2S_CLOCK_48K_INTERNAL)     // I2S clock
 bool statusLED = true;                                  // Status LED ON/OFF
-String MAC_ADDRESS = "20:91:48:42:4A:F4";
+String MAC_ADDRESS = "20:91:48:AA:B1:DB";
 // Reduce RUN frequency if needed.
 const uint16_t AUDIO_FREQ_RUN = 8000;
 const uint16_t AUDIO_FREQ_DATA = 8000;
@@ -173,28 +173,28 @@ uint32_t featureIntervals[NUM_FEATURES] = {ENERGY_INTERVAL_AUDIO,
 // Array of thresholds; add new array and change code accordingly if you want
 // more states.
 float featureNormalThreshold[NUM_FEATURES] = {30,
-                                              10000,
+                                              100,
                                               //10000,
-                                              60,
-                                              40,
+                                              2000,
+                                              2000,
                                               //10000,
                                               200,
                                               500
                                              };
 float featureWarningThreshold[NUM_FEATURES] = {600,
-                                               50000,
+                                               150,
                                                //10000,
-                                               70,
-                                               50,
+                                               3000,
+                                               3000,
                                                //10000,
                                                205,
                                                1000
                                               };
 float featureDangerThreshold[NUM_FEATURES] = {1200,
-                                              100000,
+                                              200,
                                               //100000,
-                                              80,
-                                              60,
+                                              4000,
+                                              4000,
                                               //100000,
                                               210,
                                               1500
@@ -347,6 +347,7 @@ int date = 0;
 int dateset = 0;
 double dateyear = 0;
 int dateyear1 = 0;
+int parametertag = 0;
 
 // THRESH
 uint16_t bleFeatureType = 0;
@@ -1769,6 +1770,13 @@ void loop()
           args_assigned2 = sscanf(bleBuffer, "%d:%d.%d", &date, &dateset, &dateyear1);
           dateyear = double(dateset) + double(dateyear1) / double(1000000);
           Serial.println(dateyear);
+        }
+
+        // Wireless parameter setting 
+        if (bleBuffer[0] == '2') {
+          args_assigned2 = sscanf(bleBuffer, "%d:%d-%d-%d", &parametertag, &datasendlimit, &bluesleeplimit, &datareceptiontimeout);
+          Serial.print("Data send limit is : ");
+          Serial.println(datasendlimit);
         }
         bleBufferIndex = 0;
       }

@@ -347,6 +347,7 @@ int date = 0;
 int dateset = 0;
 double dateyear = 0;
 int dateyear1 = 0;
+int parametertag = 0;
 
 // THRESH
 uint16_t bleFeatureType = 0;
@@ -1604,6 +1605,13 @@ void loop()
           args_assigned2 = sscanf(bleBuffer, "%d:%d.%d", &date, &dateset, &dateyear1);
           dateyear = double(dateset) + double(dateyear1) / double(1000000);
           Serial.println(dateyear);
+        }
+
+        // Wireless parameter setting 
+        if (bleBuffer[0] == '2') {
+          args_assigned2 = sscanf(bleBuffer, "%d:%d-%d-%d", &parametertag, &datasendlimit, &bluesleeplimit, &datareceptiontimeout);
+          Serial.print("Data send limit is : ");
+          Serial.println(datasendlimit);
         }
         bleBufferIndex = 0;
       }
