@@ -28,7 +28,7 @@ const uint16_t AUDIO_FREQ_RUN = 8000;
 const uint16_t AUDIO_FREQ_DATA = 8000;
 
 uint16_t TARGET_AUDIO_SAMPLE = AUDIO_FREQ_RUN;          // Audio frequency
-const uint16_t TARGET_ACCEL_SAMPLE = 1000;              // Accel frequency
+uint16_t TARGET_ACCEL_SAMPLE = 1000;              // Accel frequency
 const uint32_t RESTING_INTERVAL = 0;                    // Inter-batch gap
 
 // NOTE: Do NOT change the following variables unless you know what you're doing
@@ -658,15 +658,15 @@ void audio_rfft() {
                 magsize_2048 - 2);
 
   /* DEBUGGING ROUTINE; FREQUENCY CHECKER
-      TODO: REMOVE THIS WHEN DONE
-    q15_t joj;
-    uint32_t ind;
-    arm_max_q15(audio_batch[buffer_compute_index],
-              magsize_2048,
-              &joj,
-              &ind);
-    Serial.println(joj*2);
-    Serial.println((ind+1)*TARGET_AUDIO_SAMPLE / (double)AUDIO_NFFT);
+    //      TODO: REMOVE THIS WHEN DONE
+    //    q15_t joj;
+    //    uint32_t ind;
+    //    arm_max_q15(audio_batch[buffer_compute_index],
+    //              magsize_2048,
+    //              &joj,
+    //              &ind);
+    //Serial.println(joj*2);
+    //Serial.println((ind+1)*TARGET_AUDIO_SAMPLE / (double)AUDIO_NFFT);
   */
 
   for (int i = NUM_TD_FEATURES; i < NUM_FEATURES; i++) {
@@ -807,17 +807,17 @@ void accel_rfft() {
                 &((float*)rfft_accel_buffer)[1],
                 magsize_512 - 2);
 
-  /* DEBUGGING ROUTINE; FFT BIN CHECKER
-    TODO: Remove this when done
-    float sum = 0;
-    for (int i=0; i<magsize_512; i++){
-    Serial.print(((float*)rfft_accel_buffer)[i], 8);
-    sum += ((float*)rfft_accel_buffer)[i];
-    Serial.print(" ");
-    }
-    Serial.println();
-    Serial.println(sum, 8);
-  */
+  //  /* DEBUGGING ROUTINE; FFT BIN CHECKER
+  //    TODO: Remove this when done
+  //    float sum = 0;
+  //    for (int i=0; i<magsize_512; i++){
+  //    Serial.print(((float*)rfft_accel_buffer)[i], 8);
+  //    sum += ((float*)rfft_accel_buffer)[i];
+  //    Serial.print(" ");
+  //    }
+  //    Serial.println();
+  //    Serial.println(sum, 8);
+  //  */
 
   for (int i = NUM_TD_FEATURES; i < NUM_FEATURES; i++) {
     // Update accel frequency domain feature variables only when the feature IS
@@ -1061,8 +1061,8 @@ float feature_mcr () {
 
   max_temp = max(max_x, max_y);
   max_r = max(max_temp, max_z);
-  Serial.print("max value = "); Serial.println(max_r);
-  return max_r*100;
+  //Serial.print("max value = "); Serial.println(max_r);
+  return max_r * 100;
 }
 
 
@@ -1466,75 +1466,75 @@ void loop()
 
   //Robustness for data reception//
   buffnow = millis();
-  if (bleBufferIndex > 0){
-    if (buffnow -  buffprev > datareceptiontimeout){
+  if (bleBufferIndex > 0) {
+    if (buffnow -  buffprev > datareceptiontimeout) {
       bleBufferIndex = 0;
     }
-  }else{
+  } else {
     buffprev = buffnow;
   }
 
   /* -------------------------- USB Connection Check ----------------------- */
-      if (bitRead(USB0_OTGSTAT, 5)) {
-        // Disconnected; this flag will briefly come up when USB gets disconnected.
-        // Immediately put into RUN mode.
-        if (currMode != RUN) { //If disconnected and NOT in RUN mode, set to run mode with idle state initialized
-          Serial2.begin(9600);
-          Serial2.flush();
-          resetSampling(true);
-          currMode = RUN;
-          LEDColors c = BLUE_NOOP;
-          changeStatusLED(c);
-  
-          // Reset state
-          currState = NOT_CUTTING;
-        } else { //If disconnected and in RUN mode, continue in run mode
-        }
+  if (bitRead(USB0_OTGSTAT, 5)) {
+    // Disconnected; this flag will briefly come up when USB gets disconnected.
+    // Immediately put into RUN mode.
+    if (currMode != RUN) { //If disconnected and NOT in RUN mode, set to run mode with idle state initialized
+      Serial2.begin(9600);
+      Serial2.flush();
+      resetSampling(true);
+      currMode = RUN;
+      LEDColors c = BLUE_NOOP;
+      changeStatusLED(c);
+
+      // Reset state
+      currState = NOT_CUTTING;
+    } else { //If disconnected and in RUN mode, continue in run mode
+    }
+  } else {
+    // Connected
+    if (currMode == RUN) {
+      // NOTE: Assume the battery will start charging when USB is connected.
+      if (digitalRead(chargerCHG) == 1) { //If connected, charging and in RUN mode, set to CHARGING mode
+        //Serial2.flush();
+        //Serial2.end();
+        //LEDColors c = PURPLE_CHARGE;
+        //changeStatusLED(c);
+        //currMode = CHARGING;
       } else {
-        // Connected
-        if (currMode == RUN) {
-          // NOTE: Assume the battery will start charging when USB is connected.
-          if (digitalRead(chargerCHG) == 1) { //If connected, charging and in RUN mode, set to CHARGING mode
-            //Serial2.flush();
-            //Serial2.end();
-            //LEDColors c = PURPLE_CHARGE;
-            //changeStatusLED(c);
-            //currMode = CHARGING;
-          } else {
-            if (didThresChange) { //Weirdly, the logic for chargerCHG switches once ble data is received!
-              //Serial2.flush();
-              //Serial2.end();
-              //LEDColors c = PURPLE_CHARGE;
-              //changeStatusLED(c);
-              //currMode = CHARGING;
-            }
-         }
-        } else if (currMode == CHARGING) { //If already in charging mode
-          // CHARGE mode and battery is NOT charging.
-          // Display white LED to notify charge completion.
-          if (digitalRead(chargerCHG) == 0) {
-            if (didThresChange) {//Weirdly, the logic for chargerCHG switches once ble data is received!
-              //LEDColors c = PURPLE_CHARGE;
-              //changeStatusLED(c);
-            }
-            else {
-              //LEDColors c = WHITE_NONE;
-              //changeStatusLED(c);
-            }
-  
-          } else {
-            if (didThresChange) { //Weirdly, the logic for chargerCHG switches once ble data is received!
-              //LEDColors c = WHITE_NONE;
-              //changeStatusLED(c);
-            }
-            else {
-              //LEDColors c = PURPLE_CHARGE;
-              //changeStatusLED(c);
-            }
-          }
-        } else {
+        if (didThresChange) { //Weirdly, the logic for chargerCHG switches once ble data is received!
+          //Serial2.flush();
+          //Serial2.end();
+          //LEDColors c = PURPLE_CHARGE;
+          //changeStatusLED(c);
+          //currMode = CHARGING;
         }
       }
+    } else if (currMode == CHARGING) { //If already in charging mode
+      // CHARGE mode and battery is NOT charging.
+      // Display white LED to notify charge completion.
+      if (digitalRead(chargerCHG) == 0) {
+        if (didThresChange) {//Weirdly, the logic for chargerCHG switches once ble data is received!
+          //LEDColors c = PURPLE_CHARGE;
+          //changeStatusLED(c);
+        }
+        else {
+          //LEDColors c = WHITE_NONE;
+          //changeStatusLED(c);
+        }
+
+      } else {
+        if (didThresChange) { //Weirdly, the logic for chargerCHG switches once ble data is received!
+          //LEDColors c = WHITE_NONE;
+          //changeStatusLED(c);
+        }
+        else {
+          //LEDColors c = PURPLE_CHARGE;
+          //changeStatusLED(c);
+        }
+      }
+    } else {
+    }
+  }
 
   /* ----------- Two-way Communication via BLE, only on RUN mode. ----------- */
 
@@ -1563,14 +1563,14 @@ void loop()
           rubbish = false;
         }
 
-        // receive the timestamp data from the hub 
+        // receive the timestamp data from the hub
         if (bleBuffer[0] == '1') {
           args_assigned2 = sscanf(bleBuffer, "%d:%d.%d", &date, &dateset, &dateyear1);
           dateyear = double(dateset) + double(dateyear1) / double(1000000);
           Serial.println(dateyear);
         }
 
-        // Wireless parameter setting 
+        // Wireless parameter setting
         if (bleBuffer[0] == '2') {
           args_assigned2 = sscanf(bleBuffer, "%d:%d-%d-%d", &parametertag, &datasendlimit, &bluesleeplimit, &datareceptiontimeout);
           Serial.print("Data send limit is : ");
@@ -1722,44 +1722,174 @@ void loop()
   //  }
 
   /* ------------- Hardwire Serial for DATA_COLLECTION commands ------------- */
+
   while (Serial.available() > 0) {
     characterRead = Serial.read();
+
     if (characterRead != '\n')
       wireBuffer.concat(characterRead);
   }
+
   if (wireBuffer.length() > 0) {
-    //if (currMode == CHARGING) {
+    Serial.println(wireBuffer);
+
     if (currMode == RUN) {
       // Check the received info; iff data collection request, change the mode
-      if (wireBuffer == START_COLLECTION) {
+      if (wireBuffer.indexOf(START_COLLECTION) > -1) {
         LEDColors c = CYAN_DATA;
         changeStatusLED(c);
-
         Serial.print(START_CONFIRM);
         resetSampling(false);
         currMode = DATA_COLLECTION;
       }
-    } else if (currMode == DATA_COLLECTION) {
+    }
+
+    if (currMode == DATA_COLLECTION) {
+
+      // Arange changed
+      if (wireBuffer.indexOf("Arange") > -1) {
+        int Arangelocation = wireBuffer.indexOf("Arange");
+        String Arange2 = wireBuffer.charAt(Arangelocation + 7);
+        int Arange = Arange2.toInt();
+        switch (Arange) {
+          case 0:
+            Ascale = AFS_2G;
+            break;
+          case 1:
+            Ascale = AFS_4G;
+            break;
+          case 2:
+            Ascale = AFS_8G;
+            break;
+          case 3:
+            Ascale = AFS_16G;
+            break;
+        }
+        getAres();
+      }
+
+
+      // LED run color changed
+      if (wireBuffer.indexOf("rgb") > -1) {
+        int rbglocation = wireBuffer.indexOf("rgb");
+        int Red = wireBuffer.charAt(rbglocation + 7) - 48;
+        int Blue = wireBuffer.charAt(rbglocation + 8) - 48;
+        int Green = wireBuffer.charAt(rbglocation + 9) - 48;
+        if (Blue == 1) {
+          digitalWrite(22, LOW);
+        }
+        else {
+          digitalWrite(22, HIGH);
+        }
+        if (Red == 1) {
+          digitalWrite(21, LOW);
+        }
+        else {
+          digitalWrite(21, HIGH);
+        }
+        if (Green == 1) {
+          digitalWrite(20, LOW);
+        }
+        else {
+          digitalWrite(20, HIGH);
+        }
+      }
+
+
+      //Acoustic sampling rate changed
+      if (wireBuffer.indexOf("acosr") > -1) {
+        int acosrLocation = wireBuffer.indexOf("acosr");
+        int target_sample_A = wireBuffer.charAt(acosrLocation + 6) - 48;
+        int target_sample_B = wireBuffer.charAt(acosrLocation + 7) - 48;
+        TARGET_AUDIO_SAMPLE = (target_sample_A * 10 + target_sample_B) * 1000;
+        DOWNSAMPLE_MAX = 48000 / TARGET_AUDIO_SAMPLE;
+
+        //Re-initialize sampling counters
+        accel_counter = 0;
+        subsample_counter = 0;
+      }
+
+
+      //Acceleromter sampling rate changed
+      if (wireBuffer.indexOf("accsr") > -1) {
+        int accsrLocation = wireBuffer.indexOf("accsr");
+        int target_sample_C = wireBuffer.charAt(accsrLocation + 6) - 48;
+        int target_sample_D = wireBuffer.charAt(accsrLocation + 7) - 48;
+        int target_sample_E = wireBuffer.charAt(accsrLocation + 8) - 48;
+        int target_sample_F = wireBuffer.charAt(accsrLocation + 9) - 48;
+
+        int target_sample_vib1 = (target_sample_C * 1000 + target_sample_D * 100 + target_sample_E * 10 + target_sample_F);
+        switch (target_sample_vib1) {
+          case 8:
+            TARGET_ACCEL_SAMPLE = 7.8125;
+            break;
+          case 16:
+            TARGET_ACCEL_SAMPLE = 15.625;
+            break;
+          case 31:
+            TARGET_ACCEL_SAMPLE = 31.25;
+            break;
+          case 63:
+            TARGET_ACCEL_SAMPLE = 62.5;
+            break;
+          case 125:
+            TARGET_ACCEL_SAMPLE = 125;
+            break;
+          case 250:
+            TARGET_ACCEL_SAMPLE = 250;
+            break;
+          case 500:
+            TARGET_ACCEL_SAMPLE = 500;
+            break;
+          case 1000:
+            TARGET_ACCEL_SAMPLE = 1000;
+            break;
+        }
+        ACCEL_COUNTER_TARGET = TARGET_AUDIO_SAMPLE / TARGET_ACCEL_SAMPLE;
+        accel_counter = 0;
+        subsample_counter = 0;
+      }
+
       // Check the received info; iff data collection finished, change the mode
       if (wireBuffer == END_COLLECTION) {
-        //LEDColors c = PURPLE_CHARGE;
         LEDColors c = BLUE_NOOP;
         changeStatusLED(c);
 
         Serial.print(END_CONFIRM);
-        //currMode = CHARGING;
         currMode = RUN;
+
+        TARGET_AUDIO_SAMPLE = 8000;
+        DOWNSAMPLE_MAX = 48000 / TARGET_AUDIO_SAMPLE;
+
+        TARGET_ACCEL_SAMPLE = 1000;
+        ACCEL_COUNTER_TARGET = TARGET_AUDIO_SAMPLE / TARGET_ACCEL_SAMPLE;
+        Serial.println(ACCEL_COUNTER_TARGET);
+        
+        accel_counter = 0;
+        subsample_counter = 0;
+
+        Ascale = AFS_4G;
+        getAres();
       }
-    }
+    } 
+
     // Clear wire buffer
     wireBuffer = "";
-  }
+
+  } // end of if (currMode == RUN)
+
 
   // After handling all state / mode changes, check if features need to be computed.
   if (currMode == RUN && compute_feature_now[buffer_compute_index]) {
     compute_features();
   }
+
 }
+
+
+
+
+
 
 //Battery Status calculation function
 int getInputVoltage() {
