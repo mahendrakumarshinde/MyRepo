@@ -22,13 +22,13 @@
 
 #define CLOCK_TYPE         (I2S_CLOCK_48K_INTERNAL)     // I2S clock
 bool statusLED = true;                                  // Status LED ON/OFF
-String MAC_ADDRESS = "20:91:48:42:4A:F4";
+String MAC_ADDRESS = "20:91:48:AA:B1:DB";
 // Reduce RUN frequency if needed.
 const uint16_t AUDIO_FREQ_RUN = 8000;
 const uint16_t AUDIO_FREQ_DATA = 8000;
 
 uint16_t TARGET_AUDIO_SAMPLE = AUDIO_FREQ_RUN;          // Audio frequency
-const uint16_t TARGET_ACCEL_SAMPLE = 1000;              // Accel frequency
+uint16_t TARGET_ACCEL_SAMPLE = 1000;              // Accel frequency
 const uint32_t RESTING_INTERVAL = 0;                    // Inter-batch gap
 
 // NOTE: Do NOT change the following variables unless you know what you're doing
@@ -1061,7 +1061,7 @@ float feature_mcr () {
 
   max_temp = max(max_x, max_y);
   max_r = max(max_temp, max_z);
-  Serial.print("max value = "); Serial.println(max_r);
+  //Serial.print("max value = "); Serial.println(max_r);
   return max_r*100;
 }
 
@@ -1483,7 +1483,6 @@ void i2s_rx_callback( int32_t *pBuf )
       }
     }
   } else if (currMode == DATA_COLLECTION) {
-    //Serial.print("currMode=DATA COLLECTION\n");
     // perform the data extraction for single channel mic
     extractdata_inplace(&pBuf[0]);
 
@@ -1510,6 +1509,8 @@ void i2s_rx_callback( int32_t *pBuf )
 
       accel_counter = 0;
     }
+
+    
   }
   else {
     //Serial.print("DIDNT FIND A MODE");
@@ -1527,8 +1528,8 @@ void i2s_tx_callback( int32_t *pBuf )
 /* --- Time functions --- */
 
 double gettimestamp() {
-  Serial.print("gettimestamp called : ");
-  Serial.println(dateyear);
+  //Serial.print("gettimestamp called : ");
+  //Serial.println(dateyear);
   return dateyear;
 }
 
@@ -1931,30 +1932,153 @@ void loop()
     if (characterRead != '\n')
       wireBuffer.concat(characterRead);
   }
+
+  
   if (wireBuffer.length() > 0) {
-    //if (currMode == CHARGING) {
+  
     if (currMode == RUN) {
       // Check the received info; iff data collection request, change the mode
-      if (wireBuffer == START_COLLECTION) {
+      if (wireBuffer.indexOf(START_COLLECTION) > -1) {
         LEDColors c = CYAN_DATA;
         changeStatusLED(c);
-
         Serial.print(START_CONFIRM);
         resetSampling(false);
         currMode = DATA_COLLECTION;
       }
-    } else if (currMode == DATA_COLLECTION) {
+    } 
+    
+    if (currMode == DATA_COLLECTION) {
+      Serial.println(wireBuffer);
+      // Arange changed
+      if (wireBuffer.indexOf("Arange") > -1) {
+        int Arangelocation = wireBuffer.indexOf("Arange");
+        String Arange2 = wireBuffer.charAt(Arangelocation + 7);
+        int Arange = Arange2.toInt();
+        switch (Arange) {
+          case 0:
+            Ascale = AFS_2G;
+            break;
+          case 1:
+            Ascale = AFS_4G;
+            break;
+          case 2:
+            Ascale = AFS_8G;
+            break;
+          case 3:
+            Ascale = AFS_16G;
+            break;
+        }
+        getAres();
+      }
+
+
+      // LED run color changed
+      if (wireBuffer.indexOf("rgb") > -1) {
+        int rbglocation = wireBuffer.indexOf("rgb");
+        int Red = wireBuffer.charAt(rbglocation + 7) - 48;
+        int Blue = wireBuffer.charAt(rbglocation + 8) - 48;
+        int Green = wireBuffer.charAt(rbglocation + 9) - 48;
+        if (Blue == 1) {
+          digitalWrite(27, LOW);
+        }
+        else {
+          digitalWrite(27, HIGH);
+        }
+        if (Red == 1) {
+          digitalWrite(29, LOW);
+        }
+        else {
+          digitalWrite(29, HIGH);
+        }
+        if (Green == 1) {
+          digitalWrite(28, LOW);
+        }
+        else {
+          digitalWrite(28, HIGH);
+        }
+      }
+
+
+      //Acoustic sampling rate changed
+      if (wireBuffer.indexOf("acosr") > -1) {
+        int acosrLocation = wireBuffer.indexOf("acosr");
+        int target_sample_A = wireBuffer.charAt(acosrLocation + 6) - 48;
+        int target_sample_B = wireBuffer.charAt(acosrLocation + 7) - 48;
+        TARGET_AUDIO_SAMPLE = (target_sample_A * 10 + target_sample_B) * 1000;
+        DOWNSAMPLE_MAX = 48000 / TARGET_AUDIO_SAMPLE;
+
+        //Re-initialize sampling counters
+        accel_counter = 0;
+        subsample_counter = 0;
+      }
+
+
+      //Acceleromter sampling rate changed
+      if (wireBuffer.indexOf("accsr") > -1) {
+        int accsrLocation = wireBuffer.indexOf("accsr");
+        int target_sample_C = wireBuffer.charAt(accsrLocation + 6) - 48;
+        int target_sample_D = wireBuffer.charAt(accsrLocation + 7) - 48;
+        int target_sample_E = wireBuffer.charAt(accsrLocation + 8) - 48;
+        int target_sample_F = wireBuffer.charAt(accsrLocation + 9) - 48;
+
+        int target_sample_vib1 = (target_sample_C * 1000 + target_sample_D * 100 + target_sample_E * 10 + target_sample_F);
+        switch (target_sample_vib1) {
+          case 8:
+            TARGET_ACCEL_SAMPLE = 7.8125;
+            break;
+          case 16:
+            TARGET_ACCEL_SAMPLE = 15.625;
+            break;
+          case 31:
+            TARGET_ACCEL_SAMPLE = 31.25;
+            break;
+          case 63:
+            TARGET_ACCEL_SAMPLE = 62.5;
+            break;
+          case 125:
+            TARGET_ACCEL_SAMPLE = 125;
+            break;
+          case 250:
+            TARGET_ACCEL_SAMPLE = 250;
+            break;
+          case 500:
+            TARGET_ACCEL_SAMPLE = 500;
+            break;
+          case 1000:
+            TARGET_ACCEL_SAMPLE = 1000;
+            break;
+        }
+        ACCEL_COUNTER_TARGET = TARGET_AUDIO_SAMPLE / TARGET_ACCEL_SAMPLE;
+        accel_counter = 0;
+        subsample_counter = 0;
+      }
+      
+
       // Check the received info; iff data collection finished, change the mode
       if (wireBuffer == END_COLLECTION) {
-        //LEDColors c = PURPLE_CHARGE;
         LEDColors c = BLUE_NOOP;
         changeStatusLED(c);
 
         Serial.print(END_CONFIRM);
-        //currMode = CHARGING;
         currMode = RUN;
+        
+        Ascale = AFS_2G;
+        getAres();
+
+        TARGET_AUDIO_SAMPLE = 8000;
+        DOWNSAMPLE_MAX = 48000 / TARGET_AUDIO_SAMPLE;
+
+        TARGET_ACCEL_SAMPLE = 1000;
+        ACCEL_COUNTER_TARGET = TARGET_AUDIO_SAMPLE / TARGET_ACCEL_SAMPLE;
+
+        accel_counter = 0;
+        subsample_counter = 0;
       }
-    }
+      
+    } // end of currMode == DATA_COLLECTION
+
+
+    
     // Clear wire buffer
     wireBuffer = "";
   }
