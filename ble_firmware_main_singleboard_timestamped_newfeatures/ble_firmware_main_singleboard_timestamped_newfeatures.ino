@@ -22,7 +22,7 @@
 
 #define CLOCK_TYPE         (I2S_CLOCK_48K_INTERNAL)     // I2S clock
 bool statusLED = true;                                  // Status LED ON/OFF
-String MAC_ADDRESS = "20:91:48:AA:B1:DB";
+String MAC_ADDRESS = "88:4A:EA:69:DE:A0";
 // Reduce RUN frequency if needed.
 const uint16_t AUDIO_FREQ_RUN = 8000;
 const uint16_t AUDIO_FREQ_DATA = 8000;
@@ -58,13 +58,6 @@ const uint32_t MCR_INTERVAL_AUDIO = MCR_INTERVAL_ACCEL * RUN_ACCEL_AUDIO_RATIO;
 // NOTE: Most of these variables are for accessing calculation results.
 //       Read any of frequency domain feature calculation flow to understand.
 
-/* Deprecated, but keeping this just in case we will need again.
-  // Spectral Flux
-  double sp_flux_x = 0;
-  double sp_flux_y = 0;
-  double sp_flux_z = 0;
-*/
-
 // Spectral Centroid
 double sp_cent_x = 0;
 double sp_cent_y = 0;
@@ -74,13 +67,6 @@ double sp_cent_z = 0;
 double sp_flat_x = 0;
 double sp_flat_y = 0;
 double sp_flat_z = 0;
-
-/* Deprecated, but keeping this just in case we will need again.
-  // Spectral Crest
-  float sp_crest_x = 0;
-  float sp_crest_y = 0;
-  float sp_crest_z = 0;
-*/
 
 // Spectral Spread ACCEL
 double sp_spread_x = 0;
@@ -99,10 +85,8 @@ float sp_spread_aud = 0;
   3: Spectral Flatness
   4: Accel Spectral Spread
   5: Audio Spectral Spread
-
-  CANCELLED: Spectral Flux
-  CANCELLED: Spectral Crest
 */
+
 const uint8_t NUM_FEATURES = 6;    // Total number of features
 const uint8_t NUM_TD_FEATURES = 2; // Total number of frequency domain features
 int chosen_features = 0;
@@ -121,10 +105,8 @@ void calculate_spectral_spread_audio(int axis);
 typedef float (* FeatureFuncPtr) (); // this is a typedef to feature functions
 FeatureFuncPtr features[NUM_FEATURES] = {feature_energy,
                                          feature_mcr,
-                                         //feature_spectral_flux,
                                          feature_spectral_centroid,
                                          feature_spectral_flatness,
-                                         //feature_spectral_crest,
                                          feature_spectral_spread_accel,
                                          feature_spectral_spread_audio
                                         };
@@ -132,17 +114,15 @@ FeatureFuncPtr features[NUM_FEATURES] = {feature_energy,
 typedef void (* FeatureCalcPtr) (int); // this is a typedef to FD calculation functions
 FeatureCalcPtr calc_features[NUM_FEATURES] = {NULL,
                                               NULL,
-                                              //calculate_spectral_flux,
                                               calculate_spectral_centroid,
                                               calculate_spectral_flatness,
-                                              //calculate_spectral_crest,
                                               calculate_spectral_spread_accel,
                                               calculate_spectral_spread_audio
                                              };
 
 // NOTE: DO NOT CHANGE THIS UNLESS YOU KNOW WHAT YOU'RE DOING
 const uint16_t MAX_INTERVAL_ACCEL = 512;
-const uint16_t MAX_INTERVAL_AUDIO = 4086;
+const uint16_t MAX_INTERVAL_AUDIO = 4096;
 
 // Byte representing which features are enabled. Feature index 0 is enabled by default.
 byte enabledFeatures[(NUM_FEATURES - 1) / 8 + 1] = {B11111100};
@@ -156,19 +136,6 @@ const byte accelFDFeatures[(NUM_FEATURES - 1) / 8 + 1] = {B00111000};
 //       force FD computation for debugging.
 bool audioFDCompute = true;
 bool accelFDCompute = true;
-
-// Array of intervals for every features; currently, every FD feature is expected
-// to have half-second interval. Add new variables and change this when you want
-// smaller interval for frequency domain features.
-uint32_t featureIntervals[NUM_FEATURES] = {ENERGY_INTERVAL_AUDIO,
-                                           MCR_INTERVAL_AUDIO,
-                                           //MAX_INTERVAL_AUDIO,
-                                           MAX_INTERVAL_AUDIO,
-                                           MAX_INTERVAL_AUDIO,
-                                           //MAX_INTERVAL_AUDIO,
-                                           MAX_INTERVAL_AUDIO,
-                                           MAX_INTERVAL_AUDIO
-                                          };
 
 // Array of thresholds; add new array and change code accordingly if you want
 // more states.
@@ -258,15 +225,12 @@ uint8_t ACCBW  = 0x08 & ABW_1000Hz;  // Choose bandwidth for accelerometer
 int myLed       = 13;  // LED on the Teensy 3.1/3.2
 int chargerCHG  = 2;   // CHG pin to detect charging status
 
-// BMX055 variables
+// MPU9250 variables
 int16_t accelCount[3];  // Stores the 16-bit signed accelerometer sensor output
 float accelBias[3] = {0, 0, 0}; // Bias corrections for gyro, accelerometer, mag
 
-float ax, ay, az, gx, gy, gz, mx, my, mz; // variables to hold latest sensor data values
+float ax, ay, az; // variables to hold latest sensor data values
 float aRes; //resolution of accelerometer
-int delt_t;
-
-long init_time;
 
 // Keep this as passThru to minimize latency in between accelerometer samples
 bool passThru = true;
@@ -311,19 +275,7 @@ enum LEDColors {
 // Explicit function declaration for enum argument
 void changeStatusLED(LEDColors color);
 
-
 boolean silent = false;
-unsigned char bytes[4];
-
-// Two-way Communication Protocol Constants
-const String THRESH_START_FLAG = "THBG";
-const String THRESH_SUCCESS = "THRESH_OK";
-const String THRESH_FAIL = "THRESH_FAIL";
-
-const String FEATURE_SET_START_FLAG = "FEBG";
-const String FEATURE_SET_SUCCESS = "FEATURE_SET_OK";
-const String FEATURE_SET_FAIL = "FEATURE_SET_FAIL";
-const uint8_t FEATURE_SET_BYTELEN = (((NUM_FEATURES - 1) / 8) / 4 + 1) * 4;
 
 // Hard-wired communication buffers
 String wireBuffer = ""; // Serial only expects string literals
@@ -331,11 +283,8 @@ char characterRead; // Holder variable for newline check
 
 // Two-way Communication Variables
 char bleBuffer[19] = "abcdefghijklmnopqr";
-byte bleFeaturesBuffer[(NUM_FEATURES - 1) / 8 + 1] = {B00000000};
 uint8_t bleBufferIndex = 0;
-uint8_t bleBytesRead = 0;
 uint16_t bleFeatureIndex = 0;
-int featureIndex = 0;
 int newThres = 0;
 int newThres2 = 0;
 int newThres3 = 0;
@@ -349,28 +298,12 @@ double dateyear = 0;
 int dateyear1 = 0;
 int parametertag = 0;
 
-// THRESH
-uint16_t bleFeatureType = 0;
-float bleFeatureValue = 0;
-
-// FEATURE_SET
-uint32_t largestBatchSize = 0;
-
-// Communication state enum
-enum CommState {
-  COMM_IDLE           = 0,
-  THRESH              = 1,
-  FEATURE_SET         = 2
-};
-
-CommState currComm = COMM_IDLE;
-
 //Battery state
 int bat = 100;
 
 //Regular data transmit variables
 boolean datasendtime = false;
-int datasendlimit = 1500;
+int datasendlimit = 500;
 int currentmillis = 0;
 int prevmillis = 0;
 int currenttime = 0;
@@ -385,12 +318,8 @@ int datareceptiontimeout = 2000;
 int blue = 0;
 boolean sleepmode = false;
 int bluemillisnow = 0;
-int bluesleeplimit = 10000;
+int bluesleeplimit = 60000;
 int bluetimerstart = 0;
-
-//Special feature variables
-boolean buffcounter = false;
-float paddedbuff[5];
 
 /*==============================================================================
   ====================== Feature Computation Caller ============================
@@ -657,18 +586,6 @@ void audio_rfft() {
                 &((float*)rfft_audio_buffer)[1],
                 magsize_2048 - 2);
 
-  /* DEBUGGING ROUTINE; FREQUENCY CHECKER
-      TODO: REMOVE THIS WHEN DONE
-    q15_t joj;
-    uint32_t ind;
-    arm_max_q15(audio_batch[buffer_compute_index],
-              magsize_2048,
-              &joj,
-              &ind);
-    Serial.println(joj*2);
-    Serial.println((ind+1)*TARGET_AUDIO_SAMPLE / (double)AUDIO_NFFT);
-  */
-
   for (int i = NUM_TD_FEATURES; i < NUM_FEATURES; i++) {
     // Update audio frequency domain feature variables only when the feature IS
     // audio FD and the bit is turned on for enabledFeatures.
@@ -806,18 +723,6 @@ void accel_rfft() {
                 2.0,
                 &((float*)rfft_accel_buffer)[1],
                 magsize_512 - 2);
-
-  /* DEBUGGING ROUTINE; FFT BIN CHECKER
-    TODO: Remove this when done
-    float sum = 0;
-    for (int i=0; i<magsize_512; i++){
-    Serial.print(((float*)rfft_accel_buffer)[i], 8);
-    sum += ((float*)rfft_accel_buffer)[i];
-    Serial.print(" ");
-    }
-    Serial.println();
-    Serial.println(sum, 8);
-  */
 
   for (int i = NUM_TD_FEATURES; i < NUM_FEATURES; i++) {
     // Update accel frequency domain feature variables only when the feature IS
@@ -1068,33 +973,6 @@ float feature_mcr () {
 
 // FREQUENCY DOMAIN FEATURES
 
-/* CANCELLED
-  // Spectral Flux ACCEL, index 2
-  void calculate_spectral_flux(int axis){
-  float* buff = (float*) rfft_accel_buffer;
-
-  double logSum = 0;
-  double sum = 0;
-
-  for (int i=0; i<magsize_512; i++){
-    sum += buff[i];
-    logSum += log(buff[i]);
-  }
-
-  double flux = exp((logSum / magsize_512)) / (sum / magsize_512);
-
-  switch(axis){
-    case 0: sp_flux_x = flux; break;
-    case 1: sp_flux_y = flux; break;
-    case 2: sp_flux_z = flux; break;
-  }
-  }
-
-  float feature_spectral_flux(){
-  return (float)sp_flux_x;
-  }
-*/
-
 // Spectral Centroid ACCEL, index 2
 void calculate_spectral_centroid(int axis) {
   // TODO: Could use a LOT of CMSIS-DSP functions. Maybe optimize it later.
@@ -1143,31 +1021,6 @@ void calculate_spectral_flatness(int axis) {
 float feature_spectral_flatness() {
   return (float) sqrt(sq(sp_flat_x) + sq(sp_flat_y) + sq(sp_flat_z));
 }
-
-/* CANCELLED
-  // Spectral Crest ACCEL, index 5
-  void calculate_spectral_crest(int axis){
-  float* buff = (float*) rfft_accel_buffer;
-
-  float sqSum = 0;
-  float maxVal = 0;
-  uint32_t maxInd = 0;
-  arm_dot_prod_f32(buff, buff, magsize_512, &sqSum);
-  arm_max_f32(buff, magsize_512, &maxVal, &maxInd);
-
-  float crest = maxVal / sqSum;
-
-  switch(axis){
-    case 0: sp_crest_x = crest; break;
-    case 1: sp_crest_y = crest; break;
-    case 2: sp_crest_z = crest; break;
-  }
-  }
-
-  float feature_spectral_crest(){
-  return sp_crest_x;
-  }
-*/
 
 // Spectral Spread ACCEL, index 4
 void calculate_spectral_spread_accel(int axis) {
@@ -1226,189 +1079,12 @@ void extractdata_inplace(int32_t  *pBuf) {
   pBuf[0] = (pBuf[0] & 0x7fffffff) >> 7;
 }
 
-
 #define bufferSize 8000*3
 const uint16_t target_sample = 8000;
 const uint16_t inter = 48000 / target_sample;
-/*uint32_t subsample_counter = 0;*/
-/*uint32_t accel_counter = 0;*/
 unsigned char audio_buffer[bufferSize];
-uint32_t nTX = 0;
-uint32_t nRX = 0;
-const uint32_t intvl = 100;
-uint32_t totCount = 0;
-uint32_t localCount = 0;
-float accel_x[intvl];
-float accel_y[intvl];
-float accel_z[intvl];
-float thres = 100;
-float thres2 = 750;
-float thres3 = 1500;
-float ave_x = 0;
-float ave_y = 0;
-float ave_z = 0;
-float ene = 0; //vibration sugnal energy value
-float state = 0;
-float stateprev = 0;
-boolean over = false;
-/*int greenPin = 27;*/
-/*int redPin = 29;*/
-/*int bluePin = 28;*/
-int greenPinState = HIGH; //boot color; GREEN PIN
-int redPinState = HIGH; //boot color; RED PIN
-int bluePinState = HIGH; //boot color; BLUE PIN
-int bluestart = 0; //timer to know how long it has been idle
-/*int blue = 0; //toggle to know how if idle*/
-int millisnow = 0;
-int bluesleep = 5000; //threshold for sleep mode
-/*int sleepmode = 0; //initialize to not in sleep mode*/
-/*int currentmillis = 0; //battery monitoring*/
-/*int prevmillis = 0; //battery monitoring*/
-int batlimit = 1000; //battery monitoring
-int overallcounter = 0;
-/*int newThres = 0;*/
-/*int newThres2 = 0;*/
-/*int newThres3 = 0;*/
-/*int args_assigned = 0;*/
-/*boolean silent = false;*/
-/*unsigned char bytes[4];*/
 
 /* --- Direct I2S Receive, we get callback to read 2 words from the FIFO --- */
-
-//void i2s_rx_callback( int32_t *pBuf )
-//{
-//  //digitalWrite(28,HIGH);
-//  //Serial.print(accel_counter);
-//  // Downsampling routine; only take every 6th sample.
-//  Serial.print("Starting callback...\n");
-//  if (subsample_counter != inter - 2) {
-//    subsample_counter ++;
-//    Serial.printf("Subsample counter: Value: %d\n", subsample_counter);
-//    return;
-//  } else {
-//    subsample_counter = 0;
-//    accel_counter++;
-//    Serial.printf("Accel counter: Value: %d\n", accel_counter);
-//  }
-//  extractdata_inplace(&pBuf[0]);
-//
-//  if (accel_counter == 8) {
-//    //Perform accelerometer data extraction
-//    readAccelData(accelCount);
-//    getAres();
-//    ax = (float)accelCount[0] * aRes;// + accelBias[0];
-//    ay = (float)accelCount[1] * aRes;// + accelBias[1];
-//    az = (float)accelCount[2] * aRes;// + accelBias[2];
-//
-//    byte* axb = (byte *) &ax;
-//    byte* ayb = (byte *) &ay;
-//    byte* azb = (byte *) &az;
-//    accel_counter = 0;
-//    //Serial.print("ax="); Serial.print(ax); Serial.print("\n");
-//    // Feature Calculation
-//
-//    accel_x[localCount] = ax;
-//    accel_y[localCount] = ay;
-//    accel_z[localCount] = az;
-//    totCount = totCount + 1;
-//    localCount = localCount + 1;
-//    localCount = localCount % intvl;
-//    if (totCount > intvl) {
-//      totCount = intvl + 1;
-//      over = true;
-//    }
-//    if (over) {
-//      // Calculate the mean only if we have at least 100 data points
-//      ave_x = 0;
-//      ave_y = 0;
-//      ave_z = 0;
-//      for (int i = 0; i < intvl; i++) {
-//        ave_x = ave_x + accel_x[i];
-//        ave_y = ave_y + accel_y[i];
-//        ave_z = ave_z  + accel_z[i];
-//      }
-//      ave_x = ave_x / intvl;
-//      ave_y = ave_y / intvl;
-//      ave_z = ave_z / intvl;
-//      ene = 0; //initialize the energy feature
-//      for (int i = 0; i < intvl; i++) {
-//        ene = ene + (accel_x[i] - ave_x) * (accel_x[i] - ave_x) + (accel_y[i] - ave_y) * (accel_y[i] - ave_y) + (accel_z[i] - ave_z) * (accel_z[i] - ave_z);
-//      }
-//      ene = ene * intvl; //Signal energy integrated
-//
-//      if (ene < thres) {
-//
-//        // blue: normal cutting
-//
-//        if (blue == 0) {
-//          bluestart = millis();
-//          blue = 1;
-//        }
-//        if (blue == 1) {
-//          millisnow = millis();
-//          if (millisnow - bluestart >= bluesleeplimit) { //sleep mode
-//            sleepmode = true;
-//            greenPinState = HIGH;
-//            redPinState = HIGH;
-//            bluePinState = HIGH;
-//            digitalWrite(greenPin, greenPinState);
-//            digitalWrite(redPin, redPinState);
-//            digitalWrite(bluePin, bluePinState);
-//            blue = 0;
-//          }
-//        }
-//
-//        if (sleepmode == 0) {
-//          bluePinState = LOW;
-//          redPinState = HIGH;
-//          greenPinState = LOW;
-//        }
-//        digitalWrite(greenPin, greenPinState);
-//        digitalWrite(redPin, redPinState);
-//        digitalWrite(bluePin, bluePinState);
-//        currState = NOT_CUTTING;
-//      }
-//      else if (ene < thres2) {
-//        blue = 0;
-//        sleepmode = 0;
-//        // green: normal cutting
-//
-//        bluePinState = HIGH;
-//        redPinState = HIGH;
-//        greenPinState = LOW;
-//        digitalWrite(greenPin, greenPinState);
-//        digitalWrite(redPin, redPinState);
-//        digitalWrite(bluePin, bluePinState);
-//        currState = NORMAL_CUTTING;
-//      }
-//      else if (ene < thres3) {
-//        blue = 0;
-//        sleepmode = 0;
-//        // yellow: warning
-//
-//        bluePinState = HIGH;
-//        redPinState = LOW;
-//        greenPinState = LOW;
-//        digitalWrite(greenPin, greenPinState);
-//        digitalWrite(redPin, redPinState);
-//        digitalWrite(bluePin, bluePinState);
-//        currState = WARNING_CUTTING;
-//      }
-//      else {
-//        // red: bad cutting
-//        blue = 0;
-//        sleepmode = 0;
-//        bluePinState = HIGH;
-//        redPinState = LOW;
-//        greenPinState = HIGH;
-//        digitalWrite(greenPin, greenPinState);
-//        digitalWrite(redPin, redPinState);
-//        digitalWrite(bluePin, bluePinState);
-//        currState = BAD_CUTTING;
-//      }
-//    }
-//  }
-//}
 
 void i2s_rx_callback( int32_t *pBuf )
 {
@@ -1522,7 +1198,7 @@ void i2s_rx_callback( int32_t *pBuf )
 
 void i2s_tx_callback( int32_t *pBuf )
 {
-  // This function won't be used at all; leave it empty.
+  // This function won't be used at all; leave it empty but don't delete!
 }
 
 /* --- Time functions --- */
@@ -1564,25 +1240,6 @@ void setup()
     pinMode(29, OUTPUT);
   }
 
-  // Read the BMX-055 WHO_AM_I registers, this is a good test of communication
-  //Serial.println("BMX055 accelerometer...");
-
-  //DEPRECATED
-  /*byte c = readByte(BMX055_ACC_ADDRESS, BMX055_ACC_WHOAMI);  // Read ACC WHO_AM_I register for BMX055
-    //Serial.print("BMX055 ACC"); Serial.print(" I AM 0x"); Serial.print(c, HEX); Serial.print(" I should be 0x"); Serial.println(0xFA, HEX);
-
-    if (c == 0xFA) // WHO_AM_I should always be ACC = 0xFA, GYRO = 0x0F, MAG = 0x32
-    {
-    //Serial.println("BMX055 is online...");
-
-    initBMX055();
-
-    // get sensor resolutions, only need to do this once
-    getAres();
-
-    fastcompaccelBMX055(accelBias);
-    //Serial.println("accel biases (mg)"); Serial.println(1000.*accelBias[0]); Serial.println(1000.*accelBias[1]); Serial.println(1000.*accelBias[2]);
-    }*/
   byte c = readByte(MPU9250_ADDRESS, WHO_AM_I_MPU9250); // Read WHO_AM_I register on MPU
   if (c == 0x71) { //WHO_AM_I should always be 0x71 for the entire chip
     initMPU9250();
@@ -1598,9 +1255,6 @@ void setup()
     Serial.println(c, HEX);
     while (1) ; // Loop forever if communication doesn't happen
   }
-
-  init_time = millis();
-  //Serial.print(init_time);
 
   // << nothing before the first delay will be printed to the serial
   delay(1500);
@@ -1678,7 +1332,6 @@ void loop()
 
   /* -------------------------- USB Connection Check ----------------------- */
   if (bitRead(USB0_OTGSTAT, 5)) {
-    //if (1==1) {
   //      // Disconnected; this flag will briefly come up when USB gets disconnected.
   //      // Immediately put into RUN mode.
       if (currMode != RUN) { //If disconnected and NOT in RUN mode, set to run mode with idle state initialized
@@ -1688,54 +1341,10 @@ void loop()
           currMode = RUN;
           LEDColors c = BLUE_NOOP;
           changeStatusLED(c);
-  //
-  //        // Reset state
           currState = NOT_CUTTING;
       }
-  } else {
-  //      // Connected
-      if (currMode == RUN) {
-        // NOTE: Assume the battery will start charging when USB is connected.
-        if (digitalRead(chargerCHG) == 1) { //If connected, charging and in RUN mode, set to CHARGING mode
-          //BLEport.flush();
-          //BLEport.end();
-          //LEDColors c = PURPLE_CHARGE;
-          //changeStatusLED(c);
-          //currMode = CHARGING;
-        } else {
-          if (didThresChange) { //Weirdly, the logic for chargerCHG switches once ble data is received!
-            //BLEport.flush();
-            //BLEport.end();
-            //LEDColors c = PURPLE_CHARGE;
-            //changeStatusLED(c);
-            //currMode = CHARGING;
-          }
-       }
-      } else if (currMode == CHARGING) { //If already in charging mode
-        // CHARGE mode and battery is NOT charging.
-        // Display white LED to notify charge completion.
-        if (digitalRead(chargerCHG) == 0) {
-          if (didThresChange) {//Weirdly, the logic for chargerCHG switches once ble data is received!
-            //LEDColors c = PURPLE_CHARGE;
-            //changeStatusLED(c);
-          }
-          else {
-            //LEDColors c = WHITE_NONE;
-            //changeStatusLED(c);
-          }
-  
-        } else {
-          if (didThresChange) { //Weirdly, the logic for chargerCHG switches once ble data is received!
-            //LEDColors c = WHITE_NONE;
-            //changeStatusLED(c);
-          }
-          else {
-            //LEDColors c = PURPLE_CHARGE;
-            //changeStatusLED(c);
-          }
-        }
-      }
   }
+  
   /*Serial.print("USB connection check complete. Starting BLE\n");*/
 
   /* ----------- Two-way Communication via BLE, only on RUN mode. ----------- */
@@ -1779,152 +1388,21 @@ void loop()
           Serial.print("Data send limit is : ");
           Serial.println(datasendlimit);
         }
+
+        // Record button pressed - go into record mode to record FFTs
+        if (bleBuffer[0] == '3') {
+          Serial.print("Time to record data and send FFTs");
+        }
+
+        // Stop button pressed - go out of record mode back into RUN mode
+        if (bleBuffer[0] == '4') {
+          Serial.print("Stop recording and sending FFTs");
+        }
+        
         bleBufferIndex = 0;
       }
     }
   }
-  
-  /*Serial.print("BLE complete.\n");*/
-
-  //  if (currMode == RUN) {
-  //    bleBufferIndex = 0;
-  //    while (BLEport.available() > 0) {
-  //      bleBuffer[bleBufferIndex] = BLEport.read();
-  //      Serial.println(char(bleBuffer[bleBufferIndex]));
-  //      bleBufferIndex ++;
-  //      // NOTE: BLE communication may come in 8 bytes, not 4 bytes, due to
-  //      //       interrupt delays. When it goes OVER 4 bytes, just cut it at 4.
-  //      if (bleBufferIndex == 4) {
-  //        break;
-  //      }
-  //      Serial.println(bleBufferIndex);
-  //    }
-  //    if (bleBufferIndex == 4) {
-  //      //Two-way Communication Protocol
-  //      switch (currComm) {
-  //        case COMM_IDLE:
-  //          if (String(bleBuffer) == THRESH_START_FLAG) {
-  //            currComm = THRESH;
-  //          } else if (String(bleBuffer) == FEATURE_SET_START_FLAG) {
-  //            currComm = FEATURE_SET;
-  //          }
-  //          break;
-  //        case THRESH:
-  //          if (bleBytesRead == 0) {
-  //            bleFeatureIndex = (*(uint16_t *)(&bleBuffer[0]));
-  //            bleFeatureType = (*(uint16_t *)(&bleBuffer[2]));
-  //
-  //            // Unexpected input; reset communication
-  //            if (bleFeatureType != 0 && bleFeatureType != 1) {
-  //              BLEport.print(THRESH_FAIL);
-  //              BLEport.flush();
-  //              bleBytesRead = 0;
-  //              bleFeatureIndex = 0;
-  //              currComm = COMM_IDLE;
-  //              break;
-  //            }
-  //            if (bleFeatureIndex < 0 || bleFeatureIndex >= NUM_FEATURES) {
-  //              BLEport.print(THRESH_FAIL);
-  //              BLEport.flush();
-  //              bleBytesRead = 0;
-  //              bleFeatureIndex = 0;
-  //              currComm = COMM_IDLE;
-  //              break;
-  //            }
-  //
-  //            Serial.println(bleFeatureIndex);
-  //            Serial.println(bleFeatureType);
-  //            bleBytesRead = 4;
-  //          } else if (bleBytesRead == 4) {
-  //            // THRESH communication completed.
-  //            if (bleFeatureType == 0) {
-  //              featureWarningThreshold[bleFeatureIndex] = (*(float *)(&bleBuffer[0]));
-  //            } else if (bleFeatureType == 1) {
-  //              featureDangerThreshold[bleFeatureIndex] = (*(float *)(&bleBuffer[0]));
-  //            }
-  //            // Transmit THRESH_SUCCESS
-  //            BLEport.print(THRESH_SUCCESS);
-  //            BLEport.flush();
-  //
-  //            // Reset Variables
-  //            bleBytesRead = 0;
-  //            bleFeatureIndex = 0;
-  //            currComm = COMM_IDLE;
-  //          }
-  //          break;
-  //        case FEATURE_SET:
-  //          if (bleBytesRead < FEATURE_SET_BYTELEN) {
-  //            bleBufferIndex = 0;
-  //            while (bleFeatureIndex < ((NUM_FEATURES - 1) / 8 + 1) && bleBufferIndex < 4) {
-  //              bleFeaturesBuffer[bleFeatureIndex] = bleBuffer[bleBufferIndex];
-  //
-  //              bleFeatureIndex ++;
-  //              bleBufferIndex ++;
-  //            }
-  //            bleBytesRead += 4;
-  //          } else if (bleBytesRead == FEATURE_SET_BYTELEN) {
-  //            // FEATURE_SET communication completed.
-  //            BLEport.print(FEATURE_SET_SUCCESS);
-  //            BLEport.flush();
-  //
-  //            // Copy over to enabledFeatures
-  //            for (int i = 0; i < (NUM_FEATURES - 1) / 8 + 1; i++) {
-  //              enabledFeatures[i] = bleFeaturesBuffer[i];
-  //            }
-  //
-  //            // Set the FFT flags according to the new feature set
-  //            for (int i = NUM_TD_FEATURES; i < NUM_FEATURES; i++) {
-  //              if ((enabledFeatures[i / 8] << (i % 8)) & (audioFDFeatures[i / 8] << (i % 8)) & B10000000) {
-  //                audioFDCompute = true;
-  //              }
-  //            }
-  //            for (int i = NUM_TD_FEATURES; i < NUM_FEATURES; i++) {
-  //              if ((enabledFeatures[i / 8] << (i % 8)) & (accelFDFeatures[i / 8] << (i % 8)) & B10000000) {
-  //                accelFDCompute = true;
-  //              }
-  //            }
-  //
-  //            largestBatchSize = 0;
-  //            for (int i = 0; i < NUM_FEATURES; i++) {
-  //              // Consider batch size only when corresponding bit is turned on.
-  //              if ((enabledFeatures[i / 8] << (i % 8)) & B10000000) {
-  //                largestBatchSize = max(largestBatchSize, featureIntervals[i]);
-  //              }
-  //            }
-  //
-  //            featureBatchSize = largestBatchSize;
-  //            resetSampling(true);
-  //
-  //            // Reset Variables
-  //            bleBytesRead = 0;
-  //            bleFeatureIndex = 0;
-  //            currComm = COMM_IDLE;
-  //          } else {
-  //            //NOTE: this should not happen if all BLE transmissions are 4 bytes aligned.
-  //            BLEport.print(FEATURE_SET_FAIL);
-  //            BLEport.flush();
-  //            bleBytesRead = 0;
-  //            bleFeatureIndex = 0;
-  //            currComm = COMM_IDLE;
-  //          }
-  //          break;
-  //      }
-  //    } else {
-  //      //Incorrect bytes received; invalidate current communication.
-  //      switch (currComm) {
-  //        case THRESH:
-  //          BLEport.print(THRESH_FAIL);
-  //          break;
-  //        case FEATURE_SET:
-  //          BLEport.print(FEATURE_SET_FAIL);
-  //          break;
-  //      }
-  //      BLEport.flush();
-  //      bleBytesRead = 0;
-  //      bleFeatureIndex = 0;
-  //      currComm = COMM_IDLE;
-  //    }
-  //  }
 
   /* ------------- Hardwire Serial for DATA_COLLECTION commands ------------- */
   while (Serial.available() > 0) {
@@ -2221,7 +1699,7 @@ void getAres() {
     // Possible accelerometer scales (and their register bit settings) are:
     // 2 Gs (0011), 4 Gs (0101), 8 Gs (1000), and 16 Gs  (1100).
     // BMX055 ACC data is signed 12 bit
-    // CHANGE: MPU data is signed 16 bit
+    // CHANGE: MPU data is signed 16 bit??
     case AFS_2G:
       aRes = 2.0 / 32768.0; // change from 2^11 to 2^15
       break;
@@ -2246,18 +1724,6 @@ void readAccelData(int16_t * destination)
   destination[2] = ((int16_t)rawData[4] << 8) | rawData[5] ;
   //Serial.printf("Accel data read: %d, %d, %d", destination[0], destination[1], destination[2]);
 }
-
-// DEPRECATED
-/*void readAccelData(int16_t * destination)
-  {
-  uint8_t rawData[6];  // x/y/z accel register data stored here
-  readBytes(BMX055_ACC_ADDRESS, BMX055_ACC_D_X_LSB, 6, &rawData[0]);       // Read the six raw data registers into data array
-  if ((rawData[0] & 0x01) && (rawData[2] & 0x01) && (rawData[4] & 0x01)) { // Check that all 3 axes have new data
-    destination[0] = (int16_t) (((int16_t)rawData[1] << 8) | rawData[0]) >> 4;  // Turn the MSB and LSB into a signed 12-bit value
-    destination[1] = (int16_t) (((int16_t)rawData[3] << 8) | rawData[2]) >> 4;
-    destination[2] = (int16_t) (((int16_t)rawData[5] << 8) | rawData[4]) >> 4;
-  }
-  }*/
 
 void SENtralPassThroughMode()
 {
@@ -2292,36 +1758,10 @@ void initMPU9250()
 
   // disable gyroscope
   writeByte(MPU9250_ADDRESS, PWR_MGMT_2, 0x07);
-
-  // Configure Gyro and Thermometer
-  // Disable FSYNC and set thermometer and gyro bandwidth to 41 and 42 Hz, respectively;
-  // minimum delay time for this setting is 5.9 ms, which means sensor fusion update rates cannot
-  // be higher than 1 / 0.0059 = 170 Hz
-  // DLPF_CFG = bits 2:0 = 011; this limits the sample rate to 1000 Hz for both
-  // With the MPU9250, it is possible to get gyro sample rates of 32 kHz (!), 8 kHz, or 1 kHz
-
-  //DISABLED FOR NOW
-  /*writeByte(MPU9250_ADDRESS, CONFIG, 0x03);*/
-
+  
   // Set sample rate = gyroscope output rate/(1 + SMPLRT_DIV)
   writeByte(MPU9250_ADDRESS, SMPLRT_DIV, 0x00);  // Use a 200 Hz rate; a rate consistent with the filter update rate
   // determined inset in CONFIG above
-
-  // DISABLED FOR NOW
-  // Set gyroscope full scale range
-  // Range selects FS_SEL and AFS_SEL are 0 - 3, so 2-bit values are left-shifted into positions 4:3
-
-  /*uint8_t c = readByte(MPU9250_ADDRESS, GYRO_CONFIG); // get current GYRO_CONFIG register value*/
-
-  // c = c & ~0xE0; // Clear self-test bits [7:5]
-
-  /*c = c & ~0x02; // Clear Fchoice bits [1:0]
-    c = c & ~0x18; // Clear AFS bits [4:3]
-    c = c | Gscale << 3; // Set full scale range for the gyro*/
-
-  // c =| 0x00; // Set Fchoice for the gyro to 11 by writing its inverse to bits 1:0 of GYRO_CONFIG
-
-  /*writeByte(MPU9250_ADDRESS, GYRO_CONFIG, c ); // Write new GYRO_CONFIG value to register*/
 
   // Set accelerometer full-scale range configuration
   byte c = readByte(MPU9250_ADDRESS, ACCEL_CONFIG); // get current ACCEL_CONFIG register value
@@ -2351,212 +1791,6 @@ void initMPU9250()
   delay(100);
   Serial.print("MPU-9250 initialized successfully.\n\n\n");
 }
-
-// DEPRECATED
-/*void initBMX055()
-  {
-  // start with all sensors in default mode with all registers reset
-  writeByte(MPU9250_ADDRESS,  BMX055_ACC_BGW_SOFTRESET, 0xB6);  // reset accelerometer
-  delay(1000); // Wait for all registers to reset
-
-  // Configure accelerometer
-  writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_PMU_RANGE, Ascale & 0x0F); // Set accelerometer full range
-  writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_PMU_BW, ACCBW & 0x0F);     // Set accelerometer bandwidth
-  writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_D_HBW, 0x00);              // Use filtered data
-
-  // //   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_INT_EN_1, 0x10);           // Enable ACC data ready interrupt
-  // //   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_INT_OUT_CTRL, 0x04);       // Set interrupts push-pull, active high for INT1 and INT2
-  // //   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_INT_MAP_1, 0x02);        // Define INT1 (intACC1) as ACC data ready interrupt
-  // //   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_INT_MAP_1, 0x80);          // Define INT2 (intACC2) as ACC data ready interrupt
-
-  // //   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_BGW_SPI3_WDT, 0x06);       // Set watchdog timer for 50 ms
-
-  // // Configure Gyro
-  // // start by resetting gyro, better not since it ends up in sleep mode?!
-  // // writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_BGW_SOFTRESET, 0xB6); // reset gyro
-  // // delay(100);
-  // // Three power modes, 0x00 Normal,
-  // // set bit 7 to 1 for suspend mode, set bit 5 to 1 for deep suspend mode
-  // // sleep duration in fast-power up from suspend mode is set by bits 1 - 3
-  // // 000 for 2 ms, 111 for 20 ms, etc.
-  // //  writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_LPM1, 0x00);  // set GYRO normal mode
-  // //  set GYRO sleep duration for fast power-up mode to 20 ms, for duty cycle of 50%
-  // //  writeByte(BMX055_ACC_ADDRESS, BMX055_GYRO_LPM1, 0x0E);
-  // // set bit 7 to 1 for fast-power-up mode,  gyro goes quickly to normal mode upon wake up
-  // // can set external wake-up interrupts on bits 5 and 4
-  // // auto-sleep wake duration set in bits 2-0, 001 4 ms, 111 40 ms
-  // //  writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_LPM2, 0x00);  // set GYRO normal mode
-  // // set gyro to fast wake up mode, will sleep for 20 ms then run normally for 20 ms
-  // // and collect data for an effective ODR of 50 Hz, other duty cycles are possible but there
-  // // is a minimum wake duration determined by the bandwidth duration, e.g.,  > 10 ms for 23Hz gyro bandwidth
-  // //  writeByte(BMX055_ACC_ADDRESS, BMX055_GYRO_LPM2, 0x87);
-
-  // writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_RANGE, Gscale);  // set GYRO FS range
-  // writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_BW, GODRBW);     // set GYRO ODR and Bandwidth
-
-  // // writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_INT_EN_0, 0x80);  // enable data ready interrupt
-  // // writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_INT_EN_1, 0x04);  // select push-pull, active high interrupts
-  // // writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_INT_MAP_1, 0x80); // select INT3 (intGYRO1) as GYRO data ready interrupt
-
-  // // writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_BGW_SPI3_WDT, 0x06); // Enable watchdog timer for I2C with 50 ms window
-
-
-  // // Configure magnetometer
-  // writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_PWR_CNTL1, 0x82);  // Softreset magnetometer, ends up in sleep mode
-  // delay(100);
-  // writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_PWR_CNTL1, 0x01); // Wake up magnetometer
-  // delay(100);
-
-  // writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_PWR_CNTL2, MODR << 3); // Normal mode
-  // //writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_PWR_CNTL2, MODR << 3 | 0x02); // Forced mode
-
-  // //writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_INT_EN_2, 0x84); // Enable data ready pin interrupt, active high
-
-  // // Set up four standard configurations for the magnetometer
-  // switch (Mmode)
-  // {
-  //   case lowPower:
-  //     // Low-power
-  //     writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_XY, 0x01);  // 3 repetitions (oversampling)
-  //     writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_Z,  0x02);  // 3 repetitions (oversampling)
-  //     break;
-  //   case Regular:
-  //     // Regular
-  //     writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_XY, 0x04);  //  9 repetitions (oversampling)
-  //     writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_Z,  0x16);  // 15 repetitions (oversampling)
-  //     break;
-  //   case enhancedRegular:
-  //     // Enhanced Regular
-  //     writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_XY, 0x07);  // 15 repetitions (oversampling)
-  //     writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_Z,  0x22);  // 27 repetitions (oversampling)
-  //     break;
-  //   case highAccuracy:
-  //     // High Accuracy
-  //     writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_XY, 0x17);  // 47 repetitions (oversampling)
-  //     writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_Z,  0x51);  // 83 repetitions (oversampling)
-  //     break;
-  // }
-  }*/
-
-//DEPRECATED
-/*void fastcompaccelBMX055(float * dest1)
-  {
-  writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_OFC_CTRL, 0x80); // set all accel offset compensation registers to zero
-  writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_OFC_SETTING, 0x20);  // set offset targets to 0, 0, and +1 g for x, y, z axes
-  writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_OFC_CTRL, 0x20); // calculate x-axis offset
-
-  byte c = readByte(BMX055_ACC_ADDRESS, BMX055_ACC_OFC_CTRL);
-  while (!(c & 0x10)) {  // check if fast calibration complete
-    c = readByte(BMX055_ACC_ADDRESS, BMX055_ACC_OFC_CTRL);
-    delay(10);
-  }
-  writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_OFC_CTRL, 0x40); // calculate y-axis offset
-
-  c = readByte(BMX055_ACC_ADDRESS, BMX055_ACC_OFC_CTRL);
-  while (!(c & 0x10)) {  // check if fast calibration complete
-    c = readByte(BMX055_ACC_ADDRESS, BMX055_ACC_OFC_CTRL);
-    delay(10);
-  }
-  writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_OFC_CTRL, 0x60); // calculate z-axis offset
-
-  c = readByte(BMX055_ACC_ADDRESS, BMX055_ACC_OFC_CTRL);
-  while (!(c & 0x10)) {  // check if fast calibration complete
-    c = readByte(BMX055_ACC_ADDRESS, BMX055_ACC_OFC_CTRL);
-    delay(10);
-  }
-
-  int8_t compx = readByte(BMX055_ACC_ADDRESS, BMX055_ACC_OFC_OFFSET_X);
-  int8_t compy = readByte(BMX055_ACC_ADDRESS, BMX055_ACC_OFC_OFFSET_Y);
-  int8_t compz = readByte(BMX055_ACC_ADDRESS, BMX055_ACC_OFC_OFFSET_Z);
-
-  dest1[0] = (float) compx / 128.; // accleration bias in g
-  dest1[1] = (float) compy / 128.; // accleration bias in g
-  dest1[2] = (float) compz / 128.; // accleration bias in g
-  }*/
-
-
-// I2C communication with the M24512DFM EEPROM is a little different from I2C communication with the usual motion sensor
-// since the address is defined by two bytes
-
-
-// I2C communication with the MS5637 is a little different from that with the MPU9250 and most other sensors
-// For the MS5637, we write commands, and the MS5637 sends data in response, rather than directly reading
-// MS5637 registers
-
-//void MS5637Reset()
-//{
-//  Wire.beginTransmission(MS5637_ADDRESS);  // Initialize the Tx buffer
-//  Wire.write(MS5637_RESET);                // Put reset command in Tx buffer
-//  Wire.endTransmission();                  // Send the Tx buffer
-//}
-
-//void MS5637PromRead(uint16_t * destination)
-//{
-//  uint8_t data[2] = {0, 0};
-//  for (uint8_t ii = 0; ii < 7; ii++) {
-//    Wire.beginTransmission(MS5637_ADDRESS);  // Initialize the Tx buffer
-//    Wire.write(0xA0 | ii << 1);              // Put PROM address in Tx buffer
-//    Wire.endTransmission(I2C_NOSTOP);        // Send the Tx buffer, but send a restart to keep connection alive
-//    uint8_t i = 0;
-//    Wire.requestFrom(MS5637_ADDRESS, 2);   // Read two bytes from slave PROM address
-//    while (Wire.available()) {
-//      data[i++] = Wire.read();
-//    }               // Put read results in the Rx buffer
-//    destination[ii] = (uint16_t) (((uint16_t) data[0] << 8) | data[1]); // construct PROM data for return to main program
-//  }
-//}
-
-//uint32_t MS5637Read(uint8_t CMD, uint8_t OSR)  // temperature data read
-//{
-//  uint8_t data[3] = {0, 0, 0};
-//  Wire.beginTransmission(MS5637_ADDRESS);  // Initialize the Tx buffer
-//  Wire.write(CMD | OSR);                  // Put pressure conversion command in Tx buffer
-//  Wire.endTransmission(I2C_NOSTOP);        // Send the Tx buffer, but send a restart to keep connection alive
-//
-//  switch (OSR)
-//  {
-//    case ADC_256: delay(1); break;  // delay for conversion to complete
-//    case ADC_512: delay(3); break;
-//    case ADC_1024: delay(4); break;
-//    case ADC_2048: delay(6); break;
-//    case ADC_4096: delay(10); break;
-//    case ADC_8192: delay(20); break;
-//  }
-//
-//  Wire.beginTransmission(MS5637_ADDRESS);  // Initialize the Tx buffer
-//  Wire.write(0x00);                        // Put ADC read command in Tx buffer
-//  Wire.endTransmission(I2C_NOSTOP);        // Send the Tx buffer, but send a restart to keep connection alive
-//  uint8_t i = 0;
-//  Wire.requestFrom(MS5637_ADDRESS, 3);     // Read three bytes from slave PROM address
-//  while (Wire.available()) {
-//    data[i++] = Wire.read();
-//  }               // Put read results in the Rx buffer
-//  return (uint32_t) (((uint32_t) data[0] << 16) | (uint32_t) data[1] << 8 | data[2]); // construct PROM data for return to main program
-//}
-
-
-
-//unsigned char MS5637checkCRC(uint16_t * n_prom)  // calculate checksum from PROM register contents
-//{
-//  int cnt;
-//  unsigned int n_rem = 0;
-//  unsigned char n_bit;
-//
-//  n_prom[0] = ((n_prom[0]) & 0x0FFF);  // replace CRC byte by 0 for checksum calculation
-//  n_prom[7] = 0;
-//  for (cnt = 0; cnt < 16; cnt++)
-//  {
-//    if (cnt % 2 == 1) n_rem ^= (unsigned short) ((n_prom[cnt >> 1]) & 0x00FF);
-//    else         n_rem ^= (unsigned short)  (n_prom[cnt >> 1] >> 8);
-//    for (n_bit = 8; n_bit > 0; n_bit--)
-//    {
-//      if (n_rem & 0x8000)    n_rem = (n_rem << 1) ^ 0x3000;
-//      else                  n_rem = (n_rem << 1);
-//    }
-//  }
-//  n_rem = ((n_rem >> 12) & 0x000F);
-//  return (n_rem ^ 0x00);
-//}
 
 // simple function to scan for I2C devices on the bus
 void I2Cscan()
