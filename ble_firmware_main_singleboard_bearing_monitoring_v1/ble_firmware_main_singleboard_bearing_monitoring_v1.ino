@@ -44,6 +44,7 @@ char rec_axis = 'X';  // To send data for record function
 const uint8_t NUM_FEATURES = 6;    // Total number of features
 const uint8_t NUM_TD_FEATURES = 2; // Total number of frequency domain features
 int chosen_features = 0;// ZAB: To send data over BLE
+bool recordmode = false;
 
 //ZAB: Function Declaration for features
 float feature_energy(); // Index 0
@@ -63,8 +64,8 @@ FeatureFuncPtr features[NUM_FEATURES] = {feature_energy,
                                         };
 
 // NOTE: DO NOT CHANGE THIS UNLESS YOU KNOW WHAT YOU'RE DOING
-const uint16_t MAX_INTERVAL_ACCEL = 512;
-const uint16_t MAX_INTERVAL_AUDIO = 4096;
+const uint16_t MAX_INTERVAL_ACCEL = 256;
+const uint16_t MAX_INTERVAL_AUDIO = 2048;
 
 // Byte representing which features are enabled. Feature index 0 is enabled by default.
 byte enabledFeatures[(NUM_FEATURES - 1) / 8 + 1] = {B11111100};
@@ -134,7 +135,7 @@ float u_x = 0, u_y = 0, u_z = 0;
 float audio_batch[2][MAX_INTERVAL_AUDIO];
 
 // RFFT Variables
-const uint16_t ACCEL_NFFT = 512;
+const uint16_t ACCEL_NFFT = MAX_INTERVAL_ACCEL;
 const uint16_t AUDIO_NFFT = 2048;
 
 const uint8_t ACCEL_RESCALE = 8;
@@ -243,7 +244,7 @@ int datareceptiontimeout = 2000;
 int blue = 0;
 boolean sleepmode = false;
 int bluemillisnow = 0;
-int bluesleeplimit = 60000;
+int bluesleeplimit = 5000;
 int bluetimerstart = 0;
 
 /*==============================================================================
@@ -270,28 +271,31 @@ void show_record_fft(char rec_axis)
 {
   BLEport.print("REC,");
   BLEport.print(MAC_ADDRESS);
-  if(rec_axis == 'X')
+  if (rec_axis == 'X')
   {
     BLEport.print(",X");
-    for (int i = 0; i < 512; i++) {
+    for (int i = 0; i < MAX_INTERVAL_ACCEL; i++) {
       BLEport.print(",");
       BLEport.print(accel_x_batch[buffer_compute_index][i]);
-    }
-  }        
-  else if(rec_axis == 'Y')
-  {
-    BLEport.print(",Y");
-    for (int i = 0; i < 512; i++) {
-      BLEport.print(",");
-      BLEport.print(accel_y_batch[buffer_compute_index][i]);
+      BLEport.flush();
     }
   }
-  else if(rec_axis == 'Z')
+  else if (rec_axis == 'Y')
+  {
+    BLEport.print(",Y");
+    for (int i = 0; i < MAX_INTERVAL_ACCEL; i++) {
+      BLEport.print(",");
+      BLEport.print(accel_y_batch[buffer_compute_index][i]);
+      BLEport.flush();
+    }
+  }
+  else if (rec_axis == 'Z')
   {
     BLEport.print(",Z");
-    for (int i = 0; i < 512; i++) {
+    for (int i = 0; i < MAX_INTERVAL_ACCEL; i++) {
       BLEport.print(",");
       BLEport.print(accel_z_batch[buffer_compute_index][i]);
+      BLEport.flush();
     }
   }
   BLEport.print(";");
@@ -302,15 +306,23 @@ void show_record_fft(char rec_axis)
 void send_features_to_BLE(uint8_t level)
 {
   BLEport.print(MAC_ADDRESS);
-  if(level == 0)
-  { BLEport.print(",00,"); }
-  else if(level == 1)
-  { BLEport.print(",01,"); }
-  else if(level == 2)
-  { BLEport.print(",02,"); }
-  else if(level == 3)
-  { BLEport.print(",03,"); }
-  
+  if (level == 0)
+  {
+    BLEport.print(",00,");
+  }
+  else if (level == 1)
+  {
+    BLEport.print(",01,");
+  }
+  else if (level == 2)
+  {
+    BLEport.print(",02,");
+  }
+  else if (level == 3)
+  {
+    BLEport.print(",03,");
+  }
+
   BLEport.print(bat);
   for (int i = 0; i < chosen_features; i++) {
     BLEport.print(",");
@@ -331,24 +343,24 @@ void compute_features() {
   record_feature_now[buffer_compute_index] = false;
   highest_danger_level = 0;
 
-//  for (int i = 0; i < NUM_TD_FEATURES; i++) 
-//  {
-//    // Compute time domain feature only when corresponding bit is turned on.
-//    feature_value[i] = features[i]();
-//    if(i == 0)
-//    {
-//    current_danger_level = threshold_feature(i, feature_value[i]);
-//    
-//    // TODO: Variable is separated for possible feature value output.
-//    //       AKA, when danger level is 2, output feature index, etc.
-//    highest_danger_level = max(highest_danger_level, current_danger_level);
-//    }
-//  }
+  //  for (int i = 0; i < NUM_TD_FEATURES; i++)
+  //  {
+  //    // Compute time domain feature only when corresponding bit is turned on.
+  //    feature_value[i] = features[i]();
+  //    if(i == 0)
+  //    {
+  //    current_danger_level = threshold_feature(i, feature_value[i]);
+  //
+  //    // TODO: Variable is separated for possible feature value output.
+  //    //       AKA, when danger level is 2, output feature index, etc.
+  //    highest_danger_level = max(highest_danger_level, current_danger_level);
+  //    }
+  //  }
   //ZAB: Temporary
   feature_value[0] = feature_energy();
   current_danger_level = threshold_feature(0, feature_value[0]);
   highest_danger_level = max(highest_danger_level, current_danger_level);
-    
+
   feature_value[1] = velocityX();
   feature_value[2] = velocityY();
   feature_value[3] = velocityZ();
@@ -357,78 +369,79 @@ void compute_features() {
 
   // Reflect highest danger level if differs from previous state.
   LEDColors c;
-  switch (highest_danger_level) 
-  {
-    case 0: //IDLE BLUE
-      if (sleepmode) {
-        // Do nothing
-      }
-      else {
-        if (currState != NOT_CUTTING || datasendtime) {
-          currState = NOT_CUTTING;
-          send_features_to_BLE(0);
+  if (!recordmode) {
+    switch (highest_danger_level)
+    {
+      case 0: //IDLE BLUE
+        if (sleepmode) {
+          // Do nothing
         }
-      }
-      //Sleep mode check start!
-      if (blue == 0 && ~sleepmode) {
-        bluetimerstart = millis();
-        blue = 1;
-      }
-      if (blue == 1) {
-        bluemillisnow = millis();
-        if (bluemillisnow - bluetimerstart >= bluesleeplimit) { //sleep mode
-          sleepmode = true;
-          blue = 0;
+        else {
+          if (currState != NOT_CUTTING || datasendtime) {
+            currState = NOT_CUTTING;
+            send_features_to_BLE(0);
+          }
         }
-      }
-      //Sleep mode check end
-      if (sleepmode) {
-        c = SLEEP_MODE;
-      }
-      else {
-        c = BLUE_NOOP;
-      }
-      changeStatusLED(c);
-      datasendtime = false;
-      break;
-      
-    case 1: //GREEN 
-      if (currState != NORMAL_CUTTING || datasendtime) {
-        currState = NORMAL_CUTTING;
-        send_features_to_BLE(1);
-      }
-      c = GREEN_OK;
-      changeStatusLED(c);
-      datasendtime = false;
-      blue = 0;
-      sleepmode = false;
-      break;
-      
-    case 2:
-      if (currState != WARNING_CUTTING || datasendtime) {
-        currState = WARNING_CUTTING;
-        send_features_to_BLE(2);
-      }
-      c = ORANGE_WARNING;
-      changeStatusLED(c);
-      datasendtime = false;
-      blue = 0;
-      sleepmode = false;
-      break;
-      
-    case 3:
-      if (currState != BAD_CUTTING || datasendtime) {
-        currState = BAD_CUTTING;
-        send_features_to_BLE(3);
-      }
-      c = RED_BAD;
-      changeStatusLED(c);
-      datasendtime = false;
-      blue = 0;
-      sleepmode = false;
-      break;
-  }
+        //Sleep mode check start!
+        if (blue == 0 && ~sleepmode) {
+          bluetimerstart = millis();
+          blue = 1;
+        }
+        if (blue == 1) {
+          bluemillisnow = millis();
+          if (bluemillisnow - bluetimerstart >= bluesleeplimit) { //sleep mode
+            sleepmode = true;
+            blue = 0;
+          }
+        }
+        //Sleep mode check end
+        if (sleepmode) {
+          c = SLEEP_MODE;
+        }
+        else {
+          c = BLUE_NOOP;
+        }
+        changeStatusLED(c);
+        datasendtime = false;
+        break;
 
+      case 1: //GREEN
+        if (currState != NORMAL_CUTTING || datasendtime) {
+          currState = NORMAL_CUTTING;
+          send_features_to_BLE(1);
+        }
+        c = GREEN_OK;
+        changeStatusLED(c);
+        datasendtime = false;
+        blue = 0;
+        sleepmode = false;
+        break;
+
+      case 2:
+        if (currState != WARNING_CUTTING || datasendtime) {
+          currState = WARNING_CUTTING;
+          send_features_to_BLE(2);
+        }
+        c = ORANGE_WARNING;
+        changeStatusLED(c);
+        datasendtime = false;
+        blue = 0;
+        sleepmode = false;
+        break;
+
+      case 3:
+        if (currState != BAD_CUTTING || datasendtime) {
+          currState = BAD_CUTTING;
+          send_features_to_BLE(3);
+        }
+        c = RED_BAD;
+        changeStatusLED(c);
+        datasendtime = false;
+        blue = 0;
+        sleepmode = false;
+        break;
+    }
+  }
   // Allow recording for old index buffer.
   record_feature_now[buffer_compute_index] = true;
   // Flip computation index AFTER all computations are done.
@@ -450,8 +463,8 @@ void calc_accelBias()
 {
   int16_t i = 0;
   int16_t sample_lim = 500; // Offset for first500 samples
-  
-  for(i = 0; i < sample_lim; i++)  
+
+  for (i = 0; i < sample_lim; i++)
   {
     readAccelData(accelCount);
     accelBias[0] += (float) accelCount[0];
@@ -486,12 +499,12 @@ float feature_energy() {
   float ave_x = 0, ave_y = 0, ave_z = 0, ene = 0;
 
   // Calculate average
-  arm_mean_f32(&accel_x_batch[buffer_compute_index][0], 512, &ave_x);
-  arm_mean_f32(&accel_y_batch[buffer_compute_index][0], 512, &ave_y);
-  arm_mean_f32(&accel_z_batch[buffer_compute_index][0], 512, &ave_z);
+  arm_mean_f32(&accel_x_batch[buffer_compute_index][0], MAX_INTERVAL_ACCEL, &ave_x);
+  arm_mean_f32(&accel_y_batch[buffer_compute_index][0], MAX_INTERVAL_ACCEL, &ave_y);
+  arm_mean_f32(&accel_z_batch[buffer_compute_index][0], MAX_INTERVAL_ACCEL, &ave_z);
 
   // Calculate energy.
-  for (int i = 0; i < 512; i++) {
+  for (int i = 0; i < MAX_INTERVAL_ACCEL; i++) {
     ene += sq(accel_x_batch[buffer_compute_index][i] - ave_x)
            +  sq(accel_y_batch[buffer_compute_index][i] - ave_y)
            +  sq(accel_z_batch[buffer_compute_index][i] - ave_z);
@@ -504,7 +517,7 @@ float velocityX()      // Index 1
 {
   float v_x = 0.0;
   int16_t j = 0;
-  for(j = 0; j < MAX_INTERVAL_ACCEL; j++)
+  for (j = 0; j < MAX_INTERVAL_ACCEL; j++)
   {
     v_x += sq(accel_x_batch[buffer_compute_index][j] * 0.001);
   }
@@ -512,14 +525,14 @@ float velocityX()      // Index 1
 
   v_x = sqrt(v_x);  //RMS Value
   v_x *= 1000000; // Upscaling the velocity
-  
+
   return v_x;
 }
 float velocityY()      // Index 2
 {
   float v_y = 0.0;
   int16_t j = 0;
-  for(j = 0; j < MAX_INTERVAL_ACCEL; j++)
+  for (j = 0; j < MAX_INTERVAL_ACCEL; j++)
   {
     v_y += sq(accel_y_batch[buffer_compute_index][j] * 0.001);
   }
@@ -527,14 +540,14 @@ float velocityY()      // Index 2
 
   v_y = sqrt(v_y);  //RMS Value
   v_y *= 1000000; // Upscaling the velocity
-  
+
   return v_y;
 }
 float velocityZ()      // Index 3
 {
   float v_z = 0.0;
   int16_t j = 0;
-  for(j = 0; j < MAX_INTERVAL_ACCEL; j++)
+  for (j = 0; j < MAX_INTERVAL_ACCEL; j++)
   {
     v_z += sq(accel_z_batch[buffer_compute_index][j] * 0.001);
   }
@@ -542,7 +555,7 @@ float velocityZ()      // Index 3
 
   v_z = sqrt(v_z);  //RMS Value
   v_z *= 1000000; // Upscaling the velocity
-  
+
   return v_z;
 }
 
@@ -556,7 +569,7 @@ float currentTemparature() // Index 4
     temperature_ticks = false;
   }
   return temperature;
-}  
+}
 float audioDB()        // Index 5
 {
   float aud_db = 0.0;
@@ -585,7 +598,7 @@ unsigned char audio_buffer[bufferSize];
 void i2s_rx_callback( int32_t *pBuf )
 {
   //Serial.println("Audio Interrupt");
-  
+
   if (currMode == RUN)
   {
     // If feature computation is lagging behind, reset all sampling routine and
@@ -597,7 +610,7 @@ void i2s_rx_callback( int32_t *pBuf )
       //Serial.print("Returning on other\n");
       return;
     }
-     // Filled out the current buffer; switch buffer index
+    // Filled out the current buffer; switch buffer index
     if (audioSamplingCount == featureBatchSize)
     {
       subsample_counter = 0;
@@ -605,7 +618,7 @@ void i2s_rx_callback( int32_t *pBuf )
       audioSamplingCount = 0;
       accelSamplingCount = 0;
       restCount = 0;
-   
+
       record_feature_now[buffer_record_index] = false;
       compute_feature_now[buffer_record_index] = true;
       buffer_record_index = buffer_record_index == 0 ? 1 : 0;
@@ -653,7 +666,7 @@ void i2s_rx_callback( int32_t *pBuf )
         accel_z_batch[buffer_record_index][accelSamplingCount] = ((float)accelCount[2] - accelBias[2]) / 16384.0 * 9.8;
 
         //Serial.println(accel_x_batch[buffer_record_index][accelSamplingCount]);
-        
+
         accelSamplingCount ++;
 
         accel_counter = 0;
@@ -704,11 +717,11 @@ void setup()
   // Setup for Master mode, pins 18/19, external pullups, 400kHz for Teensy 3.1
   Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_EXT, I2C_RATE_400);
   delay(5);//ZAB: delay(1000);
-  
+
   // Serial Initialization for Data Collection mode
   Serial.begin(115200);
   delay(5);
-  
+
   //Acoustic sensor initialization
   I2Cscan(); // should detect SENtral at 0x28
   // Set up the SENtral as sensor bus in normal operating mode
@@ -730,7 +743,7 @@ void setup()
     getAres();  //Ascale = AFS_2G
     delay(50);
     calc_accelBias();
-   // Serial.printf("ax: %f, ay: %f, az: %f\n", accelBias[0], accelBias[1], accelBias[2]);
+    // Serial.printf("ax: %f, ay: %f, az: %f\n", accelBias[0], accelBias[1], accelBias[2]);
   }
   else
   {
@@ -754,7 +767,7 @@ void setup()
   // start the I2S RX
   I2SRx0.start();
   if (!silent) Serial.println( "Started I2S RX" );
-  
+
   //For Battery Monitoring//
   analogReference(EXTERNAL);
   analogReadResolution(12);
@@ -762,7 +775,7 @@ void setup()
   bat = getInputVoltage();
 
   //ZAB: No need of this
-  
+
   // Calculate feature size and which ones are selected
   for (int i = 0; i < NUM_FEATURES; i++) {
     // Consider only when corresponding bit is turned on.
@@ -864,9 +877,18 @@ void loop()
       else if (bleBuffer[0] == '3')      // Record button pressed - go into record mode to record FFTs
       {
         Serial.println("Record button Pressed!");
+        recordmode = true;
+        delay(1);
         show_record_fft('X');
+        BLEport.flush();
+        delay(1);
         show_record_fft('Y');
+        BLEport.flush();
+        delay(1);
         show_record_fft('Z');
+        BLEport.flush();
+        delay(1);
+        recordmode = false;
       }
       else if (bleBuffer[0] == '4')      // Stop button pressed - go out of record mode back into RUN mode
       {
@@ -900,8 +922,8 @@ void loop()
         resetSampling(false);
         currMode = DATA_COLLECTION;
       }
-    } 
-    
+    }
+
     if (currMode == DATA_COLLECTION) {
       Serial.println(wireBuffer);
       // Arange changed
@@ -1096,7 +1118,7 @@ float signed24ToFloat(byte* input_ptr) {
 }
 
 // Function to estimate memory availability programmatically.
-  uint32_t FreeRam() {
+uint32_t FreeRam() {
   uint32_t stackTop;
   uint32_t heapTop;
 
@@ -1234,7 +1256,7 @@ void initMPU9250()
 
   // disable gyroscope
   writeByte(MPU9250_ADDRESS, PWR_MGMT_2, 0x07);
-  
+
   // Set sample rate = gyroscope output rate/(1 + SMPLRT_DIV)
   writeByte(MPU9250_ADDRESS, SMPLRT_DIV, 0x00);  // Use a 200 Hz rate; a rate consistent with the filter update rate
   // determined inset in CONFIG above
