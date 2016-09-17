@@ -1000,7 +1000,7 @@ void loop()
 
   if (currMode == RUN)
   {
-    while (BLEport.available() > 0)
+    while (BLEport.available() > 0 && bleBufferIndex < 19)
     {
       bleBuffer[bleBufferIndex] = BLEport.read();
       bleBufferIndex++;

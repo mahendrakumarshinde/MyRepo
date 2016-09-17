@@ -1342,7 +1342,7 @@ void loop()
   /* ----------- Two-way Communication via BLE, only on RUN mode. ----------- */
 
   if (currMode == RUN) {
-    while (BLEport.available() > 0) {
+    while (BLEport.available() > 0 && bleBufferIndex < 19) {
       bleBuffer[bleBufferIndex] = BLEport.read();
       bleBufferIndex++;
 
