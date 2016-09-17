@@ -22,7 +22,7 @@
 
 #define CLOCK_TYPE         (I2S_CLOCK_48K_INTERNAL)     // I2S clock
 bool statusLED = true;                                  // Status LED ON/OFF
-String MAC_ADDRESS = "88:4A:EA:69:DE:A0";
+String MAC_ADDRESS = "88:4A:EA:69:39:37";
 // Reduce RUN frequency if needed.
 const uint16_t AUDIO_FREQ_RUN = 8000;
 const uint16_t AUDIO_FREQ_DATA = 8000;
@@ -46,13 +46,11 @@ uint32_t accel_counter = 0;
 // NOTE: Intervals are checked based on AUDIO, not ACCEL. Read vibration energy
 //       code to understand the sampling mechanism.
 
-// Vbiration Energy
-const uint32_t ENERGY_INTERVAL_ACCEL = 64; //128
-const uint32_t ENERGY_INTERVAL_AUDIO = ENERGY_INTERVAL_ACCEL * RUN_ACCEL_AUDIO_RATIO;
+// Vibration Energy
+const uint32_t ENERGY_INTERVAL_ACCEL = 128; //All data in buffer
 
 // Mean Crossing Rate
-const uint32_t MCR_INTERVAL_ACCEL = 128;
-const uint32_t MCR_INTERVAL_AUDIO = MCR_INTERVAL_ACCEL * RUN_ACCEL_AUDIO_RATIO;
+const uint32_t MCR_INTERVAL_ACCEL = 64; //All data in buffer
 
 // FREQUENCY DOMAIN FEATURES
 // NOTE: Most of these variables are for accessing calculation results.
@@ -141,28 +139,22 @@ bool accelFDCompute = true;
 // more states.
 float featureNormalThreshold[NUM_FEATURES] = {30,
                                               100,
-                                              //10000,
                                               2000,
                                               2000,
-                                              //10000,
                                               200,
                                               500
                                              };
 float featureWarningThreshold[NUM_FEATURES] = {600,
                                                150,
-                                               //10000,
                                                3000,
                                                3000,
-                                               //10000,
                                                205,
                                                1000
                                               };
 float featureDangerThreshold[NUM_FEATURES] = {1200,
                                               200,
-                                              //100000,
                                               4000,
                                               4000,
-                                              //100000,
                                               210,
                                               1500
                                              };
@@ -907,7 +899,7 @@ float feature_energy () {
            +  sq(compBuffer[ENERGY_INTERVAL_ACCEL + i] - ave_y)
            +  sq(compBuffer[zind + i] - ave_z);
   }
-  ene *= ENERGY_INTERVAL_ACCEL;
+  ene *= ENERGY_INTERVAL_ACCEL; //Necessary?
 
   return ene;
 }
@@ -1218,10 +1210,10 @@ void setup()
   //  TWBR = 12;  // 400 kbit/sec I2C speed for Pro Mini
   // Setup for Master mode, pins 18/19, external pullups, 400kHz for Teensy 3.1
   Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_EXT, I2C_RATE_400);
-  delay(1000);
+  delay(10);
 
   Serial.begin(115200);
-  delay(1000);
+  delay(10);
 
   I2Cscan(); // should detect SENtral at 0x28
 
@@ -1257,7 +1249,7 @@ void setup()
   }
 
   // << nothing before the first delay will be printed to the serial
-  delay(1500);
+  delay(15);
 
   if (!silent) {
     Serial.print("Pin configuration setting: ");
@@ -1274,7 +1266,7 @@ void setup()
   // I2STx0.begin( CLOCK_TYPE, i2s_tx_callback );
   // Serial.println( "Initialized I2S TX without DMA" );
 
-  delay(5000);
+  delay(50);
   // start the I2S RX
   I2SRx0.start();
   //I2STx0.start();
