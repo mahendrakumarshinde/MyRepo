@@ -32,7 +32,7 @@ const String END_CONFIRM = "IUOK_END";
 
 #define CLOCK_TYPE         (I2S_CLOCK_48K_INTERNAL)     // I2S clock
 bool statusLED = true;                                  // Status LED ON/OFF
-String MAC_ADDRESS = "88:4A:EA:69:DE:A0";
+String MAC_ADDRESS = "88:4A:EA:69:E2:C3";
 uint16_t TARGET_AUDIO_SAMPLE = AUDIO_FREQ;          // Audio frequency
 uint16_t TARGET_ACCEL_SAMPLE = 1000;              // Accel frequency
 
@@ -87,23 +87,23 @@ bool accelFDCompute = true;
 // Array of thresholds; add new array and change code accordingly if you want
 // more states.
 float featureNormalThreshold[NUM_FEATURES] = {30,
-                                              100,
-                                              2000,
-                                              2000,
+                                              0.05,
+                                              0.05,
+                                              0.05,
                                               200,
                                               500
                                              };
 float featureWarningThreshold[NUM_FEATURES] = {600,
-                                               150,
-                                               3000,
-                                               3000,
+                                               1.2,
+                                               1.2,
+                                               1.2,
                                                205,
                                                1000
                                               };
 float featureDangerThreshold[NUM_FEATURES] = {1200,
-                                              200,
-                                              4000,
-                                              4000,
+                                              1.8,
+                                              1.8,
+                                              1.8,
                                               210,
                                               1500
                                              };
@@ -309,7 +309,7 @@ void show_record_fft(char rec_axis)
     BLEport.print(",X");
     for (int i = 0; i < MAX_INTERVAL_ACCEL; i++) {
       BLEport.print(",");
-      BLEport.print(accel_x_batch[buffer_compute_index][i]);
+      BLEport.print(LSB_to_ms2(accel_x_batch[buffer_compute_index][i]));
       BLEport.flush();
     }
   }
@@ -319,7 +319,7 @@ void show_record_fft(char rec_axis)
     for (int i = 0; i < MAX_INTERVAL_ACCEL; i++) {
       BLEport.print(",");
       //BLEport.print(accel_y_batch[buffer_compute_index][i]);
-      BLEport.print(accel_y_batch[buffer_compute_index][i]);
+      BLEport.print(LSB_to_ms2(accel_y_batch[buffer_compute_index][i]));
       BLEport.flush();
     }
   }
@@ -328,7 +328,7 @@ void show_record_fft(char rec_axis)
     BLEport.print(",Z");
     for (int i = 0; i < MAX_INTERVAL_ACCEL; i++) {
       BLEport.print(",");
-      BLEport.print(accel_z_batch[buffer_compute_index][i]);
+      BLEport.print(LSB_to_ms2(accel_z_batch[buffer_compute_index][i]));
       BLEport.flush();
     }
   }
@@ -393,11 +393,21 @@ void compute_features() {
   //ZAB: Temporary
   feature_value[0] = feature_energy();
   current_danger_level = threshold_feature(0, feature_value[0]);
+  Serial.print("Signal energy to threshold: ");Serial.print(feature_value[0]);Serial.print(" and thresholds are: ");Serial.println(featureNormalThreshold[0]);
   highest_danger_level = max(highest_danger_level, current_danger_level);
 
   feature_value[1] = velocityX();
+    current_danger_level = threshold_feature(1, feature_value[1]);
+  highest_danger_level = max(highest_danger_level, current_danger_level);
+  
   feature_value[2] = velocityY();
+    current_danger_level = threshold_feature(2, feature_value[2]);
+  highest_danger_level = max(highest_danger_level, current_danger_level);
+  
   feature_value[3] = velocityZ();
+    current_danger_level = threshold_feature(3, feature_value[3]);
+  highest_danger_level = max(highest_danger_level, current_danger_level);
+  
   feature_value[4] = currentTemparature();
   feature_value[5] = audioDB();
   
@@ -801,9 +811,9 @@ void i2s_rx_callback( int32_t *pBuf )
     {
       readAccelData(accelCount);
 
-      ax = (float)accelCount[0] * aRes + accelBias[0];
-      ay = (float)accelCount[1] * aRes + accelBias[1];
-      az = (float)accelCount[2] * aRes + accelBias[2];
+      ax = (float)accelCount[0] - accelBias[0];
+      ay = (float)accelCount[1] - accelBias[1];
+      az = (float)accelCount[2] - accelBias[2];
 
       byte* axb = (byte *) &ax;
       byte* ayb = (byte *) &ay;
@@ -1008,17 +1018,27 @@ void loop()
     if (bleBufferIndex > 18)
     {
       //int args_assigned = 0;
-      //Serial.println(bleBuffer);
+      Serial.println(bleBuffer);
       if (bleBuffer[0] == '0')
       {
         int newThres = 0, newThres2 = 0, newThres3 = 0;
-        //args_assigned = 
+        float newerThres = 0, newerThres2 = 0, newerThres3 = 0;
         sscanf(bleBuffer, "%d-%d-%d-%d", &bleFeatureIndex, &newThres, &newThres2, &newThres3);
+        if (bleFeatureIndex == 1 || bleFeatureIndex == 2 || bleFeatureIndex == 3){
+          newerThres = (float)newThres/(float)100;
+          newerThres2 = (float)newThres2/(float)100;
+          newerThres3 = (float)newThres3/(float)100;
+        }else{
+          newerThres = (float)newThres;
+          newerThres2 = (float)newThres2;
+          newerThres3 = (float)newThres3;
+        }
+        
         didThresChange = true;
         bleBufferIndex = 0;
-        featureNormalThreshold[bleFeatureIndex] = newThres;
-        featureWarningThreshold[bleFeatureIndex] = newThres2;
-        featureDangerThreshold[bleFeatureIndex] = newThres3;
+        featureNormalThreshold[bleFeatureIndex] = newerThres;
+        featureWarningThreshold[bleFeatureIndex] = newerThres2;
+        featureDangerThreshold[bleFeatureIndex] = newerThres3;
       }
       else if (bleBuffer[0] == '1')      // receive the timestamp data from the hub
       {

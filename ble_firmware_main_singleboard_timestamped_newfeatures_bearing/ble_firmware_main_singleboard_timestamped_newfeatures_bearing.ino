@@ -313,6 +313,8 @@ int bluemillisnow = 0;
 int bluesleeplimit = 60000;
 int bluetimerstart = 0;
 
+bool recordmode = false;
+
 /*==============================================================================
   ====================== Feature Computation Caller ============================
   ==============================================================================*/
@@ -361,6 +363,7 @@ void compute_features() {
   }
   // Reflect highest danger level if differs from previous state.
   LEDColors c;
+  if (!recordmode){
   switch (highest_danger_level) {
     case 0:
       if (sleepmode) {
@@ -482,6 +485,7 @@ void compute_features() {
       blue = 0;
       sleepmode = false;
       break;
+  }
   }
 
   // Allow recording for old index buffer.
@@ -995,23 +999,25 @@ void calculate_spectral_flatness(int axis) {
   float* buff = (float*) rfft_accel_buffer;
 
   float flatness = 0;
-  float sp_flatness_fake = 0;
-
-  for (int i = 50; i < 100; i++) {
-    sp_flatness_fake += sq(buff[i]);
+  int max_index = 0;
+  for (int i=2; i<1024; i++){
+    if(buff[i]>flatness){
+      flatness=buff[i];
+      max_index = i;
+    }
   }
-  sp_flatness_fake = sp_flatness_fake * float(1000000); //if it needs to be scaled!
-  flatness = sp_flatness_fake;
 
   switch (axis) {
-    case 0: sp_flat_x = flatness; break;
-    case 1: sp_flat_y = flatness; break;
-    case 2: sp_flat_z = flatness; break;
+    case 0: sp_flat_x = max_index; Serial.print("the frequency in X is: "); Serial.println(max_index); break;
+    case 1: sp_flat_y = max_index; Serial.print("the frequency in Y is: "); Serial.println(max_index); break;
+    case 2: sp_flat_z = max_index; Serial.print("the frequency in Z is: "); Serial.println(max_index); break;
   }
 }
 
 float feature_spectral_flatness() {
-  return (float) sqrt(sq(sp_flat_x) + sq(sp_flat_y) + sq(sp_flat_z));
+  float flatness_result = (sp_flat_x + sp_flat_y + sp_flat_z)/3;
+  Serial.print("the frequency is: "); Serial.println(flatness_result);
+  return flatness_result;
 }
 
 // Spectral Spread ACCEL, index 4
@@ -1384,6 +1390,18 @@ void loop()
         // Record button pressed - go into record mode to record FFTs
         if (bleBuffer[0] == '3') {
           Serial.print("Time to record data and send FFTs");
+        recordmode = true;
+        delay(1);
+        show_record_fft('X');
+        BLEport.flush();
+        delay(1);
+        show_record_fft('Y');
+        BLEport.flush();
+        delay(1);
+        show_record_fft('Z');
+        BLEport.flush();
+        delay(1);
+        recordmode = false;
         }
 
         // Stop button pressed - go out of record mode back into RUN mode
@@ -1870,4 +1888,44 @@ void readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_t * des
   while (Wire.available()) {
     dest[i++] = Wire.read();
   }         // Put read results in the Rx buffer
+}
+
+void show_record_fft(char rec_axis)
+{
+  BLEport.print("REC,");
+  BLEport.print(MAC_ADDRESS);
+  if (rec_axis == 'X')
+  {
+    BLEport.print(",X");
+    for (int i = 0; i < MAX_INTERVAL_ACCEL; i++) {
+      BLEport.print(",");
+      BLEport.print(LSB_to_ms2(accel_x_batch[buffer_compute_index][i]));
+      BLEport.flush();
+    }
+  }
+  else if (rec_axis == 'Y')
+  {
+    BLEport.print(",Y");
+    for (int i = 0; i < MAX_INTERVAL_ACCEL; i++) {
+      BLEport.print(",");
+      BLEport.print(LSB_to_ms2(accel_y_batch[buffer_compute_index][i]));
+      BLEport.flush();
+    }
+  }
+  else if (rec_axis == 'Z')
+  {
+    BLEport.print(",Z");
+    for (int i = 0; i < MAX_INTERVAL_ACCEL; i++) {
+      BLEport.print(",");
+      BLEport.print(LSB_to_ms2(accel_z_batch[buffer_compute_index][i]));
+      BLEport.flush();
+    }
+  }
+  BLEport.print(";");
+  BLEport.flush();
+}
+
+float LSB_to_ms2(int16_t accelLSB)
+{
+  return ((float)accelLSB / 16384.0 * 9.8);
 }
