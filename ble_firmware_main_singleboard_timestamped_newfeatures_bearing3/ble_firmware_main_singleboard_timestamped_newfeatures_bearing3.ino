@@ -1,13 +1,20 @@
 /*
   Infinite Uptime BLE Module Firmware
+
+  TIME DOMAIN FEATURES
+  NOTE: Intervals are checked based on AUDIO, not ACCEL. Read vibration energy
+  code to understand the sampling mechanism.
+
+  FREQUENCY DOMAIN FEATURES
+  NOTE: Most of these variables are for accessing calculation results.
+  Read any of frequency domain feature calculation flow to understand.
+
 */
 
-//#include "Wire.h"
 #include <i2c_t3.h>
 #include <SPI.h>
 
-/* I2S digital audio */
-#include <i2s.h>
+#include <i2s.h>  /* I2S digital audio */
 
 /* CMSIS-DSP library for RFFT */
 #define ARM_MATH_CM4
@@ -16,157 +23,69 @@
 /* Register addresses and hamming window presets  */
 #include "constants.h"
 
-//==============================================================================
 //====================== Module Configuration Variables ========================
-//==============================================================================
-
 #define CLOCK_TYPE         (I2S_CLOCK_48K_INTERNAL)     // I2S clock
 bool statusLED = true;                                  // Status LED ON/OFF
 String MAC_ADDRESS = "88:4A:EA:69:E2:3C";
-// Reduce RUN frequency if needed.
-const uint16_t AUDIO_FREQ_RUN = 8000;
-const uint16_t AUDIO_FREQ_DATA = 8000;
 
-uint16_t TARGET_AUDIO_SAMPLE = AUDIO_FREQ_RUN;          // Audio frequency
-uint16_t TARGET_ACCEL_SAMPLE = 1000;              // Accel frequency
-const uint32_t RESTING_INTERVAL = 0;                    // Inter-batch gap
+// Reduce RUN frequency if needed.
+const uint16_t AUDIO_FREQ = 8000;     // Audio frequency set to 8000 Hz
+const uint16_t ACCEL_FREQ = 1000;     // Accel frequency set to 1000 Hz
+const uint32_t RESTING_INTERVAL = 0;  // Inter-batch gap
+const uint16_t RUN_ACCEL_AUDIO_RATIO = AUDIO_FREQ / ACCEL_FREQ;
+// Vibration Energy
+const uint32_t ENERGY_INTERVAL_ACCEL = 128; //All data in buffer
+// Mean Crossing Rate
+const uint32_t MCR_INTERVAL_ACCEL = 64; //All data in buffer
+
+const uint8_t NUM_FEATURES = 6;    // Total number of features
+const uint8_t NUM_TD_FEATURES = 2; // Total number of frequency domain features
+const uint16_t MAX_INTERVAL_ACCEL = 512;  //Number of Acceleration readings per cycle
+const uint16_t MAX_INTERVAL_AUDIO = 4096; //Number of Audio readings per cycle
+const byte audioFDFeatures[(NUM_FEATURES - 1) / 8 + 1] = {B00000100}; // Audio feature enabling variable
+const byte accelFDFeatures[(NUM_FEATURES - 1) / 8 + 1] = {B00111000}; // Accel feature enabling variable
+// RFFT Variables
+const uint16_t ACCEL_NFFT = 512;
+const uint16_t AUDIO_NFFT = 2048;
+
+const uint8_t ACCEL_RESCALE = 8;
+const uint8_t AUDIO_RESCALE = 10;
+// Modes of Operation String Constants
+const String START_COLLECTION = "IUCMD_START";
+const String START_CONFIRM = "IUOK_START";
+const String END_COLLECTION = "IUCMD_END";
+const String END_CONFIRM = "IUOK_END";
+
+// Pin definitions
+const int chargerCHG  = 2;   // CHG pin to detect charging status
+const int greenPin = 27;
+const int redPin = 29;
+const int bluePin = 28;
+//=============================================================================
+uint16_t TARGET_AUDIO_SAMPLE = AUDIO_FREQ;          // Audio frequency
+uint16_t TARGET_ACCEL_SAMPLE = ACCEL_FREQ;          // Accel frequency
 
 // NOTE: Do NOT change the following variables unless you know what you're doing
-const uint16_t RUN_ACCEL_AUDIO_RATIO = AUDIO_FREQ_RUN / TARGET_ACCEL_SAMPLE;
 uint16_t ACCEL_COUNTER_TARGET = TARGET_AUDIO_SAMPLE / TARGET_ACCEL_SAMPLE;
 uint32_t DOWNSAMPLE_MAX = 48000 / TARGET_AUDIO_SAMPLE;
 uint32_t subsample_counter = 0;
 uint32_t accel_counter = 0;
 
-//==============================================================================
 //====================== Feature Computation Variables =========================
-//==============================================================================
-
-// TIME DOMAIN FEATURES
-// NOTE: Intervals are checked based on AUDIO, not ACCEL. Read vibration energy
-//       code to understand the sampling mechanism.
-
-// Vibration Energy
-const uint32_t ENERGY_INTERVAL_ACCEL = 128; //All data in buffer
-
-// Mean Crossing Rate
-const uint32_t MCR_INTERVAL_ACCEL = 64; //All data in buffer
-
-// FREQUENCY DOMAIN FEATURES
-// NOTE: Most of these variables are for accessing calculation results.
-//       Read any of frequency domain feature calculation flow to understand.
-
-// Spectral Centroid
-double sp_cent_x = 0;
-double sp_cent_y = 0;
-double sp_cent_z = 0;
-
-// Spectral Flatness
-double sp_flat_x = 0;
-double sp_flat_y = 0;
-double sp_flat_z = 0;
+// FFT frequency detection indexes
 int max_index_X = 0;
 int max_index_Y = 0;
 int max_index_Z = 0;
 
-// Spectral Spread ACCEL
-double sp_spread_x = 0;
-double sp_spread_y = 0;
-double sp_spread_z = 0;
-
-// Spectral Spread AUDIO
-float sp_spread_aud = 0;
-
-/*
-  By default, only energy feature is turned on.
-
-  0: Signal Energy
-  1: Mean Crossing Rate
-  2: Spectral Centroid
-  3: Spectral Flatness
-  4: Accel Spectral Spread
-  5: Audio Spectral Spread
-*/
-
-const uint8_t NUM_FEATURES = 6;    // Total number of features
-const uint8_t NUM_TD_FEATURES = 2; // Total number of frequency domain features
 int chosen_features = 0;
-
-float feature_energy();
-float feature_mcr();
-float feature_spectral_centroid();
-float feature_spectral_flatness();
-float feature_spectral_spread_accel();
-float feature_spectral_spread_audio();
-void calculate_spectral_centroid(int axis);
-void calculate_spectral_flatness(int axis);
-void calculate_spectral_spread_accel(int axis);
-void calculate_spectral_spread_audio(int axis);
-
-float velocityX();
-float velocityY();
-float velocityZ();
-float currentTemperature();
-float audioDB();
-
-typedef float (* FeatureFuncPtr) (); // this is a typedef to feature functions
-FeatureFuncPtr features[NUM_FEATURES] = {feature_energy,
-                                         velocityX, //feature_mcr,
-                                         velocityY, //feature_spectral_centroid,
-                                         velocityZ, //feature_spectral_flatness,
-                                         currentTemperature,
-                                         audioDB
-                                        };
-
-typedef void (* FeatureCalcPtr) (int); // this is a typedef to FD calculation functions
-FeatureCalcPtr calc_features[NUM_FEATURES] = {NULL,
-                                              NULL,
-                                              calculate_spectral_centroid,
-                                              calculate_spectral_flatness,
-                                              calculate_spectral_spread_accel,
-                                              calculate_spectral_spread_audio
-                                             };
-
-// NOTE: DO NOT CHANGE THIS UNLESS YOU KNOW WHAT YOU'RE DOING
-const uint16_t MAX_INTERVAL_ACCEL = 512;
-const uint16_t MAX_INTERVAL_AUDIO = 4096;
 
 // Byte representing which features are enabled. Feature index 0 is enabled by default.
 byte enabledFeatures[(NUM_FEATURES - 1) / 8 + 1] = {B11111100};
 int FeatureID[NUM_FEATURES];
-
-// These should only change when list of features are changed.
-const byte audioFDFeatures[(NUM_FEATURES - 1) / 8 + 1] = {B00000100};
-const byte accelFDFeatures[(NUM_FEATURES - 1) / 8 + 1] = {B00111000};
-
 // NOTE: By default, FD features are turned off. Turn these on if you want to
 //       force FD computation for debugging.
 bool audioFDCompute = true;
 bool accelFDCompute = true;
-
-// Array of thresholds; add new array and change code accordingly if you want
-// more states.
-float featureNormalThreshold[NUM_FEATURES] = {30,
-                                              0.05,
-                                              0.05,
-                                              0.05,
-                                              200,
-                                              500
-                                             };
-float featureWarningThreshold[NUM_FEATURES] = {600,
-                                               1.2,
-                                               1.2,
-                                               1.2,
-                                               205,
-                                               1000
-                                              };
-float featureDangerThreshold[NUM_FEATURES] = {1200,
-                                              1.8,
-                                              1.8,
-                                              1.8,
-                                              210,
-                                              1500
-                                             };
 
 // NOTE: These variables are responsible for "buffer-switching" mechanism.
 //       Change these only if you know what you're doing.
@@ -174,7 +93,6 @@ bool compute_feature_now[2] = {false, false};
 bool record_feature_now[2] = {true, true};
 uint8_t buffer_compute_index = 0;
 uint8_t buffer_record_index = 0;
-
 // TODO: Fix the default value to ENERGY_INTERVAL_AUDIO after computation results
 //       are verified. This variable will determine the sampling batch size
 //       and should change according to which features are enabled currently.
@@ -199,12 +117,6 @@ q15_t accel_z_buff[MAX_INTERVAL_ACCEL];
 // Audio Buffers
 q15_t audio_batch[2][MAX_INTERVAL_AUDIO];
 
-// RFFT Variables
-const uint16_t ACCEL_NFFT = 512;
-const uint16_t AUDIO_NFFT = 2048;
-
-const uint8_t ACCEL_RESCALE = 8;
-const uint8_t AUDIO_RESCALE = 10;
 
 // RFFT Output and Magnitude Buffers
 q15_t rfft_audio_buffer [AUDIO_NFFT * 2];
@@ -217,18 +129,10 @@ arm_cfft_radix4_instance_q15 audio_cfft_instance;
 arm_rfft_instance_q15 accel_rfft_instance;
 arm_cfft_radix4_instance_q15 accel_cfft_instance;
 
-//==============================================================================
 //============================ Internal Variables ==============================
-//==============================================================================
-
-
 // Specify sensor full scale
 uint8_t Ascale = AFS_2G;           // set accel full scale
 uint8_t ACCBW  = 0x08 & ABW_1000Hz;  // Choose bandwidth for accelerometer
-
-// Pin definitions
-int myLed       = 13;  // LED on the Teensy 3.1/3.2
-int chargerCHG  = 2;   // CHG pin to detect charging status
 
 // MPU9250 variables
 int16_t accelCount[3];  // Stores the 16-bit signed accelerometer sensor output
@@ -240,45 +144,9 @@ float aRes; //resolution of accelerometer
 // Keep this as passThru to minimize latency in between accelerometer samples
 bool passThru = true;
 
-// Operation mode enum
-enum OpMode {
-  RUN              = 0,
-  CHARGING         = 1,
-  DATA_COLLECTION  = 2
-};
 
 OpMode currMode = RUN;
-
-// Modes of Operation String Constants
-const String START_COLLECTION = "IUCMD_START";
-const String START_CONFIRM = "IUOK_START";
-const String END_COLLECTION = "IUCMD_END";
-const String END_CONFIRM = "IUOK_END";
-
-// Operation state enum
-enum OpState {
-  NOT_CUTTING     = 0,
-  NORMAL_CUTTING  = 1,
-  WARNING_CUTTING = 2,
-  BAD_CUTTING     = 3
-};
-
 OpState currState = NOT_CUTTING;
-
-// LED color code enum
-enum LEDColors {
-  RED_BAD         , // L H H
-  BLUE_NOOP       , // H H L
-  GREEN_OK        , // H L H
-  ORANGE_WARNING  , // L L H
-  PURPLE_CHARGE   , // L H L
-  CYAN_DATA       , // H L L
-  WHITE_NONE      , // L L L
-  SLEEP_MODE        // H H H
-};
-
-// Explicit function declaration for enum argument
-void changeStatusLED(LEDColors color);
 
 boolean silent = false;
 
@@ -290,12 +158,9 @@ char characterRead; // Holder variable for newline check
 char bleBuffer[19] = "abcdefghijklmnopqr";
 uint8_t bleBufferIndex = 0;
 int bleFeatureIndex = 0;
-int newThres = 0;
-int newThres2 = 0;
-int newThres3 = 0;
+
 boolean didThresChange = false;
-int args_assigned = 0;
-int args_assigned2 = 0;
+
 boolean rubbish = false;
 int date = 0;
 int dateset = 0;
@@ -305,7 +170,7 @@ int dateyear1 = 0;
 int parametertag = 0;
 
 //Battery state
-int bat = 100;
+int bat = 100;  // Battery status
 
 //Regular data transmit variables
 boolean datasendtime = false;
@@ -339,32 +204,107 @@ uint16_t dig_T1, dig_P1;
 int16_t  dig_T2, dig_T3, dig_P2, dig_P3, dig_P4, dig_P5, dig_P6, dig_P7, dig_P8, dig_P9;
 double BMP280Temperature, BMP280Pressure; // stores MS5637 pressures sensor pressure and temperature
 
+// Array of thresholds; add new array and change code accordingly if you want
+// more states.
+float featureNormalThreshold[NUM_FEATURES] = {30,   // Feature Energy
+                                              0.05, // Velocity X
+                                              0.05, // Velocity Y
+                                              0.05, // Velocity Z
+                                              200,  // Temperature
+                                              500   // AudioDB
+                                             };
+float featureWarningThreshold[NUM_FEATURES] = {600, // Feature Energy
+                                               1.2, // Velocity X
+                                               1.2, // Velocity Y
+                                               1.2, // Velocity Z
+                                               205, // Temperature
+                                               1000 // AudioDB
+                                              };
+float featureDangerThreshold[NUM_FEATURES] = {1200, // Feature Energy
+                                              1.8,  // Velocity X
+                                              1.8,  // Velocity Y
+                                              1.8,  // Velocity Z
+                                              210,  // Temperature
+                                              1500  // AudioDB
+                                             };
 
+//------------------------ Function Declaration --------------------------
+float feature_energy();
+float velocityX();
+float velocityY();
+float velocityZ();
+float currentTemperature();
+float audioDB();
+// Explicit function declaration for enum argument
+void changeStatusLED(LEDColors color);
+
+typedef float (* FeatureFuncPtr) (); // this is a typedef to feature functions
+FeatureFuncPtr features[NUM_FEATURES] = {feature_energy,
+                                         velocityX,
+                                         velocityY,
+                                         velocityZ,
+                                         currentTemperature,
+                                         audioDB
+                                        };
+
+//============================ Error Handling =================================
+byte i2c_read_error;
+bool readFlag = true;
 /*==============================================================================
   ====================== Feature Computation Caller ============================
   ==============================================================================*/
 
+void show_record_fft(char rec_axis)
+{
+  BLEport.print("REC,");
+  BLEport.print(MAC_ADDRESS);
+  if (rec_axis == 'X')
+  {
+    BLEport.print(",X");
+    for (int i = 0; i < MAX_INTERVAL_ACCEL; i++) {
+      BLEport.print(",");
+      BLEport.print(LSB_to_ms2(accel_x_batch[buffer_compute_index][i]));
+      BLEport.flush();
+    }
+  }
+  else if (rec_axis == 'Y')
+  {
+    BLEport.print(",Y");
+    for (int i = 0; i < MAX_INTERVAL_ACCEL; i++) {
+      BLEport.print(",");
+      BLEport.print(LSB_to_ms2(accel_y_batch[buffer_compute_index][i]));
+      BLEport.flush();
+    }
+  }
+  else if (rec_axis == 'Z')
+  {
+    BLEport.print(",Z");
+    for (int i = 0; i < MAX_INTERVAL_ACCEL; i++) {
+      BLEport.print(",");
+      BLEport.print(LSB_to_ms2(accel_z_batch[buffer_compute_index][i]));
+      BLEport.flush();
+    }
+  }
+  BLEport.print(";");
+  BLEport.flush();
+}
+
+float LSB_to_ms2(int16_t accelLSB)
+{
+  return ((float)accelLSB * aRes * 9.8);
+}
+
 float currentTemperature() // Index 4
 {
- // if (temperature_ticks) //Update temperature every (30 x 0.5 secs)
+  int32_t rawTemp = readBMP280Temperature();
+  //    Serial.print("Raw_Data: ");
+  //    Serial.println(rawTemp);
+  if(i2c_read_error == 0x00)
   {
-//    int16_t tempCount = 0;
-//    //Serial.println(accel_x_batch[0][0]);
-//    tempCount = readTempData();  // Read the adc values
-//    temperature = ((float) tempCount) / tempSensitivity + 21.0; // Temperature in degrees Centigrade
-//    temperature_ticks = false;
-  
-//  int32_t rawPress;
-//  rawPress =  readBMP280Pressure();
-//  BMP280Pressure = (float) bmp280_compensate_P(rawPress)/25600.; // Prwssure in mbar
-  
-    int32_t rawTemp = readBMP280Temperature();
-//    Serial.print("Raw_Data: ");
-//    Serial.println(rawTemp);
-    BMP280Temperature = (float) bmp280_compensate_T(rawTemp)/100.;
-//    Serial.print("Fin_Data: ");
-//    Serial.println(BMP280Temperature);
+    BMP280Temperature = (float) bmp280_compensate_T(rawTemp) / 100.;
   }
+  //    Serial.print("Fin_Data: ");
+  //    Serial.println(BMP280Temperature);
   return BMP280Temperature;
 }
 
@@ -373,51 +313,52 @@ void compute_features() {
   compute_feature_now[buffer_compute_index] = false;
   record_feature_now[buffer_compute_index] = false;
   highest_danger_level = 0;
-
-  //  for (int i = 0; i < NUM_TD_FEATURES; i++) {
-  //    // Compute time domain feature only when corresponding bit is turned on.
-  //    if ((enabledFeatures[i / 8] << (i % 8)) & B10000000) {
-  //      feature_value[i] = features[i]();
-  //      current_danger_level = threshold_feature(i, feature_value[i]);
-  //      // TODO: Variable is separated for possible feature value output.
-  //      //       AKA, when danger level is 2, output feature index, etc.
-  //      highest_danger_level = max(highest_danger_level, current_danger_level);
-  //    }
-  //  }
-  //
-  //  if (audioFDCompute) {
-  //    audio_rfft();
-  //    for (int i = NUM_TD_FEATURES; i < NUM_FEATURES; i++) {
-  //      // Compute audio frequency domain feature only when the feature IS audio FD
-  //      // And the bit is turned on for enabledFeatures.
-  //      if ((enabledFeatures[i / 8] << (i % 8)) & (audioFDFeatures[i / 8] << (i % 8)) & B10000000) {
-  //        feature_value[i] = features[i]();
-  //        current_danger_level = threshold_feature(i, feature_value[i]);
-  //        // TODO: Variable is separated for possible feature value output.
-  //        //       AKA, when danger level is 2, output feature index, etc.
-  //        //highest_danger_level = max(highest_danger_level, current_danger_level); //UNCOMMENT
-  //      }
-  //    }
-  //  }
-  //  if (accelFDCompute) {
-  //    accel_rfft();
-  //    for (int i = NUM_TD_FEATURES; i < NUM_FEATURES; i++) {
-  //      // Compute accel frequency domain feature only when the feature IS accel FD
-  //      // And the bit is turned on for enabledFeatures.
-  //      if ((enabledFeatures[i / 8] << (i % 8)) & (accelFDFeatures[i / 8] << (i % 8)) & B10000000) {
-  //        feature_value[i] = features[i]();
-  //        current_danger_level = threshold_feature(i, feature_value[i]);
-  //        //highest_danger_level = max(highest_danger_level, current_danger_level); //UNCOMMENT
-  //      }
-  //    }
-  //  }
-
+/*
+    for (int i = 0; i < NUM_TD_FEATURES; i++) {
+      // Compute time domain feature only when corresponding bit is turned on.
+      if ((enabledFeatures[i / 8] << (i % 8)) & B10000000) {
+        feature_value[i] = features[i]();
+        current_danger_level = threshold_feature(i, feature_value[i]);
+        // TODO: Variable is separated for possible feature value output.
+        //       AKA, when danger level is 2, output feature index, etc.
+        highest_danger_level = max(highest_danger_level, current_danger_level);
+      }
+    }
+  
+    if (audioFDCompute) {
+      audio_rfft();
+      for (int i = NUM_TD_FEATURES; i < NUM_FEATURES; i++) {
+        // Compute audio frequency domain feature only when the feature IS audio FD
+        // And the bit is turned on for enabledFeatures.
+        if ((enabledFeatures[i / 8] << (i % 8)) & (audioFDFeatures[i / 8] << (i % 8)) & B10000000) {
+          feature_value[i] = features[i]();
+          current_danger_level = threshold_feature(i, feature_value[i]);
+          // TODO: Variable is separated for possible feature value output.
+          //       AKA, when danger level is 2, output feature index, etc.
+          //highest_danger_level = max(highest_danger_level, current_danger_level); //UNCOMMENT
+        }
+      }
+    }
+    if (accelFDCompute) {
+      accel_rfft();
+      for (int i = NUM_TD_FEATURES; i < NUM_FEATURES; i++) {
+        // Compute accel frequency domain feature only when the feature IS accel FD
+        // And the bit is turned on for enabledFeatures.
+        if ((enabledFeatures[i / 8] << (i % 8)) & (accelFDFeatures[i / 8] << (i % 8)) & B10000000) {
+          feature_value[i] = features[i]();
+          current_danger_level = threshold_feature(i, feature_value[i]);
+          //highest_danger_level = max(highest_danger_level, current_danger_level); //UNCOMMENT
+        }
+      }
+    }
+*/
+  
   feature_value[0] = feature_energy();
   current_danger_level = threshold_feature(0, feature_value[0]);
   highest_danger_level = max(highest_danger_level, current_danger_level);
-  
+
   accel_rfft();
-  
+
   feature_value[1] = velocityX();
   current_danger_level = threshold_feature(1, feature_value[1]);
   highest_danger_level = max(highest_danger_level, current_danger_level);
@@ -433,7 +374,7 @@ void compute_features() {
   feature_value[4] = currentTemperature();
   feature_value[5] = audioDB();
 
-  
+
   // Reflect highest danger level if differs from previous state.
   LEDColors c;
   if (!recordmode) {
@@ -571,25 +512,20 @@ void compute_features() {
 // Thresholding helper function to reduce code redundancy
 uint8_t threshold_feature(int index, float featureVal) {
   if (featureVal < featureNormalThreshold[index]) {
-    // level 0: not cutting
-    return 0;
+    return 0; // level 0: not cutting
   }
   else if (featureVal < featureWarningThreshold[index]) {
-    // level 1: normal cutting
-    return 1;
+    return 1; // level 1: normal cutting
   }
   else if (featureVal < featureDangerThreshold[index]) {
-    // level 2: warning cutting
-    return 2;
+    return 2;  // level 2: warning cutting
   }
   else {
-    // level 3: bad cutting
-    return 3;
+    return 3;  // level 3: bad cutting
   }
 }
 
 // Single instance of RFFT calculation on audio data.
-// ORIGINAL TIME SERIES DATA WILL BE MODIFIED! CALCULATE TIME DOMAIN FEATURES FIRST
 void audio_rfft() {
   // Apply Hamming window in-place
   arm_mult_q15(audio_batch[buffer_compute_index],
@@ -656,13 +592,6 @@ void audio_rfft() {
                 &((float*)rfft_audio_buffer)[1],
                 magsize_2048 - 2);
 
-  for (int i = NUM_TD_FEATURES; i < NUM_FEATURES; i++) {
-    // Update audio frequency domain feature variables only when the feature IS
-    // audio FD and the bit is turned on for enabledFeatures.
-    if ((enabledFeatures[i / 8] << (i % 8)) & (audioFDFeatures[i / 8] << (i % 8)) & B10000000) {
-      calc_features[i](0);
-    }
-  }
 
   // Second FFT, 2048 to 4095
   arm_rfft_init_q15(&audio_rfft_instance,
@@ -714,23 +643,10 @@ void audio_rfft() {
                 2.0,
                 &((float*)rfft_audio_buffer)[1],
                 magsize_2048 - 2);
-
-  for (int i = NUM_TD_FEATURES; i < NUM_FEATURES; i++) {
-    // Update audio frequency domain feature variables only when the feature IS
-    // audio FD and the bit is turned on for enabledFeatures.
-    if ((enabledFeatures[i / 8] << (i % 8)) & (audioFDFeatures[i / 8] << (i % 8)) & B10000000) {
-      calc_features[i](0);
-    }
-  }
 }
 
 // Single instance of RFFT calculation on accel data.
-// ORIGINAL TIME SERIES DATA WILL BE MODIFIED! CALCULATE TIME DOMAIN FEATURES FIRST
 void accel_rfft() {
-  // TODO: Figure out a way to update every frequency domain feature for accel
-  // without using multiple buffers
-  // NOTE: Internally update all frequency domain variables
-
   // Apply Hamming window in-place
   arm_mult_q15(accel_x_batch[buffer_compute_index],
                hamming_window_512,
@@ -757,60 +673,12 @@ void accel_rfft() {
                rfft_accel_buffer);
 
   float flatness_x = 0;
-  
+
   for (int ind_x = 2; ind_x < 512; ind_x++) {
     //Serial.printf("rfft: %f, flat: %f\n", rfft_accel_buffer[ind_x], flatness_x);
     if (rfft_accel_buffer[ind_x] > flatness_x) {
       flatness_x = rfft_accel_buffer[ind_x];
       max_index_X = ind_x;
-    }
-  }
-/*
-//  Serial.print("rfft_x_ind:");
-//  Serial.println(max_index_X);
-//  arm_shift_q15(rfft_accel_buffer,
-//                ACCEL_RESCALE,
-//                rfft_accel_buffer,
-//                ACCEL_NFFT * 2);
-
-  // NOTE: OUTPUT FORMAT IS IN 2.14
-  //  arm_cmplx_mag_q15(rfft_accel_buffer,
-  //                    accel_x_batch[buffer_compute_index],
-  //                    ACCEL_NFFT);
-  //
-  //  arm_q15_to_float(accel_x_batch[buffer_compute_index],
-  //                   (float*)rfft_accel_buffer,
-  //                   magsize_512);
-
-  // Div by K
-  //  arm_scale_f32((float*)rfft_accel_buffer,
-  //                hamming_K_512,
-  //                (float*)rfft_accel_buffer,
-  //                magsize_512);
-
-  // Div by wlen
-  //  arm_scale_f32((float*)rfft_accel_buffer,
-  //                inverse_wlen_512,
-  //                (float*)rfft_accel_buffer,
-  //                magsize_512);
-
-  // Fix 2.14 format from cmplx_mag
-  //  arm_scale_f32((float*)rfft_accel_buffer,
-  //                2.0,
-  //                (float*)rfft_accel_buffer,
-  //                magsize_512);
-
-  // Correction of the DC & Nyquist component, including Nyquist point.
-//  arm_scale_f32(&((float*)rfft_accel_buffer)[1],
-//                2.0,
-//                &((float*)rfft_accel_buffer)[1],
-//                magsize_512 - 2);
-*/
-  for (int i = NUM_TD_FEATURES; i < NUM_FEATURES; i++) {
-    // Update accel frequency domain feature variables only when the feature IS
-    // accel FD and the bit is turned on for enabledFeatures.
-    if ((enabledFeatures[i / 8] << (i % 8)) & (accelFDFeatures[i / 8] << (i % 8)) & B10000000) {
-      calc_features[i](0);
     }
   }
 
@@ -826,57 +694,11 @@ void accel_rfft() {
                rfft_accel_buffer);
 
   float flatness_y = 0;
-  
+
   for (int ind_y = 2; ind_y < 512; ind_y++) {
     if (rfft_accel_buffer[ind_y] > flatness_y) {
       flatness_y = rfft_accel_buffer[ind_y];
       max_index_Y = ind_y;
-    }
-  }
-
-  //  arm_shift_q15(rfft_accel_buffer,
-  //                ACCEL_RESCALE,
-  //                rfft_accel_buffer,
-  //                ACCEL_NFFT * 2);
-
-  // NOTE: OUTPUT FORMAT IS IN 2.14
-  //  arm_cmplx_mag_q15(rfft_accel_buffer,
-  //                    accel_y_batch[buffer_compute_index],
-  //                    ACCEL_NFFT);
-
-  //  arm_q15_to_float(accel_y_batch[buffer_compute_index],
-  //                   (float*)rfft_accel_buffer,
-  //                   magsize_512);
-
-  // Div by K
-  //  arm_scale_f32((float*)rfft_accel_buffer,
-  //                hamming_K_512,
-  //                (float*)rfft_accel_buffer,
-  //                magsize_512);
-
-  // Div by wlen
-  //  arm_scale_f32((float*)rfft_accel_buffer,
-  //                inverse_wlen_512,
-  //                (float*)rfft_accel_buffer,
-  //                magsize_512);
-
-  // Correction of the DC & Nyquist component, including Nyquist point.
-  //  arm_scale_f32(&((float*)rfft_accel_buffer)[1],
-  //                2.0,
-  //                &((float*)rfft_accel_buffer)[1],
-  //                magsize_512 - 2);
-
-  // Fix 2.14 format from cmplx_mag
-  //  arm_scale_f32((float*)rfft_accel_buffer,
-  //                2.0,
-  //                (float*)rfft_accel_buffer,
-  //                magsize_512);
-
-  for (int i = NUM_TD_FEATURES; i < NUM_FEATURES; i++) {
-    // Update accel frequency domain feature variables only when the feature IS
-    // accel FD and the bit is turned on for enabledFeatures.
-    if ((enabledFeatures[i / 8] << (i % 8)) & (accelFDFeatures[i / 8] << (i % 8)) & B10000000) {
-      calc_features[i](1);
     }
   }
 
@@ -892,78 +714,16 @@ void accel_rfft() {
                rfft_accel_buffer);
 
   float flatness_z = 0;
-  
+
   for (int ind_z = 2; ind_z < 512; ind_z++) {
     if (rfft_accel_buffer[ind_z] > flatness_z) {
       flatness_z = rfft_accel_buffer[ind_z];
       max_index_Z = ind_z;
     }
   }
-
-  //  Serial.println("RFFT in Z: ");
-  //  for (int i = 0; i < 512; i++) {
-  //
-  //    Serial.println(rfft_accel_buffer[i]);
-  //  }
-
-  //  arm_shift_q15(rfft_accel_buffer,
-  //                ACCEL_RESCALE,
-  //                rfft_accel_buffer,
-  //                ACCEL_NFFT * 2);
-
-  // NOTE: OUTPUT FORMAT IS IN 2.14
-  //  arm_cmplx_mag_q15(rfft_accel_buffer,
-  //                    accel_z_batch[buffer_compute_index],
-  //                    ACCEL_NFFT);
-
-  //  arm_q15_to_float(accel_z_batch[buffer_compute_index],
-  //                   (float*)rfft_accel_buffer,
-  //                   magsize_512);
-
-  // Div by K
-  //  arm_scale_f32((float*)rfft_accel_buffer,
-  //                hamming_K_512,
-  //                (float*)rfft_accel_buffer,
-  //                magsize_512);
-
-  // Div by wlen
-  //  arm_scale_f32((float*)rfft_accel_buffer,
-  //                inverse_wlen_512,
-  //                (float*)rfft_accel_buffer,
-  //                magsize_512);
-
-  // Fix 2.14 format from cmplx_mag
-  //  arm_scale_f32((float*)rfft_accel_buffer,
-  //                2.0,
-  //                (float*)rfft_accel_buffer,
-  //                magsize_512);
-
-  // Correction of the DC & Nyquist component, including Nyquist point.
-  //  arm_scale_f32(&((float*)rfft_accel_buffer)[1],
-  //                2.0,
-  //                &((float*)rfft_accel_buffer)[1],
-  //                magsize_512 - 2);
-
-
-  for (int i = NUM_TD_FEATURES; i < NUM_FEATURES; i++) {
-    // Update accel frequency domain feature variables only when the feature IS
-    // accel FD and the bit is turned on for enabledFeatures.
-    if ((enabledFeatures[i / 8] << (i % 8)) & (accelFDFeatures[i / 8] << (i % 8)) & B10000000) {
-      calc_features[i](2);
-    }
-  }
 }
 
-/*==============================================================================
-  ====================== Feature Computation Functions =========================
-
-  Every function should include:
-  (1) Feature calculation
-  (2) Feature value thresholding
-  (3) Return danger level according to the thresholds
-
-  You can assume that buffers are correctly populated as feature requires.
-  ==============================================================================*/
+/*====================== Feature Computation Functions =========================*/
 
 // TIME DOMAIN FEATURES
 
@@ -1019,182 +779,31 @@ float feature_energy () {
   return ene;
 }
 
-// Mean Crossing Rate ACCEL, index 1
-float feature_mcr () {
-  //TODO: Reduce redundant work; aka float conversion and bias application
-
-  // Take q15_t buffer as float buffer for computation
-  float* compBuffer = (float*)&rfft_accel_buffer;
-  // Reduce re-computation of variables
-  int zind = MCR_INTERVAL_ACCEL * 2;
-
-  // Copy from accel batches to compBuffer
-  arm_q15_to_float(&accel_x_batch[buffer_compute_index][featureBatchSize / ACCEL_COUNTER_TARGET - MCR_INTERVAL_ACCEL],
-                   compBuffer,
-                   MCR_INTERVAL_ACCEL);
-  arm_q15_to_float(&accel_y_batch[buffer_compute_index][featureBatchSize / ACCEL_COUNTER_TARGET - MCR_INTERVAL_ACCEL],
-                   &compBuffer[MCR_INTERVAL_ACCEL],
-                   MCR_INTERVAL_ACCEL);
-  arm_q15_to_float(&accel_z_batch[buffer_compute_index][featureBatchSize / ACCEL_COUNTER_TARGET - MCR_INTERVAL_ACCEL],
-                   &compBuffer[zind],
-                   MCR_INTERVAL_ACCEL);
-
-  // Scale all entries by aRes AND 2^15; the entries were NOT in q1.15 format.
-  arm_scale_f32(compBuffer, aRes * 32768, compBuffer, MCR_INTERVAL_ACCEL * 3);
-
-  // Apply accel biases
-  arm_offset_f32(compBuffer, accelBias[0], compBuffer, MCR_INTERVAL_ACCEL);
-  arm_offset_f32(&compBuffer[MCR_INTERVAL_ACCEL], accelBias[1], &compBuffer[MCR_INTERVAL_ACCEL], MCR_INTERVAL_ACCEL);
-  arm_offset_f32(&compBuffer[zind], accelBias[2], &compBuffer[zind], MCR_INTERVAL_ACCEL);
-
-  float max_r = 0;
-  float max_temp = 0;
-  float max_x = 0;
-  float max_y = 0;
-  float max_z = 0;
-  float min_x = 0;
-  float min_y = 0;
-  float min_z = 0;
-  uint32_t index = 0;
-
-  // Calculate average
-  arm_max_f32(compBuffer, 64, &max_x, &index);
-  arm_max_f32(&compBuffer[MCR_INTERVAL_ACCEL], 64, &max_y, &index);
-  arm_max_f32(&compBuffer[zind], 64, &max_z, &index);
-  arm_min_f32(compBuffer, 64, &min_x, &index);
-  arm_min_f32(&compBuffer[MCR_INTERVAL_ACCEL], 64, &min_y, &index);
-  arm_min_f32(&compBuffer[zind], 64, &min_z, &index);
-
-  min_x = abs(min_x); min_y = abs(min_y); min_y = abs(min_y);
-  max_x = abs(max_x); max_y = abs(max_y); max_y = abs(max_y);
-  max_x = max(max_x, min_x);
-  max_y = max(max_y, min_y);
-  max_z = max(max_z, min_z);
-
-  max_temp = max(max_x, max_y);
-  max_r = max(max_temp, max_z);
-  //Serial.print("max value = "); Serial.println(max_r);
-  return max_r * 100;
-}
-
-
-// FREQUENCY DOMAIN FEATURES
-
-// Spectral Centroid ACCEL, index 2
-void calculate_spectral_centroid(int axis) {
-  // TODO: Could use a LOT of CMSIS-DSP functions. Maybe optimize it later.
-  float* buff = (float*) rfft_accel_buffer;
-
-  float centroid = 0;
-  float sp_centroid_fake = 0;
-
-  for (int i = 0; i < 50; i++) {
-    sp_centroid_fake += sq(buff[i]);
-  }
-  sp_centroid_fake = sp_centroid_fake * float(1000000); //if it needs to be scaled!
-  centroid = sp_centroid_fake;
-
-  switch (axis) {
-    case 0: sp_cent_x = centroid; break;
-    case 1: sp_cent_y = centroid; break;
-    case 2: sp_cent_z = centroid; break;
-  }
-}
-
-float feature_spectral_centroid() {
-  return (float) sqrt(sq(sp_cent_x) + sq(sp_cent_y) + sq(sp_cent_z));
-}
-
-// Spectral Flatness ACCEL, index 3
-void calculate_spectral_flatness(int axis) {
-  //float* buff = (float*) rfft_accel_buffer;
-
-  switch (axis) {
-    case 0: sp_flat_x = max_index_X;// Serial.print("the frequency in X is: "); Serial.println(max_index_X*1000/1024); 
-            break;
-    case 1: sp_flat_y = max_index_Y;// Serial.print("the frequency in Y is: "); Serial.println(max_index_Y*1000/1024); 
-            break;
-    case 2: sp_flat_z = max_index_Z;// Serial.print("the frequency in Z is: "); Serial.println(max_index_Z*1000/1024); 
-            break;
-  }
-}
-
-float feature_spectral_flatness() {
-  float flatness_result = (sp_flat_x + sp_flat_y + sp_flat_z) / 3;
-//  Serial.print("the frequency is: "); Serial.println(flatness_result);
-  return flatness_result;
-}
-
-// Spectral Spread ACCEL, index 4
-void calculate_spectral_spread_accel(int axis) {
-  // TODO: Could use more CMSIS-DSP functions. Maybe optimize it later.
-  float* buff = (float*) rfft_accel_buffer;
-
-  float sp_spread_accel = 0;
-  float sp_spread_accel_fake = 0;
-
-  for (int i = 100; i < 240; i++) {
-    sp_spread_accel_fake += sq(buff[i]);
-  }
-  sp_spread_accel_fake = sp_spread_accel_fake * float(1000000); //if it needs to be scaled!
-  sp_spread_accel = sp_spread_accel_fake;
-
-  switch (axis) {
-    case 0: sp_spread_x = sp_spread_accel; break;
-    case 1: sp_spread_y = sp_spread_accel; break;
-    case 2: sp_spread_z = sp_spread_accel; break;
-  }
-}
-
-float feature_spectral_spread_accel() {
-  return (float) sqrt(sq(sp_spread_x) + sq(sp_spread_y) + sq(sp_spread_z)) / (float)100;
-}
-
-// Spectral Spread AUDIO, index 5
-void calculate_spectral_spread_audio(int axis) {
-  float* buff = (float*) rfft_audio_buffer;
-
-  sp_spread_aud = 0;
-  float sp_spread_aud_fake = 0;
-
-  for (int i = 0; i < 150; i++) {
-    sp_spread_aud_fake += sq(buff[i]);
-  }
-  sp_spread_aud_fake = sp_spread_aud_fake * float(1000000); //if it needs to be scaled!
-
-  sp_spread_aud = sp_spread_aud_fake;
-}
-
-float feature_spectral_spread_audio() {
-  //NOTE: Audio Spectral Spread has reversed thresholds; keep as negative values. //deprecated
-  return (float) sp_spread_aud;
-}
-
 float calcAccelRMSx()
 {
   float accelRMS = 0.0, accelAVG_2 = 0.0, accelAVG = 0.0;
-  for(int i = 0; i < MAX_INTERVAL_ACCEL; i++)
+  for (int i = 0; i < MAX_INTERVAL_ACCEL; i++)
   {
     accelAVG += (float)accel_x_batch[buffer_compute_index][i] * aRes * 9.8;
     accelAVG_2 += sq((float)accel_x_batch[buffer_compute_index][i] * aRes * 9.8);
   }
   float scaling_factor = 1 + 0.00266 * max_index_X + 0.000106 * sq(max_index_X);
-  accelRMS = scaling_factor * sqrt(accelAVG_2/MAX_INTERVAL_ACCEL - sq(accelAVG/MAX_INTERVAL_ACCEL));
-//    Serial.printf("Accel_RMS_X: %f\n",accelRMS);
+  accelRMS = scaling_factor * sqrt(accelAVG_2 / MAX_INTERVAL_ACCEL - sq(accelAVG / MAX_INTERVAL_ACCEL));
+  //    Serial.printf("Accel_RMS_X: %f\n",accelRMS);
   return accelRMS;
 }
 
 float velocityX()
 {
   float vel_rms_x = calcAccelRMSx() * 1000 / (2 * 3.14159 * max_index_X);
-//  Serial.printf("Vel_RMS_X: %f\n", vel_rms_x);
+  //  Serial.printf("Vel_RMS_X: %f\n", vel_rms_x);
   return vel_rms_x;
 }
 
 float calcAccelRMSy()
 {
   float accelRMS = 0.0, accelAVG_2 = 0.0, accelAVG = 0.0;
-  for(int i = 0; i < MAX_INTERVAL_ACCEL; i++)
+  for (int i = 0; i < MAX_INTERVAL_ACCEL; i++)
   {
     accelAVG += (float)accel_y_batch[buffer_compute_index][i] * aRes * 9.8;
     accelAVG_2 += sq((float)accel_y_batch[buffer_compute_index][i] * aRes * 9.8);
@@ -1223,7 +832,7 @@ float calcAccelRMSz()
   float scaling_factor = 1 + 0.00266 * max_index_Z + 0.000106 * sq(max_index_Z);
   accelRMS = scaling_factor * sqrt(accelAVG_2 / MAX_INTERVAL_ACCEL - sq(accelAVG / MAX_INTERVAL_ACCEL));
 
-//  Serial.printf("Accel_RMS_Z: %f\n", accelRMS);
+  //  Serial.printf("Accel_RMS_Z: %f\n", accelRMS);
   //  Serial.printf("Scale_Z: %f\n",scaling_factor);
   return accelRMS;
 }
@@ -1231,7 +840,7 @@ float calcAccelRMSz()
 float velocityZ()
 {
   float vel_rms_z = calcAccelRMSz() * 1000 / (2 * 3.14 * max_index_Z);
-//  Serial.printf("Vel_RMS_Z: %f\n", vel_rms_z);
+  //  Serial.printf("Vel_RMS_Z: %f\n", vel_rms_z);
   return vel_rms_z;
 }
 
@@ -1242,12 +851,14 @@ float audioDB()
   for (int i = 0; i < MAX_INTERVAL_AUDIO; i++)
   {
     aud_data = (float) abs(audio_batch[buffer_compute_index][i]);// / 16777215.0;    //16777215 = 0xffffff - 24 bit max value
-//    Serial.printf("AudioData: %f\n", aud_data);
-    if(aud_data > 0)
-    { audioDB_val += (20 * log10(aud_data)); }
+    //    Serial.printf("AudioData: %f\n", aud_data);
+    if (aud_data > 0)
+    {
+      audioDB_val += (20 * log10(aud_data));
+    }
   }
   audioDB_val /= MAX_INTERVAL_AUDIO;
-//  Serial.printf("AudioDB: %f\n", audioDB_val);
+  //  Serial.printf("AudioDB: %f\n", audioDB_val);
   return audioDB_val;
 }
 
@@ -1257,15 +868,15 @@ float audioDB()
 
 // extract the 24bit INMP441 audio data from 32bit sample
 /*ZAB: This function need to be changed
- * The pBuf value should be right shifted by 8 instead of 7 
- * and then ORed with OxFF000000 if the first bit is 1
- * that means pBuf greater than 0x80000000
+   The pBuf value should be right shifted by 8 instead of 7
+   and then ORed with OxFF000000 if the first bit is 1
+   that means pBuf greater than 0x80000000
 */
 void extractdata_inplace(int32_t  *pBuf) {
   // set highest bit to zero, then bitshift right 7 times
   // do not omit the first part (!)
   //ZAB: pBuf[0] = (pBuf[0] & 0x7fffffff) >> 7;
-  if(pBuf[0] < 0)
+  if (pBuf[0] < 0)
   {
     pBuf[0] = pBuf[0] >> 8;
     pBuf[0] |= 0xff000000;
@@ -1279,11 +890,6 @@ void extractdata_inplace(int32_t  *pBuf) {
 
 void i2s_rx_callback( int32_t *pBuf )
 {
-//  int32_t audVal = *pBuf;
-//  Serial.print("Befor extract: ");  Serial.println(audVal);
-//  extractdata_inplace(&pBuf[0]);
-//  audVal = *pBuf;
-//  Serial.print("After extract: ");  Serial.println(audVal);
   // Don't do anything if CHARGING
   if (currMode == CHARGING) {
     //Serial.print("Returning on charge\n");
@@ -1311,7 +917,7 @@ void i2s_rx_callback( int32_t *pBuf )
       record_feature_now[buffer_record_index] = false;
       compute_feature_now[buffer_record_index] = true;
       buffer_record_index = buffer_record_index == 0 ? 1 : 0;
-//      Serial.println("Data start");
+      //      Serial.println("Data start");
       // Stop collection if next buffer is not yet ready for collection
       if (!record_feature_now[buffer_record_index])
         return;
@@ -1331,7 +937,8 @@ void i2s_rx_callback( int32_t *pBuf )
     //Serial.print("currMode=RUN\n");
     if (restCount < RESTING_INTERVAL) {
       restCount ++;
-    } else {
+    } 
+    else {
       // perform the data extraction for single channel mic
       extractdata_inplace(&pBuf[0]);
 
@@ -1345,12 +952,21 @@ void i2s_rx_callback( int32_t *pBuf )
 
       if (accel_counter == ACCEL_COUNTER_TARGET) {
         readAccelData(accelCount);
-
-        accel_x_batch[buffer_record_index][accelSamplingCount] = accelCount[0];
-        accel_y_batch[buffer_record_index][accelSamplingCount] = accelCount[1];
-        accel_z_batch[buffer_record_index][accelSamplingCount] = accelCount[2];
-        accelSamplingCount ++;
-//        Serial.printf("x: %f, y: %f, z: %f, aRes: %f\n", LSB_to_ms2(accelCount[0]), LSB_to_ms2(accelCount[1]), LSB_to_ms2(accelCount[2]), aRes);
+        if(readFlag)
+        {
+//          Serial.println("1");
+          accel_x_batch[buffer_record_index][accelSamplingCount] = accelCount[0];
+          accel_y_batch[buffer_record_index][accelSamplingCount] = accelCount[1];
+          accel_z_batch[buffer_record_index][accelSamplingCount] = accelCount[2];
+          accelSamplingCount ++;
+          //        Serial.printf("x: %f, y: %f, z: %f, aRes: %f\n", LSB_to_ms2(accelCount[0]), LSB_to_ms2(accelCount[1]), LSB_to_ms2(accelCount[2]), aRes);
+        }
+        else
+        {
+          Serial.println("Skip data read");
+          Serial.println(i2c_read_error, HEX);
+          i2c_read_error = 0;
+        }
         accel_counter = 0;
       }
     }
@@ -1390,13 +1006,6 @@ void i2s_rx_callback( int32_t *pBuf )
   }
 }
 
-/* --- Direct I2S Transmit, we get callback to put 2 words into the FIFO --- */
-
-void i2s_tx_callback( int32_t *pBuf )
-{
-  // This function won't be used at all; leave it empty but don't delete!
-}
-
 /* --- Time functions --- */
 
 double gettimestamp() {
@@ -1425,25 +1034,21 @@ void setup()
 
   // ld pass thru
   // Put EM7180 SENtral into pass-through mode
-  SENtralPassThroughMode();
+  SENtralPassThroughMode();   //ZAB: This is not used
 
   // should see all the devices on the I2C bus including two from the EEPROM (ID page and data pages)
   I2Cscan();
 
   if (statusLED) {
-    pinMode(27, OUTPUT);
-    pinMode(28, OUTPUT);
-    pinMode(29, OUTPUT);
+    pinMode(greenPin, OUTPUT);
+    pinMode(redPin, OUTPUT);
+    pinMode(bluePin, OUTPUT);
   }
 
   byte c = readByte(MPU9250_ADDRESS, WHO_AM_I_MPU9250); // Read WHO_AM_I register on MPU
   if (c == 0x71) { //WHO_AM_I should always be 0x71 for the entire chip
-    initMPU9250();
-
-    getAres();
-
-    // Leaving this out for now (will allow 1g bias temporarily)
-    /*fastcompaccelMPU9250(accelBias);*/
+    initMPU9250();  // Initialize MPU9250 Accelerometer sensor
+    getAres();  // Set the aRes value depending on the accel resolution selected
   }
   else
   {
@@ -1452,7 +1057,6 @@ void setup()
     while (1) ; // Loop forever if communication doesn't happen
   }
 
-  // << nothing before the first delay will be printed to the serial
   delay(15);
 
   if (!silent) {
@@ -1463,24 +1067,17 @@ void setup()
 
   if (!silent) Serial.println( "Initialized I2C Codec" );
 
-  // prepare I2S RX with interrupts
-  I2SRx0.begin( CLOCK_TYPE, i2s_rx_callback );
+  I2SRx0.begin( CLOCK_TYPE, i2s_rx_callback );  // prepare I2S RX with interrupts
   if (!silent) Serial.println( "Initialized I2S RX without DMA" );
-
-  // I2STx0.begin( CLOCK_TYPE, i2s_tx_callback );
-  // Serial.println( "Initialized I2S TX without DMA" );
-
   delay(50);
-  // start the I2S RX
-  I2SRx0.start();
-  //I2STx0.start();
+  I2SRx0.start(); // start the I2S RX
   if (!silent) Serial.println( "Started I2S RX" );
 
   //For Battery Monitoring//
   analogReference(EXTERNAL);
   analogReadResolution(12);
   analogReadAveraging(32);
-  bat = getInputVoltage();
+  bat = getInputVoltage();  //Determine the battery status
 
   // Calculate feature size and which ones are selected
   for (int i = 0; i < NUM_FEATURES; i++) {
@@ -1496,26 +1093,22 @@ void setup()
 
   // Make sure to initialize BLEport at the end of setup
   BLEport.begin(9600);
-    // Pressure and Temperature sensor
+  // Pressure and Temperature sensor
   // Read the WHO_AM_I register of the BMP280 this is a good test of communication
   byte f = readByte(BMP280_ADDRESS, BMP280_ID);  // Read WHO_AM_I register for BMP280
-  Serial.print("BMP280 "); 
-  Serial.print("I AM "); 
-  Serial.print(f, HEX); 
-  Serial.print(" I should be "); 
+  Serial.print("BMP280 ");
+  Serial.print("I AM ");
+  Serial.print(f, HEX);
+  Serial.print(" I should be ");
   Serial.println(0x58, HEX);
   Serial.println(" ");
 
-  delay(1000); 
+  delay(10);
 
   writeByte(BMP280_ADDRESS, BMP280_RESET, 0xB6); // reset BMP280 before initilization
   delay(100);
 
   BMP280Init(); // Initialize BMP280 altimeter
-
-  int32_t sample = 0b11111111111111111111000101100000;
-  Serial.print("sample: ");
-  Serial.println(sample);
 }
 
 void loop()
@@ -1531,8 +1124,7 @@ void loop()
   }
 
   currenttime = millis();
-  dateyear = bleDateyear + (currenttime - prevtime)/1000.0;
-  
+  dateyear = bleDateyear + (currenttime - prevtime) / 1000.0;
 
   //Robustness for data reception//
   buffnow = millis();
@@ -1563,53 +1155,49 @@ void loop()
 
   /* ----------- Two-way Communication via BLE, only on RUN mode. ----------- */
 
-  if (currMode == RUN) {
-    while (BLEport.available() > 0 && bleBufferIndex < 19) {
+  if (currMode == RUN)
+  {
+    while (BLEport.available() > 0 && bleBufferIndex < 19)
+    {
       bleBuffer[bleBufferIndex] = BLEport.read();
       bleBufferIndex++;
 
-      if (bleBufferIndex > 18) {
+      if (bleBufferIndex > 18)
+      {
         Serial.println(bleBuffer);
-        if (bleBuffer[0] == '0') {
+        if (bleBuffer[0] == '0')  // Set Thresholds
+        {
           int newThres = 0, newThres2 = 0, newThres3 = 0;
-          float newerThres = 0, newerThres2 = 0, newerThres3 = 0;
           sscanf(bleBuffer, "%d-%d-%d-%d", &bleFeatureIndex, &newThres, &newThres2, &newThres3);
           if (bleFeatureIndex == 1 || bleFeatureIndex == 2 || bleFeatureIndex == 3) {
-            newerThres = (float)newThres / (float)100;
-            newerThres2 = (float)newThres2 / (float)100;
-            newerThres3 = (float)newThres3 / (float)100;
+            featureNormalThreshold[bleFeatureIndex] = (float)newThres / 100.;
+            featureWarningThreshold[bleFeatureIndex] = (float)newThres2 / 100.;
+            featureDangerThreshold[bleFeatureIndex] = (float)newThres3 / 100.;
           } else {
-            newerThres = (float)newThres;
-            newerThres2 = (float)newThres2;
-            newerThres3 = (float)newThres3;
+            featureNormalThreshold[bleFeatureIndex] = (float)newThres;
+            featureWarningThreshold[bleFeatureIndex] = (float)newThres2;
+            featureDangerThreshold[bleFeatureIndex] = (float)newThres3;
           }
-
           didThresChange = true;
           bleBufferIndex = 0;
-          featureNormalThreshold[bleFeatureIndex] = newerThres;
-          featureWarningThreshold[bleFeatureIndex] = newerThres2;
-          featureDangerThreshold[bleFeatureIndex] = newerThres3;
         }
-        // receive the timestamp data from the hub
         else if (bleBuffer[0] == '1')      // receive the timestamp data from the hub
-      {
-        //args_assigned = 
-        sscanf(bleBuffer, "%d:%d.%d", &date, &dateset, &dateyear1);
-     //   Serial.println(dateyear);
-        bleDateyear = double(dateset) + double(dateyear1) / double(1000000);
-        prevtime = millis();
-      // Serial.println(bleBuffer);
-      }
-      else if (bleBuffer[0] == '2')      // Wireless parameter setting
-      {
-        //args_assigned = 
-        sscanf(bleBuffer, "%d:%d-%d-%d", &parametertag, &datasendlimit, &bluesleeplimit, &datareceptiontimeout);
-        Serial.print("Data send limit is : ");
-        Serial.println(datasendlimit);
-      }
-      else if (bleBuffer[0] == '3')      // Record button pressed - go into record mode to record FFTs
-      {         
-      	  Serial.print("Time to record data and send FFTs");
+        {
+          sscanf(bleBuffer, "%d:%d.%d", &date, &dateset, &dateyear1);
+          //   Serial.println(dateyear);
+          bleDateyear = double(dateset) + double(dateyear1) / double(1000000);
+          prevtime = millis();
+          // Serial.println(bleBuffer);
+        }
+        else if (bleBuffer[0] == '2')      // Wireless parameter setting
+        {
+          sscanf(bleBuffer, "%d:%d-%d-%d", &parametertag, &datasendlimit, &bluesleeplimit, &datareceptiontimeout);
+          Serial.print("Data send limit is : ");
+          Serial.println(datasendlimit);
+        }
+        else if (bleBuffer[0] == '3')      // Record button pressed - go into record mode to record FFTs
+        {
+          Serial.print("Time to record data and send FFTs");
           recordmode = true;
           delay(1);
           show_record_fft('X');
@@ -1623,7 +1211,6 @@ void loop()
           delay(1);
           recordmode = false;
         }
-
         else if (bleBuffer[0] == '4')      // Stop button pressed - go out of record mode back into RUN mode
         {
           Serial.print("Stop recording and sending FFTs");
@@ -1641,10 +1228,10 @@ void loop()
       wireBuffer.concat(characterRead);
   }
 
-
-  if (wireBuffer.length() > 0) {
-
-    if (currMode == RUN) {
+  if (wireBuffer.length() > 0) 
+  {
+    if (currMode == RUN) 
+    {
       // Check the received info; iff data collection request, change the mode
       if (wireBuffer.indexOf(START_COLLECTION) > -1) {
         LEDColors c = CYAN_DATA;
@@ -1654,11 +1241,12 @@ void loop()
         currMode = DATA_COLLECTION;
       }
     }
-
-    if (currMode == DATA_COLLECTION) {
+    else if (currMode == DATA_COLLECTION) 
+    {
       Serial.println(wireBuffer);
       // Arange changed
-      if (wireBuffer.indexOf("Arange") > -1) {
+      if (wireBuffer.indexOf("Arange") > -1) 
+      {
         int Arangelocation = wireBuffer.indexOf("Arange");
         String Arange2 = wireBuffer.charAt(Arangelocation + 7);
         int Arange = Arange2.toInt();
@@ -1678,37 +1266,35 @@ void loop()
         }
         getAres();
       }
-
-
       // LED run color changed
-      if (wireBuffer.indexOf("rgb") > -1) {
-        int rbglocation = wireBuffer.indexOf("rgb");
-        int Red = wireBuffer.charAt(rbglocation + 7) - 48;
-        int Blue = wireBuffer.charAt(rbglocation + 8) - 48;
-        int Green = wireBuffer.charAt(rbglocation + 9) - 48;
-        if (Blue == 1) {
-          digitalWrite(27, LOW);
+      if (wireBuffer.indexOf("rgb") > -1) 
+      {
+        int rgblocation = wireBuffer.indexOf("rgb");
+        int Red = wireBuffer.charAt(rgblocation + 7) - 48;
+        int Green = wireBuffer.charAt(rgblocation + 8) - 48;
+        int Blue = wireBuffer.charAt(rgblocation + 9) - 48;
+        if (Green == 1) {
+          ledOn(greenPin);
         }
         else {
-          digitalWrite(27, HIGH);
+          ledOff(greenPin);
         }
         if (Red == 1) {
-          digitalWrite(29, LOW);
+          ledOn(redPin);
         }
         else {
-          digitalWrite(29, HIGH);
+          ledOff(redPin);
         }
-        if (Green == 1) {
-          digitalWrite(28, LOW);
+        if (Blue == 1) {
+          ledOn(bluePin);
         }
         else {
-          digitalWrite(28, HIGH);
+          ledOff(bluePin);
         }
       }
-
-
       //Acoustic sampling rate changed
-      if (wireBuffer.indexOf("acosr") > -1) {
+      if (wireBuffer.indexOf("acosr") > -1) 
+      {
         int acosrLocation = wireBuffer.indexOf("acosr");
         int target_sample_A = wireBuffer.charAt(acosrLocation + 6) - 48;
         int target_sample_B = wireBuffer.charAt(acosrLocation + 7) - 48;
@@ -1719,10 +1305,9 @@ void loop()
         accel_counter = 0;
         subsample_counter = 0;
       }
-
-
       //Acceleromter sampling rate changed
-      if (wireBuffer.indexOf("accsr") > -1) {
+      if (wireBuffer.indexOf("accsr") > -1) 
+      {
         int accsrLocation = wireBuffer.indexOf("accsr");
         int target_sample_C = wireBuffer.charAt(accsrLocation + 6) - 48;
         int target_sample_D = wireBuffer.charAt(accsrLocation + 7) - 48;
@@ -1760,9 +1345,9 @@ void loop()
         accel_counter = 0;
         subsample_counter = 0;
       }
-
       // Check the received info; iff data collection finished, change the mode
-      if (wireBuffer == END_COLLECTION) {
+      if (wireBuffer == END_COLLECTION) 
+      {
         LEDColors c = BLUE_NOOP;
         changeStatusLED(c);
 
@@ -1781,11 +1366,9 @@ void loop()
         accel_counter = 0;
         subsample_counter = 0;
       }
-
     } // end of currMode == DATA_COLLECTION
 
-    // Clear wire buffer
-    wireBuffer = "";
+    wireBuffer = "";    // Clear wire buffer
   }
 
   // After handling all state / mode changes, check if features need to be computed.
@@ -1821,96 +1404,68 @@ void resetSampling(bool run_mode) {
   record_feature_now[1] = true;
 
   if (run_mode) {
-    TARGET_AUDIO_SAMPLE = AUDIO_FREQ_RUN;
+    TARGET_AUDIO_SAMPLE = AUDIO_FREQ;
   } else {
-    TARGET_AUDIO_SAMPLE = AUDIO_FREQ_DATA;
+    TARGET_AUDIO_SAMPLE = AUDIO_FREQ;
   }
 
   ACCEL_COUNTER_TARGET = TARGET_AUDIO_SAMPLE / TARGET_ACCEL_SAMPLE;
   DOWNSAMPLE_MAX = 48000 / TARGET_AUDIO_SAMPLE;
 }
 
-// Re-format 24 bit signed integer to float for CFFT -- DEPRECATED.
-// Expects input to be in 24 bit signed integer in Big Endian, as microphone does.
-float signed24ToFloat(byte* input_ptr) {
-  byte ptr[4] = {0x00, 0x00, 0x00, 0x00};
-
-  // Little-endian order; ARM uses little-endian
-  ptr[0] = input_ptr[2];
-  ptr[1] = input_ptr[1];
-  ptr[2] = input_ptr[0] & B01111111;
-  ptr[3] = input_ptr[0] & B10000000;
-
-  // Read the raw bytes as signed 32 bit integer then cast to float
-  int32_t* int_ptr = (int32_t *)&ptr[0];
-  return (float)(*int_ptr);
-}
-
-// Function to estimate memory availability programmatically.
-uint32_t FreeRam() {
-  uint32_t stackTop;
-  uint32_t heapTop;
-
-  // current position of the stack.
-  stackTop = (uint32_t) &stackTop;
-
-  // current position of heap.
-  void* hTop = malloc(1);
-  heapTop = (uint32_t) hTop;
-  free(hTop);
-
-  // The difference is the free, available ram.
-  return stackTop - heapTop;
-}
-
-int greenPin = 27;
-int redPin = 29;
-int bluePin = 28;
-
 // Function that reflects LEDColors into statusLED.
 // Will not have effect if statusLED is turned off.
+void ledOn(int pin)
+{
+  digitalWrite(pin, LOW);
+}
+void ledOff(int pin)
+{
+  digitalWrite(pin, HIGH);
+}
+
 void changeStatusLED(LEDColors color) {
   if (!statusLED) return;
   switch (color) {
     case RED_BAD:
-      digitalWrite(redPin, LOW);
-      digitalWrite(greenPin, HIGH);
-      digitalWrite(bluePin, HIGH);
+      ledOn(redPin);    // R = 1
+      ledOff(greenPin); // G = 0
+      ledOff(bluePin);  // B = 0
       break;
     case BLUE_NOOP:
-      digitalWrite(redPin, HIGH);
-      digitalWrite(greenPin, HIGH);
-      digitalWrite(bluePin, LOW);
+      ledOff(redPin);   // R = 0
+      ledOff(greenPin); // G = 0
+      ledOn(bluePin);   // B = 1
       break;
     case GREEN_OK:
-      digitalWrite(redPin, HIGH);
-      digitalWrite(greenPin, LOW);
-      digitalWrite(bluePin, HIGH);
+      ledOff(redPin);   // R = 0
+      ledOn(greenPin);  // G = 1
+      ledOff(bluePin);  // B = 0
       break;
     case ORANGE_WARNING:
-      digitalWrite(redPin, LOW);
-      digitalWrite(greenPin, LOW);
-      digitalWrite(bluePin, HIGH);
+      ledOn(redPin);    // R = 1
+      ledOn(greenPin);  // G = 1
+      ledOff(bluePin);  // B = 0
       break;
     case PURPLE_CHARGE:
-      digitalWrite(redPin, LOW);
-      digitalWrite(greenPin, HIGH);
-      digitalWrite(bluePin, LOW);
+      ledOn(redPin);    // R = 1
+      ledOff(greenPin); // G = 0
+      ledOn(bluePin);   // B = 1
       break;
     case CYAN_DATA:
-      digitalWrite(redPin, HIGH);
-      digitalWrite(greenPin, LOW);
-      digitalWrite(bluePin, LOW);
+      ledOff(redPin);   // R = 0
+      ledOn(greenPin);  // G = 1
+      ledOn(bluePin);   // B = 1
       break;
     case WHITE_NONE:
-      digitalWrite(redPin, LOW);
-      digitalWrite(greenPin, LOW);
-      digitalWrite(bluePin, LOW);
+      ledOn(redPin);    // R = 1
+      ledOn(greenPin);  // G = 1
+      ledOn(bluePin);   // B = 1
       break;
     case SLEEP_MODE:
-      digitalWrite(redPin, HIGH);
-      digitalWrite(greenPin, HIGH);
-      digitalWrite(bluePin, HIGH);
+      ledOff(redPin);   // R = 0
+      ledOff(greenPin); // G = 0
+      ledOff(bluePin);  // B = 0
       break;
   }
 }
@@ -1957,8 +1512,6 @@ void SENtralPassThroughMode()
   // First put SENtral in standby mode
   uint8_t c = readByte(EM7180_ADDRESS, EM7180_AlgorithmControl);
   writeByte(EM7180_ADDRESS, EM7180_AlgorithmControl, c | 0x01);
-  //  c = readByte(EM7180_ADDRESS, EM7180_AlgorithmStatus);
-  //  Serial.print("c = "); Serial.println(c);
   // Verify standby status
   // if(readByte(EM7180_ADDRESS, EM7180_AlgorithmStatus) & 0x01) {
   if (!silent) Serial.println("SENtral in standby mode");
@@ -2090,34 +1643,45 @@ uint32_t bmp280_compensate_P(int32_t adc_P)
   long long var1, var2, p;
   var1 = ((long long)t_fine) - 128000;
   var2 = var1 * var1 * (long long)dig_P6;
-  var2 = var2 + ((var1*(long long)dig_P5)<<17);
-  var2 = var2 + (((long long)dig_P4)<<35);
-  var1 = ((var1 * var1 * (long long)dig_P3)>>8) + ((var1 * (long long)dig_P2)<<12);
-  var1 = (((((long long)1)<<47)+var1))*((long long)dig_P1)>>33;
-  if(var1 == 0)
+  var2 = var2 + ((var1 * (long long)dig_P5) << 17);
+  var2 = var2 + (((long long)dig_P4) << 35);
+  var1 = ((var1 * var1 * (long long)dig_P3) >> 8) + ((var1 * (long long)dig_P2) << 12);
+  var1 = (((((long long)1) << 47) + var1)) * ((long long)dig_P1) >> 33;
+  if (var1 == 0)
   {
     return 0;
     // avoid exception caused by division by zero
   }
   p = 1048576 - adc_P;
-  p = (((p<<31) - var2)*3125)/var1;
-  var1 = (((long long)dig_P9) * (p>>13) * (p>>13)) >> 25;
-  var2 = (((long long)dig_P8) * p)>> 19;
-  p = ((p + var1 + var2) >> 8) + (((long long)dig_P7)<<4);
+  p = (((p << 31) - var2) * 3125) / var1;
+  var1 = (((long long)dig_P9) * (p >> 13) * (p >> 13)) >> 25;
+  var2 = (((long long)dig_P8) * p) >> 19;
+  p = ((p + var1 + var2) >> 8) + (((long long)dig_P7) << 4);
   return (uint32_t)p;
 }
 
 int32_t readBMP280Temperature()
 {
   uint8_t rawData[3];  // 20-bit temperature register data stored here
-  readBytes(BMP280_ADDRESS, BMP280_TEMP_MSB, 3, &rawData[0]);  
-  return (int32_t) (((int32_t) rawData[0] << 16 | (int32_t) rawData[1] << 8 | rawData[2]) >> 4);
+  readBytes(BMP280_ADDRESS, BMP280_TEMP_MSB, 3, &rawData[0]);
+  if(i2c_read_error == 0x00)
+  {
+    return (int32_t) (((int32_t) rawData[0] << 16 | (int32_t) rawData[1] << 8 | rawData[2]) >> 4);
+  }
+  else
+  {
+    Serial.println("Skip temperature read");
+    Serial.println(i2c_read_error, HEX);
+    i2c_read_error = 0;
+  }
+  
+  return 0;
 }
 
 int32_t readBMP280Pressure()
 {
   uint8_t rawData[3];  // 20-bit pressure register data stored here
-  readBytes(BMP280_ADDRESS, BMP280_PRESS_MSB, 3, &rawData[0]);  
+  readBytes(BMP280_ADDRESS, BMP280_PRESS_MSB, 3, &rawData[0]);
   return (int32_t) (((int32_t) rawData[0] << 16 | (int32_t) rawData[1] << 8 | rawData[2]) >> 4);
 }
 
@@ -2160,67 +1724,45 @@ void writeByte(uint8_t address, uint8_t subAddress, uint8_t data)
 
 uint8_t readByte(uint8_t address, uint8_t subAddress)
 {
-  uint8_t data; // `data` will store the register data
+  uint8_t data = 0; // `data` will store the register data
   Wire.beginTransmission(address);         // Initialize the Tx buffer
   Wire.write(subAddress);                   // Put slave register address in Tx buffer
-  Wire.endTransmission(I2C_NOSTOP);        // Send the Tx buffer, but send a restart to keep connection alive
-  //  Wire.endTransmission(false);             // Send the Tx buffer, but send a restart to keep connection alive
-  //  Wire.requestFrom(address, 1);  // Read one byte from slave register address
-  Wire.requestFrom(address, (size_t) 1);   // Read one byte from slave register address
-  data = Wire.read();                      // Fill Rx buffer with result
+  i2c_read_error = Wire.endTransmission(I2C_NOSTOP, 1000); // Send the Tx buffer, but send a restart to keep connection alive
+  if (i2c_read_error == 0x00)
+  {
+    Wire.requestFrom(address, (size_t) 1);   // Read one byte from slave register address
+    data = Wire.read();                      // Fill Rx buffer with result
+  }
+  else
+  {
+//    Serial.print("Error Code:");
+//    Serial.println(err);
+  }
   return data;                             // Return data read from slave register
 }
 
 void readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_t * dest)
 {
-  Wire.beginTransmission(address);   // Initialize the Tx buffer
-  Wire.write(subAddress);            // Put slave register address in Tx buffer
-  Wire.endTransmission(I2C_NOSTOP);  // Send the Tx buffer, but send a restart to keep connection alive
-  //  Wire.endTransmission(false);       // Send the Tx buffer, but send a restart to keep connection alive
-  uint8_t i = 0;
-  //        Wire.requestFrom(address, count);  // Read bytes from slave register address
-  Wire.requestFrom(address, (size_t) count);  // Read bytes from slave register address
-  while (Wire.available()) {
-    dest[i++] = Wire.read();
-  }         // Put read results in the Rx buffer
-}
-
-void show_record_fft(char rec_axis)
-{
-  BLEport.print("REC,");
-  BLEport.print(MAC_ADDRESS);
-  if (rec_axis == 'X')
+  if(readFlag)  // To restrain I2S ISR for accel read from accessing I2C bus while temperature sensor is being read
   {
-    BLEport.print(",X");
-    for (int i = 0; i < MAX_INTERVAL_ACCEL; i++) {
-      BLEport.print(",");
-      BLEport.print(LSB_to_ms2(accel_x_batch[buffer_compute_index][i]));
-      BLEport.flush();
+    readFlag = false;
+    Wire.beginTransmission(address);   // Initialize the Tx buffer
+  //  Serial.println("TX_Begin");
+    Wire.write(subAddress);            // Put slave register address in Tx buffer
+  //  Serial.println(address, HEX);
+    i2c_read_error = Wire.endTransmission(I2C_NOSTOP, 1000); // Send the Tx buffer, but send a restart to keep connection alive
+    if (i2c_read_error == 0x00)
+    {
+      Wire.requestFrom(address, (size_t) count);  // Read bytes from slave register address
+      uint8_t i = 0;
+      while (Wire.available()) {
+        dest[i++] = Wire.read();
+      }         // Put read results in the Rx buffer
     }
+    readFlag = true;
   }
-  else if (rec_axis == 'Y')
-  {
-    BLEport.print(",Y");
-    for (int i = 0; i < MAX_INTERVAL_ACCEL; i++) {
-      BLEport.print(",");
-      BLEport.print(LSB_to_ms2(accel_y_batch[buffer_compute_index][i]));
-      BLEport.flush();
-    }
-  }
-  else if (rec_axis == 'Z')
-  {
-    BLEport.print(",Z");
-    for (int i = 0; i < MAX_INTERVAL_ACCEL; i++) {
-      BLEport.print(",");
-      BLEport.print(LSB_to_ms2(accel_z_batch[buffer_compute_index][i]));
-      BLEport.flush();
-    }
-  }
-  BLEport.print(";");
-  BLEport.flush();
-}
-
-float LSB_to_ms2(int16_t accelLSB)
-{
-  return ((float)accelLSB * aRes * 9.8);
+//  else
+//  {
+//    Serial.println("Skipped");
+//  }
 }
