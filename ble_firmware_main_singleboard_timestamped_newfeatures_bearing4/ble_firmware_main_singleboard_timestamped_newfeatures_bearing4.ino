@@ -26,7 +26,7 @@
 //====================== Module Configuration Variables ========================
 #define CLOCK_TYPE         (I2S_CLOCK_48K_INTERNAL)     // I2S clock
 bool statusLED = true;                                  // Status LED ON/OFF
-String MAC_ADDRESS = "88:4A:EA:69:E2:3C";
+String MAC_ADDRESS = "88:4A:EA:69:DE:A0";
 
 // Reduce RUN frequency if needed.
 const uint16_t AUDIO_FREQ = 8000;     // Audio frequency set to 8000 Hz
@@ -313,7 +313,12 @@ void compute_features() {
   highest_danger_level = max(highest_danger_level, current_danger_level);
 
   feature_value[4] = currentTemperature();
+  //current_danger_level = threshold_feature(4, feature_value[4]);
+  //highest_danger_level = max(highest_danger_level, current_danger_level);
+  
   feature_value[5] = audioDB();
+  //current_danger_level = threshold_feature(5, feature_value[5]);
+  //highest_danger_level = max(highest_danger_level, current_danger_level);
 
 
   // Reflect highest danger level if differs from previous state.
