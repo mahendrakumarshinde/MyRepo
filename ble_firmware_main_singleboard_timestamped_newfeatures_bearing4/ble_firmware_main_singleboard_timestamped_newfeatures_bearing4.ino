@@ -166,6 +166,14 @@ int prevmillis = 0;
 int currenttime = 0;
 int prevtime = 0;
 
+//Feature selection parameters
+int feature0check = 1;
+int feature1check = 1;
+int feature2check = 1;
+int feature3check = 1;
+int feature4check = 0;
+int feature5check = 0;
+
 //Data reception robustness variables
 int buffnow = 0;
 int buffprev = 0;
@@ -295,30 +303,42 @@ void compute_features() {
   highest_danger_level = 0;
   
   feature_value[0] = feature_energy();
-  current_danger_level = threshold_feature(0, feature_value[0]);
-  highest_danger_level = max(highest_danger_level, current_danger_level);
-
+  if (feature0check == 1){
+    current_danger_level = threshold_feature(0, feature_value[0]);
+    highest_danger_level = max(highest_danger_level, current_danger_level);
+  }
+  
   accel_rfft();
 
   feature_value[1] = velocityX();
-  current_danger_level = threshold_feature(1, feature_value[1]);
-  highest_danger_level = max(highest_danger_level, current_danger_level);
+  if (feature1check == 1){
+    current_danger_level = threshold_feature(1, feature_value[1]);
+    highest_danger_level = max(highest_danger_level, current_danger_level);
+  }
 
   feature_value[2] = velocityY();
-  current_danger_level = threshold_feature(2, feature_value[2]);
-  highest_danger_level = max(highest_danger_level, current_danger_level);
+  if (feature2check == 1){
+    current_danger_level = threshold_feature(2, feature_value[2]);
+    highest_danger_level = max(highest_danger_level, current_danger_level);
+  }
 
   feature_value[3] = velocityZ();
-  current_danger_level = threshold_feature(3, feature_value[3]);
-  highest_danger_level = max(highest_danger_level, current_danger_level);
+  if (feature3check == 1){
+    current_danger_level = threshold_feature(3, feature_value[3]);
+    highest_danger_level = max(highest_danger_level, current_danger_level);
+  }
 
   feature_value[4] = currentTemperature();
-  //current_danger_level = threshold_feature(4, feature_value[4]);
-  //highest_danger_level = max(highest_danger_level, current_danger_level);
+  if (feature4check == 1){
+    current_danger_level = threshold_feature(4, feature_value[4]);
+    highest_danger_level = max(highest_danger_level, current_danger_level);
+  }
   
   feature_value[5] = audioDB();
-  //current_danger_level = threshold_feature(5, feature_value[5]);
-  //highest_danger_level = max(highest_danger_level, current_danger_level);
+  if (feature5check == 1){
+    current_danger_level = threshold_feature(5, feature_value[5]);
+    highest_danger_level = max(highest_danger_level, current_danger_level);
+  }
 
 
   // Reflect highest danger level if differs from previous state.
@@ -1158,6 +1178,10 @@ void loop()
           BLEport.print(error_message);
           BLEport.print(";");
           BLEport.flush();
+        }
+        else if (bleBuffer[0] == '6')
+        {
+          sscanf(bleBuffer, "%d:%d.%d.%d.%d.%d.%d", &parametertag, &feature0check, &feature1check, &feature2check, &feature3check, &feature4check, &feature5check);
         }
         bleBufferIndex = 0;
       }
