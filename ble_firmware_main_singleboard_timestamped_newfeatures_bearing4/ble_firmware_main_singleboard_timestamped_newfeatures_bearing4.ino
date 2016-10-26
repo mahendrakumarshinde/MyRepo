@@ -168,9 +168,9 @@ int prevtime = 0;
 
 //Feature selection parameters
 int feature0check = 1;
-int feature1check = 1;
-int feature2check = 1;
-int feature3check = 1;
+int feature1check = 0;
+int feature2check = 0;
+int feature3check = 0;
 int feature4check = 0;
 int feature5check = 0;
 
@@ -289,7 +289,7 @@ float LSB_to_ms2(int16_t accelLSB)
 float currentTemperature() // Index 4
 {
   int32_t rawTemp = readBMP280Temperature();
-  if(i2c_read_error == 0x00)
+  if (i2c_read_error == 0x00)
   {
     BMP280Temperature = (float) bmp280_compensate_T(rawTemp) / 100.;
   }
@@ -301,41 +301,41 @@ void compute_features() {
   compute_feature_now[buffer_compute_index] = false;
   record_feature_now[buffer_compute_index] = false;
   highest_danger_level = 0;
-  
+
   feature_value[0] = feature_energy();
-  if (feature0check == 1){
+  if (feature0check == 1) {
     current_danger_level = threshold_feature(0, feature_value[0]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
-  
+
   accel_rfft();
 
   feature_value[1] = velocityX();
-  if (feature1check == 1){
+  if (feature1check == 1) {
     current_danger_level = threshold_feature(1, feature_value[1]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
 
   feature_value[2] = velocityY();
-  if (feature2check == 1){
+  if (feature2check == 1) {
     current_danger_level = threshold_feature(2, feature_value[2]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
 
   feature_value[3] = velocityZ();
-  if (feature3check == 1){
+  if (feature3check == 1) {
     current_danger_level = threshold_feature(3, feature_value[3]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
 
   feature_value[4] = currentTemperature();
-  if (feature4check == 1){
+  if (feature4check == 1) {
     current_danger_level = threshold_feature(4, feature_value[4]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
-  
+
   feature_value[5] = audioDB();
-  if (feature5check == 1){
+  if (feature5check == 1) {
     current_danger_level = threshold_feature(5, feature_value[5]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
@@ -847,31 +847,31 @@ void extractdata_inplace(int32_t  *pBuf) {
 /* --- Direct I2S Receive, we get callback to read 2 words from the FIFO --- */
 void i2s_rx_callback( int32_t *pBuf )
 {
-//  Serial.print("I2S RX : ");
-//  Serial.println(error_message);
-  if(error_message.equals("ALL_OK"))
+  //  Serial.print("I2S RX : ");
+  //  Serial.println(error_message);
+  if (error_message.equals("ALL_OK"))
   {
     // Don't do anything if CHARGING
     if (currMode == CHARGING) {
       //Serial.print("Returning on charge\n");
       return;
     }
-  
-    if (currMode == RUN) 
+
+    if (currMode == RUN)
     {
-      if (audioSamplingCount == 0 && !record_feature_now[buffer_record_index]) 
+      if (audioSamplingCount == 0 && !record_feature_now[buffer_record_index])
       {
         return;
       }
       // Filled out the current buffer; switch buffer index
-      if (audioSamplingCount == featureBatchSize) 
+      if (audioSamplingCount == featureBatchSize)
       {
         subsample_counter = 0;
         accel_counter = 0;
         audioSamplingCount = 0;
         accelSamplingCount = 0;
         restCount = 0;
-  
+
         record_feature_now[buffer_record_index] = false;
         compute_feature_now[buffer_record_index] = true;
         buffer_record_index = buffer_record_index == 0 ? 1 : 0;
@@ -881,7 +881,7 @@ void i2s_rx_callback( int32_t *pBuf )
       }
     }
     // Downsampling routine
-    if (subsample_counter != DOWNSAMPLE_MAX - 2) 
+    if (subsample_counter != DOWNSAMPLE_MAX - 2)
     {
       subsample_counter ++;
       return;
@@ -889,27 +889,27 @@ void i2s_rx_callback( int32_t *pBuf )
       subsample_counter = 0;
       accel_counter++;
     }
-  
+
     if (currMode == RUN) {
       //Serial.print("currMode=RUN\n");
       if (restCount < RESTING_INTERVAL) {
         restCount ++;
-      } 
+      }
       else {
         // perform the data extraction for single channel mic
         extractdata_inplace(&pBuf[0]);
-  
+
         byte* ptr = (byte*)&audio_batch[buffer_record_index][audioSamplingCount];
         ptr[0] = (pBuf[0] >> 8) & 0xFF;
         ptr[1] = (pBuf[0] >> 16) & 0xFF;
-  
+
         //audio_batch[buffer_record_index][audioSamplingCount] =
         //                (((pBuf[0] >> 8) & 0xFF) << 8) | ((pBuf[0] >> 16) & 0xFF);
         audioSamplingCount ++;
-  
+
         if (accel_counter == ACCEL_COUNTER_TARGET) {
           readAccelData(accelCount);
-          if(readFlag)
+          if (readFlag)
           {
             accel_x_batch[buffer_record_index][accelSamplingCount] = accelCount[0];
             accel_y_batch[buffer_record_index][accelSamplingCount] = accelCount[1];
@@ -922,28 +922,28 @@ void i2s_rx_callback( int32_t *pBuf )
     } else if (currMode == DATA_COLLECTION) {
       // perform the data extraction for single channel mic
       extractdata_inplace(&pBuf[0]);
-  
+
       // Dump sound data first
       Serial.write((pBuf[0] >> 16) & 0xFF);
       Serial.write((pBuf[0] >> 8) & 0xFF);
       Serial.write(pBuf[0] & 0xFF);
-  
+
       if (accel_counter == ACCEL_COUNTER_TARGET) {
         readAccelData(accelCount);
-  
+
         ax = (float)accelCount[0] * aRes + accelBias[0];
         ay = (float)accelCount[1] * aRes + accelBias[1];
         az = (float)accelCount[2] * aRes + accelBias[2];
-  
+
         byte* axb = (byte *) &ax;
         byte* ayb = (byte *) &ay;
         byte* azb = (byte *) &az;
-  
+
         Serial.write(axb, 4);
         Serial.write(ayb, 4);
         Serial.write(azb, 4);
         Serial.flush();
-  
+
         accel_counter = 0;
       }
     }
@@ -968,7 +968,7 @@ void setup()
     pinMode(redPin, OUTPUT);
     pinMode(bluePin, OUTPUT);
   }
-  
+
   // Enable LiPo charger's CHG read.
   pinMode(chargerCHG, INPUT_PULLUP);
 
@@ -987,13 +987,13 @@ void setup()
   // Set up the SENtral as sensor bus in normal operating mode
   // ld pass thru
   // Put EM7180 SENtral into pass-through mode
-  SENtralPassThroughMode();   
+  SENtralPassThroughMode();
 
   // should see all the devices on the I2C bus including two from the EEPROM (ID page and data pages)
   I2Cscan();
-  
+
   error_message = "ALL_OK"; //ZAB: Do not change this flow as error_message need to be set here
-  
+
   byte c = readByte(MPU9250_ADDRESS, WHO_AM_I_MPU9250); // Read WHO_AM_I register on MPU
   if (c == 0x71) { //WHO_AM_I should always be 0x71 for the entire chip
     initMPU9250();  // Initialize MPU9250 Accelerometer sensor
@@ -1016,7 +1016,7 @@ void setup()
   // Pressure and Temperature sensor
   // Read the WHO_AM_I register of the BMP280 this is a good test of communication
   byte f = readByte(BMP280_ADDRESS, BMP280_ID);  // Read WHO_AM_I register for BMP280
-  if(!silent)
+  if (!silent)
   {
     Serial.print("BMP280 ");
     Serial.print("I AM ");
@@ -1029,7 +1029,7 @@ void setup()
 
   writeByte(BMP280_ADDRESS, BMP280_RESET, 0xB6); // reset BMP280 before initilization
   delay(100);
-  if(f == 0x58)
+  if (f == 0x58)
   {
     BMP280Init(); // Initialize BMP280 altimeter
     Serial.println("BMP280 Initialised");
@@ -1039,11 +1039,11 @@ void setup()
     error_message = "BMPERR";
     Serial.print("Could not connect to BMP280: 0x");
     Serial.println(f, HEX);
-  //  while (1) ; // Loop forever if communication doesn't happen
+    //  while (1) ; // Loop forever if communication doesn't happen
   }
-  
+
   if (!silent) Serial.println( "Initialized I2C Codec" );
-  if(error_message.equals("ALL_OK"))
+  if (error_message.equals("ALL_OK"))
   {
     I2SRx0.begin( CLOCK_TYPE, i2s_rx_callback );  // prepare I2S RX with interrupts
     if (!silent) Serial.println( "Initialized I2S RX without DMA" );
@@ -1051,7 +1051,7 @@ void setup()
     I2SRx0.start(); // start the I2S RX
     if (!silent) Serial.println( "Started I2S RX" );
   }
-  else{
+  else {
     Serial.println(error_message);
   }
   //For Battery Monitoring//
@@ -1123,65 +1123,77 @@ void loop()
         Serial.println(bleBuffer);
         if (bleBuffer[0] == '0')  // Set Thresholds
         {
-          int bleFeatureIndex = 0, newThres = 0, newThres2 = 0, newThres3 = 0;
-          sscanf(bleBuffer, "%d-%d-%d-%d", &bleFeatureIndex, &newThres, &newThres2, &newThres3);
-          if (bleFeatureIndex == 1 || bleFeatureIndex == 2 || bleFeatureIndex == 3) {
-            featureNormalThreshold[bleFeatureIndex] = (float)newThres / 100.;
-            featureWarningThreshold[bleFeatureIndex] = (float)newThres2 / 100.;
-            featureDangerThreshold[bleFeatureIndex] = (float)newThres3 / 100.;
-          } else {
-            featureNormalThreshold[bleFeatureIndex] = (float)newThres;
-            featureWarningThreshold[bleFeatureIndex] = (float)newThres2;
-            featureDangerThreshold[bleFeatureIndex] = (float)newThres3;
+          if (bleBuffer[4] == '-' && bleBuffer[9] == '-' && bleBuffer[14] == '-') {
+            int bleFeatureIndex = 0, newThres = 0, newThres2 = 0, newThres3 = 0;
+            sscanf(bleBuffer, "%d-%d-%d-%d", &bleFeatureIndex, &newThres, &newThres2, &newThres3);
+            if (bleFeatureIndex == 1 || bleFeatureIndex == 2 || bleFeatureIndex == 3) {
+              featureNormalThreshold[bleFeatureIndex] = (float)newThres / 100.;
+              featureWarningThreshold[bleFeatureIndex] = (float)newThres2 / 100.;
+              featureDangerThreshold[bleFeatureIndex] = (float)newThres3 / 100.;
+            } else {
+              featureNormalThreshold[bleFeatureIndex] = (float)newThres;
+              featureWarningThreshold[bleFeatureIndex] = (float)newThres2;
+              featureDangerThreshold[bleFeatureIndex] = (float)newThres3;
+            }
+            bleBufferIndex = 0;
           }
-          bleBufferIndex = 0;
         }
         else if (bleBuffer[0] == '1')      // receive the timestamp data from the hub
         {
-          sscanf(bleBuffer, "%d:%d.%d", &date, &dateset, &dateyear1);
-          //   Serial.println(dateyear);
-          bleDateyear = double(dateset) + double(dateyear1) / double(1000000);
-          prevtime = millis();
-          // Serial.println(bleBuffer);
+          if (bleBuffer[1] == ':' && bleBuffer[12] == '.') {
+            sscanf(bleBuffer, "%d:%d.%d", &date, &dateset, &dateyear1);
+            bleDateyear = double(dateset) + double(dateyear1) / double(1000000);
+            prevtime = millis();
+          }
         }
         else if (bleBuffer[0] == '2')      // Wireless parameter setting
         {
-          sscanf(bleBuffer, "%d:%d-%d-%d", &parametertag, &datasendlimit, &bluesleeplimit, &datareceptiontimeout);
-          Serial.print("Data send limit is : ");
-          Serial.println(datasendlimit);
+          if (bleBuffer[1] == ':' && bleBuffer[7] == '-' && bleBuffer[13] == '-') {
+            sscanf(bleBuffer, "%d:%d-%d-%d", &parametertag, &datasendlimit, &bluesleeplimit, &datareceptiontimeout);
+            Serial.print("Data send limit is : ");
+            Serial.println(datasendlimit);
+          }
         }
         else if (bleBuffer[0] == '3')      // Record button pressed - go into record mode to record FFTs
         {
-          Serial.print("Time to record data and send FFTs");
-          recordmode = true;
-          delay(1);
-          show_record_fft('X');
-          BLEport.flush();
-          delay(1);
-          show_record_fft('Y');
-          BLEport.flush();
-          delay(1);
-          show_record_fft('Z');
-          BLEport.flush();
-          delay(1);
-          recordmode = false;
+          if (bleBuffer[7] == '0' && bleBuffer[9] == '0' && bleBuffer[11] == '0' && bleBuffer[13] == '0' && bleBuffer[15] == '0' && bleBuffer[17] == '0') {
+            Serial.print("Time to record data and send FFTs");
+            recordmode = true;
+            delay(1);
+            show_record_fft('X');
+            BLEport.flush();
+            delay(1);
+            show_record_fft('Y');
+            BLEport.flush();
+            delay(1);
+            show_record_fft('Z');
+            BLEport.flush();
+            delay(1);
+            recordmode = false;
+          }
         }
         else if (bleBuffer[0] == '4')      // Stop button pressed - go out of record mode back into RUN mode
         {
-          Serial.print("Stop recording and sending FFTs");
+          if (bleBuffer[7] == '0' && bleBuffer[9] == '0' && bleBuffer[11] == '0' && bleBuffer[13] == '0' && bleBuffer[15] == '0' && bleBuffer[17] == '0') {
+            Serial.print("Stop recording and sending FFTs");
+          }
         }
         else if (bleBuffer[0] == '5')
         {
-          BLEport.print("HB,");
-          BLEport.print(MAC_ADDRESS);
-          BLEport.print(",");
-          BLEport.print(error_message);
-          BLEport.print(";");
-          BLEport.flush();
+          if (bleBuffer[7] == '0' && bleBuffer[9] == '0' && bleBuffer[11] == '0' && bleBuffer[13] == '0' && bleBuffer[15] == '0' && bleBuffer[17] == '0') {
+            BLEport.print("HB,");
+            BLEport.print(MAC_ADDRESS);
+            BLEport.print(",");
+            BLEport.print(error_message);
+            BLEport.print(";");
+            BLEport.flush();
+          }
         }
         else if (bleBuffer[0] == '6')
         {
-          sscanf(bleBuffer, "%d:%d.%d.%d.%d.%d.%d", &parametertag, &feature0check, &feature1check, &feature2check, &feature3check, &feature4check, &feature5check);
+          if (bleBuffer[7] == ':' && bleBuffer[9] == '.' && bleBuffer[11] == '.' && bleBuffer[13] == '.' && bleBuffer[15] == '.' && bleBuffer[17] == '.') {
+            sscanf(bleBuffer, "%d:%d.%d.%d.%d.%d.%d", &parametertag, &feature0check, &feature1check, &feature2check, &feature3check, &feature4check, &feature5check);
+          }
         }
         bleBufferIndex = 0;
       }
@@ -1193,9 +1205,9 @@ void loop()
     if (characterRead != '\n')
       wireBuffer.concat(characterRead);
   }
-  if (wireBuffer.length() > 0) 
+  if (wireBuffer.length() > 0)
   {
-    if (currMode == RUN) 
+    if (currMode == RUN)
     {
       // Check the received info; iff data collection request, change the mode
       if (wireBuffer.indexOf(START_COLLECTION) > -1) {
@@ -1206,11 +1218,11 @@ void loop()
         currMode = DATA_COLLECTION;
       }
     }
-    else if (currMode == DATA_COLLECTION) 
+    else if (currMode == DATA_COLLECTION)
     {
       Serial.println(wireBuffer);
       // Arange changed
-      if (wireBuffer.indexOf("Arange") > -1) 
+      if (wireBuffer.indexOf("Arange") > -1)
       {
         int Arangelocation = wireBuffer.indexOf("Arange");
         String Arange2 = wireBuffer.charAt(Arangelocation + 7);
@@ -1232,7 +1244,7 @@ void loop()
         getAres();
       }
       // LED run color changed
-      if (wireBuffer.indexOf("rgb") > -1) 
+      if (wireBuffer.indexOf("rgb") > -1)
       {
         int rgblocation = wireBuffer.indexOf("rgb");
         int Red = wireBuffer.charAt(rgblocation + 7) - 48;
@@ -1258,7 +1270,7 @@ void loop()
         }
       }
       //Acoustic sampling rate changed
-      if (wireBuffer.indexOf("acosr") > -1) 
+      if (wireBuffer.indexOf("acosr") > -1)
       {
         int acosrLocation = wireBuffer.indexOf("acosr");
         int target_sample_A = wireBuffer.charAt(acosrLocation + 6) - 48;
@@ -1271,7 +1283,7 @@ void loop()
         subsample_counter = 0;
       }
       //Acceleromter sampling rate changed
-      if (wireBuffer.indexOf("accsr") > -1) 
+      if (wireBuffer.indexOf("accsr") > -1)
       {
         int accsrLocation = wireBuffer.indexOf("accsr");
         int target_sample_C = wireBuffer.charAt(accsrLocation + 6) - 48;
@@ -1311,7 +1323,7 @@ void loop()
         subsample_counter = 0;
       }
       // Check the received info; iff data collection finished, change the mode
-      if (wireBuffer == END_COLLECTION) 
+      if (wireBuffer == END_COLLECTION)
       {
         LEDColors c = BLUE_NOOP;
         changeStatusLED(c);
@@ -1625,7 +1637,7 @@ int32_t readBMP280Temperature()
 {
   uint8_t rawData[3];  // 20-bit temperature register data stored here
   readBytes(BMP280_ADDRESS, BMP280_TEMP_MSB, 3, &rawData[0]);
-  if(i2c_read_error == 0x00)
+  if (i2c_read_error == 0x00)
   {
     return (int32_t) (((int32_t) rawData[0] << 16 | (int32_t) rawData[1] << 8 | rawData[2]) >> 4);
   }
@@ -1700,7 +1712,7 @@ uint8_t readByte(uint8_t address, uint8_t subAddress)
 
 void readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_t * dest)
 {
-  if(readFlag)  // To restrain I2S ISR for accel read from accessing I2C bus while temperature sensor is being read
+  if (readFlag) // To restrain I2S ISR for accel read from accessing I2C bus while temperature sensor is being read
   {
     readFlag = false;
     Wire.beginTransmission(address);   // Initialize the Tx buffer
