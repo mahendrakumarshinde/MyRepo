@@ -27,6 +27,7 @@
 #define CLOCK_TYPE         (I2S_CLOCK_48K_INTERNAL)     // I2S clock
 bool statusLED = true;                                  // Status LED ON/OFF
 String MAC_ADDRESS = "88:4A:EA:69:E2:0E";
+String forging_command = "#A10a:60,B10b:70,C20c:80!"
 
 // Reduce RUN frequency if needed.
 const uint16_t AUDIO_FREQ = 8000;     // Audio frequency set to 8000 Hz
@@ -459,6 +460,7 @@ void compute_features() {
           BLEport.print(gettimestamp());
           BLEport.print(";");
           BLEport.flush();
+          Serial.print(forging_command);
         }
         c = RED_BAD;
         changeStatusLED(c);
@@ -765,14 +767,9 @@ float calcAccelRMSx()
 // Function to calculate RMS velocity along X axis
 float velocityX()
 {
-  if (feature_value[0] < featureNormalThreshold[0]) {
-    return 0; // level 0: not cutting
-  }
-  else {
-    float vel_rms_x = calcAccelRMSx() * 1000 / (2 * 3.14159 * max_index_X);
-    //  Serial.printf("Vel_RMS_X: %f\n", vel_rms_x);
-    return vel_rms_x;
-  }
+  float vel_rms_x = calcAccelRMSx() * 1000 / (2 * 3.14159 * max_index_X);
+  //  Serial.printf("Vel_RMS_X: %f\n", vel_rms_x);
+  return vel_rms_x;
 }
 // Function to calculate Accel RMS value for RMS velovity calculation along Y axis
 float calcAccelRMSy()
@@ -791,14 +788,9 @@ float calcAccelRMSy()
 // Function to calculate RMS velocity along Y axis
 float velocityY()
 {
-  if (feature_value[0] < featureNormalThreshold[0]) {
-    return 0; // level 0: not cutting
-  }
-  else {
-    float vel_rms_y = calcAccelRMSy() * 1000 / (2 * 3.14159 * max_index_Y);
-    //  Serial.printf("Vel_RMS_Y: %f\n", vel_rms_y);
-    return vel_rms_y;
-  }
+  float vel_rms_y = calcAccelRMSy() * 1000 / (2 * 3.14159 * max_index_Y);
+  //  Serial.printf("Vel_RMS_Y: %f\n", vel_rms_y);
+  return vel_rms_y;
 }
 // Function to calculate Accel RMS value for RMS velovity calculation along Z axis
 float calcAccelRMSz()
@@ -819,14 +811,9 @@ float calcAccelRMSz()
 // Function to calculate RMS velocity along Z axis
 float velocityZ()
 {
-  if (feature_value[0] < featureNormalThreshold[0]) {
-    return 0; // level 0: not cutting
-  }
-  else {
-    float vel_rms_z = calcAccelRMSz() * 1000 / (2 * 3.14 * max_index_Z);
-    //  Serial.printf("Vel_RMS_Z: %f\n", vel_rms_z);
-    return vel_rms_z;
-  }
+  float vel_rms_z = calcAccelRMSz() * 1000 / (2 * 3.14 * max_index_Z);
+  //  Serial.printf("Vel_RMS_Z: %f\n", vel_rms_z);
+  return vel_rms_z;
 }
 // Function to calculate Audio data in DB
 float audioDB()
