@@ -1,5 +1,5 @@
 /*
-  Infinite Uptime BLE Module Firmware
+  Infinite Uptime BLE Module Forging Firmware Updated 24-12-2016 v3
 
   TIME DOMAIN FEATURES
   NOTE: Intervals are checked based on AUDIO, not ACCEL. Read vibration energy
