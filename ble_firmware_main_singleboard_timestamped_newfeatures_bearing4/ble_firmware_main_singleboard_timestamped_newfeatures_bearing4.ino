@@ -12,7 +12,6 @@
 */
 
 #include <i2c_t3.h>
-#include <SPI.h>
 
 #include <i2s.h>  /* I2S digital audio */
 
@@ -26,7 +25,7 @@
 //====================== Module Configuration Variables ========================
 #define CLOCK_TYPE         (I2S_CLOCK_48K_INTERNAL)     // I2S clock
 bool statusLED = true;                                  // Status LED ON/OFF
-String MAC_ADDRESS = "88:4A:EA:69:E2:0E";
+String MAC_ADDRESS = "88:4A:EA:69:DF:8C";
 
 // Reduce RUN frequency if needed.
 const uint16_t AUDIO_FREQ = 8000;     // Audio frequency set to 8000 Hz
@@ -160,7 +159,7 @@ int bat = 100;  // Battery status
 
 //Regular data transmit variables
 boolean datasendtime = false;
-int datasendlimit = 500;
+int datasendlimit = 3000;
 int currentmillis = 0;
 int prevmillis = 0;
 int currenttime = 0;
@@ -378,7 +377,7 @@ void compute_features() {
         if (blue == 1) {
           bluemillisnow = millis();
           if (bluemillisnow - bluetimerstart >= bluesleeplimit) { //sleep mode
-            sleepmode = true;
+            //sleepmode = true;
             blue = 0;
           }
         }
@@ -647,7 +646,7 @@ void accel_rfft() {
       max_index_X = ind_x;
     }
   }
-  Serial.print("Frequency in X is: "); Serial.println(max_index_X);
+  //Serial.print("Frequency in X is: "); Serial.println(max_index_X);
 
   // Second FFT, Y axis
   arm_rfft_init_q15(&accel_rfft_instance,
@@ -668,7 +667,7 @@ void accel_rfft() {
       max_index_Y = ind_y;
     }
   }
-  Serial.print("Frequency in Y is: "); Serial.println(max_index_Y);
+  //Serial.print("Frequency in Y is: "); Serial.println(max_index_Y);
 
   // Third FFT, Z axis
   arm_rfft_init_q15(&accel_rfft_instance,
