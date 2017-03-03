@@ -25,7 +25,7 @@
 //====================== Module Configuration Variables ========================
 #define CLOCK_TYPE         (I2S_CLOCK_48K_INTERNAL)     // I2S clock
 bool statusLED = true;                                  // Status LED ON/OFF
-String MAC_ADDRESS = "88:4A:EA:69:E1:72";
+String MAC_ADDRESS = "88:4A:EA:69:39:1B";
 
 // Reduce RUN frequency if needed.
 const uint16_t AUDIO_FREQ = 8000;     // Audio frequency set to 8000 Hz
@@ -490,6 +490,7 @@ uint8_t threshold_feature(int index, float featureVal) {
   }
 }
 
+
 // Single instance of RFFT calculation on audio data.
 void audio_rfft() {
   // Apply Hamming window in-place
@@ -738,13 +739,11 @@ float feature_energy () {
   // NOTE: Using CMSIS-DSP functions to perform the following operation performed 2840 microseconds,
   //       while just using simple loop performed 2730 microseconds. Keep the latter.
   float ene = 0;
-  for (uint32_t i = 0; i < ENERGY_INTERVAL_ACCEL; i++) {
-    ene += sq(compBuffer[i] - ave_x)
-           +  sq(compBuffer[ENERGY_INTERVAL_ACCEL + i] - ave_y)
-           +  sq(compBuffer[zind + i] - ave_z);
+  for (uint32_t i = 0; i < ENERGY_INTERVAL_ACCEL/4; i++) {
+    ene += sq(compBuffer[zind + i] - 0.09);
   }
   ene *= ENERGY_INTERVAL_ACCEL; //Necessary?
-
+  Serial.print("Energy 1 = ");Serial.println(ene);
   return ene;
 }
 // Function to calculate Accel RMS value for RMS velovity calculation along X axis
@@ -764,14 +763,49 @@ float calcAccelRMSx()
 // Function to calculate RMS velocity along X axis
 float velocityX()
 {
-  if (feature_value[0] < featureNormalThreshold[0]) {
-    return 0; // level 0: not cutting
+  // Take q15_t buffer as float buffer for computation
+  float* compBuffer = (float*)&rfft_accel_buffer;
+  // Reduce re-computation of variables
+  int zind = ENERGY_INTERVAL_ACCEL * 2;
+
+  // Copy from accel batches to compBuffer
+  arm_q15_to_float(&accel_x_batch[buffer_compute_index][featureBatchSize / ACCEL_COUNTER_TARGET - ENERGY_INTERVAL_ACCEL],
+                   compBuffer,
+                   ENERGY_INTERVAL_ACCEL);
+  arm_q15_to_float(&accel_y_batch[buffer_compute_index][featureBatchSize / ACCEL_COUNTER_TARGET - ENERGY_INTERVAL_ACCEL],
+                   &compBuffer[ENERGY_INTERVAL_ACCEL],
+                   ENERGY_INTERVAL_ACCEL);
+  arm_q15_to_float(&accel_z_batch[buffer_compute_index][featureBatchSize / ACCEL_COUNTER_TARGET - ENERGY_INTERVAL_ACCEL],
+                   &compBuffer[zind],
+                   ENERGY_INTERVAL_ACCEL);
+
+  // Scale all entries by aRes AND 2^15; the entries were NOT in q1.15 format.
+  arm_scale_f32(compBuffer, aRes * 32768, compBuffer, ENERGY_INTERVAL_ACCEL * 3);
+
+  // Apply accel biases
+  arm_offset_f32(compBuffer, accelBias[0], compBuffer, ENERGY_INTERVAL_ACCEL);
+  arm_offset_f32(&compBuffer[ENERGY_INTERVAL_ACCEL], accelBias[1], &compBuffer[ENERGY_INTERVAL_ACCEL], ENERGY_INTERVAL_ACCEL);
+  arm_offset_f32(&compBuffer[zind], accelBias[2], &compBuffer[zind], ENERGY_INTERVAL_ACCEL);
+
+  float ave_x = 0;
+  float ave_y = 0;
+  float ave_z = 0;
+
+  // Calculate average
+  arm_mean_f32(compBuffer, ENERGY_INTERVAL_ACCEL, &ave_x);
+  arm_mean_f32(&compBuffer[ENERGY_INTERVAL_ACCEL], ENERGY_INTERVAL_ACCEL, &ave_y);
+  arm_mean_f32(&compBuffer[zind], ENERGY_INTERVAL_ACCEL, &ave_z);
+
+  // Calculate energy.
+  // NOTE: Using CMSIS-DSP functions to perform the following operation performed 2840 microseconds,
+  //       while just using simple loop performed 2730 microseconds. Keep the latter.
+  float ene = 0;
+  for (uint32_t i = ENERGY_INTERVAL_ACCEL/4; i < 2*ENERGY_INTERVAL_ACCEL/4; i++) {
+    ene += sq(compBuffer[zind + i] - 0.09);
   }
-  else {
-    float vel_rms_x = calcAccelRMSx() * 1000 / (2 * 3.14159 * max_index_X);
-    //  Serial.printf("Vel_RMS_X: %f\n", vel_rms_x);
-    return vel_rms_x;
-  }
+  ene *= ENERGY_INTERVAL_ACCEL; //Necessary?
+  Serial.print("Energy 2 = ");Serial.println(ene);
+  return ene;
 }
 // Function to calculate Accel RMS value for RMS velovity calculation along Y axis
 float calcAccelRMSy()
@@ -790,14 +824,49 @@ float calcAccelRMSy()
 // Function to calculate RMS velocity along Y axis
 float velocityY()
 {
-  if (feature_value[0] < featureNormalThreshold[0]) {
-    return 0; // level 0: not cutting
+  // Take q15_t buffer as float buffer for computation
+  float* compBuffer = (float*)&rfft_accel_buffer;
+  // Reduce re-computation of variables
+  int zind = ENERGY_INTERVAL_ACCEL * 2;
+
+  // Copy from accel batches to compBuffer
+  arm_q15_to_float(&accel_x_batch[buffer_compute_index][featureBatchSize / ACCEL_COUNTER_TARGET - ENERGY_INTERVAL_ACCEL],
+                   compBuffer,
+                   ENERGY_INTERVAL_ACCEL);
+  arm_q15_to_float(&accel_y_batch[buffer_compute_index][featureBatchSize / ACCEL_COUNTER_TARGET - ENERGY_INTERVAL_ACCEL],
+                   &compBuffer[ENERGY_INTERVAL_ACCEL],
+                   ENERGY_INTERVAL_ACCEL);
+  arm_q15_to_float(&accel_z_batch[buffer_compute_index][featureBatchSize / ACCEL_COUNTER_TARGET - ENERGY_INTERVAL_ACCEL],
+                   &compBuffer[zind],
+                   ENERGY_INTERVAL_ACCEL);
+
+  // Scale all entries by aRes AND 2^15; the entries were NOT in q1.15 format.
+  arm_scale_f32(compBuffer, aRes * 32768, compBuffer, ENERGY_INTERVAL_ACCEL * 3);
+
+  // Apply accel biases
+  arm_offset_f32(compBuffer, accelBias[0], compBuffer, ENERGY_INTERVAL_ACCEL);
+  arm_offset_f32(&compBuffer[ENERGY_INTERVAL_ACCEL], accelBias[1], &compBuffer[ENERGY_INTERVAL_ACCEL], ENERGY_INTERVAL_ACCEL);
+  arm_offset_f32(&compBuffer[zind], accelBias[2], &compBuffer[zind], ENERGY_INTERVAL_ACCEL);
+
+  float ave_x = 0;
+  float ave_y = 0;
+  float ave_z = 0;
+
+  // Calculate average
+  arm_mean_f32(compBuffer, ENERGY_INTERVAL_ACCEL, &ave_x);
+  arm_mean_f32(&compBuffer[ENERGY_INTERVAL_ACCEL], ENERGY_INTERVAL_ACCEL, &ave_y);
+  arm_mean_f32(&compBuffer[zind], ENERGY_INTERVAL_ACCEL, &ave_z);
+
+  // Calculate energy.
+  // NOTE: Using CMSIS-DSP functions to perform the following operation performed 2840 microseconds,
+  //       while just using simple loop performed 2730 microseconds. Keep the latter.
+  float ene = 0;
+  for (uint32_t i = 2*ENERGY_INTERVAL_ACCEL/4; i < 3*ENERGY_INTERVAL_ACCEL/4; i++) {
+    ene += sq(compBuffer[zind + i] - 0.09);
   }
-  else {
-    float vel_rms_y = calcAccelRMSy() * 1000 / (2 * 3.14159 * max_index_Y);
-    //  Serial.printf("Vel_RMS_Y: %f\n", vel_rms_y);
-    return vel_rms_y;
-  }
+  ene *= ENERGY_INTERVAL_ACCEL; //Necessary?
+  Serial.print("Energy 3 = ");Serial.println(ene);
+  return ene;
 }
 // Function to calculate Accel RMS value for RMS velovity calculation along Z axis
 float calcAccelRMSz()
@@ -818,14 +887,49 @@ float calcAccelRMSz()
 // Function to calculate RMS velocity along Z axis
 float velocityZ()
 {
-  if (feature_value[0] < featureNormalThreshold[0]) {
-    return 0; // level 0: not cutting
+  // Take q15_t buffer as float buffer for computation
+  float* compBuffer = (float*)&rfft_accel_buffer;
+  // Reduce re-computation of variables
+  int zind = ENERGY_INTERVAL_ACCEL * 2;
+
+  // Copy from accel batches to compBuffer
+  arm_q15_to_float(&accel_x_batch[buffer_compute_index][featureBatchSize / ACCEL_COUNTER_TARGET - ENERGY_INTERVAL_ACCEL],
+                   compBuffer,
+                   ENERGY_INTERVAL_ACCEL);
+  arm_q15_to_float(&accel_y_batch[buffer_compute_index][featureBatchSize / ACCEL_COUNTER_TARGET - ENERGY_INTERVAL_ACCEL],
+                   &compBuffer[ENERGY_INTERVAL_ACCEL],
+                   ENERGY_INTERVAL_ACCEL);
+  arm_q15_to_float(&accel_z_batch[buffer_compute_index][featureBatchSize / ACCEL_COUNTER_TARGET - ENERGY_INTERVAL_ACCEL],
+                   &compBuffer[zind],
+                   ENERGY_INTERVAL_ACCEL);
+
+  // Scale all entries by aRes AND 2^15; the entries were NOT in q1.15 format.
+  arm_scale_f32(compBuffer, aRes * 32768, compBuffer, ENERGY_INTERVAL_ACCEL * 3);
+
+  // Apply accel biases
+  arm_offset_f32(compBuffer, accelBias[0], compBuffer, ENERGY_INTERVAL_ACCEL);
+  arm_offset_f32(&compBuffer[ENERGY_INTERVAL_ACCEL], accelBias[1], &compBuffer[ENERGY_INTERVAL_ACCEL], ENERGY_INTERVAL_ACCEL);
+  arm_offset_f32(&compBuffer[zind], accelBias[2], &compBuffer[zind], ENERGY_INTERVAL_ACCEL);
+
+  float ave_x = 0;
+  float ave_y = 0;
+  float ave_z = 0;
+
+  // Calculate average
+  arm_mean_f32(compBuffer, ENERGY_INTERVAL_ACCEL, &ave_x);
+  arm_mean_f32(&compBuffer[ENERGY_INTERVAL_ACCEL], ENERGY_INTERVAL_ACCEL, &ave_y);
+  arm_mean_f32(&compBuffer[zind], ENERGY_INTERVAL_ACCEL, &ave_z);
+
+  // Calculate energy.
+  // NOTE: Using CMSIS-DSP functions to perform the following operation performed 2840 microseconds,
+  //       while just using simple loop performed 2730 microseconds. Keep the latter.
+  float ene = 0;
+  for (uint32_t i = 3*ENERGY_INTERVAL_ACCEL/4; i < ENERGY_INTERVAL_ACCEL; i++) {
+    ene += sq(compBuffer[zind + i] - 0.09);
   }
-  else {
-    float vel_rms_z = calcAccelRMSz() * 1000 / (2 * 3.14 * max_index_Z);
-    //  Serial.printf("Vel_RMS_Z: %f\n", vel_rms_z);
-    return vel_rms_z;
-  }
+  ene *= ENERGY_INTERVAL_ACCEL; //Necessary?
+  Serial.print("Energy 4 = ");Serial.println(ene);
+  return ene;
 }
 // Function to calculate Audio data in DB
 float audioDB()
