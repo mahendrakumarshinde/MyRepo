@@ -30,7 +30,7 @@ Existing librairies are:
   - IUMPU9250: Accelerometer + Gyroscope + Magnetometer
   - IURGBLed: RGB led with 7 color display (+ off)
 
-Functionnal components can be interpreted as endpoints, while connectivity components or I2C are intermediates. Intermediates and endpoints are off course inter-dependent. In this implementation, we choose to include the connectivity component and I2C in the functionnal component classes because it allows to adjust how each functionnal component uses connectivity without having to modify the connectivity classes themselves.
+Functionnal components can be interpreted as endpoints, while connectivity components or I2C are intermediates. Intermediates and endpoints are of course inter-dependent. In this implementation, we choose to include the connectivity component and I2C in the functionnal component classes because it allows to adjust how each functionnal component uses connectivity without having to modify the connectivity classes themselves.
 
 ##Dependency
 Note that libraries can depend on other libraries. The general logic is as follow:
