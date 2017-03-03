@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 #include "IUBLE.h"
-#include "IUI2CTeensy.h"
+#include "IUI2C.h"
 
 /**
 * Class to handle the RGB led behavior
@@ -12,8 +12,6 @@
 class IURGBLed
 {
   public:
-    IURGBLed(IUI2CTeensy iuI2C, IUBLE iuBLE);
-    virtual ~IURGBLed();
     enum PIN : uint8_t { // Led pin
                         RED_PIN = 29,
                         GREEN_PIN = 27,
@@ -37,7 +35,8 @@ class IURGBLed
                                   {0, 0, 0}, //WHITE_NONE
                                   {1, 1, 1} //SLEEP_MODE
                                  };
-
+    //Constructors, getters and setters
+    IURGBLed(IUI2C iuI2C, IUBLE iuBLE);
     void activate();
     void deactivate() { m_status = false; }
     bool isActive() { return m_status; }
@@ -47,7 +46,7 @@ class IURGBLed
     bool updateFromI2C();
 
   private:
-    IUI2CTeensy m_iuI2C;
+    IUI2C m_iuI2C;
     IUBLE m_iuBLE;
     bool m_status;
 };

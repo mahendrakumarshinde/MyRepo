@@ -140,9 +140,10 @@ void IUI2CTeensy::readBytes(uint8_t address, uint8_t subAddress, uint8_t count, 
     {
       Wire.requestFrom(address, (size_t) count);  // Read bytes from slave register address
       uint8_t i = 0;
-      while (Wire.available()) {
-        destination[i++] = Wire.read();
-      }         // Put read results in the Rx buffer
+      while (Wire.available())
+      {
+        destination[i++] = Wire.read(); // Put read results in the Rx buffer
+      }
     }
     else
     {

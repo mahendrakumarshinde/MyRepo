@@ -25,10 +25,6 @@
 
 #include <i2s.h>  /* I2S digital audio */
 
-/* CMSIS-DSP library for RFFT */
-#define ARM_MATH_CM4
-#include <arm_math.h>
-
 /* Register addresses and hamming window presets  */
 #include "constants.h"
 
@@ -506,6 +502,8 @@ void resetSampling(bool run_mode) {
 
 // Function to compute all the feature values to be stored on cloud
 void compute_features() {
+  Serial.println("s, ");
+  Serial.println(millis(), DEC);
   // Turn the boolean off immediately.
   compute_feature_now[buffer_compute_index] = false;
   record_feature_now[buffer_compute_index] = false;
@@ -516,10 +514,15 @@ void compute_features() {
     current_danger_level = threshold_feature(0, feature_value[0]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
+//  Serial.println("s0, ");
+//  Serial.println(millis(), DEC);
 
   iuMPU9250.computeAccelRFFT(buffer_compute_index, iuMPU9250.X, hamming_window_512);
   iuMPU9250.computeAccelRFFT(buffer_compute_index, iuMPU9250.Y, hamming_window_512);
   iuMPU9250.computeAccelRFFT(buffer_compute_index, iuMPU9250.Z, hamming_window_512);
+  
+ // Serial.println("s1, ");
+ // Serial.println(millis(), DEC);
 
   feature_value[1] = iuMPU9250.computeVelocity(buffer_compute_index, iuMPU9250.X, featureNormalThreshold[1]);
   
@@ -527,30 +530,40 @@ void compute_features() {
     current_danger_level = threshold_feature(1, feature_value[1]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
+ // Serial.println("s2, ");
+//  Serial.println(millis(), DEC);
 
   feature_value[2] = iuMPU9250.computeVelocity(buffer_compute_index, iuMPU9250.Y, featureNormalThreshold[2]);
   if (feature2check == 1) {
     current_danger_level = threshold_feature(2, feature_value[2]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
+//  Serial.println("s3, ");
+//  Serial.println(millis(), DEC);
 
   feature_value[3] = iuMPU9250.computeVelocity(buffer_compute_index, iuMPU9250.Z, featureNormalThreshold[3]);
   if (feature3check == 1) {
     current_danger_level = threshold_feature(3, feature_value[3]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
+  //Serial.println("s4, ");
+ // Serial.println(millis(), DEC);
 
   feature_value[4] = iuBMP280.getCurrentTemperature();
   if (feature4check == 1) {
     current_danger_level = threshold_feature(4, feature_value[4]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
+  //Serial.println("s5, ");
+  //Serial.println(millis(), DEC);
 
   feature_value[5] = iuI2S.getAudioDB(buffer_compute_index);
   if (feature5check == 1) {
     current_danger_level = threshold_feature(5, feature_value[5]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
+  Serial.println("s6, ");
+  Serial.println(millis(), DEC);
 
 
   // Reflect highest danger level if differs from previous state.
@@ -678,6 +691,8 @@ void compute_features() {
   record_feature_now[buffer_compute_index] = true;
   // Flip computation index AFTER all computations are done.
   buffer_compute_index = buffer_compute_index == 0 ? 1 : 0;
+  Serial.println("e, ");
+  Serial.println(millis(), DEC);
 }
 
 

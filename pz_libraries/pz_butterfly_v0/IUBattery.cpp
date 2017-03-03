@@ -1,15 +1,5 @@
 #include "IUBattery.h"
 
-IUBattery::IUBattery() : m_status(100)
-{
-    //ctor
-}
-
-IUBattery::~IUBattery()
-{
-    //dtor
-}
-
 //Battery Status calculation function
 void IUBattery::updateStatus()
 {

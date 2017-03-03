@@ -67,7 +67,6 @@ class IUMPU9250
     // Constructors, destructors, getters, setters
     IUMPU9250(IUI2CTeensy iuI2C, IUBLE iuBLE);
     IUMPU9250(IUI2CTeensy iuI2C, IUBLE iuBLE, ScaleOption scale);
-    virtual ~IUMPU9250();
     uint8_t getScale() { return m_scale; }
     void setScale(uint8_t val);
     uint8_t getBandwidth() { return m_bandwidth; }

@@ -35,7 +35,7 @@
 /*Load functionnalities*/
 #include "IURGBLed.h"
 #include "IUBLE.h"
-#include "IUI2CTeensy.h"
+#include "IUI2C.h"
 #include "IUBattery.h"
 #include "IUMPU9250.h"
 #include "IUBMP280.h"
@@ -43,11 +43,11 @@
 
 //====================== Instanciate device classes ========================
 
-IUI2CTeensy iuI2C; //Always initialize the computer bus first
+IUI2C iuI2C; //Always initialize the computer bus first
 IUBattery iuBat;
 IUBLE iuBLE(iuI2C);
 IURGBLed iuRGBLed(iuI2C,iuBLE);
-IUMPU9250 iuMPU9250(iuI2C, iuBLE);
+IUBMX055 iuBMX055(iuI2C, iuBLE);
 IUBMP280 iuBMP280(iuI2C, iuBLE);
 IUI2S iuI2S(iuI2C, iuBLE);
 
@@ -168,7 +168,7 @@ uint32_t accelSamplingCount = 0;    // Accel sample index for recording data
 uint32_t restCount = 0;             // Resting interval - Can be removed
 
 // NOTE: Do NOT change the following variables unless you know what you're doing
-uint16_t ACCEL_COUNTER_TARGET = iuI2S.getTargetSample() / iuMPU9250.getTargetSample();  // Changing ratio for data collection mode
+uint16_t ACCEL_COUNTER_TARGET = iuI2S.getTargetSample() / iuBMX055.getTargetSample();  // Changing ratio for data collection mode
 uint32_t subsample_counter = 0;
 uint32_t accel_counter = 0;
 
@@ -178,8 +178,9 @@ uint32_t accel_counter = 0;
 
 void setup()
 {
+  // Setup I2C: Always init computer bus first
+  iuI2C.activate(400000, 115200); // Set I2C frequency at 400 kHz and Baud rate at 115200
   iuBLE.activate(); // Initialize BLE port
-  iuI2C.activate(); // Setup I2C
   iuBat.activate(); // Battery
   iuRGBLed.activate();
   
@@ -189,12 +190,12 @@ void setup()
    It needs to be set to Pass-Through mode so that the MPU9250 can
    be accessed directly.*/
   iuI2C.scanDevices(); // should detect SENtral at 0x28
-  iuMPU9250.setSENtralToPassThroughMode(); // Put EM7180 SENtral into pass-through mode
+  iuBMX055.setSENtralToPassThroughMode(); // Put EM7180 SENtral into pass-through mode
   iuI2C.scanDevices(); // should see all the devices on the I2C bus including two from the EEPROM (ID page and data pages)
   iuI2C.resetErrorMessage(); //ZAB: Do not change this flow as error_message need to be set here
 
   // Wake up and configure each sensor
-  iuMPU9250.wakeUp(); // Accelerometer
+  iuBMX055.wakeUp(); // Accelerometer
   iuBMP280.wakeUp(); // Pressure and Temperature sensor
   iuI2S.wakeUp(); // Audio  
   
@@ -264,13 +265,13 @@ void loop()
       iuI2C.printBuffer();
       
       iuRGBLed.updateFromI2C(); // Check for LED color update
-      iuMPU9250.updateAccelRangeFromI2C(); // check for accel range update
-      bool accUpdate = iuMPU9250.updateSamplingRateFromI2C(); // check for accel sampling rate update
+      iuBMX055.updateAccelRangeFromI2C(); // check for accel range update
+      bool accUpdate = iuBMX055.updateSamplingRateFromI2C(); // check for accel sampling rate update
       bool audioUpdate = iuI2S.updateSamplingRateFromI2C(); // check for accel sampling rate update
       
       if (accUpdate || audioUpdate) //Accelerometer or Audio sampling rate changed
       {
-        ACCEL_COUNTER_TARGET = iuI2S.getTargetSample() / iuMPU9250.getTargetSample();
+        ACCEL_COUNTER_TARGET = iuI2S.getTargetSample() / iuBMX055.getTargetSample();
         accel_counter = 0;
         subsample_counter = 0;
       }
@@ -279,12 +280,12 @@ void loop()
       {
         currMode = RUN;
         iuRGBLed.changeColor(iuRGBLed.BLUE_NOOP);
-        iuMPU9250.setScale(iuMPU9250.AFS_2G);
-        iuMPU9250.resetTargetSample();
+        iuBMX055.setScale(iuBMX055.AFS_2G);
+        iuBMX055.resetTargetSample();
         iuI2S.resetTargetSample();
 
         //Sampling and Counter reset
-        ACCEL_COUNTER_TARGET = iuI2S.getTargetSample() / iuMPU9250.getTargetSample();
+        ACCEL_COUNTER_TARGET = iuI2S.getTargetSample() / iuBMX055.getTargetSample();
         accel_counter = 0;
         subsample_counter = 0;
       }
@@ -362,10 +363,10 @@ void i2s_rx_callback( int32_t *pBuf )
         audioSamplingCount ++;
         // Accel data
         if (accel_counter == ACCEL_COUNTER_TARGET) {
-          iuMPU9250.readAccelData();
+          iuBMX055.readAccelData();
           if (iuI2C.getReadFlag())
           {
-            iuMPU9250.pushDataToBatch(buffer_record_index, accelSamplingCount);
+            iuBMX055.pushDataToBatch(buffer_record_index, accelSamplingCount);
             accelSamplingCount ++;
           }
           accel_counter = 0;
@@ -376,8 +377,8 @@ void i2s_rx_callback( int32_t *pBuf )
       iuI2S.extractDataInPlace(&pBuf[0]); // Single channel mic
       iuI2S.dumpDataThroughI2C(pBuf);
       if (accel_counter == ACCEL_COUNTER_TARGET) {
-        iuMPU9250.readAccelData();
-        iuMPU9250.dumpDataThroughI2C();
+        iuBMX055.readAccelData();
+        iuBMX055.dumpDataThroughI2C();
         accel_counter = 0;
       }
     }
@@ -438,7 +439,7 @@ void processInstructions(char *blebuffer)
       if (blebuffer[7] == '0' && blebuffer[9] == '0' && blebuffer[11] == '0' && blebuffer[13] == '0' && blebuffer[15] == '0' && blebuffer[17] == '0') {
         iuI2C.port->print("Time to record data and send FFTs");
         recordmode = true;
-        iuMPU9250.showRecordFFT(buffer_compute_index, MAC_ADDRESS);
+        iuBMX055.showRecordFFT(buffer_compute_index, MAC_ADDRESS);
         recordmode = false;
       }
       break;
@@ -498,7 +499,7 @@ void resetSampling(bool run_mode) {
     iuI2S.resetTargetSample();
   }
 
-  ACCEL_COUNTER_TARGET = iuI2S.getTargetSample() / iuMPU9250.getTargetSample();
+  ACCEL_COUNTER_TARGET = iuI2S.getTargetSample() / iuBMX055.getTargetSample();
 }
 
 //======================= Feature Computation Caller ============================
@@ -511,30 +512,30 @@ void compute_features() {
   record_feature_now[buffer_compute_index] = false;
   highest_danger_level = 0;
 
-  feature_value[0] = iuMPU9250.computeEnergy(buffer_compute_index, featureBatchSize, ACCEL_COUNTER_TARGET);
+  feature_value[0] = iuBMX055.computeEnergy(buffer_compute_index, featureBatchSize, ACCEL_COUNTER_TARGET);
   if (feature0check == 1) {
     current_danger_level = threshold_feature(0, feature_value[0]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
 
-  iuMPU9250.computeAccelRFFT(buffer_compute_index, iuMPU9250.X, hamming_window_512);
-  iuMPU9250.computeAccelRFFT(buffer_compute_index, iuMPU9250.Y, hamming_window_512);
-  iuMPU9250.computeAccelRFFT(buffer_compute_index, iuMPU9250.Z, hamming_window_512);
+  iuBMX055.computeAccelRFFT(buffer_compute_index, iuBMX055.X, hamming_window_512);
+  iuBMX055.computeAccelRFFT(buffer_compute_index, iuBMX055.Y, hamming_window_512);
+  iuBMX055.computeAccelRFFT(buffer_compute_index, iuBMX055.Z, hamming_window_512);
 
-  feature_value[1] = iuMPU9250.computeVelocity(buffer_compute_index, iuMPU9250.X, featureNormalThreshold[1]);
+  feature_value[1] = iuBMX055.computeVelocity(buffer_compute_index, iuBMX055.X, featureNormalThreshold[1]);
   
   if (feature1check == 1) {
     current_danger_level = threshold_feature(1, feature_value[1]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
 
-  feature_value[2] = iuMPU9250.computeVelocity(buffer_compute_index, iuMPU9250.Y, featureNormalThreshold[2]);
+  feature_value[2] = iuBMX055.computeVelocity(buffer_compute_index, iuBMX055.Y, featureNormalThreshold[2]);
   if (feature2check == 1) {
     current_danger_level = threshold_feature(2, feature_value[2]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
 
-  feature_value[3] = iuMPU9250.computeVelocity(buffer_compute_index, iuMPU9250.Z, featureNormalThreshold[3]);
+  feature_value[3] = iuBMX055.computeVelocity(buffer_compute_index, iuBMX055.Z, featureNormalThreshold[3]);
   if (feature3check == 1) {
     current_danger_level = threshold_feature(3, feature_value[3]);
     highest_danger_level = max(highest_danger_level, current_danger_level);

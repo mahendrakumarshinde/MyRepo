@@ -3,14 +3,9 @@
 /**
 * LED is activated at construction.
 */
-IURGBLed::IURGBLed(IUI2CTeensy iuI2C, IUBLE iuBLE) : m_iuI2C(iuI2C), m_iuBLE(iuBLE)
+IURGBLed::IURGBLed(IUI2C iuI2C, IUBLE iuBLE) : m_iuI2C(iuI2C), m_iuBLE(iuBLE)
 {
   activate();
-}
-
-IURGBLed::~IURGBLed()
-{
-  //dtor
 }
 
 /**

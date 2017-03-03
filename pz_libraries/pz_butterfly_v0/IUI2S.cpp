@@ -1,14 +1,9 @@
 #include "IUI2S.h"
 
-IUI2S::IUI2S(IUI2CTeensy iuI2C, IUBLE iuBLE) : m_iuI2C(iuI2C), m_iuBLE(iuBLE)
+IUI2S::IUI2S(IUI2C iuI2C, IUBLE iuBLE) : m_iuI2C(iuI2C), m_iuBLE(iuBLE)
 {
     //ctor
   resetTargetSample();
-}
-
-IUI2S::~IUI2S()
-{
-    //dtor
 }
 
 /**

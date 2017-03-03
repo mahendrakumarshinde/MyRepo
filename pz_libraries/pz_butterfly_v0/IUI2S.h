@@ -6,7 +6,7 @@
 #include <arm_math.h> /* CMSIS-DSP library for RFFT */
 
 #include "IUUtilities.h"
-#include "IUI2CTeensy.h"
+#include "IUI2C.h"
 #include "IUBLE.h"
 
 
@@ -22,8 +22,7 @@ class IUI2S
     static const uint16_t NFFT = 2048; // ex AUDIO_NFFT // Audio FFT Index
     static const uint8_t RESCALE = 10; //8; // ex AUDIO_RESCALE // Scaling factor in Audio fft function
     // Getters, Setters, constructor and Destructor
-    IUI2S(IUI2CTeensy iuI2C, IUBLE iuBLE);
-    virtual ~IUI2S();
+    IUI2S(IUI2C iuI2C, IUBLE iuBLE);
     void setTargetSample(uint16_t target) { m_targetSample = target; }
     void resetTargetSample() { m_targetSample = FREQ; }
     uint16_t getTargetSample() { return m_targetSample; }
@@ -40,7 +39,7 @@ class IUI2S
     void computeAudioRFFT(uint8_t buffer_compute_index, q15_t *hamming_window, int magSize, float HammingK, float inverseWLen);
 
   private:
-    IUI2CTeensy m_iuI2C;
+    IUI2C m_iuI2C;
     IUBLE m_iuBLE;
     uint16_t m_targetSample; // ex TARGET_AUDIO_SAMPLE // Target Accel frequency may change in data collection mode
 

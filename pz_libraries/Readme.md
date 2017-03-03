@@ -1,0 +1,104 @@
+# IDE Firmware
+
+##Modularization
+From this version on, the firmware has been separated into C++ libraries, each library handling a specific component or functionality. The objective is to be able to develop a working Arduino Skectch for any hardware configuration with minimal effort, by including the libraries corresponding to the components.
+Similarly, if an existing hardware evolves (some components change), it should be easy to make the firmware evolve by updating the list of included libraries.
+Also, the development of a library for a new component (or the modification of an existing one) should be fairly easy since it requires minimal interaction with other libraries.
+
+##Current libraries
+We distinguish 3 types of libraries:
+1. Logical libraries: are prefixed with "IU" followed by the logical functionnality it is handling
+*eg: IUConfiguration.h, IUUtilities"
+2. Computer Bus (I2C) libraries: are named the same as the board, with the prefix IUI2C 
+*eg: IUI2CTeensy.h, IUI2CButterfly.h*
+3. Component libraries: are named the same as the component itself, prefixed by “IU”. Components can be functionnal (eg: sensors, LED, etc) or connectivity related (eg: bluetooth or wifi) devices.
+*eg: IUMPU9250.h or IUBMX055.h are 2 libraries for 2 different components. They both are accelerometer + gyroscope + mag combos.* 
+
+Existing librairies are:
+- Logical libraries:
+  - IUUtilities
+- I2C libraries:
+  - IUI2CTeensy
+  - IUI2CButterfly
+- Connectivity component libraries:
+  - IUBLE: Bluetooth Low Energy
+- Functionnal component libraries:
+  - IUBattery: Battery 
+  - IUBMP280: Temperature + Pression sensor
+  - IUBMX055: Accelerometer + Gyroscope + Magnetometer
+  - IUI2S: Microphone
+  - IUMPU9250: Accelerometer + Gyroscope + Magnetometer
+  - IURGBLed: RGB led with 7 color display (+ off)
+
+Functionnal components can be interpreted as endpoints, while connectivity components or I2C are intermediates. Intermediates and endpoints are off course inter-dependent. In this implementation, we choose to include the connectivity component and I2C in the functionnal component classes because it allows to adjust how each functionnal component uses connectivity without having to modify the connectivity classes themselves.
+
+##Dependency
+Note that libraries can depend on other libraries. The general logic is as follow:
+- logical libraries:
+  - can be included in any other library
+  - should only include other logical libraries
+- I2C libraries:
+  - can be included in component libraries (both connectivity and functionnal components)
+  - should only include logical libraries
+- connectivity component libraries:
+  - Can be included in functionnal component libraries
+  - Should include any library except the functionnal component libraries
+- functionnal component component libraries:
+  - should never be included in other library
+  - Should include any library except the other functionnal component libraries
+
+##Library caracteristics
+### Logical libraries
+The formalization for these libraries is quite free. It can be a class or a set of constants or functions.
+### I2C Libraries
+An I2C library contains a single class that has to handle at least the following:
+- hold its own hardware related configuration constants
+- have the ability to self-activate / self-configure / self-initialize
+- read and write bytes from / to given address and subaddress
+- handle I2C read / write errors
+- detect each components present on the board
+- have a port (usually Serial) and reading and writing through it
+- handle port read / write errors
+### Connectivity component libraries
+A connectivity library contains a single class that has at least the following functionnalities:
+- hold its own hardware related configuration constants
+- be able to hold and update its configuration variables
+- have as I2C instance
+- have the ability to self-activate / self-configure / self-initialize (by using the I2C instance)
+- have a port to read / write (eg: over bluetooth, wifi, etc)
+- handle read / write errors
+- **optionnal**: BLE component and BLE library currently handle timestamping
+## Functionnal component libraries
+A functionnal component library contains a single class that has at least the following functionnalities:
+- hold its own hardware related configuration constants
+- be able to hold and update its configuration variables
+- have an I2C instance
+- have one or several connectivity component(s) (eg: one for bluetooth, one for wifi, etc)
+- have the ability to self-activate / self-configure / self-initialize (by using the I2C instance)
+- serve its purpose (eg: measure something in the case of a sensor, blink in the case of the LED, etc)
+- post-process its own data (eg: compute total acceleration energy for the accelerometer) *- For this, one can leverage a logical library*
+- send data through I2C port and through the port of each one of its connectivity components
+
+##The role of the Sketch (*.ino file)
+In IU IDE Firmware, the role of the sketch is to orchestrate how all the components work together. This includes:
+- Before setup:
+  - Instantiating an I2C object
+  - Instantiating each component class
+  - Define all possible measure functions (by leveraging each component) and create an array of pointers to them. (+ use hashMap to name them?)
+  - Define all possible feature calculation functions (by leveraging each component), and store them in an array of pointers to them. (+ use hashMap to name them?)
+  - Create a callback function that will be called independently from the main loop. This callback function will handle data measure and will test each measure functions (using the array of pointers) to see if they are active. If yes, then call them.
+  - Create a compute_features function 
+- During setup
+  - Holding / fetching initial configuration data (**Should this be before setup?**)
+  - Initializing the I2C and each components
+  - Start the Audio component and pass it the callback function created before setup 
+- During loop:
+  - Handle recurring events
+  - Handle timed events
+  - Handle instructions received over the I2C port or any of the connectivity device
+  - Handle states, modes and configuration updates
+
+
+
+
+

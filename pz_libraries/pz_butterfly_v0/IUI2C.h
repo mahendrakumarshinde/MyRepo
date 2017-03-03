@@ -1,10 +1,15 @@
-#ifndef IUI2CTEENSY_H
-#define IUI2CTEENSY_H
+#ifndef IUI2C_H
+#define IUI2C_H
 
 #include <Arduino.h>
 #include <i2c_t3.h>
 
-class IUI2CTeensy
+
+/**
+ * Butterfly board use STM32L4 chip and a specific Arduino core have been develop for it.
+ * See Thomas Roell (aka GumpyOldPizza) github: https://github.com/GrumpyOldPizza/arduino-STM32L4
+ */
+class IUI2C
 {
   public:
     // Data collection Mode - Modes of Operation String Constants
@@ -12,11 +17,9 @@ class IUI2CTeensy
     const String START_CONFIRM = "IUOK_START";
     const String END_COLLECTION = "IUCMD_END";
     const String END_CONFIRM = "IUOK_END";
-    IUI2CTeensy();
-    IUI2CTeensy(bool silent, Stream *port);
-    virtual ~IUI2CTeensy();
-    
-    Stream *port;
+    static constexpr HardwareSerial *port = &Serial;
+    // Constructors, getters and setters
+    IUI2C();
     byte getReadError() { return m_readError; }
     bool getReadFlag() { return m_readFlag; }
     void setReadFlag(bool val) { m_readFlag = val; }
@@ -31,8 +34,9 @@ class IUI2CTeensy
     void resetBuffer();
     String getBuffer() { return m_wireBuffer; }
 
-    void activate();
+    void activate(long clockFreq, long baudrate);
     bool scanDevices();
+    bool checkComponentWhoAmI(String componentName, uint8_t address, uint8_t whoAmI, uint8_t iShouldBe);
     void writeByte(uint8_t address, uint8_t subAddress, uint8_t data);
     uint8_t readByte(uint8_t address, uint8_t subAddress);
     void readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_t *destination);
@@ -50,4 +54,4 @@ class IUI2CTeensy
     String m_errorMessage;
 };
 
-#endif // IUI2CTEENSY_H
+#endif // IUI2C_H

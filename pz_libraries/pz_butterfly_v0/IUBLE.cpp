@@ -1,8 +1,8 @@
 #include "IUBLE.h"
 
-IUBLE::IUBLE(IUI2CTeensy iuI2C) : m_iuI2C(iuI2C), m_bufferIndex(0), m_buffNow(0), m_buffPrev(0),
+IUBLE::IUBLE(IUI2C iuI2C) : m_iuI2C(iuI2C), m_bufferIndex(0), m_buffNow(0), m_buffPrev(0),
                                   m_hubDatetime(0), lastReceivedDT(0), m_lastTimer(0),
-                                  m_dataReceptionTimeout(2000), m_dataSendPeriod(3000)
+                                  m_dataReceptionTimeout(2000), m_dataSendPeriod(500)
 {
   // Fill out the buffer with meaningless data
   for (int i=0; i < m_bufferSize; i++)
@@ -11,7 +11,7 @@ IUBLE::IUBLE(IUI2CTeensy iuI2C) : m_iuI2C(iuI2C), m_bufferIndex(0), m_buffNow(0)
   }
 }
 
-IUBLE::IUBLE(IUI2CTeensy iuI2C, uint16_t dataReceptionTimeout, int dataSendPeriod) : 
+IUBLE::IUBLE(IUI2C iuI2C, uint16_t dataReceptionTimeout, int dataSendPeriod) : 
                                         m_iuI2C(iuI2C), m_bufferIndex(0), m_buffNow(0), m_buffPrev(0),
                                         m_hubDatetime(0), lastReceivedDT(0), m_lastTimer(0),
                                         m_dataReceptionTimeout(dataReceptionTimeout), m_dataSendPeriod(dataSendPeriod)
@@ -21,11 +21,6 @@ IUBLE::IUBLE(IUI2CTeensy iuI2C, uint16_t dataReceptionTimeout, int dataSendPerio
   {
     m_buffer[i] = 'a';
   }
-}
-
-IUBLE::~IUBLE()
-{
-    //dtor
 }
 
 void IUBLE::activate()

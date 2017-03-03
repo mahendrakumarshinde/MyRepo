@@ -3,7 +3,9 @@
 
 #include <Arduino.h>
 #include <i2s.h>  /* I2S digital audio */
-#include <arm_math.h> /* CMSIS-DSP library for RFFT */
+/* CMSIS-DSP library for RFFT */
+#define ARM_MATH_CM4
+#include <arm_math.h>
 
 #include "IUUtilities.h"
 #include "IUI2CTeensy.h"
@@ -43,7 +45,6 @@ class IUI2S
     IUI2CTeensy m_iuI2C;
     IUBLE m_iuBLE;
     uint16_t m_targetSample; // ex TARGET_AUDIO_SAMPLE // Target Accel frequency may change in data collection mode
-
     // Acceleration Buffers
     q15_t m_batch[2][MAX_INTERVAL]; // ex audio_batch // Audio buffer - 2 buffers namely for recording and computation simultaneously
     q15_t m_buffer[MAX_INTERVAL];

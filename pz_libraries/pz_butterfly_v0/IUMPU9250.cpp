@@ -27,11 +27,6 @@ IUMPU9250::IUMPU9250(IUI2CTeensy iuI2C, IUBLE iuBLE, IUMPU9250::ScaleOption scal
   resetTargetSample();
 }
 
-IUMPU9250::~IUMPU9250()
-{
-  //dtor
-}
-
 /**
  * Set the scale then recompute resolution
  */

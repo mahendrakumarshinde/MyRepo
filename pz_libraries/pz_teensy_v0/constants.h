@@ -6,6 +6,9 @@ Constants including register addresses and Hamming window presets.
 
 */
 
+/* CMSIS-DSP library for RFFT */
+#define ARM_MATH_CM4
+#include <arm_math.h>
 
 //==============================================================================
 //========================== Hamming Window Presets ============================

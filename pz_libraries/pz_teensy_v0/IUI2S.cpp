@@ -117,17 +117,25 @@ void IUI2S::dumpDataThroughI2C(int32_t  *pBuf)
  * Calculate and return Audio data in DB
  */
 float IUI2S::getAudioDB(uint8_t buffer_compute_index)
-{
+{ 
   float audioDB_val = 0.0;
-  float data = 0.0;
+  int aud_data = 0;
+  unsigned long long int accu = 1; // We use the accumulation because log10 is really slow...
+  unsigned long long int limit = pow(2, 53);
   for (int i = 0; i < MAX_INTERVAL; i++)
   {
-    data = (float) abs(m_batch[buffer_compute_index][i]);// / 16777215.0;    //16777215 = 0xffffff - 24 bit max value
-    if (data > 0)
+    aud_data = abs(m_batch[buffer_compute_index][i]);
+    if (aud_data > 0)
     {
-      audioDB_val += (20 * log10(data));
+      accu *= aud_data;
+    }
+    if (accu >= limit)
+    {
+      audioDB_val += (20 * log10(accu));
+      accu = 1;
     }
   }
+  audioDB_val += (20 * log10(accu));
   audioDB_val /= MAX_INTERVAL;
   return audioDB_val;
 }

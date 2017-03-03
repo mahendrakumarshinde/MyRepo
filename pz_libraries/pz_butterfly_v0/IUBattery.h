@@ -7,8 +7,7 @@ class IUBattery
 {
   public:
     const int chargerCHG  = 2;  // CHG pin to detect charging status
-    IUBattery();
-    virtual ~IUBattery();
+    IUBattery() { m_status = 100; }
     int getInputVoltage();
     void activate();
     int getStatus() { return m_status; }

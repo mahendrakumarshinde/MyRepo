@@ -1,38 +1,215 @@
 #include "IUBMX055.h"
 
 
-IUMPU9250::IUMPU9250(IUI2CTeensy iuI2C, IUBLE iuBLE) : m_iuI2C(iuI2C), m_iuBLE(iuBLE), m_energy(0)
+IUBMX055::IUBMX055(IUI2C iuI2C, IUBLE iuBLE) : m_iuI2C(iuI2C), m_iuBLE(iuBLE), m_energy(0)
 {
   for (int i=0; i < 3; i++)
   {
     m_rawAccel[i] = 0;
-    m_maxIndex[i] = 0;
+    m_maxAccelIndex[i] = 0;
+    m_accelBias[i] = 0;
+  }
+  m_accelBW = 0x08 | ABW_16Hz;
+  computeAccelResolution();
+}
+
+/**
+ * Set the scale then recompute resolution
+ */
+void IUBMX055::setAccelScale(uint8_t val)
+{
+  m_accelScale = val;
+  computeAccelResolution();
+}
+
+
+void IUBMX055::computeAccelResolution() {
+  switch (m_accelScale)
+  {
+   // Possible accelerometer scales (and their register bit settings) are:
+  // 2 Gs (0011), 4 Gs (0101), 8 Gs (1000), and 16 Gs  (1100). 
+  // BMX055 ACC data is signed 12 bit
+    case AFS_2G:
+          m_accelResolution = 2.0f/2048.0f;
+          break;
+    case AFS_4G:
+          m_accelResolution = 4.0f/2048.0f;
+          break;
+    case AFS_8G:
+          m_accelResolution = 8.0f/2048.0f;
+          break;
+    case AFS_16G:
+          m_accelResolution = 16.0f/2048.0f;
+          break;
   }
 }
 
-IUMPU9250::~IUMPU9250()
-{
-  //dtor
-}
 
 /**
  * Ping the device address and, if the answer is correct, initialize it
+ * This is a good test of communication.
  */
-void IUMPU9250::wakeUp()
-{
+void IUBMX055::wakeUp()
+{ 
+  m_iuI2C.port->println("BMX055 accelerometer...");
   
+  if(m_iuI2C.checkComponentWhoAmI("BMX055 ACC", ACC_ADDRESS, ACC_WHO_AM_I, ACC_I_AM))
+  {
+    initSensor(); // Initialize Accelerometer
+  }
+  else
+  {
+    m_iuI2C.setErrorMessage("BMXERR");
+  }
   delay(15);
+
+  /* // Disable Gyro and mag in current firmware
+  m_iuI2C.checkComponentWhoAmI("BMX055 GYRO", GYRO_ADDRESS, GYRO_WHO_AM_I, GYRO_I_AM)
+  m_iuI2C.checkComponentWhoAmI("BMX055 MAG", MAG_ADDRESS, MAG_WHO_AM_I, MAG_I_AM)  
+  */
+  
 }
 
+//TODO: Fix initSensor
 /**
  * Initialize the device by configurating the accelerometer, gyroscope and sample rates
  */
-void IUMPU9250::initSensor()
+void IUBMX055::initSensor()
 {
+    
+   // start with all sensors in default mode with all registers reset
+   writeByte(BMX055_ACC_ADDRESS,  BMX055_ACC_BGW_SOFTRESET, 0xB6);  // reset accelerometer
+   delay(1000); // Wait for all registers to reset 
+
+   // Configure accelerometer
+   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_PMU_RANGE, m_accelScale & 0x0F); // Set accelerometer full range
+   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_PMU_BW, m_accelBW & 0x0F);     // Set accelerometer bandwidth
+   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_D_HBW, 0x00);              // Use filtered data
+
+   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_INT_EN_1, 0x10);           // Enable ACC data ready interrupt
+   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_INT_OUT_CTRL, 0x04);       // Set interrupts push-pull, active high for INT1 and INT2
+   //writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_INT_MAP_1, 0x02);        // Define INT1 (intACC1) as ACC data ready interrupt
+   writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_INT_MAP_1, 0x80);          // Define INT2 (intACC2) as ACC data ready interrupt
+
+   //writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_BGW_SPI3_WDT, 0x06);       // Set watchdog timer for 50 ms
+ 
+  //Configure Gyro
+  // start by resetting gyro, better not since it ends up in sleep mode?!
+  //writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_BGW_SOFTRESET, 0xB6); // reset gyro
+  //delay(100);
+  // Three power modes, 0x00 Normal, 
+  // set bit 7 to 1 for suspend mode, set bit 5 to 1 for deep suspend mode
+  // sleep duration in fast-power up from suspend mode is set by bits 1 - 3
+  // 000 for 2 ms, 111 for 20 ms, etc.
+  //writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_LPM1, 0x00);  // set GYRO normal mode
+  // set GYRO sleep duration for fast power-up mode to 20 ms, for duty cycle of 50%
+  //writeByte(BMX055_ACC_ADDRESS, BMX055_GYRO_LPM1, 0x0E);  
+  // set bit 7 to 1 for fast-power-up mode,  gyro goes quickly to normal mode upon wake up
+  // can set external wake-up interrupts on bits 5 and 4
+  // auto-sleep wake duration set in bits 2-0, 001 4 ms, 111 40 ms
+  //writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_LPM2, 0x00);  // set GYRO normal mode
+  // set gyro to fast wake up mode, will sleep for 20 ms then run normally for 20 ms 
+  // and collect data for an effective ODR of 50 Hz, other duty cycles are possible but there
+  // is a minimum wake duration determined by the bandwidth duration, e.g.,  > 10 ms for 23Hz gyro bandwidth
+  //writeByte(BMX055_ACC_ADDRESS, BMX055_GYRO_LPM2, 0x87);   
+
+  writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_RANGE, Gscale);  // set GYRO FS range
+  writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_BW, GODRBW);     // set GYRO ODR and Bandwidth
+
+  //writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_INT_EN_0, 0x80);  // enable data ready interrupt
+  //writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_INT_EN_1, 0x04);  // select push-pull, active high interrupts
+  //writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_INT_MAP_1, 0x80); // select INT3 (intGYRO1) as GYRO data ready interrupt 
   
+  //writeByte(BMX055_GYRO_ADDRESS, BMX055_GYRO_BGW_SPI3_WDT, 0x06); // Enable watchdog timer for I2C with 50 ms window
+
+
+  // Configure magnetometer 
+  writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_PWR_CNTL1, 0x82);  // Softreset magnetometer, ends up in sleep mode
   delay(100);
-  m_iuI2C.port->print("IUBMX055 initialized successfully.\n\n");
+  writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_PWR_CNTL1, 0x01); // Wake up magnetometer
+  delay(100);
+
+  writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_PWR_CNTL2, MODR << 3); // Normal mode
+  //writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_PWR_CNTL2, MODR << 3 | 0x02); // Forced mode
+  
+  //writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_INT_EN_2, 0x84); // Enable data ready pin interrupt, active high
+  
+  // Set up four standard configurations for the magnetometer
+  switch (Mmode)
+  {
+    case lowPower:
+         // Low-power
+          writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_XY, 0x01);  // 3 repetitions (oversampling)
+          writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_Z,  0x02);  // 3 repetitions (oversampling)
+          break;
+    case Regular:
+          // Regular
+          writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_XY, 0x04);  //  9 repetitions (oversampling)
+          writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_Z,  0x16);  // 15 repetitions (oversampling)
+          break;
+    case enhancedRegular:
+          // Enhanced Regular
+          writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_XY, 0x07);  // 15 repetitions (oversampling)
+          writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_Z,  0x22);  // 27 repetitions (oversampling)
+          break;
+    case highAccuracy:
+          // High Accuracy
+          writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_XY, 0x17);  // 47 repetitions (oversampling)
+          writeByte(BMX055_MAG_ADDRESS, BMX055_MAG_REP_Z,  0x51);  // 83 repetitions (oversampling)
+          break;
+  }
+  delay(100);
+  m_iuI2C.port->print("BMX055 initialized successfully.\n\n");
   m_iuI2C.port->flush();
+}
+
+
+void IUBMX055::doAcellFastCompensation(float * dest1) 
+{
+  writeByte(ACC_ADDRESS, ACC_OFC_CTRL, 0x80); // set all accel offset compensation registers to zero
+  writeByte(ACC_ADDRESS, ACC_OFC_SETTING, 0x20);  // set offset targets to 0, 0, and +1 g for x, y, z axes
+  writeByte(ACC_ADDRESS, ACC_OFC_CTRL, 0x20); // calculate x-axis offset
+
+  byte c = readByte(ACC_ADDRESS, ACC_OFC_CTRL);
+  while(!(c & 0x10))
+  {
+    // check if fast calibration complete
+    c = readByte(ACC_ADDRESS, ACC_OFC_CTRL);
+    delay(10);
+  }
+  writeByte(ACC_ADDRESS, ACC_OFC_CTRL, 0x40); // calculate y-axis offset
+
+  c = readByte(ACC_ADDRESS, ACC_OFC_CTRL);
+  while(!(c & 0x10))
+  {
+    // check if fast calibration complete
+    c = readByte(ACC_ADDRESS, ACC_OFC_CTRL);
+    delay(10);
+  }
+  writeByte(ACC_ADDRESS, ACC_OFC_CTRL, 0x60); // calculate z-axis offset
+
+  c = readByte(ACC_ADDRESS, ACC_OFC_CTRL);
+  while(!(c & 0x10))
+  {
+    // check if fast calibration complete
+    c = readByte(ACC_ADDRESS, ACC_OFC_CTRL);
+    delay(10);
+  }
+
+  int8_t compx = readByte(ACC_ADDRESS, ACC_OFC_OFFSET_X);
+  int8_t compy = readByte(ACC_ADDRESS, ACC_OFC_OFFSET_Y);
+  int8_t compz = readByte(ACC_ADDRESS, ACC_OFC_OFFSET_Z);
+
+  m_accelBias[0] = (float) compx / 128.0f; // accleration bias in g
+  m_accelBias[1] = (float) compy / 128.0f; // accleration bias in g
+  m_accelBias[2] = (float) compz / 128.0f; // accleration bias in g
+  if (!(m_iuI2c.isSilent()))
+  {
+    m_iuI2cport->println("accel biases (mg)");
+    m_iuI2cport->println(1000. * m_accelBias[0]);
+    m_iuI2cport->println(1000. * m_accelBias[1]);
+    m_iuI2cport->println(1000. * m_accelBias[2]);
+  }
 }
 
 /* ==================== Update and Control Functions =============================== */
@@ -47,12 +224,19 @@ void IUMPU9250::initSensor()
 /* ==================== Data Collection and Feature Calculation functions ======================== */
 
 /**
- * Read acceleration data and writes it to m_rawAccel
- * @param destination an array[3] to receive x, y, z accelaration
+ * Read acceleration data and store it (in m_rawAccel)
  */
 void IUBMX055::readAccelData()
 {
-  
+  uint8_t rawData[6];  // x/y/z accel register data stored here
+  m_iuI2C.readBytes(ACC_ADDRESS, ACC_D_X_LSB, 6, &rawData[0]);       // Read the six raw data registers into data array
+  if((rawData[0] & 0x01) && (rawData[2] & 0x01) && (rawData[4] & 0x01)) // Check that all 3 axes have new data
+  { 
+    // Turn the MSB and LSB into a signed 12-bit value
+    m_rawAccel[0] = (int16_t) (((int16_t)rawData[1] << 8) | rawData[0]) >> 4;
+    m_rawAccel[1] = (int16_t) (((int16_t)rawData[3] << 8) | rawData[2]) >> 4;  
+    m_rawAccel[2] = (int16_t) (((int16_t)rawData[5] << 8) | rawData[4]) >> 4; 
+  }
 }
 
 /**
@@ -63,7 +247,7 @@ void IUBMX055::pushDataToBatch(uint8_t buffer_record_index, uint32_t index)
 {
   for (int i=0; i < 3; i++)
   {
-    m_batch[i][buffer_record_index][index] = m_rawAccel[i];
+    m_accelBatch[i][buffer_record_index][index] = m_rawAccel[i];
   }
 }
 
@@ -93,7 +277,25 @@ void IUBMX055::dumpDataThroughI2C()
  */
 void IUBMX055::showRecordFFT(uint8_t buffer_compute_index, String mac_address)
 {
-  
+  for (int i = 0; i < 3; i++)
+  {
+    m_iuBLE.port->print("REC,");
+    m_iuBLE.port->print(mac_address);
+    switch(i)
+    {
+      case 0: m_iuBLE.port->print(",X,");
+      case 1: m_iuBLE.port->print(",Y,");
+      case 2: m_iuBLE.port->print(",Z,");
+    }
+    for (int j = 0; j < MAX_INTERVAL; j++)
+    {
+      m_iuBLE.port->print(LSB_to_ms2(m_accelBatch[i][buffer_compute_index][j]));
+      m_iuBLE.port->print(",");
+      m_iuBLE.port->flush();
+    }
+    m_iuBLE.port->print(";");
+    m_iuBLE.port->flush();
+  }
 }
 
 /**
@@ -102,7 +304,7 @@ void IUBMX055::showRecordFFT(uint8_t buffer_compute_index, String mac_address)
  */
 float IUBMX055::LSB_to_ms2(int16_t accelLSB)
 {
-  
+  return ((float)accelLSB * m_resolution * 9.8);
 }
 
 /**
@@ -119,9 +321,9 @@ float IUBMX055::computeEnergy (uint8_t buffer_compute_index, uint32_t batchSize,
   uint32_t idx = batchSize / counterTarget - ENERGY_INTERVAL;
 
   // Copy from accel batches to compBuffer
-  arm_q15_to_float(&m_batch[X][buffer_compute_index][idx], compBuffer, ENERGY_INTERVAL);
-  arm_q15_to_float(&m_batch[Y][buffer_compute_index][idx], &compBuffer[ENERGY_INTERVAL], ENERGY_INTERVAL);
-  arm_q15_to_float(&m_batch[Z][buffer_compute_index][idx], &compBuffer[zind], ENERGY_INTERVAL);
+  arm_q15_to_float(&m_accelBatch[X][buffer_compute_index][idx], compBuffer, ENERGY_INTERVAL);
+  arm_q15_to_float(&m_accelBatch[Y][buffer_compute_index][idx], &compBuffer[ENERGY_INTERVAL], ENERGY_INTERVAL);
+  arm_q15_to_float(&m_accelBatch[Z][buffer_compute_index][idx], &compBuffer[zind], ENERGY_INTERVAL);
 
   // Scale all entries by resolution AND 2^15; the entries were NOT in q1.15 format.
   arm_scale_f32(compBuffer, m_resolution * 32768, compBuffer, ENERGY_INTERVAL * 3);
@@ -155,12 +357,9 @@ float IUBMX055::computeEnergy (uint8_t buffer_compute_index, uint32_t batchSize,
  * Note: currently applies a corrective scaling factor (see getScalingFactor)
  * @param axis X, Y or Z
  */
-float IUBMX055::computeAccelRMS(uint8_t buffer_compute_index, IUMPU9250::Axis axis)
+float IUBMX055::computeAccelRMS(uint8_t buffer_compute_index, IUBMX055::Axis axis)
 {
-  float   accelRMS = 0;
-  accelRMS = computeRMS(MAX_INTERVAL, m_batch[axis][buffer_compute_index]);
-  accelRMS *= getScalingFactor(axis);
-  return accelRMS;
+  return computeRMS(MAX_INTERVAL, m_accelBatch[axis][buffer_compute_index]);
 }
 
 /**
@@ -168,232 +367,41 @@ float IUBMX055::computeAccelRMS(uint8_t buffer_compute_index, IUMPU9250::Axis ax
  * @param axis X, Y or Z
  * @param cutTreshold normal cutting threshold (ex featureNormalThreshold[0])
  */
-float IUBMX055::computeVelocity(uint8_t buffer_compute_index, IUMPU9250::Axis axis, float cutTreshold)
+float IUBMX055::computeVelocity(uint8_t buffer_compute_index, IUBMX055::Axis axis, float cutTreshold)
 {
   if (m_energy < cutTreshold) {
     return 0; // level 0: not cutting
   }
   else {
-    return computeAccelRMS(buffer_compute_index, axis) * 1000 / (2 * PI * m_maxIndex[axis]);
+    return computeAccelRMS(buffer_compute_index, axis) * 1000 / (2 * PI * m_maxAccelIndex[axis]);
   }
 }
 
 /**
- * Compute RFFT on acceleration data on given axis and update m_maxIndex on this axis
+ * Compute RFFT on acceleration data on given axis and update m_maxAccelIndex on this axis
  */
-void IUBMX055::computeAccelRFFT(uint8_t buffer_compute_index, IUMPU9250::Axis axis, q15_t *hamming_window)
+void IUBMX055::computeAccelRFFT(uint8_t buffer_compute_index, IUBMX055::Axis axis, q15_t *hamming_window)
 {
   
-  arm_mult_q15(m_batch[axis][buffer_compute_index],
+  arm_mult_q15(m_accelBatch[axis][buffer_compute_index],
                hamming_window,
-               m_buffer[axis],
+               m_accelBuffer[axis],
                NFFT);
   // RFFT
   arm_rfft_init_q15(&m_rfftInstance,
                     &m_cfftInstance,
                     NFFT, 0, 1);
   arm_rfft_q15(&m_rfftInstance,
-               m_buffer[axis],
+               m_accelBuffer[axis],
                m_rfftBuffer);
   
   float flatness = 0;
   for (int i = 2; i < 512; i++) {
     if (m_rfftBuffer[i] > flatness) {
       flatness = m_rfftBuffer[i];
-      m_maxIndex[axis] = i;
+      m_maxAccelIndex[axis] = i;
     }
   }
-}
-
-/* BMX055 orientation filter as implemented by Kris Winer: https://github.com/kriswiner/BMX-055/blob/master/quaternionFilters.ino */
-// Implementation of Sebastian Madgwick's "...efficient orientation filter for... inertial/magnetic sensor arrays"
-// (see http://www.x-io.co.uk/category/open-source/ for examples and more details)
-// which fuses acceleration, rotation rate, and magnetic moments to produce a quaternion-based estimate of absolute
-// device orientation -- which can be converted to yaw, pitch, and roll. Useful for stabilizing quadcopters, etc.
-// The performance of the orientation filter is at least as good as conventional Kalman-based filtering algorithms
-// but is much less computationally intensive---it can be performed on a 3.3 V Pro Mini operating at 8 MHz!
-void IUBMX055::MadgwickQuaternionUpdate(float ax, float ay, float az, float gx, float gy, float gz, float mx, float my, float mz)
-{
-  float q1 = q[0], q2 = q[1], q3 = q[2], q4 = q[3];   // short name local variable for readability
-  float norm;
-  float hx, hy, _2bx, _2bz;
-  float s1, s2, s3, s4;
-  float qDot1, qDot2, qDot3, qDot4;
-
-  // Auxiliary variables to avoid repeated arithmetic
-  float _2q1mx;
-  float _2q1my;
-  float _2q1mz;
-  float _2q2mx;
-  float _4bx;
-  float _4bz;
-  float _2q1 = 2.0f * q1;
-  float _2q2 = 2.0f * q2;
-  float _2q3 = 2.0f * q3;
-  float _2q4 = 2.0f * q4;
-  float _2q1q3 = 2.0f * q1 * q3;
-  float _2q3q4 = 2.0f * q3 * q4;
-  float q1q1 = q1 * q1;
-  float q1q2 = q1 * q2;
-  float q1q3 = q1 * q3;
-  float q1q4 = q1 * q4;
-  float q2q2 = q2 * q2;
-  float q2q3 = q2 * q3;
-  float q2q4 = q2 * q4;
-  float q3q3 = q3 * q3;
-  float q3q4 = q3 * q4;
-  float q4q4 = q4 * q4;
-
-  // Normalise accelerometer measurement
-  norm = sqrt(ax * ax + ay * ay + az * az);
-  if (norm == 0.0f) return; // handle NaN
-  norm = 1.0f/norm;
-  ax *= norm;
-  ay *= norm;
-  az *= norm;
-
-  // Normalise magnetometer measurement
-  norm = sqrt(mx * mx + my * my + mz * mz);
-  if (norm == 0.0f) return; // handle NaN
-  norm = 1.0f/norm;
-  mx *= norm;
-  my *= norm;
-  mz *= norm;
-
-  // Reference direction of Earth's magnetic field
-  _2q1mx = 2.0f * q1 * mx;
-  _2q1my = 2.0f * q1 * my;
-  _2q1mz = 2.0f * q1 * mz;
-  _2q2mx = 2.0f * q2 * mx;
-  hx = mx * q1q1 - _2q1my * q4 + _2q1mz * q3 + mx * q2q2 + _2q2 * my * q3 + _2q2 * mz * q4 - mx * q3q3 - mx * q4q4;
-  hy = _2q1mx * q4 + my * q1q1 - _2q1mz * q2 + _2q2mx * q3 - my * q2q2 + my * q3q3 + _2q3 * mz * q4 - my * q4q4;
-  _2bx = sqrt(hx * hx + hy * hy);
-  _2bz = -_2q1mx * q3 + _2q1my * q2 + mz * q1q1 + _2q2mx * q4 - mz * q2q2 + _2q3 * my * q4 - mz * q3q3 + mz * q4q4;
-  _4bx = 2.0f * _2bx;
-  _4bz = 2.0f * _2bz;
-
-  // Gradient decent algorithm corrective step
-  s1 = -_2q3 * (2.0f * q2q4 - _2q1q3 - ax) + _2q2 * (2.0f * q1q2 + _2q3q4 - ay) - _2bz * q3 * (_2bx * (0.5f - q3q3 - q4q4) + _2bz * (q2q4 - q1q3) - mx) + (-_2bx * q4 + _2bz * q2) * (_2bx * (q2q3 - q1q4) + _2bz * (q1q2 + q3q4) - my) + _2bx * q3 * (_2bx * (q1q3 + q2q4) + _2bz * (0.5f - q2q2 - q3q3) - mz);
-  s2 = _2q4 * (2.0f * q2q4 - _2q1q3 - ax) + _2q1 * (2.0f * q1q2 + _2q3q4 - ay) - 4.0f * q2 * (1.0f - 2.0f * q2q2 - 2.0f * q3q3 - az) + _2bz * q4 * (_2bx * (0.5f - q3q3 - q4q4) + _2bz * (q2q4 - q1q3) - mx) + (_2bx * q3 + _2bz * q1) * (_2bx * (q2q3 - q1q4) + _2bz * (q1q2 + q3q4) - my) + (_2bx * q4 - _4bz * q2) * (_2bx * (q1q3 + q2q4) + _2bz * (0.5f - q2q2 - q3q3) - mz);
-  s3 = -_2q1 * (2.0f * q2q4 - _2q1q3 - ax) + _2q4 * (2.0f * q1q2 + _2q3q4 - ay) - 4.0f * q3 * (1.0f - 2.0f * q2q2 - 2.0f * q3q3 - az) + (-_4bx * q3 - _2bz * q1) * (_2bx * (0.5f - q3q3 - q4q4) + _2bz * (q2q4 - q1q3) - mx) + (_2bx * q2 + _2bz * q4) * (_2bx * (q2q3 - q1q4) + _2bz * (q1q2 + q3q4) - my) + (_2bx * q1 - _4bz * q3) * (_2bx * (q1q3 + q2q4) + _2bz * (0.5f - q2q2 - q3q3) - mz);
-  s4 = _2q2 * (2.0f * q2q4 - _2q1q3 - ax) + _2q3 * (2.0f * q1q2 + _2q3q4 - ay) + (-_4bx * q4 + _2bz * q2) * (_2bx * (0.5f - q3q3 - q4q4) + _2bz * (q2q4 - q1q3) - mx) + (-_2bx * q1 + _2bz * q3) * (_2bx * (q2q3 - q1q4) + _2bz * (q1q2 + q3q4) - my) + _2bx * q2 * (_2bx * (q1q3 + q2q4) + _2bz * (0.5f - q2q2 - q3q3) - mz);
-  norm = sqrt(s1 * s1 + s2 * s2 + s3 * s3 + s4 * s4);    // normalise step magnitude
-  norm = 1.0f/norm;
-  s1 *= norm;
-  s2 *= norm;
-  s3 *= norm;
-  s4 *= norm;
-
-  // Compute rate of change of quaternion
-  qDot1 = 0.5f * (-q2 * gx - q3 * gy - q4 * gz) - beta * s1;
-  qDot2 = 0.5f * (q1 * gx + q3 * gz - q4 * gy) - beta * s2;
-  qDot3 = 0.5f * (q1 * gy - q2 * gz + q4 * gx) - beta * s3;
-  qDot4 = 0.5f * (q1 * gz + q2 * gy - q3 * gx) - beta * s4;
-
-  // Integrate to yield quaternion
-  q1 += qDot1 * deltat;
-  q2 += qDot2 * deltat;
-  q3 += qDot3 * deltat;
-  q4 += qDot4 * deltat;
-  norm = sqrt(q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4);    // normalise quaternion
-  norm = 1.0f/norm;
-  q[0] = q1 * norm;
-  q[1] = q2 * norm;
-  q[2] = q3 * norm;
-  q[3] = q4 * norm;
-}
-  
-// Similar to Madgwick scheme but uses proportional and integral filtering on the error between estimated reference vectors and
-// measured ones. 
-void IUBMX055::MahonyQuaternionUpdate(float ax, float ay, float az, float gx, float gy, float gz, float mx, float my, float mz)
-{
-  float q1 = q[0], q2 = q[1], q3 = q[2], q4 = q[3];   // short name local variable for readability
-  float norm;
-  float hx, hy, bx, bz;
-  float vx, vy, vz, wx, wy, wz;
-  float ex, ey, ez;
-  float pa, pb, pc;
-
-  // Auxiliary variables to avoid repeated arithmetic
-  float q1q1 = q1 * q1;
-  float q1q2 = q1 * q2;
-  float q1q3 = q1 * q3;
-  float q1q4 = q1 * q4;
-  float q2q2 = q2 * q2;
-  float q2q3 = q2 * q3;
-  float q2q4 = q2 * q4;
-  float q3q3 = q3 * q3;
-  float q3q4 = q3 * q4;
-  float q4q4 = q4 * q4;   
-
-  // Normalise accelerometer measurement
-  norm = sqrt(ax * ax + ay * ay + az * az);
-  if (norm == 0.0f) return; // handle NaN
-  norm = 1.0f / norm;        // use reciprocal for division
-  ax *= norm;
-  ay *= norm;
-  az *= norm;
-
-  // Normalise magnetometer measurement
-  norm = sqrt(mx * mx + my * my + mz * mz);
-  if (norm == 0.0f) return; // handle NaN
-  norm = 1.0f / norm;        // use reciprocal for division
-  mx *= norm;
-  my *= norm;
-  mz *= norm;
-
-  // Reference direction of Earth's magnetic field
-  hx = 2.0f * mx * (0.5f - q3q3 - q4q4) + 2.0f * my * (q2q3 - q1q4) + 2.0f * mz * (q2q4 + q1q3);
-  hy = 2.0f * mx * (q2q3 + q1q4) + 2.0f * my * (0.5f - q2q2 - q4q4) + 2.0f * mz * (q3q4 - q1q2);
-  bx = sqrt((hx * hx) + (hy * hy));
-  bz = 2.0f * mx * (q2q4 - q1q3) + 2.0f * my * (q3q4 + q1q2) + 2.0f * mz * (0.5f - q2q2 - q3q3);
-
-  // Estimated direction of gravity and magnetic field
-  vx = 2.0f * (q2q4 - q1q3);
-  vy = 2.0f * (q1q2 + q3q4);
-  vz = q1q1 - q2q2 - q3q3 + q4q4;
-  wx = 2.0f * bx * (0.5f - q3q3 - q4q4) + 2.0f * bz * (q2q4 - q1q3);
-  wy = 2.0f * bx * (q2q3 - q1q4) + 2.0f * bz * (q1q2 + q3q4);
-  wz = 2.0f * bx * (q1q3 + q2q4) + 2.0f * bz * (0.5f - q2q2 - q3q3);  
-
-  // Error is cross product between estimated direction and measured direction of gravity
-  ex = (ay * vz - az * vy) + (my * wz - mz * wy);
-  ey = (az * vx - ax * vz) + (mz * wx - mx * wz);
-  ez = (ax * vy - ay * vx) + (mx * wy - my * wx);
-  if (Ki > 0.0f)
-  {
-      eInt[0] += ex;      // accumulate integral error
-      eInt[1] += ey;
-      eInt[2] += ez;
-  }
-  else
-  {
-      eInt[0] = 0.0f;     // prevent integral wind up
-      eInt[1] = 0.0f;
-      eInt[2] = 0.0f;
-  }
-
-  // Apply feedback terms
-  gx = gx + Kp * ex + Ki * eInt[0];
-  gy = gy + Kp * ey + Ki * eInt[1];
-  gz = gz + Kp * ez + Ki * eInt[2];
-
-  // Integrate rate of change of quaternion
-  pa = q2;
-  pb = q3;
-  pc = q4;
-  q1 = q1 + (-q2 * gx - q3 * gy - q4 * gz) * (0.5f * deltat);
-  q2 = pa + (q1 * gx + pb * gz - pc * gy) * (0.5f * deltat);
-  q3 = pb + (q1 * gy - pa * gz + pc * gx) * (0.5f * deltat);
-  q4 = pc + (q1 * gz + pa * gy - pb * gx) * (0.5f * deltat);
-
-  // Normalise quaternion
-  norm = sqrt(q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4);
-  norm = 1.0f / norm;
-  q[0] = q1 * norm;
-  q[1] = q2 * norm;
-  q[2] = q3 * norm;
-  q[3] = q4 * norm;
 }
 
 

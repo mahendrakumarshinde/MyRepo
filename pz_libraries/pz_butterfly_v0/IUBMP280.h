@@ -4,7 +4,7 @@
 #include <Arduino.h>
 
 #include "IUUtilities.h"
-#include "IUI2CTeensy.h"
+#include "IUI2C.h"
 #include "IUBLE.h"
 
 class IUBMP280
@@ -40,10 +40,9 @@ class IUBMP280
                                 t_500ms, t_1000ms, t_2000ms, t_4000ms,};
 
     // Constructors, destructors, getters, setters
-    IUBMP280(IUI2CTeensy iuI2C, IUBLE iuBLE);
-    IUBMP280(IUI2CTeensy iuI2C, IUBLE iuBLE, posrOptions posr, tosrOptions tosr, 
+    IUBMP280(IUI2C iuI2C, IUBLE iuBLE);
+    IUBMP280(IUI2C iuI2C, IUBLE iuBLE, posrOptions posr, tosrOptions tosr, 
               IIRFilterOptions iirFilter, ModeOptions mode, SByOptions sby);
-    virtual ~IUBMP280();
     int32_t getFineTemperature() { return m_fineTemperature; }
     int16_t getTemperature() { return m_temperature; }
     int16_t getPressure() { return m_pressure; }
@@ -59,7 +58,7 @@ class IUBMP280
     uint32_t compensatePressure(int32_t rawP);
 
   private:
-    IUI2CTeensy m_iuI2C;
+    IUI2C m_iuI2C;
     IUBLE m_iuBLE;
     int32_t m_fineTemperature; 
     int16_t m_digTemperature[3];

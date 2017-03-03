@@ -1,13 +1,13 @@
 #include "IUBMP280.h"
 
-IUBMP280::IUBMP280(IUI2CTeensy iuI2C, IUBLE iuBLE) : m_iuI2C(iuI2C), m_iuBLE(iuBLE)
+IUBMP280::IUBMP280(IUI2C iuI2C, IUBLE iuBLE) : m_iuI2C(iuI2C), m_iuBLE(iuBLE)
 {
     // Specify BMP280 default configuration
     setOptions(P_OSR_00, T_OSR_01, BW0_042ODR, normal, t_62_5ms);
 }
 
 
-IUBMP280::IUBMP280(IUI2CTeensy iuI2C,
+IUBMP280::IUBMP280(IUI2C iuI2C,
                    IUBLE iuBLE,
                    IUBMP280::posrOptions posr,
                    IUBMP280::tosrOptions tosr, 
@@ -16,11 +16,6 @@ IUBMP280::IUBMP280(IUI2CTeensy iuI2C,
                    IUBMP280::SByOptions sby) : m_iuI2C(iuI2C), m_iuBLE(iuBLE)
 {
     setOptions(posr, tosr, iirFilter, mode, sby);
-}
-
-IUBMP280::~IUBMP280()
-{
-    //dtor
 }
 
 void IUBMP280::setOptions(IUBMP280::posrOptions posr,
@@ -61,30 +56,17 @@ void IUBMP280::initSensor()
 }
 
 /**
- * Ping the device address and, if the answer is correct, initialize it
+ * Ping the component address and, if the answer is correct, initialize it
  */
 void IUBMP280::wakeUp()
 {
   // Read the WHO_AM_I register of the BMP280 this is a good test of communication
-  byte c = m_iuI2C.readByte(ADDRESS, WHO_AM_I);  // Read WHO_AM_I register
-  if (!m_iuI2C.isSilent())
+  if(m_iuI2C.checkComponentWhoAmI("BMP280", ADDRESS, WHO_AM_I, WHO_AM_I_ANSWER))
   {
-    m_iuI2C.port->print("BMP280 I AM ");
-    m_iuI2C.port->print(c, HEX);
-    m_iuI2C.port->print(" I should be ");
-    m_iuI2C.port->println(WHO_AM_I_ANSWER, HEX);
-    m_iuI2C.port->flush();
-  }
-  m_iuI2C.writeByte(ADDRESS, RESET, 0xB6); // reset BMP280 before initilization
-  delay(100);
-  if (c == WHO_AM_I_ANSWER)
-  {
-    initSensor(); // Initialize BMP280 altimeter
+    initSensor(); // Initialize BMP280
   }
   else
   {
-    m_iuI2C.port->print("Could not connect to BMP280: 0x");
-    m_iuI2C.port->println(c, HEX);
     m_iuI2C.setErrorMessage("BMPERR");
   }
   delay(15);
@@ -111,17 +93,14 @@ int32_t IUBMP280::readRawTemperature()
 {
   uint8_t rawData[3];  // 20-bit temperature register data stored here
   m_iuI2C.readBytes(ADDRESS, TEMP_MSB, 3, &rawData[0]);
-  if (!(m_iuI2C.isReadError()))
-  {
-    return (int32_t) (((int32_t) rawData[0] << 16 | (int32_t) rawData[1] << 8 | rawData[2]) >> 4);
-  }
-  else
+  if (m_iuI2C.isReadError())
   {
     m_iuI2C.port->println("Skip temperature read");
     m_iuI2C.port->println(m_iuI2C.getReadError(), HEX);
     m_iuI2C.resetReadError();
+    return 0;
   }
-  return 0;
+  return (int32_t) (((int32_t) rawData[0] << 16 | (int32_t) rawData[1] << 8 | rawData[2]) >> 4);
 }
 
 /** 
@@ -150,6 +129,13 @@ int32_t IUBMP280::readRawPressure()
 {
   uint8_t rawData[3];  // 20-bit pressure register data stored here
   m_iuI2C.readBytes(ADDRESS, PRESS_MSB, 3, &rawData[0]);
+  if (m_iuI2C.isReadError())
+  {
+    m_iuI2C.port->println("Skip temperature read");
+    m_iuI2C.port->println(m_iuI2C.getReadError(), HEX);
+    m_iuI2C.resetReadError();
+    return 0;
+  }
   return (int32_t) (((int32_t) rawData[0] << 16 | (int32_t) rawData[1] << 8 | rawData[2]) >> 4);
 }
 
