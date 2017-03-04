@@ -1,3 +1,20 @@
+/*
+  Infinite Uptime Firmware
+
+  Update:
+    03/03/2017
+  
+  Component:
+    Name:
+      I2C Computer bus
+    Description:
+      I2C computer bus for Butterfly
+
+   Comments:
+     Butterfly board use STM32L4 chip and a specific Arduino core have been develop for it.
+     See Thomas Roell (aka GumpyOldPizza) github: https://github.com/GrumpyOldPizza/arduino-STM32L4
+*/
+
 #ifndef IUI2C_H
 #define IUI2C_H
 
@@ -6,8 +23,7 @@
 
 
 /**
- * Butterfly board use STM32L4 chip and a specific Arduino core have been develop for it.
- * See Thomas Roell (aka GumpyOldPizza) github: https://github.com/GrumpyOldPizza/arduino-STM32L4
+ * 
  */
 class IUI2C
 {

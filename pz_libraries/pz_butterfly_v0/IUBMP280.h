@@ -1,3 +1,16 @@
+/*
+  Infinite Uptime Firmware
+
+  Update:
+    03/03/2017
+  
+  Component:
+    Name:
+      BMP280
+    Description:
+      Temperature and Pression sensor for Butterfly board
+*/
+
 #ifndef IUBMP280_H
 #define IUBMP280_H
 

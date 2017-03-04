@@ -2,34 +2,44 @@
 #define IUFEATURECONFIG_H
 
 #include <Arduino.h>
+#include <arm_math.h>
 
 class IUFeature
 {
     public:
-        IUFeature();
-        IUFeature(String name, float (*computeFunction) ());
+        IUFeature(uint8_t id);
+        void setId(uint8_t id) { m_id = id; }
+        uint8_t getId() { return m_id; }
         void setName(String name) { m_name = name; }
         String getName() { return m_name; }
-        float getNormalThreshold() { return m_NormalThreshold; }
-        void setNormalThreshold(float val) { m_NormalThreshold = val; }
-        float getWarningThreshold() { return m_WarningThreshold; }
-        void setWarningThreshold(float val) { m_WarningThreshold = val; }
-        float getDangerThreshold() { return m_DangerThreshold; }
-        void setDangerThreshold(float val) { m_DangerThreshold = val; }
-        void setThresholds(float normal, float warning, float danger);
+        // Feature computation, source and destination
         void setComputeFunction(float (*computeFunction) ()) { m_computeFunction = computeFunction; }
-        float compute();
+        void setSource(uint16_t sourceSize, q15_t *source);
+        void setDestination(uint16_t destinationSize, q15_t *destination);
+        bool activate();
+        // Thresholds and state
+        void setThresholds(float normal, float warning, float danger);
+        void getThreshold(uint8_t index) { return m_tresholds[index]}
         uint8_t getThresholdState();
+        // Run
+        float receive(q15_t value);
+        float compute();
+        bool stream(Stream *port);
 
     private:
+        uint8_t m_id;
         String m_name;
-        float m_value;
+        bool m_active;
+        float (*m_computeFunction);
+        uint16_t m_sourceSize;
+        q15_t *m_source;
+        uint16_t m_destinationSize;
+        flaot *m_destination;
+        // Thresholds and state
+        float m_thresholds[3]; // Normal, warning and danger thresholds
         uint8_t m_state; // possible states are 0: not cutting, 1: normal, 2: warning, 3: danger
         uint8_t m_highestDangerLevel; // The most critical state ever measured
-        float m_normalThreshold;
-        float m_warningThreshold;
-        float m_dangerThreshold;
-        float (*m_computeFunction) ();
+
 };
 
 

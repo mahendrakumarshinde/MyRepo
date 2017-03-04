@@ -1,3 +1,21 @@
+/*
+  Infinite Uptime Firmware
+
+  Update:
+    03/03/2017
+  
+  Component:
+    Name:
+      BMX-055
+    Description:
+      Accelerometer, Gyroscope and Magnetometer for Butterfly board
+
+   Comments:
+    Only accelerometer features are currently used. Variables and functions that 
+    concerns the magnetometer and gyroscope have not been developed, or have been
+    commented in order to minimize sketch weight.
+*/
+
 #ifndef IUBMX055_H
 #define IUBMX055_H
 
@@ -9,12 +27,7 @@
 #include "IUI2C.h"
 #include "IUBLE.h"
 
-/** BMX055 componant
- * 
- * NB: In order to minimize sketch weight, variables and functions that concerns the 
- * magnetometer and gyroscope have been commented. To use this functionnalities, uncomment
- * the corresponding lines.
- */
+
 class IUBMX055
 {
   public:

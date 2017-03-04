@@ -1,3 +1,16 @@
+/*
+  Infinite Uptime Firmware
+
+  Update:
+    03/03/2017
+  
+  Component:
+    Name:
+      BMD-350
+    Description:
+      Bluetooth Low Energy for Butterfly board
+*/
+
 #ifndef IUBLE_H
 #define IUBLE_H
 

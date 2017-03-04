@@ -1,3 +1,20 @@
+/*
+  Infinite Uptime Firmware
+
+  Update:
+    03/03/2017
+  
+  Component:
+    Name:
+      ICS43432 (Audio) + I2S bus
+    Description:
+      Audio sensor (ICS43432) + I2S bus for Butterfly
+ 
+   Comments:
+     A specific Arduino core have been develop for the Butterfly. For more info on the I2S library currently
+     in use, see Thomas Roell (aka GumpyOldPizza) github: https://github.com/GrumpyOldPizza/arduino-STM32L4
+*/
+
 #ifndef IUI2S_H
 #define IUI2S_H
 

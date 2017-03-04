@@ -1,3 +1,16 @@
+/*
+  Infinite Uptime Firmware
+
+  Update:
+    03/03/2017
+  
+  Component:
+    Name:
+      
+    Description:
+      Battery + LiPo charger
+*/
+
 #ifndef IUBATTERY_H
 #define IUBATTERY_H
 

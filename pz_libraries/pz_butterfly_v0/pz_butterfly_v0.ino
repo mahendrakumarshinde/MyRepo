@@ -23,12 +23,6 @@
 // All CMSIS-DSP : 2840 microseconds
 // Partial       : 2730 microseconds (current)
 
-#include <i2s.h>  /* I2S digital audio */
-
-/* CMSIS-DSP library for RFFT */
-#define ARM_MATH_CM4
-#include <arm_math.h>
-
 /* Register addresses and hamming window presets  */
 #include "constants.h"
 
@@ -37,19 +31,19 @@
 #include "IUBLE.h"
 #include "IUI2C.h"
 #include "IUBattery.h"
-#include "IUMPU9250.h"
+#include "IUBMX055.h"
 #include "IUBMP280.h"
 #include "IUI2S.h"
 
 //====================== Instanciate device classes ========================
-
-IUI2C iuI2C; //Always initialize the computer bus first
-IUBattery iuBat;
-IUBLE iuBLE(iuI2C);
-IURGBLed iuRGBLed(iuI2C,iuBLE);
-IUBMX055 iuBMX055(iuI2C, iuBLE);
-IUBMP280 iuBMP280(iuI2C, iuBLE);
-IUI2S iuI2S(iuI2C, iuBLE);
+//Always initialize the computer bus first
+IUI2C       iuI2C; 
+IUBLE       iuBLE(iuI2C);
+IUBattery   iuBat;
+IURGBLed    iuRGBLed(iuI2C, iuBLE);
+IUBMX055    iuBMX055(iuI2C, iuBLE);
+IUBMP280    iuBMP280(iuI2C, iuBLE);
+IUI2S       iuI2S(iuI2C, iuBLE);
 
 
 //====================== Module Configuration Variables ========================
@@ -70,14 +64,6 @@ const byte accelFDFeatures[(NUM_FEATURES - 1) / 8 + 1] = {B00111000}; // Accel f
 
 OpMode currMode = RUN;            // Mode of operation
 OpState currState = NOT_CUTTING;  // Current state on feature calculation
-
-boolean silent = false; // Silent flag - Used to print statements when not silent
-
-// Hard-wired communication buffers
-String wireBuffer = ""; // Serial only expects string literals
-
-// Timestamp variables
-int parametertag = 0;
 
 //Regular data transmit variables
 boolean dataSendTime = false;
@@ -465,6 +451,7 @@ void processInstructions(char *blebuffer)
     case 6:
       if (blebuffer[7] == ':' && blebuffer[9] == '.' && blebuffer[11] == '.' && blebuffer[13] == '.' && blebuffer[15] == '.' && blebuffer[17] == '.')
       {
+        int parametertag = 0;
         sscanf(blebuffer, "%d:%d.%d.%d.%d.%d.%d", &parametertag, &feature0check, &feature1check, &feature2check, &feature3check, &feature4check, &feature5check);
       }
       break;

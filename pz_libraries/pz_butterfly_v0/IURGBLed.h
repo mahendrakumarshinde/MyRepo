@@ -1,3 +1,16 @@
+/*
+  Infinite Uptime Firmware
+
+  Update:
+    03/03/2017
+  
+  Component:
+    Name:
+
+    Description:
+      RGB led at pins 27, 28, 29
+*/
+
 #ifndef IURGBLED_H
 #define IURGBLED_H
 
