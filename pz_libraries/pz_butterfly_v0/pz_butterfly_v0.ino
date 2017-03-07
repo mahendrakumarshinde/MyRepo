@@ -540,7 +540,7 @@ void compute_features() {
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
 
-
+  
   // Reflect highest danger level if differs from previous state.
   if (!recordmode) {
     double datetime = iuBLE.getDatetime();

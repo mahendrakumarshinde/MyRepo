@@ -98,6 +98,55 @@ In IU IDE Firmware, the role of the sketch is to orchestrate how all the compone
   - Handle instructions received over the I2C port or any of the connectivity device
   - Handle states, modes and configuration updates
 
+##Sensibility and scale of components and number format
+
+###Sensor output format
+Since we do computations using CMSIS arm_math library that handles q15_t numbers, it is convenient to store sensor output as q15_t numbers. Basically, it means that we convert every sensor output to a 16bit long format, either by droping the lest significant bits (>>) or by adding some that are equal to 0 (cast to int16_t then move bits to the left (<<)).
+**Warning**
+Special attention should be paid to format conversion, especially when handling variables (there is no compiler error or warning when casting a float to q15_t or vice versa).
+**Reminder**
+q15 are 15-fractional-bit number in binary. Check out conversion method here: https://en.wikipedia.org/wiki/Q_(number_format)#Conversion
+
+Below are listed sensors and there sensibility and scale (before we convert the outputs to q15_t).
+
+###MPU9250: accelerometer, gyroscope and magnetometer
+Signed, MSB first
+- Accelerometer: 
+  - 3-axis, 16 bit long each, signed digital output. The output then range between [-2^15, 2^15 - 1].
+  - Full-scale can be set to +/-2g, +/-4g, +/-8g, +/-16g, meaning that the LSB (least significant bit) is respectively 2^-14 (2 / 2^15)g, 2-13g, 2-12g, 2^-11g. 
+- Gyroscope:
+  - 3-axis, 16 bit long each, signed digital output. The output then range between [-2^15, 2^15 - 1].
+  - Full-scale range can be set to  of +/-250, +/-500, +/-1000 and +/-2000 deg/sec. LSB is then respectively 250/2^15 deg/sec, 500/2^15 deg/sec, 1000/2^15 deg/sec, 2000/2^15 deg/sec.
+- Magnetometer:
+  - 3-axis, 14 bit long each, signed digital output. The output then range between [-2^13, 2^13 - 1].
+  - Full scale range is +/-4800μT, so LSB is 4,8/2^13 T.
+
+###MPU9250: accelerometer, gyroscope and magnetometer
+Signed, MSB first
+- Accelerometer: 
+  - 3-axis, 12 bit long each, signed digital output. The output then range between [-2^11, 2^11 - 1].
+  - Full-scale can be set to +/-2g, +/-4g, +/-8g, +/-16g, meaning that the LSB (least significant bit) is respectively 2^-10 (2 / 2^15)g, 2-9g, 2-8g, 2^-7g. 
+- Gyroscope:
+  - 3-axis, 16 bit long each, signed digital output. The output then range between [-2^15, 2^15 - 1].
+  - Full-scale range can be set to  of +/-125, +/-250, +/-500, +/-1000 and +/-2000 deg/sec. LSB is then respectively 125/2^15 deg/sec, 250/2^15 deg/sec, 500/2^15 deg/sec, 1000/2^15 deg/sec, 2000/2^15 deg/sec.
+- Magnetometer:
+  - 3-axis, +/-1200μT on X and Y, +/-2500μT on Z.
+  - Resolution is 0.3 μT
+
+###INMP441 and ICS-43432: Microphone
+Signed, MSB first as per I2S standard
+- 24bit long data through I2S (see here: https://en.wikipedia.org/wiki/I%C2%B2S and here: 
+- Sensitivity is −26dBFS (for a sine wave at 1 kHz and 94 dB SPL). This means that Full-Scale reading is 120dB (94dB - 120dB = -26dB).
+NB: -26dB is the sine peak. The RMS level is -29dBFS (RMS is 3dB below for a 1KHz sine since 20log10(0.707) = -3)
+- A good measure of sound volume is then just the RMS in DB. We use normalized sum of 20 * log10(abs(sample)).
+
+###BMP280: Thermometer and barometer
+BMP280 documentation specifies its own formula to access temperature and pressure. See BMP280 datasheet at section *3.11.3 Compensation formula* p22 and at section *8.2 Compensation formula in 32 bit fixed point* p45-46.
+Documentation also states that both pressure and temperature values are expected to be received in 20 bit format, positive, stored in a 32 bit signed integer.
+An example of algorith is available p23, otherwise "This algorithm is available to customers as reference C source code (“ BMP28x_ API”) from Bosch Sensortec and via its sales and distribution partners."
+
+
+
 
 
 

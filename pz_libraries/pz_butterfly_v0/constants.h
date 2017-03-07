@@ -10,6 +10,8 @@ Constants including register addresses and Hamming window presets.
 //==============================================================================
 //========================== Hamming Window Presets ============================
 //==============================================================================
+// Hamming window definition: w(n) = 0.54 - 0.46 * cos(2 * Pi * n / N), 0 <= n <= N
+// Since we are using q15 values, we then have to do round(w(n) * 2^15) to convert from float to q15 format.
 
 const int magsize_512 = 257;
 const float hamming_K_512 = 1.8519;         // 1/0.5400
