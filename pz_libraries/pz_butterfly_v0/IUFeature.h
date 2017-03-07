@@ -149,31 +149,31 @@ class IUMultiFloatSourceFeature : public IUMultiQ15SourceFeature
 {
     public:
         // Feature computation, source, sending queue and receivers
-        virtual void setComputeFunction(float (*computeFunction) (uint8_t, uint16_t*, q15_t*));
+        virtual void setComputeFunction(float (*computeFunction) (uint8_t, uint16_t*, float*));
         // Run
-        virtual bool receive(float value);
+        virtual bool receive(uint8_t sourceIndex, float value);
 
     private:
-        float (*m_computeFunction) (uint16_t sourceSize, float* source);
+        float (*m_computeFunction) (uint8_t sourceCount, uint16_t* sourceSize, float* source);
         float *m_source;
-        virtual void newSource(uint16_t *sourceSize);
+        virtual void newSource(uint8_t sourceCount, uint16_t *sourceSize);
 }
 
 
-class IUFeatureCollection
+class IUFeatureSelection
 {
     public:
         // Arrays have to be initialized with a fixed size,
         // so we chose max_size = max number of features per collections
         static const uint8_t MAX_SIZE = 10;
-        IUFeatureCollection();
+        IUFeatureSelection();
         bool addFeature(IUFeature feature);
         bool addFeature(String name, float (*computeFunction) ());
         IUFeature getFeature(uint8_t index);
         uint8_t getSize() { return m_size; }
 
     private:
-        IUFeature m_features[MAX_SIZE];
+        IUABCFeature m_features[MAX_SIZE];
         uint8_t m_size; // Dynamic
 
 

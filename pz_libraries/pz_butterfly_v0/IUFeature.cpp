@@ -486,40 +486,47 @@ float IUMultiQ15SourceFeature::compute()
 /**
  * Setter for computeFunction
  */
-void IUMultiFloatSourceFeature::setComputeFunction(float (*computeFunction) (uint16_t, float*))
+void IUMultiFloatSourceFeature::setComputeFunction(float (*computeFunction) (uint8_t, uint16_t*, float*))
 {
   m_computeFunction = computeFunction;
 }
 
 /**
- * Create a new source
+ * Creates the source pointers
  */
-void IUSingleFloatSourceFeature::newSource(uint16_t sourceSize)
+void IUMultiQ15SourceFeature::newSource(uint8_t sourceCount, uint16_t *sourceSize)
 {
-  m_source = new float[2][m_sourceSize];
+  m_source = new float[2][m_sourceCount];
+  for (uint8_t i = 0; i < 2; i++)
+  {
+    for (uint8_t j = 0; j < sourceCount; j++)
+    {
+      m_source[i][j] = new float[sourceSize[j]];
+    }
+  }
 }
 
 /**
  * Receive a new source valu, it will be stored if the source buffers are ready
  * @return true if the value was stored in source buffer, else false
  */
-bool IUSingleFloatSourceFeature::receive(float value)
+bool IUMultiQ15SourceFeature::receive(uint8_t sourceIndex, float value)
 {
-  if (!m_recordNow[m_recordIndex])              // Recording buffer is not ready
+  if (!m_recordNow[sourceIndex][m_recordIndex])              // Recording buffer is not ready
   {
      return;
   }
-  if (m_sourceCounter < m_sourceSize)           // Recording buffer is not full
+  if (m_sourceCounter[sourceIndex] < m_sourceSize[sourceIndex])           // Recording buffer is not full
   {
-      m_source[m_recordIndex][m_sourceCounter] = value;
-      m_sourceCounter++;
+      m_source[m_recordIndex][sourceIndex][m_sourceCounter[sourceIndex]] = value;
+      m_sourceCounter[sourceIndex]++;
   }
-  if (m_sourceCounter == m_sourceSize)          // Recording buffer is now full
+  if (m_sourceCounter[sourceIndex] == m_sourceSize[sourceIndex])          // Recording buffer is now full
   {
-    m_recordNow[m_recordIndex] = false;         //Do not record anymore in this buffer
-    m_computeNow[m_recordIndex] = true;         //Buffer ready for computation
-    m_recordIndex = m_recordIndex == 0 ? 1 : 0; //switch buffer index
-    m_sourceCounter = 0;                        //Reset counter
+    m_recordNow[sourceIndex][m_recordIndex[sourceIndex]] = false;         //Do not record anymore in this buffer
+    m_computeNow[sourceIndex][m_recordIndex[sourceIndex]] = true;         //Buffer ready for computation
+    m_recordIndex[sourceIndex] = m_recordIndex[sourceIndex] == 0 ? 1 : 0; //switch buffer index
+    m_sourceCounter[sourceIndex] = 0;                        //Reset counter
   }
 }
 
