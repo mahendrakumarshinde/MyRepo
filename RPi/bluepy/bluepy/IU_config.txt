@@ -1,5 +1,0 @@
-LE Scan ...
-88:C6:26:4E:6B:F5 
-88:C6:26:4E:6B:F5 (unknown)
-7C:EC:79:F0:A0:31 (unknown)
-7C:EC:79:F0:A0:31 HMSoft
