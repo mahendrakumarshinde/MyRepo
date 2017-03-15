@@ -1,9 +1,23 @@
 #include "IUI2S.h"
 
-IUI2S::IUI2S(IUI2C iuI2C, IUBLE iuBLE) : m_iuI2C(iuI2C), m_iuBLE(iuBLE)
+char IUI2S::sensorTypes[IUI2S::sensorTypeCount] = {IUABCSensor::sensorType_microphone};
+
+IUI2S::IUI2S(IUI2C *iuI2C) :
+  IUABCSensor(),
+  m_iuI2C(iuI2C),
+  m_newData(false)
 {
-    //ctor
-  resetTargetSample();
+  setClockRate(defaultClockRate);
+}
+
+/**
+ * Audio sensor is based on the clock rate rather than on the main callback rate
+ */
+void IUI2S::setClockRate(uint32_t clockRate)
+{
+  m_clockRate = clockRate;
+  m_callbackRate = m_clockRate;
+  prepareDataAcquisition();
 }
 
 /**
@@ -11,36 +25,86 @@ IUI2S::IUI2S(IUI2C iuI2C, IUBLE iuBLE) : m_iuI2C(iuI2C), m_iuBLE(iuBLE)
  */
 void IUI2S::wakeUp()
 {
-  if (!m_iuI2C.isSilent())
+  if (!m_iuI2C->isSilent())
   {
-    m_iuI2C.port->print("I2S Pin configuration setting: ");
-    m_iuI2C.port->println( I2S_PIN_PATTERN , HEX );
-  }
-  if (!m_iuI2C.isSilent()) 
-  {
-    m_iuI2C.port->println( "Initialized I2C Codec" );
+    m_iuI2C->port->println( "Initialized I2S and ICS43432" );
   }
 }
 
-void IUI2S::begin(void (*callback) (int32_t*))
+/* ==================== Data Collection and Feature Calculation functions ======================== */
+
+/**
+ * Extract the 16 most significant bits out of ICS43432 32bit sample
+ */
+void IUI2S::processAudioData(q31_t *data)
 {
-  if (m_iuI2C.getErrorMessage().equals("ALL_OK"))
+  int sampleCount = audioSampleSize / m_downclocking;
+  for (int i = 0; i < sampleCount; i++)
   {
-    I2SRx0.begin( CLOCK_TYPE, callback );  // prepare I2S RX with interrupts
-    if (!m_iuI2C.isSilent())
+    if (i % 2 == 0) // only keep 1 record every 2 records because stereo recording but we use only 1 canal
     {
-      m_iuBLE.port->println( "Initialized I2S RX without DMA" );
-    }
-    delay(50);
-    I2SRx0.start(); // start the I2S RX
-    if (!m_iuI2C.isSilent())
-    {
-      m_iuI2C.port->println( "Started I2S RX" );
+      m_audioData[i] = (q15_t) (data[i] >> 16);
     }
   }
-  else {
-    m_iuI2C.port->println(m_iuI2C.getErrorMessage());
+  m_newData = true;
+}
+
+/**
+ * read audio data
+ * NB: Need to call this function to empty I2S buffer, otherwise the process stop
+ */
+void IUI2S::readData()
+{
+  int readBitCount = I2S.read(m_rawAudioData, sizeof(m_rawAudioData));
+  if (readBitCount)
+  {
+    processAudioData((q31_t*) m_rawAudioData);
   }
+}
+
+bool IUI2S::acquireData()
+{
+  readData();
+  if (m_newData)
+  {
+    m_newData = false;
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Send data to the receivers
+ */
+void IUI2S::sendToReceivers()
+{
+  for (int i = 0; i < m_receiverCount; i++)
+  {
+    if (m_receivers[i] && m_toSend[i] == dataSendOption::sound)
+    {
+      int sampleCount = audioSampleSize / m_downclocking;
+      for (int j = 0; j < sampleCount; j++)
+      {
+        m_receivers[i]->receive(m_receiverSourceIndex[i], m_audioData[j]);
+      }
+    }
+  }
+}
+
+/**
+ * Dump audio data to serial via I2C
+ * NB: We want to do this in *DATA COLLECTION* mode
+ */
+void IUI2S::dumpDataThroughI2C()
+{
+  int sampleCount = audioSampleSize / m_downclocking;
+  for (int j = 0; j < sampleCount; j++)
+  {
+    // stream 16bits value in 2 bytes
+    m_iuI2C->port->write((m_audioData[j] >> 8) & 0xFF);
+    m_iuI2C->port->write(m_audioData[j] & 0xFF);
+  }
+
 }
 
 /* ==================== Update and Control Functions =============================== */
@@ -55,7 +119,7 @@ void IUI2S::begin(void (*callback) (int32_t*))
  */
 bool IUI2S::updateSamplingRateFromI2C()
 {
-  String wireBuffer = m_iuI2C.getBuffer();
+  String wireBuffer = m_iuI2C->getBuffer();
   if (wireBuffer.indexOf("acosr") > -1)
   {
     int acosrLocation = wireBuffer.indexOf("acosr");
@@ -66,116 +130,3 @@ bool IUI2S::updateSamplingRateFromI2C()
   }
   return false;
 }
-
-/* ==================== Data Collection and Feature Calculation functions ======================== */
-
-/**
- * Extract the 24bit INMP441 audio data from 32bit sample
- */
-void IUI2S::extractDataInPlace(int32_t  *pBuf)
-{
-  if (pBuf[0] < 0)  // Check if the data is negative
-  {
-    pBuf[0] = pBuf[0] >> 8;
-    pBuf[0] |= 0xff000000;
-  }
-  else  // Data is positive
-  {
-    pBuf[0] = pBuf[0] >> 8;
-  }
-}
-
-/**
- * Push acceleration in the batch array to later compute the FFT
- * NB: We want to do this in *RUN* mode
- */
-void IUI2S::pushDataToBatch(uint8_t buffer_record_index, uint32_t index, int32_t  *pBuf)
-{
-  byte* ptr = (byte*)&m_batch[buffer_record_index][index];
-  ptr[0] = (pBuf[0] >> 8) & 0xFF;
-  ptr[1] = (pBuf[0] >> 16) & 0xFF;
-}
-
-
-/**
- * Dump audio data to serial via I2C 
- * NB: We want to do this in *DATA COLLECTION* mode
- */
-void IUI2S::dumpDataThroughI2C(int32_t  *pBuf)
-{
-  m_iuI2C.port->write((pBuf[0] >> 16) & 0xFF);
-  m_iuI2C.port->write((pBuf[0] >> 8) & 0xFF);
-  m_iuI2C.port->write(pBuf[0] & 0xFF);
-}
-
-/** 
- * Calculate and return Audio data in DB
- */
-float IUI2S::getAudioDB(uint8_t buffer_compute_index)
-{
-  float audioDB_val = 0.0;
-  int aud_data = 0;
-  uint64_t accu = 1; // We use the accumulation because log10 is really slow...
-  uint64_t limit = pow(2, 53); //uint64_t limit is 2^64, and we assume that max(sound pressure) < 2^11 - 1
-  for (int i = 0; i < MAX_INTERVAL; i++)
-  {
-    aud_data = abs(m_batch[buffer_compute_index][i]);
-    if (aud_data > 0)
-    {
-      accu *= aud_data;
-    }
-    if (accu >= limit)
-    {
-      audioDB_val += (20 * log10(accu));
-      accu = 1;
-    }
-  }
-  audioDB_val += (20 * log10(accu));
-  audioDB_val /= MAX_INTERVAL;
-  return audioDB_val;
-}
-/**
- * Single instance RFFT calculation on audio data
- * 
- */
-void IUI2S::computeAudioRFFT(uint8_t buffer_compute_index, q15_t *hamming_window, int magSize, float HammingK, float inverseWLen)
-{
-  // Apply Hamming window in-place
-  arm_mult_q15(m_batch[buffer_compute_index], hamming_window,
-               m_batch[buffer_compute_index], NFFT);
-
-  arm_mult_q15(&m_batch[buffer_compute_index][NFFT], hamming_window,
-               &m_batch[buffer_compute_index][NFFT], NFFT);
-
-  // TODO: Computation time verification
-  // Since input vector is 2048, perform FFT twice.
-  /*====== 2 FFT, from 0 to 2047 and from 2048 to 4095======*/
-  for (int i = 0; i < 2; i++)
-  {
-    arm_rfft_init_q15(&m_rfftInstance, &m_cfftInstance, NFFT, 0, 1);
-    if (i == 0)
-    {
-      arm_rfft_q15(&m_rfftInstance, m_batch[buffer_compute_index], m_rfftBuffer);
-    }
-    if (i == 1)
-    {
-      arm_rfft_q15(&m_rfftInstance, &m_batch[buffer_compute_index][NFFT], m_rfftBuffer);
-    }
-    arm_shift_q15(m_rfftBuffer, RESCALE, m_rfftBuffer, NFFT * 2);
-  
-    // NOTE: OUTPUT FORMAT IS IN 2.14
-    arm_cmplx_mag_q15(m_rfftBuffer, m_batch[buffer_compute_index], NFFT);
-    arm_q15_to_float(m_batch[buffer_compute_index], (float*)m_rfftBuffer, magSize);
-  
-    // TODO: REDUCE VECTOR CALCULATION BY COMING UP WITH SINGLE FACTOR
-    // Div by K
-    arm_scale_f32((float*)m_rfftBuffer, HammingK, (float*)m_rfftBuffer, magSize);
-    // Div by wlen
-    arm_scale_f32((float*)m_rfftBuffer, inverseWLen, (float*)m_rfftBuffer, magSize);
-    // Fix 2.14 format from cmplx_mag
-    arm_scale_f32((float*)m_rfftBuffer, 2.0, (float*)m_rfftBuffer, magSize);
-    // Correction of the DC & Nyquist component, including Nyquist point.
-    arm_scale_f32(&((float*)m_rfftBuffer)[1], 2.0, &((float*)m_rfftBuffer)[1], magSize - 2);
-  }
-}
-

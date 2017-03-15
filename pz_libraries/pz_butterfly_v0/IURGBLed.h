@@ -3,7 +3,7 @@
 
   Update:
     03/03/2017
-  
+
   Component:
     Name:
 
@@ -15,20 +15,20 @@
 #define IURGBLED_H
 
 #include <Arduino.h>
-#include "IUBLE.h"
+#include "IUABCSensor.h"
 #include "IUI2C.h"
 
 /**
 * Class to handle the RGB led behavior
 * LEDs are active at LOW and inactive at HIGH
 */
-class IURGBLed
+class IURGBLed : public IUABCSensor
 {
   public:
     enum PIN : uint8_t { // Led pin
-                        RED_PIN = 29,
-                        GREEN_PIN = 27,
-                        BLUE_PIN = 28};
+                        RED_PIN = A5,
+                        GREEN_PIN = A3,
+                        BLUE_PIN = A0};
     enum LEDColors { // LED color code
       RED_BAD         , // L H H
       BLUE_NOOP       , // H H L
@@ -48,8 +48,14 @@ class IURGBLed
                                   {0, 0, 0}, //WHITE_NONE
                                   {1, 1, 1} //SLEEP_MODE
                                  };
-    //Constructors, getters and setters
-    IURGBLed(IUI2C iuI2C, IUBLE iuBLE);
+    static const uint8_t sensorTypeCount = 1;
+    static char sensorTypes[sensorTypeCount];
+    enum dataSendOption : uint8_t {optionCount = 0}; // Sends nothing
+
+    // Methods
+    IURGBLed(IUI2C *iuI2C);
+    virtual ~IURGBLed() {}
+    virtual void wakeUp();
     void activate();
     void deactivate() { m_status = false; }
     bool isActive() { return m_status; }
@@ -59,8 +65,7 @@ class IURGBLed
     bool updateFromI2C();
 
   private:
-    IUI2C m_iuI2C;
-    IUBLE m_iuBLE;
+    IUI2C *m_iuI2C;
     bool m_status;
 };
 

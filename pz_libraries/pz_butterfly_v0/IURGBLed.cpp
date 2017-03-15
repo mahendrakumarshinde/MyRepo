@@ -1,10 +1,23 @@
 #include "IURGBLed.h"
 
+char IURGBLed::sensorTypes[IURGBLed::sensorTypeCount] = {IUABCSensor::sensorType_rgbled};
+
 /**
 * LED is activated at construction.
 */
-IURGBLed::IURGBLed(IUI2C iuI2C, IUBLE iuBLE) : m_iuI2C(iuI2C), m_iuBLE(iuBLE)
+IURGBLed::IURGBLed(IUI2C *iuI2C) : IUABCSensor  (), m_iuI2C(iuI2C)
 {
+  activate();
+}
+
+/**
+ * Set up the RGB LED and activate it.
+ */
+void IURGBLed::wakeUp()
+{
+  pinMode(RED_PIN, OUTPUT);
+  pinMode(GREEN_PIN, OUTPUT);
+  pinMode(BLUE_PIN, OUTPUT);
   activate();
 }
 
@@ -12,11 +25,8 @@ IURGBLed::IURGBLed(IUI2C iuI2C, IUBLE iuBLE) : m_iuI2C(iuI2C), m_iuBLE(iuBLE)
  * Set the status to active and set LED pins to output mode
  */
 void IURGBLed::activate()
-{ 
+{
   m_status = true;
-  pinMode(RED_PIN, OUTPUT);
-  pinMode(GREEN_PIN, OUTPUT);
-  pinMode(BLUE_PIN, OUTPUT);
 }
 
 void IURGBLed::ledOn(IURGBLed::PIN pin_number)
@@ -57,7 +67,7 @@ void IURGBLed::changeColor(IURGBLed::LEDColors color)
  */
 bool IURGBLed::updateFromI2C()
 {
-  String wireBuffer = m_iuI2C.getBuffer();
+  String wireBuffer = m_iuI2C->getBuffer();
   if (wireBuffer.indexOf("rgb") > -1)
   {
     int rgblocation = wireBuffer.indexOf("rgb");
@@ -85,4 +95,4 @@ bool IURGBLed::updateFromI2C()
     return true;
   }
   return false;
- }
+}

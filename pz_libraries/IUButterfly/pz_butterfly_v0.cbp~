@@ -43,8 +43,6 @@
 		<Unit filename="IUBMP280.h" />
 		<Unit filename="IUBMX055.cpp" />
 		<Unit filename="IUBMX055.h" />
-		<Unit filename="IUFeature.cpp" />
-		<Unit filename="IUFeature.h" />
 		<Unit filename="IUI2C.cpp" />
 		<Unit filename="IUI2C.h" />
 		<Unit filename="IUI2S.cpp" />

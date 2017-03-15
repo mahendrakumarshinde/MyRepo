@@ -1,6 +1,6 @@
 #include "IUI2C.h"
 
-IUI2C::IUI2C() : m_readFlag(true), m_silent(false), m_wireBuffer("")
+IUI2C::IUI2C() : IUInterface(), m_readFlag(true), m_silent(false), m_wireBuffer("")
 {
   resetErrorMessage();
 }
@@ -10,11 +10,16 @@ IUI2C::IUI2C() : m_readFlag(true), m_silent(false), m_wireBuffer("")
  * Setup for Master mode, pins 18/19, external pullups, 400kHz for Teensy 3.1
  */
 void IUI2C::activate(long clockFreq, long baudrate)
-{ 
+{
   Wire.begin(TWI_PINS_20_21); // set master mode on pins 21/20
   Wire.setClock(clockFreq); // I2C frequency at 400 kHz 400000
   port->begin(baudrate);
   delay(4000);
+}
+
+void IUI2C::activate()
+{
+  activate(defaultClockRate, defaultBaudRate);
 }
 
 /**
@@ -84,7 +89,7 @@ bool IUI2C::checkComponentWhoAmI(String componentName, uint8_t address, uint8_t 
     port->print("Could not connect to ");
     port->print(componentName);
     port->print(": 0x");
-    m_iuI2C.port->println(c, HEX);
+    port->println(c, HEX);
     port->flush();
     return false;
   }
@@ -100,7 +105,7 @@ void IUI2C::writeByte(uint8_t address, uint8_t subAddress, uint8_t data)
   uint8_t temp[2];
   temp[0] = subAddress;
   temp[1] = data;
-  Wire.transfer(address, &temp[0], 2, NULL, 0); 
+  Wire.transfer(address, &temp[0], 2, NULL, 0);
 }
 
 /**

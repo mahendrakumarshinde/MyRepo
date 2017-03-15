@@ -3,7 +3,7 @@
 
   Update:
     03/03/2017
-  
+
   Component:
     Name:
       I2C Computer bus
@@ -19,13 +19,14 @@
 #define IUI2C_H
 
 #include <Arduino.h>
-#include <i2c_t3.h>
+#include "Wire.h"
+#include "IUInterface.h"
 
 
 /**
- * 
+ *
  */
-class IUI2C
+class IUI2C : public IUInterface
 {
   public:
     // Data collection Mode - Modes of Operation String Constants
@@ -33,9 +34,12 @@ class IUI2C
     const String START_CONFIRM = "IUOK_START";
     const String END_COLLECTION = "IUCMD_END";
     const String END_CONFIRM = "IUOK_END";
+    static const uint32_t defaultBaudRate = 115200;
+    static const uint32_t defaultClockRate = 400000; // frequency at 400 kHz
     static constexpr HardwareSerial *port = &Serial;
     // Constructors, getters and setters
     IUI2C();
+    virtual ~IUI2C() {}
     byte getReadError() { return m_readError; }
     bool getReadFlag() { return m_readFlag; }
     void setReadFlag(bool val) { m_readFlag = val; }
@@ -51,6 +55,7 @@ class IUI2C
     String getBuffer() { return m_wireBuffer; }
 
     void activate(long clockFreq, long baudrate);
+    void activate();
     bool scanDevices();
     bool checkComponentWhoAmI(String componentName, uint8_t address, uint8_t whoAmI, uint8_t iShouldBe);
     void writeByte(uint8_t address, uint8_t subAddress, uint8_t data);

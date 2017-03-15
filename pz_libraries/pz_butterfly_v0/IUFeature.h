@@ -1,214 +1,316 @@
-#ifndef IUFEATURECONFIG_H
-#define IUFEATURECONFIG_H
+/*
+  Infinite Uptime Firmware
+
+
+   Feature definitions:
+   
+1. Acceleration RMS in X
+8:12
+2. Acceleration RMS in Y
+8:12
+3. Acceleration RMS in Z
+8:13
+4. Acceleration Peak-to-Peak in X
+5. Acceleration Peak-to-Peak in Y
+6. Acceleration Peak-to-Peak in Z
+8:13
+7. Velocity RMS in X
+8. Velocity RMS in Y
+9. Velocity RMS in Z
+10. Velocity Peak-to-Peak in X
+11. Velocity Peak-to-Peak in Y
+12. Velocity Peak-to-Peak in Z
+8:14
+13. Displacement RMS in X
+14. Displacement RMS in Y
+15. Displacement RMS in Z
+16. Displacement Peak-to-Peak in X
+17. Displacement Peak-to-Peak in Y
+18. Displacement Peak-to-Peak in Z
+8:14
+19. Signal  Energy (same as in existing firmware)
+8:14
+20. Latitude
+8:14
+21. Longitude
+8:15
+22. Acoustic (dB)
+8:15
+23. Temperature (C)
+8:16
+24. Energy in configurable frequency bands for vibration
+8:16
+25. Energy in configurable frequency bands for acoustics
+   
+*/
+
+
+#ifndef IUFEATURE_H
+#define IUFEATURE_H
 
 #include <Arduino.h>
-#include <arm_math.h>
-#include <MD_CirQueue.h>
+
 #include "IUUtilities.h"
+#include "IUABCFeature.h"
+#include "IUABCProducer.h"
+
+
+/* ========================== Feature classes ============================= */
 
 
 /**
- * Abstract base class for features
- */
-class IUABCFeature
+* Feature for data collection, with one or several sources with number in Q15 format
+*
+* Data collection feature is a special sort of feature:
+* - the sendingQueue is not usefull => it will be of size 1 and receive only 0
+* - it has a destination array instead, with the same shape as source
+* - it is not a Producer sub-class
+* - the compute feature update the destination array and return 0
+* - the stream function stream the destination array
+* - Sources can be named, so the name is streamed with the values
+*/
+class IUQ15DataCollectionFeature : public IUABCFeature
 {
-    public:
-        IUABCFeature() {}
-        virtual ~IUABCFeature() {}
-        void setId(uint8_t id) { m_id = id; }
-        uint8_t getId() { return m_id; }
-        void setName(String name) { m_name = name; }
-        String getName() { return m_name; }
-        // Feature computation, source, sending queue and receivers
-        virtual void setComputeFunction(float (*computeFunction) ()) = 0; // Pure virtual
-        virtual void prepareSource(uint16_t sourceSize) = 0; // Pure virtual
-        void prepareSendingQueue(uint16_t sendingQueueSize);
-        bool activate();
-        bool isActive() { return m_active; }
-        void enableFeatureCheck() { m_checkFeature = true; }
-        void disableFeatureCheck() { m_checkFeature = false; }
-        bool isFeatureCheckActive() { return m_checkFeature; }
-        // Thresholds and state
-        void setThresholds(float normal, float warning, float danger);
-        void getThreshold(uint8_t index) { return m_tresholds[index]}
-        // Run
-        virtual bool receive() = 0; // Pure virtual
-        virtual float compute() = 0; // Pure virtual
-        uint8_t getThresholdState();
-        float peekNextValue();
-        bool stream(Stream *port);
+  public:
+    static const uint8_t sourceCount = 1;
+    static const uint16_t sourceSize[sourceCount];
+    IUQ15DataCollectionFeature(uint8_t id, String name="", String fullName = "");
+    virtual ~IUQ15DataCollectionFeature() {}
+    virtual void setDefaultComputeFunction() { m_computeFunction = computeDefaultDataCollectionQ15; } //Does nothing
+    virtual bool compute();
+    void setSourceNames(String *sourceNames);
+    bool stream(Stream *port);
 
-    private:
-        uint8_t m_id;
-        String m_name;
-        bool m_active;
-        bool m_checkFeature;
-        float (*m_computeFunction) ();
-        uint16_t m_sourceSize;
-        q15_t *m_source;
-        virtual void newSource() = 0; // Pure virtual
-        uint16_t m_sourceCounter;
-        bool m_computeNow[2];
-        bool m_recordNow[2];
-        uint8_t m_computeIndex;   // Computation buffer index
-        uint8_t m_recordIndex;    // Data recording buffer index
-        // Using a queue for sending, so that we always have the n latest results
-        uint8_t m_sendingQueueSize; // MD_Queue size
-        MD_CirQueue *m_sendingQueue;
-        // Thresholds and state
-        float m_thresholds[3]; // Normal, warning and danger thresholds
-        uint8_t m_state; // possible states are 0: not cutting, 1: normal, 2: warning, 3: danger
-        uint8_t m_highestDangerLevel; // The most critical state ever measured
-};
-
-/**
- * Feature with a single source, with number in Q15 format
- */
-class IUSingleQ15SourceFeature : IUABCFeature
-{
-    public:
-        IUSingleQ15SourceFeature(uint8_t id, String name);
-        virtual ~IUSingleQ15SourceFeature();
-        // Feature computation, source, sending queue and receivers
-        virtual void setComputeFunction(float (*computeFunction) (uint16_t, q15_t*));
-        virtual void prepareSource(uint16_t sourceSize);
-        void setReceivers(uint8_t receiverCount, IUABCFeature *receivers)
-        // Run
-        virtual bool receive(q15_t value);
-        virtual float compute();
-
-    private:
-        float (*m_computeFunction) (uint16_t sourceSize, q15_t* source);
-        uint16_t m_sourceSize;
-        q15_t *m_source;
-        virtual void newSource(uint16_t *sourceSize);
-        uint16_t m_sourceCounter;
-        bool m_computeNow[2];
-        bool m_recordNow[2];
-        uint8_t m_computeIndex;   // Computation buffer index
-        uint8_t m_recordIndex;    // Data recording buffer index
-        // Using a queue for sending, so that we always have the n latest results
-        uint8_t m_sendingQueueSize; // MD_Queue size
-        MD_CirQueue *m_sendingQueue;
-        uint8_t m_receiverCount;
-        IUABCFeature *m_receivers;
-        
+  protected:
+    bool m_streamNow;
+    float *m_destination[sourceCount];
+    float (*m_computeFunction) (uint8_t sourceCount, const uint16_t *sourceSize, q15_t *source[], float *m_destination[]);
+    String m_sourceNames[sourceCount];
 };
 
 
 /**
- * Feature with a single source, with number in float format
+ * Mixing class for IUABCFeature and IUABCProducer
  */
-class IUSingleFloatSourceFeature : public IUSingleQ15SourceFeature
+class IUFeature : public IUABCFeature, public IUABCProducer
 {
-    public:
-        // Feature computation, source, sending queue and receivers
-        virtual void setComputeFunction(float (*computeFunction) (uint16_t, float*));
-        // Run
-        virtual bool receive(float value);
-
-    private:
-        float (*m_computeFunction) (uint16_t sourceSize, float* source);
-        float *m_source;
-        virtual void newSource(uint16_t *sourceSize);
-}
-
-
-/**
- * Feature with multiple sources, with number in Q15 format
- */
-class IUMultiQ15SourceFeature : public IUABCFeature
-{
-    public:
-        IUMultiSourceFeature(uint8_t id, String name="");
-        ~IUMultiQ15SourceFeature();
-        virtual void setComputeFunction(float (*computeFunction) (uint8_t, uint16_t*, q15_t*));
-        virtual void prepareSource(uint8_t sourceCount, uint16_t *sourceSize);
-        // Run
-        virtual bool receive(uint8_t sourceIndex, q15_t value);
-        virtual float compute();
-
-    private:
-        float (*m_computeFunction) (uint8_t sourceCount, uint16_t* sourceSize, q15_t* source);
-        uint8_t m_sourceCount;
-        uint16_t *m_sourceSize;
-        q15_t *m_source;
-        void newSource(uint8_t sourceCount, uint16_t *sourceSize);
-        uint16_t *m_sourceCounter;
-        bool *m_computeNow;
-        bool *m_recordNow;
-        uint8_t *m_computeIndex;   // Computation buffer index
-        uint8_t *m_recordIndex;    // Data recording buffer index
+  public:
+    static const uint8_t sourceCount = 1;
+    static const uint16_t sourceSize[sourceCount];
+    IUFeature(uint8_t id, String name="", String fullName = "");
+    virtual ~IUFeature() {}
+    enum dataSendOption : uint8_t {value = 0,
+                                   state = 1,
+                                   optionCount = 2};
+    virtual void sendToReceivers();
 };
 
 
 /**
- * Feature with multiple sources, with number in float format
- */
-class IUMultiFloatSourceFeature : public IUMultiQ15SourceFeature
+* Feature with possibly multiple sources of which number format is Q15
+*/
+class IUQ15Feature : public IUFeature
 {
-    public:
-        // Feature computation, source, sending queue and receivers
-        virtual void setComputeFunction(float (*computeFunction) (uint8_t, uint16_t*, float*));
-        // Run
-        virtual bool receive(uint8_t sourceIndex, float value);
+  public:
+    IUQ15Feature(uint8_t id, String name="", String fullName = "");
+    virtual ~IUQ15Feature() {}
+    // Feature computation, source and sending queue
+    virtual void setComputeFunction(float (*computeFunction) (uint8_t sourceCount, const uint16_t *sourceSize, q15_t *source[]))
+                    { m_computeFunction = computeFunction; }
+    virtual void setDefaultComputeFunction() { m_computeFunction = computeDefaultQ15; }
+    virtual bool receive(uint8_t sourceIndex, q15_t value);
 
-    private:
-        float (*m_computeFunction) (uint8_t sourceCount, uint16_t* sourceSize, float* source);
-        float *m_source;
-        virtual void newSource(uint8_t sourceCount, uint16_t *sourceSize);
-}
-
-
-class IUFeatureSelection
-{
-    public:
-        // Arrays have to be initialized with a fixed size,
-        // so we chose max_size = max number of features per collections
-        static const uint8_t MAX_SIZE = 10;
-        IUFeatureSelection();
-        bool addFeature(IUFeature feature);
-        bool addFeature(String name, float (*computeFunction) ());
-        IUFeature getFeature(uint8_t index);
-        uint8_t getSize() { return m_size; }
-
-    private:
-        IUABCFeature m_features[MAX_SIZE];
-        uint8_t m_size; // Dynamic
-
-
+  protected:
+    q15_t *m_source[2][sourceCount];
+    float (*m_computeFunction) (uint8_t sourceCount, const uint16_t *sourceSize, q15_t *source[]);
+    virtual bool newSource();
 };
 
-float default_compute(q15_t* source) { return source[0]; }
 
-/* ========================== Feature Definition ============================= */
-IUMultiSourceFeature accelerationEnergy = IUMultiSourceFeature(1, "acceleration_energy");
-uint16_t sourceSize[3] = {512, 512, 512}
-accelerationEnergy.prepareSource(3, sourceSize);
-accelerationEnergy.setComputeFunction(computeSignalEnergy);
+/**
+* Feature with possibly multiple sources of which number format is float
+*/
+class IUFloatFeature : public IUFeature
+{
+  public:
+    IUFloatFeature(uint8_t id, String name="", String fullName = "");
+    virtual ~IUFloatFeature() {}
+    // Feature computation, source and sending queue
+    virtual void setComputeFunction(float (*computeFunction) (uint8_t sourceCount, const uint16_t *sourceSize, float *source[]))
+                    { m_computeFunction = computeFunction; }
+    virtual void setDefaultComputeFunction() { m_computeFunction = computeDefaultFloat; }
+    virtual bool receive(uint8_t sourceIndex, float value);
 
-IUMultiSourceFeature velocityX = IUMultiSourceFeature(2, "velocity_x");
-uint16_t sourceSize[3] = {1, 1, 512}
-VelocityX.prepareSource(3, sourceSize);
-VelocityX.setComputeFunction(computeVelocity);
-
-IUMultiSourceFeature velocityY = IUMultiSourceFeature(3, "velocity_y");
-uint16_t sourceSize[3] = {1, 1, 512}
-VelocityX.prepareSource(3, sourceSize);
-VelocityX.setComputeFunction(computeVelocity);
-
-IUMultiSourceFeature velocityZ = IUMultiSourceFeature(4, "velocity_z");
-uint16_t sourceSize[3] = {1, 1, 512}
-VelocityX.prepareSource(3, sourceSize);
-VelocityX.setComputeFunction(computeVelocity);
-
-IUFeature temperature = IUFeature(5, "current_temperature");
-temperature.prepareSource(1);
-// The temperature compute function is the default one
-
-IUMultiSourceFeature audioDB = IUMultiSourceFeature(6, "current_temperature");
-audioDB.prepareSource(1);
+  protected:
+    float *m_source[2][sourceCount];
+    float (*m_computeFunction) (uint8_t sourceCount, const uint16_t *sourceSize, float *source[]);
+    virtual bool newSource();
+};
 
 
+/* ========================== Specialized Feature Classes ============================= */
 
-#endif // IUFEATURECONFIG_H
+/**
+ * Signal Energy along a single axis, over 128 values
+ * Excepted producers:
+ * 1. Sensor data (eg: Accelerometer on 1 axis)
+ * Optionnal expected receivers:
+ * 1. operationState in q15_t format
+ */
+class IUSingleAxisEnergyFeature128: public IUQ15Feature
+{
+  public:
+    IUSingleAxisEnergyFeature128(uint8_t id, String name="", String fullName = "");
+    virtual ~IUSingleAxisEnergyFeature128() {}
+    static const uint8_t sourceCount = 1;
+    static const uint16_t sourceSize[sourceCount];
+    virtual void setDefaultComputeFunction() { m_computeFunction = computeSignalEnergy; }
+};
+
+/**
+ * Signal Energy along a single axis, over 512 values
+ * Excepted producers:
+ * 1. Sensor data (eg: Accelerometer on 1 axis)
+ * Optionnal expected receivers:
+ * 1. operationState in q15_t format
+ */
+class IUSingleAxisEnergyFeature512: public IUQ15Feature
+{
+  public:
+    IUSingleAxisEnergyFeature512(uint8_t id, String name="", String fullName = "");
+    virtual ~IUSingleAxisEnergyFeature512() {}
+    static const uint8_t sourceCount = 1;
+    static const uint16_t sourceSize[sourceCount];
+    virtual void setDefaultComputeFunction() { m_computeFunction = computeSignalEnergy; }
+};
+
+/**
+ * Signal Energy along 3 axis, over 128 values
+ * Excepted producers:
+ * 1. Sensor (eg: Accelerometer on X axis)
+ * 2. Sensor (eg: Accelerometer on Y axis)
+ * 3. Sensor (eg: Accelerometer on Z axis)
+ * Optionnal expected receivers:
+ * 1. operationState in q15_t format
+ */
+class IUTriAxisEnergyFeature128: public IUQ15Feature
+{
+  public:
+    IUTriAxisEnergyFeature128(uint8_t id, String name="", String fullName = "");
+    virtual ~IUTriAxisEnergyFeature128() {}
+    static const uint8_t sourceCount = 3;
+    static const uint16_t sourceSize[sourceCount];
+    virtual void setDefaultComputeFunction() { m_computeFunction = computeSignalEnergy; }
+};
+
+/**
+ * Signal Energy along 3 axis, over 512 values
+ * Excepted producers:
+ * 1. Sensor (eg: Accelerometer on X axis)
+ * 2. Sensor (eg: Accelerometer on Y axis)
+ * 3. Sensor (eg: Accelerometer on Z axis)
+ * Optionnal expected receivers:
+ * 1. operationState in q15_t format
+ */
+class IUTriAxisEnergyFeature512: public IUQ15Feature
+{
+  public:
+    IUTriAxisEnergyFeature512(uint8_t id, String name="", String fullName = "");
+    virtual ~IUTriAxisEnergyFeature512() {}
+    static const uint8_t sourceCount = 3;
+    static const uint16_t sourceSize[sourceCount];
+    virtual void setDefaultComputeFunction() { m_computeFunction = computeSignalEnergy; }
+};
+
+/**
+ * Summing feature (can be use to sum single axis energy on 3 axis)
+ * Excepted producers:
+ * 1. Feature data (eg: Acceleration Energy on X axis)
+ * 2. Feature data (eg: Acceleration Energy on Y axis)
+ * 3. Feature data (eg: Acceleration Energy on Z axis)
+ * Optionnal expected receivers:
+ * 1. operationState in q15_t format
+ */
+class IUTriSourceSummingFeature: public IUFloatFeature
+{
+  public:
+    IUTriSourceSummingFeature(uint8_t id, String name="", String fullName = "");
+    virtual ~IUTriSourceSummingFeature() {}
+    static const uint8_t sourceCount = 3;
+    static const uint16_t sourceSize[sourceCount];
+    virtual void setDefaultComputeFunction() { m_computeFunction = computeSumOf; }
+};
+
+
+/**
+ * Summing feature (can be use to sum single axis energy on 3 axis)
+ * Excepted producers:
+ * 1. Sensor data (eg: Acceleration Energy on 1 axis)
+ * 2. Feature state (eg: Acceleration Energy feature state)
+ * Optionnal expected receivers: None
+ */
+class IUVelocityFeature512: public IUQ15Feature
+{
+  public:
+    IUVelocityFeature512(uint8_t id, String name="", String fullName = "");
+    virtual ~IUVelocityFeature512() {}
+    static const uint8_t sourceCount = 2;
+    static const uint16_t sourceSize[sourceCount];
+    virtual void setDefaultComputeFunction() { m_computeFunction = computeVelocity; }
+};
+
+
+/**
+ * Default feature, just take a float value and pass it along
+ * Excepted producers:
+ * 1. Sensor data (eg: temperature)
+ * Optionnal expected receivers: None
+ */
+class IUDefaultFloatFeature: public IUFloatFeature
+{
+  public:
+    IUDefaultFloatFeature(uint8_t id, String name="", String fullName = "");
+    virtual ~IUDefaultFloatFeature() {}
+    static const uint8_t sourceCount = 1;
+    static const uint16_t sourceSize[sourceCount];
+    virtual void setDefaultComputeFunction() { m_computeFunction = computeDefaultFloat; }
+};
+
+
+/**
+ * Feature that compute audio volume in DB
+ * Excepted producers:
+ * 1. Sensor data (audio)
+ * Optionnal expected receivers: None
+ */
+class IUAudioDBFeature2048: public IUQ15Feature
+{
+  public:
+    IUAudioDBFeature2048(uint8_t id, String name="", String fullName = "");
+    virtual ~IUAudioDBFeature2048() {}
+    static const uint8_t sourceCount = 1;
+    static const uint16_t sourceSize[sourceCount];
+    virtual void setDefaultComputeFunction() { m_computeFunction = computeAcousticDB; }
+};
+
+
+/**
+ * Feature that compute audio volume in DB
+ * Excepted producers:
+ * 1. Sensor data (audio)
+ * Optionnal expected receivers: None
+ */
+class IUAudioDBFeature4096: public IUQ15Feature
+{
+  public:
+    IUAudioDBFeature4096(uint8_t id, String name="", String fullName = "");
+    virtual ~IUAudioDBFeature4096() {}
+    static const uint8_t sourceCount = 1;
+    static const uint16_t sourceSize[sourceCount];
+    virtual void setDefaultComputeFunction() { m_computeFunction = computeAcousticDB; }
+};
+
+
+
+
+#endif // IUFEATURE_H

@@ -1,0 +1,11 @@
+#include "IUComponent.h"
+
+IUComponent::IUComponent()
+{
+  //ctor
+}
+
+IUComponent::~IUComponent()
+{
+  //dtor
+}

@@ -1,0 +1,14 @@
+#include "IUABCComponent.h"
+
+char IUABCComponent::sensorTypes[IUABCComponent::sensorTypeCount] = {IUABCComponent::sensorType_none};
+
+IUABCComponent::IUABCComponent() : IUABCProducer()
+{
+  m_samplingRate = defaultSamplingRate;
+}
+
+IUABCComponent::~IUABCComponent()
+{
+  //dtor
+}
+

@@ -3,7 +3,7 @@
 
   Update:
     03/03/2017
-  
+
   Component:
     Name:
       BMP280
@@ -17,12 +17,14 @@
 #include <Arduino.h>
 
 #include "IUUtilities.h"
+#include "IUABCSensor.h"
 #include "IUI2C.h"
-#include "IUBLE.h"
 
-class IUBMP280
+class IUBMP280 : public IUABCSensor
 {
   public:
+    static const uint8_t sensorTypeCount = 2;
+    static char  sensorTypes[sensorTypeCount];
     /*===== DEVICE CONFIGURATION AND CONSTANTS =======*/
     static const uint8_t WHO_AM_I           = 0xD0;
     static const uint8_t WHO_AM_I_ANSWER    = 0x58; // should be 0x58
@@ -49,35 +51,42 @@ class IUBMP280
                                      BW0_042ODR,
                                      BW0_021ODR}; // bandwidth at 0.021 x sample rate
     enum ModeOptions : uint8_t {Sleep = 0, forced, forced2, normal};
-    enum SByOptions : uint8_t { t_00_5ms = 0, t_62_5ms, t_125ms, t_250ms, 
+    enum SByOptions : uint8_t { t_00_5ms = 0, t_62_5ms, t_125ms, t_250ms,
                                 t_500ms, t_1000ms, t_2000ms, t_4000ms,};
 
+    enum dataSendOption : uint8_t {temperature = 0,
+                                   pressure    = 1,
+                                   optionCount = 2};
+
     // Constructors, destructors, getters, setters
-    IUBMP280(IUI2C iuI2C, IUBLE iuBLE);
-    IUBMP280(IUI2C iuI2C, IUBLE iuBLE, posrOptions posr, tosrOptions tosr, 
+    IUBMP280(IUI2C *iuI2C);
+    IUBMP280(IUI2C *iuI2C, posrOptions posr, tosrOptions tosr,
               IIRFilterOptions iirFilter, ModeOptions mode, SByOptions sby);
+    virtual ~IUBMP280() {}
     int32_t getFineTemperature() { return m_fineTemperature; }
     int16_t getTemperature() { return m_temperature; }
     int16_t getPressure() { return m_pressure; }
     void setOptions(posrOptions posr, tosrOptions tosr, IIRFilterOptions iirFilter, ModeOptions mode, SByOptions sby);
-
     // Methods
     void initSensor();
-    void wakeUp();
-    float getCurrentTemperature();
-    int32_t readRawTemperature();
-    int32_t compensateTemperature(int32_t rawT);
-    int32_t readRawPressure();
-    uint32_t compensatePressure(int32_t rawP);
+    virtual void wakeUp();
+    float readTemperature();
+    float readPressure();
+    virtual void readData();
+    virtual void sendToReceivers();
 
   private:
-    IUI2C m_iuI2C;
-    IUBLE m_iuBLE;
-    int32_t m_fineTemperature; 
+    IUI2C *m_iuI2C;
+    int32_t m_fineTemperature;
     int16_t m_digTemperature[3];
     int16_t m_digPressure[9];
     int16_t m_temperature, m_pressure;
     uint8_t m_posr, m_tosr, m_iirFilter, m_mode, m_sby;
+    //Internal Methods
+    int32_t readRawTemperature();
+    float compensateTemperature(int32_t rawT);
+    int32_t readRawPressure();
+    float compensatePressure(int32_t rawP);
 
 };
 

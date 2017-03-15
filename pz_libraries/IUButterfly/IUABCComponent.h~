@@ -1,0 +1,15 @@
+#ifndef IUCOMPONENT_H
+#define IUCOMPONENT_H
+
+
+class IUComponent
+{
+  public:
+    IUComponent();
+    virtual ~IUComponent();
+
+  protected:
+
+};
+
+#endif // IUCOMPONENT_H
