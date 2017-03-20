@@ -1,0 +1,9 @@
+# Compiled source #
+###################
+bin/
+obj/
+
+# Temporary & IDE #
+###################
+*~
+*.layout
