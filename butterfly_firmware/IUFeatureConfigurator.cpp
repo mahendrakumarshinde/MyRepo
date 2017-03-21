@@ -215,14 +215,18 @@ uint8_t IUFeatureConfigurator::getConfigFromName(String featureNames, IUFeatureC
 bool IUFeatureConfigurator::registerFeatureInFeatureDependencies(IUFeature *feature)
 {
   bool success = true;
+  Serial.println("OK 10");
+  Serial.println(feature->getName());
+  Serial.println("OK 10 10");
   FeatureConfig config = getConfigFromName(feature->getName());
   if (config.name == "")
   {
-    if (debugMode) { debugPrint("Configuration not found"); }
     return false;
   }
   FeatureSubConfig fss = feature->isFromSecondaryConfig() ? config.alt : config.def;
   FeatureConfig depConf[registeredCount];
+  Serial.println("OK 11");
+  Serial.println(fss.featureDep.names);
   uint8_t depCount = getConfigFromName(fss.featureDep.names, depConf);
   if (depCount != fss.featureDep.dependencyCount)
   {
@@ -239,6 +243,8 @@ bool IUFeatureConfigurator::registerFeatureInFeatureDependencies(IUFeature *feat
   uint8_t reservedSourceForSensor = fss.sensorDep.dependencyCount;
   for (uint8_t i = 0; i < fss.featureDep.dependencyCount; i++)
   {
+    Serial.println("OK 12");
+    Serial.println(depConf[i].name);
     IUFeature *producerFeature = getFeatureByName(depConf[i].name);
     success = producerFeature->addReceiver(depSendingOptions[i], reservedSourceForSensor + i, feature);
     if (!success)
@@ -253,11 +259,10 @@ bool IUFeatureConfigurator::registerFeatureInFeatureDependencies(IUFeature *feat
 /**
  * Register given feature as receiver of given component
  * @param feature           the feature to register as receiver
- * @param sensor            the sensor
- * @param sensorTypes       array of sensor type (see IUABCSensor static member sensorTypes)
- * @param sensorTypeCount   number of listed sensor types (see IUABCSensor static member sensorTypeCount)
+ * @param sensor            array of pointer to the sensors
+ * @param sensoCount        the number of sensors
  */
-bool IUFeatureConfigurator::registerFeatureInSensor(IUFeature *feature, IUABCSensor *sensor, char *sensorTypes, uint8_t sensorTypeCount)
+bool IUFeatureConfigurator::registerFeatureInSensor(IUFeature *feature, IUABCSensor **sensors, uint8_t sensorCount)
 {
   FeatureConfig config = getConfigFromName(feature->getName());
   if (config.name == "")
@@ -266,9 +271,9 @@ bool IUFeatureConfigurator::registerFeatureInSensor(IUFeature *feature, IUABCSen
     return false;
   }
   FeatureSubConfig fss = feature->isFromSecondaryConfig() ? config.alt : config.def;
-  String sensorType[registeredCount];
-  uint8_t sensorCount = splitString(fss.sensorDep.names, nameSeparator, sensorType, registeredCount);
-  if (sensorCount != fss.sensorDep.dependencyCount)
+  String foundSensorTypes[registeredCount];
+  uint8_t foundSensorCount = splitString(fss.sensorDep.names, nameSeparator, foundSensorTypes, registeredCount);
+  if (foundSensorCount != fss.sensorDep.dependencyCount)
   {
     if (debugMode) { debugPrint("Invalid configuration: dependency count does not match dependency names"); }
     return false;
@@ -283,34 +288,37 @@ bool IUFeatureConfigurator::registerFeatureInSensor(IUFeature *feature, IUABCSen
   bool success = true;
   for (uint8_t i = 0; i < fss.sensorDep.dependencyCount; i++)
   {
-    for (uint8_t j = 0; j < sensorTypeCount; j++)
+    for (uint8_t j = 0; j < sensorCount; j++)
     {
-      if (sensorType[i][0] == sensorTypes[j])
+      uint8_t count = sensors[j]->getSensorTypeCount();
+      for (uint8_t k = 0; k < count; k++)
       {
-        success &= sensor->addReceiver(depSendingOptions[i], i, feature);
+        if (foundSensorTypes[i][0] == sensors[j]->getSensorType(k))
+        {
+          success &= sensors[j]->addReceiver(depSendingOptions[i], i, feature);
+        }
       }
     }
   }
-  if (!success && debugMode) { debugPrint("Failed to register feature as receiver of its sensors"); }
+  if (!success && debugMode) { debugPrint("Failed to register feature as receiver of given sensors"); }
   return success;
 }
 
 /**
  * Register given feature as receiver of given component
  * @param feature           the feature to register as receiver
- * @param sensor            the sensor
- * @param sensorTypes       array of sensor type (see IUABCSensor static member sensorTypes)
- * @param sensorTypeCount   number of listed sensor types (see IUABCSensor static member sensorTypeCount)
+ * @param sensor            array of pointer to the sensors
+ * @param sensoCount        the number of sensors
  */
-void IUFeatureConfigurator::registerAllFeaturesInSensor(IUABCSensor *sensor, char *sensorTypes, uint8_t sensorTypeCount)
+void IUFeatureConfigurator::registerAllFeaturesInSensor(IUABCSensor **sensors, uint8_t sensorCount)
 {
   for (uint8_t i = 0; i < m_secondaryFeatureCount; i++)
   {
-    registerFeatureInSensor(m_secondaryFeatures[i], sensor, sensorTypes, sensorTypeCount);
+    registerFeatureInSensor(m_secondaryFeatures[i], sensors, sensorCount);
   }
   for (uint8_t i = 0; i < m_featureCount; i++)
   {
-    registerFeatureInSensor(m_features[i], sensor, sensorTypes, sensorTypeCount);
+    registerFeatureInSensor(m_features[i], sensors, sensorCount);
   }
 }
 
@@ -337,8 +345,10 @@ int IUFeatureConfigurator::createWithDependencies(IUFeatureConfigurator::Feature
   {
     alternative &= (getFeatureByName(altDep[i].name) != NULL);  // Stay true only if all alternative dep exists
   }
+  Serial.println("OK 5");
   if (!alternative)
   {
+    Serial.println("OK 6");
     // If not alternative, we will use the default config: we then have to create the dependency features
     FeatureConfig defDep[registeredCount];
     int defDepCount = getConfigFromName(config.def.featureDep.names, defDep);
@@ -365,14 +375,17 @@ int IUFeatureConfigurator::createWithDependencies(IUFeatureConfigurator::Feature
       }
     }
   }
+  Serial.println("OK 7");
   IUFeature *feature = createFeature(config, id, alternative);
   success = addFeature(feature, secondary);
+  Serial.println("OK 8");
   if (!success)
   {
     if (feature) { delete feature; }
     if (debugMode) { debugPrint(config.name + " incorrectly created or added to the configurator (the feature list may be full)"); }
     return false;
   }
+  Serial.println("OK 9");
   // Register the feature as receiver of its feature dependencies and return "success" boolean
   return registerFeatureInFeatureDependencies(feature);
 }
@@ -390,7 +403,9 @@ bool IUFeatureConfigurator::requireConfiguration(String configBufffer)
   int requiredConfigCount = getConfigFromName(configBufffer, requiredConfigs);
   for (uint8_t i = 0; i < requiredConfigCount; i++)
   {
+    Serial.println("OK 1");
     success = createWithDependencies(requiredConfigs[i], i, false);
+    Serial.println("OK 1000");
     if (!success) { return false; }
     if (debugMode) { debugPrint(requiredConfigs[i].name + " successfully created"); }
   }
@@ -493,8 +508,8 @@ IUFeature* IUFeatureConfigurator::createFeature(IUFeatureConfigurator::FeatureCo
    }
   if (feature)
   {
-    feature->setDefaultComputeFunction();
     feature->prepareSource();
+    feature->setDefaultComputeFunction();
     if (!feature->activate())
     {
       if (debugMode) { debugPrint("Feature couldn't be activated: check the source and default function"); }
@@ -657,3 +672,75 @@ uint8_t IUFeatureConfigurator::streamFeatures(HardwareSerial *port)
   }
   return counter;
 }
+
+/* ====================== Diagnostic Functions, only active when debugMode = true ====================== */
+
+/**
+ * Shows the name of features and their receiver configs
+ */ 
+void IUFeatureConfigurator::exposeFeaturesAndReceivers()
+{
+  if (!debugMode)
+  {
+    return; // Inactive if not in debugMode
+  }
+  if (m_secondaryFeatureCount == 0)
+  {
+    debugPrint("No secondary feature");
+  }
+  else
+  {
+    for (int i = 0; i < m_secondaryFeatureCount; i++)
+    {
+      debugPrint(m_secondaryFeatures[i]->getName() + ": ");
+      m_secondaryFeatures[i]->exposeReceivers();
+      debugPrint("\n");
+    }
+  }
+  if (m_featureCount == 0)
+  {
+    debugPrint("No primary feature");
+  }
+  else
+  {
+    for (int i = 0; i < m_featureCount; i++)
+    {
+      debugPrint(m_features[i]->getName() + ": ");
+      m_features[i]->exposeReceivers();
+      debugPrint("\n");
+    }
+  }
+}
+
+/**
+ * Shows the name of features and their receiver configs
+ */ 
+void IUFeatureConfigurator::exposeFeatureStates()
+{
+  if (!debugMode)
+  {
+    return; // Inactive if not in debugMode
+  }
+  if (m_secondaryFeatureCount > 0)
+  {
+    debugPrint("Secondary feature state:");
+  }
+  for (int i = 0; i < m_secondaryFeatureCount; i++)
+  {
+    debugPrint(m_secondaryFeatures[i]->getName() + " info: ");
+    m_secondaryFeatures[i]->exposeSourceConfig();
+    m_secondaryFeatures[i]->exposeCounterState();
+  }
+  if (m_featureCount > 0)
+  {
+    debugPrint("Primary feature state:");
+  }
+  for (int i = 0; i < m_featureCount; i++)
+  {
+    debugPrint(m_secondaryFeatures[i]->getName() + " info: ");
+    m_features[i]->exposeSourceConfig();
+    m_features[i]->exposeCounterState();
+  }
+  debugPrint("\n");
+}
+

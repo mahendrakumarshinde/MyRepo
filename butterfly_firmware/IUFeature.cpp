@@ -2,9 +2,6 @@
 
 /* ================== IUFeature Definitions ==================== */
 
-const uint16_t IUFeature::sourceSize[IUFeature::sourceCount] = {1};
-
-
 IUFeature::IUFeature(uint8_t id, String name, String fullName, bool fromSecondaryConfig) :
   IUABCFeature(id, name, fullName),
   IUABCProducer(),
@@ -49,9 +46,9 @@ bool IUQ15Feature::newSource()
 {
   for (uint8_t i = 0; i < 2; i++)
   {
-    for (uint16_t j = 0; j < sourceCount; j++)
+    for (uint16_t j = 0; j < getSourceCount(); j++)
     {
-      m_source[i][j] = new q15_t[sourceSize[j]];
+      m_source[i][j] = new q15_t[getSourceSize(j)];
       if (!m_source[i][j]) // Pointer assignment failed
       {
         return false;
@@ -71,12 +68,12 @@ bool IUQ15Feature::receive(uint8_t sourceIndex, q15_t value)
   {
      return false;
   }
-  if (m_sourceCounter[sourceIndex] < sourceSize[sourceIndex])           // Recording buffer is not full
+  if (m_sourceCounter[sourceIndex] < getSourceSize(sourceIndex))        // Recording buffer is not full
   {
       m_source[m_recordIndex][sourceIndex][m_sourceCounter[sourceIndex]] = value;
       m_sourceCounter[sourceIndex]++;
   }
-  if (m_sourceCounter[sourceIndex] == sourceSize[sourceIndex])          // Recording buffer is now full
+  if (m_sourceCounter[sourceIndex] == getSourceSize(sourceIndex))       // Recording buffer is now full
   {
     m_recordNow[m_recordIndex][sourceIndex] = false;         //Do not record anymore in this buffer
     m_computeNow[m_recordIndex][sourceIndex] = true;         //Buffer ready for computation
@@ -106,9 +103,9 @@ bool IUFloatFeature::newSource()
 {
   for (uint8_t i = 0; i < 2; i++)
   {
-    for (uint16_t j = 0; j < sourceCount; j++)
+    for (uint16_t j = 0; j < getSourceCount(); j++)
     {
-      m_source[i][j] = new float[sourceSize[j]];
+      m_source[i][j] = new float[getSourceSize(j)];
       if (!m_source[i][j]) // Pointer assignment failed
       {
         return false;
@@ -124,20 +121,20 @@ bool IUFloatFeature::newSource()
  */
 bool IUFloatFeature::receive(uint8_t sourceIndex, float value)
 {
-  if (!m_recordNow[m_recordIndex][sourceIndex])              // Recording buffer is not ready
+  if (!m_recordNow[m_recordIndex][sourceIndex])                         // Recording buffer is not ready
   {
      return false;
   }
-  if (m_sourceCounter[sourceIndex] < sourceSize[sourceIndex])           // Recording buffer is not full
+  if (m_sourceCounter[sourceIndex] < getSourceSize(sourceIndex))        // Recording buffer is not full
   {
       m_source[m_recordIndex][sourceIndex][m_sourceCounter[sourceIndex]] = value;
       m_sourceCounter[sourceIndex]++;
   }
-  if (m_sourceCounter[sourceIndex] == sourceSize[sourceIndex])          // Recording buffer is now full
+  if (m_sourceCounter[sourceIndex] == getSourceSize(sourceIndex))       // Recording buffer is now full
   {
-    m_recordNow[m_recordIndex][sourceIndex] = false;         //Do not record anymore in this buffer
-    m_computeNow[m_recordIndex][sourceIndex] = true;         //Buffer ready for computation
-    m_sourceCounter[sourceIndex] = 0;                        //Reset counter
+    m_recordNow[m_recordIndex][sourceIndex] = false;                    //Do not record anymore in this buffer
+    m_computeNow[m_recordIndex][sourceIndex] = true;                    //Buffer ready for computation
+    m_sourceCounter[sourceIndex] = 0;                                   //Reset counter
   }
   if (isTimeToEndRecord())
   {

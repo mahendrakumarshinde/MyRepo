@@ -223,3 +223,20 @@ void IUBMP280::sendToReceivers()
   }
 }
 
+/**
+ * Dump Temperature data to serial via I2C
+ * NB: We want to do this in *DATA COLLECTION* mode
+ */
+void IUBMP280::dumpDataThroughI2C()
+{
+  byte* data;
+  // Stream temperature float value as 4 bytes
+  data = (byte *) &m_temperature;
+  m_iuI2C->port->write(data, 4);
+  m_iuI2C->port->flush();
+  // Stream pressure float value as 4 bytes
+  data = (byte *) &m_pressure;
+  m_iuI2C->port->write(data, 4);
+  m_iuI2C->port->flush();
+}
+

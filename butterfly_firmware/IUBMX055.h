@@ -148,6 +148,8 @@ class IUBMX055 : public IUABCSensor
     // Constructor, destructor, getters and setters
     IUBMX055(IUI2C *iuI2C);
     virtual ~IUBMX055() {}
+    virtual uint8_t getSensorTypeCount() { return sensorTypeCount; }
+    virtual char getSensorType(uint8_t index) { return sensorTypes[index]; }
     void setAccelScale(accelScaleOption scale);
     void resetAccelScale() { setAccelScale(defaultAccelScale); }
     void setAccelBandwidth(accelBandwidthOption bandwidth);

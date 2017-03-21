@@ -52,9 +52,14 @@ class IURGBLed : public IUABCSensor
     static char sensorTypes[sensorTypeCount];
     enum dataSendOption : uint8_t {optionCount = 0}; // Sends nothing
 
-    // Methods
+   
+    // Constructor, destructor, getters and setters
     IURGBLed(IUI2C *iuI2C);
     virtual ~IURGBLed() {}
+    virtual uint8_t getSensorTypeCount() { return sensorTypeCount; }
+    virtual char getSensorType(uint8_t index) { return sensorTypes[index]; }
+    
+     // Methods
     virtual void wakeUp();
     void activate();
     void deactivate() { m_status = false; }

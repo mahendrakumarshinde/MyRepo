@@ -160,26 +160,8 @@ bool IUConductor::initSensors()
  */
 void IUConductor::linkFeaturesToSensors()
 {
-  featureConfigurator.registerAllFeaturesInSensor(
-                        sensorConfigurator.iuBattery,
-                        sensorConfigurator.iuBattery->sensorTypes,
-                        sensorConfigurator.iuBattery->sensorTypeCount);
-  featureConfigurator.registerAllFeaturesInSensor(
-                        sensorConfigurator.iuRGBLed,
-                        sensorConfigurator.iuRGBLed->sensorTypes,
-                        sensorConfigurator.iuRGBLed->sensorTypeCount);
-  featureConfigurator.registerAllFeaturesInSensor(
-                        sensorConfigurator.iuI2S,
-                        sensorConfigurator.iuI2S->sensorTypes,
-                        sensorConfigurator.iuI2S->sensorTypeCount);
-  featureConfigurator.registerAllFeaturesInSensor(
-                        sensorConfigurator.iuBMX055,
-                        sensorConfigurator.iuBMX055->sensorTypes,
-                        sensorConfigurator.iuBMX055->sensorTypeCount);
-  featureConfigurator.registerAllFeaturesInSensor(
-                        sensorConfigurator.iuBMP280,
-                        sensorConfigurator.iuBMP280->sensorTypes,
-                        sensorConfigurator.iuBMP280->sensorTypeCount);
+  featureConfigurator.registerAllFeaturesInSensor(sensorConfigurator.getSensors(), 
+                                                  sensorConfigurator.getSensorCount());
 }
 
 /**

@@ -22,8 +22,6 @@
 class IUFeature : public IUABCFeature, public IUABCProducer
 {
   public:
-    static const uint8_t sourceCount = 1;
-    static const uint16_t sourceSize[sourceCount];
     enum dataSendOption : uint8_t {value = 0,
                                    state = 1,
                                    optionCount = 2};
@@ -47,14 +45,14 @@ class IUQ15Feature : public IUFeature
     IUQ15Feature(uint8_t id, String name="", String fullName = "", bool fromSecondaryConfig = false);
     virtual ~IUQ15Feature() {}
     // Feature computation, source and sending queue
-    virtual void setComputeFunction(float (*computeFunction) (uint8_t sourceCount, const uint16_t *sourceSize, q15_t *source[]))
+    virtual void setComputeFunction(float (*computeFunction) (uint8_t sourceCount, const uint16_t *sourceSize, q15_t **source))
                     { m_computeFunction = computeFunction; }
     virtual void setDefaultComputeFunction() { m_computeFunction = computeDefaultQ15; }
     virtual bool receive(uint8_t sourceIndex, q15_t value);
 
   protected:
-    q15_t *m_source[2][sourceCount];
-    float (*m_computeFunction) (uint8_t sourceCount, const uint16_t *sourceSize, q15_t *source[]);
+    q15_t *m_source[2][ABCSourceCount];
+    float (*m_computeFunction) (uint8_t sourceCount, const uint16_t *sourceSize, q15_t **source);
     virtual bool newSource();
 };
 
@@ -68,14 +66,14 @@ class IUFloatFeature : public IUFeature
     IUFloatFeature(uint8_t id, String name="", String fullName = "", bool fromSecondaryConfig = false);
     virtual ~IUFloatFeature() {}
     // Feature computation, source and sending queue
-    virtual void setComputeFunction(float (*computeFunction) (uint8_t sourceCount, const uint16_t *sourceSize, float *source[]))
+    virtual void setComputeFunction(float (*computeFunction) (uint8_t sourceCount, const uint16_t *sourceSize, float **source))
                     { m_computeFunction = computeFunction; }
     virtual void setDefaultComputeFunction() { m_computeFunction = computeDefaultFloat; }
     virtual bool receive(uint8_t sourceIndex, float value);
 
   protected:
-    float *m_source[2][sourceCount];
-    float (*m_computeFunction) (uint8_t sourceCount, const uint16_t *sourceSize, float *source[]);
+    float *m_source[2][ABCSourceCount];
+    float (*m_computeFunction) (uint8_t sourceCount, const uint16_t *sourceSize, float **source);
     virtual bool newSource();
 };
 
@@ -94,6 +92,10 @@ class IUSingleAxisEnergyFeature128: public IUQ15Feature
   public:
     static const uint8_t sourceCount = 1;
     static const uint16_t sourceSize[sourceCount];
+    uint8_t getSourceCount() { return sourceCount; }
+    uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }
+    uint16_t const* getSourceSize() { return sourceSize; }
+    
     IUSingleAxisEnergyFeature128(uint8_t id, String name="", String fullName = "", bool fromSecondaryConfig = false);
     virtual ~IUSingleAxisEnergyFeature128() {}
     virtual void setDefaultComputeFunction() { m_computeFunction = computeSignalEnergy; }
@@ -111,6 +113,10 @@ class IUSingleAxisEnergyFeature512: public IUQ15Feature
   public:
     static const uint8_t sourceCount = 1;
     static const uint16_t sourceSize[sourceCount];
+    uint8_t getSourceCount() { return sourceCount; }
+    uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }
+    uint16_t const* getSourceSize() { return sourceSize; }
+    
     IUSingleAxisEnergyFeature512(uint8_t id, String name="", String fullName = "", bool fromSecondaryConfig = false);
     virtual ~IUSingleAxisEnergyFeature512() {}
     virtual void setDefaultComputeFunction() { m_computeFunction = computeSignalEnergy; }
@@ -130,6 +136,10 @@ class IUTriAxisEnergyFeature128: public IUQ15Feature
   public:
     static const uint8_t sourceCount = 3;
     static const uint16_t sourceSize[sourceCount];
+    uint8_t getSourceCount() { return sourceCount; }
+    uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }
+    uint16_t const* getSourceSize() { return sourceSize; }
+    
     IUTriAxisEnergyFeature128(uint8_t id, String name="", String fullName = "", bool fromSecondaryConfig = false);
     virtual ~IUTriAxisEnergyFeature128() {}
     virtual void setDefaultComputeFunction() { m_computeFunction = computeSignalEnergy; }
@@ -149,6 +159,10 @@ class IUTriAxisEnergyFeature512: public IUQ15Feature
   public:
     static const uint8_t sourceCount = 3;
     static const uint16_t sourceSize[sourceCount];
+    uint8_t getSourceCount() { return sourceCount; }
+    uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }
+    uint16_t const* getSourceSize() { return sourceSize; }
+    
     IUTriAxisEnergyFeature512(uint8_t id, String name="", String fullName = "", bool fromSecondaryConfig = false);
     virtual ~IUTriAxisEnergyFeature512() {}
     virtual void setDefaultComputeFunction() { m_computeFunction = computeSignalEnergy; }
@@ -168,6 +182,10 @@ class IUTriSourceSummingFeature: public IUFloatFeature
   public:
     static const uint8_t sourceCount = 3;
     static const uint16_t sourceSize[sourceCount];
+    uint8_t getSourceCount() { return sourceCount; }
+    uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }
+    uint16_t const* getSourceSize() { return sourceSize; }
+    
     IUTriSourceSummingFeature(uint8_t id, String name="", String fullName = "", bool fromSecondaryConfig = false);
     virtual ~IUTriSourceSummingFeature() {}
     virtual void setDefaultComputeFunction() { m_computeFunction = computeSumOf; }
@@ -186,6 +204,10 @@ class IUVelocityFeature512: public IUQ15Feature
   public:
     static const uint8_t sourceCount = 2;
     static const uint16_t sourceSize[sourceCount];
+    uint8_t getSourceCount() { return sourceCount; }
+    uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }
+    uint16_t const* getSourceSize() { return sourceSize; }
+    
     IUVelocityFeature512(uint8_t id, String name="", String fullName = "", bool fromSecondaryConfig = false);
     virtual ~IUVelocityFeature512() {}
     virtual void setDefaultComputeFunction() { m_computeFunction = computeVelocity; }
@@ -203,6 +225,10 @@ class IUDefaultFloatFeature: public IUFloatFeature
   public:
     static const uint8_t sourceCount = 1;
     static const uint16_t sourceSize[sourceCount];
+    uint8_t getSourceCount() { return sourceCount; }
+    uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }
+    uint16_t const* getSourceSize() { return sourceSize; }
+    
     IUDefaultFloatFeature(uint8_t id, String name="", String fullName = "", bool fromSecondaryConfig = false);
     virtual ~IUDefaultFloatFeature() {}
     virtual void setDefaultComputeFunction() { m_computeFunction = computeDefaultFloat; }
@@ -220,6 +246,10 @@ class IUAudioDBFeature2048: public IUQ15Feature
   public:
     static const uint8_t sourceCount = 1;
     static const uint16_t sourceSize[sourceCount];
+    uint8_t getSourceCount() { return sourceCount; }
+    uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }
+    uint16_t const* getSourceSize() { return sourceSize; }
+    
     IUAudioDBFeature2048(uint8_t id, String name="", String fullName = "", bool fromSecondaryConfig = false);
     virtual ~IUAudioDBFeature2048() {}
     virtual void setDefaultComputeFunction() { m_computeFunction = computeAcousticDB; }
@@ -237,6 +267,10 @@ class IUAudioDBFeature4096: public IUQ15Feature
   public:
     static const uint8_t sourceCount = 1;
     static const uint16_t sourceSize[sourceCount];
+    uint8_t getSourceCount() { return sourceCount; }
+    uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }
+    uint16_t const* getSourceSize() { return sourceSize; }
+    
     IUAudioDBFeature4096(uint8_t id, String name="", String fullName = "", bool fromSecondaryConfig = false);
     virtual ~IUAudioDBFeature4096() {}
     virtual void setDefaultComputeFunction() { m_computeFunction = computeAcousticDB; }

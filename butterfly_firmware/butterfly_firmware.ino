@@ -38,10 +38,10 @@ IUConductor conductor;
 
 void callback()
 {
-  uint32_t beg = micros();
+  //uint32_t beg = micros();
   conductor.acquireAndSendData();
-  Serial.print("Elapsed: ");
-  Serial.println((micros() - beg), DEC);
+  //Serial.print("Elapsed: ");
+  //Serial.println((micros() - beg), DEC);
 }
 
 /* ------------------------------------ begin ---------------------------------------- */
@@ -98,6 +98,10 @@ void setup()
   conductor.switchToMode(operationMode::run);
   conductor.switchToState(operationState::idle);
 
+  conductor.sensorConfigurator.exposeSensorsAndReceivers();
+  conductor.featureConfigurator.exposeFeaturesAndReceivers();
+  conductor.featureConfigurator.exposeFeatureStates();
+  
   Serial.println(conductor.iuI2C->getErrorMessage());
   Serial.println("Begin looping");
   
@@ -117,15 +121,38 @@ void loop()
     conductor.switchToState(operationState::idle);
   }
   */
+  bool newData = false;
+  newData = conductor.sensorConfigurator.iuBMX055->acquireData();
+  if (newData)
+  {
+    conductor.sensorConfigurator.iuBMX055->sendToReceivers();
+  }
+  Serial.println("Acc: ");
+  conductor.sensorConfigurator.iuBMX055->dumpDataThroughI2C();
+  
+  newData = conductor.sensorConfigurator.iuBMP280->acquireData();
+  if (newData)
+  {
+    conductor.sensorConfigurator.iuBMP280->sendToReceivers();
+  }
+  Serial.println("Temp: ");
+  conductor.sensorConfigurator.iuBMP280->dumpDataThroughI2C();
+  
 
   Serial.println(conductor.iuI2C->getErrorMessage());
   Serial.println(conductor.iuI2C->getReadError());
   
   conductor.processInstructionsFromBluetooth();   // Receive instructions via BLE during run mode
+  Serial.println("OK1");
   conductor.processInstructionsFromI2C();         // Receive instructions to enter / exit data collection mode, plus options during data collection
+  Serial.println("OK2");
   conductor.computeFeatures();                    // Conductor handles feature computation depending on operation mode
+  Serial.println("OK3");
   conductor.streamData();                         // Conductor choose streaming port depending on operation mode
+  Serial.println("OK4");
   conductor.checkAndUpdateState();
+  Serial.println("OK5");
   conductor.checkAndUpdateMode();
+  Serial.println("OK6");
 }
 

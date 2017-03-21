@@ -22,6 +22,8 @@ class IUABCProducer
     void resetReceivers();
     virtual bool addReceiver(uint8_t sendOption, uint8_t receiverSourceIndex, IUABCFeature *receiver);
     virtual void sendToReceivers() {}                   // To implement in child class
+    // Diagnostic Functions
+    void exposeReceivers();
 
   protected:
     uint8_t m_receiverCount;                            // The actual number of receivers

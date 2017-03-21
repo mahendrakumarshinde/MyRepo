@@ -1,6 +1,6 @@
 #include "IUABCSensor.h"
 
-char IUABCSensor::sensorTypes[IUABCSensor::sensorTypeCount] = {IUABCSensor::sensorType_none};
+char IUABCSensor::ABCSensorTypes[IUABCSensor::ABCSensorTypeCount] = {IUABCSensor::sensorType_none};
 
 IUABCSensor::IUABCSensor() : IUABCProducer(), m_downclocking(0), m_downclockingCount(0)
 {

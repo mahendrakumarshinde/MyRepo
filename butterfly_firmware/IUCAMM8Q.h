@@ -22,8 +22,11 @@ class IUCAMM8Q : public IUABCSensor
     static const uint32_t baudRate = 115200;
     enum dataSendOption : uint8_t {optionCount = 1};
 
+    // Constructor, destructor, getters and setters
     IUCAMM8Q(IUI2C *iuI2C);
     virtual ~IUCAMM8Q() {}
+    virtual uint8_t getSensorTypeCount() { return sensorTypeCount; }
+    virtual char getSensorType(uint8_t index) { return sensorTypes[index]; }
     //Methods
     virtual void wakeUp();
     void initSensor();

@@ -10,8 +10,10 @@
 // Set debugMode to true to enable special notifications from the whole firmware
 const bool debugMode = true;
 
-inline void debugPrint(String msg) { Serial.println(msg); }
-inline void debugPrint(char *msg) { Serial.println(msg); }
+void debugPrint(String msg, bool endline = true);
+void debugPrint(int msg, bool endline = true);
+void debugPrint(char msg, bool endline = true);
+void debugPrint(char *msg, bool endline = true);
 
 /* ============================= Operation Enums ============================= */
 /**
@@ -50,9 +52,9 @@ enum powerMode : uint8_t {deepSuspend          = 0,
 /*====================== General utility function ============================ */
 
 // String processing
-uint8_t splitString(String str, const char separator, String destination[], uint8_t destinationSize);
+uint8_t splitString(String str, const char separator, String *destination, uint8_t destinationSize);
 
-uint8_t splitStringToInt(String str, const char separator, int destination[], const uint8_t destinationSize);
+uint8_t splitStringToInt(String str, const char separator, int *destination, const uint8_t destinationSize);
 
 bool checkCharsAtPosition(char *charBuffer, int *positions, char character);
 
@@ -74,23 +76,21 @@ float computeRMS(uint16_t sourceSize, q15_t *source);
 
 /* ============================= Feature Computation functions ============================= */
 // Default compute functions
-inline float computeDefaultQ15(uint8_t sourceCount, const uint16_t *sourceSize, q15_t *source[]) { return q15ToFloat(source[0][0]); }
+inline float computeDefaultQ15(uint8_t sourceCount, const uint16_t *sourceSize, q15_t **source) { return q15ToFloat(source[0][0]); }
 
-inline float computeDefaultFloat(uint8_t sourceCount, const uint16_t *sourceSize, float *source[]) { return (source[0][0]); }
+inline float computeDefaultFloat(uint8_t sourceCount, const uint16_t *sourceSize, float **source) { return (source[0][0]); }
 
-inline float computeDefaultDataCollectionQ15 (uint8_t sourceCount, const uint16_t *sourceSize, q15_t *source[], float *m_destination[]);
+float computeSignalEnergy(uint8_t sourceCount, const uint16_t *sourceSize, q15_t **source);
 
-float computeSignalEnergy(uint8_t sourceCount, const uint16_t *sourceSize, q15_t *source[]);
+float computeSumOf(uint8_t sourceCount, const uint16_t* sourceSize, float **source);
 
-float computeSumOf(uint8_t sourceCount, const uint16_t* sourceSize, float* source[]);
+float computeRFFTMaxIndex(uint8_t sourceCount, const uint16_t* sourceSize, q15_t **source);
 
-float computeRFFTMaxIndex(uint8_t sourceCount, const uint16_t* sourceSize, q15_t* source[]);
+float computeVelocity(uint8_t sourceCount, const uint16_t *sourceSize, q15_t **source);
 
-float computeVelocity(uint8_t sourceCount, const uint16_t *sourceSize, q15_t *source[]);
+float computeAcousticDB(uint8_t sourceCount, const uint16_t* sourceSize, q15_t **source);
 
-float computeAcousticDB(uint8_t sourceCount, const uint16_t* sourceSize, q15_t* source[]);
-
-float computeAudioRFFT(uint8_t sourceCount, const uint16_t* sourceSize, q15_t* source[]);
+float computeAudioRFFT(uint8_t sourceCount, const uint16_t* sourceSize, q15_t **source);
 
 
 //==============================================================================

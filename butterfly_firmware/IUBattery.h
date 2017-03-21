@@ -28,8 +28,12 @@ class IUBattery : public IUABCSensor
     enum dataSendOption : uint8_t {voltage = 0,
                                    vdda = 1,
                                    optionCount = 2};
+    // Constructor, Destructor, getters and setters
     IUBattery(IUI2C *iuI2C);
     virtual ~IUBattery() {}
+    virtual uint8_t getSensorTypeCount() { return sensorTypeCount; }
+    virtual char getSensorType(uint8_t index) { return sensorTypes[index]; }
+    // Methods
     virtual void wakeUp();
     float getVoltage();
     float getVDDA();

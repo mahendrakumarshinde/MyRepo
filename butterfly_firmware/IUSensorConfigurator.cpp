@@ -189,13 +189,11 @@ void IUSensorConfigurator::acquireDataAndSendToReceivers()
     }
   }
   
-  */
   newData = iuBMX055->acquireData();
   if (newData)
   {
     iuBMX055->sendToReceivers();
   }
-  /*
   newData = iuBMP280->acquireData();
   if (newData)
   {
@@ -243,3 +241,33 @@ void IUSensorConfigurator::acquireAndStoreData()
     }
   }
 }
+
+/* ====================== Diagnostic Functions, only active when debugMode = true ====================== */
+
+/**
+ * Shows all sensors and the name of features receiving their data
+ */
+void IUSensorConfigurator::exposeSensorsAndReceivers()
+{
+  if (!debugMode)
+  {
+    return; // Inactive if not in debugMode
+  }
+  if (m_sensorCount == 0)
+  {
+    debugPrint("No sensor");
+    return;
+  }
+  for (int i = 0; i <  m_sensorCount; i++)
+  {
+    debugPrint("Sensor #", false);
+    debugPrint(i);
+    for (int j = 0; j < m_sensors[i]->getSensorTypeCount(); j++)
+    {
+      debugPrint(m_sensors[i]->getSensorType(j));
+    }
+    m_sensors[i]->exposeReceivers();
+    debugPrint("\n");
+  }
+}
+

@@ -2,9 +2,12 @@
 
 /* ======================== IUABCFeature Definitions ========================== */
 
-const uint16_t IUABCFeature::sourceSize[IUABCFeature::sourceCount] = {1};
+const uint16_t IUABCFeature::ABCSourceSize[IUABCFeature::ABCSourceCount] = {1};
 
-
+/**
+ * 
+ * Should call newSource or prepareSource immediatly after construction
+ */
 IUABCFeature::IUABCFeature(uint8_t id, String name, String fullName) :
   m_id(id),
   m_name(name),
@@ -18,13 +21,6 @@ IUABCFeature::IUABCFeature(uint8_t id, String name, String fullName) :
   m_highestDangerLevel = operationState::idle;
   m_computeFunction = NULL;
   setThresholds(0, 0, 0);
-  for (uint8_t i = 0; i < 2; i++)
-  {
-    for (uint16_t j = 0; j < sourceCount; j++)
-    {
-      m_source[i][j] = NULL;
-    }
-  }
 }
 
 IUABCFeature::~IUABCFeature()
@@ -33,18 +29,18 @@ IUABCFeature::~IUABCFeature()
 
 /**
  * Reset all source pointers to NULL
- * NB: Do not make this method virtual as it is called in constructors and/ or destructors.
  */
 void IUABCFeature::resetSource()
 {
   for (uint8_t i = 0; i < 2; i++)
   {
-    for (uint16_t j = 0; j < sourceCount; j++)
+    for (uint16_t j = 0; j < getSourceCount(); j++)
     {
       if(m_source[i][j])
       {
-        delete m_source[i][j]; m_source[i][j] = NULL;
+        delete m_source[i][j];
       }
+      m_source[i][j] = NULL;
     }
   }
   m_sourceReady = false;
@@ -82,14 +78,14 @@ bool IUABCFeature::prepareSource()
   m_computeIndex = 0;
   m_recordIndex = 0;
   // Init arrays
-  for (int j = 0; j < sourceCount; j++)
+  for (int j = 0; j < getSourceCount(); j++)
   {
     m_sourceCounter[j] = 0;
     for (int i = 0; i < 2; i++)
     {
       m_computeNow[i][j]= false;
       m_recordNow[i][j] = true;
-      for (int k = 0; k < sourceSize[j]; k++)
+      for (int k = 0; k < getSourceSize(j); k++)
       {
         m_source[i][j][k] = 0;
       }
@@ -107,7 +103,7 @@ bool IUABCFeature::prepareSource()
  */
 void IUABCFeature::resetCounters()
 {
-  for (uint8_t i = 0; i < sourceCount; i++)
+  for (uint8_t i = 0; i < getSourceCount(); i++)
   {
     m_sourceCounter[i] = 0;
     for (uint16_t j = 0; j < 2; j++)
@@ -134,7 +130,7 @@ bool IUABCFeature::isTimeToEndRecord()
 {
   //
   bool doNotChange = false;
-  for (uint16_t i = 0; i < sourceCount; i++)
+  for (uint16_t i = 0; i < getSourceCount(); i++)
   {
     doNotChange |= m_recordNow[m_recordIndex][i];  //if any of the recordNow is true, do not change
   }
@@ -147,21 +143,21 @@ bool IUABCFeature::isTimeToEndRecord()
  */
 bool IUABCFeature::compute()
 {
-  for (int i = 0; i < sourceCount; i++)
+  for (int i = 0; i < getSourceCount(); i++)
   {
     if(!m_computeNow[m_computeIndex][i]) //Any source not ready for computation
     {
       return false;
     }
   }
-  m_latestValue = m_computeFunction(sourceCount, sourceSize, m_source[m_computeIndex]);
+  m_latestValue = m_computeFunction(getSourceCount(), getSourceSize(), m_source[m_computeIndex]);
   m_sendingQueue.push_back(m_latestValue);
   if (m_sendingQueue.size() >= m_sendingQueueMaxSize) // Manage sending queue size
   {
     m_sendingQueue.pop_front();
   }
   // Free m_source[m_computeIndex] to store new records
-  for (int i =0; i < sourceCount; i++)
+  for (int i =0; i < getSourceCount(); i++)
   {
     m_computeNow[m_computeIndex][i] = false;   //Do not recompute this buffer
     m_recordNow[m_computeIndex][i] = true;     //Buffer ready for recording
@@ -211,4 +207,67 @@ bool IUABCFeature::stream(HardwareSerial *port)
   return false;
 }
 
+/* ====================== Diagnostic Functions, only active when debugMode = true ====================== */
+/**
+ * Shows feature info: source and queue count and size
+ */ 
+void IUABCFeature::exposeSourceConfig()
+{
+  if (!debugMode)
+  {
+    return; // Inactive if not in debugMode
+  }
+  uint8_t count = getSourceCount();
+  debugPrint("Source count: ", false);
+  debugPrint(count);
+  debugPrint("Source size:");
+  for (int i = 0; i < count; i++)
+  {
+    debugPrint(getSourceSize(i), false);
+    debugPrint(", ", false);
+  }
+  debugPrint("Queue max size:", false);
+  debugPrint(m_sendingQueueMaxSize);
+  debugPrint("Queue current size:", false);
+  debugPrint(m_sendingQueue.size());
+}
+
+
+/**
+ * Shows feature info: compute and record buffer indexes
+ */ 
+void IUABCFeature::exposeCounterState()
+{
+  if (!debugMode)
+  {
+    return; // Inactive if not in debugMode
+  }
+  uint8_t count = getSourceCount();
+  debugPrint("Counters :");
+  for (int i = 0; i < count; i++)
+  {
+    debugPrint(m_sourceCounter[i], false);
+    debugPrint(", ");
+  }
+  debugPrint("Record index :", false);
+  debugPrint(m_recordIndex);
+  debugPrint("Record now :");
+  for (int i = 0; i < count; i++)
+  {
+    debugPrint(m_recordNow[0][i], false);
+    debugPrint(", ", false);
+    debugPrint(m_recordNow[1][i], false);
+    debugPrint(", ");
+  }
+  debugPrint("Compute index :", false);
+  debugPrint(m_computeIndex);
+  debugPrint("Compute now :");
+  for (int i = 0; i < count; i++)
+  {
+    debugPrint(m_computeNow[0][i], false);
+    debugPrint(", ", false);
+    debugPrint(m_computeNow[1][i], false);
+    debugPrint(", ");
+  }
+}
 

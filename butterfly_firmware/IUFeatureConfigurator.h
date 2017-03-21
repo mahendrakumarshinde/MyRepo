@@ -69,8 +69,8 @@ class IUFeatureConfigurator
     FeatureConfig getConfigFromName(String featureName);
     uint8_t getConfigFromName(String featureNames, FeatureConfig *configs);
     bool registerFeatureInFeatureDependencies(IUFeature *feature);
-    bool registerFeatureInSensor(IUFeature *feature, IUABCSensor *sensor, char *sensorTypes, uint8_t sensorTypeCount);
-    void registerAllFeaturesInSensor(IUABCSensor *sensor, char *sensorTypes, uint8_t sensorTypeCount);
+    bool registerFeatureInSensor(IUFeature *feature, IUABCSensor **sensors, uint8_t sensorCount);
+    void registerAllFeaturesInSensor(IUABCSensor **sensors, uint8_t sensorCount);
     int createWithDependencies(FeatureConfig config, uint8_t id, bool secondary = false);
     bool requireConfiguration(String configBufffer);
     bool doStandardSetup();
@@ -86,6 +86,9 @@ class IUFeatureConfigurator
     void resetFeaturesCounters();
     operationState getOperationStateFromFeatures();
     uint8_t streamFeatures(HardwareSerial *port);
+    // Diagnostic Functions
+    void exposeFeaturesAndReceivers();
+    void exposeFeatureStates();
 
 
   protected:

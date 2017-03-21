@@ -11,7 +11,7 @@ We distinguish 4 types of libraries:
 *eg: IUConfiguration.h, IUUtilities"
 2. Computer Bus (I2C) libraries: are named the same as the board, with the prefix IUI2C 
 *eg: IUI2CTeensy.h, IUI2CButterfly.h*
-3. Sensor libraries: are named the same as the component itself, prefixed by “IU”. Components can be functionnal (eg: sensors, LED, etc) or connectivity related (eg: bluetooth or wifi) devices.
+3. Sensor libraries: are named the same as the component itself, prefixed by “IU”. Components can be sensors or connectivity related (eg: bluetooth or wifi) devices.
 *eg: IUMPU9250.h or IUBMX055.h are 2 libraries for 2 different components. They both are accelerometer + gyroscope + mag combos.*
 4. Executor library: there are 3 of them - IUSensorConfigurator, IUFeatureConfigurator and IUConductor
 
@@ -36,6 +36,7 @@ Existing librairies are:
   - IUI2S: Microphone
   - IUMPU9250: Accelerometer + Gyroscope + Magnetometer
   - IURGBLed: RGB led with 7 color display (+ off)
+- Executor 
 
 Functionnal components can be interpreted as endpoints, while connectivity components or I2C are intermediates. Intermediates and endpoints are of course inter-dependent. In this implementation, we choose to include the connectivity component and I2C in the functionnal component classes because it allows to adjust how each functionnal component uses connectivity without having to modify the connectivity classes themselves.
 

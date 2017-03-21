@@ -102,18 +102,10 @@ bool IUI2S::acquireData()
  */
 void IUI2S::sendToReceivers()
 {
-  Serial.println("ok 3");
-  Serial.print("receiver count: ");
-  Serial.println(m_receiverCount);
   for (int i = 0; i < m_receiverCount; i++)
   {
     if (m_receivers[i] && m_toSend[i] == dataSendOption::sound)
     {
-      
-      Serial.print("receiver name: ");
-      Serial.println(m_receivers[i]->getName());
-      Serial.print("to send: ");
-      Serial.println(m_toSend[i]);
       int sampleCount = audioSampleSize / m_downclocking;
       for (int j = 0; j < sampleCount; j++)
       {
@@ -121,7 +113,6 @@ void IUI2S::sendToReceivers()
       }
     }
   }
-  Serial.println("ok 4");
 }
 
 /**
@@ -137,7 +128,6 @@ void IUI2S::dumpDataThroughI2C()
     m_iuI2C->port->write((m_audioData[j] >> 8) & 0xFF);
     m_iuI2C->port->write(m_audioData[j] & 0xFF);
   }
-
 }
 
 /* ==================== Update and Control Functions =============================== */

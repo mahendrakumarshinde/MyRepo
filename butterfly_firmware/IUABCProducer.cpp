@@ -57,3 +57,28 @@ bool IUABCProducer::addReceiver(uint8_t sendOption, uint8_t receiverSourceIndex,
   return true;
 }
 
+/* ====================== Diagnostic Functions, only active when debugMode = true ====================== */
+
+/**
+ * Shows the name of features receiving Producer data and associated config
+ */ 
+void IUABCProducer::exposeReceivers()
+{
+  if (!debugMode)
+  {
+    return; // Inactive if not in debugMode
+  }
+  if (m_receiverCount == 0)
+  {
+    debugPrint("No receiver");
+    return;
+  }
+  debugPrint("Receivers count: ", false);
+  debugPrint(m_receiverCount);
+  for (int i = 0; i < m_receiverCount; i++)
+  {
+    debugPrint(m_receivers[i]->getName() + ", send option is " + m_toSend[i]);
+  }
+  
+}
+

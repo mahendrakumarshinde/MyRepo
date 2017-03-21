@@ -26,8 +26,8 @@ class IUABCSensor : public IUABCProducer
     static const char sensorType_barometer = 'P';       // for pressure
     static const char sensorType_microphone = 'S';      // for sound
     static const char sensorType_thermometer = 'T';
-    static const uint8_t sensorTypeCount = 1;
-    static char sensorTypes[sensorTypeCount];
+    static const uint8_t ABCSensorTypeCount = 1;
+    static char ABCSensorTypes[ABCSensorTypeCount];
 
     static const uint32_t defaultSamplingRate = 2; // Hz
     static const uint32_t defaultCallbackRate = 1000; // Hz
@@ -38,6 +38,8 @@ class IUABCSensor : public IUABCProducer
     virtual uint32_t getSamplingRate() { return m_samplingRate; }
     virtual void setCallbackRate(uint32_t callbackRate);
     virtual uint32_t getCallbackRate() { return m_callbackRate; }
+    virtual uint8_t getSensorTypeCount() { return ABCSensorTypeCount; }
+    virtual char getSensorType(uint8_t index) { return ABCSensorTypes[index]; }
 
     // Methods
     virtual void wakeUp() {}                  // May be defined in Child class

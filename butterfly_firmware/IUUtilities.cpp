@@ -1,5 +1,36 @@
 #include "IUUtilities.h"
 
+
+
+void debugPrint(String msg, bool endline)
+{
+  if (endline) { Serial.println(msg); }
+  else { Serial.print(msg); }
+  Serial.flush();
+}
+
+void debugPrint(int msg, bool endline)
+{
+  if (endline) { Serial.println(msg); }
+  else { Serial.print(msg); }
+  Serial.flush();
+}
+
+void debugPrint(char msg, bool endline)
+{
+  if (endline) { Serial.println(msg); }
+  else { Serial.print(msg); }
+  Serial.flush();
+}
+
+void debugPrint(char *msg, bool endline)
+{
+  if (endline) { Serial.println(msg); }
+  else { Serial.print(msg); }
+  Serial.flush();
+}
+
+
 /*====================== General utility function ============================ */
 
 /**
@@ -13,7 +44,7 @@
  * only the first ones will be kept. If there are not enough, the remaining of destination
  * is filled with empty string.
  */
-uint8_t splitString(String str, const char separator, String destination[], const uint8_t destinationSize)
+uint8_t splitString(String str, const char separator, String *destination, const uint8_t destinationSize)
 {
   int startAt = 0;
   int idx = 0;
@@ -51,7 +82,7 @@ uint8_t splitString(String str, const char separator, String destination[], cons
  * @param destinationSize the size of the destination array
  * @return                the number of substring found and converted integer
  */
-uint8_t splitStringToInt(String str, const char separator, int destination[], const uint8_t destinationSize)
+uint8_t splitStringToInt(String str, const char separator, int *destination, const uint8_t destinationSize)
 {
   String stringDestination[destinationSize];
   int substringCount = splitString(str, separator, stringDestination, destinationSize);
@@ -109,25 +140,13 @@ float computeRMS(uint16_t sourceSize, q15_t *source)
 
 /*====================== Feature Computation functions ============================ */
 
-
-float  computeDefaultDataCollectionQ15 (uint8_t sourceCount, const uint16_t *sourceSize, q15_t *source[], float *m_destination[])
-{
-  for (int i = 0; i < sourceCount; i++)
-  {
-    arm_q15_to_float(source[i], m_destination[i], (uint32_t) sourceSize[i]);
-  }
-  return 0;
-}
-
-
-
 /**
  * Compute and return the total signal energy along one or several axis
  * @param sourceCount the number of sources (= the number of axis)
  * @param sourceSize  pointer to an array of size sourceCount
  * @param source      pointer to an array q15_t[sourceCount][sourceSize[i for i in sourceCount]]
  */
-float computeSignalEnergy(uint8_t sourceCount, const uint16_t *sourceSize, q15_t *source[])
+float computeSignalEnergy(uint8_t sourceCount, const uint16_t *sourceSize, q15_t **source)
 {
   float energy = 0;
   float totalEnergy = 0;
@@ -150,7 +169,7 @@ float computeSignalEnergy(uint8_t sourceCount, const uint16_t *sourceSize, q15_t
  * @param sourceSize  pointer to an array of size sourceCount
  * @param source      pointer to an array q15_t[sourceCount][sourceSize[i for i in sourceCount]]
  */
-float computeSumOf(uint8_t sourceCount, const uint16_t* sourceSize, float* source[])
+float computeSumOf(uint8_t sourceCount, const uint16_t* sourceSize, float **source)
 {
   float total = 0;
   float grandTotal = 0;
@@ -179,7 +198,7 @@ float computeSumOf(uint8_t sourceCount, const uint16_t* sourceSize, float* sourc
  * @param sourceSize  pointer to an array of size 1 - must be {512} or {2048} in current implementation
  * @param source      pointer to an array q15_t[sourceCount][sourceSize[i for i in sourceCount]]
  */
-float computeRFFTMaxIndex(uint8_t sourceCount, const uint16_t* sourceSize, q15_t* source[])
+float computeRFFTMaxIndex(uint8_t sourceCount, const uint16_t* sourceSize, q15_t **source)
 {
   if (sourceCount != 1)
   {
@@ -243,7 +262,7 @@ float computeRFFTMaxIndex(uint8_t sourceCount, const uint16_t* sourceSize, q15_t
  * @param source      should be {acceleration values,
  *                               Acceleration energy operationState}
  */
-float computeVelocity(uint8_t sourceCount, const uint16_t *sourceSize, q15_t *source[])
+float computeVelocity(uint8_t sourceCount, const uint16_t *sourceSize, q15_t **source)
 {
   if (source[1][0] == operationState::idle)
   {
@@ -265,7 +284,7 @@ float computeVelocity(uint8_t sourceCount, const uint16_t *sourceSize, q15_t *so
  * @param sourceSize  pointer to an array of size sourceCount
  * @param source      pointer to an array q15_t[sourceCount][sourceSize[i for i in sourceCount]]
  */
-float computeAcousticDB(uint8_t sourceCount, const uint16_t* sourceSize, q15_t* source[])
+float computeAcousticDB(uint8_t sourceCount, const uint16_t* sourceSize, q15_t **source)
 {
   // Strangely, log10 is very slow. It's better to use it the least possible, so we
   // multiply data points as much as possible and then log10 the results when we have to.
@@ -313,7 +332,7 @@ float computeAcousticDB(uint8_t sourceCount, const uint16_t* sourceSize, q15_t* 
                       RFFT will then be of size 512 or 2048
  * @param source      pointer to an array q15_t[sourceCount][sourceSize[i for i in sourceCount]]
  */
-float computeAudioRFFT(uint8_t sourceCount, const uint16_t* sourceSize, q15_t* source[])
+float computeAudioRFFT(uint8_t sourceCount, const uint16_t* sourceSize, q15_t **source)
 {
   //TODO: rebuild this function, it is not working
 

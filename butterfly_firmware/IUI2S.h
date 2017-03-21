@@ -35,7 +35,7 @@
 class IUI2S : public IUABCSensor
 {
   public:
-    static const uint8_t sensorTypeCount = 2;
+    static const uint8_t sensorTypeCount = 1;
     static char sensorTypes[sensorTypeCount];
     // Frequency and sampling setting
     static const uint32_t defaultClockRate = 8000; // Hz clock rate of audio device
@@ -44,9 +44,12 @@ class IUI2S : public IUABCSensor
                                    optionCount = 1};
     static const uint8_t bitsPerSample = 32;
     static const uint16_t audioSampleSize = (I2S_BUFFER_SIZE * 8) / bitsPerSample;
+    
     // Getters, Setters, constructor and Destructor
     IUI2S(IUI2C *iuI2C);
     virtual ~IUI2S() {}
+    virtual uint8_t getSensorTypeCount() { return sensorTypeCount; }
+    virtual char getSensorType(uint8_t index) { return sensorTypes[index]; }
     void setClockRate(uint32_t clockRate);
     uint32_t getClockRate() { return m_clockRate; }
     virtual void setCallbackRate() {}  // Non settable

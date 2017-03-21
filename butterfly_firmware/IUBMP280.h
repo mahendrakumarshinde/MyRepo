@@ -65,6 +65,8 @@ class IUBMP280 : public IUABCSensor
     // Constructors, destructors, getters, setters
     IUBMP280(IUI2C *iuI2C);
     virtual ~IUBMP280() {}
+    virtual uint8_t getSensorTypeCount() { return sensorTypeCount; }
+    virtual char getSensorType(uint8_t index) { return sensorTypes[index]; }
     int32_t getFineTemperature() { return m_fineTemperature; }
     int16_t getTemperature() { return m_temperature; }
     int16_t getPressure() { return m_pressure; }
@@ -77,6 +79,7 @@ class IUBMP280 : public IUABCSensor
     float readPressure();
     virtual void readData();
     virtual void sendToReceivers();
+    virtual void dumpDataThroughI2C();
 
   private:
     IUI2C *m_iuI2C;
