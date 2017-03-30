@@ -41,7 +41,7 @@ class IUBattery : public IUABCSensor
     virtual void readData();
     virtual void sendToReceivers();
 
-  private:
+  protected:
     IUI2C *m_iuI2C;
     float m_VDDA;
     float m_vBattery;

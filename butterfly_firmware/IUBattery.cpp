@@ -3,7 +3,11 @@
 
 char IUBattery::sensorTypes[IUBattery::sensorTypeCount] = {IUABCSensor::sensorType_battery};
 
-IUBattery::IUBattery(IUI2C *iuI2C) : IUABCSensor(), m_iuI2C(iuI2C), m_VDDA(0), m_vBattery(0)
+IUBattery::IUBattery(IUI2C *iuI2C) :
+  IUABCSensor(),
+  m_iuI2C(iuI2C),
+  m_VDDA(0),
+  m_vBattery(0)
 {
   // Constructor
 }
@@ -50,13 +54,13 @@ void IUBattery::sendToReceivers()
   {
     if (m_receivers[i])
     {
-      if (m_toSend[i] == dataSendOption::voltage)
+      if (m_toSend[i] == (uint8_t) dataSendOption::voltage)
       {
-        m_receivers[i]->receive(m_receiverSourceIndex[i], m_vBattery);
+        m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], m_vBattery);
       }
-      else if (m_toSend[i] == dataSendOption::vdda)
+      else if (m_toSend[i] == (uint8_t) dataSendOption::vdda)
       {
-        m_receivers[i]->receive(m_receiverSourceIndex[i], m_VDDA);
+        m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], m_VDDA);
       }
     }
   }

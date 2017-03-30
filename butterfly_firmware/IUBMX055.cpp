@@ -1,5 +1,15 @@
 #include "IUBMX055.h"
 
+/* ================================= Static member definition ================================= */
+IUI2C* IUBMX055::m_iuI2C = NULL;
+uint8_t IUBMX055::m_rawAccelBytes[6] = {0, 0, 0, 0, 0, 0};
+q15_t IUBMX055::m_rawAccel[3] = {0, 0, 0};
+q15_t IUBMX055::m_accelData[3] = {0, 0, 0};
+q15_t IUBMX055::m_accelBias[3] = {0, 0, 0};
+float IUBMX055::m_accelResolution = 0;
+
+/* ================================= Method definition ================================= */
+
 char IUBMX055::sensorTypes[IUBMX055::sensorTypeCount] =
 {
   IUABCSensor::sensorType_accelerometer,
@@ -9,16 +19,12 @@ char IUBMX055::sensorTypes[IUBMX055::sensorTypeCount] =
 
 IUBMX055::IUBMX055(IUI2C *iuI2C) :
   IUABCSensor(),
-  m_iuI2C(iuI2C),
+  m_newData(false),
   m_accelScale(defaultAccelScale),
   m_filteredData(false),
   m_accelBandwidth(defaultAccelBandwidth)
 {
-  for (int i=0; i < 3; i++)
-  {
-    m_rawAccel[i] = 0;
-    m_accelBias[i] = 0;
-  }
+  m_iuI2C = iuI2C;
   m_samplingRate = defaultSamplingRate;
 }
 
@@ -28,7 +34,7 @@ IUBMX055::IUBMX055(IUI2C *iuI2C) :
 void IUBMX055::setAccelScale(IUBMX055::accelScaleOption scale)
 {
   m_accelScale = scale;
-  m_iuI2C->writeByte(ACC_ADDRESS, ACC_PMU_RANGE, (uint8_t) m_accelScale);
+  m_iuI2C->writeByte(ACC_ADDRESS, ACC_PMU_RANGE, (uint8_t) m_accelScale & 0x0F);
   computeAccelResolution();
 }
 
@@ -38,8 +44,8 @@ void IUBMX055::setAccelScale(IUBMX055::accelScaleOption scale)
 void IUBMX055::setAccelBandwidth(IUBMX055::accelBandwidthOption bandwidth)
 {
   m_accelBandwidth = bandwidth;
-  m_iuI2C->writeByte(ACC_ADDRESS, ACC_PMU_BW, (uint8_t) m_accelBandwidth);
-  if (debugMode && !m_filteredData)
+  m_iuI2C->writeByte(ACC_ADDRESS, ACC_PMU_BW, (uint8_t) m_accelBandwidth & 0x0F);
+  if (setupDebugMode && !m_filteredData)
   {
     debugPrint("WARNING: Set accelerometer BW for low-pass filter but filtering is not active");
   }
@@ -52,9 +58,9 @@ void IUBMX055::setAccelBandwidth(IUBMX055::accelBandwidthOption bandwidth)
  */
 void IUBMX055::useFilteredData(IUBMX055::accelBandwidthOption bandwidth)
 {
+  m_filteredData = true;
   setAccelBandwidth(bandwidth);
   m_iuI2C->writeByte(ACC_ADDRESS, ACC_D_HBW, 0x00);
-  m_filteredData = true;
 }
 
 /**
@@ -70,7 +76,7 @@ void IUBMX055::useUnfilteredData()
 /**
  * Reset BMX055 configuration and return to normal power mode
  */
-void IUBMX055::softReset()
+void IUBMX055::accSoftReset()
 {
  m_iuI2C->writeByte(ACC_ADDRESS,  ACC_BGW_SOFTRESET, 0xB6);  // reset accelerometer
  delay(1000); // Wait for all registers to reset
@@ -110,12 +116,13 @@ bool IUBMX055::checkAccelerometerWhoAmI()
 
 bool IUBMX055::checkGyroscopeWhoAmI()
 {
-  return m_iuI2C->checkComponentWhoAmI("BMX055 ACC", GYRO_ADDRESS, GYRO_WHO_AM_I, GYRO_I_AM);
+  return m_iuI2C->checkComponentWhoAmI("BMX055 GYRO", GYRO_ADDRESS, GYRO_WHO_AM_I, GYRO_I_AM);
 }
 
 bool IUBMX055::checkMagnetometerWhoAmI()
-{
-  return m_iuI2C->checkComponentWhoAmI("BMX055 ACC", MAG_ADDRESS, MAG_WHO_AM_I, MAG_I_AM);
+{ 
+  m_iuI2C->writeByte(MAG_ADDRESS, MAG_PWR_CNTL1, 0x01); // wake up magnetometer first thing
+  return m_iuI2C->checkComponentWhoAmI("BMX055 MAG", MAG_ADDRESS, MAG_WHO_AM_I, MAG_I_AM);
 }
 
 /**
@@ -127,8 +134,8 @@ void IUBMX055::wakeUp()
   m_iuI2C->port->println("BMX055 accelerometer...");
 
   bool iAmMyself = checkAccelerometerWhoAmI();
-  iAmMyself &= checkGyroscopeWhoAmI();
-  iAmMyself &= checkMagnetometerWhoAmI();
+  //iAmMyself &= checkGyroscopeWhoAmI();
+  //iAmMyself &= checkMagnetometerWhoAmI();
   
   if(iAmMyself)
   {
@@ -153,11 +160,9 @@ void IUBMX055::wakeUp()
  */
 void IUBMX055::initSensor()
 {
-   softReset();
-
   configureAccelerometer();
   configureGyroscope();
-  configureMagnometer();
+  configureMagnometer(magMode::regular);
 
   delay(100);
   m_iuI2C->port->print("BMX055 initialized successfully.\n\n");
@@ -166,9 +171,11 @@ void IUBMX055::initSensor()
 
 void IUBMX055::configureAccelerometer()
 {
+  accSoftReset();
+ 
   // Configure accelerometer
-  useFilteredData(m_accelBandwidth);
   setAccelScale(m_accelScale);
+  useUnfilteredData();
 
   m_iuI2C->writeByte(ACC_ADDRESS, ACC_INT_EN_1, 0x10);      // Enable ACC data ready interrupt
   m_iuI2C->writeByte(ACC_ADDRESS, ACC_INT_OUT_CTRL, 0x04);  // Set interrupts push-pull, active high for INT1 and INT2
@@ -182,9 +189,35 @@ void IUBMX055::configureGyroscope()
   m_iuI2C->writeByte(GYRO_ADDRESS, GYRO_BW, defaultGyroBandwidth);   // set GYRO ODR and Bandwidth
 }
 
-void IUBMX055::configureMagnometer()
+void IUBMX055::configureMagnometer(IUBMX055::magMode mMode)
 {
   m_iuI2C->writeByte(MAG_ADDRESS, MAG_PWR_CNTL1, 0x82);              // Softreset magnetometer, ends up in sleep mode
+  delay(100);
+  //TODO remove?
+  m_iuI2C->writeByte(MAG_ADDRESS, MAG_PWR_CNTL1, 0x01); // Wake up magnetometer
+  delay(100);
+  m_iuI2C->writeByte(MAG_ADDRESS, MAG_PWR_CNTL2, MODR::MODR_10Hz << 3); // Normal mode
+
+// Set up four standard configurations for the magnetometer
+  switch (mMode)
+  {
+    case magMode::lowPower:
+          m_iuI2C->writeByte(MAG_ADDRESS, MAG_REP_XY, 0x01);  // 3 repetitions (oversampling)
+          m_iuI2C->writeByte(MAG_ADDRESS, MAG_REP_Z,  0x02);  // 3 repetitions (oversampling)
+          break;
+    case magMode::regular:
+          m_iuI2C->writeByte(MAG_ADDRESS, MAG_REP_XY, 0x04);  //  9 repetitions (oversampling)
+          m_iuI2C->writeByte(MAG_ADDRESS, MAG_REP_Z,  0x16);  // 15 repetitions (oversampling)
+          break;
+    case magMode::enhancedRegular:
+          m_iuI2C->writeByte(MAG_ADDRESS, MAG_REP_XY, 0x07);  // 15 repetitions (oversampling)
+          m_iuI2C->writeByte(MAG_ADDRESS, MAG_REP_Z,  0x22);  // 27 repetitions (oversampling)
+          break;
+    case magMode::highAccuracy:
+          m_iuI2C->writeByte(MAG_ADDRESS, MAG_REP_XY, 0x17);  // 47 repetitions (oversampling)
+          m_iuI2C->writeByte(MAG_ADDRESS, MAG_REP_Z,  0x51);  // 83 repetitions (oversampling)
+          break;
+  }
 }
 
 void IUBMX055::doAcellFastCompensation(float * dest1)
@@ -213,7 +246,7 @@ void IUBMX055::doAcellFastCompensation(float * dest1)
   m_accelBias[0] = (q15_t) compx * 256; // accel bias in m/s2 Q15
   m_accelBias[1] = (q15_t) compy * 256; // accel bias in m/s2 Q15
   m_accelBias[2] = (q15_t) compz * 256; // accel bias in m/s2 Q15
-  if (debugMode)
+  if (setupDebugMode)
   {
     m_iuI2C->port->println("accel biases (mG)");
     m_iuI2C->port->println(1000 * q15ToFloat(m_accelBias[0]));
@@ -233,57 +266,68 @@ void IUBMX055::doAcellFastCompensation(float * dest1)
 void IUBMX055::readAccelData()
 {
   // Read the six raw data registers into data array
-  uint8_t rawData[6];
-  m_iuI2C->readBytes(ACC_ADDRESS, ACC_D_X_LSB, 6, &rawData[0]);
+  m_iuI2C->readBytes(ACC_ADDRESS, ACC_D_X_LSB, 6, &m_rawAccelBytes[0], processAccelData);
+}
+
+void IUBMX055::processAccelData(uint8_t wireStatus)
+{
   if (m_iuI2C->isReadError())
   {
-    m_iuI2C->port->println("Skip accel data");
+    m_iuI2C->port->println("Skip accelerometer read: ");
+    m_iuI2C->port->println(m_iuI2C->getReadError(), HEX);
+    m_iuI2C->resetReadError();
+    return;
   }
-  if(!((rawData[0] & 0x01) && (rawData[2] & 0x01) && (rawData[4] & 0x01)))
+  if(!((m_rawAccelBytes[0] & 0x01) && (m_rawAccelBytes[2] & 0x01) && (m_rawAccelBytes[4] & 0x01)))
   {
     return; // Check that all 3 axes have new data, if not return
   }
   // Turn the LSB and MSB into a signed 16-bit value (q15_t)
   // NB: Casting has precedence over << or >> operators
-  m_rawAccel[0] = (int16_t) (((int16_t)rawData[1] << 8) | rawData[0]) >> 4;
-  m_rawAccel[1] = (int16_t) (((int16_t)rawData[3] << 8) | rawData[2]) >> 4;
-  m_rawAccel[2] = (int16_t) (((int16_t)rawData[5] << 8) | rawData[4]) >> 4;
+  m_rawAccel[0] = (int16_t) (((int16_t)m_rawAccelBytes[1] << 8) | m_rawAccelBytes[0]) >> 4;
+  m_rawAccel[1] = (int16_t) (((int16_t)m_rawAccelBytes[3] << 8) | m_rawAccelBytes[2]) >> 4;
+  m_rawAccel[2] = (int16_t) (((int16_t)m_rawAccelBytes[5] << 8) | m_rawAccelBytes[4]) >> 4;
   // Multiply by resolution to have a measure in G, in q15_t format and add the bias
   m_accelData[0] = m_rawAccel[0] * m_accelResolution + m_accelBias[0];
   m_accelData[1] = m_rawAccel[1] * m_accelResolution + m_accelBias[1];
   m_accelData[2] = m_rawAccel[2] * m_accelResolution + m_accelBias[2];
-  
 }
 
 
 void IUBMX055::readData()
 {
   readAccelData();
+  m_newData = true;
 }
 
 
 void IUBMX055::sendToReceivers()
 {
+  if (!m_newData)
+  {
+    return;
+  }
   for (int i = 0; i < m_receiverCount; i++)
   {
     if (m_receivers[i])
     {
       switch(m_toSend[i])
       {
-        case dataSendOption::xAccel:
-          m_receivers[i]->receive(m_receiverSourceIndex[i], m_accelData[0]);
+        case (uint8_t) dataSendOption::xAccel:
+          m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], m_accelData[0]);
           break;
-        case dataSendOption::yAccel:
-          m_receivers[i]->receive(m_receiverSourceIndex[i], m_accelData[1]);
+        case (uint8_t) dataSendOption::yAccel:
+          m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], m_accelData[1]);
           break;
-        case dataSendOption::zAccel:
-          m_receivers[i]->receive(m_receiverSourceIndex[i], m_accelData[2]);
+        case (uint8_t) dataSendOption::zAccel:
+          m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], m_accelData[2]);
           break;
         default:
           break;
       }
     }
   }
+  m_newData = false;
 }
 
 /**

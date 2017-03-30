@@ -799,7 +799,7 @@ float velocityX()
 {
   float ene = press_energy(0, ENERGY_INTERVAL_ACCEL);
   //Serial.println("Energy 1");
-  //Serial.println(ene, DEC);
+  Serial.println(ene, DEC);
   return ene;
 }
 // Function to calculate Accel RMS value for RMS velovity calculation along Y axis
@@ -822,7 +822,7 @@ float velocityY()
   uint16_t startInd = (uint16_t) ENERGY_INTERVAL_ACCEL;
   float ene = press_energy(startInd, ENERGY_INTERVAL_ACCEL);
   //Serial.println("Energy 2");
-  //Serial.println(ene, DEC);
+  Serial.println(ene, DEC);
   return ene;
 }
 // Function to calculate Accel RMS value for RMS velovity calculation along Z axis
@@ -847,7 +847,7 @@ float velocityZ()
   uint16_t startInd = (uint16_t) (2 * ENERGY_INTERVAL_ACCEL);
   float ene = press_energy(startInd, ENERGY_INTERVAL_ACCEL);
   //Serial.println("Energy 3");
-  //Serial.println(ene, DEC);
+  Serial.println(ene, DEC);
   return ene;
 }
 
@@ -865,7 +865,7 @@ float currentTemperature() // Index 4
   uint16_t startInd = (uint16_t) (3 *ENERGY_INTERVAL_ACCEL);
   float ene = press_energy(startInd, ENERGY_INTERVAL_ACCEL);
   //Serial.println("Energy 4");
-  //Serial.println(ene, DEC);
+  Serial.println(ene, DEC);
   return ene;
 }
 

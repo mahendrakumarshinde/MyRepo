@@ -6,6 +6,7 @@
 Short name coding
 char 1: feature type
 - A for acceleration
+- B for secondary acceleration, that means acceleration energy computed by summing other energy
 - M for Magnetometer
 - G for Gyroscope
 - V for Velocity
@@ -22,86 +23,111 @@ char 3: sample sizes
 
 IUFeatureConfigurator::FeatureConfig IUFeatureConfigurator::noConfig =
 {
-  "", "",
-  {"", {0, "", ""}, {0, "", ""}},
-  {"", {0, "", ""}, {0, "", ""}}
+  "",
+  {0, "", ""},
+  {0, "", ""}
 };
 
 IUFeatureConfigurator::FeatureConfig IUFeatureConfigurator::registeredConfigs[IUFeatureConfigurator::registeredCount] =
   {
-    { // 0
-      "AX1", "accelEnergy_X_128",
-      {"IUSingleAxisEnergyFeature128", {1, "A", "0"}, {0, "", ""}},
-      {"", {0, "", ""}, {0, "", ""}}
-    },
-    { // 1
-      "AY1", "accelEnergy_Y_128",
-      {"IUSingleAxisEnergyFeature128", {1, "A", "1"}, {0, "", ""}},
-      {"", {0, "", ""}, {0, "", ""}}
-    },
-    { // 2
-      "AZ1", "accelEnergy_Z_128",
-      {"IUSingleAxisEnergyFeature128", {1, "A", "2"}, {0, "", ""}},
-      {"", {0, "", ""}, {0, "", ""}}
-    },
-    { // 3
-      "A31", "accelEnergy_3_128",
-      {"IUTriAxisEnergyFeature128", {3, "A-A-A", "0-1-2"}, {0, "", ""}},
-      {"IUTriSourceSummingFeature", {0, "", ""}, {3, "AX1-AY1-AZ1", "0-0-0"}}
-    },
-    { // 4
-      "AX3", "accelEnergy_X_512",
-      {"IUSingleAxisEnergyFeature512", {1, "A", "0"}, {0, "", ""}},
-      {"", {0, "", ""}, {0, "", ""}}
-    },
-    { // 5
-      "AY3", "accelEnergy_Y_512",
-      {"IUSingleAxisEnergyFeature512", {1, "A", "1"}, {0, "", ""}},
-      {"", {0, "", ""}, {0, "", ""}}
-    },
-    { // 6
-      "AZ3", "accelEnergy_Z_512",
-      {"IUSingleAxisEnergyFeature512", {1, "A", "2"}, {0, "", ""}},
-      {"", {0, "", ""}, {0, "", ""}}
-    },
-    { // 7
-      "A33", "accelEnergy_3_512",
-      {"IUTriAxisEnergyFeature512", {3, "A-A-A", "0-1-2"}, {0, "", ""}},
-      {"IUTriSourceSummingFeature", {0, "", ""}, {3, "AX3-AY3-AZ3", "0-0-0"}}
-    },
-    { // 8
-      "VX3", "velocity_X_512",
-      {"IUVelocityFeature512", {1, "A", "0"}, {1, "AX3", "0"}},
-      {"", {0, "", ""}, {0, "", ""}}
-    },
-    { // 9
-      "VY3", "velocity_Y_512",
-      {"IUVelocityFeature512", {1, "A", "1"}, {1, "AY3", "0"}},
-      {"", {0, "", ""}, {0, "", ""}}
-    },
-    { // 10
-      "VZ3", "velocity_Z_512",
-      {"IUVelocityFeature512", {1, "A", "2"}, {1, "AZ3", "0"}},
-      {"", {0, "", ""}, {0, "", ""}}
-    },
-    { // 11
-      "T10", "temperature_1_1",
-      {"IUDefaultFloatFeature", {1, "T", "0"}, {0, "", ""}},
-      {"", {0, "", ""}, {0, "", ""}}
-    },
-    { // 12
-      "S15", "audioDB_1_2048",
-      {"IUAudioDBFeature2048", {1, "S", "0"}, {0, "", ""}},
-      {"", {0, "", ""}, {0, "", ""}}
-    },
-    { // 13
-      "S16", "audioDB_1_4096",
-      {"IUAudioDBFeature4096", {1, "S", "0"}, {0, "", ""}},
-      {"", {0, "", ""}, {0, "", ""}}
-    },
+    {"AX1", // "accelEnergy_X_128"
+      {1, "A", "0"},
+      {0, "", ""}},
+      
+    {"AY1", // "accelEnergy_Y_128",
+      {1, "A", "1"},
+      {0, "", ""}},
+      
+    {"AZ1", // "accelEnergy_Z_128",
+      {1, "A", "2"},
+      {0, "", ""}},
+      
+    {"CX1", // "IUAccelPreComputationFeature128" Precomputation of Accel signal energy and FFT
+      {1, "A", "0"},
+      {0, "", ""}},
+      
+    {"CY1", // "IUAccelPreComputationFeature128" Precomputation of Accel signal energy and FFT
+      {1, "A", "1"},
+      {0, "", ""}},
+      
+    {"CZ1", // "IUAccelPreComputationFeature128" Precomputation of Accel signal energy and FFT
+      {1, "A", "2"},
+      {0, "", ""}},
+      
+    {"A31", // "accelEnergy_3_128",
+      {3, "A-A-A", "0-1-2"},
+      {0, "", ""}},
+      
+    {"B31", // "accelEnergy_3_128" by summing 3 single axis accel energy,
+      {0, "", ""},
+      {3, "AX1-AY1-AZ1", "0-0-0"}},
+      
+    {"D31", // "accelEnergy_3_128" by summing 3 single axis accel energy,
+      {0, "", ""},
+      {3, "CX1-CY1-CZ1", "0-0-0"}},
+      
+    {"AX3", // "accelEnergy_X_512",
+      {1, "A", "0"},
+      {0, "", ""}},
+      
+    {"AY3", // "accelEnergy_Y_512",
+      {1, "A", "1"},
+      {0, "", ""}},
+      
+    {"AZ3", // "accelEnergy_Z_512",
+      {1, "A", "2"},
+      {0, "", ""}},
+      
+    {"CX3", // "IUAccelPreComputationFeature128" Precomputation of Accel signal energy and FFT
+      {1, "A", "0"},
+      {0, "", ""}},
+      
+    {"CY3", // "IUAccelPreComputationFeature128" Precomputation of Accel signal energy and FFT
+      {1, "A", "1"},
+      {0, "", ""}},
+      
+    {"CZ3", // "IUAccelPreComputationFeature128" Precomputation of Accel signal energy and FFT
+      {1, "A", "2"},
+      {0, "", ""}},
+      
+    {"A33", // "accelEnergy_3_512",
+      {3, "A-A-A", "0-1-2"},
+      {0, "", ""}},
+      
+    {"B33", // "accelEnergy_3_512" by summing 3 single axis accel energy,
+      {0, "", ""},
+      {3, "AX3-AY3-AZ3", "0-0-0"}},
+      
+    {"D33", // "accelEnergy_3_128" by summing 3 single axis accel energy,
+      {0, "", ""},
+      {3, "CX3-CY3-CZ3", "0-0-0"}},
+      
+    {"VX3", // "velocity_X_512",
+      {0, "", ""},
+      {2, "CX3-CX3", "1-99"}},   // 99 means VX3 will receive the destinationArray from CX3
+      
+    {"VY3", // "velocity_Y_512",
+      {0, "", ""},
+      {2, "CY3-CY3", "1-99"}},
+      
+    {"VZ3", // "velocity_Z_512",
+      {0, "", ""},
+      {2, "CZ3-CZ3", "1-99"}},
+      
+    {"T10", // "temperature_1_1",
+      {1, "T", "0"},
+      {0, "", ""}},
+      
+    {"S15", // "audioDB_1_2048",
+      {1, "S", "0"},
+      {0, "", ""}},
+      
+    {"S16", // "audioDB_1_4096",
+      {1, "S", "0"},
+      {0, "", ""}},
   };
 
-String IUFeatureConfigurator::standardConfig = "A33-VX3-VY3-VZ3-T10-S16";
+String IUFeatureConfigurator::standardConfig = "CX3-CY3-CZ3-VX3-VY3-VZ3-T10-S16"; //B33";
 float IUFeatureConfigurator::standardThresholds[6][3] = {{30, 600, 1200},
                                                          {0.05, 1.2, 1.8},
                                                          {0.05, 1.2, 1.8},
@@ -120,16 +146,11 @@ bool IUFeatureConfigurator::pressFeatureCheck[4] = {true, false, false, false};
 /* ========================= Method definitions  ================================ */
 
 IUFeatureConfigurator::IUFeatureConfigurator() :
-  m_featureCount(0),
-  m_secondaryFeatureCount(0)
+  m_featureCount(0)
 {
   for (int i = 0; i < maxFeatureCount; i++)
   {
     m_features[i] = NULL;
-  }
-  for (int i = 0; i < maxSecondaryFeatureCount; i++)
-  {
-    m_secondaryFeatures[i] = NULL;
   }
 }
 
@@ -139,7 +160,7 @@ IUFeatureConfigurator::~IUFeatureConfigurator()
 }
 
 /**
- * Delete all primary and secondary features
+ * Delete all features
  */
 void IUFeatureConfigurator::resetFeatures()
 {
@@ -151,14 +172,6 @@ void IUFeatureConfigurator::resetFeatures()
     }
   }
   m_featureCount = 0;
-  for (int i = 0; i < maxSecondaryFeatureCount; i++)
-  {
-    if(m_secondaryFeatures[i])
-    {
-      delete m_secondaryFeatures[i]; m_secondaryFeatures[i] = NULL;
-    }
-  }
-  m_secondaryFeatureCount = 0;
 }
 
 /**
@@ -168,19 +181,21 @@ void IUFeatureConfigurator::resetFeatures()
  */
 IUFeatureConfigurator::FeatureConfig IUFeatureConfigurator::getConfigFromName(String featureName)
 {
-  if (featureName == "") 
+  if (featureName == "")
   {
-    if (debugMode) { debugPrint("Tried to look for an empty config name, returned NoConfig"); }
+    if (setupDebugMode) { debugPrint("Tried to look for an empty config name, returned NoConfig"); }
     return noConfig;
   }
   for (uint8_t i = 0; i < registeredCount; i++)
   {
-    if (registeredConfigs[i].name == featureName)
+    if (registeredConfigs[i].name[0] == featureName[0] &&
+        registeredConfigs[i].name[1] == featureName[1] &&
+        registeredConfigs[i].name[2] == featureName[2])
     {
       return registeredConfigs[i];
     }
   }
-  if (debugMode) { debugPrint(featureName + " is not a registered config name"); }
+  if (setupDebugMode) { debugPrint(featureName + " is not a registered config name"); }
   return noConfig;
 }
 
@@ -214,111 +229,103 @@ uint8_t IUFeatureConfigurator::getConfigFromName(String featureNames, IUFeatureC
  */
 bool IUFeatureConfigurator::registerFeatureInFeatureDependencies(IUFeature *feature)
 {
-  bool success = true;
-  Serial.println("OK 10");
-  Serial.println(feature->getName());
-  Serial.println("OK 10 10");
-  FeatureConfig config = getConfigFromName(feature->getName());
-  if (config.name == "")
+  FeatureConfig fconfig = getConfigFromName(feature->getName());
+  if (fconfig.name == "")
   {
     return false;
   }
-  FeatureSubConfig fss = feature->isFromSecondaryConfig() ? config.alt : config.def;
   FeatureConfig depConf[registeredCount];
-  Serial.println("OK 11");
-  Serial.println(fss.featureDep.names);
-  uint8_t depCount = getConfigFromName(fss.featureDep.names, depConf);
-  if (depCount != fss.featureDep.dependencyCount)
+  uint8_t depCount = getConfigFromName(fconfig.featureDep.names, depConf);
+  if (depCount != fconfig.featureDep.dependencyCount)
   {
-    if (debugMode) { debugPrint("Invalid configuration: dependency count does not match dependency names"); }
+    if (setupDebugMode) { debugPrint("Invalid configuration: dependency count does not match dependency names"); }
     return false;
   }
   int depSendingOptions[registeredCount];
-  uint8_t depSendOptCount = splitStringToInt(fss.featureDep.sendingOptions, nameSeparator, depSendingOptions, registeredCount);
-  if (depSendOptCount != fss.featureDep.dependencyCount)
+  uint8_t depSendOptCount = splitStringToInt(fconfig.featureDep.sendingOptions, nameSeparator, depSendingOptions, registeredCount);
+  if (depSendOptCount != fconfig.featureDep.dependencyCount)
   {
-    if (debugMode) { debugPrint("Invalid configuration: dependency count does not match dependency options"); }
+    if (setupDebugMode) { debugPrint("Invalid configuration: dependency count does not match dependency options"); }
     return false;
   }
-  uint8_t reservedSourceForSensor = fss.sensorDep.dependencyCount;
-  for (uint8_t i = 0; i < fss.featureDep.dependencyCount; i++)
+  uint8_t reservedSourceForSensor = fconfig.sensorDep.dependencyCount;
+  for (uint8_t i = 0; i < fconfig.featureDep.dependencyCount; i++)
   {
-    Serial.println("OK 12");
-    Serial.println(depConf[i].name);
     IUFeature *producerFeature = getFeatureByName(depConf[i].name);
-    success = producerFeature->addReceiver(depSendingOptions[i], reservedSourceForSensor + i, feature);
-    if (!success)
+    if (producerFeature == NULL)
     {
-      if (debugMode) { debugPrint("Failed to add feature as dependent of another feature"); }
+      if (setupDebugMode)
+      {
+        debugPrint(F("Missing feature dependency: "), false);
+        debugPrint(depConf[i].name);
+      }
+      return false;
+    }
+    if (!producerFeature->addReceiver(depSendingOptions[i], reservedSourceForSensor + i, feature))
+    {
+      if (setupDebugMode) { debugPrint(F("Failed to add feature as dependent of another feature")); }
       return false;
     }
   }
-  return success;
+  return true;
 }
 
 /**
  * Register given feature as receiver of given component
  * @param feature           the feature to register as receiver
- * @param sensor            array of pointer to the sensors
- * @param sensoCount        the number of sensors
+ * @param sensor            pointer to a sensors
  */
-bool IUFeatureConfigurator::registerFeatureInSensor(IUFeature *feature, IUABCSensor **sensors, uint8_t sensorCount)
+bool IUFeatureConfigurator::registerFeatureInSensors(IUFeature *feature, IUABCSensor **sensors, uint8_t sensorCount)
 {
-  FeatureConfig config = getConfigFromName(feature->getName());
-  if (config.name == "")
+  FeatureConfig fconfig = getConfigFromName(feature->getName());
+  if (fconfig.name == "")
   {
-    if (debugMode) { debugPrint("Configuration not found"); }
+    if (setupDebugMode) { debugPrint(F("Configuration not found")); }
     return false;
   }
-  FeatureSubConfig fss = feature->isFromSecondaryConfig() ? config.alt : config.def;
   String foundSensorTypes[registeredCount];
-  uint8_t foundSensorCount = splitString(fss.sensorDep.names, nameSeparator, foundSensorTypes, registeredCount);
-  if (foundSensorCount != fss.sensorDep.dependencyCount)
+  uint8_t foundSensorCount = splitString(fconfig.sensorDep.names, nameSeparator, foundSensorTypes, registeredCount);
+  if (foundSensorCount != fconfig.sensorDep.dependencyCount)
   {
-    if (debugMode) { debugPrint("Invalid configuration: dependency count does not match dependency names"); }
+    if (setupDebugMode) { debugPrint(F("Invalid configuration: dependency count does not match dependency names")); }
     return false;
   }
   int depSendingOptions[registeredCount];
-  uint8_t depSendOptCount = splitStringToInt(fss.sensorDep.sendingOptions, nameSeparator, depSendingOptions, registeredCount);
-  if (depSendOptCount != fss.sensorDep.dependencyCount)
+  uint8_t depSendOptCount = splitStringToInt(fconfig.sensorDep.sendingOptions, nameSeparator, depSendingOptions, registeredCount);
+  if (depSendOptCount != fconfig.sensorDep.dependencyCount)
   {
-    if (debugMode) { debugPrint("Invalid configuration: dependency count does not match dependency options"); }
+    if (setupDebugMode) { debugPrint(F("Invalid configuration: dependency count does not match dependency options")); }
     return false;
   }
   bool success = true;
-  for (uint8_t i = 0; i < fss.sensorDep.dependencyCount; i++)
+  for (uint8_t i = 0; i < fconfig.sensorDep.dependencyCount; i++)
   {
     for (uint8_t j = 0; j < sensorCount; j++)
     {
-      uint8_t count = sensors[j]->getSensorTypeCount();
-      for (uint8_t k = 0; k < count; k++)
+      uint8_t sCount = sensors[j]->getSensorTypeCount();
+      for (uint8_t k = 0; k < sCount; k++)
       {
         if (foundSensorTypes[i][0] == sensors[j]->getSensorType(k))
         {
-          success &= sensors[j]->addReceiver(depSendingOptions[i], i, feature);
+          success &= sensors[j]->addScalarReceiver(depSendingOptions[i], i, feature);
         }
       }
     }
   }
-  if (!success && debugMode) { debugPrint("Failed to register feature as receiver of given sensors"); }
+  if (!success && setupDebugMode) { debugPrint(F("Failed to register feature as receiver of given sensors")); }
   return success;
 }
 
 /**
  * Register given feature as receiver of given component
  * @param feature           the feature to register as receiver
- * @param sensor            array of pointer to the sensors
- * @param sensoCount        the number of sensors
+ * @param sensor            pointer to a sensor
  */
-void IUFeatureConfigurator::registerAllFeaturesInSensor(IUABCSensor **sensors, uint8_t sensorCount)
+void IUFeatureConfigurator::registerAllFeaturesInSensors(IUABCSensor **sensors, uint8_t sensorCount)
 {
-  for (uint8_t i = 0; i < m_secondaryFeatureCount; i++)
-  {
-    registerFeatureInSensor(m_secondaryFeatures[i], sensors, sensorCount);
-  }
   for (uint8_t i = 0; i < m_featureCount; i++)
   {
-    registerFeatureInSensor(m_features[i], sensors, sensorCount);
+    registerFeatureInSensors(m_features[i], sensors, sensorCount);
   }
 }
 
@@ -327,65 +334,59 @@ void IUFeatureConfigurator::registerAllFeaturesInSensor(IUABCSensor **sensors, u
  *
  * Function adds all the created feature to this instance, and call registerFeatureInFeatureDependencies
  * to handle feature inter-dependencies.
- * If alternative feature creation is possible, AND THAT ALL alternative feature dependencies
- * are ALREADY created, the feature will be created with alternative config.
  * @param config      the config to create the feature
  * @param id          the id that will be given to the new feature - default to 0
- * @param secondary   false (default) if the feature to create is primary (user requested)
- *                    true if the feature to create is secondary (needed for dependency)
  */
-int IUFeatureConfigurator::createWithDependencies(IUFeatureConfigurator::FeatureConfig config, uint8_t id, bool secondary)
+int IUFeatureConfigurator::createWithDependencies(IUFeatureConfigurator::FeatureConfig config, uint8_t id)
 {
-  bool success = true;
-  // Check alternative config dependencies: If there is an alternative and that dependencies already exists, we will use them!
-  FeatureConfig altDep[registeredCount];
-  int altDepCount = getConfigFromName(config.alt.featureDep.names, altDep);
-  bool alternative = config.alt.className && (altDepCount > 0); // True if there are possible alternative dependencies
-  for (uint8_t i = 0; i < altDepCount; i++)                     // Check that all alternative dependencies feature have been created
+  if (setupDebugMode)
   {
-    alternative &= (getFeatureByName(altDep[i].name) != NULL);  // Stay true only if all alternative dep exists
+    debugPrint(F("Available Memory: "), false);
+    debugPrint(freeMemory());
+    debugPrint("Creating ", false);
+    debugPrint(config.name, false);
+    debugPrint(" and its dependencies...");
   }
-  Serial.println("OK 5");
-  if (!alternative)
+  bool success = true;
+  /*
+  // Get dependency list
+  FeatureConfig defDep[registeredCount];
+  int defDepCount = getConfigFromName(config.featureDep.names, defDep);
+  for (uint8_t i = 0; i < defDepCount; i++)
   {
-    Serial.println("OK 6");
-    // If not alternative, we will use the default config: we then have to create the dependency features
-    FeatureConfig defDep[registeredCount];
-    int defDepCount = getConfigFromName(config.def.featureDep.names, defDep);
-    for (uint8_t i = 0; i < defDepCount; i++)
+    if (setupDebugMode) { debugPrint(config.name + " requires dependency: " + defDep[i].name); }
+    // Check if the dependency exists and, if not, create it
+    if(getFeatureByName(defDep[i].name) == NULL)
     {
-      if (debugMode) { debugPrint(config.name + " requires dependency: " + defDep[i].name); }
-      // Check if the dependency exists and, if not, create it
-      if(getFeatureByName(defDep[i].name) == NULL)
+      success = createWithDependencies(defDep[i], 0);
+      if (!success)
       {
-        success = createWithDependencies(defDep[i], 0, true);
-        if (!success)
-        {
-          if (debugMode) { debugPrint("Failed to create " + config.name + " dependencies"); }
-          return false;
-        }
-        else if (debugMode)
-        {
-          debugPrint("Created " + defDep[i].name + " feature as dependency.");
-        }
+        if (setupDebugMode) { debugPrint("Failed to create " + config.name + " dependencies"); }
+        return false;
       }
-      else if (debugMode)
+      else if (setupDebugMode)
       {
-        debugPrint(defDep[i].name + " feature already exists, it will be used as dependency.");
+        debugPrint("Created " + defDep[i].name + " feature as dependency.");
       }
     }
+    else if (setupDebugMode)
+    {
+      debugPrint(defDep[i].name + " feature already exists, it will be used as dependency.");
+    }
   }
-  Serial.println("OK 7");
-  IUFeature *feature = createFeature(config, id, alternative);
-  success = addFeature(feature, secondary);
-  Serial.println("OK 8");
+  */
+  IUFeature *feature = createFeature(config, id);
+  success = addFeature(feature);
   if (!success)
   {
     if (feature) { delete feature; }
-    if (debugMode) { debugPrint(config.name + " incorrectly created or added to the configurator (the feature list may be full)"); }
+    if (setupDebugMode)
+    {
+      debugPrint(config.name, false);
+      debugPrint(" incorrectly created");
+    }
     return false;
   }
-  Serial.println("OK 9");
   // Register the feature as receiver of its feature dependencies and return "success" boolean
   return registerFeatureInFeatureDependencies(feature);
 }
@@ -403,14 +404,16 @@ bool IUFeatureConfigurator::requireConfiguration(String configBufffer)
   int requiredConfigCount = getConfigFromName(configBufffer, requiredConfigs);
   for (uint8_t i = 0; i < requiredConfigCount; i++)
   {
-    Serial.println("OK 1");
-    success = createWithDependencies(requiredConfigs[i], i, false);
-    Serial.println("OK 1000");
+    success = createWithDependencies(requiredConfigs[i], i);
     if (!success) { return false; }
-    if (debugMode) { debugPrint(requiredConfigs[i].name + " successfully created"); }
+    if (setupDebugMode)
+    {
+      debugPrint(requiredConfigs[i].name, false);
+      debugPrint(" successfully created");
+    }
   }
   resetFeaturesCounters();
-  // Check that the number of primary features is the same as required
+  // Check that the number of features is the same as required
   return requiredConfigCount == m_featureCount;
 }
 
@@ -448,139 +451,108 @@ bool IUFeatureConfigurator::doPressSetup()
   return true;
 }
 
+
+
 /**
  * Create a feature from given config and return a pointer to it
  * @param config        the config to create the feature
  * @param id            the id that will be given to the new feature (optional, default to 0)
- * @param alternative   if false (default), use default subconfig; if true, use alternative subconfig
  */
-IUFeature* IUFeatureConfigurator::createFeature(IUFeatureConfigurator::FeatureConfig featConfig, uint8_t id, bool alternative)
+IUFeature* IUFeatureConfigurator::createFeature(IUFeatureConfigurator::FeatureConfig featConfig, uint8_t id)
 {
   IUFeature *feature = NULL;
-  String className;
-  if(alternative)
+  switch ((char) featConfig.name[0])
   {
-    className = featConfig.alt.className;
+    case 'A':
+      if (featConfig.name[1] == '3')
+      {
+        if (featConfig.name[2] == '1') { feature = new IUTriAxisEnergyFeature128(id, featConfig.name); }
+        else if (featConfig.name[2] == '3') { feature = new IUTriAxisEnergyFeature512(id, featConfig.name); }
+      }
+      else
+      {
+        if (featConfig.name[2] == '1') { feature = new IUSingleAxisEnergyFeature128(id, featConfig.name); }
+        else if (featConfig.name[2] == '3') { feature = new IUSingleAxisEnergyFeature512(id, featConfig.name); }
+      }
+      break;
+
+    case 'B':
+    case 'D':
+      feature = new IUTriSourceSummingFeature(id, featConfig.name);
+      break;
+      
+    case 'C':
+      if (featConfig.name[2] == '1') { feature = new IUAccelPreComputationFeature128(id, featConfig.name); }
+      else if (featConfig.name[2] == '3') { feature = new IUAccelPreComputationFeature512(id, featConfig.name); }
+      break;
+
+    case 'V':
+      if (featConfig.name[2] == '3') { feature = new IUVelocityFeature512(id, featConfig.name); }
+      break;
+
+    case 'T':
+      feature = new IUDefaultFloatFeature(id, featConfig.name);
+      break;
+
+    case 'S':
+      if (featConfig.name[2] == '5') { feature = new IUAudioDBFeature2048(id, featConfig.name); }
+      else if (featConfig.name[2] == '6') { feature = new IUAudioDBFeature4096(id, featConfig.name); }
+      break;
+
+    default:
+      if (setupDebugMode)
+      {
+        debugPrint("Feature name ", false);
+        debugPrint(featConfig.name, false);
+        debugPrint(" is not listed in createFeature function");
+      }
+      break;
   }
-  else
-  {
-    className = featConfig.def.className;
-  }
-  if(className == "IUSingleAxisEnergyFeature128")
-  {
-    feature = new IUSingleAxisEnergyFeature128(id, featConfig.name, featConfig.fullName, alternative);
-  }
-  else if (className == "IUTriAxisEnergyFeature128")
-  {
-    feature = new IUTriAxisEnergyFeature128(id, featConfig.name, featConfig.fullName, alternative);
-  }
-  else if (className == "IUSingleAxisEnergyFeature512")
-  {
-    feature = new IUSingleAxisEnergyFeature512(id, featConfig.name, featConfig.fullName, alternative);
-  }
-  else if (className == "IUTriAxisEnergyFeature512")
-  {
-    feature = new IUTriAxisEnergyFeature512(id, featConfig.name, featConfig.fullName, alternative);
-  }
-  else if (className == "IUVelocityFeature512")
-  {
-    feature = new IUVelocityFeature512(id, featConfig.name, featConfig.fullName, alternative);
-  }
-  else if (className == "IUDefaultFloatFeature")
-  {
-    feature = new IUDefaultFloatFeature(id, featConfig.name, featConfig.fullName, alternative);
-  }
-  else if (className == "IUAudioDBFeature2048")
-  {
-    feature = new IUAudioDBFeature2048(id, featConfig.name, featConfig.fullName, alternative);
-  }
-  else if (className == "IUAudioDBFeature4096")
-  {
-    feature = new IUAudioDBFeature4096(id, featConfig.name, featConfig.fullName, alternative);
-  }
-  else if (className == "IUTriSourceSummingFeature")
-  {
-    feature = new IUTriSourceSummingFeature(id, featConfig.name, featConfig.fullName, alternative);
-  }
-  else if (debugMode)
-  {
-    debugPrint("Feature class name is not listed in createFeature function");
-   }
   if (feature)
   {
     feature->prepareSource();
-    feature->setDefaultComputeFunction();
     if (!feature->activate())
     {
-      if (debugMode) { debugPrint("Feature couldn't be activated: check the source and default function"); }
+      if (setupDebugMode) { debugPrint(F("Feature couldn't be activated: check the source and default function")); }
       delete feature; feature = NULL;
     }
+  }
+  if (setupDebugMode)
+  {
+    debugPrint("Feature ", false);
+    debugPrint(featConfig.name, false);
+    debugPrint(" created. Available Memory: ", false);
+    debugPrint(freeMemory(), DEC);
   }
   return feature;
 }
 
 /**
- * Create a feature from given registered config index and return a pointer to it
- * @param configIdx     the index of the registered feature config
- * @param id            the feature id (optional, default to 0)
- * @param alternative   if false (default), use default config; if true, use alternative config
+ * Get the feature from instantiated feature list
  */
-IUFeature* IUFeatureConfigurator::createFeature(uint8_t configIdx, uint8_t id, bool alternative)
-{
-  return createFeature(registeredConfigs[configIdx], id, alternative);
-}
-
-/**
- * Create a feature from given name and return a pointer to it
- * @param name          the feature name
- * @param id            the feature id (optional, default to 0)
- * @param alternative   if false (default), use default config; if true, use alternative config
- */
-IUFeature* IUFeatureConfigurator::createFeature(String name, uint8_t id, bool alternative)
-{
-  return createFeature(getConfigFromName(name), id, alternative);
-}
-
-/**
- * Get the feature from "main" features, or secondary features if not found in main
- */
-IUFeature* IUFeatureConfigurator::getFeatureByName(String name)
+IUFeature* IUFeatureConfigurator::getFeatureByName(char *name)
 {
   // Check in "main" features
   for (uint8_t i = 0; i < m_featureCount; i++)
   {
-    if (m_features[i]->getName() == name)
+    String fName = m_features[i]->getName();
+    if (name[0] == fName[0] &&
+        name[1] == fName[1] &&
+        name[2] == fName[2])
     {
       return m_features[i];
-    }
-  }
-  // Check in secondary features
-  for (uint8_t i = 0; i < m_secondaryFeatureCount; i++)
-  {
-    if (m_secondaryFeatures[i]->getName() == name)
-    {
-      return m_secondaryFeatures[i];
     }
   }
   return NULL;
 }
 
 /**
- * Add a main or secondary feature to the configurator
+ * Add a feature to the configurator
  * @param feature     the feature to add.
- * @param secondary   if false, add feature to the main feature list.
- *                    if true, add feature to the secondary feature list.
  */
-bool IUFeatureConfigurator::addFeature(IUFeature *feature, bool secondary)
+bool IUFeatureConfigurator::addFeature(IUFeature *feature)
 {
-  if (!feature) { return false; } // NULL pointer will not be added
-  if (secondary && m_secondaryFeatureCount < maxSecondaryFeatureCount)
-  {
-    m_secondaryFeatures[m_secondaryFeatureCount] = feature;
-    m_secondaryFeatureCount++;
-    return true;
-  }
-  else if (m_featureCount < maxFeatureCount)
+  if (feature != NULL && m_featureCount < maxFeatureCount)
   {
     m_features[m_featureCount] = feature;
     m_featureCount++;
@@ -597,21 +569,18 @@ bool IUFeatureConfigurator::addFeature(IUFeature *feature, bool secondary)
 void IUFeatureConfigurator::computeAndSendToReceivers()
 {
   bool computed = false;
-  //Secondary Features first
-  for (uint8_t i = 0; i < m_secondaryFeatureCount; i++)
-  {
-    computed = m_secondaryFeatures[i]->compute();
-    if (computed)
-    {
-      m_secondaryFeatures[i]->sendToReceivers();
-    }
-  }
   for (uint8_t i = 0; i < m_featureCount; i++)
   {
     computed = m_features[i]->compute();
     if (computed)
     {
       m_features[i]->sendToReceivers();
+      if (loopDebugMode)
+      {
+        debugPrint(m_features[i]->getName(), false);
+        debugPrint(": ", false);
+        debugPrint(m_features[i]->getLatestValue());
+      }
     }
   }
 }
@@ -623,11 +592,6 @@ void IUFeatureConfigurator::computeAndSendToReceivers()
  */
 void IUFeatureConfigurator::resetFeaturesCounters()
 {
-  //Secondary Features first
-  for (uint8_t i = 0; i < m_secondaryFeatureCount; i++)
-  {
-    m_secondaryFeatures[i]->resetCounters();
-  }
   for (uint8_t i = 0; i < m_featureCount; i++)
   {
     m_features[i]->resetCounters();
@@ -635,7 +599,7 @@ void IUFeatureConfigurator::resetFeaturesCounters()
 }
 
 /**
- * Returns the highest operationState from primary features
+ * Returns the highest operationState from features
  */
 operationState IUFeatureConfigurator::getOperationStateFromFeatures()
 {
@@ -663,43 +627,24 @@ uint8_t IUFeatureConfigurator::streamFeatures(HardwareSerial *port)
   bool streamed = false;
   for (int i = 0; i < m_featureCount; i++)
   {
-    streamed = m_features[i]->stream(port);
-    if (streamed)
-    {
-      counter++;
-      port->print(",");
-    }
+    m_features[i]->stream(port);
+    counter++;
+    port->print(",");
   }
   return counter;
 }
 
-/* ====================== Diagnostic Functions, only active when debugMode = true ====================== */
+/* ====================== Diagnostic Functions, only active when setupDebugMode = true ====================== */
 
 /**
  * Shows the name of features and their receiver configs
- */ 
+ */
 void IUFeatureConfigurator::exposeFeaturesAndReceivers()
 {
-  if (!debugMode)
-  {
-    return; // Inactive if not in debugMode
-  }
-  if (m_secondaryFeatureCount == 0)
-  {
-    debugPrint("No secondary feature");
-  }
-  else
-  {
-    for (int i = 0; i < m_secondaryFeatureCount; i++)
-    {
-      debugPrint(m_secondaryFeatures[i]->getName() + ": ");
-      m_secondaryFeatures[i]->exposeReceivers();
-      debugPrint("\n");
-    }
-  }
+  #ifdef DEBUGMODE
   if (m_featureCount == 0)
   {
-    debugPrint("No primary feature");
+    debugPrint("No feature");
   }
   else
   {
@@ -710,37 +655,26 @@ void IUFeatureConfigurator::exposeFeaturesAndReceivers()
       debugPrint("\n");
     }
   }
+  #endif
 }
 
 /**
  * Shows the name of features and their receiver configs
- */ 
+ */
 void IUFeatureConfigurator::exposeFeatureStates()
 {
-  if (!debugMode)
-  {
-    return; // Inactive if not in debugMode
-  }
-  if (m_secondaryFeatureCount > 0)
-  {
-    debugPrint("Secondary feature state:");
-  }
-  for (int i = 0; i < m_secondaryFeatureCount; i++)
-  {
-    debugPrint(m_secondaryFeatures[i]->getName() + " info: ");
-    m_secondaryFeatures[i]->exposeSourceConfig();
-    m_secondaryFeatures[i]->exposeCounterState();
-  }
+  #ifdef DEBUGMODE
   if (m_featureCount > 0)
   {
-    debugPrint("Primary feature state:");
+    debugPrint("Feature config and state:");
   }
   for (int i = 0; i < m_featureCount; i++)
   {
-    debugPrint(m_secondaryFeatures[i]->getName() + " info: ");
+    debugPrint(m_features[i]->getName() + " info: ");
     m_features[i]->exposeSourceConfig();
     m_features[i]->exposeCounterState();
   }
   debugPrint("\n");
+  #endif
 }
 

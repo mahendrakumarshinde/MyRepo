@@ -13,9 +13,6 @@
  * Static members of this class list possible feature names and their dependencies.
  * A configurator instance makes the link between user required configuration and
  * feature object instantiations, while handling dependencies.
- * User required features are considered main features (stored in m_features),
- * while dependencies features are considered secondary features (stored in
- * m_secondaryFeatures).
  *
  */
 class IUFeatureConfigurator
@@ -24,8 +21,7 @@ class IUFeatureConfigurator
     // Arrays have to be initialized with a fixed size,
     // so we chose max_size = max number of features per collections
     static const uint8_t maxFeatureCount = 10;
-    static const uint8_t maxSecondaryFeatureCount = 10;
-    static const uint8_t registeredCount = 14;
+    static const uint8_t registeredCount = 24;
     static const char nameSeparator = '-';
 
     struct Dependencies {
@@ -39,17 +35,10 @@ class IUFeatureConfigurator
       */
     };
 
-    struct FeatureSubConfig {
-      String className;
+    struct FeatureConfig {
+      char name[4];
       Dependencies sensorDep;  // Dependencies on sensors
       Dependencies featureDep; // Dependencies on other features
-    };
-
-    struct FeatureConfig {
-      String name;
-      String fullName;
-      FeatureSubConfig def;    // default subconfiguration
-      FeatureSubConfig alt;    // alternative subconfiguration
     };
 
     static FeatureConfig noConfig; // Handle no config found cases.
@@ -69,19 +58,16 @@ class IUFeatureConfigurator
     FeatureConfig getConfigFromName(String featureName);
     uint8_t getConfigFromName(String featureNames, FeatureConfig *configs);
     bool registerFeatureInFeatureDependencies(IUFeature *feature);
-    bool registerFeatureInSensor(IUFeature *feature, IUABCSensor **sensors, uint8_t sensorCount);
-    void registerAllFeaturesInSensor(IUABCSensor **sensors, uint8_t sensorCount);
-    int createWithDependencies(FeatureConfig config, uint8_t id, bool secondary = false);
+    bool registerFeatureInSensors(IUFeature *feature, IUABCSensor **sensors, uint8_t sensorCount);
+    void registerAllFeaturesInSensors(IUABCSensor **sensors, uint8_t sensorCount);
+    int createWithDependencies(FeatureConfig config, uint8_t id);
     bool requireConfiguration(String configBufffer);
     bool doStandardSetup();
     bool doPressSetup();
-    IUFeature* createFeature(FeatureConfig config, uint8_t id = 0, bool alternative = false);
-    IUFeature* createFeature(uint8_t configIdx, uint8_t id = 0, bool alternative = false);
-    IUFeature* createFeature(String name, uint8_t id = 0, bool alternative = false);
+    IUFeature* createFeature(FeatureConfig config, uint8_t id = 0);
     IUFeature* getFeature(uint8_t index) {return m_features[index]; }
-    IUFeature* getSecondaryFeature(uint8_t index) {return m_secondaryFeatures[index]; }
-    IUFeature* getFeatureByName(String name);
-    bool addFeature(IUFeature *feature, bool secondary = false);
+    IUFeature* getFeatureByName(char *name);
+    bool addFeature(IUFeature *feature);
     void computeAndSendToReceivers();
     void resetFeaturesCounters();
     operationState getOperationStateFromFeatures();
@@ -93,9 +79,7 @@ class IUFeatureConfigurator
 
   protected:
     uint8_t m_featureCount; // Dynamic
-    uint8_t m_secondaryFeatureCount; // Dynamic
     IUFeature *m_features[maxFeatureCount];
-    IUFeature *m_secondaryFeatures[maxFeatureCount];
 };
 
 #endif // IUFEATURECONFIGURATOR_H

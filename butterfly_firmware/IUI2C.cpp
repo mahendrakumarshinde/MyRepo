@@ -1,25 +1,34 @@
 #include "IUI2C.h"
 
-IUI2C::IUI2C() : IUInterface(), m_readFlag(true), m_silent(false), m_wireBuffer("")
+IUI2C::IUI2C() :
+  IUABCInterface(),
+  m_readFlag(true),
+  m_silent(false),
+  m_wireBuffer("")
 {
-  resetErrorMessage();
+  Wire.begin(TWI_PINS_20_21); // set master mode on pins 21/20
+  setClockRate(defaultClockRate);
+  m_baudRate = IUI2C::defaultBaudRate;
+  port->begin(m_baudRate);
+  delay(4000);
+  int intPin   =   7; 
+  pinMode(intPin,  INPUT);
 }
 
 /**
- * Activate and setup I2C
- * Setup for Master mode, pins 18/19, external pullups, 400kHz for Teensy 3.1
+ * Set the I2C frequency
+ * This includes a delay.
  */
-void IUI2C::activate(long clockFreq, long baudrate)
+void IUI2C::setClockRate( uint32_t clockRate)
 {
-  Wire.begin(TWI_PINS_20_21); // set master mode on pins 21/20
-  Wire.setClock(clockFreq); // I2C frequency at 400 kHz 400000
-  port->begin(baudrate);
-  delay(4000);
+  m_clockRate = clockRate;
+  Wire.setClock(m_clockRate);
+  delay(2000);
 }
 
 void IUI2C::activate()
 {
-  activate(defaultClockRate, defaultBaudRate);
+  // Nothing to do
 }
 
 /**
@@ -47,7 +56,7 @@ bool IUI2C::scanDevices()
         port->print("I2C device found at address 0x");
         if (address < 16) { port->print("0"); }
         port->print(address, HEX);
-        port->println("  !");
+        port->println(" !");
       }
       nDevices++;
     }
@@ -96,7 +105,10 @@ bool IUI2C::checkComponentWhoAmI(String componentName, uint8_t address, uint8_t 
   return true;
 }
 
-// I2C read/write functions
+/* ========================= I2C read/write functions ========================= */
+//Speed should be around 100kB/s
+
+
 /**
  * Write a byte to given address and sub-address
  */
@@ -106,6 +118,20 @@ void IUI2C::writeByte(uint8_t address, uint8_t subAddress, uint8_t data)
   temp[0] = subAddress;
   temp[1] = data;
   Wire.transfer(address, &temp[0], 2, NULL, 0);
+}
+
+/**
+ * Write a byte to given address and sub-address
+ */
+void IUI2C::writeByte(uint8_t address, uint8_t subAddress, uint8_t data, void(*callback)(uint8_t wireStatus))
+{
+  uint8_t temp[2];
+  temp[0] = subAddress;
+  temp[1] = data;
+  if (!Wire.transfer(address, &temp[0], 2, NULL, 0, true, callback))
+  {
+    if (debugMode) { debugPrint(F("Wire.transfer with callback failed")); } 
+  }
 }
 
 /**
@@ -130,6 +156,22 @@ uint8_t IUI2C::readByte(uint8_t address, uint8_t subAddress)
 }
 
 /**
+ * Read a single byte and return it
+ * @param address where to read the byte from
+ * @param subAddress where to read the byte from
+ */
+uint8_t IUI2C::readByte(uint8_t address, uint8_t subAddress, void(*callback)(uint8_t wireStatus))
+{
+  uint8_t temp[1];
+  if (!Wire.transfer(address, &subAddress, 1, &temp[0], 1, true, callback))
+  {
+    if (debugMode) { debugPrint(F("Wire.transfer with callback failed")); } 
+    return 0;
+  }
+  return temp[0];
+}
+
+/**
  * Read several bytes and store them in destination array
  * @param address where to read the byte from
  * @param subAddress where to read the byte from
@@ -149,6 +191,25 @@ void IUI2C::readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_
         port->print("Error Code:");
         port->println(m_readError);
       }
+    }
+    m_readFlag = true;
+  }
+}
+
+/**
+ * Read several bytes and store them in destination array
+ * @param address where to read the byte from
+ * @param subAddress where to read the byte from
+ * @param the number of byte to read
+ */
+void IUI2C::readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_t *destination, void(*callback)(uint8_t wireStatus))
+{
+  if (m_readFlag) // To restrain multiple simultoneous read accesses to I2C bus
+  {
+    m_readFlag = false;
+    if (!Wire.transfer(address, &subAddress, 1, destination, count, true, callback))
+    {
+      if (debugMode) { debugPrint(F("Wire.transfer with callback failed")); } 
     }
     m_readFlag = true;
   }
@@ -203,7 +264,7 @@ bool IUI2C::checkIfStartCollection()
  */
 bool IUI2C::checkIfEndCollection()
 {
-  // Check the received info; iff data collection request, change the mode
+  // Check the received info; if data collection request, change the mode
   if (m_wireBuffer == END_COLLECTION)
   {
     port->print(END_CONFIRM);

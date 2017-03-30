@@ -14,23 +14,15 @@
 class IUSensorConfigurator
 {
   public:
-    struct sensorConfig {
-      char sensorType;
-      String className;
-      uint16_t samplingRate;
-    };
-    static const uint8_t defaultSensorCount = 5;
-    static sensorConfig noSensor;                             // Handles no sensor found
-    static sensorConfig defaultSensorConfigs[defaultSensorCount];
+    static const uint8_t sensorCount = 5;
+    // Sensors are ordered: battery, led, BMX055, BMP280, Sound
+    static uint16_t defaultSamplingRates[sensorCount];
     // Constructors, destructors, getters and setters
     IUSensorConfigurator();
     IUSensorConfigurator(IUI2C *iuI2C);
     virtual ~IUSensorConfigurator();
-    IUABCSensor* getSensorFromType(char sensorType);
-    uint8_t getSensorCount() { return m_sensorCount; }
     IUABCSensor** getSensors() { return m_sensors; }
     // Methods
-    bool addSensor(sensorConfig sconfig);
     bool createAllSensorsWithDefaultConfig();
     void wakeUpSensors();
     void acquireDataAndSendToReceivers();
@@ -45,11 +37,9 @@ class IUSensorConfigurator
     IUBMP280  *iuBMP280;
     IUI2S     *iuI2S;
 
-
   protected:
     IUI2C *m_iuI2C;
-    IUABCSensor *m_sensors[defaultSensorCount];
-    uint8_t m_sensorCount;
+    IUABCSensor *m_sensors[sensorCount];
 
 };
 

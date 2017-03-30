@@ -1,63 +1,81 @@
 # IDE Firmware
 
+
 ##Modularization
 From this version on, the firmware has been separated into C++ libraries, each library handling a specific component or functionality. The objective is to be able to develop a working Arduino Skectch for any hardware configuration with minimal effort, by including the libraries corresponding to the components.
-Similarly, if existing hardware evolves (some components change), it should be easy to make the firmware evolve by updating the list of included libraries.
+Similarly, if existing hardware evolves (eg: a component changes), it should be easy to make the firmware evolve by updating the list of included libraries.
 Also, the development of a library for a new component (or the modification of an existing one) should be fairly easy since it requires minimal interaction with other libraries.
+
 
 ##Current libraries
 We distinguish 4 types of libraries:
 1. Logical libraries: are prefixed with "IU" followed by the logical functionnality it is handling
 *eg: IUConfiguration.h, IUUtilities"
-2. Computer Bus (I2C) libraries: are named the same as the board, with the prefix IUI2C 
-*eg: IUI2CTeensy.h, IUI2CButterfly.h*
-3. Sensor libraries: are named the same as the component itself, prefixed by “IU”. Components can be sensors or connectivity related (eg: bluetooth or wifi) devices.
+2. Interface libraries: are prefixed with IU, followed by the name of the interface they are implementing, or the name of the component they are using. 
+eg: IUI2C, IUBMD350
+Note that the I2C library is a bit particular, because it is an interface between the user and the board, but also between all the components of the board. It must be instanciated first, and a pointer to it need to be passed to each instance of each component.
+3. Sensor libraries: are named the same as the component itself, prefixed by “IU”.
 *eg: IUMPU9250.h or IUBMX055.h are 2 libraries for 2 different components. They both are accelerometer + gyroscope + mag combos.*
-4. Executor library: there are 3 of them - IUSensorConfigurator, IUFeatureConfigurator and IUConductor
+4. Configurator and executor libraries: there are 3 of them - IUSensorConfigurator, IUFeatureConfigurator and IUConductor
 
 Existing librairies are:
 - Logical libraries:
-  - IUUtilities
-  - IUABCProducer
   - IUABCFeature
+  - IUABCInterface
+  - IUABCProducer
   - IUABCSensor
-  - IUInterface
   - IUFeature
-- I2C libraries:
-  - IUI2CTeensy
-  - IUI2CButterfly
-- Connectivity component libraries:
+  - IUUtilities
+- Interface libraries:
+  - IUI2C (the current one is developped for the Butterfly board specifically)
+  - IUI2CTeensy (only for Teensy firmware version)
   - IUMD350: Bluetooth Low Energy
   - IUESP8285: Wifi
-- Functionnal component libraries:
+- Sensors libraries:
   - IUBattery: Battery 
   - IUBMP280: Temperature + Pression sensor
   - IUBMX055: Accelerometer + Gyroscope + Magnetometer
   - IUI2S: Microphone
-  - IUMPU9250: Accelerometer + Gyroscope + Magnetometer
   - IURGBLed: RGB led with 7 color display (+ off)
-- Executor 
+  - IUMPU9250: Accelerometer + Gyroscope + Magnetometer for the Teensy  (only for Teensy firmware version)
+- Configurators and Conductor
+  - IUSensorConfigurator
+  - IUFeatureconfigurator 
+  - Conductor
 
-Functionnal components can be interpreted as endpoints, while connectivity components or I2C are intermediates. Intermediates and endpoints are of course inter-dependent. In this implementation, we choose to include the connectivity component and I2C in the functionnal component classes because it allows to adjust how each functionnal component uses connectivity without having to modify the connectivity classes themselves.
+IUI2C is a class wrapping a lot of functionnalities that make use of the I2C (Inter-Integrated Circuit) protocol of the board. All other hardware related classes (basically all the classes except the logical libraries) have a pointer to it. 
+Sensors can be interpreted as endpoints that acquire data. Endpoints make use of interfaces to send / receive data to / from the user.
+
 
 ##Dependency
 Note that libraries can depend on other libraries. The general logic is as follow:
-- logical libraries:
+1. Logical libraries:
   - can be included in any other library
   - should only include other logical libraries
-- I2C libraries:
-  - can be included in component libraries (both connectivity and functionnal components)
-  - should only include logical libraries
-- connectivity component libraries:
-  - Can be included in functionnal component libraries
-  - Should include any library except the functionnal component libraries
-- functionnal component component libraries:
-  - should never be included in other library
-  - Should include any library except the other functionnal component libraries
+2. Interface libraries:
+  - can be included in component libraries (note that I2C needs to be included in BLE and WiFi libraries, since those are components)
+  - should only include logical libraries or I2C
+3. Sensor libraries:
+  - can be included only in Configurator or Conductor libraries.
+  - Should include logical or interface libraries
+4. Configurators and Conductor:
+  - shouldn't be included in any other library.
+  - can include all the other libraries (and the excutor includes the configurators)
+
 
 ##Library caracteristics
 ### Logical libraries
 The formalization for these libraries is quite free. It can be a class or a set of constants or functions.
+As of today, logical libraries regroup the following functionnality:
+- Template classes for Interfaces and Sensors
+- Classes for data Producers, and Features (which are both data producers and consumers).
+
+In short, the logical libraries mainly implement the data pipeline within the firmware.
+1. Sensors are Producers subclasses: they acquire data, and then pass it down to their data consumers.
+2. Features are both data consumers and producers. They take data from a producer, and use it to produce new data.
+3. Since Features are both producers and consummers, they can be chained to perform advanced data transformation.
+4. Features also implements streaming function, to send data over USB Serial, BLE or WiFi.
+
 ### I2C Libraries
 An I2C library contains a single class that has to handle at least the following:
 - hold its own hardware related configuration constants
@@ -67,29 +85,32 @@ An I2C library contains a single class that has to handle at least the following
 - detect each components present on the board
 - have a port (usually Serial) and reading and writing through it
 - handle port read / write errors
-### Connectivity component libraries
-A connectivity library contains a single class that has at least the following functionnalities:
+
+### Other interface libraries
+Interface libraries contain a single class that has at least the following functionnalities:
 - hold its own hardware related configuration constants
 - be able to hold and update its configuration variables
-- have as I2C instance
+- have a pointer to an I2C instance
 - have the ability to self-activate / self-configure / self-initialize (by using the I2C instance)
 - have a port to read / write (eg: over bluetooth, wifi, etc)
 - handle read / write errors
-- **optionnal**: BLE component and BLE library currently handle timestamping
-## Functionnal component libraries
-A functionnal component library contains a single class that has at least the following functionnalities:
+- **optionnal**: BLE component and BLE library currently handle time synchronisation with the hub.
+
+### Sensor libraries
+A Sensor library contains a single class that has at least the following functionnalities:
 - hold its own hardware related configuration constants
 - be able to hold and update its configuration variables
-- have an I2C instance
-- have one or several connectivity component(s) (eg: one for bluetooth, one for wifi, etc)
+- have a pointer to an I2C instance
 - have the ability to self-activate / self-configure / self-initialize (by using the I2C instance)
 - serve its purpose (eg: measure something in the case of a sensor, blink in the case of the LED, etc)
-- post-process its own data (eg: compute total acceleration energy for the accelerometer) *- For this, one can leverage a logical library*
-- send data through I2C port and through the port of each one of its connectivity components
+- send data through a given port
 
-##The role of the Sketch (*.ino file)
-In IU IDE Firmware, the role of the sketch is to orchestrate how all the components work together. This includes:
-- Before setup:
+###Configurators and conductor
+In IU IDE Firmware, the role of the conductor is to orchestrate (hence the name) how all the components work together. This includes:
+- Instantiates the interfaces
+- Instantiates the configurators for sensors and features.
+- Instantiates the features
+- 
   - Instantiating an I2C object
   - Instantiating each component class
   - Define all possible measure functions (by leveraging each component) and create an array of pointers to them. (+ use hashMap to name them?)
@@ -103,10 +124,28 @@ In IU IDE Firmware, the role of the sketch is to orchestrate how all the compone
 - During loop:
   - Handle recurring events
   - Handle timed events
-  - Handle instructions received over the I2C port or any of the connectivity device
+  - Handle instructions received over the I2C port or any of the other interfaces
   - Handle states, modes and configuration updates
 
-##Sensibility and scale of components and number format
+###The role of the Sketch (*.ino file)
+Since all of the functionnalities are handled in IU libraries, the Sketch should only instanciate the Conductor and calls its functions in either the setup on main functions.
+
+##Component Specifications
+
+Current board include the following components:
+- Butterfly board, with STM32L433C microprocessor
+- BMD350: Bluetooth low energy
+- ESP8285: WiFi
+- BMX055: Accelerometer, Gyroscope, Magnetometer combo
+- BMP280: Temperature and Pressure sensor combo
+- CAM-M8Q: Geolocation device (GPS, Galileo, GLONASS, BeiDou)
+- ICS43432: Sound sensor, with I2S protocol
+
+Reference can be found in respective datasheet. Some usefull info are summarized below:
+
+###Butterfly board
+The Butterfly is a board developped by Tlera Corp (Kris Winer and his associate Thomas Roell). See comments [here](https://www.tindie.com/products/TleraCorp/butterfly-stm32l433-development-board/)
+It requires to install custom board libraries (via the board manager in the Arduino IDE). Download .zip from [Thomas Roell GitHub](https://github.com/GrumpyOldPizza/arduino-STM32L4).
 
 ###Sensor output format
 Since we do computations using CMSIS arm_math library that handles q15_t numbers, it is convenient to store sensor output as q15_t numbers. Basically, it means that we convert every sensor output to a 16bit long format, either by droping the lest significant bits (>>) or by adding some that are equal to 0 (cast to int16_t then move bits to the left (<<)).
@@ -114,8 +153,28 @@ Since we do computations using CMSIS arm_math library that handles q15_t numbers
 Special attention should be paid to format conversion, especially when handling variables (there is no compiler error or warning when casting a float to q15_t or vice versa).
 **Reminder**
 q15 are 15-fractional-bit number in binary. Check out conversion method here: https://en.wikipedia.org/wiki/Q_(number_format)#Conversion
+sensor sensibility and scale (before we convert the outputs to q15_t) are listed below.
 
-Below are listed sensors and there sensibility and scale (before we convert the outputs to q15_t).
+###BMD350
+The chip has marking on it, in the form ABXXXXXX. 'AB' is the firmware version (see datasheet for more details), and the X's are the 6 last hex digit of the MAC address. The Mac address is then 94:54:93:XX:XX:XX. The MAC address is also stored on the chip memory and is available as long as there is no full memory erase (see datasheet).
+Every beacon info can be configured, including the device name, UUID, major and minor numbers, advertissement info and rate, etc. Beacon configurations are retained even when the device is powered off.
+
+You should read both BMD350 and BMDWare datasheets.
+
+BMD350 has 2 modes that we use:
+- a configuration mode named "AT Command Interface", that allows to interact with the BMDWare via I2C and the Serial port to configure the device. This include Beacon configuration and UART configuration.
+- UART Pass-Through mode, that we use to stream data over bluetooth. We send data to the BLE module via Serial, and these data are automatically sent over bluetooth.
+Note that UART Pass-Through mode has to be configured using the AT Mode, but that AT Mode actually have to be exited for UART Pass-Through to work.
+
+Download the app "Rigado Toolbox" to get access to some usefull info and functionnalities.
+- UUID
+- MAC Address = Serial Number. It is always in the form 94:54:93:XX:XX:XX. As said earlier, the last 6 hex digits are also available on the chip markings.
+- If you have configured the chip in UART pass-through mode, you can use the test console of the app to send / receive info from device
+
+###ESP8285
+The ESP8285 is basically an ESP8266 with additionnal SPI flash memory. See comments [here](https://www.tindie.com/products/onehorse/esp8285-development-board/).
+It requires the [ESP8266 library](https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WiFi). Download it and install it using the Arduino IDE library manager.
+NB: You'll have to download the whole repo (which is for the independent ESP8266 board). Download it but just use the ESP8266WiFi library.
 
 ###MPU9250: accelerometer, gyroscope and magnetometer
 - Signed, MSB first
@@ -152,10 +211,5 @@ NB: -26dB is the sine peak. The RMS level is -29dBFS (RMS is 3dB below for a 1KH
 BMP280 documentation specifies its own formula to access temperature and pressure. See BMP280 datasheet at section *3.11.3 Compensation formula* p22 and at section *8.2 Compensation formula in 32 bit fixed point* p45-46.
 Documentation also states that both pressure and temperature values are expected to be received in 20 bit format, positive, stored in a 32 bit signed integer.
 An example of algorith is available p23, otherwise "This algorithm is available to customers as reference C source code (“ BMP28x_ API”) from Bosch Sensortec and via its sales and distribution partners."
-
-
-
-
-
 
 

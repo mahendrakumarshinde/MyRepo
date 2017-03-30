@@ -20,13 +20,14 @@
 
 #include <Arduino.h>
 #include "Wire.h"
-#include "IUInterface.h"
+#include "IUUtilities.h"
+#include "IUABCInterface.h"
 
 
 /**
  *
  */
-class IUI2C : public IUInterface
+class IUI2C : public IUABCInterface
 {
   public:
     // Data collection Mode - Modes of Operation String Constants
@@ -40,6 +41,9 @@ class IUI2C : public IUInterface
     // Constructors, getters and setters
     IUI2C();
     virtual ~IUI2C() {}
+    virtual HardwareSerial* getPort() { return port; }
+    void setClockRate( uint32_t clockRate);
+    uint32_t getClockRate() { return m_clockRate; }
     byte getReadError() { return m_readError; }
     bool getReadFlag() { return m_readFlag; }
     void setReadFlag(bool val) { m_readFlag = val; }
@@ -53,21 +57,26 @@ class IUI2C : public IUInterface
     void resetReadError() { m_readError = 0; }
     void resetBuffer();
     String getBuffer() { return m_wireBuffer; }
-
-    void activate(long clockFreq, long baudrate);
+    // Methods
     void activate();
     bool scanDevices();
     bool checkComponentWhoAmI(String componentName, uint8_t address, uint8_t whoAmI, uint8_t iShouldBe);
-    void writeByte(uint8_t address, uint8_t subAddress, uint8_t data);
-    uint8_t readByte(uint8_t address, uint8_t subAddress);
-    void readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_t *destination);
     bool checkIfStartCollection();
     bool checkIfEndCollection();
     void updateBuffer();
     void printBuffer();
+    // I2C read / write methods
+    void writeByte(uint8_t address, uint8_t subAddress, uint8_t data);
+    void writeByte(uint8_t address, uint8_t subAddress, uint8_t data, void(*callback)(uint8_t wireStatus));
+    uint8_t readByte(uint8_t address, uint8_t subAddress);
+    uint8_t readByte(uint8_t address, uint8_t subAddress, void(*callback)(uint8_t wireStatus));
+    void readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_t *destination);
+    void readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_t *destination, void(*callback)(uint8_t wireStatus));
+    
 
-  private:
+  protected:
     // Error Handling variables
+    uint32_t m_clockRate;
     bool m_readFlag;
     bool m_silent;
     String m_wireBuffer;

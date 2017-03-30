@@ -36,6 +36,8 @@
 		</Compiler>
 		<Unit filename="IUABCFeature.cpp" />
 		<Unit filename="IUABCFeature.h" />
+		<Unit filename="IUABCInterface.cpp" />
+		<Unit filename="IUABCInterface.h" />
 		<Unit filename="IUABCProducer.cpp" />
 		<Unit filename="IUABCProducer.h" />
 		<Unit filename="IUABCSensor.cpp" />
@@ -63,8 +65,6 @@
 		<Unit filename="IUI2C.h" />
 		<Unit filename="IUI2S.cpp" />
 		<Unit filename="IUI2S.h" />
-		<Unit filename="IUInterface.cpp" />
-		<Unit filename="IUInterface.h" />
 		<Unit filename="IURGBLed.cpp" />
 		<Unit filename="IURGBLed.h" />
 		<Unit filename="IUSensorConfigurator.cpp" />

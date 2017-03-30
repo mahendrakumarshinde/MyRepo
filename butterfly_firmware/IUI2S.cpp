@@ -54,7 +54,7 @@ void IUI2S::wakeUp()
 {
   if (!m_iuI2C->isSilent())
   {
-    m_iuI2C->port->println( "Initialized I2S and ICS43432" );
+    m_iuI2C->port->println("Initialized I2S and ICS43432\n");
   }
 }
 
@@ -70,7 +70,6 @@ void IUI2S::processAudioData(q31_t *data)
     // only keep 1 record every 2 records because stereo recording but we use only 1 canal
     m_audioData[i * 2] = (q15_t) (data[i] >> 16);
   }
-  m_newData = true;
 }
 
 /**
@@ -83,18 +82,14 @@ void IUI2S::readData()
   if (readBitCount)
   {
     processAudioData((q31_t*) m_rawAudioData);
+    m_newData = true;
   }
 }
 
 bool IUI2S::acquireData()
 {
   readData();
-  if (m_newData)
-  {
-    m_newData = false;
-    return true;
-  }
-  return false;
+  return m_newData;
 }
 
 /**
@@ -102,17 +97,22 @@ bool IUI2S::acquireData()
  */
 void IUI2S::sendToReceivers()
 {
+  if (!m_newData)
+  {
+    return;
+  }
   for (int i = 0; i < m_receiverCount; i++)
   {
-    if (m_receivers[i] && m_toSend[i] == dataSendOption::sound)
+    if (m_receivers[i] && m_toSend[i] == (uint8_t) dataSendOption::sound)
     {
       int sampleCount = audioSampleSize / m_downclocking;
       for (int j = 0; j < sampleCount; j++)
       {
-        m_receivers[i]->receive(m_receiverSourceIndex[i], m_audioData[j]);
+        m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], m_audioData[j]);
       }
     }
   }
+  m_newData = false;
 }
 
 /**

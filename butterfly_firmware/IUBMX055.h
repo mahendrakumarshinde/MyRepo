@@ -52,23 +52,14 @@ class IUBMX055 : public IUABCSensor
     static const uint8_t ACC_OFC_OFFSET_X     = 0x38;
     static const uint8_t ACC_OFC_OFFSET_Y     = 0x39;
     static const uint8_t ACC_OFC_OFFSET_Z     = 0x3A;
-    static const uint8_t ACC_TRIM_GPO         = 0x3B;
-    static const uint8_t ACC_TRIM_GP1         = 0x3C;
     static const uint8_t ACC_D_X_LSB          = 0x02;
-    static const uint8_t ACC_D_X_MSB          = 0x03;
     static const uint8_t ACC_D_Y_LSB          = 0x04;
-    static const uint8_t ACC_D_Y_MSB          = 0x05;
     static const uint8_t ACC_D_Z_LSB          = 0x06;
-    static const uint8_t ACC_D_Z_MSB          = 0x07;
     static const uint8_t ACC_PMU_RANGE        = 0x0F;
     static const uint8_t ACC_PMU_BW           = 0x10;
     static const uint8_t ACC_D_HBW            = 0x13;
-    static const uint8_t ACC_INT_EN_0         = 0x16;
     static const uint8_t ACC_INT_EN_1         = 0x17;
-    static const uint8_t ACC_INT_EN_2         = 0x18;
-    static const uint8_t ACC_INT_MAP_0        = 0x19;
     static const uint8_t ACC_INT_MAP_1        = 0x1A;
-    static const uint8_t ACC_INT_MAP_2        = 0x1B;
     static const uint8_t ACC_INT_OUT_CTRL     = 0x20;
     static const uint8_t ACC_BGW_SOFTRESET    = 0x14;
     static const uint8_t ACC_INT_PIN          = 7;
@@ -128,7 +119,7 @@ class IUBMX055 : public IUABCSensor
                          MODR_25Hz,                    // 25 Hz ODR
                          MODR_30Hz};                   // 30 Hz ODR
     enum magMode : uint8_t {lowPower,                  // rms noise ~1.0 microTesla, 0.17 mA power
-                            Regular,                   // rms noise ~0.6 microTesla, 0.5 mA power
+                            regular,                   // rms noise ~0.6 microTesla, 0.5 mA power
                             enhancedRegular,           // rms noise ~0.5 microTesla, 0.8 mA power
                             highAccuracy};             // rms noise ~0.3 microTesla, 4.9 mA power
 
@@ -150,18 +141,20 @@ class IUBMX055 : public IUABCSensor
     virtual ~IUBMX055() {}
     virtual uint8_t getSensorTypeCount() { return sensorTypeCount; }
     virtual char getSensorType(uint8_t index) { return sensorTypes[index]; }
+    bool isNewData() {return m_newData; }
     void setAccelScale(accelScaleOption scale);
     void resetAccelScale() { setAccelScale(defaultAccelScale); }
     void setAccelBandwidth(accelBandwidthOption bandwidth);
+    q15_t getAccelData(uint8_t index) { return m_accelData[index]; }
     void useFilteredData(accelBandwidthOption bandwidth);
     void useUnfilteredData();
-    void softReset();
+    void accSoftReset();
     // Methods
     virtual void wakeUp();
     void initSensor();
     void configureAccelerometer();
     void configureGyroscope();
-    void configureMagnometer();
+    void configureMagnometer(magMode mMode);
     void computeAccelResolution();
     bool checkAccelerometerWhoAmI();
     bool checkGyroscopeWhoAmI();
@@ -180,14 +173,17 @@ class IUBMX055 : public IUABCSensor
 
 
   protected:
-    IUI2C *m_iuI2C;
+    static IUI2C *m_iuI2C;
+    bool m_newData;
     // Accelerometer:
-    q15_t m_rawAccel[3];                    // Stores the q15_t accelerometer sensor raw output
-    q15_t m_accelData[3];                   // Stores the q15_t acceleration data (with resolution and bias) in G
-    q15_t m_accelBias[3];                   // Bias corrections
-    float m_accelResolution;                // Resolution
-    accelScaleOption m_accelScale;          // Scale
-    accelBandwidthOption m_accelBandwidth;  // Bandwidth
+    static uint8_t m_rawAccelBytes[6];
+    static q15_t m_rawAccel[3];                       // Stores the q15_t accelerometer sensor raw output
+    static q15_t m_accelData[3];                      // Stores the q15_t acceleration data (with resolution and bias) in G
+    static q15_t m_accelBias[3];                      // Bias corrections
+    static float m_accelResolution;                   // Resolution
+    static void processAccelData(uint8_t wireStatus);
+    accelScaleOption m_accelScale;                    // Scale
+    accelBandwidthOption m_accelBandwidth;            // Bandwidth
     bool m_filteredData;
 
     /*

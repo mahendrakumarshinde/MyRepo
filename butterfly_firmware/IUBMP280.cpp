@@ -1,5 +1,14 @@
 #include "IUBMP280.h"
 
+IUI2C* IUBMP280::m_iuI2C = NULL;
+uint8_t IUBMP280::m_rawTempBytes[3]; // 20-bit temperature register data stored here
+int32_t IUBMP280::m_fineTemperature = 0;
+int16_t IUBMP280::m_digTemperature[3] = {0, 0, 0};
+int16_t IUBMP280::m_temperature = 0;
+uint8_t IUBMP280::m_rawPressureBytes[3] = {0, 0, 0};
+int16_t IUBMP280::m_digPressure[9]= {0, 0, 0, 0, 0, 0, 0, 0, 0};
+int16_t IUBMP280::m_pressure = 0;
+
 char IUBMP280::sensorTypes[IUBMP280::sensorTypeCount] =
 {
   IUABCSensor::sensorType_thermometer,
@@ -8,14 +17,14 @@ char IUBMP280::sensorTypes[IUBMP280::sensorTypeCount] =
 
 IUBMP280::IUBMP280(IUI2C *iuI2C) :
   IUABCSensor(),
-  m_iuI2C(iuI2C),
+  m_newData(false),
   m_posr(defaultPosr),
   m_tosr(defaultTosr),
   m_iirFilter(defaultIIRFilter),
   m_mode(defaultMode),
   m_sby(defaultSBy)
 {
-  // ctor
+  m_iuI2C = iuI2C;
 }
 
 void IUBMP280::setOptions(IUBMP280::posrOptions posr,
@@ -86,31 +95,25 @@ void IUBMP280::wakeUp()
  * @return the temperature in Celsius degree
  * Note: if there is a read error, return previous temperature estimation
  */
-float IUBMP280::readTemperature() // Index 4
+void IUBMP280::readTemperature() // Index 4
 {
-  int32_t rawTemp = readRawTemperature();
-  if (!(m_iuI2C->isReadError()))
-  {
-    m_temperature = compensateTemperature(rawTemp);
-  }
-  return m_temperature;
+  m_iuI2C->readBytes(ADDRESS, TEMP_MSB, 3, &m_rawTempBytes[0], processTemperatureData);
 }
 
 /**
- * Return the raw temperature reading
+ * Process a raw Temperature reading (to be passed as callbak of Pressure reading via wire.transfer)
  */
-int32_t IUBMP280::readRawTemperature()
+void IUBMP280::processTemperatureData(uint8_t wireStatus)
 {
-  uint8_t rawData[3];  // 20-bit temperature register data stored here
-  m_iuI2C->readBytes(ADDRESS, TEMP_MSB, 3, &rawData[0]);
   if (m_iuI2C->isReadError())
   {
-    m_iuI2C->port->println("Skip temperature read");
+    m_iuI2C->port->print("Skip temperature read: ");
     m_iuI2C->port->println(m_iuI2C->getReadError(), HEX);
     m_iuI2C->resetReadError();
-    return 0;
+    return;
   }
-  return (int32_t) (((int32_t) rawData[0] << 16 | (int32_t) rawData[1] << 8 | rawData[2]) >> 4);
+  int32_t rawTemp = (int32_t) (((int32_t) m_rawTempBytes[0] << 16 | (int32_t) m_rawTempBytes[1] << 8 | m_rawTempBytes[2]) >> 4);
+  m_temperature = compensateTemperature(rawTemp);
 }
 
 /**
@@ -138,36 +141,30 @@ float IUBMP280::compensateTemperature(int32_t rawT)
  * @return the pressure in Pascal (Pa)
  * Note: if there is a read error, return previous pressure reading
  */
-float IUBMP280::readPressure() // Index 4
+void IUBMP280::readPressure() // Index 4
 {
-  int32_t rawP = readRawPressure();
-  if (!(m_iuI2C->isReadError()))
-  {
-    m_pressure = (float) compensatePressure(rawP) / 100.;
-  }
-  return m_pressure;
+  m_iuI2C->readBytes(ADDRESS, PRESS_MSB, 3, &m_rawPressureBytes[0], processPressureData);
 }
 
 /**
- * Return the raw pressure reading
+ * Process a raw Pressure reading (to be passed as callbak of Pressure reading via wire.transfer)
  */
-int32_t IUBMP280::readRawPressure()
+void IUBMP280::processPressureData(uint8_t wireStatus)
 {
-  uint8_t rawData[3];  // 20-bit pressure register data stored here
-  m_iuI2C->readBytes(ADDRESS, PRESS_MSB, 3, &rawData[0]);
   if (m_iuI2C->isReadError())
   {
-    m_iuI2C->port->println("Skip temperature read");
+    m_iuI2C->port->println("Skip Pressuure read");
     m_iuI2C->port->println(m_iuI2C->getReadError(), HEX);
     m_iuI2C->resetReadError();
-    return 0;
+    return;
   }
-  return (int32_t) (((int32_t) rawData[0] << 16 | (int32_t) rawData[1] << 8 | rawData[2]) >> 4);
+  int32_t rawP = (int32_t) (((int32_t) m_rawPressureBytes[0] << 16 | (int32_t) m_rawPressureBytes[1] << 8 | m_rawPressureBytes[2]) >> 4);
+  m_pressure = (float) compensatePressure(rawP) / 100.;
 }
 
 /**
- * Return
- * @param rawPT raw pressure as output by readRawPressure
+ * Return the compensated Pressure
+ * @param rawP raw pressure as output by readRawPressure
  */
 float IUBMP280::compensatePressure(int32_t rawP)
 {
@@ -197,6 +194,7 @@ void IUBMP280::readData()
 {
   readTemperature();
   readPressure();
+  m_newData = true;
 }
 
 /**
@@ -204,23 +202,28 @@ void IUBMP280::readData()
  */
 void IUBMP280::sendToReceivers()
 {
+  if (!m_newData)
+  {
+    return;
+  }
   for (int i = 0; i < m_receiverCount; i++)
   {
     if (m_receivers[i])
     {
       switch(m_toSend[i])
       {
-        case dataSendOption::temperature:
-          m_receivers[i]->receive(m_receiverSourceIndex[i], m_temperature);
+        case (uint8_t) dataSendOption::temperature:
+          m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], m_temperature);
           break;
-        case dataSendOption::pressure:
-          m_receivers[i]->receive(m_receiverSourceIndex[i], m_pressure);
+        case (uint8_t) dataSendOption::pressure:
+          m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], m_pressure);
           break;
         default:
           break;
       }
     }
   }
+  m_newData = false;
 }
 
 /**

@@ -28,11 +28,7 @@ class IUBMP280 : public IUABCSensor
     /*===== DEVICE CONFIGURATION AND CONSTANTS =======*/
     static const uint8_t WHO_AM_I           = 0xD0;
     static const uint8_t WHO_AM_I_ANSWER    = 0x58; // should be 0x58
-    static const uint8_t TEMP_XLSB          = 0xFC;
-    static const uint8_t TEMP_LSB           = 0xFB;
     static const uint8_t TEMP_MSB           = 0xFA;
-    static const uint8_t PRESS_XLSB         = 0xF9;
-    static const uint8_t PRESS_LSB          = 0xF8;
     static const uint8_t PRESS_MSB          = 0xF7;
     static const uint8_t CONFIG             = 0xF5;
     static const uint8_t CTRL_MEAS          = 0xF4;
@@ -41,10 +37,18 @@ class IUBMP280 : public IUABCSensor
     static const uint8_t CALIB00            = 0x88;
     static const uint8_t ADDRESS            = 0x76; // Address of BMP280 altimeter
     //SDO = GND  0x77 if SDO = VCC
-    enum posrOptions : uint8_t {P_OSR_00 = 0, /*no op*/ P_OSR_01, P_OSR_02,
-                                P_OSR_04, P_OSR_08, P_OSR_16};
-    enum tosrOptions : uint8_t {T_OSR_00 = 0,  /*no op*/ T_OSR_01, T_OSR_02,
-                                T_OSR_04, T_OSR_08, T_OSR_16};
+    enum posrOptions : uint8_t {P_OSR_00 = 0, /*no op*/
+                                P_OSR_01,
+                                P_OSR_02,
+                                P_OSR_04,
+                                P_OSR_08,
+                                P_OSR_16};
+    enum tosrOptions : uint8_t {T_OSR_00 = 0,  /*no op*/
+                                T_OSR_01,
+                                T_OSR_02,
+                                T_OSR_04,
+                                T_OSR_08,
+                                T_OSR_16};
     enum IIRFilterOptions : uint8_t {full = 0,  // bandwidth at full sample rate
                                      BW0_223ODR,
                                      BW0_092ODR,
@@ -67,6 +71,7 @@ class IUBMP280 : public IUABCSensor
     virtual ~IUBMP280() {}
     virtual uint8_t getSensorTypeCount() { return sensorTypeCount; }
     virtual char getSensorType(uint8_t index) { return sensorTypes[index]; }
+    bool isNewData() {return m_newData; }
     int32_t getFineTemperature() { return m_fineTemperature; }
     int16_t getTemperature() { return m_temperature; }
     int16_t getPressure() { return m_pressure; }
@@ -75,29 +80,36 @@ class IUBMP280 : public IUABCSensor
     // Methods
     void initSensor();
     virtual void wakeUp();
-    float readTemperature();
-    float readPressure();
+    void readTemperature();
+    void readPressure();
     virtual void readData();
     virtual void sendToReceivers();
     virtual void dumpDataThroughI2C();
+    int32_t readRawTemperature();
 
-  private:
-    IUI2C *m_iuI2C;
-    int32_t m_fineTemperature;
-    int16_t m_digTemperature[3];
-    int16_t m_digPressure[9];
-    int16_t m_temperature, m_pressure;
+  protected:
+    static IUI2C *m_iuI2C;
+    bool m_newData;
+    // Temperature reading
+    static uint8_t m_rawTempBytes[3]; // 20-bit temperature register data stored here
+    static int32_t m_fineTemperature;
+    static int16_t m_digTemperature[3];
+    static int16_t m_temperature;
+    static void processTemperatureData(uint8_t wireStatus);
+    static float compensateTemperature(int32_t rawT);
+    //Pressure reading
+    static uint8_t m_rawPressureBytes[3];
+    static int16_t m_digPressure[9];
+    static int16_t m_pressure;
+    static void processPressureData(uint8_t wireStatus);
+    static float compensatePressure(int32_t rawP);
+    //Config variables
     posrOptions m_posr;
     tosrOptions m_tosr;
     IIRFilterOptions m_iirFilter;
     ModeOptions m_mode;
     SByOptions m_sby;
     //Internal Methods
-    int32_t readRawTemperature();
-    float compensateTemperature(int32_t rawT);
-    int32_t readRawPressure();
-    float compensatePressure(int32_t rawP);
-
 };
 
 #endif // IUBMP280_H

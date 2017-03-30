@@ -105,22 +105,26 @@ bool IUConductor::initInterfaces()
     iuI2C = NULL;
     return false;
   }
+  iuI2C->activate();
+  iuI2C->scanDevices(); // Find components
+  iuI2C->resetErrorMessage();
+  
   iuBluetooth = new IUBMD350(iuI2C);
   if (!iuBluetooth)
   {
     iuBluetooth = NULL;
     return false;
   }
+  iuBluetooth->activate();
+  
   iuWifi = new IUESP8285(iuI2C);
   if (!iuWifi)
   {
     iuWifi = NULL;
     return false;
   }
-  // Activate them
-  iuI2C->activate();
-  iuBluetooth->activate();
   iuWifi->activate();
+  
   return true;
 }
 
@@ -149,8 +153,6 @@ bool IUConductor::initSensors()
     return false;
   }
   sensorConfigurator.iuI2S->setClockRate(m_clockRate);
-  iuI2C->scanDevices(); // Find components before waking them up
-  iuI2C->resetErrorMessage();
   sensorConfigurator.wakeUpSensors();
   return true;
 }
@@ -160,8 +162,8 @@ bool IUConductor::initSensors()
  */
 void IUConductor::linkFeaturesToSensors()
 {
-  featureConfigurator.registerAllFeaturesInSensor(sensorConfigurator.getSensors(), 
-                                                  sensorConfigurator.getSensorCount());
+  featureConfigurator.registerAllFeaturesInSensors(sensorConfigurator.getSensors(),
+                                                   sensorConfigurator.sensorCount);
 }
 
 /**
@@ -213,7 +215,7 @@ void IUConductor::switchToMode(operationMode mode)
     sensorConfigurator.iuRGBLed->changeColor(IURGBLed::SLEEP_MODE);
     msg = "sleep";
   }
-  if (!iuI2C->isSilent() || debugMode)
+  if (!iuI2C->isSilent() || loopDebugMode)
   {
     iuI2C->port->print("Entering ");
     iuI2C->port->print(msg);
@@ -257,7 +259,7 @@ void IUConductor::switchToState(operationState state)
     sensorConfigurator.iuRGBLed->changeColor(IURGBLed::RED_BAD);
     msg = "badCutting";
   }
-  if (debugMode) { debugPrint("Entering " + msg + " state\n"); }
+  if (loopDebugMode) { debugPrint("Entering " + msg + " state\n"); }
 }
 
 /**
@@ -267,7 +269,6 @@ void IUConductor::switchToState(operationState state)
  */
 bool IUConductor::checkAndUpdateMode()
 {
-  if(debugMode) { debugPrint("Checking if new operation mode"); }
   if (m_autoSleepEnabled)
   {
     if (m_opMode != operationMode::sleep && m_startSleepTimer < millis() - m_idleStartTime)
@@ -293,7 +294,6 @@ bool IUConductor::checkAndUpdateMode()
  */
 bool IUConductor::checkAndUpdateState()
 {
-  if(debugMode) { debugPrint("Checking if new operation state"); }
   if (m_opMode != operationMode::run)
   {
     return false;
@@ -348,7 +348,6 @@ bool IUConductor::acquireAndSendData()
  */
 void IUConductor::computeFeatures()
 {
-  if(debugMode) { debugPrint("Computing features (only if they are ready)"); }
   if (m_opMode == operationMode::run)
   {
     featureConfigurator.computeAndSendToReceivers();
@@ -366,17 +365,14 @@ bool IUConductor::streamData()
   if (m_opMode == operationMode::run)
   {
     port = iuBluetooth->port;
-    if(debugMode) { debugPrint("Streaming data over I2C (Serial USB)"); }
   }
   else if (m_opMode == operationMode::dataCollection)
   {
     port = iuI2C->port;
-    if(debugMode) { debugPrint("Streaming data over bluetooth"); }
   }
   else
   {
     return false;
-    if(debugMode) { debugPrint("No data streaming"); }
   }
   if (isDataSendTime())
   {
@@ -408,7 +404,7 @@ bool IUConductor::beginDataAcquisition()
   // trigger a read to kick things off
   I2S.read();
   m_inDataAcquistion = true;
-  if (debugMode) { debugPrint("Data acquisition triggered\n"); }
+  if (loopDebugMode) { debugPrint("Data acquisition triggered\n"); }
   return true;
 }
 
@@ -423,7 +419,7 @@ void IUConductor::endDataAcquisition()
     I2S.end();
   }
   m_inDataAcquistion = false;
-  if (debugMode) { debugPrint("Data acquisition disabled"); }
+  if (loopDebugMode) { debugPrint("Data acquisition disabled"); }
 }
 
 /**
@@ -432,7 +428,7 @@ void IUConductor::endDataAcquisition()
  */
 bool IUConductor::resetDataAcquisition()
 {
-  if (debugMode) { debugPrint("Resetting data acquisition..."); }
+  if (loopDebugMode) { debugPrint("Resetting data acquisition..."); }
   endDataAcquisition();
   featureConfigurator.resetFeaturesCounters();
   delay(500);
@@ -444,12 +440,11 @@ bool IUConductor::resetDataAcquisition()
  */
 void IUConductor::processInstructionsFromI2C()
 {
-  if(debugMode) { debugPrint("Reading I2C input"); }
   iuI2C->updateBuffer();
   if (iuI2C->getBuffer().length() > 0)
   {
-    if(debugMode) { debugPrint("I2C input is:"); }
-    if(debugMode) { debugPrint(iuI2C->getBuffer()); }
+    if(setupDebugMode) { debugPrint("I2C input is:"); }
+    if(setupDebugMode) { debugPrint(iuI2C->getBuffer()); }
     if (m_opMode == operationMode::run)
     {
       if(iuI2C->checkIfStartCollection()) // if data collection request, change the mode
@@ -492,7 +487,6 @@ void IUConductor::processInstructionsFromI2C()
  */
 void IUConductor::processInstructionsFromBluetooth()
 {
-  if(debugMode) { debugPrint("Reading bluetooth input"); }
   if (m_opMode != operationMode::run)
   {
     //TODO Currently only in run mode => check why? What about the configuration mode
@@ -503,8 +497,8 @@ void IUConductor::processInstructionsFromBluetooth()
   while (iuBluetooth->readToBuffer())
   {
     bleBuffer = iuBluetooth->getBuffer();
-    if(debugMode) { debugPrint("Bluetooth input is:"); }
-    if(debugMode) { debugPrint(bleBuffer); }
+    if(setupDebugMode) { debugPrint("Bluetooth input is:"); }
+    if(setupDebugMode) { debugPrint(bleBuffer); }
     if (!bleBuffer)
     {
       break;

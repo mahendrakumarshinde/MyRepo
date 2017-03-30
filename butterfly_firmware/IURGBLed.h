@@ -69,7 +69,7 @@ class IURGBLed : public IUABCSensor
     void changeColor(LEDColors color);
     bool updateFromI2C();
 
-  private:
+  protected:
     IUI2C *m_iuI2C;
     bool m_status;
 };

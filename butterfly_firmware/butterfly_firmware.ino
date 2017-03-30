@@ -30,6 +30,7 @@ const uint32_t RESTING_INTERVAL = 0;  // Inter-batch gap
 //====================== Instanciate Conductor from IU library ========================
 
 IUConductor conductor;
+bool firstLoop = true;
 
 
 //==============================================================================
@@ -38,25 +39,42 @@ IUConductor conductor;
 
 void callback()
 {
-  //uint32_t beg = micros();
   conductor.acquireAndSendData();
-  //Serial.print("Elapsed: ");
-  //Serial.println((micros() - beg), DEC);
 }
 
 /* ------------------------------------ begin ---------------------------------------- */
 
 void setup()
 {
-  Serial.begin(115200);
-  Serial.println("Start\n");
-  
-  conductor = IUConductor(MAC_ADDRESS);
-  if (!conductor.initInterfaces())
+  if (debugMode)
   {
     Serial.begin(115200);
-    Serial.println("Failed to initialize interfaces\n");
+    debugPrint(F("Start\n"));
+  }
+
+  delay(4000);
+  if (debugMode)
+  {
+    debugPrint(F("Start - Available Memory: "), false);
+    debugPrint(freeMemory());
+  }
+  
+  conductor = IUConductor(MAC_ADDRESS);
+  if (setupDebugMode)
+  {
+    debugPrint(F("Conductor - Available Memory: "), false);
+    debugPrint(freeMemory());
+  }
+  
+  if (!conductor.initInterfaces())
+  {
+    if (setupDebugMode) { debugPrint(F("Failed to initialize interfaces\n")); }
     while(1);                                                // hang
+  }
+  if (setupDebugMode)
+  {
+    debugPrint(F("Interfaces - Available Memory: "), false);
+    debugPrint(freeMemory());
   }
   conductor.printMsg("Successfully initialized interfaces\n");
   conductor.printMsg("Initializing components and setting up default configurations\n");
@@ -66,52 +84,71 @@ void setup()
     conductor.printMsg("Failed to initialize configurators\n");
     while(1);                                                // hang
   }
+  if (setupDebugMode)
+  {
+    debugPrint(F("configurators - Available Memory: "), false);
+    debugPrint(freeMemory());
+  }
   
   if (!conductor.initSensors())
   {
     conductor.printMsg("Failed to initialize sensors\n");
     while(1);                                                // hang
   }
+  if (setupDebugMode)
+  {
+    debugPrint(F("Sensors - Available Memory: "), false);
+    debugPrint(freeMemory());
+  }
+  
   if (!conductor.featureConfigurator.doStandardSetup())
   {
     conductor.printMsg("Failed to configure features\n");
     while(1);                                                // hang
   }
-
-  if (debugMode)
+  if (setupDebugMode)
   {
-    // force reset error before starting, so we can see what's next
-    conductor.iuI2C->resetErrorMessage();
+    debugPrint(F("Features - Available Memory: "), false);
+    debugPrint(freeMemory());
   }
   
   conductor.linkFeaturesToSensors();
 
-  if (debugMode)
+  if (setupDebugMode)
   {
     debugPrint(conductor.iuI2C->getErrorMessage());
     conductor.iuI2C->resetErrorMessage();
-    debugPrint((char*) conductor.iuI2C->getReadError());
+    debugPrint(F((char*) conductor.iuI2C->getReadError()));
     conductor.iuI2C->resetReadError();
+    conductor.sensorConfigurator.exposeSensorsAndReceivers();
+    conductor.featureConfigurator.exposeFeaturesAndReceivers();
+    conductor.featureConfigurator.exposeFeatureStates();
   }
   
   conductor.setCallback(callback);
   conductor.switchToMode(operationMode::run);
   conductor.switchToState(operationState::idle);
 
-  conductor.sensorConfigurator.exposeSensorsAndReceivers();
-  conductor.featureConfigurator.exposeFeaturesAndReceivers();
-  conductor.featureConfigurator.exposeFeatureStates();
-  
-  Serial.println(conductor.iuI2C->getErrorMessage());
-  Serial.println("Begin looping");
-  
-  if (debugMode) {while(1) {} } // hang here
-  
+  if (debugMode)
+  {
+    debugPrint(conductor.iuI2C->getErrorMessage());
+    debugPrint(F("Begin run at (ms): "), false);
+    debugPrint(millis());
+  }
 }
 
 void loop()
 {
   //TODO Design and develop a calibration and hardware testing framework
+  if (firstLoop)
+  {
+    if (loopDebugMode)
+    {
+      debugPrint(F("Loop - Available Memory: "), false);
+      debugPrint(freeMemory());
+    }
+    firstLoop = false;
+  }
   
   /* -------------------------- USB Connection Check ----------------------- */
   /*
@@ -121,38 +158,13 @@ void loop()
     conductor.switchToState(operationState::idle);
   }
   */
-  bool newData = false;
-  newData = conductor.sensorConfigurator.iuBMX055->acquireData();
-  if (newData)
-  {
-    conductor.sensorConfigurator.iuBMX055->sendToReceivers();
-  }
-  Serial.println("Acc: ");
-  conductor.sensorConfigurator.iuBMX055->dumpDataThroughI2C();
-  
-  newData = conductor.sensorConfigurator.iuBMP280->acquireData();
-  if (newData)
-  {
-    conductor.sensorConfigurator.iuBMP280->sendToReceivers();
-  }
-  Serial.println("Temp: ");
-  conductor.sensorConfigurator.iuBMP280->dumpDataThroughI2C();
-  
 
-  Serial.println(conductor.iuI2C->getErrorMessage());
-  Serial.println(conductor.iuI2C->getReadError());
-  
   conductor.processInstructionsFromBluetooth();   // Receive instructions via BLE during run mode
-  Serial.println("OK1");
   conductor.processInstructionsFromI2C();         // Receive instructions to enter / exit data collection mode, plus options during data collection
-  Serial.println("OK2");
   conductor.computeFeatures();                    // Conductor handles feature computation depending on operation mode
-  Serial.println("OK3");
   conductor.streamData();                         // Conductor choose streaming port depending on operation mode
-  Serial.println("OK4");
   conductor.checkAndUpdateState();
-  Serial.println("OK5");
   conductor.checkAndUpdateMode();
-  Serial.println("OK6");
+  
 }
 

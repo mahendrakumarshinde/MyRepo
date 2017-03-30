@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include "IUABCFeature.h"
+#include "IUUtilities.h"
 
 /* ========================== Producer Class ============================= */
 
@@ -16,20 +17,23 @@ class IUABCProducer
 {
   public:
     static const uint8_t maxReceiverCount = 25;
-    enum dataSendOption : uint8_t {optionCount = 0};            // Options of data to send to receivers
+    enum dataSendOption : uint8_t {optionCount = 0};   // Options of data to send to receivers
     IUABCProducer();
     virtual ~IUABCProducer();
-    void resetReceivers();
-    virtual bool addReceiver(uint8_t sendOption, uint8_t receiverSourceIndex, IUABCFeature *receiver);
+    virtual void resetReceivers();
+    virtual bool addScalarReceiver(uint8_t sendOption, uint8_t receiverSourceIndex, IUABCFeature *receiver);
+    virtual bool addArrayReceiver(uint16_t valueCount, q15_t *values, uint8_t receiverSourceIndex, IUABCFeature *receiver);
+    virtual bool addArrayReceiver(uint16_t valueCount, float *values, uint8_t receiverSourceIndex, IUABCFeature *receiver);
     virtual void sendToReceivers() {}                   // To implement in child class
+    virtual uint8_t getReceiverCount() { return m_receiverCount; }
     // Diagnostic Functions
-    void exposeReceivers();
+    virtual void exposeReceivers();
 
   protected:
     uint8_t m_receiverCount;                            // The actual number of receivers
-    uint8_t m_receiverSourceIndex[maxReceiverCount];    // The source of each recceiver to which send data
-    dataSendOption m_toSend[maxReceiverCount];          // Data to send to each receiver. Sending option should be
-                                                        // enforced in the function 'sendToReceivers'
+    uint8_t m_receiverSourceIndex[maxReceiverCount];    // The source of each receiver to which send data
+    uint8_t m_toSend[maxReceiverCount];                 // Data to send to each receiver. Sending option should be
+                                                        // used in the function 'sendToReceivers'
     IUABCFeature *m_receivers[maxReceiverCount];        // Array of pointers to receivers
 };
 
