@@ -20,7 +20,7 @@
 
 #include <Arduino.h>
 #include "Wire.h"
-#include "IUUtilities.h"
+#include "IULogger.h"
 #include "IUABCInterface.h"
 
 
@@ -66,12 +66,12 @@ class IUI2C : public IUABCInterface
     void updateBuffer();
     void printBuffer();
     // I2C read / write methods
-    void writeByte(uint8_t address, uint8_t subAddress, uint8_t data);
-    void writeByte(uint8_t address, uint8_t subAddress, uint8_t data, void(*callback)(uint8_t wireStatus));
+    bool writeByte(uint8_t address, uint8_t subAddress, uint8_t data);
+    bool writeByte(uint8_t address, uint8_t subAddress, uint8_t data, void(*callback)(uint8_t wireStatus));
     uint8_t readByte(uint8_t address, uint8_t subAddress);
     uint8_t readByte(uint8_t address, uint8_t subAddress, void(*callback)(uint8_t wireStatus));
-    void readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_t *destination);
-    void readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_t *destination, void(*callback)(uint8_t wireStatus));
+    bool readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_t *destination);
+    bool readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_t *destination, void(*callback)(uint8_t wireStatus));
     
 
   protected:

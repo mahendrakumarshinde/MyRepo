@@ -24,7 +24,6 @@
 #include <I2S.h>  /* I2S digital audio */
 #include <arm_math.h> /* CMSIS-DSP library for RFFT */
 
-#include "IUUtilities.h"
 #include "IUABCSensor.h"
 #include "IUI2C.h"
 
@@ -37,42 +36,48 @@ class IUI2S : public IUABCSensor
   public:
     static const uint8_t sensorTypeCount = 1;
     static char sensorTypes[sensorTypeCount];
+    static const uint8_t availableClockRateCount = 9;
+    static uint16_t availableClockRate[availableClockRateCount];
     // Frequency and sampling setting
-    static const uint32_t defaultClockRate = 8000; // Hz clock rate of audio device
-    static const uint32_t defaultSamplingRate = 8000; // Hz sampling rate (can be downclocked from clockRate)
+    static const uint16_t defaultClockRate = 8000; // Hz clock rate of audio device
+    static const uint16_t defaultSamplingRate = 8000; // Hz sampling rate (can be downclocked from clockRate)
     enum dataSendOption : uint8_t {sound = 0,
                                    optionCount = 1};
-    static const uint8_t bitsPerSample = 32;
-    static const uint16_t audioSampleSize = (I2S_BUFFER_SIZE * 8) / bitsPerSample;
+    static const uint8_t bitsPerAudioSample = 32;
+    static const uint16_t audioSampleSize = (I2S_BUFFER_SIZE * 8) / (bitsPerAudioSample); // stereo recording 
     
     // Getters, Setters, constructor and Destructor
     IUI2S(IUI2C *iuI2C);
     virtual ~IUI2S() {}
     virtual uint8_t getSensorTypeCount() { return sensorTypeCount; }
     virtual char getSensorType(uint8_t index) { return sensorTypes[index]; }
-    void setClockRate(uint32_t clockRate);
-    uint32_t getClockRate() { return m_clockRate; }
+    bool setClockRate(uint16_t clockRate);
+    uint16_t getClockRate() { return m_clockRate; }
     virtual void setCallbackRate() {}  // Non settable
-    uint32_t getCallbackRate() { return m_clockRate / (audioSampleSize / 2); }
-    void setSamplingRate(uint32_t samplingRate);
-    void prepareDataAcquisition();
+    uint16_t getCallbackRate() { return m_clockRate / (audioSampleSize / 2); }
+    void setSamplingRate(uint16_t samplingRate);
 
     //Methods:
     virtual void wakeUp();
+    void prepareDataAcquisition();
+    bool triggerDataAcquisition(void (*callback)());
+    bool endDataAcquisition();
     void processAudioData(q31_t *data);
-    virtual void readData();
+    virtual void readData(bool processData = true);
     virtual bool acquireData();
     virtual void sendToReceivers();
     void dumpDataThroughI2C();
+    void dumpDataForDebugging();
     bool updateSamplingRateFromI2C();
 
   protected:
     IUI2C *m_iuI2C;
-    uint32_t m_clockRate;
+    uint16_t m_clockRate;
+    bool m_firstI2STrigger;
     bool m_newData;
     uint8_t m_rawAudioData[I2S_BUFFER_SIZE];
-    q15_t m_audioData[audioSampleSize];
-    uint16_t m_targetSample;  // ex TARGET_AUDIO_SAMPLE // Target Accel frequency may change in data collection mode
+    q15_t m_audioData[audioSampleSize / 2];    // we use mono data, so we need half the size
+    uint16_t m_targetSample;              
 };
 
 #endif // IUI2S_H

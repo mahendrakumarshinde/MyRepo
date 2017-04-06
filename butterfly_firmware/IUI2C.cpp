@@ -112,26 +112,40 @@ bool IUI2C::checkComponentWhoAmI(String componentName, uint8_t address, uint8_t 
 /**
  * Write a byte to given address and sub-address
  */
-void IUI2C::writeByte(uint8_t address, uint8_t subAddress, uint8_t data)
+bool IUI2C::writeByte(uint8_t address, uint8_t subAddress, uint8_t data)
 {
   uint8_t temp[2];
   temp[0] = subAddress;
   temp[1] = data;
-  Wire.transfer(address, &temp[0], 2, NULL, 0);
+  m_readError = Wire.transfer(address, &temp[0], 2, NULL, 0);
+  if (isReadError())
+  {
+    if (!m_silent)
+    {
+      port->print("Error Code:");
+      port->println(m_readError);
+    }
+    m_errorMessage = "I2CERR";
+    resetReadError();
+    return false;
+  }
+  return true;
 }
 
 /**
  * Write a byte to given address and sub-address
  */
-void IUI2C::writeByte(uint8_t address, uint8_t subAddress, uint8_t data, void(*callback)(uint8_t wireStatus))
+bool IUI2C::writeByte(uint8_t address, uint8_t subAddress, uint8_t data, void(*callback)(uint8_t wireStatus))
 {
   uint8_t temp[2];
   temp[0] = subAddress;
   temp[1] = data;
-  if (!Wire.transfer(address, &temp[0], 2, NULL, 0, true, callback))
+  bool success = Wire.transfer(address, &temp[0], 2, NULL, 0, true, callback);
+  if (!success)
   {
-    if (debugMode) { debugPrint(F("Wire.transfer with callback failed")); } 
+    if (callbackDebugMode) { debugPrint(F("I2CERR")); }
   }
+  return success;
 }
 
 /**
@@ -145,12 +159,14 @@ uint8_t IUI2C::readByte(uint8_t address, uint8_t subAddress)
   m_readError = Wire.transfer(address, &subAddress, 1, &temp[0], 1);
   if (isReadError())
   {
-    m_errorMessage = "I2CERR";
     if (!m_silent)
     {
       port->print("Error Code:");
       port->println(m_readError);
     }
+    m_errorMessage = "I2CERR";
+    resetReadError();
+    return 0;
   }
   return temp[0];
 }
@@ -165,7 +181,7 @@ uint8_t IUI2C::readByte(uint8_t address, uint8_t subAddress, void(*callback)(uin
   uint8_t temp[1];
   if (!Wire.transfer(address, &subAddress, 1, &temp[0], 1, true, callback))
   {
-    if (debugMode) { debugPrint(F("Wire.transfer with callback failed")); } 
+    if (callbackDebugMode) { debugPrint(F("I2CERR")); }
     return 0;
   }
   return temp[0];
@@ -177,23 +193,27 @@ uint8_t IUI2C::readByte(uint8_t address, uint8_t subAddress, void(*callback)(uin
  * @param subAddress where to read the byte from
  * @param the number of byte to read
  */
-void IUI2C::readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_t *destination)
+bool IUI2C::readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_t *destination)
 {
-  if (m_readFlag) // To restrain multiple simultoneous read accesses to I2C bus
+  if (!m_readFlag) // To restrain multiple simultoneous read accesses to I2C bus
   {
-    m_readFlag = false;
-    m_readError = Wire.transfer(address, &subAddress, 1, destination, count);
-    if (isReadError())
-    {
-      m_errorMessage = "I2CERR";
-      if (!m_silent)
-      {
-        port->print("Error Code:");
-        port->println(m_readError);
-      }
-    }
-    m_readFlag = true;
+    return false;
   }
+  m_readFlag = false;
+  m_readError = Wire.transfer(address, &subAddress, 1, destination, count);
+  bool success = (!isReadError());
+  if (!success)
+  {
+    if (!m_silent)
+    {
+      port->print("Error Code:");
+      port->println(m_readError);
+    }
+    m_errorMessage = "I2CERR";
+    resetReadError();
+  }
+  m_readFlag = true;
+  return success;
 }
 
 /**
@@ -202,17 +222,20 @@ void IUI2C::readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_
  * @param subAddress where to read the byte from
  * @param the number of byte to read
  */
-void IUI2C::readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_t *destination, void(*callback)(uint8_t wireStatus))
+bool IUI2C::readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_t *destination, void(*callback)(uint8_t wireStatus))
 {
-  if (m_readFlag) // To restrain multiple simultoneous read accesses to I2C bus
+  if (!m_readFlag) // To restrain multiple simultoneous read accesses to I2C bus
   {
-    m_readFlag = false;
-    if (!Wire.transfer(address, &subAddress, 1, destination, count, true, callback))
-    {
-      if (debugMode) { debugPrint(F("Wire.transfer with callback failed")); } 
-    }
-    m_readFlag = true;
+    return false;
   }
+  m_readFlag = false;
+  bool success = Wire.transfer(address, &subAddress, 1, destination, count, true, callback);
+  if (!success)
+  {
+    if (callbackDebugMode) { debugPrint(F("I2CERR")); }
+  }
+  m_readFlag = true;
+  return success;
 }
 
 /* ------------- Hardwire Serial for DATA_COLLECTION commands ------------- */
@@ -253,7 +276,7 @@ bool IUI2C::checkIfStartCollection()
   // Check the received info; iff data collection request, change the mode
   if (m_wireBuffer.indexOf(START_COLLECTION) > -1)
   {
-    port->print(START_CONFIRM);
+    port->println(START_CONFIRM);
     return true;
   }
   return false;
@@ -267,7 +290,7 @@ bool IUI2C::checkIfEndCollection()
   // Check the received info; if data collection request, change the mode
   if (m_wireBuffer == END_COLLECTION)
   {
-    port->print(END_CONFIRM);
+    port->println(END_CONFIRM);
     return true;
   }
   return false;

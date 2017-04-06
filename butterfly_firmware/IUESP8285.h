@@ -2,7 +2,6 @@
 #define IUESP8285_H
 
 #include <Arduino.h>
-#include "IUUtilities.h"
 #include "IUI2C.h"
 
 class IUESP8285 : public IUABCInterface

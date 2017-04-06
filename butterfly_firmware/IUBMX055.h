@@ -23,7 +23,6 @@
 /* CMSIS-DSP library for RFFT */
 #include <arm_math.h>
 
-#include "IUUtilities.h"
 #include "IUABCSensor.h"
 #include "IUFeature.h"
 #include "IUI2C.h"
@@ -132,9 +131,10 @@ class IUBMX055 : public IUABCSensor
                                    xMag   = 6,
                                    yMag   = 7,
                                    zMag   = 8,
-                                   optionCount = 9};
+                                   samplingRate = 9,
+                                   optionCount = 10};
 
-    static const uint32_t defaultSamplingRate = 1000; // Hz
+    static const uint16_t defaultSamplingRate = 1000; // Hz
 
     // Constructor, destructor, getters and setters
     IUBMX055(IUI2C *iuI2C);
@@ -148,7 +148,7 @@ class IUBMX055 : public IUABCSensor
     q15_t getAccelData(uint8_t index) { return m_accelData[index]; }
     void useFilteredData(accelBandwidthOption bandwidth);
     void useUnfilteredData();
-    void accSoftReset();
+    void accelSoftReset();
     // Methods
     virtual void wakeUp();
     void initSensor();
@@ -164,6 +164,9 @@ class IUBMX055 : public IUABCSensor
     virtual void readData();
     virtual void sendToReceivers();
     void dumpDataThroughI2C();
+    virtual void dumpDataForDebugging();
+    // Diagnostic Functions
+    virtual void exposeCalibration();
 
     /*
     // BMX055 orientation filter as implemented by Kris Winer: https://github.com/kriswiner/BMX-055/blob/master/quaternionFilters.ino
@@ -176,9 +179,9 @@ class IUBMX055 : public IUABCSensor
     static IUI2C *m_iuI2C;
     bool m_newData;
     // Accelerometer:
-    static uint8_t m_rawAccelBytes[6];
-    static q15_t m_rawAccel[3];                       // Stores the q15_t accelerometer sensor raw output
-    static q15_t m_accelData[3];                      // Stores the q15_t acceleration data (with resolution and bias) in G
+    static uint8_t m_rawAccelBytes[6];                // 12bits / 2 bytes per axis: LSB, MSB => last 4 bits of LSB are not data, they are flags
+    static q15_t m_rawAccel[3];                       // Stores the Q15 accelerometer sensor raw output
+    static q15_t m_accelData[3];                      // Stores the Q4.11 acceleration data (with resolution and bias) in G
     static q15_t m_accelBias[3];                      // Bias corrections
     static float m_accelResolution;                   // Resolution
     static void processAccelData(uint8_t wireStatus);

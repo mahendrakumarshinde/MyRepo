@@ -47,18 +47,10 @@ bool IUABCProducer::addScalarReceiver(uint8_t sendOption, uint8_t receiverSource
   m_receivers[m_receiverCount] = receiver;
   if (!m_receivers[m_receiverCount])
   {
-    if(setupDebugMode) { debugPrint("Pointer assignment failed"); }
+    if(setupDebugMode) { debugPrint("Pointer assignment for scalar source failed"); }
     m_receivers[m_receiverCount] = NULL;
     return false;
   }
-  m_receivers[m_receiverCount] = receiver;
-  if (!m_receivers[m_receiverCount])
-  {
-    if(setupDebugMode) { debugPrint("Pointer assignment failed"); }
-    m_receivers[m_receiverCount] = NULL;
-    return false;
-  }
-  
   m_receiverSourceIndex[m_receiverCount] = receiverSourceIndex;
   m_toSend[m_receiverCount] = sendOption;
   m_receiverCount++;
@@ -77,15 +69,19 @@ bool IUABCProducer::addArrayReceiver(uint16_t valueCount, q15_t *values, uint8_t
     return false;
   }
   m_receivers[m_receiverCount] = receiver;
-  bool success = receiver->setSource(receiverSourceIndex, valueCount, values);
-  if (!m_receivers[m_receiverCount] || success)
+  if (!m_receivers[m_receiverCount])
   {
-    if(setupDebugMode) { debugPrint("Pointer assignment failed"); }
+    if(setupDebugMode) { debugPrint("Pointer assignment for array source failed"); }
     m_receivers[m_receiverCount] = NULL;
     return false;
   }
   m_receiverCount++;
-  return true;
+  bool success = receiver->setSource(receiverSourceIndex, valueCount, values);
+  if (!success)
+  {
+    if(setupDebugMode) { debugPrint("Array source setting failed"); }
+  }
+  return success;
 }
 
 /**
@@ -115,7 +111,7 @@ bool IUABCProducer::addArrayReceiver(uint16_t valueCount, float *values, uint8_t
 
 /**
  * Shows the name of features receiving Producer data and associated config
- */ 
+ */
 void IUABCProducer::exposeReceivers()
 {
   #ifdef DEBUGMODE

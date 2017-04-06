@@ -17,7 +17,6 @@
 #include <Arduino.h>
 /* CMSIS-DSP library for RFFT */
 #include <arm_math.h>
-#include "IUUtilities.h"
 #include "IUI2C.h"
 #include "IUABCInterface.h"
 

@@ -19,7 +19,7 @@ IUABCSensor::~IUABCSensor()
 /**
  * Rate cannot be set to zero + call prepareDataAcquisition at the end
  */
-void IUABCSensor::setSamplingRate(uint32_t samplingRate)
+void IUABCSensor::setSamplingRate(uint16_t samplingRate)
 {
   if (samplingRate == 0)
   {
@@ -35,7 +35,7 @@ void IUABCSensor::setSamplingRate(uint32_t samplingRate)
 /**
  * Rate cannot be set to zero + call prepareDataAcquisition at the end
  */
-void IUABCSensor::setCallbackRate(uint32_t callbackRate)
+void IUABCSensor::setCallbackRate(uint16_t callbackRate)
 {
   if (callbackRate == 0)
   {

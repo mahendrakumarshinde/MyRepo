@@ -2,10 +2,8 @@
 #define IUFEATURECONFIGURATOR_H
 
 #include <Arduino.h>
-#include "IUUtilities.h"
 #include "IUFeature.h"
 #include "IUABCSensor.h"
-#include <string.h>
 
 /**
  * An object dedicated to hold feature configuration and features themselves
@@ -54,12 +52,13 @@ class IUFeatureConfigurator
     // Constructor, destructor, getters and setters
     IUFeatureConfigurator();
     virtual ~IUFeatureConfigurator();
+    uint8_t getFeatureCount() { return m_featureCount; }
     void resetFeatures();
     FeatureConfig getConfigFromName(String featureName);
     uint8_t getConfigFromName(String featureNames, FeatureConfig *configs);
     bool registerFeatureInFeatureDependencies(IUFeature *feature);
     bool registerFeatureInSensors(IUFeature *feature, IUABCSensor **sensors, uint8_t sensorCount);
-    void registerAllFeaturesInSensors(IUABCSensor **sensors, uint8_t sensorCount);
+    bool registerAllFeaturesInSensors(IUABCSensor **sensors, uint8_t sensorCount);
     int createWithDependencies(FeatureConfig config, uint8_t id);
     bool requireConfiguration(String configBufffer);
     bool doStandardSetup();

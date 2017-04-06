@@ -18,7 +18,7 @@ class IUCAMM8Q : public IUABCSensor
     static const uint8_t I2C_BYTES      = 0xFD;  // Address of CAM M8Q number of data bytes ready register, two bytes
     static const uint8_t I2C_DATA       = 0xFF;  // Address of CAM M8Q I2C data buffer
 
-    static const uint32_t defaultSamplingRate = 1000; // Hz
+    static const uint16_t defaultSamplingRate = 1000; // Hz
     static const uint32_t baudRate = 115200;
     enum dataSendOption : uint8_t {optionCount = 1};
 

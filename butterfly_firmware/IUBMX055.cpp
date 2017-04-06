@@ -76,7 +76,7 @@ void IUBMX055::useUnfilteredData()
 /**
  * Reset BMX055 configuration and return to normal power mode
  */
-void IUBMX055::accSoftReset()
+void IUBMX055::accelSoftReset()
 {
  m_iuI2C->writeByte(ACC_ADDRESS,  ACC_BGW_SOFTRESET, 0xB6);  // reset accelerometer
  delay(1000); // Wait for all registers to reset
@@ -171,7 +171,7 @@ void IUBMX055::initSensor()
 
 void IUBMX055::configureAccelerometer()
 {
-  accSoftReset();
+  accelSoftReset();
  
   // Configure accelerometer
   setAccelScale(m_accelScale);
@@ -231,7 +231,7 @@ void IUBMX055::doAcellFastCompensation(float * dest1)
   {
     m_iuI2C->writeByte(ACC_ADDRESS, ACC_OFC_CTRL, offsetCmd[i]);   // calculate x, y or z axis offset
     c = m_iuI2C->readByte(ACC_ADDRESS, ACC_OFC_CTRL);              // check if fast calibration complete
-    while(!(c & 0x10))                                            // While not complete, wait
+    while(!(c & 0x10))                                             // While not complete, wait
     {
       delay(10);
       c = m_iuI2C->readByte(ACC_ADDRESS, ACC_OFC_CTRL);
@@ -242,16 +242,16 @@ void IUBMX055::doAcellFastCompensation(float * dest1)
   int8_t compy = m_iuI2C->readByte(ACC_ADDRESS, ACC_OFC_OFFSET_Y);
   int8_t compz = m_iuI2C->readByte(ACC_ADDRESS, ACC_OFC_OFFSET_Z);
 
-  // Convert to m/s2 on q15_t (from 8bit to 16bit, multiply by 2**8 = 256)
-  m_accelBias[0] = (q15_t) compx * 256; // accel bias in m/s2 Q15
-  m_accelBias[1] = (q15_t) compy * 256; // accel bias in m/s2 Q15
-  m_accelBias[2] = (q15_t) compz * 256; // accel bias in m/s2 Q15
+  // Convert to G in 12bit (for consistance with the accel readings, that are on 12bits)
+  m_accelBias[0] = (uint16_t) compx << 4;
+  m_accelBias[1] = (uint16_t) compy << 4;
+  m_accelBias[2] = (uint16_t) compz << 4;
   if (setupDebugMode)
   {
-    m_iuI2C->port->println("accel biases (mG)");
-    m_iuI2C->port->println(1000 * q15ToFloat(m_accelBias[0]));
-    m_iuI2C->port->println(1000 * q15ToFloat(m_accelBias[1]));
-    m_iuI2C->port->println(1000 * q15ToFloat(m_accelBias[2]));
+    debugPrint("accel biases (mG):");
+    debugPrint(1000 * q4_11ToFloat(m_accelBias[0]));
+    debugPrint(1000 * q4_11ToFloat(m_accelBias[1]));
+    debugPrint(1000 * q4_11ToFloat(m_accelBias[2]));
   }
 }
 
@@ -259,38 +259,40 @@ void IUBMX055::doAcellFastCompensation(float * dest1)
 /* ==================== Data Collection and Feature Calculation functions ======================== */
 
 /**
- * Read acceleration data and store it as a signed 16-bit integer (q15_t)
+ * Asynchronously read acceleration data and and call processAccelData as callback
  * Data is read from device as 2 bytes: LSB first (4 bits to use) then MSB (8 bits to use)
  * 4 last bits of LSB byte are used as flags (new data, etc).
  */
 void IUBMX055::readAccelData()
 {
   // Read the six raw data registers into data array
-  m_iuI2C->readBytes(ACC_ADDRESS, ACC_D_X_LSB, 6, &m_rawAccelBytes[0], processAccelData);
+  if(!m_iuI2C->readBytes(ACC_ADDRESS, ACC_D_X_LSB, 6, &m_rawAccelBytes[0], processAccelData))
+  {
+    if (callbackDebugMode) { debugPrint("Skip accel read"); }
+  }
 }
 
+/**
+ * Process acceleration data and store it as a Q4.11 (signed 4-integer-bit and 11-fractionnal-bit)
+ * Data is read from device as 2 bytes: LSB first (4 bits to use) then MSB (8 bits to use)
+ * 4 last bits of LSB byte are used as flags (new data, etc).
+ */
 void IUBMX055::processAccelData(uint8_t wireStatus)
 {
-  if (m_iuI2C->isReadError())
-  {
-    m_iuI2C->port->println("Skip accelerometer read: ");
-    m_iuI2C->port->println(m_iuI2C->getReadError(), HEX);
-    m_iuI2C->resetReadError();
-    return;
-  }
   if(!((m_rawAccelBytes[0] & 0x01) && (m_rawAccelBytes[2] & 0x01) && (m_rawAccelBytes[4] & 0x01)))
   {
     return; // Check that all 3 axes have new data, if not return
   }
-  // Turn the LSB and MSB into a signed 16-bit value (q15_t)
-  // NB: Casting has precedence over << or >> operators
-  m_rawAccel[0] = (int16_t) (((int16_t)m_rawAccelBytes[1] << 8) | m_rawAccelBytes[0]) >> 4;
-  m_rawAccel[1] = (int16_t) (((int16_t)m_rawAccelBytes[3] << 8) | m_rawAccelBytes[2]) >> 4;
-  m_rawAccel[2] = (int16_t) (((int16_t)m_rawAccelBytes[5] << 8) | m_rawAccelBytes[4]) >> 4;
-  // Multiply by resolution to have a measure in G, in q15_t format and add the bias
-  m_accelData[0] = m_rawAccel[0] * m_accelResolution + m_accelBias[0];
-  m_accelData[1] = m_rawAccel[1] * m_accelResolution + m_accelBias[1];
-  m_accelData[2] = m_rawAccel[2] * m_accelResolution + m_accelBias[2];
+  for (uint8_t i = 0; i < 3; ++i)
+  {
+    // Convert to Q15: LSB = LLLLXXXX, MSB = MMMMMMMMM => rawAccel = MMMMMMMMLLLL0000
+    // use 8 bits of MSB and only the 4 left-most bits of LSB (NB Casting has precedence over << or >> operators)
+    m_rawAccel[i] = (int16_t) (((int16_t)m_rawAccelBytes[2 * i + 1] << 8) | (m_rawAccelBytes[2 * i] & 0x0C));
+    
+    // Convert to Q4.11 (divide by 2^4) without losing precision since it was originally 12bit data, and then
+    // multiply by resolution to have a measure in G and add the bias
+    m_accelData[i] = m_rawAccel[i] * m_accelResolution / 16 + m_accelBias[i];
+  }
 }
 
 
@@ -322,7 +324,8 @@ void IUBMX055::sendToReceivers()
         case (uint8_t) dataSendOption::zAccel:
           m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], m_accelData[2]);
           break;
-        default:
+        case (uint8_t) dataSendOption::samplingRate:
+          m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], m_samplingRate);
           break;
       }
     }
@@ -336,6 +339,10 @@ void IUBMX055::sendToReceivers()
  */
 void IUBMX055::dumpDataThroughI2C()
 {
+  if (!m_newData)
+  {
+    return;
+  }
   byte* data;
   for (uint8_t i = 0; i < 3; i++)
   {
@@ -344,6 +351,27 @@ void IUBMX055::dumpDataThroughI2C()
     m_iuI2C->port->write(data, 4);
   }
   m_iuI2C->port->flush();
+  m_newData = false;
+}
+
+/**
+ * Dump acceleration data to serial via I2C
+ * NB: We want to do this in *DATA COLLECTION* mode, when debugMode is true
+ */
+void IUBMX055::dumpDataForDebugging()
+{
+  if (!m_newData)
+  {
+    return;
+  }
+  m_iuI2C->port->print("AX: ");
+  m_iuI2C->port->println(q4_11ToFloat(m_accelData[0]), 4);
+  m_iuI2C->port->print("AY: ");
+  m_iuI2C->port->println(q4_11ToFloat(m_accelData[1]), 4);
+  m_iuI2C->port->print("AZ: ");
+  m_iuI2C->port->println(q4_11ToFloat(m_accelData[2]), 4);
+  m_iuI2C->port->flush();
+  m_newData = false;
 }
 
 /* ==================== Update and Control Functions =============================== */
@@ -352,4 +380,26 @@ void IUBMX055::dumpDataThroughI2C()
  * have been received. If so, the updates are done.
  * Functions return true if an update happened.
  */
+
+
+/* ====================== Diagnostic Functions, only active when setupDebugMode = true ====================== */
+
+/*
+ * Show calibration info
+ */
+void IUBMX055::exposeCalibration()
+{
+  #ifdef DEBUGMODE
+  debugPrint(F("Calibration data: "));
+  debugPrint(F("Accel resolution (G): "));
+  debugPrint(m_accelResolution);
+  debugPrint(F("Accel bias (q15_t): "));
+  for (uint8_t i = 0; i < 3; ++i)
+  {
+    debugPrint(m_accelBias[i], false);
+    debugPrint(", ", false);
+  }
+  debugPrint(' ');
+  #endif
+}
 

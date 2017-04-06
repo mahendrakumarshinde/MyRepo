@@ -1,62 +1,5 @@
 #include "IUUtilities.h"
 
-
-
-void debugPrint(String msg, bool endline)
-{
-  #ifdef DEBUGMODE
-  if (endline) { Serial.println(msg); }
-  else { Serial.print(msg); }
-  Serial.flush();
-  #endif
-}
-
-void debugPrint(int msg, bool endline)
-{
-  #ifdef DEBUGMODE
-  if (endline) { Serial.println(msg, DEC); }
-  else { Serial.print(msg, DEC); }
-  Serial.flush();
-  #endif
-}
-
-void debugPrint(uint32_t msg, bool endline)
-{
-  #ifdef DEBUGMODE
-  if (endline) { Serial.println(msg, DEC); }
-  else { Serial.print(msg, DEC); }
-  Serial.flush();
-  #endif
-}
-
-void debugPrint(float msg, bool endline)
-{
-  #ifdef DEBUGMODE
-  if (endline) { Serial.println(msg, DEC); }
-  else { Serial.print(msg, DEC); }
-  Serial.flush();
-  #endif
-}
-
-void debugPrint(char msg, bool endline)
-{
-  #ifdef DEBUGMODE
-  if (endline) { Serial.println(msg); }
-  else { Serial.print(msg); }
-  Serial.flush();
-  #endif
-}
-
-void debugPrint(char *msg, bool endline)
-{
-  #ifdef DEBUGMODE
-  if (endline) { Serial.println(F(msg)); }
-  else { Serial.print(F(msg)); }
-  Serial.flush();
-  #endif
-}
-
-
 /*====================== General utility function ============================ */
 
 /**
@@ -137,15 +80,6 @@ bool checkCharsAtPosition(char *charBuffer, char character, int *positions, int 
 }
 
 
-float q15ToFloat(q15_t value)
-{
-    return ((float) value) / 32768.;
-}
-
-q15_t floatToQ15(float value)
-{
-    return (q15_t) (32768 * value);
-}
 
 /**
  * Compute and return the normalized root min square

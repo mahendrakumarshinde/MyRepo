@@ -2,6 +2,7 @@
 
 /* ======================= Sensor Default Configuration =========================== */
 
+// Sensors are ordered: battery, led, BMX055, BMP280, Sound
 uint16_t IUSensorConfigurator::defaultSamplingRates[IUSensorConfigurator::sensorCount] = {2, 1, 1000, 2, 8000};
 
 /* ============================== Methods =================================== */
@@ -97,28 +98,23 @@ void IUSensorConfigurator::wakeUpSensors()
  */
 void IUSensorConfigurator::acquireDataAndSendToReceivers()
 {
-  /*
   for (uint8_t i = 0; i < sensorCount; i++)
   {
-    newData = m_sensors[i]->acquireData();
-    if (newData)
-    {
-      m_sensors[i]->sendToReceivers();
-    }
+    m_sensors[i]->sendToReceivers();
+    m_sensors[i]->acquireData();
   }
-  */
   /*
   Due to asynchrone data acquisition, the sendToReceivers functions actually
   send the previous data reading (to allow completion of the reading in the meantime).
   So sendToReceivers are actually called before acquireData. Each sensor handles its own data 
   availability, so nothing is sent if data is not ready.
-  */
   iuBMX055->sendToReceivers();
   iuBMX055->acquireData();
   iuBMP280->sendToReceivers();
   iuBMP280->acquireData();
   iuI2S->sendToReceivers();
   iuI2S->acquireData();
+  */
 }
 
 /**
@@ -128,15 +124,17 @@ void IUSensorConfigurator::acquireDataAndSendToReceivers()
  */
 void IUSensorConfigurator::acquireDataAndDumpThroughI2C()
 {
-  bool newData = false;
-  IUABCSensor *sensor;
   for (uint8_t i = 0; i < sensorCount; i++)
   {
-    newData = m_sensors[i]->acquireData();
-    if (newData)
+    if(debugMode)
+    {
+      m_sensors[i]->dumpDataForDebugging();
+    }
+    else
     {
       m_sensors[i]->dumpDataThroughI2C();
     }
+    m_sensors[i]->acquireData();
   }
 }
 
@@ -179,6 +177,7 @@ void IUSensorConfigurator::exposeSensorsAndReceivers()
     {
       debugPrint(m_sensors[i]->getSensorType(j));
     }
+    m_sensors[i]->exposeCalibration();
     m_sensors[i]->exposeReceivers();
     debugPrint("\n");
   }

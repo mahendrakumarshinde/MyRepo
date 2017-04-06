@@ -1,8 +1,5 @@
 #include "IUConductor.h"
 
-uint32_t IUConductor::availableClockRate[IUConductor::availableClockRateCount] =
-      {8000, 12000, 16000, 24000, 32000, 48000, 96000, 11025, 22050, 44100};
-
 IUConductor::IUConductor()
 {
   iuI2C = NULL;
@@ -42,22 +39,17 @@ IUConductor::~IUConductor()
 }
 
 /**
- *
+ * Set the master clock rate (I2S clock is used as master clock by the conductor)
  * @return true if the clock rate was correctly set, else false
  */
-bool IUConductor::setClockRate(uint32_t clockRate)
+bool IUConductor::setClockRate(uint16_t clockRate)
 {
-  for (int i = 0; i < availableClockRateCount; i++)
+  m_clockRate = clockRate;
+  if (sensorConfigurator.iuI2S)
   {
-    if (availableClockRate[i] == clockRate)
-    {
-      m_clockRate = clockRate;
-      if (sensorConfigurator.iuI2S)
-      {
-        sensorConfigurator.iuI2S->setClockRate(clockRate);
-      }
-      return true;
-    }
+    // if sensors have already been initialized, set the clock rate of I2S,
+    // otherwise I2S clock rate will be set when it is initialized (see initSensors)
+    return sensorConfigurator.iuI2S->setClockRate(clockRate);
   }
   return false;
 }
@@ -160,10 +152,10 @@ bool IUConductor::initSensors()
 /**
  * Link all features to all sensors
  */
-void IUConductor::linkFeaturesToSensors()
+bool IUConductor::linkFeaturesToSensors()
 {
-  featureConfigurator.registerAllFeaturesInSensors(sensorConfigurator.getSensors(),
-                                                   sensorConfigurator.sensorCount);
+  return featureConfigurator.registerAllFeaturesInSensors(sensorConfigurator.getSensors(),
+                                                          sensorConfigurator.sensorCount);
 }
 
 /**
@@ -315,7 +307,10 @@ bool IUConductor::checkAndUpdateState()
  */
 bool IUConductor::acquireAndSendData()
 {
-  if (!m_inDataAcquistion) { return false; }
+  if (!m_inDataAcquistion)
+  {
+    return false;
+  }
   bool newData = false;
   if (iuI2C->getErrorMessage().equals("ALL_OK")) // Acquire data only if all ok
   {
@@ -337,7 +332,13 @@ bool IUConductor::acquireAndSendData()
   }
   else
   {
-    sensorConfigurator.iuI2S->readData(); // Empty I2S buffer
+    if (debugMode)
+    {
+      debugPrint("I2C error: ", false);
+      debugPrint(iuI2C->getErrorMessage());
+    }
+    iuI2C->resetErrorMessage();
+    sensorConfigurator.iuI2S->readData(false);; // Empty I2S buffer to continue
   }
   return newData;
 }
@@ -397,15 +398,14 @@ bool IUConductor::beginDataAcquisition()
   {
     return true; // Already in data acquisition
   }
-  I2S.onReceive(m_callback); // add the receiver callback
-  if (!I2S.begin(I2S_PHILIPS_MODE, m_clockRate, IUI2S::bitsPerSample)) {
-    return false;
-  }
-  // trigger a read to kick things off
-  I2S.read();
+  // m_inDataAcquistion should be set to true BEFORE triggering the data acquisition,
+  // otherwise I2S buffer won't be emptied in time
   m_inDataAcquistion = true;
-  if (loopDebugMode) { debugPrint("Data acquisition triggered\n"); }
-  return true;
+  if (!sensorConfigurator.iuI2S->triggerDataAcquisition(m_callback))
+  {
+    m_inDataAcquistion = false;
+  }
+  return m_inDataAcquistion;
 }
 
 /**
@@ -414,12 +414,12 @@ bool IUConductor::beginDataAcquisition()
  */
 void IUConductor::endDataAcquisition()
 {
-  if (m_inDataAcquistion)
+  if (!m_inDataAcquistion)
   {
-    I2S.end();
+    return; // nothing to do
   }
+  sensorConfigurator.iuI2S->endDataAcquisition();
   m_inDataAcquistion = false;
-  if (loopDebugMode) { debugPrint("Data acquisition disabled"); }
 }
 
 /**
@@ -428,7 +428,6 @@ void IUConductor::endDataAcquisition()
  */
 bool IUConductor::resetDataAcquisition()
 {
-  if (loopDebugMode) { debugPrint("Resetting data acquisition..."); }
   endDataAcquisition();
   featureConfigurator.resetFeaturesCounters();
   delay(500);
@@ -454,7 +453,6 @@ void IUConductor::processInstructionsFromI2C()
     }
     else if (m_opMode == operationMode::dataCollection)
     {
-      iuI2C->printBuffer();
       //TODO REBUILD
       /*
       sensorConfigurator.iuRGBLed->updateFromI2C();            // Check for LED color update

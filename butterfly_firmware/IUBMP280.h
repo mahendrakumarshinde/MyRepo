@@ -16,7 +16,6 @@
 
 #include <Arduino.h>
 
-#include "IUUtilities.h"
 #include "IUABCSensor.h"
 #include "IUI2C.h"
 
@@ -85,7 +84,10 @@ class IUBMP280 : public IUABCSensor
     virtual void readData();
     virtual void sendToReceivers();
     virtual void dumpDataThroughI2C();
+    virtual void dumpDataForDebugging();
     int32_t readRawTemperature();
+    // Diagnostic Functions
+    virtual void exposeCalibration();
 
   protected:
     static IUI2C *m_iuI2C;
@@ -94,13 +96,13 @@ class IUBMP280 : public IUABCSensor
     static uint8_t m_rawTempBytes[3]; // 20-bit temperature register data stored here
     static int32_t m_fineTemperature;
     static int16_t m_digTemperature[3];
-    static int16_t m_temperature;
+    static float m_temperature;
     static void processTemperatureData(uint8_t wireStatus);
     static float compensateTemperature(int32_t rawT);
     //Pressure reading
     static uint8_t m_rawPressureBytes[3];
     static int16_t m_digPressure[9];
-    static int16_t m_pressure;
+    static float m_pressure;
     static void processPressureData(uint8_t wireStatus);
     static float compensatePressure(int32_t rawP);
     //Config variables

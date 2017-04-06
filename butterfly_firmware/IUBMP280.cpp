@@ -4,10 +4,10 @@ IUI2C* IUBMP280::m_iuI2C = NULL;
 uint8_t IUBMP280::m_rawTempBytes[3]; // 20-bit temperature register data stored here
 int32_t IUBMP280::m_fineTemperature = 0;
 int16_t IUBMP280::m_digTemperature[3] = {0, 0, 0};
-int16_t IUBMP280::m_temperature = 0;
+float IUBMP280::m_temperature = 0;
 uint8_t IUBMP280::m_rawPressureBytes[3] = {0, 0, 0};
 int16_t IUBMP280::m_digPressure[9]= {0, 0, 0, 0, 0, 0, 0, 0, 0};
-int16_t IUBMP280::m_pressure = 0;
+float IUBMP280::m_pressure = 0;
 
 char IUBMP280::sensorTypes[IUBMP280::sensorTypeCount] =
 {
@@ -60,7 +60,11 @@ void IUBMP280::initSensor()
   
   // Read and store calibration data
   uint8_t calib[24];
-  m_iuI2C->readBytes(ADDRESS, CALIB00, 24, &calib[0]);
+  if (!m_iuI2C->readBytes(ADDRESS, CALIB00, 24, &calib[0]))
+  {
+    m_iuI2C->port->println("Failed to calibrate BMP280\n");
+    return;
+  }
   for (int i = 0; i < 3; i++)
   {
     m_digTemperature[i] = (uint16_t)(((uint16_t) calib[2 * i + 1] << 8) | calib[2 * i]);
@@ -69,7 +73,7 @@ void IUBMP280::initSensor()
   {
     m_digPressure[i] = (uint16_t)(((uint16_t) calib[2 * (i + 3) + 1] << 8) | calib[2 * (i + 3)]);
   }
-  m_iuI2C->port->println("BMP280 Initialized successfully.\n");
+  m_iuI2C->port->println("BMP280 initialized successfully.\n");
   m_iuI2C->port->flush();
 }
 
@@ -97,7 +101,10 @@ void IUBMP280::wakeUp()
  */
 void IUBMP280::readTemperature() // Index 4
 {
-  m_iuI2C->readBytes(ADDRESS, TEMP_MSB, 3, &m_rawTempBytes[0], processTemperatureData);
+  if (!m_iuI2C->readBytes(ADDRESS, TEMP_MSB, 3, &m_rawTempBytes[0], processTemperatureData))
+  {
+    if (callbackDebugMode) { debugPrint("Skip temperature read"); }
+  }
 }
 
 /**
@@ -105,13 +112,7 @@ void IUBMP280::readTemperature() // Index 4
  */
 void IUBMP280::processTemperatureData(uint8_t wireStatus)
 {
-  if (m_iuI2C->isReadError())
-  {
-    m_iuI2C->port->print("Skip temperature read: ");
-    m_iuI2C->port->println(m_iuI2C->getReadError(), HEX);
-    m_iuI2C->resetReadError();
-    return;
-  }
+  Serial.println("in temperature callback");
   int32_t rawTemp = (int32_t) (((int32_t) m_rawTempBytes[0] << 16 | (int32_t) m_rawTempBytes[1] << 8 | m_rawTempBytes[2]) >> 4);
   m_temperature = compensateTemperature(rawTemp);
 }
@@ -143,7 +144,10 @@ float IUBMP280::compensateTemperature(int32_t rawT)
  */
 void IUBMP280::readPressure() // Index 4
 {
-  m_iuI2C->readBytes(ADDRESS, PRESS_MSB, 3, &m_rawPressureBytes[0], processPressureData);
+  if (!m_iuI2C->readBytes(ADDRESS, PRESS_MSB, 3, &m_rawPressureBytes[0], processPressureData))
+  {
+    if (callbackDebugMode) { debugPrint("Skip pressure read"); }
+  }
 }
 
 /**
@@ -151,13 +155,7 @@ void IUBMP280::readPressure() // Index 4
  */
 void IUBMP280::processPressureData(uint8_t wireStatus)
 {
-  if (m_iuI2C->isReadError())
-  {
-    m_iuI2C->port->println("Skip Pressuure read");
-    m_iuI2C->port->println(m_iuI2C->getReadError(), HEX);
-    m_iuI2C->resetReadError();
-    return;
-  }
+  Serial.println("in pressure callback");
   int32_t rawP = (int32_t) (((int32_t) m_rawPressureBytes[0] << 16 | (int32_t) m_rawPressureBytes[1] << 8 | m_rawPressureBytes[2]) >> 4);
   m_pressure = (float) compensatePressure(rawP) / 100.;
 }
@@ -232,6 +230,10 @@ void IUBMP280::sendToReceivers()
  */
 void IUBMP280::dumpDataThroughI2C()
 {
+  if (!m_newData)
+  {
+    return;
+  }
   byte* data;
   // Stream temperature float value as 4 bytes
   data = (byte *) &m_temperature;
@@ -241,5 +243,53 @@ void IUBMP280::dumpDataThroughI2C()
   data = (byte *) &m_pressure;
   m_iuI2C->port->write(data, 4);
   m_iuI2C->port->flush();
+  m_newData = false;
+}
+
+/**
+ * Dump Temperature data to serial via I2C
+ * NB: We want to do this in *DATA COLLECTION* mode, when debugMode is true
+ */
+void IUBMP280::dumpDataForDebugging()
+{
+  if (!m_newData)
+  {
+    return;
+  }
+  // Stream float values with 4 digits
+  m_iuI2C->port->print("T: ");
+  m_iuI2C->port->println(m_temperature, 4);
+  m_iuI2C->port->flush();
+  m_iuI2C->port->print("P: ");
+  m_iuI2C->port->println(m_pressure, 4);
+  m_iuI2C->port->flush();
+  m_newData = false;
+}
+
+
+/* ====================== Diagnostic Functions, only active when setupDebugMode = true ====================== */
+
+/*
+ * Show calibration info
+ */
+void IUBMP280::exposeCalibration()
+{
+  #ifdef DEBUGMODE
+  debugPrint(F("Calibration data: "));
+  debugPrint(F("3 digital Temp vars: "));
+  for (uint8_t i = 0; i < 3; ++i)
+  {
+    debugPrint(m_digTemperature[i], false);
+    debugPrint(", ", false);
+  }
+  debugPrint(' ');
+  debugPrint(F("9 digital Pressure vars: "));
+  for (uint8_t i = 0; i < 9; ++i)
+  {
+    debugPrint(m_digPressure[i], false);
+    debugPrint(", ", false);
+  }
+  debugPrint(' ');
+  #endif
 }
 

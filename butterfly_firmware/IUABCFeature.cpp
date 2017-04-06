@@ -6,39 +6,38 @@ const uint16_t IUABCFeature::ABCSourceSize[IUABCFeature::ABCSourceCount] = {1};
 
 /**
  *
- * Should call newSource or prepareSource immediatly after construction
+ * Should call prepareSource immediatly after construction
  */
 IUABCFeature::IUABCFeature(uint8_t id, char *name) :
   m_id(id),
   m_active(false),
   m_checkFeature(false),
   m_sourceReady(false),
-  m_latestValue(0)
+  m_producerReady(false)
 {
   strcpy(m_name, name);
-  m_state = operationState::idle;
-  m_highestDangerLevel = operationState::idle;
-  m_computeScalarFunction = NULL;
   setThresholds(0, 0, 0);
-  m_computeScalarFunction = NULL;
-  m_computeArrayFunction = NULL;
 }
 
 IUABCFeature::~IUABCFeature()
 {
-  deleteSource();
+  resetSource(true);
 }
 
 /**
  * Reset all source pointers to NULL
  */
-void IUABCFeature::resetSource()
+void IUABCFeature::resetSource(bool deletePtr)
 {
   uint8_t count = getSourceCount();
   for (uint8_t i = 0; i < 2; i++)
   {
     for (uint16_t j = 0; j < count; j++)
     {
+      if (deletePtr)
+      {
+        delete m_source[i][j];
+      }
       m_source[i][j] = NULL;
     }
   }
@@ -69,25 +68,6 @@ bool IUABCFeature::prepareSource()
 }
 
 /**
- * Delete all source pointers
- */
-void IUABCFeature::deleteSource()
-{
-  uint8_t count = getSourceCount();
-  for (uint8_t i = 0; i < 2; i++)
-  {
-    for (uint16_t j = 0; j < count; j++)
-    {
-      if(m_source[i][j])
-      {
-        delete m_source[i][j]; m_source[i][j] = NULL;
-      }
-    }
-  }
-  m_sourceReady = false;
-}
-
-/**
  * Set the feature as active: it will then be calculated and streamed
  * @return true if the feature was correctly activated, else false
  * NB: The feature cannot be activated if the source or sending queue have
@@ -95,7 +75,7 @@ void IUABCFeature::deleteSource()
  */
 bool IUABCFeature::activate()
 {
-  m_active = m_sourceReady;
+  m_active = m_sourceReady && m_producerReady;
   return m_active;
 }
 
@@ -109,11 +89,10 @@ void IUABCFeature::resetCounters()
   for (uint8_t i = 0; i < getSourceCount(); i++)
   {
     m_sourceCounter[i] = 0;
-    for (uint16_t j = 0; j < 2; j++)
-    {
-      m_computeNow[j][i] = false;
-      m_recordNow[j][i] = true;
-    }
+    m_recordNow[0][i] = true;
+    m_recordNow[1][i] = true;
+    m_computeNow[0][i] = false;
+    m_computeNow[1][i] = false;
   }
   m_computeIndex = 0;
   m_recordIndex = 0;
@@ -139,6 +118,14 @@ bool IUABCFeature::receiveArray(uint8_t sourceIndex)
   }
   m_recordNow[m_recordIndex][sourceIndex] = false;         //Do not record anymore in this buffer
   m_computeNow[m_recordIndex][sourceIndex] = true;         //Buffer ready for computation
+  // Printing during callbacks can cause issues (do it only for debugging)
+  if (callbackDebugMode)
+  {
+    debugPrint(m_name, false);
+    debugPrint(" source #", false);
+    debugPrint(sourceIndex, false);
+    debugPrint(" is full");
+  }
   if (isTimeToEndRecord())
   {
     m_recordIndex = m_recordIndex == 0 ? 1 : 0; //switch buffer index
@@ -151,13 +138,24 @@ bool IUABCFeature::receiveArray(uint8_t sourceIndex)
  */
 bool IUABCFeature::isTimeToEndRecord()
 {
-  //
-  bool doNotChange = false;
-  for (uint16_t i = 0; i < getSourceCount(); i++)
+  // If any of the recordNow is true, do not change
+  for (uint8_t i = 0; i < getSourceCount(); i++)
   {
-    doNotChange |= m_recordNow[m_recordIndex][i];  //if any of the recordNow is true, do not change
+    if(m_recordNow[m_recordIndex][i])
+    {
+      return false;
+    }
   }
-  return !doNotChange;
+  // Printing during callbacks can cause issues (do it only for debugging)
+  if (callbackDebugMode)
+  {
+    debugPrint(m_name, false);
+    debugPrint(F(" all buffers full at idx "), false);
+    debugPrint(m_recordIndex, false);
+    debugPrint(": ", false);
+    debugPrint(millis());
+  }
+  return true;
 }
 
 /**
@@ -166,49 +164,38 @@ bool IUABCFeature::isTimeToEndRecord()
  */
 bool IUABCFeature::compute()
 {
+  uint32_t startT = 0;
+  if (loopDebugMode)
+  {
+    startT = millis();
+  }
   for (int i = 0; i < getSourceCount(); i++)
   {
-    if(!m_computeNow[m_computeIndex][i]) //Any source not ready for computation
+    if(!m_computeNow[m_computeIndex][i]) // Any source not ready for computation
     {
       return false;
     }
   }
   //Compute first the scalar value, as computeArrayFunctions are often destructive (they modify the source to save space,
   // because they are generally heavier)
-  if (loopDebugMode) { debugPrint(m_name, false); }
-  if(m_computeScalarFunction != NULL)
+  m_computeScalar(m_computeIndex);
+  m_computeArray(m_computeIndex);
+  if (loopDebugMode)
   {
-    if (loopDebugMode)
-    {
-      debugPrint(millis(), false);
-      debugPrint(F(": compute value"), false);
-    }
-    m_latestValue = m_computeScalarFunction(getSourceCount(), getSourceSize(), m_source[m_computeIndex]);
+    debugPrint(m_name, false);
+    debugPrint(F("computation => index, time, value: "), false);
+    debugPrint(m_computeIndex, false);
+    debugPrint(F(", "), false);
+    debugPrint(millis() - startT, false);
+    debugPrint(F(", "), false);
+    debugPrint(getLatestValue());
   }
-  if(m_computeArrayFunction != NULL)
-  {
-    if (loopDebugMode)
-    {
-      debugPrint(millis(), false);
-      debugPrint(F(": compute array"));
-    }
-    m_computeArrayFunction(getSourceCount(), getSourceSize(), m_source[m_computeIndex], getDestinationSize(), m_destination);
-  }
-  // Free m_source[m_computeIndex] to store new records
   for (int i =0; i < getSourceCount(); i++)
   {
-    m_computeNow[m_computeIndex][i] = false;   //Do not recompute this buffer
-    m_recordNow[m_computeIndex][i] = true;     //Buffer ready for recording
+    m_computeNow[m_computeIndex][i] = false;   // Do not recompute this buffer
+    m_recordNow[m_computeIndex][i] = true;     // Buffer ready for recording
   }
-  Serial.print("...");
-  Serial.print(m_computeIndex);
-  Serial.print(", ");
-  Serial.print(m_computeNow[m_computeIndex][0]);
-  Serial.print(", ");
-  Serial.print(m_recordNow[m_computeIndex][0]);
-  Serial.print(", ");
   m_computeIndex = m_computeIndex == 0 ? 1 : 0; //switch buffer index
-  Serial.println(m_computeIndex);
   return true;
 }
 
@@ -217,21 +204,22 @@ bool IUABCFeature::compute()
  * NB: Also update highestDangerLevel
  * @return 0 is not cutting, 1 is normal, 2 is warning, 3 is danger
  */
-operationState IUABCFeature::getOperationState() {
-  if (!m_checkFeature)
-  {
-    return operationState::idle; // If feature check is disabled, early return
-  }
+operationState IUABCFeature::updateState()
+{
   for (uint8_t i = 0; i < operationState::opStateCount - 1; i++)
   {
-    if (m_latestValue < m_thresholds[i])
+    if (getLatestValue() < m_thresholds[i])
     {
-      m_state = (operationState) i;
+      setState((operationState) i);
       break;
     }
   }
-  m_highestDangerLevel = max(m_highestDangerLevel, m_state);
-  return m_state;
+  if (!m_checkFeature) // If feature check is disabled, return idle independently of real state
+  {
+    return operationState::idle;
+  }
+  setHighestDangerLevel(max(getHighestDangerLevel(), getState()));
+  return getState();
 }
 
 /**
@@ -243,7 +231,7 @@ void IUABCFeature::stream(HardwareSerial *port)
   port->print("000");
   port->print(m_id);
   port->print(",");
-  port->print(m_latestValue);
+  port->print(getLatestValue());
 }
 
 /* ====================== Diagnostic Functions, only active when setupDebugMode = true ====================== */
@@ -253,7 +241,6 @@ void IUABCFeature::stream(HardwareSerial *port)
 void IUABCFeature::exposeSourceConfig()
 {
   #ifdef DEBUGMODE
-  debugPrint(F(" "));
   uint8_t count = getSourceCount();
   debugPrint(F("Source count: "), false);
   debugPrint(count);
@@ -274,9 +261,8 @@ void IUABCFeature::exposeSourceConfig()
 void IUABCFeature::exposeCounterState()
 {
   #ifdef DEBUGMODE
-  uint8_t count = getSourceCount();
-  debugPrint(F("Counter | computeNow | recordNow :"));
-  for (int i = 0; i < count; i++)
+  debugPrint(F("Counter | recordNow | computeNow :"));
+  for (uint8_t i = 0; i < getSourceCount(); i++)
   {
     debugPrint(m_sourceCounter[i], false);
     debugPrint(F(" | "), false);

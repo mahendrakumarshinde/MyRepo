@@ -2,7 +2,6 @@
 #define IUSENSORCONFIGURATOR_H
 
 #include <Arduino.h>
-#include "IUUtilities.h"
 #include "IUABCSensor.h"
 #include "IUBattery.h"
 #include "IURGBLed.h"

@@ -3,9 +3,7 @@
 
 #include <Arduino.h>
 
-#include "IUUtilities.h"
 #include "IUFeature.h"
-#include "IUABCSensor.h"
 #include "IUFeatureConfigurator.h"
 #include "IUSensorConfigurator.h"
 // Components
@@ -26,16 +24,14 @@
 class IUConductor
 {
   public:
-    static const uint8_t availableClockRateCount = 10;
-    static uint32_t availableClockRate[availableClockRateCount];
-    static const uint32_t defaultClockRate = 8000;      //Hz (must be compatible with I2C)
+    static const uint16_t defaultClockRate = 8000;      //Hz (must be compatible with I2C)
     static const uint16_t defaultDataSendPeriod = 500;        // ms - send data every T milliseconds
     // Constructors, destructors, getters and setters
     IUConductor();
     IUConductor(String macAddress);
     virtual ~IUConductor();
-    bool setClockRate( uint32_t clockRate);
-    uint32_t getClockRate() {return m_clockRate; }
+    bool setClockRate( uint16_t clockRate);
+    uint16_t getClockRate() {return m_clockRate; }
     operationState getOperationState() { return m_opState; }
     operationMode getOperationMode() { return m_opMode; }
     void enableAutoSleep() { m_autoSleepEnabled = true; }
@@ -49,7 +45,7 @@ class IUConductor
     bool initInterfaces();
     bool initConfigurators();
     bool initSensors();
-    void linkFeaturesToSensors();
+    bool linkFeaturesToSensors();
     void switchToMode(operationMode mode);
     void switchToState(operationState state);
     bool checkAndUpdateMode();
@@ -77,7 +73,7 @@ class IUConductor
     String m_macAddress;
     operationMode m_opMode;
     operationState m_opState;
-    uint32_t m_clockRate; //Hz (must be compatible with I2C)
+    uint16_t m_clockRate; //Hz (must be compatible with I2C)
     // Data acquisition
     void (*m_callback)();
     bool m_inDataAcquistion;

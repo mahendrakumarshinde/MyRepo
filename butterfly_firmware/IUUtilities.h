@@ -6,28 +6,7 @@
 #include <arm_math.h>
 #include <MemoryFree.h>
 
-/* ============================= Debugging ============================= */
-
-// Define DEBUGMODE to enable special notifications from the whole firmware
-#define DEBUGMODE
-
-#ifdef DEBUGMODE
-__attribute__((section(".noinit2"))) const bool setupDebugMode = false;
-__attribute__((section(".noinit2"))) const bool loopDebugMode = true;
-#else
-__attribute__((section(".noinit2"))) const bool setupDebugMode = false;
-__attribute__((section(".noinit2"))) const bool loopDebugMode = false;
-#endif
-
-__attribute__((section(".noinit2"))) const bool debugMode = (setupDebugMode || loopDebugMode);
-
-void debugPrint(String msg, bool endline = true);
-void debugPrint(int msg, bool endline = true);
-void debugPrint(uint32_t msg, bool endline = true);
-void debugPrint(float msg, bool endline = true);
-void debugPrint(char msg, bool endline = true);
-void debugPrint(char *msg, bool endline = true);
-
+#include "IULogger.h"
 
 /* ============================= Operation Enums ============================= */
 /**
@@ -76,9 +55,13 @@ uint8_t splitStringToInt(String str, const char separator, int *destination, con
 bool checkCharsAtPosition(char *charBuffer, int *positions, char character);
 
 // Conversion
-float q15ToFloat(q15_t value);
+inline float q15ToFloat(q15_t value) { return ((float) value) / 32768.; }
 
-q15_t floatToQ15(float value);
+inline q15_t floatToq15(float value) { return (q15_t) (32768 * value); }
+
+inline float q4_11ToFloat(q15_t value) { return ((float) value) / 2048.; }
+
+inline q15_t floatToq4_11(float value) { return (q15_t) (2048 * value); }
 
 inline float g_to_ms2(float value) { return 9.8 * value; }
 
@@ -101,12 +84,14 @@ float computeRMS(uint16_t sourceSize, q15_t *source);
 __attribute__((section(".noinit2"))) const int magsize_512 = 257;
 __attribute__((section(".noinit2"))) const float hamming_K_512 = 1.8519;         // 1/0.5400
 __attribute__((section(".noinit2"))) const float inverse_wlen_512 = 1/512.0;
-extern __attribute__((section(".noinit2"))) q15_t hamming_window_512 [512];
+//extern __attribute__((section(".noinit2"))) q15_t hamming_window_512 [512];
+extern q15_t hamming_window_512 [512];
 
 __attribute__((section(".noinit2"))) const int magsize_2048 = 1025;
 __attribute__((section(".noinit2"))) const float hamming_K_2048 = 1.8519;        // 1/0.5400
 __attribute__((section(".noinit2"))) const float inverse_wlen_2048 = 1/2048.0;
-extern __attribute__((section(".noinit2"))) q15_t hamming_window_2048 [2048];
+//extern __attribute__((section(".noinit2"))) q15_t hamming_window_2048 [2048];
+extern q15_t hamming_window_2048 [2048];
 
 
 #endif // IUUTILITIES_H

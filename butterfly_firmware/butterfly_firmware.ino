@@ -30,7 +30,9 @@ const uint32_t RESTING_INTERVAL = 0;  // Inter-batch gap
 //====================== Instanciate Conductor from IU library ========================
 
 IUConductor conductor;
-bool firstLoop = true;
+bool doOnce = true;
+uint32_t interval = 500; //ms
+uint32_t lastDisplay = 0;
 
 
 //==============================================================================
@@ -39,7 +41,17 @@ bool firstLoop = true;
 
 void callback()
 {
+  uint32_t startT = 0;
+  if (callbackDebugMode)
+  {
+    startT = micros();
+  }
+  //Serial.println('c');
   conductor.acquireAndSendData();
+  if (callbackDebugMode)
+  {
+    debugPrint(micros() - startT);
+  }
 }
 
 /* ------------------------------------ begin ---------------------------------------- */
@@ -50,32 +62,24 @@ void setup()
   {
     Serial.begin(115200);
     debugPrint(F("Start\n"));
+    delay(2000);
   }
 
-  delay(4000);
-  if (debugMode)
+  delay(2000);
+  if (setupDebugMode)
   {
-    debugPrint(F("Start - Available Memory: "), false);
-    debugPrint(freeMemory());
+    memoryLog("Start");
   }
   
   conductor = IUConductor(MAC_ADDRESS);
-  if (setupDebugMode)
-  {
-    debugPrint(F("Conductor - Available Memory: "), false);
-    debugPrint(freeMemory());
-  }
+  if (setupDebugMode) { memoryLog(F("Conductor initialized")); }
   
   if (!conductor.initInterfaces())
   {
     if (setupDebugMode) { debugPrint(F("Failed to initialize interfaces\n")); }
     while(1);                                                // hang
   }
-  if (setupDebugMode)
-  {
-    debugPrint(F("Interfaces - Available Memory: "), false);
-    debugPrint(freeMemory());
-  }
+  if (setupDebugMode) { memoryLog(F("Interfaces created")); }
   conductor.printMsg("Successfully initialized interfaces\n");
   conductor.printMsg("Initializing components and setting up default configurations\n");
   
@@ -84,72 +88,66 @@ void setup()
     conductor.printMsg("Failed to initialize configurators\n");
     while(1);                                                // hang
   }
-  if (setupDebugMode)
-  {
-    debugPrint(F("configurators - Available Memory: "), false);
-    debugPrint(freeMemory());
-  }
+  if (setupDebugMode) { memoryLog(F("Configurators created")); }
   
   if (!conductor.initSensors())
   {
     conductor.printMsg("Failed to initialize sensors\n");
     while(1);                                                // hang
   }
-  if (setupDebugMode)
-  {
-    debugPrint(F("Sensors - Available Memory: "), false);
-    debugPrint(freeMemory());
-  }
+  if (setupDebugMode) { memoryLog(F("Sensors created")); }
   
   if (!conductor.featureConfigurator.doStandardSetup())
   {
     conductor.printMsg("Failed to configure features\n");
     while(1);                                                // hang
   }
-  if (setupDebugMode)
-  {
-    debugPrint(F("Features - Available Memory: "), false);
-    debugPrint(freeMemory());
-  }
+  if (setupDebugMode) { memoryLog(F("Features created")); }
   
-  conductor.linkFeaturesToSensors();
-
+  if (!conductor.linkFeaturesToSensors())
+  {
+    conductor.printMsg("Failed to link feature sources to sensors\n");
+    while(1);                                                // hang
+  }
   if (setupDebugMode)
   {
-    debugPrint(conductor.iuI2C->getErrorMessage());
-    conductor.iuI2C->resetErrorMessage();
-    debugPrint(F((char*) conductor.iuI2C->getReadError()));
-    conductor.iuI2C->resetReadError();
+    debugPrint(F("Feature sources successfully linked to sensors\n"));
     conductor.sensorConfigurator.exposeSensorsAndReceivers();
     conductor.featureConfigurator.exposeFeaturesAndReceivers();
     conductor.featureConfigurator.exposeFeatureStates();
+    
+    debugPrint(F("I2C status: "), false);
+    debugPrint(conductor.iuI2C->getErrorMessage());
+    debugPrint(F("\nBegin run at (ms): "), false);
+    debugPrint(millis());
+    debugPrint(' ');
   }
-  
+  //Serial.flush();
   conductor.setCallback(callback);
   conductor.switchToMode(operationMode::run);
   conductor.switchToState(operationState::idle);
-
-  if (debugMode)
-  {
-    debugPrint(conductor.iuI2C->getErrorMessage());
-    debugPrint(F("Begin run at (ms): "), false);
-    debugPrint(millis());
-  }
 }
 
 void loop()
 {
-  //TODO Design and develop a calibration and hardware testing framework
-  if (firstLoop)
-  {
-    if (loopDebugMode)
-    {
-      debugPrint(F("Loop - Available Memory: "), false);
-      debugPrint(freeMemory());
-    }
-    firstLoop = false;
-  }
   
+  if (loopDebugMode)
+  {
+    if (doOnce) // For unique display
+    {
+      if (setupDebugMode) { memoryLog(F("Loop")); }
+      debugPrint(' ');
+      doOnce = false;
+    }
+    /*
+    if(millis() - lastDisplay > interval) // For regular display
+    {
+      lastDisplay = millis();
+      //conductor.featureConfigurator.getFeatureByName("CX3")->exposeCounterState();
+    }
+    */
+  }
+  //TODO Design and develop a calibration and hardware testing framework
   /* -------------------------- USB Connection Check ----------------------- */
   /*
   if (bitRead(USB0_OTGSTAT, 5)) {
@@ -158,13 +156,29 @@ void loop()
     conductor.switchToState(operationState::idle);
   }
   */
-
+  /*
+  for (uint8_t i = 0; i < conductor.featureConfigurator.getFeatureCount(); ++i)
+  {
+    if(conductor.featureConfigurator.getFeature(i))
+    {
+      Serial.print(conductor.featureConfigurator.getFeature(i)->getName());
+      if(conductor.featureConfigurator.getFeature(i)->getProducer())
+      {
+        Serial.println(": good");
+      }
+      else
+      {
+        Serial.println(": not good");
+      }
+    }
+  }
+  */
+  //Serial.println('l');
   conductor.processInstructionsFromBluetooth();   // Receive instructions via BLE during run mode
   conductor.processInstructionsFromI2C();         // Receive instructions to enter / exit data collection mode, plus options during data collection
   conductor.computeFeatures();                    // Conductor handles feature computation depending on operation mode
   conductor.streamData();                         // Conductor choose streaming port depending on operation mode
   conductor.checkAndUpdateState();
-  conductor.checkAndUpdateMode();
-  
+  conductor.checkAndUpdateMode();    
 }
 

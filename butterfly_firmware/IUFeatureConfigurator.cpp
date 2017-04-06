@@ -43,15 +43,15 @@ IUFeatureConfigurator::FeatureConfig IUFeatureConfigurator::registeredConfigs[IU
       {0, "", ""}},
       
     {"CX1", // "IUAccelPreComputationFeature128" Precomputation of Accel signal energy and FFT
-      {1, "A", "0"},
+      {2, "A-A", "0-9"},
       {0, "", ""}},
       
     {"CY1", // "IUAccelPreComputationFeature128" Precomputation of Accel signal energy and FFT
-      {1, "A", "1"},
+      {2, "A-A", "1-9"},
       {0, "", ""}},
       
     {"CZ1", // "IUAccelPreComputationFeature128" Precomputation of Accel signal energy and FFT
-      {1, "A", "2"},
+      {2, "A-A", "2-9"},
       {0, "", ""}},
       
     {"A31", // "accelEnergy_3_128",
@@ -79,15 +79,15 @@ IUFeatureConfigurator::FeatureConfig IUFeatureConfigurator::registeredConfigs[IU
       {0, "", ""}},
       
     {"CX3", // "IUAccelPreComputationFeature128" Precomputation of Accel signal energy and FFT
-      {1, "A", "0"},
+      {2, "A-A", "0-9"},
       {0, "", ""}},
       
     {"CY3", // "IUAccelPreComputationFeature128" Precomputation of Accel signal energy and FFT
-      {1, "A", "1"},
+      {2, "A-A", "1-9"},
       {0, "", ""}},
       
     {"CZ3", // "IUAccelPreComputationFeature128" Precomputation of Accel signal energy and FFT
-      {1, "A", "2"},
+      {2, "A-A", "2-9"},
       {0, "", ""}},
       
     {"A33", // "accelEnergy_3_512",
@@ -104,15 +104,15 @@ IUFeatureConfigurator::FeatureConfig IUFeatureConfigurator::registeredConfigs[IU
       
     {"VX3", // "velocity_X_512",
       {0, "", ""},
-      {2, "CX3-CX3", "1-99"}},   // 99 means VX3 will receive the destinationArray from CX3
+      {4, "CX3-CX3-CX3-CX3", "99-1-2-3"}},   // 99 means VX3 will receive the destinationArray from CX3
       
     {"VY3", // "velocity_Y_512",
       {0, "", ""},
-      {2, "CY3-CY3", "1-99"}},
+      {4, "CY3-CY3-CY3-CY3", "99-1-2-3"}},
       
     {"VZ3", // "velocity_Z_512",
       {0, "", ""},
-      {2, "CZ3-CZ3", "1-99"}},
+      {4, "CZ3-CZ3-CZ3-CZ3", "99-1-2-3"}},
       
     {"T10", // "temperature_1_1",
       {1, "T", "0"},
@@ -127,7 +127,7 @@ IUFeatureConfigurator::FeatureConfig IUFeatureConfigurator::registeredConfigs[IU
       {0, "", ""}},
   };
 
-String IUFeatureConfigurator::standardConfig = "CX3-CY3-CZ3-VX3-VY3-VZ3-T10-S16"; //B33";
+String IUFeatureConfigurator::standardConfig = "T10-S16"; //"; //B33"; CX3-VX3-CY3-VY3-CZ3-VZ3-
 float IUFeatureConfigurator::standardThresholds[6][3] = {{30, 600, 1200},
                                                          {0.05, 1.2, 1.8},
                                                          {0.05, 1.2, 1.8},
@@ -261,7 +261,7 @@ bool IUFeatureConfigurator::registerFeatureInFeatureDependencies(IUFeature *feat
       }
       return false;
     }
-    if (!producerFeature->addReceiver(depSendingOptions[i], reservedSourceForSensor + i, feature))
+    if (!producerFeature->getProducer()->addReceiver(depSendingOptions[i], reservedSourceForSensor + i, feature))
     {
       if (setupDebugMode) { debugPrint(F("Failed to add feature as dependent of another feature")); }
       return false;
@@ -308,6 +308,7 @@ bool IUFeatureConfigurator::registerFeatureInSensors(IUFeature *feature, IUABCSe
         if (foundSensorTypes[i][0] == sensors[j]->getSensorType(k))
         {
           success &= sensors[j]->addScalarReceiver(depSendingOptions[i], i, feature);
+          feature->getProducer()->setSamplingRate(sensors[j]->getSamplingRate());
         }
       }
     }
@@ -321,12 +322,16 @@ bool IUFeatureConfigurator::registerFeatureInSensors(IUFeature *feature, IUABCSe
  * @param feature           the feature to register as receiver
  * @param sensor            pointer to a sensor
  */
-void IUFeatureConfigurator::registerAllFeaturesInSensors(IUABCSensor **sensors, uint8_t sensorCount)
+bool IUFeatureConfigurator::registerAllFeaturesInSensors(IUABCSensor **sensors, uint8_t sensorCount)
 {
   for (uint8_t i = 0; i < m_featureCount; i++)
   {
-    registerFeatureInSensors(m_features[i], sensors, sensorCount);
+    if (!registerFeatureInSensors(m_features[i], sensors, sensorCount))
+    {
+      return false;
+    }
   }
+  return true;
 }
 
 /**
@@ -408,8 +413,10 @@ bool IUFeatureConfigurator::requireConfiguration(String configBufffer)
     if (!success) { return false; }
     if (setupDebugMode)
     {
+      debugPrint(F("Feature "), false);
       debugPrint(requiredConfigs[i].name, false);
-      debugPrint(" successfully created");
+      debugPrint(F(" created. Available Memory: "), false);
+      debugPrint(freeMemory(), DEC);
     }
   }
   resetFeaturesCounters();
@@ -511,18 +518,16 @@ IUFeature* IUFeatureConfigurator::createFeature(IUFeatureConfigurator::FeatureCo
   if (feature)
   {
     feature->prepareSource();
+    feature->prepareProducer();
     if (!feature->activate())
     {
-      if (setupDebugMode) { debugPrint(F("Feature couldn't be activated: check the source and default function")); }
+      if (setupDebugMode) { debugPrint(F("Feature couldn't be activated: check the source and producer")); }
       delete feature; feature = NULL;
     }
   }
-  if (setupDebugMode)
+  else
   {
-    debugPrint("Feature ", false);
-    debugPrint(featConfig.name, false);
-    debugPrint(" created. Available Memory: ", false);
-    debugPrint(freeMemory(), DEC);
+    if (setupDebugMode) { debugPrint(F("Feature memory allocation failed.")); }
   }
   return feature;
 }
@@ -574,13 +579,7 @@ void IUFeatureConfigurator::computeAndSendToReceivers()
     computed = m_features[i]->compute();
     if (computed)
     {
-      m_features[i]->sendToReceivers();
-      if (loopDebugMode)
-      {
-        debugPrint(m_features[i]->getName(), false);
-        debugPrint(": ", false);
-        debugPrint(m_features[i]->getLatestValue());
-      }
+      m_features[i]->getProducer()->sendToReceivers();
     }
   }
 }
@@ -607,7 +606,7 @@ operationState IUFeatureConfigurator::getOperationStateFromFeatures()
   operationState featState;
   for (uint8_t i = 0; i < m_featureCount; i++)
   {
-    featState = m_features[i]->getOperationState();
+    featState = m_features[i]->updateState();
     if ((uint8_t) opState < (uint8_t) featState)
     {
       opState = featState;
@@ -651,8 +650,8 @@ void IUFeatureConfigurator::exposeFeaturesAndReceivers()
     for (int i = 0; i < m_featureCount; i++)
     {
       debugPrint(m_features[i]->getName() + ": ");
-      m_features[i]->exposeReceivers();
-      debugPrint("\n");
+      m_features[i]->getProducer()->exposeReceivers();
+      debugPrint(' ');
     }
   }
   #endif
@@ -670,11 +669,12 @@ void IUFeatureConfigurator::exposeFeatureStates()
   }
   for (int i = 0; i < m_featureCount; i++)
   {
+    debugPrint(' ');
     debugPrint(m_features[i]->getName() + " info: ");
     m_features[i]->exposeSourceConfig();
     m_features[i]->exposeCounterState();
   }
-  debugPrint("\n");
+  debugPrint(' ');
   #endif
 }
 

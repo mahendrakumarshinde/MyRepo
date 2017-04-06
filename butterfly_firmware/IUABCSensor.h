@@ -29,15 +29,15 @@ class IUABCSensor : public IUABCProducer
     static const uint8_t ABCSensorTypeCount = 1;
     static char ABCSensorTypes[ABCSensorTypeCount];
 
-    static const uint32_t defaultSamplingRate = 2; // Hz
-    static const uint32_t defaultCallbackRate = 1000; // Hz
+    static const uint16_t defaultSamplingRate = 2; // Hz
+    static const uint16_t defaultCallbackRate = 1000; // Hz
     // Constructor, destructor, getters and setters
     IUABCSensor();
     virtual ~IUABCSensor();
-    virtual void setSamplingRate(uint32_t samplingRate);
-    virtual uint32_t getSamplingRate() { return m_samplingRate; }
-    virtual void setCallbackRate(uint32_t callbackRate);
-    virtual uint32_t getCallbackRate() { return m_callbackRate; }
+    virtual void setSamplingRate(uint16_t samplingRate);
+    virtual uint16_t getSamplingRate() { return m_samplingRate; }
+    virtual void setCallbackRate(uint16_t callbackRate);
+    virtual uint16_t getCallbackRate() { return m_callbackRate; }
     virtual uint8_t getSensorTypeCount() { return ABCSensorTypeCount; }
     virtual char getSensorType(uint8_t index) { return ABCSensorTypes[index]; }
 
@@ -48,11 +48,14 @@ class IUABCSensor : public IUABCProducer
     virtual void readData() {}                // May be defined in Child class
     virtual void sendToReceivers() {}         // May be defined in Child class
     virtual void dumpDataThroughI2C() {}      // May be defined in Child class
+    virtual void dumpDataForDebugging() {}    // May be defined in Child class
+    // Diagnostic Functions
+    virtual void exposeCalibration() {}       // May be defined in Child class
 
 
   protected:
-    uint32_t m_samplingRate;
-    uint32_t m_callbackRate;
+    uint16_t m_samplingRate;
+    uint16_t m_callbackRate;
     uint16_t m_downclocking;
     uint16_t m_downclockingCount;
 

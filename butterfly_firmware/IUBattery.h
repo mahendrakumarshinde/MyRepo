@@ -15,7 +15,6 @@
 #define IUBATTERY_H
 
 #include <Arduino.h>
-#include "IUUtilities.h"
 #include "IUABCSensor.h"
 #include "IUI2C.h"
 

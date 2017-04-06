@@ -19,12 +19,18 @@ float computeSignalEnergy(uint8_t sourceCount, const uint16_t *sourceSize, q15_t
   {
     for (uint16_t j = 0; j < sourceSize[i]; j++)
     {
-      energy += sq(q15ToFloat(source[i][j]));
+      energy += sq(q4_11ToFloat(source[i][j]));
     }
     totalEnergy += energy / (float) sourceSize[i];
+    Serial.print("SigE #");
+    Serial.print(i);
+    Serial.print(": ");
+    Serial.println(energy);
     energy = 0;
   }
   totalEnergy /= (float) sourceCount;
+  Serial.print("Total E: ");
+  Serial.println(totalEnergy);
   return totalEnergy;
 }
 
@@ -42,7 +48,7 @@ float computeSumOf(uint8_t sourceCount, const uint16_t* sourceSize, float **sour
   {
     for (uint16_t j = 0; j < sourceSize[i]; j++)
     {
-      total += q15ToFloat(source[i][j]);
+      total += source[i][j];
     }
     grandTotal += total / (float) sourceSize[i];
     total = 0;
@@ -206,7 +212,7 @@ float computeAcousticDB(uint8_t sourceCount, const uint16_t* sourceSize, q15_t *
     audioDB = 0;
   }
   meanAudioDB /= (float) sourceCount;
-  return audioDB;
+  return meanAudioDB;
 }
 
 
@@ -225,10 +231,6 @@ float computeAcousticDB(uint8_t sourceCount, const uint16_t* sourceSize, q15_t *
  */
 bool computeRFFT(uint8_t sourceCount, const uint16_t* sourceSize, q15_t **source, const uint16_t destinationSize, q15_t *destination)
 {
-  if (sourceCount != 1)
-  {
-    return false; // sourceCount expected to be 1
-  }
   uint16_t ss = sourceSize[0];
   // Apply Hamming window in place
   switch(ss)
@@ -250,7 +252,8 @@ bool computeRFFT(uint8_t sourceCount, const uint16_t* sourceSize, q15_t **source
                                         1);              // 0: disable bit reversal output, 1: enable it
   if (status != ARM_MATH_SUCCESS)
   {
-      return false; // failure
+    if (loopDebugMode) { debugPrint("RFFT computation failed"); }
+    return false;
   }
   arm_rfft_q15(&rfftInstance, source[0], destination);
 }
@@ -332,47 +335,109 @@ bool computeAudioRFFT(uint8_t sourceCount, const uint16_t* sourceSize, q15_t **s
 }
 
 
-/* ================== IUFeature Definitions ==================== */
+/* ======================== IUFeatureProducer Definitions ========================== */
 
-IUFeature::IUFeature(uint8_t id, char *name) :
+IUFeatureProducer::IUFeatureProducer() :
   IUABCProducer(),
-  IUABCFeature(id, name)
+  m_latestValue(0),
+  m_samplingRate(0),
+  m_sampleCount(0),
+  m_state(operationState::idle),
+  m_highestDangerLevel(operationState::idle)
 {
-  // ctor
+  m_destination = NULL;
 }
 
-void IUFeature::sendToReceivers()
+bool IUFeatureProducer::prepareDestination()
 {
-  Serial.print(m_name);
-  Serial.print(" check: ");
-  Serial.println(m_receiverCount);
+  uint16_t ds = getDestinationSize();
+  m_destination = new q15_t[ds];
+  if (!m_destination)
+  {
+    if (setupDebugMode) { debugPrint("Failed to prepare producer destination array"); }
+    return false;  
+  }
+  for (uint16_t i = 0; i < ds; i++)
+  {
+    m_destination[i] = 0;
+  }
+  return true;
+}
+
+void IUFeatureProducer::sendToReceivers()
+{
   for (uint8_t i = 0; i < m_receiverCount; i++)
   {
     if (m_receivers[i])
     {
+      if (loopDebugMode)
+      {
+        debugPrint("send to ", false);
+        debugPrint(m_receivers[i]->getName(), false);
+        debugPrint(", opt ", false);
+        debugPrint((int) m_toSend[i], false);
+      }
       switch(m_toSend[i])
       {
         case (uint8_t) dataSendOption::value:
+          if (loopDebugMode)
+          {
+            debugPrint("=> value ", false);
+            debugPrint((float) m_latestValue, false);
+          }
           m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], m_latestValue);
           break;
         case (uint8_t) dataSendOption::state:
+          if (loopDebugMode)
+          {
+            debugPrint("=> state ", false);
+            debugPrint((int) m_state, false);
+          }
           m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], (q15_t) m_state);
           break;
+        case (uint8_t) dataSendOption::samplingRate:
+          if (loopDebugMode)
+          {
+            debugPrint("=> samplingRate ", false);
+            debugPrint(m_samplingRate, false);
+          }
+          m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], (q15_t) m_samplingRate);
+          break;
+        case (uint8_t) dataSendOption::sampleCount:
+          if (loopDebugMode)
+          {
+            debugPrint("=> sampleCount ", false);
+            debugPrint(m_sampleCount, false);
+          }
+          m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], (q15_t) m_sampleCount);
+          break;
+
+          
          case (uint8_t) dataSendOption::valueArray:
+          if (loopDebugMode) { debugPrint("=> array", false); }
           m_receivers[i]->receiveArray(m_receiverSourceIndex[i]);
           break;
+        default:
+          if (loopDebugMode) { debugPrint("=> nothing (unknown option)", false); }
+          break;
+          
+      }
+      if (loopDebugMode)
+      {
+        debugPrint(" was sent to ", false);
+        debugPrint(m_receivers[i]->getName());
       }
     }
   }
 }
 
 
-bool IUFeature::addArrayReceiver(uint8_t receiverSourceIndex, IUABCFeature *receiver)
+bool IUFeatureProducer::addArrayReceiver(uint8_t receiverSourceIndex, IUABCFeature *receiver)
 {
   return IUABCProducer::addArrayReceiver(getDestinationSize(), m_destination, receiverSourceIndex, receiver);
 }
 
-bool IUFeature::addReceiver(uint8_t sendOption, uint8_t receiverSourceIndex, IUABCFeature *receiver)
+bool IUFeatureProducer::addReceiver(uint8_t sendOption, uint8_t receiverSourceIndex, IUABCFeature *receiver)
 {
   if (sendOption == 99)
   {
@@ -385,13 +450,75 @@ bool IUFeature::addReceiver(uint8_t sendOption, uint8_t receiverSourceIndex, IUA
   }
 }
 
+IUFeatureProducer512::IUFeatureProducer512() :
+  IUFeatureProducer()
+{
+  // ctor
+}
+
+
+IUFeatureProducer128::IUFeatureProducer128() :
+  IUFeatureProducer()
+{
+  // ctor
+}
+
+
+/* ================== IUFeature Definitions ==================== */
+
+IUFeature::IUFeature(uint8_t id, char *name) :
+  IUABCFeature(id, name)
+{
+  m_producer = NULL;
+}
+
+IUFeature::~IUFeature()
+{
+  if(m_producer)
+  {
+    delete m_producer;
+  }
+  m_producer = NULL;
+}
+
+bool IUFeature::prepareProducer()
+{
+  m_producer = new IUFeatureProducer();
+  if (!m_producer || !m_producer->prepareDestination())
+  {
+    if (setupDebugMode) { debugPrint("Producer preparation failed."); }
+  }
+  m_producerReady = true;
+  return m_producerReady;
+}
+
 /* ================== IUQ15Feature Definitions ==================== */
 
 IUQ15Feature::IUQ15Feature(uint8_t id, char *name) :
   IUFeature(id, name)
+{
+  // ctor
+}
+
+/**
+ * Reset all source pointers to NULL
+ */
+void IUQ15Feature::resetSource(bool deletePtr)
+{
+  uint8_t count = getSourceCount();
+  for (uint8_t i = 0; i < 2; i++)
   {
-    m_computeScalarFunction = computeDefaultQ15;
+    for (uint16_t j = 0; j < count; j++)
+    {
+      if (deletePtr)
+      {
+        delete m_source[i][j];
+      }
+      m_source[i][j] = NULL;
+    }
   }
+  m_sourceReady = false;
+}
 
 /**
  * Creates the source pointers
@@ -399,9 +526,10 @@ IUQ15Feature::IUQ15Feature(uint8_t id, char *name) :
  */
 bool IUQ15Feature::newSource()
 {
+  uint8_t count = getSourceCount();
   for (uint8_t i = 0; i < 2; i++)
   {
-    for (uint16_t j = 0; j < getSourceCount(); j++)
+    for (uint16_t j = 0; j < count; j++)
     {
       m_source[i][j] = new q15_t[getSourceSize(j)];
       if (m_source[i][j] == NULL) // Pointer assignment failed
@@ -425,9 +553,12 @@ bool IUQ15Feature::setSource(uint8_t sourceIndex, uint16_t valueCount, q15_t *va
     if(setupDebugMode) { debugPrint("Receiver source size doesn't match producer value count."); }
     return false;
   }
+  // TODO delete is causing the firmware to hang, while m_source have been previously assigned... Need to find out why
+  /*
   // Delete previous source assignment
   delete m_source[0][sourceIndex]; m_source[0][sourceIndex] = NULL;
   delete m_source[1][sourceIndex]; m_source[1][sourceIndex] = NULL;
+  */
   m_source[0][sourceIndex] = values;
   m_source[1][sourceIndex] = values;
   return true;
@@ -443,37 +574,37 @@ bool IUQ15Feature::receiveScalar(uint8_t sourceIndex, q15_t value)
 {
   if (!m_recordNow[m_recordIndex][sourceIndex])                         // Recording buffer is not ready
   {
-     return false;
+    // Printing during callbacks can cause issues (do it only for debugging)
+    if (callbackDebugMode)
+    {
+      debugPrint(m_name, false);
+      debugPrint(F(" can't record at "), false);
+      debugPrint(m_recordIndex);
+    }
+    return false;
   }
   if (m_sourceCounter[sourceIndex] < getSourceSize(sourceIndex))        // Recording buffer is not full
   {
-      m_source[m_recordIndex][sourceIndex][m_sourceCounter[sourceIndex]] = value;
-      m_sourceCounter[sourceIndex]++;
+    m_source[m_recordIndex][sourceIndex][m_sourceCounter[sourceIndex]] = value;
+    m_sourceCounter[sourceIndex]++;
   }
   if (m_sourceCounter[sourceIndex] >= getSourceSize(sourceIndex))       // Recording buffer is now full
   {
     m_recordNow[m_recordIndex][sourceIndex] = false;         //Do not record anymore in this buffer
     m_computeNow[m_recordIndex][sourceIndex] = true;         //Buffer ready for computation
     m_sourceCounter[sourceIndex] = 0;                        //Reset counter
+    // Printing during callbacks can cause issues (do it only for debugging)
+    if (callbackDebugMode)
+    {
+      debugPrint(m_name, false);
+      debugPrint(" source #", false);
+      debugPrint(sourceIndex, false);
+      debugPrint(" is full");
+    }
   }
   if (isTimeToEndRecord())
   {
-    if (loopDebugMode)
-    {
-      debugPrint(m_name, false);
-      debugPrint(F(" end of "), false);
-      debugPrint(m_recordIndex, false);
-      debugPrint(": ", false);
-      debugPrint(millis());
-    }
-    Serial.print(m_recordIndex);
-    Serial.print(", ");
-    Serial.print(m_computeNow[m_recordIndex][0]);
-    Serial.print(", ");
-    Serial.print(m_recordNow[m_recordIndex][0]);
-    Serial.print(", ");
     m_recordIndex = m_recordIndex == 0 ? 1 : 0; //switch buffer index
-    Serial.println(m_recordIndex);
   }
   return true;
 }
@@ -484,7 +615,27 @@ bool IUQ15Feature::receiveScalar(uint8_t sourceIndex, q15_t value)
 IUFloatFeature::IUFloatFeature(uint8_t id, char *name) :
   IUFeature(id, name)
 {
-  m_computeScalarFunction = computeDefaultFloat;
+  // ctor
+}
+
+/**
+ * Reset all source pointers to NULL
+ */
+void IUFloatFeature::resetSource(bool deletePtr)
+{
+  uint8_t count = getSourceCount();
+  for (uint8_t i = 0; i < 2; i++)
+  {
+    for (uint16_t j = 0; j < count; j++)
+    {
+      if (deletePtr)
+      {
+        delete m_source[i][j];
+      }
+      m_source[i][j] = NULL;
+    }
+  }
+  m_sourceReady = false;
 }
 
 /**
@@ -493,9 +644,10 @@ IUFloatFeature::IUFloatFeature(uint8_t id, char *name) :
  */
 bool IUFloatFeature::newSource()
 {
+  uint8_t count = getSourceCount();
   for (uint8_t i = 0; i < 2; i++)
   {
-    for (uint16_t j = 0; j < getSourceCount(); j++)
+    for (uint16_t j = 0; j < count; j++)
     {
       m_source[i][j] = new float[getSourceSize(j)];
       if (m_source[i][j] == NULL) // Pointer assignment failed
@@ -535,7 +687,13 @@ bool IUFloatFeature::receiveScalar(uint8_t sourceIndex, float value)
 {
   if (!m_recordNow[m_recordIndex][sourceIndex])                         // Recording buffer is not ready
   {
-     return false;
+    // Printing during callbacks can cause issues (do it only for debugging)
+    if (callbackDebugMode)
+    {
+      debugPrint(m_name, false);
+      debugPrint(F(" can't record at "), false);
+      debugPrint(m_recordIndex);
+    }
   }
   if (m_sourceCounter[sourceIndex] < getSourceSize(sourceIndex))        // Recording buffer is not full
   {
@@ -547,6 +705,13 @@ bool IUFloatFeature::receiveScalar(uint8_t sourceIndex, float value)
     m_recordNow[m_recordIndex][sourceIndex] = false;                    //Do not record anymore in this buffer
     m_computeNow[m_recordIndex][sourceIndex] = true;                    //Buffer ready for computation
     m_sourceCounter[sourceIndex] = 0;                                   //Reset counter
+    if (loopDebugMode)
+    {
+      debugPrint(m_name, false);
+      debugPrint(" source #", false);
+      debugPrint(sourceIndex, false);
+      debugPrint(" is full");
+    }
   }
   if (isTimeToEndRecord())
   {
@@ -558,23 +723,80 @@ bool IUFloatFeature::receiveScalar(uint8_t sourceIndex, float value)
 
 /* ========================== Speicalized Feature Classes ============================= */
 
-const uint16_t IUAccelPreComputationFeature128::sourceSize[IUAccelPreComputationFeature128::sourceCount] = {128};
+const uint16_t IUAccelPreComputationFeature128::sourceSize[IUAccelPreComputationFeature128::sourceCount] = {128, 1};
 
 IUAccelPreComputationFeature128::IUAccelPreComputationFeature128(uint8_t id, char *name) :
   IUQ15Feature(id, name)
 {
-   m_computeArrayFunction = computeRFFT;
-   m_computeScalarFunction = computeSignalEnergy;
+  //m_producer = NULL;
+}
+
+bool IUAccelPreComputationFeature128::prepareProducer()
+{
+  m_producer = new IUFeatureProducer128();
+  if (!m_producer || !m_producer->prepareDestination())
+  {
+    if (setupDebugMode) { debugPrint("Producer preparation failed."); }
+  }
+  m_producerReady = true;
+  getProducer()->setSampleCount(getSourceSize(0));
+  return m_producerReady;
+}
+
+void IUAccelPreComputationFeature128::m_computeScalar (uint8_t computeIndex)
+{
+  float val = computeSignalEnergy(1, getSourceSize(), m_source[m_computeIndex]);
+  getProducer()->setLatestValue(val);
+  updateState();
+  getProducer()->setSamplingRate(m_source[computeIndex][1][0]);
+  getProducer()->setSampleCount(getSourceSize(0));
+}
+
+void IUAccelPreComputationFeature128::m_computeArray (uint8_t computeIndex)
+{
+  computeRFFT(getSourceCount(), getSourceSize(), m_source[m_computeIndex], getDestinationSize(), getDestination());
 }
 
 
-const uint16_t IUAccelPreComputationFeature512::sourceSize[IUAccelPreComputationFeature512::sourceCount] = {512};
+const uint16_t IUAccelPreComputationFeature512::sourceSize[IUAccelPreComputationFeature512::sourceCount] = {512, 1};
 
 IUAccelPreComputationFeature512::IUAccelPreComputationFeature512(uint8_t id, char *name) :
   IUQ15Feature(id, name)
 {
-   m_computeArrayFunction = computeRFFT;
-   m_computeScalarFunction = computeSignalEnergy;
+  //m_producer = NULL;
+}
+
+bool IUAccelPreComputationFeature512::prepareProducer()
+{
+  m_producer = new IUFeatureProducer512();
+  if (!m_producer || !m_producer->prepareDestination())
+  {
+    if (setupDebugMode) { debugPrint("Producer preparation failed."); }
+  }
+  m_producerReady = true;
+  m_producer->setSampleCount(getSourceSize(0));
+  return m_producerReady;
+}
+
+void IUAccelPreComputationFeature512::m_computeScalar (uint8_t computeIndex)
+{
+  float val = computeSignalEnergy(1, getSourceSize(), m_source[m_computeIndex]);
+  Serial.println("ok 0");
+  getProducer()->setLatestValue(val);
+  Serial.println("ok 1");
+  updateState();
+  Serial.println("ok 2");
+  getProducer()->setSamplingRate(m_source[computeIndex][1][0]);
+  Serial.println("ok 3");
+  getProducer()->setSampleCount(getSourceSize(0));
+  Serial.println("ok 4");
+}
+
+void IUAccelPreComputationFeature512::m_computeArray (uint8_t computeIndex)
+{
+  Serial.println("ok 5");
+  computeRFFT(getSourceCount(), getSourceSize(), m_source[m_computeIndex], getDestinationSize(), getDestination());
+  Serial.println("ok 6");
 }
 
 
@@ -583,7 +805,12 @@ const uint16_t IUSingleAxisEnergyFeature128::sourceSize[IUSingleAxisEnergyFeatur
 IUSingleAxisEnergyFeature128::IUSingleAxisEnergyFeature128(uint8_t id, char *name) :
   IUQ15Feature(id, name)
 {
-   m_computeScalarFunction = computeSignalEnergy;
+  // ctor
+}
+
+void IUSingleAxisEnergyFeature128::m_computeScalar (uint8_t computeIndex)
+{
+  getProducer()->setLatestValue(computeSignalEnergy(1, getSourceSize(), m_source[m_computeIndex]));
 }
 
 
@@ -592,7 +819,12 @@ const uint16_t IUTriAxisEnergyFeature128::sourceSize[IUTriAxisEnergyFeature128::
 IUTriAxisEnergyFeature128::IUTriAxisEnergyFeature128(uint8_t id, char *name) :
   IUQ15Feature(id, name)
 {
-   m_computeScalarFunction = computeSignalEnergy;
+  // ctor
+}
+
+void IUTriAxisEnergyFeature128::m_computeScalar (uint8_t computeIndex)
+{
+  getProducer()->setLatestValue(computeSignalEnergy(3, getSourceSize(), m_source[m_computeIndex]));
 }
 
 
@@ -601,7 +833,12 @@ const uint16_t IUSingleAxisEnergyFeature512::sourceSize[IUSingleAxisEnergyFeatur
 IUSingleAxisEnergyFeature512::IUSingleAxisEnergyFeature512(uint8_t id, char *name) :
   IUQ15Feature(id, name)
 {
-   m_computeScalarFunction = computeSignalEnergy;
+  // ctor
+}
+
+void IUSingleAxisEnergyFeature512::m_computeScalar (uint8_t computeIndex)
+{
+  getProducer()->setLatestValue(computeSignalEnergy(1, getSourceSize(), m_source[m_computeIndex]));
 }
 
 
@@ -610,7 +847,12 @@ const uint16_t IUTriAxisEnergyFeature512::sourceSize[IUTriAxisEnergyFeature512::
 IUTriAxisEnergyFeature512::IUTriAxisEnergyFeature512(uint8_t id, char *name) :
   IUQ15Feature(id, name)
 {
-   m_computeScalarFunction = computeSignalEnergy;
+  // ctor
+}
+
+void IUTriAxisEnergyFeature512::m_computeScalar (uint8_t computeIndex)
+{
+  getProducer()->setLatestValue(computeSignalEnergy(3, getSourceSize(), m_source[m_computeIndex]));
 }
 
 
@@ -619,16 +861,26 @@ const uint16_t IUTriSourceSummingFeature::sourceSize[IUTriSourceSummingFeature::
 IUTriSourceSummingFeature::IUTriSourceSummingFeature(uint8_t id, char *name) :
   IUFloatFeature(id, name)
 {
-  m_computeScalarFunction = computeSumOf;
+  // ctor
+}
+
+void IUTriSourceSummingFeature::m_computeScalar (uint8_t computeIndex)
+{
+  getProducer()->setLatestValue(computeSumOf(getSourceCount(), getSourceSize(), m_source[m_computeIndex]));
 }
 
 
-const uint16_t IUVelocityFeature512::sourceSize[IUVelocityFeature512::sourceCount] = {512, 1};
+const uint16_t IUVelocityFeature512::sourceSize[IUVelocityFeature512::sourceCount] = {512, 1, 1, 1};
 
 IUVelocityFeature512::IUVelocityFeature512(uint8_t id, char *name) :
   IUQ15Feature(id, name)
 {
-  m_computeScalarFunction = computeVelocity;
+  // ctor
+}
+
+void IUVelocityFeature512::m_computeScalar (uint8_t computeIndex)
+{
+  getProducer()->setLatestValue(computeVelocity(getSourceCount(), getSourceSize(), m_source[m_computeIndex]));
 }
 
 /**
@@ -637,26 +889,39 @@ IUVelocityFeature512::IUVelocityFeature512(uint8_t id, char *name) :
  */
 bool IUVelocityFeature512::newSource()
 {
+  uint8_t count = getSourceCount();
   for (uint8_t i = 0; i < 2; i++)
   {
-    m_source[i][0] = new q15_t[1];
-    m_source[i][1] = new q15_t[1];
-    if (m_source[i][0] == NULL || m_source[i][1] == NULL) // Pointer assignment failed
+    for (uint8_t j = 0; j < count; ++j)
     {
-      return false;
+      m_source[i][j] = new q15_t[1];
+      if (m_source[i][j] == NULL) // Pointer assignment failed
+      {
+        return false;
+      }
     }
   }
   return true;
 }
-
 
 const uint16_t IUDefaultFloatFeature::sourceSize[IUDefaultFloatFeature::sourceCount] = {1};
 
 IUDefaultFloatFeature::IUDefaultFloatFeature(uint8_t id, char *name) :
   IUFloatFeature(id, name)
 {
-  m_computeScalarFunction = computeDefaultFloat;
+  // ctor
 }
+
+void IUDefaultFloatFeature::m_computeScalar (uint8_t computeIndex)
+{
+  getProducer()->setLatestValue(computeDefaultFloat(getSourceCount(), getSourceSize(), m_source[m_computeIndex]));
+}
+
+
+/* Audio Data is very bulky, so we put it in SRAM2 */
+__attribute__((section(".noinit2"))) q15_t I2SDataSRAM2_0[4096];
+__attribute__((section(".noinit2"))) q15_t I2SDataSRAM2_1[4096];
+
 
 
 const uint16_t IUAudioDBFeature2048::sourceSize[IUAudioDBFeature2048::sourceCount] = {2048};
@@ -664,7 +929,28 @@ const uint16_t IUAudioDBFeature2048::sourceSize[IUAudioDBFeature2048::sourceCoun
 IUAudioDBFeature2048::IUAudioDBFeature2048(uint8_t id, char *name) :
   IUQ15Feature(id, name)
 {
-   m_computeScalarFunction = computeAcousticDB;
+  // ctor
+}
+
+void IUAudioDBFeature2048::m_computeScalar (uint8_t computeIndex)
+{
+  getProducer()->setLatestValue(computeAcousticDB(getSourceCount(), getSourceSize(), m_source[m_computeIndex]));
+}
+
+/**
+ * Creates the source pointers
+ * @return true if pointer assignments succeeded, else false
+ */
+bool IUAudioDBFeature2048::newSource()
+{
+  uint8_t count = getSourceCount();
+  m_source[0][0] = &I2SDataSRAM2_0[0];
+  m_source[1][0] = &I2SDataSRAM2_1[0];
+  if (m_source[0][0] == NULL || m_source[1][0] == NULL) // Pointer assignment failed
+  {
+    return false;
+  }
+  return true;
 }
 
 
@@ -673,6 +959,27 @@ const uint16_t IUAudioDBFeature4096::sourceSize[IUAudioDBFeature4096::sourceCoun
 IUAudioDBFeature4096::IUAudioDBFeature4096(uint8_t id, char *name) :
   IUQ15Feature(id, name)
 {
-  m_computeScalarFunction = computeAcousticDB;
+  // ctor
+}
+
+void IUAudioDBFeature4096::m_computeScalar (uint8_t computeIndex)
+{
+  getProducer()->setLatestValue(computeAcousticDB(getSourceCount(), getSourceSize(), m_source[m_computeIndex]));
+}
+
+/**
+ * Creates the source pointers
+ * @return true if pointer assignments succeeded, else false
+ */
+bool IUAudioDBFeature4096::newSource()
+{
+  uint8_t count = getSourceCount();
+  m_source[0][0] = &I2SDataSRAM2_0[0];
+  m_source[1][0] = &I2SDataSRAM2_1[0];
+  if (m_source[0][0] == NULL || m_source[1][0] == NULL) // Pointer assignment failed
+  {
+    return false;
+  }
+  return true;
 }
 
