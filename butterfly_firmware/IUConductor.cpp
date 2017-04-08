@@ -13,7 +13,8 @@ IUConductor::IUConductor(String macAddress) :
   m_autoSleepEnabled(false),
   m_opMode(operationMode::sleep),
   m_opState(operationState::idle),
-  m_inDataAcquistion(false)
+  m_inDataAcquistion(false),
+  m_lastSentTime(0)
 {
   iuI2C = NULL;
   iuBluetooth = NULL;
@@ -70,13 +71,9 @@ void IUConductor::setDataSendPeriod(uint16_t dataSendPeriod)
  */
 bool IUConductor::isDataSendTime()
 {
-  if (m_opMode)
-  {
-    return false;
-  }
   //Timer to send data regularly//
-  uint32_t current = (uint32_t) millis();
-  if (current - m_lastSentTime >= (uint32_t) m_dataSendPeriod)
+  uint32_t current = millis();
+  if (current - m_lastSentTime >= m_dataSendPeriod)
   {
     m_lastSentTime = current;
     return true;
@@ -322,6 +319,7 @@ bool IUConductor::acquireAndSendData()
     if (m_opMode == operationMode::dataCollection)
     {
       sensorConfigurator.acquireDataAndDumpThroughI2C();
+      processInstructionsFromI2C(); // In data collection mode, need to process I2C data
       newData = true;
     }
     if (m_opMode == operationMode::record)
@@ -363,24 +361,17 @@ bool IUConductor::streamData()
 {
   //TODO: Need to implement also for wifi and for data sending over wifi
   HardwareSerial *port;
-  if (m_opMode == operationMode::run)
-  {
-    port = iuBluetooth->port;
-  }
-  else if (m_opMode == operationMode::dataCollection)
-  {
-    port = iuI2C->port;
-  }
-  else
+  if (m_opMode != operationMode::run)
   {
     return false;
   }
   if (isDataSendTime())
   {
+    port = iuBluetooth->port;
     port->print(m_macAddress);                                                 // MAC Address
-    port->print(",0"); port->print((int) m_opState, DEC); port->print(",");    // Operation State
-    port->print(sensorConfigurator.iuBattery->getVoltage()); port->print(","); // Battery status
-    featureConfigurator.streamFeatures(port);                                  // Each feature value
+    port->print(",0"); port->print((uint8_t) m_opState); port->print(",");     // Operation State
+    port->print(sensorConfigurator.iuBattery->getVoltage());                   // Battery status
+    featureConfigurator.streamFeatures(port);                     // Each feature value
     port->print(","); port->print(getDatetime()); port->print(";");            // Datetime
     port->flush();                                                             // End
     return true;
@@ -601,4 +592,29 @@ void IUConductor::processInstructionsFromWifi()
 void IUConductor::printMsg(String msg)
 {
   iuI2C->port->println(msg);
+}
+
+
+/* ====================== Diagnostic Functions, only active when setupDebugMode = true ====================== */
+
+/**
+ * Send feature data through serial for debugging purpose
+ */
+void IUConductor::debugStreamData()
+{
+  #ifdef DEBUGMODE
+  if (m_opMode != operationMode::run)
+  {
+    return;
+  }
+  if (isDataSendTime())
+  {
+    Serial.print(m_macAddress);                                                   // MAC Address
+    Serial.print(",0"); Serial.print((int) m_opState, DEC); Serial.print(",");    // Operation State
+    Serial.print(sensorConfigurator.iuBattery->getVoltage());                     // Battery status
+    featureConfigurator.debugStreamFeatures();                                    // Each feature value
+    Serial.print(","); Serial.print(getDatetime()); Serial.print(";");            // Datetime
+    Serial.flush();                                                               // End
+  }
+  #endif
 }

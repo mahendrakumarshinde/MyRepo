@@ -13,10 +13,14 @@
 __attribute__((section(".noinit2"))) const bool setupDebugMode = false;
 __attribute__((section(".noinit2"))) const bool loopDebugMode = true;
 __attribute__((section(".noinit2"))) const bool callbackDebugMode = false;
+__attribute__((section(".noinit2"))) const bool highVerbosity = false;
+__attribute__((section(".noinit2"))) const bool readableDataCollection = false;
 #else
 __attribute__((section(".noinit2"))) const bool setupDebugMode = false;
 __attribute__((section(".noinit2"))) const bool loopDebugMode = false;
 __attribute__((section(".noinit2"))) const bool callbackDebugMode = false;
+__attribute__((section(".noinit2"))) const bool highVerbosity = false;
+__attribute__((section(".noinit2"))) const bool readableDataCollection = false;
 #endif
 
 __attribute__((section(".noinit2"))) const bool debugMode = (setupDebugMode || loopDebugMode || callbackDebugMode);
@@ -36,8 +40,8 @@ template <>
 inline void debugPrint(float msg, bool endline)
 {
   #ifdef DEBUGMODE
-  if (endline) { Serial.println(msg, 4); }
-  else { Serial.print(msg, 4); }
+  if (endline) { Serial.println(msg, 6); }
+  else { Serial.print(msg, 6); }
   Serial.flush();
   #endif
 }

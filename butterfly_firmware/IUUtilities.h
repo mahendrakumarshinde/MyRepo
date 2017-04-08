@@ -59,7 +59,7 @@ inline float q15ToFloat(q15_t value) { return ((float) value) / 32768.; }
 
 inline q15_t floatToq15(float value) { return (q15_t) (32768 * value); }
 
-inline float q4_11ToFloat(q15_t value) { return ((float) value) / 2048.; }
+inline float q4_11ToFloat(q15_t value) { return ((float) value) / 2048.0; }
 
 inline q15_t floatToq4_11(float value) { return (q15_t) (2048 * value); }
 
@@ -71,8 +71,18 @@ inline float ms2_to_g(float value) { return value / 9.8; }
 
 inline q15_t ms2_to_g(q15_t value) { return value / 9.8; }
 
-float computeRMS(uint16_t sourceSize, q15_t *source);
 
+/*=========================== Math functions ================================= */
+
+float computeRMS(uint16_t sourceSize, q15_t *source, float (*transform)(q15_t));
+
+float multiArrayMean(uint8_t arrCount, const uint16_t* arrSizes, float **arrays);
+
+bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTlength, bool inverse);
+
+bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTlength, bool inverse, q15_t *window, float windowGain);
+
+void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound, bool twice = false);
 
 
 //==============================================================================

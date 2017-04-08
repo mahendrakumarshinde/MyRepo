@@ -20,7 +20,7 @@
 #include "IUButterfly.h"
 
 
-//====================== Module Configuration Variables ========================
+//========================= Module Configuration Variables ===========================
 String MAC_ADDRESS = "88:4A:EA:69:DF:8C";
 
 // Reduce RUN frequency if needed.
@@ -46,7 +46,6 @@ void callback()
   {
     startT = micros();
   }
-  //Serial.println('c');
   conductor.acquireAndSendData();
   if (callbackDebugMode)
   {
@@ -130,54 +129,29 @@ void setup()
 
 void loop()
 {
-  
   if (loopDebugMode)
   {
-    if (doOnce) // For unique display
+    if (doOnce)
     {
+      doOnce = false;
+      /* === Place your code to excute once here ===*/
       if (setupDebugMode) { memoryLog(F("Loop")); }
       debugPrint(' ');
-      doOnce = false;
+      /*======*/
+      
     }
-    /*
-    if(millis() - lastDisplay > interval) // For regular display
+    if(millis() - lastDisplay > interval || millis() < lastDisplay) // For millis overflowing
     {
       lastDisplay = millis();
-      //conductor.featureConfigurator.getFeatureByName("CX3")->exposeCounterState();
-    }
-    */
-  }
-  //TODO Design and develop a calibration and hardware testing framework
-  /* -------------------------- USB Connection Check ----------------------- */
-  /*
-  if (bitRead(USB0_OTGSTAT, 5)) {
-    // When disconnected; this flag will briefly come up when USB gets disconnected => Immediately put into RUN mode with idle state
-    conductor.switchToMode(operationMode::run);
-    conductor.switchToState(operationState::idle);
-  }
-  */
-  /*
-  for (uint8_t i = 0; i < conductor.featureConfigurator.getFeatureCount(); ++i)
-  {
-    if(conductor.featureConfigurator.getFeature(i))
-    {
-      Serial.print(conductor.featureConfigurator.getFeature(i)->getName());
-      if(conductor.featureConfigurator.getFeature(i)->getProducer())
-      {
-        Serial.println(": good");
-      }
-      else
-      {
-        Serial.println(": not good");
-      }
+      /* === Place your code to excute at fixed interval here ===*/
+      
+      /*======*/
     }
   }
-  */
-  //Serial.println('l');
   conductor.processInstructionsFromBluetooth();   // Receive instructions via BLE during run mode
   conductor.processInstructionsFromI2C();         // Receive instructions to enter / exit data collection mode, plus options during data collection
   conductor.computeFeatures();                    // Conductor handles feature computation depending on operation mode
-  conductor.streamData();                         // Conductor choose streaming port depending on operation mode
+  conductor.streamData();                         // Stream data over BLE during run mode
   conductor.checkAndUpdateState();
   conductor.checkAndUpdateMode();    
 }

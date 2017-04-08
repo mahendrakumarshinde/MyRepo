@@ -50,6 +50,8 @@ class IUABCFeature
     virtual bool isActive() { return m_active; }
     virtual void setFeatureCheck( bool checkFeature) { m_checkFeature = checkFeature; }
     virtual bool isFeatureCheckActive() { return m_checkFeature; }
+    virtual void setStreaming( bool enableStreaming) { m_isStreamed = enableStreaming; }
+    virtual bool isStreamed() { return m_isStreamed; }
     // Results
     virtual float getLatestValue() = 0;                                            // To implement in child class
     virtual uint16_t getDestinationSize() = 0;                                     // To implement in child class
@@ -65,6 +67,7 @@ class IUABCFeature
     virtual void setHighestDangerLevel(operationState state) = 0;                  // To implement in child class
     // Run
     virtual bool receiveScalar(uint8_t sourceIndex, q15_t value) { return false; } // To implement in child class
+    virtual bool receiveScalar(uint8_t sourceIndex, float value) { return false; } // To implement in child class
     virtual bool receiveArray(uint8_t sourceIndex);
     virtual void record(uint8_t idx, uint8_t sourceIndex, uint16_t recordIdx, q15_t value) { }
     virtual bool isTimeToEndRecord();
@@ -80,6 +83,7 @@ class IUABCFeature
     char m_name[3];
     bool m_active;
     bool m_checkFeature;
+    bool m_isStreamed;
     virtual void m_computeScalar (uint8_t computeIndex) { return; }   // Implement in children classes if needed
     virtual void m_computeArray (uint8_t computeIndex) { return; }    // Implement in children classes if needed
     virtual bool newSource() { return false; }                        // To implement in child class

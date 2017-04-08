@@ -16,14 +16,14 @@
 class IUABCProducer
 {
   public:
-    static const uint8_t maxReceiverCount = 25;
+    static const uint8_t maxReceiverCount = 20;
     enum dataSendOption : uint8_t {optionCount = 0};   // Options of data to send to receivers
     IUABCProducer();
     virtual ~IUABCProducer();
     virtual void resetReceivers();
     virtual bool addScalarReceiver(uint8_t sendOption, uint8_t receiverSourceIndex, IUABCFeature *receiver);
-    virtual bool addArrayReceiver(uint16_t valueCount, q15_t *values, uint8_t receiverSourceIndex, IUABCFeature *receiver);
-    virtual bool addArrayReceiver(uint16_t valueCount, float *values, uint8_t receiverSourceIndex, IUABCFeature *receiver);
+    virtual bool addArrayReceiver(uint8_t sendOption, uint16_t valueCount, q15_t *values, uint8_t receiverSourceIndex, IUABCFeature *receiver);
+    virtual bool addArrayReceiver(uint8_t sendOption, uint16_t valueCount, float *values, uint8_t receiverSourceIndex, IUABCFeature *receiver);
     virtual void sendToReceivers() {}                   // To implement in child class
     virtual uint8_t getReceiverCount() { return m_receiverCount; }
     // Diagnostic Functions

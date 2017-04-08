@@ -60,6 +60,8 @@ class IUConductor
     void processInstructionsFromBluetooth();
     void processInstructionsFromWifi();
     void printMsg(String msg);
+    // Diagnostic Functions
+    void debugStreamData();
 
     // Public members
     IUFeatureConfigurator featureConfigurator;

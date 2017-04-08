@@ -98,21 +98,21 @@ IUFeatureConfigurator::FeatureConfig IUFeatureConfigurator::registeredConfigs[IU
       {0, "", ""},
       {3, "AX3-AY3-AZ3", "0-0-0"}},
       
-    {"D33", // "accelEnergy_3_128" by summing 3 single axis accel energy,
+    {"D33", // "accelEnergy_3_512" by summing 3 single axis accel energy,
       {0, "", ""},
       {3, "CX3-CY3-CZ3", "0-0-0"}},
       
     {"VX3", // "velocity_X_512",
       {0, "", ""},
-      {4, "CX3-CX3-CX3-CX3", "99-1-2-3"}},   // 99 means VX3 will receive the destinationArray from CX3
+      {5, "CX3-CX3-CX3-CX3-CX3", "99-1-2-3-4"}},   // 99 means VX3 will receive the destinationArray from CX3
       
     {"VY3", // "velocity_Y_512",
       {0, "", ""},
-      {4, "CY3-CY3-CY3-CY3", "99-1-2-3"}},
+      {5, "CY3-CY3-CY3-CY3-CY3", "99-1-2-3-4"}},
       
     {"VZ3", // "velocity_Z_512",
       {0, "", ""},
-      {4, "CZ3-CZ3-CZ3-CZ3", "99-1-2-3"}},
+      {5, "CZ3-CZ3-CZ3-CZ3-CZ3", "99-1-2-3-4"}},
       
     {"T10", // "temperature_1_1",
       {1, "T", "0"},
@@ -127,20 +127,27 @@ IUFeatureConfigurator::FeatureConfig IUFeatureConfigurator::registeredConfigs[IU
       {0, "", ""}},
   };
 
-String IUFeatureConfigurator::standardConfig = "T10-S16"; //"; //B33"; CX3-VX3-CY3-VY3-CZ3-VZ3-
-float IUFeatureConfigurator::standardThresholds[6][3] = {{30, 600, 1200},
+String IUFeatureConfigurator::standardConfig = "CX3-CY3-CZ3-D33-VX3-VY3-VZ3-T10-S16"; //
+float IUFeatureConfigurator::standardThresholds[9][3] = {{30, 600, 1200},
+                                                         {30, 600, 1200},
+                                                         {30, 600, 1200},
+                                                         {30, 600, 1200},
                                                          {0.05, 1.2, 1.8},
                                                          {0.05, 1.2, 1.8},
                                                          {0.05, 1.2, 1.8},
                                                          {200, 205, 210},
                                                          {500, 1000, 1500}};
-bool IUFeatureConfigurator::standardFeatureCheck[6] = {true, false, false, false, false, false};
+uint8_t IUFeatureConfigurator::standardFeatureIds[9] = {7, 8, 9, 1, 2, 3, 4, 5, 6};
+bool IUFeatureConfigurator::standardFeatureStream[9] = {false, false, false, true, true, true, true, true, true};
+bool IUFeatureConfigurator::standardFeatureCheck[9] = {false, false, false, true, false, false, false, false, false};
 
 String IUFeatureConfigurator::pressConfig = "A33-A31-T10-S16";
 float IUFeatureConfigurator::pressThresholds[4][3] = {{30, 600, 1200},
                                                       {30, 600, 1200},
                                                       {200, 205, 210},
                                                       {500, 1000, 1500}};
+uint8_t IUFeatureConfigurator::pressFeatureIds[4] = {1, 2, 3, 4};
+bool IUFeatureConfigurator::pressFeatureStream[4] = {true, false, false, false};
 bool IUFeatureConfigurator::pressFeatureCheck[4] = {true, false, false, false};
 
 /* ========================= Method definitions  ================================ */
@@ -435,8 +442,10 @@ bool IUFeatureConfigurator::doStandardSetup()
   }
   for (uint8_t i = 0; i < m_featureCount; i++)
   {
+    m_features[i]->setId(standardFeatureIds[i]);
     m_features[i]->setThresholds(standardThresholds[i][0], standardThresholds[i][1], standardThresholds[i][2]);
     m_features[i]->setFeatureCheck(standardFeatureCheck[i]);
+    m_features[i]->setStreaming(standardFeatureStream[i]);
   }
   return true;
 }
@@ -452,8 +461,10 @@ bool IUFeatureConfigurator::doPressSetup()
   }
   for (uint8_t i = 0; i < m_featureCount; i++)
   {
+    m_features[i]->setId(pressFeatureIds[i]);
     m_features[i]->setThresholds(pressThresholds[i][0], pressThresholds[i][1], pressThresholds[i][2]);
     m_features[i]->setFeatureCheck(pressFeatureCheck[i]);
+    m_features[i]->setStreaming(pressFeatureStream[i]);
   }
   return true;
 }
@@ -515,19 +526,17 @@ IUFeature* IUFeatureConfigurator::createFeature(IUFeatureConfigurator::FeatureCo
       }
       break;
   }
-  if (feature)
-  {
-    feature->prepareSource();
-    feature->prepareProducer();
-    if (!feature->activate())
-    {
-      if (setupDebugMode) { debugPrint(F("Feature couldn't be activated: check the source and producer")); }
-      delete feature; feature = NULL;
-    }
-  }
-  else
+  if (feature == NULL)
   {
     if (setupDebugMode) { debugPrint(F("Feature memory allocation failed.")); }
+    return NULL;
+  }
+  feature->prepareSource();
+  feature->prepareProducer();
+  if (!feature->activate())
+  {
+    if (setupDebugMode) { debugPrint(F("Feature couldn't be activated: check the source and producer")); }
+    delete feature; feature = NULL;
   }
   return feature;
 }
@@ -626,9 +635,12 @@ uint8_t IUFeatureConfigurator::streamFeatures(HardwareSerial *port)
   bool streamed = false;
   for (int i = 0; i < m_featureCount; i++)
   {
-    m_features[i]->stream(port);
-    counter++;
-    port->print(",");
+    if (m_features[i]->isStreamed())
+    {
+      port->print(",");
+      m_features[i]->stream(port);
+      counter++;
+    }
   }
   return counter;
 }
@@ -676,5 +688,25 @@ void IUFeatureConfigurator::exposeFeatureStates()
   }
   debugPrint(' ');
   #endif
+}
+
+/**
+ * Stream feature latest values for debugging purpose
+ * Features are streamed through serial like they would be over BLE or WiFi,
+ * but with newlines (for readability)
+ */
+void IUFeatureConfigurator::debugStreamFeatures()
+{
+  #ifdef DEBUGMODE
+  bool streamed = false;
+  for (int i = 0; i < m_featureCount; i++)
+  {
+    if (m_features[i]->isStreamed())
+    {
+      Serial.println(",");
+      m_features[i]->stream(&Serial);
+    }
+  }
+  #endif  
 }
 

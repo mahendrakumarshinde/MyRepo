@@ -34,7 +34,7 @@ class IUBattery : public IUABCSensor
     virtual char getSensorType(uint8_t index) { return sensorTypes[index]; }
     // Methods
     virtual void wakeUp();
-    float getVoltage();
+    int getVoltage();
     float getVDDA();
     void readVoltage();
     virtual void readData();

@@ -61,7 +61,7 @@ bool IUABCProducer::addScalarReceiver(uint8_t sendOption, uint8_t receiverSource
  * Add a receiver to the producer
  * @return true if the receiver was added, else false
  */
-bool IUABCProducer::addArrayReceiver(uint16_t valueCount, q15_t *values, uint8_t receiverSourceIndex, IUABCFeature *receiver)
+bool IUABCProducer::addArrayReceiver(uint8_t sendOption, uint16_t valueCount, q15_t *values, uint8_t receiverSourceIndex, IUABCFeature *receiver)
 {
   if (m_receiverCount >= maxReceiverCount)
   {
@@ -75,6 +75,8 @@ bool IUABCProducer::addArrayReceiver(uint16_t valueCount, q15_t *values, uint8_t
     m_receivers[m_receiverCount] = NULL;
     return false;
   }
+  m_receiverSourceIndex[m_receiverCount] = receiverSourceIndex;
+  m_toSend[m_receiverCount] = sendOption;
   m_receiverCount++;
   bool success = receiver->setSource(receiverSourceIndex, valueCount, values);
   if (!success)
@@ -88,7 +90,7 @@ bool IUABCProducer::addArrayReceiver(uint16_t valueCount, q15_t *values, uint8_t
  * Add a receiver to the producer
  * @return true if the receiver was added, else false
  */
-bool IUABCProducer::addArrayReceiver(uint16_t valueCount, float *values, uint8_t receiverSourceIndex, IUABCFeature *receiver)
+bool IUABCProducer::addArrayReceiver(uint8_t sendOption, uint16_t valueCount, float *values, uint8_t receiverSourceIndex, IUABCFeature *receiver)
 {
   if (m_receiverCount >= maxReceiverCount)
   {
@@ -103,6 +105,8 @@ bool IUABCProducer::addArrayReceiver(uint16_t valueCount, float *values, uint8_t
     m_receivers[m_receiverCount] = NULL;
     return false;
   }
+  m_receiverSourceIndex[m_receiverCount] = receiverSourceIndex;
+  m_toSend[m_receiverCount] = sendOption;
   m_receiverCount++;
   return true;
 }

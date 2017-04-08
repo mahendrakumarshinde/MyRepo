@@ -325,7 +325,7 @@ void IUBMX055::sendToReceivers()
           m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], m_accelData[2]);
           break;
         case (uint8_t) dataSendOption::samplingRate:
-          m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], m_samplingRate);
+          m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], (q15_t) m_samplingRate);
           break;
       }
     }
@@ -334,7 +334,7 @@ void IUBMX055::sendToReceivers()
 }
 
 /**
- * Dump acceleration data to serial via I2C
+ * Dump acceleration data to serial via I2C - accel unit is G, in float format
  * NB: We want to do this in *DATA COLLECTION* mode
  */
 void IUBMX055::dumpDataThroughI2C()
@@ -343,11 +343,13 @@ void IUBMX055::dumpDataThroughI2C()
   {
     return;
   }
+  float accel;
   byte* data;
   for (uint8_t i = 0; i < 3; i++)
   {
     // Stream float value as 4 bytes
-    data = (byte *) &m_accelData[i];
+    accel = q4_11ToFloat(m_accelData[i]);
+    data = (byte *) &accel;
     m_iuI2C->port->write(data, 4);
   }
   m_iuI2C->port->flush();
@@ -355,7 +357,7 @@ void IUBMX055::dumpDataThroughI2C()
 }
 
 /**
- * Dump acceleration data to serial via I2C
+ * Dump acceleration data to serial via I2C - accel unit is G, in float format
  * NB: We want to do this in *DATA COLLECTION* mode, when debugMode is true
  */
 void IUBMX055::dumpDataForDebugging()

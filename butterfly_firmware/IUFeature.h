@@ -15,16 +15,10 @@
 
 /* ===================== Feature calculation functions ===================== */
 
-// Default compute functions
-inline float computeDefaultQ15(uint8_t sourceCount, const uint16_t *sourceSize, q15_t **source) { return q15ToFloat(source[0][0]); }
-inline float computeDefaultFloat(uint8_t sourceCount, const uint16_t *sourceSize, float **source) { return (source[0][0]); }
-
 // Scalar feature functions
-float computeSignalEnergy(uint8_t sourceCount, const uint16_t *sourceSize, q15_t **source);
+float computeSignalEnergy(uint8_t sourceCount, const uint16_t *sourceSize, q15_t **source, float (*transform)(q15_t));
 
-float computeSumOf(uint8_t sourceCount, const uint16_t* sourceSize, float **source);
-
-float computeRFFTMaxIndex(uint8_t sourceCount, const uint16_t* sourceSize, q15_t **source);
+float computeVelocityFormer(q15_t *velocityFFT, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqhigherBound);
 
 float computeVelocity(uint8_t sourceCount, const uint16_t *sourceSize, q15_t **source);
 
@@ -32,14 +26,10 @@ float computeAcousticDB(uint8_t sourceCount, const uint16_t* sourceSize, q15_t *
 
 // Array feature functions
 
-bool computeRFFT(uint8_t sourceCount, const uint16_t* sourceSize, q15_t **source, const uint16_t destinationSize, q15_t *destination);
-
 bool computeAudioRFFT(uint8_t sourceCount, const uint16_t* sourceSize, q15_t **source, const uint16_t destinationSize, q15_t *destination);
 
 
 /* ========================== Feature classes ============================= */
-
-class IUFeature; // Forward declaration
 
 /*
  *
@@ -47,13 +37,14 @@ class IUFeature; // Forward declaration
 class IUFeatureProducer: public IUABCProducer
 {
   public:
-    static const uint8_t maxReceiverCount = 5;
+    static const uint8_t maxReceiverCount = 10;
     static const uint16_t destinationSize = 1;
     enum dataSendOption : uint8_t {value = 0,
                                    state = 1,
                                    samplingRate = 2,
                                    sampleCount = 3,
-                                   scalarOptionCount = 4,
+                                   RMS = 4,
+                                   scalarOptionCount = 5,
                                    valueArray = 99};
     IUFeatureProducer();
     virtual ~IUFeatureProducer() {};
@@ -66,17 +57,20 @@ class IUFeatureProducer: public IUABCProducer
     virtual uint16_t getSampleCount() { return m_sampleCount; }
     virtual void setLatestValue(float latestValue) { m_latestValue = latestValue; }
     virtual float getLatestValue() { return m_latestValue; }
+    virtual void setRMS(float rms) { m_rms = rms; }
+    virtual float getRMS() { return m_rms; }
     virtual void setState(operationState state) { m_state = state; }
     virtual operationState getState() { return m_state; }
     virtual void setHighestDangerLevel(operationState state) { m_highestDangerLevel = state; }
     virtual operationState getHighestDangerLevel() { return m_highestDangerLevel; }
     // Feature computation, source and sending queue
     virtual void sendToReceivers();
-    virtual bool addArrayReceiver(uint8_t receiverSourceIndex, IUABCFeature *receiver);
+    virtual bool addArrayReceiver(uint8_t sendOption, uint8_t receiverSourceIndex, IUABCFeature *receiver);
     virtual bool addReceiver(uint8_t sendOption, uint8_t receiverSourceIndex, IUABCFeature *receiver);
 
   protected:
     float m_latestValue;
+    float m_rms;
     q15_t *m_destination;
     uint16_t m_samplingRate;
     uint16_t m_sampleCount;
@@ -85,30 +79,36 @@ class IUFeatureProducer: public IUABCProducer
 };
 
 
-class IUFeatureProducer128: public IUFeatureProducer
+/*
+ *
+ */
+class IUFeatureProducer256: public IUFeatureProducer
 {
   public:
-    static const uint16_t destinationSize = 128;
-    IUFeatureProducer128();
-    virtual ~IUFeatureProducer128() {};
+    static const uint16_t destinationSize = 256;
+    IUFeatureProducer256();
+    virtual ~IUFeatureProducer256() {};
     virtual uint16_t getDestinationSize() { return destinationSize; }
     
 };
 
 
-class IUFeatureProducer512: public IUFeatureProducer
+/*
+ *
+ */
+class IUFeatureProducer1024: public IUFeatureProducer
 {
   public:
-    static const uint16_t destinationSize = 512;
-    IUFeatureProducer512();
-    virtual ~IUFeatureProducer512() {};
+    static const uint16_t destinationSize = 1024;
+    IUFeatureProducer1024();
+    virtual ~IUFeatureProducer1024() {};
     virtual uint16_t getDestinationSize() { return destinationSize; }
 };
 
 /* ========================== Feature classes ============================= */
 
 /**
- * Mixing class for IUABCFeature and IUABCProducer
+ * Feature class
  */
 class IUFeature : public IUABCFeature
 {
@@ -384,7 +384,7 @@ class IUTriSourceSummingFeature: public IUFloatFeature
 class IUVelocityFeature512: public IUQ15Feature
 {
   public:
-    static const uint8_t sourceCount = 4;
+    static const uint8_t sourceCount = 5;
     static const uint16_t sourceSize[sourceCount];
     virtual uint8_t getSourceCount() { return sourceCount; }
     virtual uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }

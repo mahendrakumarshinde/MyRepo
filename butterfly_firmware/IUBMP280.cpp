@@ -112,7 +112,6 @@ void IUBMP280::readTemperature() // Index 4
  */
 void IUBMP280::processTemperatureData(uint8_t wireStatus)
 {
-  Serial.println("in temperature callback");
   int32_t rawTemp = (int32_t) (((int32_t) m_rawTempBytes[0] << 16 | (int32_t) m_rawTempBytes[1] << 8 | m_rawTempBytes[2]) >> 4);
   m_temperature = compensateTemperature(rawTemp);
 }
@@ -155,7 +154,6 @@ void IUBMP280::readPressure() // Index 4
  */
 void IUBMP280::processPressureData(uint8_t wireStatus)
 {
-  Serial.println("in pressure callback");
   int32_t rawP = (int32_t) (((int32_t) m_rawPressureBytes[0] << 16 | (int32_t) m_rawPressureBytes[1] << 8 | m_rawPressureBytes[2]) >> 4);
   m_pressure = (float) compensatePressure(rawP) / 100.;
 }
@@ -259,9 +257,8 @@ void IUBMP280::dumpDataForDebugging()
   // Stream float values with 4 digits
   m_iuI2C->port->print("T: ");
   m_iuI2C->port->println(m_temperature, 4);
-  m_iuI2C->port->flush();
-  m_iuI2C->port->print("P: ");
-  m_iuI2C->port->println(m_pressure, 4);
+  //m_iuI2C->port->print("P: ");
+  //m_iuI2C->port->println(m_pressure, 4);
   m_iuI2C->port->flush();
   m_newData = false;
 }

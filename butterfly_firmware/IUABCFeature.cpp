@@ -11,6 +11,7 @@ const uint16_t IUABCFeature::ABCSourceSize[IUABCFeature::ABCSourceCount] = {1};
 IUABCFeature::IUABCFeature(uint8_t id, char *name) :
   m_id(id),
   m_active(false),
+  m_isStreamed(false),
   m_checkFeature(false),
   m_sourceReady(false),
   m_producerReady(false)
@@ -114,7 +115,7 @@ bool IUABCFeature::receiveArray(uint8_t sourceIndex)
 {
   if (!m_recordNow[m_recordIndex][sourceIndex])
   {
-     return false; // Recording buffer is not ready
+    return false; // Recording buffer is not ready
   }
   m_recordNow[m_recordIndex][sourceIndex] = false;         //Do not record anymore in this buffer
   m_computeNow[m_recordIndex][sourceIndex] = true;         //Buffer ready for computation

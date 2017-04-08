@@ -80,21 +80,174 @@ bool checkCharsAtPosition(char *charBuffer, char character, int *positions, int 
 }
 
 
+/*=========================== Math functions ================================= */
 
 /**
  * Compute and return the normalized root min square
  * @param sourceSize the length of the array
  * @param source a q15_t array (elements are int16_t0
  */
-float computeRMS(uint16_t sourceSize, q15_t *source)
+float computeRMS(uint16_t sourceSize, q15_t *source, float (*transform)(q15_t))
 {
   float avg(0), avg2(0);
   for (int i = 0; i < sourceSize; i++)
   {
-    avg += (float)source[i];
-    avg2 += sq((float)source[i]);
+    avg += transform(source[i]);
+    avg2 += sq(transform(source[i]));
   }
-  return sqrt(avg2 / sourceSize - sq(avg / sourceSize));
+  return sqrt(avg2 / (float) sourceSize - sq(avg / (float) sourceSize));
+}
+
+/**
+ * Compute and return the normalized sum of all sources
+ * @param arrCount the number of arrays
+ * @param arrSize  pointer to an array of size arrCount
+ * @param arrays   pointer to an array q15_t[arrCount][arrSizes[i for i in arrCount]]
+ */
+float multiArrayMean(uint8_t arrCount, const uint16_t* arrSizes, float **arrays)
+{
+  float total = 0;
+  float grandTotal = 0;
+  for (uint8_t i = 0; i < arrCount; i++)
+  {
+    for (uint16_t j = 0; j < arrSizes[i]; j++)
+    {
+      total += arrays[i][j];
+    }
+    grandTotal += total / (float) arrSizes[i];
+    total = 0;
+  }
+  return grandTotal / (float) arrCount;
+}
+
+
+
+arm_rfft_instance_q15 rfftInstance;
+
+
+/**
+ * Compute (inverse) RFFT and put it in destination
+ * @param source           
+ * @param destination      
+ * @param FFTLength        the length of the FFT
+ * @param inverse          false to compute forward FFT, true to compute inverse FFT
+ * @return                 true if the computation succeeded, else false
+ * The freq domain array size should be twice the time domain array size, so:
+ * - if inverse is false, source size = FFTLength and destination size = 2 * FFTLength
+ * - if inverse is true, source size = 2 * FFTLength and destination size = FFTLength
+ */
+bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTLength, bool inverse)
+{
+  arm_status armStatus = arm_rfft_init_q15(&rfftInstance,   // RFFT instance
+                                           FFTLength,       // FFT length
+                                           (int) inverse,   // 0: forward FFT, 1: inverse FFT
+                                           0);              // 1: enable bit reversal output, 0: disable it
+  if (armStatus != ARM_MATH_SUCCESS)
+  {
+    if (loopDebugMode) { debugPrint("FFT / Inverse FFT computation failed"); }
+    return false;
+  }
+  arm_rfft_q15(&rfftInstance, source, destination);
+  return true;
+}
+
+/**
+ * Compute (inverse) RFFT
+ * NB - this function WILL MODIFY the source to apply the windowing (no array duplication to save space)
+ * see computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTlength, bool inverse)
+ * @param window        the window function as an array of FFTLength elements, to apply to the time domain samples
+ * @param windowGain    the gain of the window, a correcting factor to apply in the freq domain.
+ */
+bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTLength, bool inverse, q15_t *window, float windowGain)
+{
+  if (inverse)
+  {
+    //arm_scale_q15(source, 1. / (float) windowGain, 0, source, 2 * FFTLength);
+  }
+  else
+  {
+    //arm_mult_q15(source, window, source, FFTLength);
+    // Avoid saturation
+    for (uint16_t i = 0; i < FFTLength; ++i)
+    {
+      source[i] = (q15_t) ((float) source[i] * (float) window[i] / 32768.);
+    }
+  }
+  computeRFFT(source, destination, FFTLength, inverse);
+  if (inverse)
+  {
+    //for (uint16_t i = 0; i < FFTLength; ++i)
+    //{
+    //  destination[i] = (q15_t) ((float) destination[i] * 32768. / (float) window[i]);
+    //}
+  }
+  else
+  {
+    //arm_scale_q15(destination, windowGain, 0, destination, 2 * FFTLength);
+  }
+}
+
+/*
+ * Apply a bandpass filtering and integrate 1 or 2 times a FFT
+ * Note that the input FFT will be modified in the process
+ * @param values            the FFT (as an array of size 2 * sampleCount as outputed by arm_rfft)
+ * @param sampleCount       the sample count
+ * @param samplingRate      the sampling rate / frequency
+ * @param FreqLowerBound    freq lower bound for bandpass filtering
+ * @param FreqHigherBound   freq higher bound for bandpass filtering
+ * @param twice             set to false (default) to integrate once, set to true to integrate twice
+ */
+void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound, bool twice)
+{
+  float df = (float) samplingRate / (float) sampleCount;
+  uint16_t minIdx = (uint16_t) ((float) FreqLowerBound / df);
+  uint16_t maxIdx = (uint16_t) min((float) FreqHigherBound / df, sampleCount);
+  float omega = 2. * PI * df;
+  if(loopDebugMode)
+  {
+    debugPrint("df, minFreq, maxFreq, minIdx, maxIdx");
+    debugPrint(df, false); debugPrint(", ", false); 
+    debugPrint(FreqLowerBound, false); debugPrint(", ", false); 
+    debugPrint(FreqHigherBound, false); debugPrint(", ", false); 
+    debugPrint(minIdx, false); debugPrint(", ", false); 
+    debugPrint(maxIdx, false);
+  }
+  
+  // Apply high pass filter
+  for (uint16_t i = 0; i < minIdx; i++)
+  {
+    values[2 * i] = 0;
+    values[2 * i + 1] = 0;
+  }
+  
+  // Integrate accel FFT (divide by j * idx * omega)
+  if (twice)
+  {
+    float factor = - 1. / sq(omega);
+    for (uint16_t i = minIdx; i < maxIdx; i++)
+    {
+      values[2 * i] = (q15_t) ((float) values[2 * i] * factor / (float) i);
+      values[2 * i + 1] = (q15_t) ((float) values[2 * i + 1] * factor / (float) i);
+    }
+  }
+  else
+  {
+    q15_t real(0), comp(0);
+    for (uint16_t i = minIdx; i < maxIdx; i++)
+    {
+      real = values[2 * i];
+      comp = values[2 * i + 1];
+      values[2 * i] = (q15_t) ((float) comp / ((float) i * omega));
+      values[2 * i + 1] = (q15_t) (- (float) real / ((float) i * omega));
+    }
+  }
+  
+  // Apply high pass filter
+  for (uint16_t i = maxIdx; i < sampleCount; i++)
+  {
+    values[2 * i] = 0;
+    values[2 * i + 1] = 0;
+  }
 }
 
 //==============================================================================

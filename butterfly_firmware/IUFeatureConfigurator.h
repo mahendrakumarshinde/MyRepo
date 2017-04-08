@@ -43,10 +43,14 @@ class IUFeatureConfigurator
     static FeatureConfig registeredConfigs[registeredCount];
 
     static String standardConfig;
-    static float standardThresholds[6][3];
-    static bool standardFeatureCheck[6];
+    static uint8_t standardFeatureIds[9];
+    static float standardThresholds[9][3];
+    static bool standardFeatureStream[9];
+    static bool standardFeatureCheck[9];
     static String pressConfig;
+    static uint8_t pressFeatureIds[4];
     static float pressThresholds[4][3];
+    static bool pressFeatureStream[4];
     static bool pressFeatureCheck[4];
 
     // Constructor, destructor, getters and setters
@@ -74,6 +78,7 @@ class IUFeatureConfigurator
     // Diagnostic Functions
     void exposeFeaturesAndReceivers();
     void exposeFeatureStates();
+    void debugStreamFeatures();
 
 
   protected:

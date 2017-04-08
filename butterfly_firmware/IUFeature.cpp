@@ -3,15 +3,14 @@
 
 /*====================== Scalar Feature Computation functions ============================ */
 
-//arm_rfft_instance_q15 rfftInstance;
-
 /**
  * Compute and return the total signal energy along one or several axis
  * @param sourceCount the number of sources (= the number of axis)
  * @param sourceSize  pointer to an array of size sourceCount
  * @param source      pointer to an array q15_t[sourceCount][sourceSize[i for i in sourceCount]]
+ * @param transform   pointer to a conversion function to apply to the values element-wise
  */
-float computeSignalEnergy(uint8_t sourceCount, const uint16_t *sourceSize, q15_t **source)
+float computeSignalEnergy(uint8_t sourceCount, const uint16_t *sourceSize, q15_t **source, float (*transform)(q15_t))
 {
   float energy = 0;
   float totalEnergy = 0;
@@ -19,151 +18,68 @@ float computeSignalEnergy(uint8_t sourceCount, const uint16_t *sourceSize, q15_t
   {
     for (uint16_t j = 0; j < sourceSize[i]; j++)
     {
-      energy += sq(q4_11ToFloat(source[i][j]));
+      energy += sq(transform(source[i][j]));
     }
     totalEnergy += energy / (float) sourceSize[i];
-    Serial.print("SigE #");
-    Serial.print(i);
-    Serial.print(": ");
-    Serial.println(energy);
     energy = 0;
   }
   totalEnergy /= (float) sourceCount;
-  Serial.print("Total E: ");
-  Serial.println(totalEnergy);
   return totalEnergy;
 }
 
-/**
- * Compute and return the normalized sum of all sources
- * @param sourceCount the number of sources
- * @param sourceSize  pointer to an array of size sourceCount
- * @param source      pointer to an array q15_t[sourceCount][sourceSize[i for i in sourceCount]]
- */
-float computeSumOf(uint8_t sourceCount, const uint16_t* sourceSize, float **source)
-{
-  float total = 0;
-  float grandTotal = 0;
-  for (uint8_t i = 0; i < sourceCount; i++)
-  {
-    for (uint16_t j = 0; j < sourceSize[i]; j++)
-    {
-      total += source[i][j];
-    }
-    grandTotal += total / (float) sourceSize[i];
-    total = 0;
-  }
-  grandTotal /= (float) sourceCount;
-  return grandTotal;
-}
 
-
-//TODO: Check what windowing function work best + maybe test some other pitch detection method
 /**
- * Compute RFFT and return the index of the max factor - WORK FOR A SINGLE SOURCE
+ * Compute and return single axis velocity using acceleration RMS and pitch
  * Since a single index is returned, only work for a single source (sourceCount = 1)
  * Check out this example: https://www.keil.com/pack/doc/CMSIS/DSP/html/arm_fft_bin_example_f32_8c-example.html
  * What we try to do is basically pitch detection: https://en.wikipedia.org/wiki/Pitch_detection_algorithm
  * However, have a look here: http://dsp.stackexchange.com/questions/11312/why-should-one-use-windowing-functions-for-fft
- * @param sourceCount the number of sources - must be 1
- * @param sourceSize  pointer to an array of size 1 - must be {512} or {2048} in current implementation
- * @param source      pointer to an array q15_t[sourceCount][sourceSize[i for i in sourceCount]]
+ * @param sourceCount the number of sources - should be 2
+ * @param sourceSize  pointer to an array of size sourceCount - eg: {512, 1}
+ * @param source      should be {acceleration values,
+ *                               Acceleration energy operationState}
  */
-float computeRFFTMaxIndex(uint8_t sourceCount, const uint16_t* sourceSize, q15_t **source)
+float computeVelocity(q15_t *accelFFT, float accelRMS, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound)
 {
-  if (sourceCount != 1)
+  float df = (float) samplingRate / (float) sampleCount;
+  uint16_t minIdx = (uint16_t) ((float) FreqLowerBound / df);
+  uint16_t maxIdx = (uint16_t) min((float) FreqHigherBound / df, sampleCount);
+  /* Pitch detection */
+  //TODO: Check what windowing function work best + maybe test some other pitch detection method
+  float flatness = 0;
+  q15_t norm = 0;
+  uint16_t maxIndex = 0;
+  for (uint16_t i = minIdx; i < maxIdx; i++)
   {
-    return -1; // sourceCount expected to be 1
-  }
-  uint16_t ss = sourceSize[0];
-  q15_t compBuffer[ss];
-  switch(ss)
-  {
-    case 512:
-      arm_mult_q15(source[0], hamming_window_512, compBuffer, ss);
-      break;
-    case 2048:
-      arm_mult_q15(source[0], hamming_window_2048, compBuffer, ss);
-      break;
-    default:
-      return -1; //Fail if sourceSize is not supported
-  }
-  // RFFT
-  arm_rfft_instance_q15 rfftInstance;
-  q15_t rfftBuffer[ss];
-  arm_status status = arm_rfft_init_q15(&rfftInstance,  // RFFT instance
-                                        ss        ,     // FFT length
-                                        0,              // 0: forward FFT, 1: inverse FFT
-                                        1);             // 0: disable bit reversal output, 1: enable it
-  if (status != ARM_MATH_SUCCESS)
-  {
-      return -1; // failure
-  }
-  arm_rfft_q15(&rfftInstance, compBuffer, rfftBuffer);
-  // TODO check what is better between block 1 and block 2
-  // block 1 ===========================================
-  // Find index of max factor
-  float flatness(0), index(0);
-  // TODO: check why we start at index 2
-  for (int i = 2; i < ss; i++) {
-    if (rfftBuffer[i] > flatness) {
-      flatness = rfftBuffer[i];
-      index = i;
+    norm = sqrt(sq(accelFFT[2 * i]) + sq(accelFFT[2 * i + 1]));
+    if (norm > flatness)
+    {
+      flatness = norm;
+      maxIndex = i;
     }
   }
-  // ===================================================
-  // block 2 ===========================================
-  /*
-  q15_t flatness = 0;
-  uint32_t index = 0;
-  // TODO: check why we start at index 2
-  arm_max_q15(&rfftBuffer[2],   // array
-              ss - 2,   // array size
-              flatness,
-              index);
-  */
-  // ===================================================
-  return ((float) index);
+  return accelRMS / (2 * PI * df * (float) maxIndex);
 }
 
 /**
- * Compute and return single axis velocity using acceleration RMS and pitch
- * @param sourceCount the number of sources - should be 2
- * @param sourceSize  pointer to an array of size sourceCount - eg: {512, 1}
- * @param source      should be {acceleration values,
- *                               Acceleration energy operationState}
+ * Compute velocity RMS from an accel FFT
+ * Note that the input accelFFT will be modified in the process
+ * @param accelFFT          the FFT (as an array of size 2 * sampleCount as outputed by arm_rfft)
+ * @param sampleCount       the sample count
+ * @param samplingRate      the sampling rate / frequency
+ * @param FreqLowerBound    freq lower bound for bandpass filtering
+ * @param FreqHigherBound   freq higher bound for bandpass filtering
  */
-float computeVelocity(uint8_t sourceCount, const uint16_t *sourceSize, q15_t **source)
+float computeFullVelocity(q15_t *accelFFT, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound)
 {
-  if (source[1][0] == operationState::idle)
-  {
-    return 0;
-  }
-  else
-  {
-    float maxIndex = computeRFFTMaxIndex(1, sourceSize, source);
-    return computeRMS(sourceSize[0], source[0]) * 1000 / (2 * PI * maxIndex);
-  }
-}
-
-/**
- * Compute and return single axis velocity using acceleration RMS and pitch
- * @param sourceCount the number of sources - should be 2
- * @param sourceSize  pointer to an array of size sourceCount - eg: {512, 1}
- * @param source      should be {acceleration values,
- *                               Acceleration energy operationState}
- */
-float computeFullVelocity(uint8_t sourceCount, const uint16_t *sourceSize, q15_t **source)
-{
-  if (source[1][0] == operationState::idle)
-  {
-    return 0;
-  }
-  else
-  {
-    float maxIndex = computeRFFTMaxIndex(1, sourceSize, source);
-    return computeRMS(sourceSize[0], source[0]) * 1000 / (2 * PI * maxIndex);
-  }
+  // Filter and integrate in frequency domain
+  filterAndIntegrateFFT(accelFFT, sampleCount, samplingRate, FreqLowerBound, FreqHigherBound, false);
+  // Inverse FFT
+  q15_t velocities[sampleCount];
+  computeRFFT(accelFFT, velocities, sampleCount, true);
+  // Velocities RMS
+  float val = computeRMS(sampleCount, velocities, q4_11ToFloat);
+  return val;
 }
 
 /**
@@ -216,89 +132,46 @@ float computeAcousticDB(uint8_t sourceCount, const uint16_t* sourceSize, q15_t *
 }
 
 
-/*====================== Scalar Feature Computation functions ============================ */
+/*====================== Array Feature Computation functions ============================ */
 
-/**
- * Compute RFFT and put it in destination - expects only 1 source
- * NB - this function is destructive -
- * To save space, it will modify the source itself, so the source won't be usable afterward.
- * @param sourceCount      the number of sources - must be 1
- * @param sourceSize       pointer to an array of size 1 - must be {512} or {2048} in current implementation
- * @param source           pointer to an array q15_t[sourceCount][sourceSize[i for i in sourceCount]]
- * @param destinationSize  the size of the destination array
- * @param destination      pointer to an array to collect the results
- * @return                 true if the computation succeeded, else false.
- */
-bool computeRFFT(uint8_t sourceCount, const uint16_t* sourceSize, q15_t **source, const uint16_t destinationSize, q15_t *destination)
-{
-  uint16_t ss = sourceSize[0];
-  // Apply Hamming window in place
-  switch(ss)
-  {
-    case 512:
-      arm_mult_q15(source[0], hamming_window_512, source[0], ss);
-      break;
-    case 2048:
-      arm_mult_q15(source[0], hamming_window_2048, source[0], ss);
-      break;
-    default:
-      return false; //Fail if sourceSize is not supported
-  }
-  // RFFT
-  arm_rfft_instance_q15 rfftInstance;
-  arm_status status = arm_rfft_init_q15(&rfftInstance,   // RFFT instance
-                                        destinationSize, // FFT length
-                                        0,               // 0: forward FFT, 1: inverse FFT
-                                        1);              // 0: disable bit reversal output, 1: enable it
-  if (status != ARM_MATH_SUCCESS)
-  {
-    if (loopDebugMode) { debugPrint("RFFT computation failed"); }
-    return false;
-  }
-  arm_rfft_q15(&rfftInstance, source[0], destination);
-}
 
 /**
  * Single instance RFFT calculation on audio data - expects only 1 source
- * NB - this function is destructive -
- * To save space, it will modify the source itself, so the source won't be usable afterward.
+ * NB - this function is destructive - To save space, it will modify the source itself, so the source won't be usable afterward.
  * The function use 2 successive RFFT calculation of half the size of the source
- * @param sourceCount      the number of sources - must be 1
- * @param sourceSize       pointer to an array of size 1 - must be {1024} or {4096} in current implementation
-                           RFFT will then be of size 512 or 2048
- * @param source           pointer to an array q15_t[sourceCount][sourceSize[i for i in sourceCount]]
+ * @param sourceSize       must be {1024} or {4096} in current implementation - RFFT will then be of size 512 or 2048
+ * @param source           pointer to an array q15_t[sourceSize]
  * @param destinationSize  the size of the destination array
  * @param destination      pointer to an array to collect the results
  * @return                 true if the computation succeeded, else false.
  */
-bool computeAudioRFFT(uint8_t sourceCount, const uint16_t* sourceSize, q15_t **source, const uint16_t destinationSize, q15_t *destination)
+bool computeAudioRFFT(const uint16_t sourceSize, q15_t *source, const uint16_t destinationSize, q15_t *destination)
 {
   //TODO: rebuild this function, it is not working
-  if (setupDebugMode) { debugPrint(F("Need to refactor the function computeAudioRFFT")); }
+  if (debugMode) { debugPrint(F("Need to refactor the function computeAudioRFFT")); }
   return false;
-
+  if ((2 * sourceSize) != destinationSize)
+  {
+    if (loopDebugMode) { debugPrint(F("RFFT output size must be twice the input size")); }
+    return false;
+  }
   //TODO allow to pass this as argument (maybe in the source)
   uint8_t AUDIO_RESCALE = 10;
-
-  if (sourceCount != 1)
-  {
-    return false; // sourceCount expected to be 1
-  }
-  uint16_t ss = sourceSize[0];
+  
   const uint16_t rfftSize = destinationSize / 2;
   float magSize(0), hammingK(0), inverseWLen(0);
   switch(rfftSize)
   {
     case 512:
-      arm_mult_q15(source[0], hamming_window_512, source[0], rfftSize);
-      arm_mult_q15(&source[0][rfftSize], hamming_window_512, &source[0][rfftSize], rfftSize);
+      arm_mult_q15(source, hamming_window_512, source, rfftSize);
+      arm_mult_q15(&source[rfftSize], hamming_window_512, &source[rfftSize], rfftSize);
       magSize = magsize_512;
       hammingK = hamming_K_512;
       inverseWLen = inverse_wlen_512;
       break;
     case 2048:
-      arm_mult_q15(source[0], hamming_window_2048, source[0], rfftSize);
-      arm_mult_q15(&source[0][rfftSize], hamming_window_2048, &source[0][rfftSize], rfftSize);
+      arm_mult_q15(source, hamming_window_2048, source, rfftSize);
+      arm_mult_q15(&source[rfftSize], hamming_window_2048, &source[rfftSize], rfftSize);
       magSize = magsize_2048;
       hammingK = hamming_K_2048;
       inverseWLen = inverse_wlen_2048;
@@ -310,17 +183,22 @@ bool computeAudioRFFT(uint8_t sourceCount, const uint16_t* sourceSize, q15_t **s
   arm_rfft_instance_q15 rfftInstance;
   for (int i = 0; i < 2; i++)
   {
-    arm_status status = arm_rfft_init_q15(&rfftInstance,   // RFFT instance
-                                          destinationSize, // FFT length
-                                          0,               // 0: forward FFT, 1: inverse FFT
-                                          1);              // 0: disable bit reversal output, 1: enable it
-    arm_rfft_q15(&rfftInstance, &source[0][i * rfftSize], destination);
-    arm_shift_q15(&destination[i * rfftSize], AUDIO_RESCALE, &destination[i * rfftSize], ss);
+    arm_status armStatus = arm_rfft_init_q15(&rfftInstance,   // RFFT instance
+                                             sourceSize,      // FFT length
+                                             0,               // 0: forward FFT, 1: inverse FFT
+                                             1);              // 0: disable bit reversal output, 1: enable it
+    if (!armStatus)
+    {
+      if (loopDebugMode) { debugPrint("RFFT computation failed"); }
+      return false;
+    }
+    arm_rfft_q15(&rfftInstance, &source[i * rfftSize], destination);
+    arm_shift_q15(&destination[i * rfftSize], AUDIO_RESCALE, &destination[i * rfftSize], sourceSize);
   }
 
   // NOTE: OUTPUT FORMAT IS IN 2.14
-  arm_cmplx_mag_q15(destination, source[0], ss);
-  arm_q15_to_float(source[0], (float*)destination, magSize);
+  arm_cmplx_mag_q15(destination, source, sourceSize);
+  arm_q15_to_float(source, (float*)destination, magSize);
 
   // TODO: REDUCE VECTOR CALCULATION BY COMING UP WITH SINGLE FACTOR
   // Div by K
@@ -340,6 +218,7 @@ bool computeAudioRFFT(uint8_t sourceCount, const uint16_t* sourceSize, q15_t **s
 IUFeatureProducer::IUFeatureProducer() :
   IUABCProducer(),
   m_latestValue(0),
+  m_rms(0),
   m_samplingRate(0),
   m_sampleCount(0),
   m_state(operationState::idle),
@@ -370,7 +249,7 @@ void IUFeatureProducer::sendToReceivers()
   {
     if (m_receivers[i])
     {
-      if (loopDebugMode)
+      if (loopDebugMode && highVerbosity)
       {
         debugPrint("send to ", false);
         debugPrint(m_receivers[i]->getName(), false);
@@ -380,61 +259,89 @@ void IUFeatureProducer::sendToReceivers()
       switch(m_toSend[i])
       {
         case (uint8_t) dataSendOption::value:
-          if (loopDebugMode)
+          if (loopDebugMode && highVerbosity)
           {
             debugPrint("=> value ", false);
-            debugPrint((float) m_latestValue, false);
+            debugPrint((float) m_latestValue);
           }
           m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], m_latestValue);
           break;
         case (uint8_t) dataSendOption::state:
-          if (loopDebugMode)
+          if (loopDebugMode && highVerbosity)
           {
             debugPrint("=> state ", false);
-            debugPrint((int) m_state, false);
+            debugPrint((int) m_state);
           }
           m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], (q15_t) m_state);
           break;
         case (uint8_t) dataSendOption::samplingRate:
-          if (loopDebugMode)
+          if (loopDebugMode && highVerbosity)
           {
             debugPrint("=> samplingRate ", false);
-            debugPrint(m_samplingRate, false);
+            debugPrint(m_samplingRate);
           }
           m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], (q15_t) m_samplingRate);
           break;
         case (uint8_t) dataSendOption::sampleCount:
-          if (loopDebugMode)
+          if (loopDebugMode && highVerbosity)
           {
             debugPrint("=> sampleCount ", false);
-            debugPrint(m_sampleCount, false);
+            debugPrint(m_sampleCount);
           }
           m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], (q15_t) m_sampleCount);
           break;
-
-          
+        case (uint8_t) dataSendOption::RMS:
+          if (loopDebugMode && highVerbosity)
+          {
+            debugPrint("=> RMS ", false);
+            debugPrint(m_rms);
+          }
+          m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], (q15_t) m_sampleCount);
+          break;
          case (uint8_t) dataSendOption::valueArray:
-          if (loopDebugMode) { debugPrint("=> array", false); }
+          if (loopDebugMode && highVerbosity) { debugPrint("=> array"); }
           m_receivers[i]->receiveArray(m_receiverSourceIndex[i]);
           break;
         default:
-          if (loopDebugMode) { debugPrint("=> nothing (unknown option)", false); }
+          if (loopDebugMode)
+          {
+            debugPrint(F("option "), false);
+            debugPrint((uint8_t) m_toSend[i], false);
+            debugPrint(F(" for receiver "), false);
+            debugPrint(m_receivers[i]->getName(), false);
+            debugPrint(F(" is unknown"));
+          }
           break;
           
-      }
-      if (loopDebugMode)
-      {
-        debugPrint(" was sent to ", false);
-        debugPrint(m_receivers[i]->getName());
       }
     }
   }
 }
 
 
-bool IUFeatureProducer::addArrayReceiver(uint8_t receiverSourceIndex, IUABCFeature *receiver)
+bool IUFeatureProducer::addArrayReceiver(uint8_t sendOption, uint8_t receiverSourceIndex, IUABCFeature *receiver)
 {
-  return IUABCProducer::addArrayReceiver(getDestinationSize(), m_destination, receiverSourceIndex, receiver);
+  if (m_receiverCount >= maxReceiverCount)
+  {
+    if(setupDebugMode) { debugPrint("Producer's receiver list is full"); }
+    return false;
+  }
+  m_receivers[m_receiverCount] = receiver;
+  if (!m_receivers[m_receiverCount])
+  {
+    if(setupDebugMode) { debugPrint("Pointer assignment for array source failed"); }
+    m_receivers[m_receiverCount] = NULL;
+    return false;
+  }
+  m_receiverSourceIndex[m_receiverCount] = receiverSourceIndex;
+  m_toSend[m_receiverCount] = sendOption;
+  m_receiverCount++;
+  bool success = receiver->setSource(receiverSourceIndex, getDestinationSize(), m_destination);
+  if (!success)
+  {
+    if(setupDebugMode) { debugPrint("Array source setting failed"); }
+  }
+  return success;
 }
 
 bool IUFeatureProducer::addReceiver(uint8_t sendOption, uint8_t receiverSourceIndex, IUABCFeature *receiver)
@@ -442,7 +349,7 @@ bool IUFeatureProducer::addReceiver(uint8_t sendOption, uint8_t receiverSourceIn
   if (sendOption == 99)
   {
     m_toSend[m_receiverCount] = sendOption;
-    return addArrayReceiver(receiverSourceIndex, receiver);
+    return addArrayReceiver(sendOption, receiverSourceIndex, receiver);
   }
   else
   {
@@ -450,14 +357,15 @@ bool IUFeatureProducer::addReceiver(uint8_t sendOption, uint8_t receiverSourceIn
   }
 }
 
-IUFeatureProducer512::IUFeatureProducer512() :
+
+IUFeatureProducer256::IUFeatureProducer256() :
   IUFeatureProducer()
 {
   // ctor
 }
 
 
-IUFeatureProducer128::IUFeatureProducer128() :
+IUFeatureProducer1024::IUFeatureProducer1024() :
   IUFeatureProducer()
 {
   // ctor
@@ -671,17 +579,21 @@ bool IUFloatFeature::setSource(uint8_t sourceIndex, uint16_t valueCount, float *
     if(setupDebugMode) { debugPrint("Receiver source size doesn't match producer value count."); }
     return false;
   }
-  // Delete previous source assignment
+  // TODO delete is causing the firmware to hang, while m_source have been previously assigned... Need to find out why
+  /*
   delete m_source[0][sourceIndex]; m_source[0][sourceIndex] = NULL;
   delete m_source[1][sourceIndex]; m_source[1][sourceIndex] = NULL;
+  */
   m_source[0][sourceIndex] = values;
   m_source[1][sourceIndex] = values;
   return true;
 }
 
 /**
- * Receive a new source valu, it will be stored if the source buffers are ready
- * @return true if the value was stored in source buffer, else false
+ * Receive a new source value - it will be stored only if the source buffers are ready
+ * @param sourceIndex   the index of the source to hydrate
+ * @param value         the value to add to the source
+ * @return              true if the value was stored in source buffer, else false
  */
 bool IUFloatFeature::receiveScalar(uint8_t sourceIndex, float value)
 {
@@ -694,18 +606,20 @@ bool IUFloatFeature::receiveScalar(uint8_t sourceIndex, float value)
       debugPrint(F(" can't record at "), false);
       debugPrint(m_recordIndex);
     }
+    return false;
   }
   if (m_sourceCounter[sourceIndex] < getSourceSize(sourceIndex))        // Recording buffer is not full
   {
-      m_source[m_recordIndex][sourceIndex][m_sourceCounter[sourceIndex]] = value;
-      m_sourceCounter[sourceIndex]++;
+    m_source[m_recordIndex][sourceIndex][m_sourceCounter[sourceIndex]] = value;
+    m_sourceCounter[sourceIndex]++;
   }
-  if (m_sourceCounter[sourceIndex] == getSourceSize(sourceIndex))       // Recording buffer is now full
+  if (m_sourceCounter[sourceIndex] >= getSourceSize(sourceIndex))       // Recording buffer is now full
   {
-    m_recordNow[m_recordIndex][sourceIndex] = false;                    //Do not record anymore in this buffer
-    m_computeNow[m_recordIndex][sourceIndex] = true;                    //Buffer ready for computation
-    m_sourceCounter[sourceIndex] = 0;                                   //Reset counter
-    if (loopDebugMode)
+    m_recordNow[m_recordIndex][sourceIndex] = false;         //Do not record anymore in this buffer
+    m_computeNow[m_recordIndex][sourceIndex] = true;         //Buffer ready for computation
+    m_sourceCounter[sourceIndex] = 0;                        //Reset counter
+    // Printing during callbacks can cause issues (do it only for debugging)
+    if (callbackDebugMode)
     {
       debugPrint(m_name, false);
       debugPrint(" source #", false);
@@ -733,7 +647,7 @@ IUAccelPreComputationFeature128::IUAccelPreComputationFeature128(uint8_t id, cha
 
 bool IUAccelPreComputationFeature128::prepareProducer()
 {
-  m_producer = new IUFeatureProducer128();
+  m_producer = new IUFeatureProducer256();
   if (!m_producer || !m_producer->prepareDestination())
   {
     if (setupDebugMode) { debugPrint("Producer preparation failed."); }
@@ -745,8 +659,9 @@ bool IUAccelPreComputationFeature128::prepareProducer()
 
 void IUAccelPreComputationFeature128::m_computeScalar (uint8_t computeIndex)
 {
-  float val = computeSignalEnergy(1, getSourceSize(), m_source[m_computeIndex]);
-  getProducer()->setLatestValue(val);
+  // Accel is in G and Q4.11 format, need to convert the energy to float and (m.s-2)^2
+  float val = computeSignalEnergy(1, getSourceSize(), m_source[m_computeIndex], q4_11ToFloat) * sq(9.81);
+  getProducer()->setLatestValue(val); 
   updateState();
   getProducer()->setSamplingRate(m_source[computeIndex][1][0]);
   getProducer()->setSampleCount(getSourceSize(0));
@@ -754,7 +669,10 @@ void IUAccelPreComputationFeature128::m_computeScalar (uint8_t computeIndex)
 
 void IUAccelPreComputationFeature128::m_computeArray (uint8_t computeIndex)
 {
-  computeRFFT(getSourceCount(), getSourceSize(), m_source[m_computeIndex], getDestinationSize(), getDestination());
+  computeRFFT(m_source[m_computeIndex][0],  // pointer to source
+              getDestination(),             // pointer to destination
+              getSourceSize()[0],           // FFT length
+              false);                       // Forward FFT
 }
 
 
@@ -768,7 +686,7 @@ IUAccelPreComputationFeature512::IUAccelPreComputationFeature512(uint8_t id, cha
 
 bool IUAccelPreComputationFeature512::prepareProducer()
 {
-  m_producer = new IUFeatureProducer512();
+  m_producer = new IUFeatureProducer1024();
   if (!m_producer || !m_producer->prepareDestination())
   {
     if (setupDebugMode) { debugPrint("Producer preparation failed."); }
@@ -780,23 +698,24 @@ bool IUAccelPreComputationFeature512::prepareProducer()
 
 void IUAccelPreComputationFeature512::m_computeScalar (uint8_t computeIndex)
 {
-  float val = computeSignalEnergy(1, getSourceSize(), m_source[m_computeIndex]);
-  Serial.println("ok 0");
+  // Accel is in G and Q4.11 format, need to convert the energy to float and (m.s-2)^2
+  float val = computeSignalEnergy(1, getSourceSize(), m_source[m_computeIndex], q4_11ToFloat) * sq(9.81);
   getProducer()->setLatestValue(val);
-  Serial.println("ok 1");
+  float rms = computeRMS(getSourceSize()[0], m_source[m_computeIndex][0], q4_11ToFloat) * 9.81; // Convert to m.s-1
+  getProducer()->setRMS(rms);
   updateState();
-  Serial.println("ok 2");
   getProducer()->setSamplingRate(m_source[computeIndex][1][0]);
-  Serial.println("ok 3");
   getProducer()->setSampleCount(getSourceSize(0));
-  Serial.println("ok 4");
 }
 
 void IUAccelPreComputationFeature512::m_computeArray (uint8_t computeIndex)
 {
-  Serial.println("ok 5");
-  computeRFFT(getSourceCount(), getSourceSize(), m_source[m_computeIndex], getDestinationSize(), getDestination());
-  Serial.println("ok 6");
+  computeRFFT(m_source[m_computeIndex][0],  // pointer to source
+              getDestination(),             // pointer to destination
+              getSourceSize()[0],           // FFT length
+              false);                        // Forward FFT
+              //hamming_window_512,           // windowing
+              //hamming_K_512);               // window gain
 }
 
 
@@ -810,7 +729,9 @@ IUSingleAxisEnergyFeature128::IUSingleAxisEnergyFeature128(uint8_t id, char *nam
 
 void IUSingleAxisEnergyFeature128::m_computeScalar (uint8_t computeIndex)
 {
-  getProducer()->setLatestValue(computeSignalEnergy(1, getSourceSize(), m_source[m_computeIndex]));
+  // Accel is in G and Q4.11 format, need to convert the energy to float and (m.s-2)^2
+  float val = computeSignalEnergy(1, getSourceSize(), m_source[m_computeIndex], q4_11ToFloat) * sq(9.81);
+  getProducer()->setLatestValue(val);
 }
 
 
@@ -824,7 +745,9 @@ IUTriAxisEnergyFeature128::IUTriAxisEnergyFeature128(uint8_t id, char *name) :
 
 void IUTriAxisEnergyFeature128::m_computeScalar (uint8_t computeIndex)
 {
-  getProducer()->setLatestValue(computeSignalEnergy(3, getSourceSize(), m_source[m_computeIndex]));
+  // Accel is in G and Q4.11 format, need to convert the energy to float and (m.s-2)^2
+  float val = computeSignalEnergy(3, getSourceSize(), m_source[m_computeIndex], q4_11ToFloat) * sq(9.81);
+  getProducer()->setLatestValue(val);
 }
 
 
@@ -838,7 +761,8 @@ IUSingleAxisEnergyFeature512::IUSingleAxisEnergyFeature512(uint8_t id, char *nam
 
 void IUSingleAxisEnergyFeature512::m_computeScalar (uint8_t computeIndex)
 {
-  getProducer()->setLatestValue(computeSignalEnergy(1, getSourceSize(), m_source[m_computeIndex]));
+  float val = computeSignalEnergy(1, getSourceSize(), m_source[m_computeIndex], q4_11ToFloat) * sq(9.81);
+  getProducer()->setLatestValue(val);
 }
 
 
@@ -850,9 +774,10 @@ IUTriAxisEnergyFeature512::IUTriAxisEnergyFeature512(uint8_t id, char *name) :
   // ctor
 }
 
-void IUTriAxisEnergyFeature512::m_computeScalar (uint8_t computeIndex)
+void IUTriAxisEnergyFeature512::m_computeScalar(uint8_t computeIndex)
 {
-  getProducer()->setLatestValue(computeSignalEnergy(3, getSourceSize(), m_source[m_computeIndex]));
+  float val = computeSignalEnergy(3, getSourceSize(), m_source[m_computeIndex], q4_11ToFloat) * sq(9.81);
+  getProducer()->setLatestValue(val);
 }
 
 
@@ -864,13 +789,14 @@ IUTriSourceSummingFeature::IUTriSourceSummingFeature(uint8_t id, char *name) :
   // ctor
 }
 
-void IUTriSourceSummingFeature::m_computeScalar (uint8_t computeIndex)
+void IUTriSourceSummingFeature::m_computeScalar(uint8_t computeIndex)
 {
-  getProducer()->setLatestValue(computeSumOf(getSourceCount(), getSourceSize(), m_source[m_computeIndex]));
+  float val = multiArrayMean(getSourceCount(), getSourceSize(), m_source[m_computeIndex]);
+  getProducer()->setLatestValue(val);
 }
 
 
-const uint16_t IUVelocityFeature512::sourceSize[IUVelocityFeature512::sourceCount] = {512, 1, 1, 1};
+const uint16_t IUVelocityFeature512::sourceSize[IUVelocityFeature512::sourceCount] = {1024, 1, 1, 1, 1};
 
 IUVelocityFeature512::IUVelocityFeature512(uint8_t id, char *name) :
   IUQ15Feature(id, name)
@@ -880,7 +806,20 @@ IUVelocityFeature512::IUVelocityFeature512(uint8_t id, char *name) :
 
 void IUVelocityFeature512::m_computeScalar (uint8_t computeIndex)
 {
-  getProducer()->setLatestValue(computeVelocity(getSourceCount(), getSourceSize(), m_source[m_computeIndex]));
+  /*
+  if (m_source[computeIndex][1][0] == operationState::idle)
+  {
+    getProducer()->setLatestValue(0); // Do not compute velocities when idle
+    return;
+  }
+  */
+  float val = computeVelocity(m_source[computeIndex][0],    // accelFFT
+                              m_source[computeIndex][4][0], // accelRMS
+                              m_source[computeIndex][3][0], // sampleCount
+                              m_source[computeIndex][2][0], // samplingRate
+                              5,                            // Bandpass filtering lower bound => remove gravity
+                              1000);                        // Bandpass filtering higher bound
+  getProducer()->setLatestValue(val);
 }
 
 /**
@@ -914,7 +853,7 @@ IUDefaultFloatFeature::IUDefaultFloatFeature(uint8_t id, char *name) :
 
 void IUDefaultFloatFeature::m_computeScalar (uint8_t computeIndex)
 {
-  getProducer()->setLatestValue(computeDefaultFloat(getSourceCount(), getSourceSize(), m_source[m_computeIndex]));
+  getProducer()->setLatestValue(m_source[computeIndex][0][0]);
 }
 
 

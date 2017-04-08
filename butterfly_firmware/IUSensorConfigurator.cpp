@@ -126,7 +126,7 @@ void IUSensorConfigurator::acquireDataAndDumpThroughI2C()
 {
   for (uint8_t i = 0; i < sensorCount; i++)
   {
-    if(debugMode)
+    if(readableDataCollection)
     {
       m_sensors[i]->dumpDataForDebugging();
     }

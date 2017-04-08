@@ -31,10 +31,10 @@ void IUBattery::readVoltage()
   m_vBattery = (127.0f / 100.0f) * 3.30f * ((float) analogRead(voltagePin)) / 4095.0f;
 }
 
-float IUBattery::getVoltage()
+int IUBattery::getVoltage()
 {
   readVoltage();
-  return m_vBattery;
+  return (int) (1000 * m_vBattery);
 }
 
 float IUBattery::getVDDA()
