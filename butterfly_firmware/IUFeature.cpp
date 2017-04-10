@@ -76,9 +76,9 @@ float computeFullVelocity(q15_t *accelFFT, uint16_t sampleCount, uint16_t sampli
   filterAndIntegrateFFT(accelFFT, sampleCount, samplingRate, FreqLowerBound, FreqHigherBound, false);
   // Inverse FFT
   q15_t velocities[sampleCount];
-  computeRFFT(accelFFT, velocities, sampleCount, true);
+  computeRFFT(accelFFT, velocities, sampleCount, true); // FFT / iFFT dowscale values by 9bit
   // Velocities RMS
-  float val = computeRMS(sampleCount, velocities, q4_11ToFloat);
+  float val = computeRMS(sampleCount, velocities, q13_2ToFloat);
   return val;
 }
 
@@ -813,12 +813,11 @@ void IUVelocityFeature512::m_computeScalar (uint8_t computeIndex)
     return;
   }
   */
-  float val = computeVelocity(m_source[computeIndex][0],    // accelFFT
-                              m_source[computeIndex][4][0], // accelRMS
-                              m_source[computeIndex][3][0], // sampleCount
-                              m_source[computeIndex][2][0], // samplingRate
-                              5,                            // Bandpass filtering lower bound => remove gravity
-                              1000);                        // Bandpass filtering higher bound
+  float val = computeFullVelocity(m_source[computeIndex][0],    // accelFFT
+                                  m_source[computeIndex][3][0], // sampleCount
+                                  m_source[computeIndex][2][0], // samplingRate
+                                  5,                            // Bandpass filtering lower bound => remove gravity
+                                  1000);                        // Bandpass filtering higher bound
   getProducer()->setLatestValue(val);
 }
 

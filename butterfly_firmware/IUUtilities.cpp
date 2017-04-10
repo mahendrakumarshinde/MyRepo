@@ -141,7 +141,7 @@ bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTLength, bo
   arm_status armStatus = arm_rfft_init_q15(&rfftInstance,   // RFFT instance
                                            FFTLength,       // FFT length
                                            (int) inverse,   // 0: forward FFT, 1: inverse FFT
-                                           0);              // 1: enable bit reversal output, 0: disable it
+                                           1);              // 1: enable bit reversal output
   if (armStatus != ARM_MATH_SUCCESS)
   {
     if (loopDebugMode) { debugPrint("FFT / Inverse FFT computation failed"); }
@@ -166,7 +166,6 @@ bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTLength, bo
   }
   else
   {
-    //arm_mult_q15(source, window, source, FFTLength);
     // Avoid saturation
     for (uint16_t i = 0; i < FFTLength; ++i)
     {
@@ -176,10 +175,10 @@ bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTLength, bo
   computeRFFT(source, destination, FFTLength, inverse);
   if (inverse)
   {
-    //for (uint16_t i = 0; i < FFTLength; ++i)
-    //{
-    //  destination[i] = (q15_t) ((float) destination[i] * 32768. / (float) window[i]);
-    //}
+    for (uint16_t i = 0; i < FFTLength; ++i)
+    {
+      destination[i] = (q15_t) ((float) destination[i] * 32768. / (float) window[i]);
+    }
   }
   else
   {
@@ -210,7 +209,7 @@ void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplin
     debugPrint(FreqLowerBound, false); debugPrint(", ", false); 
     debugPrint(FreqHigherBound, false); debugPrint(", ", false); 
     debugPrint(minIdx, false); debugPrint(", ", false); 
-    debugPrint(maxIdx, false);
+    debugPrint(maxIdx);
   }
   
   // Apply high pass filter

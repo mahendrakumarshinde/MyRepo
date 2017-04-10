@@ -55,13 +55,17 @@ uint8_t splitStringToInt(String str, const char separator, int *destination, con
 bool checkCharsAtPosition(char *charBuffer, int *positions, char character);
 
 // Conversion
-inline float q15ToFloat(q15_t value) { return ((float) value) / 32768.; }
+inline float q15ToFloat(q15_t value) { return ((float) value) / 32768.0; }
 
 inline q15_t floatToq15(float value) { return (q15_t) (32768 * value); }
 
 inline float q4_11ToFloat(q15_t value) { return ((float) value) / 2048.0; }
 
 inline q15_t floatToq4_11(float value) { return (q15_t) (2048 * value); }
+
+inline float q13_2ToFloat(q15_t value) { return ((float) value) / 4.0; }
+
+inline q15_t floatToq13_2(float value) { return (q15_t) (4 * value); }
 
 inline float g_to_ms2(float value) { return 9.8 * value; }
 
