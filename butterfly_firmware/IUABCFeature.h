@@ -48,6 +48,7 @@ class IUABCFeature
     virtual void deactivate() { m_active = false; }
     virtual void resetCounters();
     virtual bool isActive() { return m_active; }
+    virtual bool getFeatureCheck() { return m_checkFeature; }
     virtual void setFeatureCheck( bool checkFeature) { m_checkFeature = checkFeature; }
     virtual bool isFeatureCheckActive() { return m_checkFeature; }
     virtual void setStreaming( bool enableStreaming) { m_isStreamed = enableStreaming; }
@@ -73,6 +74,7 @@ class IUABCFeature
     virtual bool isTimeToEndRecord();
     virtual bool compute();
     virtual void stream(HardwareSerial *port);
+    virtual void streamSourceData(HardwareSerial *port, uint8_t sourceIdx, float (*transform)(q15_t));
 
     // Diagnostic Functions
     virtual void exposeSourceConfig();

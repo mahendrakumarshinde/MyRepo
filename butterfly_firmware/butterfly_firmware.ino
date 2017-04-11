@@ -21,7 +21,7 @@
 
 
 //========================= Module Configuration Variables ===========================
-String MAC_ADDRESS = "88:4A:EA:69:DF:8C";
+String MAC_ADDRESS = "94:54:93:0F:67:01";
 
 // Reduce RUN frequency if needed.
 const uint32_t RESTING_INTERVAL = 0;  // Inter-batch gap
@@ -71,37 +71,60 @@ void setup()
   }
   
   conductor = IUConductor(MAC_ADDRESS);
-  if (setupDebugMode) { memoryLog(F("Conductor initialized")); }
+  if (setupDebugMode)
+  {
+    memoryLog(F("Conductor initialized"));
+    debugPrint(' ');
+  }
   
   if (!conductor.initInterfaces())
   {
     if (setupDebugMode) { debugPrint(F("Failed to initialize interfaces\n")); }
     while(1);                                                // hang
   }
-  if (setupDebugMode) { memoryLog(F("Interfaces created")); }
+  if (setupDebugMode)
+  {
+    memoryLog(F("Interfaces created"));
+    debugPrint(' ');
+    conductor.iuBluetooth->exposeInfo();
+    debugPrint(' ');
+  }
+  
   conductor.printMsg("Successfully initialized interfaces\n");
-  conductor.printMsg("Initializing components and setting up default configurations\n");
+  conductor.printMsg("Initializing components and setting up default configurations...");
   
   if (!conductor.initConfigurators())
   {
     conductor.printMsg("Failed to initialize configurators\n");
     while(1);                                                // hang
   }
-  if (setupDebugMode) { memoryLog(F("Configurators created")); }
+  if (setupDebugMode)
+  {
+    memoryLog(F("Configurators created"));
+    debugPrint(' ');
+  }
   
   if (!conductor.initSensors())
   {
     conductor.printMsg("Failed to initialize sensors\n");
     while(1);                                                // hang
   }
-  if (setupDebugMode) { memoryLog(F("Sensors created")); }
+  if (setupDebugMode)
+  {
+      memoryLog(F("Sensors created"));
+      debugPrint(' ');
+  }
   
   if (!conductor.featureConfigurator.doStandardSetup())
   {
     conductor.printMsg("Failed to configure features\n");
     while(1);                                                // hang
   }
-  if (setupDebugMode) { memoryLog(F("Features created")); }
+  if (setupDebugMode)
+  {
+    memoryLog(F("Features created"));
+    debugPrint(' ');
+  }
   
   if (!conductor.linkFeaturesToSensors())
   {
@@ -110,18 +133,25 @@ void setup()
   }
   if (setupDebugMode)
   {
-    debugPrint(F("Feature sources successfully linked to sensors\n"));
+    memoryLog(F("Feature sources successfully linked to sensors"));
+    debugPrint(' ');
+  }
+  
+  conductor.printMsg("Done setting up components and configurations\n");
+  
+  if (setupDebugMode)
+  {
     conductor.sensorConfigurator.exposeSensorsAndReceivers();
     conductor.featureConfigurator.exposeFeaturesAndReceivers();
     conductor.featureConfigurator.exposeFeatureStates();
     
     debugPrint(F("I2C status: "), false);
     debugPrint(conductor.iuI2C->getErrorMessage());
-    debugPrint(F("\nBegin run at (ms): "), false);
+    debugPrint(F("\nFinished setup at (ms): "), false);
     debugPrint(millis());
     debugPrint(' ');
   }
-  //Serial.flush();
+  
   conductor.setCallback(callback);
   conductor.switchToMode(operationMode::run);
   conductor.switchToState(operationState::idle);
@@ -148,10 +178,10 @@ void loop()
       /*======*/
     }
   }
-  conductor.processInstructionsFromBluetooth();   // Receive instructions via BLE during run mode
-  conductor.processInstructionsFromI2C();         // Receive instructions to enter / exit data collection mode, plus options during data collection
-  conductor.computeFeatures();                    // Conductor handles feature computation depending on operation mode
-  conductor.streamData();                         // Stream data over BLE during run mode
+  conductor.processInstructionsFromBluetooth(MAC_ADDRESS);  // Receive instructions via BLE during run mode
+  conductor.processInstructionsFromI2C();                   // Receive instructions to enter / exit data collection mode, plus options during data collection
+  conductor.computeFeatures();                              // Conductor handles feature computation depending on operation mode
+  conductor.streamData();                                   // Stream data over BLE during run mode
   conductor.checkAndUpdateState();
   conductor.checkAndUpdateMode();    
 }

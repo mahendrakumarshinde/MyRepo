@@ -24,8 +24,8 @@
 class IUConductor
 {
   public:
-    static const uint16_t defaultClockRate = 8000;      //Hz (must be compatible with I2C)
-    static const uint16_t defaultDataSendPeriod = 500;        // ms - send data every T milliseconds
+    static const uint16_t defaultClockRate = 8000;           //Hz (must be compatible with I2C)
+    static const uint16_t defaultDataSendPeriod = 2000;      // ms - send data every T milliseconds
     // Constructors, destructors, getters and setters
     IUConductor();
     IUConductor(String macAddress);
@@ -37,9 +37,9 @@ class IUConductor
     void enableAutoSleep() { m_autoSleepEnabled = true; }
     void disableAutoSleep() { m_autoSleepEnabled = false; }
     bool isAutoSleepEnabled() { return m_autoSleepEnabled; }
-    double getDatetime() { return m_refDatetime - (double) m_lastSynchroTime + (double) millis(); }
     void setDataSendPeriod(uint16_t dataSendPeriod);
     bool isDataSendTime();
+    double getDatetime();
     void setCallback(void (*callback)()) { m_callback = callback; }
     // Methods
     bool initInterfaces();
@@ -57,7 +57,7 @@ class IUConductor
     void endDataAcquisition();
     bool resetDataAcquisition();
     void processInstructionsFromI2C();
-    void processInstructionsFromBluetooth();
+    void processInstructionsFromBluetooth(String macAddress);
     void processInstructionsFromWifi();
     void printMsg(String msg);
     // Diagnostic Functions

@@ -14,7 +14,9 @@ IUConductor::IUConductor(String macAddress) :
   m_opMode(operationMode::sleep),
   m_opState(operationState::idle),
   m_inDataAcquistion(false),
-  m_lastSentTime(0)
+  m_lastSentTime(0),
+  m_refDatetime(0),
+  m_lastSynchroTime(0)
 {
   iuI2C = NULL;
   iuBluetooth = NULL;
@@ -79,6 +81,15 @@ bool IUConductor::isDataSendTime()
     return true;
   }
   return false;
+}
+
+/**
+ * 
+ */
+double IUConductor::getDatetime()
+{
+  double now = millis();
+  return m_refDatetime - (double) m_lastSynchroTime + now;
 }
 
 /**
@@ -204,12 +215,7 @@ void IUConductor::switchToMode(operationMode mode)
     sensorConfigurator.iuRGBLed->changeColor(IURGBLed::SLEEP_MODE);
     msg = "sleep";
   }
-  if (!iuI2C->isSilent() || loopDebugMode)
-  {
-    iuI2C->port->print("Entering ");
-    iuI2C->port->print(msg);
-    iuI2C->port->println(" mode\n");
-  }
+  if (loopDebugMode) { debugPrint("\nEntering " + msg + " mode\n"); }
 }
 
 /**
@@ -248,7 +254,7 @@ void IUConductor::switchToState(operationState state)
     sensorConfigurator.iuRGBLed->changeColor(IURGBLed::RED_BAD);
     msg = "badCutting";
   }
-  if (loopDebugMode) { debugPrint("Entering " + msg + " state\n"); }
+  if (loopDebugMode) { debugPrint("\nEntering " + msg + " state\n"); }
 }
 
 /**
@@ -474,7 +480,7 @@ void IUConductor::processInstructionsFromI2C()
  *    include a check on data reception timeout.
  * 2. scan the content of the buffer and apply changes where needed
  */
-void IUConductor::processInstructionsFromBluetooth()
+void IUConductor::processInstructionsFromBluetooth(String macAddress)
 {
   if (m_opMode != operationMode::run)
   {
@@ -486,44 +492,53 @@ void IUConductor::processInstructionsFromBluetooth()
   while (iuBluetooth->readToBuffer())
   {
     bleBuffer = iuBluetooth->getBuffer();
-    if(setupDebugMode) { debugPrint("Bluetooth input is:"); }
-    if(setupDebugMode) { debugPrint(bleBuffer); }
     if (!bleBuffer)
     {
       break;
     }
+    if(loopDebugMode)
+    {
+      debugPrint(F("Bluetooth input is:"), false);
+      debugPrint(bleBuffer);
+    }
     switch(bleBuffer[0])
     {
-      case 0: // Set Thresholds
+      case '0': // Set Thresholds
+        Serial.println("case 0");
         if (bleBuffer[4] == '-' && bleBuffer[9] == '-' && bleBuffer[14] == '-')
         {
+          Serial.println("here 2");
           int featureIdx = 0, newThres = 0, newThres2 = 0, newThres3 = 0;
           sscanf(bleBuffer, "%d-%d-%d-%d", &featureIdx, &newThres, &newThres2, &newThres3);
+          IUFeature *feat = featureConfigurator.getFeatureById(featureIdx + 1);
           if (featureIdx == 1 || featureIdx == 2 || featureIdx == 3)
           {
-            featureConfigurator.getFeature(featureIdx)->setThresholds((float)newThres / 100.,
-                                                                      (float)newThres2 / 100.,
-                                                                      (float)newThres3 / 100.);
+            feat->setThresholds((float)newThres / 100., (float)newThres2 / 100., (float)newThres3 / 100.);
           }
           else
           {
-          featureConfigurator.getFeature(featureIdx)->setThresholds((float)newThres,
-                                                                    (float)newThres2,
-                                                                    (float)newThres3);
+            feat->setThresholds((float)newThres, (float)newThres2, (float)newThres3);
           }
+          Serial.print(feat->getName()); Serial.print('-');
+          Serial.print(feat->getThreshold(0)); Serial.print('-');
+          Serial.print(feat->getThreshold(1)); Serial.print('-');
+          Serial.println(feat->getThreshold(2));
         }
         break;
-      case 1: // Receive the timestamp data from the bluetooth hub
+      case '1': // Receive the timestamp data from the bluetooth hub
+        Serial.println("case 1");
         if (bleBuffer[1] == ':' && bleBuffer[12] == '.')
         {
           int date(0), dateset(0), dateyear(0);
           sscanf(bleBuffer, "%d:%d.%d", &date, &dateset, &dateyear);
           m_refDatetime = double(dateset) + double(dateyear) / double(1000000);
           m_lastSynchroTime = millis();
+          Serial.print("Time sync, new time is:"); Serial.println(getDatetime());
         }
         break;
 
-      case 2: // Bluetooth parameter setting
+      case '2': // Bluetooth parameter setting
+        Serial.println("case 2");
         if (bleBuffer[1] == ':' && bleBuffer[7] == '-' && bleBuffer[13] == '-')
         {
           int dataRecTimeout(0), paramtag(0), dataSendPeriod(0);
@@ -534,27 +549,46 @@ void IUConductor::processInstructionsFromBluetooth()
         }
         break;
 
-      case 3: // Record button pressed - go into record mode to record FFTs
-        //TODO Implement
-        /*
-        if (bleBuffer[7] == '0' && bleBuffer[9] == '0' && bleBuffer[11] == '0' && bleBuffer[13] == '0' && bleBuffer[15] == '0' && bleBuffer[17] == '0') {
-          iuI2C->port->print("Time to record data and send FFTs");
-          recordmode = true;
-          iuBMX055->showRecordFFT(buffer_compute_index, MAC_ADDRESS);
-          recordmode = false;
+      case '3': // Record button pressed - go into record mode to record FFTs
+        Serial.println("case 3");
+        if (bleBuffer[7] == '0' && bleBuffer[9] == '0' && bleBuffer[11] == '0' && bleBuffer[13] == '0' && bleBuffer[15] == '0' && bleBuffer[17] == '0')
+        {
+          iuBluetooth->port->print("REC,");
+          iuBluetooth->port->print(macAddress);
+          IUFeature *feat = NULL;
+          feat = featureConfigurator.getFeatureByName("CX3");
+          if (feat)
+          {
+            iuBluetooth->port->print(",X");
+            feat->streamSourceData(iuBluetooth->port, 0, q4_11ToFloat);
+          }
+          feat = featureConfigurator.getFeatureByName("CY3");
+          if (feat)
+          {
+            iuBluetooth->port->print(",Y");
+            feat->streamSourceData(iuBluetooth->port, 0, q4_11ToFloat);
+          }
+          feat = featureConfigurator.getFeatureByName("CZ3");
+          if (feat)
+          {
+            iuBluetooth->port->print(",Z");
+            feat->streamSourceData(iuBluetooth->port, 0, q4_11ToFloat);
+          }
+          iuBluetooth->port->print(";");
+          iuBluetooth->port->flush();
+          Serial.println("Record mode");
         }
-        */
         break;
-      case 4: // Stop button pressed - go out of record mode back into RUN mode
-        //TODO Implement
-        /*
-        if (bleBuffer[7] == '0' && bleBuffer[9] == '0' && bleBuffer[11] == '0' && bleBuffer[13] == '0' && bleBuffer[15] == '0' && bleBuffer[17] == '0') {
+      case '4': // Stop button pressed - go out of record mode back into RUN mode
+        Serial.println("case 4");
+        if (bleBuffer[7] == '0' && bleBuffer[9] == '0' && bleBuffer[11] == '0' && bleBuffer[13] == '0' && bleBuffer[15] == '0' && bleBuffer[17] == '0')
+        {
           iuI2C->port->print("Stop recording and sending FFTs");
         }
-        */
         break;
 
-      case 5:
+      case '5':
+        Serial.println("case 5");
         if (bleBuffer[7] == '0' && bleBuffer[9] == '0' && bleBuffer[11] == '0' && bleBuffer[13] == '0' && bleBuffer[15] == '0' && bleBuffer[17] == '0')
         {
           iuBluetooth->port->print("HB,");
@@ -566,7 +600,8 @@ void IUConductor::processInstructionsFromBluetooth()
         }
         break;
 
-      case 6:
+      case '6':
+        Serial.println("case 6");
         //TODO: Reimplement
         if (bleBuffer[7] == ':' && bleBuffer[9] == '.' && bleBuffer[11] == '.' && bleBuffer[13] == '.' && bleBuffer[15] == '.' && bleBuffer[17] == '.')
         {
@@ -575,8 +610,10 @@ void IUConductor::processInstructionsFromBluetooth()
           sscanf(bleBuffer, "%d:%d.%d.%d.%d.%d.%d", &parametertag, &fcheck[0], &fcheck[1], &fcheck[2], &fcheck[3], &fcheck[4], &fcheck[5]);
           for (uint8_t i = 0; i < 6; i++)
           {
-            IUFeature *feat = featureConfigurator.getFeature(i);
+            IUFeature *feat = featureConfigurator.getFeatureById(i + 1);
             feat->setFeatureCheck((bool) fcheck[i]);
+            Serial.print(feat->getName()); Serial.print(" - ");
+            Serial.println(feat->getFeatureCheck());   
           }
         }
         break;

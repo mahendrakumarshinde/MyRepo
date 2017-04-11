@@ -84,14 +84,13 @@ bool IUI2C::scanDevices()
 bool IUI2C::checkComponentWhoAmI(String componentName, uint8_t address, uint8_t whoAmI, uint8_t iShouldBe)
 {
   byte c = readByte(address, whoAmI);  // Read ACC WHO_AM_I register for componant
-  if (!m_silent)
+  if (setupDebugMode)
   {
-    port->print(componentName);
-    port->print(" I AM 0x");
-    port->print(c, HEX);
-    port->print(" I should be 0x");
-    port->println(iShouldBe, HEX);
-    port->flush();
+    debugPrint(componentName);
+    debugPrint(F(" I AM 0x"), false);
+    debugPrint(c, false);
+    debugPrint(F(" I should be 0x"), false);
+    debugPrint(iShouldBe);
   }
   if (c != iShouldBe)
   {

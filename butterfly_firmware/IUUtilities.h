@@ -54,6 +54,8 @@ uint8_t splitStringToInt(String str, const char separator, int *destination, con
 
 bool checkCharsAtPosition(char *charBuffer, int *positions, char character);
 
+void strCopyWithAutocompletion(char *destination, char *source, uint8_t destLen, uint8_t srcLen);
+
 // Conversion
 inline float q15ToFloat(q15_t value) { return ((float) value) / 32768.0; }
 

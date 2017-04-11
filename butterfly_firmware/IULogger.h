@@ -11,7 +11,7 @@
 
 #ifdef DEBUGMODE
 __attribute__((section(".noinit2"))) const bool setupDebugMode = false;
-__attribute__((section(".noinit2"))) const bool loopDebugMode = true;
+__attribute__((section(".noinit2"))) const bool loopDebugMode = false;
 __attribute__((section(".noinit2"))) const bool callbackDebugMode = false;
 __attribute__((section(".noinit2"))) const bool highVerbosity = false;
 __attribute__((section(".noinit2"))) const bool readableDataCollection = false;
@@ -46,14 +46,21 @@ inline void debugPrint(float msg, bool endline)
   #endif
 }
 
+inline void memoryLog()
+{
+  #ifdef DEBUGMODE
+  Serial.print(F("Available Memory: "));
+  Serial.println(freeMemory(), DEC);
+  Serial.flush();
+  #endif
+}
 
 inline void memoryLog(String msg)
 {
   #ifdef DEBUGMODE
   Serial.print(msg);
-  Serial.print(F(" - Available Memory: "));
-  Serial.println(freeMemory(), DEC);
-  Serial.flush();
+  Serial.print(F(" - "));
+  memoryLog();
   #endif
 }
 

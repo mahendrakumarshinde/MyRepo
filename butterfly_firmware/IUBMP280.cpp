@@ -73,8 +73,7 @@ void IUBMP280::initSensor()
   {
     m_digPressure[i] = (uint16_t)(((uint16_t) calib[2 * (i + 3) + 1] << 8) | calib[2 * (i + 3)]);
   }
-  m_iuI2C->port->println("BMP280 initialized successfully.\n");
-  m_iuI2C->port->flush();
+  if (setupDebugMode) { debugPrint(F("BMP280 initialized successfully.\n")); }
 }
 
 /**

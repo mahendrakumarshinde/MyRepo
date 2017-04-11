@@ -61,9 +61,9 @@ void IUI2S::setSamplingRate(uint16_t samplingRate)
  */
 void IUI2S::wakeUp()
 {
-  if (!m_iuI2C->isSilent())
+  if (setupDebugMode)
   {
-    m_iuI2C->port->println("Initialized I2S and ICS43432\n");
+    debugPrint(F("Initialized I2S and ICS43432\n"));
   }
 }
 
@@ -95,14 +95,14 @@ bool IUI2S::triggerDataAcquisition(void (*callback)())
   {
     readData(false);
   }
-  if (loopDebugMode) { debugPrint("Data acquisition triggered\n"); }
+  if (loopDebugMode) { debugPrint("\nData acquisition triggered\n"); }
   return true;
 }
 
 bool IUI2S::endDataAcquisition()
 {
   //I2S.end();
-  if (loopDebugMode) { debugPrint("Data acquisition disabled"); }
+  if (loopDebugMode) { debugPrint("\nData acquisition disabled\n"); }
   return true;
 }
 

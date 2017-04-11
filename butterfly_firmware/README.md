@@ -109,23 +109,12 @@ A Sensor library contains a single class that has at least the following functio
 In IU IDE Firmware, the role of the conductor is to orchestrate (hence the name) how all the components work together. This includes:
 - Instantiates the interfaces
 - Instantiates the configurators for sensors and features.
-- Instantiates the features
-- 
-  - Instantiating an I2C object
-  - Instantiating each component class
-  - Define all possible measure functions (by leveraging each component) and create an array of pointers to them. (+ use hashMap to name them?)
-  - Define all possible feature calculation functions (by leveraging each component), and store them in an array of pointers to them. (+ use hashMap to name them?)
-  - Create a callback function that will be called independently from the main loop. This callback function will handle data measure and will test each measure functions (using the array of pointers) to see if they are active. If yes, then call them.
-  - Create a compute_features function 
-- During setup
-  - Holding / fetching initial configuration data (**Should this be before setup?**)
-  - Initializing the I2C and each components
-  - Start the Audio component and pass it the callback function created before setup 
-- During loop:
-  - Handle recurring events
-  - Handle timed events
-  - Handle instructions received over the I2C port or any of the other interfaces
-  - Handle states, modes and configuration updates
+- Instantiates the sensors and features through their configurators
+- Handles data acquisitions, feature computation, data sending, time syncing, state and mode changes and configuration data reception
+
+The conductor relies on the SensorConfigurator to handle everything that is sensor related: instantiation, configuration, sampling rate, data transmission to feature or through BLE...
+It relies on the FeatureConfigurator for: feature instantiation (based on user requested configuration), configuration, feature computation, result trasnmission via BLE...
+
 
 ### The role of the Sketch (*.ino file) ###
 Since all of the functionnalities are handled in IU libraries, the Sketch should only instanciate the Conductor and calls its functions in either the setup on main functions.
@@ -160,17 +149,31 @@ Check out conversion method on [wikipedia](https://en.wikipedia.org/wiki/Q_(numb
 sensor sensibility and scale (before we convert the outputs to q15_t) are listed below.
 
 ### BMD350 ###
-The chip has marking on it, in the form ABXXXXXX. 'AB' is the firmware version (see datasheet for more details), and the X's are the 6 last hex digit of the MAC address. The Mac address is then 94:54:93:XX:XX:XX. The MAC address is also stored on the chip memory and is available as long as there is no full memory erase (see datasheet).
+BMD350 comes with a pre-flashed firmware named BMDWare. You should read both BMD350 and BMDWare datasheets.
+
+####MAC Address####
+The BLE MAC address is written on the BMD350 chip on it, in the form ABXXXXXX. 'AB' is the firmware version (see datasheet for more details), and the X's are the 6 last hex digit of the MAC address. The Mac address is then 94:54:93:XX:XX:XX.
+It is also stored on the chip memory and is available as long as full memory erase is performed (see datasheet). Read it via UICR register.
+UICR Register:
+NRF_UICR + 0x80 (0x10001080): MAC_Addr [0] (0xZZ)
+NRF_UICR + 0x81 (0x10001081): MAC_Addr [1] (0xYY)
+NRF_UICR + 0x82 (0x10001082): MAC_Addr [2] (0xXX)
+NRF_UICR + 0x83 (0x10001083): MAC_Addr [3] (0x93)
+NRF_UICR + 0x84 (0x10001084): MAC_Addr [4] (0x54)
+NRF_UICR + 0x85 (0x10001085): MAC_Addr [5] (0x94)
+
+####Beacon / iBeacon configuration####
 Every beacon info can be configured, including the device name, UUID, major and minor numbers, advertissement info and rate, etc. Beacon configurations are retained even when the device is powered off.
 
-You should read both BMD350 and BMDWare datasheets.
-
+####AT Command mode####
 BMD350 has 2 modes that we use:
 - a configuration mode named "AT Command Interface", that allows to interact with the BMDWare via I2C and the Serial port to configure the device. This include Beacon configuration and UART configuration.
 - UART Pass-Through mode, that we use to stream data over bluetooth. We send data to the BLE module via Serial, and these data are automatically sent over bluetooth.
 Note that UART Pass-Through mode has to be configured using the AT Mode, but that AT Mode actually have to be exited for UART Pass-Through to work.
 
-Download the app "Rigado Toolbox" to get access to some usefull info and functionnalities.
+####BLE utility app####
+Some usefull Android / Apple apps exist, that allow to detect, connect to and read / write data to a BLE device. We have use "BLE UUID Explorer" and "Rigado Toolbox" so far.
+Rigado Toolbox is specifically designed to work with BMD300 series (developed by Rigado). Some of its functionnalities are:
 - UUID
 - MAC Address = Serial Number. It is always in the form 94:54:93:XX:XX:XX. As said earlier, the last 6 hex digits are also available on the chip markings.
 - If you have configured the chip in UART pass-through mode, you can use the test console of the app to send / receive info from device

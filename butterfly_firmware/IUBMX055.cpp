@@ -131,8 +131,6 @@ bool IUBMX055::checkMagnetometerWhoAmI()
  */
 void IUBMX055::wakeUp()
 {
-  m_iuI2C->port->println("BMX055 accelerometer...");
-
   bool iAmMyself = checkAccelerometerWhoAmI();
   //iAmMyself &= checkGyroscopeWhoAmI();
   //iAmMyself &= checkMagnetometerWhoAmI();
@@ -165,8 +163,7 @@ void IUBMX055::initSensor()
   configureMagnometer(magMode::regular);
 
   delay(100);
-  m_iuI2C->port->print("BMX055 initialized successfully.\n\n");
-  m_iuI2C->port->flush();
+  if (setupDebugMode) { debugPrint(F("BMX055 initialized successfully.\n")); }
 }
 
 void IUBMX055::configureAccelerometer()

@@ -8,14 +8,15 @@ IUBMD350::IUBMD350(IUI2C *iuI2C) :
   m_iuI2C(iuI2C),
   m_bufferIndex(0),
   m_dataReceptionTimeout(2000),
-  m_lastReadTime(0)
+  m_lastReadTime(0),
+  m_ATCmdEnabled(false)
 {
   // Init Settings
   settings[0] = {"flowControl", "ufc", false};
   settings[1] = {"parity", "upar", false};
   settings[2] = {"UARTPassThrough", "uen", false};
   // Fill out the buffer with meaningless data
-  for (int i=0; i < bufferSize; i++)
+  for (int i = 0; i < bufferSize; i++)
   {
     m_buffer[i] = 'a';
   }
@@ -26,11 +27,12 @@ IUBMD350::IUBMD350(IUI2C *iuI2C) :
   // Initial Configuration
   m_baudRate = defaultBaudRate;
   port->begin(defaultBaudRate);
+
   enterATCommandInterface();
   queryDeviceName();
   queryUUIDInfo();
   queryBLEBaudRate();
-  if(m_BLEBaudRate != defaultBLEBaudRate)
+  if (m_BLEBaudRate != defaultBLEBaudRate)
   {
     setBLEBaudRate(defaultBLEBaudRate);
   }
@@ -41,9 +43,9 @@ IUBMD350::IUBMD350(IUI2C *iuI2C) :
 }
 
 /**
- * Reset the device
- * Required after when entering / exiting AT Command Interface Mode
- */
+   Reset the device
+   Required after when entering / exiting AT Command Interface Mode
+*/
 void IUBMD350::resetDevice()
 {
   digitalWrite(resetPin, LOW); // reset BMD-350
@@ -52,59 +54,62 @@ void IUBMD350::resetDevice()
 }
 
 /**
- * Go into AT Command Interface Mode or exit it
- * AT Command Interface is a mode where commands can be issued to the BMDWare via
- * the BLE module port (Serial1). These commands allows to configure or query info
- * about configuration.
- * UART Pass-Through needs to be configured when in AT Command Interface Mode, but
- * AT Mode needs to be exited to use UART Pass-Through.
- */
+   Go into AT Command Interface Mode or exit it
+   AT Command Interface is a mode where commands can be issued to the BMDWare via
+   the BLE module port (Serial1). These commands allows to configure or query info
+   about configuration.
+   UART Pass-Through needs to be configured when in AT Command Interface Mode, but
+   AT Mode needs to be exited to use UART Pass-Through.
+*/
 void IUBMD350::enterATCommandInterface()
 {
-  m_ATCmdEnabled = true;
   digitalWrite(ATCmdPin, LOW);
   delay(100);
   resetDevice();
+  // hold ATMD pin LOW for at least 2.5s. If not, AT Mode will not work
   delay(3000);
-  // hold ATMD pin LOW for at least 2.5 seconds
-  // If you do not hold it, the AT Mode will not be fully configured and will not work
-  if (!m_iuI2C->isSilent())
+  m_ATCmdEnabled = true;
+  if (setupDebugMode)
   {
-    m_iuI2C->port->println("Entered AT Command Interface mode");
+    debugPrint(F("Entered AT Command Interface mode"));
   }
+  delay(500);
 }
 
 /**
- * See enterATCommandInterface
- */
+   See enterATCommandInterface
+*/
 void IUBMD350::exitATCommandInterface()
 {
   m_ATCmdEnabled = false;
   digitalWrite(ATCmdPin, HIGH);
   delay(100);
   resetDevice();
-  if (!m_iuI2C->isSilent())
+  if (setupDebugMode)
   {
-    m_iuI2C->port->println("Exited AT Command Interface mode");
+    debugPrint(F("Exited AT Command Interface mode"));
   }
 }
 
 /**
- * Send a configuration command to the BMDWare in AT Mode
- * NB: Please not that sending configuration commands can take a non-negligible of time
- *     and requires the use of delay: it is not suitable for use in callbacks.
- * @param command   the command to send, without the at$ prefix and
-                    without return carriage "\r" (see datasheet)
- * @param result    a pointer to a string to store the message returned by the BMDWare
- * @return  true if currently in AT Mode and the command was sent
-            false if currently not in AT Mode, and the command was canceled.
- */
-bool IUBMD350::sendATCommand(String cmd, String *result)
+   Send a configuration command to the BMDWare in AT Mode
+   NB: Please not that sending configuration commands can take a non-negligible of time
+       and requires the use of delay: it is not suitable for use in callbacks.
+   @param command     the command to send, without the at$ prefix and
+                      without return carriage "\r" (see datasheet)
+   @param result      a pointer to a string to store the message returned by the BMDWare
+   @param resultLen   the expected length of result
+   @return            -1 if the command failed, or the number N of char of the response
+                      Please not that we can have N <> resultLen
+*/
+int IUBMD350::sendATCommand(String cmd, char *response, uint8_t responseLength)
 {
   if (!m_ATCmdEnabled)
   {
-    if (setupDebugMode) { debugPrint("BLE: Cannot send AT commands when not in AT mode"); }
-    return false;
+    if (setupDebugMode) {
+      debugPrint("BLE: Cannot send AT commands when not in AT mode");
+    }
+    return -1;
   }
   port->write("at$");
   int charCount = cmd.length();
@@ -113,122 +118,166 @@ bool IUBMD350::sendATCommand(String cmd, String *result)
     port->write(cmd[i]);
   }
   port->write('\r');
+  port->flush();
   uint8_t i = 0;
   while (!port->available() && i <= 50)
   {
-    delay(100); 
+    delay(100);
     i++;
   }
   if (i == 50)
   {
-    if (setupDebugMode) { debugPrint("AT Command '" + cmd + "' failed"); }
-    return false;
+    if (setupDebugMode) {
+      debugPrint("AT Command '" + cmd + "' failed");
+    }
+    return -1;
   }
+  int respCount = 0;
+  for (uint8_t j = 0; j < responseLength; ++j)
+  {
+    if (!port->available())
+    {
+      break;
+    }
+    response[j] = port->read();
+    respCount++;
+    if (response[j] == '\r' || response[j] == '\n') // end of response is carriage or line return
+    {
+      response[j] = 0; // Replace with end of string
+      break;
+    }
+  }
+  // Check that port buffer is empty
   while (port->available())
   {
-    result += port->read();
+    port->read();
   }
+  return respCount;
+}
+
+/**
+   Get BLE Module info and stream them through given port
+   @param  pointers to char arrays to get the resulting info
+   @param  length of arrays
+*/
+void IUBMD350::getModuleInfo(char *BMDVersion, char *bootVersion, char *protocolVersion, char *hardwareInfo,
+                             uint8_t len1, uint8_t len2, uint8_t len3, uint8_t len4)
+{
+  sendATCommand("ver?", BMDVersion, len1);
+  sendATCommand("blver?", bootVersion, len2);
+  sendATCommand("pver?", protocolVersion, len3);
+  sendATCommand("hwinfo?", hardwareInfo, len4);
+}
+
+/**
+   Send an AT command to set the device name (must be in AT mode)
+   @param name  the new device name, from 1 to 8 ASCII char
+   @return      true if successfully set, else false
+*/
+bool IUBMD350::setDeviceName(char *deviceName)
+{
+  queryDeviceName();
+  if (m_deviceName == deviceName)
+  {
+    return true; // Nothing to do, already OK
+  }
+  strcpy(m_deviceName, deviceName);
+  char response[3];
+  String cmd = "name ";
+  sendATCommand((String) (cmd + m_deviceName), response, 3);
+  if (strcmp(response, "OK"))
+  {
+    return true;
+  }
+  if (setupDebugMode) {
+    debugPrint("Failed to set device name");
+  }
+  return false;
+}
+
+/**
+   Query BLE configuration to get the device name
+   Also update the device name saved at the class level (accessible via getDeviceName)
+*/
+bool IUBMD350::queryDeviceName()
+{
+  char response[9];
+  int respLen = sendATCommand("name?", response, 9);
+  if (respLen > 0)
+  {
+    strCopyWithAutocompletion(m_deviceName, response, 9, respLen);
+    return true;
+  }
+  return false; // failed
+}
+
+/**
+   Set the UUID and the Major and Minor numbers for the device (see bluetooth Beacon)
+
+   @param UUID    Universal Unique Identiifier as a char array of 32 hex digit (UUID is 16byte (128bit long number)
+   @param major   UUID Major Number as a char array of 4 hex digits (16bit long number)
+   @param minor   UUID Minor Number as a char array of 4 hex digits (16bit long number)
+   @return        true if successfully set, else false
+*/
+bool IUBMD350::setUUIDInfo(char *UUID, char *major, char *minor)
+{
+  strcpy(m_UUID, UUID);
+  strcpy(m_majorNumber, major);
+  strcpy(m_minorNumber, minor);
+  bool success[3] = {false, false, false};
+  char response[3];
+  String cmd = "buuid ";
+  if(sendATCommand((String) (cmd + m_UUID), response, 3) > 0)
+  {
+    success[0] = strcmp(response, "OK");
+  }
+  cmd = "bmjid ";
+  if(sendATCommand((String) (cmd + m_majorNumber), response, 3) > 0)
+  {
+    success[1] = strcmp(response, "OK");
+  }
+  cmd = "bmnid ";
+  if(sendATCommand((String) (cmd + m_minorNumber), response, 3) > 0)
+  {
+    success[2] = strcmp(response, "OK");
+  }
+  if (success[0] && success[1] && success[2])
+  {
+    return true;
+  }
+  if (setupDebugMode) {
+    debugPrint("Failed to set BLE UUID, major and / or minor numbers");
+  }
+  return false;
+}
+
+/**
+   Query BLE configuration to get the UUID, major and minor numbers
+   Also update the UUID, major and minor saved at the class level (accessible via getters)
+*/
+bool IUBMD350::queryUUIDInfo()
+{
+  char uuid[33];
+  int respLen = sendATCommand("buuid?", uuid, 33);
+  if (respLen < 1) { return false; }
+  strCopyWithAutocompletion(m_UUID, uuid, 33, respLen);
+  
+  char number[5];
+  respLen = sendATCommand("bmjid?", number, 5);
+  if (respLen < 1) { return false; }
+  strCopyWithAutocompletion(m_majorNumber, number, 5, respLen);
+  
+  respLen = sendATCommand("bmnid?", number, 5);
+  if (respLen < 1) { return false; }
+  strCopyWithAutocompletion(m_minorNumber, number, 5, respLen);
+  
   return true;
 }
 
 /**
- * Get BLE Module info and stream them through given port
- * @param  pointers to strings to get the resulting info
- */
-void IUBMD350::getModuleInfo(String *BMDVersion, String *bootVersion, String *protocolVersion, String *hardwareInfo)
-{
-  sendATCommand("ver?", BMDVersion);
-  sendATCommand("blver?", bootVersion);
-  sendATCommand("pver?", protocolVersion);
-  sendATCommand("hwinfo?", hardwareInfo);
-}
-
-/**
- * Send an AT command to set the device name (must be in AT mode)
- * @param name  the new device name, from 1 to 8 ASCII char
- * @return      true if successfully set, else false
- */
-bool IUBMD350::setDeviceName(String name)
-{
-  queryDeviceName();
-  if (m_deviceName == name)
-  {
-    return true; // Nothing to do, already OK
-  }
-  m_deviceName = name;
-  String result = "";
-  bool success = sendATCommand((String) ("name " + m_deviceName), &result);
-  if (success && result == "OK")
-  {
-    return true;
-  }
-  if (setupDebugMode) { debugPrint("Failed to set device name"); }
-  return false;
-}
-
-/**
- * Query BLE configuration to get the device name
- * Also update the device name saved at the class level (accessible via getDeviceName)
- */
-String IUBMD350::queryDeviceName()
-{
-  String result = "";
-  if (sendATCommand("name?", &result))
-  {
-    m_deviceName = result;
-    return m_deviceName;
-  }
-  return ""; // failed
-}
-
-/**
- * Set the UUID and the Major and Minor numbers for the device (see bluetooth Beacon)
- *
- * @param UUID    Universal Unique Identiifier as a String of 32 hex digit (UUID is 16byte (128bit long number)
- * @param major   UUID Major Number as a String of 4 hex digits (16bit long number)
- * @param minor   UUID Minor Number as a String of 4 hex digits (16bit long number)
- * @return      true if successfully set, else false
- */
-bool IUBMD350::setUUIDInfo(String UUID, String major, String minor)
-{
-  m_UUID = UUID;
-  m_majorNumber = major;
-  m_minorNumber = minor;
-  String results[3] = {"", "", ""};
-  bool success = sendATCommand((String) ("buuid " + m_UUID), &results[0]);
-  success &= sendATCommand((String) ("bmjid " + m_majorNumber), &results[1]);
-  success &= sendATCommand((String) ("bmnid " + m_minorNumber), &results[2]);
-  if (success && results[0] == "OK" && results[1] == "OK" && results[2] == "OK")
-  {
-    return true;
-  }
-  if (setupDebugMode) { debugPrint("Failed to set BLE UUID, major and / or minor numbers"); }
-  return false;
-}
-
-/**
- * Query BLE configuration to get the UUID, major and minor numbers
- * Also update the UUID, major and minor saved at the class level (accessible via getters)
- */
-bool IUBMD350::queryUUIDInfo()
-{
-  String results[3] = {"", "", ""};
-  if (sendATCommand("buuid?", &results[0]) &&
-      sendATCommand("bmjid?", &results[1]) &&
-      sendATCommand("bmnid?", &results[2]))
-  {
-    m_UUID = results[0];
-    m_majorNumber = results[1];
-    m_minorNumber = results[2];
-    return true;
-  }
-  return false;
-}
-
-/**
- * Send an AT command to set the given baudRate (must be in AT mode)
- * @return      true if successfully set, else false
- */
+   Send an AT command to set the given baudRate (must be in AT mode)
+   @return      true if successfully set, else false
+*/
 bool IUBMD350::setBLEBaudRate(uint32_t baudRate)
 {
   queryBLEBaudRate();
@@ -237,36 +286,39 @@ bool IUBMD350::setBLEBaudRate(uint32_t baudRate)
     return true; // Nothing to do, already OK
   }
   m_BLEBaudRate = baudRate;
-  String result = "";
-  bool success = sendATCommand((String) ("ubr " + m_BLEBaudRate), &result);
-  if (success && result == "OK")
+  char response[3];
+  int respLength = sendATCommand((String) ("ubr " + m_BLEBaudRate), response, 3);
+  if (respLength > 0 && strcmp(response, "OK"))
   {
     return true;
   }
-  if (setupDebugMode) { debugPrint("Failed to set BLE Baud Rate"); }
+  if (setupDebugMode)
+  {
+    debugPrint("Failed to set BLE Baud Rate");
+  }
   return false;
 }
 
 /**
- * Query BLE configuration to get the current baud rate
- * Also update the baudrate saved at the class level (accessible via getBaudRate)
- */
+   Query BLE configuration to get the current baud rate
+   Also update the baudrate saved at the class level (accessible via getBaudRate)
+*/
 uint32_t IUBMD350::queryBLEBaudRate()
 {
-  String result = "";
-  if (sendATCommand("ubr?", &result))
+  char response[8];
+  if (sendATCommand("ubr?", response, 8))
   {
-    m_BLEBaudRate = (uint32_t) result.toInt();
+    m_BLEBaudRate = (uint32_t) strtol(response, NULL, 16);
     return m_BLEBaudRate;
   }
   return 0; // failed
 }
 
 /**
- * Return the setting (name, command and state) from its name
- * @param settingName   the name of the setting to get
- * @return              the setting (name + command + state)
- */
+   Return the setting (name, command and state) from its name
+   @param settingName   the name of the setting to get
+   @return              the setting (name + command + state)
+*/
 IUBMD350::BooleanSetting IUBMD350::getBooleanSettings(String settingName)
 {
   for (int i = 0; i < booleanSettingCount; i++)
@@ -276,14 +328,16 @@ IUBMD350::BooleanSetting IUBMD350::getBooleanSettings(String settingName)
       return settings[i];
     }
   }
-  if (setupDebugMode) { debugPrint("BLE setting '" + settingName + "' not found"); }
+  if (setupDebugMode) {
+    debugPrint("BLE setting '" + settingName + "' not found");
+  }
   return noSetting;
 }
 
 /**
- * Send an AT command to enable / disable the desired setting
- * @return      true if successfully set, else false
- */
+   Send an AT command to enable / disable the desired setting
+   @return      true if successfully set, else false
+*/
 bool IUBMD350::setBooleanSettings(String settingName, bool enable)
 {
   queryBooleanSettingState(settingName);
@@ -297,28 +351,30 @@ bool IUBMD350::setBooleanSettings(String settingName, bool enable)
     return false; // Fail if no setting found
   }
   conf.state = enable;
-  String result = "";
-  bool success = false;
+  char response[3];
+  int respLength = -1;
   if (enable)
   {
-    success = sendATCommand((String) (conf.command + " 01"), &result);
+    respLength = sendATCommand((String) (conf.command + " 01"), response, 3);
   }
   else
   {
-    success = sendATCommand((String) (conf.command + " 00"), &result);
+    respLength = sendATCommand((String) (conf.command + " 00"), response, 3);
   }
-  if (success && result == "OK")
+  if (respLength > 0 && strcmp(response, "OK"))
   {
     return true;
   }
-  if (setupDebugMode) { debugPrint("Failed to set BLE " + conf.name); }
+  if (setupDebugMode) {
+    debugPrint("Failed to set BLE " + conf.name);
+  }
   return false;
 }
 
 /**
- * Query BLE configuration to get the setting current state
- * Also update the setting saved at the class level (accessible via getBooleanSetting(name).state)
- */
+   Query BLE configuration to get the setting current state
+   Also update the setting saved at the class level (accessible via getBooleanSetting(name).state)
+*/
 bool IUBMD350::queryBooleanSettingState(String settingName)
 {
   BooleanSetting conf = getBooleanSettings(settingName);
@@ -326,10 +382,10 @@ bool IUBMD350::queryBooleanSettingState(String settingName)
   {
     return false; // return false if failed if no setting found
   }
-  String result = "";
-  if (sendATCommand((String) (conf.command + "?"), &result))
+  char response[3];
+  if (sendATCommand((String) (conf.command + "?"), response, 3) > 0)
   {
-    conf.state = (result == "01");
+    conf.state = strcmp(response, "01");
     return conf.state;
   }
   return false; // return false if failed
@@ -337,8 +393,8 @@ bool IUBMD350::queryBooleanSettingState(String settingName)
 
 
 /**
- * Ready the device for bluetooth streaming
- */
+   Ready the device for bluetooth streaming
+*/
 void IUBMD350::activate()
 {
   if (m_ATCmdEnabled) // Make sure AT Command Interface is disabled
@@ -348,9 +404,9 @@ void IUBMD350::activate()
 }
 
 /**
- * Reset the buffer if more time than m_dataReceptionTimeout passed since last reception.
- * @return true if a timeout happened and that the buffer was reset, else false.
- */
+   Reset the buffer if more time than m_dataReceptionTimeout passed since last reception.
+   @return true if a timeout happened and that the buffer was reset, else false.
+*/
 bool IUBMD350::checkDataReceptionTimeout()
 {
   if (m_bufferIndex > 0 && (millis() -  m_lastReadTime > m_dataReceptionTimeout))
@@ -362,19 +418,19 @@ bool IUBMD350::checkDataReceptionTimeout()
 }
 
 /**
- * Read available incoming bytes to fill the buffer
- * @param processBuffer a function to process buffer
- * @return true if the buffer is full and ready to be read, else false
- * NB1: if there are a lot of incoming data, the buffer should be
- * filled and processed several times.
- * NB2: a data reception timeout check is performed before reading (see
- * checkDataReceptionTimeout).
- */
+   Read available incoming bytes to fill the buffer
+   @param processBuffer a function to process buffer
+   @return true if the buffer is full and ready to be read, else false
+   NB1: if there are a lot of incoming data, the buffer should be
+   filled and processed several times.
+   NB2: a data reception timeout check is performed before reading (see
+   checkDataReceptionTimeout).
+*/
 bool IUBMD350::readToBuffer()
 {
   if (m_bufferIndex == bufferSize)
   {
-      m_bufferIndex = 0; // reset the buffer if it was previously filled
+    m_bufferIndex = 0; // reset the buffer if it was previously filled
   }
   checkDataReceptionTimeout();
   while (port->available() > 0)
@@ -384,6 +440,11 @@ bool IUBMD350::readToBuffer()
     m_lastReadTime = millis();
     if (m_bufferIndex == bufferSize)
     {
+      if (loopDebugMode)
+      {
+        debugPrint(F("BLE received: "), false);
+        debugPrint(m_buffer);
+      }
       return true; // buffer is full => return true to warn it's ready to be processed
     }
   }
@@ -392,10 +453,10 @@ bool IUBMD350::readToBuffer()
 
 
 /**
- * Print given buffer then flushes
- * @param buff the buffer
- * @param buffSize the buffer size
- */
+   Print given buffer then flushes
+   @param buff the buffer
+   @param buffSize the buffer size
+*/
 void IUBMD350::printFigures(uint16_t buffSize, q15_t *buff)
 {
   for (int i = 0; i < buffSize; i++)
@@ -407,17 +468,35 @@ void IUBMD350::printFigures(uint16_t buffSize, q15_t *buff)
 }
 
 /**
- * Print given buffer then flushes
- * @param buff the buffer
- * @param buffSize the buffer size
- * @param transform a transfo to apply to each buffer element before printing
- */
+   Print given buffer then flushes
+   @param buff the buffer
+   @param buffSize the buffer size
+   @param transform a transfo to apply to each buffer element before printing
+*/
 void IUBMD350::printFigures(uint16_t buffSize, q15_t *buff, float (*transform) (int16_t))
 {
-    for (int i = 0; i < buffSize; i++)
-    {
-      port->print(transform(buff[i]));
-      port->print(",");
-      port->flush();
-    }
+  for (int i = 0; i < buffSize; i++)
+  {
+    port->print(transform(buff[i]));
+    port->print(",");
+    port->flush();
+  }
+}
+
+
+/* ====================== Diagnostic Functions, only active when setupDebugMode = true ====================== */
+
+void IUBMD350::exposeInfo()
+{
+  #ifdef DEBUGMODE
+  debugPrint(F("BLE Config: "));
+  debugPrint(F("Device name: "), false); debugPrint(m_deviceName);
+  debugPrint(F("UUID: "), false); debugPrint(m_UUID);
+  debugPrint(F("Major number: "), false); debugPrint(m_majorNumber);
+  debugPrint(F("Minor number: "), false); debugPrint(m_minorNumber);
+  debugPrint(F("Baud rate: "), false); debugPrint(m_BLEBaudRate);
+  debugPrint(F("Flow Control enabled: "), false); debugPrint(getBooleanSettings("flowControl").state);
+  debugPrint(F("Parity enabled: "), false); debugPrint(getBooleanSettings("parity").state);
+  debugPrint(F("UARTPassThrough enabled: "), false); debugPrint(getBooleanSettings("UARTPassThrough").state);
+  #endif
 }

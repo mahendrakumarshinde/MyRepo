@@ -9,6 +9,7 @@
       BMD-350
     Description:
       Bluetooth Low Energy for Butterfly board
+      BMD-350 UART connected to Serial 2 (pins 30/31) on Butterfly
 */
 
 #ifndef IUBMD350_H
@@ -52,16 +53,17 @@ class IUBMD350 : public IUABCInterface
     void enterATCommandInterface();
     void exitATCommandInterface();
     bool isATCommandInterfaceEnabled() { return m_ATCmdEnabled; }
-    bool sendATCommand(String cmd, String *result);
-    void getModuleInfo(String *BMDVersion, String *bootVersion, String *protocolVersion, String *hardwareInfo);
-    bool setDeviceName(String name);
-    String getDeviceName() { return m_deviceName; }
-    String queryDeviceName();
-    bool setUUIDInfo(String UUID, String major, String minor);
+    int sendATCommand(String cmd, char *response, uint8_t responseLength);
+    void getModuleInfo(char *BMDVersion, char *bootVersion, char *protocolVersion, char *hardwareInfo,
+                       uint8_t len1 = 11, uint8_t len2 = 21, uint8_t len3 = 3, uint8_t len4 = 13);
+    bool setDeviceName(char *deviceName);
+    bool queryDeviceName();
+    char* getDeviceName() { return m_deviceName; }
+    bool setUUIDInfo(char *UUID, char *major, char *minor);
     bool queryUUIDInfo();
-    String getUUID() { return m_UUID; }
-    String getMajorNumber() { return m_majorNumber; }
-    String getMinorNumber() { return m_minorNumber; }
+    char* getUUID() { return m_UUID; }
+    char* getMajorNumber() { return m_majorNumber; }
+    char* getMinorNumber() { return m_minorNumber; }
     bool setBLEBaudRate(uint32_t baudRate);
     uint32_t getBLEBaudRate() { return m_baudRate; }
     uint32_t queryBLEBaudRate();
@@ -79,14 +81,17 @@ class IUBMD350 : public IUABCInterface
     void printFigures(uint16_t buffSize, q15_t *buff, float (*transform)(int16_t));
     // Public members
     BooleanSetting settings[booleanSettingCount];
+    
+    // Diagnostic Functions
+    void exposeInfo();
 
   protected:
     IUI2C *m_iuI2C;
     bool m_ATCmdEnabled;
-    String m_deviceName;
-    String m_UUID;
-    String m_majorNumber;
-    String m_minorNumber;
+    char m_deviceName[9];     // max 8 chars + 1 char end of string
+    char m_UUID[33];          // 32 hex digits + 1 char end of string
+    char m_majorNumber[5];    // 4 hex digits + 1 char end of string
+    char m_minorNumber[5];    // 4 hex digits + 1 char end of string
     uint32_t m_BLEBaudRate;
     char m_buffer[bufferSize];  // BLE Data buffer
     uint8_t m_bufferIndex; // BLE buffer Index

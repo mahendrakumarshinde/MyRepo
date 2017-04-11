@@ -353,11 +353,8 @@ int IUFeatureConfigurator::createWithDependencies(IUFeatureConfigurator::Feature
 {
   if (setupDebugMode)
   {
-    debugPrint(F("Available Memory: "), false);
-    debugPrint(freeMemory());
-    debugPrint("Creating ", false);
-    debugPrint(config.name, false);
-    debugPrint(" and its dependencies...");
+    debugPrint("Starting creation of ", false);
+    memoryLog(config.name);
   }
   bool success = true;
   /*
@@ -422,8 +419,7 @@ bool IUFeatureConfigurator::requireConfiguration(String configBufffer)
     {
       debugPrint(F("Feature "), false);
       debugPrint(requiredConfigs[i].name, false);
-      debugPrint(F(" created. Available Memory: "), false);
-      debugPrint(freeMemory(), DEC);
+      memoryLog(" created");
     }
   }
   resetFeaturesCounters();
@@ -542,11 +538,26 @@ IUFeature* IUFeatureConfigurator::createFeature(IUFeatureConfigurator::FeatureCo
 }
 
 /**
- * Get the feature from instantiated feature list
+ * Get the feature with given id (lookup on instantiated features)
+ */
+IUFeature* IUFeatureConfigurator::getFeatureById(uint8_t id)
+{
+  for (uint8_t i = 0; i < m_featureCount; i++)
+  {
+    if (m_features[i]->getId() == id)
+    {
+      return m_features[i];
+    }
+  }
+  return NULL;
+}
+
+
+/**
+ * Get the feature with given name (lookup on instantiated features)
  */
 IUFeature* IUFeatureConfigurator::getFeatureByName(char *name)
 {
-  // Check in "main" features
   for (uint8_t i = 0; i < m_featureCount; i++)
   {
     String fName = m_features[i]->getName();
@@ -621,7 +632,7 @@ operationState IUFeatureConfigurator::getOperationStateFromFeatures()
       opState = featState;
     }
   }
-  return featState;
+  return opState;
 }
 
 /**

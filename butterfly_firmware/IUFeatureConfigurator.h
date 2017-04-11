@@ -69,6 +69,7 @@ class IUFeatureConfigurator
     bool doPressSetup();
     IUFeature* createFeature(FeatureConfig config, uint8_t id = 0);
     IUFeature* getFeature(uint8_t index) {return m_features[index]; }
+    IUFeature* getFeatureById(uint8_t id);
     IUFeature* getFeatureByName(char *name);
     bool addFeature(IUFeature *feature);
     void computeAndSendToReceivers();

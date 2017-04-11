@@ -79,6 +79,24 @@ bool checkCharsAtPosition(char *charBuffer, char character, int *positions, int 
   return true;
 }
 
+/**
+ * Copy source into destination, and complete destination with 0
+ * source must be shorter or as long as destination, never longer.
+ */
+void strCopyWithAutocompletion(char *destination, char *source, uint8_t destLen, uint8_t srcLen)
+{
+  for (uint8_t i = 0; i < min(destLen, srcLen); i++)
+  {
+    destination[i] = source[i];
+  }
+  if (srcLen < destLen)
+  {
+    for (uint8_t i = srcLen; i < destLen; i++)
+    {
+      destination[i] = 0;
+    }
+  }
+}
 
 /*=========================== Math functions ================================= */
 
@@ -202,7 +220,7 @@ void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplin
   uint16_t minIdx = (uint16_t) ((float) FreqLowerBound / df);
   uint16_t maxIdx = (uint16_t) min((float) FreqHigherBound / df, sampleCount);
   float omega = 2. * PI * df;
-  if(loopDebugMode)
+  if(loopDebugMode && highVerbosity)
   {
     debugPrint("df, minFreq, maxFreq, minIdx, maxIdx");
     debugPrint(df, false); debugPrint(", ", false); 
