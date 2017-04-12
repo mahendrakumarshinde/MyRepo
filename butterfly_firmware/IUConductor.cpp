@@ -15,13 +15,13 @@ IUConductor::IUConductor(String macAddress) :
   m_opState(operationState::idle),
   m_inDataAcquistion(false),
   m_lastSentTime(0),
-  m_refDatetime(0),
   m_lastSynchroTime(0)
 {
   iuI2C = NULL;
   iuBluetooth = NULL;
   iuWifi = NULL;
   m_dataSendPeriod = defaultDataSendPeriod;
+  m_refDatetime = defaultTimestamp;
   setClockRate(defaultClockRate);
 }
 
@@ -376,7 +376,7 @@ bool IUConductor::streamData()
     port = iuBluetooth->port;
     port->print(m_macAddress);                                                 // MAC Address
     port->print(",0"); port->print((uint8_t) m_opState); port->print(",");     // Operation State
-    port->print(sensorConfigurator.iuBattery->getVoltage());                   // Battery status
+    port->print(sensorConfigurator.iuBattery->getBatteryStatus());             // % Battery charge
     featureConfigurator.streamFeatures(port);                     // Each feature value
     port->print(","); port->print(getDatetime()); port->print(";");            // Datetime
     port->flush();                                                             // End
@@ -501,13 +501,12 @@ void IUConductor::processInstructionsFromBluetooth(String macAddress)
       debugPrint(F("Bluetooth input is:"), false);
       debugPrint(bleBuffer);
     }
+    Serial.println(bleBuffer);
     switch(bleBuffer[0])
     {
       case '0': // Set Thresholds
-        Serial.println("case 0");
         if (bleBuffer[4] == '-' && bleBuffer[9] == '-' && bleBuffer[14] == '-')
         {
-          Serial.println("here 2");
           int featureIdx = 0, newThres = 0, newThres2 = 0, newThres3 = 0;
           sscanf(bleBuffer, "%d-%d-%d-%d", &featureIdx, &newThres, &newThres2, &newThres3);
           IUFeature *feat = featureConfigurator.getFeatureById(featureIdx + 1);
@@ -526,7 +525,6 @@ void IUConductor::processInstructionsFromBluetooth(String macAddress)
         }
         break;
       case '1': // Receive the timestamp data from the bluetooth hub
-        Serial.println("case 1");
         if (bleBuffer[1] == ':' && bleBuffer[12] == '.')
         {
           int date(0), dateset(0), dateyear(0);
@@ -538,7 +536,6 @@ void IUConductor::processInstructionsFromBluetooth(String macAddress)
         break;
 
       case '2': // Bluetooth parameter setting
-        Serial.println("case 2");
         if (bleBuffer[1] == ':' && bleBuffer[7] == '-' && bleBuffer[13] == '-')
         {
           int dataRecTimeout(0), paramtag(0), dataSendPeriod(0);
@@ -550,9 +547,9 @@ void IUConductor::processInstructionsFromBluetooth(String macAddress)
         break;
 
       case '3': // Record button pressed - go into record mode to record FFTs
-        Serial.println("case 3");
         if (bleBuffer[7] == '0' && bleBuffer[9] == '0' && bleBuffer[11] == '0' && bleBuffer[13] == '0' && bleBuffer[15] == '0' && bleBuffer[17] == '0')
         {
+          Serial.println("Record mode");
           iuBluetooth->port->print("REC,");
           iuBluetooth->port->print(macAddress);
           IUFeature *feat = NULL;
@@ -576,11 +573,9 @@ void IUConductor::processInstructionsFromBluetooth(String macAddress)
           }
           iuBluetooth->port->print(";");
           iuBluetooth->port->flush();
-          Serial.println("Record mode");
         }
         break;
       case '4': // Stop button pressed - go out of record mode back into RUN mode
-        Serial.println("case 4");
         if (bleBuffer[7] == '0' && bleBuffer[9] == '0' && bleBuffer[11] == '0' && bleBuffer[13] == '0' && bleBuffer[15] == '0' && bleBuffer[17] == '0')
         {
           iuI2C->port->print("Stop recording and sending FFTs");
@@ -588,7 +583,6 @@ void IUConductor::processInstructionsFromBluetooth(String macAddress)
         break;
 
       case '5':
-        Serial.println("case 5");
         if (bleBuffer[7] == '0' && bleBuffer[9] == '0' && bleBuffer[11] == '0' && bleBuffer[13] == '0' && bleBuffer[15] == '0' && bleBuffer[17] == '0')
         {
           iuBluetooth->port->print("HB,");
@@ -601,7 +595,6 @@ void IUConductor::processInstructionsFromBluetooth(String macAddress)
         break;
 
       case '6':
-        Serial.println("case 6");
         //TODO: Reimplement
         if (bleBuffer[7] == ':' && bleBuffer[9] == '.' && bleBuffer[11] == '.' && bleBuffer[13] == '.' && bleBuffer[15] == '.' && bleBuffer[17] == '.')
         {

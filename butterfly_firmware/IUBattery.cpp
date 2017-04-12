@@ -43,6 +43,12 @@ float IUBattery::getVDDA()
   return m_VDDA;
 }
 
+uint8_t IUBattery::getBatteryStatus()
+{
+  uint8_t battteryStatus  = (uint8_t) ((float) getVoltage() * 100. / (float) maxVoltage);
+  return max(min(battteryStatus, 100), 0);
+}
+
 void IUBattery::readData()
 {
   readVoltage();
