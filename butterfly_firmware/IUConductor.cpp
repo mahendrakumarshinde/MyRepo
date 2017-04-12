@@ -88,8 +88,8 @@ bool IUConductor::isDataSendTime()
  */
 double IUConductor::getDatetime()
 {
-  double now = millis();
-  return m_refDatetime - (double) m_lastSynchroTime + now;
+  uint32_t now = millis();
+  return m_refDatetime - (double) (m_lastSynchroTime + now) / 1000.;
 }
 
 /**
