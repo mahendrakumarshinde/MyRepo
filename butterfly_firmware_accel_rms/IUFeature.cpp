@@ -763,7 +763,8 @@ IUSingleAxisEnergyFeature512::IUSingleAxisEnergyFeature512(uint8_t id, char *nam
 
 void IUSingleAxisEnergyFeature512::m_computeScalar (uint8_t computeIndex)
 {
-  float val = computeSignalEnergy(1, getSourceSize(), m_source[m_computeIndex], q4_11ToFloat) * sq(9.81);
+  float val = computeRMS(getSourceSize()[0], m_source[m_computeIndex][0], q4_11ToFloat);
+  //computeSignalEnergy(1, getSourceSize(), m_source[m_computeIndex], q4_11ToFloat) * sq(9.81);
   getProducer()->setLatestValue(val);
 }
 
