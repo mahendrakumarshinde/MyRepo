@@ -78,6 +78,23 @@ inline float ms2_to_g(float value) { return value / 9.8; }
 inline q15_t ms2_to_g(q15_t value) { return value / 9.8; }
 
 
+inline q15_t getMax(q15_t *values, uint16_t count)
+{
+  if (count == 0)
+  {
+    return 0;
+  }
+  q15_t maxVal = values[0];
+  for (uint16_t i = 0; i < count; ++i)
+  {
+    if (maxVal < values[i])
+    {
+      maxVal = values[i];
+    }
+  }
+  return maxVal;
+}
+
 /*=========================== Math functions ================================= */
 
 float computeRMS(uint16_t sourceSize, q15_t *source, float (*transform)(q15_t));
@@ -88,7 +105,7 @@ bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTlength, bo
 
 bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTlength, bool inverse, q15_t *window, float windowGain);
 
-void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound, bool twice = false);
+void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound, uint16_t rescale, bool twice = false);
 
 
 //==============================================================================

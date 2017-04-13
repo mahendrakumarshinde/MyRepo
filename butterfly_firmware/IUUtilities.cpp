@@ -214,12 +214,12 @@ bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTLength, bo
  * @param FreqHigherBound   freq higher bound for bandpass filtering
  * @param twice             set to false (default) to integrate once, set to true to integrate twice
  */
-void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound, bool twice)
+void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound, uint16_t rescale, bool twice)
 {
   float df = (float) samplingRate / (float) sampleCount;
   uint16_t minIdx = (uint16_t) ((float) FreqLowerBound / df);
   uint16_t maxIdx = (uint16_t) min((float) FreqHigherBound / df, sampleCount);
-  float omega = 2. * PI * df;
+  float omega = 2. * PI * df / (float) rescale;
   if(loopDebugMode && highVerbosity)
   {
     debugPrint("df, minFreq, maxFreq, minIdx, maxIdx");

@@ -72,13 +72,14 @@ float computeVelocity(q15_t *accelFFT, float accelRMS, uint16_t sampleCount, uin
  */
 float computeFullVelocity(q15_t *accelFFT, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound)
 {
+  uint16_t rescale = 256;
   // Filter and integrate in frequency domain
-  filterAndIntegrateFFT(accelFFT, sampleCount, samplingRate, FreqLowerBound, FreqHigherBound, false);
+  filterAndIntegrateFFT(accelFFT, sampleCount, samplingRate, FreqLowerBound, FreqHigherBound, rescale, false);
   // Inverse FFT
   q15_t velocities[sampleCount];
   computeRFFT(accelFFT, velocities, sampleCount, true); // FFT / iFFT dowscale values by 9bit
   // Velocities RMS
-  float val = computeRMS(sampleCount, velocities, q13_2ToFloat);
+  float val = computeRMS(sampleCount, velocities, q13_2ToFloat) * 1000. / (float) rescale;
   return val;
 }
 
@@ -813,6 +814,8 @@ void IUVelocityFeature512::m_computeScalar (uint8_t computeIndex)
     return;
   }
   */
+  m_source[computeIndex][0][0] = 0;
+  m_source[computeIndex][0][1] = 0;
   float val = computeFullVelocity(m_source[computeIndex][0],    // accelFFT
                                   m_source[computeIndex][3][0], // sampleCount
                                   m_source[computeIndex][2][0], // samplingRate
@@ -872,7 +875,8 @@ IUAudioDBFeature2048::IUAudioDBFeature2048(uint8_t id, char *name) :
 
 void IUAudioDBFeature2048::m_computeScalar (uint8_t computeIndex)
 {
-  getProducer()->setLatestValue(computeAcousticDB(getSourceCount(), getSourceSize(), m_source[m_computeIndex]));
+  float val = computeAcousticDB(getSourceCount(), getSourceSize(), m_source[m_computeIndex]);
+  getProducer()->setLatestValue(60. + (val-23.3) * 0.642); // adjust
 }
 
 /**
