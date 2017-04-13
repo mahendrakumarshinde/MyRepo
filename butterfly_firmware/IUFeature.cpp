@@ -906,7 +906,8 @@ IUAudioDBFeature4096::IUAudioDBFeature4096(uint8_t id, char *name) :
 
 void IUAudioDBFeature4096::m_computeScalar (uint8_t computeIndex)
 {
-  getProducer()->setLatestValue(computeAcousticDB(getSourceCount(), getSourceSize(), m_source[m_computeIndex]));
+  float val = computeAcousticDB(getSourceCount(), getSourceSize(), m_source[m_computeIndex]);
+  getProducer()->setLatestValue(60. + (val-23.3) * 0.642);
 }
 
 /**
