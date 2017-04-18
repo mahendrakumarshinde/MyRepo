@@ -31,15 +31,15 @@ IUFeatureConfigurator::FeatureConfig IUFeatureConfigurator::noConfig =
 IUFeatureConfigurator::FeatureConfig IUFeatureConfigurator::registeredConfigs[IUFeatureConfigurator::registeredCount] =
   {
     {"AX1", // "accelEnergy_X_128"
-      {1, "A", "0"},
+      {2, "A-A", "0-9"},
       {0, "", ""}},
       
     {"AY1", // "accelEnergy_Y_128",
-      {1, "A", "1"},
+      {2, "A-A", "1-9"},
       {0, "", ""}},
       
     {"AZ1", // "accelEnergy_Z_128",
-      {1, "A", "2"},
+      {2, "A-A", "2-9"},
       {0, "", ""}},
       
     {"CX1", // "IUAccelPreComputationFeature128" Precomputation of Accel signal energy and FFT
@@ -55,7 +55,7 @@ IUFeatureConfigurator::FeatureConfig IUFeatureConfigurator::registeredConfigs[IU
       {0, "", ""}},
       
     {"A31", // "accelEnergy_3_128",
-      {3, "A-A-A", "0-1-2"},
+      {4, "A-A-A-A", "0-1-2-9"},
       {0, "", ""}},
       
     {"B31", // "accelEnergy_3_128" by summing 3 single axis accel energy,
@@ -67,15 +67,15 @@ IUFeatureConfigurator::FeatureConfig IUFeatureConfigurator::registeredConfigs[IU
       {3, "CX1-CY1-CZ1", "0-0-0"}},
       
     {"AX3", // "accelEnergy_X_512",
-      {1, "A", "0"},
+      {2, "A-A", "0-9"},
       {0, "", ""}},
       
     {"AY3", // "accelEnergy_Y_512",
-      {1, "A", "1"},
+      {2, "A-A", "1-9"},
       {0, "", ""}},
       
     {"AZ3", // "accelEnergy_Z_512",
-      {1, "A", "2"},
+      {2, "A-A", "2-9"},
       {0, "", ""}},
       
     {"CX3", // "IUAccelPreComputationFeature128" Precomputation of Accel signal energy and FFT
@@ -91,7 +91,7 @@ IUFeatureConfigurator::FeatureConfig IUFeatureConfigurator::registeredConfigs[IU
       {0, "", ""}},
       
     {"A33", // "accelEnergy_3_512",
-      {3, "A-A-A", "0-1-2"},
+      {4, "A-A-A-A", "0-1-2-9"},
       {0, "", ""}},
       
     {"B33", // "accelEnergy_3_512" by summing 3 single axis accel energy,

@@ -113,7 +113,11 @@ float computeRMS(uint16_t sourceSize, q15_t *source, float (*transform)(q15_t))
     avg += transform(source[i]);
     avg2 += sq(transform(source[i]));
   }
-  return sqrt(avg2 / (float) sourceSize - sq(avg / (float) sourceSize));
+  Serial.print("avg: "); Serial.println(sq(avg));
+  Serial.print("avg2: "); Serial.println(avg2);
+  float result = sqrt(avg2 / (float) sourceSize - sq(avg / (float) sourceSize));
+  Serial.print("result: "); Serial.println(result);
+  return result;
 }
 
 /**

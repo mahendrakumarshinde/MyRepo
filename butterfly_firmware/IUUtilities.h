@@ -4,7 +4,6 @@
 #include <Arduino.h>
 /* CMSIS-DSP library for RFFT */
 #include <arm_math.h>
-#include <MemoryFree.h>
 
 #include "IULogger.h"
 
@@ -99,11 +98,19 @@ inline q15_t getMax(q15_t *values, uint16_t count)
 
 float computeRMS(uint16_t sourceSize, q15_t *source, float (*transform)(q15_t));
 
+float computeNormalizedRMS(uint16_t sourceSize, q15_t *source, float (*transform)(q15_t));
+
+float computeSignalEnergy(q15_t *values, uint16_t sampleCount, uint16_t samplingFreq, float scalingFactor = 1., bool removeMean = false);
+
+float computeSignalPower(q15_t *values, uint16_t sampleCount, uint16_t samplingFreq, float scalingFactor = 1., bool removeMean = false);
+
+float computeSignalRMS(q15_t *values, uint16_t sampleCount, uint16_t samplingFreq, float scalingFactor = 1., bool removeMean = false);
+
 float multiArrayMean(uint8_t arrCount, const uint16_t* arrSizes, float **arrays);
 
 bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTlength, bool inverse);
 
-bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTlength, bool inverse, q15_t *window, float windowGain);
+bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTlength, bool inverse, q15_t *window);
 
 void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound, uint16_t rescale, bool twice = false);
 

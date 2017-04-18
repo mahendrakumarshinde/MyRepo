@@ -290,6 +290,11 @@ void IUBMX055::processAccelData(uint8_t wireStatus)
     // multiply by resolution to have a measure in G and add the bias
     m_accelData[i] = m_rawAccel[i] * m_accelResolution / 16 + m_accelBias[i];
   }
+  /*
+  Serial.print("X: "); Serial.println(m_accelData[0]);
+  Serial.print("Y: "); Serial.println(m_accelData[1]);
+  Serial.print("Z: "); Serial.println(m_accelData[2]);
+  */
 }
 
 

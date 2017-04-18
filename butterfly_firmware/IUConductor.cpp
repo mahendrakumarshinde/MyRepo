@@ -89,7 +89,7 @@ bool IUConductor::isDataSendTime()
 double IUConductor::getDatetime()
 {
   uint32_t now = millis();
-  return m_refDatetime - (double) (now - m_lastSynchroTime) / 1000.;
+  return m_refDatetime + (double) (now - m_lastSynchroTime) / 1000.;
 }
 
 /**
@@ -498,10 +498,9 @@ void IUConductor::processInstructionsFromBluetooth(String macAddress)
     }
     if(loopDebugMode)
     {
-      debugPrint(F("Bluetooth input is:"), false);
+      debugPrint(F("BLE input received:"), false);
       debugPrint(bleBuffer);
     }
-    Serial.println(bleBuffer);
     switch(bleBuffer[0])
     {
       case '0': // Set Thresholds
@@ -518,10 +517,13 @@ void IUConductor::processInstructionsFromBluetooth(String macAddress)
           {
             feat->setThresholds((float)newThres, (float)newThres2, (float)newThres3);
           }
-          Serial.print(feat->getName()); Serial.print('-');
-          Serial.print(feat->getThreshold(0)); Serial.print('-');
-          Serial.print(feat->getThreshold(1)); Serial.print('-');
-          Serial.println(feat->getThreshold(2));
+          if (loopDebugMode)
+          {
+            debugPrint(feat->getName(), false); debugPrint(':', false);
+            debugPrint(feat->getThreshold(0), false); debugPrint(' - ', false);
+            debugPrint(feat->getThreshold(1), false); debugPrint(' - ', false);
+            debugPrint(feat->getThreshold(2));
+          }
         }
         break;
       case '1': // Receive the timestamp data from the bluetooth hub
@@ -531,7 +533,11 @@ void IUConductor::processInstructionsFromBluetooth(String macAddress)
           sscanf(bleBuffer, "%d:%d.%d", &flag, &timestamp, &microsec);
           m_refDatetime = double(timestamp) + double(microsec) / double(1000000);
           m_lastSynchroTime = millis();
-          Serial.print("Time sync, new time is:"); Serial.println(getDatetime());
+          if (loopDebugMode)
+          {
+            debugPrint("Time sync: ", false);
+            debugPrint(getDatetime());
+          }
         }
         break;
 
@@ -549,7 +555,7 @@ void IUConductor::processInstructionsFromBluetooth(String macAddress)
       case '3': // Record button pressed - go into record mode to record FFTs
         if (bleBuffer[7] == '0' && bleBuffer[9] == '0' && bleBuffer[11] == '0' && bleBuffer[13] == '0' && bleBuffer[15] == '0' && bleBuffer[17] == '0')
         {
-          Serial.println("Record mode");
+          if (loopDebugMode) { debugPrint("Record mode"); }
           iuBluetooth->port->print("REC,");
           iuBluetooth->port->print(macAddress);
           IUFeature *feat = NULL;

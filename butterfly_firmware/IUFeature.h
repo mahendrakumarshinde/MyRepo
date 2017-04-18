@@ -16,11 +16,12 @@
 /* ===================== Feature calculation functions ===================== */
 
 // Scalar feature functions
-float computeSignalEnergy(uint8_t sourceCount, const uint16_t *sourceSize, q15_t **source, float (*transform)(q15_t));
 
-float computeVelocityFormer(q15_t *velocityFFT, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqhigherBound);
+float computeVelocity(q15_t *accelFFT, float accelRMS, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound); 
 
-float computeVelocity(uint8_t sourceCount, const uint16_t *sourceSize, q15_t **source);
+float computeFullVelocity(q15_t *accelFFT, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound);
+
+float computeFullVelocity(q15_t *accelFFT, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound, q15_t *window);
 
 float computeAcousticDB(uint8_t sourceCount, const uint16_t* sourceSize, q15_t **source);
 
@@ -240,6 +241,7 @@ class IUAccelPreComputationFeature512: public IUQ15Feature
     // Compute functions
     virtual void m_computeScalar (uint8_t computeIndex);
     virtual void m_computeArray (uint8_t computeIndex);
+    bool m_applyWindow;
 };
 
 
@@ -253,7 +255,7 @@ class IUAccelPreComputationFeature512: public IUQ15Feature
 class IUSingleAxisEnergyFeature128: public IUQ15Feature
 {
   public:
-    static const uint8_t sourceCount = 1;
+    static const uint8_t sourceCount = 2;
     static const uint16_t sourceSize[sourceCount];
     virtual uint8_t getSourceCount() { return sourceCount; }
     virtual uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }
@@ -280,7 +282,7 @@ class IUSingleAxisEnergyFeature128: public IUQ15Feature
 class IUTriAxisEnergyFeature128: public IUQ15Feature
 {
   public:
-    static const uint8_t sourceCount = 3;
+    static const uint8_t sourceCount = 4;
     static const uint16_t sourceSize[sourceCount];
     virtual uint8_t getSourceCount() { return sourceCount; }
     virtual uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }
@@ -305,7 +307,7 @@ class IUTriAxisEnergyFeature128: public IUQ15Feature
 class IUSingleAxisEnergyFeature512: public IUQ15Feature
 {
   public:
-    static const uint8_t sourceCount = 1;
+    static const uint8_t sourceCount = 2;
     static const uint16_t sourceSize[sourceCount];
     virtual uint8_t getSourceCount() { return sourceCount; }
     virtual uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }
@@ -332,7 +334,7 @@ class IUSingleAxisEnergyFeature512: public IUQ15Feature
 class IUTriAxisEnergyFeature512: public IUQ15Feature
 {
   public:
-    static const uint8_t sourceCount = 3;
+    static const uint8_t sourceCount = 4;
     static const uint16_t sourceSize[sourceCount];
     virtual uint8_t getSourceCount() { return sourceCount; }
     virtual uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }
@@ -397,6 +399,7 @@ class IUVelocityFeature512: public IUQ15Feature
     virtual bool newSource();
     // Compute functions
     virtual void m_computeScalar (uint8_t computeIndex);
+    bool m_applyWindow;
 };
 
 

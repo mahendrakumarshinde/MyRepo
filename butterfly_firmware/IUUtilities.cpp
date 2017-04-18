@@ -101,19 +101,102 @@ void strCopyWithAutocompletion(char *destination, char *source, uint8_t destLen,
 /*=========================== Math functions ================================= */
 
 /**
- * Compute and return the normalized root min square
+ * Compute and return the root min square
  * @param sourceSize the length of the array
  * @param source a q15_t array (elements are int16_t0
  */
 float computeRMS(uint16_t sourceSize, q15_t *source, float (*transform)(q15_t))
 {
-  float avg(0), avg2(0);
+  float avg2(0);
   for (int i = 0; i < sourceSize; i++)
   {
-    avg += transform(source[i]);
     avg2 += sq(transform(source[i]));
   }
-  return sqrt(avg2 / (float) sourceSize - sq(avg / (float) sourceSize));
+  return sqrt(avg2 / (float) sourceSize);
+}
+
+/**
+ * Compute and return the normalized root min square
+ * @param sourceSize the length of the array
+ * @param source a q15_t array (elements are int16_t0
+ */
+float computeNormalizedRMS(uint16_t sourceSize, q15_t *source, float (*transform)(q15_t))
+{
+  float total = 0;
+  q15_t avg = 0;
+  arm_mean_q15(source, sourceSize, &avg);
+  for (int i = 0; i < sourceSize; i++)
+  {
+    total += sq(transform(source[i] - avg));
+  }
+  return sqrt(total / (float) sourceSize);
+}
+
+/**
+ * Compute and return the total energy of a signal
+ * @param values          the sampled values of the signal
+ * @param sampleCount     the number of sampled values
+ * @param samplingFreq    the sampling frequency
+ * @param scalingFactor   a scaling factor to apply to the signal (sample-wise) beforehand
+ * @param removeMean      if true, the mean value is substracted from the signal, centering it around 0
+ * 
+ * Signal energy formula: sum((x(t)- x_mean)^2 * dt) for t in [0, dt, 2 *dt, ..., T] 
+ * where x_mean = Mean(x) if removeMean is true else 0, dt = 1 / samplingFreq and T = sampleCount / samplingFreq.
+ * 
+ */
+float computeSignalEnergy(q15_t *values, uint16_t sampleCount, uint16_t samplingFreq, float scalingFactor,
+                          bool removeMean)
+{
+  float total = 0;
+  q15_t avg = 0;
+  if (removeMean)
+  {
+    arm_mean_q15(values, sampleCount, &avg);
+  }
+  for (int i = 0; i < sampleCount; i++)
+  {
+    total += sq((values[i] - avg) * scalingFactor);
+  }
+  return total / samplingFreq;
+}
+
+/**
+ * Compute and return the total energy of a signal
+ * @param values          the sampled values of the signal
+ * @param sampleCount     the number of sampled values
+ * @param samplingFreq    the sampling frequency
+ * @param scalingFactor   a scaling factor to apply to the signal (sample-wise) beforehand
+ * @param removeMean      if true, the mean value is substracted from the signal, centering it around 0
+ * 
+ * Signal Power definition: Total signal energy divided by the time 
+ * Signal Power formula: 1 / T * sum((x(t)- x_mean)^2 * dt) for t in [0, dt, 2 *dt, ..., T] 
+ * where x_mean = Mean(x) if removeMean is true else 0, dt = 1 / samplingFreq and T = sampleCount / samplingFreq.
+ */
+float computeSignalPower(q15_t *values, uint16_t sampleCount, uint16_t samplingFreq, float scalingFactor,
+                         bool removeMean)
+{
+  float energy = computeSignalEnergy(values, sampleCount, samplingFreq, scalingFactor, removeMean);
+  float T = (float) sampleCount / (float) samplingFreq;
+  return energy / T;
+}
+
+/**
+ * Return the root min square (= effective value) of a signal
+ * @param values          the sampled valuesof the signal
+ * @param sampleCount     the number of sampled values
+ * @param samplingFreq    the sampling frequency
+ * @param scalingFactor   a scaling factor to apply to the signal (sample-wise) beforehand
+ * @param removeMean      if true, the mean value is substracted from the signal, centering it around 0
+ * 
+ * RMS / effective value definition: the value of a continuous signal that would produce the same energy over a period T
+ * RMS formula: sqrt(1/T * sum(((x(t)- x_mean) * dt)^2)) for t in [0, dt, 2 *dt, ..., T] 
+ * where x_mean = Mean(x) if removeMean is true else 0, dt = 1 / samplingFreq and T = sampleCount / samplingFreq.
+ */
+float computeSignalRMS(q15_t *values, uint16_t sampleCount, uint16_t samplingFreq, float scalingFactor,
+                       bool removeMean)
+{
+  float power = computeSignalPower(values, sampleCount, samplingFreq, scalingFactor, removeMean);
+  return sqrt(power);
 }
 
 /**
@@ -176,31 +259,22 @@ bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTLength, bo
  * @param window        the window function as an array of FFTLength elements, to apply to the time domain samples
  * @param windowGain    the gain of the window, a correcting factor to apply in the freq domain.
  */
-bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTLength, bool inverse, q15_t *window, float windowGain)
+bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTLength, bool inverse, q15_t *window)
 {
-  if (inverse)
+  if (!inverse) // Apply window
   {
-    //arm_scale_q15(source, 1. / (float) windowGain, 0, source, 2 * FFTLength);
-  }
-  else
-  {
-    // Avoid saturation
     for (uint16_t i = 0; i < FFTLength; ++i)
     {
       source[i] = (q15_t) ((float) source[i] * (float) window[i] / 32768.);
     }
   }
   computeRFFT(source, destination, FFTLength, inverse);
-  if (inverse)
+  if (inverse) // "un-" window the iFFT
   {
     for (uint16_t i = 0; i < FFTLength; ++i)
     {
       destination[i] = (q15_t) ((float) destination[i] * 32768. / (float) window[i]);
     }
-  }
-  else
-  {
-    //arm_scale_q15(destination, windowGain, 0, destination, 2 * FFTLength);
   }
 }
 

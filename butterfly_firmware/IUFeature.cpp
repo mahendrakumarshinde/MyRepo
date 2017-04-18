@@ -4,31 +4,6 @@
 /*====================== Scalar Feature Computation functions ============================ */
 
 /**
- * Compute and return the total signal energy along one or several axis
- * @param sourceCount the number of sources (= the number of axis)
- * @param sourceSize  pointer to an array of size sourceCount
- * @param source      pointer to an array q15_t[sourceCount][sourceSize[i for i in sourceCount]]
- * @param transform   pointer to a conversion function to apply to the values element-wise
- */
-float computeSignalEnergy(uint8_t sourceCount, const uint16_t *sourceSize, q15_t **source, float (*transform)(q15_t))
-{
-  float energy = 0;
-  float totalEnergy = 0;
-  for (uint8_t i = 0; i < sourceCount; i++)
-  {
-    for (uint16_t j = 0; j < sourceSize[i]; j++)
-    {
-      energy += sq(transform(source[i][j]));
-    }
-    totalEnergy += energy / (float) sourceSize[i];
-    energy = 0;
-  }
-  totalEnergy /= (float) sourceCount;
-  return totalEnergy;
-}
-
-
-/**
  * Compute and return single axis velocity using acceleration RMS and pitch
  * Since a single index is returned, only work for a single source (sourceCount = 1)
  * Check out this example: https://www.keil.com/pack/doc/CMSIS/DSP/html/arm_fft_bin_example_f32_8c-example.html
@@ -80,7 +55,21 @@ float computeFullVelocity(q15_t *accelFFT, uint16_t sampleCount, uint16_t sampli
   q15_t velocities[sampleCount];
   computeRFFT(accelFFT, velocities, sampleCount, true); // FFT / iFFT dowscale values by 9bit
   // Velocities RMS
-  float val = computeRMS(sampleCount, velocities, q13_2ToFloat) * 1000. / (float) rescale;
+  float val = computeSignalRMS(velocities, sampleCount, 4. * 1000. / (float) rescale);
+  return val;
+}
+
+float computeFullVelocity(q15_t *accelFFT, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound, q15_t *window)
+{
+  uint16_t rescale = 512;
+  // Filter and integrate in frequency domain
+  filterAndIntegrateFFT(accelFFT, sampleCount, samplingRate, FreqLowerBound, FreqHigherBound, rescale, false);
+  //Serial.print(" max: "); Serial.println(getMax(accelFFT, 512));
+  // Inverse FFT
+  q15_t velocities[sampleCount];
+  computeRFFT(accelFFT, velocities, sampleCount, true, window); // FFT / iFFT dowscale values by 9bit
+  // Velocities RMS
+  float val = computeSignalRMS(velocities, sampleCount, 4. * 1000. / (float) rescale);
   return val;
 }
 
@@ -661,8 +650,11 @@ bool IUAccelPreComputationFeature128::prepareProducer()
 
 void IUAccelPreComputationFeature128::m_computeScalar (uint8_t computeIndex)
 {
-  // Accel is in G and Q4.11 format, need to convert the energy to float and (m.s-2)^2
-  float val = computeSignalEnergy(1, getSourceSize(), m_source[m_computeIndex], q4_11ToFloat) * sq(9.81);
+  float val = computeSignalEnergy(m_source[m_computeIndex][0],  // samples
+                                  getSourceSize(0),             // sample count
+                                  m_source[computeIndex][1][0], // sampling frequency
+                                  9.81 / 2048.,                  // G * 2^11 (because q4_11)
+                                  false);                       // center signal around 0 ?
   getProducer()->setLatestValue(val); 
   updateState();
   getProducer()->setSamplingRate(m_source[computeIndex][1][0]);
@@ -681,7 +673,8 @@ void IUAccelPreComputationFeature128::m_computeArray (uint8_t computeIndex)
 const uint16_t IUAccelPreComputationFeature512::sourceSize[IUAccelPreComputationFeature512::sourceCount] = {512, 1};
 
 IUAccelPreComputationFeature512::IUAccelPreComputationFeature512(uint8_t id, char *name) :
-  IUQ15Feature(id, name)
+  IUQ15Feature(id, name),
+  m_applyWindow(false)
 {
   //m_producer = NULL;
 }
@@ -700,10 +693,31 @@ bool IUAccelPreComputationFeature512::prepareProducer()
 
 void IUAccelPreComputationFeature512::m_computeScalar (uint8_t computeIndex)
 {
-  // Accel is in G and Q4.11 format, need to convert the energy to float and (m.s-2)^2
-  float val = computeSignalEnergy(1, getSourceSize(), m_source[m_computeIndex], q4_11ToFloat) * sq(9.81);
+  float val = computeSignalEnergy(m_source[m_computeIndex][0],  // samples
+                                  getSourceSize(0),             // sample count
+                                  m_source[computeIndex][1][0], // sampling frequency
+                                  9.81 / 2048.,                  // G * 2^11 (because q4_11)
+                                  false);                       // center signal around 0 ?
   getProducer()->setLatestValue(val);
-  float rms = computeRMS(getSourceSize()[0], m_source[m_computeIndex][0], q4_11ToFloat) * 9.81; // Convert to m.s-1
+  float rms = computeNormalizedRMS(getSourceSize()[0], m_source[m_computeIndex][0], q4_11ToFloat) * 9.81; // Convert to m.s-1
+  if (calibrationMode)
+  {
+    debugPrint(m_name);
+    debugPrint("Signal Energy: ", false); debugPrint(val);
+    debugPrint(F("Normalized RMS: "), false); debugPrint(rms);
+    float signalRMS = computeSignalRMS(m_source[m_computeIndex][0],
+                                       getSourceSize(0),
+                                       m_source[computeIndex][1][0],      // Sampling Rate
+                                       9.81 / 2048.,                       // Convert to m.s-1
+                                       false);
+    debugPrint(F("Signal RMS: "), false); debugPrint(signalRMS);
+    float signalRMSNoMean = computeSignalRMS(m_source[m_computeIndex][0],
+                                       getSourceSize(0),
+                                       m_source[computeIndex][1][0],      // Sampling Rate
+                                       9.81 / 2048.,                       // Convert to m.s-1
+                                       true);
+    debugPrint(F("Signal RMS no mean: "), false); debugPrint(signalRMSNoMean);
+  }
   getProducer()->setRMS(rms);
   updateState();
   getProducer()->setSamplingRate(m_source[computeIndex][1][0]);
@@ -712,16 +726,39 @@ void IUAccelPreComputationFeature512::m_computeScalar (uint8_t computeIndex)
 
 void IUAccelPreComputationFeature512::m_computeArray (uint8_t computeIndex)
 {
-  computeRFFT(m_source[m_computeIndex][0],  // pointer to source
-              getDestination(),             // pointer to destination
-              getSourceSize()[0],           // FFT length
-              false);                        // Forward FFT
-              //hamming_window_512,           // windowing
-              //hamming_K_512);               // window gain
+  if (m_applyWindow)
+  {
+    if (calibrationMode)
+    {
+      debugPrint(m_name, false);
+      debugPrint(": apply window");
+      m_applyWindow = false;
+    }
+    computeRFFT(m_source[m_computeIndex][0],  // pointer to source
+                getDestination(),             // pointer to destination
+                getSourceSize(0),             // FFT length
+                false,                        // Forward FFT
+                hamming_window_512);          // windowing
+  }
+  else
+  {
+    if (calibrationMode)
+    {
+      debugPrint(m_name, false);
+      debugPrint(": DO NOT apply window");
+      m_applyWindow = true;
+    }
+    computeRFFT(m_source[m_computeIndex][0],  // pointer to source
+                getDestination(),             // pointer to destination
+                getSourceSize(0),             // FFT length
+                false);                        // Forward FFT
+                //hamming_window_512,           // windowing
+                //hamming_K_512);               // window gain
+  }
 }
 
 
-const uint16_t IUSingleAxisEnergyFeature128::sourceSize[IUSingleAxisEnergyFeature128::sourceCount] = {128};
+const uint16_t IUSingleAxisEnergyFeature128::sourceSize[IUSingleAxisEnergyFeature128::sourceCount] = {128, 1};
 
 IUSingleAxisEnergyFeature128::IUSingleAxisEnergyFeature128(uint8_t id, char *name) :
   IUQ15Feature(id, name)
@@ -731,13 +768,16 @@ IUSingleAxisEnergyFeature128::IUSingleAxisEnergyFeature128(uint8_t id, char *nam
 
 void IUSingleAxisEnergyFeature128::m_computeScalar (uint8_t computeIndex)
 {
-  // Accel is in G and Q4.11 format, need to convert the energy to float and (m.s-2)^2
-  float val = computeSignalEnergy(1, getSourceSize(), m_source[m_computeIndex], q4_11ToFloat) * sq(9.81);
+  float val = computeSignalEnergy(m_source[m_computeIndex][0],  // samples
+                                  getSourceSize(0),             // sample count
+                                  m_source[computeIndex][1][0], // sampling frequency
+                                  9.81 / 2048.,                  // G * 2^11 (because q4_11)
+                                  false);                       // center signal around 0 ?
   getProducer()->setLatestValue(val);
 }
 
 
-const uint16_t IUTriAxisEnergyFeature128::sourceSize[IUTriAxisEnergyFeature128::sourceCount] = {128, 128, 128};
+const uint16_t IUTriAxisEnergyFeature128::sourceSize[IUTriAxisEnergyFeature128::sourceCount] = {128, 128, 128, 1};
 
 IUTriAxisEnergyFeature128::IUTriAxisEnergyFeature128(uint8_t id, char *name) :
   IUQ15Feature(id, name)
@@ -747,13 +787,22 @@ IUTriAxisEnergyFeature128::IUTriAxisEnergyFeature128(uint8_t id, char *name) :
 
 void IUTriAxisEnergyFeature128::m_computeScalar (uint8_t computeIndex)
 {
-  // Accel is in G and Q4.11 format, need to convert the energy to float and (m.s-2)^2
-  float val = computeSignalEnergy(3, getSourceSize(), m_source[m_computeIndex], q4_11ToFloat) * sq(9.81);
+  // Compute on each axis and then take the average
+  float values[3] = {0, 0, 0};
+  for (uint8_t i = 0; i < 3; ++i)
+  {
+    values[i] = computeSignalEnergy(m_source[m_computeIndex][i],  // samples
+                                    getSourceSize(i),              // sample count
+                                    m_source[computeIndex][4][0], // sampling frequency
+                                    9.81 / 2048.,                  // G * 2^11 (because q4_11)
+                                    false);                       // center signal around 0 ?
+  }
+  float val = (values[0] + values[1] + values[2]) / 3.0;
   getProducer()->setLatestValue(val);
 }
 
 
-const uint16_t IUSingleAxisEnergyFeature512::sourceSize[IUSingleAxisEnergyFeature512::sourceCount] = {512};
+const uint16_t IUSingleAxisEnergyFeature512::sourceSize[IUSingleAxisEnergyFeature512::sourceCount] = {512, 1};
 
 IUSingleAxisEnergyFeature512::IUSingleAxisEnergyFeature512(uint8_t id, char *name) :
   IUQ15Feature(id, name)
@@ -763,12 +812,16 @@ IUSingleAxisEnergyFeature512::IUSingleAxisEnergyFeature512(uint8_t id, char *nam
 
 void IUSingleAxisEnergyFeature512::m_computeScalar (uint8_t computeIndex)
 {
-  float val = computeSignalEnergy(1, getSourceSize(), m_source[m_computeIndex], q4_11ToFloat) * sq(9.81);
+  float val = computeSignalEnergy(m_source[m_computeIndex][0],  // samples
+                                  getSourceSize(0),             // sample count
+                                  m_source[computeIndex][1][0], // sampling frequency
+                                  9.81 / 2048.,                  // G * 2^11 (because q4_11)
+                                  false);                       // center signal around 0 ?
   getProducer()->setLatestValue(val);
 }
 
 
-const uint16_t IUTriAxisEnergyFeature512::sourceSize[IUTriAxisEnergyFeature512::sourceCount] = {512, 512, 512};
+const uint16_t IUTriAxisEnergyFeature512::sourceSize[IUTriAxisEnergyFeature512::sourceCount] = {512, 512, 512, 1};
 
 IUTriAxisEnergyFeature512::IUTriAxisEnergyFeature512(uint8_t id, char *name) :
   IUQ15Feature(id, name)
@@ -778,7 +831,17 @@ IUTriAxisEnergyFeature512::IUTriAxisEnergyFeature512(uint8_t id, char *name) :
 
 void IUTriAxisEnergyFeature512::m_computeScalar(uint8_t computeIndex)
 {
-  float val = computeSignalEnergy(3, getSourceSize(), m_source[m_computeIndex], q4_11ToFloat) * sq(9.81);
+  // Compute on each axis and then take the average
+  float values[3] = {0, 0, 0};
+  for (uint8_t i = 0; i < 3; ++i)
+  {
+    values[i] = computeSignalEnergy(m_source[m_computeIndex][i],  // samples
+                                    getSourceSize(i),              // sample count
+                                    m_source[computeIndex][4][0], // sampling frequency
+                                    9.81 / 2048.,                  // G * 2^11 (because q4_11)
+                                    false);                       // center signal around 0 ?
+  }
+  float val = (values[0] + values[1] + values[2]) / 3.0;
   getProducer()->setLatestValue(val);
 }
 
@@ -801,7 +864,8 @@ void IUTriSourceSummingFeature::m_computeScalar(uint8_t computeIndex)
 const uint16_t IUVelocityFeature512::sourceSize[IUVelocityFeature512::sourceCount] = {1024, 1, 1, 1, 1};
 
 IUVelocityFeature512::IUVelocityFeature512(uint8_t id, char *name) :
-  IUQ15Feature(id, name)
+  IUQ15Feature(id, name),
+  m_applyWindow(false)
 {
   // ctor
 }
@@ -818,11 +882,50 @@ void IUVelocityFeature512::m_computeScalar (uint8_t computeIndex)
   m_source[computeIndex][0][0] = 0;
   m_source[computeIndex][0][1] = 0;
   //Serial.print(m_name);
-  float val = computeFullVelocity(m_source[computeIndex][0],    // accelFFT
-                                  m_source[computeIndex][3][0], // sampleCount
-                                  m_source[computeIndex][2][0], // samplingRate
-                                  5,                            // Bandpass filtering lower bound => remove gravity
-                                  1000);                        // Bandpass filtering higher bound
+  float val;
+  if (calibrationMode)
+  {
+    debugPrint(m_name);
+    debugPrint("Pitch velocity: ", false);
+    val = computeVelocity(m_source[computeIndex][0],    // accelFFT
+                          m_source[computeIndex][4][0], // accelRMS
+                          m_source[computeIndex][3][0], // sampleCount
+                          m_source[computeIndex][2][0], // samplingRate
+                          5,                            // Bandpass filtering lower bound => remove gravity
+                          1000);                        // Bandpass filtering higher bound
+    debugPrint(val);
+    if (m_applyWindow)
+    {
+      m_applyWindow = false;
+      debugPrint("Full V - Apply Window: ", false);
+      val = computeFullVelocity(m_source[computeIndex][0],    // accelFFT
+                                m_source[computeIndex][3][0], // sampleCount
+                                m_source[computeIndex][2][0], // samplingRate
+                                5,                            // Bandpass filtering lower bound => remove gravity
+                                1000,                         // Bandpass filtering higher bound
+                                hamming_window_512);
+      debugPrint(val);
+    }
+    else
+    {
+      m_applyWindow = true;
+      debugPrint("Full V - DO NOT apply Window: ", false);
+      val = computeFullVelocity(m_source[computeIndex][0],    // accelFFT
+                                m_source[computeIndex][3][0], // sampleCount
+                                m_source[computeIndex][2][0], // samplingRate
+                                5,                            // Bandpass filtering lower bound => remove gravity
+                                1000);                        // Bandpass filtering higher bound
+      debugPrint(val);
+    }
+  }
+  else
+  {
+    val = computeFullVelocity(m_source[computeIndex][0],    // accelFFT
+                              m_source[computeIndex][3][0], // sampleCount
+                              m_source[computeIndex][2][0], // samplingRate
+                              5,                            // Bandpass filtering lower bound => remove gravity
+                              1000);                        // Bandpass filtering higher bound
+  }
   getProducer()->setLatestValue(max(val - 1.1, 0.0) * 10.);
 }
 

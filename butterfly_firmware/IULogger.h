@@ -2,7 +2,8 @@
 #define IULOGGER_H
 
 #include <Arduino.h>
-#include <MemoryFree.h>
+#include <ArduinoUnit.h>
+//#include <MemoryFree.h>
 
 /* ============================= Debugging ============================= */
 
@@ -13,12 +14,14 @@
 __attribute__((section(".noinit2"))) const bool setupDebugMode = false;
 __attribute__((section(".noinit2"))) const bool loopDebugMode = false;
 __attribute__((section(".noinit2"))) const bool callbackDebugMode = false;
+__attribute__((section(".noinit2"))) const bool calibrationMode = true;
 __attribute__((section(".noinit2"))) const bool highVerbosity = false;
 __attribute__((section(".noinit2"))) const bool readableDataCollection = false;
 #else
 __attribute__((section(".noinit2"))) const bool setupDebugMode = false;
 __attribute__((section(".noinit2"))) const bool loopDebugMode = false;
 __attribute__((section(".noinit2"))) const bool callbackDebugMode = false;
+__attribute__((section(".noinit2"))) const bool calibrationMode = false;
 __attribute__((section(".noinit2"))) const bool highVerbosity = false;
 __attribute__((section(".noinit2"))) const bool readableDataCollection = false;
 #endif
