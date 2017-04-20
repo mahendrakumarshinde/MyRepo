@@ -76,7 +76,7 @@ class IUBMX055 : public IUABCSensor
                                          ABW_250Hz  = 0x0D,    // 250   Hz,  2 ms update time
                                          ABW_500Hz  = 0x0E,    // 500   Hz,  1 ms update time
                                          ABW_1000Hz = 0x0F};   // 1000  Hz,  0.5 ms update time
-    static const accelScaleOption defaultAccelScale = AFS_2G;
+    static const accelScaleOption defaultAccelScale = AFS_4G;
     static const accelBandwidthOption defaultAccelBandwidth = ABW_16Hz;
 
     //Gyroscope
