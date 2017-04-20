@@ -1,5 +1,19 @@
 # IDE Firmware #
 
+## Dependencies ##
+
+### Butterfly board ###
+The Butterfly is a board developped by Tlera Corp (Kris Winer and his associate Thomas Roell). See comments [here](https://www.tindie.com/products/TleraCorp/butterfly-stm32l433-development-board/)
+It requires to install custom board libraries (via the board manager in the Arduino IDE). Download .zip from [Thomas Roell GitHub](https://github.com/GrumpyOldPizza/arduino-STM32L4).
+
+### Additional libraries ###
+Required additionnal libraries can be found in this repository, as .zip folders:
+- Arduino-MemoryFree-master.zip, also available (here)[https://github.com/mpflaga/Arduino-MemoryFree]
+- arduinounit-master.zip, also available (here)[https://github.com/mmurdoch/arduinounit]
+- IUButterflyI2S.zip, that is basically the same I2S library developped than in the Butterfly board package (see above), but with some modified constants. In particular, the I2S_BUFFER_SIZE need to be modified to adjust the I2S Tx callback rate.
+
+These libraries can be installed in the Arduino IDE in the menu Sketch > Include Library > Add .ZIP Library.
+
 
 ## Modularization ##
 From this version on, the firmware has been separated into C++ libraries, each library handling a specific component or functionality. The objective is to be able to develop a working Arduino Skectch for any hardware configuration with minimal effort, by including the libraries corresponding to the components.
@@ -132,9 +146,6 @@ Current board include the following components:
 
 Reference can be found in respective datasheet. Some usefull info are summarized below:
 
-### Butterfly board ###
-The Butterfly is a board developped by Tlera Corp (Kris Winer and his associate Thomas Roell). See comments [here](https://www.tindie.com/products/TleraCorp/butterfly-stm32l433-development-board/)
-It requires to install custom board libraries (via the board manager in the Arduino IDE). Download .zip from [Thomas Roell GitHub](https://github.com/GrumpyOldPizza/arduino-STM32L4).
 
 ### Sensor output format ###
 Since we do computations using CMSIS arm_math library that handles q15_t numbers, it is convenient to store sensor output as q15_t numbers or variant (eg q4.11). Basically, it means that we convert sensor output to a 16bit long format, either by droping the lest significant bits (>>) or by adding some that are equal to 0 (cast to int16_t then move bits to the left (<<)).

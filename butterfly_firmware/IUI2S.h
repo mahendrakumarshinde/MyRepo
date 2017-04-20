@@ -21,7 +21,7 @@
 #define IUI2S_H
 
 #include <Arduino.h>
-#include <I2S.h>  /* I2S digital audio */
+#include <IUButterflyI2S.h>  /* I2S digital audio */
 #include <arm_math.h> /* CMSIS-DSP library for RFFT */
 
 #include "IUABCSensor.h"

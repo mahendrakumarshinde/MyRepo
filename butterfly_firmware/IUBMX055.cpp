@@ -284,7 +284,7 @@ void IUBMX055::processAccelData(uint8_t wireStatus)
   {
     // Convert to Q15: LSB = LLLLXXXX, MSB = MMMMMMMMM => rawAccel = MMMMMMMMLLLL0000
     // use 8 bits of MSB and only the 4 left-most bits of LSB (NB Casting has precedence over << or >> operators)
-    m_rawAccel[i] = (int16_t) (((int16_t)m_rawAccelBytes[2 * i + 1] << 8) | (m_rawAccelBytes[2 * i] & 0x0C));
+    m_rawAccel[i] = (int16_t) (((int16_t)m_rawAccelBytes[2 * i + 1] << 8) | (m_rawAccelBytes[2 * i] & 0xF0));
     
     // Convert to Q4.11 (divide by 2^4) without losing precision since it was originally 12bit data, and then
     // multiply by resolution to have a measure in G and add the bias
