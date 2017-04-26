@@ -8,8 +8,8 @@ It requires to install custom board libraries (via the board manager in the Ardu
 
 ### Additional libraries ###
 Required additionnal libraries can be found in this repository, as .zip folders:
-- Arduino-MemoryFree-master.zip, also available (here)[https://github.com/mpflaga/Arduino-MemoryFree]
-- arduinounit-master.zip, also available (here)[https://github.com/mmurdoch/arduinounit]
+- Arduino-MemoryFree-master.zip, also available [here](https://github.com/mpflaga/Arduino-MemoryFree)
+- arduinounit-master.zip, also available [here](https://github.com/mmurdoch/arduinounit)
 - IUButterflyI2S.zip, that is basically the same I2S library developped than in the Butterfly board package (see above), but with some modified constants. In particular, the I2S_BUFFER_SIZE need to be modified to adjust the I2S Tx callback rate.
 
 These libraries can be installed in the Arduino IDE in the menu Sketch > Include Library > Add .ZIP Library.
@@ -160,9 +160,19 @@ Check out conversion method on [wikipedia](https://en.wikipedia.org/wiki/Q_(numb
 sensor sensibility and scale (before we convert the outputs to q15_t) are listed below.
 
 ### BMD350 ###
-BMD350 comes with a pre-flashed firmware named BMDWare. You should read both BMD350 and BMDWare datasheets.
+BMD350 is a BLE chip: [intro to BLE, GAP & GATT](https://learn.adafruit.com/introduction-to-bluetooth-low-energy/introduction) (there are several pages).
+The chip comes with a pre-flashed firmware named BMDWare. You should read both BMD350 and BMDWare datasheets.
 
-####MAC Address####
+### Service and Characteristics ###
+Profiles, services and characteristics can be discovered using a BLE app, such as "BLE Scanner" (see section BLE utility apps below).
+The services and characteristics we are most interested about:
+- UART Service: 6E400001-B5A3-F393-E0A9-E50E24DCCA9E
+  - Tx characteristic (send from device, read in App): 6E400003-B5A3-F393-E0A9-E50E24DCCA9E
+  - Rx characteristic (send from app, read on device): 6E400002-B5A3-F393-E0A9-E50E24DCCA9E
+- Device Information Service: 0x180a
+  - Serial Number (MAC Address) characteristic: 00002a25-0000-1000-8000-00805f9b34fb
+
+#### MAC Address ####
 The BLE MAC address is written on the BMD350 chip on it, in the form ABXXXXXX. 'AB' is the firmware version (see datasheet for more details), and the X's are the 6 last hex digit of the MAC address. The Mac address is then 94:54:93:XX:XX:XX.
 It is also stored on the chip memory and is available as long as full memory erase is performed (see datasheet). Read it via UICR register.
 UICR Register:
@@ -173,17 +183,17 @@ NRF_UICR + 0x83 (0x10001083): MAC_Addr [3] (0x93)
 NRF_UICR + 0x84 (0x10001084): MAC_Addr [4] (0x54)
 NRF_UICR + 0x85 (0x10001085): MAC_Addr [5] (0x94)
 
-####Beacon / iBeacon configuration####
+#### Beacon / iBeacon configuration ####
 Every beacon info can be configured, including the device name, UUID, major and minor numbers, advertissement info and rate, etc. Beacon configurations are retained even when the device is powered off.
 
-####AT Command mode####
+#### AT Command mode ####
 BMD350 has 2 modes that we use:
 - a configuration mode named "AT Command Interface", that allows to interact with the BMDWare via I2C and the Serial port to configure the device. This include Beacon configuration and UART configuration.
 - UART Pass-Through mode, that we use to stream data over bluetooth. We send data to the BLE module via Serial, and these data are automatically sent over bluetooth.
 Note that UART Pass-Through mode has to be configured using the AT Mode, but that AT Mode actually have to be exited for UART Pass-Through to work.
 
-####BLE utility app####
-Some usefull Android / Apple apps exist, that allow to detect, connect to and read / write data to a BLE device. We have use "BLE UUID Explorer" and "Rigado Toolbox" so far.
+#### BLE utility apps ####
+Some usefull Android / Apple apps exist, that allow to detect, connect to and read / write data to a BLE device. We have use "BLE UUID Explorer", "BLE Scanner" and "Rigado Toolbox" so far.
 Rigado Toolbox is specifically designed to work with BMD300 series (developed by Rigado). Some of its functionnalities are:
 - UUID
 - MAC Address = Serial Number. It is always in the form 94:54:93:XX:XX:XX. As said earlier, the last 6 hex digits are also available on the chip markings.
@@ -221,7 +231,7 @@ NB: You'll have to download the whole repo (which is for the independent ESP8266
 
 ### INMP441 and ICS-43432: Microphone ###
 - Signed, MSB first as per I2S standard
-- 24bit long data through I2S (see here: https://en.wikipedia.org/wiki/I%C2%B2S and here: 
+- 24bit long data through I2S (see [here](https://en.wikipedia.org/wiki/I%C2%B2S))
 - Sensitivity is −26dBFS (for a sine wave at 1 kHz and 94 dB SPL). This means that Full-Scale reading is 120dB (94dB - 120dB = -26dB).
 NB: -26dB is the sine peak. The RMS level is -29dBFS (RMS is 3dB below for a 1KHz sine since 20log10(0.707) = -3)
 - A good measure of sound volume is then just the RMS in DB. We use normalized sum of 20 * log10(abs(sample)).
