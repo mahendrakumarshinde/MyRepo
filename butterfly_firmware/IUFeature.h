@@ -45,7 +45,8 @@ class IUFeatureProducer: public IUABCProducer
                                    samplingRate = 2,
                                    sampleCount = 3,
                                    RMS = 4,
-                                   scalarOptionCount = 5,
+                                   mainFreq = 5,
+                                   scalarOptionCount = 6,
                                    valueArray = 99};
     IUFeatureProducer();
     virtual ~IUFeatureProducer() {};
@@ -60,6 +61,8 @@ class IUFeatureProducer: public IUABCProducer
     virtual float getLatestValue() { return m_latestValue; }
     virtual void setRMS(float rms) { m_rms = rms; }
     virtual float getRMS() { return m_rms; }
+    virtual void setMainFreq(float value) { m_mainFreq = value; }
+    virtual float getMainFreq() { return m_mainFreq; }
     virtual void setState(operationState state) { m_state = state; }
     virtual operationState getState() { return m_state; }
     virtual void setHighestDangerLevel(operationState state) { m_highestDangerLevel = state; }
@@ -72,6 +75,7 @@ class IUFeatureProducer: public IUABCProducer
   protected:
     float m_latestValue;
     float m_rms;
+    float m_mainFreq;
     q15_t *m_destination;
     uint16_t m_samplingRate;
     uint16_t m_sampleCount;
@@ -128,6 +132,7 @@ class IUFeature : public IUABCFeature
     virtual IUFeatureProducer* getProducer() { return m_producer; }
     virtual void setProducer(IUFeatureProducer *producer) { m_producer = producer; }
     virtual bool prepareProducer();
+    virtual void resetReceivers() { m_producer->resetReceivers(); }
 
    protected:
     IUFeatureProducer *m_producer;
@@ -241,7 +246,6 @@ class IUAccelPreComputationFeature512: public IUQ15Feature
     // Compute functions
     virtual void m_computeScalar (uint8_t computeIndex);
     virtual void m_computeArray (uint8_t computeIndex);
-    bool m_applyWindow;
 };
 
 
@@ -399,7 +403,6 @@ class IUVelocityFeature512: public IUQ15Feature
     virtual bool newSource();
     // Compute functions
     virtual void m_computeScalar (uint8_t computeIndex);
-    bool m_applyWindow;
 };
 
 

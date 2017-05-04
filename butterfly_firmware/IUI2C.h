@@ -32,8 +32,10 @@ class IUI2C : public IUABCInterface
   public:
     // Data collection Mode - Modes of Operation String Constants
     const String START_COLLECTION = "IUCMD_START";
+    const String START_CALIBRATION = "IUCAL_START";
     const String START_CONFIRM = "IUOK_START";
     const String END_COLLECTION = "IUCMD_END";
+    const String END_CALIBRATION = "IUCAL_END";
     const String END_CONFIRM = "IUOK_END";
     static const uint32_t defaultBaudRate = 115200;
     static const uint32_t defaultClockRate = 400000; // frequency at 400 kHz
@@ -61,6 +63,8 @@ class IUI2C : public IUABCInterface
     void activate();
     bool scanDevices();
     bool checkComponentWhoAmI(String componentName, uint8_t address, uint8_t whoAmI, uint8_t iShouldBe);
+    bool checkIfStartCalibration();
+    bool checkIfEndCalibration();
     bool checkIfStartCollection();
     bool checkIfEndCollection();
     void updateBuffer();

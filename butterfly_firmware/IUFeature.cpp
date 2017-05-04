@@ -210,6 +210,7 @@ IUFeatureProducer::IUFeatureProducer() :
   IUABCProducer(),
   m_latestValue(0),
   m_rms(0),
+  m_mainFreq(0),
   m_samplingRate(0),
   m_sampleCount(0),
   m_state(operationState::idle),
@@ -373,11 +374,14 @@ IUFeature::IUFeature(uint8_t id, char *name) :
 
 IUFeature::~IUFeature()
 {
+  Serial.println("delete - here 20");
   if(m_producer)
   {
     delete m_producer;
   }
+  Serial.println("here 21");
   m_producer = NULL;
+  Serial.println("here 22");
 }
 
 bool IUFeature::prepareProducer()
@@ -655,7 +659,9 @@ void IUAccelPreComputationFeature128::m_computeScalar (uint8_t computeIndex)
                                   m_source[computeIndex][1][0], // sampling frequency
                                   9.81 / 2048.,                  // G * 2^11 (because q4_11)
                                   false);                       // center signal around 0 ?
-  getProducer()->setLatestValue(val); 
+  getProducer()->setLatestValue(val);
+  float rms = computeNormalizedRMS(getSourceSize()[0], m_source[m_computeIndex][0], q4_11ToFloat) * 9.81; // Convert to m.s-1
+  getProducer()->setRMS(rms);
   updateState();
   getProducer()->setSamplingRate(m_source[computeIndex][1][0]);
   getProducer()->setSampleCount(getSourceSize(0));
@@ -667,14 +673,15 @@ void IUAccelPreComputationFeature128::m_computeArray (uint8_t computeIndex)
               getDestination(),             // pointer to destination
               getSourceSize()[0],           // FFT length
               false);                       // Forward FFT
+  float mainFreq = getMainFrequency(getDestination(), getSourceSize(0), m_source[computeIndex][1][0]);
+  getProducer()->setRMS(mainFreq);
 }
 
 
 const uint16_t IUAccelPreComputationFeature512::sourceSize[IUAccelPreComputationFeature512::sourceCount] = {512, 1};
 
 IUAccelPreComputationFeature512::IUAccelPreComputationFeature512(uint8_t id, char *name) :
-  IUQ15Feature(id, name),
-  m_applyWindow(false)
+  IUQ15Feature(id, name)
 {
   //m_producer = NULL;
 }
@@ -700,24 +707,6 @@ void IUAccelPreComputationFeature512::m_computeScalar (uint8_t computeIndex)
                                   false);                       // center signal around 0 ?
   getProducer()->setLatestValue(val);
   float rms = computeNormalizedRMS(getSourceSize()[0], m_source[m_computeIndex][0], q4_11ToFloat) * 9.81; // Convert to m.s-1
-  if (calibrationMode)
-  {
-    debugPrint(m_name);
-    debugPrint("Signal Energy: ", false); debugPrint(val);
-    debugPrint(F("Normalized RMS: "), false); debugPrint(rms);
-    float signalRMS = computeSignalRMS(m_source[m_computeIndex][0],
-                                       getSourceSize(0),
-                                       m_source[computeIndex][1][0],      // Sampling Rate
-                                       9.81 / 2048.,                       // Convert to m.s-1
-                                       false);
-    debugPrint(F("Signal RMS: "), false); debugPrint(signalRMS);
-    float signalRMSNoMean = computeSignalRMS(m_source[m_computeIndex][0],
-                                       getSourceSize(0),
-                                       m_source[computeIndex][1][0],      // Sampling Rate
-                                       9.81 / 2048.,                       // Convert to m.s-1
-                                       true);
-    debugPrint(F("Signal RMS no mean: "), false); debugPrint(signalRMSNoMean);
-  }
   getProducer()->setRMS(rms);
   updateState();
   getProducer()->setSamplingRate(m_source[computeIndex][1][0]);
@@ -726,35 +715,12 @@ void IUAccelPreComputationFeature512::m_computeScalar (uint8_t computeIndex)
 
 void IUAccelPreComputationFeature512::m_computeArray (uint8_t computeIndex)
 {
-  if (m_applyWindow)
-  {
-    if (calibrationMode)
-    {
-      debugPrint(m_name, false);
-      debugPrint(": apply window");
-      m_applyWindow = false;
-    }
-    computeRFFT(m_source[m_computeIndex][0],  // pointer to source
-                getDestination(),             // pointer to destination
-                getSourceSize(0),             // FFT length
-                false,                        // Forward FFT
-                hamming_window_512);          // windowing
-  }
-  else
-  {
-    if (calibrationMode)
-    {
-      debugPrint(m_name, false);
-      debugPrint(": DO NOT apply window");
-      m_applyWindow = true;
-    }
-    computeRFFT(m_source[m_computeIndex][0],  // pointer to source
-                getDestination(),             // pointer to destination
-                getSourceSize(0),             // FFT length
-                false);                        // Forward FFT
-                //hamming_window_512,           // windowing
-                //hamming_K_512);               // window gain
-  }
+  computeRFFT(m_source[m_computeIndex][0],  // pointer to source
+              getDestination(),             // pointer to destination
+              getSourceSize(0),             // FFT length
+              false);                        // Forward FFT
+  float mainFreq = getMainFrequency(getDestination(), getSourceSize(0), m_source[computeIndex][1][0]);
+  getProducer()->setRMS(mainFreq);
 }
 
 
@@ -864,8 +830,7 @@ void IUTriSourceSummingFeature::m_computeScalar(uint8_t computeIndex)
 const uint16_t IUVelocityFeature512::sourceSize[IUVelocityFeature512::sourceCount] = {1024, 1, 1, 1, 1};
 
 IUVelocityFeature512::IUVelocityFeature512(uint8_t id, char *name) :
-  IUQ15Feature(id, name),
-  m_applyWindow(false)
+  IUQ15Feature(id, name)
 {
   // ctor
 }
@@ -882,51 +847,12 @@ void IUVelocityFeature512::m_computeScalar (uint8_t computeIndex)
   m_source[computeIndex][0][0] = 0;
   m_source[computeIndex][0][1] = 0;
   //Serial.print(m_name);
-  float val;
-  if (calibrationMode)
-  {
-    debugPrint(m_name);
-    debugPrint("Pitch velocity: ", false);
-    val = computeVelocity(m_source[computeIndex][0],    // accelFFT
-                          m_source[computeIndex][4][0], // accelRMS
-                          m_source[computeIndex][3][0], // sampleCount
-                          m_source[computeIndex][2][0], // samplingRate
-                          5,                            // Bandpass filtering lower bound => remove gravity
-                          1000);                        // Bandpass filtering higher bound
-    debugPrint(val);
-    if (m_applyWindow)
-    {
-      m_applyWindow = false;
-      debugPrint("Full V - Apply Window: ", false);
-      val = computeFullVelocity(m_source[computeIndex][0],    // accelFFT
-                                m_source[computeIndex][3][0], // sampleCount
-                                m_source[computeIndex][2][0], // samplingRate
-                                5,                            // Bandpass filtering lower bound => remove gravity
-                                1000,                         // Bandpass filtering higher bound
-                                hamming_window_512);
-      debugPrint(val);
-    }
-    else
-    {
-      m_applyWindow = true;
-      debugPrint("Full V - DO NOT apply Window: ", false);
-      val = computeFullVelocity(m_source[computeIndex][0],    // accelFFT
-                                m_source[computeIndex][3][0], // sampleCount
-                                m_source[computeIndex][2][0], // samplingRate
-                                5,                            // Bandpass filtering lower bound => remove gravity
-                                1000);                        // Bandpass filtering higher bound
-      debugPrint(val);
-    }
-  }
-  else
-  {
-    val = computeFullVelocity(m_source[computeIndex][0],    // accelFFT
-                              m_source[computeIndex][3][0], // sampleCount
-                              m_source[computeIndex][2][0], // samplingRate
-                              5,                            // Bandpass filtering lower bound => remove gravity
-                              1000);                        // Bandpass filtering higher bound
-  }
-  getProducer()->setLatestValue(max(val - 1.1, 0.0) * 10.);
+  float val = computeFullVelocity(m_source[computeIndex][0],    // accelFFT
+                                  m_source[computeIndex][3][0], // sampleCount
+                                  m_source[computeIndex][2][0], // samplingRate
+                                  5,                            // Bandpass filtering lower bound => remove gravity
+                                  1000);                        // Bandpass filtering higher bound
+  getProducer()->setLatestValue(val);
 }
 
 /**

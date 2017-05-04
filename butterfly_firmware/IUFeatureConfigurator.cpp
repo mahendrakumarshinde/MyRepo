@@ -113,6 +113,30 @@ IUFeatureConfigurator::FeatureConfig IUFeatureConfigurator::registeredConfigs[IU
     {"VZ3", // "velocity_Z_512",
       {0, "", ""},
       {5, "CZ3-CZ3-CZ3-CZ3-CZ3", "99-1-2-3-4"}},
+    
+    {"FX3", // Freq X 512
+      {1, "CX3", "5"},
+      {0, "", ""}},
+      
+    {"FY3", // Freq Y 512
+      {1, "CY3", "5"},
+      {0, "", ""}},
+      
+    {"FZ3", // Freq Z 512
+      {1, "CZ3", "5"},
+      {0, "", ""}},
+    
+    {"RX3", // RMS X 512
+      {1, "CX3", "4"},
+      {0, "", ""}},
+      
+    {"RY3", // RMS Y 512
+      {1, "CY3", "4"},
+      {0, "", ""}},
+      
+    {"RZ3", // RMS Z 512
+      {1, "CZ3", "4"},
+      {0, "", ""}},
       
     {"T10", // "temperature_1_1",
       {1, "T", "0"},
@@ -126,9 +150,17 @@ IUFeatureConfigurator::FeatureConfig IUFeatureConfigurator::registeredConfigs[IU
       {1, "S", "0"},
       {0, "", ""}},
   };
+  
+String IUFeatureConfigurator::calibrationConfig = "CX3-CY3-CZ3-D33-VX3-VY3-VZ3-T10-S16-FX3-FY3-FZ3-RX3-RY3-RZ3";
+uint8_t IUFeatureConfigurator::calibrationFeatureIds[15] = {7, 8, 9, 1, 2, 3, 4, 5, 6, 10, 11, 12, 13, 14, 15};
+bool IUFeatureConfigurator::calibrationFeatureStream[15] = {false, false, false, false,
+                                                           true, true, true,  // VX3, VY3, VZ3
+                                                           false, false,
+                                                           true, true, true,
+                                                           true, true, true};
 
-String IUFeatureConfigurator::standardConfig = "CX3-CY3-CZ3-D33-VX3-VY3-VZ3-T10-S16"; //
-float IUFeatureConfigurator::standardThresholds[9][3] = {{30, 600, 1200},
+String IUFeatureConfigurator::standardConfig = "CX3-CY3-CZ3-D33-VX3-VY3-VZ3-T10-S16-FX3-FY3-FZ3-RX3-RY3-RZ3"; //
+float IUFeatureConfigurator::standardThresholds[15][3] = {{30, 600, 1200},
                                                          {30, 600, 1200},
                                                          {30, 600, 1200},
                                                          {30, 600, 1200},
@@ -136,10 +168,16 @@ float IUFeatureConfigurator::standardThresholds[9][3] = {{30, 600, 1200},
                                                          {0.05, 1.2, 1.8},
                                                          {0.05, 1.2, 1.8},
                                                          {200, 205, 210},
-                                                         {500, 1000, 1500}};
-uint8_t IUFeatureConfigurator::standardFeatureIds[9] = {7, 8, 9, 1, 2, 3, 4, 5, 6};
-bool IUFeatureConfigurator::standardFeatureStream[9] = {false, false, false, true, true, true, true, true, true};
-bool IUFeatureConfigurator::standardFeatureCheck[9] = {false, false, false, true, false, false, false, false, false};
+                                                         {500, 1000, 1500},
+                                                         {0, 0, 0},
+                                                         {0, 0, 0},
+                                                         {0, 0, 0},
+                                                         {0, 0, 0},
+                                                         {0, 0, 0},
+                                                         {0, 0, 0}};
+uint8_t IUFeatureConfigurator::standardFeatureIds[15] = {7, 8, 9, 1, 2, 3, 4, 5, 6, 10, 11, 12, 13, 14, 15};
+bool IUFeatureConfigurator::standardFeatureStream[15] = {false, false, false, true, true, true, true, true, true, false, false, false, false, false, false};
+bool IUFeatureConfigurator::standardFeatureCheck[15] = {false, false, false, true, false, false, false, false, false, false, false, false, false, false, false};
 
 String IUFeatureConfigurator::pressConfig = "A33-A31-T10-S16";
 float IUFeatureConfigurator::pressThresholds[4][3] = {{30, 600, 1200},
@@ -173,9 +211,15 @@ void IUFeatureConfigurator::resetFeatures()
 {
   for (int i = 0; i < maxFeatureCount; i++)
   {
+    Serial.print(i); Serial.print(": "); 
     if(m_features[i])
     {
-      delete m_features[i]; m_features[i] = NULL;
+      Serial.print("if ");
+      Serial.println(m_features[i]->getName());
+      delete m_features[i];
+      Serial.print("deleted");
+      m_features[i] = NULL;
+      Serial.println("now null");
     }
   }
   m_featureCount = 0;
@@ -428,6 +472,39 @@ bool IUFeatureConfigurator::requireConfiguration(String configBufffer)
 }
 
 /**
+ * Do a calibration setup from pre-programmed configuration in FeatureConfigurator
+ */
+bool IUFeatureConfigurator::doCalibrationSetup()
+{
+  if (!requireConfiguration(calibrationConfig))
+  {
+    return false;
+  }
+  for (uint8_t i = 0; i < m_featureCount; i++)
+  {
+    m_features[i]->setId(calibrationFeatureIds[i]);
+    m_features[i]->setStreaming(calibrationFeatureStream[i]);
+  }
+  return true;
+}
+
+void IUFeatureConfigurator::setCalibrationStreaming()
+{
+  for (uint8_t i = 0; i < m_featureCount; i++)
+  {
+    m_features[i]->setStreaming(calibrationFeatureStream[i]);
+  }
+}
+
+void IUFeatureConfigurator::setStandardStreaming()
+{
+  for (uint8_t i = 0; i < m_featureCount; i++)
+  {
+    m_features[i]->setStreaming(standardFeatureStream[i]);
+  }
+}
+
+/**
  * Do a standard setup from pre-programmed configuration in FeatureConfigurator
  */
 bool IUFeatureConfigurator::doStandardSetup()
@@ -500,17 +577,25 @@ IUFeature* IUFeatureConfigurator::createFeature(IUFeatureConfigurator::FeatureCo
       else if (featConfig.name[2] == '3') { feature = new IUAccelPreComputationFeature512(id, featConfig.name); }
       break;
 
-    case 'V':
-      if (featConfig.name[2] == '3') { feature = new IUVelocityFeature512(id, featConfig.name); }
+    case 'F':
+      feature = new IUDefaultFloatFeature(id, featConfig.name);
       break;
 
-    case 'T':
+    case 'R':
       feature = new IUDefaultFloatFeature(id, featConfig.name);
       break;
 
     case 'S':
       if (featConfig.name[2] == '5') { feature = new IUAudioDBFeature2048(id, featConfig.name); }
       else if (featConfig.name[2] == '6') { feature = new IUAudioDBFeature4096(id, featConfig.name); }
+      break;
+
+    case 'T':
+      feature = new IUDefaultFloatFeature(id, featConfig.name);
+      break;
+
+    case 'V':
+      if (featConfig.name[2] == '3') { feature = new IUVelocityFeature512(id, featConfig.name); }
       break;
 
     default:
@@ -656,6 +741,17 @@ uint8_t IUFeatureConfigurator::streamFeatures(HardwareSerial *port)
   return counter;
 }
 
+/**
+ * Reset the pointers of all the sensor receivers to NULL
+ */
+void IUFeatureConfigurator::resetAllReceivers()
+{
+  for (uint8_t i = 0; i < m_featureCount; i++)
+  {
+    m_features[i]->resetReceivers();
+  }
+}
+
 /* ====================== Diagnostic Functions, only active when setupDebugMode = true ====================== */
 
 /**
@@ -670,6 +766,8 @@ void IUFeatureConfigurator::exposeFeaturesAndReceivers()
   }
   else
   {
+    debugPrint(m_featureCount, false);
+    debugPrint(" features:");
     for (int i = 0; i < m_featureCount; i++)
     {
       debugPrint(m_features[i]->getName() + ": ");
@@ -699,25 +797,5 @@ void IUFeatureConfigurator::exposeFeatureStates()
   }
   debugPrint(' ');
   #endif
-}
-
-/**
- * Stream feature latest values for debugging purpose
- * Features are streamed through serial like they would be over BLE or WiFi,
- * but with newlines (for readability)
- */
-void IUFeatureConfigurator::debugStreamFeatures()
-{
-  #ifdef DEBUGMODE
-  bool streamed = false;
-  for (int i = 0; i < m_featureCount; i++)
-  {
-    if (m_features[i]->isStreamed())
-    {
-      Serial.println(",");
-      m_features[i]->stream(&Serial);
-    }
-  }
-  #endif  
 }
 

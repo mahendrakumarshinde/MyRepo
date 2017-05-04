@@ -27,6 +27,7 @@ class IUConductor
     static const uint16_t defaultClockRate = 8000;           //Hz (must be compatible with I2C)
     static const uint16_t defaultDataSendPeriod = 2000;      // ms - send data every T milliseconds
     static constexpr double defaultTimestamp = 1492144654.00; //1483228800.00;    // January 1st, 2017
+    static const uint16_t calibrationDataSendPeriod = 500;      // ms - send data every T milliseconds
     // Constructors, destructors, getters and setters
     IUConductor();
     IUConductor(String macAddress);
@@ -41,28 +42,28 @@ class IUConductor
     void setDataSendPeriod(uint16_t dataSendPeriod);
     bool isDataSendTime();
     double getDatetime();
-    void setCallback(void (*callback)()) { m_callback = callback; }
     // Methods
     bool initInterfaces();
     bool initConfigurators();
     bool initSensors();
     bool linkFeaturesToSensors();
+    void switchToUsage(usageMode mode);
     void switchToMode(operationMode mode);
     void switchToState(operationState state);
     bool checkAndUpdateMode();
     bool checkAndUpdateState();
     bool acquireAndSendData();
     void computeFeatures();
-    bool streamData();
+    bool streamData(HardwareSerial *port, bool newLine=false);
     bool beginDataAcquisition();
     void endDataAcquisition();
     bool resetDataAcquisition();
     void processInstructionsFromI2C();
-    void processInstructionsFromBluetooth(String macAddress);
+    void processInstructionsFromBluetooth();
     void processInstructionsFromWifi();
-    void printMsg(String msg);
+    void setup(void (*callback)());
+    void loop();
     // Diagnostic Functions
-    void debugStreamData();
 
     // Public members
     IUFeatureConfigurator featureConfigurator;
@@ -74,6 +75,7 @@ class IUConductor
 
   protected:
     String m_macAddress;
+    usageMode m_usageMode;
     operationMode m_opMode;
     operationState m_opState;
     uint16_t m_clockRate; //Hz (must be compatible with I2C)

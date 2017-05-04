@@ -341,6 +341,23 @@ void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplin
   }
 }
 
+float getMainFrequency(q15_t *fftValues, uint16_t sampleCount, uint16_t samplingRate)
+{
+  float df = (float) samplingRate / (float) sampleCount;
+  int maxIdx = 0;
+  float amplitude(0), maxVal(0);
+  for (uint16_t i = 0; i < sampleCount; i++)
+  {
+    amplitude = sqrt(sq(fftValues[2 * i]) + sq(fftValues[2 * i + 1]));
+    if (amplitude > maxVal)
+    {
+      maxVal = amplitude;
+      maxIdx = i;
+    }
+  }
+  return (float) maxIdx * df; 
+}
+
 //==============================================================================
 //========================== Hamming Window Presets ============================
 //==============================================================================

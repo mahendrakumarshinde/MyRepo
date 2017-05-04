@@ -11,6 +11,7 @@ IUConductor::IUConductor(String macAddress) :
   m_macAddress(macAddress),
   m_bluesleeplimit(60000),
   m_autoSleepEnabled(false),
+  m_usageMode(usageMode::operation),
   m_opMode(operationMode::sleep),
   m_opState(operationState::idle),
   m_inDataAcquistion(false),
@@ -167,6 +168,67 @@ bool IUConductor::linkFeaturesToSensors()
 }
 
 /**
+ * Switch to a new Usage Mode
+ * usage mode typically describe how the 
+ */
+void IUConductor::switchToUsage(usageMode mode)
+{
+  if(m_usageMode == mode)
+  {
+    return; // Nothing to do
+  }
+  m_usageMode = mode;
+  String msg;
+  if (m_usageMode == usageMode::configuration)
+  {
+    switchToMode(operationMode::sleep);
+    msg = "configuration";
+  }
+  else if (m_usageMode == usageMode::calibration)
+  {
+    switchToMode(operationMode::sleep);
+    /*
+    Serial.println("reset sensor receivers");
+    Serial.flush();
+    sensorConfigurator.resetAllReceivers();
+    Serial.println("reset feature receivers");
+    Serial.flush();
+    featureConfigurator.resetAllReceivers();
+    Serial.println("done");
+    Serial.flush();
+    featureConfigurator.doCalibrationSetup();
+    */
+    setDataSendPeriod(calibrationDataSendPeriod);
+    featureConfigurator.setCalibrationStreaming();
+    switchToMode(operationMode::run);
+    sensorConfigurator.iuRGBLed->changeColor(IURGBLed::CYAN_DATA); // override run mode color with calibration color
+    iuI2C->silence();
+    msg = "calibration";
+  }
+  else if (m_usageMode == usageMode::operation)
+  {
+    switchToMode(operationMode::sleep);
+    /*
+    Serial.println("reset sensor receivers");
+    Serial.flush();
+    sensorConfigurator.resetAllReceivers();
+    Serial.println("reset feature receivers");
+    Serial.flush();
+    featureConfigurator.resetAllReceivers();
+    Serial.println("done");
+    Serial.flush();
+    featureConfigurator.doStandardSetup();
+    */
+    setDataSendPeriod(defaultDataSendPeriod);
+    featureConfigurator.setStandardStreaming();
+    switchToMode(operationMode::run);
+    iuI2C->unsilence();
+    msg = "operation";
+  }
+  if (loopDebugMode) { debugPrint("\nEntering " + msg + " usage\n"); }
+}
+
+/**
  * Switch to a new operation mode
  * 1. When switching to "run", "record" or "data collection" mode, start data
  *    acquisition with beginDataAcquisition().
@@ -188,6 +250,19 @@ void IUConductor::switchToMode(operationMode mode)
   }
   else if (m_opMode == operationMode::run)
   {
+    // TODO Rebuild
+    /*
+    sensorConfigurator.iuRGBLed->updateFromI2C();            // Check for LED color update
+    sensorConfigurator.iuBMX055->updateAccelRangeFromI2C();  // check for accel range update
+    bool accUpdate = iuBMX055->updateSamplingRateFromI2C();  // check for accel sampling rate update
+    bool audioUpdate = iuI2S->updateSamplingRateFromI2C();   // check for accel sampling rate update
+    if (accUpdate || audioUpdate) //Accelerometer or Audio sampling rate changed
+    {
+      ACCEL_COUNTER_TARGET = iuI2S.getTargetSample() / iuBMX055.getTargetSample();
+      accel_counter = 0;
+      subsample_counter = 0;
+    }
+    */
     sensorConfigurator.iuRGBLed->changeColor(IURGBLed::BLUE_NOOP);
     resetDataAcquisition();
     msg = "run";
@@ -197,11 +272,6 @@ void IUConductor::switchToMode(operationMode mode)
     sensorConfigurator.iuRGBLed->changeColor(IURGBLed::CYAN_DATA);
     resetDataAcquisition();
     msg = "data collection";
-  }
-  else if (m_opMode == operationMode::configuration)
-  {
-    endDataAcquisition();
-    msg = "configuration";
   }
   else if (m_opMode == operationMode::record)
   {
@@ -363,22 +433,23 @@ void IUConductor::computeFeatures()
  * Send feature data through an interface (serial, bluetooth, wifi)
  * @return true if data was sent, else false
  */
-bool IUConductor::streamData()
+bool IUConductor::streamData(HardwareSerial *port, bool newLine)
 {
-  //TODO: Need to implement also for wifi and for data sending over wifi
-  HardwareSerial *port;
   if (m_opMode != operationMode::run)
   {
     return false;
   }
   if (isDataSendTime())
   {
-    port = iuBluetooth->port;
     port->print(m_macAddress);                                                 // MAC Address
     port->print(",0"); port->print((uint8_t) m_opState); port->print(",");     // Operation State
     port->print(sensorConfigurator.iuBattery->getBatteryStatus());             // % Battery charge
-    featureConfigurator.streamFeatures(port);                     // Each feature value
+    featureConfigurator.streamFeatures(port);                                  // Each feature value
     port->print(","); port->print(getDatetime()); port->print(";");            // Datetime
+    if (newLine)
+    {
+      port->println("");
+    }
     port->flush();                                                             // End
     return true;
   }
@@ -417,6 +488,8 @@ void IUConductor::endDataAcquisition()
   }
   sensorConfigurator.iuI2S->endDataAcquisition();
   m_inDataAcquistion = false;
+  // Delay to make sure that the I2S callback function is called for the last time
+  delay(50);
 }
 
 /**
@@ -441,33 +514,22 @@ void IUConductor::processInstructionsFromI2C()
   {
     if(setupDebugMode) { debugPrint("I2C input is:"); }
     if(setupDebugMode) { debugPrint(iuI2C->getBuffer()); }
-    if (m_opMode == operationMode::run)
+    if(m_usageMode == usageMode::operation && iuI2C->checkIfStartCalibration())
     {
-      if(iuI2C->checkIfStartCollection()) // if data collection request, change the mode
-      {
-        switchToMode(operationMode::dataCollection);
-      }
+      switchToUsage(usageMode::calibration);
     }
-    else if (m_opMode == operationMode::dataCollection)
+    else if (m_usageMode == usageMode::calibration && iuI2C->checkIfEndCalibration())
     {
-      //TODO REBUILD
-      /*
-      sensorConfigurator.iuRGBLed->updateFromI2C();            // Check for LED color update
-      sensorConfigurator.iuBMX055->updateAccelRangeFromI2C();  // check for accel range update
-      bool accUpdate = iuBMX055->updateSamplingRateFromI2C();  // check for accel sampling rate update
-      bool audioUpdate = iuI2S->updateSamplingRateFromI2C();   // check for accel sampling rate update
-      if (accUpdate || audioUpdate) //Accelerometer or Audio sampling rate changed
-      {
-        ACCEL_COUNTER_TARGET = iuI2S.getTargetSample() / iuBMX055.getTargetSample();
-        accel_counter = 0;
-        subsample_counter = 0;
-      }
-      */
-      if (iuI2C->checkIfEndCollection()) //if data collection finished, change the mode
-      {
-        switchToMode(operationMode::run);
-        sensorConfigurator.iuBMX055->resetAccelScale();
-      }
+      switchToUsage(usageMode::operation);
+    }
+    if (m_opMode == operationMode::run && iuI2C->checkIfStartCollection())
+    {
+      switchToMode(operationMode::dataCollection);
+    }
+    else if (m_opMode == operationMode::dataCollection && iuI2C->checkIfEndCollection())
+    {
+      switchToMode(operationMode::run);
+      sensorConfigurator.iuBMX055->resetAccelScale();
     }
     iuI2C->resetBuffer();    // Clear wire buffer
   }
@@ -480,12 +542,10 @@ void IUConductor::processInstructionsFromI2C()
  *    include a check on data reception timeout.
  * 2. scan the content of the buffer and apply changes where needed
  */
-void IUConductor::processInstructionsFromBluetooth(String macAddress)
+void IUConductor::processInstructionsFromBluetooth()
 {
   if (m_opMode != operationMode::run)
   {
-    //TODO Currently only in run mode => check why? What about the configuration mode
-    //See also processInstructionFromI2C
     return;
   }
   char *bleBuffer = NULL;
@@ -557,7 +617,7 @@ void IUConductor::processInstructionsFromBluetooth(String macAddress)
         {
           if (loopDebugMode) { debugPrint("Record mode"); }
           iuBluetooth->port->print("REC,");
-          iuBluetooth->port->print(macAddress);
+          iuBluetooth->port->print(m_macAddress);
           IUFeature *feat = NULL;
           feat = featureConfigurator.getFeatureByName("CX3");
           if (feat)
@@ -611,8 +671,6 @@ void IUConductor::processInstructionsFromBluetooth(String macAddress)
           {
             IUFeature *feat = featureConfigurator.getFeatureById(i + 1);
             feat->setFeatureCheck((bool) fcheck[i]);
-            Serial.print(feat->getName()); Serial.print(" - ");
-            Serial.println(feat->getFeatureCheck());   
           }
         }
         break;
@@ -625,32 +683,112 @@ void IUConductor::processInstructionsFromWifi()
 
 }
 
-void IUConductor::printMsg(String msg)
+void IUConductor::setup(void (*callback)())
 {
-  iuI2C->port->println(msg);
+  if (!initInterfaces())
+  {
+    if (setupDebugMode) { debugPrint(F("Failed to initialize interfaces\n")); }
+    while(1);                                                // hang
+  }
+  if (setupDebugMode)
+  {
+    memoryLog(F("Interfaces created"));
+    debugPrint(' ');
+    iuBluetooth->exposeInfo();
+    debugPrint(' ');
+  }
+  
+  iuI2C->port->println("Successfully initialized interfaces\n");
+  iuI2C->port->println("Initializing components and setting up default configurations...");
+  
+  if (!initConfigurators())
+  {
+    iuI2C->port->println("Failed to initialize configurators\n");
+    while(1);                                                // hang
+  }
+  if (setupDebugMode)
+  {
+    memoryLog(F("Configurators created"));
+    debugPrint(' ');
+  }
+  
+  if (!initSensors())
+  {
+    iuI2C->port->println("Failed to initialize sensors\n");
+    while(1);                                                // hang
+  }
+  if (setupDebugMode)
+  {
+      memoryLog(F("Sensors created"));
+      debugPrint(' ');
+  }
+  
+  if (!featureConfigurator.doStandardSetup())
+  {
+    iuI2C->port->println("Failed to configure features\n");
+    while(1);                                                // hang
+  }
+  if (setupDebugMode)
+  {
+    memoryLog(F("Features created"));
+    debugPrint(' ');
+  }
+  
+  if (!linkFeaturesToSensors())
+  {
+    iuI2C->port->println("Failed to link feature sources to sensors\n");
+    while(1);                                                // hang
+  }
+  if (setupDebugMode)
+  {
+    memoryLog(F("Feature sources successfully linked to sensors"));
+    debugPrint(' ');
+  }
+  
+  iuI2C->port->println("Done setting up components and configurations\n");
+  
+  if (setupDebugMode)
+  {
+    sensorConfigurator.exposeSensorsAndReceivers();
+    featureConfigurator.exposeFeaturesAndReceivers();
+    featureConfigurator.exposeFeatureStates();
+    
+    debugPrint(F("I2C status: "), false);
+    debugPrint(iuI2C->getErrorMessage());
+    debugPrint(F("\nFinished setup at (ms): "), false);
+    debugPrint(millis());
+    debugPrint(' ');
+  }
+  
+  m_callback = callback;
+  switchToMode(operationMode::run);
+  switchToState(operationState::idle);
+}
+
+void IUConductor::loop()
+{
+  if (m_usageMode == usageMode::operation)
+  {
+    processInstructionsFromBluetooth();  // Receive instructions via BLE
+    processInstructionsFromI2C();        // Receive instructions to enter / exit modes, plus options during data collection
+    computeFeatures();                   // Feature computation depending on operation mode
+    streamData(iuBluetooth->port);       // Stream data over BLE
+    checkAndUpdateState();
+    checkAndUpdateMode();
+  }
+  else if (m_usageMode == usageMode::calibration)
+  {
+    processInstructionsFromI2C();        // Receive instructions to enter / exit modes
+    computeFeatures();                   // Feature computation depending on operation mode
+    streamData(iuI2C->port);             // Stream data over I2C during calibration
+  }
+  else if (m_usageMode == usageMode::configuration)
+  {
+    processInstructionsFromBluetooth();  // Receive instructions via BLE
+    processInstructionsFromI2C();        // Receive instructions to enter / exit modes
+  }
 }
 
 
 /* ====================== Diagnostic Functions, only active when setupDebugMode = true ====================== */
 
-/**
- * Send feature data through serial for debugging purpose
- */
-void IUConductor::debugStreamData()
-{
-  #ifdef DEBUGMODE
-  if (m_opMode != operationMode::run)
-  {
-    return;
-  }
-  if (isDataSendTime())
-  {
-    Serial.print(m_macAddress);                                                   // MAC Address
-    Serial.print(",0"); Serial.print((int) m_opState, DEC); Serial.print(",");    // Operation State
-    Serial.print(sensorConfigurator.iuBattery->getVoltage());                     // Battery status
-    featureConfigurator.debugStreamFeatures();                                    // Each feature value
-    Serial.print(","); Serial.print(getDatetime()); Serial.print(";");            // Datetime
-    Serial.flush();                                                               // End
-  }
-  #endif
-}

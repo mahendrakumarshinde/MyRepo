@@ -1,12 +1,14 @@
-# Infinite Uptime IDE firmware repository
+# Infinite Uptime IDE firmware repository #
 
 This repository contains several firmware versions, depending on the functionnalities and the board (see folder list below).
 Each firmware version has its own README, please refer to it.
 
 
-## Infinite Uptime Productivity
+## Infinite Uptime Productivity ##
 * /butterfly_firmware
   Buttefly firmware, close to 1st production version, only velocities still need some adjustment
+* /calibration_ui
+  A UI written in Python to calibrate IDEs and print calibration reports
 * /libraries  
   All libraries that are referenced by one or more firmwares in this directory
 * /teensy_press_firmware

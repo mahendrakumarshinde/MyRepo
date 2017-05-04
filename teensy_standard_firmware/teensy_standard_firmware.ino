@@ -25,7 +25,7 @@
 //====================== Module Configuration Variables ========================
 #define CLOCK_TYPE         (I2S_CLOCK_48K_INTERNAL)     // I2S clock
 bool statusLED = true;                                  // Status LED ON/OFF
-String MAC_ADDRESS = "88:4A:EA:69:39:1B";
+String MAC_ADDRESS = "88:4A:EA:69:38:1C";
 
 // Reduce RUN frequency if needed.
 const uint16_t AUDIO_FREQ = 8000;     // Audio frequency set to 8000 Hz
@@ -737,6 +737,24 @@ float press_energy(uint16_t startInd, uint32_t buffSize)
   return (energy[0] + energy[1] + energy[2]); //Total energy on all 3 axes
 }
 
+/**
+ * Return the max absolute value
+ * 
+ * eg: max_abs_accel(accel_x_batch[buffer_compute_index], MAX_INTERVAL_ACCEL)
+ */
+float max_abs_accel(q15_t *accel_batch, int16_t batchSize)
+{
+  float max_val(0), val(0);
+  for (uint16_t i = 0; i < batchSize; ++i)
+  {
+    val = abs(accel_batch[i]);
+    if (val > max_val)
+    {
+      max_val = val;
+    }
+  }
+  return max_val;
+}
 
 float feature_energy () {
   float ene = press_energy(0, MAX_INTERVAL_ACCEL);

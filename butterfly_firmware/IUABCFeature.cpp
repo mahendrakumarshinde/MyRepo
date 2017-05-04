@@ -22,7 +22,9 @@ IUABCFeature::IUABCFeature(uint8_t id, char *name) :
 
 IUABCFeature::~IUABCFeature()
 {
+  Serial.println("here 24");
   resetSource(true);
+  Serial.println("here 25");
 }
 
 /**
@@ -35,9 +37,15 @@ void IUABCFeature::resetSource(bool deletePtr)
   {
     for (uint16_t j = 0; j < count; j++)
     {
-      if (deletePtr)
+      Serial.print(i); Serial.print(", "); Serial.println(j);
+      if (deletePtr && m_source[i][j] != NULL)
       {
         delete m_source[i][j];
+        Serial.println("deleted");
+      }
+      else
+      {
+        Serial.println("passed");
       }
       m_source[i][j] = NULL;
     }
@@ -229,7 +237,14 @@ operationState IUABCFeature::updateState()
  */
 void IUABCFeature::stream(HardwareSerial *port)
 {
-  port->print("000");
+  if (m_id < 10)
+  {
+    port->print("000");
+  }
+  else
+  {
+    port->print("00");
+  }
   port->print(m_id);
   port->print(",");
   port->print(getLatestValue());

@@ -8,6 +8,17 @@
 #include "IULogger.h"
 
 /* ============================= Operation Enums ============================= */
+  /** 
+ * Usage modes are user controlled, they describe how the device is being used
+ */
+enum usageMode : uint8_t
+{
+  calibration      = 0,
+  configuration    = 1,
+  operation       = 2,
+  usageModeCount   = 3
+};
+
 /**
  * Operation modes are mostly user controlled, with some automatic mode switching
  */
@@ -16,17 +27,16 @@ enum operationMode : uint8_t
   run              = 0,
   charging         = 1,
   dataCollection   = 2,
-  configuration    = 3,
-  record           = 4,
-  sleep            = 5,
-  opModeCount      = 6
+  record           = 3,
+  sleep            = 4,
+  opModeCount      = 5
 }; // The number of different operation modes
 
 /**
  * Operation states describe the production status, inferred from calculated features
  * and user-defined thresholds
  */
-enum operationState : uint8_t {idle      = 0,
+enum operationState : uint8_t {idle            = 0,
                                normalCutting   = 1,
                                warningCutting  = 2,
                                badCutting      = 3,
@@ -113,6 +123,8 @@ bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTlength, bo
 bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTlength, bool inverse, q15_t *window);
 
 void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound, uint16_t rescale, bool twice = false);
+
+float getMainFrequency(q15_t *fftValues, uint16_t sampleCount, uint16_t samplingRate);
 
 
 //==============================================================================
