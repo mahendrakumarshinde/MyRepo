@@ -122,7 +122,7 @@ bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTlength, bo
 
 bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTlength, bool inverse, q15_t *window);
 
-void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound, uint16_t rescale, bool twice = false);
+void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound, uint16_t scalingFactor, bool twice = false);
 
 float getMainFrequency(q15_t *fftValues, uint16_t sampleCount, uint16_t samplingRate);
 

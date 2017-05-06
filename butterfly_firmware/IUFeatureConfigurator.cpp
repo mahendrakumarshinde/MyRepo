@@ -155,7 +155,7 @@ String IUFeatureConfigurator::calibrationConfig = "CX3-CY3-CZ3-D33-VX3-VY3-VZ3-T
 uint8_t IUFeatureConfigurator::calibrationFeatureIds[15] = {7, 8, 9, 1, 2, 3, 4, 5, 6, 10, 11, 12, 13, 14, 15};
 bool IUFeatureConfigurator::calibrationFeatureStream[15] = {false, false, false, false,
                                                            true, true, true,  // VX3, VY3, VZ3
-                                                           false, false,
+                                                           true, false,
                                                            true, true, true,
                                                            true, true, true};
 

@@ -25,7 +25,7 @@
 //====================== Module Configuration Variables ========================
 #define CLOCK_TYPE         (I2S_CLOCK_48K_INTERNAL)     // I2S clock
 bool statusLED = true;                                  // Status LED ON/OFF
-String MAC_ADDRESS = "88:4A:EA:69:38:1C";
+String MAC_ADDRESS = "88:4A:EA:69:36:C8";
 
 // Reduce RUN frequency if needed.
 const uint16_t AUDIO_FREQ = 8000;     // Audio frequency set to 8000 Hz
@@ -76,6 +76,18 @@ uint32_t accel_counter = 0;
 int max_index_X = 0;  // Frequency Index for X axis
 int max_index_Y = 0;  // Frequency Index for Y axis
 int max_index_Z = 0;  // Frequency Index for Z axis
+
+int max_index_X_2 = 0;  // 2nd max Frequency Index for X axis
+int max_index_Y_2 = 0;  // 2nd max Frequency Index for Y axis
+int max_index_Z_2 = 0;  // 2nd max Frequency Index for Z axis
+
+int max_index_X_3 = 0;  // 3rd max Frequency Index for X axis
+int max_index_Y_3 = 0;  // 3rd max Frequency Index for Y axis
+int max_index_Z_3 = 0;  // 3rd max Frequency Index for Z axis
+
+int max_index = 0;      // Global Frequency Index
+int max_index_2 = 0;    // 2nd global Frequency Index
+int max_index_3 = 0;    // 3rd global Frequency Index
 
 int chosen_features = 0;  // Number of chosen features
 
@@ -284,16 +296,7 @@ float LSB_to_ms2(int16_t accelLSB)
 {
   return ((float)accelLSB * aRes * 9.8);
 }
-// Function to estimate current temperature from BMP280 Sensor
-float currentTemperature() // Index 4
-{
-  int32_t rawTemp = readBMP280Temperature();
-  if (i2c_read_error == 0x00)
-  {
-    BMP280Temperature = (float) bmp280_compensate_T(rawTemp) / 100.;
-  }
-  return BMP280Temperature;
-}
+
 // Function to compute all the feature values to be stored on cloud
 void compute_features() {
   // Turn the boolean off immediately.
@@ -638,16 +641,48 @@ void accel_rfft() {
                accel_x_buff,
                rfft_accel_buffer);
 
-  float flatness_x = 0;
-
-  for (int ind_x = 2; ind_x < 512; ind_x++) {
+  float magnitude = 0;
+  int df = 2; // 1000.0 / 512.0;
+  
+  float flatness_x(0), flatness_x_2(0), flatness_x_3(0);
+  max_index_X = 0;
+  max_index_X_2 = 0;
+  max_index_X_3 = 0;
+  
+  for (int ind_x = 2; ind_x < 256; ind_x++)
+  {
+    magnitude = sqrt(sq(rfft_accel_buffer[2 * ind_x]) + sq(rfft_accel_buffer[2 * ind_x + 1]));
     //Serial.printf("rfft: %f, flat: %f\n", rfft_accel_buffer[ind_x], flatness_x);
-    if (rfft_accel_buffer[ind_x] > flatness_x) {
-      flatness_x = rfft_accel_buffer[ind_x];
-      max_index_X = ind_x;
+    if (magnitude > flatness_x) {
+      flatness_x_3 = flatness_x_2;
+      flatness_x_2 = flatness_x;
+      flatness_x = magnitude;
+      max_index_X_3 = max_index_X_2;
+      max_index_X_2 = max_index_X;
+      max_index_X = ind_x * df;
+      
+    }
+    else if (magnitude > flatness_x_2)
+    {
+      flatness_x_3 = flatness_x_2;
+      flatness_x_2 = magnitude;
+      max_index_X_3 = max_index_X_2;
+      max_index_X_2 = ind_x * df;
+      
+    }
+    else if (magnitude > flatness_x_3)
+    {
+      flatness_x_3 = magnitude;
+      max_index_X_3 = ind_x * df;
+      
     }
   }
-  //Serial.print("Frequency in X is: "); Serial.println(max_index_X);
+  /*
+  Serial.print("Frequencies in X are: ");
+  Serial.print(max_index_X); Serial.print(", "); 
+  Serial.print(max_index_X_2); Serial.print(", ");
+  Serial.println(max_index_X_3);
+  */
 
   // Second FFT, Y axis
   arm_rfft_init_q15(&accel_rfft_instance,
@@ -660,15 +695,45 @@ void accel_rfft() {
                accel_y_buff,
                rfft_accel_buffer);
 
-  float flatness_y = 0;
-
-  for (int ind_y = 2; ind_y < 512; ind_y++) {
-    if (rfft_accel_buffer[ind_y] > flatness_y) {
-      flatness_y = rfft_accel_buffer[ind_y];
-      max_index_Y = ind_y;
+  float flatness_y(0), flatness_y_2(0), flatness_y_3(0);
+  max_index_Y = 0;
+  max_index_Y_2 = 0;
+  max_index_Y_3 = 0;
+  
+  for (int ind_y = 2; ind_y < 256; ind_y++)
+  {
+    magnitude = sqrt(sq(rfft_accel_buffer[2 * ind_y]) + sq(rfft_accel_buffer[2 * ind_y + 1]));
+    //Serial.printf("rfft: %f, flat: %f\n", rfft_accel_buffer[ind_y], flatness_y);
+    if (magnitude > flatness_y) {
+      flatness_y_3 = flatness_y_2;
+      flatness_y_2 = flatness_y;
+      flatness_y = magnitude;
+      max_index_Y_3 = max_index_Y_2;
+      max_index_Y_2 = max_index_Y;
+      max_index_Y = ind_y * df;
+      
+    }
+    else if (magnitude > flatness_y_2)
+    {
+      flatness_y_3 = flatness_y_2;
+      flatness_y_2 = magnitude;
+      max_index_Y_3 = max_index_Y_2;
+      max_index_Y_2 = ind_y * df;
+      
+    }
+    else if (magnitude > flatness_y_3)
+    {
+      flatness_y_3 = magnitude;
+      max_index_Y_3 = ind_y * df;
+      
     }
   }
-  //Serial.print("Frequency in Y is: "); Serial.println(max_index_Y);
+  /*
+  Serial.print("Frequencies in Y are: ");
+  Serial.print(max_index_Y); Serial.print(", "); 
+  Serial.print(max_index_Y_2); Serial.print(", ");
+  Serial.println(max_index_Y_3);
+  */
 
   // Third FFT, Z axis
   arm_rfft_init_q15(&accel_rfft_instance,
@@ -681,17 +746,74 @@ void accel_rfft() {
                accel_z_buff,
                rfft_accel_buffer);
 
-  float flatness_z = 0;
-
-  for (int ind_z = 2; ind_z < 512; ind_z++) {
-    if (rfft_accel_buffer[ind_z] > flatness_z) {
-      flatness_z = rfft_accel_buffer[ind_z];
-      max_index_Z = ind_z;
+  
+  float flatness_z(0), flatness_z_2(0), flatness_z_3(0);
+  max_index_Z = 0;
+  max_index_Z_2 = 0;
+  max_index_Z_3 = 0;
+  
+  for (int ind_z = 2; ind_z < 256; ind_z++)
+  {
+    magnitude = sqrt(sq(rfft_accel_buffer[2 * ind_z]) + sq(rfft_accel_buffer[2 * ind_z + 1]));
+    //Serial.printf("rfft: %f, flat: %f\n", rfft_accel_buffer[ind_z], flatness_z);
+    if (magnitude > flatness_z) {
+      flatness_z_3 = flatness_z_2;
+      flatness_z_2 = flatness_z;
+      flatness_z = magnitude;
+      max_index_Z_3 = max_index_Z_2;
+      max_index_Z_2 = max_index_Z;
+      max_index_Z = ind_z * df;
+      
+    }
+    else if (magnitude > flatness_z_2)
+    {
+      flatness_z_3 = flatness_z_2;
+      flatness_z_2 = magnitude;
+      max_index_Z_3 = max_index_Z_2;
+      max_index_Z_2 = ind_z * df;
+      
+    }
+    else if (magnitude > flatness_z_3)
+    {
+      flatness_z_3 = magnitude;
+      max_index_Z_3 = ind_z * df;
+      
     }
   }
+  /*
+  Serial.print("Frequencies in Z are: ");
+  Serial.print(max_index_Z); Serial.print(", "); 
+  Serial.print(max_index_Z_2); Serial.print(", ");
+  Serial.println(max_index_Z_3);
+  */
+
+  if (flatness_z > flatness_y && flatness_z > flatness_x)
+  {
+    max_index = max_index_Z;
+    max_index_2 = max_index_Z_2;
+    max_index_3 = max_index_Z_3;
+  }
+  else if (flatness_y > flatness_z && flatness_y > flatness_x)
+  {
+    max_index = max_index_Y;
+    max_index_2 = max_index_Y_2;
+    max_index_3 = max_index_Y_3;
+  }
+  else
+  {
+    max_index = max_index_X;
+    max_index_2 = max_index_X_2;
+    max_index_3 = max_index_X_3;
+  }
+  /*
+  Serial.print("Global frequencies are: ");
+  Serial.print(max_index); Serial.print(", "); 
+  Serial.print(max_index_2); Serial.print(", ");
+  Serial.println(max_index_3);
+  */
 }
 
-//Serial.print("Frequency in Z is: "); Serial.println(max_index_Z);
+
 
 /*====================== Feature Computation Functions =========================*/
 
@@ -842,6 +964,18 @@ float velocityZ()
     return vel_rms_z;
   }
 }
+
+// Function to estimate current temperature from BMP280 Sensor
+float currentTemperature() // Index 4
+{
+  int32_t rawTemp = readBMP280Temperature();
+  if (i2c_read_error == 0x00)
+  {
+    BMP280Temperature = (float) bmp280_compensate_T(rawTemp) / 100.;
+  }
+  return BMP280Temperature;
+}
+
 // Function to calculate Audio data in DB
 float audioDB()
 {
