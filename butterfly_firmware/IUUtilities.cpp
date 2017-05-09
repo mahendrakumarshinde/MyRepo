@@ -140,6 +140,7 @@ float computeNormalizedRMS(uint16_t sourceSize, q15_t *source, float (*transform
  * @param scalingFactor   a scaling factor to apply to the signal (sample-wise) beforehand
  * @param removeMean      if true, the mean value is substracted from the signal, centering it around 0
  * 
+ * WARNING => Since the signal energy is squared, the resulting scaling factor will be squared as well.
  * Signal energy formula: sum((x(t)- x_mean)^2 * dt) for t in [0, dt, 2 *dt, ..., T] 
  * where x_mean = Mean(x) if removeMean is true else 0, dt = 1 / samplingFreq and T = sampleCount / samplingFreq.
  * 
@@ -155,7 +156,7 @@ float computeSignalEnergy(q15_t *values, uint16_t sampleCount, uint16_t sampling
   }
   for (int i = 0; i < sampleCount; i++)
   {
-    total += sq((values[i] - avg) * scalingFactor);
+    total += sq((float) (values[i] - avg) * scalingFactor);
   }
   return total / samplingFreq;
 }
@@ -273,7 +274,7 @@ bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTLength, bo
   {
     for (uint16_t i = 0; i < FFTLength; ++i)
     {
-      destination[i] = (q15_t) ((float) destination[i] * 32768. / (float) window[i]);
+      destination[i] = (q15_t) round((float) destination[i] * 32768. / (float) window[i]);
     }
   }
 }
@@ -292,7 +293,7 @@ void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplin
 {
   float df = (float) samplingRate / (float) sampleCount;
   uint16_t minIdx = (uint16_t) max(((float) FreqLowerBound / df), 1);
-  uint16_t maxIdx = (uint16_t) min((float) FreqHigherBound / df, sampleCount), ;
+  uint16_t maxIdx = (uint16_t) min((float) FreqHigherBound / df, sampleCount);
   float omega = 2. * PI * df / (float) scalingFactor;
   if(loopDebugMode && highVerbosity)
   {
@@ -317,8 +318,8 @@ void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplin
     float factor = - 1. / sq(omega);
     for (uint16_t i = minIdx; i < maxIdx; i++)
     {
-      values[2 * i] = (q15_t) ((float) values[2 * i] * factor / (float) sq(i));
-      values[2 * i + 1] = (q15_t) ((float) values[2 * i + 1] * factor / (float) sq(i));
+      values[2 * i] = (q15_t) round((float) values[2 * i] * factor / (float) sq(i));
+      values[2 * i + 1] = (q15_t) round((float) values[2 * i + 1] * factor / (float) sq(i));
     }
   }
   else
@@ -328,8 +329,8 @@ void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplin
     {
       real = values[2 * i];
       comp = values[2 * i + 1];
-      values[2 * i] = (q15_t) ((float) comp / ((float) i * omega));
-      values[2 * i + 1] = (q15_t) (- (float) real / ((float) i * omega));
+      values[2 * i] = (q15_t) round((float) comp / ((float) i * omega));
+      values[2 * i + 1] = (q15_t) round(- (float) real / ((float) i * omega));
     }
   }
   
@@ -346,7 +347,7 @@ float getMainFrequency(q15_t *fftValues, uint16_t sampleCount, uint16_t sampling
   float df = (float) samplingRate / (float) sampleCount;
   int maxIdx = 0;
   float amplitude(0), maxVal(0);
-  for (uint16_t i = 0; i < sampleCount; i++)
+  for (uint16_t i = 1; i < sampleCount; i++)
   {
     amplitude = sqrt(sq(fftValues[2 * i]) + sq(fftValues[2 * i + 1]));
     if (amplitude > maxVal)

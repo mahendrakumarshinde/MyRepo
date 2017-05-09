@@ -19,9 +19,9 @@
 
 float computeVelocity(q15_t *accelFFT, float accelRMS, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound); 
 
-float computeFullVelocity(q15_t *accelFFT, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound);
+float computeFullVelocity(q15_t *accelFFT, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound, float scalingFactor);
 
-float computeFullVelocity(q15_t *accelFFT, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound, q15_t *window);
+float computeFullVelocity(q15_t *accelFFT, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound, float scalingFactor, q15_t *window);
 
 float computeAcousticDB(uint8_t sourceCount, const uint16_t* sourceSize, q15_t **source);
 
@@ -390,7 +390,7 @@ class IUTriSourceSummingFeature: public IUFloatFeature
 class IUVelocityFeature512: public IUQ15Feature
 {
   public:
-    static const uint8_t sourceCount = 5;
+    static const uint8_t sourceCount = 4;
     static const uint16_t sourceSize[sourceCount];
     virtual uint8_t getSourceCount() { return sourceCount; }
     virtual uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }

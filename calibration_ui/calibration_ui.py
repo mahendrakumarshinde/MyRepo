@@ -230,11 +230,18 @@ class SerialDataCollector:
         self.parity = serial_settings.get('parity', self.default_parity)
 
     def collect_data(self, termination_byte=b';', timeout=0):
+        """
+        Generator that collect data from device
+        
+        It sends a signal to the device to enter calibration mode, and exit it
+        at the end of collection.
+        Data collection duration is timeout seconds.
+        """
         if len(termination_byte) != 1:
             raise TypeError('termination_byte arg needs to be a single byte')
         if not isinstance(termination_byte, bytes):
             termination_byte = termination_byte.encode()
-        ser = serial.Serial(self.port, self.baud_rate)
+        ser = serial.Serial(self.port, self.baud_rate, timeout=timeout)
         ser.write(self.start_collection_command)
         time.sleep(.1)
         start_time = time.time()
@@ -365,6 +372,16 @@ class CalibrationInterface(tk.Frame):
                                 termination_byte=self.data_termination_byte,
                                 timeout=timeout)
         calibration_experiment.calibrate(data_gen)
+    
+    def get_all_calibration_from_type(self, calibration_type):
+        """
+        Return all the listed calibration experiment of given type
+        """
+        calibration_experiments = []
+        for exp in self.calibration_experiments:
+            if isinstance(exp, calibration_type):
+                calibration_experiments.append(exp)
+        return calibration_experiments
     
     # ===== Graphic interface methods =====
     
@@ -497,7 +514,7 @@ class CalibrationInterface(tk.Frame):
                 label.config(text=msg)
                 label['bg'] = '#d9d9d9'
     
-    def create_pop_up_alert(self, name, text, width=450, height=100):
+    def create_pop_up_alert(self, name, text, width=450, height=110):
         alert = tk.Toplevel(self)
         self.center_window(alert, width, height)
         self.alerts[name] = alert
@@ -567,10 +584,12 @@ class CalibrationInterface(tk.Frame):
             pass
         try:
             data = CalibrationData(data)
-        except ValueError as e:
+        except (ValueError, UnboundLocalError) as e:
             invalid_data_msg ='Invalid data'
-            if e.args[0][:len(invalid_data_msg)] == invalid_data_msg:
-                self.alerts['invalid_data'].deiconify()
+            if isinstance(e, ValueError) and \
+                        e.args[0][:len(invalid_data_msg)] != invalid_data_msg:
+                raise e
+            self.alerts['invalid_data'].deiconify()
             return
         mac_address = data.get('mac_address')
         self.current_temperature = data.get('temperature')
@@ -582,6 +601,7 @@ class CalibrationInterface(tk.Frame):
     def validate_inputs(self):
         if self._input_validated:
             # Reset inputs
+            self.reset_calibrations()
             self.set_entry_states('normal')
             self.set_calibration_button_states('disabled')
             self.buttons['input_validation'].config(text='Validate')
@@ -716,17 +736,23 @@ class CalibrationInterface(tk.Frame):
         return info
     
     def print_report(self):
-        if not all(exp.done for exp in self.calibration_experiments):
-            self.alerts['calibration_incomplete'].deiconify()
-            return
+#        if not all(exp.done for exp in self.calibration_experiments):
+#            self.alerts['calibration_incomplete'].deiconify()
+#            return
         pdf = CalibrationReportPDF(title='IU Hardware Calibration Report')
         pdf.add_infos(self.get_header_info())
-        pdf.add_calibration_section(self.calibration_experiments,
-                                    'freqZ', 'rmsZ',
+        
+        # Vibration Experiments
+        experiments = self.get_all_calibration_from_type(VibrationCalibration)
+        pdf.add_calibration_section(experiments, 'freqZ', 'rmsZ',
                                     y=max(pdf.current_y, 60))
-        pdf.add_calibration_section(self.calibration_experiments,
-                                    'rmsZ', 'freqZ',
+        pdf.add_calibration_section(experiments, 'rmsZ', 'freqZ',
                                     y=max(pdf.current_y, 60))
+        pdf.add_calibration_section(experiments, 'velocityZ', 'freqZ',
+                                    y=max(pdf.current_y, 60))
+            
+        #TODO Add other experiment types here if needed
+        
         pdf.add_infos(self.get_footer_info())
         filepath = asksaveasfilename()
         if filepath[-4:] != '.pdf':
@@ -784,7 +810,7 @@ class CalibrationReportPDF(fpdf.FPDF):
         w = self.get_string_width(txt)
         self.cell(w, 9, txt, 0, 0, 'C', 0)
         self.set_font('Arial', size=15)
-        self.ln(10)
+        self.ln(15)
         
 
     def footer(self):
@@ -793,7 +819,7 @@ class CalibrationReportPDF(fpdf.FPDF):
         txt1 = 'Refer to '
         txt2 = 'infinite-uptime.com/products/industrial-data-enabler'
         
-        self.set_y(-22)
+        self.set_y(-20)
         self.cell(0, 4, '©Infinite Uptime, INC 2016', 0, 1)
         
         self.cell(self.get_string_width(txt1), 4, txt1, ln=0)
@@ -803,7 +829,7 @@ class CalibrationReportPDF(fpdf.FPDF):
                   link='http://infinite-uptime.com/products/industrial-data-enabler')
         
         # Position at 1.5 cm from bottom
-        self.set_y(-12)
+        self.set_y(-10)
         # Arial italic 8
         self.set_font('Arial', 'I', 8)
         # Text color in gray
@@ -879,6 +905,16 @@ class CalibrationReportPDF(fpdf.FPDF):
         """
         
         """
+        x = x or self.current_x
+        y = y or self.current_y
+        # check if enough room to add the table
+        bot_limit =  self.h - self.b_margin
+        table_heigth = (len(rows) + 2) * h
+        if y + table_heigth > bot_limit:
+            self.add_page() #go to next page
+            self.current_y = self.y
+            y = self.y
+
         x = x or self.current_x
         y = y or self.current_y
         self.set_xy(x, y)

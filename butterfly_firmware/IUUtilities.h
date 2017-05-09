@@ -104,6 +104,14 @@ inline q15_t getMax(q15_t *values, uint16_t count)
   return maxVal;
 }
 
+inline void copyArray(q15_t *source, q15_t *dest, int arrSize)
+{
+  for (int i = 0; i < arrSize; ++i)
+  {
+    dest[i] = source[i];
+  }
+}
+
 /*=========================== Math functions ================================= */
 
 float computeRMS(uint16_t sourceSize, q15_t *source, float (*transform)(q15_t));

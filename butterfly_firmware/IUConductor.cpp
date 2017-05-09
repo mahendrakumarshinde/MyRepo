@@ -186,7 +186,7 @@ void IUConductor::switchToUsage(usageMode mode)
   }
   else if (m_usageMode == usageMode::calibration)
   {
-    switchToMode(operationMode::sleep);
+    //switchToMode(operationMode::sleep);
     /*
     Serial.println("reset sensor receivers");
     Serial.flush();
@@ -200,14 +200,14 @@ void IUConductor::switchToUsage(usageMode mode)
     */
     setDataSendPeriod(calibrationDataSendPeriod);
     featureConfigurator.setCalibrationStreaming();
-    switchToMode(operationMode::run);
+    //switchToMode(operationMode::run);
     sensorConfigurator.iuRGBLed->changeColor(IURGBLed::CYAN_DATA); // override run mode color with calibration color
     iuI2C->silence();
     msg = "calibration";
   }
   else if (m_usageMode == usageMode::operation)
   {
-    switchToMode(operationMode::sleep);
+    //switchToMode(operationMode::sleep);
     /*
     Serial.println("reset sensor receivers");
     Serial.flush();
@@ -221,7 +221,7 @@ void IUConductor::switchToUsage(usageMode mode)
     */
     setDataSendPeriod(defaultDataSendPeriod);
     featureConfigurator.setStandardStreaming();
-    switchToMode(operationMode::run);
+    //switchToMode(operationMode::run);
     iuI2C->unsilence();
     msg = "operation";
   }

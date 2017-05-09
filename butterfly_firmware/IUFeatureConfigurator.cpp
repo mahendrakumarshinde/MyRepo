@@ -104,39 +104,39 @@ IUFeatureConfigurator::FeatureConfig IUFeatureConfigurator::registeredConfigs[IU
       
     {"VX3", // "velocity_X_512",
       {0, "", ""},
-      {5, "CX3-CX3-CX3-CX3-CX3", "99-1-2-3-4"}},   // 99 means VX3 will receive the destinationArray from CX3
+      {4, "CX3-CX3-CX3-CX3", "99-1-2-3"}},   // 99 means VX3 will receive the destinationArray from CX3
       
     {"VY3", // "velocity_Y_512",
       {0, "", ""},
-      {5, "CY3-CY3-CY3-CY3-CY3", "99-1-2-3-4"}},
+      {4, "CY3-CY3-CY3-CY3", "99-1-2-3"}},
       
     {"VZ3", // "velocity_Z_512",
       {0, "", ""},
-      {5, "CZ3-CZ3-CZ3-CZ3-CZ3", "99-1-2-3-4"}},
+      {4, "CZ3-CZ3-CZ3-CZ3", "99-1-2-3"}},
     
     {"FX3", // Freq X 512
-      {1, "CX3", "5"},
-      {0, "", ""}},
+      {0, "", ""},
+      {1, "CX3", "5"}},
       
     {"FY3", // Freq Y 512
-      {1, "CY3", "5"},
-      {0, "", ""}},
+      {0, "", ""},
+      {1, "CY3", "5"}},
       
     {"FZ3", // Freq Z 512
-      {1, "CZ3", "5"},
-      {0, "", ""}},
+      {0, "", ""},
+      {1, "CZ3", "5"}},
     
     {"RX3", // RMS X 512
-      {1, "CX3", "4"},
-      {0, "", ""}},
+      {0, "", ""},
+      {1, "CX3", "4"}},
       
     {"RY3", // RMS Y 512
-      {1, "CY3", "4"},
-      {0, "", ""}},
+      {0, "", ""},
+      {1, "CY3", "4"}},
       
     {"RZ3", // RMS Z 512
-      {1, "CZ3", "4"},
-      {0, "", ""}},
+      {0, "", ""},
+      {1, "CZ3", "4"}},
       
     {"T10", // "temperature_1_1",
       {1, "T", "0"},

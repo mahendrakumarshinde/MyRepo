@@ -113,6 +113,7 @@ void IUBMP280::processTemperatureData(uint8_t wireStatus)
 {
   int32_t rawTemp = (int32_t) (((int32_t) m_rawTempBytes[0] << 16 | (int32_t) m_rawTempBytes[1] << 8 | m_rawTempBytes[2]) >> 4);
   m_temperature = compensateTemperature(rawTemp);
+  Serial.print("temperature: "); Serial.println(m_temperature);
 }
 
 /**
