@@ -4,7 +4,7 @@ IUI2C* IUBMP280::m_iuI2C = NULL;
 uint8_t IUBMP280::m_rawTempBytes[3]; // 20-bit temperature register data stored here
 int32_t IUBMP280::m_fineTemperature = 0;
 int16_t IUBMP280::m_digTemperature[3] = {0, 0, 0};
-float IUBMP280::m_temperature = 0;
+float IUBMP280::m_temperature = 28;
 uint8_t IUBMP280::m_rawPressureBytes[3] = {0, 0, 0};
 int16_t IUBMP280::m_digPressure[9]= {0, 0, 0, 0, 0, 0, 0, 0, 0};
 float IUBMP280::m_pressure = 0;

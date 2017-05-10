@@ -31,31 +31,31 @@ IUFeatureConfigurator::FeatureConfig IUFeatureConfigurator::noConfig =
 IUFeatureConfigurator::FeatureConfig IUFeatureConfigurator::registeredConfigs[IUFeatureConfigurator::registeredCount] =
   {
     {"AX1", // "accelEnergy_X_128"
-      {2, "A-A", "0-9"},
+      {3, "A-A-A", "0-11-3"},
       {0, "", ""}},
       
     {"AY1", // "accelEnergy_Y_128",
-      {2, "A-A", "1-9"},
+      {3, "A-A-A", "1-11-3"},
       {0, "", ""}},
       
     {"AZ1", // "accelEnergy_Z_128",
-      {2, "A-A", "2-9"},
+      {3, "A-A-A", "2-11-3"},
       {0, "", ""}},
       
     {"CX1", // "IUAccelPreComputationFeature128" Precomputation of Accel signal energy and FFT
-      {2, "A-A", "0-9"},
+      {3, "A-A-A", "0-11-3"},
       {0, "", ""}},
       
     {"CY1", // "IUAccelPreComputationFeature128" Precomputation of Accel signal energy and FFT
-      {2, "A-A", "1-9"},
+      {3, "A-A-A", "1-11-3"},
       {0, "", ""}},
       
     {"CZ1", // "IUAccelPreComputationFeature128" Precomputation of Accel signal energy and FFT
-      {2, "A-A", "2-9"},
+      {3, "A-A-A", "2-11-3"},
       {0, "", ""}},
       
     {"A31", // "accelEnergy_3_128",
-      {4, "A-A-A-A", "0-1-2-9"},
+      {5, "A-A-A-A-A", "0-1-2-11-3"},
       {0, "", ""}},
       
     {"B31", // "accelEnergy_3_128" by summing 3 single axis accel energy,
@@ -67,31 +67,31 @@ IUFeatureConfigurator::FeatureConfig IUFeatureConfigurator::registeredConfigs[IU
       {3, "CX1-CY1-CZ1", "0-0-0"}},
       
     {"AX3", // "accelEnergy_X_512",
-      {2, "A-A", "0-9"},
+      {3, "A-A-A", "0-11-3"},
       {0, "", ""}},
       
     {"AY3", // "accelEnergy_Y_512",
-      {2, "A-A", "1-9"},
+      {3, "A-A-A", "1-11-3"},
       {0, "", ""}},
       
     {"AZ3", // "accelEnergy_Z_512",
-      {2, "A-A", "2-9"},
+      {3, "A-A-A", "2-11-3"},
       {0, "", ""}},
       
-    {"CX3", // "IUAccelPreComputationFeature128" Precomputation of Accel signal energy and FFT
-      {2, "A-A", "0-9"},
+    {"CX3", // "IUAccelPreComputationFeature512" Precomputation of Accel signal energy and FFT
+      {3, "A-A-A", "0-11-3"},
       {0, "", ""}},
       
-    {"CY3", // "IUAccelPreComputationFeature128" Precomputation of Accel signal energy and FFT
-      {2, "A-A", "1-9"},
+    {"CY3", // "IUAccelPreComputationFeature512" Precomputation of Accel signal energy and FFT
+      {3, "A-A-A", "1-11-3"},
       {0, "", ""}},
       
-    {"CZ3", // "IUAccelPreComputationFeature128" Precomputation of Accel signal energy and FFT
-      {2, "A-A", "2-9"},
+    {"CZ3", // "IUAccelPreComputationFeature512" Precomputation of Accel signal energy and FFT
+      {3, "A-A-A", "2-11-3"},
       {0, "", ""}},
       
     {"A33", // "accelEnergy_3_512",
-      {4, "A-A-A-A", "0-1-2-9"},
+      {5, "A-A-A-A-A", "0-1-2-11-3"},
       {0, "", ""}},
       
     {"B33", // "accelEnergy_3_512" by summing 3 single axis accel energy,
@@ -104,15 +104,15 @@ IUFeatureConfigurator::FeatureConfig IUFeatureConfigurator::registeredConfigs[IU
       
     {"VX3", // "velocity_X_512",
       {0, "", ""},
-      {4, "CX3-CX3-CX3-CX3", "99-1-2-3"}},   // 99 means VX3 will receive the destinationArray from CX3
+      {5, "CX3-CX3-CX3-CX3-CX3", "99-2-3-4-6"}},   // 99 means VX3 will receive the destinationArray from CX3
       
     {"VY3", // "velocity_Y_512",
       {0, "", ""},
-      {4, "CY3-CY3-CY3-CY3", "99-1-2-3"}},
+      {5, "CY3-CY3-CY3-CY3-CY3", "99-2-3-4-6"}},
       
     {"VZ3", // "velocity_Z_512",
       {0, "", ""},
-      {4, "CZ3-CZ3-CZ3-CZ3", "99-1-2-3"}},
+      {5, "CZ3-CZ3-CZ3-CZ3-CZ3", "99-2-3-4-6"}},
     
     {"FX3", // Freq X 512
       {0, "", ""},
@@ -211,15 +211,15 @@ void IUFeatureConfigurator::resetFeatures()
 {
   for (int i = 0; i < maxFeatureCount; i++)
   {
-    Serial.print(i); Serial.print(": "); 
+    //Serial.print(i); Serial.print(": "); 
     if(m_features[i])
     {
-      Serial.print("if ");
-      Serial.println(m_features[i]->getName());
+      //Serial.print("if ");
+      //Serial.println(m_features[i]->getName());
       delete m_features[i];
-      Serial.print("deleted");
+      //Serial.print("deleted");
       m_features[i] = NULL;
-      Serial.println("now null");
+      //Serial.println("now null");
     }
   }
   m_featureCount = 0;

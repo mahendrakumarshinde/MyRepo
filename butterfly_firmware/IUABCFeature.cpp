@@ -250,24 +250,6 @@ void IUABCFeature::stream(HardwareSerial *port)
   port->print(getLatestValue());
 }
 
-/**
- * Stream raw source data through given port
- * @param port        the port through which data must be streamed
- * @param sourceIdx   the index of the source to stream
- * @param transform   a transformation function to apply to each element of the source
- * This is useful to get a whole batch of data, and to perform computation 
- * outside of the device itself
- */
-void IUABCFeature::streamSourceData(HardwareSerial *port, uint8_t sourceIdx, float (*transform)(q15_t))
-{
-  for (int i = 0; i < getSourceSize(sourceIdx); i++) {
-      port->print(",");
-      port->print(transform(m_source[m_computeIndex][sourceIdx][i]));
-      port->flush();
-    }
-}
-
-
 /* ====================== Diagnostic Functions, only active when setupDebugMode = true ====================== */
 /**
  * Shows feature info: source and queue count and size

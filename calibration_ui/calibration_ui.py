@@ -97,6 +97,7 @@ class CalibrationExperiment:
     fields = []
     verbose_names = []
     units = []
+    unit_conversion_factors = []
     _pretty_template = \
         """
             ----------------------------------------------------
@@ -126,8 +127,9 @@ class CalibrationExperiment:
         values = defaultdict(list)
         for data_byte in data_generator:
             data = CalibrationData(data_byte)
-            for field in self.fields:
-                values[field].append(float(data.get(field)))
+            for field, factor in zip(self.fields,
+                                     self.unit_conversion_factors):
+                values[field].append(factor * float(data.get(field)))
         for field, ref_val, tol in zip(self.fields,
                                        self.ref_values,
                                        self.tolerances):
@@ -199,18 +201,21 @@ class VibrationCalibration(CalibrationExperiment):
     fields = ['rmsZ', 'freqZ', 'velocityZ']
     verbose_names = ['Accel. RMS', 'Frequency', 'Velocity RMS']
     units = ['mm/s2', 'Hz', 'mm/s']
+    unit_conversion_factors = [1000, 1, 1]
 
 
 class TemperatureCalibration(CalibrationExperiment):
     fields = ['temp']
     verbose_names = ['Temperature']
     units = ['deg C']
+    unit_conversion_factors = [1]
 
 
 class AudioCalibration(CalibrationExperiment):
     fields = ['audioDB', 'freq']
     verbose_names = ['Audio Volume', 'Frequency']
     units = ['DB', 'Hz']
+    unit_conversion_factors = [1, 1]
 
 
 class SerialDataCollector:

@@ -221,6 +221,7 @@ void IUConductor::switchToUsage(usageMode mode)
     */
     setDataSendPeriod(defaultDataSendPeriod);
     featureConfigurator.setStandardStreaming();
+    sensorConfigurator.iuRGBLed->changeColor(IURGBLed::BLUE_NOOP);
     //switchToMode(operationMode::run);
     iuI2C->unsilence();
     msg = "operation";
@@ -623,19 +624,19 @@ void IUConductor::processInstructionsFromBluetooth()
           if (feat)
           {
             iuBluetooth->port->print(",X");
-            feat->streamSourceData(iuBluetooth->port, 0, q4_11ToFloat);
+            feat->streamSourceData(iuBluetooth->port);
           }
           feat = featureConfigurator.getFeatureByName("CY3");
           if (feat)
           {
             iuBluetooth->port->print(",Y");
-            feat->streamSourceData(iuBluetooth->port, 0, q4_11ToFloat);
+            feat->streamSourceData(iuBluetooth->port);
           }
           feat = featureConfigurator.getFeatureByName("CZ3");
           if (feat)
           {
             iuBluetooth->port->print(",Z");
-            feat->streamSourceData(iuBluetooth->port, 0, q4_11ToFloat);
+            feat->streamSourceData(iuBluetooth->port);
           }
           iuBluetooth->port->print(";");
           iuBluetooth->port->flush();

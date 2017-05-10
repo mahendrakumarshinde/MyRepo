@@ -46,7 +46,8 @@ class IUFeatureProducer: public IUABCProducer
                                    sampleCount = 3,
                                    RMS = 4,
                                    mainFreq = 5,
-                                   scalarOptionCount = 6,
+                                   resolution = 6,
+                                   scalarOptionCount = 7,
                                    valueArray = 99};
     IUFeatureProducer();
     virtual ~IUFeatureProducer() {};
@@ -63,6 +64,8 @@ class IUFeatureProducer: public IUABCProducer
     virtual float getRMS() { return m_rms; }
     virtual void setMainFreq(float value) { m_mainFreq = value; }
     virtual float getMainFreq() { return m_mainFreq; }
+    virtual void setResolution(q15_t value) { m_resolution = value; }
+    virtual q15_t getResolution() { return m_resolution; }
     virtual void setState(operationState state) { m_state = state; }
     virtual operationState getState() { return m_state; }
     virtual void setHighestDangerLevel(operationState state) { m_highestDangerLevel = state; }
@@ -79,6 +82,7 @@ class IUFeatureProducer: public IUABCProducer
     q15_t *m_destination;
     uint16_t m_samplingRate;
     uint16_t m_sampleCount;
+    q15_t m_resolution;
     operationState m_state;                  // Operation state
     operationState m_highestDangerLevel;     // The most critical state ever measured
 };
@@ -152,6 +156,7 @@ class IUQ15Feature : public IUFeature
     virtual bool setSource(uint8_t sourceIndex, uint16_t valueCount, q15_t *values);
     virtual void getSource(uint8_t idx, q15_t **values) { values = m_source[idx]; }
     virtual bool receiveScalar(uint8_t sourceIndex, q15_t value);
+    virtual bool receiveScalar(uint8_t sourceIndex, float value);
     virtual void record(uint8_t idx, uint8_t sourceIndex, uint16_t recordIdx, q15_t value) { m_source[idx][sourceIndex][recordIdx] = value; }
 
   protected:
@@ -173,6 +178,7 @@ class IUFloatFeature : public IUFeature
     virtual bool setSource(uint8_t sourceIndex, uint16_t valueCount, float *values);
     virtual void getSource(uint8_t idx, float **values) { values = m_source[idx]; }
     virtual bool receiveScalar(uint8_t sourceIndex, float value);
+    virtual bool receiveScalar(uint8_t sourceIndex, q15_t value);
     virtual void record(uint8_t idx, uint8_t sourceIndex, uint16_t recordIdx, float value) { m_source[idx][sourceIndex][recordIdx] = value; }
 
   protected:
@@ -194,14 +200,16 @@ class IUFloatFeature : public IUFeature
 class IUAccelPreComputationFeature128: public IUQ15Feature
 {
   public:
-    static const uint8_t sourceCount = 2;
+    static const uint8_t sourceCount = 3;
     static const uint16_t sourceSize[sourceCount];
+    static constexpr float accelRMSThreshold = 0.25;
 
     IUAccelPreComputationFeature128(uint8_t id, char *name);
     virtual ~IUAccelPreComputationFeature128() {}
     virtual uint8_t getSourceCount() { return sourceCount; }
     virtual uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }
     virtual uint16_t const* getSourceSize() { return sourceSize; }
+    virtual void streamSourceData(HardwareSerial *port);
 
     // Specific producer
     virtual bool prepareProducer();
@@ -227,14 +235,16 @@ class IUAccelPreComputationFeature128: public IUQ15Feature
 class IUAccelPreComputationFeature512: public IUQ15Feature
 {
   public:
-    static const uint8_t sourceCount = 2;
+    static const uint8_t sourceCount = 3;
     static const uint16_t sourceSize[sourceCount];
+    static constexpr float accelRMSThreshold = 0.25;
 
     IUAccelPreComputationFeature512(uint8_t id, char *name);
     virtual ~IUAccelPreComputationFeature512() {}
     virtual uint8_t getSourceCount() { return sourceCount; }
     virtual uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }
     virtual uint16_t const* getSourceSize() { return sourceSize; }
+    virtual void streamSourceData(HardwareSerial *port);
 
     // Specific producer
     virtual bool prepareProducer();
@@ -259,7 +269,7 @@ class IUAccelPreComputationFeature512: public IUQ15Feature
 class IUSingleAxisEnergyFeature128: public IUQ15Feature
 {
   public:
-    static const uint8_t sourceCount = 2;
+    static const uint8_t sourceCount = 3;
     static const uint16_t sourceSize[sourceCount];
     virtual uint8_t getSourceCount() { return sourceCount; }
     virtual uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }
@@ -286,7 +296,7 @@ class IUSingleAxisEnergyFeature128: public IUQ15Feature
 class IUTriAxisEnergyFeature128: public IUQ15Feature
 {
   public:
-    static const uint8_t sourceCount = 4;
+    static const uint8_t sourceCount = 5;
     static const uint16_t sourceSize[sourceCount];
     virtual uint8_t getSourceCount() { return sourceCount; }
     virtual uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }
@@ -311,7 +321,7 @@ class IUTriAxisEnergyFeature128: public IUQ15Feature
 class IUSingleAxisEnergyFeature512: public IUQ15Feature
 {
   public:
-    static const uint8_t sourceCount = 2;
+    static const uint8_t sourceCount = 3;
     static const uint16_t sourceSize[sourceCount];
     virtual uint8_t getSourceCount() { return sourceCount; }
     virtual uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }
@@ -338,7 +348,7 @@ class IUSingleAxisEnergyFeature512: public IUQ15Feature
 class IUTriAxisEnergyFeature512: public IUQ15Feature
 {
   public:
-    static const uint8_t sourceCount = 4;
+    static const uint8_t sourceCount = 5;
     static const uint16_t sourceSize[sourceCount];
     virtual uint8_t getSourceCount() { return sourceCount; }
     virtual uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }
@@ -390,8 +400,9 @@ class IUTriSourceSummingFeature: public IUFloatFeature
 class IUVelocityFeature512: public IUQ15Feature
 {
   public:
-    static const uint8_t sourceCount = 4;
+    static const uint8_t sourceCount = 5;
     static const uint16_t sourceSize[sourceCount];
+    static const q15_t accelRMSThreshold = (q15_t) (0.25 * 32768);
     virtual uint8_t getSourceCount() { return sourceCount; }
     virtual uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }
     virtual uint16_t const* getSourceSize() { return sourceSize; }

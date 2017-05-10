@@ -122,17 +122,19 @@ class IUBMX055 : public IUABCSensor
                             enhancedRegular,           // rms noise ~0.5 microTesla, 0.8 mA power
                             highAccuracy};             // rms noise ~0.3 microTesla, 4.9 mA power
 
-    enum dataSendOption : uint8_t {xAccel = 0,         // Options of data to send to receivers
-                                   yAccel = 1,         // Can be data from one of the 3 sensors on 1 axis
-                                   zAccel = 2,
-                                   xGyro  = 3,
-                                   yGyro  = 4,
-                                   zGyro  = 5,
-                                   xMag   = 6,
-                                   yMag   = 7,
-                                   zMag   = 8,
-                                   samplingRate = 9,
-                                   optionCount = 10};
+    enum dataSendOption : uint8_t {xAccel          = 0, // Options of data to send to receivers
+                                   yAccel          = 1, // Can be data from one of the 3 sensors on 1 axis
+                                   zAccel          = 2,
+                                   accelResolution = 3,
+                                   xGyro           = 4,
+                                   yGyro           = 5,
+                                   zGyro           = 6,
+                                   gyroResolution  = 7,
+                                   xMag            = 8,
+                                   yMag            = 9,
+                                   zMag            = 10,
+                                   samplingRate    = 11,
+                                   optionCount     = 12};
 
     static const uint16_t defaultSamplingRate = 1000; // Hz
 
@@ -181,9 +183,9 @@ class IUBMX055 : public IUABCSensor
     // Accelerometer:
     static uint8_t m_rawAccelBytes[6];                // 12bits / 2 bytes per axis: LSB, MSB => last 4 bits of LSB are not data, they are flags
     static q15_t m_rawAccel[3];                       // Stores the Q15 accelerometer sensor raw output
-    static q15_t m_accelData[3];                      // Stores the Q4.11 acceleration data (with resolution and bias) in G
+    static q15_t m_accelData[3];                      // Stores the Q15 acceleration data (with bias) in G
     static q15_t m_accelBias[3];                      // Bias corrections
-    static float m_accelResolution;                   // Resolution
+    static q15_t m_accelResolution;                   // Resolution
     static void processAccelData(uint8_t wireStatus);
     accelScaleOption m_accelScale;                    // Scale
     accelBandwidthOption m_accelBandwidth;            // Bandwidth
@@ -194,7 +196,7 @@ class IUBMX055 : public IUABCSensor
     int16_t m_rawGyro[3];         // Stores the 16-bit signed gyro sensor output
     float m_g[3];                 // Latest data values
     float m_gyroBias[3];          // Bias corrections
-    float m_gyroResolution;       // Resolution
+    q15_t m_gyroResolution;       // Resolution
     uint8_t m_gyroScale;          // Scale
 
     // Magnetometer:

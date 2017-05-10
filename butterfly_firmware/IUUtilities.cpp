@@ -294,24 +294,13 @@ void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplin
   float df = (float) samplingRate / (float) sampleCount;
   uint16_t minIdx = (uint16_t) max(((float) FreqLowerBound / df), 1);
   uint16_t maxIdx = (uint16_t) min((float) FreqHigherBound / df, sampleCount);
-  float omega = 2. * PI * df / (float) scalingFactor;
-  if(loopDebugMode && highVerbosity)
-  {
-    debugPrint("df, minFreq, maxFreq, minIdx, maxIdx");
-    debugPrint(df, false); debugPrint(", ", false); 
-    debugPrint(FreqLowerBound, false); debugPrint(", ", false); 
-    debugPrint(FreqHigherBound, false); debugPrint(", ", false); 
-    debugPrint(minIdx, false); debugPrint(", ", false); 
-    debugPrint(maxIdx);
-  }
-  
+  float omega = 2. * PI * df / (float) scalingFactor;  
   // Apply high pass filter
   for (uint16_t i = 0; i < minIdx; i++)
   {
     values[2 * i] = 0;
     values[2 * i + 1] = 0;
   }
-  
   // Integrate accel FFT (divide by j * idx * omega)
   if (twice)
   {
@@ -333,7 +322,6 @@ void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplin
       values[2 * i + 1] = (q15_t) round(- (float) real / ((float) i * omega));
     }
   }
-  
   // Apply high pass filter
   for (uint16_t i = maxIdx; i < sampleCount; i++)
   {
@@ -347,7 +335,7 @@ float getMainFrequency(q15_t *fftValues, uint16_t sampleCount, uint16_t sampling
   float df = (float) samplingRate / (float) sampleCount;
   int maxIdx = 0;
   float amplitude(0), maxVal(0);
-  for (uint16_t i = 1; i < sampleCount; i++)
+  for (uint16_t i = 2; i < sampleCount / 2; i++) // Start at 2 to ignore DC component
   {
     amplitude = sqrt(sq(fftValues[2 * i]) + sq(fftValues[2 * i + 1]));
     if (amplitude > maxVal)

@@ -70,22 +70,9 @@ inline float q15ToFloat(q15_t value) { return ((float) value) / 32768.0; }
 
 inline q15_t floatToq15(float value) { return (q15_t) (32768 * value); }
 
-inline float q4_11ToFloat(q15_t value) { return ((float) value) / 2048.0; }
+inline float toMS2(q15_t value, q15_t accelResolution) { return (float) value * (float) accelResolution * 9.8065 / 32768.0; }
 
-inline q15_t floatToq4_11(float value) { return (q15_t) (2048 * value); }
-
-inline float q13_2ToFloat(q15_t value) { return ((float) value) / 4.0; }
-
-inline q15_t floatToq13_2(float value) { return (q15_t) (4 * value); }
-
-inline float g_to_ms2(float value) { return 9.8 * value; }
-
-inline q15_t g_to_ms2(q15_t value) { return 9.8 * value; }
-
-inline float ms2_to_g(float value) { return value / 9.8; }
-
-inline q15_t ms2_to_g(q15_t value) { return value / 9.8; }
-
+inline float getFactorToMS2(q15_t accelResolution) { return (float) accelResolution * 9.8065 / 32768.0; }
 
 inline q15_t getMax(q15_t *values, uint16_t count)
 {
