@@ -22,7 +22,9 @@ IUABCFeature::IUABCFeature(uint8_t id, char *name) :
 
 IUABCFeature::~IUABCFeature()
 {
+  Serial.println("here 24");
   resetSource(true);
+  Serial.println("here 25");
 }
 
 /**
@@ -35,9 +37,15 @@ void IUABCFeature::resetSource(bool deletePtr)
   {
     for (uint16_t j = 0; j < count; j++)
     {
-      if (deletePtr)
+      Serial.print(i); Serial.print(", "); Serial.println(j);
+      if (deletePtr && m_source[i][j] != NULL)
       {
         delete m_source[i][j];
+        Serial.println("deleted");
+      }
+      else
+      {
+        Serial.println("passed");
       }
       m_source[i][j] = NULL;
     }
@@ -229,29 +237,18 @@ operationState IUABCFeature::updateState()
  */
 void IUABCFeature::stream(HardwareSerial *port)
 {
-  port->print("000");
+  if (m_id < 10)
+  {
+    port->print("000");
+  }
+  else
+  {
+    port->print("00");
+  }
   port->print(m_id);
   port->print(",");
   port->print(getLatestValue());
 }
-
-/**
- * Stream raw source data through given port
- * @param port        the port through which data must be streamed
- * @param sourceIdx   the index of the source to stream
- * @param transform   a transformation function to apply to each element of the source
- * This is useful to get a whole batch of data, and to perform computation 
- * outside of the device itself
- */
-void IUABCFeature::streamSourceData(HardwareSerial *port, uint8_t sourceIdx, float (*transform)(q15_t))
-{
-  for (int i = 0; i < getSourceSize(sourceIdx); i++) {
-      port->print(",");
-      port->print(transform(m_source[m_computeIndex][sourceIdx][i]));
-      port->flush();
-    }
-}
-
 
 /* ====================== Diagnostic Functions, only active when setupDebugMode = true ====================== */
 /**

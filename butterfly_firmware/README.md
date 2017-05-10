@@ -8,8 +8,8 @@ It requires to install custom board libraries (via the board manager in the Ardu
 
 ### Additional libraries ###
 Required additionnal libraries can be found in this repository, as .zip folders:
-- Arduino-MemoryFree-master.zip, also available [here](https://github.com/mpflaga/Arduino-MemoryFree)
-- arduinounit-master.zip, also available [here](https://github.com/mmurdoch/arduinounit)
+- Arduino-MemoryFree.zip, also available [here](https://github.com/mpflaga/Arduino-MemoryFree)
+- IUArduinoUnit.zip. This is a modified version of [arduinounit](https://github.com/mmurdoch/arduinounit), where we removed the "free memory" functionnality (not working for the Butterfly), that we replaced with the Arduino-MemoryFree.
 - IUButterflyI2S.zip, that is basically the same I2S library developped than in the Butterfly board package (see above), but with some modified constants. In particular, the I2S_BUFFER_SIZE need to be modified to adjust the I2S Tx callback rate.
 
 These libraries can be installed in the Arduino IDE in the menu Sketch > Include Library > Add .ZIP Library.

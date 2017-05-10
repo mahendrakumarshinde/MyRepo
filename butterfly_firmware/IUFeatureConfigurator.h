@@ -18,8 +18,8 @@ class IUFeatureConfigurator
   public:
     // Arrays have to be initialized with a fixed size,
     // so we chose max_size = max number of features per collections
-    static const uint8_t maxFeatureCount = 10;
-    static const uint8_t registeredCount = 24;
+    static const uint8_t maxFeatureCount = 20;
+    static const uint8_t registeredCount = 30;
     static const char nameSeparator = '-';
 
     struct Dependencies {
@@ -41,12 +41,15 @@ class IUFeatureConfigurator
 
     static FeatureConfig noConfig; // Handle no config found cases.
     static FeatureConfig registeredConfigs[registeredCount];
-
+    
+    static String calibrationConfig;
+    static uint8_t calibrationFeatureIds[15];
+    static bool calibrationFeatureStream[15];
     static String standardConfig;
-    static uint8_t standardFeatureIds[9];
-    static float standardThresholds[9][3];
-    static bool standardFeatureStream[9];
-    static bool standardFeatureCheck[9];
+    static uint8_t standardFeatureIds[15];
+    static float standardThresholds[15][3];
+    static bool standardFeatureStream[15];
+    static bool standardFeatureCheck[15];
     static String pressConfig;
     static uint8_t pressFeatureIds[4];
     static float pressThresholds[4][3];
@@ -65,8 +68,11 @@ class IUFeatureConfigurator
     bool registerAllFeaturesInSensors(IUABCSensor **sensors, uint8_t sensorCount);
     int createWithDependencies(FeatureConfig config, uint8_t id);
     bool requireConfiguration(String configBufffer);
+    bool doCalibrationSetup();
     bool doStandardSetup();
     bool doPressSetup();
+    void setCalibrationStreaming();
+    void setStandardStreaming();
     IUFeature* createFeature(FeatureConfig config, uint8_t id = 0);
     IUFeature* getFeature(uint8_t index) {return m_features[index]; }
     IUFeature* getFeatureById(uint8_t id);
@@ -76,10 +82,10 @@ class IUFeatureConfigurator
     void resetFeaturesCounters();
     operationState getOperationStateFromFeatures();
     uint8_t streamFeatures(HardwareSerial *port);
+    void resetAllReceivers();
     // Diagnostic Functions
     void exposeFeaturesAndReceivers();
     void exposeFeatureStates();
-    void debugStreamFeatures();
 
 
   protected:

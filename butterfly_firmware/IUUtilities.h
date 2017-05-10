@@ -8,6 +8,17 @@
 #include "IULogger.h"
 
 /* ============================= Operation Enums ============================= */
+  /** 
+ * Usage modes are user controlled, they describe how the device is being used
+ */
+enum usageMode : uint8_t
+{
+  calibration      = 0,
+  configuration    = 1,
+  operation       = 2,
+  usageModeCount   = 3
+};
+
 /**
  * Operation modes are mostly user controlled, with some automatic mode switching
  */
@@ -16,17 +27,16 @@ enum operationMode : uint8_t
   run              = 0,
   charging         = 1,
   dataCollection   = 2,
-  configuration    = 3,
-  record           = 4,
-  sleep            = 5,
-  opModeCount      = 6
+  record           = 3,
+  sleep            = 4,
+  opModeCount      = 5
 }; // The number of different operation modes
 
 /**
  * Operation states describe the production status, inferred from calculated features
  * and user-defined thresholds
  */
-enum operationState : uint8_t {idle      = 0,
+enum operationState : uint8_t {idle            = 0,
                                normalCutting   = 1,
                                warningCutting  = 2,
                                badCutting      = 3,
@@ -60,22 +70,9 @@ inline float q15ToFloat(q15_t value) { return ((float) value) / 32768.0; }
 
 inline q15_t floatToq15(float value) { return (q15_t) (32768 * value); }
 
-inline float q4_11ToFloat(q15_t value) { return ((float) value) / 2048.0; }
+inline float toMS2(q15_t value, q15_t accelResolution) { return (float) value * (float) accelResolution * 9.8065 / 32768.0; }
 
-inline q15_t floatToq4_11(float value) { return (q15_t) (2048 * value); }
-
-inline float q13_2ToFloat(q15_t value) { return ((float) value) / 4.0; }
-
-inline q15_t floatToq13_2(float value) { return (q15_t) (4 * value); }
-
-inline float g_to_ms2(float value) { return 9.8 * value; }
-
-inline q15_t g_to_ms2(q15_t value) { return 9.8 * value; }
-
-inline float ms2_to_g(float value) { return value / 9.8; }
-
-inline q15_t ms2_to_g(q15_t value) { return value / 9.8; }
-
+inline float getFactorToMS2(q15_t accelResolution) { return (float) accelResolution * 9.8065 / 32768.0; }
 
 inline q15_t getMax(q15_t *values, uint16_t count)
 {
@@ -92,6 +89,14 @@ inline q15_t getMax(q15_t *values, uint16_t count)
     }
   }
   return maxVal;
+}
+
+inline void copyArray(q15_t *source, q15_t *dest, int arrSize)
+{
+  for (int i = 0; i < arrSize; ++i)
+  {
+    dest[i] = source[i];
+  }
 }
 
 /*=========================== Math functions ================================= */
@@ -112,7 +117,9 @@ bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTlength, bo
 
 bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTlength, bool inverse, q15_t *window);
 
-void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound, uint16_t rescale, bool twice = false);
+void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound, uint16_t scalingFactor, bool twice = false);
+
+float getMainFrequency(q15_t *fftValues, uint16_t sampleCount, uint16_t samplingRate);
 
 
 //==============================================================================

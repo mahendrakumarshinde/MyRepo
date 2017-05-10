@@ -44,11 +44,10 @@ const uint32_t RESTING_INTERVAL = 0;  // Inter-batch gap
 
 //====================== Instanciate Conductor from IU library ========================
 
-IUConductor conductor;
 bool doOnce = true;
 uint32_t interval = 500; //ms
 uint32_t lastDisplay = 0;
-
+IUConductor conductor;
 
 //==============================================================================
 //================================= Main Code ==================================
@@ -82,11 +81,10 @@ void setup()
     if (debugMode)
     {
       Serial.begin(115200);
-      debugPrint(F("Start\n"));
       delay(2000);
+      debugPrint(F("Start\n"));
     }
-  
-    delay(2000);
+    
     if (setupDebugMode)
     {
       memoryLog("Start");
@@ -99,84 +97,7 @@ void setup()
       debugPrint(' ');
     }
     
-    if (!conductor.initInterfaces())
-    {
-      if (setupDebugMode) { debugPrint(F("Failed to initialize interfaces\n")); }
-      while(1);                                                // hang
-    }
-    if (setupDebugMode)
-    {
-      memoryLog(F("Interfaces created"));
-      debugPrint(' ');
-      conductor.iuBluetooth->exposeInfo();
-      debugPrint(' ');
-    }
-    
-    conductor.printMsg("Successfully initialized interfaces\n");
-    conductor.printMsg("Initializing components and setting up default configurations...");
-    
-    if (!conductor.initConfigurators())
-    {
-      conductor.printMsg("Failed to initialize configurators\n");
-      while(1);                                                // hang
-    }
-    if (setupDebugMode)
-    {
-      memoryLog(F("Configurators created"));
-      debugPrint(' ');
-    }
-    
-    if (!conductor.initSensors())
-    {
-      conductor.printMsg("Failed to initialize sensors\n");
-      while(1);                                                // hang
-    }
-    if (setupDebugMode)
-    {
-        memoryLog(F("Sensors created"));
-        debugPrint(' ');
-    }
-    
-    if (!conductor.featureConfigurator.doStandardSetup())
-    {
-      conductor.printMsg("Failed to configure features\n");
-      while(1);                                                // hang
-    }
-    if (setupDebugMode)
-    {
-      memoryLog(F("Features created"));
-      debugPrint(' ');
-    }
-    
-    if (!conductor.linkFeaturesToSensors())
-    {
-      conductor.printMsg("Failed to link feature sources to sensors\n");
-      while(1);                                                // hang
-    }
-    if (setupDebugMode)
-    {
-      memoryLog(F("Feature sources successfully linked to sensors"));
-      debugPrint(' ');
-    }
-    
-    conductor.printMsg("Done setting up components and configurations\n");
-    
-    if (setupDebugMode)
-    {
-      conductor.sensorConfigurator.exposeSensorsAndReceivers();
-      conductor.featureConfigurator.exposeFeaturesAndReceivers();
-      conductor.featureConfigurator.exposeFeatureStates();
-      
-      debugPrint(F("I2C status: "), false);
-      debugPrint(conductor.iuI2C->getErrorMessage());
-      debugPrint(F("\nFinished setup at (ms): "), false);
-      debugPrint(millis());
-      debugPrint(' ');
-    }
-    
-    conductor.setCallback(callback);
-    conductor.switchToMode(operationMode::run);
-    conductor.switchToState(operationState::idle);
+    conductor.setup(callback);
    
    #endif
 }
@@ -188,7 +109,7 @@ void loop()
     Test::run();
 
   #else
-  
+
     if (loopDebugMode)
     {
       if (doOnce)
@@ -208,12 +129,8 @@ void loop()
         /*======*/
       }
     }
-    conductor.processInstructionsFromBluetooth(MAC_ADDRESS);  // Receive instructions via BLE during run mode
-    conductor.processInstructionsFromI2C();                   // Receive instructions to enter / exit data collection mode, plus options during data collection
-    conductor.computeFeatures();                              // Conductor handles feature computation depending on operation mode
-    conductor.streamData();                                   // Stream data over BLE during run mode
-    conductor.checkAndUpdateState();
-    conductor.checkAndUpdateMode();
+
+    conductor.loop();
     
   #endif
 }

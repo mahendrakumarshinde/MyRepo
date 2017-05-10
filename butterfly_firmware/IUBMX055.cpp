@@ -6,7 +6,7 @@ uint8_t IUBMX055::m_rawAccelBytes[6] = {0, 0, 0, 0, 0, 0};
 q15_t IUBMX055::m_rawAccel[3] = {0, 0, 0};
 q15_t IUBMX055::m_accelData[3] = {0, 0, 0};
 q15_t IUBMX055::m_accelBias[3] = {0, 0, 0};
-float IUBMX055::m_accelResolution = 0;
+q15_t IUBMX055::m_accelResolution = 0;
 
 /* ================================= Method definition ================================= */
 
@@ -95,16 +95,16 @@ void IUBMX055::computeAccelResolution() {
    // Possible accelerometer scales (and their register bit settings) are:
   // 2 Gs (0011), 4 Gs (0101), 8 Gs (1000), and 16 Gs  (1100).
     case AFS_2G:
-          m_accelResolution = 2.0f;
+          m_accelResolution = 2;
           break;
     case AFS_4G:
-          m_accelResolution = 4.0f;
+          m_accelResolution = 4;
           break;
     case AFS_8G:
-          m_accelResolution = 8.0f;
+          m_accelResolution = 8;
           break;
     case AFS_16G:
-          m_accelResolution = 16.0f;
+          m_accelResolution = 16;
           break;
   }
 }
@@ -239,16 +239,16 @@ void IUBMX055::doAcellFastCompensation(float * dest1)
   int8_t compy = m_iuI2C->readByte(ACC_ADDRESS, ACC_OFC_OFFSET_Y);
   int8_t compz = m_iuI2C->readByte(ACC_ADDRESS, ACC_OFC_OFFSET_Z);
 
-  // Convert to G in 12bit (for consistance with the accel readings, that are on 12bits)
-  m_accelBias[0] = (uint16_t) compx << 4;
-  m_accelBias[1] = (uint16_t) compy << 4;
-  m_accelBias[2] = (uint16_t) compz << 4;
+  // Convert to G in 15bit (for consistance with the accel readings)
+  m_accelBias[0] = (uint16_t) compx << 8;
+  m_accelBias[1] = (uint16_t) compy << 8;
+  m_accelBias[2] = (uint16_t) compz << 8;
   if (setupDebugMode)
   {
     debugPrint("accel biases (mG):");
-    debugPrint(1000 * q4_11ToFloat(m_accelBias[0]));
-    debugPrint(1000 * q4_11ToFloat(m_accelBias[1]));
-    debugPrint(1000 * q4_11ToFloat(m_accelBias[2]));
+    debugPrint(1000 * q15ToFloat(m_accelBias[0]));
+    debugPrint(1000 * q15ToFloat(m_accelBias[1]));
+    debugPrint(1000 * q15ToFloat(m_accelBias[2]));
   }
 }
 
@@ -270,7 +270,7 @@ void IUBMX055::readAccelData()
 }
 
 /**
- * Process acceleration data and store it as a Q4.11 (signed 4-integer-bit and 11-fractionnal-bit)
+ * Process acceleration data and store it as a Q15 (signed 15-fractionnal-bit)
  * Data is read from device as 2 bytes: LSB first (4 bits to use) then MSB (8 bits to use)
  * 4 last bits of LSB byte are used as flags (new data, etc).
  */
@@ -286,9 +286,8 @@ void IUBMX055::processAccelData(uint8_t wireStatus)
     // use 8 bits of MSB and only the 4 left-most bits of LSB (NB Casting has precedence over << or >> operators)
     m_rawAccel[i] = (int16_t) (((int16_t)m_rawAccelBytes[2 * i + 1] << 8) | (m_rawAccelBytes[2 * i] & 0xF0));
     
-    // Convert to Q4.11 (divide by 2^4) without losing precision since it was originally 12bit data, and then
-    // multiply by resolution to have a measure in G and add the bias
-    m_accelData[i] = m_rawAccel[i] * m_accelResolution / 16 + m_accelBias[i];
+    // Add bias
+    m_accelData[i] = m_rawAccel[i] + m_accelBias[i];
   }
   // Serial.print(m_accelData[0]); Serial.print(' '); Serial.print(m_accelData[1]); Serial.print(' '); Serial.println(m_accelData[2]);
 }
@@ -322,6 +321,9 @@ void IUBMX055::sendToReceivers()
         case (uint8_t) dataSendOption::zAccel:
           m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], m_accelData[2]);
           break;
+        case (uint8_t) dataSendOption::accelResolution:
+          m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], m_accelResolution);
+          break;
         case (uint8_t) dataSendOption::samplingRate:
           m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], (q15_t) m_samplingRate);
           break;
@@ -346,7 +348,7 @@ void IUBMX055::dumpDataThroughI2C()
   for (uint8_t i = 0; i < 3; i++)
   {
     // Stream float value as 4 bytes
-    accel = q4_11ToFloat(m_accelData[i]);
+    accel = q15ToFloat(m_accelData[i]);
     data = (byte *) &accel;
     m_iuI2C->port->write(data, 4);
   }
@@ -365,11 +367,11 @@ void IUBMX055::dumpDataForDebugging()
     return;
   }
   m_iuI2C->port->print("AX: ");
-  m_iuI2C->port->println(q4_11ToFloat(m_accelData[0]), 4);
+  m_iuI2C->port->println(q15ToFloat(m_accelData[0]), 4);
   m_iuI2C->port->print("AY: ");
-  m_iuI2C->port->println(q4_11ToFloat(m_accelData[1]), 4);
+  m_iuI2C->port->println(q15ToFloat(m_accelData[1]), 4);
   m_iuI2C->port->print("AZ: ");
-  m_iuI2C->port->println(q4_11ToFloat(m_accelData[2]), 4);
+  m_iuI2C->port->println(q15ToFloat(m_accelData[2]), 4);
   m_iuI2C->port->flush();
   m_newData = false;
 }

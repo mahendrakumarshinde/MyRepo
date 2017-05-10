@@ -156,6 +156,17 @@ void IUSensorConfigurator::acquireAndStoreData()
   }
 }
 
+/**
+ * Reset the pointers of all the sensor receivers to NULL
+ */
+void IUSensorConfigurator::resetAllReceivers()
+{
+  for (uint8_t i = 0; i < sensorCount; i++)
+  {
+    m_sensors[i]->resetReceivers();
+  }
+}
+
 /* ====================== Diagnostic Functions, only active when setupDebugMode = true ====================== */
 
 /**

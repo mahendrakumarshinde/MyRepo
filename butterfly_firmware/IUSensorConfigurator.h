@@ -27,6 +27,7 @@ class IUSensorConfigurator
     void acquireDataAndSendToReceivers();
     void acquireDataAndDumpThroughI2C();
     void acquireAndStoreData();
+    void resetAllReceivers();
     // Diagnostic Functions
     void exposeSensorsAndReceivers();
     // Public members for sensors for convenience

@@ -74,7 +74,7 @@ class IUABCFeature
     virtual bool isTimeToEndRecord();
     virtual bool compute();
     virtual void stream(HardwareSerial *port);
-    virtual void streamSourceData(HardwareSerial *port, uint8_t sourceIdx, float (*transform)(q15_t));
+    virtual void streamSourceData(HardwareSerial *port) {}
 
     // Diagnostic Functions
     virtual void exposeSourceConfig();

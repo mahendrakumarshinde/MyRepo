@@ -18,6 +18,8 @@ IUABCProducer::~IUABCProducer()
 
 /**
  * Reset pointers to receivers to NULL
+ * 
+ * DO NOT DELETE the receivers, since they are not the producer responsability
  * NB: This method should be virtual since it's used in constructor and destructor.
  */
 void IUABCProducer::resetReceivers()
@@ -27,8 +29,9 @@ void IUABCProducer::resetReceivers()
   {
     if (m_receivers[i])
     {
-      delete m_receivers[i]; m_receivers[i] = NULL;
+      Serial.print("resetting "); Serial.println(m_receivers[i]->getName());
     }
+    m_receivers[i] = NULL;
     m_receiverSourceIndex[i] = 0;
   }
 }

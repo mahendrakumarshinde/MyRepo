@@ -140,6 +140,7 @@ float computeNormalizedRMS(uint16_t sourceSize, q15_t *source, float (*transform
  * @param scalingFactor   a scaling factor to apply to the signal (sample-wise) beforehand
  * @param removeMean      if true, the mean value is substracted from the signal, centering it around 0
  * 
+ * WARNING => Since the signal energy is squared, the resulting scaling factor will be squared as well.
  * Signal energy formula: sum((x(t)- x_mean)^2 * dt) for t in [0, dt, 2 *dt, ..., T] 
  * where x_mean = Mean(x) if removeMean is true else 0, dt = 1 / samplingFreq and T = sampleCount / samplingFreq.
  * 
@@ -155,7 +156,7 @@ float computeSignalEnergy(q15_t *values, uint16_t sampleCount, uint16_t sampling
   }
   for (int i = 0; i < sampleCount; i++)
   {
-    total += sq((values[i] - avg) * scalingFactor);
+    total += sq((float) (values[i] - avg) * scalingFactor);
   }
   return total / samplingFreq;
 }
@@ -273,7 +274,7 @@ bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTLength, bo
   {
     for (uint16_t i = 0; i < FFTLength; ++i)
     {
-      destination[i] = (q15_t) ((float) destination[i] * 32768. / (float) window[i]);
+      destination[i] = (q15_t) round((float) destination[i] * 32768. / (float) window[i]);
     }
   }
 }
@@ -288,37 +289,26 @@ bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTLength, bo
  * @param FreqHigherBound   freq higher bound for bandpass filtering
  * @param twice             set to false (default) to integrate once, set to true to integrate twice
  */
-void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound, uint16_t rescale, bool twice)
+void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound, uint16_t scalingFactor, bool twice)
 {
   float df = (float) samplingRate / (float) sampleCount;
-  uint16_t minIdx = (uint16_t) ((float) FreqLowerBound / df);
+  uint16_t minIdx = (uint16_t) max(((float) FreqLowerBound / df), 1);
   uint16_t maxIdx = (uint16_t) min((float) FreqHigherBound / df, sampleCount);
-  float omega = 2. * PI * df / (float) rescale;
-  if(loopDebugMode && highVerbosity)
-  {
-    debugPrint("df, minFreq, maxFreq, minIdx, maxIdx");
-    debugPrint(df, false); debugPrint(", ", false); 
-    debugPrint(FreqLowerBound, false); debugPrint(", ", false); 
-    debugPrint(FreqHigherBound, false); debugPrint(", ", false); 
-    debugPrint(minIdx, false); debugPrint(", ", false); 
-    debugPrint(maxIdx);
-  }
-  
+  float omega = 2. * PI * df / (float) scalingFactor;  
   // Apply high pass filter
   for (uint16_t i = 0; i < minIdx; i++)
   {
     values[2 * i] = 0;
     values[2 * i + 1] = 0;
   }
-  
   // Integrate accel FFT (divide by j * idx * omega)
   if (twice)
   {
     float factor = - 1. / sq(omega);
     for (uint16_t i = minIdx; i < maxIdx; i++)
     {
-      values[2 * i] = (q15_t) ((float) values[2 * i] * factor / (float) i);
-      values[2 * i + 1] = (q15_t) ((float) values[2 * i + 1] * factor / (float) i);
+      values[2 * i] = (q15_t) round((float) values[2 * i] * factor / (float) sq(i));
+      values[2 * i + 1] = (q15_t) round((float) values[2 * i + 1] * factor / (float) sq(i));
     }
   }
   else
@@ -328,17 +318,33 @@ void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplin
     {
       real = values[2 * i];
       comp = values[2 * i + 1];
-      values[2 * i] = (q15_t) ((float) comp / ((float) i * omega));
-      values[2 * i + 1] = (q15_t) (- (float) real / ((float) i * omega));
+      values[2 * i] = (q15_t) round((float) comp / ((float) i * omega));
+      values[2 * i + 1] = (q15_t) round(- (float) real / ((float) i * omega));
     }
   }
-  
   // Apply high pass filter
   for (uint16_t i = maxIdx; i < sampleCount; i++)
   {
     values[2 * i] = 0;
     values[2 * i + 1] = 0;
   }
+}
+
+float getMainFrequency(q15_t *fftValues, uint16_t sampleCount, uint16_t samplingRate)
+{
+  float df = (float) samplingRate / (float) sampleCount;
+  int maxIdx = 0;
+  float amplitude(0), maxVal(0);
+  for (uint16_t i = 2; i < sampleCount / 2; i++) // Start at 2 to ignore DC component
+  {
+    amplitude = sqrt(sq(fftValues[2 * i]) + sq(fftValues[2 * i + 1]));
+    if (amplitude > maxVal)
+    {
+      maxVal = amplitude;
+      maxIdx = i;
+    }
+  }
+  return (float) maxIdx * df; 
 }
 
 //==============================================================================

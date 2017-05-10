@@ -65,7 +65,6 @@
 		<Unit filename="IUI2C.h" />
 		<Unit filename="IUI2S.cpp" />
 		<Unit filename="IUI2S.h" />
-		<Unit filename="IULogger.cpp" />
 		<Unit filename="IULogger.h" />
 		<Unit filename="IURGBLed.cpp" />
 		<Unit filename="IURGBLed.h" />
@@ -73,6 +72,8 @@
 		<Unit filename="IUSensorConfigurator.h" />
 		<Unit filename="IUUtilities.cpp" />
 		<Unit filename="IUUtilities.h" />
+		<Unit filename="QualityTest/QA_IUBMX055.h" />
+		<Unit filename="UnitTest/Test_IUUtilities.h" />
 		<Extensions>
 			<envvars />
 			<code_completion />

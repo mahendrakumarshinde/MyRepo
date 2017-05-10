@@ -268,11 +268,36 @@ void IUI2C::printBuffer()
 }
 
 /**
+ * Check if we should start calibration
+ */
+bool IUI2C::checkIfStartCalibration()
+{
+  if (m_wireBuffer.indexOf(START_CALIBRATION) > -1)
+  {
+    port->println(START_CONFIRM);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Check if we should end calibration
+ */
+bool IUI2C::checkIfEndCalibration()
+{
+  if (m_wireBuffer.indexOf(END_CALIBRATION) > -1)
+  {
+    port->println(END_CONFIRM);
+    return true;
+  }
+  return false;
+}
+
+/**
  * Check if we should start data collection, (ie enter collection mode)
  */
 bool IUI2C::checkIfStartCollection()
 {
-  // Check the received info; iff data collection request, change the mode
   if (m_wireBuffer.indexOf(START_COLLECTION) > -1)
   {
     port->println(START_CONFIRM);
@@ -286,7 +311,6 @@ bool IUI2C::checkIfStartCollection()
  */
 bool IUI2C::checkIfEndCollection()
 {
-  // Check the received info; if data collection request, change the mode
   if (m_wireBuffer == END_COLLECTION)
   {
     port->println(END_CONFIRM);

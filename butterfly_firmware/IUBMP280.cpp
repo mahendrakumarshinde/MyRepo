@@ -4,7 +4,7 @@ IUI2C* IUBMP280::m_iuI2C = NULL;
 uint8_t IUBMP280::m_rawTempBytes[3]; // 20-bit temperature register data stored here
 int32_t IUBMP280::m_fineTemperature = 0;
 int16_t IUBMP280::m_digTemperature[3] = {0, 0, 0};
-float IUBMP280::m_temperature = 0;
+float IUBMP280::m_temperature = 28;
 uint8_t IUBMP280::m_rawPressureBytes[3] = {0, 0, 0};
 int16_t IUBMP280::m_digPressure[9]= {0, 0, 0, 0, 0, 0, 0, 0, 0};
 float IUBMP280::m_pressure = 0;
@@ -113,6 +113,7 @@ void IUBMP280::processTemperatureData(uint8_t wireStatus)
 {
   int32_t rawTemp = (int32_t) (((int32_t) m_rawTempBytes[0] << 16 | (int32_t) m_rawTempBytes[1] << 8 | m_rawTempBytes[2]) >> 4);
   m_temperature = compensateTemperature(rawTemp);
+  Serial.print("temperature: "); Serial.println(m_temperature);
 }
 
 /**
