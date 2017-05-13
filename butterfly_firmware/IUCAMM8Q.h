@@ -32,8 +32,6 @@ class IUCAMM8Q : public IUABCSensor
     void initSensor();
     virtual void readData();
     virtual void sendToReceivers();
-    void dumpDataThroughI2C();
-
 
   protected:
     IUI2C *m_iuI2C;

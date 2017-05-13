@@ -300,7 +300,7 @@ bool IUI2C::checkIfStartCollection()
 {
   if (m_wireBuffer.indexOf(START_COLLECTION) > -1)
   {
-    port->println(START_CONFIRM);
+    port->print(START_CONFIRM); // No new line !!
     return true;
   }
   return false;

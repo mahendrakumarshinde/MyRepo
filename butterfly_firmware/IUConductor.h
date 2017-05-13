@@ -25,9 +25,9 @@ class IUConductor
 {
   public:
     static const uint16_t defaultClockRate = 8000;           //Hz (must be compatible with I2C)
-    static const uint16_t defaultDataSendPeriod = 2000;      // ms - send data every T milliseconds
+    static const uint16_t defaultDataSendPeriod = 1500;      // ms - send data every T milliseconds
     static constexpr double defaultTimestamp = 1492144654.00; //1483228800.00;    // January 1st, 2017
-    static const uint16_t calibrationDataSendPeriod = 500;      // ms - send data every T milliseconds
+    static const uint16_t shortestDataSendPeriod = 500;      // ms - send data every T milliseconds
     // Constructors, destructors, getters and setters
     IUConductor();
     IUConductor(String macAddress);

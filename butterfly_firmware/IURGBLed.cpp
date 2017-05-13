@@ -38,6 +38,14 @@ void IURGBLed::ledOff(IURGBLed::PIN pin_number)
 {
   digitalWrite(pin_number, HIGH);
 }
+    
+void IURGBLed::changeColor(bool R, bool G, bool B)
+{
+  if (!m_status) return;
+  digitalWrite(RED_PIN, (int) (R));
+  digitalWrite(GREEN_PIN, (int) (G));
+  digitalWrite(BLUE_PIN, (int) (B));
+}
 
 /**
 * Update the LEDs to the current RGB color
@@ -45,13 +53,8 @@ void IURGBLed::ledOff(IURGBLed::PIN pin_number)
 */
 void IURGBLed::changeColor(IURGBLed::LEDColors color)
 {
-  if (!m_status) return;
-  digitalWrite(RED_PIN, COLORCODE[color][0]);
-  digitalWrite(GREEN_PIN, COLORCODE[color][1]);
-  digitalWrite(BLUE_PIN, COLORCODE[color][2]);
+  changeColor(COLORCODE[color][0], COLORCODE[color][1], COLORCODE[color][2]);
 }
-
-// LED run color changed
 
 
 /* ==================== Update and Control Functions =============================== */

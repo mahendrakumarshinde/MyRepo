@@ -76,7 +76,7 @@ class IUI2S : public IUABCSensor
     bool m_firstI2STrigger;
     bool m_newData;
     uint8_t m_rawAudioData[I2S_BUFFER_SIZE];
-    q15_t m_audioData[audioSampleSize / 2];    // we use mono data, so we need half the size
+    q31_t m_audioData[audioSampleSize / 2];    // 32bit samples, we use mono data so array half the size
     uint16_t m_targetSample;              
 };
 

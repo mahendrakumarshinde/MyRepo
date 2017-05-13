@@ -6,8 +6,6 @@ Created on Sun Apr 30 17:26:51 2017
 @author: pat
 """
 
-
-import os
 import time
 import serial
 import numpy as np
@@ -29,17 +27,9 @@ import fpdf
 #import tkinter.scrolledtext
 #import tkinter.tix
 
-"""
-button.x['state'] = 'normal'
-button.config(state="normal")
-button.config(state='disabled')
-"""
-
 #==============================================================================
 # Data collection and calibration
 #==============================================================================
-
-PORT = "/dev/ttyACM0"
 
 def ensure_bytes(str_or_bytes):
     """
@@ -733,17 +723,16 @@ class CalibrationInterface(tk.Frame):
         return info
     
     def get_footer_info(self):
-        certificate_number = ''
         info = [
             ('Calibrated By :', self.get_user_input('operator_name')),
-            ('Certificate # :', certificate_number),
+            ('Certificate # :', self.get_user_input('certificate_number')),
             ('Uncertainty :', '{}% Confidence'.format(self.uncertainty))]
         return info
     
     def print_report(self):
-#        if not all(exp.done for exp in self.calibration_experiments):
-#            self.alerts['calibration_incomplete'].deiconify()
-#            return
+        if not all(exp.done for exp in self.calibration_experiments):
+            self.alerts['calibration_incomplete'].deiconify()
+            return
         pdf = CalibrationReportPDF(title='IU Hardware Calibration Report')
         pdf.add_infos(self.get_header_info())
         
@@ -755,7 +744,7 @@ class CalibrationInterface(tk.Frame):
                                     y=max(pdf.current_y, 60))
         pdf.add_calibration_section(experiments, 'velocityZ', 'freqZ',
                                     y=max(pdf.current_y, 60))
-            
+        
         #TODO Add other experiment types here if needed
         
         pdf.add_infos(self.get_footer_info())

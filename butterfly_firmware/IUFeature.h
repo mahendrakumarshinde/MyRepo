@@ -149,6 +149,7 @@ class IUFeature : public IUABCFeature
 class IUQ15Feature : public IUFeature
 {
   public:
+    static const q15_t rescaleFloatScalar = 512;
     IUQ15Feature(uint8_t id, char *name);
     virtual ~IUQ15Feature() {}
     // Feature computation, source and sending queue
@@ -402,7 +403,7 @@ class IUVelocityFeature512: public IUQ15Feature
   public:
     static const uint8_t sourceCount = 5;
     static const uint16_t sourceSize[sourceCount];
-    static const q15_t accelRMSThreshold = (q15_t) (0.25 * 32768);
+    static const q15_t accelRMSThreshold = (q15_t) (0.25 * rescaleFloatScalar);
     virtual uint8_t getSourceCount() { return sourceCount; }
     virtual uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }
     virtual uint16_t const* getSourceSize() { return sourceSize; }
