@@ -554,8 +554,8 @@ bool IUQ15Feature::receiveScalar(uint8_t sourceIndex, q15_t value)
 
 bool IUQ15Feature::receiveScalar(uint8_t sourceIndex, float value)
 {
-  q15_t val = floatToq15(value);
-  receiveScalar(sourceIndex, val);
+  q15_t val = (q15_t) value *rescaleFloatScalar;
+  return receiveScalar(sourceIndex, val);
 }
 
 
@@ -678,7 +678,7 @@ bool IUFloatFeature::receiveScalar(uint8_t sourceIndex, float value)
 bool IUFloatFeature::receiveScalar(uint8_t sourceIndex, q15_t value)
 {
   float val = q15ToFloat(value);
-  receiveScalar(sourceIndex, val);
+  return receiveScalar(sourceIndex, val);
 }
 
 /* ========================== Speicalized Feature Classes ============================= */
@@ -716,7 +716,7 @@ void IUAccelPreComputationFeature128::m_computeScalar (uint8_t computeIndex)
                                m_source[computeIndex][1][0],                 // sampling freq
                                getFactorToMS2(m_source[computeIndex][2][0]), // Convert to m.s-2
                                true);                                        // remove mean
-  getProducer()->setRMS(rms);
+  getProducer()->setRMS(1.03 * rms);  // Upscale by 3%
   updateState();
   getProducer()->setSamplingRate(m_source[computeIndex][1][0]);
   getProducer()->setResolution(m_source[computeIndex][2][0]);
@@ -790,7 +790,7 @@ void IUAccelPreComputationFeature512::m_computeScalar (uint8_t computeIndex)
                                m_source[computeIndex][1][0],                 // sampling freq
                                getFactorToMS2(m_source[computeIndex][2][0]), // Convert to m.s-2
                                true);                                        // remove mean
-  getProducer()->setRMS(rms);
+  getProducer()->setRMS(1.03 * rms); // Upscale by 3%
   updateState();
   getProducer()->setSamplingRate(m_source[computeIndex][1][0]);
   getProducer()->setResolution(m_source[computeIndex][2][0]);

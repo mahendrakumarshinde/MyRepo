@@ -223,11 +223,15 @@ void IUBMP280::sendToReceivers()
 }
 
 /**
- * Dump Temperature data to serial via I2C
- * NB: We want to do this in *DATA COLLECTION* mode
+ * Dump Temperature data to serial via I2C => DISABLED
+ * 
+ * NB: We want to do this in *DATA COLLECTION* mode, but for now the 
+ * data collection mode only get Accel and Sound data
  */
 void IUBMP280::dumpDataThroughI2C()
 {
+  // DISABLED
+  /*
   if (!m_newData)
   {
     return;
@@ -242,6 +246,7 @@ void IUBMP280::dumpDataThroughI2C()
   m_iuI2C->port->write(data, 4);
   m_iuI2C->port->flush();
   m_newData = false;
+  */
 }
 
 /**

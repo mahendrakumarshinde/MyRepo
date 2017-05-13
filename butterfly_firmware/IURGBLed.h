@@ -66,6 +66,7 @@ class IURGBLed : public IUABCSensor
     bool isActive() { return m_status; }
     void ledOn(IURGBLed::PIN pin_number);
     void ledOff(IURGBLed::PIN pin_number);
+    void changeColor(bool R, bool G, bool B);
     void changeColor(LEDColors color);
     bool updateFromI2C();
 

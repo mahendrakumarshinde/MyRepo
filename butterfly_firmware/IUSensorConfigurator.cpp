@@ -124,18 +124,19 @@ void IUSensorConfigurator::acquireDataAndSendToReceivers()
  */
 void IUSensorConfigurator::acquireDataAndDumpThroughI2C()
 {
-  for (uint8_t i = 0; i < sensorCount; i++)
+  // Audio data first, then Accel
+  if(readableDataCollection)
   {
-    if(readableDataCollection)
-    {
-      m_sensors[i]->dumpDataForDebugging();
-    }
-    else
-    {
-      m_sensors[i]->dumpDataThroughI2C();
-    }
-    m_sensors[i]->acquireData();
+    iuI2S->dumpDataForDebugging();
+    iuBMX055->dumpDataForDebugging();
   }
+  else
+  {
+    iuI2S->dumpDataThroughI2C();
+    iuBMX055->dumpDataThroughI2C();
+  }
+  iuI2S->acquireData();
+  iuBMX055->acquireData();
 }
 
 /**

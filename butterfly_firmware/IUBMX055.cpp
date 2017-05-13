@@ -348,11 +348,9 @@ void IUBMX055::dumpDataThroughI2C()
   for (uint8_t i = 0; i < 3; i++)
   {
     // Stream float value as 4 bytes
-    accel = q15ToFloat(m_accelData[i]);
-    data = (byte *) &accel;
+    accel = toMS2(m_accelData[i], m_accelResolution);
     m_iuI2C->port->write(data, 4);
   }
-  m_iuI2C->port->flush();
   m_newData = false;
 }
 

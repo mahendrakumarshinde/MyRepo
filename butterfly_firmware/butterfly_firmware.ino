@@ -78,7 +78,7 @@ void setup()
     
   #else
   
-    if (debugMode)
+    if (setupDebugMode)
     {
       Serial.begin(115200);
       delay(2000);

@@ -49,13 +49,21 @@ IUConductor::~IUConductor()
 bool IUConductor::setClockRate(uint16_t clockRate)
 {
   m_clockRate = clockRate;
-  if (sensorConfigurator.iuI2S)
+  if (!sensorConfigurator.iuI2S)
   {
-    // if sensors have already been initialized, set the clock rate of I2S,
-    // otherwise I2S clock rate will be set when it is initialized (see initSensors)
-    return sensorConfigurator.iuI2S->setClockRate(clockRate);
+    // if I2S has not been initialized initialized yet, return.
+    // I2S clock rate will be set when it is initialized (see initSensors)
+    return false;
   }
-  return false;
+  if (!sensorConfigurator.iuI2S->setClockRate(clockRate))
+  {
+    return false;
+  }
+  int callbackRate = sensorConfigurator.iuI2S->getCallbackRate();
+  // Let the other sensors know the new callback rate
+  sensorConfigurator.iuBMX055->setCallbackRate(callbackRate);
+  sensorConfigurator.iuBMP280->setCallbackRate(callbackRate);
+  sensorConfigurator.iuBattery->setCallbackRate(callbackRate);
 }
 
 void IUConductor::setDataSendPeriod(uint16_t dataSendPeriod)
@@ -198,11 +206,11 @@ void IUConductor::switchToUsage(usageMode mode)
     Serial.flush();
     featureConfigurator.doCalibrationSetup();
     */
-    setDataSendPeriod(calibrationDataSendPeriod);
+    iuI2C->silence();
+    setDataSendPeriod(shortestDataSendPeriod);
     featureConfigurator.setCalibrationStreaming();
     //switchToMode(operationMode::run);
     sensorConfigurator.iuRGBLed->changeColor(IURGBLed::CYAN_DATA); // override run mode color with calibration color
-    iuI2C->silence();
     msg = "calibration";
   }
   else if (m_usageMode == usageMode::operation)
@@ -265,18 +273,21 @@ void IUConductor::switchToMode(operationMode mode)
     }
     */
     sensorConfigurator.iuRGBLed->changeColor(IURGBLed::BLUE_NOOP);
-    resetDataAcquisition();
+    iuI2C->unsilence();
+    beginDataAcquisition();
+    //resetDataAcquisition();
     msg = "run";
   }
   else if (m_opMode == operationMode::dataCollection)
   {
+    iuI2C->silence();
     sensorConfigurator.iuRGBLed->changeColor(IURGBLed::CYAN_DATA);
-    resetDataAcquisition();
+    //resetDataAcquisition();
     msg = "data collection";
   }
   else if (m_opMode == operationMode::record)
   {
-    resetDataAcquisition();
+    //resetDataAcquisition();
     msg = "record";
   }
   else if (m_opMode == operationMode::sleep)
@@ -396,7 +407,8 @@ bool IUConductor::acquireAndSendData()
     if (m_opMode == operationMode::dataCollection)
     {
       sensorConfigurator.acquireDataAndDumpThroughI2C();
-      processInstructionsFromI2C(); // In data collection mode, need to process I2C data
+      // In data collection mode, need to process I2C data
+      processInstructionsFromI2C();
       newData = true;
     }
     if (m_opMode == operationMode::record)
@@ -511,29 +523,94 @@ bool IUConductor::resetDataAcquisition()
 void IUConductor::processInstructionsFromI2C()
 {
   iuI2C->updateBuffer();
-  if (iuI2C->getBuffer().length() > 0)
+  String msg = iuI2C->getBuffer();
+  if (msg.length() == 0)
   {
-    if(setupDebugMode) { debugPrint("I2C input is:"); }
-    if(setupDebugMode) { debugPrint(iuI2C->getBuffer()); }
-    if(m_usageMode == usageMode::operation && iuI2C->checkIfStartCalibration())
-    {
-      switchToUsage(usageMode::calibration);
-    }
-    else if (m_usageMode == usageMode::calibration && iuI2C->checkIfEndCalibration())
-    {
-      switchToUsage(usageMode::operation);
-    }
-    if (m_opMode == operationMode::run && iuI2C->checkIfStartCollection())
+    return;
+  }
+  if(setupDebugMode) { debugPrint("I2C input is:"); }
+  if(setupDebugMode) { debugPrint(msg); }
+
+  // Usage mode switching
+  if(m_usageMode == usageMode::operation && iuI2C->checkIfStartCalibration())
+  {
+    switchToUsage(usageMode::calibration);
+  }
+  else if (m_usageMode == usageMode::calibration && iuI2C->checkIfEndCalibration())
+  {
+    switchToUsage(usageMode::operation);
+  }
+
+  // Operation mode switching
+  if (m_opMode == operationMode::run)
+  {
+    if (iuI2C->checkIfStartCollection())
     {
       switchToMode(operationMode::dataCollection);
     }
-    else if (m_opMode == operationMode::dataCollection && iuI2C->checkIfEndCollection())
+  }
+  else if (m_opMode == operationMode::dataCollection)
+  {
+    if (iuI2C->checkIfEndCollection())
     {
       switchToMode(operationMode::run);
       sensorConfigurator.iuBMX055->resetAccelScale();
+      return;
     }
-    iuI2C->resetBuffer();    // Clear wire buffer
+    if (msg.indexOf("Arange") > -1)
+    {
+      // Update Accel range
+      int loc = msg.indexOf("Arange") + 7;
+      String accelRangeStr = (String) (msg.charAt(loc));
+      int accelRange = accelRangeStr.toInt();
+      switch (accelRange)
+      {
+        case 0:
+          sensorConfigurator.iuBMX055->setAccelScale(sensorConfigurator.iuBMX055->AFS_2G);
+          break;
+        case 1:
+          sensorConfigurator.iuBMX055->setAccelScale(sensorConfigurator.iuBMX055->AFS_2G);
+          break;
+        case 2:
+          sensorConfigurator.iuBMX055->setAccelScale(sensorConfigurator.iuBMX055->AFS_2G);
+          break;
+        case 3:
+          sensorConfigurator.iuBMX055->setAccelScale(sensorConfigurator.iuBMX055->AFS_2G);
+          break;
+      }
+    }
+    else if (msg.indexOf("rgb") > -1)
+    {
+      // Change LED color
+      int loc = msg.indexOf("rgb") + 7;
+      int R = msg.charAt(loc) - 48;
+      int G = msg.charAt(loc + 1) - 48;
+      int B = msg.charAt(loc + 2) - 48;
+      sensorConfigurator.iuRGBLed->changeColor((bool) R, (bool) G, (bool) B);
+    }
+    else if (msg.indexOf("acosr") > -1)
+    {
+      // Change audio sampling rate
+      int loc = msg.indexOf("acosr") + 6;
+      int A = msg.charAt(loc) - 48;
+      int B = msg.charAt(loc + 1) - 48;
+      uint16_t samplingRate = (uint16_t) ((A * 10 + B) * 1000);
+      sensorConfigurator.iuI2S->setSamplingRate(samplingRate);
+      // Update the conductor clock rate (since it's based on I2S clock)
+      setClockRate(sensorConfigurator.iuI2S->getClockRate());
+    }
+    else if (msg.indexOf("accsr") > -1)
+    {
+      int loc = msg.indexOf("accsr") + 6;
+      int A = msg.charAt(loc) - 48;
+      int B = msg.charAt(loc + 1) - 48;
+      int C = msg.charAt(loc + 2) - 48;
+      int D = msg.charAt(loc + 3) - 48;
+      int samplingRate = (A * 1000 + B * 100 + C * 10 + D);
+      sensorConfigurator.iuBMX055->setSamplingRate(samplingRate);
+    }
   }
+  iuI2C->resetBuffer();    // Clear wire buffer
 }
 
 /**
@@ -770,6 +847,10 @@ void IUConductor::loop()
 {
   if (m_usageMode == usageMode::operation)
   {
+    if (m_opMode == operationMode::dataCollection)
+    {
+      return; // Nothing to do in loop during data collection
+    }
     processInstructionsFromBluetooth();  // Receive instructions via BLE
     processInstructionsFromI2C();        // Receive instructions to enter / exit modes, plus options during data collection
     computeFeatures();                   // Feature computation depending on operation mode

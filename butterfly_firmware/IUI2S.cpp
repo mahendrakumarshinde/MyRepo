@@ -48,11 +48,21 @@ void IUI2S::setSamplingRate(uint16_t samplingRate)
   if (samplingRate == 0)
   {
     m_samplingRate = defaultSamplingRate;
+    return;
   }
-  else
+  if (samplingRate > m_clockRate)
   {
-    m_samplingRate = samplingRate;
+    // Need to increase the clock rate
+    for (uint8_t i = 0; i < availableClockRateCount; ++i)
+    {
+      if (availableClockRate[i] > samplingRate)
+      {
+        setClockRate(availableClockRate[i]);
+        break;
+      }
+    }
   }
+  m_samplingRate = samplingRate;
   prepareDataAcquisition();
 }
 
@@ -110,14 +120,14 @@ bool IUI2S::endDataAcquisition()
 /* ==================== Data Collection and Feature Calculation functions ======================== */
 
 /**
- * Extract the 16 most significant bits out of ICS43432 32bit sample
+ * ICS43432 32bit sample
  */
 void IUI2S::processAudioData(q31_t *data)
 {
   for (int i = 0; i < m_downclocking; i++)
   {
     // only keep 1 record every 2 records because stereo recording but we use only 1 canal
-    m_audioData[i] = (q15_t) (data[i * 2] >> 16);
+    m_audioData[i] = (q31_t) (data[i * 2]);
   }
 }
 
@@ -160,7 +170,9 @@ void IUI2S::sendToReceivers()
     {
       for (int j = 0; j < m_downclocking; j++)
       {
-        m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], m_audioData[j]);
+        // Send most significant 16bits
+        m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], 
+                                      (q15_t) (m_audioData[j] >> 16));
       }
     }
   }
@@ -181,9 +193,10 @@ void IUI2S::dumpDataThroughI2C()
   }
   for (int j = 0; j < m_downclocking; j++)
   {
-    // stream 16bits value in 2 bytes
+    // stream 3 most significant bytes from 32bits value
+    m_iuI2C->port->write((m_audioData[j] >> 24) & 0xFF);
+    m_iuI2C->port->write((m_audioData[j] >> 16) & 0xFF);
     m_iuI2C->port->write((m_audioData[j] >> 8) & 0xFF);
-    m_iuI2C->port->write(m_audioData[j] & 0xFF);
   }
   m_newData = false;
 }
@@ -200,7 +213,8 @@ void IUI2S::dumpDataForDebugging()
     return;
   }
   m_iuI2C->port->print("S: ");
-  m_iuI2C->port->println(m_audioData[0]);
+  // Dump only most significant 24bits
+  m_iuI2C->port->println((m_audioData[0] >> 8));
   m_iuI2C->port->flush();
   m_newData = false;
 }
