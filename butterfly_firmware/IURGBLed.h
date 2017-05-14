@@ -39,6 +39,8 @@ class IURGBLed : public IUABCSensor
       WHITE_NONE      , // L L L
       SLEEP_MODE      };// H H H
     // RGB LOW / HIGH code
+    /*
+     * //Inverted color codes
     const bool COLORCODE[8][3] = {{0, 1, 1}, //RED_BAD
                                   {1, 1, 0}, //BLUE_NOOP
                                   {1, 0, 1}, //GREEN_OK
@@ -47,6 +49,16 @@ class IURGBLed : public IUABCSensor
                                   {1, 0, 0}, //CYAN_DATA
                                   {0, 0, 0}, //WHITE_NONE
                                   {1, 1, 1} //SLEEP_MODE
+                                 };
+    */
+    const bool COLORCODE[8][3] = {{1, 0, 0}, //RED_BAD
+                                  {0, 0, 1}, //BLUE_NOOP
+                                  {0, 1, 0}, //GREEN_OK
+                                  {1, 1, 0}, //ORANGE_WARNING
+                                  {1, 0, 1}, //PURPLE_CHARGE
+                                  {0, 1, 1}, //CYAN_DATA
+                                  {1, 1, 1}, //WHITE_NONE
+                                  {0, 0, 0} //SLEEP_MODE
                                  };
     static const uint8_t sensorTypeCount = 1;
     static char sensorTypes[sensorTypeCount];
