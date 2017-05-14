@@ -64,6 +64,8 @@ class IUBMP280 : public IUABCSensor
     static const IIRFilterOptions defaultIIRFilter   = BW0_042ODR;
     static const ModeOptions defaultMode             = normal;
     static const SByOptions defaultSBy               = t_62_5ms;
+    
+    static const uint16_t defaultSamplingRate = 1; // Hz
 
     // Constructors, destructors, getters, setters
     IUBMP280(IUI2C *iuI2C);

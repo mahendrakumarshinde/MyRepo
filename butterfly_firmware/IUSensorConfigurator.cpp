@@ -132,11 +132,18 @@ void IUSensorConfigurator::acquireDataAndDumpThroughI2C()
   }
   else
   {
+    //Serial.print("s: ");
+    //Serial.println(micros());
     iuI2S->dumpDataThroughI2C();
     iuBMX055->dumpDataThroughI2C();
   }
   iuI2S->acquireData();
   iuBMX055->acquireData();
+  //m_iuI2C->port->write(';');
+  //delayMicroseconds(500);
+  //Serial.print("e: ");
+  //Serial.println(micros());
+  //m_iuI2C->port->flush();
 }
 
 /**

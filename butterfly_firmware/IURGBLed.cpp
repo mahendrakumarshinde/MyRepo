@@ -42,9 +42,9 @@ void IURGBLed::ledOff(IURGBLed::PIN pin_number)
 void IURGBLed::changeColor(bool R, bool G, bool B)
 {
   if (!m_status) return;
-  digitalWrite(RED_PIN, (int) (R));
-  digitalWrite(GREEN_PIN, (int) (G));
-  digitalWrite(BLUE_PIN, (int) (B));
+  digitalWrite(RED_PIN, (int) (!R));
+  digitalWrite(GREEN_PIN, (int) (!G));
+  digitalWrite(BLUE_PIN, (int) (!B));
 }
 
 /**

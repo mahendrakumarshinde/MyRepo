@@ -70,6 +70,8 @@ inline float q15ToFloat(q15_t value) { return ((float) value) / 32768.0; }
 
 inline q15_t floatToq15(float value) { return (q15_t) (32768 * value); }
 
+inline float toG(q15_t value, q15_t accelResolution) { return (float) value * (float) accelResolution / 32768.0; }
+
 inline float toMS2(q15_t value, q15_t accelResolution) { return (float) value * (float) accelResolution * 9.8065 / 32768.0; }
 
 inline float getFactorToMS2(q15_t accelResolution) { return (float) accelResolution * 9.8065 / 32768.0; }
