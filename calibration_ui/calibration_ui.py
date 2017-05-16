@@ -291,7 +291,7 @@ class CalibrationInterface(tk.Frame):
         VibrationCalibration([1000, 40, 4], [5, 5, 5]),
         VibrationCalibration([2000, 40, 8], [5, 5, 5]),
         VibrationCalibration([5000, 40, 20], [5, 5, 5]),
-        VibrationCalibration([1000, 80, 2], [5, 5, 5]),
+        #VibrationCalibration([1000, 80, 2], [5, 5, 5]),
         VibrationCalibration([2000, 80, 4], [5, 5, 5]),
         VibrationCalibration([5000, 80, 10], [5, 5, 5]),
         ]
@@ -587,7 +587,8 @@ class CalibrationInterface(tk.Frame):
             self.alerts['invalid_data'].deiconify()
             return
         mac_address = data.get('mac_address')
-        self.current_temperature = data.get('temperature')
+        #TODO get actual temperature once its calibrated
+        self.current_temperature = 28 #data.get('temperature')
         if mac_address != self.get_user_input('mac_address'):
             self.alerts['wrong_mac_address'].deiconify()
             return False
@@ -730,9 +731,9 @@ class CalibrationInterface(tk.Frame):
         return info
     
     def print_report(self):
-        if not all(exp.done for exp in self.calibration_experiments):
-            self.alerts['calibration_incomplete'].deiconify()
-            return
+#        if not all(exp.done for exp in self.calibration_experiments):
+#            self.alerts['calibration_incomplete'].deiconify()
+#            return
         pdf = CalibrationReportPDF(title='IU Hardware Calibration Report')
         pdf.add_infos(self.get_header_info())
         
