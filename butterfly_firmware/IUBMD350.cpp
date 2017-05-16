@@ -9,7 +9,9 @@ IUBMD350::IUBMD350(IUI2C *iuI2C) :
   m_bufferIndex(0),
   m_dataReceptionTimeout(2000),
   m_lastReadTime(0),
-  m_ATCmdEnabled(false)
+  m_ATCmdEnabled(false),
+  m_UARTTxPower(defaultUARTTxPower),
+  m_beaconTxPower(defaultBeaconTxPower)
 {
   // Init Settings
   settings[0] = {"flowControl", "ufc", false};
@@ -36,6 +38,8 @@ IUBMD350::IUBMD350(IUI2C *iuI2C) :
   {
     setBLEBaudRate(defaultBLEBaudRate);
   }
+  setTxPower(defaultUARTTxPower);
+  setTxPower(defaultBeaconTxPower, true);
   setBooleanSettings("flowControl", false);
   setBooleanSettings("parity", false);
   setBooleanSettings("UARTPassThrough", true);
@@ -67,13 +71,13 @@ void IUBMD350::enterATCommandInterface()
   delay(100);
   resetDevice();
   // hold ATMD pin LOW for at least 2.5s. If not, AT Mode will not work
-  delay(3000);
+  delay(2500);
   m_ATCmdEnabled = true;
   if (setupDebugMode)
   {
     debugPrint(F("Entered AT Command Interface mode"));
   }
-  delay(500);
+  delay(10);
 }
 
 /**
@@ -185,7 +189,7 @@ bool IUBMD350::setDeviceName(char *deviceName)
   char response[3];
   String cmd = "name ";
   sendATCommand((String) (cmd + m_deviceName), response, 3);
-  if (strcmp(response, "OK"))
+  if (strcmp(response, "OK") == 0)
   {
     return true;
   }
@@ -194,7 +198,6 @@ bool IUBMD350::setDeviceName(char *deviceName)
   }
   return false;
 }
-
 /**
    Query BLE configuration to get the device name
    Also update the device name saved at the class level (accessible via getDeviceName)
@@ -209,6 +212,101 @@ bool IUBMD350::queryDeviceName()
     return true;
   }
   return false; // failed
+}
+
+/**
+ * Set the TX power of the BLE UART and Beacon
+ * 
+ * UART Tx power affects the range at which the device is connectable
+ * Beacon Tx Power affects the range at which the device is visible / discoverable
+ */
+bool IUBMD350::setTxPower(int8_t txPower, bool beacon)
+{
+  String cmd;
+  if (beacon)
+  {
+    cmd = "ctxpwr ";
+  }
+  else
+  {
+    cmd = "btxpwr ";
+  }
+  switch (txPower)
+  {
+    case (-4):
+      cmd += "FC"; // 256 - 4 = 252
+      break;
+    case 0:
+      cmd += "00";
+      break;
+    case 4:
+      cmd += "04";
+      break;
+    default:
+      cmd += "04"; // Default to max Tx power = max BLE range
+  }
+  char response[3];
+  sendATCommand(cmd, response, 3);
+  queryTxPower(beacon);
+  if (strcmp(response, "OK") == 0)
+  {
+    return true;
+  }
+  if (setupDebugMode) {
+    if (beacon)
+    {
+      debugPrint("Failed to set Beacon Tx Power");
+    }
+    else
+    {
+      debugPrint("Failed to set UART Tx Power");
+    }
+  }
+  return false;
+}
+
+bool IUBMD350::queryTxPower(bool beacon)
+{
+  char response[3];
+  int respLen;
+  if (beacon)
+  {
+    respLen = sendATCommand("btxpwr?", response, 3);
+  }
+  else
+  {
+    respLen = sendATCommand("ctxpwr?", response, 3);
+  }
+  if (respLen == 0)
+  {
+    return false; // failed
+  }
+  int8_t txPower;
+  if (strcmp(response, "FC") == 0)
+  {
+    txPower = -4;
+  }
+  else if (strcmp(response, "00") == 0)
+  {
+    txPower = 0;
+  }
+  else if (strcmp(response, "04") == 0)
+  {
+    txPower = 4;
+  }
+  else
+  {
+    return false;  // Unknown response
+  }
+  if (beacon)
+  {
+    m_beaconTxPower = txPower;
+  }
+  else
+  {
+    m_UARTTxPower = txPower;
+  }
+  return true;
 }
 
 /**
@@ -229,17 +327,17 @@ bool IUBMD350::setUUIDInfo(char *UUID, char *major, char *minor)
   String cmd = "buuid ";
   if(sendATCommand((String) (cmd + m_UUID), response, 3) > 0)
   {
-    success[0] = strcmp(response, "OK");
+    success[0] = (strcmp(response, "OK") == 0);
   }
   cmd = "bmjid ";
   if(sendATCommand((String) (cmd + m_majorNumber), response, 3) > 0)
   {
-    success[1] = strcmp(response, "OK");
+    success[1] = (strcmp(response, "OK") == 0);
   }
   cmd = "bmnid ";
   if(sendATCommand((String) (cmd + m_minorNumber), response, 3) > 0)
   {
-    success[2] = strcmp(response, "OK");
+    success[2] = (strcmp(response, "OK") == 0);
   }
   if (success[0] && success[1] && success[2])
   {
@@ -288,7 +386,7 @@ bool IUBMD350::setBLEBaudRate(uint32_t baudRate)
   m_BLEBaudRate = baudRate;
   char response[3];
   int respLength = sendATCommand((String) ("ubr " + m_BLEBaudRate), response, 3);
-  if (respLength > 0 && strcmp(response, "OK"))
+  if (respLength > 0 && strcmp(response, "OK") == 0)
   {
     return true;
   }
@@ -361,7 +459,7 @@ bool IUBMD350::setBooleanSettings(String settingName, bool enable)
   {
     respLength = sendATCommand((String) (conf.command + " 00"), response, 3);
   }
-  if (respLength > 0 && strcmp(response, "OK"))
+  if (respLength > 0 && strcmp(response, "OK") == 0)
   {
     return true;
   }
@@ -385,7 +483,7 @@ bool IUBMD350::queryBooleanSettingState(String settingName)
   char response[3];
   if (sendATCommand((String) (conf.command + "?"), response, 3) > 0)
   {
-    conf.state = strcmp(response, "01");
+    conf.state = (strcmp(response, "01") == 0);
     return conf.state;
   }
   return false; // return false if failed

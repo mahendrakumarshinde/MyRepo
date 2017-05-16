@@ -578,20 +578,14 @@ IUFeature* IUFeatureConfigurator::createFeature(IUFeatureConfigurator::FeatureCo
       break;
 
     case 'F':
-      feature = new IUDefaultFloatFeature(id, featConfig.name);
-      break;
-
     case 'R':
+    case 'T':
       feature = new IUDefaultFloatFeature(id, featConfig.name);
       break;
 
     case 'S':
       if (featConfig.name[2] == '5') { feature = new IUAudioDBFeature2048(id, featConfig.name); }
       else if (featConfig.name[2] == '6') { feature = new IUAudioDBFeature4096(id, featConfig.name); }
-      break;
-
-    case 'T':
-      feature = new IUDefaultFloatFeature(id, featConfig.name);
       break;
 
     case 'V':

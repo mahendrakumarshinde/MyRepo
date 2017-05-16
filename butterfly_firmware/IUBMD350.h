@@ -32,11 +32,13 @@ class IUBMD350 : public IUABCInterface
     };
 
     static constexpr HardwareSerial *port = &Serial1;
-    static const uint8_t bufferSize = 19;
+    static const uint8_t bufferSize       = 19;
     // Device configuration
     static const uint8_t resetPin         = 38;     // BMD-350 reset pin active LOW
     static const uint8_t ATCmdPin         = 26;     // toggle pin for AT Command Interface
     // Default Config
+    static const int8_t defaultUARTTxPower = 4;
+    static const int8_t defaultBeaconTxPower = 4;
     static const uint32_t defaultBaudRate = 57600;      // transmission rate through Serial1 to the BLE module
     static const uint32_t defaultBLEBaudRate = 57600;   // transmission rate through bluetooth (from BLE module to BLE receiver)
     static const bool defaultFlowControlEnable = false;
@@ -59,6 +61,10 @@ class IUBMD350 : public IUABCInterface
     bool setDeviceName(char *deviceName);
     bool queryDeviceName();
     char* getDeviceName() { return m_deviceName; }
+    bool setTxPower(int8_t txPower, bool beacon=false);
+    bool queryTxPower(bool beacon=false);
+    int8_t getBeaconTxPower() { return m_beaconTxPower; }
+    int8_t getUARTTxPower() { return m_UARTTxPower; }
     bool setUUIDInfo(char *UUID, char *major, char *minor);
     bool queryUUIDInfo();
     char* getUUID() { return m_UUID; }
@@ -89,6 +95,8 @@ class IUBMD350 : public IUABCInterface
     IUI2C *m_iuI2C;
     bool m_ATCmdEnabled;
     char m_deviceName[9];     // max 8 chars + 1 char end of string
+    int8_t m_beaconTxPower;
+    int8_t m_UARTTxPower;
     char m_UUID[33];          // 32 hex digits + 1 char end of string
     char m_majorNumber[5];    // 4 hex digits + 1 char end of string
     char m_minorNumber[5];    // 4 hex digits + 1 char end of string

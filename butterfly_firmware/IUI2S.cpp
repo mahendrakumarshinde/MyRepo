@@ -94,6 +94,9 @@ bool IUI2S::triggerDataAcquisition(void (*callback)())
   if (m_firstI2STrigger)
   {
     I2S.onReceive(callback); // add the receiver callback
+    Serial.println(m_clockRate);
+    Serial.println(audioSampleSize);
+    Serial.println(getCallbackRate());
     if (!I2S.begin(I2S_PHILIPS_MODE, m_clockRate, bitsPerAudioSample))
     {
       return false;
