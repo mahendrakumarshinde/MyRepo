@@ -39,7 +39,7 @@ class IUI2S : public IUABCSensor
     static const uint8_t availableClockRateCount = 9;
     static uint16_t availableClockRate[availableClockRateCount];
     // Frequency and sampling setting
-    static const uint16_t defaultClockRate = 8000; // Hz clock rate of audio device
+    static const uint16_t defaultClockRate = 48000; // Hz clock rate of audio device
     static const uint16_t defaultSamplingRate = 8000; // Hz sampling rate (can be downclocked from clockRate)
     enum dataSendOption : uint8_t {sound = 0,
                                    optionCount = 1};
