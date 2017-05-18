@@ -215,6 +215,7 @@ bool IUABCFeature::compute()
  */
 operationState IUABCFeature::updateState()
 {
+  setState(operationState::badCutting);
   for (uint8_t i = 0; i < operationState::opStateCount - 1; i++)
   {
     if (getLatestValue() < m_thresholds[i])

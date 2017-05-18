@@ -160,10 +160,10 @@ bool IUFeatureConfigurator::calibrationFeatureStream[15] = {false, false, false,
                                                            true, true, true};
 
 String IUFeatureConfigurator::standardConfig = "CX3-CY3-CZ3-D33-VX3-VY3-VZ3-T10-S16-FX3-FY3-FZ3-RX3-RY3-RZ3"; //
-float IUFeatureConfigurator::standardThresholds[15][3] = {{30, 600, 1200},
-                                                         {30, 600, 1200},
-                                                         {30, 600, 1200},
-                                                         {30, 600, 1200},
+float IUFeatureConfigurator::standardThresholds[15][3] = {{17, 40, 70},
+                                                         {17, 40, 70},
+                                                         {17, 40, 70},
+                                                         {17, 40, 70},
                                                          {0.05, 1.2, 1.8},
                                                          {0.05, 1.2, 1.8},
                                                          {0.05, 1.2, 1.8},
