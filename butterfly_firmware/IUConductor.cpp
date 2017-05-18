@@ -851,13 +851,13 @@ void IUConductor::loop()
     {
       return; // Nothing to do in loop during data collection
     }
+    checkAndUpdateMode();
     processInstructionsFromBluetooth();  // Receive instructions via BLE
     processInstructionsFromI2C();        // Receive instructions to enter / exit modes, plus options during data collection
-    //sensorConfigurator.iuBMP280->readTemperature(); // For some reason temperature reading doesn't work in callback
+    sensorConfigurator.iuBMP280->readTemperature(); // For some reason temperature reading doesn't work in callback
     computeFeatures();                   // Feature computation depending on operation mode
-    streamData(iuBluetooth->port);       // Stream data over BLE
     checkAndUpdateState();
-    checkAndUpdateMode();
+    streamData(iuBluetooth->port);       // Stream data over BLE
   }
   else if (m_usageMode == usageMode::calibration)
   {
