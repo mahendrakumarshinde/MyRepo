@@ -747,13 +747,24 @@ void IUAccelPreComputationFeature128::m_computeArray (uint8_t computeIndex)
  * This is useful to get a whole batch of data, and to perform computation 
  * outside of the device itself
  */
-void IUAccelPreComputationFeature128::streamSourceData(HardwareSerial *port)
+void IUAccelPreComputationFeature128::streamSourceData(HardwareSerial *port, String macAddr, String keyword)
 {
-  for (int i = 0; i < getSourceSize(0); i++) {
-      port->print(",");
-      port->print(toMS2(m_source[m_computeIndex][0][i], m_source[m_computeIndex][2][0]));
-      port->flush();
-    }
+  while (!m_computeNow[m_computeIndex][0])
+  {
+    delay(1); // Wait for the recording to finish
+  }
+  port->print("REC,");
+  port->print(macAddr);
+  port->print(',');
+  port->print(keyword);
+  for (int i = 0; i < getSourceSize(0); i++)
+  {
+    port->print(',');
+    port->print(toMS2(m_source[m_computeIndex][0][i], m_source[m_computeIndex][2][0]));
+    port->flush();
+  }
+  port->print(';');
+  port->flush();
 }
 
 
@@ -821,14 +832,24 @@ void IUAccelPreComputationFeature512::m_computeArray (uint8_t computeIndex)
  * This is useful to get a whole batch of data, and to perform computation 
  * outside of the device itself
  */
-void IUAccelPreComputationFeature512::streamSourceData(HardwareSerial *port)
+void IUAccelPreComputationFeature512::streamSourceData(HardwareSerial *port, String macAddr, String keyword)
 {
+  while (m_computeNow[m_computeIndex][0])
+  {
+    delay(1); // Wait for the recording to finish
+  }
+  port->print("REC,");
+  port->print(macAddr);
+  port->print(',');
+  port->print(keyword);
   for (int i = 0; i < getSourceSize(0); i++)
   {
-      port->print(",");
-      port->print(toMS2(m_source[m_computeIndex][0][i], m_source[m_computeIndex][2][0]));
-      port->flush();
+    port->print(',');
+    port->print(toMS2(m_source[m_computeIndex][0][i], m_source[m_computeIndex][2][0]));
+    port->flush();
   }
+  port->print(';');
+  port->flush();
 }
 
 

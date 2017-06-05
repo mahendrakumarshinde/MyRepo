@@ -25,7 +25,7 @@
 //====================== Module Configuration Variables ========================
 #define CLOCK_TYPE         (I2S_CLOCK_48K_INTERNAL)     // I2S clock
 bool statusLED = true;                                  // Status LED ON/OFF
-String MAC_ADDRESS = "E0:E5:CF:CD:B1:46";
+String MAC_ADDRESS = "88:4A:EA:69:DE:A8";
 
 // Reduce RUN frequency if needed.
 const uint16_t AUDIO_FREQ = 8000;     // Audio frequency set to 8000 Hz

@@ -210,7 +210,7 @@ class IUAccelPreComputationFeature128: public IUQ15Feature
     virtual uint8_t getSourceCount() { return sourceCount; }
     virtual uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }
     virtual uint16_t const* getSourceSize() { return sourceSize; }
-    virtual void streamSourceData(HardwareSerial *port);
+    virtual void streamSourceData(HardwareSerial *port, String macAddr, String keyword);
 
     // Specific producer
     virtual bool prepareProducer();
@@ -245,7 +245,7 @@ class IUAccelPreComputationFeature512: public IUQ15Feature
     virtual uint8_t getSourceCount() { return sourceCount; }
     virtual uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }
     virtual uint16_t const* getSourceSize() { return sourceSize; }
-    virtual void streamSourceData(HardwareSerial *port);
+    virtual void streamSourceData(HardwareSerial *port, String macAddr, String keyword);
 
     // Specific producer
     virtual bool prepareProducer();

@@ -694,29 +694,22 @@ void IUConductor::processInstructionsFromBluetooth()
         if (bleBuffer[7] == '0' && bleBuffer[9] == '0' && bleBuffer[11] == '0' && bleBuffer[13] == '0' && bleBuffer[15] == '0' && bleBuffer[17] == '0')
         {
           if (loopDebugMode) { debugPrint("Record mode"); }
-          iuBluetooth->port->print("REC,");
-          iuBluetooth->port->print(m_macAddress);
           IUFeature *feat = NULL;
           feat = featureConfigurator.getFeatureByName("CX3");
           if (feat)
           {
-            iuBluetooth->port->print(",X");
-            feat->streamSourceData(iuBluetooth->port);
+            feat->streamSourceData(iuBluetooth->port, m_macAddress, "X");
           }
           feat = featureConfigurator.getFeatureByName("CY3");
           if (feat)
           {
-            iuBluetooth->port->print(",Y");
-            feat->streamSourceData(iuBluetooth->port);
+            feat->streamSourceData(iuBluetooth->port, m_macAddress, "Y");
           }
           feat = featureConfigurator.getFeatureByName("CZ3");
           if (feat)
           {
-            iuBluetooth->port->print(",Z");
-            feat->streamSourceData(iuBluetooth->port);
+            feat->streamSourceData(iuBluetooth->port, m_macAddress, "Z");
           }
-          iuBluetooth->port->print(";");
-          iuBluetooth->port->flush();
         }
         break;
       case '4': // Stop button pressed - go out of record mode back into RUN mode

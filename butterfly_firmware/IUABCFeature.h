@@ -74,7 +74,7 @@ class IUABCFeature
     virtual bool isTimeToEndRecord();
     virtual bool compute();
     virtual void stream(HardwareSerial *port);
-    virtual void streamSourceData(HardwareSerial *port) {}
+    virtual void streamSourceData(HardwareSerial *port, String macAddr, String keyword) {}
 
     // Diagnostic Functions
     virtual void exposeSourceConfig();
@@ -98,8 +98,8 @@ class IUABCFeature
     uint16_t m_sourceCounter[ABCSourceCount];
     bool m_computeNow[2][ABCSourceCount];
     bool m_recordNow[2][ABCSourceCount];
-    uint8_t m_computeIndex;                                            // Computation buffer index
     uint8_t m_recordIndex;                                             // Data recording buffer index
+    uint8_t m_computeIndex;                                            // Computation buffer index
     // Thresholds and state
     float m_thresholds[operationState::opStateCount - 1];              // Normal, warning and danger thresholds
 };
