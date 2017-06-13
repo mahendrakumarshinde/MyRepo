@@ -44,8 +44,22 @@ class IUI2C : public IUABCInterface
     IUI2C();
     virtual ~IUI2C() {}
     virtual HardwareSerial* getPort() { return port; }
+    // Hardware and power management
+    virtual void wakeUp();
+    virtual void sleep();
+    virtual void suspend();
     void setClockRate( uint32_t clockRate);
     uint32_t getClockRate() { return m_clockRate; }
+    bool scanDevices();
+    bool checkComponentWhoAmI(String componentName, uint8_t address, uint8_t whoAmI, uint8_t iShouldBe);
+    // I2C read / write methods
+    bool writeByte(uint8_t address, uint8_t subAddress, uint8_t data);
+    bool writeByte(uint8_t address, uint8_t subAddress, uint8_t data, void(*callback)(uint8_t wireStatus));
+    uint8_t readByte(uint8_t address, uint8_t subAddress);
+    uint8_t readByte(uint8_t address, uint8_t subAddress, void(*callback)(uint8_t wireStatus));
+    bool readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_t *destination);
+    bool readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_t *destination, void(*callback)(uint8_t wireStatus));
+    // Communication Methods
     byte getReadError() { return m_readError; }
     bool getReadFlag() { return m_readFlag; }
     void setReadFlag(bool val) { m_readFlag = val; }
@@ -59,24 +73,13 @@ class IUI2C : public IUABCInterface
     void resetReadError() { m_readError = 0; }
     void resetBuffer();
     String getBuffer() { return m_wireBuffer; }
-    // Methods
-    void activate();
-    bool scanDevices();
-    bool checkComponentWhoAmI(String componentName, uint8_t address, uint8_t whoAmI, uint8_t iShouldBe);
     bool checkIfStartCalibration();
     bool checkIfEndCalibration();
     bool checkIfStartCollection();
     bool checkIfEndCollection();
     void updateBuffer();
     void printBuffer();
-    // I2C read / write methods
-    bool writeByte(uint8_t address, uint8_t subAddress, uint8_t data);
-    bool writeByte(uint8_t address, uint8_t subAddress, uint8_t data, void(*callback)(uint8_t wireStatus));
-    uint8_t readByte(uint8_t address, uint8_t subAddress);
-    uint8_t readByte(uint8_t address, uint8_t subAddress, void(*callback)(uint8_t wireStatus));
-    bool readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_t *destination);
-    bool readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_t *destination, void(*callback)(uint8_t wireStatus));
-    
+
 
   protected:
     // Error Handling variables

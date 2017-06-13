@@ -22,8 +22,7 @@
 class IUBMP280 : public IUABCSensor
 {
   public:
-    static const uint8_t sensorTypeCount = 2;
-    static char  sensorTypes[sensorTypeCount];
+    static IUABCSensor:sensorTypeOptions sensorType = IUABCSensor::ATMOSPHERE;
     /*===== DEVICE CONFIGURATION AND CONSTANTS =======*/
     static const uint8_t WHO_AM_I           = 0xD0;
     static const uint8_t WHO_AM_I_ANSWER    = 0x58; // should be 0x58
@@ -35,52 +34,55 @@ class IUBMP280 : public IUABCSensor
     static const uint8_t RESET              = 0xE0;
     static const uint8_t CALIB00            = 0x88;
     static const uint8_t ADDRESS            = 0x76; // Address of BMP280 altimeter
-    //SDO = GND  0x77 if SDO = VCC
-    enum posrOptions : uint8_t {P_OSR_00 = 0, /*no op*/
-                                P_OSR_01,
-                                P_OSR_02,
-                                P_OSR_04,
-                                P_OSR_08,
-                                P_OSR_16};
-    enum tosrOptions : uint8_t {T_OSR_00 = 0,  /*no op*/
-                                T_OSR_01,
-                                T_OSR_02,
-                                T_OSR_04,
-                                T_OSR_08,
-                                T_OSR_16};
-    enum IIRFilterOptions : uint8_t {full = 0,  // bandwidth at full sample rate
-                                     BW0_223ODR,
-                                     BW0_092ODR,
-                                     BW0_042ODR,
-                                     BW0_021ODR}; // bandwidth at 0.021 x sample rate
-    enum ModeOptions : uint8_t {Sleep = 0, forced, forced2, normal};
-    enum SByOptions : uint8_t { t_00_5ms = 0, t_62_5ms, t_125ms, t_250ms,
-                                t_500ms, t_1000ms, t_2000ms, t_4000ms,};
+    enum powerModeBits : uint8_t {SLEEP = 0,
+                                  FORCED = 1,
+                                  NORMAL = 3};
+    // Oversampling improves reading accuracy and reduce noise, but increase the power consumption
+    enum overSamplingRates : uint8_t {SKIPPED = 0,
+                                      OSR_01  = 1,
+                                      OSR_02  = 2,
+                                      OSR_04  = 3,
+                                      OSR_08  = 4,
+                                      OSR_16  = 5};
+    // Internal IIR filtering, to suppress short term disturbance (door slamming, wind...)
+    enum IIRFilterCoeffs : uint8_t {OFF,
+                                    COEFF_02,
+                                    COEFF_04,
+                                    COEFF_08,
+                                    COEFF_16};
+    // Control inactive (standby) duration in Normal mode
+    enum StandByDurations : uint8_t {t_00_5ms,
+                                     t_62_5ms,
+                                     t_125ms,
+                                     t_250ms,
+                                     t_500ms,
+                                     t_1000ms,
+                                     t_2000ms,
+                                     t_4000ms};
     enum dataSendOption : uint8_t {temperature = 0,
                                    pressure    = 1,
                                    optionCount = 2};
-    static const posrOptions defaultPosr             = P_OSR_00;
-    static const tosrOptions defaultTosr             = T_OSR_01;
-    static const IIRFilterOptions defaultIIRFilter   = BW0_042ODR;
-    static const ModeOptions defaultMode             = normal;
-    static const SByOptions defaultSBy               = t_62_5ms;
-    
+    static const overSamplingRates defaultPressureOSR     = SKIPPED;
+    static const overSamplingRates defaultTmperatureOSR   = OSR_01;
+    static const IIRFilterOptions  defaultIIRFilter       = OFF;
+    static const StandByDurations  defaultStandByDuration = t_62_5ms;
+
     static const uint16_t defaultSamplingRate = 1; // Hz
 
-    // Constructors, destructors, getters, setters
+    // Constructors, destructor, getters, setters
     IUBMP280(IUI2C *iuI2C);
     virtual ~IUBMP280() {}
-    virtual uint8_t getSensorTypeCount() { return sensorTypeCount; }
-    virtual char getSensorType(uint8_t index) { return sensorTypes[index]; }
-    bool isNewData() {return m_newData; }
-    int32_t getFineTemperature() { return m_fineTemperature; }
-    int16_t getTemperature() { return m_temperature; }
-    int16_t getPressure() { return m_pressure; }
-    void setOptions(posrOptions posr, tosrOptions tosr, IIRFilterOptions iirFilter, ModeOptions mode, SByOptions sby);
-    void reset();
-    // Methods
-    void initSensor();
+    virtual char getSensorType() { return (char) sensorType; }
+    // Hardware and power management methods
+    void softReset();
     virtual void wakeUp();
+    virtual void sleep();
+    virtual void suspend();
+    void setOverSamplingRates(overSamplingRates pressureOSR, overSamplingRates temperatureOSR);
+    void setIIRFiltering(IIRFilterOptions iirFilter);
+    void setStandbyDuration(StandByDurations duration);
+    void calibrate();
+    // Data acquisition methods
     void readTemperature();
     void readPressure();
     virtual void readData();
@@ -88,12 +90,24 @@ class IUBMP280 : public IUABCSensor
     virtual void dumpDataThroughI2C();
     virtual void dumpDataForDebugging();
     int32_t readRawTemperature();
+    // Communication methods
+    bool isNewData() {return m_newData; }
+    int32_t getFineTemperature() { return m_fineTemperature; }
+    int16_t getTemperature() { return m_temperature; }
+    int16_t getPressure() { return m_pressure; }
     // Diagnostic Functions
     virtual void exposeCalibration();
 
   protected:
     static IUI2C *m_iuI2C;
     bool m_newData;
+    // Hardware configuration
+    overSamplingRates m_pressureOSR;
+    overSamplingRates m_temperatureOSR;
+    IIRFilterOptions m_iirFilter;
+    StandByDurations m_standByDuration;
+    void writeControlMeasureRegister();
+    void writeConfigRegister();
     // Temperature reading
     static uint8_t m_rawTempBytes[3]; // 20-bit temperature register data stored here
     static int32_t m_fineTemperature;
@@ -107,13 +121,6 @@ class IUBMP280 : public IUABCSensor
     static float m_pressure;
     static void processPressureData(uint8_t wireStatus);
     static float compensatePressure(int32_t rawP);
-    //Config variables
-    posrOptions m_posr;
-    tosrOptions m_tosr;
-    IIRFilterOptions m_iirFilter;
-    ModeOptions m_mode;
-    SByOptions m_sby;
-    //Internal Methods
 };
 
 #endif // IUBMP280_H

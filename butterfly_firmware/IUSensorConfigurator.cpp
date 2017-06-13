@@ -2,46 +2,50 @@
 
 /* ======================= Sensor Default Configuration =========================== */
 
-// Sensors are ordered: battery, led, BMX055, BMP280, Sound
-uint16_t IUSensorConfigurator::defaultSamplingRates[IUSensorConfigurator::sensorCount] = {2, 1, 1000, 2, 8000};
+// Sensors are ordered: battery, Accel, Gyro, Mag, BMP280, Sound, GNSS
+uint16_t IUSensorConfigurator::defaultSamplingRates[IUSensorConfigurator::sensorCount] =
+  {2, 1000, 2, 2, 2, 8000, 2};
+
+IUABCSensor::powerMode IUSensorConfigurator::defaultPowerMode[IUSensorConfigurator::sensorCount] =
+  {
+    IUABCSensor::ACTIVE,
+    IUABCSensor::ACTIVE,
+    IUABCSensor::SUSPEND,
+    IUABCSensor::SUSPEND,
+    IUABCSensor::ACTIVE,
+    IUABCSensor::ACTIVE,
+    IUABCSensor::SUSPEND
+  };
 
 /* ============================== Methods =================================== */
 
 IUSensorConfigurator::IUSensorConfigurator() :
   m_iuI2C(NULL)
 {
-  iuBattery = NULL;
-  iuRGBLed = NULL;
-  iuBMX055 = NULL;
-  iuBMP280 = NULL;
-  iuI2S = NULL;
-  for (int i = 0; i < sensorCount; i++)
-  {
-    m_sensors[i] = NULL;
-  }
+  resetSensorPointers();
 }
 
 IUSensorConfigurator::IUSensorConfigurator(IUI2C *iuI2C) :
   m_iuI2C(iuI2C)
 {
-  iuBattery = NULL;
-  iuRGBLed = NULL;
-  iuBMX055 = NULL;
-  iuBMP280 = NULL;
-  iuI2S = NULL;
-  for (int i = 0; i < sensorCount; i++)
-  {
-    m_sensors[i] = NULL;
-  }
+  resetSensorPointers();
 }
 
 IUSensorConfigurator::~IUSensorConfigurator()
 {
+  resetSensorPointers();
+}
+
+void IUSensorConfigurator::resetSensorPointers()
+{
   iuBattery = NULL;
-  iuRGBLed = NULL;
+  iuAccelerometer = NULL;
+  iuGyroscope = NULL;
+  iuMagnetometer = NULL;
   iuBMX055 = NULL;
   iuBMP280 = NULL;
   iuI2S = NULL;
+  iuGNSS = NULL;
   for (int i = 0; i < sensorCount; i++)
   {
     m_sensors[i] = NULL;
@@ -57,16 +61,20 @@ bool IUSensorConfigurator::createAllSensorsWithDefaultConfig()
 {
 
   iuBattery = new IUBattery(m_iuI2C);
-  iuRGBLed = new IURGBLed(m_iuI2C);
-  iuBMX055 = new IUBMX055(m_iuI2C);
+  iuAccelerometer = new IUBMX055Acc(m_iuI2C);
+  iuGyroscope = new IUBMX055Gyro(m_iuI2C);
+  iuMagnetometer = new IUBMX055Mag(m_iuI2C);
   iuBMP280 = new IUBMP280(m_iuI2C);
   iuI2S = new IUI2S(m_iuI2C);
+  iuGNSS = new IUCAMM8Q(m_iuI2C);
 
   m_sensors[0] = iuBattery;
-  m_sensors[1] = iuRGBLed;
-  m_sensors[2] = iuBMX055;
-  m_sensors[3] = iuBMP280;
-  m_sensors[4] = iuI2S;
+  m_sensors[1] = iuAccelerometer;
+  m_sensors[2] = iuGyroscope;
+  m_sensors[3] = iuMagnetometer;
+  m_sensors[4] = iuBMP280;
+  m_sensors[5] = iuI2S;
+  m_sensors[6] = iuGNSS;
 
   for (int i = 0; i < sensorCount; i++)
   {
@@ -80,47 +88,36 @@ bool IUSensorConfigurator::createAllSensorsWithDefaultConfig()
       return false;
     }
     m_sensors[i]->setSamplingRate(defaultSamplingRates[i]);
+    m_sensors[i]->switchToPowerMode(defaultPowerMode[i]);
   }
   return true;
-}
-
-void IUSensorConfigurator::wakeUpSensors()
-{
-  for (uint8_t i = 0; i < sensorCount; i++)
-  {
-    m_sensors[i]->wakeUp();
-  }
 }
 
 /**
  * Have each sensor acquire data and send them to their respective receivers
  * NB: For "run" mode
+ * @param asynchronous  if true, acquire data only from asynchronous sensors,
+                        else acquire data only synchronous sensors
  */
-void IUSensorConfigurator::acquireDataAndSendToReceivers()
+void IUSensorConfigurator::acquireDataAndSendToReceivers(bool asynchronous)
 {
+  /*
+  Due to asynchrone data acquisition, the sendToReceivers functions actually
+  send the previous data reading (to allow completion of the reading in the meantime).
+  So sendToReceivers are actually called before acquireData. Each sensor handles its own data
+  availability, so nothing is sent if data is not ready.
+  */
   for (uint8_t i = 0; i < sensorCount; i++)
   {
     m_sensors[i]->sendToReceivers();
     m_sensors[i]->acquireData();
   }
-  /*
-  Due to asynchrone data acquisition, the sendToReceivers functions actually
-  send the previous data reading (to allow completion of the reading in the meantime).
-  So sendToReceivers are actually called before acquireData. Each sensor handles its own data 
-  availability, so nothing is sent if data is not ready.
-  iuBMX055->sendToReceivers();
-  iuBMX055->acquireData();
-  iuBMP280->sendToReceivers();
-  iuBMP280->acquireData();
-  iuI2S->sendToReceivers();
-  iuI2S->acquireData();
-  */
 }
 
 /**
  * Have each sensor acquire data and send them through I2C
- * NB: For "data collection" mode
- * NB: in data collection kode, for 6 feature, method duration is about 17 microseconds
+ * NB: For "data collection" mode - only send Sound and Acceleration data (asynchronously)
+ * NB: method duration is about 17 microseconds
  */
 void IUSensorConfigurator::acquireDataAndDumpThroughI2C()
 {
@@ -132,25 +129,20 @@ void IUSensorConfigurator::acquireDataAndDumpThroughI2C()
   }
   else
   {
-    //Serial.print("s: ");
-    //Serial.println(micros());
     iuI2S->dumpDataThroughI2C();
     iuBMX055->dumpDataThroughI2C();
   }
   iuI2S->acquireData();
   iuBMX055->acquireData();
-  //m_iuI2C->port->write(';');
-  //delayMicroseconds(500);
-  //Serial.print("e: ");
-  //Serial.println(micros());
-  //m_iuI2C->port->flush();
 }
 
 /**
  * Have each sensor acquire data and send them through I2C
  * NB: For "record" mode
+ * @param asynchronous  if true, acquire data only from asynchronous sensors,
+                        else acquire data only synchronous sensors
  */
-void IUSensorConfigurator::acquireAndStoreData()
+void IUSensorConfigurator::acquireAndStoreData(bool asynchronous)
 {
   bool newData = false;
   IUABCSensor *sensor;
@@ -172,6 +164,42 @@ void IUSensorConfigurator::resetAllReceivers()
   for (uint8_t i = 0; i < sensorCount; i++)
   {
     m_sensors[i]->resetReceivers();
+  }
+}
+
+
+/* ====================== Power management methods ====================== */
+
+/**
+ * Wake Up all sensors and put them into ACTIVE mode
+ */
+void IUSensorConfigurator::allSensorsWakeUp()
+{
+  for (uint8_t i = 0; i < sensorCount; i++)
+  {
+    m_sensors[i]->wakeUp();
+  }
+}
+
+/**
+ * Put all sensors into SLEEP Mode
+ */
+void IUSensorConfigurator::allSensorsSleep()
+{
+  for (uint8_t i = 0; i < sensorCount; i++)
+  {
+    m_sensors[i]->sleep();
+  }
+}
+
+/**
+ * Put all sensors into SUSPEND Mode
+ */
+void IUSensorConfigurator::allSensorsSuspend()
+{
+  for (uint8_t i = 0; i < sensorCount; i++)
+  {
+    m_sensors[i]->suspend();
   }
 }
 

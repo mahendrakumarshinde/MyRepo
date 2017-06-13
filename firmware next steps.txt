@@ -1,0 +1,38 @@
+- Low Power mode implementation:
+  1. Wifi: Kris has already created some functions to put the WiFi module into deep sleep
+    - Just need to integrate them
+    - Need to wait for the FTDI to be delivered to start testing
+  2. BMP280:
+    - See datasheet page 16
+    - Barometer and thermometer have a single common power management.
+    - Use "Forced Mode"? => one measure and then go back to sleep
+  3. BMX055:
+    - Check power mode in the doc
+  4. BLE:
+    - Check power mode in the doc
+    - If there is indeed a sleep mode available, does sleeping disconnect the device?
+  5. STM32L433:
+    - Is it worth it, compared to the other module power usage?
+    - See datasheet pages 24-26 => ask Kris if there is an interface to implement them?
+    - Is the clock rate adjustable? Is it something we should consider doing (now or in the future)? Is there an interface?
+  5. Global design:
+    - Add a configuration to allow to specify the sleep / wake time of the entire board (each sensors + BLE / wifi?)
+
+- OTA:
+  1. BLE:
+    - Check and test Kris sketches
+    - OPTION 1: Use Kris's skecth for OTA using a Dragonfly + NRF52 as host
+      * Need to get a Dragonfly with a NRF52832 from Kris?
+      * "In order to program the compiled code onto the nRF52 development board, a Nordic nRF52 pca10040 DK board is useful." => Also need to get a DK board?
+    - OPTION 2:
+      * Use Cassia Hub as host => in that case, I have to replicate "IU_Dragonfly_BLE_OTA_Update_Utility_V0.0" functionnalities in a Python app.
+      * We can also have Po program the same for the Android App.
+    - Note that *.iap files (firmware image files) path are given by Arduino IDE once the skecth compilation is complete. The file path should be something like "/tmp/arduino_build_XXXXXX".
+  2. WiFi:
+    - Check Kris sketches
+    - Need to wait for the delivery of the FTDI
+
+
+Low power mode is not immediate: the API from Kris is only for the WiFi module.
+There are 3 areas where I need to work:
+

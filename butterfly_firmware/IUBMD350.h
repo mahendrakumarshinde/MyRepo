@@ -45,11 +45,16 @@ class IUBMD350 : public IUABCInterface
     static const bool defaultParityEnable = false;
     static const uint8_t booleanSettingCount = 3;
     static BooleanSetting noSetting;
+
     //Constructors, getters and setters
     IUBMD350(IUI2C *iuI2C);
     virtual ~IUBMD350() {}
     virtual HardwareSerial* getPort() { return port; }
-    void resetDevice();
+    // Hardware and power management
+    void softReset();
+    virtual void wakeUp();
+    virtual void sleep();
+    virtual void suspend();
     // TODO Need to set / use password? If yes, see BMDWare datasheet
     //Set Password AT Command (1 to 19 byte alphanumeric): at$password
     void enterATCommandInterface();
@@ -70,12 +75,26 @@ class IUBMD350 : public IUABCInterface
     char* getUUID() { return m_UUID; }
     char* getMajorNumber() { return m_majorNumber; }
     char* getMinorNumber() { return m_minorNumber; }
+    bool setUARTSettings(uint32_t baudRate, bool flowControl, bool parity, bool passThrough);
+    bool queryUARTSettings();
+    uint32_t getUARTBaudRate() { return m_UARTBaudRate; }
+    bool inUARTFlowControlEnabled() { return m_UARTFlowControl; }
+    bool isUARTParityEnabled() { return m_UARTParity; }
+    bool isUARTEnabled() { return m_UARTMode; }
+
+
+
+
     bool setBLEBaudRate(uint32_t baudRate);
     uint32_t getBLEBaudRate() { return m_baudRate; }
     uint32_t queryBLEBaudRate();
     BooleanSetting getBooleanSettings(String settingName);
     bool setBooleanSettings(String settingName, bool enable);
     bool queryBooleanSettingState(String settingName);
+
+
+
+
     uint16_t getDataReceptionTimeout() { return m_dataReceptionTimeout; }
     void setDataReceptionTimeout(uint16_t dataRecTimeout) { m_dataReceptionTimeout = dataRecTimeout; }
     char* getBuffer() { return m_buffer; }
@@ -87,23 +106,31 @@ class IUBMD350 : public IUABCInterface
     void printFigures(uint16_t buffSize, q15_t *buff, float (*transform)(int16_t));
     // Public members
     BooleanSetting settings[booleanSettingCount];
-    
+
     // Diagnostic Functions
     void exposeInfo();
 
   protected:
+    // Main configuration
     IUI2C *m_iuI2C;
     bool m_ATCmdEnabled;
     char m_deviceName[9];     // max 8 chars + 1 char end of string
-    int8_t m_beaconTxPower;
-    int8_t m_UARTTxPower;
     char m_UUID[33];          // 32 hex digits + 1 char end of string
     char m_majorNumber[5];    // 4 hex digits + 1 char end of string
     char m_minorNumber[5];    // 4 hex digits + 1 char end of string
-    uint32_t m_BLEBaudRate;
+    // Power Management
+    powerMode m_status
+    int8_t m_beaconTxPower;
+    int8_t m_UARTTxPower;
+    // UART Configuration
+    uint32_t m_UARTBaudRate;
+    bool m_UARTFlowControl;
+    bool m_UARTParity;
+    bool m_UARTMode;
+    // Communication
     char m_buffer[bufferSize];  // BLE Data buffer
     uint8_t m_bufferIndex; // BLE buffer Index
-    //Data reception robustness variables: Buffer is cleansed if now - lastReadTime > dataReceptionTimeout
+    // Data reception robustness variables: Buffer is cleansed if now - lastReadTime > dataReceptionTimeout
     uint16_t m_dataReceptionTimeout; // ms
     uint32_t m_lastReadTime;
 

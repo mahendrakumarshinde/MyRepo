@@ -3,6 +3,9 @@
 
 IUBMD350::BooleanSetting IUBMD350::noSetting = {"", "", false};
 
+
+/* ============================ Constructors, destructor, getters, setters ============================ */
+
 IUBMD350::IUBMD350(IUI2C *iuI2C) :
   IUABCInterface(),
   m_iuI2C(iuI2C),
@@ -46,11 +49,38 @@ IUBMD350::IUBMD350(IUI2C *iuI2C) :
   exitATCommandInterface();
 }
 
+
+/* ============================  Hardware & power management methods ============================ */
+
+/**
+ * Switch to ACTIVE power mode
+ */
+void IUBMD350::wakeUp()
+{
+  m_powerMode = powerMode::ACTIVE;
+}
+
+/**
+ * Switch to SLEEP power mode
+ */
+void IUBMD350::sleep()
+{
+  m_powerMode = powerMode::SLEEP;
+}
+
+/**
+ * Switch to SUSPEND power mode
+ */
+void IUBMD350::suspend()
+{
+  m_powerMode = powerMode::SUSPEND;
+}
+
 /**
    Reset the device
    Required after when entering / exiting AT Command Interface Mode
 */
-void IUBMD350::resetDevice()
+void IUBMD350::softReset()
 {
   digitalWrite(resetPin, LOW); // reset BMD-350
   delay(100); // wait a while
@@ -69,7 +99,7 @@ void IUBMD350::enterATCommandInterface()
 {
   digitalWrite(ATCmdPin, LOW);
   delay(100);
-  resetDevice();
+  softReset();
   // hold ATMD pin LOW for at least 2.5s. If not, AT Mode will not work
   delay(2500);
   m_ATCmdEnabled = true;
@@ -88,7 +118,7 @@ void IUBMD350::exitATCommandInterface()
   m_ATCmdEnabled = false;
   digitalWrite(ATCmdPin, HIGH);
   delay(100);
-  resetDevice();
+  softReset();
   if (setupDebugMode)
   {
     debugPrint(F("Exited AT Command Interface mode"));
@@ -216,7 +246,7 @@ bool IUBMD350::queryDeviceName()
 
 /**
  * Set the TX power of the BLE UART and Beacon
- * 
+ *
  * UART Tx power affects the range at which the device is connectable
  * Beacon Tx Power affects the range at which the device is visible / discoverable
  */
@@ -359,16 +389,16 @@ bool IUBMD350::queryUUIDInfo()
   int respLen = sendATCommand("buuid?", uuid, 33);
   if (respLen < 1) { return false; }
   strCopyWithAutocompletion(m_UUID, uuid, 33, respLen);
-  
+
   char number[5];
   respLen = sendATCommand("bmjid?", number, 5);
   if (respLen < 1) { return false; }
   strCopyWithAutocompletion(m_majorNumber, number, 5, respLen);
-  
+
   respLen = sendATCommand("bmnid?", number, 5);
   if (respLen < 1) { return false; }
   strCopyWithAutocompletion(m_minorNumber, number, 5, respLen);
-  
+
   return true;
 }
 

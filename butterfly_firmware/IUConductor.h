@@ -52,7 +52,7 @@ class IUConductor
     void switchToState(operationState state);
     bool checkAndUpdateMode();
     bool checkAndUpdateState();
-    bool acquireAndSendData();
+    void acquireAndSendData(bool asynchronous);
     void computeFeatures();
     bool streamData(HardwareSerial *port, bool newLine=false);
     bool beginDataAcquisition();
@@ -71,6 +71,7 @@ class IUConductor
     IUI2C      *iuI2C;
     IUBMD350   *iuBluetooth;
     IUESP8285  *iuWifi;
+    IURGBLed   *iuRGBLed;
 
 
   protected:

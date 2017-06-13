@@ -7,51 +7,71 @@
 
 #include "IULogger.h"
 
-/* ============================= Operation Enums ============================= */
-  /** 
- * Usage modes are user controlled, they describe how the device is being used
+/* ============================= Operation Modes ============================= */
+
+/**
+ * Power modes are enforced at component level and are controlled by the either
+ * automatically or by the user
  */
-enum usageMode : uint8_t
+class powerMode
 {
-  calibration      = 0,
-  configuration    = 1,
-  operation       = 2,
-  usageModeCount   = 3
+  public:
+    enum  option : uint8_t
+    {
+      ACTIVE  = 0,
+      SLEEP   = 1,
+      SUSPEND = 2,
+      COUNT   = 3,
+    };
 };
 
 /**
- * Operation modes are mostly user controlled, with some automatic mode switching
+ * Usage modes are user controlled, they describe how the device is being used
  */
-enum operationMode : uint8_t
+class usageMode
 {
-  run              = 0,
-  charging         = 1,
-  dataCollection   = 2,
-  record           = 3,
-  sleep            = 4,
-  opModeCount      = 5
-}; // The number of different operation modes
+  public:
+    enum  option : uint8_t
+    {
+      CALIBRATION   = 0,
+      CONFIGURATION = 1,
+      OPERATION     = 2,
+      COUNT         = 3,
+    };
+};
+
+/**
+ * Acquisition modes are mostly user controlled, with some automatic mode switching
+ */
+class aquisitionMode
+{
+  public:
+    enum  option : uint8_t
+    {
+      FEATURE   = 0,
+      EXTENSIVE = 1,
+      RECORD    = 2,
+      NONE      = 3,
+      COUNT     = 4,
+    };
+};
 
 /**
  * Operation states describe the production status, inferred from calculated features
  * and user-defined thresholds
  */
-enum operationState : uint8_t {idle            = 0,
-                               normalCutting   = 1,
-                               warningCutting  = 2,
-                               badCutting      = 3,
-                               opStateCount    = 4}; // The number of different operation states
-
-/**
- * Power modes are programmatically controlled and managed by the conductor depending
- * on the operation modes, states, and desired sampling rate
- */
-enum powerMode : uint8_t {deepSuspend          = 0,
-                          suspend              = 1,
-                          standBy              = 2,
-                          low                  = 3,
-                          normal               = 4,
-                          powerModeCount       = 5};
+class operationState
+{
+  public:
+    enum  option : uint8_t
+    {
+      IDLE    = 0,
+      NORMAL  = 1,
+      WARNING = 2,
+      DANGER  = 3,
+      COUNT   = 4,
+    };
+};
 
 
 /*====================== General utility function ============================ */

@@ -60,7 +60,7 @@ void callback()
   {
     startT = micros();
   }
-  conductor.acquireAndSendData();
+  conductor.acquireAndSendData(true);
   if (callbackDebugMode)
   {
     debugPrint(micros() - startT);

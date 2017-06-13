@@ -738,6 +738,25 @@ float press_energy(uint16_t startInd, uint32_t buffSize)
 }
 
 
+/**
+ * Return the max absolute value
+ * 
+ * eg: max_abs_accel(accel_x_batch[buffer_compute_index], MAX_INTERVAL_ACCEL)
+ */
+float max_abs_accel(q15_t *accel_batch, int16_t batchSize)
+{
+  float max_val(0), val(0);
+  for (uint16_t i = 0; i < batchSize; ++i)
+  {
+    val = abs(accel_batch[i]);
+    if (val > max_val)
+    {
+      max_val = val;
+    }
+  }
+  return max_val;
+}
+
 /*
 const uint16_t ACCEL_MEAN_INTERVAL = 120;
 q15_t accelMeanBuff[3][ACCEL_MEAN_INTERVAL];
@@ -799,7 +818,7 @@ float velocityX()
 {
   float ene = press_energy(0, ENERGY_INTERVAL_ACCEL);
   //Serial.println("Energy 1");
-  Serial.println(ene, DEC);
+  //Serial.println(ene, DEC);
   return ene;
 }
 // Function to calculate Accel RMS value for RMS velovity calculation along Y axis
@@ -822,7 +841,7 @@ float velocityY()
   uint16_t startInd = (uint16_t) ENERGY_INTERVAL_ACCEL;
   float ene = press_energy(startInd, ENERGY_INTERVAL_ACCEL);
   //Serial.println("Energy 2");
-  Serial.println(ene, DEC);
+  //Serial.println(ene, DEC);
   return ene;
 }
 // Function to calculate Accel RMS value for RMS velovity calculation along Z axis
@@ -847,7 +866,7 @@ float velocityZ()
   uint16_t startInd = (uint16_t) (2 * ENERGY_INTERVAL_ACCEL);
   float ene = press_energy(startInd, ENERGY_INTERVAL_ACCEL);
   //Serial.println("Energy 3");
-  Serial.println(ene, DEC);
+  //Serial.println(ene, DEC);
   return ene;
 }
 
@@ -865,7 +884,7 @@ float currentTemperature() // Index 4
   uint16_t startInd = (uint16_t) (3 *ENERGY_INTERVAL_ACCEL);
   float ene = press_energy(startInd, ENERGY_INTERVAL_ACCEL);
   //Serial.println("Energy 4");
-  Serial.println(ene, DEC);
+  //Serial.println(ene, DEC);
   return ene;
 }
 

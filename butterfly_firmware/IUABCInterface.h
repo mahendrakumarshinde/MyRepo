@@ -6,16 +6,18 @@
 class IUABCInterface
 {
   public:
-    static const uint32_t ABCDefaultBaudRate = 115200;
-    static constexpr HardwareSerial *ABCPort = NULL;
+    // Constructors, destructor, getters and setters
     IUABCInterface();
     virtual ~IUABCInterface();
-    virtual HardwareSerial* getPort() { return ABCPort; }
-    virtual uint32_t getDefaultBaudRate() { return ABCDefaultBaudRate; }
-    virtual void setBaudRate( uint32_t baudRate);
+    virtual void setBaudRate(uint32_t baudRate);
     virtual uint32_t getBaudRate() { return m_baudRate; }
+    // Hardware & power management methods
+    virtual void wakeUp() {}      // May be defined in Child class
+    virtual void sleep() {}       // May be defined in Child class
+    virtual void suspend() {}     // May be defined in Child class
 
   protected:
+    powerMode::option m_powerMode;
     uint32_t m_baudRate;
 };
 

@@ -1,5 +1,8 @@
 #include "IUI2C.h"
 
+
+/* ============================ Constructors, destructor, getters, setters ============================ */
+
 IUI2C::IUI2C() :
   IUABCInterface(),
   m_readFlag(true),
@@ -11,8 +14,38 @@ IUI2C::IUI2C() :
   m_baudRate = IUI2C::defaultBaudRate;
   port->begin(m_baudRate);
   delay(4000);
-  int intPin   =   7; 
+  int intPin   =   7;
   pinMode(intPin,  INPUT);
+}
+
+
+/* ============================  Hardware & power management methods ============================ */
+
+/**
+ * Switch to ACTIVE power mode
+ * I2C cannot really be turned off, so in practice, this does nothing
+ */
+void IUI2C::wakeUp()
+{
+  m_powerMode = powerMode::ACTIVE;
+}
+
+/**
+ * Switch to SLEEP power mode
+ * I2C cannot really be turned off, so in practice, this does nothing
+ */
+void IUI2C::sleep()
+{
+  m_powerMode = powerMode::SLEEP;
+}
+
+/**
+ * Switch to SUSPEND power mode
+ * I2C cannot really be turned off, so in practice, this does nothing
+ */
+void IUI2C::suspend()
+{
+  m_powerMode = powerMode::SUSPEND;
 }
 
 /**
@@ -24,11 +57,6 @@ void IUI2C::setClockRate( uint32_t clockRate)
   m_clockRate = clockRate;
   Wire.setClock(m_clockRate);
   delay(2000);
-}
-
-void IUI2C::activate()
-{
-  // Nothing to do
 }
 
 /**
@@ -237,7 +265,7 @@ bool IUI2C::readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_
   return success;
 }
 
-/* ------------- Hardwire Serial for DATA_COLLECTION commands ------------- */
+/* ========================= Communication methods ========================= */
 
 /**
  * Read port (serial) and write the output in the wire buffer

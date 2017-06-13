@@ -12,7 +12,7 @@
 
    Comments:
      A specific Arduino core have been develop for the Butterfly. For more info on the I2S library currently
-     in use, see Thomas Roell (aka GumpyOldPizza) github: https://github.com/GrumpyOldPizza/arduino-STM32L4
+     in use, see Thomas Roell (aka GrumpyOldPizza) github: https://github.com/GrumpyOldPizza/arduino-STM32L4
      I2S use a buffer to collect data and when it's full it calls an onReceive callback function.
 
 */
@@ -28,14 +28,15 @@
 #include "IUI2C.h"
 
 /**
+ * Class to handle both the I2S and the related ICS43432 microphone
  *
- * IUI2S is sensibility more complicated than other sensor classes because it handles the
+ * Also implement a callback mechanism (with callback rate vs sampling rate) to
+ * drive the sampling rate of other asynchronous sensors.
  */
 class IUI2S : public IUABCSensor
 {
   public:
-    static const uint8_t sensorTypeCount = 1;
-    static char sensorTypes[sensorTypeCount];
+    static char sensorType = IUABCSensor::SOUND;
     static const uint8_t availableClockRateCount = 9;
     static uint16_t availableClockRate[availableClockRateCount];
     // Frequency and sampling setting
@@ -44,27 +45,29 @@ class IUI2S : public IUABCSensor
     enum dataSendOption : uint8_t {sound = 0,
                                    optionCount = 1};
     static const uint8_t bitsPerAudioSample = 32;
-    static const uint16_t audioSampleSize = (I2S_BUFFER_SIZE * 8) / (bitsPerAudioSample); // stereo recording 
-    
+    static const uint16_t audioSampleSize = (I2S_BUFFER_SIZE * 8) / (bitsPerAudioSample); // stereo recording
+
     // Getters, Setters, constructor and Destructor
     IUI2S(IUI2C *iuI2C);
     virtual ~IUI2S() {}
-    virtual uint8_t getSensorTypeCount() { return sensorTypeCount; }
-    virtual char getSensorType(uint8_t index) { return sensorTypes[index]; }
+    virtual char getSensorType() { return (char) sensorType; }
+    // Hardware and power management methods
+    virtual void wakeUp();
+    virtual void sleep();
+    virtual void suspend();
     bool setClockRate(uint16_t clockRate);
     uint16_t getClockRate() { return m_clockRate; }
     virtual void setCallbackRate() {}  // Non settable
     uint16_t getCallbackRate() { return m_clockRate / (audioSampleSize / 2); }
     void setSamplingRate(uint16_t samplingRate);
-
-    //Methods:
-    virtual void wakeUp();
+    // Data acquisition methods
     void prepareDataAcquisition();
     bool triggerDataAcquisition(void (*callback)());
     bool endDataAcquisition();
     void processAudioData(q31_t *data);
     virtual void readData(bool processData = true);
     virtual bool acquireData();
+    // Communication methods
     virtual void sendToReceivers();
     void dumpDataThroughI2C();
     void dumpDataForDebugging();
@@ -77,7 +80,7 @@ class IUI2S : public IUABCSensor
     bool m_newData;
     uint8_t m_rawAudioData[I2S_BUFFER_SIZE];
     q31_t m_audioData[audioSampleSize / 2];    // 32bit samples, we use mono data so array half the size
-    uint16_t m_targetSample;              
+    uint16_t m_targetSample;
 };
 
 #endif // IUI2S_H

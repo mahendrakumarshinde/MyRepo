@@ -4,38 +4,48 @@
 #include <Arduino.h>
 #include "IUABCSensor.h"
 #include "IUBattery.h"
-#include "IURGBLed.h"
-#include "IUBMX055.h"
+#include "IUBMX055Acc.h"
+#include "IUBMX055Gyro.h"
+#include "IUBMX055Mag.h"
 #include "IUBMP280.h"
+#include "IUCAMM8Q.h"
 #include "IUI2S.h"
 
 
 class IUSensorConfigurator
 {
   public:
-    static const uint8_t sensorCount = 5;
-    // Sensors are ordered: battery, led, BMX055, BMP280, Sound
+    static const uint8_t sensorCount = 7;
+    // Sensors are ordered: battery, Accel, Gyro, Mag, BMP280, Sound, GNSS
     static uint16_t defaultSamplingRates[sensorCount];
-    // Constructors, destructors, getters and setters
+    static IUABCSensor::powerMode defaultPowerMode[sensorCount];
+
+    // Constructors, destructor, getters and setters
     IUSensorConfigurator();
     IUSensorConfigurator(IUI2C *iuI2C);
     virtual ~IUSensorConfigurator();
+    void resetSensorPointers();
     IUABCSensor** getSensors() { return m_sensors; }
-    // Methods
+    // Configuration and run methods
     bool createAllSensorsWithDefaultConfig();
-    void wakeUpSensors();
-    void acquireDataAndSendToReceivers();
+    void acquireDataAndSendToReceivers(bool asynchronous);
     void acquireDataAndDumpThroughI2C();
-    void acquireAndStoreData();
+    void acquireAndStoreData(bool asynchronous);
     void resetAllReceivers();
-    // Diagnostic Functions
+    //Power management methods
+    void allSensorsWakeUp();
+    void allSensorsSleep();
+    void allSensorsSuspend();
+    // Diagnostic methods
     void exposeSensorsAndReceivers();
     // Public members for sensors for convenience
-    IUBattery *iuBattery;
-    IURGBLed  *iuRGBLed;
-    IUBMX055  *iuBMX055;
-    IUBMP280  *iuBMP280;
-    IUI2S     *iuI2S;
+    IUBattery    *iuBattery;
+    IUBMX055Acc  *iuAccelerometer;
+    IUBMX055Gyro *iuGyroscope;
+    IUBMX055Mag  *iuMagnetometer;
+    IUBMP280     *iuBMP280;
+    IUI2S        *iuI2S;
+    IUCAMM8Q     *iuGNSS;
 
   protected:
     IUI2C *m_iuI2C;
