@@ -61,11 +61,11 @@ class IUABCFeature
     // Thresholds and state
     virtual void setThresholds(float normalVal, float warningVal, float dangerVal);
     virtual float getThreshold(uint8_t index) { return m_thresholds[index]; }
-    virtual operationState updateState();
-    virtual operationState getState() = 0;                                         // To implement in child class
-    virtual void setState(operationState state) = 0;                               // To implement in child class
-    virtual operationState getHighestDangerLevel() = 0;                            // To implement in child class
-    virtual void setHighestDangerLevel(operationState state) = 0;                  // To implement in child class
+    virtual operationState::option updateState();
+    virtual operationState::option getState() = 0;                                 // To implement in child class
+    virtual void setState(operationState::option state) = 0;                       // To implement in child class
+    virtual operationState::option getHighestDangerLevel() = 0;                    // To implement in child class
+    virtual void setHighestDangerLevel(operationState::option state) = 0;          // To implement in child class
     // Run
     virtual bool receiveScalar(uint8_t sourceIndex, q15_t value) { return false; } // To implement in child class
     virtual bool receiveScalar(uint8_t sourceIndex, float value) { return false; } // To implement in child class
@@ -101,7 +101,7 @@ class IUABCFeature
     uint8_t m_recordIndex;                                             // Data recording buffer index
     uint8_t m_computeIndex;                                            // Computation buffer index
     // Thresholds and state
-    float m_thresholds[operationState::opStateCount - 1];              // Normal, warning and danger thresholds
+    float m_thresholds[operationState::COUNT - 1];              // Normal, warning and danger thresholds
 };
 
 

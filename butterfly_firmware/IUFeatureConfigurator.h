@@ -80,7 +80,7 @@ class IUFeatureConfigurator
     bool addFeature(IUFeature *feature);
     void computeAndSendToReceivers();
     void resetFeaturesCounters();
-    operationState getOperationStateFromFeatures();
+    operationState::option getOperationStateFromFeatures();
     uint8_t streamFeatures(HardwareSerial *port);
     void resetAllReceivers();
     // Diagnostic Functions

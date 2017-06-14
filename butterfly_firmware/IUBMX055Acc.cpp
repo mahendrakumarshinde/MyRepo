@@ -3,6 +3,7 @@
 /* ================================= Static member definition ================================= */
 
 IUI2C* IUBMX055Acc::m_iuI2C = NULL;
+bool IUBMX055Acc::m_newData = false;
 uint8_t IUBMX055Acc::m_rawBytes[6] = {0, 0, 0, 0, 0, 0};
 q15_t IUBMX055Acc::m_rawData[3] = {0, 0, 0};
 q15_t IUBMX055Acc::m_data[3] = {0, 0, 0};
@@ -16,25 +17,24 @@ q15_t IUBMX055Acc::m_resolution = 0;
  */
 IUBMX055Acc::IUBMX055Acc(IUI2C *iuI2C) :
   IUABCSensor(),
-  m_newData(false),
   m_scale(defaultScale),
   m_filteredData(false),
   m_bandwidth(defaultBandwidth)
 {
   m_iuI2C = iuI2C;
   m_samplingRate = defaultSamplingRate;
-  if (!m_iuI2C->checkComponentWhoAmI("BMX055 ACC", ACC_ADDRESS, ACC_WHO_AM_I, ACC_I_AM))
+  if (!m_iuI2C->checkComponentWhoAmI("BMX055 ACC", ADDRESS, WHO_AM_I, I_AM))
   {
     m_iuI2C->setErrorMessage("ACCERR");
     return;
   }
   softReset();
   wakeUp();
-  setscale(m_scale);
+  setScale(m_scale);
+  setSamplingRate(defaultSamplingRate);
   useUnfilteredData();
   configureInterrupts();
   m_asynchronous = true;
-  if (setupDebugMode) { debugPrint(F("Accelerometer initialized successfully.\n")); }
 }
 
 /**
@@ -56,7 +56,7 @@ void IUBMX055Acc::softReset()
 void IUBMX055Acc::wakeUp()
 {
   m_powerMode = powerMode::ACTIVE;
-  writeByte(BMX055_ACC_ADDRESS, BMX055_ACC_PMU_LPW, 0x00);
+  m_iuI2C->writeByte(ADDRESS, PMU_LPW, 0x00);
   delay(100);
 }
 
@@ -69,7 +69,7 @@ void IUBMX055Acc::wakeUp()
 void IUBMX055Acc::sleep()
 {
   m_powerMode = powerMode::SLEEP;
-  writeByte(ADDRESS, PMU_LPW, 0x80);
+  m_iuI2C->writeByte(ADDRESS, PMU_LPW, 0x80);
 }
 
 /**
@@ -81,7 +81,7 @@ void IUBMX055Acc::sleep()
 void IUBMX055Acc::suspend()
 {
   m_powerMode = powerMode::SUSPEND;
-  writeByte(ADDRESS, PMU_LPW, 0x20);
+  m_iuI2C->writeByte(ADDRESS, PMU_LPW, 0x20);
 }
 
 /**
@@ -99,8 +99,8 @@ void IUBMX055Acc::setScale(IUBMX055Acc::scaleOption scale)
  */
 void IUBMX055Acc::setBandwidth(IUBMX055Acc::bandwidthOption bandwidth)
 {
-  m_Bandwidth = bandwidth;
-  m_iuI2C->writeByte(ADDRESS, PMU_BW, (uint8_t) m_Bandwidth & 0x0F);
+  m_bandwidth = bandwidth;
+  m_iuI2C->writeByte(ADDRESS, PMU_BW, (uint8_t) m_bandwidth & 0x0F);
   if (setupDebugMode && !m_filteredData)
   {
     debugPrint("WARNING: Set accelerometer BW for low-pass filter but filtering is not active");
@@ -253,13 +253,13 @@ void IUBMX055Acc::sendToReceivers()
     {
       switch(m_toSend[i])
       {
-        case (uint8_t) dataSendOption::X:
+        case (uint8_t) dataSendOption::dataX:
           m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], m_data[0]);
           break;
-        case (uint8_t) dataSendOption::Y:
+        case (uint8_t) dataSendOption::dataY:
           m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], m_data[1]);
           break;
-        case (uint8_t) dataSendOption::Z:
+        case (uint8_t) dataSendOption::dataZ:
           m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], m_data[2]);
           break;
         case (uint8_t) dataSendOption::resolution:

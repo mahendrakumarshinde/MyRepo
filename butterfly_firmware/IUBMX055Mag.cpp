@@ -16,8 +16,7 @@ q15_t IUBMX055Mag::m_bias[3] = {0, 0, 0};
 IUBMX055Mag::IUBMX055Mag(IUI2C *iuI2C) :
   IUABCSensor(),
   m_odr(defaultODR),
-  m_accuracy(defaultAccuracy),
-  m_samplingRate(defaultSamplingRate)
+  m_accuracy(defaultAccuracy)
 {
   m_iuI2C = iuI2C;
   softReset();
@@ -26,6 +25,7 @@ IUBMX055Mag::IUBMX055Mag(IUI2C *iuI2C) :
     m_iuI2C->setErrorMessage("MAGERR");
     return;
   }
+  setSamplingRate(defaultSamplingRate);
 }
 
 
@@ -116,9 +116,9 @@ void IUBMX055Mag::writeODRRegister()
 }
 
 /**
- *
+ * Set the accuracy from an accuracyPreset, by changing the oversampling on XY and Z axis
  */
-void setAccuracy(accuracyPreset accuracy)
+void IUBMX055Mag::setAccuracy(IUBMX055Mag::accuracyPreset accuracy)
 {
   m_accuracy = accuracy;
   switch (m_accuracy)
@@ -139,38 +139,6 @@ void setAccuracy(accuracyPreset accuracy)
       m_iuI2C->writeByte(ADDRESS, REP_XY, 0x17);  // 47 repetitions (oversampling)
       m_iuI2C->writeByte(ADDRESS, REP_Z,  0x51);  // 83 repetitions (oversampling)
       break;
-  }
-}
-
-/**
- *
- */
-void IUBMX055Mag::configureMagnometer(IUBMX055Mag::magMode mMode)
-{
-
-
-  setAccuracy(accuracyOption accuracyMode)
-
-
-// Set up four standard configurations for the magnetometer
-  switch (mMode)
-  {
-    case magMode::lowPower:
-          m_iuI2C->writeByte(MAG_ADDRESS, MAG_REP_XY, 0x01);  // 3 repetitions (oversampling)
-          m_iuI2C->writeByte(MAG_ADDRESS, MAG_REP_Z,  0x02);  // 3 repetitions (oversampling)
-          break;
-    case magMode::regular:
-          m_iuI2C->writeByte(MAG_ADDRESS, MAG_REP_XY, 0x04);  //  9 repetitions (oversampling)
-          m_iuI2C->writeByte(MAG_ADDRESS, MAG_REP_Z,  0x16);  // 15 repetitions (oversampling)
-          break;
-    case magMode::enhancedRegular:
-          m_iuI2C->writeByte(MAG_ADDRESS, MAG_REP_XY, 0x07);  // 15 repetitions (oversampling)
-          m_iuI2C->writeByte(MAG_ADDRESS, MAG_REP_Z,  0x22);  // 27 repetitions (oversampling)
-          break;
-    case magMode::highAccuracy:
-          m_iuI2C->writeByte(MAG_ADDRESS, MAG_REP_XY, 0x17);  // 47 repetitions (oversampling)
-          m_iuI2C->writeByte(MAG_ADDRESS, MAG_REP_Z,  0x51);  // 83 repetitions (oversampling)
-          break;
   }
 }
 

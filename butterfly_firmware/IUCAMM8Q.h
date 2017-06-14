@@ -24,7 +24,7 @@
 class IUCAMM8Q : public IUABCSensor
 {
   public:
-    static IUABCSensor::sensorTypeOptions sensorType = IUABCSensor::GNSS;
+    static const sensorTypeOptions sensorType = IUABCSensor::SATELLITE;
     enum dataSendOption : uint8_t {latitude    = 0,
                                    longitude   = 1,
                                    altitude    = 2,

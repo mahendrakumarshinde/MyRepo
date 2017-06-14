@@ -63,7 +63,7 @@ void IUCAMM8Q::setPeriodic(uint32_t onTime, uint32_t period, bool forced)
   m_onTime = onTime;
   m_period = period;
   m_forcedMode = forced;
-  GNSS.setPeriodic(onTime, period, force); // set periodic wake and sleep mode
+  GNSS.setPeriodic(onTime, period, forced); // set periodic wake and sleep mode
   while (!GNSS.done()) { }                 // wait for set to complete
 }
 

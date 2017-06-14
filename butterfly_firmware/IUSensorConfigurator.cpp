@@ -6,15 +6,15 @@
 uint16_t IUSensorConfigurator::defaultSamplingRates[IUSensorConfigurator::sensorCount] =
   {2, 1000, 2, 2, 2, 8000, 2};
 
-IUABCSensor::powerMode IUSensorConfigurator::defaultPowerMode[IUSensorConfigurator::sensorCount] =
+powerMode::option IUSensorConfigurator::defaultPowerMode[IUSensorConfigurator::sensorCount] =
   {
-    IUABCSensor::ACTIVE,
-    IUABCSensor::ACTIVE,
-    IUABCSensor::SUSPEND,
-    IUABCSensor::SUSPEND,
-    IUABCSensor::ACTIVE,
-    IUABCSensor::ACTIVE,
-    IUABCSensor::SUSPEND
+    powerMode::ACTIVE,
+    powerMode::ACTIVE,
+    powerMode::SUSPEND,
+    powerMode::SUSPEND,
+    powerMode::ACTIVE,
+    powerMode::ACTIVE,
+    powerMode::SUSPEND
   };
 
 /* ============================== Methods =================================== */
@@ -42,7 +42,6 @@ void IUSensorConfigurator::resetSensorPointers()
   iuAccelerometer = NULL;
   iuGyroscope = NULL;
   iuMagnetometer = NULL;
-  iuBMX055 = NULL;
   iuBMP280 = NULL;
   iuI2S = NULL;
   iuGNSS = NULL;
@@ -125,15 +124,15 @@ void IUSensorConfigurator::acquireDataAndDumpThroughI2C()
   if(readableDataCollection)
   {
     iuI2S->dumpDataForDebugging();
-    iuBMX055->dumpDataForDebugging();
+    iuAccelerometer->dumpDataForDebugging();
   }
   else
   {
     iuI2S->dumpDataThroughI2C();
-    iuBMX055->dumpDataThroughI2C();
+    iuAccelerometer->dumpDataThroughI2C();
   }
   iuI2S->acquireData();
-  iuBMX055->acquireData();
+  iuAccelerometer->acquireData();
 }
 
 /**
@@ -219,11 +218,9 @@ void IUSensorConfigurator::exposeSensorsAndReceivers()
   for (int i = 0; i <  sensorCount; i++)
   {
     debugPrint("Sensor #", false);
-    debugPrint(i);
-    for (int j = 0; j < m_sensors[i]->getSensorTypeCount(); j++)
-    {
-      debugPrint(m_sensors[i]->getSensorType(j));
-    }
+    debugPrint(i, false);
+    debugPrint(": ", false);
+    debugPrint(m_sensors[i]->getSensorType());
     m_sensors[i]->exposeCalibration();
     m_sensors[i]->exposeReceivers();
     debugPrint("\n");

@@ -64,7 +64,7 @@ float computeFullVelocity(q15_t *accelFFT, uint16_t sampleCount, uint16_t sampli
   //Serial.print(" max: "); Serial.println(getMax(accelFFT, 512));
   // Inverse FFT
   q15_t velocities[sampleCount];
-  computeRFFT(accelFFT, velocities, sampleCount, true); 
+  computeRFFT(accelFFT, velocities, sampleCount, true);
   // Velocities RMS
   //Need to multiply by 512 as arm_math FFT downscale by 9 bits
   float velRMS = computeSignalRMS(velocities, sampleCount, samplingRate, scalingFactor * 512. / (float) internalRescale, false);
@@ -171,7 +171,7 @@ bool computeAudioRFFT(const uint16_t sourceSize, q15_t *source, const uint16_t d
   }
   //TODO allow to pass this as argument (maybe in the source)
   uint8_t AUDIO_RESCALE = 10;
-  
+
   const uint16_t rfftSize = destinationSize / 2;
   float magSize(0), hammingK(0), inverseWLen(0);
   switch(rfftSize)
@@ -237,8 +237,8 @@ IUFeatureProducer::IUFeatureProducer() :
   m_samplingRate(0),
   m_sampleCount(0),
   m_resolution(0),
-  m_state(operationState::idle),
-  m_highestDangerLevel(operationState::idle)
+  m_state(operationState::IDLE),
+  m_highestDangerLevel(operationState::IDLE)
 {
   m_destination = NULL;
 }
@@ -250,7 +250,7 @@ bool IUFeatureProducer::prepareDestination()
   if (!m_destination)
   {
     if (setupDebugMode) { debugPrint("Failed to prepare producer destination array"); }
-    return false;  
+    return false;
   }
   for (uint16_t i = 0; i < ds; i++)
   {
@@ -344,7 +344,7 @@ void IUFeatureProducer::sendToReceivers()
             debugPrint(F(" is unknown"));
           }
           break;
-          
+
       }
     }
   }
@@ -744,7 +744,7 @@ void IUAccelPreComputationFeature128::m_computeArray (uint8_t computeIndex)
 /**
  * Stream raw accel data through given port
  * @param port        the port through which data must be streamed
- * This is useful to get a whole batch of data, and to perform computation 
+ * This is useful to get a whole batch of data, and to perform computation
  * outside of the device itself
  */
 void IUAccelPreComputationFeature128::streamSourceData(HardwareSerial *port, String macAddr, String keyword)
@@ -829,7 +829,7 @@ void IUAccelPreComputationFeature512::m_computeArray (uint8_t computeIndex)
 /**
  * Stream raw accel data through given port
  * @param port        the port through which data must be streamed
- * This is useful to get a whole batch of data, and to perform computation 
+ * This is useful to get a whole batch of data, and to perform computation
  * outside of the device itself
  */
 void IUAccelPreComputationFeature512::streamSourceData(HardwareSerial *port, String macAddr, String keyword)

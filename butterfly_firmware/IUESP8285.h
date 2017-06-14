@@ -11,6 +11,7 @@ class IUESP8285 : public IUABCInterface
     //Constructor, destructor, setters and getters
     IUESP8285(IUI2C *iuI2C);
     virtual ~IUESP8285() {}
+    virtual void setBaudRate(uint32_t baudRate);
     // Hardware and power management
     virtual void wakeUp();
     virtual void sleep();

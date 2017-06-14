@@ -24,13 +24,13 @@
 #include "IUI2C.h"
 
 
-class IUBMX055 : public IUABCSensor
+class IUBMX055Acc : public IUABCSensor
 {
   public:
     enum Axis : uint8_t {X = 0,
                          Y = 1,
                          Z = 2};
-    static IUABCSensor:sensorTypeOptions sensorType = IUABCSensor::ACCELERATION;
+    static const sensorTypeOptions sensorType = IUABCSensor::ACCELERATION;
 
     /*===== DEVICE CONFIGURATION AND CONSTANTS =======*/
     static const uint8_t ADDRESS          = 0x18;
@@ -70,9 +70,9 @@ class IUBMX055 : public IUABCSensor
     static const scaleOption defaultScale = AFS_4G;
     static const bandwidthOption defaultBandwidth = ABW_16Hz;
 
-    enum dataSendOption : uint8_t {X            = 0,
-                                   Y            = 1,
-                                   Z            = 2,
+    enum dataSendOption : uint8_t {dataX        = 0,
+                                   dataY        = 1,
+                                   dataZ        = 2,
                                    resolution   = 3,
                                    samplingRate = 4,
                                    optionCount  = 5};
@@ -89,7 +89,7 @@ class IUBMX055 : public IUABCSensor
     virtual void sleep();
     virtual void suspend();
     void setScale(scaleOption scale);
-    void resetScale() { setscale(defaultScale); }
+    void resetScale() { setScale(defaultScale); }
     void setBandwidth(bandwidthOption bandwidth);
     void useFilteredData(bandwidthOption bandwidth);
     void useUnfilteredData();
@@ -99,7 +99,7 @@ class IUBMX055 : public IUABCSensor
     void computeResolution();
     virtual void readData();
     bool isNewData() {return m_newData; }
-    q15_t getData(uint8_t index) { return m_Data[index]; }
+    q15_t getData(uint8_t index) { return m_data[index]; }
     // Communication methods
     virtual void sendToReceivers();
     void dumpDataThroughI2C();
@@ -110,7 +110,7 @@ class IUBMX055 : public IUABCSensor
   protected:
     static IUI2C *m_iuI2C;
     // Data acquisition
-    bool m_newData;
+    static bool m_newData;
     static uint8_t m_rawBytes[6]; // 12bits / 2 bytes per axis: LSB, MSB => last 4 bits of LSB are not data, they are flags
     static q15_t m_rawData[3];    // Stores the Q15 accelerometer sensor raw output
     static q15_t m_data[3];       // Stores the Q15 data (with bias) in G

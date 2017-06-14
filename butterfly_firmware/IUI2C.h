@@ -43,7 +43,7 @@ class IUI2C : public IUABCInterface
     // Constructors, getters and setters
     IUI2C();
     virtual ~IUI2C() {}
-    virtual HardwareSerial* getPort() { return port; }
+    virtual void setBaudRate(uint32_t baudRate);
     // Hardware and power management
     virtual void wakeUp();
     virtual void sleep();

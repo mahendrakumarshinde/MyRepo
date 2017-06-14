@@ -21,10 +21,10 @@
 class IUBattery : public IUABCSensor
 {
   public:
+    static const sensorTypeOptions sensorType = IUABCSensor::BATTERY;
     static const uint8_t voltagePin  = A2;  // CHG pin to detect charging status
     static const uint8_t sensorTypeCount = 1;
     static const uint16_t maxVoltage = 4100; // mV full battery voltage
-    static char sensorType = IUABCSensor::BATTERY;
     enum dataSendOption : uint8_t {voltage = 0,
                                    vdda = 1,
                                    optionCount = 2};

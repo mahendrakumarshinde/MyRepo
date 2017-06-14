@@ -33,7 +33,7 @@ void IUABCSensor::switchToPowerMode(powerMode::option pMode)
       suspend();
       break;
     default:
-      if (debugMode) { debugPrint("Error - Unknown power mode"); }
+      if (debugMode) { debugPrint("Error - This power mode is not managed by the sensor"); }
       break;
   }
 }

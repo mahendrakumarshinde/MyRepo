@@ -1,10 +1,7 @@
 #include "IUBMD350.h"
 
 
-IUBMD350::BooleanSetting IUBMD350::noSetting = {"", "", false};
-
-
-/* ============================ Constructors, destructor, getters, setters ============================ */
+/* ============================ Constructors & destructor ============================ */
 
 IUBMD350::IUBMD350(IUI2C *iuI2C) :
   IUABCInterface(),
@@ -12,69 +9,36 @@ IUBMD350::IUBMD350(IUI2C *iuI2C) :
   m_bufferIndex(0),
   m_dataReceptionTimeout(2000),
   m_lastReadTime(0),
-  m_ATCmdEnabled(false),
-  m_UARTTxPower(defaultUARTTxPower),
-  m_beaconTxPower(defaultBeaconTxPower)
+  m_ATCmdEnabled(false)
 {
-  // Init Settings
-  settings[0] = {"flowControl", "ufc", false};
-  settings[1] = {"parity", "upar", false};
-  settings[2] = {"UARTPassThrough", "uen", false};
+  // Configure pins and port
+  pinMode(ATCmdPin, OUTPUT);
+  pinMode(resetPin, OUTPUT);
+  delay(100);
+  setBaudRate(defaultBaudRate);
+  // Get initial device name and UUID configuration
+  enterATCommandInterface();
+  queryDeviceName();
+  queryBeaconConfiguration();
+  // Then wakeUp => will set up the rest of the config
+  wakeUp();
+  exitATCommandInterface();
   // Fill out the buffer with meaningless data
   for (int i = 0; i < bufferSize; i++)
   {
     m_buffer[i] = 'a';
   }
-  // Make configuration pins writable
-  pinMode(ATCmdPin, OUTPUT);
-  pinMode(resetPin, OUTPUT);
-  delay(100);
-  // Initial Configuration
-  m_baudRate = defaultBaudRate;
-  port->begin(defaultBaudRate);
+}
 
-  enterATCommandInterface();
-  queryDeviceName();
-  queryUUIDInfo();
-  queryBLEBaudRate();
-  if (m_BLEBaudRate != defaultBLEBaudRate)
-  {
-    setBLEBaudRate(defaultBLEBaudRate);
-  }
-  setTxPower(defaultUARTTxPower);
-  setTxPower(defaultBeaconTxPower, true);
-  setBooleanSettings("flowControl", false);
-  setBooleanSettings("parity", false);
-  setBooleanSettings("UARTPassThrough", true);
-  exitATCommandInterface();
+void IUBMD350::setBaudRate(uint32_t baudRate)
+{
+  m_baudRate = baudRate;
+  // NB: Do not flush or end, as it blocks the device
+  port->begin(m_baudRate);
 }
 
 
 /* ============================  Hardware & power management methods ============================ */
-
-/**
- * Switch to ACTIVE power mode
- */
-void IUBMD350::wakeUp()
-{
-  m_powerMode = powerMode::ACTIVE;
-}
-
-/**
- * Switch to SLEEP power mode
- */
-void IUBMD350::sleep()
-{
-  m_powerMode = powerMode::SLEEP;
-}
-
-/**
- * Switch to SUSPEND power mode
- */
-void IUBMD350::suspend()
-{
-  m_powerMode = powerMode::SUSPEND;
-}
 
 /**
    Reset the device
@@ -88,6 +52,54 @@ void IUBMD350::softReset()
 }
 
 /**
+ * Switch to ACTIVE power mode
+ * ACTIVE mode consist of default Beacon and UART settings
+ */
+void IUBMD350::wakeUp()
+{
+  enterATCommandInterface();
+  m_powerMode = powerMode::ACTIVE;
+  configureBeacon(defaultBeaconTxPower, defaultBeaconEnabled, defaultbeaconAdInterval,
+                  m_beaconUUID, m_beaconMajorNumber, m_beaconMinorNumber);
+  configureUART(defaultConnectedTxPower, defaultUARTEnabled, defaultUARTBaudRate,
+                defaultUARTFlowControl, defaultUARTParity);
+  exitATCommandInterface();
+}
+
+/**
+ * Switch to SLEEP power mode
+ * SLEEP mode consist of disabled Beacon and enabled UART settings
+ */
+void IUBMD350::sleep()
+{
+  enterATCommandInterface();
+  m_powerMode = powerMode::SLEEP;
+  configureBeacon(txPowerOption::DBm30, false, 4000,
+                  m_beaconUUID, m_beaconMajorNumber, m_beaconMinorNumber);
+  configureUART(defaultConnectedTxPower, defaultUARTEnabled, defaultUARTBaudRate,
+                defaultUARTFlowControl, defaultUARTParity);
+  exitATCommandInterface();
+}
+
+/**
+ * Switch to SUSPEND power mode
+ * SLEEP mode consist of disabled Beacon and UART modes
+ */
+void IUBMD350::suspend()
+{
+  enterATCommandInterface();
+  m_powerMode = powerMode::SUSPEND;
+  configureBeacon(txPowerOption::DBm30, false, 4000,
+                  m_beaconUUID, m_beaconMajorNumber, m_beaconMinorNumber);
+  configureUART(txPowerOption::DBm30, false, defaultUARTBaudRate,
+                false, false);
+  exitATCommandInterface();
+}
+
+
+/* ============================  Configuration via AT Command methods ============================ */
+
+/**
    Go into AT Command Interface Mode or exit it
    AT Command Interface is a mode where commands can be issued to the BMDWare via
    the BLE module port (Serial1). These commands allows to configure or query info
@@ -97,6 +109,10 @@ void IUBMD350::softReset()
 */
 void IUBMD350::enterATCommandInterface()
 {
+  if (m_ATCmdEnabled)
+  {
+    return; // Already in AT Command mode
+  }
   digitalWrite(ATCmdPin, LOW);
   delay(100);
   softReset();
@@ -111,14 +127,18 @@ void IUBMD350::enterATCommandInterface()
 }
 
 /**
-   See enterATCommandInterface
-*/
+ * Exit AT Command interface (see enterATCommandInterface)
+ */
 void IUBMD350::exitATCommandInterface()
 {
-  m_ATCmdEnabled = false;
+  if (!m_ATCmdEnabled)
+  {
+    return; // Already out of AT Command mode
+  }
   digitalWrite(ATCmdPin, HIGH);
   delay(100);
   softReset();
+  m_ATCmdEnabled = false;
   if (setupDebugMode)
   {
     debugPrint(F("Exited AT Command Interface mode"));
@@ -189,6 +209,9 @@ int IUBMD350::sendATCommand(String cmd, char *response, uint8_t responseLength)
   return respCount;
 }
 
+
+/***** BMDware info *****/
+
 /**
    Get BLE Module info and stream them through given port
    @param  pointers to char arrays to get the resulting info
@@ -203,18 +226,16 @@ void IUBMD350::getModuleInfo(char *BMDVersion, char *bootVersion, char *protocol
   sendATCommand("hwinfo?", hardwareInfo, len4);
 }
 
+
+/***** Device Name *****/
+
 /**
-   Send an AT command to set the device name (must be in AT mode)
-   @param name  the new device name, from 1 to 8 ASCII char
-   @return      true if successfully set, else false
-*/
+ * Send an AT command to set the device name (must be in AT mode)
+ * @param name  the new device name, from 1 to 8 ASCII char
+ * @return      true if successfully set, else false
+ */
 bool IUBMD350::setDeviceName(char *deviceName)
 {
-  queryDeviceName();
-  if (m_deviceName == deviceName)
-  {
-    return true; // Nothing to do, already OK
-  }
   strcpy(m_deviceName, deviceName);
   char response[3];
   String cmd = "name ";
@@ -228,10 +249,11 @@ bool IUBMD350::setDeviceName(char *deviceName)
   }
   return false;
 }
+
 /**
-   Query BLE configuration to get the device name
-   Also update the device name saved at the class level (accessible via getDeviceName)
-*/
+ * Query BLE configuration to get the device name
+ * Also update the device name saved at the class level (accessible via getDeviceName)
+ */
 bool IUBMD350::queryDeviceName()
 {
   char response[9];
@@ -244,292 +266,236 @@ bool IUBMD350::queryDeviceName()
   return false; // failed
 }
 
+
+/***** Beacon configuration *****/
+
 /**
- * Set the TX power of the BLE UART and Beacon
+ * Set Beacon configuration
  *
- * UART Tx power affects the range at which the device is connectable
- * Beacon Tx Power affects the range at which the device is visible / discoverable
+ * @param txPower     Transmission power for the Beacon
+ * @param enabled     If true, enable Beacon, else disable the Beacon and don't write the following config to BLE module
+ *                    registers (they are just stored at instance level). The txPower is always written though.
+ * @param adInterval  Beacon advertisement interval in ms - valid values range from 50ms to 4000ms.
+ * @param UUID        Universal Unique Identifier as a char array of 32 hex digit (UUID is 16byte (128bit long number)
+ * @param major       UUID Major Number as a char array of 4 hex digits (16bit long number)
+ * @param minor       UUID Minor Number as a char array of 4 hex digits (16bit long number)
+ * @return            true if configuration was successfully set, else false
  */
-bool IUBMD350::setTxPower(int8_t txPower, bool beacon)
+bool IUBMD350::configureBeacon(txPowerOption txPower, bool enabled, uint16_t adInterval,
+                               char *UUID, char *major, char *minor)
 {
+  bool success = true;
+  char response[3];
   String cmd;
-  if (beacon)
+  // Set attributes
+  m_beaconEnabled = enabled;
+  m_beaconTxPower = txPower;
+  strcpy(m_beaconUUID, UUID);
+  strcpy(m_beaconMajorNumber, major);
+  strcpy(m_beaconMinorNumber, minor);
+  // Set Tx Power
+  cmd = "btxpwr " + String(txPower, HEX);
+  sendATCommand(cmd, response, 3);
+  success &= (strcmp(response, "OK") == 0);
+  // enable / disable Beacon
+  if (enabled) { cmd = "ben 01"; }
+  else { cmd = "ben 00"; }
+  sendATCommand(cmd, response, 3);
+  success &= (strcmp(response, "OK") == 0);
+  if (!enabled)
   {
-    cmd = "ctxpwr ";
+    // Return early if Beacon was disabled (but still change the power beforehand)
+    return success;
   }
-  else
+  // Set Ad Interval
+  cmd = "badint " + String(adInterval, HEX);
+  sendATCommand(cmd, response, 3);
+  success &= (strcmp(response, "OK") == 0);
+  // Set UUID
+  cmd = "buuid ";
+  sendATCommand((String) (cmd + m_beaconUUID), response, 3);
+  success &= (strcmp(response, "OK") == 0);
+  // Set major number
+  cmd = "bmjid ";
+  sendATCommand((String) (cmd + m_beaconMajorNumber), response, 3);
+  success &= (strcmp(response, "OK") == 0);
+  // Set minor number
+  cmd = "bmnid ";
+  sendATCommand((String) (cmd + m_beaconMinorNumber), response, 3);
+  success &= (strcmp(response, "OK") == 0);
+  if ((!success) && setupDebugMode)
   {
-    cmd = "btxpwr ";
+    debugPrint("Failed to configure BLE beacon");
   }
-  switch (txPower)
+  return success;
+}
+
+/**
+ * Query beacon configuration from BLE module registers and update instance attributes
+ * @return true if the queries succeeded, else false
+ */
+bool IUBMD350::queryBeaconConfiguration()
+{
+  int respLen = 0;
+  // Beacon enabled / disabled
+  char enabled[3];
+  respLen = sendATCommand("ben?", enabled, 3);
+  m_beaconEnabled = (strcmp(enabled, "01") == 0);
+  // Get Tx Power
+  char txPowHex[3];
+  respLen = sendATCommand("btxpwr?", txPowHex, 3);
+  if (respLen < 1) { return false; }
+  m_beaconTxPower = (txPowerOption) strtol(txPowHex, NULL, 16);
+  // Ad Interval
+  char adInt[4];
+  if (sendATCommand("badint?", adInt, 4))
   {
-    case (-4):
-      cmd += "FC"; // 256 - 4 = 252
-      break;
-    case 0:
-      cmd += "00";
-      break;
-    case 4:
-      cmd += "04";
-      break;
-    default:
-      cmd += "04"; // Default to max Tx power = max BLE range
+    m_beaconAdInterval = (uint16_t) strtol(adInt, NULL, 16);
   }
+  // UUID
+  char uuid[33];
+  respLen = sendATCommand("buuid?", uuid, 33);
+  if (respLen < 1) { return false; }
+  strCopyWithAutocompletion(m_beaconUUID, uuid, 33, respLen);
+  // Major number
+  char number[5];
+  respLen = sendATCommand("bmjid?", number, 5);
+  if (respLen < 1) { return false; }
+  strCopyWithAutocompletion(m_beaconMajorNumber, number, 5, respLen);
+  // Minor number
+  respLen = sendATCommand("bmnid?", number, 5);
+  if (respLen < 1) { return false; }
+  strCopyWithAutocompletion(m_beaconMinorNumber, number, 5, respLen);
+  return true;
+}
+
+
+/***** UART configuration *****/
+
+/**
+ * Set UART configuration
+ * If enabled is False, just disable the UART. Other configuration are stored in the class but not
+ * written to the BLE module registers
+ */
+/**
+ * Set UART configuration
+ *
+ * @param txPower      Transmission power for the UART
+ * @param enabled      If true, enable UART, else disable the UART and don't write the following config to BLE module
+ *                     registers (they are just stored at instance level). The txPower is always written though.
+ * @param baudRate     The baud rate used for UART communication
+ * @param flowControl  Enable flow control ?
+ * @param parity       enable parity ?
+ * @return             true if configuration was successfully set, else false
+ */
+bool IUBMD350::configureUART(txPowerOption txPower, bool enabled, uint32_t baudRate, bool flowControl, bool parity)
+{
+  bool success = true;
+  char response[3];
+  String cmd;
+  // Set attributes
+  m_UARTEnabled = enabled;
+  m_UARTBaudRate = baudRate;
+  m_UARTFlowControl = flowControl;
+  m_UARTParity = parity;
+  // Set connected Tx Power
+  success &= setConnectedTxPower(txPower);
+  // enable / disable UART
+  if (enabled) { cmd = "uen 01"; }
+  else { cmd = "uen 00"; }
+  sendATCommand(cmd, response, 3);
+  success &= (strcmp(response, "OK") == 0);
+  if (!enabled)
+  {
+    return success; // Return early if UART was disabled
+  }
+  // Baud Rate
+  sendATCommand((String) ("ubr " + m_UARTBaudRate), response, 3);
+  success &= (strcmp(response, "OK") == 0);
+  // Flow Control
+  if (flowControl) { cmd += "ufc 01"; }
+  else { cmd = "ufc 00"; }
+  sendATCommand(cmd, response, 3);
+  success &= (strcmp(response, "OK") == 0);
+  // Parity
+  if (parity) { cmd += "upar 01"; }
+  else { cmd = "upar 00"; }
+  sendATCommand(cmd, response, 3);
+  success &= (strcmp(response, "OK") == 0);
+  if ((!success) && setupDebugMode)
+  {
+    debugPrint("Failed to configure BLE UART");
+  }
+  return success;
+
+}
+
+/**
+ * Query UART configuration from BLE module registers and update instance attributes
+ * @return true if the queries succeeded, else false
+ */
+bool IUBMD350::queryUARTConfiguration()
+{
+  int respLen = 0;
+  // UART enabled / disabled
+  char enabled[3];
+  respLen = sendATCommand("uen?", enabled, 3);
+  m_beaconEnabled = (strcmp(enabled, "01") == 0);
+  // Get Tx Power
+  queryConnectedTxPower();
+  // Baud Rate
+  char baudRate[8];
+  if (sendATCommand("ubr?", baudRate, 8))
+  {
+    m_UARTBaudRate = (uint32_t) strtol(baudRate, NULL, 16);
+  }
+  // Flow Control
+  char flowControl[3];
+  respLen = sendATCommand("ufc?", flowControl, 3);
+  m_beaconEnabled = (strcmp(flowControl, "01") == 0);
+  // Parity
+  char parity[3];
+  respLen = sendATCommand("upar?", parity, 3);
+  m_beaconEnabled = (strcmp(parity, "01") == 0);
+  return true;
+}
+
+
+/***** Connected Power *****/
+
+/**
+ * Set the connected TX power
+ * NB: the connected Tx Power is also used for UART, when UART is enabled
+ */
+bool IUBMD350::setConnectedTxPower(txPowerOption txPower)
+{
+  m_connectedTxPower = txPower;
+  String cmd = "ctxpwr " + String(txPower, HEX);
   char response[3];
   sendATCommand(cmd, response, 3);
-  queryTxPower(beacon);
   if (strcmp(response, "OK") == 0)
   {
     return true;
   }
-  if (setupDebugMode) {
-    if (beacon)
-    {
-      debugPrint("Failed to set Beacon Tx Power");
-    }
-    else
-    {
-      debugPrint("Failed to set UART Tx Power");
-    }
-  }
+  if (debugMode) { debugPrint("Failed to set connected Tx Power"); }
   return false;
 }
 
-bool IUBMD350::queryTxPower(bool beacon)
+/**
+ * Query the connected TX power from BLE module registers via AT Command
+ * @return True if the query succeeded else false
+ */
+bool IUBMD350::queryConnectedTxPower()
 {
-  char response[3];
-  int respLen;
-  if (beacon)
-  {
-    respLen = sendATCommand("btxpwr?", response, 3);
-  }
-  else
-  {
-    respLen = sendATCommand("ctxpwr?", response, 3);
-  }
-  if (respLen == 0)
-  {
-    return false; // failed
-  }
-  int8_t txPower;
-  if (strcmp(response, "FC") == 0)
-  {
-    txPower = -4;
-  }
-  else if (strcmp(response, "00") == 0)
-  {
-    txPower = 0;
-  }
-  else if (strcmp(response, "04") == 0)
-  {
-    txPower = 4;
-  }
-  else
-  {
-    return false;  // Unknown response
-  }
-  if (beacon)
-  {
-    m_beaconTxPower = txPower;
-  }
-  else
-  {
-    m_UARTTxPower = txPower;
-  }
+  char txPowHex[3];
+  int respLen = sendATCommand("ctxpwr?", txPowHex, 3);
+  if (respLen < 1) { return false; }
+  m_beaconTxPower = (txPowerOption) strtol(txPowHex, NULL, 16);
   return true;
 }
 
-/**
-   Set the UUID and the Major and Minor numbers for the device (see bluetooth Beacon)
 
-   @param UUID    Universal Unique Identiifier as a char array of 32 hex digit (UUID is 16byte (128bit long number)
-   @param major   UUID Major Number as a char array of 4 hex digits (16bit long number)
-   @param minor   UUID Minor Number as a char array of 4 hex digits (16bit long number)
-   @return        true if successfully set, else false
-*/
-bool IUBMD350::setUUIDInfo(char *UUID, char *major, char *minor)
-{
-  strcpy(m_UUID, UUID);
-  strcpy(m_majorNumber, major);
-  strcpy(m_minorNumber, minor);
-  bool success[3] = {false, false, false};
-  char response[3];
-  String cmd = "buuid ";
-  if(sendATCommand((String) (cmd + m_UUID), response, 3) > 0)
-  {
-    success[0] = (strcmp(response, "OK") == 0);
-  }
-  cmd = "bmjid ";
-  if(sendATCommand((String) (cmd + m_majorNumber), response, 3) > 0)
-  {
-    success[1] = (strcmp(response, "OK") == 0);
-  }
-  cmd = "bmnid ";
-  if(sendATCommand((String) (cmd + m_minorNumber), response, 3) > 0)
-  {
-    success[2] = (strcmp(response, "OK") == 0);
-  }
-  if (success[0] && success[1] && success[2])
-  {
-    return true;
-  }
-  if (setupDebugMode) {
-    debugPrint("Failed to set BLE UUID, major and / or minor numbers");
-  }
-  return false;
-}
-
-/**
-   Query BLE configuration to get the UUID, major and minor numbers
-   Also update the UUID, major and minor saved at the class level (accessible via getters)
-*/
-bool IUBMD350::queryUUIDInfo()
-{
-  char uuid[33];
-  int respLen = sendATCommand("buuid?", uuid, 33);
-  if (respLen < 1) { return false; }
-  strCopyWithAutocompletion(m_UUID, uuid, 33, respLen);
-
-  char number[5];
-  respLen = sendATCommand("bmjid?", number, 5);
-  if (respLen < 1) { return false; }
-  strCopyWithAutocompletion(m_majorNumber, number, 5, respLen);
-
-  respLen = sendATCommand("bmnid?", number, 5);
-  if (respLen < 1) { return false; }
-  strCopyWithAutocompletion(m_minorNumber, number, 5, respLen);
-
-  return true;
-}
-
-/**
-   Send an AT command to set the given baudRate (must be in AT mode)
-   @return      true if successfully set, else false
-*/
-bool IUBMD350::setBLEBaudRate(uint32_t baudRate)
-{
-  queryBLEBaudRate();
-  if (m_BLEBaudRate == baudRate)
-  {
-    return true; // Nothing to do, already OK
-  }
-  m_BLEBaudRate = baudRate;
-  char response[3];
-  int respLength = sendATCommand((String) ("ubr " + m_BLEBaudRate), response, 3);
-  if (respLength > 0 && strcmp(response, "OK") == 0)
-  {
-    return true;
-  }
-  if (setupDebugMode)
-  {
-    debugPrint("Failed to set BLE Baud Rate");
-  }
-  return false;
-}
-
-/**
-   Query BLE configuration to get the current baud rate
-   Also update the baudrate saved at the class level (accessible via getBaudRate)
-*/
-uint32_t IUBMD350::queryBLEBaudRate()
-{
-  char response[8];
-  if (sendATCommand("ubr?", response, 8))
-  {
-    m_BLEBaudRate = (uint32_t) strtol(response, NULL, 16);
-    return m_BLEBaudRate;
-  }
-  return 0; // failed
-}
-
-/**
-   Return the setting (name, command and state) from its name
-   @param settingName   the name of the setting to get
-   @return              the setting (name + command + state)
-*/
-IUBMD350::BooleanSetting IUBMD350::getBooleanSettings(String settingName)
-{
-  for (int i = 0; i < booleanSettingCount; i++)
-  {
-    if (settings[i].name == settingName)
-    {
-      return settings[i];
-    }
-  }
-  if (setupDebugMode) {
-    debugPrint("BLE setting '" + settingName + "' not found");
-  }
-  return noSetting;
-}
-
-/**
-   Send an AT command to enable / disable the desired setting
-   @return      true if successfully set, else false
-*/
-bool IUBMD350::setBooleanSettings(String settingName, bool enable)
-{
-  queryBooleanSettingState(settingName);
-  BooleanSetting conf = getBooleanSettings(settingName);
-  if (conf.state == enable)
-  {
-    return true; // Nothing to do, already OK
-  }
-  if (conf.name == "")
-  {
-    return false; // Fail if no setting found
-  }
-  conf.state = enable;
-  char response[3];
-  int respLength = -1;
-  if (enable)
-  {
-    respLength = sendATCommand((String) (conf.command + " 01"), response, 3);
-  }
-  else
-  {
-    respLength = sendATCommand((String) (conf.command + " 00"), response, 3);
-  }
-  if (respLength > 0 && strcmp(response, "OK") == 0)
-  {
-    return true;
-  }
-  if (setupDebugMode) {
-    debugPrint("Failed to set BLE " + conf.name);
-  }
-  return false;
-}
-
-/**
-   Query BLE configuration to get the setting current state
-   Also update the setting saved at the class level (accessible via getBooleanSetting(name).state)
-*/
-bool IUBMD350::queryBooleanSettingState(String settingName)
-{
-  BooleanSetting conf = getBooleanSettings(settingName);
-  if (conf.name == "")
-  {
-    return false; // return false if failed if no setting found
-  }
-  char response[3];
-  if (sendATCommand((String) (conf.command + "?"), response, 3) > 0)
-  {
-    conf.state = (strcmp(response, "01") == 0);
-    return conf.state;
-  }
-  return false; // return false if failed
-}
-
-
-/**
-   Ready the device for bluetooth streaming
-*/
-void IUBMD350::activate()
-{
-  if (m_ATCmdEnabled) // Make sure AT Command Interface is disabled
-  {
-    exitATCommandInterface();
-  }
-}
+/* ============================  Communication methods ============================ */
 
 /**
    Reset the buffer if more time than m_dataReceptionTimeout passed since last reception.
@@ -580,51 +546,25 @@ bool IUBMD350::readToBuffer()
 }
 
 
-/**
-   Print given buffer then flushes
-   @param buff the buffer
-   @param buffSize the buffer size
-*/
-void IUBMD350::printFigures(uint16_t buffSize, q15_t *buff)
-{
-  for (int i = 0; i < buffSize; i++)
-  {
-    port->print(buff[i]);
-    port->print(",");
-    port->flush();
-  }
-}
-
-/**
-   Print given buffer then flushes
-   @param buff the buffer
-   @param buffSize the buffer size
-   @param transform a transfo to apply to each buffer element before printing
-*/
-void IUBMD350::printFigures(uint16_t buffSize, q15_t *buff, float (*transform) (int16_t))
-{
-  for (int i = 0; i < buffSize; i++)
-  {
-    port->print(transform(buff[i]));
-    port->print(",");
-    port->flush();
-  }
-}
-
-
 /* ====================== Diagnostic Functions, only active when setupDebugMode = true ====================== */
 
 void IUBMD350::exposeInfo()
 {
   #ifdef DEBUGMODE
   debugPrint(F("BLE Config: "));
-  debugPrint(F("Device name: "), false); debugPrint(m_deviceName);
-  debugPrint(F("UUID: "), false); debugPrint(m_UUID);
-  debugPrint(F("Major number: "), false); debugPrint(m_majorNumber);
-  debugPrint(F("Minor number: "), false); debugPrint(m_minorNumber);
-  debugPrint(F("Baud rate: "), false); debugPrint(m_BLEBaudRate);
-  debugPrint(F("Flow Control enabled: "), false); debugPrint(getBooleanSettings("flowControl").state);
-  debugPrint(F("Parity enabled: "), false); debugPrint(getBooleanSettings("parity").state);
-  debugPrint(F("UARTPassThrough enabled: "), false); debugPrint(getBooleanSettings("UARTPassThrough").state);
+  debugPrint(F("  Device name: ")); debugPrint(m_deviceName);
+  debugPrint(F("  Connected Tx Power (dB): "), false); debugPrint((int8_t) m_connectedTxPower);
+  debugPrint(F("  UART config:"));
+  debugPrint(F("    Enabled: "), false); debugPrint(m_UARTEnabled);
+  debugPrint(F("    Baud rate: "), false); debugPrint(m_UARTBaudRate);
+  debugPrint(F("    Flow Control enabled: "), false); debugPrint(m_UARTFlowControl);
+  debugPrint(F("    Parity enabled: "), false); debugPrint(m_UARTParity);
+  debugPrint(F("UARTPassThrough enabled: "), false); debugPrint(m_UARTEnabled);
+  debugPrint(F("  Beacon config:"));
+  debugPrint(F("    Enabled: "), false); debugPrint(m_beaconEnabled);
+  debugPrint(F("    TxPower (dB): "), false); debugPrint((int8_t) m_beaconTxPower);
+  debugPrint(F("    UUID: "), false); debugPrint(m_beaconUUID);
+  debugPrint(F("    Major number: "), false); debugPrint(m_beaconMajorNumber);
+  debugPrint(F("    Minor number: "), false); debugPrint(m_beaconMinorNumber);
   #endif
 }

@@ -20,7 +20,6 @@ float IUBMP280::m_pressure = 0;
 IUBMP280::IUBMP280(IUI2C *iuI2C) :
   IUABCSensor(),
   m_newData(false),
-  m_powerMode(IUABCSensor::ACTIVE),
   m_pressureOSR(defaultPressureOSR),
   m_temperatureOSR(defaultTmperatureOSR),
   m_iirFilter(defaultIIRFilter),
@@ -33,10 +32,9 @@ IUBMP280::IUBMP280(IUI2C *iuI2C) :
     return;
   }
   softReset();
-  writeControlMeasureRegister();
+  wakeUp();
   writeConfigRegister();
   calibrate();
-  if (setupDebugMode) { debugPrint(F("BMP280 initialized successfully.\n")); }
 }
 
 /* ============================  Hardware & power management methods ============================ */
@@ -86,7 +84,7 @@ void IUBMP280::setOverSamplingRates(overSamplingRates pressureOSR, overSamplingR
   writeControlMeasureRegister();
 }
 
-void IUBMP280::setIIRFiltering(IIRFilterOptions iirFilter)
+void IUBMP280::setIIRFiltering(IIRFilterCoeffs iirFilter)
 {
   m_iirFilter = iirFilter;
   writeConfigRegister();
@@ -112,7 +110,7 @@ void IUBMP280::writeConfigRegister()
 void IUBMP280::writeControlMeasureRegister()
 {
   uint8_t powerBit;
-  if (m_powerMode == IUABCSensor::ACTIVE)
+  if (m_powerMode == powerMode::ACTIVE)
   {
     powerBit = (uint8_t) powerModeBits::FORCED;
   }

@@ -20,12 +20,12 @@ class IUABCSensor : public IUABCProducer
                                    ACCELERATION = 'A',
                                    ATMOSPHERE   = 'T', // Temperature + pressure
                                    BATTERY      = 'B',
-                                   GNSS         = 'G',
+                                   SATELLITE    = 'G',
                                    ORIENTATION  = 'O', // Gyroscope
                                    MAGNETISM    = 'M',
                                    SOUND        = 'S',
                                    ULTRASOUND   = 'U'};
-    static sensorTypeOptions ABCSensorType = sensorTypeOptions::NONE;
+    static const sensorTypeOptions ABCSensorType = sensorTypeOptions::NONE;
 
     static const uint16_t defaultSamplingRate = 2; // Hz
     static const uint16_t defaultCallbackRate = 1000; // Hz

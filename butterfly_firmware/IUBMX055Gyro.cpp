@@ -11,10 +11,7 @@ q15_t IUBMX055Gyro::m_bias[3] = {0, 0, 0};
 /* ================================= Method definition ================================= */
 
 IUBMX055Gyro::IUBMX055Gyro(IUI2C *iuI2C) :
-  IUABCSensor(),
-  m_scale(defaultScale),
-  m_bandwidth(defaultBandwidth),
-  m_samplingRate(defaultSamplingRate)
+  IUABCSensor()
 {
   m_iuI2C = iuI2C;
   if (!m_iuI2C->checkComponentWhoAmI("BMX055 Gyro", ADDRESS, WHO_AM_I, I_AM))
@@ -22,9 +19,11 @@ IUBMX055Gyro::IUBMX055Gyro(IUI2C *iuI2C) :
     m_iuI2C->setErrorMessage("GYRERR");
     return;
   }
+  m_samplingRate = defaultSamplingRate;
   softReset();
-  setScale(m_scale);
-  setAccelBandwidth(m_bandwidth);
+  setScale(defaultScale);
+  setBandwidth(defaultBandwidth);
+  setSamplingRate(defaultSamplingRate);
 }
 
 
@@ -33,7 +32,7 @@ IUBMX055Gyro::IUBMX055Gyro(IUI2C *iuI2C) :
 /**
  * Soft reset gyroscope and return to normal power mode
  */
-void softReset()
+void IUBMX055Gyro::softReset()
 {
   m_iuI2C->writeByte(ADDRESS,  BGW_SOFTRESET, 0xB6);
   delay(15);
@@ -108,7 +107,7 @@ void IUBMX055Gyro::setScale(IUBMX055Gyro::scaleOption scale)
 /**
  * Set the accelerometer bandwidth
  */
-void IUBMX055Gyro::setBandwidth(IUBMX055Gyro::andwidthOption bandwidth)
+void IUBMX055Gyro::setBandwidth(IUBMX055Gyro::bandwidthOption bandwidth)
 {
   m_bandwidth = bandwidth;
   m_iuI2C->writeByte(ADDRESS, BW, m_bandwidth);

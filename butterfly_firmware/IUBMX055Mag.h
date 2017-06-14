@@ -30,7 +30,7 @@ class IUBMX055Mag : public IUABCSensor
     enum Axis : uint8_t {X = 0,
                          Y = 1,
                          Z = 2};
-    static IUABCSensor::sensorTypeOptions sensorType = IUABCSensor::MAGNETISM;
+    static const sensorTypeOptions sensorType = IUABCSensor::MAGNETISM;
 
     /*===== DEVICE CONFIGURATION AND CONSTANTS =======*/
     static const uint8_t ADDRESS   = 0x10;
@@ -54,11 +54,11 @@ class IUBMX055Mag : public IUABCSensor
                                    ENHANCEDREGULAR, // RMS noise ~0.5 microTesla, 0.8 mA power
                                    HIGHACCURACY};   // RMS noise ~0.3 microTesla, 4.9 mA power
     static const ODROption defaultODR = ODR_10Hz;
-    static const accuracyPreset defaultAccuracy = lowPower;
+    static const accuracyPreset defaultAccuracy = accuracyPreset::LOWPOWER;
 
-    enum dataSendOption : uint8_t {X            = 0,
-                                   Y            = 1,
-                                   Z            = 2,
+    enum dataSendOption : uint8_t {dataX        = 0,
+                                   dataY        = 1,
+                                   dataZ        = 2,
                                    samplingRate = 3,
                                    optionCount  = 4};
     static const uint16_t defaultSamplingRate = 1000; // Hz
@@ -77,13 +77,13 @@ class IUBMX055Mag : public IUABCSensor
     void setODR(ODROption ODR);
     void setAccuracy(accuracyPreset accuracy);
     // Data acquisition methods
-    virtual void readData() {}          // Not implemented
+    virtual void readData() {}             // Not implemented
     // Communication methods
-    virtual void sendToReceivers()      // Not implemented
-    virtual void dumpDataThroughI2C()   // Not implemented
-    virtual void dumpDataForDebugging() // Not implemented
+    virtual void sendToReceivers() {}      // Not implemented
+    virtual void dumpDataThroughI2C() {}   // Not implemented
+    virtual void dumpDataForDebugging() {} // Not implemented
     // Diagnostic Functions
-    virtual void exposeCalibration() {} // Not implemented
+    virtual void exposeCalibration() {}    // Not implemented
 
   protected:
     static IUI2C *m_iuI2C;
@@ -93,9 +93,9 @@ class IUBMX055Mag : public IUABCSensor
     accuracyPreset m_accuracy;
     void writeODRRegister();
     // Data acquisition
-    int16_t m_rawData[3];     // Stores the 13/15-bit signed magnetometer sensor output
-    float m_data[3];          // Latest data values
-    float m_bias[3];          // Bias corrections
+    static int16_t m_rawData[3];     // Stores the 13/15-bit signed magnetometer sensor output
+    static q15_t m_data[3];          // Latest data values
+    static q15_t m_bias[3];          // Bias corrections
 };
 
 

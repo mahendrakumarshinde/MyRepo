@@ -36,7 +36,7 @@
 class IUI2S : public IUABCSensor
 {
   public:
-    static char sensorType = IUABCSensor::SOUND;
+    static const sensorTypeOptions sensorType = IUABCSensor::SOUND;
     static const uint8_t availableClockRateCount = 9;
     static uint16_t availableClockRate[availableClockRateCount];
     // Frequency and sampling setting

@@ -30,7 +30,7 @@ class IUBMX055Gyro : public IUABCSensor
     enum Axis : uint8_t {X = 0,
                          Y = 1,
                          Z = 2};
-    static IUABCSensor::sensorTypeOptions sensorType = IUABCSensor::ORIENTATION;
+    static const sensorTypeOptions sensorType = IUABCSensor::ORIENTATION;
 
     /*===== DEVICE CONFIGURATION AND CONSTANTS =======*/
     static const uint8_t ADDRESS         = 0x68;
@@ -58,9 +58,9 @@ class IUBMX055Gyro : public IUABCSensor
     static const scaleOption defaultScale = GFS_125DPS;
     static const bandwidthOption defaultBandwidth = BW_200Hz23Hz;
 
-    enum dataSendOption : uint8_t {X            = 0,
-                                   Y            = 1,
-                                   Z            = 2,
+    enum dataSendOption : uint8_t {dataX        = 0,
+                                   dataY        = 1,
+                                   dataZ        = 2,
                                    resolution   = 3,
                                    samplingRate = 4,
                                    optionCount  = 5};
@@ -77,30 +77,30 @@ class IUBMX055Gyro : public IUABCSensor
     virtual void suspend();
     void enableFastPowerUp();
     void disableFastPowerUp();
-    void powerSaveMode() {}             // Not implemented
+    void powerSaveMode() {}                // Not implemented
     void setScale(scaleOption scale);
     void setBandwidth(bandwidthOption scale);
     // Data acquisition methods
     void computeResolution();
-    virtual void readData() {}          // Not implemented
+    virtual void readData() {}             // Not implemented
     // Communication methods
-    virtual void sendToReceivers()      // Not implemented
-    virtual void dumpDataThroughI2C()   // Not implemented
-    virtual void dumpDataForDebugging() // Not implemented
+    virtual void sendToReceivers() {}      // Not implemented
+    virtual void dumpDataThroughI2C() {}   // Not implemented
+    virtual void dumpDataForDebugging() {} // Not implemented
     // Diagnostic Functions
-    virtual void exposeCalibration() {} // Not implemented
+    virtual void exposeCalibration() {}    // Not implemented
 
   protected:
     static IUI2C *m_iuI2C;
     // Configuration
-    q15_t m_resolution;    // Resolution
+    q15_t m_resolution;           // Resolution
     scaleOption m_scale;
     bandwidthOption m_bandwidth;
     bool m_fastPowerUpEnabled;
     // Data acquisition variables
-    int16_t m_rawData[3];  // Stores the 16-bit signed gyro sensor output
-    float m_data[3];       // Latest data values
-    float m_bias[3];       // Bias corrections
+    static int16_t m_rawData[3];  // Stores the 16-bit signed gyro sensor output
+    static q15_t m_data[3];       // Latest data values
+    static q15_t m_bias[3];       // Bias corrections
 };
 
 

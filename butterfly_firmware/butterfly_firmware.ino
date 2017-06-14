@@ -17,7 +17,7 @@
 */
 
 #include <string.h>
-#include "IUButterfly.h"
+#include "IUConductor.h"
 
 /*=========================================================================================== 
  * Unit test and quality assessment test 

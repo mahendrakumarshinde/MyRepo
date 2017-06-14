@@ -22,7 +22,7 @@
 class IUBMP280 : public IUABCSensor
 {
   public:
-    static IUABCSensor:sensorTypeOptions sensorType = IUABCSensor::ATMOSPHERE;
+    static const sensorTypeOptions sensorType = IUABCSensor::ATMOSPHERE;
     /*===== DEVICE CONFIGURATION AND CONSTANTS =======*/
     static const uint8_t WHO_AM_I           = 0xD0;
     static const uint8_t WHO_AM_I_ANSWER    = 0x58; // should be 0x58
@@ -64,7 +64,7 @@ class IUBMP280 : public IUABCSensor
                                    optionCount = 2};
     static const overSamplingRates defaultPressureOSR     = SKIPPED;
     static const overSamplingRates defaultTmperatureOSR   = OSR_01;
-    static const IIRFilterOptions  defaultIIRFilter       = OFF;
+    static const IIRFilterCoeffs  defaultIIRFilter        = OFF;
     static const StandByDurations  defaultStandByDuration = t_62_5ms;
 
     static const uint16_t defaultSamplingRate = 1; // Hz
@@ -79,7 +79,7 @@ class IUBMP280 : public IUABCSensor
     virtual void sleep();
     virtual void suspend();
     void setOverSamplingRates(overSamplingRates pressureOSR, overSamplingRates temperatureOSR);
-    void setIIRFiltering(IIRFilterOptions iirFilter);
+    void setIIRFiltering(IIRFilterCoeffs iirFilter);
     void setStandbyDuration(StandByDurations duration);
     void calibrate();
     // Data acquisition methods
@@ -104,7 +104,7 @@ class IUBMP280 : public IUABCSensor
     // Hardware configuration
     overSamplingRates m_pressureOSR;
     overSamplingRates m_temperatureOSR;
-    IIRFilterOptions m_iirFilter;
+    IIRFilterCoeffs m_iirFilter;
     StandByDurations m_standByDuration;
     void writeControlMeasureRegister();
     void writeConfigRegister();

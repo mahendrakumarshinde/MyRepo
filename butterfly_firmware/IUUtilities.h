@@ -6,73 +6,7 @@
 #include <arm_math.h>
 
 #include "IULogger.h"
-
-/* ============================= Operation Modes ============================= */
-
-/**
- * Power modes are enforced at component level and are controlled by the either
- * automatically or by the user
- */
-class powerMode
-{
-  public:
-    enum  option : uint8_t
-    {
-      ACTIVE  = 0,
-      SLEEP   = 1,
-      SUSPEND = 2,
-      COUNT   = 3,
-    };
-};
-
-/**
- * Usage modes are user controlled, they describe how the device is being used
- */
-class usageMode
-{
-  public:
-    enum  option : uint8_t
-    {
-      CALIBRATION   = 0,
-      CONFIGURATION = 1,
-      OPERATION     = 2,
-      COUNT         = 3,
-    };
-};
-
-/**
- * Acquisition modes are mostly user controlled, with some automatic mode switching
- */
-class aquisitionMode
-{
-  public:
-    enum  option : uint8_t
-    {
-      FEATURE   = 0,
-      EXTENSIVE = 1,
-      RECORD    = 2,
-      NONE      = 3,
-      COUNT     = 4,
-    };
-};
-
-/**
- * Operation states describe the production status, inferred from calculated features
- * and user-defined thresholds
- */
-class operationState
-{
-  public:
-    enum  option : uint8_t
-    {
-      IDLE    = 0,
-      NORMAL  = 1,
-      WARNING = 2,
-      DANGER  = 3,
-      COUNT   = 4,
-    };
-};
-
+#include "IUConstants.h"
 
 /*====================== General utility function ============================ */
 

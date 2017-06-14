@@ -18,7 +18,7 @@ class IUSensorConfigurator
     static const uint8_t sensorCount = 7;
     // Sensors are ordered: battery, Accel, Gyro, Mag, BMP280, Sound, GNSS
     static uint16_t defaultSamplingRates[sensorCount];
-    static IUABCSensor::powerMode defaultPowerMode[sensorCount];
+    static powerMode::option defaultPowerMode[sensorCount];
 
     // Constructors, destructor, getters and setters
     IUSensorConfigurator();
