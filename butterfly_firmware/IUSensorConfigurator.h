@@ -26,16 +26,18 @@ class IUSensorConfigurator
     virtual ~IUSensorConfigurator();
     void resetSensorPointers();
     IUABCSensor** getSensors() { return m_sensors; }
-    // Configuration and run methods
-    bool createAllSensorsWithDefaultConfig();
-    void acquireDataAndSendToReceivers(bool asynchronous);
-    void acquireDataAndDumpThroughI2C();
-    void acquireAndStoreData(bool asynchronous);
     void resetAllReceivers();
+    // Operation methods
+    bool createAllSensorsWithDefaultConfig();
+    void acquireData(bool asynchronous);
+    void sendDataToReceivers(bool asynchronous);
+    // TODO => 'dumpDataThroughI2C' should probably be a method somehow shared with features
+    void dumpDataThroughI2C(bool asynchronous);
     //Power management methods
     void allSensorsWakeUp();
     void allSensorsSleep();
     void allSensorsSuspend();
+    void doDefaultPowerConfig();
     // Diagnostic methods
     void exposeSensorsAndReceivers();
     // Public members for sensors for convenience

@@ -23,7 +23,7 @@ class IUConductor
     static const uint16_t defaultClockRate = 48000;           //Hz (must be compatible with I2C)
     static const uint16_t defaultDataSendPeriod = 1500;       // ms - send data every T milliseconds
     static constexpr double defaultTimestamp = 1492144654.00; //1483228800.00;    // January 1st, 2017
-    static const uint16_t shortestDataSendPeriod = 500;       // ms - send data every T milliseconds
+    static const uint16_t shortestDataSendPeriod = 512;       // ms - send data every T milliseconds
     // Constructors, destructor, getters and setters
     IUConductor();
     IUConductor(String macAddress);
@@ -34,16 +34,20 @@ class IUConductor
     void setDataSendPeriod(uint16_t dataSendPeriod);
     bool isDataSendTime();
     double getDatetime();
-    // Usage modes, acquisition modes and power modes mgmt methods
-    void changePowerPreset(powerPreset::option powerPreset);
-    void changeUsageMode(usageMode::option mode);
+    // Usage, acquisition, power, streaming and state mgmt methods
+    void millisleep(uint32_t duration);
+    void sleep(uint32_t duration);
+    void doMinimalPowerConfig();
+    void doDefaultPowerConfig();
+    void manageAutoSleep();
+    void configureAutoSleep(bool enabled, uint16_t startSleepTimer, uint32_t sleepDuration);
+    void manageSleepCycle();
+    void configureSleepCycle(bool enabled, uint32_t onTime, uint32_t cycleTime);
     void changeAcquisitionMode(acquisitionMode::option mode);
+    void changeStreamingMode(streamingMode::option mode);
+    void changeUsagePreset(usagePreset::option usage);
     void changeOperationState(operationState::option state);
-    bool checkAndUpdatePowerPreset();
-    bool checkAndUpdateAcquisitionMode();
-    bool checkAndUpdateOperationState();
-    void enableAutoSleep() { m_autoSleepEnabled = true; }
-    void disableAutoSleep() { m_autoSleepEnabled = false; }
+    void checkAndUpdateOperationState();
     // Setup and configuration methods
     bool initInterfaces();
     bool initConfigurators();
@@ -52,7 +56,8 @@ class IUConductor
     // Operation methods
     void acquireAndSendData(bool asynchronous);
     void computeFeatures();
-    bool streamData(HardwareSerial *port, bool newLine=false);
+    bool streamFeatures(bool newLine=false);
+    bool storeData() {}                       // TODO => implement
     bool beginDataAcquisition();
     void endDataAcquisition();
     bool resetDataAcquisition();
@@ -80,17 +85,21 @@ class IUConductor
     uint32_t m_lastSynchroTime;
     uint32_t m_lastSentTime;
     double m_refDatetime;              // last datetime received from bluetooth or wifi
-    // Usage modes, acquisition modes and power modes mgmt
-    powerPreset::option m_powerPreset;
-    usageMode::option m_usageMode;
+    // Usage, acquisition, power, streaming and state mgmt
     acquisitionMode::option m_acquisitionMode;
+    streamingMode::option m_streamingMode;
+    usagePreset::option m_usagePreset;
     operationState::option m_operationState;
-      // Timers for auto-sleep management
+      // Timers for auto-sleep management (all in milliseconds)
       bool m_autoSleepEnabled;
       uint32_t m_idleStartTime;
-      uint32_t m_sleepStartTime;
       uint16_t m_startSleepTimer;
-      uint16_t m_endSleepTimer;
+      uint32_t m_autoSleepDuration;
+      // Timers for sleep cycle management (all in seconds)
+      bool m_sleepCycleEnabled;
+      uint32_t m_onTime;
+      uint32_t m_cycleTime;
+      uint32_t m_cycleStartTime;
     // Operations
     void (*m_callback)();
     bool m_inDataAcquistion;

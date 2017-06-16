@@ -32,7 +32,3 @@
     - Check Kris sketches
     - Need to wait for the delivery of the FTDI
 
-
-Low power mode is not immediate: the API from Kris is only for the WiFi module.
-There are 3 areas where I need to work:
-

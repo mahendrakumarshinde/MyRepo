@@ -12,6 +12,7 @@ class IUESP8285 : public IUABCInterface
     IUESP8285(IUI2C *iuI2C);
     virtual ~IUESP8285() {}
     virtual void setBaudRate(uint32_t baudRate);
+    virtual powerMode::option getPowerMode() { return m_powerMode; }
     // Hardware and power management
     virtual void wakeUp();
     virtual void sleep();

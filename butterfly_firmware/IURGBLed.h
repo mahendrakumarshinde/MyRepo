@@ -43,6 +43,11 @@ class IURGBLed
     void ledOff(IURGBLed::PIN pin_number);
     void changeColor(bool R, bool G, bool B);
     void changeColor(LEDColors color);
+    void lock() { m_locked = true; }
+    void unlock() { m_locked = false; }
+
+  private:
+    bool m_locked;
 };
 
 #endif // IURGBLED_H

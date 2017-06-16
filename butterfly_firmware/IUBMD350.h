@@ -51,6 +51,7 @@ class IUBMD350 : public IUABCInterface
     IUBMD350(IUI2C *iuI2C);
     virtual ~IUBMD350() {}
     virtual void setBaudRate(uint32_t baudRate);
+    virtual powerMode::option getPowerMode() { return m_powerMode; }
     // Hardware and power management
     void softReset();
     virtual void wakeUp();

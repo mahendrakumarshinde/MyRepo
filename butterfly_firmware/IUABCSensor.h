@@ -38,6 +38,7 @@ class IUABCSensor : public IUABCProducer
     virtual void setCallbackRate(uint16_t callbackRate);
     virtual uint16_t getCallbackRate() { return m_callbackRate; }
     virtual char getSensorType() { return (char) ABCSensorType; }
+    virtual powerMode::option getPowerMode() { return m_powerMode; }
 
     // Hardware & power management methods
     virtual void switchToPowerMode(powerMode::option pMode);

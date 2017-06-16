@@ -17,7 +17,7 @@ powerMode::option IUSensorConfigurator::defaultPowerMode[IUSensorConfigurator::s
     powerMode::SUSPEND
   };
 
-/* ============================== Methods =================================== */
+/* ============================== Initializaton methods =================================== */
 
 IUSensorConfigurator::IUSensorConfigurator() :
   m_iuI2C(NULL)
@@ -50,6 +50,20 @@ void IUSensorConfigurator::resetSensorPointers()
     m_sensors[i] = NULL;
   }
 }
+
+/**
+ * Reset the pointers of all the sensor receivers to NULL
+ */
+void IUSensorConfigurator::resetAllReceivers()
+{
+  for (uint8_t i = 0; i < sensorCount; i++)
+  {
+    m_sensors[i]->resetReceivers();
+  }
+}
+
+
+/* ============================== Operation methods =================================== */
 
 /**
  * Use defaultSensorConfigs to create all sensors and set their default config
@@ -93,76 +107,63 @@ bool IUSensorConfigurator::createAllSensorsWithDefaultConfig()
 }
 
 /**
- * Have each sensor acquire data and send them to their respective receivers
- * NB: For "run" mode
- * @param asynchronous  if true, acquire data only from asynchronous sensors,
-                        else acquire data only synchronous sensors
+ * Have sensors acquire data
+ * 
+ * @param asynchronous  if true (false), only asynchronous (synchronous) sensors acquire data
  */
-void IUSensorConfigurator::acquireDataAndSendToReceivers(bool asynchronous)
+void IUSensorConfigurator::acquireData(bool asynchronous)
 {
-  /*
-  Due to asynchrone data acquisition, the sendToReceivers functions actually
-  send the previous data reading (to allow completion of the reading in the meantime).
-  So sendToReceivers are actually called before acquireData. Each sensor handles its own data
-  availability, so nothing is sent if data is not ready.
-  */
   for (uint8_t i = 0; i < sensorCount; i++)
   {
-    m_sensors[i]->sendToReceivers();
-    m_sensors[i]->acquireData();
-  }
-}
-
-/**
- * Have each sensor acquire data and send them through I2C
- * NB: For "data collection" mode - only send Sound and Acceleration data (asynchronously)
- * NB: method duration is about 17 microseconds
- */
-void IUSensorConfigurator::acquireDataAndDumpThroughI2C()
-{
-  // Audio data first, then Accel
-  if(readableDataCollection)
-  {
-    iuI2S->dumpDataForDebugging();
-    iuAccelerometer->dumpDataForDebugging();
-  }
-  else
-  {
-    iuI2S->dumpDataThroughI2C();
-    iuAccelerometer->dumpDataThroughI2C();
-  }
-  iuI2S->acquireData();
-  iuAccelerometer->acquireData();
-}
-
-/**
- * Have each sensor acquire data and send them through I2C
- * NB: For "record" mode
- * @param asynchronous  if true, acquire data only from asynchronous sensors,
-                        else acquire data only synchronous sensors
- */
-void IUSensorConfigurator::acquireAndStoreData(bool asynchronous)
-{
-  bool newData = false;
-  IUABCSensor *sensor;
-  for (uint8_t i = 0; i < sensorCount; i++)
-  {
-    newData = m_sensors[i]->acquireData();
-    if (newData)
+    if (m_sensors[i]->isAsynchronous() == asynchronous)
     {
-      //TODO implement record mode
+      m_sensors[i]->acquireData();
     }
   }
 }
 
 /**
- * Reset the pointers of all the sensor receivers to NULL
+ * Have sensors send data to their receivers
+ * 
+ * @param asynchronous  if true (false), only asynchronous (synchronous) sensors are processed
  */
-void IUSensorConfigurator::resetAllReceivers()
+void IUSensorConfigurator::sendDataToReceivers(bool asynchronous)
 {
   for (uint8_t i = 0; i < sensorCount; i++)
   {
-    m_sensors[i]->resetReceivers();
+    if (m_sensors[i]->isAsynchronous() == asynchronous)
+    {
+      m_sensors[i]->sendToReceivers();
+    }
+  }
+}
+
+/**
+ * Have sensors send raw data through I2C
+ * 
+ * @param asynchronous  if true (false), only asynchronous (synchronous) sensors are processed
+ */
+void IUSensorConfigurator::dumpDataThroughI2C(bool asynchronous)
+{
+  if(readableDataCollection)
+  {
+    for (uint8_t i = 0; i < sensorCount; i++)
+    {
+      if (m_sensors[i]->isAsynchronous() == asynchronous)
+      {
+        m_sensors[i]->dumpDataForDebugging();
+      }
+    }
+  }
+  else
+  {
+    for (uint8_t i = 0; i < sensorCount; i++)
+    {
+      if (m_sensors[i]->isAsynchronous() == asynchronous)
+      {
+        m_sensors[i]->dumpDataThroughI2C();
+      }
+    }
   }
 }
 
@@ -200,6 +201,17 @@ void IUSensorConfigurator::allSensorsSuspend()
   {
     m_sensors[i]->suspend();
   }
+}
+
+void IUSensorConfigurator::doDefaultPowerConfig()
+{
+  if (iuBattery->getPowerMode() != powerMode::ACTIVE) { iuBattery->wakeUp(); }
+  if (iuAccelerometer->getPowerMode() != powerMode::ACTIVE) { iuAccelerometer->wakeUp(); }
+  if (iuGyroscope->getPowerMode() != powerMode::SUSPEND) { iuGyroscope->suspend(); }
+  if (iuMagnetometer->getPowerMode() != powerMode::SUSPEND) { iuMagnetometer->suspend(); }
+  if (iuBMP280->getPowerMode() != powerMode::ACTIVE) { iuBMP280->wakeUp(); }
+  if (iuI2S->getPowerMode() != powerMode::ACTIVE) { iuI2S->wakeUp(); }
+  if (iuGNSS->getPowerMode() != powerMode::SUSPEND) { iuGNSS->suspend(); }
 }
 
 /* ====================== Diagnostic Functions, only active when setupDebugMode = true ====================== */

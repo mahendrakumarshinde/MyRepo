@@ -96,6 +96,9 @@ test(accelAndVelocityComputation)
       6656, 7696
     };
 
+  q15_t maxAscent = findMaxAscent(data, sampleCount, 4);
+  assertEqual(maxAscent, 4144);
+
   float energy1 = computeSignalEnergy(data, sampleCount, samplingRate, 1, false);
   float energy2 = computeSignalEnergy(data, sampleCount, samplingRate, 2, false);
   float energy3 = computeSignalEnergy(data, sampleCount, samplingRate, 1, true);

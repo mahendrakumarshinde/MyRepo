@@ -6,7 +6,7 @@
 #include <arm_math.h>
 
 #include "IULogger.h"
-#include "IUConstants.h"
+#include "IUKeywords.h"
 
 /*====================== General utility function ============================ */
 
@@ -77,6 +77,7 @@ void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplin
 
 float getMainFrequency(q15_t *fftValues, uint16_t sampleCount, uint16_t samplingRate);
 
+q15_t findMaxAscent(q15_t *batch, uint16_t batchSize, uint16_t max_count);
 
 //==============================================================================
 //========================== Hamming Window Presets ============================

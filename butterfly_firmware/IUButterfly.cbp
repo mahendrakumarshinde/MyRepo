@@ -69,6 +69,8 @@
 		<Unit filename="IUI2C.h" />
 		<Unit filename="IUI2S.cpp" />
 		<Unit filename="IUI2S.h" />
+		<Unit filename="IUKeywords.cpp" />
+		<Unit filename="IUKeywords.h" />
 		<Unit filename="IULogger.h" />
 		<Unit filename="IURGBLed.cpp" />
 		<Unit filename="IURGBLed.h" />

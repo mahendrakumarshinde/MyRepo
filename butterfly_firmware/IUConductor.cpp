@@ -15,12 +15,13 @@ IUConductor::IUConductor(String macAddress) :
   m_macAddress(macAddress),
   m_bluesleeplimit(60000),
   m_autoSleepEnabled(false),
-  m_usageMode(usageMode::OPERATION),
-  m_acquisitionMode(acquisitionMode::NONE),
-  m_operationState(operationState::IDLE),
   m_inDataAcquistion(false),
   m_lastSentTime(0),
-  m_lastSynchroTime(0)
+  m_lastSynchroTime(0),
+  m_usagePreset(usagePreset::OPERATION),    
+  m_acquisitionMode(acquisitionMode::NONE),
+  m_streamingMode(streamingMode::BLE),
+  m_operationState(operationState::IDLE)
 {
   iuI2C = NULL;
   iuBluetooth = NULL;
@@ -115,54 +116,112 @@ double IUConductor::getDatetime()
 }
 
 
-/* ============================ Usage, acquisition and power modes mgmt methods methods ============================ */
+/* ============================ Usage, acquisition, power, streaming and state mgmt ============================ */
 
-void IUConductor::changePowerPreset(powerPreset::option powerPreset)
+/**
+ * Place the device in a short sleep (reduced power consumption but fast start up)
+ */
+void IUConductor::millisleep(uint32_t duration)
 {
-  m_powerPreset = powerPreset;
-  if (m_powerPreset == powerPreset::ACTIVE)
-  {
-    /*
-      ACTIVE  = 0,
-      SUSPEND = 2,
-      LOW1    = 3,
-      LOW2    = 4,
-      COUNT   = 5,
-     */
-  }
+  sensorConfigurator.allSensorsSleep();
+  STM32.stop(duration);
+  doDefaultPowerConfig();
+}
+
+/**
+ * Put the whole device to sleep for a long time (suspend the components and stop the STM32)
+ */
+void IUConductor::sleep(uint32_t duration)
+{
+  doMinimalPowerConfig();
+  STM32.stop(duration);
+  doDefaultPowerConfig();
+  /*
+  STM32.sleep();
+  STM32.stop(uint32_t timeout = 0);
+  STM32.standby(uint32_t timeout = 0);
+  STM32.standby(uint32_t pin, uint32_t mode, uint32_t timeout = 0);
+  STM32.shutdown(uint32_t timeout = 0);
+  STM32.shutdown(uint32_t pin, uint32_t mode, uint32_t timeout = 0);
+  */
+}
+
+void IUConductor::doMinimalPowerConfig()
+{
+  if (iuBluetooth->getPowerMode() != powerMode::SUSPEND) { iuBluetooth->suspend(); }
+  if (iuWifi->getPowerMode() != powerMode::SUSPEND) { iuWifi->suspend(); }
+  sensorConfigurator.allSensorsSuspend();
+}
+
+void IUConductor::doDefaultPowerConfig()
+{
+  if (iuBluetooth->getPowerMode() != powerMode::ACTIVE) { iuBluetooth->wakeUp(); }
+  if (iuWifi->getPowerMode() != powerMode::SUSPEND) { iuWifi->suspend(); }
+  sensorConfigurator.doDefaultPowerConfig();
 }
 
 
 /**
- * Switch to a new Usage Mode
- * usage mode typically describe how the
+ * Automatically puts the device to sleep (if the setting is enabled) when its idle for a long time
+ * 
+ * NB: Autosleep is always disabled when thee streamingMode is wired (the device get continual power anyway)
  */
-void IUConductor::changeUsageMode(usageMode::option mode)
+void IUConductor::manageAutoSleep()
 {
-  m_usageMode = mode;
-  String msg;
-  if (m_usageMode == usageMode::CONFIGURATION)
+  if (m_streamingMode == streamingMode::WIRED)
   {
-    changeAcquisitionMode(acquisitionMode::NONE);
-    msg = "configuration";
+    return;
   }
-  else if (m_usageMode == usageMode::CALIBRATION)
+  if (m_autoSleepEnabled)
   {
-    iuI2C->silence();
-    setDataSendPeriod(shortestDataSendPeriod);
-    featureConfigurator.setCalibrationStreaming();
-    iuRGBLed->changeColor(IURGBLed::CYAN);
-    msg = "calibration";
+    if (m_acquisitionMode != acquisitionMode::NONE && m_startSleepTimer < millis() - m_idleStartTime)
+    {
+      millisleep(m_autoSleepDuration);
+    }
   }
-  else if (m_usageMode == usageMode::OPERATION)
+}
+
+/**
+ * Enable auto-sleep management and set up the parameters
+ * 
+ * @param startSleepTimer  The timer (in ms) during which the device must stay idle before going to sleep
+ * @param sleepDuration  The duration (in ms) of the sleep
+ */
+void IUConductor::configureAutoSleep(bool enabled, uint16_t startSleepTimer, uint32_t sleepDuration)
+{
+  m_autoSleepEnabled = enabled;
+  m_startSleepTimer = startSleepTimer;
+  m_autoSleepDuration = sleepDuration;
+}
+
+/**
+ * Manage the active / sleep cycle
+ * 
+ * NB: Autosleep is always disabled when thee streamingMode is wired (the device get continual power anyway)
+ */
+void IUConductor::manageSleepCycle()
+{
+  uint32_t now = millis() / 1000;
+  if (now > m_cycleStartTime + m_onTime)
   {
-    setDataSendPeriod(defaultDataSendPeriod);
-    featureConfigurator.setStandardStreaming();
-    iuRGBLed->changeColor(IURGBLed::BLUE);
-    iuI2C->unsilence();
-    msg = "operation";
+    sleep(m_cycleTime - m_onTime);
+    m_cycleStartTime = millis() / 1000;
   }
-  if (loopDebugMode) { debugPrint("\nEntering " + msg + " usage\n"); }
+}
+
+/**
+ * Enable the active / sleep cycle management and set up the active and total cycle time
+ * 
+ * @param onTime     the duration (in s) during which the device is active
+ * @param cycleTime  the duration (in s) of the total cycle (active + sleep)
+ * eg: (onTime=60, cycleTime=3600) => the device will be active 1min per hour
+ */
+void IUConductor::configureSleepCycle(bool enabled, uint32_t onTime, uint32_t cycleTime)
+{
+  m_autoSleepEnabled = enabled;
+  m_onTime = onTime;
+  m_cycleTime = cycleTime;
+  m_cycleStartTime = millis() / 1000;
 }
 
 /**
@@ -174,57 +233,124 @@ void IUConductor::changeUsageMode(usageMode::option mode)
  */
 void IUConductor::changeAcquisitionMode(acquisitionMode::option mode)
 {
+  if (m_acquisitionMode == mode)
+  {
+    return; // Nothing to do
+  }
   m_acquisitionMode = mode;
   String msg;
-  if (m_acquisitionMode == acquisitionMode::FEATURE)
+  // TODO => normally we should resetDataAcquisition in RAWDATA and FEATURE modes, but that blocks so far,
+  // need to check why
+  switch (m_acquisitionMode)
   {
-    iuRGBLed->changeColor(IURGBLed::BLUE);
-    iuI2C->unsilence();
-    beginDataAcquisition();
-    //resetDataAcquisition();
-    msg = "run";
+    case acquisitionMode::RAWDATA:
+      iuRGBLed->changeColor(IURGBLed::CYAN);
+      break;
+    case acquisitionMode::FEATURE:
+      iuRGBLed->changeColor(IURGBLed::BLUE);
+      beginDataAcquisition();
+      msg = "features";
+      break;
+    case acquisitionMode::NONE:
+      endDataAcquisition();
+      msg = "nothing";
+      break;
+    default:
+      if (loopDebugMode) { debugPrint(F("Invalid acquisition Mode")); }
+      return;
   }
-  else if (m_acquisitionMode == acquisitionMode::WIRED)
+  if (loopDebugMode) { debugPrint("\nAcquiring " + msg + "\n"); }
+}
+
+/**
+ * Switch to a streamingMode
+ */
+void IUConductor::changeStreamingMode(streamingMode::option mode)
+{
+  if (m_streamingMode == mode)
   {
-    iuI2C->silence();
-    iuRGBLed->changeColor(IURGBLed::CYAN);
-    //resetDataAcquisition();
-    msg = "WIRED data collection";
+    return; // Nothing to do
   }
-  else if (m_acquisitionMode == acquisitionMode::RECORD)
+  m_streamingMode = mode;
+  String msg;
+  switch (m_streamingMode)
   {
-    //resetDataAcquisition();
-    msg = "record";
+    case streamingMode::WIRED:
+      iuI2C->silence();
+      msg = "Serial";
+      break;
+    case streamingMode::BLE:
+      iuI2C->unsilence();
+      msg = "bluetooth";
+      break;
+    case streamingMode::WIFI:
+      iuI2C->unsilence();
+      msg = "Wifi";
+      break;
+    case streamingMode::STORE:
+      // TODO Implement storage in SPI
+      if (loopDebugMode) { debugPrint("\nNow storing data in SPI Flash\n"); }
+      break;
+    default:
+      if (loopDebugMode) { debugPrint(F("Invalid streaming Mode")); }
+      return;
   }
-  else if (m_acquisitionMode == acquisitionMode::NONE)
+  if (loopDebugMode) { debugPrint("\nNow sending data over " + msg + "\n"); }
+}
+
+/**
+ * Switch to a new Usage Preset
+ */
+void IUConductor::changeUsagePreset(usagePreset::option usage)
+{
+  m_usagePreset = usage;
+  changeAcquisitionMode(usagePreset::acquisitionModeDetails[m_usagePreset]);
+  changeStreamingMode(usagePreset::streamingModeDetails[m_usagePreset]);
+  String msg;
+  switch (m_usagePreset)
   {
-    m_sleepStartTime = millis();
-    endDataAcquisition();
-    iuRGBLed->changeColor(IURGBLed::SLEEP);
-    msg = "sleep";
+    case usagePreset::CALIBRATION:
+      setDataSendPeriod(shortestDataSendPeriod);
+      featureConfigurator.setCalibrationStreaming();
+      iuRGBLed->changeColor(IURGBLed::CYAN);
+      iuRGBLed->lock();
+      msg = "calibration";
+      break;
+    case usagePreset::EXPERIMENT:
+      msg = "experiment";
+      break;
+    case usagePreset::OPERATION:
+      iuRGBLed->unlock();
+      iuRGBLed->changeColor(IURGBLed::BLUE);
+      setDataSendPeriod(defaultDataSendPeriod);
+      featureConfigurator.setStandardStreaming();
+      sensorConfigurator.iuAccelerometer->resetScale();
+      msg = "operation";
+      break;
+    default:
+      if (loopDebugMode) { debugPrint(F("Invalid usage mode preset")); }
+      return;
   }
-  if (loopDebugMode) { debugPrint("\nEntering " + msg + " mode\n"); }
+  if (loopDebugMode) { debugPrint("\nSet up for " + msg + "\n"); }
 }
 
 /**
  * Switch to a new state and update the Led color accordingly
- * NB:Do not update state if:
- * - in sleep mode
- * - already in desired state
- * Also updates the idleStartTime timer
+ * 
+ * Also updates the idleStartTime timer for auto-sleep management
  */
 void IUConductor::changeOperationState(operationState::option state)
 {
-  operationState::option previousState = m_operationState;
+  if (m_operationState == state)
+  {
+    return;
+  }
   m_operationState = state;
   String msg = "";
   if (m_operationState == operationState::IDLE)
   {
-    if (previousState != operationState::IDLE)
-    {
-      m_idleStartTime = millis();
-      iuRGBLed->changeColor(IURGBLed::BLUE);
-    }
+    m_idleStartTime = millis();
+    iuRGBLed->changeColor(IURGBLed::BLUE);
     msg = "Idle";
   }
   else if (m_operationState == operationState::NORMAL)
@@ -246,59 +372,23 @@ void IUConductor::changeOperationState(operationState::option state)
 }
 
 /**
- * Check if the powerPreset needs to be updated: if yes, update it
- * NB: To update the mode, this function calls method changePowerPreset.
- * @return true if the powerPreset was updated, else false.
- */
-bool IUConductor::checkAndUpdatePowerPreset()
-{
-  // TODO: Determine conditions
-  return false;
-}
-
-/**
- * Check if the acquisitionMode needs to be updated: if yes, update it
- * NB: To update the mode, this function calls method changeAcquisitionMode.
- * @return true if the mode was updated, else false.
- */
-bool IUConductor::checkAndUpdateAcquisitionMode()
-{
-  if (m_autoSleepEnabled)
-  {
-    if (m_acquisitionMode != acquisitionMode::NONE && m_startSleepTimer < millis() - m_idleStartTime)
-    {
-      changeAcquisitionMode(acquisitionMode::NONE); // go to sleep
-      return true;
-    }
-    else if (m_acquisitionMode == acquisitionMode::NONE && m_operationState == operationState::IDLE && m_endSleepTimer < millis() - m_sleepStartTime)
-    {
-      changeAcquisitionMode(acquisitionMode::FEATURE); // exit sleep mode into run mode
-      return true;
-    }
-  }
-  return false;
-}
-
-/**
  * Check if the operation state needs to be updated: if yes, update it
- * NB1: The conductor operation state is based on the highest state from features.
- * NB2: To update the state, this function calls method changeOperationState.
- * NB3: operation state update is disabled when not in "run" operation mode.
+ * The conductor operation state is based on the highest state from features.
+ * To update the state, this function calls method changeOperationState.
+ * operationState is only updated when in acquisitionMode::FEATURE.
  * @return true if the state was updated, else false.
  */
-bool IUConductor::checkAndUpdateOperationState()
+void IUConductor::checkAndUpdateOperationState()
 {
   if (m_acquisitionMode != acquisitionMode::FEATURE)
   {
-    return false;
+    return;
   }
   operationState::option newState = featureConfigurator.getOperationStateFromFeatures();
   if (m_operationState != newState)
   {
     changeOperationState(newState);
-    return true;
   }
-  return false;
 }
 
 
@@ -399,20 +489,30 @@ void IUConductor::acquireAndSendData(bool asynchronous)
   }
   if (iuI2C->getErrorMessage().equals("ALL_OK")) // Acquire data only if all ok
   {
-    if (m_acquisitionMode == acquisitionMode::FEATURE)
+    switch (m_acquisitionMode)
     {
-      sensorConfigurator.acquireDataAndSendToReceivers(asynchronous);
-    }
-    // dataCollection is only processed asynchronously
-    if (m_acquisitionMode == acquisitionMode::WIRED && asynchronous)
-    {
-      sensorConfigurator.acquireDataAndDumpThroughI2C();
-      // In data collection mode, need to process I2C data
-      processInstructionsFromI2C();
-    }
-    if (m_acquisitionMode == acquisitionMode::RECORD)
-    {
-      sensorConfigurator.acquireAndStoreData(asynchronous);
+      case acquisitionMode::NONE:
+        break; // Do not acquire
+      case acquisitionMode::RAWDATA:
+        switch (m_streamingMode)
+        {
+          case streamingMode::WIRED:
+            sensorConfigurator.dumpDataThroughI2C(asynchronous);
+            // TODO: In EXPERIMENT mode, need to process I2C data here otherwise they are not properly processed
+            // Can we fix this ?
+            processInstructionsFromI2C();
+            break;
+          default:
+            if (loopDebugMode) { debugPrint(F("'acquire and send data' case not implemented!")); }
+        }
+        sensorConfigurator.acquireData(asynchronous);
+        break;
+      case acquisitionMode::FEATURE:
+        sensorConfigurator.sendDataToReceivers(asynchronous);
+        sensorConfigurator.acquireData(asynchronous);
+        break;
+      default:
+        if (loopDebugMode) { debugPrint(F("'acquire and send data' case not implemented!")); }
     }
   }
   else
@@ -440,30 +540,40 @@ void IUConductor::computeFeatures()
 }
 
 /**
- * Send feature data through an interface (serial, bluetooth, wifi)
+ * Send feature data through Serial, BLE or WiFi depending on streamingMode
+ * NB: If the acquisitionMode is not FEATURE, does nothing.
  * @return true if data was sent, else false
  */
-bool IUConductor::streamData(HardwareSerial *port, bool newLine)
+bool IUConductor::streamFeatures(bool newLine)
 {
-  if (m_acquisitionMode != acquisitionMode::FEATURE)
+  if (!isDataSendTime() || m_acquisitionMode != acquisitionMode::FEATURE)
   {
     return false;
   }
-  if (isDataSendTime())
+  HardwareSerial *port = NULL;
+  switch (m_streamingMode)
   {
-    port->print(m_macAddress);                                                 // MAC Address
-    port->print(",0"); port->print((uint8_t) m_operationState); port->print(",");     // Operation State
-    port->print(sensorConfigurator.iuBattery->getBatteryStatus());             // % Battery charge
-    featureConfigurator.streamFeatures(port);                                  // Each feature value
-    port->print(","); port->print(getDatetime()); port->print(";");            // Datetime
-    if (newLine)
-    {
-      port->println("");
-    }
-    port->flush();                                                             // End
-    return true;
+    case streamingMode::WIRED:
+      port = iuI2C->port;
+      break;
+    case streamingMode::BLE:
+      port = iuBluetooth->port;
+      break;
+    case streamingMode::WIFI:
+      port = iuWifi->port;
+      break;
   }
-  return false;
+  port->print(m_macAddress); port->print(",0");                     // MAC Address
+  port->print((uint8_t) m_operationState); port->print(",");        // Operation State
+  port->print(sensorConfigurator.iuBattery->getBatteryStatus());    // % Battery charge
+  featureConfigurator.streamFeatures(port);                         // Each feature value
+  port->print(","); port->print(getDatetime()); port->print(";");   // Datetime
+  if (newLine)
+  {
+    port->println("");
+  }
+  port->flush();
+  return true;
 }
 
 /**
@@ -528,100 +638,95 @@ void IUConductor::processInstructionsFromI2C()
   if(setupDebugMode) { debugPrint("I2C input is:"); }
   if(setupDebugMode) { debugPrint(msg); }
 
-  // Usage mode switching
-  if(m_usageMode == usageMode::OPERATION && iuI2C->checkIfStartCalibration())
+  // TODO => make the processing of the command not depend on the usagePreset
+  
+  // Usage mode Preset switching
+  switch (m_usagePreset)
   {
-    changeUsageMode(usageMode::CALIBRATION);
-  }
-  else if (m_usageMode == usageMode::CALIBRATION && iuI2C->checkIfEndCalibration())
-  {
-    changeUsageMode(usageMode::OPERATION);
-  }
-
-  // Operation mode switching
-  if (m_acquisitionMode == acquisitionMode::FEATURE)
-  {
-    if (iuI2C->checkIfStartCollection())
-    {
-      changeAcquisitionMode(acquisitionMode::WIRED);
-    }
-  }
-  else if (m_acquisitionMode == acquisitionMode::WIRED)
-  {
-    if (iuI2C->checkIfEndCollection())
-    {
-      changeAcquisitionMode(acquisitionMode::FEATURE);
-      sensorConfigurator.iuAccelerometer->resetScale();
-      return;
-    }
-    if (msg.indexOf("Arange") > -1)
-    {
-      // Update Accel range
-      int loc = msg.indexOf("Arange") + 7;
-      String accelRangeStr = (String) (msg.charAt(loc));
-      int accelRange = accelRangeStr.toInt();
-      switch (accelRange)
+    case usagePreset::CALIBRATION:
+      if (iuI2C->checkIfEndCalibration()) { changeUsagePreset(usagePreset::OPERATION); }
+      break;
+    case usagePreset::EXPERIMENT:
+      if (iuI2C->checkIfEndCollection())
       {
-        case 0:
-          sensorConfigurator.iuAccelerometer->setScale(sensorConfigurator.iuAccelerometer->AFS_2G);
-          break;
-        case 1:
-          sensorConfigurator.iuAccelerometer->setScale(sensorConfigurator.iuAccelerometer->AFS_2G);
-          break;
-        case 2:
-          sensorConfigurator.iuAccelerometer->setScale(sensorConfigurator.iuAccelerometer->AFS_2G);
-          break;
-        case 3:
-          sensorConfigurator.iuAccelerometer->setScale(sensorConfigurator.iuAccelerometer->AFS_2G);
-          break;
+        changeUsagePreset(usagePreset::OPERATION);
+        return;
       }
-    }
-    else if (msg.indexOf("rgb") > -1)
-    {
-      // Change LED color
-      int loc = msg.indexOf("rgb") + 7;
-      int R = msg.charAt(loc) - 48;
-      int G = msg.charAt(loc + 1) - 48;
-      int B = msg.charAt(loc + 2) - 48;
-      iuRGBLed->changeColor((bool) R, (bool) G, (bool) B);
-    }
-    else if (msg.indexOf("acosr") > -1)
-    {
-      // Change audio sampling rate
-      int loc = msg.indexOf("acosr") + 6;
-      int A = msg.charAt(loc) - 48;
-      int B = msg.charAt(loc + 1) - 48;
-      uint16_t samplingRate = (uint16_t) ((A * 10 + B) * 1000);
-      sensorConfigurator.iuI2S->setSamplingRate(samplingRate);
-      // Update the conductor clock rate (since it's based on I2S clock)
-      setClockRate(sensorConfigurator.iuI2S->getClockRate());
-    }
-    else if (msg.indexOf("accsr") > -1)
-    {
-      int loc = msg.indexOf("accsr") + 6;
-      int A = msg.charAt(loc) - 48;
-      int B = msg.charAt(loc + 1) - 48;
-      int C = msg.charAt(loc + 2) - 48;
-      int D = msg.charAt(loc + 3) - 48;
-      int samplingRate = (A * 1000 + B * 100 + C * 10 + D);
-      sensorConfigurator.iuAccelerometer->setSamplingRate(samplingRate);
-    }
+      if (msg.indexOf("Arange") > -1)
+      {
+        // Update Accel range
+        int loc = msg.indexOf("Arange") + 7;
+        String accelRangeStr = (String) (msg.charAt(loc));
+        int accelRange = accelRangeStr.toInt();
+        switch (accelRange)
+        {
+          case 0:
+            sensorConfigurator.iuAccelerometer->setScale(sensorConfigurator.iuAccelerometer->AFS_2G);
+            break;
+          case 1:
+            sensorConfigurator.iuAccelerometer->setScale(sensorConfigurator.iuAccelerometer->AFS_4G);
+            break;
+          case 2:
+            sensorConfigurator.iuAccelerometer->setScale(sensorConfigurator.iuAccelerometer->AFS_8G);
+            break;
+          case 3:
+            sensorConfigurator.iuAccelerometer->setScale(sensorConfigurator.iuAccelerometer->AFS_16G);
+            break;
+        }
+      }
+      else if (msg.indexOf("rgb") > -1)
+      {
+        // Change LED color
+        int loc = msg.indexOf("rgb") + 7;
+        int R = msg.charAt(loc) - 48;
+        int G = msg.charAt(loc + 1) - 48;
+        int B = msg.charAt(loc + 2) - 48;
+        iuRGBLed->changeColor((bool) R, (bool) G, (bool) B);
+      }
+      else if (msg.indexOf("acosr") > -1)
+      {
+        // Change audio sampling rate
+        int loc = msg.indexOf("acosr") + 6;
+        int A = msg.charAt(loc) - 48;
+        int B = msg.charAt(loc + 1) - 48;
+        uint16_t samplingRate = (uint16_t) ((A * 10 + B) * 1000);
+        sensorConfigurator.iuI2S->setSamplingRate(samplingRate);
+        // Update the conductor clock rate (since it's based on I2S clock)
+        setClockRate(sensorConfigurator.iuI2S->getClockRate());
+      }
+      else if (msg.indexOf("accsr") > -1)
+      {
+        int loc = msg.indexOf("accsr") + 6;
+        int A = msg.charAt(loc) - 48;
+        int B = msg.charAt(loc + 1) - 48;
+        int C = msg.charAt(loc + 2) - 48;
+        int D = msg.charAt(loc + 3) - 48;
+        int samplingRate = (A * 1000 + B * 100 + C * 10 + D);
+        sensorConfigurator.iuAccelerometer->setSamplingRate(samplingRate);
+      }
+      break;
+    case usagePreset::OPERATION:
+      if (iuI2C->checkIfStartCalibration()) { changeUsagePreset(usagePreset::CALIBRATION); }
+      if (iuI2C->checkIfStartCollection()) { changeUsagePreset(usagePreset::EXPERIMENT); }
+      break;
   }
   iuI2C->resetBuffer();    // Clear wire buffer
 }
 
 /**
- * Process the instructions sent over Bluetooth to adjust the configuration
- * Concretely:
+ * Process the instructions sent over Bluetooth
+ * 
+ * NB: when streamingMode is WIRED, we ignore BLE instructions
+ * Process:
  * 1. read and fill the bluetooth receiving buffer (with readToBuffer). This
  *    include a check on data reception timeout.
  * 2. scan the content of the buffer and apply changes where needed
  */
 void IUConductor::processInstructionsFromBluetooth()
 {
-  if (m_acquisitionMode != acquisitionMode::FEATURE)
+  if (m_streamingMode == streamingMode::WIRED)
   {
-    return;
+    return; // Do not listen to BLE when wired
   }
   char *bleBuffer = NULL;
   while (iuBluetooth->readToBuffer())
@@ -679,15 +784,16 @@ void IUConductor::processInstructionsFromBluetooth()
       case '2': // Bluetooth parameter setting
         if (bleBuffer[1] == ':' && bleBuffer[7] == '-' && bleBuffer[13] == '-')
         {
-          int dataRecTimeout(0), paramtag(0), dataSendPeriod(0);
-          sscanf(bleBuffer, "%d:%d-%d-%d", &paramtag, &dataSendPeriod, m_startSleepTimer, &dataRecTimeout);
-          m_endSleepTimer = m_startSleepTimer;
+          int dataRecTimeout(0), paramtag(0), startSleepTimer(0), dataSendPeriod(0);
+          sscanf(bleBuffer, "%d:%d-%d-%d", &paramtag, &dataSendPeriod, startSleepTimer, &dataRecTimeout);
+          //TODO For now, autoSleep is deactivated => check its behavior and activate it
+          configureAutoSleep(false, startSleepTimer, startSleepTimer);
           setDataSendPeriod((uint16_t) dataSendPeriod);
           iuBluetooth->setDataReceptionTimeout((uint16_t) dataRecTimeout);
         }
         break;
 
-      case '3': // Record button pressed - go into extensive mode to record FFTs
+      case '3': // Record button pressed - go into EXTENSIVE mode to record FFTs
         if (bleBuffer[7] == '0' && bleBuffer[9] == '0' && bleBuffer[11] == '0' && bleBuffer[13] == '0' && bleBuffer[15] == '0' && bleBuffer[17] == '0')
         {
           if (loopDebugMode) { debugPrint("Record mode"); }
@@ -727,7 +833,6 @@ void IUConductor::processInstructionsFromBluetooth()
           iuBluetooth->port->flush();
         }
         break;
-
       case '6':
         if (bleBuffer[7] == ':' && bleBuffer[9] == '.' && bleBuffer[11] == '.' && bleBuffer[13] == '.' && bleBuffer[15] == '.' && bleBuffer[17] == '.')
         {
@@ -741,13 +846,30 @@ void IUConductor::processInstructionsFromBluetooth()
           }
         }
         break;
+      case '7': // Power mode
+        if (bleBuffer[1] == ':' && bleBuffer[3] == ':' && bleBuffer[11] == ':')
+        {
+          int parametertag(0), enabled(0), onTime(0), cycleTime(0);
+          sscanf(bleBuffer, "%d:%d:%d:%d", &parametertag, &enabled, &onTime, &cycleTime);
+          configureSleepCycle((bool) enabled, onTime, cycleTime);
+        }
+        break;
     }
   }
 }
 
+/**
+ * Process the instructions sent over WiFi
+ * 
+ * NB: when streamingMode is WIRED, we ignore WiFi instructions
+ */
 void IUConductor::processInstructionsFromWifi()
 {
-
+  if (m_streamingMode == streamingMode::WIRED)
+  {
+    return; // Do not listen to WiFi when wired
+  }
+  // TODO Implement
 }
 
 void IUConductor::setup(void (*callback)())
@@ -819,6 +941,14 @@ void IUConductor::setup(void (*callback)())
     debugPrint(' ');
   }
 
+  // Power Management
+  if (setupDebugMode) { debugPrint(F("\nSetting up power modes...")); }
+  doDefaultPowerConfig();
+  if (setupDebugMode)
+  {
+    memoryLog(F("=> Successfully set up power modes"));
+  }
+
   if (setupDebugMode) { debugPrint(F("\n***Done setting up components and configurations***\n")); }
 
   m_callback = callback;
@@ -828,31 +958,18 @@ void IUConductor::setup(void (*callback)())
 
 void IUConductor::loop()
 {
-  if (m_usageMode == usageMode::OPERATION)
-  {
-    if (m_acquisitionMode == acquisitionMode::WIRED)
-    {
-      return;
-    }
-    checkAndUpdateAcquisitionMode();
-    processInstructionsFromBluetooth();  // Receive instructions via BLE
-    processInstructionsFromI2C();        // Receive instructions to enter / exit modes, plus options during data collection
-    acquireAndSendData(false);           // Acquire data from asynchronous sensor
-    computeFeatures();                   // Feature computation depending on operation mode
-    checkAndUpdateOperationState();      // Update the operationState
-    streamData(iuBluetooth->port);       // Stream data over BLE
-  }
-  else if (m_usageMode == usageMode::CALIBRATION)
-  {
-    processInstructionsFromI2C();        // Receive instructions to enter / exit modes
-    computeFeatures();                   // Feature computation depending on operation mode
-    streamData(iuI2C->port);             // Stream data over I2C during calibration
-  }
-  else if (m_usageMode == usageMode::CONFIGURATION)
-  {
-    processInstructionsFromBluetooth();  // Receive instructions via BLE
-    processInstructionsFromI2C();        // Receive instructions to enter / exit modes
-  }
+  // Power saving
+  manageAutoSleep();
+  manageSleepCycle();
+  // Configuration
+  processInstructionsFromI2C();
+  processInstructionsFromBluetooth();
+  processInstructionsFromWifi();
+  // Action
+  acquireAndSendData(false);       // Acquire data from synchronous sensor
+  computeFeatures();               // Feature computation depending on operation mode
+  checkAndUpdateOperationState();  // Update the operationState
+  streamFeatures();                // Stream features
 }
 
 

@@ -1,396 +1,440 @@
-#include "IUUtilities.h"
-
-/*====================== General utility function ============================ */
-
-/**
- * Split a String at given separator and put the substring in destination
- * @param str             the string to parse
- * @param separator       separator at which split string
- * @param destination     the array where to put the substring
- * @param destinationSize the size of the destination array
- * @return                the number of substrings found
- * NB: destination has a fixed size given as argument. If there are too many substring,
- * only the first ones will be kept. If there are not enough, the remaining of destination
- * is filled with empty string.
- */
-uint8_t splitString(String str, const char separator, String *destination, const uint8_t destinationSize)
-{
-  int startAt = 0;
-  int idx = 0;
-  int substringCount = 0;
-  for (int i = 0; i < destinationSize; i++)
-  {
-    idx = str.indexOf(separator, startAt);
-    if (idx == -1)
-    {
-      String endstr = str.substring(startAt);
-      if(endstr != "" && i < destinationSize)
-      {
-        destination[i] = endstr;
-        i++;
-      }
-      for (int j = i; j < destinationSize; j++)
-      {
-        destination[j] = "";
-      }
-      return i;
-    }
-    destination[i] = str.substring(startAt, idx);
-    substringCount++;
-    startAt = idx + 1;
-  }
-  return substringCount;
-}
-
-/**
- * Same as splitString except that the resulting substring will be converted to int
- * @param str             the string to parse
- * @param separator       separator at which split string
- * @param destination     the array where to put the substring
- * @param destinationSize the size of the destination array
- * @return                the number of substring found and converted integer
- */
-uint8_t splitStringToInt(String str, const char separator, int *destination, const uint8_t destinationSize)
-{
-  String stringDestination[destinationSize];
-  int substringCount = splitString(str, separator, stringDestination, destinationSize);
-  int counter = 0;
-  for (int i = 0; i < substringCount; i++)
-  {
-    destination[i] = stringDestination[i].toInt();
-    counter++;
-  }
-  return counter;
-}
-
-/**
- * Check if character appears at given positions in charbuffer
- */
-bool checkCharsAtPosition(char *charBuffer, char character, int *positions, int positionCount)
-{
-  for (int i = 0; i < positionCount; i++)
-  {
-    if (charBuffer[i] != character)
-    {
-      return false;
-    }
-  }
-  return true;
-}
-
-/**
- * Copy source into destination, and complete destination with 0
- * source must be shorter or as long as destination, never longer.
- */
-void strCopyWithAutocompletion(char *destination, char *source, uint8_t destLen, uint8_t srcLen)
-{
-  for (uint8_t i = 0; i < min(destLen, srcLen); i++)
-  {
-    destination[i] = source[i];
-  }
-  if (srcLen < destLen)
-  {
-    for (uint8_t i = srcLen; i < destLen; i++)
-    {
-      destination[i] = 0;
-    }
-  }
-}
-
-/*=========================== Math functions ================================= */
-
-/**
- * Compute and return the root min square
- * @param sourceSize the length of the array
- * @param source a q15_t array (elements are int16_t0
- */
-float computeRMS(uint16_t sourceSize, q15_t *source, float (*transform)(q15_t))
-{
-  float avg2(0);
-  for (int i = 0; i < sourceSize; i++)
-  {
-    avg2 += sq(transform(source[i]));
-  }
-  return sqrt(avg2 / (float) sourceSize);
-}
-
-/**
- * Compute and return the normalized root min square
- * @param sourceSize the length of the array
- * @param source a q15_t array (elements are int16_t0
- */
-float computeNormalizedRMS(uint16_t sourceSize, q15_t *source, float (*transform)(q15_t))
-{
-  float total = 0;
-  q15_t avg = 0;
-  arm_mean_q15(source, sourceSize, &avg);
-  for (int i = 0; i < sourceSize; i++)
-  {
-    total += sq(transform(source[i] - avg));
-  }
-  return sqrt(total / (float) sourceSize);
-}
-
-/**
- * Compute and return the total energy of a signal
- * @param values          the sampled values of the signal
- * @param sampleCount     the number of sampled values
- * @param samplingFreq    the sampling frequency
- * @param scalingFactor   a scaling factor to apply to the signal (sample-wise) beforehand
- * @param removeMean      if true, the mean value is substracted from the signal, centering it around 0
- *
- * WARNING => Since the signal energy is squared, the resulting scaling factor will be squared as well.
- * Signal energy formula: sum((x(t)- x_mean)^2 * dt) for t in [0, dt, 2 *dt, ..., T]
- * where x_mean = Mean(x) if removeMean is true else 0, dt = 1 / samplingFreq and T = sampleCount / samplingFreq.
- *
- */
-float computeSignalEnergy(q15_t *values, uint16_t sampleCount, uint16_t samplingFreq, float scalingFactor,
-                          bool removeMean)
-{
-  float total = 0;
-  q15_t avg = 0;
-  if (removeMean)
-  {
-    arm_mean_q15(values, sampleCount, &avg);
-  }
-  for (int i = 0; i < sampleCount; i++)
-  {
-    total += sq((float) (values[i] - avg) * scalingFactor);
-  }
-  return total / samplingFreq;
-}
-
-/**
- * Compute and return the total energy of a signal
- * @param values          the sampled values of the signal
- * @param sampleCount     the number of sampled values
- * @param samplingFreq    the sampling frequency
- * @param scalingFactor   a scaling factor to apply to the signal (sample-wise) beforehand
- * @param removeMean      if true, the mean value is substracted from the signal, centering it around 0
- *
- * Signal Power definition: Total signal energy divided by the time
- * Signal Power formula: 1 / T * sum((x(t)- x_mean)^2 * dt) for t in [0, dt, 2 *dt, ..., T]
- * where x_mean = Mean(x) if removeMean is true else 0, dt = 1 / samplingFreq and T = sampleCount / samplingFreq.
- */
-float computeSignalPower(q15_t *values, uint16_t sampleCount, uint16_t samplingFreq, float scalingFactor,
-                         bool removeMean)
-{
-  float energy = computeSignalEnergy(values, sampleCount, samplingFreq, scalingFactor, removeMean);
-  float T = (float) sampleCount / (float) samplingFreq;
-  return energy / T;
-}
-
-/**
- * Return the root min square (= effective value) of a signal
- * @param values          the sampled valuesof the signal
- * @param sampleCount     the number of sampled values
- * @param samplingFreq    the sampling frequency
- * @param scalingFactor   a scaling factor to apply to the signal (sample-wise) beforehand
- * @param removeMean      if true, the mean value is substracted from the signal, centering it around 0
- *
- * RMS / effective value definition: the value of a continuous signal that would produce the same energy over a period T
- * RMS formula: sqrt(1/T * sum(((x(t)- x_mean) * dt)^2)) for t in [0, dt, 2 *dt, ..., T]
- * where x_mean = Mean(x) if removeMean is true else 0, dt = 1 / samplingFreq and T = sampleCount / samplingFreq.
- */
-float computeSignalRMS(q15_t *values, uint16_t sampleCount, uint16_t samplingFreq, float scalingFactor,
-                       bool removeMean)
-{
-  float power = computeSignalPower(values, sampleCount, samplingFreq, scalingFactor, removeMean);
-  return sqrt(power);
-}
-
-/**
- * Compute and return the normalized sum of all sources
- * @param arrCount the number of arrays
- * @param arrSize  pointer to an array of size arrCount
- * @param arrays   pointer to an array q15_t[arrCount][arrSizes[i for i in arrCount]]
- */
-float multiArrayMean(uint8_t arrCount, const uint16_t* arrSizes, float **arrays)
-{
-  float total = 0;
-  float grandTotal = 0;
-  for (uint8_t i = 0; i < arrCount; i++)
-  {
-    for (uint16_t j = 0; j < arrSizes[i]; j++)
-    {
-      total += arrays[i][j];
-    }
-    grandTotal += total / (float) arrSizes[i];
-    total = 0;
-  }
-  return grandTotal / (float) arrCount;
-}
-
-
-
-arm_rfft_instance_q15 rfftInstance;
-
-
-/**
- * Compute (inverse) RFFT and put it in destination
- * @param source
- * @param destination
- * @param FFTLength        the length of the FFT
- * @param inverse          false to compute forward FFT, true to compute inverse FFT
- * @return                 true if the computation succeeded, else false
- * The freq domain array size should be twice the time domain array size, so:
- * - if inverse is false, source size = FFTLength and destination size = 2 * FFTLength
- * - if inverse is true, source size = 2 * FFTLength and destination size = FFTLength
- */
-bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTLength, bool inverse)
-{
-  arm_status armStatus = arm_rfft_init_q15(&rfftInstance,   // RFFT instance
-                                           FFTLength,       // FFT length
-                                           (int) inverse,   // 0: forward FFT, 1: inverse FFT
-                                           1);              // 1: enable bit reversal output
-  if (armStatus != ARM_MATH_SUCCESS)
-  {
-    if (loopDebugMode) { debugPrint("FFT / Inverse FFT computation failed"); }
-    return false;
-  }
-  arm_rfft_q15(&rfftInstance, source, destination);
-  return true;
-}
-
-/**
- * Compute (inverse) RFFT
- * NB - this function WILL MODIFY the source to apply the windowing (no array duplication to save space)
- * see computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTlength, bool inverse)
- * @param window        the window function as an array of FFTLength elements, to apply to the time domain samples
- * @param windowGain    the gain of the window, a correcting factor to apply in the freq domain.
- */
-bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTLength, bool inverse, q15_t *window)
-{
-  if (!inverse) // Apply window
-  {
-    for (uint16_t i = 0; i < FFTLength; ++i)
-    {
-      source[i] = (q15_t) ((float) source[i] * (float) window[i] / 32768.);
-    }
-  }
-  computeRFFT(source, destination, FFTLength, inverse);
-  if (inverse) // "un-" window the iFFT
-  {
-    for (uint16_t i = 0; i < FFTLength; ++i)
-    {
-      destination[i] = (q15_t) round((float) destination[i] * 32768. / (float) window[i]);
-    }
-  }
-}
-
 /*
- * Apply a bandpass filtering and integrate 1 or 2 times a FFT
- * Note that the input FFT will be modified in the process
- * @param values            the FFT (as an array of size 2 * sampleCount as outputed by arm_rfft)
- * @param sampleCount       the sample count
- * @param samplingRate      the sampling rate / frequency
- * @param FreqLowerBound    freq lower bound for bandpass filtering
- * @param FreqHigherBound   freq higher bound for bandpass filtering
- * @param twice             set to false (default) to integrate once, set to true to integrate twice
- */
-void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound, uint16_t scalingFactor, bool twice)
-{
-  float df = (float) samplingRate / (float) sampleCount;
-  uint16_t minIdx = (uint16_t) max(((float) FreqLowerBound / df), 1);
-  uint16_t maxIdx = (uint16_t) min((float) FreqHigherBound / df, sampleCount);
-  float omega = 2. * PI * df / (float) scalingFactor;
-  // Apply high pass filter
-  for (uint16_t i = 0; i < minIdx; i++)
-  {
-    values[2 * i] = 0;
-    values[2 * i + 1] = 0;
-  }
-  // Integrate accel FFT (divide by j * idx * omega)
-  if (twice)
-  {
-    float factor = - 1. / sq(omega);
-    for (uint16_t i = minIdx; i < maxIdx; i++)
-    {
-      values[2 * i] = (q15_t) round((float) values[2 * i] * factor / (float) sq(i));
-      values[2 * i + 1] = (q15_t) round((float) values[2 * i + 1] * factor / (float) sq(i));
-    }
-  }
-  else
-  {
-    q15_t real(0), comp(0);
-    for (uint16_t i = minIdx; i < maxIdx; i++)
-    {
-      real = values[2 * i];
-      comp = values[2 * i + 1];
-      values[2 * i] = (q15_t) round((float) comp / ((float) i * omega));
-      values[2 * i + 1] = (q15_t) round(- (float) real / ((float) i * omega));
-    }
-  }
-  // Apply high pass filter
-  for (uint16_t i = maxIdx; i < sampleCount; i++)
-  {
-    values[2 * i] = 0;
-    values[2 * i + 1] = 0;
-  }
-}
 
-float getMainFrequency(q15_t *fftValues, uint16_t sampleCount, uint16_t samplingRate)
-{
-  float df = (float) samplingRate / (float) sampleCount;
-  int maxIdx = 0;
-  float amplitude(0), maxVal(0);
-  for (uint16_t i = 2; i < sampleCount / 2; i++) // Start at 2 to ignore DC component
-  {
-    amplitude = sqrt(sq(fftValues[2 * i]) + sq(fftValues[2 * i + 1]));
-    if (amplitude > maxVal)
-    {
-      maxVal = amplitude;
-      maxIdx = i;
-    }
-  }
-  return (float) maxIdx * df;
-}
+Infinite Uptime BLE Module Firmware
 
-q15_t findMaxAscent(q15_t *batch, uint16_t batchSize, uint16_t max_count)
-{
-  q15_t buff[max_count];
-  for (uint16_t j = 0; j < max_count; ++j)
-  {
-    buff[j] = 0;
-  }
-  uint16_t pos = 0;
-  q15_t diff = 0;
-  q15_t max_ascent = 0;
-  q15_t max_ascent_candidate = 0;
-  for (uint16_t i = 1; i < batchSize; ++i)
-  {
-    diff = batch[i] - batch[i - 1];
-    if (diff >= 0)
-    {
-      buff[pos] = diff;
-      ++pos;
-      if (pos >= max_count)
-      {
-        pos = 0;
-      }
-      max_ascent_candidate = 0;
-      for (uint16_t j = 0; j < max_count; ++j)
-      {
-        max_ascent_candidate += buff[j];
-      }
-      max_ascent = max(max_ascent, max_ascent_candidate);
-    }
-    else
-    {
-      pos = 0;
-      for (uint16_t j = 0; j < max_count; ++j)
-      {
-        buff[j] = 0;
-      }
-    }
-  }
-  return max_ascent;
-}
+Constants including register addresses and Hamming window presets.
+
+*/
+
+//==============================================================================
+//======================= Register Addresses and Enums =========================
+//==============================================================================
+
+// See MS5637-02BA03 Low Voltage Barometric Pressure Sensor Data Sheet http://www.meas-spec.com/downloads/MS5637-02BA03.pdf
+#define MS5637_RESET      0x1E
+#define MS5637_CONVERT_D1 0x40
+#define MS5637_CONVERT_D2 0x50
+#define MS5637_ADC_READ   0x00
+
+#define BLEport Serial1
+
+// DEPRECATED: tons of BMX055 registers
+
+// MPU-9250 accel register constants
+#define SELF_TEST_X_ACCEL 0x0D
+#define SELF_TEST_Y_ACCEL 0x0E
+#define SELF_TEST_Z_ACCEL 0x0F
+
+#define SMPLRT_DIV       0x19
+#define CONFIG           0x1A
+#define GYRO_CONFIG      0x1B
+#define ACCEL_CONFIG     0x1C
+#define ACCEL_CONFIG2    0x1D
+#define LP_ACCEL_ODR     0x1E
+#define WOM_THR          0x1F
+
+#define MOT_DUR          0x20  // Duration counter threshold for motion interrupt generation, 1 kHz rate, LSB = 1 ms
+#define ZMOT_THR         0x21  // Zero-motion detection threshold bits [7:0]
+#define ZRMOT_DUR        0x22  // Duration counter threshold for zero motion interrupt generation, 16 Hz rate, LSB = 64 ms
+
+#define FIFO_EN          0x23
+#define I2C_MST_CTRL     0x24
+#define I2C_SLV0_ADDR    0x25
+#define I2C_SLV0_REG     0x26
+#define I2C_SLV0_CTRL    0x27
+#define I2C_SLV1_ADDR    0x28
+#define I2C_SLV1_REG     0x29
+#define I2C_SLV1_CTRL    0x2A
+#define I2C_SLV2_ADDR    0x2B
+#define I2C_SLV2_REG     0x2C
+#define I2C_SLV2_CTRL    0x2D
+#define I2C_SLV3_ADDR    0x2E
+#define I2C_SLV3_REG     0x2F
+#define I2C_SLV3_CTRL    0x30
+#define I2C_SLV4_ADDR    0x31
+#define I2C_SLV4_REG     0x32
+#define I2C_SLV4_DO      0x33
+#define I2C_SLV4_CTRL    0x34
+#define I2C_SLV4_DI      0x35
+#define I2C_MST_STATUS   0x36
+#define INT_PIN_CFG      0x37
+#define INT_ENABLE       0x38
+#define DMP_INT_STATUS   0x39  // Check DMP interrupt
+#define INT_STATUS       0x3A
+#define ACCEL_XOUT_H     0x3B
+#define ACCEL_XOUT_L     0x3C
+#define ACCEL_YOUT_H     0x3D
+#define ACCEL_YOUT_L     0x3E
+#define ACCEL_ZOUT_H     0x3F
+#define ACCEL_ZOUT_L     0x40
+#define MOT_DETECT_STATUS 0x61
+#define I2C_SLV0_DO      0x63
+#define I2C_SLV1_DO      0x64
+#define I2C_SLV2_DO      0x65
+#define I2C_SLV3_DO      0x66
+#define I2C_MST_DELAY_CTRL 0x67
+#define SIGNAL_PATH_RESET  0x68
+#define MOT_DETECT_CTRL  0x69
+#define USER_CTRL        0x6A  // Bit 7 enable DMP, bit 3 reset DMP
+#define PWR_MGMT_1       0x6B // Device defaults to the SLEEP mode
+#define PWR_MGMT_2       0x6C
+#define DMP_BANK         0x6D  // Activates a specific bank in the DMP
+#define DMP_RW_PNT       0x6E  // Set read/write pointer to a specific start address in specified DMP bank
+#define DMP_REG          0x6F  // Register in DMP from which to read or to which to write
+#define DMP_REG_1        0x70
+#define DMP_REG_2        0x71
+#define FIFO_COUNTH      0x72
+#define FIFO_COUNTL      0x73
+#define FIFO_R_W         0x74
+#define WHO_AM_I_MPU9250 0x75 // Should return 0x71
+#define XA_OFFSET_H      0x77
+#define XA_OFFSET_L      0x78
+#define YA_OFFSET_H      0x7A
+#define YA_OFFSET_L      0x7B
+#define ZA_OFFSET_H      0x7D
+#define ZA_OFFSET_L      0x7E
+
+#if ADO
+#define MPU9250_ADDRESS 0x69  // Device address when ADO = 1
+#else
+#define MPU9250_ADDRESS 0x68  // Device address when ADO = 0
+#endif
+
+#define AHRS true         // set to false for basic data read
+#define SerialDebug true   // set to true to get Serial output for debugging
+
+
+// BMX055 Gyroscope Registers
+#define BMX055_GYRO_WHOAMI           0x00  // should return 0x0F
+//#define BMX055_GYRO_Reserved       0x01
+#define BMX055_GYRO_RATE_X_LSB       0x02
+#define BMX055_GYRO_RATE_X_MSB       0x03
+#define BMX055_GYRO_RATE_Y_LSB       0x04
+#define BMX055_GYRO_RATE_Y_MSB       0x05
+#define BMX055_GYRO_RATE_Z_LSB       0x06
+#define BMX055_GYRO_RATE_Z_MSB       0x07
+//#define BMX055_GYRO_Reserved       0x08
+#define BMX055_GYRO_INT_STATUS_0  0x09
+#define BMX055_GYRO_INT_STATUS_1  0x0A
+#define BMX055_GYRO_INT_STATUS_2  0x0B
+#define BMX055_GYRO_INT_STATUS_3  0x0C
+//#define BMX055_GYRO_Reserved    0x0D
+#define BMX055_GYRO_FIFO_STATUS   0x0E
+#define BMX055_GYRO_RANGE         0x0F
+#define BMX055_GYRO_BW            0x10
+#define BMX055_GYRO_LPM1          0x11
+#define BMX055_GYRO_LPM2          0x12
+#define BMX055_GYRO_RATE_HBW      0x13
+#define BMX055_GYRO_BGW_SOFTRESET 0x14
+#define BMX055_GYRO_INT_EN_0      0x15
+#define BMX055_GYRO_INT_EN_1      0x16
+#define BMX055_GYRO_INT_MAP_0     0x17
+#define BMX055_GYRO_INT_MAP_1     0x18
+#define BMX055_GYRO_INT_MAP_2     0x19
+#define BMX055_GYRO_INT_SRC_1     0x1A
+#define BMX055_GYRO_INT_SRC_2     0x1B
+#define BMX055_GYRO_INT_SRC_3     0x1C
+//#define BMX055_GYRO_Reserved    0x1D
+#define BMX055_GYRO_FIFO_EN       0x1E
+//#define BMX055_GYRO_Reserved    0x1F
+//#define BMX055_GYRO_Reserved    0x20
+#define BMX055_GYRO_INT_RST_LATCH 0x21
+#define BMX055_GYRO_HIGH_TH_X     0x22
+#define BMX055_GYRO_HIGH_DUR_X    0x23
+#define BMX055_GYRO_HIGH_TH_Y     0x24
+#define BMX055_GYRO_HIGH_DUR_Y    0x25
+#define BMX055_GYRO_HIGH_TH_Z     0x26
+#define BMX055_GYRO_HIGH_DUR_Z    0x27
+//#define BMX055_GYRO_Reserved    0x28
+//#define BMX055_GYRO_Reserved    0x29
+//#define BMX055_GYRO_Reserved    0x2A
+#define BMX055_GYRO_SOC           0x31
+#define BMX055_GYRO_A_FOC         0x32
+#define BMX055_GYRO_TRIM_NVM_CTRL 0x33
+#define BMX055_GYRO_BGW_SPI3_WDT  0x34
+//#define BMX055_GYRO_Reserved    0x35
+#define BMX055_GYRO_OFC1          0x36
+#define BMX055_GYRO_OFC2          0x37
+#define BMX055_GYRO_OFC3          0x38
+#define BMX055_GYRO_OFC4          0x39
+#define BMX055_GYRO_TRIM_GP0      0x3A
+#define BMX055_GYRO_TRIM_GP1      0x3B
+#define BMX055_GYRO_BIST          0x3C
+#define BMX055_GYRO_FIFO_CONFIG_0 0x3D
+#define BMX055_GYRO_FIFO_CONFIG_1 0x3E
+
+// BMX055 magnetometer registers
+#define BMX055_MAG_WHOAMI         0x40  // should return 0x32
+#define BMX055_MAG_Reserved       0x41
+#define BMX055_MAG_XOUT_LSB       0x42
+#define BMX055_MAG_XOUT_MSB       0x43
+#define BMX055_MAG_YOUT_LSB       0x44
+#define BMX055_MAG_YOUT_MSB       0x45
+#define BMX055_MAG_ZOUT_LSB       0x46
+#define BMX055_MAG_ZOUT_MSB       0x47
+#define BMX055_MAG_ROUT_LSB       0x48
+#define BMX055_MAG_ROUT_MSB       0x49
+#define BMX055_MAG_INT_STATUS     0x4A
+#define BMX055_MAG_PWR_CNTL1      0x4B
+#define BMX055_MAG_PWR_CNTL2      0x4C
+#define BMX055_MAG_INT_EN_1       0x4D
+#define BMX055_MAG_INT_EN_2       0x4E
+#define BMX055_MAG_LOW_THS        0x4F
+#define BMX055_MAG_HIGH_THS       0x50
+#define BMX055_MAG_REP_XY         0x51
+#define BMX055_MAG_REP_Z          0x52
+/* Trim Extended Registers */
+#define BMM050_DIG_X1             0x5D // needed for magnetic field calculation
+#define BMM050_DIG_Y1             0x5E
+#define BMM050_DIG_Z4_LSB         0x62
+#define BMM050_DIG_Z4_MSB         0x63
+#define BMM050_DIG_X2             0x64
+#define BMM050_DIG_Y2             0x65
+#define BMM050_DIG_Z2_LSB         0x68
+#define BMM050_DIG_Z2_MSB         0x69
+#define BMM050_DIG_Z1_LSB         0x6A
+#define BMM050_DIG_Z1_MSB         0x6B
+#define BMM050_DIG_XYZ1_LSB       0x6C
+#define BMM050_DIG_XYZ1_MSB       0x6D
+#define BMM050_DIG_Z3_LSB         0x6E
+#define BMM050_DIG_Z3_MSB         0x6F
+#define BMM050_DIG_XY2            0x70
+#define BMM050_DIG_XY1            0x71
+
+// EM7180 SENtral register map
+// see http://www.emdeveloper.com/downloads/7180/EMSentral_EM7180_Register_Map_v1_3.pdf
+//
+#define EM7180_QX                 0x00  // this is a 32-bit normalized floating point number read from registers 0x00-03
+#define EM7180_QY                 0x04  // this is a 32-bit normalized floating point number read from registers 0x04-07
+#define EM7180_QZ                 0x08  // this is a 32-bit normalized floating point number read from registers 0x08-0B
+#define EM7180_QW                 0x0C  // this is a 32-bit normalized floating point number read from registers 0x0C-0F
+#define EM7180_QTIME              0x10  // this is a 16-bit unsigned integer read from registers 0x10-11
+#define EM7180_MX                 0x12  // int16_t from registers 0x12-13
+#define EM7180_MY                 0x14  // int16_t from registers 0x14-15
+#define EM7180_MZ                 0x16  // int16_t from registers 0x16-17
+#define EM7180_MTIME              0x18  // uint16_t from registers 0x18-19
+#define EM7180_AX                 0x1A  // int16_t from registers 0x1A-1B
+#define EM7180_AY                 0x1C  // int16_t from registers 0x1C-1D
+#define EM7180_AZ                 0x1E  // int16_t from registers 0x1E-1F
+#define EM7180_ATIME              0x20  // uint16_t from registers 0x20-21
+#define EM7180_GX                 0x22  // int16_t from registers 0x22-23
+#define EM7180_GY                 0x24  // int16_t from registers 0x24-25
+#define EM7180_GZ                 0x26  // int16_t from registers 0x26-27
+#define EM7180_GTIME              0x28  // uint16_t from registers 0x28-29
+#define EM7180_QRateDivisor       0x32  // uint8_t
+#define EM7180_EnableEvents       0x33
+#define EM7180_HostControl        0x34
+#define EM7180_EventStatus        0x35
+#define EM7180_SensorStatus       0x36
+#define EM7180_SentralStatus      0x37
+#define EM7180_AlgorithmStatus    0x38
+#define EM7180_FeatureFlags       0x39
+#define EM7180_ParamAcknowledge   0x3A
+#define EM7180_SavedParamByte0    0x3B
+#define EM7180_SavedParamByte1    0x3C
+#define EM7180_SavedParamByte2    0x3D
+#define EM7180_SavedParamByte3    0x3E
+#define EM7180_ActualMagRate      0x45
+#define EM7180_ActualAccelRate    0x46
+#define EM7180_ActualGyroRate     0x47
+#define EM7180_ErrorRegister      0x50
+#define EM7180_AlgorithmControl   0x54
+#define EM7180_MagRate            0x55
+#define EM7180_AccelRate          0x56
+#define EM7180_GyroRate           0x57
+#define EM7180_LoadParamByte0     0x60
+#define EM7180_LoadParamByte1     0x61
+#define EM7180_LoadParamByte2     0x62
+#define EM7180_LoadParamByte3     0x63
+#define EM7180_ParamRequest       0x64
+#define EM7180_ROMVersion1        0x70
+#define EM7180_ROMVersion2        0x71
+#define EM7180_RAMVersion1        0x72
+#define EM7180_RAMVersion2        0x73
+#define EM7180_ProductID          0x90
+#define EM7180_RevisionID         0x91
+#define EM7180_RunStatus          0x92
+#define EM7180_UploadAddress      0x94 // uint16_t registers 0x94 (MSB)-5(LSB)
+#define EM7180_UploadData         0x96
+#define EM7180_CRCHost            0x97  // uint32_t from registers 0x97-9A
+#define EM7180_ResetRequest       0x9B
+#define EM7180_PassThruStatus     0x9E
+#define EM7180_PassThruControl    0xA0
+
+// Using the Teensy Mini Add-On board, BMX055 SDO1 = SDO2 = CSB3 = GND as designed
+// Seven-bit BMX055 device addresses are ACC = 0x18, GYRO = 0x68, MAG = 0x10
+
+// DEPRECATED
+// #define BMX055_ACC_ADDRESS  0x18   // Address of BMX055 accelerometer
+
+#define BMX055_GYRO_ADDRESS 0x68   // Address of BMX055 gyroscope
+#define BMX055_MAG_ADDRESS  0x10   // Address of BMX055 magnetometer
+#define MS5637_ADDRESS      0x76   // Address of MS5637 altimeter
+#define EM7180_ADDRESS      0x28   // Address of the EM7180 SENtral sensor hub
+#define M24512DFM_DATA_ADDRESS   0x50   // Address of the 500 page M24512DFM EEPROM data buffer, 1024 bits (128 8-bit bytes) per page
+#define M24512DFM_IDPAGE_ADDRESS 0x58   // Address of the single M24512DFM lockable EEPROM ID page
+
+// Set initial input parameters
+// define MPU ACC full scale options
+// CHANGE: new constants for MPU
+#define AFS_2G  0x0
+#define AFS_4G  0x1
+#define AFS_8G  0x2
+#define AFS_16G 0x3
+
+
+enum ACCBW {    // define BMX055 accelerometer bandwidths
+  ABW_8Hz,      // 7.81 Hz,  64 ms update time
+  ABW_16Hz,     // 15.63 Hz, 32 ms update time
+  ABW_31Hz,     // 31.25 Hz, 16 ms update time
+  ABW_63Hz,     // 62.5  Hz,  8 ms update time
+  ABW_125Hz,    // 125   Hz,  4 ms update time
+  ABW_250Hz,    // 250   Hz,  2 ms update time
+  ABW_500Hz,    // 500   Hz,  1 ms update time
+  ABW_1000Hz     // 1000  Hz,  0.5 ms update time
+};
+
+enum Gscale {
+  GFS_2000DPS = 0,
+  GFS_1000DPS,
+  GFS_500DPS,
+  GFS_250DPS,
+  GFS_125DPS
+};
+
+enum GODRBW {
+  G_2000Hz523Hz = 0, // 2000 Hz ODR and unfiltered (bandwidth 523Hz)
+  G_2000Hz230Hz,
+  G_1000Hz116Hz,
+  G_400Hz47Hz,
+  G_200Hz23Hz,
+  G_100Hz12Hz,
+  G_200Hz64Hz,
+  G_100Hz32Hz  // 100 Hz ODR and 32 Hz bandwidth
+};
+
+enum MODR {
+  MODR_10Hz = 0,   // 10 Hz ODR
+  MODR_2Hz     ,   // 2 Hz ODR
+  MODR_6Hz     ,   // 6 Hz ODR
+  MODR_8Hz     ,   // 8 Hz ODR
+  MODR_15Hz    ,   // 15 Hz ODR
+  MODR_20Hz    ,   // 20 Hz ODR
+  MODR_25Hz    ,   // 25 Hz ODR
+  MODR_30Hz        // 30 Hz ODR
+};
+
+enum Mmode {
+  lowPower         = 0,   // rms noise ~1.0 microTesla, 0.17 mA power
+  Regular             ,   // rms noise ~0.6 microTesla, 0.5 mA power
+  enhancedRegular     ,   // rms noise ~0.5 microTesla, 0.8 mA power
+  highAccuracy            // rms noise ~0.3 microTesla, 4.9 mA power
+};
+
+// MS5637 pressure sensor sample rates
+#define ADC_256  0x00 // define pressure and temperature conversion rates
+#define ADC_512  0x02
+#define ADC_1024 0x04
+#define ADC_2048 0x06
+#define ADC_4096 0x08
+#define ADC_8192 0x0A
+#define ADC_D1   0x40
+#define ADC_D2   0x50
+
+// BMP280 registers
+#define BMP280_TEMP_XLSB  0xFC
+#define BMP280_TEMP_LSB   0xFB
+#define BMP280_TEMP_MSB   0xFA
+#define BMP280_PRESS_XLSB 0xF9
+#define BMP280_PRESS_LSB  0xF8
+#define BMP280_PRESS_MSB  0xF7
+#define BMP280_CONFIG     0xF5
+#define BMP280_CTRL_MEAS  0xF4
+#define BMP280_STATUS     0xF3
+#define BMP280_RESET      0xE0
+#define BMP280_ID         0xD0  // should be 0x58
+#define BMP280_CALIB00    0x88
+#define BMP280_ADDRESS    0x76  //SDO = GND  0x77 if SDO = VCC      // Address of BMP280 altimeter 
+
+enum BMP280Posr {
+  P_OSR_00 = 0,  // no op
+  P_OSR_01,
+  P_OSR_02,
+  P_OSR_04,
+  P_OSR_08,
+  P_OSR_16
+};
+
+enum BMP280Tosr {
+  T_OSR_00 = 0,  // no op
+  T_OSR_01,
+  T_OSR_02,
+  T_OSR_04,
+  T_OSR_08,
+  T_OSR_16
+};
+
+enum BMP280IIRFilter {
+  full = 0,  // bandwidth at full sample rate
+  BW0_223ODR,
+  BW0_092ODR,
+  BW0_042ODR,
+  BW0_021ODR // bandwidth at 0.021 x sample rate
+};
+
+enum BMP280Mode {
+  Sleep = 0,
+  forced,
+  forced2,
+  normal
+};
+
+enum BMP280SBy {
+  t_00_5ms = 0,
+  t_62_5ms,
+  t_125ms,
+  t_250ms,
+  t_500ms,
+  t_1000ms,
+  t_2000ms,
+  t_4000ms,
+};
+
+//============================= User defined Enums =============================
+// Operation mode enum
+enum OpMode {
+  RUN              = 0,
+  CHARGING         = 1,
+  DATA_COLLECTION  = 2
+};
+
+// Operation state enum
+enum OpState {
+  NOT_CUTTING     = 0,
+  NORMAL_CUTTING  = 1,
+  WARNING_CUTTING = 2,
+  BAD_CUTTING     = 3
+};
+
+// LED color code enum
+enum LEDColors {
+  RED_BAD         , // L H H
+  BLUE_NOOP       , // H H L
+  GREEN_OK        , // H L H
+  ORANGE_WARNING  , // L L H
+  PURPLE_CHARGE   , // L H L
+  CYAN_DATA       , // H L L
+  WHITE_NONE      , // L L L
+  SLEEP_MODE        // H H H
+};
 
 //==============================================================================
 //========================== Hamming Window Presets ============================
 //==============================================================================
 
+int magsize_512 = 257;
+float hamming_K_512 = 1.8519;         // 1/0.5400
+float inverse_wlen_512 = 1/512.0;
 q15_t hamming_window_512 [512] = {
   2621,   2621,   2624,   2631,   2641,   2650,   2660,   2677,   2693,   2713,
   2736,   2759,   2785,   2811,   2844,   2877,   2909,   2949,   2988,   3027,
@@ -446,7 +490,9 @@ q15_t hamming_window_512 [512] = {
   2624,   2621
 };
 
-
+int magsize_2048 = 1025;
+float hamming_K_2048 = 1.8519;        // 1/0.5400
+float inverse_wlen_2048 = 1/2048.0;
 q15_t hamming_window_2048 [2048] = {
   2621,   2621,   2621,   2621,   2621,   2624,   2624,   2624,   2624,   2627,
   2627,   2631,   2631,   2634,   2634,   2637,   2641,   2641,   2644,   2647,

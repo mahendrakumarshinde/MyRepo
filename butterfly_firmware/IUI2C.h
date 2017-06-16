@@ -44,6 +44,7 @@ class IUI2C : public IUABCInterface
     IUI2C();
     virtual ~IUI2C() {}
     virtual void setBaudRate(uint32_t baudRate);
+    virtual powerMode::option getPowerMode() { return m_powerMode; }
     // Hardware and power management
     virtual void wakeUp();
     virtual void sleep();
