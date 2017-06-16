@@ -17,7 +17,7 @@
 
 // Scalar feature functions
 
-float computeVelocity(q15_t *accelFFT, float accelRMS, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound); 
+float computeVelocity(q15_t *accelFFT, float accelRMS, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound);
 
 float computeFullVelocity(q15_t *accelFFT, uint16_t sampleCount, uint16_t samplingRate, uint16_t FreqLowerBound, uint16_t FreqHigherBound, float scalingFactor);
 
@@ -66,10 +66,10 @@ class IUFeatureProducer: public IUABCProducer
     virtual float getMainFreq() { return m_mainFreq; }
     virtual void setResolution(q15_t value) { m_resolution = value; }
     virtual q15_t getResolution() { return m_resolution; }
-    virtual void setState(operationState state) { m_state = state; }
-    virtual operationState getState() { return m_state; }
-    virtual void setHighestDangerLevel(operationState state) { m_highestDangerLevel = state; }
-    virtual operationState getHighestDangerLevel() { return m_highestDangerLevel; }
+    virtual void setState(operationState::option state) { m_state = state; }
+    virtual operationState::option getState() { return m_state; }
+    virtual void setHighestDangerLevel(operationState::option state) { m_highestDangerLevel = state; }
+    virtual operationState::option getHighestDangerLevel() { return m_highestDangerLevel; }
     // Feature computation, source and sending queue
     virtual void sendToReceivers();
     virtual bool addArrayReceiver(uint8_t sendOption, uint8_t receiverSourceIndex, IUABCFeature *receiver);
@@ -83,8 +83,8 @@ class IUFeatureProducer: public IUABCProducer
     uint16_t m_samplingRate;
     uint16_t m_sampleCount;
     q15_t m_resolution;
-    operationState m_state;                  // Operation state
-    operationState m_highestDangerLevel;     // The most critical state ever measured
+    operationState::option m_state;                  // Operation state
+    operationState::option m_highestDangerLevel;     // The most critical state ever measured
 };
 
 
@@ -98,7 +98,7 @@ class IUFeatureProducer256: public IUFeatureProducer
     IUFeatureProducer256();
     virtual ~IUFeatureProducer256() {};
     virtual uint16_t getDestinationSize() { return destinationSize; }
-    
+
 };
 
 
@@ -127,11 +127,11 @@ class IUFeature : public IUABCFeature
     virtual float getLatestValue() { return getProducer()->getLatestValue(); }
     virtual uint16_t getDestinationSize() { return getProducer()->getDestinationSize(); }
     virtual q15_t* getDestination() { return getProducer()->getDestination(); }
-    virtual operationState getState() { return getProducer()->getState(); }
-    virtual void setState(operationState state) { getProducer()->setState(state); }
-    virtual operationState getHighestDangerLevel() { return getProducer()->getHighestDangerLevel(); }
-    virtual void setHighestDangerLevel(operationState state) { getProducer()->setHighestDangerLevel(state); }
-    
+    virtual operationState::option getState() { return getProducer()->getState(); }
+    virtual void setState(operationState::option state) { getProducer()->setState(state); }
+    virtual operationState::option getHighestDangerLevel() { return getProducer()->getHighestDangerLevel(); }
+    virtual void setHighestDangerLevel(operationState::option state) { getProducer()->setHighestDangerLevel(state); }
+
     // producer
     virtual IUFeatureProducer* getProducer() { return m_producer; }
     virtual void setProducer(IUFeatureProducer *producer) { m_producer = producer; }
@@ -210,7 +210,7 @@ class IUAccelPreComputationFeature128: public IUQ15Feature
     virtual uint8_t getSourceCount() { return sourceCount; }
     virtual uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }
     virtual uint16_t const* getSourceSize() { return sourceSize; }
-    virtual void streamSourceData(HardwareSerial *port);
+    virtual void streamSourceData(HardwareSerial *port, String macAddr, String keyword);
 
     // Specific producer
     virtual bool prepareProducer();
@@ -221,7 +221,7 @@ class IUAccelPreComputationFeature128: public IUQ15Feature
     //IUFeatureProducer *m_producer;
     // Compute functions
     virtual void m_computeScalar (uint8_t computeIndex);
-    virtual void m_computeArray (uint8_t computeIndex);    
+    virtual void m_computeArray (uint8_t computeIndex);
 };
 
 
@@ -245,7 +245,7 @@ class IUAccelPreComputationFeature512: public IUQ15Feature
     virtual uint8_t getSourceCount() { return sourceCount; }
     virtual uint16_t getSourceSize(uint8_t index) { return sourceSize[index]; }
     virtual uint16_t const* getSourceSize() { return sourceSize; }
-    virtual void streamSourceData(HardwareSerial *port);
+    virtual void streamSourceData(HardwareSerial *port, String macAddr, String keyword);
 
     // Specific producer
     virtual bool prepareProducer();

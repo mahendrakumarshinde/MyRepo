@@ -213,20 +213,20 @@ bool IUABCFeature::compute()
  * NB: Also update highestDangerLevel
  * @return 0 is not cutting, 1 is normal, 2 is warning, 3 is danger
  */
-operationState IUABCFeature::updateState()
+operationState::option IUABCFeature::updateState()
 {
-  setState(operationState::badCutting);
-  for (uint8_t i = 0; i < operationState::opStateCount - 1; i++)
+  setState(operationState::DANGER);
+  for (uint8_t i = 0; i < operationState::COUNT - 1; i++)
   {
     if (getLatestValue() < m_thresholds[i])
     {
-      setState((operationState) i);
+      setState((operationState::option) i);
       break;
     }
   }
   if (!m_checkFeature) // If feature check is disabled, return idle independently of real state
   {
-    return operationState::idle;
+    return operationState::IDLE;
   }
   setHighestDangerLevel(max(getHighestDangerLevel(), getState()));
   return getState();

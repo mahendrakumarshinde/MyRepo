@@ -31,31 +31,31 @@ IUFeatureConfigurator::FeatureConfig IUFeatureConfigurator::noConfig =
 IUFeatureConfigurator::FeatureConfig IUFeatureConfigurator::registeredConfigs[IUFeatureConfigurator::registeredCount] =
   {
     {"AX1", // "accelEnergy_X_128"
-      {3, "A-A-A", "0-11-3"},
+      {3, "A-A-A", "0-4-3"},
       {0, "", ""}},
       
     {"AY1", // "accelEnergy_Y_128",
-      {3, "A-A-A", "1-11-3"},
+      {3, "A-A-A", "1-4-3"},
       {0, "", ""}},
       
     {"AZ1", // "accelEnergy_Z_128",
-      {3, "A-A-A", "2-11-3"},
+      {3, "A-A-A", "2-4-3"},
       {0, "", ""}},
       
     {"CX1", // "IUAccelPreComputationFeature128" Precomputation of Accel signal energy and FFT
-      {3, "A-A-A", "0-11-3"},
+      {3, "A-A-A", "0-4-3"},
       {0, "", ""}},
       
     {"CY1", // "IUAccelPreComputationFeature128" Precomputation of Accel signal energy and FFT
-      {3, "A-A-A", "1-11-3"},
+      {3, "A-A-A", "1-4-3"},
       {0, "", ""}},
       
     {"CZ1", // "IUAccelPreComputationFeature128" Precomputation of Accel signal energy and FFT
-      {3, "A-A-A", "2-11-3"},
+      {3, "A-A-A", "2-4-3"},
       {0, "", ""}},
       
     {"A31", // "accelEnergy_3_128",
-      {5, "A-A-A-A-A", "0-1-2-11-3"},
+      {5, "A-A-A-A-A", "0-1-2-4-3"},
       {0, "", ""}},
       
     {"B31", // "accelEnergy_3_128" by summing 3 single axis accel energy,
@@ -67,31 +67,31 @@ IUFeatureConfigurator::FeatureConfig IUFeatureConfigurator::registeredConfigs[IU
       {3, "CX1-CY1-CZ1", "0-0-0"}},
       
     {"AX3", // "accelEnergy_X_512",
-      {3, "A-A-A", "0-11-3"},
+      {3, "A-A-A", "0-4-3"},
       {0, "", ""}},
       
     {"AY3", // "accelEnergy_Y_512",
-      {3, "A-A-A", "1-11-3"},
+      {3, "A-A-A", "1-4-3"},
       {0, "", ""}},
       
     {"AZ3", // "accelEnergy_Z_512",
-      {3, "A-A-A", "2-11-3"},
+      {3, "A-A-A", "2-4-3"},
       {0, "", ""}},
       
     {"CX3", // "IUAccelPreComputationFeature512" Precomputation of Accel signal energy and FFT
-      {3, "A-A-A", "0-11-3"},
+      {3, "A-A-A", "0-4-3"},
       {0, "", ""}},
       
     {"CY3", // "IUAccelPreComputationFeature512" Precomputation of Accel signal energy and FFT
-      {3, "A-A-A", "1-11-3"},
+      {3, "A-A-A", "1-4-3"},
       {0, "", ""}},
       
     {"CZ3", // "IUAccelPreComputationFeature512" Precomputation of Accel signal energy and FFT
-      {3, "A-A-A", "2-11-3"},
+      {3, "A-A-A", "2-4-3"},
       {0, "", ""}},
       
     {"A33", // "accelEnergy_3_512",
-      {5, "A-A-A-A-A", "0-1-2-11-3"},
+      {5, "A-A-A-A-A", "0-1-2-4-3"},
       {0, "", ""}},
       
     {"B33", // "accelEnergy_3_512" by summing 3 single axis accel energy,
@@ -353,14 +353,10 @@ bool IUFeatureConfigurator::registerFeatureInSensors(IUFeature *feature, IUABCSe
   {
     for (uint8_t j = 0; j < sensorCount; j++)
     {
-      uint8_t sCount = sensors[j]->getSensorTypeCount();
-      for (uint8_t k = 0; k < sCount; k++)
+      if (foundSensorTypes[i][0] == (char) sensors[j]->getSensorType())
       {
-        if (foundSensorTypes[i][0] == sensors[j]->getSensorType(k))
-        {
-          success &= sensors[j]->addScalarReceiver(depSendingOptions[i], i, feature);
-          feature->getProducer()->setSamplingRate(sensors[j]->getSamplingRate());
-        }
+        success &= sensors[j]->addScalarReceiver(depSendingOptions[i], i, feature);
+        feature->getProducer()->setSamplingRate(sensors[j]->getSamplingRate());
       }
     }
   }
@@ -699,10 +695,10 @@ void IUFeatureConfigurator::resetFeaturesCounters()
 /**
  * Returns the highest operationState from features
  */
-operationState IUFeatureConfigurator::getOperationStateFromFeatures()
+operationState::option IUFeatureConfigurator::getOperationStateFromFeatures()
 {
-  operationState opState = operationState::idle;
-  operationState featState;
+  operationState::option opState = operationState::IDLE;
+  operationState::option featState;
   for (uint8_t i = 0; i < m_featureCount; i++)
   {
     featState = m_features[i]->updateState();

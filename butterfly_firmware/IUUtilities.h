@@ -6,53 +6,7 @@
 #include <arm_math.h>
 
 #include "IULogger.h"
-
-/* ============================= Operation Enums ============================= */
-  /** 
- * Usage modes are user controlled, they describe how the device is being used
- */
-enum usageMode : uint8_t
-{
-  calibration      = 0,
-  configuration    = 1,
-  operation       = 2,
-  usageModeCount   = 3
-};
-
-/**
- * Operation modes are mostly user controlled, with some automatic mode switching
- */
-enum operationMode : uint8_t
-{
-  run              = 0,
-  charging         = 1,
-  dataCollection   = 2,
-  record           = 3,
-  sleep            = 4,
-  opModeCount      = 5
-}; // The number of different operation modes
-
-/**
- * Operation states describe the production status, inferred from calculated features
- * and user-defined thresholds
- */
-enum operationState : uint8_t {idle            = 0,
-                               normalCutting   = 1,
-                               warningCutting  = 2,
-                               badCutting      = 3,
-                               opStateCount    = 4}; // The number of different operation states
-
-/**
- * Power modes are programmatically controlled and managed by the conductor depending
- * on the operation modes, states, and desired sampling rate
- */
-enum powerMode : uint8_t {deepSuspend          = 0,
-                          suspend              = 1,
-                          standBy              = 2,
-                          low                  = 3,
-                          normal               = 4,
-                          powerModeCount       = 5};
-
+#include "IUKeywords.h"
 
 /*====================== General utility function ============================ */
 
@@ -123,6 +77,7 @@ void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplin
 
 float getMainFrequency(q15_t *fftValues, uint16_t sampleCount, uint16_t samplingRate);
 
+q15_t findMaxAscent(q15_t *batch, uint16_t batchSize, uint16_t max_count);
 
 //==============================================================================
 //========================== Hamming Window Presets ============================

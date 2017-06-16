@@ -1,7 +1,7 @@
 #include "IUBattery.h"
 
 
-char IUBattery::sensorTypes[IUBattery::sensorTypeCount] = {IUABCSensor::sensorType_battery};
+/* ================================= Method definition ================================= */
 
 IUBattery::IUBattery(IUI2C *iuI2C) :
   IUABCSensor(),
@@ -9,18 +9,40 @@ IUBattery::IUBattery(IUI2C *iuI2C) :
   m_VDDA(0),
   m_vBattery(0)
 {
-  // Constructor
+  pinMode(voltagePin, INPUT); // Enable battery read.
+  analogReadResolution(12);   // take advantage of 12-bit ADCs
+  readVoltage();
 }
 
+
+/* =========================== Hardware and power management methods =========================== */
+
 /**
- * Enables the battery readings
+ * Switch to ACTIVE power mode
  */
 void IUBattery::wakeUp()
 {
-  pinMode(voltagePin, INPUT);        // Enable battery read.
-  analogReadResolution(12); // take advantage of 12-bit ADCs
-  readVoltage();
+  m_powerMode = powerMode::ACTIVE;
 }
+
+/**
+ * Switch to SLEEP power mode
+ */
+void IUBattery::sleep()
+{
+  m_powerMode = powerMode::SLEEP;
+}
+
+/**
+ * Switch to SUSPEND power mode
+ */
+void IUBattery::suspend()
+{
+  m_powerMode = powerMode::SUSPEND;
+}
+
+
+/* =========================== Data acquisition methods =========================== */
 
 /**
  * Reads VDDA and the battery voltage
@@ -53,6 +75,9 @@ void IUBattery::readData()
 {
   readVoltage();
 }
+
+
+/* =========================== Communication methods =========================== */
 
 void IUBattery::sendToReceivers()
 {

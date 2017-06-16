@@ -18,7 +18,6 @@ uint8_t splitString(String str, const char separator, String *destination, const
   int startAt = 0;
   int idx = 0;
   int substringCount = 0;
-
   for (int i = 0; i < destinationSize; i++)
   {
     idx = str.indexOf(separator, startAt);
@@ -139,11 +138,11 @@ float computeNormalizedRMS(uint16_t sourceSize, q15_t *source, float (*transform
  * @param samplingFreq    the sampling frequency
  * @param scalingFactor   a scaling factor to apply to the signal (sample-wise) beforehand
  * @param removeMean      if true, the mean value is substracted from the signal, centering it around 0
- * 
+ *
  * WARNING => Since the signal energy is squared, the resulting scaling factor will be squared as well.
- * Signal energy formula: sum((x(t)- x_mean)^2 * dt) for t in [0, dt, 2 *dt, ..., T] 
+ * Signal energy formula: sum((x(t)- x_mean)^2 * dt) for t in [0, dt, 2 *dt, ..., T]
  * where x_mean = Mean(x) if removeMean is true else 0, dt = 1 / samplingFreq and T = sampleCount / samplingFreq.
- * 
+ *
  */
 float computeSignalEnergy(q15_t *values, uint16_t sampleCount, uint16_t samplingFreq, float scalingFactor,
                           bool removeMean)
@@ -168,9 +167,9 @@ float computeSignalEnergy(q15_t *values, uint16_t sampleCount, uint16_t sampling
  * @param samplingFreq    the sampling frequency
  * @param scalingFactor   a scaling factor to apply to the signal (sample-wise) beforehand
  * @param removeMean      if true, the mean value is substracted from the signal, centering it around 0
- * 
- * Signal Power definition: Total signal energy divided by the time 
- * Signal Power formula: 1 / T * sum((x(t)- x_mean)^2 * dt) for t in [0, dt, 2 *dt, ..., T] 
+ *
+ * Signal Power definition: Total signal energy divided by the time
+ * Signal Power formula: 1 / T * sum((x(t)- x_mean)^2 * dt) for t in [0, dt, 2 *dt, ..., T]
  * where x_mean = Mean(x) if removeMean is true else 0, dt = 1 / samplingFreq and T = sampleCount / samplingFreq.
  */
 float computeSignalPower(q15_t *values, uint16_t sampleCount, uint16_t samplingFreq, float scalingFactor,
@@ -188,9 +187,9 @@ float computeSignalPower(q15_t *values, uint16_t sampleCount, uint16_t samplingF
  * @param samplingFreq    the sampling frequency
  * @param scalingFactor   a scaling factor to apply to the signal (sample-wise) beforehand
  * @param removeMean      if true, the mean value is substracted from the signal, centering it around 0
- * 
+ *
  * RMS / effective value definition: the value of a continuous signal that would produce the same energy over a period T
- * RMS formula: sqrt(1/T * sum(((x(t)- x_mean) * dt)^2)) for t in [0, dt, 2 *dt, ..., T] 
+ * RMS formula: sqrt(1/T * sum(((x(t)- x_mean) * dt)^2)) for t in [0, dt, 2 *dt, ..., T]
  * where x_mean = Mean(x) if removeMean is true else 0, dt = 1 / samplingFreq and T = sampleCount / samplingFreq.
  */
 float computeSignalRMS(q15_t *values, uint16_t sampleCount, uint16_t samplingFreq, float scalingFactor,
@@ -229,8 +228,8 @@ arm_rfft_instance_q15 rfftInstance;
 
 /**
  * Compute (inverse) RFFT and put it in destination
- * @param source           
- * @param destination      
+ * @param source
+ * @param destination
  * @param FFTLength        the length of the FFT
  * @param inverse          false to compute forward FFT, true to compute inverse FFT
  * @return                 true if the computation succeeded, else false
@@ -294,7 +293,7 @@ void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount, uint16_t samplin
   float df = (float) samplingRate / (float) sampleCount;
   uint16_t minIdx = (uint16_t) max(((float) FreqLowerBound / df), 1);
   uint16_t maxIdx = (uint16_t) min((float) FreqHigherBound / df, sampleCount);
-  float omega = 2. * PI * df / (float) scalingFactor;  
+  float omega = 2. * PI * df / (float) scalingFactor;
   // Apply high pass filter
   for (uint16_t i = 0; i < minIdx; i++)
   {
@@ -344,7 +343,48 @@ float getMainFrequency(q15_t *fftValues, uint16_t sampleCount, uint16_t sampling
       maxIdx = i;
     }
   }
-  return (float) maxIdx * df; 
+  return (float) maxIdx * df;
+}
+
+q15_t findMaxAscent(q15_t *batch, uint16_t batchSize, uint16_t max_count)
+{
+  q15_t buff[max_count];
+  for (uint16_t j = 0; j < max_count; ++j)
+  {
+    buff[j] = 0;
+  }
+  uint16_t pos = 0;
+  q15_t diff = 0;
+  q15_t max_ascent = 0;
+  q15_t max_ascent_candidate = 0;
+  for (uint16_t i = 1; i < batchSize; ++i)
+  {
+    diff = batch[i] - batch[i - 1];
+    if (diff >= 0)
+    {
+      buff[pos] = diff;
+      ++pos;
+      if (pos >= max_count)
+      {
+        pos = 0;
+      }
+      max_ascent_candidate = 0;
+      for (uint16_t j = 0; j < max_count; ++j)
+      {
+        max_ascent_candidate += buff[j];
+      }
+      max_ascent = max(max_ascent, max_ascent_candidate);
+    }
+    else
+    {
+      pos = 0;
+      for (uint16_t j = 0; j < max_count; ++j)
+      {
+        buff[j] = 0;
+      }
+    }
+  }
+  return max_ascent;
 }
 
 //==============================================================================

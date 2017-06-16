@@ -5,8 +5,7 @@
     03/03/2017
 
   Component:
-    Name:
-
+    Name: RGB Led
     Description:
       RGB led at pins 27, 28, 29
 */
@@ -15,76 +14,40 @@
 #define IURGBLED_H
 
 #include <Arduino.h>
-#include "IUABCSensor.h"
-#include "IUI2C.h"
 
 /**
 * Class to handle the RGB led behavior
 * LEDs are active at LOW and inactive at HIGH
 */
-class IURGBLed : public IUABCSensor
+class IURGBLed
 {
   public:
-    enum PIN : uint8_t { // Led pin
-                        RED_PIN = A5,
+    enum PIN : uint8_t {RED_PIN = A5,
                         GREEN_PIN = A3,
                         BLUE_PIN = A0};
-    enum LEDColors { // LED color code
-      RED_BAD         , // L H H
-      BLUE_NOOP       , // H H L
-      GREEN_OK        , // H L H
-      ORANGE_WARNING  , // L L H
-      PURPLE_CHARGE   , // L H L
-      CYAN_DATA       , // H L L
-      WHITE_NONE      , // L L L
-      SLEEP_MODE      };// H H H
-    // RGB LOW / HIGH code
-    /*
-     * //Inverted color codes
-    const bool COLORCODE[8][3] = {{0, 1, 1}, //RED_BAD
-                                  {1, 1, 0}, //BLUE_NOOP
-                                  {1, 0, 1}, //GREEN_OK
-                                  {0, 0, 1}, //ORANGE_WARNING
-                                  {0, 1, 0}, //PURPLE_CHARGE
-                                  {1, 0, 0}, //CYAN_DATA
-                                  {0, 0, 0}, //WHITE_NONE
-                                  {1, 1, 1} //SLEEP_MODE
-                                 };
-    */
-    const bool COLORCODE[8][3] = {{1, 0, 0}, //RED_BAD
-                                  {0, 0, 1}, //BLUE_NOOP
-                                  {0, 1, 0}, //GREEN_OK
-                                  {1, 1, 0}, //ORANGE_WARNING
-                                  {1, 0, 1}, //PURPLE_CHARGE
-                                  {0, 1, 1}, //CYAN_DATA
-                                  {1, 1, 1}, //WHITE_NONE
-                                  {0, 0, 0} //SLEEP_MODE
-                                 };
-    static const uint8_t sensorTypeCount = 1;
-    static char sensorTypes[sensorTypeCount];
-    enum dataSendOption : uint8_t {optionCount = 0}; // Sends nothing
-
-   
+    enum LEDColors {RED, BLUE, GREEN, ORANGE, PURPLE, CYAN, WHITE, SLEEP};
+    // Color code                  R  G  B
+    const bool COLORCODE[8][3] = {{1, 0, 0}, // RED
+                                  {0, 0, 1}, // BLUE
+                                  {0, 1, 0}, // GREEN
+                                  {1, 1, 0}, // ORANGE
+                                  {1, 0, 1}, // PURPLE
+                                  {0, 1, 1}, // CYAN
+                                  {1, 1, 1}, // WHITE
+                                  {0, 0, 0}};// SLEEP
     // Constructor, destructor, getters and setters
-    IURGBLed(IUI2C *iuI2C);
+    IURGBLed();
     virtual ~IURGBLed() {}
-    virtual uint8_t getSensorTypeCount() { return sensorTypeCount; }
-    virtual char getSensorType(uint8_t index) { return sensorTypes[index]; }
-    
      // Methods
-    virtual void wakeUp();
-    void activate();
-    void deactivate() { m_status = false; }
-    bool isActive() { return m_status; }
     void ledOn(IURGBLed::PIN pin_number);
     void ledOff(IURGBLed::PIN pin_number);
     void changeColor(bool R, bool G, bool B);
     void changeColor(LEDColors color);
-    bool updateFromI2C();
+    void lock() { m_locked = true; }
+    void unlock() { m_locked = false; }
 
-  protected:
-    IUI2C *m_iuI2C;
-    bool m_status;
+  private:
+    bool m_locked;
 };
 
 #endif // IURGBLED_H

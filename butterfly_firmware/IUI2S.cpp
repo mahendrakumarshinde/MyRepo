@@ -5,8 +5,6 @@
 uint16_t IUI2S::availableClockRate[IUI2S::availableClockRateCount] =
       {8000, 12000, 16000, 24000, 32000, 48000, 11025, 22050, 44100};
 
-char IUI2S::sensorTypes[IUI2S::sensorTypeCount] = {IUABCSensor::sensorType_microphone};
-
 
 /* ============================= Method definitions ============================= */
 
@@ -17,6 +15,33 @@ IUI2S::IUI2S(IUI2C *iuI2C) :
   m_newData(false)
 {
   setClockRate(defaultClockRate);
+  m_asynchronous = true;
+}
+
+/* ======================== Hardware and power management methods ======================== */
+
+/**
+ * Switch to ACTIVE power mode
+ */
+void IUI2S::wakeUp()
+{
+  m_powerMode = powerMode::ACTIVE;
+}
+
+/**
+ * Switch to SLEEP power mode
+ */
+void IUI2S::sleep()
+{
+  m_powerMode = powerMode::SLEEP;
+}
+
+/**
+ * Switch to SUSPEND power mode
+ */
+void IUI2S::suspend()
+{
+  m_powerMode = powerMode::SUSPEND;
 }
 
 /**
@@ -26,7 +51,7 @@ IUI2S::IUI2S(IUI2C *iuI2C) :
  */
 bool IUI2S::setClockRate(uint16_t clockRate)
 {
-  
+
   for (int i = 0; i < availableClockRateCount; i++)
   {
     if (availableClockRate[i] == clockRate)
@@ -66,16 +91,8 @@ void IUI2S::setSamplingRate(uint16_t samplingRate)
   prepareDataAcquisition();
 }
 
-/**
- * Configure and Initialize the device
- */
-void IUI2S::wakeUp()
-{
-  if (setupDebugMode)
-  {
-    debugPrint(F("Initialized I2S and ICS43432\n"));
-  }
-}
+
+/* ======================== Data acquisition methods ======================== */
 
 /**
  * Prepare data acquisition by setting up the sampling rates
@@ -116,9 +133,6 @@ bool IUI2S::endDataAcquisition()
   return true;
 }
 
-
-/* ==================== Data Collection and Feature Calculation functions ======================== */
-
 /**
  * ICS43432 32bit sample
  */
@@ -139,7 +153,7 @@ void IUI2S::processAudioData(q31_t *data)
  * NB: NWe need to call this function to empty I2S buffer, otherwise the process stop. If
  * we don't want to keep the new data, we can pass false to processData argument.
  */
-void IUI2S::readData(bool processData)  
+void IUI2S::readData(bool processData)
 {
   int readBitCount = I2S.read(m_rawAudioData, sizeof(m_rawAudioData));
   if (readBitCount)
@@ -154,6 +168,9 @@ bool IUI2S::acquireData()
   readData();
   return m_newData;
 }
+
+
+/* ==================== Communication methods ======================== */
 
 /**
  * Send data to the receivers
@@ -171,15 +188,13 @@ void IUI2S::sendToReceivers()
       for (int j = 0; j < m_downclocking; j++)
       {
         // Send most significant 16bits
-        m_receivers[i]->receiveScalar(m_receiverSourceIndex[i], 
+        m_receivers[i]->receiveScalar(m_receiverSourceIndex[i],
                                       (q15_t) (m_audioData[j] >> 16));
       }
     }
   }
   m_newData = false;
 }
-
-
 
 /**
  * Dump audio data to serial via I2C

@@ -1,5 +1,7 @@
 #include "IUBMP280.h"
 
+/* ================================= Static member definition ================================= */
+
 IUI2C* IUBMP280::m_iuI2C = NULL;
 uint8_t IUBMP280::m_rawTempBytes[3]; // 20-bit temperature register data stored here
 int32_t IUBMP280::m_fineTemperature = 0;
@@ -9,56 +11,121 @@ uint8_t IUBMP280::m_rawPressureBytes[3] = {0, 0, 0};
 int16_t IUBMP280::m_digPressure[9]= {0, 0, 0, 0, 0, 0, 0, 0, 0};
 float IUBMP280::m_pressure = 0;
 
-char IUBMP280::sensorTypes[IUBMP280::sensorTypeCount] =
-{
-  IUABCSensor::sensorType_thermometer,
-  IUABCSensor::sensorType_barometer
-};
 
+/* ============================ Constructors, destructor, getters, setters ============================ */
+
+/**
+ * Initialize and set up the default configuration
+ */
 IUBMP280::IUBMP280(IUI2C *iuI2C) :
   IUABCSensor(),
   m_newData(false),
-  m_posr(defaultPosr),
-  m_tosr(defaultTosr),
+  m_pressureOSR(defaultPressureOSR),
+  m_temperatureOSR(defaultTmperatureOSR),
   m_iirFilter(defaultIIRFilter),
-  m_mode(defaultMode),
-  m_sby(defaultSBy)
+  m_standByDuration(defaultStandByDuration)
 {
   m_iuI2C = iuI2C;
+  if(!m_iuI2C->checkComponentWhoAmI("BMP280", ADDRESS, WHO_AM_I, WHO_AM_I_ANSWER))
+  {
+    m_iuI2C->setErrorMessage("BMPERR");
+    return;
+  }
+  softReset();
+  wakeUp();
+  writeConfigRegister();
+  calibrate();
 }
 
-void IUBMP280::setOptions(IUBMP280::posrOptions posr,
-                          IUBMP280::tosrOptions tosr,
-                          IUBMP280::IIRFilterOptions iirFilter,
-                          IUBMP280::ModeOptions mode,
-                          IUBMP280::SByOptions sby)
-{
-  m_posr = posr;
-  m_tosr = tosr;
-  m_iirFilter = iirFilter;
-  m_mode = mode;
-  m_sby = sby;
-  // Set T and P oversampling rates and sensor mode
-  m_iuI2C->writeByte(ADDRESS, CTRL_MEAS, m_tosr << 5 | m_posr << 2 | m_mode);
-  // Set standby time interval in normal mode and bandwidth
-  m_iuI2C->writeByte(ADDRESS, CONFIG, m_sby << 5 | m_iirFilter << 2);
-}
+/* ============================  Hardware & power management methods ============================ */
 
-void IUBMP280::reset()
+/**
+ * Soft reset to default Power-On settings
+ */
+void IUBMP280::softReset()
 {
-  m_iuI2C->writeByte(ADDRESS, RESET, 0xB6); // reset BMP280 before initilization
+  m_iuI2C->writeByte(ADDRESS, RESET, 0xB6);
   delay(100);
 }
 
 /**
- * Configure the BMP280 and store calibration data
+ * Switch to ACTIVE power mode
+ *
+ * IU 'ACTIVE' power mode correspond to the FORCED BMP280 power mode
  */
-void IUBMP280::initSensor()
+void IUBMP280::wakeUp()
 {
-  reset();
-  setOptions(m_posr, m_tosr, m_iirFilter, m_mode, m_sby);
-  
-  // Read and store calibration data
+  m_powerMode = powerMode::ACTIVE;
+  writeControlMeasureRegister();
+}
+
+/**
+ * Switch to SLEEP power mode
+ */
+void IUBMP280::sleep()
+{
+  m_powerMode = powerMode::SLEEP;
+  writeControlMeasureRegister();
+}
+
+/**
+ * Switch to SUSPEND power mode
+ */
+void IUBMP280::suspend()
+{
+  m_powerMode = powerMode::SUSPEND;
+  writeControlMeasureRegister();
+}
+
+void IUBMP280::setOverSamplingRates(overSamplingRates pressureOSR, overSamplingRates temperatureOSR)
+{
+  m_pressureOSR = pressureOSR;
+  m_temperatureOSR = temperatureOSR;
+  writeControlMeasureRegister();
+}
+
+void IUBMP280::setIIRFiltering(IIRFilterCoeffs iirFilter)
+{
+  m_iirFilter = iirFilter;
+  writeConfigRegister();
+}
+
+void IUBMP280::setStandbyDuration(StandByDurations duration)
+{
+  m_standByDuration = duration;
+  writeConfigRegister();
+}
+
+/**
+ * Write to the configuration register
+ */
+void IUBMP280::writeConfigRegister()
+{
+  m_iuI2C->writeByte(ADDRESS, CONFIG, m_standByDuration << 5 | m_iirFilter << 2);
+}
+
+/**
+ * Write the Control Measure configuration to the register
+ */
+void IUBMP280::writeControlMeasureRegister()
+{
+  uint8_t powerBit;
+  if (m_powerMode == powerMode::ACTIVE)
+  {
+    powerBit = (uint8_t) powerModeBits::FORCED;
+  }
+  else
+  {
+    powerBit = (uint8_t) powerModeBits::SLEEP;
+  }
+  m_iuI2C->writeByte(ADDRESS, CTRL_MEAS, m_temperatureOSR << 5 | m_pressureOSR << 2 | powerBit);
+}
+
+/**
+ * Read and store calibration data
+ */
+void IUBMP280::calibrate()
+{
   uint8_t calib[24];
   if (!m_iuI2C->readBytes(ADDRESS, CALIB00, 24, &calib[0]))
   {
@@ -73,25 +140,10 @@ void IUBMP280::initSensor()
   {
     m_digPressure[i] = (uint16_t)(((uint16_t) calib[2 * (i + 3) + 1] << 8) | calib[2 * (i + 3)]);
   }
-  if (setupDebugMode) { debugPrint(F("BMP280 initialized successfully.\n")); }
 }
 
-/**
- * Ping the component address and, if the answer is correct, initialize it
- */
-void IUBMP280::wakeUp()
-{
-  // Read the WHO_AM_I register of the BMP280 this is a good test of communication
-  if(m_iuI2C->checkComponentWhoAmI("BMP280", ADDRESS, WHO_AM_I, WHO_AM_I_ANSWER))
-  {
-    initSensor(); // Initialize BMP280
-  }
-  else
-  {
-    m_iuI2C->setErrorMessage("BMPERR");
-  }
-  delay(15);
-}
+
+/* ==================== Data Collection and Feature Calculation functions ======================== */
 
 /**
  * Update m_temperature with current temperature estimation and return it
@@ -133,7 +185,6 @@ float IUBMP280::compensateTemperature(int32_t rawT)
   // resolution is 0.01 DegC, need to divide by 100 (eg: Output value of “5123” equals 51.23 DegC.)
   return (float) T / 100.;
 }
-
 
 /**
  * Read and compute the current pressure, store it and return it
@@ -192,6 +243,9 @@ void IUBMP280::readData()
   m_newData = true;
 }
 
+
+/* ==================== Communication methods ======================== */
+
 /**
  * Send data to receiver following dataSendOption
  */
@@ -223,8 +277,8 @@ void IUBMP280::sendToReceivers()
 
 /**
  * Dump Temperature data to serial via I2C => DISABLED
- * 
- * NB: We want to do this in *DATA COLLECTION* mode, but for now the 
+ *
+ * NB: We want to do this in *DATA COLLECTION* mode, but for now the
  * data collection mode only get Accel and Sound data
  */
 void IUBMP280::dumpDataThroughI2C()

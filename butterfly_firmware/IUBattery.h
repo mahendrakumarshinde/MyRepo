@@ -21,25 +21,28 @@
 class IUBattery : public IUABCSensor
 {
   public:
+    static const sensorTypeOptions sensorType = IUABCSensor::BATTERY;
     static const uint8_t voltagePin  = A2;  // CHG pin to detect charging status
     static const uint8_t sensorTypeCount = 1;
     static const uint16_t maxVoltage = 4100; // mV full battery voltage
-    static char sensorTypes[sensorTypeCount];
     enum dataSendOption : uint8_t {voltage = 0,
                                    vdda = 1,
                                    optionCount = 2};
     // Constructor, Destructor, getters and setters
     IUBattery(IUI2C *iuI2C);
     virtual ~IUBattery() {}
-    virtual uint8_t getSensorTypeCount() { return sensorTypeCount; }
-    virtual char getSensorType(uint8_t index) { return sensorTypes[index]; }
-    // Methods
+    virtual char getSensorType() { return (char) sensorType; }
+    // Hardware and power management methods
     virtual void wakeUp();
+    virtual void sleep();
+    virtual void suspend();
+    // Data acquisition methods
     int getVoltage();
     float getVDDA();
     uint8_t getBatteryStatus();
     void readVoltage();
     virtual void readData();
+    // Communication methods
     virtual void sendToReceivers();
 
   protected:

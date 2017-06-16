@@ -1,5 +1,8 @@
 #include "IUI2C.h"
 
+
+/* ============================ Constructors, destructor, getters, setters ============================ */
+
 IUI2C::IUI2C() :
   IUABCInterface(),
   m_readFlag(true),
@@ -8,11 +11,48 @@ IUI2C::IUI2C() :
 {
   Wire.begin(TWI_PINS_20_21); // set master mode on pins 21/20
   setClockRate(defaultClockRate);
-  m_baudRate = IUI2C::defaultBaudRate;
+  setBaudRate(defaultBaudRate);
+  pinMode(7, INPUT);
+  wakeUp();
+}
+
+void IUI2C::setBaudRate(uint32_t baudRate)
+{
+  m_baudRate = baudRate;
+  port->flush();
+  delay(2);
+  port->end();
+  delay(10);
   port->begin(m_baudRate);
-  delay(4000);
-  int intPin   =   7; 
-  pinMode(intPin,  INPUT);
+}
+
+/* ============================  Hardware & power management methods ============================ */
+
+/**
+ * Switch to ACTIVE power mode
+ * I2C cannot really be turned off, so in practice, this does nothing
+ */
+void IUI2C::wakeUp()
+{
+  m_powerMode = powerMode::ACTIVE;
+}
+
+/**
+ * Switch to SLEEP power mode
+ * I2C cannot really be turned off, so in practice, this does nothing
+ */
+void IUI2C::sleep()
+{
+  m_powerMode = powerMode::SLEEP;
+}
+
+/**
+ * Switch to SUSPEND power mode
+ * I2C cannot really be turned off, so in practice, this does nothing
+ */
+void IUI2C::suspend()
+{
+  m_powerMode = powerMode::SUSPEND;
 }
 
 /**
@@ -26,11 +66,6 @@ void IUI2C::setClockRate( uint32_t clockRate)
   delay(2000);
 }
 
-void IUI2C::activate()
-{
-  // Nothing to do
-}
-
 /**
 * Scan components connected to the computer bus
 * @return false if no device found else true
@@ -38,7 +73,7 @@ void IUI2C::activate()
 bool IUI2C::scanDevices()
 {
   // scan for i2c devices
-  if (!m_silent) port->println("Scanning...");
+  if (setupDebugMode) debugPrint(F("I2C Scanning..."));
 
   byte error, address;
   int nDevices = 0;
@@ -52,11 +87,10 @@ bool IUI2C::scanDevices()
 
     if (error == 0)
     {
-      if (!m_silent) {
-        port->print("I2C device found at address 0x");
-        if (address < 16) { port->print("0"); }
-        port->print(address, HEX);
-        port->println(" !");
+      if (setupDebugMode) {
+        debugPrint(F("  Device found at address 0x"), false);
+        if (address < 16) { debugPrint(F("0"), false); }
+        debugPrint(String(address, HEX));
       }
       nDevices++;
     }
@@ -73,7 +107,6 @@ bool IUI2C::scanDevices()
     if (!m_silent) port->println("No I2C devices found\n");
     return false;
   }
-  if (!m_silent) port->println("done\n");
   return true;
 }
 
@@ -86,10 +119,10 @@ bool IUI2C::checkComponentWhoAmI(String componentName, uint8_t address, uint8_t 
   byte c = readByte(address, whoAmI);  // Read ACC WHO_AM_I register for componant
   if (setupDebugMode)
   {
-    debugPrint(componentName);
-    debugPrint(F(" I AM 0x"), false);
+    debugPrint(componentName, false);
+    debugPrint(F(": I AM 0x"), false);
     debugPrint(c, false);
-    debugPrint(F(" I should be 0x"), false);
+    debugPrint(F(", I should be 0x"), false);
     debugPrint(iShouldBe);
   }
   if (c != iShouldBe)
@@ -237,7 +270,7 @@ bool IUI2C::readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_
   return success;
 }
 
-/* ------------- Hardwire Serial for DATA_COLLECTION commands ------------- */
+/* ========================= Communication methods ========================= */
 
 /**
  * Read port (serial) and write the output in the wire buffer

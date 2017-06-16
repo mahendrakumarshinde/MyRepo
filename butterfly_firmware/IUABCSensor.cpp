@@ -1,11 +1,10 @@
 #include "IUABCSensor.h"
 
-char IUABCSensor::ABCSensorTypes[IUABCSensor::ABCSensorTypeCount] = {IUABCSensor::sensorType_none};
-
 IUABCSensor::IUABCSensor() :
   IUABCProducer(),
   m_downclocking(0),
-  m_downclockingCount(0)
+  m_downclockingCount(0),
+  m_asynchronous(false)
 {
   m_samplingRate = defaultSamplingRate;
   m_callbackRate = defaultCallbackRate;
@@ -14,6 +13,29 @@ IUABCSensor::IUABCSensor() :
 IUABCSensor::~IUABCSensor()
 {
   //dtor
+}
+
+/**
+ * Convenience function to change the power mode
+ * Depending on the powerMode::option, calls the right function
+ */
+void IUABCSensor::switchToPowerMode(powerMode::option pMode)
+{
+  switch (pMode)
+  {
+    case powerMode::ACTIVE:
+      wakeUp();
+      break;
+    case powerMode::SLEEP:
+      sleep();
+      break;
+    case powerMode::SUSPEND:
+      suspend();
+      break;
+    default:
+      if (debugMode) { debugPrint("Error - This power mode is not managed by the sensor"); }
+      break;
+  }
 }
 
 /**

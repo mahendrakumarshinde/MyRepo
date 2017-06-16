@@ -11,9 +11,14 @@ class IUESP8285 : public IUABCInterface
     //Constructor, destructor, setters and getters
     IUESP8285(IUI2C *iuI2C);
     virtual ~IUESP8285() {}
-    virtual HardwareSerial* getPort() { return port; }
-    // Methods
-    void activate() {}
+    virtual void setBaudRate(uint32_t baudRate);
+    virtual powerMode::option getPowerMode() { return m_powerMode; }
+    // Hardware and power management
+    virtual void wakeUp();
+    virtual void sleep();
+    virtual void suspend();
+    // Communication methods
+
 
   protected:
     IUI2C *m_iuI2C;

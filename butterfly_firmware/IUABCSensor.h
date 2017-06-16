@@ -16,36 +16,40 @@
 class IUABCSensor : public IUABCProducer
 {
   public:
-    static const char sensorType_none = '0';
-    static const char sensorType_accelerometer = 'A';
-    static const char sensorType_battery = 'B';
-    static const char sensorType_gyroscope = 'G';
-    static const char sensorType_rgbled = 'I';          // for info
-    static const char sensorType_gps = 'L';             // for location
-    static const char sensorType_magnetometer = 'M';
-    static const char sensorType_barometer = 'P';       // for pressure
-    static const char sensorType_microphone = 'S';      // for sound
-    static const char sensorType_thermometer = 'T';
-    static const uint8_t ABCSensorTypeCount = 1;
-    static char ABCSensorTypes[ABCSensorTypeCount];
+    enum sensorTypeOptions : char {NONE         = '0',
+                                   ACCELERATION = 'A',
+                                   ATMOSPHERE   = 'T', // Temperature + pressure
+                                   BATTERY      = 'B',
+                                   SATELLITE    = 'G',
+                                   ORIENTATION  = 'O', // Gyroscope
+                                   MAGNETISM    = 'M',
+                                   SOUND        = 'S',
+                                   ULTRASOUND   = 'U'};
+    static const sensorTypeOptions ABCSensorType = sensorTypeOptions::NONE;
 
     static const uint16_t defaultSamplingRate = 2; // Hz
     static const uint16_t defaultCallbackRate = 1000; // Hz
     // Constructor, destructor, getters and setters
     IUABCSensor();
     virtual ~IUABCSensor();
+    virtual bool isAsynchronous() { return m_asynchronous; }
     virtual void setSamplingRate(uint16_t samplingRate);
     virtual uint16_t getSamplingRate() { return m_samplingRate; }
     virtual void setCallbackRate(uint16_t callbackRate);
     virtual uint16_t getCallbackRate() { return m_callbackRate; }
-    virtual uint8_t getSensorTypeCount() { return ABCSensorTypeCount; }
-    virtual char getSensorType(uint8_t index) { return ABCSensorTypes[index]; }
+    virtual char getSensorType() { return (char) ABCSensorType; }
+    virtual powerMode::option getPowerMode() { return m_powerMode; }
 
-    // Methods
-    virtual void wakeUp() {}                  // May be defined in Child class
+    // Hardware & power management methods
+    virtual void switchToPowerMode(powerMode::option pMode);
+    virtual void wakeUp() {}                 // May be defined in Child class
+    virtual void sleep() {}                  // May be defined in Child class
+    virtual void suspend() {}                // May be defined in Child class
+    // Data acquisition methods
     virtual void prepareDataAcquisition();
     virtual bool acquireData();
     virtual void readData() {}                // May be defined in Child class
+    // Communication methods
     virtual void sendToReceivers() {}         // May be defined in Child class
     virtual void dumpDataThroughI2C() {}      // May be defined in Child class
     virtual void dumpDataForDebugging() {}    // May be defined in Child class
@@ -54,6 +58,8 @@ class IUABCSensor : public IUABCProducer
 
 
   protected:
+    powerMode::option m_powerMode;
+    bool m_asynchronous;
     uint16_t m_samplingRate;
     uint16_t m_callbackRate;
     uint16_t m_downclocking;
