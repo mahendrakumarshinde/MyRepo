@@ -43,7 +43,7 @@ class IUCAMM8Q : public IUABCSensor
 
     static const uint16_t defaultSamplingRate = 2; // Hz
     static const uint32_t defaultOnTime = 10;
-    static const uint32_t defaultPeriod = 10;
+    static const uint32_t defaultPeriod = 1000;
     static const bool defaultForcedMode = true;
 
     // Constructor, destructor, getters and setters

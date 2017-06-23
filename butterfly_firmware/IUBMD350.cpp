@@ -91,8 +91,8 @@ void IUBMD350::suspend()
   m_powerMode = powerMode::SUSPEND;
   configureBeacon(txPowerOption::DBm30, false, 4000,
                   m_beaconUUID, m_beaconMajorNumber, m_beaconMinorNumber);
-  configureUART(txPowerOption::DBm30, false, defaultUARTBaudRate,
-                false, false);
+  configureUART(txPowerOption::DBm30, defaultUARTEnabled, defaultUARTBaudRate,
+                defaultUARTFlowControl, defaultUARTParity);
   exitATCommandInterface();
 }
 
@@ -273,8 +273,7 @@ bool IUBMD350::queryDeviceName()
  * Set Beacon configuration
  *
  * @param txPower     Transmission power for the Beacon
- * @param enabled     If true, enable Beacon, else disable the Beacon and don't write the following config to BLE module
- *                    registers (they are just stored at instance level). The txPower is always written though.
+ * @param enabled     If true, enable Beacon, else disable the Beacon
  * @param adInterval  Beacon advertisement interval in ms - valid values range from 50ms to 4000ms.
  * @param UUID        Universal Unique Identifier as a char array of 32 hex digit (UUID is 16byte (128bit long number)
  * @param major       UUID Major Number as a char array of 4 hex digits (16bit long number)
@@ -302,11 +301,6 @@ bool IUBMD350::configureBeacon(txPowerOption txPower, bool enabled, uint16_t adI
   else { cmd = "ben 00"; }
   sendATCommand(cmd, response, 3);
   success &= (strcmp(response, "OK") == 0);
-  if (!enabled)
-  {
-    // Return early if Beacon was disabled (but still change the power beforehand)
-    return success;
-  }
   // Set Ad Interval
   cmd = "badint " + String(adInterval, HEX);
   sendATCommand(cmd, response, 3);
@@ -374,15 +368,9 @@ bool IUBMD350::queryBeaconConfiguration()
 
 /**
  * Set UART configuration
- * If enabled is False, just disable the UART. Other configuration are stored in the class but not
- * written to the BLE module registers
- */
-/**
- * Set UART configuration
  *
  * @param txPower      Transmission power for the UART
- * @param enabled      If true, enable UART, else disable the UART and don't write the following config to BLE module
- *                     registers (they are just stored at instance level). The txPower is always written though.
+ * @param enabled      If true, enable UART, else disable the UART
  * @param baudRate     The baud rate used for UART communication
  * @param flowControl  Enable flow control ?
  * @param parity       enable parity ?
@@ -405,10 +393,6 @@ bool IUBMD350::configureUART(txPowerOption txPower, bool enabled, uint32_t baudR
   else { cmd = "uen 00"; }
   sendATCommand(cmd, response, 3);
   success &= (strcmp(response, "OK") == 0);
-  if (!enabled)
-  {
-    return success; // Return early if UART was disabled
-  }
   // Baud Rate
   sendATCommand((String) ("ubr " + m_UARTBaudRate), response, 3);
   success &= (strcmp(response, "OK") == 0);

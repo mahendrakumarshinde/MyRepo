@@ -205,13 +205,13 @@ void IUSensorConfigurator::allSensorsSuspend()
 
 void IUSensorConfigurator::doDefaultPowerConfig()
 {
-  if (iuBattery->getPowerMode() != powerMode::ACTIVE) { iuBattery->wakeUp(); }
-  if (iuAccelerometer->getPowerMode() != powerMode::ACTIVE) { iuAccelerometer->wakeUp(); }
-  if (iuGyroscope->getPowerMode() != powerMode::SUSPEND) { iuGyroscope->suspend(); }
-  if (iuMagnetometer->getPowerMode() != powerMode::SUSPEND) { iuMagnetometer->suspend(); }
-  if (iuBMP280->getPowerMode() != powerMode::ACTIVE) { iuBMP280->wakeUp(); }
-  if (iuI2S->getPowerMode() != powerMode::ACTIVE) { iuI2S->wakeUp(); }
-  if (iuGNSS->getPowerMode() != powerMode::SUSPEND) { iuGNSS->suspend(); }
+  for (int i = 0; i < sensorCount; i++)
+  {
+    if (m_sensors[i]->getPowerMode() != defaultPowerMode[i])
+    {
+      m_sensors[i]->switchToPowerMode(defaultPowerMode[i]);
+    }
+  }
 }
 
 /* ====================== Diagnostic Functions, only active when setupDebugMode = true ====================== */

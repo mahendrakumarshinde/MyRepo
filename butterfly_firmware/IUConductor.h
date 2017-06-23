@@ -21,7 +21,7 @@ class IUConductor
 {
   public:
     static const uint16_t defaultClockRate = 48000;           //Hz (must be compatible with I2C)
-    static const uint16_t defaultDataSendPeriod = 1500;       // ms - send data every T milliseconds
+    static const uint16_t defaultDataSendPeriod = 512;       // ms - send data every T milliseconds
     static constexpr double defaultTimestamp = 1492144654.00; //1483228800.00;    // January 1st, 2017
     static const uint16_t shortestDataSendPeriod = 512;       // ms - send data every T milliseconds
     // Constructors, destructor, getters and setters
@@ -35,14 +35,13 @@ class IUConductor
     bool isDataSendTime();
     double getDatetime();
     // Usage, acquisition, power, streaming and state mgmt methods
-    void millisleep(uint32_t duration);
     void sleep(uint32_t duration);
-    void doMinimalPowerConfig();
+    void suspend(uint32_t duration);
     void doDefaultPowerConfig();
     void manageAutoSleep();
     void configureAutoSleep(bool enabled, uint16_t startSleepTimer, uint32_t sleepDuration);
-    void manageSleepCycle();
-    void configureSleepCycle(bool enabled, uint32_t onTime, uint32_t cycleTime);
+    void manageSuspendCycle();
+    void configureSuspendCycle(bool enabled, uint32_t onTime, uint32_t cycleTime);
     void changeAcquisitionMode(acquisitionMode::option mode);
     void changeStreamingMode(streamingMode::option mode);
     void changeUsagePreset(usagePreset::option usage);
@@ -75,6 +74,7 @@ class IUConductor
     IUBMD350   *iuBluetooth;
     IUESP8285  *iuWifi;
     IURGBLed   *iuRGBLed;
+    uint16_t Hour, Minute, Second, Millisec, Year, Month, Day, Alt;
 
   protected:
     String m_macAddress;
@@ -95,8 +95,8 @@ class IUConductor
       uint32_t m_idleStartTime;
       uint16_t m_startSleepTimer;
       uint32_t m_autoSleepDuration;
-      // Timers for sleep cycle management (all in seconds)
-      bool m_sleepCycleEnabled;
+      // Timers for suspend cycle management (all in seconds)
+      bool m_suspendCycleEnabled;
       uint32_t m_onTime;
       uint32_t m_cycleTime;
       uint32_t m_cycleStartTime;

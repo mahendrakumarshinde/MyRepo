@@ -14,6 +14,7 @@
 #define IURGBLED_H
 
 #include <Arduino.h>
+#include "IUKeywords.h"
 
 /**
 * Class to handle the RGB led behavior
@@ -38,16 +39,20 @@ class IURGBLed
     // Constructor, destructor, getters and setters
     IURGBLed();
     virtual ~IURGBLed() {}
+    void setOnTimer(uint16_t duration) { m_onTimer = duration; }
      // Methods
-    void ledOn(IURGBLed::PIN pin_number);
-    void ledOff(IURGBLed::PIN pin_number);
-    void changeColor(bool R, bool G, bool B);
-    void changeColor(LEDColors color);
+    void turnOff();
+    void autoTurnOff();
     void lock() { m_locked = true; }
     void unlock() { m_locked = false; }
+    void changeColor(bool R, bool G, bool B);
+    void changeColor(LEDColors color);
+    void showOperationState(operationState::option state);
 
   private:
     bool m_locked;
+    uint32_t m_nextOffTime;
+    uint16_t m_onTimer;
 };
 
 #endif // IURGBLED_H

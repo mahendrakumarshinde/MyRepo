@@ -15,8 +15,9 @@ IUCAMM8Q::IUCAMM8Q(IUI2C *iuI2C) :
   while (!GNSS.done()) { }                             // wait for set to complete
   GNSS.setSBAS(true);                                  // choose satellites
   while (!GNSS.done()) { }                             // wait for set to complete
-  setPeriodic(m_onTime, m_period, m_forcedMode);       // set periodic wake and sleep mode
-  while (!GNSS.done()) { }                             // wait for set to complete
+  wakeUp();
+  // GNSS deactivated for now, irregardless of the power mode
+  GNSS.sleep();
 }
 
 
@@ -28,7 +29,7 @@ IUCAMM8Q::IUCAMM8Q(IUI2C *iuI2C) :
 void IUCAMM8Q::wakeUp()
 {
   m_powerMode = powerMode::ACTIVE;
-  GNSS.wakeup();
+  //setPeriodic(m_onTime, m_period, true);
 }
 
 /**
@@ -37,7 +38,7 @@ void IUCAMM8Q::wakeUp()
 void IUCAMM8Q::sleep()
 {
   m_powerMode = powerMode::SLEEP;
-  GNSS.sleep();
+  //GNSS.sleep();
 }
 
 /**
@@ -48,7 +49,7 @@ void IUCAMM8Q::sleep()
 void IUCAMM8Q::suspend()
 {
   m_powerMode = powerMode::SUSPEND;
-  GNSS.sleep();
+  //GNSS.sleep();
 }
 
 /**

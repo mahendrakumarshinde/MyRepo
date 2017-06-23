@@ -36,7 +36,7 @@
 
 
 //========================= Module Configuration Variables ===========================
-String MAC_ADDRESS = "94:54:93:0E:7D:D1";
+String MAC_ADDRESS = "94:54:93:0F:67:01";
 
 // Reduce RUN frequency if needed.
 const uint32_t RESTING_INTERVAL = 0;  // Inter-batch gap

@@ -3,7 +3,9 @@
 /**
 * LED is activated at construction.
 */
-IURGBLed::IURGBLed()
+IURGBLed::IURGBLed() :
+  m_onTimer(50),
+  m_nextOffTime(0)
 {
   pinMode(RED_PIN, OUTPUT);
   pinMode(GREEN_PIN, OUTPUT);
@@ -11,19 +13,25 @@ IURGBLed::IURGBLed()
   unlock();
 }
 
-void IURGBLed::ledOn(IURGBLed::PIN pin_number)
+/**
+ * Turn off the LED (it doesn't matter if the LEDs are locked or not)
+ */
+void IURGBLed::turnOff()
 {
-  if (!m_locked)
-  {
-    digitalWrite(pin_number, LOW);
-  }
+  digitalWrite(RED_PIN, HIGH);
+  digitalWrite(GREEN_PIN, HIGH);
+  digitalWrite(BLUE_PIN, HIGH);
 }
 
-void IURGBLed::ledOff(IURGBLed::PIN pin_number)
+/**
+ * Automatically turn off the LEDs after they have been on for more than onTimer
+ */
+void IURGBLed::autoTurnOff()
 {
-  if (!m_locked)
+  uint32_t now = millis();
+  if (now > m_nextOffTime)
   {
-    digitalWrite(pin_number, HIGH);
+    turnOff();
   }
 }
 
@@ -34,16 +42,41 @@ void IURGBLed::changeColor(bool R, bool G, bool B)
     digitalWrite(RED_PIN, (int) (!R));
     digitalWrite(GREEN_PIN, (int) (!G));
     digitalWrite(BLUE_PIN, (int) (!B));
+    m_nextOffTime = millis() + m_onTimer;
   }
 }
 
 /**
-* Update the LEDs to the current RGB color
-*/
+ * Update the LEDs to the current RGB color
+ */
 void IURGBLed::changeColor(IURGBLed::LEDColors color)
+{ 
+  changeColor(COLORCODE[color][0], COLORCODE[color][1], COLORCODE[color][2]);
+}
+
+/**
+ * Lit the LEDs with a color specific to the operationState
+ * 
+ * Colors are BLUE (idle), GREEN (normal), ORANGE (warning) and RED (danger).
+ */
+void IURGBLed::showOperationState(operationState::option state)
 {
-  if (!m_locked)
+  switch (state)
   {
-    changeColor(COLORCODE[color][0], COLORCODE[color][1], COLORCODE[color][2]);
+    case operationState::IDLE:
+      changeColor(LEDColors::BLUE);
+      break;
+    case operationState::NORMAL:
+      changeColor(LEDColors::GREEN);
+      break;
+    case operationState::WARNING:
+      changeColor(LEDColors::ORANGE);
+      break;
+    case operationState::DANGER:
+      changeColor(LEDColors::RED);
+      break;
+    default:
+      turnOff();
   }
 }
+

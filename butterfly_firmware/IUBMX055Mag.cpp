@@ -39,7 +39,7 @@ IUBMX055Mag::IUBMX055Mag(IUI2C *iuI2C) :
 void IUBMX055Mag::softReset()
 {
   m_iuI2C->writeByte(ADDRESS, PWR_CNTL1, 0x82);
-  delay(50);
+  delay(100);
 }
 
 /**

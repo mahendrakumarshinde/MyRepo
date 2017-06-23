@@ -37,6 +37,7 @@ void IUESP8285::wakeUp()
 void IUESP8285::sleep()
 {
   m_powerMode = powerMode::SLEEP;
+  //WiFiSerial::Put_WiFi_To_Sleep(0.0f); // Passing 0 makes the WiFi sleep indefinitly
 }
 
 /**
@@ -45,5 +46,6 @@ void IUESP8285::sleep()
 void IUESP8285::suspend()
 {
   m_powerMode = powerMode::SUSPEND;
+  //WiFiSerial::Put_WiFi_To_Sleep(0.0f); // Passing 0 makes the WiFi sleep indefinitly
 }
 

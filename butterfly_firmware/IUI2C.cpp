@@ -7,7 +7,8 @@ IUI2C::IUI2C() :
   IUABCInterface(),
   m_readFlag(true),
   m_silent(false),
-  m_wireBuffer("")
+  m_wireBuffer(""),
+  m_began(false)
 {
   Wire.begin(TWI_PINS_20_21); // set master mode on pins 21/20
   setClockRate(defaultClockRate);
@@ -19,11 +20,15 @@ IUI2C::IUI2C() :
 void IUI2C::setBaudRate(uint32_t baudRate)
 {
   m_baudRate = baudRate;
-  port->flush();
-  delay(2);
-  port->end();
+  if (m_began)
+  {
+    port->flush();
+    delay(2);
+    port->end();
+  }
   delay(10);
   port->begin(m_baudRate);
+  m_began = true;
 }
 
 /* ============================  Hardware & power management methods ============================ */
@@ -127,11 +132,13 @@ bool IUI2C::checkComponentWhoAmI(String componentName, uint8_t address, uint8_t 
   }
   if (c != iShouldBe)
   {
-    port->print("Could not connect to ");
-    port->print(componentName);
-    port->print(": 0x");
-    port->println(c, HEX);
-    port->flush();
+    if (setupDebugMode)
+    {
+      debugPrint(F("Could not connect to "), false);
+      debugPrint(componentName, false);
+      debugPrint(F(": 0x"), false);
+      debugPrint(String(c, HEX));
+    }
     return false;
   }
   return true;

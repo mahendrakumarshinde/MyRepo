@@ -21,7 +21,10 @@ IUConductor::IUConductor(String macAddress) :
   m_usagePreset(usagePreset::OPERATION),    
   m_acquisitionMode(acquisitionMode::NONE),
   m_streamingMode(streamingMode::BLE),
-  m_operationState(operationState::IDLE)
+  m_operationState(operationState::IDLE),
+  m_suspendCycleEnabled(false),
+  m_onTime(60),
+  m_cycleTime(300)
 {
   iuI2C = NULL;
   iuBluetooth = NULL;
@@ -112,6 +115,7 @@ bool IUConductor::isDataSendTime()
 double IUConductor::getDatetime()
 {
   uint32_t now = millis();
+  // TODO millis doesn't take into account time while STM32.stop()
   return m_refDatetime + (double) (now - m_lastSynchroTime) / 1000.;
 }
 
@@ -120,37 +124,30 @@ double IUConductor::getDatetime()
 
 /**
  * Place the device in a short sleep (reduced power consumption but fast start up)
+ * Wake up time is around 100ms
  */
-void IUConductor::millisleep(uint32_t duration)
+void IUConductor::sleep(uint32_t duration)
 {
   sensorConfigurator.allSensorsSleep();
+  iuRGBLed->changeColor(IURGBLed::SLEEP);
   STM32.stop(duration);
+  iuRGBLed->changeColor(IURGBLed::BLUE);
   doDefaultPowerConfig();
 }
 
 /**
- * Put the whole device to sleep for a long time (suspend the components and stop the STM32)
+ * Suspend the whole device for a long time (suspend the components and stop the STM32)
+ * Wake up time is around 7750ms
  */
-void IUConductor::sleep(uint32_t duration)
-{
-  doMinimalPowerConfig();
-  STM32.stop(duration);
-  doDefaultPowerConfig();
-  /*
-  STM32.sleep();
-  STM32.stop(uint32_t timeout = 0);
-  STM32.standby(uint32_t timeout = 0);
-  STM32.standby(uint32_t pin, uint32_t mode, uint32_t timeout = 0);
-  STM32.shutdown(uint32_t timeout = 0);
-  STM32.shutdown(uint32_t pin, uint32_t mode, uint32_t timeout = 0);
-  */
-}
-
-void IUConductor::doMinimalPowerConfig()
+void IUConductor::suspend(uint32_t duration)
 {
   if (iuBluetooth->getPowerMode() != powerMode::SUSPEND) { iuBluetooth->suspend(); }
   if (iuWifi->getPowerMode() != powerMode::SUSPEND) { iuWifi->suspend(); }
   sensorConfigurator.allSensorsSuspend();
+  iuRGBLed->changeColor(IURGBLed::SLEEP);
+  STM32.stop(duration * 1000);             //
+  iuRGBLed->changeColor(IURGBLed::BLUE);
+  doDefaultPowerConfig();
 }
 
 void IUConductor::doDefaultPowerConfig()
@@ -176,7 +173,7 @@ void IUConductor::manageAutoSleep()
   {
     if (m_acquisitionMode != acquisitionMode::NONE && m_startSleepTimer < millis() - m_idleStartTime)
     {
-      millisleep(m_autoSleepDuration);
+      sleep(m_autoSleepDuration);
     }
   }
 }
@@ -199,12 +196,12 @@ void IUConductor::configureAutoSleep(bool enabled, uint16_t startSleepTimer, uin
  * 
  * NB: Autosleep is always disabled when thee streamingMode is wired (the device get continual power anyway)
  */
-void IUConductor::manageSleepCycle()
+void IUConductor::manageSuspendCycle()
 {
   uint32_t now = millis() / 1000;
   if (now > m_cycleStartTime + m_onTime)
   {
-    sleep(m_cycleTime - m_onTime);
+    suspend(m_cycleTime - m_onTime);
     m_cycleStartTime = millis() / 1000;
   }
 }
@@ -216,9 +213,9 @@ void IUConductor::manageSleepCycle()
  * @param cycleTime  the duration (in s) of the total cycle (active + sleep)
  * eg: (onTime=60, cycleTime=3600) => the device will be active 1min per hour
  */
-void IUConductor::configureSleepCycle(bool enabled, uint32_t onTime, uint32_t cycleTime)
+void IUConductor::configureSuspendCycle(bool enabled, uint32_t onTime, uint32_t cycleTime)
 {
-  m_autoSleepEnabled = enabled;
+  m_suspendCycleEnabled = enabled;
   m_onTime = onTime;
   m_cycleTime = cycleTime;
   m_cycleStartTime = millis() / 1000;
@@ -303,6 +300,10 @@ void IUConductor::changeStreamingMode(streamingMode::option mode)
  */
 void IUConductor::changeUsagePreset(usagePreset::option usage)
 {
+  if (m_usagePreset == usage)
+  {
+    return; // Nothing to do
+  }
   m_usagePreset = usage;
   changeAcquisitionMode(usagePreset::acquisitionModeDetails[m_usagePreset]);
   changeStreamingMode(usagePreset::streamingModeDetails[m_usagePreset]);
@@ -346,29 +347,10 @@ void IUConductor::changeOperationState(operationState::option state)
     return;
   }
   m_operationState = state;
-  String msg = "";
   if (m_operationState == operationState::IDLE)
   {
     m_idleStartTime = millis();
-    iuRGBLed->changeColor(IURGBLed::BLUE);
-    msg = "Idle";
   }
-  else if (m_operationState == operationState::NORMAL)
-  {
-    iuRGBLed->changeColor(IURGBLed::GREEN);
-    msg = "Normal";
-  }
-  else if (m_operationState == operationState::WARNING)
-  {
-    iuRGBLed->changeColor(IURGBLed::ORANGE);
-    msg = "Warning";
-  }
-  else if (m_operationState == operationState::DANGER)
-  {
-    iuRGBLed->changeColor(IURGBLed::RED);
-    msg = "Danger";
-  }
-  if (loopDebugMode) { debugPrint("\nIn '" + msg + "' state\n"); }
 }
 
 /**
@@ -385,10 +367,7 @@ void IUConductor::checkAndUpdateOperationState()
     return;
   }
   operationState::option newState = featureConfigurator.getOperationStateFromFeatures();
-  if (m_operationState != newState)
-  {
-    changeOperationState(newState);
-  }
+  changeOperationState(newState);
 }
 
 
@@ -401,28 +380,6 @@ void IUConductor::checkAndUpdateOperationState()
  */
 bool IUConductor::initInterfaces()
 {
-  iuI2C = new IUI2C();
-  if (!iuI2C)
-  {
-    iuI2C = NULL;
-    return false;
-  }
-  iuI2C->scanDevices(); // Find components
-  iuI2C->resetErrorMessage();
-
-  iuBluetooth = new IUBMD350(iuI2C);
-  if (!iuBluetooth)
-  {
-    iuBluetooth = NULL;
-    return false;
-  }
-  
-  iuWifi = new IUESP8285(iuI2C);
-  if (!iuWifi)
-  {
-    iuWifi = NULL;
-    return false;
-  }
 
   // Also create and init the LED
   iuRGBLed = new IURGBLed();
@@ -432,7 +389,26 @@ bool IUConductor::initInterfaces()
     return false;
   }
   iuRGBLed->changeColor(IURGBLed::WHITE);
-
+  iuI2C = new IUI2C();
+  if (!iuI2C)
+  {
+    iuI2C = NULL;
+    return false;
+  }
+  iuI2C->scanDevices(); // Find components
+  iuI2C->resetErrorMessage();
+  iuBluetooth = new IUBMD350(iuI2C);
+  if (!iuBluetooth)
+  {
+    iuBluetooth = NULL;
+    return false;
+  }
+  iuWifi = new IUESP8285(iuI2C);
+  if (!iuWifi)
+  {
+    iuWifi = NULL;
+    return false;
+  }
   return true;
 }
 
@@ -541,7 +517,9 @@ void IUConductor::computeFeatures()
 
 /**
  * Send feature data through Serial, BLE or WiFi depending on streamingMode
- * NB: If the acquisitionMode is not FEATURE, does nothing.
+ * 
+ * NB1: Also light the LED to show the operationState
+ * NB2: If the acquisitionMode is not FEATURE, does nothing.
  * @return true if data was sent, else false
  */
 bool IUConductor::streamFeatures(bool newLine)
@@ -550,6 +528,7 @@ bool IUConductor::streamFeatures(bool newLine)
   {
     return false;
   }
+  iuRGBLed->showOperationState(m_operationState); // Light the LED to sow the state
   HardwareSerial *port = NULL;
   switch (m_streamingMode)
   {
@@ -851,7 +830,7 @@ void IUConductor::processInstructionsFromBluetooth()
         {
           int parametertag(0), enabled(0), onTime(0), cycleTime(0);
           sscanf(bleBuffer, "%d:%d:%d:%d", &parametertag, &enabled, &onTime, &cycleTime);
-          configureSleepCycle((bool) enabled, onTime, cycleTime);
+          configureSuspendCycle((bool) enabled, onTime, cycleTime);
         }
         break;
     }
@@ -943,7 +922,7 @@ void IUConductor::setup(void (*callback)())
 
   // Power Management
   if (setupDebugMode) { debugPrint(F("\nSetting up power modes...")); }
-  doDefaultPowerConfig();
+  //doDefaultPowerConfig();
   if (setupDebugMode)
   {
     memoryLog(F("=> Successfully set up power modes"));
@@ -956,20 +935,34 @@ void IUConductor::setup(void (*callback)())
   changeOperationState(operationState::IDLE);
 }
 
+/**
+ * Main operations - This function should be called in the main loop
+ * 
+ * The regular calls to iuRGBLed->autoTurnOff() check if the LEDs have been lit long enough (based on the 
+ * iuRGBLED timer), so that the LEDs can be turned off to save power.
+ */
 void IUConductor::loop()
 {
   // Power saving
+  iuRGBLed->autoTurnOff();
   manageAutoSleep();
-  manageSleepCycle();
+  manageSuspendCycle();
   // Configuration
+  iuRGBLed->autoTurnOff();
   processInstructionsFromI2C();
+  iuRGBLed->autoTurnOff();
   processInstructionsFromBluetooth();
+  iuRGBLed->autoTurnOff();
   processInstructionsFromWifi();
   // Action
-  acquireAndSendData(false);       // Acquire data from synchronous sensor
-  computeFeatures();               // Feature computation depending on operation mode
-  checkAndUpdateOperationState();  // Update the operationState
-  streamFeatures();                // Stream features
+  iuRGBLed->autoTurnOff();
+  acquireAndSendData(false);                      // Acquire data from synchronous sensor
+  iuRGBLed->autoTurnOff();
+  computeFeatures();                              // Feature computation depending on operation mode
+  iuRGBLed->autoTurnOff();
+  checkAndUpdateOperationState();                 // Update the operationState
+  iuRGBLed->autoTurnOff();
+  streamFeatures();                               // Stream features
 }
 
 
