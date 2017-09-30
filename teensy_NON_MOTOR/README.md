@@ -2,7 +2,7 @@
 
 ## Feature List ##
 
-1. Acceleration Energy on 512ms buffer, sampled at 1kHz in (m/s/s)2
+1. Acceleration Energy on 512ms buffer, sum of the 3 axis, sampled at 1kHz in (m/s/s)2
   
   - Threshold Idle -> Normal: 100
 
@@ -10,7 +10,7 @@
 
   - Threshold Warning -> Danger: 140
 
-2. Velocity RMS on X axis using pitch mode (ie using main frequency + Accel RMS) in m/s
+2. Acceleration Energy on 512ms buffer on X axis, sampled at 1kHz in (m/s/s)2
 
   - Threshold Idle -> Normal: 100
 
@@ -18,7 +18,7 @@
 
   - Threshold Warning -> Danger: 140
 
-3. Velocity RMS on Y axis using pitch mode (ie using main frequency + Accel RMS) in m/s
+3. Acceleration Energy on 512ms buffer on Y axis, sampled at 1kHz in (m/s/s)2
 
   - Threshold Idle -> Normal: 100
 
@@ -26,7 +26,7 @@
 
   - Threshold Warning -> Danger: 140
 
-4. Velocity RMS on Z axis using pitch mode (ie using main frequency + Accel RMS) in m/s
+4. Acceleration Energy on 512ms buffer on Z axis, sampled at 1kHz in (m/s/s)2
 
   - Threshold Idle -> Normal: 100
 
