@@ -34,14 +34,13 @@
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 		</Compiler>
-		<Unit filename="IUABCFeature.cpp" />
-		<Unit filename="IUABCFeature.h" />
-		<Unit filename="IUABCInterface.cpp" />
-		<Unit filename="IUABCInterface.h" />
-		<Unit filename="IUABCProducer.cpp" />
-		<Unit filename="IUABCProducer.h" />
-		<Unit filename="IUABCSensor.cpp" />
-		<Unit filename="IUABCSensor.h" />
+		<Unit filename="ABCInterface.h" />
+		<Unit filename="FeatureBuffer.cpp" />
+		<Unit filename="FeatureBuffer.h" />
+		<Unit filename="FeatureComputer.cpp" />
+		<Unit filename="FeatureComputer.h" />
+		<Unit filename="Features.cpp" />
+		<Unit filename="Features.h" />
 		<Unit filename="IUBMD350.cpp" />
 		<Unit filename="IUBMD350.h" />
 		<Unit filename="IUBMP280.cpp" />
@@ -58,28 +57,24 @@
 		<Unit filename="IUCAMM8Q.h" />
 		<Unit filename="IUConductor.cpp" />
 		<Unit filename="IUConductor.h" />
-		<Unit filename="IUConstants.h" />
 		<Unit filename="IUESP8285.cpp" />
 		<Unit filename="IUESP8285.h" />
-		<Unit filename="IUFeature.cpp" />
-		<Unit filename="IUFeature.h" />
-		<Unit filename="IUFeatureConfigurator.cpp" />
-		<Unit filename="IUFeatureConfigurator.h" />
 		<Unit filename="IUI2C.cpp" />
 		<Unit filename="IUI2C.h" />
 		<Unit filename="IUI2S.cpp" />
 		<Unit filename="IUI2S.h" />
-		<Unit filename="IUKeywords.cpp" />
-		<Unit filename="IUKeywords.h" />
-		<Unit filename="IULogger.h" />
 		<Unit filename="IURGBLed.cpp" />
 		<Unit filename="IURGBLed.h" />
 		<Unit filename="IUSensorConfigurator.cpp" />
 		<Unit filename="IUSensorConfigurator.h" />
-		<Unit filename="IUUtilities.cpp" />
-		<Unit filename="IUUtilities.h" />
+		<Unit filename="Keywords.h" />
+		<Unit filename="Logger.h" />
 		<Unit filename="QualityTest/QA_IUBMX055.h" />
+		<Unit filename="Sensor.cpp" />
+		<Unit filename="Sensor.h" />
 		<Unit filename="UnitTest/Test_IUUtilities.h" />
+		<Unit filename="Utilities.cpp" />
+		<Unit filename="Utilities.h" />
 		<Extensions>
 			<envvars />
 			<code_completion />

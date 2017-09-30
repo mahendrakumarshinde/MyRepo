@@ -1,19 +1,24 @@
-#include "IUUtilities.h"
+#include "Utilities.h"
 
-/*====================== General utility function ============================ */
+
+/*==============================================================================
+    String processing
+============================================================================= */
 
 /**
  * Split a String at given separator and put the substring in destination
+ *
  * @param str             the string to parse
  * @param separator       separator at which split string
  * @param destination     the array where to put the substring
  * @param destinationSize the size of the destination array
  * @return                the number of substrings found
- * NB: destination has a fixed size given as argument. If there are too many substring,
- * only the first ones will be kept. If there are not enough, the remaining of destination
- * is filled with empty string.
+ * NB: destination has a fixed size given as argument. If there are too many
+ * substring, only the first ones will be kept. If there are not enough, the
+ * remaining of destination is filled with empty string
  */
-uint8_t splitString(String str, const char separator, String *destination, const uint8_t destinationSize)
+uint8_t splitString(String str, const char separator, String *destination,
+                    const uint8_t destinationSize)
 {
   int startAt = 0;
   int idx = 0;
@@ -43,17 +48,20 @@ uint8_t splitString(String str, const char separator, String *destination, const
 }
 
 /**
- * Same as splitString except that the resulting substring will be converted to int
+ * Same as splitString except the resulting substring will be converted to int
+ *
  * @param str             the string to parse
  * @param separator       separator at which split string
  * @param destination     the array where to put the substring
  * @param destinationSize the size of the destination array
  * @return                the number of substring found and converted integer
  */
-uint8_t splitStringToInt(String str, const char separator, int *destination, const uint8_t destinationSize)
+uint8_t splitStringToInt(String str, const char separator, int *destination,
+                         const uint8_t destinationSize)
 {
   String stringDestination[destinationSize];
-  int substringCount = splitString(str, separator, stringDestination, destinationSize);
+  int substringCount = splitString(str, separator, stringDestination,
+                                   destinationSize);
   int counter = 0;
   for (int i = 0; i < substringCount; i++)
   {
@@ -66,7 +74,8 @@ uint8_t splitStringToInt(String str, const char separator, int *destination, con
 /**
  * Check if character appears at given positions in charbuffer
  */
-bool checkCharsAtPosition(char *charBuffer, char character, int *positions, int positionCount)
+bool checkCharsAtPosition(char *charBuffer, char character, int *positions,
+                          int positionCount)
 {
   for (int i = 0; i < positionCount; i++)
   {
@@ -80,6 +89,7 @@ bool checkCharsAtPosition(char *charBuffer, char character, int *positions, int 
 
 /**
  * Copy source into destination, and complete destination with 0
+ *
  * source must be shorter or as long as destination, never longer.
  */
 void strCopyWithAutocompletion(char *destination, char *source, uint8_t destLen, uint8_t srcLen)
@@ -97,131 +107,40 @@ void strCopyWithAutocompletion(char *destination, char *source, uint8_t destLen,
   }
 }
 
-/*=========================== Math functions ================================= */
 
-/**
- * Compute and return the root min square
- * @param sourceSize the length of the array
- * @param source a q15_t array (elements are int16_t0
- */
-float computeRMS(uint16_t sourceSize, q15_t *source, float (*transform)(q15_t))
+/*==============================================================================
+    Conversion
+============================================================================= */
+
+float q15ToFloat(q15_t value)
 {
-  float avg2(0);
-  for (int i = 0; i < sourceSize; i++)
-  {
-    avg2 += sq(transform(source[i]));
-  }
-  return sqrt(avg2 / (float) sourceSize);
+    return ((float) value) / 32768.0;
 }
 
-/**
- * Compute and return the normalized root min square
- * @param sourceSize the length of the array
- * @param source a q15_t array (elements are int16_t0
- */
-float computeNormalizedRMS(uint16_t sourceSize, q15_t *source, float (*transform)(q15_t))
+q15_t floatToq15(float value)
 {
-  float total = 0;
-  q15_t avg = 0;
-  arm_mean_q15(source, sourceSize, &avg);
-  for (int i = 0; i < sourceSize; i++)
-  {
-    total += sq(transform(source[i] - avg));
-  }
-  return sqrt(total / (float) sourceSize);
+    return (q15_t) (32768 * value);
 }
 
-/**
- * Compute and return the total energy of a signal
- * @param values          the sampled values of the signal
- * @param sampleCount     the number of sampled values
- * @param samplingFreq    the sampling frequency
- * @param scalingFactor   a scaling factor to apply to the signal (sample-wise) beforehand
- * @param removeMean      if true, the mean value is substracted from the signal, centering it around 0
- *
- * WARNING => Since the signal energy is squared, the resulting scaling factor will be squared as well.
- * Signal energy formula: sum((x(t)- x_mean)^2 * dt) for t in [0, dt, 2 *dt, ..., T]
- * where x_mean = Mean(x) if removeMean is true else 0, dt = 1 / samplingFreq and T = sampleCount / samplingFreq.
- *
- */
-float computeSignalEnergy(q15_t *values, uint16_t sampleCount, uint16_t samplingFreq, float scalingFactor,
-                          bool removeMean)
+float toG(q15_t value, uint16_t accelResolution)
 {
-  float total = 0;
-  q15_t avg = 0;
-  if (removeMean)
-  {
-    arm_mean_q15(values, sampleCount, &avg);
-  }
-  for (int i = 0; i < sampleCount; i++)
-  {
-    total += sq((float) (values[i] - avg) * scalingFactor);
-  }
-  return total / samplingFreq;
+    return (float) value * (float) accelResolution / 32768.0;
 }
 
-/**
- * Compute and return the total energy of a signal
- * @param values          the sampled values of the signal
- * @param sampleCount     the number of sampled values
- * @param samplingFreq    the sampling frequency
- * @param scalingFactor   a scaling factor to apply to the signal (sample-wise) beforehand
- * @param removeMean      if true, the mean value is substracted from the signal, centering it around 0
- *
- * Signal Power definition: Total signal energy divided by the time
- * Signal Power formula: 1 / T * sum((x(t)- x_mean)^2 * dt) for t in [0, dt, 2 *dt, ..., T]
- * where x_mean = Mean(x) if removeMean is true else 0, dt = 1 / samplingFreq and T = sampleCount / samplingFreq.
- */
-float computeSignalPower(q15_t *values, uint16_t sampleCount, uint16_t samplingFreq, float scalingFactor,
-                         bool removeMean)
+float toMS2(q15_t value, uint16_t accelResolution)
 {
-  float energy = computeSignalEnergy(values, sampleCount, samplingFreq, scalingFactor, removeMean);
-  float T = (float) sampleCount / (float) samplingFreq;
-  return energy / T;
+    return (float) value * (float) accelResolution * 9.8065 / 32768.0;
 }
 
-/**
- * Return the root min square (= effective value) of a signal
- * @param values          the sampled valuesof the signal
- * @param sampleCount     the number of sampled values
- * @param samplingFreq    the sampling frequency
- * @param scalingFactor   a scaling factor to apply to the signal (sample-wise) beforehand
- * @param removeMean      if true, the mean value is substracted from the signal, centering it around 0
- *
- * RMS / effective value definition: the value of a continuous signal that would produce the same energy over a period T
- * RMS formula: sqrt(1/T * sum(((x(t)- x_mean) * dt)^2)) for t in [0, dt, 2 *dt, ..., T]
- * where x_mean = Mean(x) if removeMean is true else 0, dt = 1 / samplingFreq and T = sampleCount / samplingFreq.
- */
-float computeSignalRMS(q15_t *values, uint16_t sampleCount, uint16_t samplingFreq, float scalingFactor,
-                       bool removeMean)
+float getFactorToMS2(uint16_t accelResolution)
 {
-  float power = computeSignalPower(values, sampleCount, samplingFreq, scalingFactor, removeMean);
-  return sqrt(power);
-}
-
-/**
- * Compute and return the normalized sum of all sources
- * @param arrCount the number of arrays
- * @param arrSize  pointer to an array of size arrCount
- * @param arrays   pointer to an array q15_t[arrCount][arrSizes[i for i in arrCount]]
- */
-float multiArrayMean(uint8_t arrCount, const uint16_t* arrSizes, float **arrays)
-{
-  float total = 0;
-  float grandTotal = 0;
-  for (uint8_t i = 0; i < arrCount; i++)
-  {
-    for (uint16_t j = 0; j < arrSizes[i]; j++)
-    {
-      total += arrays[i][j];
-    }
-    grandTotal += total / (float) arrSizes[i];
-    total = 0;
-  }
-  return grandTotal / (float) arrCount;
+    return (float) accelResolution * 9.8065 / 32768.0;
 }
 
 
+/*==============================================================================
+    FFTs
+============================================================================= */
 
 arm_rfft_instance_q15 rfftInstance;
 
@@ -387,9 +306,10 @@ q15_t findMaxAscent(q15_t *batch, uint16_t batchSize, uint16_t max_count)
   return max_ascent;
 }
 
-//==============================================================================
-//========================== Hamming Window Presets ============================
-//==============================================================================
+
+/*==============================================================================
+    Hamming Window Presets
+============================================================================= */
 
 q15_t hamming_window_512 [512] = {
   2621,   2621,   2624,   2631,   2641,   2650,   2660,   2677,   2693,   2713,

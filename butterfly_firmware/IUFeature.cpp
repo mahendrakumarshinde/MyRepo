@@ -1027,8 +1027,10 @@ void IUDefaultFloatFeature::m_computeScalar (uint8_t computeIndex)
 
 
 /* Audio Data is very bulky, so we put it in SRAM2 */
-__attribute__((section(".noinit2"))) q15_t I2SDataSRAM2_0[4096];
-__attribute__((section(".noinit2"))) q15_t I2SDataSRAM2_1[4096];
+//__attribute__((section(".noinit2"))) q15_t I2SDataSRAM2_0[4096];
+//__attribute__((section(".noinit2"))) q15_t I2SDataSRAM2_1[4096];
+q15_t I2SDataSRAM2_0[4096];
+q15_t I2SDataSRAM2_1[4096];
 
 
 

@@ -1,35 +1,44 @@
 #include "IUCAMM8Q.h"
 
-/* ================================= Method definition ================================= */
+using namespace IUComponent;
 
-IUCAMM8Q::IUCAMM8Q(IUI2C *iuI2C) :
-  IUABCSensor(),
+
+/* =============================================================================
+    Constructors and destructors
+============================================================================= */
+
+IUCAMM8Q::IUCAMM8Q(IUI2C *iuI2C, uint8_t id) :
+  Sensor(id, 0),
   m_iuI2C(iuI2C),
   m_onTime(defaultOnTime),
   m_period(defaultPeriod),
   m_forcedMode(defaultForcedMode)
 {
-  GNSS.begin(Serial2, GNSS.MODE_UBLOX, GNSS.RATE_5HZ); // Start GNSS
-  while (!GNSS.done()) { }                             // wait for begin to complete
-  GNSS.setConstellation(GNSS.CONSTELLATION_GPS);       // choose satellites
-  while (!GNSS.done()) { }                             // wait for set to complete
-  GNSS.setSBAS(true);                                  // choose satellites
-  while (!GNSS.done()) { }                             // wait for set to complete
-  wakeUp();
-  // GNSS deactivated for now, irregardless of the power mode
-  GNSS.sleep();
+    // Start GNSS
+    GNSS.begin(Serial2, GNSS.MODE_UBLOX, GNSS.RATE_5HZ);
+    while (!GNSS.done()) { }
+    // Choose satellites
+    GNSS.setConstellation(GNSS.CONSTELLATION_GPS);
+    while (!GNSS.done()) { }
+    GNSS.setSBAS(true);
+    while (!GNSS.done()) { }
+    wakeUp();
+    // GNSS deactivated for now, irregardless of the power mode
+    GNSS.sleep();
 }
 
 
-/* ============================ Hardware & power management methods ============================ */
+/* =============================================================================
+    Hardware & power management
+============================================================================= */
 
 /**
  * Set the power mode to ACTIVE
  */
 void IUCAMM8Q::wakeUp()
 {
-  m_powerMode = powerMode::ACTIVE;
-  //setPeriodic(m_onTime, m_period, true);
+    Sensor::wakeUp();
+    //setPeriodic(m_onTime, m_period, true);
 }
 
 /**
@@ -37,35 +46,43 @@ void IUCAMM8Q::wakeUp()
  */
 void IUCAMM8Q::sleep()
 {
-  m_powerMode = powerMode::SLEEP;
+  Sensor::sleep();
   //GNSS.sleep();
 }
 
 /**
  * Set the power mode to SUSPEND
+ *
  * The SUSPEND mode is actually the same than the SLEEP mode,
  * since GNSS API doesn't offer a suspend mode.
  */
 void IUCAMM8Q::suspend()
 {
-  m_powerMode = powerMode::SUSPEND;
+  Sensor::suspend();
   //GNSS.sleep();
 }
 
+
+/* =============================================================================
+    Configuration and calibration
+============================================================================= */
+
 /**
  * Wrapper around GNSS.setPeriodic method - set the active / inactive behavior
+ *
  * @param onTime  the active time (in s) over 'period' duration
  * @param period  the duration of a complete (active + inactive) cycle
- * @param force   if yes, activate forced mode (location can be read even if device
- *                is in its inactive period). If no, location can be read while inactive.
+ * @param force   if yes, activate forced mode (location can be read even if
+ *                device is in its inactive period). If no, location can be read
+ *                while inactive.
  */
 void IUCAMM8Q::setPeriodic(uint32_t onTime, uint32_t period, bool forced)
 {
-  m_onTime = onTime;
-  m_period = period;
-  m_forcedMode = forced;
-  GNSS.setPeriodic(onTime, period, forced); // set periodic wake and sleep mode
-  while (!GNSS.done()) { }                 // wait for set to complete
+    m_onTime = onTime;
+    m_period = period;
+    m_forcedMode = forced;
+    GNSS.setPeriodic(onTime, period, forced);  // set periodic wake / sleep mode
+    while (!GNSS.done()) { }
 }
 
 /**
@@ -73,7 +90,7 @@ void IUCAMM8Q::setPeriodic(uint32_t onTime, uint32_t period, bool forced)
  */
 void IUCAMM8Q::enterForcedMode()
 {
-  setPeriodic(m_onTime, m_period, true);
+    setPeriodic(m_onTime, m_period, true);
 }
 
 /**
@@ -81,14 +98,16 @@ void IUCAMM8Q::enterForcedMode()
  */
 void IUCAMM8Q::exitForcedMode()
 {
-  setPeriodic(m_onTime, m_period, false);
+    setPeriodic(m_onTime, m_period, false);
 }
 
 
-/* ============================ Data acquisition methods ============================ */
+/* =============================================================================
+    Data acquisition
+============================================================================= */
 
 /**
- *
+ * Read data
  */
 void IUCAMM8Q::readData()
 {
@@ -96,15 +115,9 @@ void IUCAMM8Q::readData()
 }
 
 
-/* ============================ Communication methods ============================ */
-
-/**
- *
- */
-void IUCAMM8Q::sendToReceivers()
-{
-  // TODO Implement
-}
+/* =============================================================================
+    Communication
+============================================================================= */
 
 /**
  *
@@ -123,12 +136,16 @@ void IUCAMM8Q::dumpDataForDebugging()
 }
 
 
-/* ============================ Diagnostic methods ============================ */
+/* =============================================================================
+    Debugging
+============================================================================= */
 
 /**
  *
  */
 void IUCAMM8Q::exposeCalibration()
 {
-
+    #ifdef DEBUGMODE
+    // TODO Implement
+    #endif
 }

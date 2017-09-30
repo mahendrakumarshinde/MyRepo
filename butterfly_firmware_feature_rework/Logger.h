@@ -1,5 +1,5 @@
-#ifndef IULOGGER_H
-#define IULOGGER_H
+#ifndef LOGGER_H
+#define LOGGER_H
 
 #include <Arduino.h>
 #include <ArduinoUnit.h>
@@ -24,7 +24,8 @@ __attribute__((section(".noinit2"))) const bool highVerbosity = false;
 __attribute__((section(".noinit2"))) const bool readableDataCollection = false;
 #endif
 
-__attribute__((section(".noinit2"))) const bool debugMode = (setupDebugMode || loopDebugMode || callbackDebugMode);
+__attribute__((section(".noinit2"))) const bool debugMode =
+    (setupDebugMode || loopDebugMode || callbackDebugMode);
 
 template <typename T>
 inline void debugPrint(T msg, bool endline = true)
@@ -65,4 +66,4 @@ inline void memoryLog(String msg)
   #endif
 }
 
-#endif // IULOGGER_H
+#endif // LOGGER_H
