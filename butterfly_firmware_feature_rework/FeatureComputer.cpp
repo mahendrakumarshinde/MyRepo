@@ -6,11 +6,9 @@
 ============================================================================= */
 
 FeatureComputer::FeatureComputer(uint8_t id, uint8_t destinationCount,
-                                 FeatureBuffer *destination0,
-                                 FeatureBuffer *destination1,
-                                 FeatureBuffer *destination2,
-                                 FeatureBuffer *destination3,
-                                 FeatureBuffer *destination4) :
+                                 Feature *destination0, Feature *destination1,
+                                 Feature *destination2, Feature *destination3,
+                                 Feature *destination4) :
     m_id(id),
     m_active(false),
     m_sourceCount(0),
@@ -31,7 +29,7 @@ FeatureComputer::FeatureComputer(uint8_t id, uint8_t destinationCount,
 /***** Sources and destinations *****/
 
 /**
- * Add a source (a FeatureBuffer) to the feature
+ * Add a source (a Feature) to the feature
  *
  * Note that a feature can have no more than maxSourceCount sources.
  * @param source              The source to add
@@ -43,7 +41,7 @@ FeatureComputer::FeatureComputer(uint8_t id, uint8_t destinationCount,
  *      the sections used for computation will be the 1st and 5th (1 sections,
  *      then skip 3, then 1, then skip 3, etc).
  */
-void FeatureComputer::addSource(FeatureBuffer *source, uint8_t sectionCount,
+void FeatureComputer::addSource(Feature *source, uint8_t sectionCount,
                                 uint8_t skippedSectionCount)
 {
     if (m_sourceCount >= maxSourceCount)
@@ -148,10 +146,8 @@ void FeatureComputer::exposeConfig()
 
 /***** Signal Energy, Power and RMS *****/
 
-SignalEnergyComputer::SignalEnergyComputer(uint8_t id,
-                                           FeatureBuffer *destEnergy,
-                                           FeatureBuffer *destPower,
-                                           FeatureBuffer *destRMS,
+SignalEnergyComputer::SignalEnergyComputer(uint8_t id, Feature *destEnergy,
+                                           Feature *destPower, Feature *destRMS,
                                            bool removeMean, bool normalize) :
     FeatureComputer(id, 3, destEnergy, destPower, destRMS),
     m_removeMean(removeMean),
@@ -181,13 +177,13 @@ void SignalEnergyComputer::m_specializedCompute()
         m_destinations[i]->setResolution(resolution);
     }
     q15_t *values = m_sources[0]->getNextQ15Values();
-    uint16_t totalSize = m_sectionCount[0] * m_sources[0]->getSectionSize();
+    uint16_t sectionSize = m_sources[0]->getSectionSize();
+    uint16_t totalSize = m_sectionCount[0] * sectionSize;
     float total = 0;
     q15_t avg = 0;
     if (m_removeMean)
     {
-        //arm_mean_q15(values, m_originalSectionSize, &avg);
-        placeHolderFunction();
+        arm_mean_q15(values, sectionSize, &avg);
     }
     for (int i = 0; i < totalSize; i++)
     {
@@ -197,9 +193,7 @@ void SignalEnergyComputer::m_specializedCompute()
     {
         total = total / (float) totalSize;
     }
-    total = total / samplingRate;
-    m_destinations[0]->addFloatValue(total);
-    total = total * (float) samplingRate;
+    m_destinations[0]->addFloatValue(total / (float) samplingRate);
     m_destinations[1]->addFloatValue(total);
     m_destinations[2]->addFloatValue(sqrt(total));
 }
@@ -208,9 +202,9 @@ void SignalEnergyComputer::m_specializedCompute()
 /***** Sums *****/
 
 SectionSumComputer::SectionSumComputer(uint8_t id, uint8_t destinationCount,
-                                       FeatureBuffer *destination0,
-                                       FeatureBuffer *destination1,
-                                       FeatureBuffer *destination2,
+                                       Feature *destination0,
+                                       Feature *destination1,
+                                       Feature *destination2,
                                        bool normalize) :
     FeatureComputer(id, destinationCount, destination0, destination1,
                     destination2),
@@ -248,7 +242,7 @@ void SectionSumComputer::m_specializedCompute()
 
 
 MultiSourceSumComputer::MultiSourceSumComputer(uint8_t id,
-                                               FeatureBuffer *destination0,
+                                               Feature *destination0,
                                                bool normalize) :
     FeatureComputer(id, 1, destination0),
     m_normalize(normalize)
@@ -285,12 +279,11 @@ void MultiSourceSumComputer::m_specializedCompute()
 
 /***** FFTs *****/
 
-Q15FFTComputer::Q15FFTComputer(uint8_t id,
-                               FeatureBuffer *reducedFFT,
-                               FeatureBuffer *integralRMS,
-                               FeatureBuffer *integralPeakToPeak,
-                               FeatureBuffer *doubleIntegralRMS,
-                               FeatureBuffer *doubleIntegralPeakToPeak,
+Q15FFTComputer::Q15FFTComputer(uint8_t id, Feature *reducedFFT,
+                               Feature *integralRMS,
+                               Feature *integralPeakToPeak,
+                               Feature *doubleIntegralRMS,
+                               Feature *doubleIntegralPeakToPeak,
                                q15_t *allocatedFFTSpace,
                                uint8_t outputFFTIntegration,
                                bool computeReducedFFT,
@@ -350,7 +343,7 @@ void FeatureComputerFFTQ31::m_specializedCompute(uint8_t specIndex)
 
 /***** Audio DB *****/
 
-AudioDBComputer::AudioDBComputer(uint8_t id, FeatureBuffer *audioDB) :
+AudioDBComputer::AudioDBComputer(uint8_t id, Feature *audioDB) :
     FeatureComputer(id, 1, audioDB)
 {
 }
@@ -367,7 +360,7 @@ void AudioDBComputer::m_specializedCompute()
     m_destinations[0]->setSamplingRate(m_sources[0]->getSamplingRate());
     m_destinations[0]->setResolution(m_sources[0]->getResolution());
 
-    placeHolderFunction();
+    // TODO Reimplement
 //    uint16_t length = m_sources[0]->getSectionSize() * m_sectionCount[0];
 //    q15_t* values = m_sources[0]->getNextQ15Values();
 //    // Strangely, log10 is very slow. It's better to use it the least possible, so we

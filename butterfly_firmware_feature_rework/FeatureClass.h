@@ -1,7 +1,13 @@
-#ifndef FEATUREBUFFER_H
-#define FEATUREBUFFER_H
+#ifndef FEATURECLASS_H
+#define FEATURECLASS_H
+
+#include <Arduino.h>
+#include <ArduinoJson.h>
+/* CMSIS-DSP library for RFFT */
+#include <arm_math.h>
 
 #include "Keywords.h"
+#include "Logger.h"
 
 
 /* =============================================================================
@@ -9,9 +15,10 @@
 ============================================================================= */
 
 /**
- * A buffer that contains feature values.
+ * A Feature has a buffer of values, and the methods to interact with it.
  *
- * Buffers handle per section recording, publication and acknowledgement.
+ * Features handle per section recording on their buffer, publication and
+ * acknowledgement.
  * Buffers are split into multiple sections (2 by default). Note that the total
  * length of the buffer should be divisible by maxSectionCount. Each section
  * represents a consistent set of values that are recorded together.
@@ -26,7 +33,7 @@
  * and then a global acknowledgement, which is a check of each partial
  * acknowledgement, can be performed.
  */
-class FeatureBuffer
+class Feature
 {
     public:
         /* TODO - For now, only slideOption::FIXED is implemented => need to
@@ -35,12 +42,11 @@ class FeatureBuffer
                                     ROLLING};
         static const uint8_t maxSectionCount = 8;
         static const uint8_t maxReceiverCount = 5;
-        FeatureBuffer(const char* name, uint8_t sectionCount=2,
-                      uint16_t sectionSize=1, slideOption sliding=FIXED);
-        virtual ~FeatureBuffer() {}
+        Feature(const char* name, uint8_t sectionCount=2,
+                uint16_t sectionSize=1, slideOption sliding=FIXED);
+        virtual ~Feature() {}
         virtual void reset();
         virtual uint8_t addReceiver(uint8_t receiverId);
-
         /***** Feature designation *****/
         virtual char* getName() { return m_name; }
         virtual bool isNamed(const char* name)
@@ -55,21 +61,24 @@ class FeatureBuffer
         virtual bool isStreaming() { return m_streamingEnabled; }
         virtual void enableStreaming() { m_streamingEnabled = true; }
         virtual void disableStreaming() { m_streamingEnabled = false; }
-        virtual bool useForOperationState() { return m_opStateEnabled; }
+        virtual bool opStateEnabled() { return m_opStateEnabled; }
         virtual void enableOperationState() { m_opStateEnabled = true; }
-        virtual void disableOperationState();
+        virtual void disableOperationState() { m_opStateEnabled = false; }
         virtual void activate() { m_active = true; }
-        virtual void deactivate() { m_active = false; }
+        virtual void deactivate();
         virtual bool isActive() { return m_active; }
         /***** OperationState and Thresholds *****/
-        virtual void setState(OperationState::option opState);
-        virtual OperationState::option getState() { return m_operationState; }
-        virtual OperationState::option getHighestState()
-            { return m_highestOpState; }
+        virtual OperationState::option getOperationState() {}
+        virtual void setThreshold(uint8_t idx, float value)
+            { m_thresholds[idx] = value; }
         virtual void setThresholds(float normalVal, float warningVal,
                                    float dangerVal);
         virtual float getThreshold(uint8_t idx) { return m_thresholds[idx]; }
-        /***** Computaters tracking *****/
+        /***** Computers tracking *****/
+        virtual void setSensorName(const char* name)
+            { strcpy(m_sensorName, name); }
+        virtual char* getSensorName() { return m_sensorName; }
+        virtual bool isComputedFeature() { return m_computerId != 0; }
         virtual void setComputerId(uint8_t id) { m_computerId = id; }
         virtual uint8_t getComputerId() { return m_computerId; }
         virtual uint8_t getReceiverCount() { return m_receiverCount; }
@@ -90,9 +99,10 @@ class FeatureBuffer
         virtual bool isReadyToRecord(uint8_t sectionCount=1);
         virtual void partialAcknowledge(uint8_t receiverIdx,
                                         uint8_t sectionCount=1);
-        virtual void publishIfReady(uint8_t sectionCount=1);
-        virtual void acknowledgeIfReady(uint8_t sectionCount=1);
+        virtual void acknowledgeIfReady();
         virtual void incrementFillingIndex();
+        /***** Communication *****/
+        void stream(HardwareSerial *port);
         /***** Debugging *****/
         void exposeConfig();
         void exposeCounters();
@@ -108,12 +118,10 @@ class FeatureBuffer
         bool m_active;
         bool m_opStateEnabled;
         bool m_streamingEnabled;
-        /***** OperationState and Thresholds *****/
-        OperationState::option m_operationState;
-        OperationState::option m_highestOpState;
         // Normal, warning and danger thresholds
         float m_thresholds[OperationState::COUNT - 1];
-        /***** Computaters tracking *****/
+        /***** Computers tracking *****/
+        char m_sensorName[4];
         uint8_t m_computerId;
         uint8_t m_receiverCount;
         uint8_t m_receiversId[maxReceiverCount];
@@ -129,6 +137,11 @@ class FeatureBuffer
         bool m_published[maxSectionCount];
         bool m_acknowledged[maxSectionCount];
         bool m_partialAcknowledged[maxSectionCount][maxReceiverCount];
+        // Lock a section to prevent both recording and computation, useful when
+        // streaming the section content for example, to garantee data
+        // consistency at section level
+        bool m_locked[maxSectionCount];
+        void m_specializedStream(HardwareSerial *port, uint8_t sectionIdx);
 };
 
 
@@ -137,62 +150,71 @@ class FeatureBuffer
 ============================================================================= */
 
 /**
- * A FeatureBuffer which values are float numbers
+ * A Feature which values are float numbers
  *
  * Values should be an array of size = sectionCount * sectionCount
  */
-class FloatFeature : public FeatureBuffer
+class FloatFeature : public Feature
 {
     public:
         FloatFeature(const char* name, uint8_t sectionCount=2,
                      uint16_t sectionSize=1, float *values=NULL,
-                     FeatureBuffer::slideOption sliding=FeatureBuffer::FIXED);
+                     Feature::slideOption sliding=Feature::FIXED);
         virtual ~FloatFeature() {}
         virtual float* getNextFloatValues();
         virtual void addFloatValue(float value);
+        /***** OperationState and Thresholds *****/
+        virtual OperationState::option getOperationState();
 
     protected:
         float *m_values;
+        void m_specializedStream(HardwareSerial *port, uint8_t sectionIdx);
 };
 
 
 /**
- * A FeatureBuffer which values are q15_t numbers
+ * A Feature which values are q15_t numbers
  *
  * Values should be an array of size = sectionCount * sectionCount
  */
-class Q15Feature : public FeatureBuffer
+class Q15Feature : public Feature
 {
     public:
         Q15Feature(const char* name, uint8_t sectionCount=2,
                    uint16_t sectionSize=1, q15_t *values=NULL,
-                   FeatureBuffer::slideOption sliding=FeatureBuffer::FIXED);
+                   Feature::slideOption sliding=Feature::FIXED);
         virtual ~Q15Feature() {}
         virtual q15_t* getNextQ15Values();
         virtual void addQ15Value(q15_t value);
+        /***** OperationState and Thresholds *****/
+        virtual OperationState::option getOperationState();
 
     protected:
         q15_t *m_values;
+        void m_specializedStream(HardwareSerial *port, uint8_t sectionIdx);
 };
 
 
 /**
- * A FeatureBuffer which values are q31_t numbers
+ * A Feature which values are q31_t numbers
  *
  * Values should be an array of size = sectionCount * sectionCount
  */
-class Q31Feature : public FeatureBuffer
+class Q31Feature : public Feature
 {
     public:
         Q31Feature(const char* name, uint8_t sectionCount=2,
                    uint16_t sectionSize=1, q31_t *values=NULL,
-                   FeatureBuffer::slideOption sliding=FeatureBuffer::FIXED);
+                   Feature::slideOption sliding=Feature::FIXED);
         virtual ~Q31Feature() {}
         virtual q31_t* getNextQ31Values();
         virtual void addQ31Value(q31_t value);
+        /***** OperationState and Thresholds *****/
+        virtual OperationState::option getOperationState();
 
     protected:
         q31_t *m_values;
+        void m_specializedStream(HardwareSerial *port, uint8_t sectionIdx);
 };
 
-#endif // FEATUREBUFFER_H
+#endif // FEATURECLASS_H

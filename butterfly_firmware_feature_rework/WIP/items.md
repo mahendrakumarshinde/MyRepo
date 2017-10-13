@@ -1,137 +1,41 @@
 
-**1. For message Serialization, check Avro, thrift (FB), others ?**
+**1. Read Temperature and Pressure at once?**
 
+**2. What do we do when ill-configured? Nothing? Send something special in heartbeat?**
+- What to do when no feature are streaming? Use atLeastOneStreamingFeature
 
-**2. Feature Streaming:**
+**3. Check and fix resolution computation for each sensor**
 
-/***** Streaming *****/
-virtual void stream(HardwareSerial *port);
+**4. Formerly, had issue processing the USB instructions in EXPERIMENT mode. Is it working now?**
+See Conductor.acquireData
+/* TODO: In EXPERIMENT mode, need to process I2C data here
+otherwise they are not properly processed. Can we fix
+this ? */
+processInstructionsFromI2C();
 
-/***** Streaming *****/
-/**
- * Stream feature id and value through given port
- * @return true if value was available and streamed, else false
- */
-void FeatureBuffer::stream(HardwareSerial *port)
-{
-  if (m_id < 10)
-  {
-    port->print("000");
-  }
-  else
-  {
-    port->print("00");
-  }
-  port->print(m_id);
-  port->print(",");
-  port->print(m_referenceValue);
-}
-// Use this?
-bool m_streamingAcknowledged[maxSectionCount];
+## BONUS ##
 
+**00. Improve Features.h / Features.cpp**
+- Move declaration + instanciation of sensors into sensor files
+- Use namespace FeatureUtility
 
+**01. Add configuration options in FFT features to set up freq_low_bound and freq_high_bound**
 
-**3. When do we call, for each FeatureBuffer:**
-- publishIfReady
-- acknowledgeIfReady
+**02. Add RPM feature**
 
-
-**4. I2C message interpretation:**
-const String START_COLLECTION = "IUCMD_START";
-const String START_CALIBRATION = "IUCAL_START";
-const String START_CONFIRM = "IUOK_START";
-const String END_COLLECTION = "IUCMD_END";
-const String END_CALIBRATION = "IUCAL_END";
-const String END_CONFIRM = "IUOK_END";
-bool checkIfStartCalibration();
-bool checkIfEndCalibration();
-bool checkIfStartCollection();
-bool checkIfEndCollection();
-
-/**
- * Check if we should start calibration
- */
-bool IUI2C::checkIfStartCalibration()
-{
-  if (m_wireBuffer.indexOf(START_CALIBRATION) > -1)
-  {
-    port->println(START_CONFIRM);
-    return true;
-  }
-  return false;
-}
-
-/**
- * Check if we should end calibration
- */
-bool IUI2C::checkIfEndCalibration()
-{
-  if (m_wireBuffer.indexOf(END_CALIBRATION) > -1)
-  {
-    port->println(END_CONFIRM);
-    return true;
-  }
-  return false;
-}
-
-/**
- * Check if we should start data collection, (ie enter collection mode)
- */
-bool IUI2C::checkIfStartCollection()
-{
-  if (m_wireBuffer.indexOf(START_COLLECTION) > -1)
-  {
-    port->print(START_CONFIRM); // No new line !!
-    return true;
-  }
-  return false;
-}
-
-/**
- * Check if we should end data collection, (ie return run mode)
- */
-bool IUI2C::checkIfEndCollection()
-{
-  if (m_wireBuffer == END_COLLECTION)
-  {
-    port->println(END_CONFIRM);
-    return true;
-  }
-  return false;
-}
-
-
-**5. Resolve how to use the following in Sensors:**
-
-/***** Communication *****/
-// May be defined in Child class
-virtual void dumpDataThroughI2C() {}
-virtual void dumpDataForDebugging() {}
-/***** Debugging *****/
-// May be defined in Child class
-virtual void exposeCalibration() {}
-
-
-**6. For sensors, When to set up resolution, sampling rate and callback rate?**
-
-
-**7. CAM-M8Q GNSS => the feature format is not a base type, it is GNSSLocation type**
+**03. Add geolocation features**
+CAM-M8Q GNSS => the feature format is not a base type, it is GNSSLocation type
 How to handle the value propagation through the features / featureComputers?
 
+**04. function conductor.resetDataAcquisition wasn't working. Is it now?**
 
-**8. m_audioData is Q31 but audio feature is currently Q15 => Sort this out**
+**05. To save power: deactivateFeature and activateFeature => Also activate/deactivate sensors automatically?**
 
+**20. Use Avro for message serialization to send features?**
+- Pros / Cons ?
+- Also checked Thrift and ProtocolBuffer, but Avro looks to be the most relevant.
 
-**9. The function updateSamplingRateFromI2C in I2S is a "receive configuration from I2C" type of function**
-=> remove it from I2S and put it in the configuration module.
-
-
-**20. Stop and restart I2S**
-This was not working previously. What about now?
-Clarify the process and document it.
-
-
-**21. Info about RAM selection (among other)**
+**22. Info about RAM selection (among other)**
 https://github.com/GrumpyOldPizza/arduino-STM32L4/blob/master/variants/STM32L432KC-NUCLEO/linker_scripts/STM32L432KC_FLASH.ld
 
 

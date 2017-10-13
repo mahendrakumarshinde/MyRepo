@@ -1,0 +1,77 @@
+device:
+    version: "1.0.0"
+    power_mode: 0  # NORMAL
+    autosleep_delay: 60  # Used only when power_mode is AUTOSLEEP
+    sleep_duration: 300  # Used only when power_mode is AUTOSLEEP or PERIODIC_SLEEP
+    cycle_time: 3600  # Used only when power_mode is PERIODIC_SLEEP
+    data_send_period: 500 # ms
+
+components:
+    accelerometer:
+        sampling_rate: 0  # 1000Hz
+        full_scale_range: 5  # 4G
+        use_filtering: 0
+    altimeter:
+        usage_preset: 1  # NORMAL
+    gps:
+        cycle_duration: 3600
+        active_duration: 1
+        forced_mode: 0
+    gyroscope:
+        sampling_rate: 0  # 2000Hz ODR, filter at 523Hz
+        full_scale_range: 1  # 1000Hz
+    magnetometer:
+        usage_preset: 0  # LOW
+    microphone: 
+        sampling_rate: 8000
+
+features:  # Features that are not required for streaming can be omitted
+    accelEnergy512Total:
+        streaming_group: 1
+        streaming_index: 0
+        operation_state_enabled: 1
+        thresholds:
+        - 100
+        - 110
+        - 120
+    velocityRMS512X:
+        streaming_group: 1
+        streaming_index: 1
+        operation_state_enabled: 0
+        thresholds:
+        - 0.5
+        - 1.2
+        - 1.5
+    velocityRMS512Y:
+        streaming_group: 1
+        streaming_index: 2
+        operation_state_enabled: 0
+        thresholds:
+        - 0.5
+        - 1.2
+        - 1.5
+    velocityRMS512Z:
+        streaming_group: 1
+        streaming_index: 3
+        operation_state_enabled: 0
+        thresholds:
+        - 0.5
+        - 1.2
+        - 1.5
+    temperature:
+        streaming_group: 1
+        streaming_index: 4
+        operation_state_enabled: 0
+        thresholds:
+        - 40
+        - 80
+        - 120
+    audioDB4096:
+        streaming_group: 1
+        streaming_index: 5
+        operation_state_enabled: 0
+        thresholds:
+        - 500
+        - 1000
+        - 1500
+

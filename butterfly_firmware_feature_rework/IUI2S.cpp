@@ -1,55 +1,22 @@
 #include "IUI2S.h"
 
-using namespace IUComponent;
-
 
 /* =============================================================================
     Constructors and destructors
 ============================================================================= */
 
-uint16_t IUI2S::availableClockRate[IUI2S::availableClockRateCount] =
-      {8000, 12000, 16000, 24000, 32000, 48000, 11025, 22050, 44100};
-
-IUI2S::IUI2S(IUI2C *iuI2C, uint8_t id, FeatureBuffer *audio);
-  Sensor(id, 1, audio),
+IUI2S::IUI2S(IUI2C *iuI2C, const char* name, Feature *audio);
+  AsynchronousSensor(name, 1, audio),
   m_iuI2C(iuI2C),
   m_firstI2STrigger(true)
 {
-  setClockRate(defaultClockRate);
-  m_asynchronous = true;
+  prepareDataAcquisition();
 }
-
-
-/* =============================================================================
-    Hardware and power management
-============================================================================= */
 
 
 /* =============================================================================
     Configuration and calibration
 ============================================================================= */
-
-/**
- * Set the clock rate: Audio sampling is based on this and drives the callback
- *
- * @return  true if the given clockrate is allowed and has been set.
- *          false if the callback rate is not allowed.
- */
-bool IUI2S::setClockRate(uint16_t clockRate)
-{
-
-    for (int i = 0; i < availableClockRateCount; i++)
-    {
-        if (availableClockRate[i] == clockRate)
-        {
-            m_clockRate = clockRate;
-            m_callbackRate = m_clockRate;
-            prepareDataAcquisition();
-            return true;
-        }
-    }
-    return false;
-}
 
 /**
  * Set the audio sampling rate
@@ -64,20 +31,11 @@ void IUI2S::setSamplingRate(uint16_t samplingRate)
     if (samplingRate == 0)
     {
         m_samplingRate = defaultSamplingRate;
-        return;
     }
-    if (samplingRate > m_clockRate) // Need to increase the clock rate ?
+    else
     {
-        for (uint8_t i = 0; i < availableClockRateCount; ++i)
-        {
-            if (availableClockRate[i] > samplingRate)
-            {
-                setClockRate(availableClockRate[i]);
-                break;
-            }
-        }
+        m_samplingRate = samplingRate;
     }
-    m_samplingRate = samplingRate;
     prepareDataAcquisition();
 }
 
@@ -111,7 +69,7 @@ bool IUI2S::triggerDataAcquisition(void (*callback)())
     if (m_firstI2STrigger)
     {
         I2S.onReceive(callback); // add the receiver callback
-        if (!I2S.begin(I2S_PHILIPS_MODE, m_clockRate, bitsPerAudioSample))
+        if (!I2S.begin(I2S_PHILIPS_MODE, clockRate, bitsPerAudioSample))
         {
             return false;
         }
@@ -148,7 +106,7 @@ void IUI2S::processAudioData(q31_t *data)
         /* only keep 1 record every 2 records because stereo recording but we
         use only 1 canal. */
         m_audioData[i] = (q31_t) (data[i * 2]);
-        m_destinations[i]->addQ15Value(m_audioData[i]);
+        m_destinations[i]->addQ31Value(m_audioData[i]);
     }
 }
 
@@ -178,56 +136,25 @@ bool IUI2S::acquireData()
 
 /**
  * Dump audio data to serial via I2C
- * NB: We want to do this in *DATA COLLECTION* mode
+ *
+ * This should be done in DATA COLLECTION mode.
  */
-void IUI2S::dumpDataThroughI2C()
+void IUI2S::sendData()
 {
-    for (int j = 0; j < m_downclocking; j++)
+    if (loopDebugMode)
     {
-        // stream 3 most significant bytes from 32bits value
-        m_iuI2C->port->write((m_audioData[j] >> 24) & 0xFF);
-        m_iuI2C->port->write((m_audioData[j] >> 16) & 0xFF);
-        m_iuI2C->port->write((m_audioData[j] >> 8) & 0xFF);
+        // does nothing
     }
-}
-
-/**
- * Dump audio data to serial via I2C
- * Note that we do not send all data otherwise it is too much for the Serial to keep up
- * NB: We want to do this in *DATA COLLECTION* mode, when debugMode is true
- */
-void IUI2S::dumpDataForDebugging()
-{
-    m_iuI2C->port->print("S: ");
-    // Dump only most significant 24bits
-    m_iuI2C->port->println((m_audioData[0] >> 8));
-    m_iuI2C->port->flush();
-}
-
-
-/* ================== Update and Control Functions ========================== */
-/*
- * The following functions check and read the I2C wire buffer to see if configuration updates
- * have been received. If so, the updates are done.
- * Functions return true if an update happened.
- */
-
-/**
- * Check the I2C wire buffer for update of sampling rate
- */
-bool IUI2S::updateSamplingRateFromI2C()
-{
-    String wireBuffer = m_iuI2C->getBuffer();
-    if (wireBuffer.indexOf("acosr") > -1)
+    else
     {
-        int acosrLocation = wireBuffer.indexOf("acosr");
-        int target_sample_A = wireBuffer.charAt(acosrLocation + 6) - 48;
-        int target_sample_B = wireBuffer.charAt(acosrLocation + 7) - 48;
-        setSamplingRate((target_sample_A * 10 + target_sample_B) * 1000);
-        setClockRate((target_sample_A * 10 + target_sample_B) * 1000);
-        return true;
+        for (int j = 0; j < m_downclocking; j++)
+        {
+            // stream 3 most significant bytes from 32bits value
+            m_iuI2C->port->write((m_audioData[j] >> 24) & 0xFF);
+            m_iuI2C->port->write((m_audioData[j] >> 16) & 0xFF);
+            m_iuI2C->port->write((m_audioData[j] >> 8) & 0xFF);
+        }
     }
-    return false;
 }
 
 

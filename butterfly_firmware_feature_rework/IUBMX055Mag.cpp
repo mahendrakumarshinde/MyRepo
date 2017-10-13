@@ -1,7 +1,5 @@
 #include "IUBMX055Mag.h"
 
-using namespace IUComponent;
-
 
 /* =============================================================================
     Constructors and destructors
@@ -13,29 +11,40 @@ using namespace IUComponent;
  * NB: The WHO AM I does not work when in SUSPEND mode, so the BMX055
  * magnetometer needs to be soft-reset or waked up first.
  */
-IUBMX055Mag::IUBMX055Mag(IUI2C *iuI2C, uint8_t id,
-                         FeatureBuffer *magneticX,
-                         FeatureBuffer *magneticY,
-                         FeatureBuffer *magneticZ) :
-    Sensor(id, 3, magneticX, magneticY, magneticZ),
+IUBMX055Mag::IUBMX055Mag(IUI2C *iuI2C, const char* name, Feature *magneticX,
+                         Feature *magneticY, Feature *magneticZ) :
+    AsynchronousSensor(name, 3, magneticX, magneticY, magneticZ),
     m_forcedMode(false),
     m_odr(defaultODR),
     m_accuracy(defaultAccuracy)
 {
     m_iuI2C = iuI2C;
-    softReset();
-    if (!m_iuI2C->checkComponentWhoAmI("BMX055 Mag", ADDRESS, WHO_AM_I, I_AM))
-    {
-        m_iuI2C->setErrorMessage("MAGERR");
-        return;
-    }
-    setSamplingRate(defaultSamplingRate);
+    m_samplingRate = defaultSamplingRate;
 }
 
 
 /* =============================================================================
     Hardware & power management
 ============================================================================= */
+
+/**
+ * Set up the component and finalize the object initialization
+ */
+void IUBMX055Mag::setupHardware()
+{
+    softReset();
+    if (!m_iuI2C->checkComponentWhoAmI("BMX055 Mag", ADDRESS, WHO_AM_I, I_AM))
+    {
+        if (debugMode)
+        {
+            debugPrint("MAGERR");
+        }
+        return;
+    }
+    setODR(m_odr);
+    setAccuracy(m_accuracy);
+    setSamplingRate(m_samplingRate);
+}
 
 /**
  * Soft reset - Soft reset always bring the magnetometer into sleep mode
@@ -57,9 +66,9 @@ void IUBMX055Mag::softReset()
  */
 void IUBMX055Mag::wakeUp()
 {
-    Sensor::wakeUp();
+    AsynchronousSensor::wakeUp();
     m_iuI2C->writeByte(ADDRESS, PWR_CNTL1, 0x01);
-    enterForcedMode();
+    exitForcedMode();
 }
 
 /**
@@ -69,7 +78,7 @@ void IUBMX055Mag::wakeUp()
  */
 void IUBMX055Mag::sleep()
 {
-    Sensor::sleep();
+    AsynchronousSensor::sleep();
     m_iuI2C->writeByte(ADDRESS, PWR_CNTL1, 0x01);
     m_iuI2C->writeByte(ADDRESS, PWR_CNTL2, ((uint8_t) m_odr << 3) | 0x06);
 }
@@ -81,7 +90,7 @@ void IUBMX055Mag::sleep()
  */
 void IUBMX055Mag::suspend()
 {
-    Sensor::suspend();
+    AsynchronousSensor::suspend();
     m_iuI2C->writeByte(ADDRESS, PWR_CNTL1, 0x00);
 }
 
@@ -89,6 +98,28 @@ void IUBMX055Mag::suspend()
 /* =============================================================================
     Configuration and calibration
 ============================================================================= */
+
+bool IUBMX055Mag::configure(JsonVariant &config)
+{
+    JsonVariant my_config = config[m_name];
+    if (!my_config)
+    {
+        return false;
+    }
+    // ODR
+    JsonVariant value = my_config["FREQ"];
+    if (value.success())
+    {
+        setODR(ODROption) value.as<int>();
+    }
+    // Accuracy Preset
+    value = my_config["ACY"];
+    if (value.success())
+    {
+        setAccuracy(accuracyPreset) value.as<int>();
+    }
+    return true;
+}
 
 /**
  * Enter Forced Mode => on demand data acquisition
@@ -116,6 +147,33 @@ void IUBMX055Mag::exitForcedMode()
 void IUBMX055Mag::setODR(IUBMX055Mag::ODROption ODR)
 {
     m_odr = ODR;
+    switch (m_odr)
+    {
+    case ODR_10Hz:
+        setSamplingRate(10);
+        break;
+    case ODR_2Hz:
+        setSamplingRate(2);
+        break;
+    case ODR_6Hz:
+        setSamplingRate(6);
+        break;
+    case ODR_8Hz:
+        setSamplingRate(8);
+        break;
+    case ODR_15Hz:
+        setSamplingRate(15);
+        break;
+    case ODR_20Hz:
+        setSamplingRate(20);
+        break;
+    case ODR_25Hz:
+        setSamplingRate(25);
+        break;
+    case ODR_30Hz:
+        setSamplingRate(30);
+        break;
+    }
     if (debugMode && m_forcedMode)
     {
         debugPrint("Set Magnetometer ODR but Forced Mode is active: ODR will"

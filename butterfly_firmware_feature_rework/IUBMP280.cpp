@@ -1,41 +1,45 @@
 #include "IUBMP280.h"
 
-using namespace IUComponent;
-
 
 /* =============================================================================
     Constructors and destructors
 ============================================================================= */
 
-IUBMP280::IUBMP280(IUI2C *iuI2C, uint8_t id, FeatureBuffer *temperature,
-                   FeatureBuffer *pressure) :
-    Sensor(id, 2, temperature, pressure),
-    m_resolution(1),
-    m_pressureOSR(defaultPressureOSR),
-    m_temperatureOSR(defaultTmperatureOSR),
-    m_iirFilter(defaultIIRFilter),
-    m_standByDuration(defaultStandByDuration),
+IUBMP280::IUBMP280(IUI2C *iuI2C, const char* name, Feature *temperature,
+                   Feature *pressure) :
+    SynchronousSensor(name, 2, temperature, pressure),
     m_temperature(28),
     m_fineTemperature(0),
     m_pressure(1013)
 {
     m_iuI2C = iuI2C;
-    if(!m_iuI2C->checkComponentWhoAmI("BMP280", ADDRESS, WHO_AM_I,
-                                      WHO_AM_I_ANSWER))
-    {
-        m_iuI2C->setErrorMessage("BMPERR");
-        return;
-    }
-    softReset();
-    wakeUp();
-    writeConfigRegister();
-    calibrate();
 }
 
 
 /* =============================================================================
     Hardware & power management
 ============================================================================= */
+
+/**
+ * Set up the component and finalize the object initialization
+ */
+void IUBMP280::setupHardware()
+{
+    if(!m_iuI2C->checkComponentWhoAmI("BMP280", ADDRESS, WHO_AM_I,
+                                      WHO_AM_I_ANSWER))
+    {
+        if (debugMode)
+        {
+            debugPrint("BMPERR");
+        }
+        return;
+    }
+    softReset();
+    m_usagePreset = usagePreset::P_REGULAR;
+    wakeUp();
+    writeConfigRegister();
+    calibrate();
+}
 
 /**
  * Soft reset to default Power-On settings
@@ -53,8 +57,8 @@ void IUBMP280::softReset()
  */
 void IUBMP280::wakeUp()
 {
-    Sensor::wakeUp();
-    writeControlMeasureRegister();
+    SynchronousSensor::wakeUp();
+    changeUsagePreset(m_usagePreset);
 }
 
 /**
@@ -62,7 +66,7 @@ void IUBMP280::wakeUp()
  */
 void IUBMP280::sleep()
 {
-    Sensor::sleep();
+    SynchronousSensor::sleep();
     writeControlMeasureRegister();
 }
 
@@ -71,7 +75,7 @@ void IUBMP280::sleep()
  */
 void IUBMP280::suspend()
 {
-    Sensor::suspend();
+    SynchronousSensor::suspend();
     writeControlMeasureRegister();
 }
 
@@ -79,6 +83,58 @@ void IUBMP280::suspend()
 /* =============================================================================
     Configuration and calibration
 ============================================================================= */
+
+void IUBMP280::switchToLowUsage()
+{
+    m_usagePreset = usagePreset::P_LOW;
+    m_powerByte = (uint8_t) powerModeBytes::FORCED;
+    m_pressureOSR = overSamplingRates::SKIPPED;
+    m_temperatureOSR = overSamplingRates::OSR_01;
+    writeControlMeasureRegister();
+    m_iirFilter = IIRFilterCoeffs::OFF;
+    m_standByDuration = StandByDurations::t_4000ms;
+    writeConfigRegister();
+    setSamplingPeriod(60000);  // 1 min
+}
+
+void IUBMP280::switchToRegularUsage()
+{
+    m_usagePreset = usagePreset::P_REGULAR;
+    m_powerByte = (uint8_t) powerModeBytes::FORCED;
+    m_pressureOSR = overSamplingRates::SKIPPED;
+    m_temperatureOSR = overSamplingRates::OSR_01;
+    writeControlMeasureRegister();
+    m_iirFilter = IIRFilterCoeffs::OFF;
+    m_standByDuration = StandByDurations::t_4000ms;
+    writeConfigRegister();
+    setSamplingPeriod(15000);  // 15s
+}
+
+void IUBMP280::switchToEnhancedUsage()
+{
+    m_usagePreset = usagePreset::P_ENHANCED;
+    m_powerByte = (uint8_t) powerModeBytes::FORCED;
+    m_pressureOSR = overSamplingRates::SKIPPED;
+    m_temperatureOSR = overSamplingRates::OSR_01;
+    writeControlMeasureRegister();
+    m_iirFilter = IIRFilterCoeffs::OFF;
+    m_standByDuration = StandByDurations::t_2000ms;
+    writeConfigRegister();
+    setSamplingPeriod(5000);  // 5s
+}
+
+void IUBMP280::switchToHighUsage()
+{
+    m_usagePreset = usagePreset::P_HIGH;
+    m_powerByte = (uint8_t) powerModeBytes::FORCED;
+    m_pressureOSR = overSamplingRates::SKIPPED;
+    m_temperatureOSR = overSamplingRates::OSR_01;
+    writeControlMeasureRegister();
+    m_iirFilter = IIRFilterCoeffs::OFF;
+    m_standByDuration = StandByDurations::t_250ms;
+    writeConfigRegister();
+    setSamplingPeriod(1000);  // 1s
+}
 
 /**
  * Set the oversampling rates for pressure and temperature.
@@ -129,17 +185,8 @@ void IUBMP280::writeConfigRegister()
  */
 void IUBMP280::writeControlMeasureRegister()
 {
-    uint8_t powerBit;
-    if (m_powerMode == powerMode::ACTIVE)
-        {
-    powerBit = (uint8_t) powerModeBits::FORCED;
-    }
-    else
-    {
-        powerBit = (uint8_t) powerModeBits::SLEEP;
-    }
     m_iuI2C->writeByte(ADDRESS, CTRL_MEAS,
-                       m_temperatureOSR << 5 | m_pressureOSR << 2 | powerBit);
+                       m_temperatureOSR << 5 | m_pressureOSR << 2 | m_powerByte);
 }
 
 /**
@@ -150,7 +197,10 @@ void IUBMP280::calibrate()
     uint8_t calib[24];
     if (!m_iuI2C->readBytes(ADDRESS, CALIB00, 24, &calib[0]))
     {
-        m_iuI2C->port->println("Failed to calibrate BMP280\n");
+        if (setupDebugMode)
+        {
+            debugPrint("Failed to calibrate BMP280");
+        }
         return;
     }
     for (int i = 0; i < 3; i++)
@@ -178,7 +228,7 @@ void IUBMP280::calibrate()
  *
  * If there is a read error, the previous temperature is kept instead.
  */
-void IUBMP280::readTemperature() // Index 4
+void IUBMP280::readTemperature()
 {
   if (!m_iuI2C->readBytes(ADDRESS, TEMP_MSB, 3, &m_rawTempBytes[0],
                           processTemperatureData))
@@ -304,40 +354,21 @@ void IUBMP280::readData()
 ============================================================================= */
 
 /**
- * Dump Temperature data to serial via I2C => DISABLED
+ * Dump Temperature data to serial
  *
- * NB: We want to do this in *DATA COLLECTION* mode, but for now the
- * data collection mode only get Accel and Sound data
+ * NB: We want to do this in *DATA COLLECTION* mode.
+ * If loopDebugMode is true, will send humand readable content, else nothing.
  */
-void IUBMP280::dumpDataThroughI2C()
+void IUBMP280::sendData(HardwareSerial *port)
 {
-    // DISABLED
-    /*
-    byte* data;
-    // Stream temperature float value as 4 bytes
-    data = (byte *) &m_temperature;
-    m_iuI2C->port->write(data, 4);
-    m_iuI2C->port->flush();
-    // Stream pressure float value as 4 bytes
-    data = (byte *) &m_pressure;
-    m_iuI2C->port->write(data, 4);
-    m_iuI2C->port->flush();
-    */
-}
-
-/**
- * Dump Temperature data to serial via I2C
- *
- * NB: We want to do this in *DATA COLLECTION* mode, when debugMode is true
- */
-void IUBMP280::dumpDataForDebugging()
-{
-    // Stream float values with 4 digits
-    m_iuI2C->port->print("T: ");
-    m_iuI2C->port->println(m_temperature, 4);
-    //m_iuI2C->port->print("P: ");
-    //m_iuI2C->port->println(m_pressure, 4);
-    m_iuI2C->port->flush();
+    if (loopDebugMode)  // Human readable in the console
+    {
+        port->print("T: ");
+        port->println(m_temperature, 4);
+        port->print("P: ");
+        port->println(m_pressure, 4);
+        port->flush();
+    }
 }
 
 

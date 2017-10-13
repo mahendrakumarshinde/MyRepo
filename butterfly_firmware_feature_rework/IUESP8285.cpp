@@ -1,22 +1,29 @@
 #include "IUESP8285.h"
 
-using namespace IUComponent;
 
 /* =============================================================================
     Constructor & desctructors
 ============================================================================= */
 
-IUESP8285::IUESP8285(IUI2C *iuI2C) :
-    ABCComponent(),
-    m_iuI2C(iuI2C)
+IUESP8285::IUESP8285(HardwareSerial *serialPort, uint32_t rate,
+                     uint16_t dataReceptionTimeout) :
+    IUSerial(InterfaceType::INT_WIFI, serialPort, rate, 20, ';',
+             dataReceptionTimeout)
 {
-    wakeUp();
 }
 
 
 /* =============================================================================
     Hardware & power management
 ============================================================================= */
+
+/**
+ * Set up the component and finalize the object initialization
+ */
+void IUESP8285::setupHardware()
+{
+    IUSerial::setupHardware()
+}
 
 /**
  * Switch to ACTIVE power mode
@@ -48,22 +55,13 @@ void IUESP8285::suspend()
 
 
 /* =============================================================================
-    WiFi Communication
+    WiFi communication
 ============================================================================= */
 
-void IUESP8285::setBaudRate(uint32_t baudRate)
-{
-    m_baudRate = baudRate;
-    port->flush();
-    delay(2);
-    port->end();
-    delay(10);
-    port->begin(m_baudRate);
-}
 
 
 /* =============================================================================
     Instanciation
 ============================================================================= */
 
-IUESP8285 iuWiFi(&iuI2C);
+IUESP8285 iuWiFi(&Serial1, 57600, 2000);

@@ -1,34 +1,44 @@
 #include "IUBMX055Gyro.h"
 
-using namespace IUComponent;
-
 
 /* =============================================================================
     Constructors and destructors
 ============================================================================= */
 
-IUBMX055Gyro::IUBMX055Gyro(IUI2C *iuI2C, uint8_t id, FeatureBuffer *tiltX,
-                           FeatureBuffer *tiltY, FeatureBuffer *tiltZ);
-    Sensor(id, 3, tiltX, tiltY, tiltZ),
+IUBMX055Gyro::IUBMX055Gyro(IUI2C *iuI2C, const char* name, Feature *tiltX,
+                           Feature *tiltY, Feature *tiltZ);
+    AsynchronousSensor(name, 3, tiltX, tiltY, tiltZ),
     m_resolution(0)
 {
     m_iuI2C = iuI2C;
-    if (!m_iuI2C->checkComponentWhoAmI("BMX055 Gyro", ADDRESS, WHO_AM_I, I_AM))
-    {
-        m_iuI2C->setErrorMessage("GYRERR");
-        return;
-    }
     m_samplingRate = defaultSamplingRate;
-    softReset();
-    setScale(defaultScale);
-    setBandwidth(defaultBandwidth);
-    setSamplingRate(defaultSamplingRate);
+    // Fast Power Up is disabled at POR (Power-On Reset)
+    m_fastPowerUpEnabled = false;
 }
 
 
 /* =============================================================================
     Hardware & power management
 ============================================================================= */
+
+/**
+ * Set up the component and finalize the object initialization
+ */
+void IUBMX055Gyro::setupHardware()
+{
+    if (!m_iuI2C->checkComponentWhoAmI("BMX055 Gyro", ADDRESS, WHO_AM_I, I_AM))
+    {
+        if (debugMode)
+        {
+            debugPrint("GYROERR");
+        }
+        return;
+    }
+    softReset();
+    setScale(defaultScale);
+    setBandwidth(defaultBandwidth);
+    setSamplingRate(defaultSamplingRate);
+}
 
 /**
  * Soft reset gyroscope and return to normal power mode
@@ -46,7 +56,7 @@ void IUBMX055Gyro::softReset()
  */
 void IUBMX055Gyro::wakeUp()
 {
-    Sensor::wakeUp();
+    AsynchronousSensor::wakeUp();
     // Write {0, 0} to {suspend (bit7), deep-suspend (bit5)}
     m_iuI2C->writeByte(ADDRESS,  LPM1, 0x00);
 }
@@ -58,7 +68,8 @@ void IUBMX055Gyro::wakeUp()
  */
 void IUBMX055Gyro::sleep()
 {
-    Sensor::sleep();
+    AsynchronousSensor::sleep();
+    m_fastPowerUpEnabled = true;
     // Write {1, 0} to {suspend (bit7), deep-suspend (bit5)}
     m_iuI2C->writeByte(ADDRESS,  LPM1, 0x80);
 }
@@ -73,7 +84,8 @@ void IUBMX055Gyro::sleep()
  */
 void IUBMX055Gyro::suspend()
 {
-    Sensor::suspend();
+    AsynchronousSensor::suspend();
+    m_fastPowerUpEnabled = false;
     // Write {0, 1} to {suspend (bit7), deep-suspend (bit5)}
     m_iuI2C->writeByte(ADDRESS,  LPM1, 0x20);
 }
@@ -83,27 +95,26 @@ void IUBMX055Gyro::suspend()
     Configuration and calibration
 ============================================================================= */
 
-/**
- * Enable Fast Power Up option of SLEEP mode (2.5mA)
- *
- * Fast power up, when enabled, modifies the SLEEP mode. Fast Power Up must be
- * enabled before calling sleep().
- */
-void IUBMX055Gyro::enableFastPowerUp()
+bool IUBMX055Gyro::configure(JsonVariant &config)
 {
-    m_fastPowerUpEnabled = true;
-    sleep();
-}
-
-/**
- * Disable Fast Power Up option of SLEEP mode (classic SLEEP MODE is then used)
- *
- * Fast Power Up is disabled at POR (Power-On Reset)
- */
-void IUBMX055Gyro::disableFastPowerUp()
-{
-    m_fastPowerUpEnabled = false;
-    sleep();
+    JsonVariant my_config = config[m_name];
+    if (!my_config)
+    {
+        return false;
+    }
+    // Sampling Rate and bandwidth
+    value = my_config["FREQ"];
+    if (value.success())
+    {
+        setBandwidth(bandwidthOption) value.as<int>();
+    }
+    // Full Scale Range
+    value = my_config["FSR"];
+    if (value.success())
+    {
+        setScale(scaleOption) value.as<int>();
+    }
+    return true;
 }
 
 /**
@@ -123,6 +134,33 @@ void IUBMX055Gyro::setBandwidth(IUBMX055Gyro::bandwidthOption bandwidth)
 {
     m_bandwidth = bandwidth;
     m_iuI2C->writeByte(ADDRESS, BW, m_bandwidth);
+    switch (bandwidth)
+    {
+    case BW_2000Hz523Hz:
+        setSamplingRate(2000);
+        break;
+    case BW_2000Hz230Hz:
+        setSamplingRate(2000);
+        break;
+    case BW_1000Hz116Hz:
+        setSamplingRate(1000);
+        break;
+    case BW_400Hz47Hz:
+        setSamplingRate(400);
+        break;
+    case BW_200Hz23Hz:
+        setSamplingRate(200);
+        break;
+    case BW_100Hz12Hz:
+        setSamplingRate(100);
+        break;
+    case BW_200Hz64Hz:
+        setSamplingRate(200);
+        break;
+    case BW_100Hz32Hz:
+        setSamplingRate(100);
+        break;
+    }
 }
 
 

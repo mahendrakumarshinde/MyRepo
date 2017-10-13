@@ -14,17 +14,28 @@ namespace Axis
                            Y     = 1,
                            Z     = 2,
                            COUNT = 3};
-};
+}
 
 
 /* =============================================================================
-    Operation Modes
+    Interface Types
+============================================================================= */
+
+namespace InterfaceType
+{
+    enum option : uint8_t {INT_USB   = 0,
+                           INT_BLE   = 1,
+                           INT_WIFI  = 2,
+                           COUNT = 3};
+}
+
+
+/* =============================================================================
+    Component Power Modes
 ============================================================================= */
 
 /**
  * Define the power mode at component level
- *
- * Power modes are controlled either automatically (auto-sleep) or by the user
  */
 namespace PowerMode
 {
@@ -32,8 +43,12 @@ namespace PowerMode
                            SLEEP   = 1,
                            SUSPEND = 2,
                            COUNT   = 3};
-};
+}
 
+
+/* =============================================================================
+    Operation Mode
+============================================================================= */
 
 /**
  * Define what type of data we want to acquire / compute
@@ -44,22 +59,19 @@ namespace AcquisitionMode
                            FEATURE = 1,
                            NONE    = 2,
                            COUNT   = 3};
-};
+}
 
 /**
  * Define the channel through which data will be sent
  */
 namespace StreamingMode
 {
-    enum option : uint8_t {WIRED = 0,   // Send over Serial
-                           BLE   = 1,   // Send over Bluetooth Low Energy
-                           WIFI  = 2,   // Send over WiFi
-                           STORE = 3,   // Store in SPI Flash to stream later
+    enum option : uint8_t {WIRED = 0,  // Send over Serial
+                           BLE   = 1,  // Send over Bluetooth Low Energy
+                           WIFI  = 2,  // Send over WiFi
+                           STORE = 3,  // Store in SPI Flash to stream later
                            COUNT = 4};
-};
-/* TODO => Need to really enforce StreamingMode, as most of the streaming
-functions have hardcoded ports (eg dumpDataThroughI2C) => Need to finish to
-define all the message format for the different channel (WIRED, BLE, WIFI) */
+}
 
 
 /* =============================================================================
@@ -67,21 +79,15 @@ define all the message format for the different channel (WIRED, BLE, WIFI) */
 ============================================================================= */
 
 /**
- * Usage Preset are user controlled, they describe how the device is being used
+ * Usage Mode are user controlled, they describe how the device is being used
  */
-namespace UsagePreset
+namespace UsageMode
 {
-    enum option : uint8_t {CALIBRATION   = 0,
-                           EXPERIMENT    = 1,
-                           OPERATION     = 2,
-                           COUNT         = 3};
+    enum option : uint8_t {CALIBRATION = 0,
+                           EXPERIMENT  = 1,
+                           OPERATION   = 2,
+                           COUNT       = 3};
     // Related default config
-    const PowerMode::option powerPresetDetails[COUNT] =
-    {
-        PowerMode::ACTIVE,
-        PowerMode::ACTIVE,
-        PowerMode::ACTIVE,
-    };
     const AcquisitionMode::option acquisitionModeDetails[COUNT] =
     {
         AcquisitionMode::FEATURE,
@@ -94,7 +100,7 @@ namespace UsagePreset
         StreamingMode::WIRED,
         StreamingMode::BLE,
     };
-};
+}
 
 
 /* =============================================================================
@@ -113,6 +119,6 @@ namespace OperationState
                            WARNING = 2,
                            DANGER  = 3,
                            COUNT   = 4};
-};
+}
 
 #endif // KEYWORDS_H

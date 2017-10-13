@@ -47,7 +47,7 @@ The chip comes with a pre-flashed firmware named BMDWare. You should read both B
 
 #### Service and Characteristics ####
 Profiles, services and characteristics can be discovered using a BLE app, such as "BLE Scanner" (see section BLE utility apps below).
-The services and characteristics we are most interested about:
+The services and characteristics we use:
 - UART Service: 6E400001-B5A3-F393-E0A9-E50E24DCCA9E
   - Tx characteristic (send from device, read in App): 6E400003-B5A3-F393-E0A9-E50E24DCCA9E
   - Rx characteristic (send from app, read on device): 6E400002-B5A3-F393-E0A9-E50E24DCCA9E

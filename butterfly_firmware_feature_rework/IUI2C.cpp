@@ -1,23 +1,15 @@
 #include "IUI2C.h"
 
-using namespace IUComponent;
 
 /* =============================================================================
     Constructor & desctructors
 ============================================================================= */
 
 IUI2C::IUI2C() :
-    ABCComponent(),
+    Component(),
     m_readFlag(true),
-    m_silent(false),
-    m_wireBuffer(""),
-    m_begun(false)
+    m_errorFlag(false)
 {
-    Wire.begin(TWI_PINS_20_21); // set master mode on pins 21/20
-    setClockRate(defaultClockRate);
-    setBaudRate(defaultBaudRate);
-    pinMode(7, INPUT);
-    wakeUp();
 }
 
 
@@ -26,42 +18,14 @@ IUI2C::IUI2C() :
 ============================================================================= */
 
 /**
- * Switch to ACTIVE power mode
- *
- * I2C cannot really be turned off, so in practice, this does nothing
+ * Set up the component and finalize the object initialization
  */
-void IUI2C::wakeUp()
+void IUI2C::setupHardware()
 {
-    m_powerMode = powerMode::ACTIVE;
-}
-
-/**
- * Switch to SLEEP power mode
- * I2C cannot really be turned off, so in practice, this does nothing
- */
-void IUI2C::sleep()
-{
-    m_powerMode = powerMode::SLEEP;
-}
-
-/**
- * Switch to SUSPEND power mode
- * I2C cannot really be turned off, so in practice, this does nothing
- */
-void IUI2C::suspend()
-{
-    m_powerMode = powerMode::SUSPEND;
-}
-
-/**
- * Set the I2C frequency
- * This includes a delay.
- */
-void IUI2C::setClockRate( uint32_t clockRate)
-{
-    m_clockRate = clockRate;
-    Wire.setClock(m_clockRate);
+    Wire.begin(TWI_PINS_20_21); // set master mode on pins 21/20
+    Wire.setClock(CLOCK_RATE);
     delay(2000);
+    wakeUp();
 }
 
 
@@ -81,16 +45,15 @@ bool IUI2C::writeByte(uint8_t address, uint8_t subAddress, uint8_t data)
     uint8_t temp[2];
     temp[0] = subAddress;
     temp[1] = data;
-    m_readError = Wire.transfer(address, &temp[0], 2, NULL, 0);
-    if (isReadError())
+    byte errorCode = Wire.transfer(address, &temp[0], 2, NULL, 0);
+    if (errorCode != 0x00)
     {
-        if (!m_silent)
+        m_errorFlag = true;
+        if (debugMode)
         {
-            port->print("Error Code:");
-            port->println(m_readError);
+            debugPrint("Error Code:", false);
+            debugPrint(errorCode);
         }
-        m_errorMessage = "I2CERR";
-        resetReadError();
         return false;
     }
     return true;
@@ -110,7 +73,7 @@ bool IUI2C::writeByte(uint8_t address, uint8_t subAddress, uint8_t data,
     {
         if (callbackDebugMode)
         {
-            debugPrint(F("I2CERR"));
+            debugPrint(F("I2C error"));
         }
     }
     return success;
@@ -125,16 +88,15 @@ bool IUI2C::writeByte(uint8_t address, uint8_t subAddress, uint8_t data,
 uint8_t IUI2C::readByte(uint8_t address, uint8_t subAddress)
 {
     uint8_t temp[1];
-    m_readError = Wire.transfer(address, &subAddress, 1, &temp[0], 1);
-    if (isReadError())
+    byte errorCode = Wire.transfer(address, &subAddress, 1, &temp[0], 1);
+    if (isError())
     {
-        if (!m_silent)
+        m_errorFlag = true;
+        if (debugMode)
         {
-            port->print("Error Code:");
-            port->println(m_readError);
+            debugPrint("Error Code:", false);
+            debugPrint(errorCode);
         }
-        m_errorMessage = "I2CERR";
-        resetReadError();
         return 0;
     }
     return temp[0];
@@ -154,7 +116,7 @@ uint8_t IUI2C::readByte(uint8_t address, uint8_t subAddress,
     {
         if (callbackDebugMode)
         {
-            debugPrint(F("I2CERR"));
+            debugPrint(F("I2C error"));
         }
         return 0;
     }
@@ -177,20 +139,19 @@ bool IUI2C::readBytes(uint8_t address, uint8_t subAddress, uint8_t count,
         return false;
     }
     m_readFlag = false;
-    m_readError = Wire.transfer(address, &subAddress, 1, destination, count);
-    bool success = (!isReadError());
-    if (!success)
-    {
-        if (!m_silent)
-        {
-            port->print("Error Code:");
-            port->println(m_readError);
-        }
-        m_errorMessage = "I2CERR";
-        resetReadError();
-    }
+    byte errorCode = Wire.transfer(address, &subAddress, 1, destination, count);
     m_readFlag = true;
-    return success;
+    if (errorCode != 0x00)
+    {
+        m_errorFlag = true;
+        if (debugMode)
+        {
+            debugPrint("Error Code:", false);
+            debugPrint(errorCode);
+        }
+        return false;
+    }
+    return true;
 }
 
 /**
@@ -215,7 +176,7 @@ bool IUI2C::readBytes(uint8_t address, uint8_t subAddress, uint8_t count,
     {
         if (callbackDebugMode)
         {
-            debugPrint(F("I2CERR"));
+            debugPrint(F("I2C error"));
         }
     }
     m_readFlag = true;
@@ -256,19 +217,19 @@ bool IUI2C::scanDevices()
         }
         else if (error == 4)
         {
-            if (!m_silent)
+            if (setupDebugMode)
             {
-                port->print("Unknown error at address 0x");
-                if (address < 16) port->print("0");
-                port->println(address, HEX);
+                debugPrint("Unknown error at address 0x", false);
+                if (address < 16) debugPrint("0", false);
+                debugPrint(address, HEX);
             }
         }
     }
     if (nDevices == 0)
     {
-        if (!m_silent)
+        if (setupDebugMode)
         {
-            port->println("No I2C devices found\n");
+            debugPrint("No I2C devices found\n");
         }
         return false;
     }
@@ -305,61 +266,6 @@ bool IUI2C::checkComponentWhoAmI(String componentName, uint8_t address,
     }
     return true;
 }
-
-
-/* =============================================================================
-    Communication through USB
-============================================================================= */
-
-/**
- * Set the Serial baud rate for USB communications
- */
-void IUI2C::setBaudRate(uint32_t baudRate)
-{
-    m_baudRate = baudRate;
-    if (m_begun)
-    {
-        port->flush();
-        delay(2);
-        port->end();
-    }
-    delay(10);
-    port->begin(m_baudRate);
-    m_begun = true;
-}
-
-
-/**
- * Read port (serial) and write the output in the wire buffer
- */
-void IUI2C::updateBuffer()
-{
-    while (port->available() > 0)
-    {
-        char characterRead = port->read();
-        if (characterRead != '\n')
-        {
-            m_wireBuffer.concat(characterRead);
-        }
-    }
-}
-
-/**
- * Empty the wire buffer
- */
-void IUI2C::resetBuffer()
-{
-    m_wireBuffer = "";
-}
-
-/**
- * Print the wire buffer to port (serial)
- */
-void IUI2C::printBuffer()
-{
-    port->println(m_wireBuffer);
-}
-
 
 /* =============================================================================
     Instanciation

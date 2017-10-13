@@ -1,7 +1,5 @@
 #include "IUBMX055Acc.h"
 
-using namespace IUComponent;
-
 
 /* =============================================================================
     Constructors and destructors
@@ -10,11 +8,9 @@ using namespace IUComponent;
 /**
  * Initialize and configure the BMX055 for the accelerometer
  */
-IUBMX055Acc::IUBMX055Acc(IUI2C *iuI2C, uint8_t id,
-                         FeatureBuffer *accelerationX,
-                         FeatureBuffer *accelerationY,
-                         FeatureBuffer *accelerationZ) :
-    Sensor(id, 3, accelerationX,accelerationY, accelerationZ),
+IUBMX055Acc::IUBMX055Acc(IUI2C *iuI2C, const char* name, Feature *accelerationX,
+                         Feature *accelerationY, Feature *accelerationZ) :
+    AsynchronousSensor(name, 3, accelerationX,accelerationY, accelerationZ),
     m_scale(defaultScale),
     m_bandwidth(defaultBandwidth),
     m_filteredData(false),
@@ -22,24 +18,36 @@ IUBMX055Acc::IUBMX055Acc(IUI2C *iuI2C, uint8_t id,
 {
     m_iuI2C = iuI2C;
     m_samplingRate = defaultSamplingRate;
-    if (!m_iuI2C->checkComponentWhoAmI("BMX055 ACC", ADDRESS, WHO_AM_I, I_AM))
-    {
-        m_iuI2C->setErrorMessage("ACCERR");
-        return;
-    }
-    softReset();
-    wakeUp();
-    setScale(m_scale);
-    setSamplingRate(defaultSamplingRate);
-    useUnfilteredData();
-    configureInterrupts();
-    m_asynchronous = true;
 }
 
 
 /* =============================================================================
     Hardware & power management
 ============================================================================= */
+
+/**
+ * Set up the component and finalize the object initialization
+ */
+void IUBMX055Acc::setupHardware()
+{
+    if (!m_iuI2C->checkComponentWhoAmI("BMX055 ACC", ADDRESS, WHO_AM_I, I_AM))
+    {
+        if (debugMode)
+        {
+            debugPrint("ACCERR");
+        }
+        return;
+    }
+    // Setup interrupt pin on the STM32 as IPUT
+    pinMode(INT_PIN, INPUT);
+    softReset();
+    wakeUp();
+    setScale(m_scale);
+    setSamplingRate(m_samplingRate);
+    useUnfilteredData();
+    configureInterrupts();
+    m_asynchronous = true;
+}
 
 /**
  * Reset BMX055 configuration and return to normal power mode
@@ -57,7 +65,7 @@ void IUBMX055Acc::softReset()
  */
 void IUBMX055Acc::wakeUp()
 {
-    Sensor::wakeUp();
+    AsynchronousSensor::wakeUp();
     m_iuI2C->writeByte(ADDRESS, PMU_LPW, 0x00);
     delay(100);
 }
@@ -71,7 +79,7 @@ void IUBMX055Acc::wakeUp()
  */
 void IUBMX055Acc::sleep()
 {
-    Sensor::sleep();
+    AsynchronousSensor::sleep();
     m_iuI2C->writeByte(ADDRESS, PMU_LPW, 0x80);
 }
 
@@ -84,7 +92,7 @@ void IUBMX055Acc::sleep()
  */
 void IUBMX055Acc::suspend()
 {
-    Sensor::suspend();
+    AsynchronousSensor::suspend();
     m_iuI2C->writeByte(ADDRESS, PMU_LPW, 0x20);
 }
 
@@ -92,6 +100,41 @@ void IUBMX055Acc::suspend()
 /* =============================================================================
     Configuration and calibration
 ============================================================================= */
+
+bool IUBMX055Acc::configure(JsonVariant &config)
+{
+    JsonVariant my_config = config[m_name];
+    if (!my_config)
+    {
+        return false;
+    }
+    // Full Scale Range
+    JsonVariant value = my_config["FSR"];
+    if (value.success())
+    {
+        setScale(scaleOption) value.as<int>();
+    }
+    // Filtering and bandwidth
+    value = my_config["BW"];
+    if (value.success())
+    {
+        setBandwidth(bandwidthOption) value.as<int>();
+    }
+    value = my_config["HPF"];
+    if (value.success())
+    {
+        if (value.as<int>())
+        {
+            useFilteredData(m_bandwidth);
+        }
+        else
+        {
+            useUnfilteredData();
+        }
+    }
+    // General sensor config
+    return AsynchronousSensor::configure(config);
+}
 
 /**
  * Set the scale then recompute resolution
@@ -275,37 +318,34 @@ void IUBMX055Acc::processData(uint8_t wireStatus)
 ============================================================================= */
 
 /**
- * Dump acceleration data to serial via I2C - unit is G, in float format
+ * Dump acceleration data to serial - unit is G, in float format
  *
  * NB: We want to do this in *DATA COLLECTION* mode
  */
-void IUBMX055Acc::dumpDataThroughI2C()
+void IUBMX055Acc::sendData(HardwareSerial *port)
 {
-    float accel;
-    byte* data;
-    for (uint8_t i = 0; i < 3; i++)
+    if (loopDebugMode)  // Human readable in the console
     {
-        // Stream float value as 4 bytes
-        accel = toG(m_data[i], m_resolution);
-        data = (byte*) &accel;
-        m_iuI2C->port->write(data, 4);
+        port->print("AX: ");
+        port->println(q15ToFloat(m_data[0]), 4);
+        port->print("AY: ");
+        port->println(q15ToFloat(m_data[1]), 4);
+        port->print("AZ: ");
+        port->println(q15ToFloat(m_data[2]), 4);
+        port->flush();
     }
-}
-
-/**
- * Dump acceleration data to serial via I2C - accel unit is G, in float format
- *
- * NB: We want to do this in *DATA COLLECTION* mode, when debugMode is true
- */
-void IUBMX055Acc::dumpDataForDebugging()
-{
-    m_iuI2C->port->print("AX: ");
-    m_iuI2C->port->println(q15ToFloat(m_data[0]), 4);
-    m_iuI2C->port->print("AY: ");
-    m_iuI2C->port->println(q15ToFloat(m_data[1]), 4);
-    m_iuI2C->port->print("AZ: ");
-    m_iuI2C->port->println(q15ToFloat(m_data[2]), 4);
-    m_iuI2C->port->flush();
+    else  // Send bytes (faster)
+    {
+        float accel;
+        byte* data;
+        for (uint8_t i = 0; i < 3; i++)
+        {
+            // Stream float value as 4 bytes
+            accel = toG(m_data[i], m_resolution);
+            data = (byte*) &accel;
+            port->write(data, 4);
+        }
+    }
 }
 
 

@@ -1,18 +1,28 @@
 #include "IUCAMM8Q.h"
 
-using namespace IUComponent;
-
 
 /* =============================================================================
     Constructors and destructors
 ============================================================================= */
 
-IUCAMM8Q::IUCAMM8Q(IUI2C *iuI2C, uint8_t id) :
-  Sensor(id, 0),
-  m_iuI2C(iuI2C),
-  m_onTime(defaultOnTime),
-  m_period(defaultPeriod),
-  m_forcedMode(defaultForcedMode)
+IUCAMM8Q::IUCAMM8Q(IUI2C *iuI2C, const char* name) :
+    SynchronousSensor(name, 0),
+    m_iuI2C(iuI2C),
+    m_onTime(defaultOnTime),
+    m_period(defaultPeriod),
+    m_forcedMode(defaultForcedMode)
+{
+}
+
+
+/* =============================================================================
+    Hardware & power management
+============================================================================= */
+
+/**
+ * Set up the component and finalize the object initialization
+ */
+void IUCAMM8Q::setupHardware()
 {
     // Start GNSS
     GNSS.begin(Serial2, GNSS.MODE_UBLOX, GNSS.RATE_5HZ);
@@ -27,17 +37,12 @@ IUCAMM8Q::IUCAMM8Q(IUI2C *iuI2C, uint8_t id) :
     GNSS.sleep();
 }
 
-
-/* =============================================================================
-    Hardware & power management
-============================================================================= */
-
 /**
  * Set the power mode to ACTIVE
  */
 void IUCAMM8Q::wakeUp()
 {
-    Sensor::wakeUp();
+    SynchronousSensor::wakeUp();
     //setPeriodic(m_onTime, m_period, true);
 }
 
@@ -46,8 +51,8 @@ void IUCAMM8Q::wakeUp()
  */
 void IUCAMM8Q::sleep()
 {
-  Sensor::sleep();
-  //GNSS.sleep();
+    SynchronousSensor::sleep();
+    //GNSS.sleep();
 }
 
 /**
@@ -58,8 +63,8 @@ void IUCAMM8Q::sleep()
  */
 void IUCAMM8Q::suspend()
 {
-  Sensor::suspend();
-  //GNSS.sleep();
+    SynchronousSensor::suspend();
+    //GNSS.sleep();
 }
 
 
@@ -67,14 +72,43 @@ void IUCAMM8Q::suspend()
     Configuration and calibration
 ============================================================================= */
 
+bool IUCAMM8Q::configure(JsonVariant &config)
+{
+    JsonVariant my_config = config[m_name];
+    if (!my_config)
+    {
+        return false;
+    }
+    // Active duration
+    JsonVariant value = my_config["TON"];
+    if (value.success())
+    {
+        m_onTime = (uint32_t) value.as<int>();
+    }
+    // Cycle duration
+    value = my_config["TCY"];
+    if (value.success())
+    {
+        m_period = (uint32_t) value.as<int>();
+    }
+    // Forced mode
+    value = my_config["FORCE"];
+    if (value.success())
+    {
+        m_forcedMode = (bool) value.as<int>();
+    }
+    setPeriodic(m_onTime, m_period, m_forcedMode);
+    return SynchronousSensor::configure(config);
+}
+
 /**
  * Wrapper around GNSS.setPeriodic method - set the active / inactive behavior
  *
  * @param onTime  the active time (in s) over 'period' duration
  * @param period  the duration of a complete (active + inactive) cycle
  * @param force   if yes, activate forced mode (location can be read even if
- *                device is in its inactive period). If no, location can be read
- *                while inactive.
+ *                device is in its inactive period). If no, location can't be
+ *                read while inactive.
  */
 void IUCAMM8Q::setPeriodic(uint32_t onTime, uint32_t period, bool forced)
 {
@@ -120,17 +154,9 @@ void IUCAMM8Q::readData()
 ============================================================================= */
 
 /**
- *
+ * Send geolocation data to serial
  */
-void IUCAMM8Q::dumpDataThroughI2C()
-{
-  // TODO Implement
-}
-
-/**
- *
- */
-void IUCAMM8Q::dumpDataForDebugging()
+void IUCAMM8Q::sendData(HardwareSerial *port)
 {
   // TODO Implement
 }

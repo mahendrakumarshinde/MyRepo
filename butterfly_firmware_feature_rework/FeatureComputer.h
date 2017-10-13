@@ -1,7 +1,7 @@
 #ifndef FEATURECOMPUTER_H
 #define FEATURECOMPUTER_H
 
-#include "FeatureBuffer.h"
+#include "FeatureClass.h"
 
 
 /* =============================================================================
@@ -13,13 +13,10 @@ class FeatureComputer
     public:
         static const uint8_t maxSourceCount = 5;
         static const uint8_t maxDestinationCount = 5;
-        FeatureComputer(uint8_t id,
-                        uint8_t destinationCount=0,
-                        FeatureBuffer *destination0=NULL,
-                        FeatureBuffer *destination1=NULL,
-                        FeatureBuffer *destination2=NULL,
-                        FeatureBuffer *destination3=NULL,
-                        FeatureBuffer *destination4=NULL);
+        FeatureComputer(uint8_t id, uint8_t destinationCount=0,
+                        Feature *destination0=NULL, Feature *destination1=NULL,
+                        Feature *destination2=NULL, Feature *destination3=NULL,
+                        Feature *destination4=NULL);
         virtual ~FeatureComputer() {}
         virtual uint8_t getId() { return m_id; }
         /***** Configuration *****/
@@ -27,12 +24,12 @@ class FeatureComputer
         virtual void deactivate() { m_active = false; }
         virtual bool isActive() { return m_active; }
         /***** Sources and destinations *****/
-        virtual void addSource(FeatureBuffer *source, uint8_t sectionCount,
+        virtual void addSource(Feature *source, uint8_t sectionCount,
                                uint8_t skippedSectionCount=0);
         virtual uint8_t getSourceCount() { return m_sourceCount; }
-        virtual FeatureBuffer* getSource(uint8_t idx) { return m_sources[idx]; }
+        virtual Feature* getSource(uint8_t idx) { return m_sources[idx]; }
         virtual uint8_t getDestinationCount() { return m_destinationCount; }
-        virtual FeatureBuffer* getDestination(uint8_t idx)
+        virtual Feature* getDestination(uint8_t idx)
             { return m_destinations[idx]; }
         /***** Computation *****/
         virtual bool compute();
@@ -46,13 +43,13 @@ class FeatureComputer
         /***** Sources and destinations *****/
         // Source buffers
         uint8_t m_sourceCount;
-        FeatureBuffer *m_sources[maxSourceCount];
+        Feature *m_sources[maxSourceCount];
         uint8_t m_indexesAsReceiver[maxSourceCount];
         uint8_t m_sectionCount[maxSourceCount];
         uint8_t m_skippedSectionCount[maxSourceCount];
         // Destination buffers
         uint8_t m_destinationCount;
-        FeatureBuffer *m_destinations[maxDestinationCount];
+        Feature *m_destinations[maxDestinationCount];
         /***** Computation *****/
         virtual void m_specializedCompute() {}
 };
@@ -75,10 +72,8 @@ class FeatureComputer
 class SignalEnergyComputer: public FeatureComputer
 {
     public:
-        SignalEnergyComputer(uint8_t id,
-                             FeatureBuffer *destEnergy=NULL,
-                             FeatureBuffer *destPower=NULL,
-                             FeatureBuffer *destRMS=NULL,
+        SignalEnergyComputer(uint8_t id, Feature *destEnergy=NULL,
+                             Feature *destPower=NULL, Feature *destRMS=NULL,
                              bool removeMean=false, bool normalize=false);
         // Change parameters
         void setRemoveMean(bool value) { m_removeMean = value; }
@@ -105,9 +100,9 @@ class SectionSumComputer: public FeatureComputer
 {
     public:
         SectionSumComputer(uint8_t id, uint8_t destinationCount=0,
-                           FeatureBuffer *destination0=NULL,
-                           FeatureBuffer *destination1=NULL,
-                           FeatureBuffer *destination2=NULL,
+                           Feature *destination0=NULL,
+                           Feature *destination1=NULL,
+                           Feature *destination2=NULL,
                            bool normalize=false);
         // Change parameters
         void setNormalize(bool value) { m_normalize = value; }
@@ -129,7 +124,7 @@ class SectionSumComputer: public FeatureComputer
 class MultiSourceSumComputer: public FeatureComputer
 {
     public:
-        MultiSourceSumComputer(uint8_t id, FeatureBuffer *destination0=NULL,
+        MultiSourceSumComputer(uint8_t id, Feature *destination0=NULL,
                            bool normalize=false);
         // Change parameters
         void setNormalize(bool value) { m_normalize = value; }
@@ -153,12 +148,11 @@ class MultiSourceSumComputer: public FeatureComputer
 class Q15FFTComputer: public FeatureComputer
 {
     public:
-        Q15FFTComputer(uint8_t id,
-                       FeatureBuffer *reducedFFT=NULL,
-                       FeatureBuffer *integralRMS=NULL,
-                       FeatureBuffer *integralPeakToPeak=NULL,
-                       FeatureBuffer *doubleIntegralRMS=NULL,
-                       FeatureBuffer *doubleIntegralPeakToPeak=NULL,
+        Q15FFTComputer(uint8_t id, Feature *reducedFFT=NULL,
+                       Feature *integralRMS=NULL,
+                       Feature *integralPeakToPeak=NULL,
+                       Feature *doubleIntegralRMS=NULL,
+                       Feature *doubleIntegralPeakToPeak=NULL,
                        q15_t *allocatedFFTSpace=NULL,
                        uint8_t outputFFTIntegration=1,
                        bool computeReducedFFT=false,
@@ -197,7 +191,7 @@ class Q15FFTComputer: public FeatureComputer
 class Q31FFTComputer: public FeatureComputer
 {
     public:
-        Q31FFTComputer(uint8_t id=0, FeatureBuffer *destination0=NULL);
+        Q31FFTComputer(uint8_t id=0, Feature *destination0=NULL);
 
     protected:
         virtual void m_specializedCompute();
@@ -210,14 +204,14 @@ class Q31FFTComputer: public FeatureComputer
  * Audio decibel computer for Q15 values
  *
  * Sources:
- *      - A Q15 buffer
+ *      - A Q31 buffer
  * Destinations:
  *      - Audio dB value: a float buffer
  */
 class AudioDBComputer: public FeatureComputer
 {
     public:
-        AudioDBComputer(uint8_t id, FeatureBuffer *audioDB=NULL);
+        AudioDBComputer(uint8_t id, Feature *audioDB=NULL);
 
     protected:
         virtual void m_specializedCompute();

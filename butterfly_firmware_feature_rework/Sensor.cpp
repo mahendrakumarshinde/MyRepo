@@ -1,64 +1,27 @@
 #include "Sensor.h"
 
-using namespace IUComponent;
-
 
 /* =============================================================================
-    Constructors and destructors
+    Generic Sensor class
 ============================================================================= */
 
-Sensor::Sensor(uint8_t id, uint8_t destinationCount,
-               FeatureBuffer *destination0, FeatureBuffer *destination1,
-               FeatureBuffer *destination2) :
-    ABCComponent(),
-    m_id(id),
+/***** Constructors and destructors *****/
+
+Sensor::Sensor(const char* name, uint8_t destinationCount,
+               Feature *destination0, Feature *destination1,
+               Feature *destination2) :
+    Component(),
     m_destinationCount(destinationCount)
 {
+    strcpy(m_name, name);
     m_destinations[0] = destination0;
     m_destinations[1] = destination1;
     m_destinations[2] = destination2;
+    setResolution(1); // Default resolution
 }
 
 
-/* =============================================================================
-    Sampling and resolution
-============================================================================= */
-
-/**
- * Rate cannot be set to zero + call prepareDataAcquisition at the end
- */
-void Sensor::setCallbackRate(uint16_t callbackRate)
-{
-    if (callbackRate == 0)
-    {
-        m_callbackRate = defaultCallbackRate;
-    }
-    else
-    {
-        m_callbackRate = callbackRate;
-    }
-    prepareDataAcquisition();
-}
-
-/**
- * Rate cannot be set to zero + call prepareDataAcquisition at the end
- */
-void Sensor::setSamplingRate(uint16_t samplingRate)
-{
-    if (samplingRate == 0)
-    {
-        m_samplingRate = defaultSamplingRate;
-    }
-    else
-    {
-        m_samplingRate = samplingRate;
-    }
-    for (uint8_t i = 0; i < getDestinationCount(); ++i)
-    {
-        m_destinations[i]->setSamplingRate(m_samplingRate);
-    }
-    prepareDataAcquisition();
-}
+/***** Sampling and resolution *****/
 
 void Sensor::setResolution(uint16_t resolution)
 {
@@ -71,27 +34,92 @@ void Sensor::setResolution(uint16_t resolution)
 
 
 /* =============================================================================
-    Data acquisition
+    Asynchronous Sensor
 ============================================================================= */
 
+AsynchronousSensor::AsynchronousSensor(const char* name,
+                                       uint8_t destinationCount,
+                                       Feature *destination0,
+                                       Feature *destination1,
+                                       Feature *destination2) :
+    Sensor(name, destinationCount, destination0, destination1, destination2)
+{
+    m_callbackRate = defaultCallbackRate;
+    setSamplingRate(defaultSamplingRate);
+}
+
+
+/***** Configuration *****/
 
 /**
- * Prepare data acquisition by setting up the sampling rates
+ * Read and apply the config
+ *
+ * @param config  A reference to a JsonVariant, ie a parsed JSON
+ * @return        True if a config was found and applied for the sensor, else
+ *                False
+ */
+bool AsynchronousSensor::configure(JsonVariant &config)
+{
+
+    JsonVariant my_config = config[m_name];
+    if (!my_config)
+    {
+        return false;
+    }
+    uint16_t samplingRate = my_config["FREQ"];
+    if (samplingRate)
+    {
+        setSamplingRate(samplingRate);
+    }
+    return Sensor::configure(config);
+}
+
+
+
+/***** Sampling and resolution *****/
+
+/**
+ * Rate cannot be set to zero + call computeDownclockingRate at the end
+ */
+void AsynchronousSensor::setCallbackRate(uint16_t callbackRate)
+{
+    m_callbackRate = callbackRate;
+    computeDownclockingRate();
+}
+
+/**
+ * Rate cannot be set to zero + call computeDownclockingRate at the end
+ */
+void AsynchronousSensor::setSamplingRate(uint16_t samplingRate)
+{
+    m_samplingRate = samplingRate;
+    for (uint8_t i = 0; i < getDestinationCount(); ++i)
+    {
+        m_destinations[i]->setSamplingRate(m_samplingRate);
+    }
+    computeDownclockingRate();
+}
+
+/**
+ * Compute the downclocking rate from the callback and sampling rates
  *
  * Should be called every time the callback or sampling rates are modified.
  */
-void Sensor::prepareDataAcquisition()
+void AsynchronousSensor::computeDownclockingRate()
 {
     m_downclocking = m_callbackRate / m_samplingRate;
     m_downclockingCount = 0;
 }
 
+
+/***** Data acquisition *****/
+
 /**
- * Acquire new data and transmit it to receivers, while handling down-clocking
+ * Acquire new data, while handling down-clocking
  *
  * @return true if new data were acquired, else false
  */
-bool Sensor::acquireData()
+bool AsynchronousSensor::acquireData()
 {
     m_downclockingCount++;
     if (m_downclocking != m_downclockingCount)
@@ -99,6 +127,14 @@ bool Sensor::acquireData()
         return false;
     }
     m_downclockingCount = 0;
+    // Check if destinations are ready
+    for (uint8_t i = 0; i < m_destinationCount; ++i)
+    {
+        if(!m_destinations[i]->isReadyToRecord())
+        {
+            return false;
+        }
+    }
     readData();
     for (uint8_t i = 0; i < m_destinationCount; ++i)
     {
@@ -106,4 +142,110 @@ bool Sensor::acquireData()
         m_destinations[i]->setResolution(m_resolution);
     }
     return true;
+}
+
+
+/* =============================================================================
+    Synchronous Sensor
+============================================================================= */
+
+SynchronousSensor::SynchronousSensor(const char* name,
+                                     uint8_t destinationCount,
+                                     Feature *destination0,
+                                     Feature *destination1,
+                                     Feature *destination2) :
+    Sensor(name, destinationCount, destination0, destination1, destination2),
+    m_usagePreset(SynchronousSensor::defaultUsagePreset),
+    m_lastAcquisitionTime(0),
+{
+    for (uint8_t i = 0; i < getDestinationCount(); ++i)
+    {
+        /* TODO For now synchronous sensors sends 0 as sampling rates to their
+        receivers. Change this? Is it worth it? */
+        m_destinations[i]->setSamplingRate(0);
+    }
+}
+
+
+/***** Configuration *****/
+
+/**
+ * Read and apply the config
+ *
+ * @param config  A reference to a JsonVariant, ie a parsed JSON
+ * @return        True if a config was found and applied for the sensor, else
+ *                False
+ */
+bool SynchronousSensor::configure(JsonVariant &config)
+{
+
+    JsonVariant my_config = config[m_name];
+    if (!my_config)
+    {
+        return false;
+    }
+    JsonVariant value = my_config["USG"];
+    if (value.success())
+    {
+        changeUsagePreset((usagePreset) value.as<int>())
+    }
+    return Sensor::configure(config);
+}
+
+/**
+ * Change the usagePreset
+ *
+ * @param usage  A usagePreset (Low, Regular, Enhanced, High)
+ */
+void SynchronousSensor::changeUsagePreset(SynchronousSensor::usagePreset usage)
+{
+    switch (m_usageMode)
+    {
+    case usagePreset::P_LOW:
+        switchToLowUsage();
+        break;
+    case usagePreset::P_REGULAR:
+        switchToRegularUsage();
+        break;
+    case usagePreset::P_ENHANCED:
+        switchToEnhancedUsage();
+        break;
+    case usagePreset::P_HIGH:
+        switchToHighUsage();
+        break;
+    default:
+        if (debugMode)
+        {
+            debugPrint(F("Unknown usagePreset "), false);
+            debugPrint(usage);
+        }
+    }
+}
+
+
+/***** Data acquisition *****/
+
+/**
+ * Acquire new data, while handling down-clocking
+ *
+ * @return true if new data were acquired, else false
+ */
+bool SynchronousSensor::acquireData()
+{
+    uint32_t now = millis();
+    if (m_lastAcquisitionTime + m_samplingPeriod > now
+            && m_lastAcquisitionTime < now )  // Handle millis() overflow
+    {
+        return false;
+    }
+    // Check if destinations are ready
+    for (uint8_t i = 0; i < m_destinationCount; ++i)
+    {
+        if(!m_destinations[i]->isReadyToRecord())
+        {
+            return false;
+        }
+    }
+    readData();
+    m_lastAcquisitionTime = now;
 }

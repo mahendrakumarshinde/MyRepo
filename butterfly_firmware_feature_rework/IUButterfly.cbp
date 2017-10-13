@@ -34,11 +34,17 @@
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 		</Compiler>
-		<Unit filename="ABCInterface.h" />
-		<Unit filename="FeatureBuffer.cpp" />
-		<Unit filename="FeatureBuffer.h" />
+		<Unit filename="Component.h" />
+		<Unit filename="Conductor.cpp" />
+		<Unit filename="Conductor.h" />
+		<Unit filename="Configurator.cpp" />
+		<Unit filename="Configurator.h" />
+		<Unit filename="FeatureClass.cpp" />
+		<Unit filename="FeatureClass.h" />
 		<Unit filename="FeatureComputer.cpp" />
 		<Unit filename="FeatureComputer.h" />
+		<Unit filename="FeatureStreamingGroup.cpp" />
+		<Unit filename="FeatureStreamingGroup.h" />
 		<Unit filename="Features.cpp" />
 		<Unit filename="Features.h" />
 		<Unit filename="IUBMD350.cpp" />
@@ -55,8 +61,6 @@
 		<Unit filename="IUBattery.h" />
 		<Unit filename="IUCAMM8Q.cpp" />
 		<Unit filename="IUCAMM8Q.h" />
-		<Unit filename="IUConductor.cpp" />
-		<Unit filename="IUConductor.h" />
 		<Unit filename="IUESP8285.cpp" />
 		<Unit filename="IUESP8285.h" />
 		<Unit filename="IUI2C.cpp" />
@@ -65,8 +69,8 @@
 		<Unit filename="IUI2S.h" />
 		<Unit filename="IURGBLed.cpp" />
 		<Unit filename="IURGBLed.h" />
-		<Unit filename="IUSensorConfigurator.cpp" />
-		<Unit filename="IUSensorConfigurator.h" />
+		<Unit filename="IUSerial.cpp" />
+		<Unit filename="IUSerial.h" />
 		<Unit filename="Keywords.h" />
 		<Unit filename="Logger.h" />
 		<Unit filename="QualityTest/QA_IUBMX055.h" />
@@ -75,6 +79,7 @@
 		<Unit filename="UnitTest/Test_IUUtilities.h" />
 		<Unit filename="Utilities.cpp" />
 		<Unit filename="Utilities.h" />
+		<Unit filename="butterfly_firmware.cpp" />
 		<Extensions>
 			<envvars />
 			<code_completion />

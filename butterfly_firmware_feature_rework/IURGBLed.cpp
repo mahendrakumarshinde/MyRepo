@@ -1,6 +1,5 @@
 #include "IURGBLed.h"
 
-using namespace IUComponent;
 
 /* =============================================================================
     Constructor & desctructors
@@ -10,7 +9,7 @@ using namespace IUComponent;
 * LED is activated at construction
 */
 IURGBLed::IURGBLed() :
-    ABCComponent(),
+    Component(),
     m_onTimer(50),
     m_nextOffTime(0)
 {
@@ -31,7 +30,7 @@ IURGBLed::IURGBLed() :
  */
 void IURGBLed::sleep()
 {
-    ABCComponent::sleep();
+    Component::sleep();
     turnOff();
 }
 
@@ -40,7 +39,7 @@ void IURGBLed::sleep()
  */
 void IURGBLed::suspend()
 {
-    ABCComponent::sleep();
+    Component::suspend();
     turnOff();
 }
 

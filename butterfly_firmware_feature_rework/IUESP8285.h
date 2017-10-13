@@ -2,43 +2,43 @@
 #define IUESP8285_H
 
 #include <Arduino.h>
+
 #include "Host_WiFiserial.h"
-#include "IUI2C.h"
+#include "IUSerial.h"
 
 
-namespace IUComponent
+/**
+ * Wifi chip
+ *
+ * Component:
+ *   Name:
+ *   ESP-8285
+ * Description:
+ *
+ */
+class IUESP8285 : public IUSerial
 {
-    /**
-     * Wifi chip
-     *
-     * Component:
-     *   Name:
-     *   ESP-8285
-     * Description:
-     *
-     */
-    class IUESP8285 : public ABCComponent
-    {
     public:
-        static constexpr HardwareSerial *port = &Serial3;
         /***** Constructors & desctructors *****/
-        IUESP8285(IUI2C *iuI2C);
+        IUESP8285(HardwareSerial *serialPort, uint32_t rate=57600,
+                  uint16_t dataReceptionTimeout=2000);
         virtual ~IUESP8285() {}
-        /***** Communication with components *****/
+        /***** Hardware and power management *****/
+        virtual void setupHardware();
         virtual void wakeUp();
         virtual void sleep();
         virtual void suspend();
-        /***** WiFi Communication *****/
-        virtual void setBaudRate(uint32_t baudRate);
-        virtual uint32_t getBaudRate() { return m_baudRate; }
+        /***** WiFi communication *****/
 
     protected:
-        IUI2C *m_iuI2C;
-        uint32_t m_baudRate;
-    };
+        /***** Communication *****/
+        char m_buffer[20];
 
-    /***** Instanciation *****/
-    extern IUESP8285 iuWiFi;
 };
+
+
+/***** Instanciation *****/
+
+extern IUESP8285 iuWiFi;
 
 #endif // IUESP8285_H

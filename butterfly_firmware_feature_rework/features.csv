@@ -26,9 +26,9 @@ accelRMS512Z,A9Z,2,1,accelRMS512ZValues
 accelEnergy512Total,E93,2,1,accelEnergy512TotalValues
 accelPower512Total,P93,2,1,accelPower512TotalValues
 accelRMS512Total,A93,2,1,accelRMS512TotalValues
-Q15Feature accelReducedFFTX,FAX,2,50,accelReducedFFTXValues
-Q15Feature accelReducedFFTY,FAY,2,50,accelReducedFFTYValues
-Q15Feature accelReducedFFTZ,FAZ,2,50,accelReducedFFTZValues
+accelReducedFFTX,FAX,2,50,accelReducedFFTXValues
+accelReducedFFTY,FAY,2,50,accelReducedFFTYValues
+accelReducedFFTZ,FAZ,2,50,accelReducedFFTZValues
 velocityAmplitude512X,VVX,2,1,velocityAmplitude512XValues
 velocityAmplitude512Y,VVY,2,1,velocityAmplitude512YValues
 velocityAmplitude512Z,VVZ,2,1,velocityAmplitude512ZValues
@@ -43,12 +43,6 @@ displacementRMS512Y,DAX,2,1,displacementRMS512YValues
 displacementRMS512Z,DAZ,2,1,displacementRMS512ZValues
 temperature,TMP,2,1,temperatureValues
 pressure,PRS,2,1,pressureValues
-Q15Feature audio,SND,4,2048,audioValues
+audio,SND,4,2048,audioValues
 audioDB2048,S11,4,1,audioDB2048Values
 audioDB4096,S12,2,1,audioDB4096Value
-accelEnergy512Total,E93,2,1,accelEnergy512TotalValues
-accelPower512Total,P93,2,1,accelPower512TotalValues
-accelRMS512Total,A93,2,1,accelRMS512TotalValues
-accelEnergy128Total,E73,2,1,accelEnergy128TotalValues
-accelPower128Total,P73,2,1,accelPower128TotalValues
-accelRMS128Total,A73,2,1,accelRMS128TotalValues

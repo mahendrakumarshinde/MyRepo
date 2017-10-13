@@ -5,15 +5,21 @@
     Feature definitions
 ============================================================================= */
 
+/***** Battery load *****/
+
+float batteryLoadValues[2];
+FloatFeature batteryLoad("BAT", 2, 1, batteryLoadValues);
+
+
 /***** Accelerometer Features *****/
 
 // Sensor data
 q15_t accelerationXValues[1024];
 q15_t accelerationYValues[1024];
 q15_t accelerationZValues[1024];
-Q15Feature accelerationX("AAX", 8, 128, accelerationXValues);
-Q15Feature accelerationY("AAY", 8, 128, accelerationYValues);
-Q15Feature accelerationZ("AAZ", 8, 128, accelerationZValues);
+Q15Feature accelerationX("A0X", 8, 128, accelerationXValues);
+Q15Feature accelerationY("A0Y", 8, 128, accelerationYValues);
+Q15Feature accelerationZ("A0Z", 8, 128, accelerationZValues);
 
 
 // 128 sample long accel features
@@ -119,17 +125,23 @@ FloatFeature displacementRMS512Z("DAZ", 2, 1, displacementRMS512ZValues);
 /***** Gyroscope Features *****/
 
 // Sensor data
-//Q15Feature tiltX;
-//Q15Feature tiltY;
-//Q15Feature tiltZ;
+q15_t tiltXValues[2];
+q15_t tiltYValues[2];
+q15_t tiltZValues[2];
+Q15Feature tiltX("T0X", 2, 1, tiltXValues);
+Q15Feature tiltY("T0Y", 2, 1, tiltYValues);
+Q15Feature tiltZ("T0Z", 2, 1, tiltZValues);
 
 
 /***** Magnetometer Features *****/
 
 // Sensor data
-//Q15Feature magnetometerX;
-//Q15Feature magnetometerY;
-//Q15Feature magnetometerZ;
+q15_t magneticXValues[2];
+q15_t magneticYValues[2];
+q15_t magneticZValues[2];
+Q15Feature magneticX("M0X", 2, 1, magneticXValues);
+Q15Feature magneticY("M0Y", 2, 1, magneticYValues);
+Q15Feature magneticZ("M0Z", 2, 1, magneticZValues);
 
 
 /***** Barometer Features *****/
@@ -144,8 +156,8 @@ FloatFeature pressure("PRS", 2, 1, pressureValues);
 /***** Audio Features *****/
 
 // Sensor data
-q15_t audioValues[8192];
-Q15Feature audio("SND", 4, 2048, audioValues);
+q31_t audioValues[8192];
+Q31Feature audio("SND", 4, 2048, audioValues);
 
 // 2048 sample long features
 float audioDB2048Values[4];
@@ -154,6 +166,83 @@ FloatFeature audioDB2048("S11", 4, 1, audioDB2048Values);
 // 4096 sample long features
 float audioDB4096Values[2];
 FloatFeature audioDB4096("S12", 2, 1, audioDB4096Values);
+
+
+/***** GNSS Feature *****/
+
+
+
+/***** Pointers *****/
+
+Feature *FEATURES[FEATURE_COUNT] = {
+    &accelerationX,
+    &accelerationY,
+    &accelerationZ,
+    &accelEnergy128X,
+    &accelEnergy128Y,
+    &accelEnergy128Z,
+    &accelPower128X,
+    &accelPower128Y,
+    &accelPower128Z,
+    &accelRMS128X,
+    &accelRMS128Y,
+    &accelRMS128Z,
+    &accelEnergy128Total,
+    &accelPower128Total,
+    &accelRMS128Total,
+    &accelEnergy512X,
+    &accelEnergy512Y,
+    &accelEnergy512Z,
+    &accelPower512X,
+    &accelPower512Y,
+    &accelPower512Z,
+    &accelRMS512X,
+    &accelRMS512Y,
+    &accelRMS512Z,
+    &accelEnergy512Total,
+    &accelPower512Total,
+    &accelRMS512Total,
+    &accelReducedFFTX,
+    &accelReducedFFTY,
+    &accelReducedFFTZ,
+    &velocityAmplitude512X,
+    &velocityAmplitude512Y,
+    &velocityAmplitude512Z,
+    &velocityRMS512X,
+    &velocityRMS512Y,
+    &velocityRMS512Z,
+    &displacementAmplitude512X,
+    &displacementAmplitude512Y,
+    &displacementAmplitude512Z,
+    &displacementRMS512X,
+    &displacementRMS512Y,
+    &displacementRMS512Z,
+    &temperature,
+    &pressure,
+    &audio,
+    &audioDB2048,
+    &audioDB4096,
+};
+
+
+/***** Selectors*****/
+
+/**
+ * Return a pointer to the 1st existing Feature that has given name.
+ *
+ * NB: Will return a NULL pointer if no such Feature is found
+ */
+Feature* getFeatureByName(const char* name)
+{
+    for (uint8_t i = 0; i < FEATURE_COUNT; ++i)
+    {
+        if (FEATURES[i]->isNamed(name))
+        {
+            return FEATURES[i];
+        }
+    }
+    return NULL;
+}
 
 
 /* =============================================================================
@@ -240,59 +329,10 @@ AudioDBComputer audioDB2048Computer(14, &audioDB2048);
 AudioDBComputer audioDB4096Computer(15, &audioDB4096);
 
 
-/* =============================================================================
-    Utilities
-============================================================================= */
+/***** Pointers *****/
 
-FeatureBuffer *FEATURES[FEATURE_COUNT] = {
-    &accelerationX,
-    &accelerationY,
-    &accelerationZ,
-    &accelEnergy128X,
-    &accelEnergy128Y,
-    &accelEnergy128Z,
-    &accelPower128X,
-    &accelPower128Y,
-    &accelPower128Z,
-    &accelRMS128X,
-    &accelRMS128Y,
-    &accelRMS128Z,
-    &accelEnergy128Total,
-    &accelPower128Total,
-    &accelRMS128Total,
-    &accelEnergy512X,
-    &accelEnergy512Y,
-    &accelEnergy512Z,
-    &accelPower512X,
-    &accelPower512Y,
-    &accelPower512Z,
-    &accelRMS512X,
-    &accelRMS512Y,
-    &accelRMS512Z,
-    &accelEnergy512Total,
-    &accelPower512Total,
-    &accelRMS512Total,
-    &accelReducedFFTX,
-    &accelReducedFFTY,
-    &accelReducedFFTZ,
-    &velocityAmplitude512X,
-    &velocityAmplitude512Y,
-    &velocityAmplitude512Z,
-    &velocityRMS512X,
-    &velocityRMS512Y,
-    &velocityRMS512Z,
-    &displacementAmplitude512X,
-    &displacementAmplitude512Y,
-    &displacementAmplitude512Z,
-    &displacementRMS512X,
-    &displacementRMS512Y,
-    &displacementRMS512Z,
-    &temperature,
-    &pressure,
-    &audio,
-    &audioDB2048,
-    &audioDB4096,
-};
+// Some featureComputers alter there data source, so it is important that those
+// be listed last of all the computers that use the same data source.
 
 FeatureComputer *FEATURE_COMPUTERS[FEATURE_COMPUTER_COUNT] = {
     &accel128XComputer,
@@ -312,6 +352,86 @@ FeatureComputer *FEATURE_COMPUTERS[FEATURE_COMPUTER_COUNT] = {
     &audioDB4096Computer,
 };
 
+
+/***** Selectors*****/
+
+/**
+ * Return a pointer to the 1st existing FeatureComputer that has given id.
+ *
+ * NB: Will return a NULL pointer if no such FeatureComputer is found
+ */
+FeatureComputer* getFeatureComputerById(uint8_t id)
+{
+    for (uint8_t i = 0; i < FEATURE_COMPUTER_COUNT; ++i)
+    {
+        if (FEATURE_COMPUTERS[i]->getId() == id)
+        {
+            return FEATURE_COMPUTERS[i];
+        }
+    }
+    return NULL;
+}
+
+
+/* =============================================================================
+    Sensors declarations
+============================================================================= */
+
+IUBattery iuBattery(&iuI2C, "BAT", &batteryLoad);
+IUBMP280 iuAltimeter(&iuI2C, "ALT", &temperature, &pressure);
+IUBMX055Acc iuAccelerometer(&iuI2C, "ACC", &accelerationX, &accelerationY,
+                            &accelerationZ);
+IUBMX055Gyro iuGyroscope(&iuI2C, "GYR", &tiltX, &tiltY, &tiltZ);
+IUBMX055Mag iuBMX055Mag(&iuI2C, "MAG", &magneticX, &magneticY, &magneticZ);
+IUCAMM8Q iuGNSS(&iuI2C, "GPS");
+IUI2S iuI2S(&iuI2C, "MIC", &audio);
+
+
+/***** Pointers *****/
+
+Sensor *SENSORS[SENSOR_COUNT] = {
+    &iuBattery,
+    &iuAltimeter,
+    &iuAccelerometer,
+    &iuGyroscope,
+    &iuBMX055Mag,
+    &iuGNSS,
+    &iuI2S
+};
+
+
+/***** Selectors*****/
+
+/**
+ * Return a pointer to the 1st existing sensor that has given name.
+ *
+ * NB: Will return a NULL pointer if no such sensor is found
+ */
+Sensor* getSensorByName(const char* name)
+{
+    for (uint8_t i = 0; i < SENSOR_COUNT; ++i)
+    {
+        if (SENSORS[i]->isNamed(name))
+        {
+            return SENSORS[i];
+        }
+    }
+    return NULL;
+}
+
+
+/* =============================================================================
+    Feature streaming group declarations
+============================================================================= */
+
+FeatureStreamingGroup featureGroup1(1);
+FeatureStreamingGroup featureGroup2(2);
+FeatureStreamingGroup featureGroup3(3);
+
+
+/* =============================================================================
+    Utilities
+============================================================================= */
 
 /***** Computers setup *****/
 
@@ -366,43 +486,6 @@ void setUpComputerSource()
 }
 
 
-/***** Feature and computer selectors*****/
-
-/**
- * Return a pointer to the 1st existing FeatureBuffer that has given name.
- *
- * NB: Will return a NULL pointer if no such FeatureBuffer is found
- */
-FeatureBuffer* getFeatureByName(const char* name)
-{
-    for (uint8_t i = 0; i < FEATURE_COUNT; ++i)
-    {
-        if (FEATURES[i]->isNamed(name))
-        {
-            return FEATURES[i];
-        }
-    }
-    return NULL;
-}
-
-/**
- * Return a pointer to the 1st existing FeatureComputer that has given id.
- *
- * NB: Will return a NULL pointer if no such FeatureComputer is found
- */
-FeatureComputer* getFeatureComputerById(uint8_t id)
-{
-    for (uint8_t i = 0; i < FEATURE_COMPUTER_COUNT; ++i)
-    {
-        if (FEATURE_COMPUTERS[i]->getId() == id)
-        {
-            return FEATURE_COMPUTERS[i];
-        }
-    }
-    return NULL;
-}
-
-
 /***** Activate / deactivate features *****/
 
 /**
@@ -411,10 +494,14 @@ FeatureComputer* getFeatureComputerById(uint8_t id)
  * Also recursively activate the computation of all the feature's required
  * components (ie the sources of its computer).
  */
-void activateFeature(FeatureBuffer* feature)
+void activateFeature(Feature* feature)
 {
     feature->activate();
     uint8_t compId = feature->getComputerId();
+    if (compId == 0)
+    {
+        return;
+    }
     FeatureComputer* computer = getFeatureComputerById(compId);
     if (computer != NULL)
     {
@@ -426,6 +513,7 @@ void activateFeature(FeatureBuffer* feature)
             activateFeature(computer->getSource(i));
         }
     }
+    // TODO Activate sensors as well?
 }
 
 /**
@@ -435,7 +523,7 @@ void activateFeature(FeatureBuffer* feature)
  *  - it is not streaming
  *  - all it's receivers (computers who use it as source) are deactivated
  */
-bool isFeatureDeactivatable(FeatureBuffer* feature)
+bool isFeatureDeactivatable(Feature* feature)
 {
     if (feature->isStreaming())
     {
@@ -456,91 +544,201 @@ bool isFeatureDeactivatable(FeatureBuffer* feature)
 /**
  * Deactivate the computation of a feature
  *
+ * Will also disable the feature streaming.
  * Will also check if the computation of the feature's required components can
- * be deactivate.
+ * be deactivated.
  */
-void deactivateFeature(FeatureBuffer* feature)
+void deactivateFeature(Feature* feature)
 {
     feature->deactivate();
     uint8_t compId = feature->getComputerId();
-    FeatureComputer* computer = getFeatureComputerById(compId);
-    if (computer != NULL)
+    if (compId != 0)
     {
-        // If none of the computer's destinations are active, the computer can
-        // be deactivated too.
-        bool deactivatable = true;
-        for (uint8_t i = 0; i < computer->getDestinationCount(); ++i)
+        FeatureComputer* computer = getFeatureComputerById(compId);
+        if (computer != NULL)
         {
-            deactivatable &= (!computer->getDestination(i)->isActive());
-        }
-        if (deactivatable)
-        {
-            computer->deactivate();
-            //
-            FeatureBuffer* antecedent;
-            for (uint8_t i = 0; i < computer->getSourceCount(); ++i)
+            // If none of the computer's destinations are active, the computer
+            // can be deactivated too.
+            bool deactivatable = true;
+            for (uint8_t i = 0; i < computer->getDestinationCount(); ++i)
             {
-                antecedent = computer->getSource(i);
-                if (!isFeatureDeactivatable(antecedent))
+                deactivatable &= (!computer->getDestination(i)->isActive());
+            }
+            if (deactivatable)
+            {
+                computer->deactivate();
+                //
+                Feature* antecedent;
+                for (uint8_t i = 0; i < computer->getSourceCount(); ++i)
                 {
-                    deactivateFeature(antecedent);
+                    antecedent = computer->getSource(i);
+                    if (!isFeatureDeactivatable(antecedent))
+                    {
+                        deactivateFeature(antecedent);
+                    }
                 }
             }
         }
     }
+    // TODO Deactivate sensors as well?
 }
 
 /**
- * Disable the streaming of a feature
- *
- * Will also check if the computation of the feature can be deactivated.
+ * Deactivate all features and feature computers
  */
-void enableStreaming(FeatureBuffer* feature)
+void deactivateEverything()
 {
-    feature->enableStreaming();
+    featureGroup1.reset();
+    featureGroup2.reset();
+    featureGroup3.reset();
+    for (uint8_t i = 0; i < FEATURE_COUNT; ++i)
+    {
+        FEATURES[i]->deactivate();
+    }
+    for (uint8_t i = 0; i < FEATURE_COMPUTER_COUNT; ++i)
+    {
+        FEATURE_COMPUTERS[i]->deactivate();
+    }
+    // TODO Deactivate sensors as well?
+}
+
+
+/***** Configuration *****/
+
+/**
+ * Applied the given config to the feature.
+ */
+bool configureFeature(Feature *feature, JsonVariant &config)
+{
+    JsonVariant my_config = config[feature->getName()];
+    if (!my_config)
+    {
+        return false;
+    }
+    // Activate the feature
     activateFeature(feature);
+    // Configure the streaming
+    JsonVariant group = my_config["GRP"];
+    JsonVariant index = my_config["IDX"];
+    if (group.success() && index.success())
+    {
+        switch(group.as<int>())
+        {
+            case 1:
+                featureGroup1.add((uint8_t) (index.as<int>()), feature);
+                break;
+            case 2:
+                featureGroup2.add((uint8_t) (index.as<int>()), feature);
+                break;
+            case 3:
+                featureGroup3.add((uint8_t) (index.as<int>()), feature);
+                break;
+        }
+    }
+    JsonVariant value = my_config["OPS"];
+    if (value)
+    {
+        if (value.as<int>())
+        {
+            feature->enableOperationState();
+        }
+        else
+        {
+            feature->disableOperationState();
+        }
+    }
+    // Thresholds setting
+    value = my_config["TRH"][0];
+    if (value.success())
+    {
+        feature->setThreshold(0, value);
+    }
+    value = my_config["TRH"][1];
+    if (value.success())
+    {
+        feature->setThreshold(1, value);
+    }
+    value = my_config["TRH"][2];
+    if (value.success())
+    {
+        feature->setThreshold(2, value);
+    }
+    if (debugMode)
+    {
+        debugPrint(F("Configured feature "), false);
+        debugPrint(feature->getName());
+    }
+    return true;
 }
 
 /**
- * Disable the streaming of a feature
- *
- * Will also check if the computation of the feature can be deactivated.
+ * Check if at least one feature is streaming.
  */
-void disableStreaming(FeatureBuffer* feature)
+bool atLeastOneStreamingFeature()
 {
-    feature->disableStreaming();
-    deactivateFeature(feature);
+    for (uint8_t i = 0; i < FEATURE_COUNT; ++i)
+    {
+        if (FEATURES[i]->isStreaming())
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 
 /***** Default feature sets *****/
 
+void enableCalibrationFeatures()
+{
+    //calibrationFeatureGroup.setDataSendPeriod(defaultDataSendPeriod);
+}
+
 void enableMotorFeatures()
 {
-    for (uint8_t i = 0; i < FEATURE_COUNT; ++i)
-    {
-        disableStreaming(FEATURES[i]);
-    }
-    enableStreaming(getFeatureByName("E93"));
-    enableStreaming(getFeatureByName("VAX"));
-    enableStreaming(getFeatureByName("VAY"));
-    enableStreaming(getFeatureByName("VAZ"));
-    enableStreaming(getFeatureByName("TMP"));
-    enableStreaming(getFeatureByName("S11"));
+    deactivateEverything();
+    Feature *feature = getFeatureByName("E93");
+    activateFeature(feature);
+    featureGroup1.add(0, feature);
+    feature = getFeatureByName("VAX");
+    activateFeature(feature);
+    featureGroup1.add(1, feature);
+    feature = getFeatureByName("VAY");
+    activateFeature(feature);
+    featureGroup1.add(2, feature);
+    feature = getFeatureByName("VAZ");
+    activateFeature(feature);
+    featureGroup1.add(3, feature);
+    feature = getFeatureByName("TMP");
+    activateFeature(feature);
+    featureGroup1.add(4, feature);
+    feature = getFeatureByName("S11");
+    activateFeature(feature);
+    featureGroup1.add(5, feature);
+
 }
 
 void enablePressFeatures()
 {
-    for (uint8_t i = 0; i < FEATURE_COUNT; ++i)
-    {
-        disableStreaming(FEATURES[i]);
-    }
-    enableStreaming(getFeatureByName("E93"));
-    enableStreaming(getFeatureByName("E9X"));
-    enableStreaming(getFeatureByName("E9Y"));
-    enableStreaming(getFeatureByName("E9Z"));
-    enableStreaming(getFeatureByName("TMP"));
-    enableStreaming(getFeatureByName("S11"));
+    deactivateEverything();
+    Feature *feature = getFeatureByName("E93");
+    activateFeature(feature);
+    featureGroup1.add(0, feature);
+    feature = getFeatureByName("E9X");
+    activateFeature(feature);
+    featureGroup1.add(1, feature);
+    feature = getFeatureByName("E9Y");
+    activateFeature(feature);
+    featureGroup1.add(2, feature);
+    feature = getFeatureByName("E9Z");
+    activateFeature(feature);
+    featureGroup1.add(3, feature);
+    feature = getFeatureByName("TMP");
+    activateFeature(feature);
+    featureGroup1.add(4, feature);
+    feature = getFeatureByName("S11");
+    activateFeature(feature);
+    featureGroup1.add(5, feature);
 }
 
 void exposeAllFeatureConfigurations()

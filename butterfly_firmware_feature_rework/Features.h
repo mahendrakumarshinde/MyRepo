@@ -1,13 +1,30 @@
 #ifndef FEATURES_H
 #define FEATURES_H
 
-#include "FeatureBuffer.h"
+#include <ArduinoJson.h>
+
+#include "FeatureClass.h"
 #include "FeatureComputer.h"
+#include "FeatureStreamingGroup.h"
+#include "IUI2C.h"
+#include "IUBattery.h"
+#include "IUBMP280.h"
+#include "IUBMX055Acc.h"
+#include "IUBMX055Gyro.h"
+#include "IUBMX055Mag.h"
+#include "IUCAMM8Q.h"
+#include "IUI2S.h"
 
 
 /* =============================================================================
     Feature declarations
 ============================================================================= */
+
+/***** Battery load *****/
+
+extern float batteryLoadValues[2];
+extern FloatFeature batteryLoad;
+
 
 /***** Accelerometer Features *****/
 
@@ -120,34 +137,40 @@ extern FloatFeature displacementRMS512Z;
 /***** Gyroscope Features *****/
 
 // Sensor data
-//extern Q15Feature tiltX;
-//extern Q15Feature tiltY;
-//extern Q15Feature tiltZ;
+extern q15_t tiltXValues[2];
+extern q15_t tiltYValues[2];
+extern q15_t tiltZValues[2];
+extern Q15Feature tiltX;
+extern Q15Feature tiltY;
+extern Q15Feature tiltZ;
 
 
 /***** Magnetometer Features *****/
 
 // Sensor data
-//extern Q15Feature magneticX;
-//extern Q15Feature magneticY;
-//extern Q15Feature magneticZ;
+extern q15_t magneticXValues[2];
+extern q15_t magneticYValues[2];
+extern q15_t magneticZValues[2];
+extern Q15Feature magneticX;
+extern Q15Feature magneticY;
+extern Q15Feature magneticZ;
 
 
 /***** Barometer Features *****/
 
 // Sensor data
 extern float temperatureValues[2];
-extern float pressureValues[2];
-
 extern FloatFeature temperature;
+
+extern float pressureValues[2];
 extern FloatFeature pressure;
 
 
 /***** Audio Features *****/
 
 // Sensor data
-extern q15_t audioValues[8192];
-extern Q15Feature audio;
+extern q31_t audioValues[8192];
+extern Q31Feature audio;
 
 // 2048 sample long features
 extern float audioDB2048Values[4];
@@ -156,6 +179,20 @@ extern FloatFeature audioDB2048;
 // 4096 sample long features
 extern float audioDB4096Values[2];
 extern FloatFeature audioDB4096;
+
+
+/***** GNSS Feature *****/
+
+
+/***** Pointers *****/
+
+const uint8_t FEATURE_COUNT = 47;
+extern Feature *FEATURES[FEATURE_COUNT];
+
+
+/***** Selector *****/
+
+Feature* getFeatureByName(const char* name);
 
 
 /* =============================================================================
@@ -197,32 +234,72 @@ extern AudioDBComputer audioDB2048Computer;
 extern AudioDBComputer audioDB4096Computer;
 
 
-/* =============================================================================
-    Utilities
-============================================================================= */
-
-const uint8_t FEATURE_COUNT = 47;
-extern FeatureBuffer *FEATURES[FEATURE_COUNT];
+/***** Pointers *****/
 
 const uint8_t FEATURE_COMPUTER_COUNT = 15;
 extern FeatureComputer *FEATURE_COMPUTERS[FEATURE_COMPUTER_COUNT];
 
+
+/***** Selector *****/
+
+FeatureComputer* getFeatureComputerById(uint8_t id);
+
+
+/* =============================================================================
+    Sensors declarations
+============================================================================= */
+
+extern IUBattery iuBattery;
+extern IUBMP280 iuAltimeter;
+extern IUBMX055Acc iuAccelerometer;
+extern IUBMX055Gyro iuGyroscope;
+extern IUBMX055Mag iuBMX055Mag;
+extern IUCAMM8Q iuGNSS;
+extern IUI2S iuI2S;
+
+
+/***** Pointers *****/
+
+const uint8_t SENSOR_COUNT = 7;
+extern Sensor *SENSORS[SENSOR_COUNT];
+
+
+/***** Selector *****/
+
+Sensor* getSensorByName(const char* name);
+
+
+/* =============================================================================
+    Feature streaming group declarations
+============================================================================= */
+
+extern FeatureStreamingGroup featureGroup1;
+extern FeatureStreamingGroup featureGroup2;
+extern FeatureStreamingGroup featureGroup3;
+
+
+/* =============================================================================
+    Utilities
+============================================================================= */
+
 /***** Computers setup *****/
 void setUpComputerSource();
 
-/***** Feature and computer selectors*****/
-FeatureBuffer* getFeatureByName(const char* name);
-FeatureComputer* getFeatureComputerById(uint8_t id);
 
 /***** Activate / deactivate features *****/
-void activateFeature(FeatureBuffer* feature);
-bool isFeatureDeactivatable(FeatureBuffer* feature);
-void deactivateFeature(FeatureBuffer* feature);
-void enableStreaming(FeatureBuffer* feature);
-void disableStreaming(FeatureBuffer* feature);
+void activateFeature(Feature* feature);
+bool isFeatureDeactivatable(Feature* feature);
+void deactivateFeature(Feature* feature);
+void deactivateEverything();
+
+
+/***** Configuration *****/
+bool configureFeature(Feature *feature, JsonVariant &config);
+bool atLeastOneStreamingFeature();
 
 
 /***** Default feature sets *****/
+void enableCalibrationFeatures();
 void enableMotorFeatures();
 void enablePressFeatures();
 void exposeAllFeatureConfigurations();
