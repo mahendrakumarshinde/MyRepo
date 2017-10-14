@@ -1,11 +1,3 @@
-## Commentaire pour JD sur les features ##
-
-Avantage d'etre en pull => Chaque producer ne stocke ses donnees qu'une fois et les processors (=features) les utilisent
-=> gain de memoire
-=> On cree toutes les features des le debut, et apres on ne fait que les activer / desactiver
-
-
-
 ## BLE, WiFi ##
 
 ### Android App / Hub to device ###
