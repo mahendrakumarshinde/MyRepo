@@ -6,6 +6,13 @@
 #include "IUI2C.h"
 
 
+/***** Data Acquisition callbacks *****/
+
+extern bool newAccelData;
+
+void accelReadCallback(uint8_t wireStatus);
+
+
 /**
  * Accelerometer
  *
@@ -86,6 +93,7 @@ class IUBMX055Acc : public AsynchronousSensor
         void doFastCompensation(float *destination);
         /***** Data acquisition *****/
         void computeResolution();
+        virtual void acquireData();
         virtual void readData();
         q15_t getData(uint8_t index) { return m_data[index]; }
         /***** Communication *****/
@@ -106,7 +114,7 @@ class IUBMX055Acc : public AsynchronousSensor
         q15_t m_rawData[3];     // Q15 accelerometer raw output
         q15_t m_data[3];        // Q15 data (with bias) in G
         q15_t m_bias[3];        // Bias corrections
-        void processData(uint8_t wireStatus);
+        void processData();
 };
 
 #endif // IUBMX055ACC_H

@@ -141,7 +141,7 @@ class Feature
         // streaming the section content for example, to garantee data
         // consistency at section level
         bool m_locked[maxSectionCount];
-        void m_specializedStream(HardwareSerial *port, uint8_t sectionIdx);
+        void m_specializedStream(HardwareSerial *port, uint8_t sectionIdx) {}
 };
 
 

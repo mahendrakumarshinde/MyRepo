@@ -31,11 +31,6 @@ How to handle the value propagation through the features / featureComputers?
 
 **05. To save power: deactivateFeature and activateFeature => Also activate/deactivate sensors automatically?**
 
-**20. Use Avro for message serialization to send features?**
-- Pros / Cons ?
-- Also checked Thrift and ProtocolBuffer, but Avro looks to be the most relevant.
-
 **22. Info about RAM selection (among other)**
 https://github.com/GrumpyOldPizza/arduino-STM32L4/blob/master/variants/STM32L432KC-NUCLEO/linker_scripts/STM32L432KC_FLASH.ld
-
 

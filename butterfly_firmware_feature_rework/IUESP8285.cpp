@@ -22,7 +22,7 @@ IUESP8285::IUESP8285(HardwareSerial *serialPort, uint32_t rate,
  */
 void IUESP8285::setupHardware()
 {
-    IUSerial::setupHardware()
+    IUSerial::setupHardware();
 }
 
 /**

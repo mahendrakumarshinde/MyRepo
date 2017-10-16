@@ -6,9 +6,8 @@
 ============================================================================= */
 
 IUBMX055Gyro::IUBMX055Gyro(IUI2C *iuI2C, const char* name, Feature *tiltX,
-                           Feature *tiltY, Feature *tiltZ);
-    AsynchronousSensor(name, 3, tiltX, tiltY, tiltZ),
-    m_resolution(0)
+                           Feature *tiltY, Feature *tiltZ) :
+    AsynchronousSensor(name, 3, tiltX, tiltY, tiltZ)
 {
     m_iuI2C = iuI2C;
     m_samplingRate = defaultSamplingRate;
@@ -103,16 +102,16 @@ bool IUBMX055Gyro::configure(JsonVariant &config)
         return false;
     }
     // Sampling Rate and bandwidth
-    value = my_config["FREQ"];
+    JsonVariant value = my_config["FREQ"];
     if (value.success())
     {
-        setBandwidth(bandwidthOption) value.as<int>();
+        setBandwidth((bandwidthOption) (value.as<int>()));
     }
     // Full Scale Range
     value = my_config["FSR"];
     if (value.success())
     {
-        setScale(scaleOption) value.as<int>();
+        setScale((scaleOption) (value.as<int>()));
     }
     return true;
 }

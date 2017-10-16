@@ -83,19 +83,19 @@ bool IUCAMM8Q::configure(JsonVariant &config)
     JsonVariant value = my_config["TON"];
     if (value.success())
     {
-        m_onTime = (uint32_t) value.as<int>();
+        m_onTime = (uint32_t) (value.as<int>());
     }
     // Cycle duration
     value = my_config["TCY"];
     if (value.success())
     {
-        m_period = (uint32_t) value.as<int>();
+        m_period = (uint32_t) (value.as<int>());
     }
     // Forced mode
     value = my_config["FORCE"];
     if (value.success())
     {
-        m_forcedMode = (bool) value.as<int>();
+        m_forcedMode = (bool) (value.as<int>());
     }
     setPeriodic(m_onTime, m_period, m_forcedMode);
     return SynchronousSensor::configure(config);

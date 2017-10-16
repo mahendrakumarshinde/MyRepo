@@ -11,10 +11,10 @@ class Configurator
 {
     public:
         /***** Preset values and default settings *****/
-        static constexpr char START_CONFIRM[12] = "IUCMD_START";
-        static constexpr char END_CONFIRM[10] = "IUCMD_END";
+        static char START_CONFIRM[12];
+        static char END_CONFIRM[10];
         /***** Constructors & destructor *****/
-        Configurator() {}
+        Configurator(int placeholder) {}
         virtual ~Configurator() {}
         /***** Serial Reading *****/
         void readFromSerial(IUSerial *iuSerial);

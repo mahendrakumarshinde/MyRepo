@@ -116,15 +116,13 @@ void AsynchronousSensor::computeDownclockingRate()
 
 /**
  * Acquire new data, while handling down-clocking
- *
- * @return true if new data were acquired, else false
  */
-bool AsynchronousSensor::acquireData()
+void AsynchronousSensor::acquireData()
 {
     m_downclockingCount++;
     if (m_downclocking != m_downclockingCount)
     {
-        return false;
+        return;
     }
     m_downclockingCount = 0;
     // Check if destinations are ready
@@ -132,7 +130,7 @@ bool AsynchronousSensor::acquireData()
     {
         if(!m_destinations[i]->isReadyToRecord())
         {
-            return false;
+            return;
         }
     }
     readData();
@@ -141,7 +139,6 @@ bool AsynchronousSensor::acquireData()
         m_destinations[i]->setSamplingRate(m_samplingRate);
         m_destinations[i]->setResolution(m_resolution);
     }
-    return true;
 }
 
 
@@ -156,7 +153,7 @@ SynchronousSensor::SynchronousSensor(const char* name,
                                      Feature *destination2) :
     Sensor(name, destinationCount, destination0, destination1, destination2),
     m_usagePreset(SynchronousSensor::defaultUsagePreset),
-    m_lastAcquisitionTime(0),
+    m_lastAcquisitionTime(0)
 {
     for (uint8_t i = 0; i < getDestinationCount(); ++i)
     {
@@ -187,7 +184,7 @@ bool SynchronousSensor::configure(JsonVariant &config)
     JsonVariant value = my_config["USG"];
     if (value.success())
     {
-        changeUsagePreset((usagePreset) value.as<int>())
+        changeUsagePreset((usagePreset) (value.as<int>()));
     }
     return Sensor::configure(config);
 }
@@ -199,7 +196,7 @@ bool SynchronousSensor::configure(JsonVariant &config)
  */
 void SynchronousSensor::changeUsagePreset(SynchronousSensor::usagePreset usage)
 {
-    switch (m_usageMode)
+    switch (m_usagePreset)
     {
     case usagePreset::P_LOW:
         switchToLowUsage();
@@ -226,24 +223,22 @@ void SynchronousSensor::changeUsagePreset(SynchronousSensor::usagePreset usage)
 /***** Data acquisition *****/
 
 /**
- * Acquire new data, while handling down-clocking
- *
- * @return true if new data were acquired, else false
+ * Acquire new data, while handling sampling period
  */
-bool SynchronousSensor::acquireData()
+void SynchronousSensor::acquireData()
 {
     uint32_t now = millis();
     if (m_lastAcquisitionTime + m_samplingPeriod > now
             && m_lastAcquisitionTime < now )  // Handle millis() overflow
     {
-        return false;
+        return;
     }
     // Check if destinations are ready
     for (uint8_t i = 0; i < m_destinationCount; ++i)
     {
         if(!m_destinations[i]->isReadyToRecord())
         {
-            return false;
+            return ;
         }
     }
     readData();

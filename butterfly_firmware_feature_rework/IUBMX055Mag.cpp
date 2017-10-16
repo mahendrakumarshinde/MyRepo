@@ -110,13 +110,13 @@ bool IUBMX055Mag::configure(JsonVariant &config)
     JsonVariant value = my_config["FREQ"];
     if (value.success())
     {
-        setODR(ODROption) value.as<int>();
+        setODR((ODROption) (value.as<int>()));
     }
     // Accuracy Preset
     value = my_config["ACY"];
     if (value.success())
     {
-        setAccuracy(accuracyPreset) value.as<int>();
+        setAccuracy((accuracyPreset) (value.as<int>()));
     }
     return true;
 }

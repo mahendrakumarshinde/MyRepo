@@ -114,7 +114,7 @@ void loop()
             uint32_t now = millis();
             if(now - lastDone > interval || now < lastDone)
             {
-                lastDisplay = now;
+                lastDone = now;
                 /* === Place your code to excute at fixed interval here ===*/
 
                 /*======*/
@@ -131,7 +131,7 @@ void loop()
         configurator.readFromSerial(&iuWiFi);
         iuRGBLed.autoTurnOff();
         // Acquire data from synchronous sensor
-        conductor.acquireAndSendData(false);
+        conductor.acquireData(false);
         iuRGBLed.autoTurnOff();
         // Feature computation depending on operation mode
         conductor.computeFeatures();

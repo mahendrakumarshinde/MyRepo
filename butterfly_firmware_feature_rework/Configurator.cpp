@@ -1,5 +1,10 @@
 #include "Configurator.h"
 
+
+
+char Configurator::START_CONFIRM[12] = "IUCMD_START";
+char Configurator::END_CONFIRM[10] = "IUCMD_END";
+
 /* =============================================================================
     Serial Reading
 ============================================================================= */
@@ -296,4 +301,4 @@ void Configurator::processLegacyBLECommands(char *buff)
     Instanciation
 ============================================================================= */
 
-//Configurator configurator();
+Configurator configurator(12);

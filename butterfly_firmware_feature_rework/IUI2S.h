@@ -57,7 +57,7 @@ class IUI2S : public AsynchronousSensor
         bool endDataAcquisition();
         void processAudioData(q31_t *data);
         virtual void readData();
-        virtual bool acquireData();
+        virtual void acquireData();
         /***** Communication *****/
         void sendData(HardwareSerial *port);
 

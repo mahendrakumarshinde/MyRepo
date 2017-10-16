@@ -6,7 +6,7 @@
 ============================================================================= */
 
 IUBattery::IUBattery(IUI2C *iuI2C, const char* name, Feature *batteryLoad) :
-  SynchronousSensor(name, destinationCount=1, batteryLoad),
+  SynchronousSensor(name, 1, batteryLoad),
   m_iuI2C(iuI2C),
   m_VDDA(0),
   m_vBattery(0)
@@ -67,6 +67,6 @@ void IUBattery::readData()
     m_VDDA = STM32.getVREF();
     m_vBattery = 1000 * (127.0f / 100.0f) * 3.30f * \
         ((float) analogRead(voltagePin)) / 4095.0f;
-    m_batteryLoad = () m_vBattery * 100. / (float) maxVoltage);
+    m_batteryLoad = m_vBattery * 100. / (float) maxVoltage;
     m_destinations[0]->addFloatValue(m_batteryLoad);
 }

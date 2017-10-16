@@ -126,4 +126,4 @@ void IURGBLed::showOperationState(OperationState::option state)
     Instanciation
 ============================================================================= */
 
-IURGBLed iuRGBLed();
+IURGBLed iuRGBLed = IURGBLed();

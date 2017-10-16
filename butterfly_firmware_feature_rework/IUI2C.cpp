@@ -271,4 +271,4 @@ bool IUI2C::checkComponentWhoAmI(String componentName, uint8_t address,
     Instanciation
 ============================================================================= */
 
-IUI2C iuI2C();
+IUI2C iuI2C = IUI2C();

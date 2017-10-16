@@ -6,8 +6,17 @@
 #include "IUI2C.h"
 
 
+/***** Data Acquisition callbacks *****/
+
+extern bool newTemperatureData;
+extern bool newPressureData;
+
+void temperatureReadCallback(uint8_t wireStatus);
+void pressureReadCallback(uint8_t wireStatus);
+
+
 /**
- * Barometer
+ * Barometer / Altimeter
  *
  * Component:
  *  Name:
@@ -88,6 +97,7 @@ class IUBMP280 : public SynchronousSensor
         void readPressure();
         int16_t getPressure() { return m_pressure; }
         // Acquisition
+        virtual void acquireData();
         virtual void readData();
         /***** Communication *****/
         void sendData(HardwareSerial *port);
@@ -98,7 +108,7 @@ class IUBMP280 : public SynchronousSensor
         /***** Core *****/
         IUI2C *m_iuI2C;
         /***** Hardware and power management *****/
-        uint8_t m_powerBit;
+        uint8_t m_powerByte;
         overSamplingRates m_pressureOSR;
         overSamplingRates m_temperatureOSR;
         IIRFilterCoeffs m_iirFilter;
@@ -113,13 +123,18 @@ class IUBMP280 : public SynchronousSensor
         float m_temperature;  // Temperature in degree Celsius
         uint8_t m_rawTempBytes[3];  // 20-bit temperature data from register
         int32_t m_fineTemperature;
-        void processTemperatureData(uint8_t wireStatus);
+        void processTemperatureData();
         float compensateTemperature(int32_t rawT);
         //Pressure reading
         float m_pressure;  // Pressure in hPa
         uint8_t m_rawPressureBytes[3];
-        void processPressureData(uint8_t wireStatus);
+        void processPressureData();
         float compensatePressure(int32_t rawP);
 };
+
+
+/***** Instanciation *****/
+//
+//extern IUBMP280 iuAltimeter;
 
 #endif // IUBMP280_H

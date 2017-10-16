@@ -5,7 +5,7 @@
     Constructors and destructors
 ============================================================================= */
 
-IUI2S::IUI2S(IUI2C *iuI2C, const char* name, Feature *audio);
+IUI2S::IUI2S(IUI2C *iuI2C, const char* name, Feature *audio) :
   AsynchronousSensor(name, 1, audio),
   m_iuI2C(iuI2C),
   m_firstI2STrigger(true)
@@ -78,7 +78,7 @@ bool IUI2S::triggerDataAcquisition(void (*callback)())
     }
     else
     {
-        readData(false);
+        readData();
     }
     if (loopDebugMode)
     {
@@ -124,7 +124,7 @@ void IUI2S::readData()
     }
 }
 
-bool IUI2S::acquireData()
+void IUI2S::acquireData()
 {
     readData();
 }
@@ -139,7 +139,7 @@ bool IUI2S::acquireData()
  *
  * This should be done in DATA COLLECTION mode.
  */
-void IUI2S::sendData()
+void IUI2S::sendData(HardwareSerial *port)
 {
     if (loopDebugMode)
     {
@@ -150,9 +150,9 @@ void IUI2S::sendData()
         for (int j = 0; j < m_downclocking; j++)
         {
             // stream 3 most significant bytes from 32bits value
-            m_iuI2C->port->write((m_audioData[j] >> 24) & 0xFF);
-            m_iuI2C->port->write((m_audioData[j] >> 16) & 0xFF);
-            m_iuI2C->port->write((m_audioData[j] >> 8) & 0xFF);
+            port->write((m_audioData[j] >> 24) & 0xFF);
+            port->write((m_audioData[j] >> 16) & 0xFF);
+            port->write((m_audioData[j] >> 8) & 0xFF);
         }
     }
 }

@@ -2,6 +2,26 @@
 
 
 /* =============================================================================
+    Data Acquisition callbacks
+============================================================================= */
+
+bool newAccelData = false;
+
+void accelReadCallback(uint8_t wireStatus)
+{
+    if (wireStatus == 0)
+    {
+        newAccelData = true;
+    }
+    else if (callbackDebugMode)
+    {
+        debugPrint(F("Acceleration read error "), false);
+        debugPrint(wireStatus);
+    }
+}
+
+
+/* =============================================================================
     Constructors and destructors
 ============================================================================= */
 
@@ -13,8 +33,7 @@ IUBMX055Acc::IUBMX055Acc(IUI2C *iuI2C, const char* name, Feature *accelerationX,
     AsynchronousSensor(name, 3, accelerationX,accelerationY, accelerationZ),
     m_scale(defaultScale),
     m_bandwidth(defaultBandwidth),
-    m_filteredData(false),
-    m_resolution(0)
+    m_filteredData(false)
 {
     m_iuI2C = iuI2C;
     m_samplingRate = defaultSamplingRate;
@@ -46,7 +65,6 @@ void IUBMX055Acc::setupHardware()
     setSamplingRate(m_samplingRate);
     useUnfilteredData();
     configureInterrupts();
-    m_asynchronous = true;
 }
 
 /**
@@ -112,13 +130,13 @@ bool IUBMX055Acc::configure(JsonVariant &config)
     JsonVariant value = my_config["FSR"];
     if (value.success())
     {
-        setScale(scaleOption) value.as<int>();
+        setScale((scaleOption) (value.as<int>()));
     }
     // Filtering and bandwidth
     value = my_config["BW"];
     if (value.success())
     {
-        setBandwidth(bandwidthOption) value.as<int>();
+        setBandwidth((bandwidthOption) (value.as<int>()));
     }
     value = my_config["HPF"];
     if (value.success())
@@ -268,7 +286,18 @@ void IUBMX055Acc::computeResolution() {
 }
 
 /**
- * Asynchronously read acceleration data and and call processData as callback
+ * Acquire new data, while handling down-clocking
+ */
+void IUBMX055Acc::acquireData()
+{
+    // Process data from last acquisition if needed
+    processData();
+    // Acquire new data
+    AsynchronousSensor::acquireData();
+}
+
+/**
+ * Asynchronously read acceleration data
  *
  * Data is read from device as 2 bytes: LSB first (4 bits to use) then MSB
  * (8 bits to use) 4 last bits of LSB byte are used as flags (new data, etc).
@@ -276,7 +305,8 @@ void IUBMX055Acc::computeResolution() {
 void IUBMX055Acc::readData()
 {
     // Read the six raw data registers into data array
-    if(!m_iuI2C->readBytes(ADDRESS, D_X_LSB, 6, &m_rawBytes[0], processData))
+    if(!m_iuI2C->readBytes(ADDRESS, D_X_LSB, 6, &m_rawBytes[0],
+                           accelReadCallback))
     {
         if (callbackDebugMode)
         {
@@ -291,8 +321,12 @@ void IUBMX055Acc::readData()
  * Data is read from device as 2 bytes: LSB first (4 bits to use) then MSB
  * (8 bits to use) 4 last bits of LSB byte are used as flags (new data, etc).
  */
-void IUBMX055Acc::processData(uint8_t wireStatus)
+void IUBMX055Acc::processData()
 {
+    if (!newAccelData)
+    {
+        return;
+    }
     // Check that all 3 axes have new data, if not return
     if(!((m_rawBytes[0] & 0x01) && (m_rawBytes[2] & 0x01) &&
          (m_rawBytes[4] & 0x01)))
@@ -310,6 +344,7 @@ void IUBMX055Acc::processData(uint8_t wireStatus)
         m_data[i] = m_rawData[i] + m_bias[i];
         m_destinations[i]->addQ15Value(m_data[i]);
     }
+    newAccelData = false;
 }
 
 

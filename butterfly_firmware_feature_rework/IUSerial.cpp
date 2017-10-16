@@ -9,6 +9,7 @@ IUSerial::IUSerial(InterfaceType::option interType, HardwareSerial *serialPort,
                    uint32_t rate, uint16_t buffSize, char stop,
                    uint16_t dataReceptionTimeout) :
     Component(),
+    interface(interType),
     port(serialPort),
     baudRate(rate),
     bufferSize(buffSize),
@@ -73,7 +74,7 @@ bool IUSerial::readToBuffer()
     char newChar;
     while (port->available() > 0)
     {
-        if (m_bufferIndex == maxBufferSize) // overflowing
+        if (m_bufferIndex >= bufferSize) // overflowing
         {
             m_bufferIndex = 0;
             if (debugMode)

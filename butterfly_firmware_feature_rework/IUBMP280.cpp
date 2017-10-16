@@ -2,6 +2,41 @@
 
 
 /* =============================================================================
+    Data Acquisition callbacks
+============================================================================= */
+
+bool newTemperatureData = false;
+bool newPressureData = false;
+
+void temperatureReadCallback(uint8_t wireStatus)
+{
+    if (wireStatus == 0)
+    {
+        newTemperatureData = true;
+    }
+    else if (callbackDebugMode)
+    {
+        debugPrint(F("Temperature read error "), false);
+        debugPrint(wireStatus);
+    }
+}
+
+void pressureReadCallback(uint8_t wireStatus)
+{
+    if (wireStatus == 0)
+    {
+        newPressureData = true;
+    }
+    else if (callbackDebugMode)
+    {
+        debugPrint(F("Pressure read error "), false);
+        debugPrint(wireStatus);
+    }
+}
+
+
+
+/* =============================================================================
     Constructors and destructors
 ============================================================================= */
 
@@ -231,7 +266,7 @@ void IUBMP280::calibrate()
 void IUBMP280::readTemperature()
 {
   if (!m_iuI2C->readBytes(ADDRESS, TEMP_MSB, 3, &m_rawTempBytes[0],
-                          processTemperatureData))
+                          temperatureReadCallback))
   {
     if (callbackDebugMode)
     {
@@ -242,16 +277,18 @@ void IUBMP280::readTemperature()
 
 /**
  * Process a raw Temperature reading
- *
- * This function is to be passed as callbak of Temperature reading via
- * wire.transfer.
  */
-void IUBMP280::processTemperatureData(uint8_t wireStatus)
+void IUBMP280::processTemperatureData()
 {
+    if (!newTemperatureData)
+    {
+        return;
+    }
     int32_t rawTemp = (int32_t) (((int32_t) m_rawTempBytes[0] << 16 | \
         (int32_t) m_rawTempBytes[1] << 8 | m_rawTempBytes[2]) >> 4);
     m_temperature = compensateTemperature(rawTemp);
     m_destinations[0]->addFloatValue(m_temperature);
+    newTemperatureData = false;
 }
 
 /**
@@ -286,7 +323,7 @@ float IUBMP280::compensateTemperature(int32_t rawT)
 void IUBMP280::readPressure() // Index 4
 {
     if (!m_iuI2C->readBytes(ADDRESS, PRESS_MSB, 3, &m_rawPressureBytes[0],
-                            processPressureData))
+                            pressureReadCallback))
     {
         if (callbackDebugMode)
         {
@@ -297,16 +334,18 @@ void IUBMP280::readPressure() // Index 4
 
 /**
  * Process and store a raw Pressure reading in hectoPascal (hPa)
- *
- * This function is to be passed as callbak of Pressure reading via
- * wire.transfer.
  */
-void IUBMP280::processPressureData(uint8_t wireStatus)
+void IUBMP280::processPressureData()
 {
+    if (!newPressureData)
+    {
+        return;
+    }
     int32_t rawP = (int32_t) (((int32_t) m_rawPressureBytes[0] << 16 | \
         (int32_t) m_rawPressureBytes[1] << 8 | m_rawPressureBytes[2]) >> 4);
     m_pressure = compensatePressure(rawP);
     m_destinations[1]->addFloatValue(m_pressure);
+    newPressureData = false;
 }
 
 /**
@@ -341,6 +380,18 @@ float IUBMP280::compensatePressure(int32_t rawP)
 
 
 /***** Acquisition *****/
+
+/**
+ * Acquire new data, while handling sampling period
+ */
+void IUBMP280::acquireData()
+{
+    // Process data from last acquisition if needed
+    processTemperatureData();
+    processPressureData();
+    // Acquire new data
+    SynchronousSensor::acquireData();
+}
 
 void IUBMP280::readData()
 {
@@ -400,3 +451,9 @@ void IUBMP280::exposeCalibration()
     #endif
 }
 
+
+/* =============================================================================
+    Instanciation
+============================================================================= */
+//
+//IUBMP280 iuAltimeter(&iuI2C, "ALT", &temperature, &pressure);

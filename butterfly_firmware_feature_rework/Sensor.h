@@ -40,7 +40,7 @@ class Sensor : public Component
         virtual void setResolution(uint16_t resolution);
         virtual uint16_t getResolution() { return m_resolution; }
         /***** Data acquisition *****/
-        virtual bool acquireData() {}
+        virtual void acquireData() {}
         virtual void readData() {}  // May be defined in Child class
         /***** Communication *****/
         void sendData(HardwareSerial *port) { }
@@ -88,7 +88,7 @@ class AsynchronousSensor : public Sensor
         virtual uint16_t getSamplingRate() { return m_samplingRate; }
         virtual void computeDownclockingRate();
         /***** Data acquisition *****/
-        virtual bool acquireData();
+        virtual void acquireData();
 
     protected:
         /***** Sampling and resolution *****/
@@ -142,7 +142,7 @@ class SynchronousSensor : public Sensor
         virtual float getSamplingRate()
             { return 1.0f / (float) m_samplingPeriod; }
         /***** Data acquisition *****/
-        virtual bool acquireData();
+        virtual void acquireData();
 
     protected:
         /***** Configuration *****/
