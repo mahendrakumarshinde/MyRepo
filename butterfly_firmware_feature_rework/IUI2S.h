@@ -28,7 +28,7 @@
  *    I2S use a buffer to collect data and when it's full it calls an
  *    onReceive callback function.
  * Destinations:
- *      - audio: a Q31Feature with section size = 2048
+ *      - audio: a Q15Feature
  */
 class IUI2S : public AsynchronousSensor
 {
@@ -52,7 +52,7 @@ class IUI2S : public AsynchronousSensor
         uint16_t getCallbackRate() { return clockRate / (audioSampleSize / 2); }
         void setSamplingRate(uint16_t samplingRate);
         /***** Data acquisition *****/
-        void prepareDataAcquisition();
+        void computeDownclockingRate();
         bool triggerDataAcquisition(void (*callback)());
         bool endDataAcquisition();
         void processAudioData(q31_t *data);
@@ -60,6 +60,8 @@ class IUI2S : public AsynchronousSensor
         virtual void acquireData();
         /***** Communication *****/
         void sendData(HardwareSerial *port);
+        /***** Debugging *****/
+        virtual void expose();
 
     protected:
         /***** Core *****/
@@ -69,7 +71,7 @@ class IUI2S : public AsynchronousSensor
         /***** Data acquisition *****/
         uint8_t m_rawAudioData[I2S_BUFFER_SIZE];
         // 32bit samples, we use mono data so array half the size
-        q31_t m_audioData[audioSampleSize / 2];
+        q15_t m_audioData[audioSampleSize / 2];
         uint16_t m_targetSample;
 };
 

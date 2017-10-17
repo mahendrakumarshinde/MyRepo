@@ -1,4 +1,4 @@
-#include "Features.h"
+#include "FeatureGraph.h"
 
 
 /* =============================================================================
@@ -156,8 +156,8 @@ FloatFeature pressure("PRS", 2, 1, pressureValues);
 /***** Audio Features *****/
 
 // Sensor data
-q31_t audioValues[4096];
-Q31Feature audio("SND", 2, 2048, audioValues);
+q15_t audioValues[8192];
+Q15Feature audio("SND", 2, 2048, audioValues);
 
 // 2048 sample long features
 __attribute__((section(".noinit2"))) float audioDB2048Values[4];
@@ -741,13 +741,19 @@ void enablePressFeatures()
     featureGroup1.add(5, feature);
 }
 
-void exposeAllFeatureConfigurations()
+void exposeAllConfigurations()
 {
     #ifdef DEBUGMODE
+    for (uint8_t i = 0; i < SENSOR_COUNT; ++i)
+    {
+        SENSORS[i]->expose();
+    }
+    debugPrint("");
     for (uint8_t i = 0; i < FEATURE_COUNT; ++i)
     {
         FEATURES[i]->exposeConfig();
         FEATURES[i]->exposeCounters();
+        debugPrint("_____");
     }
     debugPrint("");
     for (uint8_t i = 0; i < FEATURE_COMPUTER_COUNT; ++i)

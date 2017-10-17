@@ -45,7 +45,7 @@ class Sensor : public Component
         /***** Communication *****/
         void sendData(HardwareSerial *port) { }
         /***** Debugging *****/
-        // May be defined in Child class
+        virtual void expose();
         virtual void exposeCalibration() {}
 
     protected:

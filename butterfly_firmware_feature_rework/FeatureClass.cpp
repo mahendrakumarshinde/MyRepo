@@ -12,6 +12,7 @@ Feature::Feature(const char* name, uint8_t sectionCount, uint16_t sectionSize,
     m_active(false),
     m_opStateEnabled(false),
     m_streamingEnabled(false),
+    m_operationState(OperationState::IDLE),
     m_computerId(0),
     m_receiverCount(0),
     m_sectionCount(sectionCount),
@@ -74,6 +75,34 @@ void Feature::deactivate()
 
 
 /***** OperationState and Thresholds *****/
+
+/**
+ * Determine the state using getValueToCompareToThresholds and the thresholds
+ */
+void Feature::updateOperationState()
+{
+    if (m_opStateEnabled)
+    {
+        float value = getValueToCompareToThresholds();
+        if (value > m_thresholds[2])
+        {
+            m_operationState = OperationState::DANGER;
+            return;
+        }
+        else if (value > m_thresholds[1])
+        {
+            m_operationState = OperationState::WARNING;
+            return;
+        }
+        else if (value > m_thresholds[0])
+        {
+            m_operationState = OperationState::NORMAL;
+            return;
+        }
+    }
+    m_operationState = OperationState::IDLE;
+}
+
 
 void Feature::setThresholds(float normalVal, float warningVal, float dangerVal)
 {
@@ -192,6 +221,9 @@ void Feature::incrementFillingIndex()
         m_published[m_recordIndex] = true;
         m_acknowledged[m_recordIndex] = false;
         m_recordIndex = (m_recordIndex + 1) % maxSectionCount;
+        // After publishing, update the operation state to reflect the latest
+        // published section
+        updateOperationState();
     }
     // Filling Index restart from 0 if needed
     m_fillingIndex %= m_totalSize;
@@ -257,14 +289,14 @@ void Feature::exposeCounters()
 
     debugPrint(F("  "), false);
     debugPrint(m_sectionCount, false);
-    debugPrint(F(" sections:"));
-    for (uint8_t i = 0; i < m_receiverCount; ++i)
+    debugPrint(F(" sections"));
+    for (uint8_t i = 0; i < m_sectionCount; ++i)
     {
         debugPrint(F("  "), false);
         debugPrint(i, false);
-        debugPrint(F(": published "), false);
+        debugPrint(F(": published="), false);
         debugPrint(m_published[i], false);
-        debugPrint(F(", acknowledged "), false);
+        debugPrint(F(", acknowledged="), false);
         debugPrint(m_acknowledged[i]);
         //TODO also print m_partialAcknowledged[i][maxReceiverCount]?
     }
@@ -302,35 +334,34 @@ void FloatFeature::addFloatValue(float value)
 {
     m_values[m_fillingIndex] = value;
     incrementFillingIndex();
+    if (loopDebugMode && isComputedFeature())
+    {
+        debugPrint(getName(), false);
+        debugPrint(": ", false);
+        debugPrint(value);
+    }
 }
 
 /**
- * Compute the feature operation State
+ * By default, return the mean value of the latest recorded section
  */
-OperationState::option FloatFeature::getOperationState()
+float FloatFeature::getValueToCompareToThresholds()
 {
-    if (m_opStateEnabled)
+    uint8_t k = (maxSectionCount + m_recordIndex - 1) % maxSectionCount;
+    float total = 0;
+    for (uint16_t i = k * m_sectionSize; i < (k + 1) * m_sectionSize; ++i)
     {
-        float value = getNextFloatValues()[0];
-        if (value > m_thresholds[2])
-        {
-            return OperationState::DANGER;
-        }
-        else if (value > m_thresholds[1])
-        {
-            return OperationState::WARNING;
-        }
-        else if (value > m_thresholds[0])
-        {
-            return OperationState::NORMAL;
-        }
+        total += m_values[i];
     }
-    return OperationState::IDLE;
+    return total / (float) m_sectionSize;
 }
 
+/**
+ * Stream the content of the section at sectionIdx
+ */
 void FloatFeature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx)
 {
-    for (uint8_t i = sectionIdx * m_sectionSize;
+    for (uint16_t i = sectionIdx * m_sectionSize;
          i < (sectionIdx + 1) * m_sectionSize; ++i)
     {
         port->print(",");
@@ -365,35 +396,17 @@ void Q15Feature::addQ15Value(q15_t value)
 {
     m_values[m_fillingIndex] = value;
     incrementFillingIndex();
-}
-
-/**
- * Compute the feature operation State
- */
-OperationState::option Q15Feature::getOperationState()
-{
-    if (m_opStateEnabled)
+    if (loopDebugMode && isComputedFeature())
     {
-        float value = (float) getNextQ15Values()[0];
-        if (value > m_thresholds[2])
-        {
-            return OperationState::DANGER;
-        }
-        else if (value > m_thresholds[1])
-        {
-            return OperationState::WARNING;
-        }
-        else if (value > m_thresholds[0])
-        {
-            return OperationState::NORMAL;
-        }
+        debugPrint(getName(), false);
+        debugPrint(": ", false);
+        debugPrint(value);
     }
-    return OperationState::IDLE;
 }
 
 void Q15Feature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx)
 {
-    for (uint8_t i = sectionIdx * m_sectionSize;
+    for (uint16_t i = sectionIdx * m_sectionSize;
          i < (sectionIdx + 1) * m_sectionSize; ++i)
     {
         port->print(",");
@@ -428,35 +441,17 @@ void Q31Feature::addQ31Value(q31_t value)
 {
     m_values[m_fillingIndex] = value;
     incrementFillingIndex();
-}
-
-/**
- * Compute the feature operation State
- */
-OperationState::option Q31Feature::getOperationState()
-{
-    if (m_opStateEnabled)
+    if (loopDebugMode && isComputedFeature())
     {
-        float value = (float) getNextQ31Values()[0];
-        if (value > m_thresholds[2])
-        {
-            return OperationState::DANGER;
-        }
-        else if (value > m_thresholds[1])
-        {
-            return OperationState::WARNING;
-        }
-        else if (value > m_thresholds[0])
-        {
-            return OperationState::NORMAL;
-        }
+        debugPrint(getName(), false);
+        debugPrint(": ", false);
+        debugPrint(value);
     }
-    return OperationState::IDLE;
 }
 
 void Q31Feature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx)
 {
-    for (uint8_t i = sectionIdx * m_sectionSize;
+    for (uint16_t i = sectionIdx * m_sectionSize;
          i < (sectionIdx + 1) * m_sectionSize; ++i)
     {
         port->print(",");

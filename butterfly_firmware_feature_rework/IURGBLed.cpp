@@ -10,7 +10,6 @@
 */
 IURGBLed::IURGBLed() :
     Component(),
-    m_onTimer(50),
     m_nextOffTime(0)
 {
   pinMode(RED_PIN, OUTPUT);
@@ -49,10 +48,14 @@ void IURGBLed::suspend()
 ============================================================================= */
 
 /**
- * Turn off the LED (it doesn't matter if the LEDs are locked or not)
+ * Turn off the LED
  */
 void IURGBLed::turnOff()
 {
+    if (m_locked)
+    {
+        return;  // Do not turn off when locked
+    }
     digitalWrite(RED_PIN, HIGH);
     digitalWrite(GREEN_PIN, HIGH);
     digitalWrite(BLUE_PIN, HIGH);
@@ -83,7 +86,7 @@ void IURGBLed::changeColor(bool R, bool G, bool B)
         digitalWrite(RED_PIN, (int) (!R));
         digitalWrite(GREEN_PIN, (int) (!G));
         digitalWrite(BLUE_PIN, (int) (!B));
-        m_nextOffTime = millis() + m_onTimer;
+        m_nextOffTime = millis() + onTimer;
     }
 }
 

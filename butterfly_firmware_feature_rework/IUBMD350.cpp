@@ -223,21 +223,17 @@ int IUBMD350::sendATCommand(String cmd, char *response, uint8_t responseLength)
  * @param name  the new device name, from 1 to 8 ASCII char
  * @return      true if successfully set, else false
  */
-bool IUBMD350::setDeviceName(char *deviceName)
+void IUBMD350::setDeviceName(char *deviceName)
 {
     strcpy(m_deviceName, deviceName);
     char response[3];
     String cmd = "name ";
     sendATCommand((String) (cmd + m_deviceName), response, 3);
-    if (strcmp(response, "OK") == 0)
+    if (strcmp(response, "OK") != 0 && setupDebugMode)
     {
-        return true;
+        debugPrint(F("Failed to set device name, response was: "), false);
+        debugPrint(response);
     }
-    if (setupDebugMode)
-    {
-        debugPrint("Failed to set device name");
-    }
-    return false;
 }
 
 /**
@@ -246,17 +242,18 @@ bool IUBMD350::setDeviceName(char *deviceName)
  * Also update the device name saved at the class level (accessible via
  * getDeviceName)
  */
-bool IUBMD350::queryDeviceName()
+void IUBMD350::queryDeviceName()
 {
     char response[9];
     int respLen = sendATCommand("name?", response, 9);
     if (respLen > 0)
     {
         strcpy(m_deviceName, response);
-        // strCopyWithAutocompletion(m_deviceName, response, 9, respLen);
-        return true;
     }
-    return false;
+    else if (setupDebugMode)
+    {
+        debugPrint(F("Failed to query device name: no response"));
+    }
 }
 
 
@@ -267,34 +264,55 @@ bool IUBMD350::queryDeviceName()
  *
  * @return  true if configuration was successfully set, else false
  */
-bool IUBMD350::configureUARTPassthrough()
+void IUBMD350::configureUARTPassthrough()
 {
-    bool success = true;
     char response[3];
-    String cmd;
-    // enable / disable UART PassThrough
-    if (UART_ENABLED) { cmd = "uen 01"; }
-    else { cmd = "uen 00"; }
-    sendATCommand(cmd, response, 3);
-    success &= (strcmp(response, "OK") == 0);
     // Baud Rate
-    sendATCommand((String) ("ubr " + baudRate), response, 3);
-    success &= (strcmp(response, "OK") == 0);
+    String cmd = String("ubr ") + String(baudRate);
+    sendATCommand(cmd, response, 3);
+    if (setupDebugMode && strcmp(response, "OK") != 0)
+    {
+        debugPrint(F("Failed to set UART baud rate:\n  Command was: "),
+                   false);
+        debugPrint(cmd);
+        debugPrint(F("  Response was: "), false);
+        debugPrint(response);
+    }
     // Flow Control
     if (UART_FLOW_CONTROL) { cmd += "ufc 01"; }
     else { cmd = "ufc 00"; }
     sendATCommand(cmd, response, 3);
-    success &= (strcmp(response, "OK") == 0);
+    if (setupDebugMode && strcmp(response, "OK") != 0)
+    {
+        debugPrint(F("Failed to configure UART flow control:\n  Command was: "),
+                   false);
+        debugPrint(cmd);
+        debugPrint(F("  Response was: "), false);
+        debugPrint(response);
+    }
     // Parity
     if (UART_PARITY) { cmd += "upar 01"; }
     else { cmd = "upar 00"; }
     sendATCommand(cmd, response, 3);
-    success &= (strcmp(response, "OK") == 0);
-    if ((!success) && setupDebugMode)
+    if (setupDebugMode && strcmp(response, "OK") != 0)
     {
-        debugPrint("Failed to configure BLE UART");
+        debugPrint(F("Failed to configure UART parity:\n  Command was: "),
+                   false);
+        debugPrint(cmd);
+        debugPrint(F("  Response was: "), false);
+        debugPrint(response);
     }
-    return success;
+    // enable / disable UART PassThrough
+    if (UART_ENABLED) { cmd = "uen 01"; }
+    else { cmd = "uen 00"; }
+    sendATCommand(cmd, response, 3);
+    if (setupDebugMode && strcmp(response, "OK") != 0)
+    {
+        debugPrint(F("Failed to enable UART:\n  Command was: "), false);
+        debugPrint(cmd);
+        debugPrint(F("  Response was: "), false);
+        debugPrint(response);
+    }
 }
 
 
@@ -306,9 +324,8 @@ bool IUBMD350::configureUARTPassthrough()
  *  from 50ms to 4000ms.
  * @return            true if configuration was successfully set, else false
  */
-bool IUBMD350::configureBeacon(bool enabled, uint16_t adInterval)
+void IUBMD350::configureBeacon(bool enabled, uint16_t adInterval)
 {
-    bool success = true;
     char response[3];
     String cmd;
     // Set attributes
@@ -318,16 +335,19 @@ bool IUBMD350::configureBeacon(bool enabled, uint16_t adInterval)
     if (enabled) { cmd = "ben 01"; }
     else { cmd = "ben 00"; }
     sendATCommand(cmd, response, 3);
-    success &= (strcmp(response, "OK") == 0);
+    if (setupDebugMode && strcmp(response, "OK") != 0)
+    {
+        debugPrint(F("Failed to enable / disable Beacon, response was: "), false);
+        debugPrint(response);
+    }
     // Set Ad Interval
     cmd = "badint " + String(adInterval, HEX);
     sendATCommand(cmd, response, 3);
-    success &= (strcmp(response, "OK") == 0);
-    if ((!success) && setupDebugMode)
+    if (setupDebugMode && strcmp(response, "OK") != 0)
     {
-        debugPrint("Failed to configure BLE beacon");
+        debugPrint(F("Failed to set Ad Interval, response was: "), false);
+        debugPrint(response);
     }
-    return success;
 }
 
 
@@ -340,7 +360,7 @@ bool IUBMD350::configureBeacon(bool enabled, uint16_t adInterval)
  * @param minor  UUID Minor Number as a char array of 4 hex digits (16bit)
  * @return       true if configuration was successfully set, else false
  */
-bool IUBMD350::setBeaconUUID(char *UUID, char *major, char *minor)
+void IUBMD350::setBeaconUUID(char *UUID, char *major, char *minor)
 {
     bool success = true;
     char response[3];
@@ -359,9 +379,8 @@ bool IUBMD350::setBeaconUUID(char *UUID, char *major, char *minor)
     success &= (strcmp(response, "OK") == 0);
     if ((!success) && setupDebugMode)
     {
-        debugPrint("Failed to configure BLE beacon");
+        debugPrint("Failed to configure BLE beacon UUID");
     }
-    return success;
 }
 
 
@@ -372,25 +391,31 @@ bool IUBMD350::setBeaconUUID(char *UUID, char *major, char *minor)
  *
  * @return True if the queries succeeded else false
  */
-bool IUBMD350::setTxPowers(txPowerOption txPower)
+void IUBMD350::setTxPowers(txPowerOption txPower)
 {
     m_connectedTxPower = txPower;
     m_beaconTxPower = txPower;
     char response[3];
-    bool success = true;
     // Connected Power
-    String cmd = "ctxpwr " + String(txPower, HEX);
+    String cmd = String("ctxpwr ") + String(txPower, HEX);
     sendATCommand(cmd, response, 3);
-    success &= (strcmp(response, "OK") == 0);
-    // Beacon Power
-    cmd = "btxpwr " + String(txPower, HEX);
-    sendATCommand(cmd, response, 3);
-    success &= strcmp(response, "OK") == 0;
-    if (!success && debugMode)
+    if (setupDebugMode && strcmp(response, "OK") != 0)
     {
-        debugPrint("Failed to set connected Tx Power");
+        debugPrint(F("Failed to set Connected Tx Power:\n  Command was: "), false);
+        debugPrint(cmd);
+        debugPrint(F("  Response was: "), false);
+        debugPrint(response);
     }
-    return success;
+    // Beacon Power
+    cmd = String("btxpwr ") + String(txPower, HEX);
+    sendATCommand(cmd, response, 3);
+    if (setupDebugMode && strcmp(response, "OK") != 0)
+    {
+        debugPrint(F("Failed to set Beacon Tx Power:\n  Command was: "), false);
+        debugPrint(cmd);
+        debugPrint(F("  Response was: "), false);
+        debugPrint(response);
+    }
 }
 
 /**
@@ -398,20 +423,27 @@ bool IUBMD350::setTxPowers(txPowerOption txPower)
  *
  * @return True if the queries succeeded else false
  */
-bool IUBMD350::queryTxPowers()
+void IUBMD350::queryTxPowers()
 {
     char txPowHex[3];
-    bool success1 = sendATCommand("ctxpwr?", txPowHex, 3) > 0;
-    if (success1)
+    int respLen = sendATCommand("ctxpwr?", txPowHex, 3);
+    if (respLen > 0)
     {
         m_connectedTxPower = (txPowerOption) strtol(txPowHex, NULL, 16);
     }
-    bool success2 = sendATCommand("btxpwr?", txPowHex, 3) > 0;
-    if (success2)
+    else if (setupDebugMode)
+    {
+        debugPrint(F("Failed to query connected Tx Power"));
+    }
+    respLen = sendATCommand("btxpwr?", txPowHex, 3) > 0;
+    if (respLen > 0)
     {
         m_beaconTxPower = (txPowerOption) strtol(txPowHex, NULL, 16);
     }
-    return success1 && success2;
+    else if (setupDebugMode)
+    {
+        debugPrint(F("Failed to query beacon Tx Power"));
+    }
 }
 
 

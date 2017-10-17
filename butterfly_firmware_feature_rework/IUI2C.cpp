@@ -51,7 +51,7 @@ bool IUI2C::writeByte(uint8_t address, uint8_t subAddress, uint8_t data)
         m_errorFlag = true;
         if (debugMode)
         {
-            debugPrint("Error Code:", false);
+            debugPrint("I2C error Code:", false);
             debugPrint(errorCode);
         }
         return false;
@@ -94,7 +94,7 @@ uint8_t IUI2C::readByte(uint8_t address, uint8_t subAddress)
         m_errorFlag = true;
         if (debugMode)
         {
-            debugPrint("Error Code:", false);
+            debugPrint("I2C error code:", false);
             debugPrint(errorCode);
         }
         return 0;
@@ -146,7 +146,7 @@ bool IUI2C::readBytes(uint8_t address, uint8_t subAddress, uint8_t count,
         m_errorFlag = true;
         if (debugMode)
         {
-            debugPrint("Error Code:", false);
+            debugPrint("I2C error code:", false);
             debugPrint(errorCode);
         }
         return false;
@@ -219,7 +219,7 @@ bool IUI2C::scanDevices()
         {
             if (setupDebugMode)
             {
-                debugPrint("Unknown error at address 0x", false);
+                debugPrint("Error at address 0x", false);
                 if (address < 16) debugPrint("0", false);
                 debugPrint(address, HEX);
             }

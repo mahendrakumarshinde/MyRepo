@@ -33,6 +33,28 @@ void Sensor::setResolution(uint16_t resolution)
 }
 
 
+/***** Debugging *****/
+
+/**
+ * Shows the sensor and its destination in DEBUGMODE
+ */
+void Sensor::expose()
+{
+    #ifdef DEBUGMODE
+    debugPrint(F("Sensor "), false);
+    debugPrint(getName(), false);
+    debugPrint(F(" has "), false);
+    debugPrint(m_destinationCount, false);
+    debugPrint(F(" receivers:"));
+    for (uint8_t i = 0; i < m_destinationCount; ++i)
+    {
+        debugPrint(F("  "), false);
+        debugPrint(m_destinations[i]->getName());
+    }
+    #endif
+}
+
+
 /* =============================================================================
     Asynchronous Sensor
 ============================================================================= */
@@ -120,7 +142,7 @@ void AsynchronousSensor::computeDownclockingRate()
 void AsynchronousSensor::acquireData()
 {
     m_downclockingCount++;
-    if (m_downclocking != m_downclockingCount)
+    if (m_downclockingCount < m_downclocking)
     {
         return;
     }

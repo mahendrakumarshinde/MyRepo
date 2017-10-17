@@ -15,6 +15,7 @@ Conductor::Conductor(const char* version, const char* macAddress) :
     m_refDatetime(Conductor::defaultTimestamp),
     m_operationState(OperationState::IDLE),
     m_inDataAcquistion(false),
+    m_lastLitLedTime(0),
     m_usageMode(UsageMode::OPERATION),
     m_acquisitionMode(AcquisitionMode::NONE),
     m_streamingMode(StreamingMode::BLE)
@@ -368,6 +369,7 @@ void Conductor::updateOperationState()
     OperationState::option featState;
     for (uint8_t i = 0; i < FEATURE_COUNT; i++)
     {
+        FEATURES[i]->getOperationState();
         featState = FEATURES[i]->getOperationState();
         if ((uint8_t) newState < (uint8_t) featState)
         {
@@ -376,7 +378,12 @@ void Conductor::updateOperationState()
     }
     m_operationState = newState;
     // Light the LED to show the state
-    iuRGBLed.showOperationState(m_operationState);
+    uint32_t now = millis();
+    if (m_lastLitLedTime > now || m_lastLitLedTime + showOpStateTimer > now)
+    {
+        iuRGBLed.showOperationState(m_operationState);
+        m_lastLitLedTime = now;
+    }
 }
 
 /**
@@ -544,34 +551,42 @@ void Conductor::changeUsageMode(UsageMode::option usage)
 void Conductor::setup(void (*callback)())
 {
     // Interfaces
-    if (setupDebugMode)
+    if (debugMode)
     {
         debugPrint(F("\nInitializing interfaces..."));
     }
     iuI2C.setupHardware();
-    iuBluetooth.setupHardware();
-    iuWiFi.setupHardware();
     if (setupDebugMode)
     {
+        iuI2C.scanDevices();
+        debugPrint("");
+    }
+    iuBluetooth.setupHardware();
+    iuWiFi.setupHardware();
+    if(debugMode)
+    {
         memoryLog(F("=> Successfully initialized interfaces"));
+    }
+    if (setupDebugMode)
+    {
         debugPrint(' ');
         iuBluetooth.exposeInfo();
     }
 
     // Default feature configuration
-    if (setupDebugMode)
+    if (debugMode)
     {
         debugPrint(F("\nSetting up default feature configuration..."));
     }
     setUpComputerSource();
     enableMotorFeatures();
-    if (setupDebugMode)
+    if (debugMode)
     {
-    memoryLog(F("=> Succesfully configured default features"));
+        memoryLog(F("=> Succesfully configured default features"));
     }
 
     // Sensors
-    if (setupDebugMode)
+    if (debugMode)
     {
         debugPrint(F("\nInitializing sensors..."));
     }
@@ -584,7 +599,7 @@ void Conductor::setup(void (*callback)())
             SENSORS[i]->setCallbackRate(callbackRate);
         }
     }
-    if (setupDebugMode)
+    if (debugMode)
     {
       memoryLog(F("=> Successfully initialized sensors"));
     }
@@ -592,17 +607,17 @@ void Conductor::setup(void (*callback)())
     //
     if (setupDebugMode)
     {
-        exposeAllFeatureConfigurations();
+        exposeAllConfigurations();
         if (iuI2C.isError())
         {
-            debugPrint(F("I2C Error"));
+            debugPrint(F("\nI2C Satus: Error"));
         }
         else
         {
-            debugPrint(F("I2C OK"));
+            debugPrint(F("\nI2C Satus: OK"));
         }
         debugPrint(F("\n***Finished setup at (ms): "), false);
-        debugPrint(millis());
+        debugPrint(millis(), false);
         debugPrint(F("***\n"));
     }
 

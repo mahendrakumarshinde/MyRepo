@@ -24,8 +24,7 @@ class FeatureComputer
         virtual void deactivate() { m_active = false; }
         virtual bool isActive() { return m_active; }
         /***** Sources and destinations *****/
-        virtual void addSource(Feature *source, uint8_t sectionCount,
-                               uint8_t skippedSectionCount=0);
+        virtual void addSource(Feature *source, uint8_t sectionCount);
         virtual uint8_t getSourceCount() { return m_sourceCount; }
         virtual Feature* getSource(uint8_t idx) { return m_sources[idx]; }
         virtual uint8_t getDestinationCount() { return m_destinationCount; }
@@ -46,7 +45,6 @@ class FeatureComputer
         Feature *m_sources[maxSourceCount];
         uint8_t m_indexesAsReceiver[maxSourceCount];
         uint8_t m_sectionCount[maxSourceCount];
-        uint8_t m_skippedSectionCount[maxSourceCount];
         // Destination buffers
         uint8_t m_destinationCount;
         Feature *m_destinations[maxDestinationCount];

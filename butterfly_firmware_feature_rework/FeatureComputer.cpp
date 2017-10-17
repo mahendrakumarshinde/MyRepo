@@ -35,14 +35,8 @@ FeatureComputer::FeatureComputer(uint8_t id, uint8_t destinationCount,
  * @param source              The source to add
  * @param sectionCount        The number of sections of the source computed
  *      together
- * @param skippedSectionCount The number of sections to skip between 2 groups of
- *      computed sections
- * Eg: For a source of 8 sections, with sectionCount=1 & skippedSectionCount=3,
- *      the sections used for computation will be the 1st and 5th (1 sections,
- *      then skip 3, then 1, then skip 3, etc).
  */
-void FeatureComputer::addSource(Feature *source, uint8_t sectionCount,
-                                uint8_t skippedSectionCount)
+void FeatureComputer::addSource(Feature *source, uint8_t sectionCount)
 {
     if (m_sourceCount >= maxSourceCount)
     {
@@ -51,7 +45,6 @@ void FeatureComputer::addSource(Feature *source, uint8_t sectionCount,
     m_sources[m_sourceCount] = source;
     m_indexesAsReceiver[m_sourceCount] = source->addReceiver(m_id);
     m_sectionCount[m_sourceCount] = sectionCount;
-    m_skippedSectionCount[m_sourceCount] = skippedSectionCount;
     m_sourceCount++;
 }
 
@@ -88,8 +81,9 @@ bool FeatureComputer::compute()
     if (loopDebugMode)
     {
         debugPrint(m_id, false);
-        debugPrint(F(" computed in time "), false);
-        debugPrint(millis() - startT);
+        debugPrint(F(" computed in "), false);
+        debugPrint(millis() - startT, false);
+        debugPrint(F("ms"));
     }
     // Acknowledge the computed sections for each source
     for (uint8_t i = 0; i < m_sourceCount; ++i )
@@ -123,9 +117,7 @@ void FeatureComputer::exposeConfig()
         debugPrint(F(", index as receiver "), false);
         debugPrint(m_indexesAsReceiver[i], false);
         debugPrint(F(", section count "), false);
-        debugPrint(m_sectionCount[i], false);
-        debugPrint(F(", skipped section count "), false);
-        debugPrint(m_skippedSectionCount[i]);
+        debugPrint(m_sectionCount[i]);
     }
     debugPrint(F("  "), false);
     debugPrint(m_destinationCount, false);

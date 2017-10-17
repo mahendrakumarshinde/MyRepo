@@ -29,6 +29,8 @@ IUBMX055Mag::IUBMX055Mag(IUI2C *iuI2C, const char* name, Feature *magneticX,
 
 /**
  * Set up the component and finalize the object initialization
+ *
+ * By default, this 
  */
 void IUBMX055Mag::setupHardware()
 {
@@ -41,9 +43,6 @@ void IUBMX055Mag::setupHardware()
         }
         return;
     }
-    setODR(m_odr);
-    setAccuracy(m_accuracy);
-    setSamplingRate(m_samplingRate);
 }
 
 /**
@@ -53,34 +52,51 @@ void IUBMX055Mag::softReset()
 {
     // Write 1 to both bit7 and bit1 from power control byte 0x4B
     m_iuI2C->writeByte(ADDRESS, PWR_CNTL1, 0x82);
-    delay(100);
+    delay(1000);
+    // Reflect the actual state of the sensor
+    AsynchronousSensor::sleep();
+    m_forcedMode = true;
+    setAccuracy(m_accuracy);
+    setSamplingRate(m_samplingRate);
 }
 
 
 /**
- * Set the power mode to ACTIVE (between 170μA and 4.9mA)
- *
- * By default, the device will be waked up and put into forced mode (so it
- * will actually be asleep until a record is requested or until exitForcedMode
- * is called).
+ * Set the power mode to ACTIVE (between 170μA and 4.9mA).
+ * 
+ * After waking up, the Magnetometer will be in Forced Mode by default.
  */
 void IUBMX055Mag::wakeUp()
 {
+    if (m_powerMode == PowerMode::SUSPEND)
+    {
+        m_iuI2C->writeByte(ADDRESS, PWR_CNTL1, 0x01);
+        delay(100);
+        // When exiting suspend mode, need to rewrite configurations
+        setAccuracy(m_accuracy);
+        setSamplingRate(m_samplingRate);
+    }
+    enterForcedMode();
     AsynchronousSensor::wakeUp();
-    m_iuI2C->writeByte(ADDRESS, PWR_CNTL1, 0x01);
-    exitForcedMode();
 }
 
 /**
  * Set the power mode to SLEEP
- *
- * This is the default mode after soft-reset.
+ * 
+ * The registers can be read but no data acquisition can be performed.
  */
 void IUBMX055Mag::sleep()
 {
+    // When exiting suspend mode, need to rewrite configurations
+    if (m_powerMode == PowerMode::SUSPEND)
+    {
+        m_iuI2C->writeByte(ADDRESS, PWR_CNTL1, 0x01);
+        setAccuracy(m_accuracy);
+        setSamplingRate(m_samplingRate);
+    }
+    m_iuI2C->writeByte(ADDRESS, PWR_CNTL2, 0x06);
+    m_forcedMode = true;  // Reflect the actual state of the sensor
     AsynchronousSensor::sleep();
-    m_iuI2C->writeByte(ADDRESS, PWR_CNTL1, 0x01);
-    m_iuI2C->writeByte(ADDRESS, PWR_CNTL2, ((uint8_t) m_odr << 3) | 0x06);
 }
 
 /**
@@ -90,8 +106,8 @@ void IUBMX055Mag::sleep()
  */
 void IUBMX055Mag::suspend()
 {
-    AsynchronousSensor::suspend();
     m_iuI2C->writeByte(ADDRESS, PWR_CNTL1, 0x00);
+    AsynchronousSensor::suspend();
 }
 
 
@@ -127,7 +143,7 @@ bool IUBMX055Mag::configure(JsonVariant &config)
 void IUBMX055Mag::enterForcedMode()
 {
     m_forcedMode = true;
-    writeODRRegister();
+    m_iuI2C->writeByte(ADDRESS, PWR_CNTL2, 0x02);
 }
 
 /**
@@ -176,7 +192,7 @@ void IUBMX055Mag::setODR(IUBMX055Mag::ODROption ODR)
     }
     if (debugMode && m_forcedMode)
     {
-        debugPrint("Set Magnetometer ODR but Forced Mode is active: ODR will"
+        debugPrint("Set Magnetometer ODR but Forced Mode is active: ODR will "
                    "be ignored");
     }
     writeODRRegister();

@@ -68,12 +68,16 @@ class Feature
         virtual void deactivate();
         virtual bool isActive() { return m_active; }
         /***** OperationState and Thresholds *****/
-        virtual OperationState::option getOperationState() {}
+        virtual OperationState::option getOperationState()
+            { return m_operationState; }
+        virtual void updateOperationState();
         virtual void setThreshold(uint8_t idx, float value)
             { m_thresholds[idx] = value; }
         virtual void setThresholds(float normalVal, float warningVal,
                                    float dangerVal);
         virtual float getThreshold(uint8_t idx) { return m_thresholds[idx]; }
+        virtual float getValueToCompareToThresholds()
+            { return m_thresholds[0] - 1;}
         /***** Computers tracking *****/
         virtual void setSensorName(const char* name)
             { strcpy(m_sensorName, name); }
@@ -118,6 +122,8 @@ class Feature
         bool m_active;
         bool m_opStateEnabled;
         bool m_streamingEnabled;
+        /***** OperationState and Thresholds *****/
+        OperationState::option m_operationState;
         // Normal, warning and danger thresholds
         float m_thresholds[OperationState::COUNT - 1];
         /***** Computers tracking *****/
@@ -164,7 +170,7 @@ class FloatFeature : public Feature
         virtual float* getNextFloatValues();
         virtual void addFloatValue(float value);
         /***** OperationState and Thresholds *****/
-        virtual OperationState::option getOperationState();
+        virtual float getValueToCompareToThresholds();
 
     protected:
         float *m_values;
@@ -186,8 +192,6 @@ class Q15Feature : public Feature
         virtual ~Q15Feature() {}
         virtual q15_t* getNextQ15Values();
         virtual void addQ15Value(q15_t value);
-        /***** OperationState and Thresholds *****/
-        virtual OperationState::option getOperationState();
 
     protected:
         q15_t *m_values;
@@ -209,8 +213,6 @@ class Q31Feature : public Feature
         virtual ~Q31Feature() {}
         virtual q31_t* getNextQ31Values();
         virtual void addQ31Value(q31_t value);
-        /***** OperationState and Thresholds *****/
-        virtual OperationState::option getOperationState();
 
     protected:
         q31_t *m_values;

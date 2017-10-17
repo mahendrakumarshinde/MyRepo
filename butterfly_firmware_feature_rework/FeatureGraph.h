@@ -1,5 +1,5 @@
-#ifndef FEATURES_H
-#define FEATURES_H
+#ifndef FEATUREGRAPH_H
+#define FEATUREGRAPH_H
 
 #include <ArduinoJson.h>
 
@@ -169,8 +169,8 @@ extern FloatFeature pressure;
 /***** Audio Features *****/
 
 // Sensor data
-extern q31_t audioValues[4096];
-extern Q31Feature audio;
+extern q15_t audioValues[8192];
+extern Q15Feature audio;
 
 // 2048 sample long features
 extern __attribute__((section(".noinit2"))) float audioDB2048Values[4];
@@ -302,7 +302,6 @@ bool atLeastOneStreamingFeature();
 void enableCalibrationFeatures();
 void enableMotorFeatures();
 void enablePressFeatures();
-void exposeAllFeatureConfigurations();
+void exposeAllConfigurations();
 
-
-#endif // FEATURES_H
+#endif // FEATUREGRAPH_H

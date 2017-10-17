@@ -54,18 +54,18 @@ class IUBMD350 : public IUSerial
         void exitATCommandInterface();
         int sendATCommand(String cmd, char *response, uint8_t responseLength);
         // Device name
-        bool setDeviceName(char *deviceName);
-        bool queryDeviceName();
+        void setDeviceName(char *deviceName);
+        void queryDeviceName();
         char* getDeviceName() { return m_deviceName; }
         /* TODO Need to set / use password? If yes, see BMDWare datasheet
         Set Password AT Command (1 to 19 byte alphanumeric): at$password */
         // Beacon and UART Passthrough
-        bool configureUARTPassthrough();
-        bool configureBeacon(bool enabled, uint16_t adInterval);
-        bool setBeaconUUID(char *UUID, char *major, char *minor);
+        void configureUARTPassthrough();
+        void configureBeacon(bool enabled, uint16_t adInterval);
+        void setBeaconUUID(char *UUID, char *major, char *minor);
         // Tx Powers
-        bool setTxPowers(txPowerOption txPower);
-        bool queryTxPowers();
+        void setTxPowers(txPowerOption txPower);
+        void queryTxPowers();
         txPowerOption getConnectedTxPower() { return m_connectedTxPower; }
         txPowerOption getBeaconTxPower() { return m_beaconTxPower; }
         /***** Debugging *****/

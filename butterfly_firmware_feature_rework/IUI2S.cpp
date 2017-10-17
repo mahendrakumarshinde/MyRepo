@@ -10,7 +10,7 @@ IUI2S::IUI2S(IUI2C *iuI2C, const char* name, Feature *audio) :
   m_iuI2C(iuI2C),
   m_firstI2STrigger(true)
 {
-  prepareDataAcquisition();
+    setSamplingRate(defaultSamplingRate);
 }
 
 
@@ -24,19 +24,12 @@ IUI2S::IUI2S(IUI2C *iuI2C, const char* name, Feature *audio) :
  * If the new sampling rate is greater than the clock rate, the later will be
  * increased to allow the former.
  * Sampling rate cannot be set to zero.
- * This function internally call prepareDataAcquisition at the end.
+ * This function internally call computeDownclockingRate at the end.
  */
 void IUI2S::setSamplingRate(uint16_t samplingRate)
 {
-    if (samplingRate == 0)
-    {
-        m_samplingRate = defaultSamplingRate;
-    }
-    else
-    {
-        m_samplingRate = samplingRate;
-    }
-    prepareDataAcquisition();
+    m_samplingRate = samplingRate;
+    computeDownclockingRate();
 }
 
 
@@ -49,7 +42,7 @@ void IUI2S::setSamplingRate(uint16_t samplingRate)
  *
  * This must be called everytime the callback or sampling rates are modified.
  */
-void IUI2S::prepareDataAcquisition()
+void IUI2S::computeDownclockingRate()
 {
     m_downclocking = m_samplingRate / getCallbackRate();
     m_downclockingCount = 0;
@@ -97,7 +90,9 @@ bool IUI2S::endDataAcquisition()
 /**
  * Process an audio sample
  *
- * @param ICS43432 32bit sample
+ * @param ICS43432 24bit sample, contained in a 32bit number (q31_t). We will
+ *  only keep the 16 most significant bit (lose 8bits in precision) and store
+ *  them as q15_t.
  */
 void IUI2S::processAudioData(q31_t *data)
 {
@@ -105,8 +100,9 @@ void IUI2S::processAudioData(q31_t *data)
     {
         /* only keep 1 record every 2 records because stereo recording but we
         use only 1 canal. */
-        m_audioData[i] = (q31_t) (data[i * 2]);
-        m_destinations[i]->addQ31Value(m_audioData[i]);
+        // Send most significant 16bits
+        m_audioData[i] = (q15_t) (data[i * 2] >> 16);
+        m_destinations[0]->addQ15Value(m_audioData[i]);
     }
 }
 
@@ -161,4 +157,25 @@ void IUI2S::sendData(HardwareSerial *port)
 /* =============================================================================
     Debugging
 ============================================================================= */
+
+/**
+ * Shows the I2S + microphone config when in DEBUGMODE
+ */
+void IUI2S::expose()
+{
+    #ifdef DEBUGMODE
+    Sensor::expose();
+    debugPrint(F("Sampling config"));
+    debugPrint(F("  clock rate: "), false);
+    debugPrint(clockRate);
+    debugPrint(F("  audio sample size: "), false);
+    debugPrint(audioSampleSize);
+    debugPrint(F("  callback rate: "), false);
+    debugPrint(getCallbackRate());
+    debugPrint(F("  sampling rate: "), false);
+    debugPrint(m_samplingRate);
+    debugPrint(F("  downclocking: "), false);
+    debugPrint(m_downclocking);
+    #endif
+}
 

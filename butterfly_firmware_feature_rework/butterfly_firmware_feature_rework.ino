@@ -58,16 +58,16 @@ uint32_t lastDone = 0;
  */
 void callback()
 {
-  uint32_t startT = 0;
-  if (callbackDebugMode)
-  {
-    startT = micros();
-  }
-  conductor.acquireData(true);
-  if (callbackDebugMode)
-  {
-    debugPrint(micros() - startT);
-  }
+    uint32_t startT = 0;
+    if (callbackDebugMode)
+    {
+        startT = micros();
+    }
+    conductor.acquireData(true);
+    if (callbackDebugMode)
+    {
+        debugPrint(micros() - startT);
+    }
 }
 
 
@@ -81,7 +81,7 @@ void setup()
         Serial.begin(115200);
         delay(4000);
     #else
-        if (setupDebugMode)
+        if (debugMode)
         {
           Serial.begin(115200);
           delay(2000);

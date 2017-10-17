@@ -22,7 +22,7 @@ class IURGBLed : public Component
         /***** Preset values and default settings *****/
         enum PIN : uint8_t {RED_PIN = A5,
                             GREEN_PIN = A3,
-                            BLUE_PIN = A0};
+                            BLUE_PIN = A4};
         enum LEDColors : uint8_t {RED,
                                   BLUE,
                                   GREEN,
@@ -40,6 +40,8 @@ class IURGBLed : public Component
                                       {0, 1, 1}, // CYAN
                                       {1, 1, 1}, // WHITE
                                       {0, 0, 0}};// SLEEP
+        // The default duration the LED stays on after being lit.
+        static const uint8_t onTimer = 50;  //ms
         /***** Constructors & desctructors *****/
         IURGBLed();
         virtual ~IURGBLed() {}
@@ -47,7 +49,6 @@ class IURGBLed : public Component
         virtual void sleep();
         virtual void suspend();
         /***** Color management *****/
-        void setOnTimer(uint16_t duration) { m_onTimer = duration; }
         void turnOff();
         void autoTurnOff();
         void lock() { m_locked = true; }
@@ -58,7 +59,6 @@ class IURGBLed : public Component
 
     private:
         bool m_locked;
-        uint16_t m_onTimer;
         uint32_t m_nextOffTime;
 };
 

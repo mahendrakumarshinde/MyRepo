@@ -7,7 +7,7 @@
 #include "IUBMD350.h"
 #include "IUESP8285.h"
 #include "IURGBLed.h"
-#include "Features.h"
+#include "FeatureGraph.h"
 
 
 /**
@@ -23,6 +23,8 @@ class Conductor
                                   COUNT    = 3};
         // Default start datetime
         static constexpr double defaultTimestamp = 1492144654.00;
+        // Operation state shown on LED every X ms
+        static const uint16_t showOpStateTimer = 500;
         /***** Constructors and destructor *****/
         Conductor(const char* version, const char* macAddress);
         virtual ~Conductor() {}
@@ -81,6 +83,8 @@ class Conductor
         OperationState::option m_operationState;
         void (*m_callback)();
         bool m_inDataAcquistion;
+        // The last time the LED was lit to reflect the OP state.
+        uint32_t m_lastLitLedTime;
         /***** Configuration and Mode management *****/
         UsageMode::option m_usageMode;
         AcquisitionMode::option m_acquisitionMode;

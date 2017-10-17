@@ -12,7 +12,7 @@
 
 #ifdef DEBUGMODE
 __attribute__((section(".noinit2"))) const bool setupDebugMode = true;
-__attribute__((section(".noinit2"))) const bool loopDebugMode = true;
+__attribute__((section(".noinit2"))) const bool loopDebugMode = false;
 __attribute__((section(".noinit2"))) const bool callbackDebugMode = false;
 __attribute__((section(".noinit2"))) const bool highVerbosity = false;
 __attribute__((section(".noinit2"))) const bool readableDataCollection = false;

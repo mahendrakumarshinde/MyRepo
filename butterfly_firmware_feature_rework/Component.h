@@ -13,7 +13,7 @@ class Component
     public:
         Component() {}
         virtual ~Component() {}
-        // Hardware & power management methods
+        /***** Hardware & power management methods *****/
         virtual void setupHardware() {}
         virtual void wakeUp() { m_powerMode = PowerMode::ACTIVE; }
         virtual void sleep() { m_powerMode = PowerMode::SLEEP; }
