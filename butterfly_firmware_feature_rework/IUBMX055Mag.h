@@ -54,7 +54,7 @@ class IUBMX055Mag : public AsynchronousSensor
         static const ODROption defaultODR = ODR_10Hz;
         static const accuracyPreset defaultAccuracy = \
             accuracyPreset::LOWPOWER;
-        static const uint16_t defaultSamplingRate = 1000; // Hz
+        static const uint16_t defaultSamplingRate = 20; // Hz
         /***** Constructors and destructors *****/
         IUBMX055Mag(IUI2C *iuI2C, const char* name, Feature *magneticX=NULL,
                     Feature *magneticY=NULL, Feature *magneticZ=NULL);

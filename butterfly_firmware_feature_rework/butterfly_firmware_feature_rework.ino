@@ -4,19 +4,27 @@
   Update 2017-10-10
 */
 
+/* =============================================================================
+    Library imports
+============================================================================= */
+
+
 #include "Conductor.h"
 #include "Configurator.h"
-
-/* =============================================================================
-    Unit test and quality assessment test
-============================================================================= */
 
 /* Comment / Uncomment the "define" lines to toggle / untoggle unit or quality
 test mode */
 
-//#define UNITTEST
+#define UNITTEST
 #ifdef UNITTEST
-  #include "UnitTest/Test_IUUtilities.h"
+  #include "UnitTest/Test_Component.h"
+  #include "UnitTest/Test_FeatureClass.h"
+  #include "UnitTest/Test_FeatureComputer.h"
+  #include "UnitTest/Test_FeatureGraph.h"
+  #include "UnitTest/Test_FeatureStreamingGroup.h"
+  #include "UnitTest/Test_Sensor.h"
+  #include "UnitTest/Test_Utilities.h"
+  #include "UnitTest/UnitTestData.h"
 #endif
 
 //#define QUALITYTEST
@@ -26,12 +34,10 @@ test mode */
 
 
 /* =============================================================================
-    Identification Constants
+    Firmware version
 ============================================================================= */
 
 const char FIRMWARE_VERSION[6] = "1.0.0";
-
-const char MAC_ADDRESS[18] = "94:54:93:0F:67:01";
 
 
 /* =============================================================================
@@ -73,13 +79,15 @@ void callback()
 
 /***** Begin *****/
 
-Conductor conductor(FIRMWARE_VERSION, MAC_ADDRESS);
+Conductor conductor(FIRMWARE_VERSION);
 
 void setup()
 {
     #ifdef UNITTEST
         Serial.begin(115200);
-        delay(4000);
+        delay(2000);
+        memoryLog("UNIT TEST");
+        Serial.println(' ');
     #else
         if (debugMode)
         {

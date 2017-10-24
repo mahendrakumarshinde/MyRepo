@@ -5,8 +5,7 @@
     "TSL": 60,
     "TOFF": 300,
     "TCY": 3600,
-    "FNC1": "DEV",
-    "FNC2": "PRS"
+    "FNC1": "PRS"
   },
   "components": {
     "ACC": {

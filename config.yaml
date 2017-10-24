@@ -4,8 +4,7 @@ device:
   autosleep_delay: 60  # Used only when power_mode is AUTOSLEEP
   sleep_duration: 300  # Used only when power_mode is AUTOSLEEP or PERIODIC_SLEEP
   sleep_cycle: 3600  # Used only when power_mode is PERIODIC_SLEEP
-  function_1: device_monitoring
-  function_2: press_standard
+  function_1: press_standard
 
 components:
   accelerometer:

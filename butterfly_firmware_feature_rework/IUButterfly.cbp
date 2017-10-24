@@ -12,9 +12,58 @@
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Compiler>
+					<Add option="-std=c++11" />
+					<Add option="-m32" />
 					<Add option="-g" />
 					<Add directory="include" />
+					<Add directory="/home/pat/workspace/productivity/butterfly_firmware_feature_rework/" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/cores/stm32l4" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/cores/stm32l4/avr" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Include" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/libraries/EEPROM/src" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/libraries/RTC/src" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/libraries/Servo/src" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/libraries/SPI/src" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/libraries/Wire/src" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Device/ST/STM32L4xx/Include" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Device/ST/STM32L4xx/Source" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Include" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/DAP" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/Class/CDC/Inc" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/Class/CDC/Src" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/Class/HID/Inc" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/Class/HID/Src" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/Class/MSC/Inc" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/Class/MSC/Src" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/Core/Inc" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/Core/Src" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/HAL/Inc" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/HAL/Inc/Legacy" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/HAL/Src" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/variants/STM32L433CC-Butterfly" />
+					<Add directory="/home/pat/workspace/arduino/libraries/ArduinoJson/src" />
+					<Add directory="/home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson" />
+					<Add directory="/home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Data" />
+					<Add directory="/home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Deserialization" />
+					<Add directory="/home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Polyfills" />
+					<Add directory="/home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Serialization" />
+					<Add directory="/home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/StringTraits" />
+					<Add directory="/home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/TypeTraits" />
+					<Add directory="/home/pat/workspace/arduino/libraries/Arduino-MemoryFree" />
+					<Add directory="/home/pat/workspace/arduino/libraries/GNSS" />
+					<Add directory="/home/pat/workspace/arduino/libraries/GNSS/utility" />
+					<Add directory="/home/pat/workspace/arduino/libraries/IUArduinoUnit/src" />
+					<Add directory="/home/pat/workspace/arduino/libraries/IUArduinoUnit/src/ArduinoUnitUtility" />
+					<Add directory="/home/pat/workspace/arduino/libraries/IUButterflyI2S/src" />
+					<Add directory="/home/pat/workspace/arduino/libraries/IUWiFiOTA" />
 				</Compiler>
+				<Linker>
+					<Add option="-m32" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Lib" />
+					<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Lib" />
+				</Linker>
 			</Target>
 			<Target title="Release">
 				<Option output="bin/Release/IUButterfly" prefix_auto="1" extension_auto="1" />
@@ -23,17 +72,70 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-O2" />
+					<Add option="-std=c++11" />
+					<Add option="-m32" />
 					<Add directory="include" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
+					<Add option="-m32" />
 				</Linker>
 			</Target>
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
+			<Add option="-std=c++11" />
+			<Add option="-m32" />
 			<Add option="-fexceptions" />
+			<Add option="-DSTM32L443xx" />
+			<Add directory="/home/pat/workspace/productivity/butterfly_firmware_feature_rework/" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/cores/stm32l4" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/cores/stm32l4/avr" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Include" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/libraries/EEPROM/src" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/libraries/RTC/src" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/libraries/Servo/src" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/libraries/SPI/src" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/libraries/Wire/src" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Device/ST/STM32L4xx/Include" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Device/ST/STM32L4xx/Source" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Include" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/DAP" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/Class/CDC/Inc" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/Class/CDC/Src" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/Class/HID/Inc" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/Class/HID/Src" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/Class/MSC/Inc" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/Class/MSC/Src" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/Core/Inc" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/Core/Src" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/HAL/Inc" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/HAL/Inc/Legacy" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/HAL/Src" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/variants/STM32L433CC-Butterfly" />
+			<Add directory="/home/pat/workspace/arduino/libraries/ArduinoJson/src" />
+			<Add directory="/home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson" />
+			<Add directory="/home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Data" />
+			<Add directory="/home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Deserialization" />
+			<Add directory="/home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Polyfills" />
+			<Add directory="/home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Serialization" />
+			<Add directory="/home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/StringTraits" />
+			<Add directory="/home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/TypeTraits" />
+			<Add directory="/home/pat/workspace/arduino/libraries/Arduino-MemoryFree" />
+			<Add directory="/home/pat/workspace/arduino/libraries/GNSS" />
+			<Add directory="/home/pat/workspace/arduino/libraries/GNSS/utility" />
+			<Add directory="/home/pat/workspace/arduino/libraries/IUArduinoUnit/src" />
+			<Add directory="/home/pat/workspace/arduino/libraries/IUArduinoUnit/src/ArduinoUnitUtility" />
+			<Add directory="/home/pat/workspace/arduino/libraries/IUButterflyI2S/src" />
+			<Add directory="/home/pat/workspace/arduino/libraries/IUWiFiOTA" />
 		</Compiler>
+		<Linker>
+			<Add option="-m32" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Lib" />
+			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Lib" />
+		</Linker>
 		<Unit filename="Component.h" />
 		<Unit filename="Conductor.cpp" />
 		<Unit filename="Conductor.h" />
@@ -43,10 +145,10 @@
 		<Unit filename="FeatureClass.h" />
 		<Unit filename="FeatureComputer.cpp" />
 		<Unit filename="FeatureComputer.h" />
+		<Unit filename="FeatureGraph.cpp" />
+		<Unit filename="FeatureGraph.h" />
 		<Unit filename="FeatureStreamingGroup.cpp" />
 		<Unit filename="FeatureStreamingGroup.h" />
-		<Unit filename="Features.cpp" />
-		<Unit filename="Features.h" />
 		<Unit filename="IUBMD350.cpp" />
 		<Unit filename="IUBMD350.h" />
 		<Unit filename="IUBMP280.cpp" />
@@ -76,10 +178,16 @@
 		<Unit filename="QualityTest/QA_IUBMX055.h" />
 		<Unit filename="Sensor.cpp" />
 		<Unit filename="Sensor.h" />
-		<Unit filename="UnitTest/Test_IUUtilities.h" />
+		<Unit filename="UnitTest/Test_Component.h" />
+		<Unit filename="UnitTest/Test_FeatureClass.h" />
+		<Unit filename="UnitTest/Test_FeatureComputer.h" />
+		<Unit filename="UnitTest/Test_FeatureGraph.h" />
+		<Unit filename="UnitTest/Test_FeatureStreamingGroup.h" />
+		<Unit filename="UnitTest/Test_Sensor.h" />
+		<Unit filename="UnitTest/Test_Utilities.h" />
+		<Unit filename="UnitTest/UnitTestData.h" />
 		<Unit filename="Utilities.cpp" />
 		<Unit filename="Utilities.h" />
-		<Unit filename="butterfly_firmware.cpp" />
 		<Extensions>
 			<envvars />
 			<code_completion />

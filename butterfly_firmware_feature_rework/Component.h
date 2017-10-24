@@ -33,10 +33,6 @@ class Component
                 suspend();
                 break;
             default:
-                if (debugMode)
-                {
-                    raiseException("Undefined power mode");
-                }
                 break;
             }
         }

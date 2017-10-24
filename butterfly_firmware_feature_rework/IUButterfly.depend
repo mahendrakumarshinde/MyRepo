@@ -1,0 +1,885 @@
+# depslib dependency file v1.0
+1508540976 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/Conductor.cpp
+	"Conductor.h"
+
+1508435527 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/Conductor.h
+	<Arduino.h>
+	"IUSerial.h"
+	"IUBMD350.h"
+	"IUESP8285.h"
+	"IURGBLed.h"
+	"FeatureGraph.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/cores/stm32l4/Arduino.h
+	<stdbool.h>
+	<stdint.h>
+	<stdlib.h>
+	<string.h>
+	<math.h>
+	"avr/pgmspace.h"
+	"avr/interrupt.h"
+	"avr/io.h"
+	"binary.h"
+	"itoa.h"
+	"stm32l4xx.h"
+	"stm32l4_wiring.h"
+	"WCharacter.h"
+	"WString.h"
+	"WMath.h"
+	"HardwareSerial.h"
+	"STM32.h"
+	"variant.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/cores/stm32l4/avr/pgmspace.h
+	<inttypes.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/cores/stm32l4/avr/interrupt.h
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/cores/stm32l4/avr/io.h
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/cores/stm32l4/binary.h
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/cores/stm32l4/itoa.h
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Device/ST/STM32L4xx/Include/stm32l4xx.h
+	"stm32l431xx.h"
+	"stm32l432xx.h"
+	"stm32l433xx.h"
+	"stm32l442xx.h"
+	"stm32l443xx.h"
+	"stm32l451xx.h"
+	"stm32l452xx.h"
+	"stm32l462xx.h"
+	"stm32l471xx.h"
+	"stm32l475xx.h"
+	"stm32l476xx.h"
+	"stm32l485xx.h"
+	"stm32l486xx.h"
+	"stm32l496xx.h"
+	"stm32l4a6xx.h"
+	"stm32l4xx_hal.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Device/ST/STM32L4xx/Include/stm32l431xx.h
+	"core_cm4.h"
+	"system_stm32l4xx.h"
+	<stdint.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Include/core_cm4.h
+	<stdint.h>
+	"core_cmInstr.h"
+	"core_cmFunc.h"
+	"core_cmSimd.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Include/core_cmInstr.h
+	"cmsis_armcc.h"
+	"cmsis_armcc_V6.h"
+	"cmsis_gcc.h"
+	<cmsis_iar.h>
+	<cmsis_ccs.h>
+	<cmsis_csm.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Include/cmsis_armcc.h
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Include/cmsis_armcc_V6.h
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Include/cmsis_gcc.h
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Include/core_cmFunc.h
+	"cmsis_armcc.h"
+	"cmsis_armcc_V6.h"
+	"cmsis_gcc.h"
+	<cmsis_iar.h>
+	<cmsis_ccs.h>
+	<cmsis_csm.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Include/core_cmSimd.h
+	"cmsis_armcc.h"
+	"cmsis_armcc_V6.h"
+	"cmsis_gcc.h"
+	<cmsis_iar.h>
+	<cmsis_ccs.h>
+	<cmsis_csm.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Device/ST/STM32L4xx/Include/system_stm32l4xx.h
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Device/ST/STM32L4xx/Include/stm32l432xx.h
+	"core_cm4.h"
+	"system_stm32l4xx.h"
+	<stdint.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Device/ST/STM32L4xx/Include/stm32l433xx.h
+	"core_cm4.h"
+	"system_stm32l4xx.h"
+	<stdint.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Device/ST/STM32L4xx/Include/stm32l442xx.h
+	"core_cm4.h"
+	"system_stm32l4xx.h"
+	<stdint.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Device/ST/STM32L4xx/Include/stm32l443xx.h
+	"core_cm4.h"
+	"system_stm32l4xx.h"
+	<stdint.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Device/ST/STM32L4xx/Include/stm32l451xx.h
+	"core_cm4.h"
+	"system_stm32l4xx.h"
+	<stdint.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Device/ST/STM32L4xx/Include/stm32l452xx.h
+	"core_cm4.h"
+	"system_stm32l4xx.h"
+	<stdint.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Device/ST/STM32L4xx/Include/stm32l462xx.h
+	"core_cm4.h"
+	"system_stm32l4xx.h"
+	<stdint.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Device/ST/STM32L4xx/Include/stm32l471xx.h
+	"core_cm4.h"
+	"system_stm32l4xx.h"
+	<stdint.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Device/ST/STM32L4xx/Include/stm32l475xx.h
+	"core_cm4.h"
+	"system_stm32l4xx.h"
+	<stdint.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Device/ST/STM32L4xx/Include/stm32l476xx.h
+	"core_cm4.h"
+	"system_stm32l4xx.h"
+	<stdint.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Device/ST/STM32L4xx/Include/stm32l485xx.h
+	"core_cm4.h"
+	"system_stm32l4xx.h"
+	<stdint.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Device/ST/STM32L4xx/Include/stm32l486xx.h
+	"core_cm4.h"
+	"system_stm32l4xx.h"
+	<stdint.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Device/ST/STM32L4xx/Include/stm32l496xx.h
+	"core_cm4.h"
+	"system_stm32l4xx.h"
+	<stdint.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Device/ST/STM32L4xx/Include/stm32l4a6xx.h
+	"core_cm4.h"
+	"system_stm32l4xx.h"
+	<stdint.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/cores/stm32l4/stm32l4_wiring.h
+	<stdint.h>
+	"armv7m.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Include/armv7m.h
+	<stdint.h>
+	"armv7m_atomic.h"
+	"armv7m_bitband.h"
+	"armv7m_pendsv.h"
+	"armv7m_svcall.h"
+	"armv7m_systick.h"
+	"armv7m_timer.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Include/armv7m_atomic.h
+	<stdint.h>
+	<stdbool.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Include/armv7m_bitband.h
+	<stdint.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Include/armv7m_pendsv.h
+	<stdint.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Include/armv7m_svcall.h
+	<stdint.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Include/armv7m_systick.h
+	<stdint.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Include/armv7m_timer.h
+	<stdint.h>
+	<stdbool.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/cores/stm32l4/WCharacter.h
+	<ctype.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/cores/stm32l4/WString.h
+	<stdlib.h>
+	<string.h>
+	<ctype.h>
+	<avr/pgmspace.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/cores/stm32l4/WMath.h
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/cores/stm32l4/HardwareSerial.h
+	<inttypes.h>
+	"Stream.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/cores/stm32l4/Stream.h
+	<inttypes.h>
+	"Print.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/cores/stm32l4/Print.h
+	<inttypes.h>
+	<stdio.h>
+	"WString.h"
+	"Printable.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/cores/stm32l4/Printable.h
+	<stdlib.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/cores/stm32l4/STM32.h
+	<Arduino.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/variants/STM32L433CC-Butterfly/variant.h
+	"USBAPI.h"
+	"Uart.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/cores/stm32l4/USBAPI.h
+	"HardwareSerial.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/cores/stm32l4/Uart.h
+	"HardwareSerial.h"
+
+1508458376 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUSerial.h
+	<Arduino.h>
+	"Keywords.h"
+	"Component.h"
+
+1508189955 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/Keywords.h
+	<Arduino.h>
+
+1508542747 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/Component.h
+	"Keywords.h"
+	"Logger.h"
+
+1508522207 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/Logger.h
+	<Arduino.h>
+	<ArduinoUnit.h>
+	<MemoryFree.h>
+
+1493549260 /home/pat/workspace/arduino/libraries/IUArduinoUnit/src/ArduinoUnit.h
+	<stdint.h>
+	<Print.h>
+	<ArduinoUnitUtility/Compare.h>
+	<ArduinoUnitUtility/FakeStream.h>
+	<ArduinoUnitUtility/FakeStreamBuffer.h>
+
+1493549260 /home/pat/workspace/arduino/libraries/IUArduinoUnit/src/ArduinoUnitUtility/Compare.h
+	<avr/pgmspace.h>
+	<WString.h>
+
+1493549260 /home/pat/workspace/arduino/libraries/IUArduinoUnit/src/ArduinoUnitUtility/FakeStream.h
+	"Arduino.h"
+
+1493549260 /home/pat/workspace/arduino/libraries/IUArduinoUnit/src/ArduinoUnitUtility/FakeStreamBuffer.h
+	"Arduino.h"
+	"FakeStream.h"
+
+1504731099 /home/pat/workspace/arduino/libraries/Arduino-MemoryFree/MemoryFree.h
+
+1508192857 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMD350.h
+	<Arduino.h>
+	"IUSerial.h"
+
+1508189955 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUESP8285.h
+	<Arduino.h>
+	"Host_WiFiserial.h"
+	"IUSerial.h"
+
+1497659343 /home/pat/workspace/arduino/libraries/IUWiFiOTA/Host_WiFiserial.h
+	"OTA.h"
+
+1497659343 /home/pat/workspace/arduino/libraries/IUWiFiOTA/OTA.h
+	"Host_WiFiserial.h"
+
+1508279353 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IURGBLed.h
+	<Arduino.h>
+	"Keywords.h"
+	"Component.h"
+
+1508286733 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/FeatureGraph.h
+	<ArduinoJson.h>
+	"FeatureClass.h"
+	"FeatureComputer.h"
+	"FeatureStreamingGroup.h"
+	"IUI2C.h"
+	"IUBattery.h"
+	"IUBMP280.h"
+	"IUBMX055Acc.h"
+	"IUBMX055Gyro.h"
+	"IUBMX055Mag.h"
+	"IUCAMM8Q.h"
+	"IUI2S.h"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson.h
+	"ArduinoJson.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson.hpp
+	"ArduinoJson/DynamicJsonBuffer.hpp"
+	"ArduinoJson/JsonArray.hpp"
+	"ArduinoJson/JsonObject.hpp"
+	"ArduinoJson/StaticJsonBuffer.hpp"
+	"ArduinoJson/Deserialization/JsonParserImpl.hpp"
+	"ArduinoJson/JsonArrayImpl.hpp"
+	"ArduinoJson/JsonBufferImpl.hpp"
+	"ArduinoJson/JsonObjectImpl.hpp"
+	"ArduinoJson/JsonVariantImpl.hpp"
+	"ArduinoJson/Serialization/JsonSerializerImpl.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/DynamicJsonBuffer.hpp
+	"JsonBufferBase.hpp"
+	<stdlib.h>
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/JsonBufferBase.hpp
+	"Deserialization/JsonParser.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Deserialization/JsonParser.hpp
+	"../JsonBuffer.hpp"
+	"../JsonVariant.hpp"
+	"../TypeTraits/IsConst.hpp"
+	"StringWriter.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/JsonBuffer.hpp
+	<stddef.h>
+	<stdint.h>
+	<string.h>
+	"Data/NonCopyable.hpp"
+	"JsonVariant.hpp"
+	"TypeTraits/EnableIf.hpp"
+	"TypeTraits/IsArray.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Data/NonCopyable.hpp
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/JsonVariant.hpp
+	<stddef.h>
+	<stdint.h>
+	"Data/JsonVariantContent.hpp"
+	"Data/JsonVariantDefault.hpp"
+	"Data/JsonVariantType.hpp"
+	"JsonVariantBase.hpp"
+	"RawJson.hpp"
+	"Serialization/JsonPrintable.hpp"
+	"TypeTraits/EnableIf.hpp"
+	"TypeTraits/IsChar.hpp"
+	"TypeTraits/IsFloatingPoint.hpp"
+	"TypeTraits/IsIntegral.hpp"
+	"TypeTraits/IsSame.hpp"
+	"TypeTraits/IsSignedIntegral.hpp"
+	"TypeTraits/IsUnsignedIntegral.hpp"
+	"TypeTraits/RemoveConst.hpp"
+	"TypeTraits/RemoveReference.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Data/JsonVariantContent.hpp
+	"JsonFloat.hpp"
+	"JsonInteger.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Data/JsonFloat.hpp
+	"../Configuration.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Configuration.hpp
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Data/JsonInteger.hpp
+	"../Configuration.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Data/JsonVariantDefault.hpp
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Data/JsonVariantType.hpp
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/JsonVariantBase.hpp
+	"JsonVariantCasts.hpp"
+	"JsonVariantComparisons.hpp"
+	"JsonVariantSubscripts.hpp"
+	"Serialization/JsonPrintable.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/JsonVariantCasts.hpp
+	"Data/JsonVariantAs.hpp"
+	"Polyfills/attributes.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Data/JsonVariantAs.hpp
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Polyfills/attributes.hpp
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/JsonVariantComparisons.hpp
+	"StringTraits/StringTraits.hpp"
+	"TypeTraits/EnableIf.hpp"
+	"TypeTraits/IsVariant.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/StringTraits/StringTraits.hpp
+	<string.h>
+	"../Configuration.hpp"
+	"../TypeTraits/EnableIf.hpp"
+	"../TypeTraits/IsBaseOf.hpp"
+	"../TypeTraits/IsChar.hpp"
+	"../TypeTraits/RemoveReference.hpp"
+	"ArduinoStream.hpp"
+	"CharPointer.hpp"
+	"FlashString.hpp"
+	"StdStream.hpp"
+	"StdString.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/TypeTraits/EnableIf.hpp
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/TypeTraits/IsBaseOf.hpp
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/TypeTraits/IsChar.hpp
+	"IsSame.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/TypeTraits/IsSame.hpp
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/TypeTraits/RemoveReference.hpp
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/StringTraits/ArduinoStream.hpp
+	<Stream.h>
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/StringTraits/CharPointer.hpp
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/StringTraits/FlashString.hpp
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/StringTraits/StdStream.hpp
+	<istream>
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/StringTraits/StdString.hpp
+	<WString.h>
+	<string>
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/TypeTraits/IsVariant.hpp
+	"IsBaseOf.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/JsonVariantSubscripts.hpp
+	"Data/JsonVariantAs.hpp"
+	"Polyfills/attributes.hpp"
+	"StringTraits/StringTraits.hpp"
+	"TypeTraits/EnableIf.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Serialization/JsonPrintable.hpp
+	"../Configuration.hpp"
+	"../TypeTraits/EnableIf.hpp"
+	"DummyPrint.hpp"
+	"DynamicStringBuilder.hpp"
+	"IndentedPrint.hpp"
+	"JsonSerializer.hpp"
+	"JsonWriter.hpp"
+	"Prettyfier.hpp"
+	"StaticStringBuilder.hpp"
+	"StreamPrintAdapter.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Serialization/DummyPrint.hpp
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Serialization/DynamicStringBuilder.hpp
+	"../StringTraits/StringTraits.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Serialization/IndentedPrint.hpp
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Serialization/JsonSerializer.hpp
+	"JsonWriter.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Serialization/JsonWriter.hpp
+	<stdint.h>
+	"../Data/Encoding.hpp"
+	"../Data/JsonInteger.hpp"
+	"../Polyfills/attributes.hpp"
+	"../Serialization/FloatParts.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Data/Encoding.hpp
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Serialization/FloatParts.hpp
+	"../Configuration.hpp"
+	"../Polyfills/math.hpp"
+	"../TypeTraits/FloatTraits.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Polyfills/math.hpp
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/TypeTraits/FloatTraits.hpp
+	<stdint.h>
+	<stdlib.h>
+	"../Configuration.hpp"
+	"../Polyfills/math.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Serialization/Prettyfier.hpp
+	"IndentedPrint.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Serialization/StaticStringBuilder.hpp
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Serialization/StreamPrintAdapter.hpp
+	"../Configuration.hpp"
+	<ostream>
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/RawJson.hpp
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/TypeTraits/IsFloatingPoint.hpp
+	"IsSame.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/TypeTraits/IsIntegral.hpp
+	"IsSame.hpp"
+	"IsSignedIntegral.hpp"
+	"IsUnsignedIntegral.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/TypeTraits/IsSignedIntegral.hpp
+	"../Configuration.hpp"
+	"IsSame.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/TypeTraits/IsUnsignedIntegral.hpp
+	"../Configuration.hpp"
+	"IsSame.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/TypeTraits/RemoveConst.hpp
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/TypeTraits/IsArray.hpp
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/TypeTraits/IsConst.hpp
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Deserialization/StringWriter.hpp
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/JsonArray.hpp
+	"Data/JsonBufferAllocated.hpp"
+	"Data/List.hpp"
+	"Data/ReferenceType.hpp"
+	"Data/ValueSetter.hpp"
+	"JsonVariant.hpp"
+	"Serialization/JsonPrintable.hpp"
+	"StringTraits/StringTraits.hpp"
+	"TypeTraits/EnableIf.hpp"
+	"TypeTraits/IsArray.hpp"
+	"TypeTraits/IsFloatingPoint.hpp"
+	"TypeTraits/IsSame.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Data/JsonBufferAllocated.hpp
+	"../JsonBuffer.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Data/List.hpp
+	"../JsonBuffer.hpp"
+	"ListConstIterator.hpp"
+	"ListIterator.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Data/ListConstIterator.hpp
+	"ListNode.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Data/ListNode.hpp
+	<stddef.h>
+	"JsonBufferAllocated.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Data/ListIterator.hpp
+	"ListConstIterator.hpp"
+	"ListNode.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Data/ReferenceType.hpp
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Data/ValueSetter.hpp
+	"../JsonBuffer.hpp"
+	"../JsonVariant.hpp"
+	"../StringTraits/StringTraits.hpp"
+	"../TypeTraits/EnableIf.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/JsonObject.hpp
+	"Data/JsonBufferAllocated.hpp"
+	"Data/List.hpp"
+	"Data/ReferenceType.hpp"
+	"Data/ValueSetter.hpp"
+	"JsonPair.hpp"
+	"Serialization/JsonPrintable.hpp"
+	"StringTraits/StringTraits.hpp"
+	"TypeTraits/EnableIf.hpp"
+	"TypeTraits/IsArray.hpp"
+	"TypeTraits/IsFloatingPoint.hpp"
+	"TypeTraits/IsSame.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/JsonPair.hpp
+	"JsonVariant.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/StaticJsonBuffer.hpp
+	"JsonBufferBase.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Deserialization/JsonParserImpl.hpp
+	"Comments.hpp"
+	"JsonParser.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Deserialization/Comments.hpp
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/JsonArrayImpl.hpp
+	"JsonArray.hpp"
+	"JsonArraySubscript.hpp"
+	"JsonObject.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/JsonArraySubscript.hpp
+	"Configuration.hpp"
+	"JsonVariantBase.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/JsonBufferImpl.hpp
+	"Deserialization/JsonParser.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/JsonObjectImpl.hpp
+	"JsonArray.hpp"
+	"JsonObject.hpp"
+	"JsonObjectSubscript.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/JsonObjectSubscript.hpp
+	"Configuration.hpp"
+	"JsonVariantBase.hpp"
+	"TypeTraits/EnableIf.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/JsonVariantImpl.hpp
+	"Configuration.hpp"
+	"JsonArray.hpp"
+	"JsonObject.hpp"
+	"JsonVariant.hpp"
+	"Polyfills/isFloat.hpp"
+	"Polyfills/isInteger.hpp"
+	"Polyfills/parseFloat.hpp"
+	"Polyfills/parseInteger.hpp"
+	<string.h>
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Polyfills/isFloat.hpp
+	<string.h>
+	"./ctype.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Polyfills/ctype.hpp
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Polyfills/isInteger.hpp
+	"./ctype.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Polyfills/parseFloat.hpp
+	"../TypeTraits/FloatTraits.hpp"
+	"./ctype.hpp"
+	"./math.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Polyfills/parseInteger.hpp
+	<stdlib.h>
+	"../Configuration.hpp"
+	"./ctype.hpp"
+
+1507054478 /home/pat/workspace/arduino/libraries/ArduinoJson/src/ArduinoJson/Serialization/JsonSerializerImpl.hpp
+	"../JsonArray.hpp"
+	"../JsonArraySubscript.hpp"
+	"../JsonObject.hpp"
+	"../JsonObjectSubscript.hpp"
+	"../JsonVariant.hpp"
+	"JsonSerializer.hpp"
+
+1508458678 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/FeatureClass.h
+	<Arduino.h>
+	<ArduinoJson.h>
+	<arm_math.h>
+	"Keywords.h"
+	"Logger.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Include/arm_math.h
+	"core_cm7.h"
+	"core_cm4.h"
+	"core_cm3.h"
+	"core_cm0.h"
+	"core_cm0plus.h"
+	"string.h"
+	"math.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Include/core_cm7.h
+	<stdint.h>
+	"core_cmInstr.h"
+	"core_cmFunc.h"
+	"core_cmSimd.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Include/core_cm3.h
+	<stdint.h>
+	"core_cmInstr.h"
+	"core_cmFunc.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Include/core_cm0.h
+	<stdint.h>
+	"core_cmInstr.h"
+	"core_cmFunc.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Include/core_cm0plus.h
+	<stdint.h>
+	"core_cmInstr.h"
+	"core_cmFunc.h"
+
+1508792542 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/FeatureComputer.h
+	"FeatureClass.h"
+
+1508189955 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/FeatureStreamingGroup.h
+	<Arduino.h>
+	<ArduinoJson.h>
+	"FeatureClass.h"
+
+1508189955 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUI2C.h
+	<Arduino.h>
+	"Wire.h"
+	"Utilities.h"
+	"Component.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/libraries/Wire/src/Wire.h
+	"Stream.h"
+	"variant.h"
+
+1508458479 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/Utilities.h
+	<Arduino.h>
+	<arm_math.h>
+	"Logger.h"
+
+1508453485 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBattery.h
+	<Arduino.h>
+	"Sensor.h"
+	"IUI2C.h"
+
+1508460069 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/Sensor.h
+	<ArduinoJson.h>
+	"Component.h"
+	"FeatureClass.h"
+
+1508189955 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMP280.h
+	<Arduino.h>
+	"Sensor.h"
+	"IUI2C.h"
+
+1508448157 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMX055Acc.h
+	<Arduino.h>
+	"Sensor.h"
+	"IUI2C.h"
+
+1508448202 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMX055Gyro.h
+	<Arduino.h>
+	"Sensor.h"
+	"IUI2C.h"
+
+1508439837 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMX055Mag.h
+	<Arduino.h>
+	"Sensor.h"
+	"IUI2C.h"
+
+1508440002 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUCAMM8Q.h
+	<Arduino.h>
+	<GNSS.h>
+	"Sensor.h"
+	"IUI2C.h"
+
+1496961814 /home/pat/workspace/arduino/libraries/GNSS/GNSS.h
+	"Arduino.h"
+	"utility/gnss_api.h"
+
+1496961814 /home/pat/workspace/arduino/libraries/GNSS/utility/gnss_api.h
+	<stdint.h>
+	<stdbool.h>
+	<string.h>
+
+1508440073 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUI2S.h
+	<Arduino.h>
+	<IUButterflyI2S.h>
+	<arm_math.h>
+	"Sensor.h"
+	"IUI2C.h"
+
+1508519867 /home/pat/workspace/arduino/libraries/IUButterflyI2S/src/IUButterflyI2S.h
+	<Arduino.h>
+
+1508458182 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/Configurator.cpp
+	"Configurator.h"
+
+1508287150 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/Configurator.h
+	<ArduinoJson.h>
+	"FeatureGraph.h"
+	"Conductor.h"
+
+1508542780 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/FeatureClass.cpp
+	"FeatureClass.h"
+
+1508542802 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/FeatureComputer.cpp
+	"FeatureComputer.h"
+
+1508287849 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/FeatureGraph.cpp
+	"FeatureGraph.h"
+
+1508189955 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/FeatureStreamingGroup.cpp
+	"FeatureStreamingGroup.h"
+
+1508440731 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBattery.cpp
+	"IUBattery.h"
+
+1508540997 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMD350.cpp
+	"IUBMD350.h"
+
+1508541012 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMP280.cpp
+	"IUBMP280.h"
+
+1508541066 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMX055Acc.cpp
+	"IUBMX055Acc.h"
+
+1508448188 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMX055Gyro.cpp
+	"IUBMX055Gyro.h"
+
+1508439973 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMX055Mag.cpp
+	"IUBMX055Mag.h"
+
+1508189955 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUCAMM8Q.cpp
+	"IUCAMM8Q.h"
+
+1508189955 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUESP8285.cpp
+	"IUESP8285.h"
+
+1508200029 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUI2C.cpp
+	"IUI2C.h"
+
+1508541066 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUI2S.cpp
+	"IUI2S.h"
+
+1508279374 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IURGBLed.cpp
+	"IURGBLed.h"
+
+1508189955 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUSerial.cpp
+	"IUSerial.h"
+
+1508460094 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/Sensor.cpp
+	"Sensor.h"
+
+1508541064 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/Utilities.cpp
+	"Utilities.h"
+
+1508520430 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/main.cpp
+	"FeatureClass.h"
+	"Sensor.h"
+	"FeatureComputer.h"
+	"FeatureGraph.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/HAL/Inc/stm32l4xx_hal.h
+	"stm32l4xx_hal_conf.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/HAL/Inc/stm32l4xx_hal_conf.h
+	"stm32l4xx_hal_rcc.h"
+	"stm32l4xx_hal_pwr.h"
+	"stm32l4xx_hal_pcd.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/HAL/Inc/stm32l4xx_hal_rcc.h
+	"stm32l4xx_hal_def.h"
+	"stm32l4xx_hal_rcc_ex.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/HAL/Inc/stm32l4xx_hal_def.h
+	"stm32l4xx.h"
+	"Legacy/stm32_hal_legacy.h"
+	<stdio.h>
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/HAL/Inc/Legacy/stm32_hal_legacy.h
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/HAL/Inc/stm32l4xx_hal_rcc_ex.h
+	"stm32l4xx_hal_def.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/HAL/Inc/stm32l4xx_hal_pwr.h
+	"stm32l4xx_hal_def.h"
+	"stm32l4xx_hal_pwr_ex.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/HAL/Inc/stm32l4xx_hal_pwr_ex.h
+	"stm32l4xx_hal_def.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/HAL/Inc/stm32l4xx_hal_pcd.h
+	"stm32l4xx_ll_usb.h"
+	"stm32l4xx_hal_pcd_ex.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/HAL/Inc/stm32l4xx_ll_usb.h
+	"stm32l4xx_hal_def.h"
+
+1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Source/USB/HAL/Inc/stm32l4xx_hal_pcd_ex.h
+	"stm32l4xx_hal_def.h"
+

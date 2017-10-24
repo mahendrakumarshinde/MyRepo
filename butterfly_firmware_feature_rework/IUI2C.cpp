@@ -82,8 +82,8 @@ bool IUI2C::writeByte(uint8_t address, uint8_t subAddress, uint8_t data,
 /**
  * Read a single byte and return it
  *
- * @param address where to read the byte from
- * @param subAddress where to read the byte from
+ * @param address Where to read the byte from
+ * @param subAddress Where to read the byte from
  */
 uint8_t IUI2C::readByte(uint8_t address, uint8_t subAddress)
 {
@@ -105,8 +105,8 @@ uint8_t IUI2C::readByte(uint8_t address, uint8_t subAddress)
 /**
  * Read a single byte and return it
  *
- * @param address where to read the byte from
- * @param subAddress where to read the byte from
+ * @param address Where to read the byte from
+ * @param subAddress Where to read the byte from
  */
 uint8_t IUI2C::readByte(uint8_t address, uint8_t subAddress,
                         void(*callback)(uint8_t wireStatus))
@@ -126,9 +126,9 @@ uint8_t IUI2C::readByte(uint8_t address, uint8_t subAddress,
 /**
  * Read several bytes and store them in destination array
  *
- * @param address where to read the byte from
- * @param subAddress where to read the byte from
- * @param the number of byte to read
+ * @param address Where to read the byte from
+ * @param subAddress Where to read the byte from
+ * @param The number of byte to read
  */
 bool IUI2C::readBytes(uint8_t address, uint8_t subAddress, uint8_t count,
                       uint8_t *destination)
@@ -157,9 +157,9 @@ bool IUI2C::readBytes(uint8_t address, uint8_t subAddress, uint8_t count,
 /**
  * Read several bytes and store them in destination array
  *
- * @param address where to read the byte from
- * @param subAddress where to read the byte from
- * @param the number of byte to read
+ * @param address Where to read the byte from
+ * @param subAddress Where to read the byte from
+ * @param The number of byte to read
  */
 bool IUI2C::readBytes(uint8_t address, uint8_t subAddress, uint8_t count,
                       uint8_t *destination, void(*callback)(uint8_t wireStatus))
@@ -189,7 +189,7 @@ bool IUI2C::readBytes(uint8_t address, uint8_t subAddress, uint8_t count,
 /**
 * Scan components connected to the computer bus
 *
-* @return false if no device found else true
+* @return False if no device found else true
 */
 bool IUI2C::scanDevices()
 {
@@ -239,7 +239,7 @@ bool IUI2C::scanDevices()
 /**
  * Read the WHO_AM_I register (this is a good test of communication)
  *
- * @return true if the WHO_AM_I register read is correct, else false
+ * @return True if the WHO_AM_I register read is correct, else false
  */
 bool IUI2C::checkComponentWhoAmI(String componentName, uint8_t address,
                                  uint8_t whoAmI, uint8_t iShouldBe)

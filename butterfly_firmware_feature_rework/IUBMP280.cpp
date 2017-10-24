@@ -48,6 +48,8 @@ IUBMP280::IUBMP280(IUI2C *iuI2C, const char* name, Feature *temperature,
     m_pressure(1013)
 {
     m_iuI2C = iuI2C;
+    temperature->setResolution(0.01);
+    pressure->setResolution(0.01);
 }
 
 
@@ -238,12 +240,12 @@ void IUBMP280::calibrate()
         }
         return;
     }
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 3; ++i)
     {
         m_digTemperature[i] =
             (uint16_t)(((uint16_t) calib[2 * i + 1] << 8) | calib[2 * i]);
     }
-    for (int i = 0; i < 9; i++)
+    for (int i = 0; i < 9; ++i)
     {
         m_digPressure[i] = (uint16_t)(((uint16_t) calib[2 * (i + 3) + 1] << 8) \
             | calib[2 * (i + 3)]);
@@ -295,7 +297,7 @@ void IUBMP280::processTemperatureData()
  * Return temperature in Degree Celsius
  *
  * Also update m_fineTemperature
- * @param rawT raw temperature as read from register
+ * @param rawT Raw temperature as read from register
  */
 float IUBMP280::compensateTemperature(int32_t rawT)
 {
@@ -307,9 +309,7 @@ float IUBMP280::compensateTemperature(int32_t rawT)
   var2 = (((((rawT >> 4) - t1) * ((rawT >> 4) - t1)) >> 12) * t3) >> 14;
   m_fineTemperature = var1 + var2;
   T = (m_fineTemperature * 5 + 128) >> 8;
-  /* resolution is 0.01 DegC, need to divide by 100 (eg: Output value of
-  “5123” equals 51.23 DegC.) */
-  return (float) T / 100.;
+  return (float) T;  // Resolution is 0.01, so value of 2563 => 25.63 degree C
 }
 
 
@@ -350,7 +350,7 @@ void IUBMP280::processPressureData()
 
 /**
  * Return the compensated Pressure in hPa
- * @param rawP raw pressure as output by readRawPressure
+ * @param rawP Raw pressure as output by readRawPressure
  */
 float IUBMP280::compensatePressure(int32_t rawP)
 {
@@ -374,8 +374,8 @@ float IUBMP280::compensatePressure(int32_t rawP)
     p = ((p + var1 + var2) >> 8) + (((long long)m_digPressure[6]) << 4);
     // pressure in Pa in Q24.8 format (24 integer bits and 8 fractional bits)
     // => need to convert to float eg: p = 24674867 represents 24674867/256 =
-    // 96386.2 Pa = 963.862 hPa
-    return (float) p / 25600.;
+    // 96386.2 Pa
+    return (float) p / 256.;
 }
 
 

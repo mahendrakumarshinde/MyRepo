@@ -33,7 +33,7 @@ class Configurator
         // eg: can hold the following config (remove the space and line breaks)
 //        {
 //          "features": {
-//            "E93": {
+//            "A93": {
 //              "STREAM": 1,
 //              "OPS": 1,
 //              "TRH": [100, 110, 120]

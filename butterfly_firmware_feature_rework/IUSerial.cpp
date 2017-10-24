@@ -58,8 +58,8 @@ void IUSerial::resetBuffer()
  * If m_newMessage is true, the function will return True immediatly.
  * Also, a data reception timeout check is performed before reading (see
  * hasTimedOut).
- * @param processBuffer a function to process buffer
- * @return true if a full message has been received, else false
+ * @param processBuffer A function to process buffer
+ * @return True if a full message has been received, else false
  */
 bool IUSerial::readToBuffer()
 {

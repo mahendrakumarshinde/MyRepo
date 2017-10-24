@@ -32,16 +32,11 @@ FeatureComputer::FeatureComputer(uint8_t id, uint8_t destinationCount,
  * Add a source (a Feature) to the feature
  *
  * Note that a feature can have no more than maxSourceCount sources.
- * @param source              The source to add
- * @param sectionCount        The number of sections of the source computed
- *      together
+ * @param source        The source to add
+ * @param sectionCount  The number of sections of the source computed together
  */
 void FeatureComputer::addSource(Feature *source, uint8_t sectionCount)
 {
-    if (m_sourceCount >= maxSourceCount)
-    {
-        raiseException("Too many sources");
-    }
     m_sources[m_sourceCount] = source;
     m_indexesAsReceiver[m_sourceCount] = source->addReceiver(m_id);
     m_sectionCount[m_sourceCount] = sectionCount;
@@ -59,7 +54,7 @@ void FeatureComputer::addSource(Feature *source, uint8_t sectionCount)
 bool FeatureComputer::compute()
 {
     uint32_t startT = 0;
-    if (loopDebugMode) { startT = millis(); }
+    if (loopDebugMode && highVerbosity) { startT = millis(); }
     // Check if sources are ready
     for (uint8_t i = 0; i < m_sourceCount; ++i)
     {
@@ -78,18 +73,17 @@ bool FeatureComputer::compute()
         }
     }
     m_specializedCompute();
-    if (loopDebugMode)
+    // Acknowledge the computed sections for each source
+    for (uint8_t i = 0; i < m_sourceCount; ++i )
+    {
+        m_sources[i]->acknowledge(m_indexesAsReceiver[i], m_sectionCount[i]);
+    }
+    if (loopDebugMode && highVerbosity)
     {
         debugPrint(m_id, false);
         debugPrint(F(" computed in "), false);
         debugPrint(millis() - startT, false);
         debugPrint(F("ms"));
-    }
-    // Acknowledge the computed sections for each source
-    for (uint8_t i = 0; i < m_sourceCount; ++i )
-    {
-        m_sources[i]->partialAcknowledge(m_indexesAsReceiver[i],
-                                         m_sectionCount[i]);
     }
     return true;
 }
@@ -138,10 +132,9 @@ void FeatureComputer::exposeConfig()
 
 /***** Signal Energy, Power and RMS *****/
 
-SignalEnergyComputer::SignalEnergyComputer(uint8_t id, Feature *destEnergy,
-                                           Feature *destPower, Feature *destRMS,
-                                           bool removeMean, bool normalize) :
-    FeatureComputer(id, 3, destEnergy, destPower, destRMS),
+SignalRMSComputer::SignalRMSComputer(uint8_t id, Feature *rms, bool removeMean,
+                                     bool normalize) :
+    FeatureComputer(id, 1, rms),
     m_removeMean(removeMean),
     m_normalize(normalize)
 {
@@ -159,16 +152,10 @@ SignalEnergyComputer::SignalEnergyComputer(uint8_t id, Feature *destEnergy,
  * Signal power: signal energy divided by Period
  * Signal RMS: square root of signal power
  */
-void SignalEnergyComputer::m_specializedCompute()
+void SignalRMSComputer::m_specializedCompute()
 {
-    uint16_t samplingRate = m_sources[0]->getSamplingRate();
-    uint16_t resolution = m_sources[0]->getResolution();
-    for (uint8_t i = 0; i < 3; ++i)
-    {
-        m_destinations[i]->setSamplingRate(samplingRate);
-        m_destinations[i]->setResolution(resolution);
-    }
-    q15_t *values = m_sources[0]->getNextQ15Values();
+    float resolution = m_sources[0]->getResolution();
+    q15_t *values = m_sources[0]->getNextQ15Values(m_indexesAsReceiver[0]);
     uint16_t sectionSize = m_sources[0]->getSectionSize();
     uint16_t totalSize = m_sectionCount[0] * sectionSize;
     float total = 0;
@@ -177,17 +164,17 @@ void SignalEnergyComputer::m_specializedCompute()
     {
         arm_mean_q15(values, sectionSize, &avg);
     }
-    for (int i = 0; i < totalSize; i++)
+    for (int i = 0; i < totalSize; ++i)
     {
-        total += sq((float) (values[i] - avg) * resolution);
+        total += sq((values[i] - avg) * resolution);
     }
     if (m_normalize)
     {
         total = total / (float) totalSize;
     }
-    m_destinations[0]->addFloatValue(total / (float) samplingRate);
-    m_destinations[1]->addFloatValue(total);
-    m_destinations[2]->addFloatValue(sqrt(total));
+    m_destinations[0]->setSamplingRate(m_sources[0]->getSamplingRate());
+    m_destinations[0]->setResolution(resolution);
+    m_destinations[0]->addFloatValue(sqrt(total));
 }
 
 
@@ -218,7 +205,7 @@ void SectionSumComputer::m_specializedCompute()
         m_destinations[i]->setSamplingRate(m_sources[i]->getSamplingRate());
         m_destinations[i]->setResolution(m_sources[i]->getResolution());
         length = m_sources[i]->getSectionSize() * m_sectionCount[i];
-        values = m_sources[i]->getNextFloatValues();
+        values = m_sources[i]->getNextFloatValues(m_indexesAsReceiver[i]);
         total = 0;
         for (uint16_t j = 0; j < length; ++j)
         {
@@ -253,12 +240,14 @@ void MultiSourceSumComputer::m_specializedCompute()
     m_destinations[0]->setSamplingRate(m_sources[0]->getSamplingRate());
     m_destinations[0]->setResolution(m_sources[0]->getResolution());
     uint16_t length = m_sources[0]->getSectionSize() * m_sectionCount[0];
-    float total = 0.;
+    float total;
     for (uint16_t k = 0; k < length; ++k)
     {
+        total = 0;
         for (uint8_t i = 0; i < m_sourceCount; ++i)
         {
-            total += m_sources[i]->getNextFloatValues()[k];
+            total += m_sources[i]->getNextFloatValues(
+                m_indexesAsReceiver[i])[k];
         }
         if (m_normalize)
         {
@@ -308,7 +297,7 @@ void Q15FFTComputer::m_specializedCompute()
         }
         return;
     }
-    q15_t *source = m_sources[0]->getNextQ15Values();
+    q15_t *source = m_sources[0]->getNextQ15Values(m_indexesAsReceiver[0]);
     arm_rfft_q15(&m_rfftInstance, source, m_allocatedFFTSpace);
     */
 }
@@ -354,7 +343,7 @@ void AudioDBComputer::m_specializedCompute()
 
     // TODO Reimplement
 //    uint16_t length = m_sources[0]->getSectionSize() * m_sectionCount[0];
-//    q15_t* values = m_sources[0]->getNextQ15Values();
+//    q15_t* values = m_sources[0]->getNextQ15Values(m_indexesAsReceiver[0]);
 //    // Strangely, log10 is very slow. It's better to use it the least possible, so we
 //    // multiply data points as much as possible and then log10 the results when we have to.
 //    // We can multiply data points until we reach uint64_t limit (so 2^64)
@@ -367,7 +356,7 @@ void AudioDBComputer::m_specializedCompute()
 //    int data = 0;
 //    uint64_t accu = 1;
 //    float audioDB = 0.;
-//    for (uint16_t j = 0; j < length; j++)
+//    for (uint16_t j = 0; j < length; ++j)
 //    {
 //        data = abs(values[j]);
 //        if (data > 0)
@@ -382,4 +371,5 @@ void AudioDBComputer::m_specializedCompute()
 //    }
 //    audioDB += log10(accu);
 //    m_destinations[0]->addFloatValue(20.0 * audioDB / (float) length);
+    m_destinations[0]->addFloatValue(0.0);
 }

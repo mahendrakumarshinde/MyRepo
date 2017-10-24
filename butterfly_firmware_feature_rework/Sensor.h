@@ -18,6 +18,11 @@ class Sensor : public Component
 {
     public:
         /***** Preset values and default settings *****/
+        enum usagePreset : uint8_t {P_LOW      = 0,
+                                    P_REGULAR  = 1,
+                                    P_ENHANCED = 2,
+                                    P_HIGH     = 3,
+                                    COUNT    = 4};
         static const uint8_t maxDestinationCount = 3;
         /***** Constructors and destructors *****/
         Sensor(const char* name, uint8_t destinationCount=0,
@@ -112,11 +117,6 @@ class SynchronousSensor : public Sensor
 {
     public:
         /***** Preset values and default settings *****/
-        enum usagePreset : uint8_t {P_LOW      = 0,
-                                    P_REGULAR  = 1,
-                                    P_ENHANCED = 2,
-                                    P_HIGH     = 3,
-                                    COUNT    = 4};
         static const usagePreset defaultUsagePreset = P_REGULAR;
         static const uint32_t defaultSamplingPeriod = 1000; // ms
         /***** Constructors and destructors *****/
@@ -127,13 +127,13 @@ class SynchronousSensor : public Sensor
         virtual ~SynchronousSensor() {}
         /***** Configuration *****/
         virtual bool configure(JsonVariant &config);
-        virtual void changeUsagePreset(usagePreset usage);
-        virtual void switchToLowUsage() { m_usagePreset = usagePreset::P_LOW; }
+        virtual void changeUsagePreset(Sensor::usagePreset usage);
+        virtual void switchToLowUsage() { m_usagePreset = Sensor::P_LOW; }
         virtual void switchToRegularUsage()
-            { m_usagePreset = usagePreset::P_REGULAR; }
+            { m_usagePreset = Sensor::P_REGULAR; }
         virtual void switchToEnhancedUsage()
-            { m_usagePreset = usagePreset::P_ENHANCED; }
-        virtual void switchToHighUsage() { m_usagePreset = usagePreset::P_HIGH; }
+            { m_usagePreset = Sensor::P_ENHANCED; }
+        virtual void switchToHighUsage() { m_usagePreset = Sensor::P_HIGH; }
         /***** Sampling and resolution *****/
         virtual bool isAsynchronous() { return false; }
         virtual void setSamplingPeriod(uint32_t samplingPeriod)

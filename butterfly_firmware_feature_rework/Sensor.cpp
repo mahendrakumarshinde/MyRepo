@@ -76,9 +76,8 @@ AsynchronousSensor::AsynchronousSensor(const char* name,
 /**
  * Read and apply the config
  *
- * @param config  A reference to a JsonVariant, ie a parsed JSON
- * @return        True if a config was found and applied for the sensor, else
- *                False
+ * @param config A reference to a JsonVariant, ie a parsed JSON
+ * @return True if a config was found and applied for the sensor, else false
  */
 bool AsynchronousSensor::configure(JsonVariant &config)
 {
@@ -156,11 +155,6 @@ void AsynchronousSensor::acquireData()
         }
     }
     readData();
-    for (uint8_t i = 0; i < m_destinationCount; ++i)
-    {
-        m_destinations[i]->setSamplingRate(m_samplingRate);
-        m_destinations[i]->setResolution(m_resolution);
-    }
 }
 
 
@@ -191,9 +185,8 @@ SynchronousSensor::SynchronousSensor(const char* name,
 /**
  * Read and apply the config
  *
- * @param config  A reference to a JsonVariant, ie a parsed JSON
- * @return        True if a config was found and applied for the sensor, else
- *                False
+ * @param config A reference to a JsonVariant, ie a parsed JSON
+ * @return True if a config was found and applied for the sensor, else false
  */
 bool SynchronousSensor::configure(JsonVariant &config)
 {
@@ -214,22 +207,22 @@ bool SynchronousSensor::configure(JsonVariant &config)
 /**
  * Change the usagePreset
  *
- * @param usage  A usagePreset (Low, Regular, Enhanced, High)
+ * @param usage A usagePreset (Low, Regular, Enhanced, High)
  */
-void SynchronousSensor::changeUsagePreset(SynchronousSensor::usagePreset usage)
+void SynchronousSensor::changeUsagePreset(Sensor::usagePreset usage)
 {
     switch (m_usagePreset)
     {
-    case usagePreset::P_LOW:
+    case Sensor::P_LOW:
         switchToLowUsage();
         break;
-    case usagePreset::P_REGULAR:
+    case Sensor::P_REGULAR:
         switchToRegularUsage();
         break;
-    case usagePreset::P_ENHANCED:
+    case Sensor::P_ENHANCED:
         switchToEnhancedUsage();
         break;
-    case usagePreset::P_HIGH:
+    case Sensor::P_HIGH:
         switchToHighUsage();
         break;
     default:

@@ -104,11 +104,11 @@ bool IUCAMM8Q::configure(JsonVariant &config)
 /**
  * Wrapper around GNSS.setPeriodic method - set the active / inactive behavior
  *
- * @param onTime  the active time (in s) over 'period' duration
- * @param period  the duration of a complete (active + inactive) cycle
- * @param force   if yes, activate forced mode (location can be read even if
- *                device is in its inactive period). If no, location can't be
- *                read while inactive.
+ * @param onTime The active time (in s) over 'period' duration
+ * @param period The duration of a complete (active + inactive) cycle
+ * @param force If yes, activate forced mode (location can be read even if
+ *  device is in its inactive period). If no, location can't be read while
+ *  inactive.
  */
 void IUCAMM8Q::setPeriodic(uint32_t onTime, uint32_t period, bool forced)
 {

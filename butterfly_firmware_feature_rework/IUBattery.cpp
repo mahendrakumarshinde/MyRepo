@@ -65,8 +65,7 @@ void IUBattery::switchToHighUsage()
 void IUBattery::readData()
 {
     m_VDDA = STM32.getVREF();
-    m_vBattery = 1000 * (127.0f / 100.0f) * 3.30f * \
-        ((float) analogRead(voltagePin)) / 4095.0f;
-    m_batteryLoad = m_vBattery * 100. / (float) maxVoltage;
+    m_batteryLoad = (float) (analogRead(voltagePin)) / 40.95f;
+    m_vBattery = m_batteryLoad * maxVoltage / 100.0f;
     m_destinations[0]->addFloatValue(m_batteryLoad);
 }

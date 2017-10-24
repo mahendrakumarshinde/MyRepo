@@ -28,10 +28,8 @@
  * Buffers have a mechanism to publish a section (signaling that it has been
  * entirely filled with records and is ready to be computed) and acknowledge it
  * (all the necessary computations have been done and the section is now
- * available to record new data).
- * Acknowledgement is done on a per-receiver basis (partial acknowledgement),
- * and then a global acknowledgement, which is a check of each partial
- * acknowledgement, can be performed.
+ * available to record new data). Acknowledgement is done on a per-receiver
+ * basis.
  */
 class Feature
 {
@@ -55,8 +53,8 @@ class Feature
         /***** Physical metadata *****/
         virtual void setSamplingRate(uint16_t rate) { m_samplingRate = rate; }
         virtual uint16_t getSamplingRate() { return m_samplingRate; }
-        virtual void setResolution(uint16_t res) { m_resolution = res; }
-        virtual uint16_t getResolution() { return m_resolution; }
+        virtual void setResolution(float res) { m_resolution = res; }
+        virtual float getResolution() { return m_resolution; }
         /***** Configuration *****/
         virtual bool isStreaming() { return m_streamingEnabled; }
         virtual void enableStreaming() { m_streamingEnabled = true; }
@@ -91,20 +89,18 @@ class Feature
         /***** Buffer core *****/
         // Accessors to values
         virtual uint16_t getSectionSize() {return m_sectionSize; }
-        virtual q15_t* getNextQ15Values() { return NULL; }
-        virtual float* getNextFloatValues() { return NULL; }
-        virtual q31_t* getNextQ31Values() { return NULL; }
+        virtual q15_t* getNextQ15Values(uint8_t receiverIdx) { return NULL; }
+        virtual float* getNextFloatValues(uint8_t receiverIdx) { return NULL; }
+        virtual q31_t* getNextQ31Values(uint8_t receiverIdx) { return NULL; }
         virtual void addQ15Value(q15_t value) {}
         virtual void addFloatValue(float value) {}
         virtual void addQ31Value(q31_t value) {}
         // Tracking the buffer state
-        virtual bool isReadyToCompute(uint8_t receiverIndex,
-                                      uint8_t sectionCount=1);
         virtual bool isReadyToRecord(uint8_t sectionCount=1);
-        virtual void partialAcknowledge(uint8_t receiverIdx,
-                                        uint8_t sectionCount=1);
-        virtual void acknowledgeIfReady();
+        virtual bool isReadyToCompute(uint8_t receiverIdx,
+                                      uint8_t sectionCount=1);
         virtual void incrementFillingIndex();
+        virtual void acknowledge(uint8_t receiverIdx, uint8_t sectionCount=1);
         /***** Communication *****/
         void stream(HardwareSerial *port);
         /***** Debugging *****/
@@ -117,7 +113,7 @@ class Feature
         char m_name[4];
         /***** Physical metadata *****/
         uint16_t m_samplingRate;
-        uint16_t m_resolution;
+        float m_resolution;
         /***** Configuration variables *****/
         bool m_active;
         bool m_opStateEnabled;
@@ -139,10 +135,9 @@ class Feature
         // Tracking the buffer state
         uint16_t m_fillingIndex;
         uint8_t m_recordIndex;
-        uint8_t m_computeIndex;
+        uint8_t m_computeIndex[maxReceiverCount];
         bool m_published[maxSectionCount];
-        bool m_acknowledged[maxSectionCount];
-        bool m_partialAcknowledged[maxSectionCount][maxReceiverCount];
+        bool m_acknowledged[maxSectionCount][maxReceiverCount];
         // Lock a section to prevent both recording and computation, useful when
         // streaming the section content for example, to garantee data
         // consistency at section level
@@ -167,7 +162,7 @@ class FloatFeature : public Feature
                      uint16_t sectionSize=1, float *values=NULL,
                      Feature::slideOption sliding=Feature::FIXED);
         virtual ~FloatFeature() {}
-        virtual float* getNextFloatValues();
+        virtual float* getNextFloatValues(uint8_t receiverIdx);
         virtual void addFloatValue(float value);
         /***** OperationState and Thresholds *****/
         virtual float getValueToCompareToThresholds();
@@ -190,12 +185,13 @@ class Q15Feature : public Feature
                    uint16_t sectionSize=1, q15_t *values=NULL,
                    Feature::slideOption sliding=Feature::FIXED);
         virtual ~Q15Feature() {}
-        virtual q15_t* getNextQ15Values();
+        virtual q15_t* getNextQ15Values(uint8_t receiverIdx);
         virtual void addQ15Value(q15_t value);
 
     protected:
         q15_t *m_values;
-        void m_specializedStream(HardwareSerial *port, uint8_t sectionIdx);
+        void m_specializedStream(HardwareSerial *port, uint8_t sectionIdx)
+            { raiseException(F("Q15Feature streaming not implemented")); }
 };
 
 
@@ -211,12 +207,13 @@ class Q31Feature : public Feature
                    uint16_t sectionSize=1, q31_t *values=NULL,
                    Feature::slideOption sliding=Feature::FIXED);
         virtual ~Q31Feature() {}
-        virtual q31_t* getNextQ31Values();
+        virtual q31_t* getNextQ31Values(uint8_t receiverIdx);
         virtual void addQ31Value(q31_t value);
 
     protected:
         q31_t *m_values;
-        void m_specializedStream(HardwareSerial *port, uint8_t sectionIdx);
+        void m_specializedStream(HardwareSerial *port, uint8_t sectionIdx)
+            { raiseException(F("Q31Feature streaming not implemented")); }
 };
 
 #endif // FEATURECLASS_H

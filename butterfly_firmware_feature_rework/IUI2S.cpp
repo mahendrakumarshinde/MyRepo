@@ -18,20 +18,6 @@ IUI2S::IUI2S(IUI2C *iuI2C, const char* name, Feature *audio) :
     Configuration and calibration
 ============================================================================= */
 
-/**
- * Set the audio sampling rate
- *
- * If the new sampling rate is greater than the clock rate, the later will be
- * increased to allow the former.
- * Sampling rate cannot be set to zero.
- * This function internally call computeDownclockingRate at the end.
- */
-void IUI2S::setSamplingRate(uint16_t samplingRate)
-{
-    m_samplingRate = samplingRate;
-    computeDownclockingRate();
-}
-
 
 /* =============================================================================
     Data acquisition
@@ -96,7 +82,7 @@ bool IUI2S::endDataAcquisition()
  */
 void IUI2S::processAudioData(q31_t *data)
 {
-    for (int i = 0; i < m_downclocking; i++)
+    for (int i = 0; i < m_downclocking; ++i)
     {
         /* only keep 1 record every 2 records because stereo recording but we
         use only 1 canal. */
@@ -143,7 +129,7 @@ void IUI2S::sendData(HardwareSerial *port)
     }
     else
     {
-        for (int j = 0; j < m_downclocking; j++)
+        for (int j = 0; j < m_downclocking; ++j)
         {
             // stream 3 most significant bytes from 32bits value
             port->write((m_audioData[j] >> 24) & 0xFF);

@@ -2,6 +2,7 @@
 #define FEATURECOMPUTER_H
 
 #include "FeatureClass.h"
+//#include "Utilities.h"
 
 
 /* =============================================================================
@@ -58,21 +59,18 @@ class FeatureComputer
 ============================================================================= */
 
 /**
- * Signal Energy, Power and RMS
+ * Signal RMS
  *
  * Sources:
  *      - Signal data: Q15 data buffer (with sampling rate and resolution)
  * Destinations:
- *      - Signal Energy: Float data buffer with sectionSize = 1
- *      - Signal Power: Float data buffer with sectionSize = 1
- *      - Signal RMS: Float data buffer with sectionSize = 1
+ *      - Signal RMS: Float data buffer
  */
-class SignalEnergyComputer: public FeatureComputer
+class SignalRMSComputer: public FeatureComputer
 {
     public:
-        SignalEnergyComputer(uint8_t id, Feature *destEnergy=NULL,
-                             Feature *destPower=NULL, Feature *destRMS=NULL,
-                             bool removeMean=false, bool normalize=false);
+        SignalRMSComputer(uint8_t id, Feature *rms=NULL,
+                          bool removeMean=false, bool normalize=false);
         // Change parameters
         void setRemoveMean(bool value) { m_removeMean = value; }
         void setNormalize(bool value) { m_normalize = value; }
@@ -115,7 +113,9 @@ class SectionSumComputer: public FeatureComputer
  * Sum several sources, section by section
  *
  * Sources:
- *      - Several Float buffers
+ *      - Several Float buffers, with the same section size and number of
+ *      sections to compute at once (the computer will use these parameters from
+ *      only the 1st source only and assume they are the same for all)
  * Destinations:
  *      - 1 Float buffer
  */
@@ -123,7 +123,7 @@ class MultiSourceSumComputer: public FeatureComputer
 {
     public:
         MultiSourceSumComputer(uint8_t id, Feature *destination0=NULL,
-                           bool normalize=false);
+                               bool normalize=false);
         // Change parameters
         void setNormalize(bool value) { m_normalize = value; }
 

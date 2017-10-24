@@ -24,10 +24,10 @@ class IUSerial : public Component
         virtual ~IUSerial() {}
         /***** Public constants *****/
         const InterfaceType::option interface;
+        HardwareSerial *port;
         const uint32_t baudRate;
         const uint16_t bufferSize;
         const char stopChar;
-        HardwareSerial *port;
         /***** Hardware and power management *****/
         virtual void setupHardware();
         /***** Communication *****/

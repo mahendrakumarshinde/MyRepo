@@ -92,7 +92,6 @@ class IUBMX055Acc : public AsynchronousSensor
         void configureInterrupts();
         void doFastCompensation(float *destination);
         /***** Data acquisition *****/
-        void computeResolution();
         virtual void acquireData();
         virtual void readData();
         q15_t getData(uint8_t index) { return m_data[index]; }

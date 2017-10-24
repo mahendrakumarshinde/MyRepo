@@ -38,62 +38,24 @@ extern Q15Feature accelerationZ;
 
 
 // 128 sample long accel features
-extern __attribute__((section(".noinit2"))) float accelEnergy128XValues[8];
-extern __attribute__((section(".noinit2"))) float accelEnergy128YValues[8];
-extern __attribute__((section(".noinit2"))) float accelEnergy128ZValues[8];
-extern FloatFeature accelEnergy128X;
-extern FloatFeature accelEnergy128Y;
-extern FloatFeature accelEnergy128Z;
-
-extern __attribute__((section(".noinit2"))) float accelPower128XValues[8];
-extern __attribute__((section(".noinit2"))) float accelPower128YValues[8];
-extern __attribute__((section(".noinit2"))) float accelPower128ZValues[8];
-extern FloatFeature accelPower128X;
-extern FloatFeature accelPower128Y;
-extern FloatFeature accelPower128Z;
-
 extern __attribute__((section(".noinit2"))) float accelRMS128XValues[8];
 extern __attribute__((section(".noinit2"))) float accelRMS128YValues[8];
 extern __attribute__((section(".noinit2"))) float accelRMS128ZValues[8];
+extern __attribute__((section(".noinit2"))) float accelRMS128TotalValues[8];
 extern FloatFeature accelRMS128X;
 extern FloatFeature accelRMS128Y;
 extern FloatFeature accelRMS128Z;
-
-extern __attribute__((section(".noinit2"))) float accelEnergy128TotalValues[8];
-extern __attribute__((section(".noinit2"))) float accelPower128TotalValues[8];
-extern __attribute__((section(".noinit2"))) float accelRMS128TotalValues[8];
-extern FloatFeature accelEnergy128Total;
-extern FloatFeature accelPower128Total;
 extern FloatFeature accelRMS128Total;
 
 
 // 512 sample long accel features
-extern __attribute__((section(".noinit2"))) float accelEnergy512XValues[2];
-extern __attribute__((section(".noinit2"))) float accelEnergy512YValues[2];
-extern __attribute__((section(".noinit2"))) float accelEnergy512ZValues[2];
-extern FloatFeature accelEnergy512X;
-extern FloatFeature accelEnergy512Y;
-extern FloatFeature accelEnergy512Z;
-
-extern __attribute__((section(".noinit2"))) float accelPower512XValues[2];
-extern __attribute__((section(".noinit2"))) float accelPower512YValues[2];
-extern __attribute__((section(".noinit2"))) float accelPower512ZValues[2];
-extern FloatFeature accelPower512X;
-extern FloatFeature accelPower512Y;
-extern FloatFeature accelPower512Z;
-
 extern __attribute__((section(".noinit2"))) float accelRMS512XValues[2];
 extern __attribute__((section(".noinit2"))) float accelRMS512YValues[2];
 extern __attribute__((section(".noinit2"))) float accelRMS512ZValues[2];
+extern __attribute__((section(".noinit2"))) float accelRMS512TotalValues[2];
 extern FloatFeature accelRMS512X;
 extern FloatFeature accelRMS512Y;
 extern FloatFeature accelRMS512Z;
-
-extern __attribute__((section(".noinit2"))) float accelEnergy512TotalValues[2];
-extern __attribute__((section(".noinit2"))) float accelPower512TotalValues[2];
-extern __attribute__((section(".noinit2"))) float accelRMS512TotalValues[2];
-extern FloatFeature accelEnergy512Total;
-extern FloatFeature accelPower512Total;
 extern FloatFeature accelRMS512Total;
 
 
@@ -105,33 +67,35 @@ extern Q15Feature accelReducedFFTX;
 extern Q15Feature accelReducedFFTY;
 extern Q15Feature accelReducedFFTZ;
 
-extern __attribute__((section(".noinit2"))) float velocityAmplitude512XValues[2];
-extern __attribute__((section(".noinit2"))) float velocityAmplitude512YValues[2];
-extern __attribute__((section(".noinit2"))) float velocityAmplitude512ZValues[2];
-extern FloatFeature velocityAmplitude512X;
-extern FloatFeature velocityAmplitude512Y;
-extern FloatFeature velocityAmplitude512Z;
+// Velocity features from 512 sample long accel data
+extern __attribute__((section(".noinit2"))) float velAmplitude512XValues[2];
+extern __attribute__((section(".noinit2"))) float velAmplitude512YValues[2];
+extern __attribute__((section(".noinit2"))) float velAmplitude512ZValues[2];
+extern FloatFeature velAmplitude512X;
+extern FloatFeature velAmplitude512Y;
+extern FloatFeature velAmplitude512Z;
 
-extern __attribute__((section(".noinit2"))) float velocityRMS512XValues[2];
-extern __attribute__((section(".noinit2"))) float velocityRMS512YValues[2];
-extern __attribute__((section(".noinit2"))) float velocityRMS512ZValues[2];
-extern FloatFeature velocityRMS512X;
-extern FloatFeature velocityRMS512Y;
-extern FloatFeature velocityRMS512Z;
+extern __attribute__((section(".noinit2"))) float velRMS512XValues[2];
+extern __attribute__((section(".noinit2"))) float velRMS512YValues[2];
+extern __attribute__((section(".noinit2"))) float velRMS512ZValues[2];
+extern FloatFeature velRMS512X;
+extern FloatFeature velRMS512Y;
+extern FloatFeature velRMS512Z;
 
-extern __attribute__((section(".noinit2"))) float displacementAmplitude512XValues[2];
-extern __attribute__((section(".noinit2"))) float displacementAmplitude512YValues[2];
-extern __attribute__((section(".noinit2"))) float displacementAmplitude512ZValues[2];
-extern FloatFeature displacementAmplitude512X;
-extern FloatFeature displacementAmplitude512Y;
-extern FloatFeature displacementAmplitude512Z;
+// Displacements features from 512 sample long accel data
+extern __attribute__((section(".noinit2"))) float dispAmplitude512XValues[2];
+extern __attribute__((section(".noinit2"))) float dispAmplitude512YValues[2];
+extern __attribute__((section(".noinit2"))) float dispAmplitude512ZValues[2];
+extern FloatFeature dispAmplitude512X;
+extern FloatFeature dispAmplitude512Y;
+extern FloatFeature dispAmplitude512Z;
 
-extern __attribute__((section(".noinit2"))) float displacementRMS512XValues[2];
-extern __attribute__((section(".noinit2"))) float displacementRMS512YValues[2];
-extern __attribute__((section(".noinit2"))) float displacementRMS512ZValues[2];
-extern FloatFeature displacementRMS512X;
-extern FloatFeature displacementRMS512Y;
-extern FloatFeature displacementRMS512Z;
+extern __attribute__((section(".noinit2"))) float dispRMS512XValues[2];
+extern __attribute__((section(".noinit2"))) float dispRMS512YValues[2];
+extern __attribute__((section(".noinit2"))) float dispRMS512ZValues[2];
+extern FloatFeature dispRMS512X;
+extern FloatFeature dispRMS512Y;
+extern FloatFeature dispRMS512Z;
 
 
 /***** Gyroscope Features *****/
@@ -186,7 +150,7 @@ extern FloatFeature audioDB4096;
 
 /***** Pointers *****/
 
-const uint8_t FEATURE_COUNT = 47;
+const uint8_t FEATURE_COUNT = 31;
 extern Feature *FEATURES[FEATURE_COUNT];
 
 
@@ -206,19 +170,15 @@ extern q15_t allocatedFFTSpace[1024];
 /***** Accelerometer Features *****/
 
 // 128 sample long accel computers
-extern SignalEnergyComputer accel128XComputer;
-extern SignalEnergyComputer accel128YComputer;
-extern SignalEnergyComputer accel128ZComputer;
-
-extern MultiSourceSumComputer accelEnergy128TotalComputer;
-extern MultiSourceSumComputer accelPower128TotalComputer;
+extern SignalRMSComputer accel128XComputer;
+extern SignalRMSComputer accel128YComputer;
+extern SignalRMSComputer accel128ZComputer;
 extern MultiSourceSumComputer accelRMS128TotalComputer;
 
 // 512 sample long accel computers
 extern SectionSumComputer accel512XComputer;
 extern SectionSumComputer accel512YComputer;
 extern SectionSumComputer accel512ZComputer;
-
 extern SectionSumComputer accel512TotalComputer;
 
 
@@ -236,7 +196,7 @@ extern AudioDBComputer audioDB4096Computer;
 
 /***** Pointers *****/
 
-const uint8_t FEATURE_COMPUTER_COUNT = 15;
+const uint8_t FEATURE_COMPUTER_COUNT = 13;
 extern FeatureComputer *FEATURE_COMPUTERS[FEATURE_COMPUTER_COUNT];
 
 

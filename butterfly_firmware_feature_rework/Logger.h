@@ -11,17 +11,21 @@
 #define DEBUGMODE
 
 #ifdef DEBUGMODE
-__attribute__((section(".noinit2"))) const bool setupDebugMode = false;
-__attribute__((section(".noinit2"))) const bool loopDebugMode = true;
-__attribute__((section(".noinit2"))) const bool callbackDebugMode = false;
+    const bool setupDebugMode = false;
+    const bool loopDebugMode = true;
+    const bool highVerbosity = false;
+    const bool showIntermediaryResults = true;
+    const bool callbackDebugMode = false;
 #else
-__attribute__((section(".noinit2"))) const bool setupDebugMode = false;
-__attribute__((section(".noinit2"))) const bool loopDebugMode = false;
-__attribute__((section(".noinit2"))) const bool callbackDebugMode = false;
+    const bool setupDebugMode = false;
+    const bool loopDebugMode = false;
+    const bool highVerbosity = false;
+    const bool showIntermediaryResults = false;
+    const bool callbackDebugMode = false;
 #endif
 
-__attribute__((section(".noinit2"))) const bool debugMode =
-    (setupDebugMode || loopDebugMode || callbackDebugMode);
+const bool debugMode = true;
+//    (setupDebugMode || loopDebugMode || callbackDebugMode);
 
 template <typename T>
 inline void debugPrint(T msg, bool endline = true)
@@ -50,7 +54,6 @@ inline void raiseException(T msg)
     #ifdef DEBUGMODE
     debugPrint(F("Error: "), false);
     debugPrint(msg);
-    while(1) { }
     #endif
 }
 

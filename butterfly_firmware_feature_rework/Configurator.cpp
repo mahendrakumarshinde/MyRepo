@@ -44,6 +44,12 @@ void Configurator::readFromSerial(IUSerial *iuSerial)
                 case InterfaceType::INT_BLE:
                     processLegacyBLECommands(buffer);
                     break;
+                default:
+                    if (loopDebugMode)
+                    {
+                        debugPrint(F("Unhandled interface type: "), false);
+                        debugPrint(iuSerial->interface);
+                    }
             }
         }
         iuSerial->resetBuffer();    // Clear wire buffer
@@ -198,6 +204,12 @@ void Configurator::processLegacyUSBCommands(char *buff)
                 conductor.changeUsageMode(UsageMode::EXPERIMENT);
             }
             break;
+        default:
+            if (loopDebugMode)
+            {
+                debugPrint(F("Unhandled usage mode: "), false);
+                debugPrint(conductor.getUsageMode());
+            }
     }
 }
 
@@ -245,20 +257,17 @@ void Configurator::processLegacyBLECommands(char *buff)
 //                IUFeature *feat = getFeatureByName("A0X");
 //                if (feat)
 //                {
-//                    feat.streamSourceData(iuBluetooth.port,
-//                                          conductor.getMacAddress(), "X");
+//                    feat.streamSourceData(iuBluetooth.port, "X");
 //                }
 //                feat = getFeatureByName("A0Y");
 //                if (feat)
 //                {
-//                    feat.streamSourceData(iuBluetooth.port,
-//                                          conductor.getMacAddress(), "Y");
+//                    feat.streamSourceData(iuBluetooth.port, "Y");
 //                }
 //                feat = getFeatureByName("A0Z");
 //                if (feat)
 //                {
-//                    feat.streamSourceData(iuBluetooth.port,
-//                                          conductor.getMacAddress(), "Z");
+//                    feat.streamSourceData(iuBluetooth.port, "Z");
 //                }
             }
             break;
@@ -273,8 +282,6 @@ void Configurator::processLegacyBLECommands(char *buff)
                 buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
             {
                 iuBluetooth.port->print("HB,");
-                iuBluetooth.port->print(conductor.getMacAddress());
-                iuBluetooth.port->print(",");
                 if (iuI2C.isError())
                 {
                     iuBluetooth.port->print("I2CERR");

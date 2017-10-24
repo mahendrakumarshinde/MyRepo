@@ -10,7 +10,6 @@ IUBMX055Gyro::IUBMX055Gyro(IUI2C *iuI2C, const char* name, Feature *tiltX,
     AsynchronousSensor(name, 3, tiltX, tiltY, tiltZ)
 {
     m_iuI2C = iuI2C;
-    m_samplingRate = defaultSamplingRate;
     // Fast Power Up is disabled at POR (Power-On Reset)
     m_fastPowerUpEnabled = false;
 }
@@ -123,7 +122,12 @@ void IUBMX055Gyro::setScale(IUBMX055Gyro::scaleOption scale)
 {
     m_scale = scale;
     m_iuI2C->writeByte(ADDRESS, RANGE, m_scale);
-    computeResolution();
+
+
+    //TODO Implement
+    m_resolution = 0;
+
+
 }
 
 /**
@@ -166,15 +170,6 @@ void IUBMX055Gyro::setBandwidth(IUBMX055Gyro::bandwidthOption bandwidth)
 /* =============================================================================
     Data Acquisition
 ============================================================================= */
-
-/**
- * Compute the gyroscope resolution based on the full scale range
- */
-void IUBMX055Gyro::computeResolution()
-{
-    //TODO Implement
-    m_resolution = 0;
-}
 
 
 /* =============================================================================

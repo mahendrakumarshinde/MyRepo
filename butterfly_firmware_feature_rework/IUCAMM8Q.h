@@ -21,7 +21,6 @@ class IUCAMM8Q : public SynchronousSensor
 {
     public:
         /***** Preset values and default settings *****/
-        static const uint16_t defaultSamplingRate = 2; // Hz
         static const uint32_t defaultOnTime = 10;
         static const uint32_t defaultPeriod = 1000;
         static const bool defaultForcedMode = true;

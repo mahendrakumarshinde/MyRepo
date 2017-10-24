@@ -14,12 +14,13 @@ processInstructionsFromI2C();
 
 **5. butterfly_firmware is not working on branch feature_rework_from_scratch => do not commit it in Master**
 
+**6. Change heartbeat msg to contain battery level + alert status reporting (= % of time in each Operation State)**
+
+**7. Set default threshold for feature**
+
 ## BONUS ##
 
 **01. Add configuration options in FFT features to set up freq_low_bound and freq_high_bound**
-
-**02. I2S was previously using q15_t (16 most significant bits) to reduce memory usage. Do that again?**
-=> Or maybe just engineer, present a more useful feature for Sound data
 
 **03. Add geolocation features**
 CAM-M8Q GNSS => the feature format is not a base type, it is GNSSLocation type

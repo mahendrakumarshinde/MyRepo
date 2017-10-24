@@ -5,7 +5,7 @@
     Constructors and destructors
 ============================================================================= */
 
-Conductor::Conductor(const char* version, const char* macAddress) :
+Conductor::Conductor(const char* version) :
     m_sleepMode(sleepMode::NONE),
     m_startTime(0),
     m_autoSleepDelay(60000),
@@ -21,7 +21,6 @@ Conductor::Conductor(const char* version, const char* macAddress) :
     m_streamingMode(StreamingMode::BLE)
 {
     strcpy(m_version, version);
-    strcpy(m_macAddress, macAddress);
 }
 
 
@@ -125,7 +124,7 @@ void Conductor::manageSleepCycles()
 bool Conductor::configure(JsonVariant &my_config)
 {
     // Firmware and config version check
-    const char* vers = my_config["VERS"].asString();
+    const char* vers = my_config["VERS"].as<char*>();
     if (vers == NULL || strcmp(m_version, vers) > 0)
     {
         if (debugMode)
@@ -275,7 +274,7 @@ bool Conductor::resetDataAcquisition()
  * Data acquisition function
  *
  * Method formerly benchmarked for (accel + sound) at 10microseconds.
- * @param  When asynchronous is true, acquire data from asynchronous sensors,
+ * @param asynchronous  When true, acquire data from asynchronous sensors,
  *  else acquire data from synchronous sensors.
  */
 void Conductor::acquireData(bool asynchronous)
@@ -341,14 +340,6 @@ void Conductor::computeFeatures()
             FEATURE_COMPUTERS[i]->compute();
         }
     }
-    // Acknowledge sections of feature buffers (free them for recording)
-    for (uint8_t i = 0; i < FEATURE_COUNT; ++i)
-    {
-        if (FEATURES[i]->isActive())
-        {
-            FEATURES[i]->acknowledgeIfReady();
-        }
-    }
 }
 
 /**
@@ -367,7 +358,7 @@ void Conductor::updateOperationState()
     }
     OperationState::option newState = OperationState::IDLE;
     OperationState::option featState;
-    for (uint8_t i = 0; i < FEATURE_COUNT; i++)
+    for (uint8_t i = 0; i < FEATURE_COUNT; ++i)
     {
         FEATURES[i]->getOperationState();
         featState = FEATURES[i]->getOperationState();
@@ -410,6 +401,12 @@ void Conductor::streamFeatures()
         case StreamingMode::WIFI:
             port = iuWiFi.port;
             break;
+        default:
+            if (loopDebugMode)
+            {
+                debugPrint(F("StreamingMode not handled: "), false);
+                debugPrint(m_streamingMode);
+            }
     }
     double timestamp = getDatetime();
     featureGroup1.stream(port, m_operationState, timestamp);

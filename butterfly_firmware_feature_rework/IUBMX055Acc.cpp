@@ -36,7 +36,6 @@ IUBMX055Acc::IUBMX055Acc(IUI2C *iuI2C, const char* name, Feature *accelerationX,
     m_filteredData(false)
 {
     m_iuI2C = iuI2C;
-    m_samplingRate = defaultSamplingRate;
 }
 
 
@@ -62,7 +61,7 @@ void IUBMX055Acc::setupHardware()
     softReset();
     wakeUp();
     setScale(m_scale);
-    setSamplingRate(m_samplingRate);
+    setSamplingRate(defaultSamplingRate);
     useUnfilteredData();
     configureInterrupts();
 }
@@ -156,12 +155,28 @@ bool IUBMX055Acc::configure(JsonVariant &config)
 
 /**
  * Set the scale then recompute resolution
+ *
+ * Resolution is m/s2 per LSB.
  */
 void IUBMX055Acc::setScale(IUBMX055Acc::scaleOption scale)
 {
     m_scale = scale;
     m_iuI2C->writeByte(ADDRESS, PMU_RANGE, (uint8_t) m_scale & 0x0F);
-    computeResolution();
+    switch (m_scale)
+    {
+    case AFS_2G:
+        setResolution(2.0 * 9.80665 / 32768.0);
+        break;
+    case AFS_4G:
+        setResolution(4.0 * 9.80665 / 32768.0);
+        break;
+    case AFS_8G:
+        setResolution(8.0 * 9.80665 / 32768.0);
+        break;
+    case AFS_16G:
+        setResolution(16.0 * 9.80665 / 32768.0);
+        break;
+    }
 }
 
 /**
@@ -229,7 +244,7 @@ void IUBMX055Acc::doFastCompensation(float * dest1)
 
     uint8_t offsetCmd[3] = {0x20, 0x40, 0x60}; // x, y and z axis
     byte c = 0;
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 3; ++i)
     {
         // calculate x, y or z axis offset
         m_iuI2C->writeByte(ADDRESS, OFC_CTRL, offsetCmd[i]);
@@ -263,27 +278,6 @@ void IUBMX055Acc::doFastCompensation(float * dest1)
 /* =============================================================================
     Data Collection
 ============================================================================= */
-
-/**
- * Set the resolution depending on the full scale value
- */
-void IUBMX055Acc::computeResolution() {
-    switch (m_scale)
-    {
-    case AFS_2G:
-        m_resolution = 2;
-        break;
-    case AFS_4G:
-        m_resolution = 4;
-        break;
-    case AFS_8G:
-        m_resolution = 8;
-        break;
-    case AFS_16G:
-        m_resolution = 16;
-        break;
-    }
-}
 
 /**
  * Acquire new data, while handling down-clocking
@@ -362,21 +356,21 @@ void IUBMX055Acc::sendData(HardwareSerial *port)
     if (loopDebugMode)  // Human readable in the console
     {
         port->print("AX: ");
-        port->println(q15ToFloat(m_data[0]), 4);
+        port->println((float) m_data[0] * m_resolution / 9.80665, 4);
         port->print("AY: ");
-        port->println(q15ToFloat(m_data[1]), 4);
+        port->println((float) m_data[1] * m_resolution / 9.80665, 4);
         port->print("AZ: ");
-        port->println(q15ToFloat(m_data[2]), 4);
+        port->println((float) m_data[2] * m_resolution / 9.80665, 4);
         port->flush();
     }
-    else  // Send bytes (faster)
+    else  // Send bytes (faster ?)
     {
         float accel;
         byte* data;
-        for (uint8_t i = 0; i < 3; i++)
+        for (uint8_t i = 0; i < 3; ++i)
         {
             // Stream float value as 4 bytes
-            accel = toG(m_data[i], m_resolution);
+            accel = (float) m_data[i] * m_resolution / 9.80665;
             data = (byte*) &accel;
             port->write(data, 4);
         }
@@ -395,7 +389,7 @@ void IUBMX055Acc::exposeCalibration()
 {
     #ifdef DEBUGMODE
     debugPrint(F("Accelerometer calibration data: "));
-    debugPrint(F("Resolution (G): "));
+    debugPrint(F("Resolution (m.s-2): "));
     debugPrint(m_resolution);
     debugPrint(F("Bias (q15_t): "));
     for (uint8_t i = 0; i < 3; ++i)

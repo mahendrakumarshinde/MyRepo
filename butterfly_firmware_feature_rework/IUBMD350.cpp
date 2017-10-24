@@ -150,12 +150,12 @@ void IUBMD350::exitATCommandInterface()
  *
  * Note that sending configuration commands can take a non-negligible amount of
  * time and requires the use of delay: it is not suitable for use in callbacks.
- * @param command     the command to send, without the at$ prefix and
+ * @param command  The command to send, without the at$ prefix and
  *  without return carriage "\r" (see datasheet)
- * @param result      a pointer to a string to store the message returned by the
+ * @param result  A pointer to a string to store the message returned by the
  *  BMDWare
- * @param responseLength   the expected length of result
- * @return            -1 if the command failed, or the number N of char of the
+ * @param responseLength  The expected length of result
+ * @return -1 if the command failed, or the number N of char of the
  *  response. Note that it is possible that N <> responseLength.
  */
 int IUBMD350::sendATCommand(String cmd, char *response, uint8_t responseLength)
@@ -170,7 +170,7 @@ int IUBMD350::sendATCommand(String cmd, char *response, uint8_t responseLength)
     }
     port->write("at$");
     int charCount = cmd.length();
-    for (int i = 0; i < charCount; i++)
+    for (int i = 0; i < charCount; ++i)
     {
         port->write(cmd[i]);
     }
@@ -220,8 +220,8 @@ int IUBMD350::sendATCommand(String cmd, char *response, uint8_t responseLength)
 /**
  * Send an AT command to set the device name (must be in AT mode)
  *
- * @param name  the new device name, from 1 to 8 ASCII char
- * @return      true if successfully set, else false
+ * @param name  The new device name, from 1 to 8 ASCII char
+ * @return  True if successfully set, else false
  */
 void IUBMD350::setDeviceName(char *deviceName)
 {
@@ -319,10 +319,10 @@ void IUBMD350::configureUARTPassthrough()
 /**
  * Set Beacon configuration
  *
- * @param enabled     If true, enable Beacon, else disable the Beacon
+ * @param enabled  If true, enable Beacon, else disable the Beacon
  * @param adInterval  Beacon advertisement interval in ms - valid values range
  *  from 50ms to 4000ms.
- * @return            true if configuration was successfully set, else false
+ * @return True if configuration was successfully set, else false
  */
 void IUBMD350::configureBeacon(bool enabled, uint16_t adInterval)
 {
@@ -354,11 +354,11 @@ void IUBMD350::configureBeacon(bool enabled, uint16_t adInterval)
 /**
  * Set Beacon UUID
  *
- * @param UUID   Universal Unique Identifier as a char array of 32 hex digits
+ * @param UUID  Universal Unique Identifier as a char array of 32 hex digits
  *  (UUID is 16byte = 128bit long number)
  * @param major  UUID Major Number as a char array of 4 hex digits (16bit)
  * @param minor  UUID Minor Number as a char array of 4 hex digits (16bit)
- * @return       true if configuration was successfully set, else false
+ * @return True if configuration was successfully set, else false
  */
 void IUBMD350::setBeaconUUID(char *UUID, char *major, char *minor)
 {
@@ -491,7 +491,6 @@ void IUBMD350::printUARTConfiguration()
 void IUBMD350::printBeaconConfiguration()
 {
     #ifdef DEBUGMODE
-    int respLen = 0;
     // Beacon enabled / disabled
     char enabled[3];
     sendATCommand("ben?", enabled, 3);
@@ -542,8 +541,8 @@ void IUBMD350::exposeInfo()
 /**
  * Get BLE Module info and stream them through given port
  *
- * @param  pointers to char arrays to get the resulting info
- * @param  length of arrays
+ * @param  char*  Pointers to char arrays to get the resulting info
+ * @param  len1, len2, len3, len4  Length of arrays
  */
 void IUBMD350::getBMDwareInfo(char *BMDVersion, char *bootVersion,
                               char *protocolVersion, char *hardwareInfo,

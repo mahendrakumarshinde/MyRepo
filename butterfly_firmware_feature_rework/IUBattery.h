@@ -23,7 +23,8 @@ class IUBattery : public SynchronousSensor
         /***** Preset values and default settings *****/
         // CHG pin to detect charging status
         static const uint8_t voltagePin  = A2;
-        static const uint16_t maxVoltage = 4100; // mV full battery voltage
+        // Full battery voltage (mV) => 1000 * (127.0f / 100.0f) * 3.30f = 4191
+        static constexpr float maxVoltage = 4191.0f;
         /***** Constructors & desctructors *****/
         IUBattery(IUI2C *iuI2C, const char* name, Feature *batteryLoad=NULL);
         virtual ~IUBattery() {}

@@ -66,7 +66,6 @@ class IUBMX055Gyro : public AsynchronousSensor
         void setScale(scaleOption scale);
         void setBandwidth(bandwidthOption scale);
         /***** Data acquisition *****/
-        void computeResolution();
         virtual void readData() {}             // Not implemented
         /***** Debugging *****/
         virtual void exposeCalibration() {}    // Not implemented
@@ -75,7 +74,6 @@ class IUBMX055Gyro : public AsynchronousSensor
         /***** Core *****/
         IUI2C *m_iuI2C;
         /***** Configuration and calibration *****/
-        q15_t m_resolution;
         scaleOption m_scale;
         bandwidthOption m_bandwidth;
         bool m_fastPowerUpEnabled;

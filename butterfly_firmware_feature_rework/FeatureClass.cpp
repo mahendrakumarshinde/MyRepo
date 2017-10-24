@@ -8,7 +8,7 @@
 Feature::Feature(const char* name, uint8_t sectionCount, uint16_t sectionSize,
                  Feature::slideOption sliding) :
     m_samplingRate(0),
-    m_resolution(0),
+    m_resolution(1),
     m_active(false),
     m_opStateEnabled(false),
     m_streamingEnabled(false),
@@ -21,6 +21,10 @@ Feature::Feature(const char* name, uint8_t sectionCount, uint16_t sectionSize,
 {
     strcpy(m_name, name);
     strcpy(m_sensorName, "---");
+    for (uint8_t i = 0; i < OperationState::COUNT - 1; ++i)
+    {
+        m_thresholds[i] = 0;
+    }
     m_totalSize = m_sectionCount * m_sectionSize;
     reset();
 }
@@ -32,15 +36,19 @@ void Feature::reset()
 {
     m_fillingIndex = 0;
     m_recordIndex = 0;
-    m_computeIndex = 0;
-    for (uint8_t i = 0; i < maxSectionCount; ++i)
+    for (uint8_t i = 0; i < maxReceiverCount; ++i)
     {
-        m_locked[i] = false;
-        m_published[i] = false;
-        m_acknowledged[i] = true;
-        for (uint8_t j = 0; j < maxReceiverCount; ++j)
+        m_computeIndex[i] = 0;
+    }
+    // All sections are set as ready to record: not locked, not published and
+    // acknowledged by all receivers.
+    for (uint8_t j = 0; j < maxSectionCount; ++j)
+    {
+        m_locked[j] = false;
+        m_published[j] = false;
+        for (uint8_t k = 0; k < maxReceiverCount; ++k)
         {
-            m_partialAcknowledged[i][j] = false;
+            m_acknowledged[j][k] = true;
         }
     }
 }
@@ -50,10 +58,6 @@ void Feature::reset()
  */
 uint8_t Feature::addReceiver(uint8_t receiverId)
 {
-    if (m_receiverCount >= maxReceiverCount)
-    {
-        raiseException("Too many receivers");
-    }
     m_receiversId[m_receiverCount] = receiverId;
     m_receiverCount++;
     return m_receiverCount - 1;
@@ -71,6 +75,7 @@ void Feature::deactivate()
 {
     m_active = false;
     m_opStateEnabled = false;
+    m_streamingEnabled = false;
 }
 
 
@@ -115,38 +120,46 @@ void Feature::setThresholds(float normalVal, float warningVal, float dangerVal)
 /***** Tracking the buffer state *****/
 
 /**
- * Check whether the section(s) of the buffer are ready for computation
- *
- * Ready for computation means not locked, published and not yet acknowledged
- * by this receiver.
- */
-bool Feature::isReadyToCompute(uint8_t receiverIndex, uint8_t sectionCount)
-{
-    uint8_t k;
-    for (uint8_t i = m_computeIndex; i < m_computeIndex + sectionCount; ++i)
-    {
-        k = i % maxSectionCount;
-        if (m_locked[k] || m_partialAcknowledged[k][receiverIndex] ||
-            !m_published[k])
-        {
-            return false;
-        }
-    }
-    return true;
-}
-
-/**
  * Check if the section(s) of the buffer are ready for recording
  *
- * Ready for recording means acknowledged and not locked.
+ * Ready for recording means not locked, not already published and acknowledged
+ * by all receivers.
  */
 bool Feature::isReadyToRecord(uint8_t sectionCount)
 {
     uint8_t k;
     for (uint8_t i = m_recordIndex; i < m_recordIndex + sectionCount; ++i)
     {
-        k = i % maxSectionCount;
-        if(m_locked[k] || !m_acknowledged[k])
+        k = i % m_sectionCount;
+        if (m_locked[k] || m_published[k])
+        {
+            return false;
+        }
+        for (uint8_t j = 0; j < m_receiverCount; ++j)
+        {
+            if (!m_acknowledged[k][j])
+            {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+/**
+ * Check if the next section(s) of the buffer are ready for computation
+ *
+ * Ready for computation means the sections must be not locked, fully recorded,
+ * not yet received by this receiver.
+ */
+bool Feature::isReadyToCompute(uint8_t receiverIdx, uint8_t sectionCount)
+{
+    uint8_t k;
+    uint8_t idx = m_computeIndex[receiverIdx];
+    for (uint8_t i = idx; i < idx + sectionCount; ++i)
+    {
+        k = i % m_sectionCount;
+        if (m_locked[k] || !m_published[k] || m_acknowledged[k][receiverIdx])
         {
             return false;
         }
@@ -155,62 +168,12 @@ bool Feature::isReadyToRecord(uint8_t sectionCount)
 }
 
 /**
- * Acknowledge one or several sections of the buffer for a given receiver Idx
- */
-void Feature::partialAcknowledge(uint8_t receiverIdx, uint8_t sectionCount)
-{
-    for (uint8_t i = m_computeIndex; i < m_computeIndex + sectionCount; ++i)
-    {
-        m_partialAcknowledged[i % maxSectionCount][receiverIdx] = true;
-    }
-}
-
-/**
- * Acknowledge the next sections if all partial acknowledgement are OK
- *
- * Function will check sections one by one starting at computeIndex and, if all
- * partialAcknowledged are true, will acknowledge the section. It stops at the
- * first non-completely ackwoledged section.
- * This function should be called immediately after the receivers of the feature
- * have run.
- *
- * Acknowledging a section set its "acknowledged" and "published" boleans to
- * true and false respectively. computeIndex (index of the current computed
- * section) is then appropriately moved forward.
- */
-void Feature::acknowledgeIfReady()
-{
-    uint8_t k;
-    for (uint8_t i = m_computeIndex; i < m_computeIndex + maxSectionCount; ++i)
-    {
-        k = i % maxSectionCount;
-        for (uint8_t j = 0; j < maxReceiverCount; ++j)
-        {
-            if (!m_partialAcknowledged[k][j])
-            {
-                // Not ready because some sections are not totally acknowledged
-                break;
-            }
-        }
-        // All partial acknowledgement OK, so move forward
-        for (uint8_t j = 0; j < maxReceiverCount; ++j)
-        {
-            m_partialAcknowledged[k][j] = false;
-        }
-        m_acknowledged[k] = true;
-        m_published[k] = false;
-        m_computeIndex = (i + 1) % maxSectionCount;
-    }
-
-}
-
-/**
  * Increment the index used to record data in the buffer
  *
  * Also publish the sections if it has been entirely recorded.
- * Publishing a section set its "published" and "acknowledged" booleans to true.
- * and false respectively. recordIndex (index of current recording section) is
- * then appropriately moved forward.
+ * Publishing a section set its "published" boolean to true, and the
+ * "acknowledged" booleans of all the receivers to false.
+ * recordIndex (index of current recording section) is also moved forward.
  */
 void Feature::incrementFillingIndex()
 {
@@ -219,14 +182,61 @@ void Feature::incrementFillingIndex()
     if (m_fillingIndex >= (m_recordIndex + 1) * m_sectionSize)
     {
         m_published[m_recordIndex] = true;
-        m_acknowledged[m_recordIndex] = false;
-        m_recordIndex = (m_recordIndex + 1) % maxSectionCount;
-        // After publishing, update the operation state to reflect the latest
-        // published section
+        for (uint8_t j = 0; j < m_receiverCount; ++j)
+        {
+            m_acknowledged[m_recordIndex][j] = false;
+        }
+        if (loopDebugMode && highVerbosity)
+        {
+            debugPrint(getName(), false);
+            debugPrint(F(" publish section="), false);
+            debugPrint(m_recordIndex, false);
+            debugPrint(F(", idx="), false);
+            debugPrint(m_fillingIndex);
+        }
+        m_recordIndex = (m_recordIndex + 1) % m_sectionCount;
+        // Update the operation state to reflect the latest published section
         updateOperationState();
     }
     // Filling Index restart from 0 if needed
     m_fillingIndex %= m_totalSize;
+}
+
+/**
+ * Acknowledge one or several sections of the buffer for a given receiver Idx
+ *
+ * Acknowledging a section set its "acknowledged"  bolean to true. If all
+ * receivers have acknowledged the section, the "published" boolean of the
+ * section is then set to false to allow recording.
+ */
+void Feature::acknowledge(uint8_t receiverIdx, uint8_t sectionCount)
+{
+    uint8_t idx = m_computeIndex[receiverIdx];
+    bool unpublish;
+    uint8_t k;
+    for (uint8_t i = idx; i < idx + sectionCount; ++i)
+    {
+        k = i % m_sectionCount;
+        // Acknowledge for current receiver
+        m_acknowledged[k][receiverIdx] = true;
+        // Check other receiver acknowledgement to maybe unpublish the section
+        unpublish = true;
+        for (uint8_t j = 0; j < m_receiverCount; ++j)
+        {
+            unpublish &= m_acknowledged[k][j];
+        }
+        if (unpublish)
+        {
+            m_published[k] = false;
+            if (loopDebugMode && highVerbosity)
+            {
+                debugPrint(getName(), false);
+                debugPrint(F(" fully acknowledge section="), false);
+                debugPrint(k);
+            }
+        }
+    }
+    m_computeIndex[receiverIdx] = (idx + sectionCount) % m_sectionCount;
 }
 
 
@@ -237,7 +247,8 @@ void Feature::incrementFillingIndex()
  */
 void Feature::stream(HardwareSerial *port)
 {
-    uint8_t k = (maxSectionCount + m_recordIndex - 1) % maxSectionCount;
+    // Lock and print the last recorded section (= recordIndex - 1)
+    uint8_t k = (m_sectionCount + m_recordIndex - 1) % m_sectionCount;
     m_locked[k] = true;
     m_specializedStream(port, k);
     m_locked[k] = false;
@@ -285,20 +296,27 @@ void Feature::exposeCounters()
     debugPrint(F("  record idx: "), false);
     debugPrint(m_recordIndex);
     debugPrint(F("  Compute idx: "), false);
-    debugPrint(m_computeIndex);
-
-    debugPrint(F("  "), false);
+    for (uint8_t j = 0; j < m_receiverCount; ++j)
+    {
+        debugPrint(m_computeIndex[j], false);
+        debugPrint(", ", false);
+    }
+    debugPrint(F("\n  "), false);
     debugPrint(m_sectionCount, false);
     debugPrint(F(" sections"));
     for (uint8_t i = 0; i < m_sectionCount; ++i)
     {
         debugPrint(F("  "), false);
         debugPrint(i, false);
-        debugPrint(F(": published="), false);
+        debugPrint(F(": published: "), false);
         debugPrint(m_published[i], false);
-        debugPrint(F(", acknowledged="), false);
-        debugPrint(m_acknowledged[i]);
-        //TODO also print m_partialAcknowledged[i][maxReceiverCount]?
+        debugPrint(F(", acknowledged: "), false);
+        for (uint8_t j = 0; j < m_receiverCount; ++j)
+        {
+            debugPrint(m_acknowledged[i][j], false);
+            debugPrint(", ", false);
+        }
+        debugPrint("");
     }
     #endif
 }
@@ -313,7 +331,7 @@ void Feature::exposeCounters()
 FloatFeature::FloatFeature(const char* name, uint8_t sectionCount,
                            uint16_t sectionSize, float *values,
                            Feature::slideOption sliding) :
-    Feature(name, sectionCount, sectionCount, sliding)
+    Feature(name, sectionCount, sectionSize, sliding)
 {
     m_values = values;
 }
@@ -321,10 +339,10 @@ FloatFeature::FloatFeature(const char* name, uint8_t sectionCount,
 /**
  * Return a pointer to the start of the section
  */
-float* FloatFeature::getNextFloatValues()
+float* FloatFeature::getNextFloatValues(uint8_t receiverIdx)
 {
-    uint16_t startIndex = (uint16_t) m_computeIndex * m_sectionSize;
-    return &m_values[startIndex];
+    uint16_t startIdx = (uint16_t) m_computeIndex[receiverIdx] * m_sectionSize;
+    return &m_values[startIdx];
 }
 
 /**
@@ -334,7 +352,7 @@ void FloatFeature::addFloatValue(float value)
 {
     m_values[m_fillingIndex] = value;
     incrementFillingIndex();
-    if (loopDebugMode && isComputedFeature())
+    if (loopDebugMode && showIntermediaryResults && isComputedFeature())
     {
         debugPrint(getName(), false);
         debugPrint(": ", false);
@@ -347,7 +365,7 @@ void FloatFeature::addFloatValue(float value)
  */
 float FloatFeature::getValueToCompareToThresholds()
 {
-    uint8_t k = (maxSectionCount + m_recordIndex - 1) % maxSectionCount;
+    uint8_t k = (m_sectionCount + m_recordIndex - 1) % m_sectionCount;
     float total = 0;
     for (uint16_t i = k * m_sectionSize; i < (k + 1) * m_sectionSize; ++i)
     {
@@ -365,7 +383,7 @@ void FloatFeature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx)
          i < (sectionIdx + 1) * m_sectionSize; ++i)
     {
         port->print(",");
-        port->print(m_values[i]);
+        port->print(m_values[i] * m_resolution);
     }
 }
 
@@ -375,7 +393,7 @@ void FloatFeature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx)
 Q15Feature::Q15Feature(const char* name, uint8_t sectionCount,
                        uint16_t sectionSize, q15_t *values,
                        Feature::slideOption sliding) :
-    Feature(name, sectionCount, sectionCount, sliding)
+    Feature(name, sectionCount, sectionSize, sliding)
 {
     m_values = values;
 }
@@ -383,10 +401,10 @@ Q15Feature::Q15Feature(const char* name, uint8_t sectionCount,
 /**
  * Return a pointer to the start of the section
  */
-q15_t* Q15Feature::getNextQ15Values()
+q15_t* Q15Feature::getNextQ15Values(uint8_t receiverIdx)
 {
-    uint16_t startIndex = (uint16_t) m_computeIndex * m_sectionSize;
-    return &m_values[startIndex];
+    uint16_t startIdx = (uint16_t) m_computeIndex[receiverIdx] * m_sectionSize;
+    return &m_values[startIdx];
 }
 
 /**
@@ -396,21 +414,11 @@ void Q15Feature::addQ15Value(q15_t value)
 {
     m_values[m_fillingIndex] = value;
     incrementFillingIndex();
-    if (loopDebugMode && isComputedFeature())
+    if (loopDebugMode && showIntermediaryResults && isComputedFeature())
     {
         debugPrint(getName(), false);
         debugPrint(": ", false);
         debugPrint(value);
-    }
-}
-
-void Q15Feature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx)
-{
-    for (uint16_t i = sectionIdx * m_sectionSize;
-         i < (sectionIdx + 1) * m_sectionSize; ++i)
-    {
-        port->print(",");
-        port->print(m_values[i]);
     }
 }
 
@@ -420,7 +428,7 @@ void Q15Feature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx)
 Q31Feature::Q31Feature(const char* name, uint8_t sectionCount,
                        uint16_t sectionSize, q31_t *values,
                        Feature::slideOption sliding) :
-    Feature(name, sectionCount, sectionCount, sliding)
+    Feature(name, sectionCount, sectionSize, sliding)
 {
     m_values = values;
 }
@@ -428,10 +436,10 @@ Q31Feature::Q31Feature(const char* name, uint8_t sectionCount,
 /**
  * Return a pointer to the start of the section
  */
-q31_t* Q31Feature::getNextQ31Values()
+q31_t* Q31Feature::getNextQ31Values(uint8_t receiverIdx)
 {
-    uint16_t startIndex = (uint16_t) m_computeIndex * m_sectionSize;
-    return &m_values[startIndex];
+    uint16_t startIdx = (uint16_t) m_computeIndex[receiverIdx] * m_sectionSize;
+    return &m_values[startIdx];
 }
 
 /**
@@ -441,20 +449,10 @@ void Q31Feature::addQ31Value(q31_t value)
 {
     m_values[m_fillingIndex] = value;
     incrementFillingIndex();
-    if (loopDebugMode && isComputedFeature())
+    if (loopDebugMode && showIntermediaryResults && isComputedFeature())
     {
         debugPrint(getName(), false);
         debugPrint(": ", false);
         debugPrint(value);
-    }
-}
-
-void Q31Feature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx)
-{
-    for (uint16_t i = sectionIdx * m_sectionSize;
-         i < (sectionIdx + 1) * m_sectionSize; ++i)
-    {
-        port->print(",");
-        port->print(m_values[i]);
     }
 }

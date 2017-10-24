@@ -2,11 +2,19 @@
 #define UTILITIES_H
 
 #include <Arduino.h>
-/* CMSIS-DSP library for RFFT */
-#include <arm_math.h>
+#include <arm_math.h>  // CMSIS-DSP library for RFFT
 
 #include "Logger.h"
-#include "Keywords.h"
+
+
+/*==============================================================================
+    Conversion
+============================================================================= */
+
+// Q15 <-> Float
+float q15ToFloat(q15_t value);
+
+q15_t floatToq15(float value);
 
 
 /*==============================================================================
@@ -60,83 +68,60 @@ void copyArray(T *source, T *dest, int arrSize)
   }
 }
 
-
-/*==============================================================================
-    String processing
-============================================================================= */
-
-uint8_t splitString(String str, const char separator, String *destination,
-                    uint8_t destinationSize);
-
-uint8_t splitStringToInt(String str, const char separator, int *destination,
-                         const uint8_t destinationSize);
-
-bool checkCharsAtPosition(char *charBuffer, int *positions, char character);
-
-void strCopyWithAutocompletion(char *destination, char *source, uint8_t destLen,
-                               uint8_t srcLen);
-
-
-/*==============================================================================
-    Conversion
-============================================================================= */
-
-// Q15 <-> Float
-float q15ToFloat(q15_t value);
-
-q15_t floatToq15(float value);
-
-
-// Acceleration units
-float toG(q15_t value, uint16_t accelResolution);
-
-float toMS2(q15_t value, uint16_t accelResolution);
-
-float getFactorToMS2(uint16_t accelResolution);
+/**
+ * Return the K max values from given source array
+ *
+ * Implement a QuickSelect algorithm
+ */
+void getMaxCoefficients(float *source, uint16_t sourceCount, float *destination,
+                        uint16_t destinationCount);
 
 
 /*==============================================================================
     FFTs
 ============================================================================= */
 
-bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTlength,
-                 bool inverse);
+/**
+ * Collection of function to compute FFTs and use their complex coefficients.
+ */
+namespace FFT
+{
+    void computeRFFT(q15_t *source, q15_t *destination,
+                     const uint16_t FFTlength, bool inverse);
 
-bool computeRFFT(q15_t *source, q15_t *destination, const uint16_t FFTlength,
-                 bool inverse, q15_t *window);
+    void computeRFFT(q15_t *source, q15_t *destination,
+                     const uint16_t FFTlength, bool inverse, q15_t *window);
 
-void filterAndIntegrateFFT(q15_t *values, uint16_t sampleCount,
-                           uint16_t samplingRate, uint16_t FreqLowerBound,
-                           uint16_t FreqHigherBound, uint16_t scalingFactor,
-                           bool twice = false);
+    void filterAndIntegrate(q15_t *values, uint16_t sampleCount,
+                            uint16_t samplingRate, uint16_t FreqLowerBound,
+                            uint16_t FreqHigherBound, uint16_t scalingFactor,
+                            bool twice = false);
+}
 
-float getMainFrequency(q15_t *fftValues, uint16_t sampleCount,
-                       uint16_t samplingRate);
+/**
+ * Collection of function that uses FFT Squared amplitudes.
+ */
+namespace FFTSquaredAmplitudes
+{
+    void getAmplitudes(q15_t *fftValues, uint16_t sampleCount,
+                       q15_t *destination);
 
-q15_t findMaxAscent(q15_t *batch, uint16_t batchSize, uint16_t max_count);
+    q15_t getRMS(q15_t *amplitudes, uint16_t sampleCount);
+
+    void filterAndIntegrate(q15_t *values, uint16_t sampleCount,
+                            uint16_t samplingRate, uint16_t FreqLowerBound,
+                            uint16_t FreqHigherBound, uint16_t scalingFactor,
+                            bool twice);
+
+    float getMainFrequency(q15_t *amplitudes, uint16_t sampleCount,
+                           uint16_t samplingRate);
+}
 
 
 /*==============================================================================
-    Hamming Window Presets
+    Analytics
 ============================================================================= */
 
-/* Hamming window definition: w(n) = 0.54 - 0.46 * cos(2 * Pi * n / N),
-0 <= n <= N. Since we are using q15 values, we then have to do
-round(w(n) * 2^15) to convert from float to q15 format.*/
-
-__attribute__((section(".noinit2"))) const int magsize_512 = 257;
-// 1/0.5400 = 1.8519
-__attribute__((section(".noinit2"))) const float hamming_K_512 = 1.8519;
-__attribute__((section(".noinit2"))) const float inverse_wlen_512 = 1/512.0;
-//extern __attribute__((section(".noinit2"))) q15_t hamming_window_512 [512];
-extern q15_t hamming_window_512 [512];
-
-__attribute__((section(".noinit2"))) const int magsize_2048 = 1025;
-// 1/0.5400 = 1.8519
-__attribute__((section(".noinit2"))) const float hamming_K_2048 = 1.8519;
-__attribute__((section(".noinit2"))) const float inverse_wlen_2048 = 1/2048.0;
-//extern __attribute__((section(".noinit2"))) q15_t hamming_window_2048 [2048];
-extern q15_t hamming_window_2048 [2048];
-
+q15_t findMaxAscent(q15_t *batch, uint16_t batchSize, uint16_t maxCount);
 
 #endif // UTILITIES_H

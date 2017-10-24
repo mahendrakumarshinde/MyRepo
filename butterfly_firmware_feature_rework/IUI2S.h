@@ -50,7 +50,6 @@ class IUI2S : public AsynchronousSensor
         /***** Configuration and calibration *****/
         virtual void setCallbackRate() {}  // Non settable
         uint16_t getCallbackRate() { return clockRate / (audioSampleSize / 2); }
-        void setSamplingRate(uint16_t samplingRate);
         /***** Data acquisition *****/
         void computeDownclockingRate();
         bool triggerDataAcquisition(void (*callback)());
