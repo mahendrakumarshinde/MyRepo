@@ -137,25 +137,9 @@ bool Conductor::configure(JsonVariant &my_config)
         }
         return false;
     }
-    // Data send Period
-    JsonVariant value = my_config["DS1"];
-    if (value.success())
-    {
-        featureGroup1.setDataSendPeriod((uint16_t) (value.as<int>()));
-    }
-    value = my_config["DS2"];
-    if (value.success())
-    {
-        featureGroup2.setDataSendPeriod((uint16_t) (value.as<int>()));
-    }
-    value = my_config["DS3"];
-    if (value.success())
-    {
-        featureGroup3.setDataSendPeriod((uint16_t) (value.as<int>()));
-    }
     // Sleep management
     bool changed = false;
-    value = my_config["POW"];
+    JsonVariant value = my_config["POW"];
     if (value.success())
     {
         m_sleepMode = (sleepMode) (value.as<int>());
@@ -409,9 +393,10 @@ void Conductor::streamFeatures()
             }
     }
     double timestamp = getDatetime();
-    featureGroup1.stream(port, m_operationState, timestamp);
-    featureGroup2.stream(port, m_operationState, timestamp);
-    featureGroup3.stream(port, m_operationState, timestamp);
+    for (uint8_t i = 0; i < FEATURE_PROFILE_COUNT; ++i)
+    {
+        FEATURE_PROFILES[i]->stream(port, m_operationState, timestamp);
+    }
 }
 
 
@@ -507,7 +492,8 @@ void Conductor::changeUsageMode(UsageMode::option usage)
     switch (m_usageMode)
     {
         case UsageMode::CALIBRATION:
-            enableCalibrationFeatures();
+            deactivateAllProfiles();
+            calibrationProfile.activate();
             iuRGBLed.changeColor(IURGBLed::CYAN);
             iuRGBLed.lock();
             msg = "calibration";
@@ -518,7 +504,8 @@ void Conductor::changeUsageMode(UsageMode::option usage)
         case UsageMode::OPERATION:
             iuRGBLed.unlock();
             iuRGBLed.changeColor(IURGBLed::BLUE);
-            enableMotorFeatures();
+            deactivateAllProfiles();
+            motorStandardProfile.activate();
             iuAccelerometer.resetScale();
             msg = "operation";
             break;
@@ -535,90 +522,3 @@ void Conductor::changeUsageMode(UsageMode::option usage)
     }
 }
 
-
-/* =============================================================================
-    Main Setup and loop
-============================================================================= */
-
-/**
- * Handle most of the device setup
- *
- * This function is to be called in the main setup function.
- */
-void Conductor::setup(void (*callback)())
-{
-    // Interfaces
-    if (debugMode)
-    {
-        debugPrint(F("\nInitializing interfaces..."));
-    }
-    iuI2C.setupHardware();
-    if (setupDebugMode)
-    {
-        iuI2C.scanDevices();
-        debugPrint("");
-    }
-    iuBluetooth.setupHardware();
-    iuWiFi.setupHardware();
-    if(debugMode)
-    {
-        memoryLog(F("=> Successfully initialized interfaces"));
-    }
-    if (setupDebugMode)
-    {
-        debugPrint(' ');
-        iuBluetooth.exposeInfo();
-    }
-
-    // Default feature configuration
-    if (debugMode)
-    {
-        debugPrint(F("\nSetting up default feature configuration..."));
-    }
-    setUpComputerSource();
-    enableMotorFeatures();
-    if (debugMode)
-    {
-        memoryLog(F("=> Succesfully configured default features"));
-    }
-
-    // Sensors
-    if (debugMode)
-    {
-        debugPrint(F("\nInitializing sensors..."));
-    }
-    uint16_t callbackRate = iuI2S.getCallbackRate();
-    for (uint8_t i = 0; i < SENSOR_COUNT; ++i)
-    {
-        SENSORS[i]->setupHardware();
-        if (SENSORS[i]->isAsynchronous())
-        {
-            SENSORS[i]->setCallbackRate(callbackRate);
-        }
-    }
-    if (debugMode)
-    {
-      memoryLog(F("=> Successfully initialized sensors"));
-    }
-
-    //
-    if (setupDebugMode)
-    {
-        exposeAllConfigurations();
-        if (iuI2C.isError())
-        {
-            debugPrint(F("\nI2C Satus: Error"));
-        }
-        else
-        {
-            debugPrint(F("\nI2C Satus: OK"));
-        }
-        debugPrint(F("\n***Finished setup at (ms): "), false);
-        debugPrint(millis(), false);
-        debugPrint(F("***\n"));
-    }
-
-    m_callback = callback;
-    changeAcquisitionMode(AcquisitionMode::FEATURE);
-    iuRGBLed.showOperationState(m_operationState);  // Start LED
-}

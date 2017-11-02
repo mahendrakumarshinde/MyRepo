@@ -65,6 +65,7 @@ class Feature
         virtual void activate() { m_active = true; }
         virtual void deactivate();
         virtual bool isActive() { return m_active; }
+        bool configure(JsonVariant &config);
         /***** OperationState and Thresholds *****/
         virtual OperationState::option getOperationState()
             { return m_operationState; }
@@ -109,6 +110,7 @@ class Feature
 
 
     protected:
+//        static Feature *instances[20];
         /***** Feature designation *****/
         char m_name[4];
         /***** Physical metadata *****/

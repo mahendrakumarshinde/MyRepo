@@ -9,7 +9,7 @@
 /**
  * Test getMax function
  */
-test(getMax)
+test(Utilities__getMax)
 {
     q15_t a1[5] = {1, -2, -3, 2, 1};
     assertEqual(getMax(a1, 5), 2);
@@ -24,7 +24,7 @@ test(getMax)
 /**
  * Test sumArray function
  */
-test(sumArray)
+test(Utilities__sumArray)
 {
     q15_t a1[5] = {1, -2, -3, 2, 1};
     assertEqual(sumArray(a1, 5), -1);
@@ -39,7 +39,7 @@ test(sumArray)
 /**
  * Test copyArray function
  */
-test(copyArray)
+test(Utilities__copyArray)
 {
     q15_t src[5] = {1, -2, -3, 2, 1};
     q15_t dest[3];
@@ -51,14 +51,20 @@ test(copyArray)
 
 
 /**
- * Test FFT-related functions
+ * Test RFFT-related functions
  *
- * - FFT::computeRFFT
- * - FFT::filterAndIntegrateFFT
+ * These tests not only aim at testing the function themselves, but also at
+ * illustrating the loss of precision in the q15_t RFFT and in the FFT
+ * integration. In the FFT integration itself, the loss of precision can be
+ * countered by using an rescaling factor of k bits (see getRescalingFactor).
+ *
+ * - RFFT::computeRFFT
+ * - RFFT::getRescalingFactor
+ * - RFFT::filterAndIntegrateFFT
  */
-test(FFT_computation)
+test(Utilities__RFFT)
 {
-    q15_t rfftValues[1024];
+    q15_t rfftValues[2 * testSampleCount];
     copyArray(q15TestData, sharedTestArray, testSampleCount);
     // Store RMS value of the series for future reference
     float orgRMS = 0;
@@ -67,212 +73,254 @@ test(FFT_computation)
         orgRMS += sq((float) sharedTestArray[i]);
     }
     orgRMS = sqrt(orgRMS / testSampleCount);
-//    assertEqual(round(orgRMS), 8060);
-    Serial.println("orgRMS");
-    Serial.println(orgRMS);
+    assertEqual(round(orgRMS), 8060);
 
     /***** Test computeRFFT *****/
     // Forward
-    FFT::computeRFFT(sharedTestArray, rfftValues, testSampleCount, false);
+    RFFT::computeRFFT(sharedTestArray, rfftValues, testSampleCount, false);
+
     assertEqual(rfftValues[0], 7895);    // Found 7897 in Python
     assertEqual(rfftValues[1], 0);       // Found 0 in Python
     assertEqual(rfftValues[2], -1);      // Found -0.9 in Python
     assertEqual(rfftValues[3], 1);       // Found 1.6 in Python
+    assertEqual(rfftValues[80], -2);
+    assertEqual(rfftValues[81], 8);
     assertEqual(rfftValues[82], 329);    // Found 329.9 in Python
     assertEqual(rfftValues[83], -1085);  // Found -1084.8 in Python
+    assertEqual(rfftValues[84], -3);
+    assertEqual(rfftValues[85], -9);
     // Inverse fft
-    FFT::computeRFFT(rfftValues, sharedTestArray, testSampleCount, true);
+    RFFT::computeRFFT(rfftValues, sharedTestArray, testSampleCount, true);
     float newRMS = 0;
     for (uint16_t i = 0; i < testSampleCount; ++i)
     {
-        newRMS += sq((float) sharedTestArray[i]);
+        // Scaling factor of 512=2**9 because of FFT internal rescaling
+        newRMS += sq((float) sharedTestArray[i] * 512.);
     }
     newRMS = sqrt(newRMS / testSampleCount);
-//    // Illustrate loss of precision
-//    assertEqual(round(orgRMS), 8060);
-//    assertEqual(round(newRMS), 7660);
-    Serial.println("newRMS");
-    Serial.println(newRMS);
+    // Illustrate loss of precision
+    assertEqual(round(orgRMS), 8060);
+    assertEqual(round(newRMS), 7381);
 
 
-    /***** Test filterAndIntegrateFFT *****/
+    /***** Test getRescalingFactorForIntegral *****/
     copyArray(q15TestData, sharedTestArray, testSampleCount);
-    FFT::computeRFFT(sharedTestArray, rfftValues, testSampleCount, false);
-    FFT::filterAndIntegrate(rfftValues, testSampleCount, testSamplingRate, 0,
-                            1000, 512, false);
+    RFFT::computeRFFT(sharedTestArray, rfftValues, testSampleCount, false);
+
+    uint16_t scaling = RFFT::getRescalingFactorForIntegral(
+        rfftValues, testSampleCount, testSamplingRate);
+    assertEqual(scaling, 8192);
+
+
+    /***** Test filterAndIntegrate *****/
+    /* Also show difference of precision with different rescaling factor */
+
+    // Inapdated rescaling => imprecise result
+    RFFT::filterAndIntegrate(rfftValues, testSampleCount, testSamplingRate, 0,
+                            1000, 256, false);
     assertEqual(rfftValues[0], 0);
     assertEqual(rfftValues[1], 0);
-    assertEqual(rfftValues[2], 42);
-    assertEqual(rfftValues[3], 42);
+    assertEqual(rfftValues[2], 21);
+    assertEqual(rfftValues[3], 21);
     assertEqual(rfftValues[4], 0);
-    assertEqual(rfftValues[5], 42);
-    assertEqual(rfftValues[82], -1104);
-    assertEqual(rfftValues[83], -335);
-
-    float integralRMS1 = 0;
+    assertEqual(rfftValues[5], 21);
+    assertEqual(rfftValues[82], -552);
+    assertEqual(rfftValues[83], -167);
+    RFFT::computeRFFT(rfftValues, sharedTestArray, testSampleCount, true);
+    float unpreciseRMS = 0;
     for (uint16_t i = 0; i < testSampleCount; ++i)
     {
-        integralRMS1 += sq((float) sharedTestArray[i]);
+        // factor of 2 = 512 / 256 (internal FFT rescaling / scaling factor)
+        unpreciseRMS += sq((float) sharedTestArray[i] * 2.0);
     }
-    integralRMS1 = sqrt(integralRMS1 / testSampleCount);
-    // New RMS must match the original
-//    assertEqual(round(integralRMS1 * 1000), 3497); // Python 3378
-    Serial.println("integralRMS1");
-    Serial.println(integralRMS1);
+    unpreciseRMS = sqrt(unpreciseRMS / testSampleCount);
+    assertEqual(round(unpreciseRMS * 1000), 4776); // Python 3378
 
-
+    // Apdated rescaling, as outputed by RFFT::getRescalingFactorForIntegral
+    // => precise result
     copyArray(q15TestData, sharedTestArray, testSampleCount);
-    FFT::computeRFFT(sharedTestArray, rfftValues, testSampleCount, false);
-    FFT::filterAndIntegrate(rfftValues, testSampleCount, testSamplingRate, 5,
-                            1000, 512, false);
+    RFFT::computeRFFT(sharedTestArray, rfftValues, testSampleCount, false);
+    RFFT::filterAndIntegrate(rfftValues, testSampleCount, testSamplingRate, 0,
+                             1000, 8192, false);
+    assertEqual(rfftValues[0], 0);
+    assertEqual(rfftValues[1], 0);
+    assertEqual(rfftValues[2], 668);
+    assertEqual(rfftValues[3], 668);
+    assertEqual(rfftValues[4], 0);
+    assertEqual(rfftValues[5], 668);
+    assertEqual(rfftValues[80], 134);
+    assertEqual(rfftValues[81], 33);
+    assertEqual(rfftValues[82], -17665);
+    assertEqual(rfftValues[83], -5357);
+    assertEqual(rfftValues[84], -143);
+    assertEqual(rfftValues[85], 48);
+    RFFT::computeRFFT(rfftValues, sharedTestArray, testSampleCount, true);
+    float preciseRMS = 0;
+    for (uint16_t i = 0; i < testSampleCount; ++i)
+    {
+        // factor of 1/16 = 512 / 8192 (internal FFT rescaling / scaling factor)
+        preciseRMS += sq((float) sharedTestArray[i] / 16.0);
+    }
+    preciseRMS = sqrt(preciseRMS / testSampleCount);
+    assertEqual(round(preciseRMS * 1000), 3369); // Python 3378
+
+    // Test the passband filtering
+    copyArray(q15TestData, sharedTestArray, testSampleCount);
+    RFFT::computeRFFT(sharedTestArray, rfftValues, testSampleCount, false);
+    RFFT::filterAndIntegrate(rfftValues, testSampleCount, testSamplingRate, 5,
+                             1000, 8192, false);
     assertEqual(rfftValues[0], 0);
     assertEqual(rfftValues[1], 0);
     assertEqual(rfftValues[2], 0);
     assertEqual(rfftValues[3], 0);
     assertEqual(rfftValues[4], 0);
-    assertEqual(rfftValues[5], 42);
-    assertEqual(rfftValues[82], -1104);
-    assertEqual(rfftValues[83], -335);
-
-    float integralRMS2 = 0;
+    assertEqual(rfftValues[5], 668);
+    assertEqual(rfftValues[82], -17665);
+    assertEqual(rfftValues[83], -5357);
+    RFFT::computeRFFT(rfftValues, sharedTestArray, testSampleCount, true);
+    float filteredRMS = 0;
     for (uint16_t i = 0; i < testSampleCount; ++i)
     {
-        integralRMS2 += sq((float) sharedTestArray[i]);
+        // factor of 1/16 = 512 / 8192 (internal FFT rescaling / scaling factor)
+        filteredRMS += sq((float) sharedTestArray[i] / 16);
     }
-    integralRMS2 = sqrt(integralRMS2 / testSampleCount);
-    // New RMS must match the original
-//    assertEqual(round(integralRMS2 * 1000), 3476); // Python 3375
-    Serial.println("integralRMS2");
-    Serial.println(integralRMS2);
+    filteredRMS = sqrt(filteredRMS / testSampleCount);
+    assertEqual(round(filteredRMS * 1000), 3366); // Python 3375
 
+
+    // 2nd Order integration
+    copyArray(q15TestData, sharedTestArray, testSampleCount);
+    RFFT::computeRFFT(sharedTestArray, rfftValues, testSampleCount, false);
+    RFFT::filterAndIntegrate(rfftValues, testSampleCount, testSamplingRate, 0,
+                             1000, 8192, false);
+    scaling = RFFT::getRescalingFactorForIntegral(
+        rfftValues, testSampleCount, testSamplingRate);
+    assertEqual(scaling, 256);
+
+    RFFT::filterAndIntegrate(rfftValues, testSampleCount, testSamplingRate, 0,
+                             1000, 256, false);
+    assertEqual(rfftValues[0], 0);
+    assertEqual(rfftValues[1], 0);
+    assertEqual(rfftValues[2], 13935);
+    assertEqual(rfftValues[3], -13935);
+    assertEqual(rfftValues[4], 6967);
+    assertEqual(rfftValues[5], 0);
+    assertEqual(rfftValues[80], 17);
+    assertEqual(rfftValues[81], -70);
+    assertEqual(rfftValues[82], -2726);
+    assertEqual(rfftValues[83], 8988);
+    assertEqual(rfftValues[84], 24);
+    assertEqual(rfftValues[85], 71);
+    RFFT::computeRFFT(rfftValues, sharedTestArray, testSampleCount, true);
+    float displacementRMS = 0;
+    for (uint16_t i = 0; i < testSampleCount; ++i)
+    {
+        // factor of 1/4.096 = 1000 * 512 / (8192 * 256)
+        // (1000 * internal FFT rescaling / scaling factor)
+        displacementRMS += sq((float) sharedTestArray[i] / 4.0960);
+    }
+    displacementRMS = sqrt(displacementRMS / testSampleCount);
+    assertEqual(round(displacementRMS * 100), 2423); // Python 2686
 }
 
 
 /**
- * Test FFTSquaredAmplitudes-related functions
+ * Test RFFTAmplitudes-related functions
  *
- * - FFTSquaredAmplitudes::getAmplitudes
- * - FFTSquaredAmplitudes::getRMS
- * - FFTSquaredAmplitudes::filterAndIntegrate
- * - FFTSquaredAmplitudes::getMainFrequency
+ * - RFFTAmplitudes::getAmplitudes
+ * - RFFTAmplitudes::getRMS
+ * - RFFTAmplitudes::getRescalingFactorForIntegral
+ * - RFFTAmplitudes::filterAndIntegrate
+ * - RFFTAmplitudes::getMainFrequency
  */
-test(FFTSquaredAmplitudes_computation)
+test(Utilities__RFFTAmplitudes)
 {
-
-}
-
-
-/**
- * Test FFT-related functions
- *
- */
-test(fft_computation)
-{
+    q15_t rfftValues[2 * testSampleCount];
+    q15_t amplitudes[testSampleCount / 2 + 1];
     copyArray(q15TestData, sharedTestArray, testSampleCount);
-    q15_t maxAscent = findMaxAscent(sharedTestArray, testSampleCount, 4);
-    assertEqual(maxAscent, 4144);
+    // Store RMS value of the series for future reference
+    q15_t avg = 0;
+    arm_mean_q15(sharedTestArray, testSampleCount, &avg);
+    float orgRMSNoDC(0), orgRMSDC(0);
+    for (uint16_t i = 0; i < testSampleCount; ++i)
+    {
+        orgRMSDC += sq((float) sharedTestArray[i]);
+        orgRMSNoDC += sq((float) (sharedTestArray[i] - avg));
+    }
+    orgRMSDC = sqrt(orgRMSDC / testSampleCount);
+    orgRMSNoDC = sqrt(orgRMSNoDC / testSampleCount);
+    assertEqual(round(orgRMSDC), 8060);
+    assertEqual(round(orgRMSNoDC), 1609);
 
-//    copyArray(q15TestData, sharedTestArray, testSampleCount);
-//    float energy1 = computeSignalEnergy(sharedTestArray, testSampleCount, testSamplingRate,
-//                                        1, false);
-//    float energy2 = computeSignalEnergy(sharedTestArray, testSampleCount, testSamplingRate,
-//                                        2, false);
-//    float energy3 = computeSignalEnergy(sharedTestArray, testSampleCount, testSamplingRate,
-//                                        1, true);
-//    assertEqual(round(energy1), 33258676);
-//    assertEqual(round(energy2), 133034704);
-//    assertEqual(round(energy3), 1325821);
-//
-//    float power1 = computeSignalPower(sharedTestArray, testSampleCount, testSamplingRate, 1,
-//                                      false);
-//    float power2 = computeSignalPower(sharedTestArray, testSampleCount, testSamplingRate, 2,
-//                                      false);
-//    float power3 = computeSignalPower(sharedTestArray, testSampleCount, testSamplingRate, 1,
-//                                      true);
-//    assertEqual(round(power1), 64958348);
-//    assertEqual(round(power2), 259833392);
-//    assertEqual(round(power3), 2589493);
-//
-//    float rms1 = computeSignalRMS(sharedTestArray, testSampleCount, testSamplingRate, 1,
-//                                  false);
-//    float rms2 = computeSignalRMS(sharedTestArray, testSampleCount, testSamplingRate, 10,
-//                                  false);
-//    float rms3 = computeSignalRMS(sharedTestArray, testSampleCount, testSamplingRate, 1,
-//                                  true);
-//    assertEqual(round(rms1 * 100), 805967); // Round to 2 decimal place
-//    assertEqual(round(rms2 * 100), 8059685); // Round to 2 decimal place
-//    assertEqual(round(rms3 * 100), 160919); // Round to 2 decimal place
+    /***** Test getAmplitudes *****/
+    RFFT::computeRFFT(sharedTestArray, rfftValues, testSampleCount, false);
 
-    q15_t rfftValues[1024];
+    RFFTAmplitudes::getAmplitudes(rfftValues, testSampleCount, amplitudes);
+    assertEqual(amplitudes[0], 7895);
+    assertEqual(amplitudes[1], 1);
+    assertEqual(amplitudes[2], 2);
+    assertEqual(amplitudes[40], 8);
+    assertEqual(amplitudes[41], 1133);
+    assertEqual(amplitudes[42], 9);
 
-    copyArray(q15TestData, sharedTestArray, testSampleCount);
-    FFT::computeRFFT(sharedTestArray, rfftValues, testSampleCount, false);
-    assertEqual(rfftValues[0], 7895);   // found 7897 in Python
-    assertEqual(rfftValues[1], 0);      // found 0 in Python
-    assertEqual(rfftValues[2], -1);      // found -0.9 in Python
-    assertEqual(rfftValues[3], 1);      // found 1.6 in Python
-    assertEqual(rfftValues[82], 329);    // found 329.9 in Python
-    assertEqual(rfftValues[83], -1085);  //found -1084.8 in Python
+    /***** Test getRMS *****/
+    float amplitudeRMS = RFFTAmplitudes::getRMS(amplitudes, testSampleCount);
+    assertEqual(round(amplitudeRMS), 1608);
 
-    // Inverse fft
-    copyArray(q15TestData, sharedTestArray, testSampleCount);
-    FFT::computeRFFT(rfftValues, sharedTestArray, testSampleCount, true);
-//    float orgRMS = computeSignalRMS(sharedTestArray, testSampleCount, testSamplingRate, 1,
-//                                    false);
-//    float newRMS = computeSignalRMS(sharedTestArray, testSampleCount, testSamplingRate, 1,
-//                                    false) * 512;
-    //    // Illustrate loss of precision
-    //    assertEqual(round(orgRMS), 8060);
-    //    assertEqual(round(newRMS), 7381);
-
-//    float mainFreq = getMainFrequency(rfftValues, testSampleCount, testSamplingRate);
-//    assertEqual(round(mainFreq * 100), 8008); // Around 80 Hz
-
-    copyArray(q15TestData, sharedTestArray, testSampleCount);
-    FFT::computeRFFT(sharedTestArray, rfftValues, testSampleCount, false);
-    FFT::filterAndIntegrate(rfftValues, testSampleCount, testSamplingRate, 0, 1000, 512,
-                            false);
-    assertEqual(rfftValues[0], 0);
-    assertEqual(rfftValues[1], 0);
-    assertEqual(rfftValues[2], 42);
-    assertEqual(rfftValues[3], 42);
-    assertEqual(rfftValues[4], 0);
-    assertEqual(rfftValues[5], 42);
-    assertEqual(rfftValues[82], -1104);
-    assertEqual(rfftValues[83], -335);
+    float amplitudeRMSWithDC = RFFTAmplitudes::getRMS(amplitudes,
+                                                      testSampleCount, false);
+    assertEqual(round(amplitudeRMSWithDC), 8057);
 
 
-    copyArray(q15TestData, sharedTestArray, testSampleCount);
-    FFT::computeRFFT(sharedTestArray, rfftValues, testSampleCount, false);
-    FFT::filterAndIntegrate(rfftValues, testSampleCount, testSamplingRate, 5, 1000, 512,
-                            false);
-    assertEqual(rfftValues[0], 0);
-    assertEqual(rfftValues[1], 0);
-    assertEqual(rfftValues[2], 0);
-    assertEqual(rfftValues[3], 0);
-    assertEqual(rfftValues[4], 0);
-    assertEqual(rfftValues[5], 42);
-    assertEqual(rfftValues[82], -1104);
-    assertEqual(rfftValues[83], -335);
+    /***** Test getRescalingFactorForIntegral *****/
+    q15_t scaling = RFFTAmplitudes::getRescalingFactorForIntegral(
+        amplitudes, testSampleCount, testSamplingRate);
+    assertEqual(scaling, 8192);
 
-//    copyArray(q15TestData, sharedTestArray, testSampleCount);
-//    computeRFFT(sharedTestArray, rfftValues, testSampleCount, false);
-//    float velRMS1 = computeFullVelocity(rfftValues, testSampleCount, testSamplingRate,
-//                                        0, 1000, 1);
-//
-//    copyArray(q15TestData, sharedTestArray, testSampleCount);
-//    computeRFFT(sharedTestArray, rfftValues, testSampleCount, false);
-//    float velRMS2 = computeFullVelocity(rfftValues, testSampleCount, testSamplingRate,
-//                                        0, 1000, 9806.5 * 4. / 32768.);
-//
-//    copyArray(q15TestData, sharedTestArray, testSampleCount);
-//    computeRFFT(sharedTestArray, rfftValues, testSampleCount, false);
-//    float velRMS3 = computeFullVelocity(rfftValues, testSampleCount, testSamplingRate,
-//                                        5, 1000, 9806.5 * 4. / 32768.);
-//
-//    assertEqual(round(velRMS1 * 1000), 3497); // Python 3378
-//    assertEqual(round(velRMS2 * 1000), 4186); // Python 4052
-//    assertEqual(round(velRMS3 * 1000), 4160); // Python 4044
+
+    /***** Test filterAndIntegrate *****/
+    // 1st Integration
+    RFFTAmplitudes::filterAndIntegrate(amplitudes, testSampleCount,
+                                       testSamplingRate, 0, 1000, 8192, false);
+    assertEqual(amplitudes[0], 0);
+    assertEqual(amplitudes[1], 668);
+    assertEqual(amplitudes[2], 668);
+    assertEqual(amplitudes[3], 445);
+    assertEqual(amplitudes[40], 134);
+    assertEqual(amplitudes[41], 18447);
+    assertEqual(amplitudes[42], 143);
+    amplitudeRMS = RFFTAmplitudes::getRMS(amplitudes, testSampleCount);
+    assertEqual(round(amplitudeRMS), 27554);
+    // Rescaled, but round to 3 decimal precision
+    assertEqual(round(amplitudeRMS * 1000.0 / 8192.0), 3364);
+    // RMS without DC should be the same than with DC, since integration
+    // remove DC component
+    amplitudeRMSWithDC = RFFTAmplitudes::getRMS(amplitudes, testSampleCount,
+                                                false);
+    assertEqual(amplitudeRMSWithDC, amplitudeRMS);
+
+
+    // 2nd Integration
+    scaling = RFFTAmplitudes::getRescalingFactorForIntegral(
+        amplitudes, testSampleCount, testSamplingRate);
+    assertEqual(scaling, 256);
+
+    RFFTAmplitudes::filterAndIntegrate(amplitudes, testSampleCount,
+                                       testSamplingRate, 0, 1000, 256, false);
+    assertEqual(amplitudes[0], 0);
+    assertEqual(amplitudes[1], 13935);
+    assertEqual(amplitudes[2], 6967);
+    assertEqual(amplitudes[40], 70);
+    assertEqual(amplitudes[41], 9386);
+    assertEqual(amplitudes[42], 71);
+
+    amplitudeRMS = RFFTAmplitudes::getRMS(amplitudes, testSampleCount);
+    assertEqual(round(amplitudeRMS), 46822);
+    // RMS without DC should be the same than with DC, since integration
+    // remove DC component
+    amplitudeRMSWithDC = RFFTAmplitudes::getRMS(amplitudes, testSampleCount,
+                                                false);
+    assertEqual(amplitudeRMSWithDC, amplitudeRMS);
 }
 
 

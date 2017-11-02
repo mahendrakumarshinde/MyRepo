@@ -376,7 +376,49 @@ test(FeatureComputer__multi_source_sum)
  */
 test(FeatureComputer__q15_fft)
 {
+    // Creating sources
+    q15_t sourceValues[1024];
+    Q15Feature source("SRC", 2, 512, sourceValues);
+    source.setSamplingRate(testSamplingRate);
+    // Creating destinations
+    q15_t reducedFFTValues[300];
+    Q15Feature reducedFFT("FFT", 2, 150, reducedFFTValues);
+    float integralRMSValues[2];
+    FloatFeature integralRMS("RM1", 2, 1, integralRMSValues);
+    float doubleIntegralRMSValues[2];
+    FloatFeature doubleIntegralRMS("RM2", 2, 1, doubleIntegralRMSValues);
 
+    Q15FFTComputer fftComputer = Q15FFTComputer(1, &reducedFFT, &integralRMS,
+                                                &doubleIntegralRMS,
+                                                sharedTestArray,
+                                                5,  // lowCutFrequency
+                                                550);  // highCutFrequency
+    fftComputer.addSource(&source, 1);
+    // Fill source and compute
+    for (uint16_t i = 0; i < testSampleCount; ++i)
+    {
+        source.addQ15Value(q15TestData[i]);
+    }
+    assertTrue(fftComputer.compute());
+    // Reduced FFT validation
+    assertEqual(reducedFFTValues[0], 0);
+    assertEqual(reducedFFTValues[1], 7895);
+    assertEqual(reducedFFTValues[2], 0);
+    assertEqual(reducedFFTValues[3], 41);
+    assertEqual(reducedFFTValues[4], 329);
+    assertEqual(reducedFFTValues[5], -1085);
+    assertEqual(reducedFFTValues[6], 5);
+    assertEqual(reducedFFTValues[7], 9);
+    assertEqual(reducedFFTValues[8], 30);
+    assertEqual(reducedFFTValues[147], 79);
+    assertEqual(reducedFFTValues[148], -5);
+    assertEqual(reducedFFTValues[149], -1);
+    // integralRMS validation
+    assertEqual(round(integralRMSValues[0]), 3362);
+    assertEqual(round(integralRMS.getResolution() * 1000), 1);
+    // doubleIntegralRMS validation
+    assertEqual(round(doubleIntegralRMSValues[0] * 100), 2025);
+    assertEqual(round(doubleIntegralRMS.getResolution() * 1000), 1);
 }
 
 
@@ -385,7 +427,25 @@ test(FeatureComputer__q15_fft)
  */
 test(FeatureComputer__audio_db)
 {
-
+    // Creating sources
+    q15_t sourceValues[1024];
+    Q15Feature source("SRC", 2, 512, sourceValues);
+    source.setSamplingRate(testSamplingRate);
+    // Creating destination
+    float audioDBValues[2];
+    FloatFeature audioDB("DBA", 2, 1, audioDBValues);
+    // Creating computer
+    AudioDBComputer audioDBComputer = AudioDBComputer(1, &audioDB);
+    audioDBComputer.addSource(&source, 1);
+    // Fill source and compute
+    for (uint16_t i = 0; i < testSampleCount; ++i)
+    {
+        source.addQ15Value(q15TestData[i]);
+    }
+    assertTrue(audioDBComputer.compute());
+    assertEqual(round(audioDBValues[0] * 100), 7776);
+    assertEqual(round(audioDB.getSamplingRate()), 1000);
+    assertEqual(round(audioDB.getResolution()), 1);
 }
 
 #endif // TEST_FEATURECOMPUTER_H_INCLUDED

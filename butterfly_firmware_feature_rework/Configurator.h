@@ -20,11 +20,13 @@ class Configurator
         void readFromSerial(IUSerial *iuSerial);
         /***** Command Processing *****/
         void processConfiguration(char *json);
+        void configureDeviceFunctions(JsonVariant &config);
         void configureAllFeatures(JsonVariant &config);
         void configureAllSensors(JsonVariant &config);
         void processLegacyUSBCommands(char *buff);
         void processLegacyBLECommands(char *buff);
-
+        /***** Debugging *****/
+        void exposeAllConfigurations();
 
 
     protected:

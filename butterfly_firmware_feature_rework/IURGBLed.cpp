@@ -17,6 +17,7 @@ IURGBLed::IURGBLed() :
   pinMode(BLUE_PIN, OUTPUT);
   unlock();
   wakeUp();
+  changeColor(LEDColors::WHITE);
 }
 
 

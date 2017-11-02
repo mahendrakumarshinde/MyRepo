@@ -4,9 +4,9 @@
     "POW": 0,
     "TSL": 60,
     "TOFF": 300,
-    "TCY": 3600,
-    "FNC1": "PRS"
+    "TCY": 3600
   },
+  "functions": ["HEALTH", "PRSSTD"],
   "components": {
     "ACC": {
       "FSR": 5

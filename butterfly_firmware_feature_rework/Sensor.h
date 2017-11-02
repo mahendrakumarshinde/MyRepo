@@ -128,6 +128,7 @@ class SynchronousSensor : public Sensor
         /***** Configuration *****/
         virtual bool configure(JsonVariant &config);
         virtual void changeUsagePreset(Sensor::usagePreset usage);
+        virtual Sensor::usagePreset getUsagePreset() { return m_usagePreset; }
         virtual void switchToLowUsage() { m_usagePreset = Sensor::P_LOW; }
         virtual void switchToRegularUsage()
             { m_usagePreset = Sensor::P_REGULAR; }

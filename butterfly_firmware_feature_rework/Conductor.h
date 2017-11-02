@@ -39,6 +39,7 @@ class Conductor
         void setRefDatetime(double refDatetime);
         double getDatetime();
         /***** Operations *****/
+        void setCallback(void (*callback)()) { m_callback = callback; };
         bool beginDataAcquisition();
         void endDataAcquisition();
         bool resetDataAcquisition();
@@ -55,8 +56,6 @@ class Conductor
         StreamingMode::option getStreamingMode() { return m_streamingMode; }
         void changeUsageMode(UsageMode::option usage);
         UsageMode::option getUsageMode() { return m_usageMode; }
-        /***** Main setup *****/
-        void setup(void (*callback)());
 
     protected:
         char m_version[6];  // eg: "1.0.0"

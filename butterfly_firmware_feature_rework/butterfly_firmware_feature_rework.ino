@@ -15,13 +15,12 @@
 /* Comment / Uncomment the "define" lines to toggle / untoggle unit or quality
 test mode */
 
-#define UNITTEST
+//#define UNITTEST
 #ifdef UNITTEST
   #include "UnitTest/Test_Component.h"
   #include "UnitTest/Test_FeatureClass.h"
   #include "UnitTest/Test_FeatureComputer.h"
-  #include "UnitTest/Test_FeatureGraph.h"
-  #include "UnitTest/Test_FeatureStreamingGroup.h"
+  #include "UnitTest/Test_FeatureProfile.h"
   #include "UnitTest/Test_Sensor.h"
   #include "UnitTest/Test_Utilities.h"
   #include "UnitTest/UnitTestData.h"
@@ -95,7 +94,76 @@ void setup()
           delay(2000);
           memoryLog("Start");
         }
-        conductor.setup(callback);
+        // Interfaces
+        if (debugMode)
+        {
+            debugPrint(F("\nInitializing interfaces..."));
+        }
+        iuI2C.setupHardware();
+        if (setupDebugMode)
+        {
+            iuI2C.scanDevices();
+            debugPrint("");
+        }
+        iuBluetooth.setupHardware();
+        iuWiFi.setupHardware();
+        if(debugMode)
+        {
+            memoryLog(F("=> Successfully initialized interfaces"));
+        }
+        if (setupDebugMode)
+        {
+            debugPrint(' ');
+            iuBluetooth.exposeInfo();
+        }
+        // Default feature configuration
+        if (debugMode)
+        {
+            debugPrint(F("\nSetting up default feature configuration..."));
+        }
+        setUpComputerSource();
+        setUpProfiles();
+        // Activate a profile by default
+        motorStandardProfile.activate();
+        if (debugMode)
+        {
+            memoryLog(F("=> Succesfully configured default features"));
+        }
+        // Sensors
+        if (debugMode)
+        {
+            debugPrint(F("\nInitializing sensors..."));
+        }
+        uint16_t callbackRate = iuI2S.getCallbackRate();
+        for (uint8_t i = 0; i < SENSOR_COUNT; ++i)
+        {
+            SENSORS[i]->setupHardware();
+            if (SENSORS[i]->isAsynchronous())
+            {
+                SENSORS[i]->setCallbackRate(callbackRate);
+            }
+        }
+        if (debugMode)
+        {
+          memoryLog(F("=> Successfully initialized sensors"));
+        }
+        if (setupDebugMode)
+        {
+            configurator.exposeAllConfigurations();
+            if (iuI2C.isError())
+            {
+                debugPrint(F("\nI2C Satus: Error"));
+            }
+            else
+            {
+                debugPrint(F("\nI2C Satus: OK"));
+            }
+            debugPrint(F("\n***Finished setup at (ms): "), false);
+            debugPrint(millis(), false);
+            debugPrint(F("***\n"));
+        }
+        conductor.setCallback(callback);
+        conductor.changeAcquisitionMode(AcquisitionMode::FEATURE);
     #endif
 }
 

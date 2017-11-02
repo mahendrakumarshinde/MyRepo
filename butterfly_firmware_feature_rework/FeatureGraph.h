@@ -5,7 +5,7 @@
 
 #include "FeatureClass.h"
 #include "FeatureComputer.h"
-#include "FeatureStreamingGroup.h"
+#include "FeatureProfile.h"
 #include "IUI2C.h"
 #include "IUBattery.h"
 #include "IUBMP280.h"
@@ -47,7 +47,6 @@ extern FloatFeature accelRMS128Y;
 extern FloatFeature accelRMS128Z;
 extern FloatFeature accelRMS128Total;
 
-
 // 512 sample long accel features
 extern __attribute__((section(".noinit2"))) float accelRMS512XValues[2];
 extern __attribute__((section(".noinit2"))) float accelRMS512YValues[2];
@@ -58,23 +57,15 @@ extern FloatFeature accelRMS512Y;
 extern FloatFeature accelRMS512Z;
 extern FloatFeature accelRMS512Total;
 
-
 // FFT feature from 512 sample long accel data
-extern __attribute__((section(".noinit2"))) q15_t accelReducedFFTXValues[100];
-extern __attribute__((section(".noinit2"))) q15_t accelReducedFFTYValues[100];
-extern __attribute__((section(".noinit2"))) q15_t accelReducedFFTZValues[100];
+extern __attribute__((section(".noinit2"))) q15_t accelReducedFFTXValues[300];
+extern __attribute__((section(".noinit2"))) q15_t accelReducedFFTYValues[300];
+extern __attribute__((section(".noinit2"))) q15_t accelReducedFFTZValues[300];
 extern Q15Feature accelReducedFFTX;
 extern Q15Feature accelReducedFFTY;
 extern Q15Feature accelReducedFFTZ;
 
 // Velocity features from 512 sample long accel data
-extern __attribute__((section(".noinit2"))) float velAmplitude512XValues[2];
-extern __attribute__((section(".noinit2"))) float velAmplitude512YValues[2];
-extern __attribute__((section(".noinit2"))) float velAmplitude512ZValues[2];
-extern FloatFeature velAmplitude512X;
-extern FloatFeature velAmplitude512Y;
-extern FloatFeature velAmplitude512Z;
-
 extern __attribute__((section(".noinit2"))) float velRMS512XValues[2];
 extern __attribute__((section(".noinit2"))) float velRMS512YValues[2];
 extern __attribute__((section(".noinit2"))) float velRMS512ZValues[2];
@@ -83,13 +74,6 @@ extern FloatFeature velRMS512Y;
 extern FloatFeature velRMS512Z;
 
 // Displacements features from 512 sample long accel data
-extern __attribute__((section(".noinit2"))) float dispAmplitude512XValues[2];
-extern __attribute__((section(".noinit2"))) float dispAmplitude512YValues[2];
-extern __attribute__((section(".noinit2"))) float dispAmplitude512ZValues[2];
-extern FloatFeature dispAmplitude512X;
-extern FloatFeature dispAmplitude512Y;
-extern FloatFeature dispAmplitude512Z;
-
 extern __attribute__((section(".noinit2"))) float dispRMS512XValues[2];
 extern __attribute__((section(".noinit2"))) float dispRMS512YValues[2];
 extern __attribute__((section(".noinit2"))) float dispRMS512ZValues[2];
@@ -150,7 +134,7 @@ extern FloatFeature audioDB4096;
 
 /***** Pointers *****/
 
-const uint8_t FEATURE_COUNT = 31;
+const uint8_t FEATURE_COUNT = 25;
 extern Feature *FEATURES[FEATURE_COUNT];
 
 
@@ -170,22 +154,22 @@ extern q15_t allocatedFFTSpace[1024];
 /***** Accelerometer Features *****/
 
 // 128 sample long accel computers
-extern SignalRMSComputer accel128XComputer;
-extern SignalRMSComputer accel128YComputer;
-extern SignalRMSComputer accel128ZComputer;
+extern SignalRMSComputer accel128ComputerX;
+extern SignalRMSComputer accel128ComputerY;
+extern SignalRMSComputer accel128ComputerZ;
 extern MultiSourceSumComputer accelRMS128TotalComputer;
 
 // 512 sample long accel computers
-extern SectionSumComputer accel512XComputer;
-extern SectionSumComputer accel512YComputer;
-extern SectionSumComputer accel512ZComputer;
+extern SectionSumComputer accel512ComputerX;
+extern SectionSumComputer accel512ComputerY;
+extern SectionSumComputer accel512ComputerZ;
 extern SectionSumComputer accel512TotalComputer;
 
 
 // computers for FFT feature from 512 sample long accel data
-extern Q15FFTComputer accelReducedFFTXComputer;
-extern Q15FFTComputer accelReducedFFTYComputer;
-extern Q15FFTComputer accelReducedFFTZComputer;
+extern Q15FFTComputer accelFFTComputerX;
+extern Q15FFTComputer accelFFTComputerY;
+extern Q15FFTComputer accelFFTComputerZ;
 
 
 /***** Audio Features *****/
@@ -203,6 +187,11 @@ extern FeatureComputer *FEATURE_COMPUTERS[FEATURE_COMPUTER_COUNT];
 /***** Selector *****/
 
 FeatureComputer* getFeatureComputerById(uint8_t id);
+
+
+/***** Set up sources *****/
+
+void setUpComputerSource();
 
 
 /* =============================================================================
@@ -230,38 +219,41 @@ Sensor* getSensorByName(const char* name);
 
 
 /* =============================================================================
-    Feature streaming group declarations
+    Feature Profiles declarations
 ============================================================================= */
 
-extern FeatureStreamingGroup featureGroup1;
-extern FeatureStreamingGroup featureGroup2;
-extern FeatureStreamingGroup featureGroup3;
+extern FeatureProfile healthCheckProfile;
+extern FeatureProfile calibrationProfile;
+extern FeatureProfile pressStandardProfile;
+extern FeatureProfile motorStandardProfile;
+
+
+/***** Pointers *****/
+
+const uint8_t FEATURE_PROFILE_COUNT = 4;
+extern FeatureProfile *FEATURE_PROFILES[FEATURE_PROFILE_COUNT];
+
+
+/***** Selector *****/
+
+FeatureProfile* getProfileByName(const char* name);
+
+
+/***** Profile Configuration *****/
+
+void deactivateAllProfiles();
+void setUpProfiles();
 
 
 /* =============================================================================
     Utilities
 ============================================================================= */
 
-/***** Computers setup *****/
-void setUpComputerSource();
-
 
 /***** Activate / deactivate features *****/
 void activateFeature(Feature* feature);
 bool isFeatureDeactivatable(Feature* feature);
 void deactivateFeature(Feature* feature);
-void deactivateEverything();
-
-
-/***** Configuration *****/
-bool configureFeature(Feature *feature, JsonVariant &config);
-bool atLeastOneStreamingFeature();
-
-
-/***** Default feature sets *****/
-void enableCalibrationFeatures();
-void enableMotorFeatures();
-void enablePressFeatures();
-void exposeAllConfigurations();
+void deactivateAllFeatures();
 
 #endif // FEATUREGRAPH_H

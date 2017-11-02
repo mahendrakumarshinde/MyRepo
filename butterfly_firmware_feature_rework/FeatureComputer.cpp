@@ -260,66 +260,77 @@ void MultiSourceSumComputer::m_specializedCompute()
 
 /***** FFTs *****/
 
-Q15FFTComputer::Q15FFTComputer(uint8_t id, Feature *reducedFFT,
+Q15FFTComputer::Q15FFTComputer(uint8_t id,
+                               Feature *reducedFFT,
                                Feature *integralRMS,
-                               Feature *integralPeakToPeak,
                                Feature *doubleIntegralRMS,
-                               Feature *doubleIntegralPeakToPeak,
                                q15_t *allocatedFFTSpace,
-                               uint8_t outputFFTIntegration,
-                               bool computeReducedFFT,
-                               bool computeIntegral,
-                               bool computeDoubleIntegral) :
-    FeatureComputer(id, 5, reducedFFT, integralRMS, integralPeakToPeak,
-                    doubleIntegralRMS, doubleIntegralPeakToPeak),
-    m_outputFFTIntegration(outputFFTIntegration),
-    m_computeReducedFFT(computeReducedFFT),
-    m_computeIntegral(computeIntegral),
-    m_computeDoubleIntegral(computeDoubleIntegral)
+                               uint16_t lowCutFrequency,
+                               uint16_t highCutFrequency) :
+    FeatureComputer(id, 3, reducedFFT, integralRMS, doubleIntegralRMS),
+    m_lowCutFrequency(lowCutFrequency),
+    m_highCutFrequency(highCutFrequency)
 {
     m_allocatedFFTSpace = allocatedFFTSpace;
 }
 
+/**
+ * RFFT computation + RMS of intregrated & double-integrated signal
+ *
+ * Internally creates 2 Q15 arrays of size sampleCount / 2.
+ * => Total size in bytes is 2 * sampleCount.
+ */
 void Q15FFTComputer::m_specializedCompute()
 {
-    /*
-    uint16_t FFTLength = m_sources[0]->getSectionSize() * m_sectionCount[0];
-    arm_status armStatus = arm_rfft_init_q15(
-        &m_rfftInstance, // RFFT instance
-        FFTLength,       // FFT length
-        0,               // 0: forward FFT, 1: inverse FFT
-        1);              // 1: enable bit reversal output
-    if (armStatus != ARM_MATH_SUCCESS)
+    // 0. Preparation
+    uint16_t samplingRate = m_sources[0]->getSamplingRate();
+    for (uint8_t i = 0; i < m_destinationCount; ++i)
     {
-        if (loopDebugMode)
-        {
-            debugPrint("FFT computation failed");
-        }
-        return;
+        m_destinations[i]->setSamplingRate(samplingRate);
     }
-    q15_t *source = m_sources[0]->getNextQ15Values(m_indexesAsReceiver[0]);
-    arm_rfft_q15(&m_rfftInstance, source, m_allocatedFFTSpace);
-    */
+    float resolution = m_sources[0]->getResolution();
+    uint16_t sampleCount = m_sources[0]->getSectionSize() * m_sectionCount[0];
+    uint16_t reducedLength = m_destinations[0]->getSectionSize() / 3;
+    q15_t *values = m_sources[0]->getNextQ15Values(m_indexesAsReceiver[0]);
+    uint32_t amplitudeCount = sampleCount / 2 + 1;
+    q15_t amplitudes[amplitudeCount];
+    // 1. Compute FFT and get amplitudes
+    RFFT::computeRFFT(values, m_allocatedFFTSpace, sampleCount, false);
+    RFFTAmplitudes::getAmplitudes(m_allocatedFFTSpace, sampleCount, amplitudes);
+    // 2. Keep the K max coefficients (K = reducedLength)
+    q15_t maxVal;
+    uint32_t maxIdx;
+    q15_t amplitudesCopy[amplitudeCount];
+    copyArray(amplitudes, amplitudesCopy, amplitudeCount);
+    for (uint16_t i = 0; i < reducedLength; ++i)
+    {
+        arm_max_q15(amplitudesCopy, amplitudeCount, &maxVal, &maxIdx);
+        amplitudesCopy[maxIdx] = 0;
+        m_destinations[0]->addQ15Value((q15_t) maxIdx);
+        m_destinations[0]->addQ15Value(m_allocatedFFTSpace[2 * maxIdx]);
+        m_destinations[0]->addQ15Value(m_allocatedFFTSpace[2 * maxIdx + 1]);
+    }
+    // 3. 1st integration in frequency domain
+    q15_t scaling1 = RFFTAmplitudes::getRescalingFactorForIntegral(
+        amplitudes, sampleCount, samplingRate);
+    RFFTAmplitudes::filterAndIntegrate(amplitudes, sampleCount, samplingRate,
+                                       m_lowCutFrequency, m_highCutFrequency,
+                                       scaling1, false);
+    float integratedRMS1 = RFFTAmplitudes::getRMS(amplitudes, sampleCount);
+    integratedRMS1 *= 1000 / ((float) scaling1);
+    m_destinations[1]->addFloatValue(integratedRMS1);
+    m_destinations[1]->setResolution(resolution / 1000.0);
+    // 4. 2nd integration in frequency domain
+    q15_t scaling2 = RFFTAmplitudes::getRescalingFactorForIntegral(
+        amplitudes, sampleCount, samplingRate);
+    RFFTAmplitudes::filterAndIntegrate(amplitudes, sampleCount, samplingRate,
+                                       m_lowCutFrequency, m_highCutFrequency,
+                                       scaling2, false);
+    float integratedRMS2 = RFFTAmplitudes::getRMS(amplitudes, sampleCount);
+    integratedRMS2 *= 1000 / ((float) scaling1 * (float) scaling2);
+    m_destinations[2]->addFloatValue(integratedRMS2);
+    m_destinations[2]->setResolution(resolution / 1000.0);
 }
-
-/*
-void FeatureComputerFFTQ31::m_specializedCompute(uint8_t specIndex)
-{
-  uint16_t FFTLength = m_sources[0]->getSectionLength() * m_sourceBufferSpecs[0][specIndex][1];
-  arm_status armStatus = arm_rfft_init_q31(&m_rfftInstance, // RFFT instance
-                                           FFTLength,       // FFT length
-                                           0,               // 0: forward FFT, 1: inverse FFT
-                                           1);              // 1: enable bit reversal output
-  if (armStatus != ARM_MATH_SUCCESS)
-  {
-    if (loopDebugMode) { debugPrint("FFT / Inverse FFT computation failed"); }
-    return;
-  }
-  q15_t *source = m_sources[0]->getBuffer(m_sourceBufferIndex[0])->getQ31ValuesForCompute();
-  q15_t *destination = m_buffers[0]->getQ31ValuesForCompute();
-  arm_rfft_q31(&m_rfftInstance, source, destination);
-}
-*/
 
 
 /***** Audio DB *****/
@@ -340,36 +351,34 @@ void AudioDBComputer::m_specializedCompute()
 {
     m_destinations[0]->setSamplingRate(m_sources[0]->getSamplingRate());
     m_destinations[0]->setResolution(m_sources[0]->getResolution());
-
-    // TODO Reimplement
-//    uint16_t length = m_sources[0]->getSectionSize() * m_sectionCount[0];
-//    q15_t* values = m_sources[0]->getNextQ15Values(m_indexesAsReceiver[0]);
-//    // Strangely, log10 is very slow. It's better to use it the least possible, so we
-//    // multiply data points as much as possible and then log10 the results when we have to.
-//    // We can multiply data points until we reach uint64_t limit (so 2^64)
-//    // First, compute the limit for our accumulation
-//    q15_t maxVal = 0;
-//    uint32_t maxIdx = 0;
-//    arm_max_q15(values, length, &maxVal, &maxIdx); // Get max data value
-//    uint64_t limit = pow(2, 63 - round(log(maxVal) / log(2)));
-//    // Then, use it to compute our data
-//    int data = 0;
-//    uint64_t accu = 1;
-//    float audioDB = 0.;
-//    for (uint16_t j = 0; j < length; ++j)
-//    {
-//        data = abs(values[j]);
-//        if (data > 0)
-//        {
-//            accu *= data;
-//        }
-//        if (accu >= limit)
-//        {
-//            audioDB += log10(accu);
-//            accu = 1;
-//        }
-//    }
-//    audioDB += log10(accu);
-//    m_destinations[0]->addFloatValue(20.0 * audioDB / (float) length);
-    m_destinations[0]->addFloatValue(0.0);
+    uint16_t length = m_sources[0]->getSectionSize() * m_sectionCount[0];
+    q15_t* values = m_sources[0]->getNextQ15Values(m_indexesAsReceiver[0]);
+    /* Oddly, log10 is very slow. It's better to use it the least possible,
+    so we multiply data points as much as possible and then log10 the results
+    when we have to. We can multiply data points until we reach uint64_t limit
+    (so 2^64).*/
+    //First, compute the limit for our accumulation
+    q15_t maxVal = 0;
+    uint32_t maxIdx = 0;
+    arm_max_q15(values, length, &maxVal, &maxIdx); // Get max data value
+    uint64_t limit = pow(2, 63 - round(log(maxVal) / log(2)));
+    // Then, use it to compute our data
+    int data = 0;
+    uint64_t accu = 1;
+    float audioDB = 0.;
+    for (uint16_t j = 0; j < length; ++j)
+    {
+        data = abs(values[j]);
+        if (data > 0)
+        {
+            accu *= data;
+        }
+        if (accu >= limit)
+        {
+            audioDB += log10(accu);
+            accu = 1;
+        }
+    }
+    audioDB += log10(accu);
+    m_destinations[0]->addFloatValue(20.0 * audioDB / (float) length);
 }

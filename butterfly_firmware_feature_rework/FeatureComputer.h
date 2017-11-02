@@ -2,7 +2,7 @@
 #define FEATURECOMPUTER_H
 
 #include "FeatureClass.h"
-//#include "Utilities.h"
+#include "Utilities.h"
 
 
 /* =============================================================================
@@ -140,62 +140,29 @@ class MultiSourceSumComputer: public FeatureComputer
  *      - A Q15 buffer
  * Destinations:
  *      - Reduced FFT values: A Q15 buffer
- *      - Integrated values: A Q15 buffer
- *      - Double-integrated values: A Q15 buffer
+ *      - Integrated RMS: A Q15 buffer
+ *      - Double-integrated RMS: A Q15 buffer
  */
 class Q15FFTComputer: public FeatureComputer
 {
     public:
-        Q15FFTComputer(uint8_t id, Feature *reducedFFT=NULL,
+        Q15FFTComputer(uint8_t id,
+                       Feature *reducedFFT=NULL,
                        Feature *integralRMS=NULL,
-                       Feature *integralPeakToPeak=NULL,
                        Feature *doubleIntegralRMS=NULL,
-                       Feature *doubleIntegralPeakToPeak=NULL,
                        q15_t *allocatedFFTSpace=NULL,
-                       uint8_t outputFFTIntegration=1,
-                       bool computeReducedFFT=false,
-                       bool computeIntegral=true,
-                       bool computeDoubleIntegral=false);
+                       uint16_t lowCutFrequency=5,
+                       uint16_t highCutFrequency=550);
         // Change parameters
-        void setOutputFFTIntegration(uint8_t value)
-                { m_outputFFTIntegration = value; }
-        void setComputeReducedFFT(bool value) { m_computeReducedFFT = value; }
-        void setComputeIntegral(bool value) { m_computeIntegral = value; }
-        void setComputeDoubleIntegral(bool value)
-                { m_computeDoubleIntegral = value; }
+        void setLowCutFrequency(uint16_t value) { m_lowCutFrequency = value; }
+        void setHighCutFrequency(uint16_t value) { m_highCutFrequency = value; }
 
     protected:
         virtual void m_specializedCompute();
-        //arm_rfft_instance_q15 m_rfftInstance;
         q15_t *m_allocatedFFTSpace;
-        uint8_t m_outputFFTIntegration;
-        bool m_computeReducedFFT;
-        bool m_computeIntegral;
-        bool m_computeDoubleIntegral;
-
+        uint16_t m_lowCutFrequency;
+        uint16_t m_highCutFrequency;
 };
-
-
-/**
- * FFT for Q31 values
- *
- * Sources:
- *      - 1 Q31 buffers
- * Destinations:
- *      - 1 Q31 buffer, with section size twice as large as the source section
- *          size
- */
-/*
-class Q31FFTComputer: public FeatureComputer
-{
-    public:
-        Q31FFTComputer(uint8_t id=0, Feature *destination0=NULL);
-
-    protected:
-        virtual void m_specializedCompute();
-        arm_rfft_instance_q31 m_rfftInstance;
-};
-*/
 
 
 /**

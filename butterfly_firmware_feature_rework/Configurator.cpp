@@ -81,6 +81,11 @@ void Configurator::processConfiguration(char *json)
     {
         conductor.configure(sub_config);
     }
+    sub_config = root["functions"];
+    if (sub_config.success())
+    {
+        configureDeviceFunctions(sub_config);
+    }
     // Component configuration
     sub_config = root["components"];
     if (sub_config.success())
@@ -98,14 +103,33 @@ void Configurator::processConfiguration(char *json)
 /**
  * Apply the given config to the designated features.
  */
+void Configurator::configureDeviceFunctions(JsonVariant &config)
+{
+    deactivateAllProfiles();
+    FeatureProfile *profile;
+    JsonVariant profileName;
+    for (uint8_t i = 0; i < FEATURE_PROFILE_COUNT; ++i)
+    {
+        profileName = config[i];
+        if (profileName.success())
+        {
+            profile = getProfileByName(profileName.as<char*>());
+            if (profile)
+            {
+                profile->activate();
+            }
+        }
+    }
+}
+
+/**
+ * Apply the given config to the designated features.
+ */
 void Configurator::configureAllFeatures(JsonVariant &config)
 {
-    // Deactivate all features and computers
-    deactivateEverything();
-    // Set up new config
     for (uint8_t i = 0; i < FEATURE_COUNT; ++i)
     {
-        configureFeature(FEATURES[i], config);
+        FEATURES[i]->configure(config);
     }
 }
 
@@ -301,6 +325,36 @@ void Configurator::processLegacyBLECommands(char *buff)
             }
             break;
     }
+}
+
+
+/* =============================================================================
+    Command Processing
+============================================================================= */
+
+/**
+ * Expose current configurations
+ */
+void Configurator::exposeAllConfigurations()
+{
+    #ifdef DEBUGMODE
+    for (uint8_t i = 0; i < SENSOR_COUNT; ++i)
+    {
+        SENSORS[i]->expose();
+    }
+    debugPrint("");
+    for (uint8_t i = 0; i < FEATURE_COUNT; ++i)
+    {
+        FEATURES[i]->exposeConfig();
+        FEATURES[i]->exposeCounters();
+        debugPrint("_____");
+    }
+    debugPrint("");
+    for (uint8_t i = 0; i < FEATURE_COMPUTER_COUNT; ++i)
+    {
+        FEATURE_COMPUTERS[i]->exposeConfig();
+    }
+    #endif
 }
 
 

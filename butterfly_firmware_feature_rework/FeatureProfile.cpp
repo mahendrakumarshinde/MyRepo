@@ -1,22 +1,22 @@
-#include "FeatureStreamingGroup.h"
+#include "FeatureProfile.h"
 
 
 /* =============================================================================
     Constructors & destructor
 ============================================================================= */
 
-FeatureStreamingGroup::FeatureStreamingGroup(uint8_t id) :
-    m_id(id),
-    m_dataSendPeriod(FeatureStreamingGroup::defaultDataSendPeriod),
+FeatureProfile::FeatureProfile(const char *name, uint16_t dataSendPeriod) :
+    m_dataSendPeriod(dataSendPeriod),
     m_lastSentTime(0)
 {
+    strcpy(m_name, name);
     reset();
 }
 
 /**
  * Remove all the features from the group
  */
-void FeatureStreamingGroup::reset()
+void FeatureProfile::reset()
 {
     m_featureCount = 0;
     for (uint8_t i = 0; i < maxFeatureCount; ++i)
@@ -26,23 +26,19 @@ void FeatureStreamingGroup::reset()
 }
 
 /**
- * Add a feature in the group at the given index
+ * Append a feature to the profile
  */
-void FeatureStreamingGroup::add(uint8_t idx, Feature *feature)
+void FeatureProfile::addFeature(Feature *feature)
 {
-    if (idx >= maxFeatureCount)
+    if (m_featureCount >= maxFeatureCount)
     {
         if (debugMode)
         {
-            debugPrint(F("FeatureGroup: index out of range "), false);
-            debugPrint(idx);
+            debugPrint(F("FeatureProfile: too many features"));
         }
     }
-    m_features[idx] = feature;
-    if (idx >= m_featureCount)
-    {
-        m_featureCount = idx + 1;
-    }
+    m_features[m_featureCount] = feature;
+    m_featureCount++;
     feature->enableStreaming();
 }
 
@@ -54,13 +50,13 @@ void FeatureStreamingGroup::add(uint8_t idx, Feature *feature)
 /**
  * Set the data send interval.
  */
-void FeatureStreamingGroup::setDataSendPeriod(uint16_t dataSendPeriod)
+void FeatureProfile::setDataSendPeriod(uint16_t dataSendPeriod)
 {
     m_dataSendPeriod = dataSendPeriod;
     if (debugMode)
     {
         debugPrint(F("Group "), false);
-        debugPrint(m_id, false);
+        debugPrint(m_name, false);
         debugPrint(F(": data send period set to "), false);
         debugPrint(m_dataSendPeriod);
     }
@@ -71,7 +67,7 @@ void FeatureStreamingGroup::setDataSendPeriod(uint16_t dataSendPeriod)
  *
  * NB: Data streaming is always disabled when in "sleep" operation mode.
  */
-bool FeatureStreamingGroup::isDataSendTime()
+bool FeatureProfile::isDataSendTime()
 {
     // Timer to send data regularly
     uint32_t now = millis();
@@ -95,14 +91,19 @@ bool FeatureStreamingGroup::isDataSendTime()
 /**
  * Sends the values of the group features through given serial.
  */
-void FeatureStreamingGroup::stream(HardwareSerial *port, OperationState::option opState,
-                                   double timestamp)
+void FeatureProfile::stream(HardwareSerial *port,
+                            OperationState::option opState,
+                            double timestamp)
 {
+    if (!m_active)
+    {
+        return;  // Only stream if profile is active
+    }
     if (m_featureCount == 0 || !isDataSendTime())
     {
         return;
     }
-    port->print(m_id);
+    port->print(m_name);
     port->print(",");
     port->print(timestamp);
     port->print(",");

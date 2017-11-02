@@ -68,29 +68,40 @@ void copyArray(T *source, T *dest, int arrSize)
   }
 }
 
-/**
- * Return the K max values from given source array
- *
- * Implement a QuickSelect algorithm
- */
-void getMaxCoefficients(float *source, uint16_t sourceCount, float *destination,
-                        uint16_t destinationCount);
-
 
 /*==============================================================================
     FFTs
 ============================================================================= */
 
 /**
- * Collection of function to compute FFTs and use their complex coefficients.
+ * Collection of function to compute RFFTs and use their complex coefficients.
+ *
+ * To compute RFFT, we use arm_rfft functions: these functions output an array
+ * of 2 * FFT length (number of sample points in temporal domain), where:
+ *  - even index are real part of FFT coef
+ *  - odd index are complex part of FFT coef
+ * Because of that:
+ *  - coefs[0] + j*coefs[1] is the DC component, with coefs[1] = 0 since RFFT
+ *  - coefs[2*k] + j*coefs[2*k + 1] for k in [1, 255] are the positive frequency
+ *  coefficients.
+ *  - coefs[512] + j*coefs[513] is the Nyquist freq coefficient (same for both
+ *  positive and negative frequencies)
+ *  - coefs[2*k] + j*coefs[2*k + 1] for k in [257, 511] are the negative
+ *  frequency coefficients. Since it's an RFFT, the negative freq coefs are the
+ *  complex conjugate of the positive freq coefs.
+ *
+ * NB: In fact, it looks like arm_rfft function DOESN'T USE these coefficients
+ * to compute the inverse RFFT (although it still needs an array with enough
+ * room to contain them, and that the forward RFFT provide these coefs).
  */
-namespace FFT
+namespace RFFT
 {
     void computeRFFT(q15_t *source, q15_t *destination,
-                     const uint16_t FFTlength, bool inverse);
+                     const uint16_t FFTlength, bool inverse,
+                     q15_t *window=NULL);
 
-    void computeRFFT(q15_t *source, q15_t *destination,
-                     const uint16_t FFTlength, bool inverse, q15_t *window);
+    uint16_t getRescalingFactorForIntegral(q15_t *values, uint16_t sampleCount,
+                                           uint16_t samplingRate);
 
     void filterAndIntegrate(q15_t *values, uint16_t sampleCount,
                             uint16_t samplingRate, uint16_t FreqLowerBound,
@@ -99,16 +110,27 @@ namespace FFT
 }
 
 /**
- * Collection of function that uses FFT Squared amplitudes.
+ * Collection of function that uses RFFT amplitudes.
+ *
+ * amplitude = sqrt(real^2 + complex^2) (ie absolute value of complex coef)
+ * IMPORTANT: Since dealing with RFFT, negative frequency coefficients are
+ * complex conjugate of the positive frequency coefficients, so their amplitudes
+ * are equal. As a consequence, length of amplitude array is
+ * SampleCount / 2 + 1 (since sampleCount is always even)
+ * where SampleCount is the number of data point in time domain.
  */
-namespace FFTSquaredAmplitudes
+namespace RFFTAmplitudes
 {
-    void getAmplitudes(q15_t *fftValues, uint16_t sampleCount,
+    void getAmplitudes(q15_t *rfftValues, uint16_t sampleCount,
                        q15_t *destination);
 
-    q15_t getRMS(q15_t *amplitudes, uint16_t sampleCount);
+    float getRMS(q15_t *amplitudes, uint16_t sampleCount, bool removeDC=true);
 
-    void filterAndIntegrate(q15_t *values, uint16_t sampleCount,
+    uint16_t getRescalingFactorForIntegral(q15_t *amplitudes,
+                                           uint16_t sampleCount,
+                                           uint16_t samplingRate);
+
+    void filterAndIntegrate(q15_t *amplitudes, uint16_t sampleCount,
                             uint16_t samplingRate, uint16_t FreqLowerBound,
                             uint16_t FreqHigherBound, uint16_t scalingFactor,
                             bool twice);

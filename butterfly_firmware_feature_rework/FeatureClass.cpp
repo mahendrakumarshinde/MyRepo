@@ -5,6 +5,11 @@
     Generic Feature buffers
 ============================================================================= */
 
+//Feature *instances[20] = {NULL, NULL, NULL, NULL, NULL,
+//                          NULL, NULL, NULL, NULL, NULL,
+//                          NULL, NULL, NULL, NULL, NULL,
+//                          NULL, NULL, NULL, NULL, NULL};
+
 Feature::Feature(const char* name, uint8_t sectionCount, uint16_t sectionSize,
                  Feature::slideOption sliding) :
     m_samplingRate(0),
@@ -76,6 +81,46 @@ void Feature::deactivate()
     m_active = false;
     m_opStateEnabled = false;
     m_streamingEnabled = false;
+}
+
+
+/**
+ * Applied the given config to the feature.
+ */
+bool Feature::configure(JsonVariant &config)
+{
+    JsonVariant my_config = config[m_name];
+    if (!my_config)
+    {
+        return false;
+    }
+    JsonVariant value = my_config["OPS"];
+    if (value)
+    {
+        if (value.as<int>())
+        {
+            enableOperationState();
+        }
+        else
+        {
+            disableOperationState();
+        }
+    }
+    // Thresholds setting
+    for (uint8_t i = 0; i < 3; ++i)
+    {
+        value = my_config["TRH"][i];
+        if (value.success())
+        {
+            setThreshold(i, value);
+        }
+    }
+    if (debugMode)
+    {
+        debugPrint(F("Configured feature "), false);
+        debugPrint(m_name);
+    }
+    return true;
 }
 
 

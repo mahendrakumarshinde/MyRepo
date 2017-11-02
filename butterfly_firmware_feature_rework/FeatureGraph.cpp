@@ -45,21 +45,14 @@ FloatFeature accelRMS512Total("A93", 2, 1, accelRMS512TotalValues);
 
 
 // FFT feature from 512 sample long accel data
-__attribute__((section(".noinit2"))) q15_t accelReducedFFTXValues[100];
-__attribute__((section(".noinit2"))) q15_t accelReducedFFTYValues[100];
-__attribute__((section(".noinit2"))) q15_t accelReducedFFTZValues[100];
-Q15Feature accelReducedFFTX("FAX", 2, 50, accelReducedFFTXValues);
-Q15Feature accelReducedFFTY("FAY", 2, 50, accelReducedFFTYValues);
-Q15Feature accelReducedFFTZ("FAZ", 2, 50, accelReducedFFTZValues);
+__attribute__((section(".noinit2"))) q15_t accelReducedFFTXValues[300];
+__attribute__((section(".noinit2"))) q15_t accelReducedFFTYValues[300];
+__attribute__((section(".noinit2"))) q15_t accelReducedFFTZValues[300];
+Q15Feature accelReducedFFTX("FAX", 2, 150, accelReducedFFTXValues);
+Q15Feature accelReducedFFTY("FAY", 2, 150, accelReducedFFTYValues);
+Q15Feature accelReducedFFTZ("FAZ", 2, 150, accelReducedFFTZValues);
 
 // Velocity features from 512 sample long accel data
-__attribute__((section(".noinit2"))) float velAmplitude512XValues[2];
-__attribute__((section(".noinit2"))) float velAmplitude512YValues[2];
-__attribute__((section(".noinit2"))) float velAmplitude512ZValues[2];
-FloatFeature velAmplitude512X("VVX", 2, 1, velAmplitude512XValues);
-FloatFeature velAmplitude512Y("VVY", 2, 1, velAmplitude512YValues);
-FloatFeature velAmplitude512Z("VVZ", 2, 1, velAmplitude512ZValues);
-
 __attribute__((section(".noinit2"))) float velRMS512XValues[2];
 __attribute__((section(".noinit2"))) float velRMS512YValues[2];
 __attribute__((section(".noinit2"))) float velRMS512ZValues[2];
@@ -68,13 +61,6 @@ FloatFeature velRMS512Y("VAY", 2, 1, velRMS512YValues);
 FloatFeature velRMS512Z("VAZ", 2, 1, velRMS512ZValues);
 
 // Displacements features from 512 sample long accel data
-__attribute__((section(".noinit2"))) float dispAmplitude512XValues[2];
-__attribute__((section(".noinit2"))) float dispAmplitude512YValues[2];
-__attribute__((section(".noinit2"))) float dispAmplitude512ZValues[2];
-FloatFeature dispAmplitude512X("DVX", 2, 1, dispAmplitude512XValues);
-FloatFeature dispAmplitude512Y("DVY", 2, 1, dispAmplitude512YValues);
-FloatFeature dispAmplitude512Z("DVZ", 2, 1, dispAmplitude512ZValues);
-
 __attribute__((section(".noinit2"))) float dispRMS512XValues[2];
 __attribute__((section(".noinit2"))) float dispRMS512YValues[2];
 __attribute__((section(".noinit2"))) float dispRMS512ZValues[2];
@@ -150,15 +136,9 @@ Feature *FEATURES[FEATURE_COUNT] = {
     &accelReducedFFTX,
     &accelReducedFFTY,
     &accelReducedFFTZ,
-    &velAmplitude512X,
-    &velAmplitude512Y,
-    &velAmplitude512Z,
     &velRMS512X,
     &velRMS512Y,
     &velRMS512Z,
-    &dispAmplitude512X,
-    &dispAmplitude512Y,
-    &dispAmplitude512Z,
     &dispRMS512X,
     &dispRMS512Y,
     &dispRMS512Z,
@@ -202,41 +182,35 @@ q15_t allocatedFFTSpace[1024];
 /***** Accelerometer Features *****/
 
 // 128 sample long accel computers
-SignalRMSComputer accel128XComputer(1,&accelRMS128X);
-SignalRMSComputer accel128YComputer(2, &accelRMS128Y);
-SignalRMSComputer accel128ZComputer(3, &accelRMS128Z);
+SignalRMSComputer accel128ComputerX(1,&accelRMS128X);
+SignalRMSComputer accel128ComputerY(2, &accelRMS128Y);
+SignalRMSComputer accel128ComputerZ(3, &accelRMS128Z);
 MultiSourceSumComputer accelRMS128TotalComputer(4, &accelRMS128Total);
 
 
 // 512 sample long accel computers
-SectionSumComputer accel512XComputer(5, 1, &accelRMS512X);
-SectionSumComputer accel512YComputer(6, 1, &accelRMS512Y);
-SectionSumComputer accel512ZComputer(7, 1, &accelRMS512Z);
+SectionSumComputer accel512ComputerX(5, 1, &accelRMS512X);
+SectionSumComputer accel512ComputerY(6, 1, &accelRMS512Y);
+SectionSumComputer accel512ComputerZ(7, 1, &accelRMS512Z);
 SectionSumComputer accel512TotalComputer(8, 1, &accelRMS512Total);
 
 
 // Computers for FFT feature from 512 sample long accel data
-Q15FFTComputer accelReducedFFTXComputer(9,
-                                        &accelReducedFFTX,
-                                        &velAmplitude512X,
-                                        &velRMS512X,
-                                        &dispAmplitude512X,
-                                        &dispRMS512X,
-                                        allocatedFFTSpace);
-Q15FFTComputer accelReducedFFTYComputer(10,
-                                        &accelReducedFFTY,
-                                        &velAmplitude512Y,
-                                        &velRMS512Y,
-                                        &dispAmplitude512Y,
-                                        &dispRMS512Y,
-                                        allocatedFFTSpace);
-Q15FFTComputer accelReducedFFTZComputer(11,
-                                        &accelReducedFFTZ,
-                                        &velAmplitude512Z,
-                                        &velRMS512Z,
-                                        &dispAmplitude512Z,
-                                        &dispRMS512Z,
-                                        allocatedFFTSpace);
+Q15FFTComputer accelFFTComputerX(9,
+                                 &accelReducedFFTX,
+                                 &velRMS512X,
+                                 &dispRMS512X,
+                                 allocatedFFTSpace);
+Q15FFTComputer accelFFTComputerY(10,
+                                 &accelReducedFFTY,
+                                 &velRMS512Y,
+                                 &dispRMS512Y,
+                                 allocatedFFTSpace);
+Q15FFTComputer accelFFTComputerZ(11,
+                                 &accelReducedFFTZ,
+                                 &velRMS512Z,
+                                 &dispRMS512Z,
+                                 allocatedFFTSpace);
 
 
 /***** Audio Features *****/
@@ -247,21 +221,21 @@ AudioDBComputer audioDB4096Computer(13, &audioDB4096);
 
 /***** Pointers *****/
 
-// Some featureComputers alter there data source, so it is important that those
+// Some featureComputers alter their data source, so it is important that those
 // be listed last of all the computers that use the same data source.
 
 FeatureComputer *FEATURE_COMPUTERS[FEATURE_COMPUTER_COUNT] = {
-    &accel128XComputer,
-    &accel128YComputer,
-    &accel128ZComputer,
+    &accel128ComputerX,
+    &accel128ComputerY,
+    &accel128ComputerZ,
     &accelRMS128TotalComputer,
-    &accel512XComputer,
-    &accel512YComputer,
-    &accel512ZComputer,
+    &accel512ComputerX,
+    &accel512ComputerY,
+    &accel512ComputerZ,
     &accel512TotalComputer,
-    &accelReducedFFTXComputer,
-    &accelReducedFFTYComputer,
-    &accelReducedFFTZComputer,
+    &accelFFTComputerX,
+    &accelFFTComputerY,
+    &accelFFTComputerZ,
     &audioDB2048Computer,
     &audioDB4096Computer,
 };
@@ -286,6 +260,37 @@ FeatureComputer* getFeatureComputerById(uint8_t id)
     return NULL;
 }
 
+
+/***** Set up source *****/
+
+/**
+ * Associate the FeatureComputer instances to their sources.
+ */
+void setUpComputerSource()
+{
+    // From acceleration sensor data
+    accel128ComputerX.addSource(&accelerationX, 1);
+    accel128ComputerY.addSource(&accelerationY, 1);
+    accel128ComputerZ.addSource(&accelerationZ, 1);
+    accelRMS128TotalComputer.addSource(&accelRMS128X, 1);
+    accelRMS128TotalComputer.addSource(&accelRMS128Y, 1);
+    accelRMS128TotalComputer.addSource(&accelRMS128Z, 1);
+
+    // Aggregate acceleration RMS
+    accel512ComputerX.addSource(&accelRMS128X, 1);
+    accel512ComputerY.addSource(&accelRMS128Y, 1);
+    accel512ComputerZ.addSource(&accelRMS128Z, 1);
+    accel512TotalComputer.addSource(&accelRMS128Total, 1);
+
+    // Acceleration FFTs
+    accelFFTComputerX.addSource(&accelerationX, 4);
+    accelFFTComputerY.addSource(&accelerationY, 4);
+    accelFFTComputerZ.addSource(&accelerationZ, 4);
+
+    // Audio DB
+    audioDB2048Computer.addSource(&audio, 1);
+    audioDB4096Computer.addSource(&audio, 2);
+}
 
 /* =============================================================================
     Sensors declarations
@@ -335,49 +340,98 @@ Sensor* getSensorByName(const char* name)
 
 
 /* =============================================================================
-    Feature streaming group declarations
+    Feature Profiles declarations
 ============================================================================= */
 
-FeatureStreamingGroup featureGroup1(1);
-FeatureStreamingGroup featureGroup2(2);
-FeatureStreamingGroup featureGroup3(3);
+// Health Check
+FeatureProfile healthCheckProfile("HEALTH", 500);
+// Calibration
+FeatureProfile calibrationProfile("CAL001", 512);
+// Standard Press Monitoring
+FeatureProfile pressStandardProfile("PRSSTD", 512);
+// Standard Motor Monitoring
+FeatureProfile motorStandardProfile("MOTSTD", 512);
+
+
+/***** Pointers *****/
+
+FeatureProfile *FEATURE_PROFILES[FEATURE_PROFILE_COUNT] = {
+    &healthCheckProfile,
+    &calibrationProfile,
+    &pressStandardProfile,
+    &motorStandardProfile
+};
+
+
+/***** Selector *****/
+
+/**
+ * Return a pointer to the 1st existing featureProfile that has given name.
+ *
+ * NB: Will return a NULL pointer if no such featureProfile is found
+ */
+FeatureProfile* getProfileByName(const char* name)
+{
+    for (uint8_t i = 0; i < FEATURE_PROFILE_COUNT; ++i)
+    {
+        if (FEATURE_PROFILES[i]->isNamed(name))
+        {
+            return FEATURE_PROFILES[i];
+        }
+    }
+    return NULL;
+}
+
+
+/***** Profile Configuration *****/
+
+void deactivateAllProfiles()
+{
+    for (uint8_t i = 0; i < FEATURE_PROFILE_COUNT; ++i)
+    {
+        FEATURE_PROFILES[i]->deactivate();
+    }
+    deactivateAllFeatures();
+}
+
+void setUpProfiles()
+{
+    // Health Check
+    healthCheckProfile.addFeature(&batteryLoad);
+    // TODO => configure full HealthCheckProfile
+    // Calibration (previously VX3, VY3, VZ3, T10, FX3, FY3, FZ3, RX3, RY3, RZ3
+    // TODO Fix CalibrationProfile features
+    calibrationProfile.addFeature(&velRMS512X);
+    calibrationProfile.addFeature(&velRMS512Y);
+    calibrationProfile.addFeature(&velRMS512Z);
+    pressStandardProfile.addFeature(&temperature);
+    calibrationProfile.addFeature(&dispRMS512X);
+    calibrationProfile.addFeature(&dispRMS512Y);
+    calibrationProfile.addFeature(&dispRMS512Z);
+    calibrationProfile.addFeature(&accelRMS512X);
+    calibrationProfile.addFeature(&accelRMS512Y);
+    calibrationProfile.addFeature(&accelRMS512Z);
+    //calibrationProfile
+    // Standard Press Monitoring
+    pressStandardProfile.addFeature(&accelRMS512Total);
+    pressStandardProfile.addFeature(&accelRMS512X);
+    pressStandardProfile.addFeature(&accelRMS512Y);
+    pressStandardProfile.addFeature(&accelRMS512Z);
+    pressStandardProfile.addFeature(&temperature);
+    pressStandardProfile.addFeature(&audioDB4096);
+    // Standard Motor Monitoring
+    motorStandardProfile.addFeature(&accelRMS512Total);
+    motorStandardProfile.addFeature(&velRMS512X);
+    motorStandardProfile.addFeature(&velRMS512Y);
+    motorStandardProfile.addFeature(&velRMS512Z);
+    motorStandardProfile.addFeature(&temperature);
+    motorStandardProfile.addFeature(&audioDB4096);
+}
 
 
 /* =============================================================================
     Utilities
 ============================================================================= */
-
-/***** Computers setup *****/
-
-/**
- * Associate the FeatureComputer instances to their sources.
- */
-void setUpComputerSource()
-{
-    // From acceleration sensor data
-    accel128XComputer.addSource(&accelerationX, 1);
-    accel128YComputer.addSource(&accelerationY, 1);
-    accel128ZComputer.addSource(&accelerationZ, 1);
-    accelRMS128TotalComputer.addSource(&accelRMS128X, 1);
-    accelRMS128TotalComputer.addSource(&accelRMS128Y, 1);
-    accelRMS128TotalComputer.addSource(&accelRMS128Z, 1);
-
-    // Aggregate acceleration RMS
-    accel512XComputer.addSource(&accelRMS128X, 1);
-    accel512YComputer.addSource(&accelRMS128Y, 1);
-    accel512ZComputer.addSource(&accelRMS128Z, 1);
-    accel512TotalComputer.addSource(&accelRMS128Total, 1);
-
-    // Acceleration FFTs
-    accelReducedFFTXComputer.addSource(&accelerationX, 4);
-    accelReducedFFTYComputer.addSource(&accelerationY, 4);
-    accelReducedFFTZComputer.addSource(&accelerationZ, 4);
-
-    // Audio DB
-    audioDB2048Computer.addSource(&audio, 1);
-    audioDB4096Computer.addSource(&audio, 2);
-}
-
 
 /***** Activate / deactivate features *****/
 
@@ -479,11 +533,8 @@ void deactivateFeature(Feature* feature)
 /**
  * Deactivate all features and feature computers
  */
-void deactivateEverything()
+void deactivateAllFeatures()
 {
-    featureGroup1.reset();
-    featureGroup2.reset();
-    featureGroup3.reset();
     for (uint8_t i = 0; i < FEATURE_COUNT; ++i)
     {
         FEATURES[i]->deactivate();
@@ -495,163 +546,3 @@ void deactivateEverything()
     // TODO Deactivate sensors as well?
 }
 
-
-/***** Configuration *****/
-
-/**
- * Applied the given config to the feature.
- */
-bool configureFeature(Feature *feature, JsonVariant &config)
-{
-    JsonVariant my_config = config[feature->getName()];
-    if (!my_config)
-    {
-        return false;
-    }
-    // Activate the feature
-    activateFeature(feature);
-    // Configure the streaming
-    JsonVariant group = my_config["GRP"];
-    JsonVariant index = my_config["IDX"];
-    if (group.success() && index.success())
-    {
-        switch(group.as<int>())
-        {
-            case 1:
-                featureGroup1.add((uint8_t) (index.as<int>()), feature);
-                break;
-            case 2:
-                featureGroup2.add((uint8_t) (index.as<int>()), feature);
-                break;
-            case 3:
-                featureGroup3.add((uint8_t) (index.as<int>()), feature);
-                break;
-        }
-    }
-    JsonVariant value = my_config["OPS"];
-    if (value)
-    {
-        if (value.as<int>())
-        {
-            feature->enableOperationState();
-        }
-        else
-        {
-            feature->disableOperationState();
-        }
-    }
-    // Thresholds setting
-    value = my_config["TRH"][0];
-    if (value.success())
-    {
-        feature->setThreshold(0, value);
-    }
-    value = my_config["TRH"][1];
-    if (value.success())
-    {
-        feature->setThreshold(1, value);
-    }
-    value = my_config["TRH"][2];
-    if (value.success())
-    {
-        feature->setThreshold(2, value);
-    }
-    if (debugMode)
-    {
-        debugPrint(F("Configured feature "), false);
-        debugPrint(feature->getName());
-    }
-    return true;
-}
-
-/**
- * Check if at least one feature is streaming.
- */
-bool atLeastOneStreamingFeature()
-{
-    for (uint8_t i = 0; i < FEATURE_COUNT; ++i)
-    {
-        if (FEATURES[i]->isStreaming())
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
-
-/***** Default feature sets *****/
-
-void enableCalibrationFeatures()
-{
-    //calibrationFeatureGroup.setDataSendPeriod(defaultDataSendPeriod);
-}
-
-void enableMotorFeatures()
-{
-    deactivateEverything();
-    Feature *feature = getFeatureByName("A93");
-    activateFeature(feature);
-    featureGroup1.add(0, feature);
-    feature = getFeatureByName("VAX");
-    activateFeature(feature);
-    featureGroup1.add(1, feature);
-    feature = getFeatureByName("VAY");
-    activateFeature(feature);
-    featureGroup1.add(2, feature);
-    feature = getFeatureByName("VAZ");
-    activateFeature(feature);
-    featureGroup1.add(3, feature);
-    feature = getFeatureByName("TMP");
-    activateFeature(feature);
-    featureGroup1.add(4, feature);
-    feature = getFeatureByName("S11");
-    activateFeature(feature);
-    featureGroup1.add(5, feature);
-
-}
-
-void enablePressFeatures()
-{
-    deactivateEverything();
-    Feature *feature = getFeatureByName("A93");
-    activateFeature(feature);
-    featureGroup1.add(0, feature);
-    feature = getFeatureByName("A9X");
-    activateFeature(feature);
-    featureGroup1.add(1, feature);
-    feature = getFeatureByName("A9Y");
-    activateFeature(feature);
-    featureGroup1.add(2, feature);
-    feature = getFeatureByName("A9Z");
-    activateFeature(feature);
-    featureGroup1.add(3, feature);
-    feature = getFeatureByName("TMP");
-    activateFeature(feature);
-    featureGroup1.add(4, feature);
-    feature = getFeatureByName("S11");
-    activateFeature(feature);
-    featureGroup1.add(5, feature);
-}
-
-void exposeAllConfigurations()
-{
-    #ifdef DEBUGMODE
-    for (uint8_t i = 0; i < SENSOR_COUNT; ++i)
-    {
-        SENSORS[i]->expose();
-    }
-    debugPrint("");
-    for (uint8_t i = 0; i < FEATURE_COUNT; ++i)
-    {
-        FEATURES[i]->exposeConfig();
-        FEATURES[i]->exposeCounters();
-        debugPrint("_____");
-    }
-    debugPrint("");
-    for (uint8_t i = 0; i < FEATURE_COMPUTER_COUNT; ++i)
-    {
-        FEATURE_COMPUTERS[i]->exposeConfig();
-    }
-    #endif
-}
