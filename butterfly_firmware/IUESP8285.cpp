@@ -13,10 +13,10 @@ IUESP8285::IUESP8285(IUI2C *iuI2C) :
 void IUESP8285::setBaudRate(uint32_t baudRate)
 {
   m_baudRate = baudRate;
-  port->flush();
-  delay(2);
-  port->end();
-  delay(10);
+//  port->flush();
+//  delay(2);
+//  port->end();
+//  delay(10);
   port->begin(m_baudRate);
 }
 

@@ -760,8 +760,8 @@ void IUConductor::processInstructionsFromBluetooth()
           if (loopDebugMode)
           {
             debugPrint(feat->getName(), false); debugPrint(':', false);
-            debugPrint(feat->getThreshold(0), false); debugPrint(' - ', false);
-            debugPrint(feat->getThreshold(1), false); debugPrint(' - ', false);
+            debugPrint(feat->getThreshold(0), false); debugPrint(" - ", false);
+            debugPrint(feat->getThreshold(1), false); debugPrint(" - ", false);
             debugPrint(feat->getThreshold(2));
           }
         }
