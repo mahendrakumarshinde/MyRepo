@@ -83,6 +83,7 @@ class IUI2C : public IUABCInterface
 
 
   protected:
+    bool m_began;
     // Error Handling variables
     uint32_t m_clockRate;
     bool m_readFlag;

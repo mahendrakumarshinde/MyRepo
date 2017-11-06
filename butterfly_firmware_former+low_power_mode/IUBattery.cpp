@@ -11,6 +11,7 @@ IUBattery::IUBattery(IUI2C *iuI2C) :
 {
   pinMode(voltagePin, INPUT); // Enable battery read.
   analogReadResolution(12);   // take advantage of 12-bit ADCs
+  wakeUp();
   readVoltage();
 }
 

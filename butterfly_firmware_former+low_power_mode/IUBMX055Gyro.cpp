@@ -81,7 +81,7 @@ void IUBMX055Gyro::suspend()
 void IUBMX055Gyro::enableFastPowerUp()
 {
   m_fastPowerUpEnabled = true;
-  m_iuI2C->writeByte(ADDRESS,  LPM1, 0x80);
+  sleep();
 }
 
 /**
@@ -91,7 +91,7 @@ void IUBMX055Gyro::enableFastPowerUp()
 void IUBMX055Gyro::disableFastPowerUp()
 {
   m_fastPowerUpEnabled = false;
-  m_iuI2C->writeByte(ADDRESS,  LPM1, 0x00);
+  sleep();
 }
 
 /**

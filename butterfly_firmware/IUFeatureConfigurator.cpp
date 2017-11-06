@@ -631,7 +631,7 @@ IUFeature* IUFeatureConfigurator::getFeatureById(uint8_t id)
 /**
  * Get the feature with given name (lookup on instantiated features)
  */
-IUFeature* IUFeatureConfigurator::getFeatureByName(char *name)
+IUFeature* IUFeatureConfigurator::getFeatureByName(const char *name)
 {
   for (uint8_t i = 0; i < m_featureCount; i++)
   {

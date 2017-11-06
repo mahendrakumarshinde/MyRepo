@@ -2,6 +2,7 @@
 #define IUESP8285_H
 
 #include <Arduino.h>
+#include "Host_WiFiserial.h"
 #include "IUI2C.h"
 
 class IUESP8285 : public IUABCInterface
@@ -18,7 +19,6 @@ class IUESP8285 : public IUABCInterface
     virtual void sleep();
     virtual void suspend();
     // Communication methods
-
 
   protected:
     IUI2C *m_iuI2C;

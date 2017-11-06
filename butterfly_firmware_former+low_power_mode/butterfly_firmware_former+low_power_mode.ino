@@ -36,7 +36,7 @@
 
 
 //========================= Module Configuration Variables ===========================
-String MAC_ADDRESS = "94:54:93:0E:63:FC";
+String MAC_ADDRESS = "94:54:93:0F:67:01";
 
 // Reduce RUN frequency if needed.
 const uint32_t RESTING_INTERVAL = 0;  // Inter-batch gap
@@ -71,14 +71,17 @@ void callback()
 
 void setup()
 {
-  Serial.begin(IUI2C::defaultBaudRate);
-  delay(1000);
-  
   #ifdef UNITTEST
-    delay(1000);
+  
+    Serial.begin(115200);
+    delay(4000);
+    
   #else
+  
     if (setupDebugMode)
     {
+      Serial.begin(115200);
+      delay(2000);
       debugPrint(F("Start\n"));
     }
     
@@ -95,6 +98,7 @@ void setup()
     }
     
     conductor.setup(callback);
+   
    #endif
 }
 

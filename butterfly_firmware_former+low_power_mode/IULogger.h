@@ -11,7 +11,7 @@
 #define DEBUGMODE
 
 #ifdef DEBUGMODE
-__attribute__((section(".noinit2"))) const bool setupDebugMode = false;
+__attribute__((section(".noinit2"))) const bool setupDebugMode = true;
 __attribute__((section(".noinit2"))) const bool loopDebugMode = false;
 __attribute__((section(".noinit2"))) const bool callbackDebugMode = false;
 __attribute__((section(".noinit2"))) const bool highVerbosity = false;
@@ -32,7 +32,7 @@ inline void debugPrint(T msg, bool endline = true)
   #ifdef DEBUGMODE
   if (endline) { Serial.println(msg); }
   else { Serial.print(msg); }
-//  Serial.flush();
+  Serial.flush();
   #endif
 }
 
@@ -43,7 +43,7 @@ inline void debugPrint(float msg, bool endline)
   #ifdef DEBUGMODE
   if (endline) { Serial.println(msg, 6); }
   else { Serial.print(msg, 6); }
-//  Serial.flush();
+  Serial.flush();
   #endif
 }
 
@@ -52,7 +52,7 @@ inline void memoryLog()
   #ifdef DEBUGMODE
   Serial.print(F("Available Memory: "));
   Serial.println(freeMemory(), DEC);
-//  Serial.flush();
+  Serial.flush();
   #endif
 }
 

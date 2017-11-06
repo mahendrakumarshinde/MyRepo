@@ -1030,8 +1030,6 @@ void IUDefaultFloatFeature::m_computeScalar (uint8_t computeIndex)
 __attribute__((section(".noinit2"))) q15_t I2SDataSRAM2_0[4096];
 __attribute__((section(".noinit2"))) q15_t I2SDataSRAM2_1[4096];
 
-
-
 const uint16_t IUAudioDBFeature2048::sourceSize[IUAudioDBFeature2048::sourceCount] = {2048};
 
 IUAudioDBFeature2048::IUAudioDBFeature2048(uint8_t id, char *name) :
