@@ -1622,13 +1622,12 @@ void getAres() {
   {
     // Possible accelerometer scales (and their register bit settings) are:
     // 2 Gs (0011), 4 Gs (0101), 8 Gs (1000), and 16 Gs  (1100).
-    // BMX055 ACC data is signed 12 bit
-    // CHANGE: MPU data is signed 16 bit??
+    // BMX055 ACC data is signed 12 bit, but stored on signed 16 bit
     case AFS_2G:
-      aRes = 2.0 / 32768.0; // change from 2^11 to 2^15
+      aRes = 2.0 / 32768.0;
       break;
     case AFS_4G:
-      aRes = 4.0 / 32768.0; // is this even right? should it be 2^16?
+      aRes = 4.0 / 32768.0;
       break;
     case AFS_8G:
       aRes = 8.0 / 32768.0;

@@ -1,13 +1,7 @@
 # Compiled source #
 ###################
-butterfly_firmware/bin/
-butterfly_firmware/obj/
-press_firmware/bin/
-press_firmware/obj/
-standard_firmware/bin/
-standard_firmware/obj/
-pz_teensy_rework/bin/
-pz_teensy_rework/obj/
+*/bin/
+*/obj/
 
 
 # Temporary & IDE #

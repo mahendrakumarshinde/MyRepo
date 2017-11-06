@@ -1,0 +1,34 @@
+device:
+  version: 1.0.0
+  power_mode: 0  # normal
+  autosleep_delay: 60  # Used only when power_mode is AUTOSLEEP
+  sleep_duration: 300  # Used only when power_mode is AUTOSLEEP or PERIODIC_SLEEP
+  sleep_cycle: 3600  # Used only when power_mode is PERIODIC_SLEEP
+
+functions:
+- health_check
+- press_standard
+
+components:
+  accelerometer:
+    full_scale_range: 5  # 4G
+  gyroscope:
+    full_scale_range: 1  # 1000Hz
+
+features:
+  acceleration_rms_512_x:
+    thresholds:
+    - 0.25
+    - 0.5
+    - 0.75
+  acceleration_rms_512_y:
+    thresholds:
+    - 10
+    - 11
+    - 12
+  acceleration_rms_512_z:
+    thresholds:
+    - 0.25
+    - 0.5
+    - 0.75
+

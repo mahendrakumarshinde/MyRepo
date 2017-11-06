@@ -1,0 +1,29 @@
+{
+  "device": {
+    "VERS": "1.0.0",
+    "POW": 0,
+    "TSL": 60,
+    "TOFF": 300,
+    "TCY": 3600
+  },
+  "functions": ["HEALTH", "PRSSTD"],
+  "components": {
+    "ACC": {
+      "FSR": 5
+      },
+    "GYR": {
+      "FSR": 1
+      }
+  },
+  "features": {
+    "A9X": {
+      "TRH": [0.25, 0.5, 0.75]
+    },
+    "A9Y": {
+      "TRH": [10, 11, 12]
+    },
+    "A9Z": {
+      "TRH": [0.25, 0.5, 0.75]
+    }
+  }
+}
