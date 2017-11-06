@@ -33,6 +33,7 @@ class FeatureComputer
             { return m_destinations[idx]; }
         /***** Computation *****/
         virtual bool compute();
+        virtual void acknowledgeSectionToSources();
         /***** Debugging *****/
         void exposeConfig();
 
@@ -123,13 +124,15 @@ class MultiSourceSumComputer: public FeatureComputer
 {
     public:
         MultiSourceSumComputer(uint8_t id, Feature *destination0=NULL,
-                               bool normalize=false);
+                               bool normalize=false, bool rmsLike=false);
         // Change parameters
         void setNormalize(bool value) { m_normalize = value; }
+        void setRMSLike(bool value) { m_rmsLike = value; }
 
     protected:
         virtual void m_specializedCompute();
         bool m_normalize;  // Return the average instead of the sum
+        bool m_rmsLike;  // Return the average instead of the sum
 };
 
 

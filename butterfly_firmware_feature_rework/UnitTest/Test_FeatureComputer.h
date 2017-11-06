@@ -94,8 +94,8 @@ test(FeatureComputer__simple_operation)
 
     // Fill out 2nd section of the destination
     destination.incrementFillingIndex();
-    // Compute is now impossible since no free section in the destination
-    assertFalse(computer.compute());
+    // destination is full, but has no receiver, so can still compute
+    assertTrue(computer.compute());
 }
 
 
@@ -160,8 +160,8 @@ test(FeatureComputer__complex_operation)
     {
         destination2.incrementFillingIndex();
     }
-    // destination2 is full => cannot compute
-    assertFalse(computer.compute());  // No nompute
+    // destination2 is full, but has no receiver, so can still compute
+    assertTrue(computer.compute());
 }
 
 
@@ -184,6 +184,8 @@ test(FeatureComputer__signal_rms)
     SignalRMSComputer rms512Computer(1, &rms512, false, false);
     rms128Computer.addSource(&source, 1);
     rms512Computer.addSource(&source, 4);
+    rms128Computer.activate();
+    rms512Computer.activate();
 
     /***** Conditions: removeMean = false, normalize = false *****/
     for (uint16_t i = 0; i < 512; ++i)
@@ -273,6 +275,7 @@ test(FeatureComputer__section_sum)
     SectionSumComputer sumComputer(1, 2, &dest1, &dest2);
     sumComputer.addSource(&source1, 1);  // Sum over 1 section
     sumComputer.addSource(&source2, 2);  // Sum over 2 sections at once
+    sumComputer.activate();
 
     // Without averaging / normalize = false (ie sum value)
     sumComputer.setNormalize(false);
@@ -327,9 +330,11 @@ test(FeatureComputer__multi_source_sum)
     MultiSourceSumComputer sumComputer(1, &dest1);  // Test over single section
     sumComputer.addSource(&source1, 1);  // Sum over 1 section
     sumComputer.addSource(&source2, 1);  // Sum over 2 sections at once
+    sumComputer.activate();
     MultiSourceSumComputer sumComputer2(2, &dest2);  // Test over 2 sections
     sumComputer2.addSource(&source1, 2);  // Sum over 1 section
     sumComputer2.addSource(&source2, 2);  // Sum over 2 sections at once
+    sumComputer2.activate();
 
     // Without averaging / normalize = false (ie sum value)
     sumComputer.setNormalize(false);
@@ -394,6 +399,7 @@ test(FeatureComputer__q15_fft)
                                                 5,  // lowCutFrequency
                                                 550);  // highCutFrequency
     fftComputer.addSource(&source, 1);
+    fftComputer.activate();
     // Fill source and compute
     for (uint16_t i = 0; i < testSampleCount; ++i)
     {
@@ -415,10 +421,10 @@ test(FeatureComputer__q15_fft)
     assertEqual(reducedFFTValues[149], -1);
     // integralRMS validation
     assertEqual(round(integralRMSValues[0]), 3362);
-    assertEqual(round(integralRMS.getResolution() * 1000), 1);
+    assertEqual(round(integralRMS.getResolution()), 1);
     // doubleIntegralRMS validation
     assertEqual(round(doubleIntegralRMSValues[0] * 100), 2025);
-    assertEqual(round(doubleIntegralRMS.getResolution() * 1000), 1);
+    assertEqual(round(doubleIntegralRMS.getResolution()), 1);
 }
 
 
@@ -437,6 +443,7 @@ test(FeatureComputer__audio_db)
     // Creating computer
     AudioDBComputer audioDBComputer = AudioDBComputer(1, &audioDB);
     audioDBComputer.addSource(&source, 1);
+    audioDBComputer.activate();
     // Fill source and compute
     for (uint16_t i = 0; i < testSampleCount; ++i)
     {

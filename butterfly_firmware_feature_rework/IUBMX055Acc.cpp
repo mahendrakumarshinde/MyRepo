@@ -390,7 +390,7 @@ void IUBMX055Acc::exposeCalibration()
     #ifdef DEBUGMODE
     debugPrint(F("Accelerometer calibration data: "));
     debugPrint(F("Resolution (m.s-2): "));
-    debugPrint(m_resolution);
+    debugPrint(m_resolution, 7);
     debugPrint(F("Bias (q15_t): "));
     for (uint8_t i = 0; i < 3; ++i)
     {

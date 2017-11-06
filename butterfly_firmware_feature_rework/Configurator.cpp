@@ -116,7 +116,7 @@ void Configurator::configureDeviceFunctions(JsonVariant &config)
             profile = getProfileByName(profileName.as<char*>());
             if (profile)
             {
-                profile->activate();
+                activateProfile(profile);
             }
         }
     }
@@ -306,6 +306,8 @@ void Configurator::processLegacyBLECommands(char *buff)
                 buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
             {
                 iuBluetooth.port->print("HB,");
+                iuBluetooth.port->print(conductor.getMacAddress());
+                iuBluetooth.port->print(",");
                 if (iuI2C.isError())
                 {
                     iuBluetooth.port->print("I2CERR");

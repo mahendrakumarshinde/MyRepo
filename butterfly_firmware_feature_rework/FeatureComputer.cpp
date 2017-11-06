@@ -72,13 +72,16 @@ bool FeatureComputer::compute()
             return false;
         }
     }
-    m_specializedCompute();
+    if (m_active)
+    {
+        m_specializedCompute();
+    }
     // Acknowledge the computed sections for each source
     for (uint8_t i = 0; i < m_sourceCount; ++i )
     {
         m_sources[i]->acknowledge(m_indexesAsReceiver[i], m_sectionCount[i]);
     }
-    if (loopDebugMode && highVerbosity)
+    if (m_active && loopDebugMode && highVerbosity)
     {
         debugPrint(m_id, false);
         debugPrint(F(" computed in "), false);
@@ -88,6 +91,14 @@ bool FeatureComputer::compute()
     return true;
 }
 
+/**
+ * Acknowledge the sections for each source
+ *
+ * Function should be called either after computation
+ */
+void FeatureComputer::acknowledgeSectionToSources()
+{
+}
 
 /***** Debugging *****/
 
@@ -166,15 +177,22 @@ void SignalRMSComputer::m_specializedCompute()
     }
     for (int i = 0; i < totalSize; ++i)
     {
-        total += sq((values[i] - avg) * resolution);
+        total += sq((values[i] - avg));
     }
     if (m_normalize)
     {
         total = total / (float) totalSize;
     }
+    total = sqrt(total);
     m_destinations[0]->setSamplingRate(m_sources[0]->getSamplingRate());
     m_destinations[0]->setResolution(resolution);
-    m_destinations[0]->addFloatValue(sqrt(total));
+    m_destinations[0]->addFloatValue(total);
+    if (featureDebugMode)
+    {
+        debugPrint(m_destinations[0]->getName(), false);
+        debugPrint(": ", false);
+        debugPrint(total * resolution);
+    }
 }
 
 
@@ -216,15 +234,22 @@ void SectionSumComputer::m_specializedCompute()
             total = total / (float) length;
         }
         m_destinations[i]->addFloatValue(total);
+        if (featureDebugMode)
+        {
+            debugPrint(m_destinations[i]->getName(), false);
+            debugPrint(": ", false);
+            debugPrint(total * m_sources[i]->getResolution());
+        }
     }
 }
 
 
 MultiSourceSumComputer::MultiSourceSumComputer(uint8_t id,
                                                Feature *destination0,
-                                               bool normalize) :
+                                               bool normalize, bool rmsLike) :
     FeatureComputer(id, 1, destination0),
-    m_normalize(normalize)
+    m_normalize(normalize),
+    m_rmsLike(rmsLike)
 {
     // Constructor
 }
@@ -244,16 +269,34 @@ void MultiSourceSumComputer::m_specializedCompute()
     for (uint16_t k = 0; k < length; ++k)
     {
         total = 0;
-        for (uint8_t i = 0; i < m_sourceCount; ++i)
+        if (m_rmsLike)
         {
-            total += m_sources[i]->getNextFloatValues(
-                m_indexesAsReceiver[i])[k];
+            for (uint8_t i = 0; i < m_sourceCount; ++i)
+            {
+                total += sq(m_sources[i]->getNextFloatValues(
+                    m_indexesAsReceiver[i])[k]);
+            }
+            total = sqrt(total);
+        }
+        else
+        {
+            for (uint8_t i = 0; i < m_sourceCount; ++i)
+            {
+                total += m_sources[i]->getNextFloatValues(
+                    m_indexesAsReceiver[i])[k];
+            }
         }
         if (m_normalize)
         {
             total = total / (float) m_sourceCount;
         }
         m_destinations[0]->addFloatValue(total);
+        if (featureDebugMode)
+        {
+            debugPrint(m_destinations[0]->getName(), false);
+            debugPrint(": ", false);
+            debugPrint(total * m_sources[0]->getResolution());
+        }
     }
 }
 
@@ -310,6 +353,11 @@ void Q15FFTComputer::m_specializedCompute()
         m_destinations[0]->addQ15Value(m_allocatedFFTSpace[2 * maxIdx]);
         m_destinations[0]->addQ15Value(m_allocatedFFTSpace[2 * maxIdx + 1]);
     }
+    if (featureDebugMode)
+    {
+        debugPrint(m_destinations[0]->getName(), false);
+        debugPrint(": was computed");
+    }
     // 3. 1st integration in frequency domain
     q15_t scaling1 = RFFTAmplitudes::getRescalingFactorForIntegral(
         amplitudes, sampleCount, samplingRate);
@@ -319,7 +367,13 @@ void Q15FFTComputer::m_specializedCompute()
     float integratedRMS1 = RFFTAmplitudes::getRMS(amplitudes, sampleCount);
     integratedRMS1 *= 1000 / ((float) scaling1);
     m_destinations[1]->addFloatValue(integratedRMS1);
-    m_destinations[1]->setResolution(resolution / 1000.0);
+    m_destinations[1]->setResolution(resolution);
+    if (featureDebugMode)
+    {
+        debugPrint(m_destinations[1]->getName(), false);
+        debugPrint(": ", false);
+        debugPrint(integratedRMS1 * resolution);
+    }
     // 4. 2nd integration in frequency domain
     q15_t scaling2 = RFFTAmplitudes::getRescalingFactorForIntegral(
         amplitudes, sampleCount, samplingRate);
@@ -329,7 +383,13 @@ void Q15FFTComputer::m_specializedCompute()
     float integratedRMS2 = RFFTAmplitudes::getRMS(amplitudes, sampleCount);
     integratedRMS2 *= 1000 / ((float) scaling1 * (float) scaling2);
     m_destinations[2]->addFloatValue(integratedRMS2);
-    m_destinations[2]->setResolution(resolution / 1000.0);
+    m_destinations[2]->setResolution(resolution);
+    if (featureDebugMode)
+    {
+        debugPrint(m_destinations[2]->getName(), false);
+        debugPrint(": ", false);
+        debugPrint(integratedRMS2 * resolution);
+    }
 }
 
 
@@ -380,5 +440,12 @@ void AudioDBComputer::m_specializedCompute()
         }
     }
     audioDB += log10(accu);
-    m_destinations[0]->addFloatValue(20.0 * audioDB / (float) length);
+    float result = 20.0 * audioDB / (float) length;
+    m_destinations[0]->addFloatValue(result);
+    if (featureDebugMode)
+    {
+        debugPrint(m_destinations[0]->getName(), false);
+        debugPrint(": ", false);
+        debugPrint(result * m_sources[0]->getResolution());
+    }
 }

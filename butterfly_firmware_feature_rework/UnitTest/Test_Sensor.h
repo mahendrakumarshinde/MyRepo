@@ -55,8 +55,9 @@ test(Sensor__SynchronousSensor)
     /***** Values after initialization *****/
     assertTrue(sensor.isNamed("SYN"));
     assertFalse(sensor.isAsynchronous());
-    assertEqual(round(sensor.getSamplingRate() * 1000),
-                round(1000.0f / (float) sensor.defaultSamplingPeriod))  ;
+    assertEqual(sensor.getSamplingPeriod(), 1000);
+    assertEqual(round(sensor.getSamplingRate() * 10000),
+                round(10000.0f / (float) sensor.defaultSamplingPeriod))  ;
 }
 
 #endif // TEST_SENSOR_H_INCLUDED

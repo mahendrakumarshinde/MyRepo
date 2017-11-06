@@ -6,6 +6,7 @@
 ============================================================================= */
 
 FeatureProfile::FeatureProfile(const char *name, uint16_t dataSendPeriod) :
+    m_active(false),
     m_dataSendPeriod(dataSendPeriod),
     m_lastSentTime(0)
 {
@@ -75,7 +76,7 @@ bool FeatureProfile::isDataSendTime()
     {
         m_lastSentTime = 0; // Manage millis uint32_t overflow
     }
-    if (m_lastSentTime + m_dataSendPeriod >= now)
+    if (m_lastSentTime + m_dataSendPeriod < now)
     {
         m_lastSentTime = now;
         return true;
@@ -119,6 +120,43 @@ void FeatureProfile::stream(HardwareSerial *port,
     if (loopDebugMode)
     {
         // Add a line break to ease readability in debug mode
+        port->println("");
+    }
+    port->flush();
+}
+
+
+void FeatureProfile::legacyStream(HardwareSerial *port, const char *macAddress,
+                                  OperationState::option opState,
+                                  float batteryLoad, double timestamp)
+{
+    if (!m_active)
+    {
+        return;  // Only stream if profile is active
+    }
+    if (m_featureCount == 0 || !isDataSendTime())
+    {
+        return;
+    }
+    port->print(macAddress);
+    port->print(",0");
+    port->print((uint8_t) opState);
+    port->print(",");
+    port->print((int) round(batteryLoad * 100));
+    for (uint8_t i = 0; i < m_featureCount; ++i)
+    {
+        port->print(",000");
+        port->print(i + 1);
+        if (m_features[i] != NULL)
+        {
+            m_features[i]->stream(port);
+        }
+    }
+    port->print(",");
+    port->print(timestamp);
+    port->print(";");
+    if (loopDebugMode)
+    {
         port->println("");
     }
     port->flush();

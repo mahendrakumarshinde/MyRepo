@@ -22,7 +22,7 @@ class IURGBLed : public Component
         /***** Preset values and default settings *****/
         enum PIN : uint8_t {RED_PIN = A5,
                             GREEN_PIN = A3,
-                            BLUE_PIN = A4};
+                            BLUE_PIN = A0};  // A4
         enum LEDColors : uint8_t {RED,
                                   BLUE,
                                   GREEN,

@@ -143,6 +143,14 @@ extern Feature *FEATURES[FEATURE_COUNT];
 Feature* getFeatureByName(const char* name);
 
 
+/***** Activate / deactivate features *****/
+
+void activateFeature(Feature* feature);
+bool isFeatureDeactivatable(Feature* feature);
+void deactivateFeature(Feature* feature);
+void deactivateAllFeatures();
+
+
 /* =============================================================================
     Computers declarations
 ============================================================================= */
@@ -241,19 +249,10 @@ FeatureProfile* getProfileByName(const char* name);
 
 /***** Profile Configuration *****/
 
+void activateProfile(FeatureProfile *profile);
+void deactivateProfile(FeatureProfile *profile);
 void deactivateAllProfiles();
 void setUpProfiles();
 
-
-/* =============================================================================
-    Utilities
-============================================================================= */
-
-
-/***** Activate / deactivate features *****/
-void activateFeature(Feature* feature);
-bool isFeatureDeactivatable(Feature* feature);
-void deactivateFeature(Feature* feature);
-void deactivateAllFeatures();
 
 #endif // FEATUREGRAPH_H

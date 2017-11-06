@@ -144,7 +144,8 @@ class Feature
         // streaming the section content for example, to garantee data
         // consistency at section level
         bool m_locked[maxSectionCount];
-        void m_specializedStream(HardwareSerial *port, uint8_t sectionIdx) {}
+        virtual void m_specializedStream(HardwareSerial *port,
+                                         uint8_t sectionIdx) {}
 };
 
 
@@ -171,7 +172,8 @@ class FloatFeature : public Feature
 
     protected:
         float *m_values;
-        void m_specializedStream(HardwareSerial *port, uint8_t sectionIdx);
+        virtual void m_specializedStream(HardwareSerial *port,
+                                         uint8_t sectionIdx);
 };
 
 
@@ -192,7 +194,8 @@ class Q15Feature : public Feature
 
     protected:
         q15_t *m_values;
-        void m_specializedStream(HardwareSerial *port, uint8_t sectionIdx)
+        virtual void m_specializedStream(HardwareSerial *port,
+                                         uint8_t sectionIdx)
             { raiseException(F("Q15Feature streaming not implemented")); }
 };
 
@@ -214,7 +217,8 @@ class Q31Feature : public Feature
 
     protected:
         q31_t *m_values;
-        void m_specializedStream(HardwareSerial *port, uint8_t sectionIdx)
+        virtual void m_specializedStream(HardwareSerial *port,
+                                         uint8_t sectionIdx)
             { raiseException(F("Q31Feature streaming not implemented")); }
 };
 

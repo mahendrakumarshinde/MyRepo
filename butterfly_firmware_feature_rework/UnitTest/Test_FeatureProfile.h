@@ -25,11 +25,11 @@ test(FeatureProfile__test)
     assertTrue(profile.getFeature(1)->isNamed("002"));
 
     /***** Data send Period *****/
-//    assertTrue(profile.isDataSendTime());
-//    // 2nd successive call should be false
-//    assertFalse(profile.isDataSendTime());
-//    delay(500);
-//    assertTrue(profile.isDataSendTime());
+    assertTrue(profile.isDataSendTime());
+    // 2nd successive call should be false
+    assertFalse(profile.isDataSendTime());
+    delay(600);
+    assertTrue(profile.isDataSendTime());
 
     /***** Data send Period *****/
 //    profile.stream(&Serial, OperationState::IDLE, 0);

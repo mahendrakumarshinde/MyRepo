@@ -40,6 +40,27 @@ test(FeatureClass__initialization)
  */
 test(FeatureClass__buffer_state_tracking)
 {
+    /***** Feature without receivers *****/
+    Feature feature0("001", 2, 10);
+    feature0.isReadyToRecord();
+    for (uint8_t i = 0; i < 10; ++i)
+    {
+        feature0.incrementFillingIndex();
+    }
+    assertTrue(feature0.isReadyToRecord());
+    for (uint8_t i = 0; i < 10; ++i)
+    {
+        feature0.incrementFillingIndex();
+    }
+    assertTrue(feature0.isReadyToRecord());
+    for (uint8_t i = 0; i < 10; ++i)
+    {
+        feature0.incrementFillingIndex();
+    }
+    assertTrue(feature0.isReadyToRecord());
+
+
+    /***** Feature with receivers *****/
     Feature feature("TST", 2, 10);
     feature.addReceiver(1);
     feature.addReceiver(2);
@@ -98,6 +119,11 @@ test(FeatureClass__buffer_state_tracking)
     assertTrue(feature.isReadyToCompute(0, 2));
     assertTrue(feature.isReadyToCompute(1, 2));
 
+    // Acknowledge the 2 sections at once
+    feature.acknowledge(0, 2);  // Acknowledge for 1st receiver
+    feature.acknowledge(1, 2);  // Acknowledge for 1st receiver
+    assertTrue(feature.isReadyToRecord());
+
     // Reset everything to initial state
     feature.reset();
     assertTrue(feature.isReadyToRecord());
@@ -106,6 +132,9 @@ test(FeatureClass__buffer_state_tracking)
     assertFalse(feature.isReadyToCompute(0, 2));
     assertFalse(feature.isReadyToCompute(1));
     assertFalse(feature.isReadyToCompute(1, 2));
+
+
+
 }
 
 
@@ -163,6 +192,87 @@ test(FeatureClass__number_format_features)
     // section
     float value = floatFeature.getValueToCompareToThresholds();
     assertEqual(round(10 * value), 46);
+}
+
+
+/**
+ * Test functions specific to Feature subclasses (number format specific)
+ */
+test(FeatureClass__FloatFeatureOperationState)
+{
+    /***** Scalar feature (section size = 1) *****/
+    float scalarValues[4];
+    FloatFeature scalarFeature("SCL", 4, 1, scalarValues);
+    // Initial values
+    assertFalse(scalarFeature.opStateEnabled());
+    assertEqual(scalarFeature.getOperationState(), OperationState::IDLE);
+    for (uint8_t i = 0; i < OperationState::COUNT - 1; i++)
+    {
+        assertEqual(scalarFeature.getThreshold(i), 0);
+    }
+    // Update thresholds
+    scalarFeature.enableOperationState();
+    scalarFeature.setThresholds(1.1, 2.2, 3.3);
+    assertTrue(scalarFeature.opStateEnabled());
+    assertEqual(round(scalarFeature.getThreshold(0) * 10), 11);
+    assertEqual(round(scalarFeature.getThreshold(1) * 10), 22);
+    assertEqual(round(scalarFeature.getThreshold(2) * 10), 33);
+    // update Operation State
+    scalarFeature.addFloatValue(0.5);
+    assertEqual(round(scalarFeature.getValueToCompareToThresholds() * 10), 5);
+    assertEqual(scalarFeature.getOperationState(), OperationState::IDLE);
+    scalarFeature.addFloatValue(1.5);
+    assertEqual(round(scalarFeature.getValueToCompareToThresholds() * 10), 15);
+    assertEqual(scalarFeature.getOperationState(), OperationState::NORMAL);
+    scalarFeature.addFloatValue(2.5);
+    assertEqual(round(scalarFeature.getValueToCompareToThresholds() * 10), 25);
+    assertEqual(scalarFeature.getOperationState(), OperationState::WARNING);
+    scalarFeature.addFloatValue(3.5);
+    assertEqual(round(scalarFeature.getValueToCompareToThresholds() * 10), 35);
+    assertEqual(scalarFeature.getOperationState(), OperationState::DANGER);
+
+    /***** Array feature (section size > 1) *****/
+    float arrayValues[40];
+    FloatFeature arrayFeature("ARR", 4, 10, arrayValues);
+    // Initial values
+    assertFalse(arrayFeature.opStateEnabled());
+    assertEqual(arrayFeature.getOperationState(), OperationState::IDLE);
+    for (uint8_t i = 0; i < OperationState::COUNT - 1; i++)
+    {
+        assertEqual(arrayFeature.getThreshold(i), 0);
+    }
+    // Update thresholds
+    arrayFeature.enableOperationState();
+    arrayFeature.setThresholds(2.5, 3.0, 3.5);
+    assertTrue(arrayFeature.opStateEnabled());
+    assertEqual(round(arrayFeature.getThreshold(0) * 10), 25);
+    assertEqual(round(arrayFeature.getThreshold(1) * 10), 30);
+    assertEqual(round(arrayFeature.getThreshold(2) * 10), 35);
+    // update Operation State
+    for (float i = 0; i < 10; ++i)
+    {
+        arrayFeature.addFloatValue(0.5 * i);
+    }
+    assertEqual(round(arrayFeature.getValueToCompareToThresholds() * 100), 225);
+    assertEqual(arrayFeature.getOperationState(), OperationState::IDLE);
+    for (float i = 0; i < 10; ++i)
+    {
+        arrayFeature.addFloatValue(0.5 * (i + 1));
+    }
+    assertEqual(round(arrayFeature.getValueToCompareToThresholds() * 100), 275);
+    assertEqual(arrayFeature.getOperationState(), OperationState::NORMAL);
+    for (float i = 0; i < 10; ++i)
+    {
+        arrayFeature.addFloatValue(0.5 * (i + 2));
+    }
+    assertEqual(round(arrayFeature.getValueToCompareToThresholds() * 100), 325);
+    assertEqual(arrayFeature.getOperationState(), OperationState::WARNING);
+    for (float i = 0; i < 10; ++i)
+    {
+        arrayFeature.addFloatValue(0.5 * (i + 3));
+    }
+    assertEqual(round(arrayFeature.getValueToCompareToThresholds() * 100), 375);
+    assertEqual(arrayFeature.getOperationState(), OperationState::DANGER);
 }
 
 #endif // TEST_FEATURECLASS_H_INCLUDED

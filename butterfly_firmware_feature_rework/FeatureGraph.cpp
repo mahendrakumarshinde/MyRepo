@@ -170,6 +170,118 @@ Feature* getFeatureByName(const char* name)
 }
 
 
+/***** Activate / deactivate features *****/
+
+/**
+ * Activate the computation of a feature
+ *
+ * Also recursively activate the computation of all the feature's required
+ * components (ie the sources of its computer).
+ */
+void activateFeature(Feature* feature)
+{
+    feature->activate();
+    uint8_t compId = feature->getComputerId();
+    if (compId == 0)
+    {
+        return;
+    }
+    FeatureComputer* computer = getFeatureComputerById(compId);
+    if (computer != NULL)
+    {
+        // Activate the feature's computer
+        computer->activate();
+        // Activate the computer's sources
+        for (uint8_t i = 0; i < computer->getSourceCount(); ++i)
+        {
+            activateFeature(computer->getSource(i));
+        }
+    }
+    // TODO Activate sensors as well?
+}
+
+/**
+ * Check whether the feature computation can be deactivated.
+ *
+ * A feature is deactivatable if:
+ *  - it is not streaming
+ *  - all it's receivers (computers who use it as source) are deactivated
+ */
+bool isFeatureDeactivatable(Feature* feature)
+{
+    if (feature->isStreaming())
+    {
+        return false;
+    }
+    FeatureComputer* computer;
+    for (uint8_t i = 0; i < feature->getReceiverCount(); ++i)
+    {
+        computer = getFeatureComputerById(feature->getReceiverId(i));
+        if (computer != NULL && !computer->isActive())
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * Deactivate the computation of a feature
+ *
+ * Will also disable the feature streaming.
+ * Will also check if the computation of the feature's required components can
+ * be deactivated.
+ */
+void deactivateFeature(Feature* feature)
+{
+    feature->deactivate();
+    uint8_t compId = feature->getComputerId();
+    if (compId != 0)
+    {
+        FeatureComputer* computer = getFeatureComputerById(compId);
+        if (computer != NULL)
+        {
+            // If none of the computer's destinations are active, the computer
+            // can be deactivated too.
+            bool deactivatable = true;
+            for (uint8_t i = 0; i < computer->getDestinationCount(); ++i)
+            {
+                deactivatable &= (!computer->getDestination(i)->isActive());
+            }
+            if (deactivatable)
+            {
+                computer->deactivate();
+                //
+                Feature* antecedent;
+                for (uint8_t i = 0; i < computer->getSourceCount(); ++i)
+                {
+                    antecedent = computer->getSource(i);
+                    if (!isFeatureDeactivatable(antecedent))
+                    {
+                        deactivateFeature(antecedent);
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Deactivate all features and feature computers
+ */
+void deactivateAllFeatures()
+{
+    for (uint8_t i = 0; i < FEATURE_COUNT; ++i)
+    {
+        FEATURES[i]->deactivate();
+    }
+    for (uint8_t i = 0; i < FEATURE_COMPUTER_COUNT; ++i)
+    {
+        FEATURE_COMPUTERS[i]->deactivate();
+    }
+}
+
+
 /* =============================================================================
     Computers declarations
 ============================================================================= */
@@ -185,14 +297,16 @@ q15_t allocatedFFTSpace[1024];
 SignalRMSComputer accel128ComputerX(1,&accelRMS128X);
 SignalRMSComputer accel128ComputerY(2, &accelRMS128Y);
 SignalRMSComputer accel128ComputerZ(3, &accelRMS128Z);
-MultiSourceSumComputer accelRMS128TotalComputer(4, &accelRMS128Total);
+MultiSourceSumComputer accelRMS128TotalComputer(4, &accelRMS128Total, false,
+                                                true);
 
 
 // 512 sample long accel computers
-SectionSumComputer accel512ComputerX(5, 1, &accelRMS512X);
-SectionSumComputer accel512ComputerY(6, 1, &accelRMS512Y);
-SectionSumComputer accel512ComputerZ(7, 1, &accelRMS512Z);
-SectionSumComputer accel512TotalComputer(8, 1, &accelRMS512Total);
+SectionSumComputer accel512ComputerX(5, 1, &accelRMS512X, NULL, NULL, true);
+SectionSumComputer accel512ComputerY(6, 1, &accelRMS512Y, NULL, NULL, true);
+SectionSumComputer accel512ComputerZ(7, 1, &accelRMS512Z, NULL, NULL, true);
+SectionSumComputer accel512TotalComputer(8, 1, &accelRMS512Total, NULL, NULL,
+                                         true);
 
 
 // Computers for FFT feature from 512 sample long accel data
@@ -385,6 +499,24 @@ FeatureProfile* getProfileByName(const char* name)
 
 /***** Profile Configuration *****/
 
+void activateProfile(FeatureProfile *profile)
+{
+    profile->activate();
+    for (uint8_t i = 0; i < profile->getFeatureCount(); ++i)
+    {
+        activateFeature(profile->getFeature(i));
+    }
+}
+
+void deactivateProfile(FeatureProfile *profile)
+{
+    profile->deactivate();
+    for (uint8_t i = 0; i < profile->getFeatureCount(); ++i)
+    {
+        deactivateFeature(profile->getFeature(i));
+    }
+}
+
 void deactivateAllProfiles()
 {
     for (uint8_t i = 0; i < FEATURE_PROFILE_COUNT; ++i)
@@ -396,10 +528,12 @@ void deactivateAllProfiles()
 
 void setUpProfiles()
 {
-    // Health Check
+    /*** Health Check ***/
     healthCheckProfile.addFeature(&batteryLoad);
     // TODO => configure full HealthCheckProfile
-    // Calibration (previously VX3, VY3, VZ3, T10, FX3, FY3, FZ3, RX3, RY3, RZ3
+
+    /*** Calibration ***/
+    // Previously VX3, VY3, VZ3, T10, FX3, FY3, FZ3, RX3, RY3, RZ3
     // TODO Fix CalibrationProfile features
     calibrationProfile.addFeature(&velRMS512X);
     calibrationProfile.addFeature(&velRMS512Y);
@@ -411,15 +545,16 @@ void setUpProfiles()
     calibrationProfile.addFeature(&accelRMS512X);
     calibrationProfile.addFeature(&accelRMS512Y);
     calibrationProfile.addFeature(&accelRMS512Z);
-    //calibrationProfile
-    // Standard Press Monitoring
+
+    /*** Standard Press Monitoring ***/
     pressStandardProfile.addFeature(&accelRMS512Total);
     pressStandardProfile.addFeature(&accelRMS512X);
     pressStandardProfile.addFeature(&accelRMS512Y);
     pressStandardProfile.addFeature(&accelRMS512Z);
     pressStandardProfile.addFeature(&temperature);
     pressStandardProfile.addFeature(&audioDB4096);
-    // Standard Motor Monitoring
+
+    /*** Standard Motor Monitoring ***/
     motorStandardProfile.addFeature(&accelRMS512Total);
     motorStandardProfile.addFeature(&velRMS512X);
     motorStandardProfile.addFeature(&velRMS512Y);
@@ -427,122 +562,3 @@ void setUpProfiles()
     motorStandardProfile.addFeature(&temperature);
     motorStandardProfile.addFeature(&audioDB4096);
 }
-
-
-/* =============================================================================
-    Utilities
-============================================================================= */
-
-/***** Activate / deactivate features *****/
-
-/**
- * Activate the computation of a feature
- *
- * Also recursively activate the computation of all the feature's required
- * components (ie the sources of its computer).
- */
-void activateFeature(Feature* feature)
-{
-    feature->activate();
-    uint8_t compId = feature->getComputerId();
-    if (compId == 0)
-    {
-        return;
-    }
-    FeatureComputer* computer = getFeatureComputerById(compId);
-    if (computer != NULL)
-    {
-        // Activate the feature's computer
-        computer->activate();
-        // Activate the computer's sources
-        for (uint8_t i = 0; i < computer->getSourceCount(); ++i)
-        {
-            activateFeature(computer->getSource(i));
-        }
-    }
-    // TODO Activate sensors as well?
-}
-
-/**
- * Check whether the feature computation can be deactivated.
- *
- * A feature is deactivatable if:
- *  - it is not streaming
- *  - all it's receivers (computers who use it as source) are deactivated
- */
-bool isFeatureDeactivatable(Feature* feature)
-{
-    if (feature->isStreaming())
-    {
-        return false;
-    }
-    FeatureComputer* computer;
-    for (uint8_t i = 0; i < feature->getReceiverCount(); ++i)
-    {
-        computer = getFeatureComputerById(feature->getReceiverId(i));
-        if (computer != NULL && !computer->isActive())
-        {
-            return false;
-        }
-    }
-    return true;
-}
-
-/**
- * Deactivate the computation of a feature
- *
- * Will also disable the feature streaming.
- * Will also check if the computation of the feature's required components can
- * be deactivated.
- */
-void deactivateFeature(Feature* feature)
-{
-    feature->deactivate();
-    uint8_t compId = feature->getComputerId();
-    if (compId != 0)
-    {
-        FeatureComputer* computer = getFeatureComputerById(compId);
-        if (computer != NULL)
-        {
-            // If none of the computer's destinations are active, the computer
-            // can be deactivated too.
-            bool deactivatable = true;
-            for (uint8_t i = 0; i < computer->getDestinationCount(); ++i)
-            {
-                deactivatable &= (!computer->getDestination(i)->isActive());
-            }
-            if (deactivatable)
-            {
-                computer->deactivate();
-                //
-                Feature* antecedent;
-                for (uint8_t i = 0; i < computer->getSourceCount(); ++i)
-                {
-                    antecedent = computer->getSource(i);
-                    if (!isFeatureDeactivatable(antecedent))
-                    {
-                        deactivateFeature(antecedent);
-                    }
-                }
-            }
-        }
-    }
-    // TODO Deactivate sensors as well?
-}
-
-/**
- * Deactivate all features and feature computers
- */
-void deactivateAllFeatures()
-{
-    for (uint8_t i = 0; i < FEATURE_COUNT; ++i)
-    {
-        FEATURES[i]->deactivate();
-    }
-    for (uint8_t i = 0; i < FEATURE_COMPUTER_COUNT; ++i)
-    {
-        FEATURE_COMPUTERS[i]->deactivate();
-    }
-    // TODO Deactivate sensors as well?
-}
-

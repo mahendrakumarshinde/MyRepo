@@ -18,12 +18,13 @@ test mode */
 //#define UNITTEST
 #ifdef UNITTEST
   #include "UnitTest/Test_Component.h"
+  #include "UnitTest/Test_Configurator.h"
   #include "UnitTest/Test_FeatureClass.h"
   #include "UnitTest/Test_FeatureComputer.h"
+  #include "UnitTest/Test_FeatureGraph.h"
   #include "UnitTest/Test_FeatureProfile.h"
   #include "UnitTest/Test_Sensor.h"
   #include "UnitTest/Test_Utilities.h"
-  #include "UnitTest/UnitTestData.h"
 #endif
 
 //#define QUALITYTEST
@@ -33,10 +34,11 @@ test mode */
 
 
 /* =============================================================================
-    Firmware version
+    MAC Address and Firmware version
 ============================================================================= */
 
 const char FIRMWARE_VERSION[6] = "1.0.0";
+const char MAC_ADDRESS[18] = "94:54:93:0F:67:01";
 
 
 /* =============================================================================
@@ -78,20 +80,19 @@ void callback()
 
 /***** Begin *****/
 
-Conductor conductor(FIRMWARE_VERSION);
+Conductor conductor(FIRMWARE_VERSION, MAC_ADDRESS);
 
 void setup()
 {
+    // Setup USB first for Serial communication
+    iuUSB.setupHardware();
+    
     #ifdef UNITTEST
-        Serial.begin(115200);
-        delay(2000);
         memoryLog("UNIT TEST");
         Serial.println(' ');
     #else
         if (debugMode)
         {
-          Serial.begin(115200);
-          delay(2000);
           memoryLog("Start");
         }
         // Interfaces
@@ -124,7 +125,15 @@ void setup()
         setUpComputerSource();
         setUpProfiles();
         // Activate a profile by default
-        motorStandardProfile.activate();
+        activateProfile(&motorStandardProfile);
+        accelRMS512Total.enableOperationState();
+        accelRMS512Total.setThresholds(110, 130, 150);
+//        accelRMS512X.enableOperationState();
+//        accelRMS512Total.setThresholds(0.5, 1.2, 1.8);
+//        accelRMS512Y.enableOperationState();
+//        accelRMS512Total.setThresholds(0.5, 1.2, 1.8);
+//        accelRMS512Z.enableOperationState();
+//        accelRMS512Total.setThresholds(0.5, 1.2, 1.8);
         if (debugMode)
         {
             memoryLog(F("=> Succesfully configured default features"));

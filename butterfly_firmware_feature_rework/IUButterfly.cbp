@@ -147,8 +147,8 @@
 		<Unit filename="FeatureComputer.h" />
 		<Unit filename="FeatureGraph.cpp" />
 		<Unit filename="FeatureGraph.h" />
-		<Unit filename="FeatureStreamingGroup.cpp" />
-		<Unit filename="FeatureStreamingGroup.h" />
+		<Unit filename="FeatureProfile.cpp" />
+		<Unit filename="FeatureProfile.h" />
 		<Unit filename="IUBMD350.cpp" />
 		<Unit filename="IUBMD350.h" />
 		<Unit filename="IUBMP280.cpp" />
@@ -179,10 +179,11 @@
 		<Unit filename="Sensor.cpp" />
 		<Unit filename="Sensor.h" />
 		<Unit filename="UnitTest/Test_Component.h" />
+		<Unit filename="UnitTest/Test_Configurator.h" />
 		<Unit filename="UnitTest/Test_FeatureClass.h" />
 		<Unit filename="UnitTest/Test_FeatureComputer.h" />
 		<Unit filename="UnitTest/Test_FeatureGraph.h" />
-		<Unit filename="UnitTest/Test_FeatureStreamingGroup.h" />
+		<Unit filename="UnitTest/Test_FeatureProfile.h" />
 		<Unit filename="UnitTest/Test_Sensor.h" />
 		<Unit filename="UnitTest/Test_Utilities.h" />
 		<Unit filename="UnitTest/UnitTestData.h" />

@@ -36,6 +36,9 @@ class FeatureProfile
         /***** Communication *****/
         void stream(HardwareSerial *port, OperationState::option opState,
                     double timestamp);
+        void legacyStream(HardwareSerial *port, const char *macAddress,
+                          OperationState::option opState, float batteryLoad,
+                          double timestamp);
 
     protected:
         /***** Profile Designation *****/

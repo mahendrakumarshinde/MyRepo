@@ -26,9 +26,10 @@ class Conductor
         // Operation state shown on LED every X ms
         static const uint16_t showOpStateTimer = 500;
         /***** Constructors and destructor *****/
-        Conductor(const char* version);
+        Conductor(const char* version, const char* macAddress);
         virtual ~Conductor() {}
         char* getVersion() { return m_version; }
+        char* getMacAddress() { return m_macAddress; }
         /***** Hardware & power management *****/
         void sleep(uint32_t duration);
         void suspend(uint32_t duration);
@@ -58,6 +59,7 @@ class Conductor
         UsageMode::option getUsageMode() { return m_usageMode; }
 
     protected:
+        char m_macAddress[18];
         char m_version[6];  // eg: "1.0.0"
         /***** Hardware & power management *****/
         sleepMode m_sleepMode;

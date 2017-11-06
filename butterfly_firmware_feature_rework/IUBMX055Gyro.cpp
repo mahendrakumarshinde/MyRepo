@@ -123,11 +123,8 @@ void IUBMX055Gyro::setScale(IUBMX055Gyro::scaleOption scale)
     m_scale = scale;
     m_iuI2C->writeByte(ADDRESS, RANGE, m_scale);
 
-
     //TODO Implement
     m_resolution = 0;
-
-
 }
 
 /**

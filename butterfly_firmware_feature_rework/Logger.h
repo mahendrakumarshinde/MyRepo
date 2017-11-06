@@ -12,20 +12,20 @@
 
 #ifdef DEBUGMODE
     const bool setupDebugMode = false;
-    const bool loopDebugMode = true;
+    const bool loopDebugMode = false;
+    const bool featureDebugMode = false;
     const bool highVerbosity = false;
-    const bool showIntermediaryResults = true;
     const bool callbackDebugMode = false;
 #else
     const bool setupDebugMode = false;
     const bool loopDebugMode = false;
+    const bool featureDebugMode = false;
     const bool highVerbosity = false;
-    const bool showIntermediaryResults = false;
     const bool callbackDebugMode = false;
 #endif
 
-const bool debugMode = true;
-//    (setupDebugMode || loopDebugMode || callbackDebugMode);
+const bool debugMode = (setupDebugMode || loopDebugMode || 
+    featureDebugMode || callbackDebugMode);
 
 template <typename T>
 inline void debugPrint(T msg, bool endline = true)
@@ -33,7 +33,6 @@ inline void debugPrint(T msg, bool endline = true)
     #ifdef DEBUGMODE
     if (endline) { Serial.println(msg); }
     else { Serial.print(msg); }
-    Serial.flush();
     #endif
 }
 
@@ -44,7 +43,6 @@ inline void debugPrint(float msg, bool endline)
     #ifdef DEBUGMODE
     if (endline) { Serial.println(msg, 6); }
     else { Serial.print(msg, 6); }
-    Serial.flush();
     #endif
 }
 
@@ -62,7 +60,6 @@ inline void memoryLog()
     #ifdef DEBUGMODE
     Serial.print(F("Available Memory: "));
     Serial.println(freeMemory(), DEC);
-    Serial.flush();
     #endif
 }
 

@@ -23,7 +23,7 @@ Sensor::Sensor(const char* name, uint8_t destinationCount,
 
 /***** Sampling and resolution *****/
 
-void Sensor::setResolution(uint16_t resolution)
+void Sensor::setResolution(float resolution)
 {
     m_resolution = resolution;
     for (uint8_t i = 0; i < getDestinationCount(); ++i)
@@ -171,12 +171,7 @@ SynchronousSensor::SynchronousSensor(const char* name,
     m_usagePreset(SynchronousSensor::defaultUsagePreset),
     m_lastAcquisitionTime(0)
 {
-    for (uint8_t i = 0; i < getDestinationCount(); ++i)
-    {
-        /* TODO For now synchronous sensors sends 0 as sampling rates to their
-        receivers. Change this? Is it worth it? */
-        m_destinations[i]->setSamplingRate(0);
-    }
+    setSamplingPeriod(defaultSamplingPeriod);
 }
 
 
@@ -231,6 +226,18 @@ void SynchronousSensor::changeUsagePreset(Sensor::usagePreset usage)
             debugPrint(F("Unknown usagePreset "), false);
             debugPrint(usage);
         }
+    }
+}
+
+
+void SynchronousSensor::setSamplingPeriod(uint32_t samplingPeriod)
+{
+    m_samplingPeriod = samplingPeriod;
+    for (uint8_t i = 0; i < getDestinationCount(); ++i)
+    {
+        /* TODO For now synchronous sensors sends 0 as sampling rates to their
+        receivers. Change this? Is it worth it? */
+        m_destinations[i]->setSamplingRate(0);
     }
 }
 

@@ -5,7 +5,7 @@
     Constructors and destructors
 ============================================================================= */
 
-Conductor::Conductor(const char* version) :
+Conductor::Conductor(const char* version, const char* macAddress) :
     m_sleepMode(sleepMode::NONE),
     m_startTime(0),
     m_autoSleepDelay(60000),
@@ -21,6 +21,7 @@ Conductor::Conductor(const char* version) :
     m_streamingMode(StreamingMode::BLE)
 {
     strcpy(m_version, version);
+    strcpy(m_macAddress, macAddress);
 }
 
 
@@ -96,14 +97,14 @@ void Conductor::manageSleepCycles()
     }
     if (m_sleepMode == sleepMode::AUTO)
     {
-        if (m_startTime + m_autoSleepDelay > now)
+        if (m_startTime + m_autoSleepDelay < now)
         {
             sleep(m_sleepDuration);
         }
     }
     else if (m_sleepMode == sleepMode::PERIODIC)
     {
-        if (m_startTime + (m_cycleTime - m_sleepDuration) > now)
+        if (m_startTime + (m_cycleTime - m_sleepDuration) < now)
         {
             suspend(m_sleepDuration);
             m_startTime = millis();
@@ -319,10 +320,7 @@ void Conductor::computeFeatures()
     // Run feature computers
     for (uint8_t i = 0; i < FEATURE_COMPUTER_COUNT; ++i)
     {
-        if (FEATURE_COMPUTERS[i]->isActive())
-        {
-            FEATURE_COMPUTERS[i]->compute();
-        }
+        FEATURE_COMPUTERS[i]->compute();
     }
 }
 
@@ -354,7 +352,7 @@ void Conductor::updateOperationState()
     m_operationState = newState;
     // Light the LED to show the state
     uint32_t now = millis();
-    if (m_lastLitLedTime > now || m_lastLitLedTime + showOpStateTimer > now)
+    if (m_lastLitLedTime > now || m_lastLitLedTime + showOpStateTimer < now)
     {
         iuRGBLed.showOperationState(m_operationState);
         m_lastLitLedTime = now;
@@ -393,10 +391,16 @@ void Conductor::streamFeatures()
             }
     }
     double timestamp = getDatetime();
+    float batteryLoad = iuBattery.getBatteryLoad();
     for (uint8_t i = 0; i < FEATURE_PROFILE_COUNT; ++i)
     {
-        FEATURE_PROFILES[i]->stream(port, m_operationState, timestamp);
+        // TODO Switch to new streaming format once the backend is ready
+//        FEATURE_PROFILES[i]->stream(port, m_operationState, timestamp);
+        FEATURE_PROFILES[i]->legacyStream(port, m_macAddress, m_operationState,
+                                          batteryLoad, timestamp);
     }
+
+
 }
 
 
@@ -425,6 +429,7 @@ void Conductor::changeAcquisitionMode(AcquisitionMode::option mode)
     {
         case AcquisitionMode::RAWDATA:
             iuRGBLed.changeColor(IURGBLed::CYAN);
+            beginDataAcquisition();
             break;
         case AcquisitionMode::FEATURE:
             iuRGBLed.changeColor(IURGBLed::BLUE);
@@ -493,7 +498,7 @@ void Conductor::changeUsageMode(UsageMode::option usage)
     {
         case UsageMode::CALIBRATION:
             deactivateAllProfiles();
-            calibrationProfile.activate();
+            activateProfile(&calibrationProfile);
             iuRGBLed.changeColor(IURGBLed::CYAN);
             iuRGBLed.lock();
             msg = "calibration";
@@ -505,7 +510,15 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             iuRGBLed.unlock();
             iuRGBLed.changeColor(IURGBLed::BLUE);
             deactivateAllProfiles();
-            motorStandardProfile.activate();
+            activateProfile(&motorStandardProfile);
+            accelRMS512Total.enableOperationState();
+            accelRMS512Total.setThresholds(110, 130, 150);
+//            accelRMS512X.enableOperationState();
+//            accelRMS512Total.setThresholds(0.05, 1.2, 1.8);
+//            accelRMS512Y.enableOperationState();
+//            accelRMS512Total.setThresholds(0.05, 1.2, 1.8);
+//            accelRMS512Z.enableOperationState();
+//            accelRMS512Total.setThresholds(0.05, 1.2, 1.8);
             iuAccelerometer.resetScale();
             msg = "operation";
             break;

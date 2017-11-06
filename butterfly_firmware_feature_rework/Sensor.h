@@ -42,8 +42,8 @@ class Sensor : public Component
         /***** Sampling and resolution *****/
         virtual bool isAsynchronous() { return false; }
         virtual void setCallbackRate(uint16_t callbackRate) {} // For asynchronous sensors
-        virtual void setResolution(uint16_t resolution);
-        virtual uint16_t getResolution() { return m_resolution; }
+        virtual void setResolution(float resolution);
+        virtual float getResolution() { return m_resolution; }
         /***** Data acquisition *****/
         virtual void acquireData() {}
         virtual void readData() {}  // May be defined in Child class
@@ -59,7 +59,7 @@ class Sensor : public Component
         uint8_t m_destinationCount;
         Feature *m_destinations[maxDestinationCount];
         /***** Sampling and resolution *****/
-        uint16_t m_resolution;
+        float m_resolution;
 };
 
 
@@ -137,8 +137,7 @@ class SynchronousSensor : public Sensor
         virtual void switchToHighUsage() { m_usagePreset = Sensor::P_HIGH; }
         /***** Sampling and resolution *****/
         virtual bool isAsynchronous() { return false; }
-        virtual void setSamplingPeriod(uint32_t samplingPeriod)
-            { m_samplingPeriod = samplingPeriod; }
+        virtual void setSamplingPeriod(uint32_t samplingPeriod);
         virtual uint32_t getSamplingPeriod() { return m_samplingPeriod; }
         virtual float getSamplingRate()
             { return 1.0f / (float) m_samplingPeriod; }

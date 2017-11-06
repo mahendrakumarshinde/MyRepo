@@ -173,18 +173,32 @@ void Feature::setThresholds(float normalVal, float warningVal, float dangerVal)
 bool Feature::isReadyToRecord(uint8_t sectionCount)
 {
     uint8_t k;
-    for (uint8_t i = m_recordIndex; i < m_recordIndex + sectionCount; ++i)
+    if (m_receiverCount == 0)
     {
-        k = i % m_sectionCount;
-        if (m_locked[k] || m_published[k])
+        for (uint8_t i = m_recordIndex; i < m_recordIndex + sectionCount; ++i)
         {
-            return false;
-        }
-        for (uint8_t j = 0; j < m_receiverCount; ++j)
-        {
-            if (!m_acknowledged[k][j])
+            if (m_locked[k])
             {
                 return false;
+            }
+            m_published[k] = false;
+        }
+    }
+    else
+    {
+        for (uint8_t i = m_recordIndex; i < m_recordIndex + sectionCount; ++i)
+        {
+            k = i % m_sectionCount;
+            if (m_locked[k] || m_published[k])
+            {
+                return false;
+            }
+            for (uint8_t j = 0; j < m_receiverCount; ++j)
+            {
+                if (!m_acknowledged[k][j])
+                {
+                    return false;
+                }
             }
         }
     }
@@ -397,12 +411,6 @@ void FloatFeature::addFloatValue(float value)
 {
     m_values[m_fillingIndex] = value;
     incrementFillingIndex();
-    if (loopDebugMode && showIntermediaryResults && isComputedFeature())
-    {
-        debugPrint(getName(), false);
-        debugPrint(": ", false);
-        debugPrint(value);
-    }
 }
 
 /**
@@ -416,7 +424,7 @@ float FloatFeature::getValueToCompareToThresholds()
     {
         total += m_values[i];
     }
-    return total / (float) m_sectionSize;
+    return m_resolution * total / (float) m_sectionSize;
 }
 
 /**
@@ -459,12 +467,6 @@ void Q15Feature::addQ15Value(q15_t value)
 {
     m_values[m_fillingIndex] = value;
     incrementFillingIndex();
-    if (loopDebugMode && showIntermediaryResults && isComputedFeature())
-    {
-        debugPrint(getName(), false);
-        debugPrint(": ", false);
-        debugPrint(value);
-    }
 }
 
 
@@ -494,10 +496,4 @@ void Q31Feature::addQ31Value(q31_t value)
 {
     m_values[m_fillingIndex] = value;
     incrementFillingIndex();
-    if (loopDebugMode && showIntermediaryResults && isComputedFeature())
-    {
-        debugPrint(getName(), false);
-        debugPrint(": ", false);
-        debugPrint(value);
-    }
 }

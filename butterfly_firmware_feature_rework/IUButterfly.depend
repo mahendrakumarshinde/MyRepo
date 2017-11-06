@@ -246,19 +246,19 @@
 1497876182 /home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/cores/stm32l4/Uart.h
 	"HardwareSerial.h"
 
-1508458376 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUSerial.h
+1509660637 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUSerial.h
 	<Arduino.h>
 	"Keywords.h"
 	"Component.h"
 
-1508189955 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/Keywords.h
+1509660637 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/Keywords.h
 	<Arduino.h>
 
-1508542747 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/Component.h
+1509660637 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/Component.h
 	"Keywords.h"
 	"Logger.h"
 
-1508522207 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/Logger.h
+1509929894 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/Logger.h
 	<Arduino.h>
 	<ArduinoUnit.h>
 	<MemoryFree.h>
@@ -283,11 +283,11 @@
 
 1504731099 /home/pat/workspace/arduino/libraries/Arduino-MemoryFree/MemoryFree.h
 
-1508192857 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMD350.h
+1509660637 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMD350.h
 	<Arduino.h>
 	"IUSerial.h"
 
-1508189955 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUESP8285.h
+1509660637 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUESP8285.h
 	<Arduino.h>
 	"Host_WiFiserial.h"
 	"IUSerial.h"
@@ -661,7 +661,7 @@
 	"../JsonVariant.hpp"
 	"JsonSerializer.hpp"
 
-1508458678 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/FeatureClass.h
+1509660637 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/FeatureClass.h
 	<Arduino.h>
 	<ArduinoJson.h>
 	<arm_math.h>
@@ -706,7 +706,7 @@
 	<ArduinoJson.h>
 	"FeatureClass.h"
 
-1508189955 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUI2C.h
+1509660637 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUI2C.h
 	<Arduino.h>
 	"Wire.h"
 	"Utilities.h"
@@ -716,42 +716,42 @@
 	"Stream.h"
 	"variant.h"
 
-1508458479 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/Utilities.h
+1509660637 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/Utilities.h
 	<Arduino.h>
 	<arm_math.h>
 	"Logger.h"
 
-1508453485 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBattery.h
+1509660637 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBattery.h
 	<Arduino.h>
 	"Sensor.h"
 	"IUI2C.h"
 
-1508460069 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/Sensor.h
+1509730735 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/Sensor.h
 	<ArduinoJson.h>
 	"Component.h"
 	"FeatureClass.h"
 
-1508189955 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMP280.h
+1509660637 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMP280.h
 	<Arduino.h>
 	"Sensor.h"
 	"IUI2C.h"
 
-1508448157 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMX055Acc.h
+1509660637 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMX055Acc.h
 	<Arduino.h>
 	"Sensor.h"
 	"IUI2C.h"
 
-1508448202 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMX055Gyro.h
+1509660637 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMX055Gyro.h
 	<Arduino.h>
 	"Sensor.h"
 	"IUI2C.h"
 
-1508439837 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMX055Mag.h
+1509660637 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMX055Mag.h
 	<Arduino.h>
 	"Sensor.h"
 	"IUI2C.h"
 
-1508440002 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUCAMM8Q.h
+1509660637 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUCAMM8Q.h
 	<Arduino.h>
 	<GNSS.h>
 	"Sensor.h"
@@ -766,7 +766,7 @@
 	<stdbool.h>
 	<string.h>
 
-1508440073 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUI2S.h
+1509660637 /home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUI2S.h
 	<Arduino.h>
 	<IUButterflyI2S.h>
 	<arm_math.h>
@@ -796,46 +796,46 @@
 1508189955 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/FeatureStreamingGroup.cpp
 	"FeatureStreamingGroup.h"
 
-1508440731 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBattery.cpp
+1509660637 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBattery.cpp
 	"IUBattery.h"
 
-1508540997 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMD350.cpp
+1509660637 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMD350.cpp
 	"IUBMD350.h"
 
-1508541012 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMP280.cpp
+1509660637 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMP280.cpp
 	"IUBMP280.h"
 
-1508541066 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMX055Acc.cpp
+1509660637 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMX055Acc.cpp
 	"IUBMX055Acc.h"
 
-1508448188 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMX055Gyro.cpp
+1509660637 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMX055Gyro.cpp
 	"IUBMX055Gyro.h"
 
-1508439973 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMX055Mag.cpp
+1509660637 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUBMX055Mag.cpp
 	"IUBMX055Mag.h"
 
-1508189955 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUCAMM8Q.cpp
+1509660637 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUCAMM8Q.cpp
 	"IUCAMM8Q.h"
 
-1508189955 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUESP8285.cpp
+1509660637 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUESP8285.cpp
 	"IUESP8285.h"
 
-1508200029 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUI2C.cpp
+1509660637 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUI2C.cpp
 	"IUI2C.h"
 
-1508541066 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUI2S.cpp
+1509660637 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUI2S.cpp
 	"IUI2S.h"
 
 1508279374 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IURGBLed.cpp
 	"IURGBLed.h"
 
-1508189955 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUSerial.cpp
+1509660637 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/IUSerial.cpp
 	"IUSerial.h"
 
 1508460094 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/Sensor.cpp
 	"Sensor.h"
 
-1508541064 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/Utilities.cpp
+1509660637 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/Utilities.cpp
 	"Utilities.h"
 
 1508520430 source:/home/pat/workspace/productivity/butterfly_firmware_feature_rework/main.cpp
