@@ -85,12 +85,13 @@ Conductor conductor(FIRMWARE_VERSION, MAC_ADDRESS);
 void setup()
 {
     // Setup USB first for Serial communication
-    iuUSB.setupHardware();
-    
     #ifdef UNITTEST
+        Serial.begin(115200);
+        delay(2000);
         memoryLog("UNIT TEST");
         Serial.println(' ');
     #else
+        iuUSB.setupHardware();
         if (debugMode)
         {
           memoryLog("Start");
