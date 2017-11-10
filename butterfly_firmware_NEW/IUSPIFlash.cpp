@@ -5,6 +5,8 @@
     Constructors and destructors
 ============================================================================= */
 
+uint8_t IUSPIFlash::ID_BYTES[IUSPIFlash::ID_BYTE_COUNT] = {0xEF, 0x40, 0x14};
+
 IUSPIFlash::IUSPIFlash() :
     Component(),
     m_busy(false)
@@ -55,16 +57,16 @@ void IUSPIFlash::hardReset()
  * Return the index of the sector / block containing the given page
  */
 uint16_t IUSPIFlash::getBlockIndex(pageBlockTypes blockType,
-                                   uint16_t pageNumber)
+                                   uint16_t pageIndex)
 {
     switch (blockType)
     {
         case SECTOR:
-            return pageNumber / SECTOR_PAGE_COUNT;
+            return pageIndex / SECTOR_PAGE_COUNT;
         case BLOCK_32KB:
-            return pageNumber / BLOCK_32KB_PAGE_COUNT;
+            return pageIndex / BLOCK_32KB_PAGE_COUNT;
         case BLOCK_64KB:
-            return pageNumber / BLOCK_64KB_PAGE_COUNT;
+            return pageIndex / BLOCK_64KB_PAGE_COUNT;
         default:
             if (debugMode)
             {
@@ -144,10 +146,10 @@ void IUSPIFlash::eraseChip(bool wait)
  *
  * @param blockType The type of page block to erase (pages can only be erased by
  *  sector or block)
- * @param pageNumber The page number
+ * @param pageIndex The page number
  */
 void IUSPIFlash::erasePages(IUSPIFlash::pageBlockTypes blockType,
-                            uint16_t pageNumber)
+                            uint16_t pageIndex)
 {
     uint8_t eraseCommand;
     switch (blockType)
@@ -168,7 +170,7 @@ void IUSPIFlash::erasePages(IUSPIFlash::pageBlockTypes blockType,
             }
             return;
     }
-    uint32_t address = getAddressFromPage(pageNumber);
+    uint32_t address = getAddressFromPage(pageIndex);
     beginTransaction();
     SPI.transfer(CMD_WRITE_ENABLE);
     digitalWrite(CSPIN, HIGH);
@@ -189,11 +191,11 @@ void IUSPIFlash::erasePages(IUSPIFlash::pageBlockTypes blockType,
  * A page contains 256 bytes, ie 256 chars or uint8_t.
  *
  * @param content A pointer to a byte array of length 256
- * @param pageNumber The page number
+ * @param pageIndex The page number
  */
-void IUSPIFlash::programPage(uint8_t *content, uint16_t pageNumber)
+void IUSPIFlash::programPage(uint8_t *content, uint16_t pageIndex)
 {
-    uint32_t address = getAddressFromPage(pageNumber);
+    uint32_t address = getAddressFromPage(pageIndex);
     // Enable write
     beginTransaction();
     SPI.transfer(CMD_WRITE_ENABLE);
@@ -219,15 +221,15 @@ void IUSPIFlash::programPage(uint8_t *content, uint16_t pageNumber)
  *
  * @param content A pointer to a byte array, to receive the
  *  content of the read pages. Its length should be pageCount * 256.
- * @param pageNumber The page number
+ * @param pageIndex The page number
  * @param pageCount The number of successive pages to read
  * @param highSpeed If true, function will use the high speed read flash
  *  command, else will use the default speed read flash command.
  */
-void IUSPIFlash::readPages(uint8_t *content, uint16_t pageNumber,
+void IUSPIFlash::readPages(uint8_t *content, uint16_t pageIndex,
                            const uint16_t pageCount, bool highSpeed)
 {
-    uint32_t address = getAddressFromPage(pageNumber);
+    uint32_t address = getAddressFromPage(pageIndex);
     beginTransaction();
     if (highSpeed)
     {
@@ -317,11 +319,11 @@ void IUSPIFlash::waitForAvailability()
 /**
  * Convert a page number to a 24-bit address
  *
- * @param pageNumber The page number
+ * @param pageIndex The page number
  */
-uint32_t IUSPIFlash::getAddressFromPage(uint16_t pageNumber)
+uint32_t IUSPIFlash::getAddressFromPage(uint16_t pageIndex)
 {
-  return ((uint32_t) pageNumber) << 8;
+  return ((uint32_t) pageIndex) << 8;
 }
 
 /**

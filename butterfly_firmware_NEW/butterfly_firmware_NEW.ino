@@ -15,7 +15,7 @@
 /* Comment / Uncomment the "define" lines to toggle / untoggle unit or quality
 test mode */
 
-#define UNITTEST
+//#define UNITTEST
 #ifdef UNITTEST
   #include "UnitTest/Test_Component.h"
   #include "UnitTest/Test_Configurator.h"
@@ -23,14 +23,14 @@ test mode */
   #include "UnitTest/Test_FeatureComputer.h"
   #include "UnitTest/Test_FeatureGraph.h"
   #include "UnitTest/Test_FeatureProfile.h"
-//  #include "UnitTest/Test_IUSPIFlash.h"
   #include "UnitTest/Test_Sensor.h"
   #include "UnitTest/Test_Utilities.h"
 #endif
 
-//#define QUALITYTEST
-#ifdef QUALITYTEST
-  #include "QualityTest/QA_IUBMX055.h"
+#define INTEGRATEDTEST
+#ifdef INTEGRATEDTEST
+  #include "IntegratedTest/IT_IUBMX055.h"
+  #include "IntegratedTest/IT_IUSPIFlash.h"
 #endif
 
 
@@ -86,10 +86,10 @@ Conductor conductor(FIRMWARE_VERSION, MAC_ADDRESS);
 void setup()
 {
     // Setup USB first for Serial communication
-    #ifdef UNITTEST
+    #if defined(UNITTEST) || defined(INTEGRATEDTEST)
         Serial.begin(115200);
         delay(2000);
-        memoryLog("UNIT TEST");
+        memoryLog("TESTING");
         Serial.println(' ');
     #else
         iuUSB.setupHardware();
@@ -187,6 +187,9 @@ void setup()
 void loop()
 {
     #ifdef UNITTEST
+        Test::run();
+    #elif defined(INTEGRATEDTEST)
+//        IUSPIFlash__test();
         Test::run();
     #else
         if (loopDebugMode)

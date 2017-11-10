@@ -12,9 +12,10 @@
  *
  * Component:
  *  Name:
- *    Flash memory
+ *    Winbond  W25Q80BLUX1G flash memory
  *  Description:
- *    1MB Flash Memory, accessible through SPI
+ *    1MB SPI Flash Memory
+ *    Flash id is on 3 bytes: 0xEF, 0x40, 0x14
  *    Memory is organised in:
  *    - pages: Each page contain 256B, ie 2048bits.
  *    - sectors: each sector is 4kB, which is 16 pages
@@ -28,7 +29,7 @@ class IUSPIFlash : public Component
         /* Highest page number is:
          - 0xFFFF = 65535 for 16MB = 128Mbit flash
          - 0x0EFF =  4095 for 1MB = 8Mbit flash */
-        uint16_t MAX_PAGE_NUMBER = 0x0EFF;
+        static const uint16_t MAX_PAGE_NUMBER = 0x0EFF;
         static const uint8_t STATUS_WIP             = 1;
         static const uint8_t STATUS_WEL             = 2;
         static const uint8_t CMD_WRITE_STATUS_REG   = 0x01;
@@ -46,6 +47,9 @@ class IUSPIFlash : public Component
         static const uint8_t CMD_POWER_DOWN         = 0xB9;
         static const uint8_t CMD_CHIP_ERASE         = 0xC7;
         static const uint8_t CMD_BLOCK64K_ERASE     = 0xD8;
+        // ID bytes
+        static const uint8_t ID_BYTE_COUNT = 3;
+        static uint8_t ID_BYTES[ID_BYTE_COUNT];
         // Page group types
         enum pageBlockTypes : uint8_t {SECTOR,
                                        BLOCK_32KB,
@@ -61,15 +65,15 @@ class IUSPIFlash : public Component
         virtual void setupHardware();
         void hardReset();
         /***** Utility function *****/
-        uint16_t getBlockIndex(pageBlockTypes blockType, uint16_t pageNumber);
+        uint16_t getBlockIndex(pageBlockTypes blockType, uint16_t pageIndex);
         uint16_t getBlockFirstPage(pageBlockTypes blockType,
                                    uint16_t blockIndex);
         /***** Read / write functions *****/
         void readId(uint8_t *destination, uint8_t destinationCount);
         void eraseChip(bool wait);
-        void erasePages(pageBlockTypes blockType, uint16_t pageNumber);
-        void programPage(uint8_t *content, uint16_t pageNumber);
-        void readPages(uint8_t *content, uint16_t pageNumber,
+        void erasePages(pageBlockTypes blockType, uint16_t pageIndex);
+        void programPage(uint8_t *content, uint16_t pageIndex);
+        void readPages(uint8_t *content, uint16_t pageIndex,
                        const uint16_t pageCount, bool highSpeed);
 
     protected:
@@ -79,7 +83,7 @@ class IUSPIFlash : public Component
         void endTransaction(bool waitForCompletion=false);
         uint8_t readStatus();
         void waitForAvailability();
-        uint32_t getAddressFromPage(uint16_t pageNumber);
+        uint32_t getAddressFromPage(uint16_t pageIndex);
         uint16_t getPageFromAddress(uint32_t addr);
 
 };

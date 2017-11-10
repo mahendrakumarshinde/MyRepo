@@ -171,6 +171,10 @@
 		<Unit filename="IUI2S.h" />
 		<Unit filename="IURGBLed.cpp" />
 		<Unit filename="IURGBLed.h" />
+		<Unit filename="IURTDExtension.cpp" />
+		<Unit filename="IURTDExtension.h" />
+		<Unit filename="IUSPIFlash.cpp" />
+		<Unit filename="IUSPIFlash.h" />
 		<Unit filename="IUSerial.cpp" />
 		<Unit filename="IUSerial.h" />
 		<Unit filename="Keywords.h" />
@@ -184,6 +188,7 @@
 		<Unit filename="UnitTest/Test_FeatureComputer.h" />
 		<Unit filename="UnitTest/Test_FeatureGraph.h" />
 		<Unit filename="UnitTest/Test_FeatureProfile.h" />
+		<Unit filename="UnitTest/Test_IUSPIFlash.h" />
 		<Unit filename="UnitTest/Test_Sensor.h" />
 		<Unit filename="UnitTest/Test_Utilities.h" />
 		<Unit filename="UnitTest/UnitTestData.h" />

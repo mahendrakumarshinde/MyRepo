@@ -6,7 +6,7 @@
 #include "IUSerial.h"
 #include "IUBMD350.h"
 #include "IUESP8285.h"
-//#include "IUSPIFlash.h"
+#include "IUSPIFlash.h"
 #include "IURGBLed.h"
 #include "FeatureGraph.h"
 
