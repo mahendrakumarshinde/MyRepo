@@ -91,4 +91,8 @@ class IUBMX055Mag : public AsynchronousSensor
 
 };
 
+/***** Instantiation *****/
+
+extern IUBMX055Mag iuMagnetometer;
+
 #endif // IUBMX055MAG_H

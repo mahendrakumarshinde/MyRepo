@@ -20,9 +20,13 @@ class IURGBLed : public Component
 {
     public:
         /***** Preset values and default settings *****/
-        enum PIN : uint8_t {RED_PIN = A5,
-                            GREEN_PIN = A3,
-                            BLUE_PIN = A0};  // A0 on v.03
+        static const uint8_t RED_PIN = A5;
+        static const uint8_t GREEN_PIN = A3;
+        #ifdef BUTTERFLY_V04
+            static const uint8_t BLUE_PIN = A4;
+        #else
+            static const uint8_t BLUE_PIN = A0;
+        #endif
         enum LEDColors : uint8_t {RED,
                                   BLUE,
                                   GREEN,

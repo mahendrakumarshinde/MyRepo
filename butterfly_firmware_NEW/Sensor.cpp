@@ -5,7 +5,12 @@
     Generic Sensor class
 ============================================================================= */
 
-/***** Constructors and destructors *****/
+uint8_t Sensor::instanceCount = 0;
+
+Sensor *Sensor::instances[Sensor::MAX_INSTANCE_COUNT] = {
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+
+/***** Core *****/
 
 Sensor::Sensor(const char* name, uint8_t destinationCount,
                Feature *destination0, Feature *destination1,
@@ -18,6 +23,50 @@ Sensor::Sensor(const char* name, uint8_t destinationCount,
     m_destinations[1] = destination1;
     m_destinations[2] = destination2;
     setResolution(1); // Default resolution
+    // Instance registration
+    if (debugMode)
+    {
+        Sensor *existing = getInstanceByName(name);
+        if (existing != NULL)
+        {
+            debugPrint(F("WARNING - Duplicate sensor name "), false);
+            debugPrint(name);
+        }
+        if (instanceCount >= MAX_INSTANCE_COUNT)
+        {
+            raiseException("Max sensor count exceeded");
+        }
+    }
+    m_instanceIdx = instanceCount;
+    instances[m_instanceIdx] = this;
+    instanceCount++;
+}
+
+Sensor::~Sensor()
+{
+    instances[m_instanceIdx] = NULL;
+    for (uint8_t i = m_instanceIdx + 1; i < instanceCount; ++i)
+    {
+        instances[i]->m_instanceIdx--;
+        instances[i -1] = instances[i];
+    }
+    instances[instanceCount] = NULL;
+    instanceCount--;
+}
+
+Sensor *Sensor::getInstanceByName(const char *name)
+{
+    for (uint8_t i = 0; i < instanceCount; ++i)
+    {
+        if (instances[i] != NULL)
+        {
+            if(instances[i]->isNamed(name))
+            {
+                return instances[i];
+            }
+        }
+    }
+    return NULL;
 }
 
 

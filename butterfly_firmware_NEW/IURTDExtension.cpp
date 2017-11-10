@@ -1,5 +1,6 @@
 #include "IURTDExtension.h"
 
+#ifdef RTD_DAUGHTER_BOARD // Optionnal hardware
 
 /* =============================================================================
     Constructors and destructors
@@ -103,3 +104,12 @@ bool IURTDExtension::readFromExpanderRegister(uint8_t exRegister,
     // FIXME above line returns the error "stray '\33' in program"
     return true;
 }
+
+
+/* =============================================================================
+    Instanciation
+============================================================================= */
+
+extern IURTDExtension iuRTDExtension(&iuI2C, "RTD", &rtdTemp);
+
+#endif // RTD_DAUGHTER_BOARD

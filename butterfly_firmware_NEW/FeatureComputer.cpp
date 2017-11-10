@@ -5,6 +5,13 @@
     Feature Computer Base Class
 ============================================================================= */
 
+uint8_t FeatureComputer::instanceCount = 0;
+
+FeatureComputer *FeatureComputer::instances[
+    FeatureComputer::MAX_INSTANCE_COUNT] = {
+        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+
 FeatureComputer::FeatureComputer(uint8_t id, uint8_t destinationCount,
                                  Feature *destination0, Feature *destination1,
                                  Feature *destination2, Feature *destination3,
@@ -23,6 +30,50 @@ FeatureComputer::FeatureComputer(uint8_t id, uint8_t destinationCount,
     {
         m_destinations[i]->setComputerId(m_id);
     }
+    // Instance registration
+    if (debugMode)
+    {
+        FeatureComputer *existing = getInstanceById(id);
+        if (existing != NULL)
+        {
+            debugPrint(F("WARNING - Duplicate computer id "), false);
+            debugPrint(id);
+        }
+        if (instanceCount >= MAX_INSTANCE_COUNT)
+        {
+            raiseException("Max computer count exceeded");
+        }
+    }
+    m_instanceIdx = instanceCount;
+    instances[m_instanceIdx] = this;
+    instanceCount++;
+}
+
+FeatureComputer::~FeatureComputer()
+{
+    instances[m_instanceIdx] = NULL;
+    for (uint8_t i = m_instanceIdx + 1; i < instanceCount; ++i)
+    {
+        instances[i]->m_instanceIdx--;
+        instances[i -1] = instances[i];
+    }
+    instances[instanceCount] = NULL;
+    instanceCount--;
+}
+
+FeatureComputer *FeatureComputer::getInstanceById(const uint8_t id)
+{
+    for (uint8_t i = 0; i < instanceCount; ++i)
+    {
+        if (instances[i] != NULL)
+        {
+            if(instances[i]->getId() == id)
+            {
+                return instances[i];
+            }
+        }
+    }
+    return NULL;
 }
 
 
@@ -448,4 +499,84 @@ void AudioDBComputer::m_specializedCompute()
         debugPrint(": ", false);
         debugPrint(result * m_sources[0]->getResolution());
     }
+}
+
+
+/* =============================================================================
+    Instanciations
+============================================================================= */
+
+// Shared computation space
+q15_t allocatedFFTSpace[1024];
+
+// Note that computer_id 0 is reserved to designate an absence of computer.
+
+/***** Accelerometer Features *****/
+
+// 128 sample long accel computers
+SignalRMSComputer accel128ComputerX(1,&accelRMS128X);
+SignalRMSComputer accel128ComputerY(2, &accelRMS128Y);
+SignalRMSComputer accel128ComputerZ(3, &accelRMS128Z);
+MultiSourceSumComputer accelRMS128TotalComputer(4, &accelRMS128Total, false,
+                                                true);
+
+
+// 512 sample long accel computers
+SectionSumComputer accel512ComputerX(5, 1, &accelRMS512X, NULL, NULL, true);
+SectionSumComputer accel512ComputerY(6, 1, &accelRMS512Y, NULL, NULL, true);
+SectionSumComputer accel512ComputerZ(7, 1, &accelRMS512Z, NULL, NULL, true);
+SectionSumComputer accel512TotalComputer(8, 1, &accelRMS512Total, NULL, NULL,
+                                         true);
+
+
+// Computers for FFT feature from 512 sample long accel data
+Q15FFTComputer accelFFTComputerX(9,
+                                 &accelReducedFFTX,
+                                 &velRMS512X,
+                                 &dispRMS512X,
+                                 allocatedFFTSpace);
+Q15FFTComputer accelFFTComputerY(10,
+                                 &accelReducedFFTY,
+                                 &velRMS512Y,
+                                 &dispRMS512Y,
+                                 allocatedFFTSpace);
+Q15FFTComputer accelFFTComputerZ(11,
+                                 &accelReducedFFTZ,
+                                 &velRMS512Z,
+                                 &dispRMS512Z,
+                                 allocatedFFTSpace);
+
+
+/***** Audio Features *****/
+
+AudioDBComputer audioDB2048Computer(12, &audioDB2048);
+AudioDBComputer audioDB4096Computer(13, &audioDB4096);
+
+
+/***** Set up sources *****/
+
+/**
+ * Add sources to computer instances (must be called during main setup)
+ */
+void setUpComputerSources()
+{
+    // From acceleration sensor data
+    accel128ComputerX.addSource(&accelerationX, 1);
+    accel128ComputerY.addSource(&accelerationY, 1);
+    accel128ComputerZ.addSource(&accelerationZ, 1);
+    accelRMS128TotalComputer.addSource(&accelRMS128X, 1);
+    accelRMS128TotalComputer.addSource(&accelRMS128Y, 1);
+    accelRMS128TotalComputer.addSource(&accelRMS128Z, 1);
+    // Aggregate acceleration RMS
+    accel512ComputerX.addSource(&accelRMS128X, 1);
+    accel512ComputerY.addSource(&accelRMS128Y, 1);
+    accel512ComputerZ.addSource(&accelRMS128Z, 1);
+    accel512TotalComputer.addSource(&accelRMS128Total, 1);
+    // Acceleration FFTs
+    accelFFTComputerX.addSource(&accelerationX, 4);
+    accelFFTComputerY.addSource(&accelerationY, 4);
+    accelFFTComputerZ.addSource(&accelerationZ, 4);
+    // Audio DB
+    audioDB2048Computer.addSource(&audio, 1);
+    audioDB4096Computer.addSource(&audio, 2);
 }

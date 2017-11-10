@@ -1,6 +1,8 @@
 #ifndef IURTDEXTENSION_H
 #define IURTDEXTENSION_H
 
+#ifdef RTD_DAUGHTER_BOARD // Optionnal hardware
+
 #include <Arduino.h>
 #include "Sensor.h"
 #include "IUI2C.h"
@@ -52,5 +54,12 @@ class IURTDExtension : public SynchronousSensor
         bool readFromExpanderRegister(uint8_t exRegister, uint8_t *destination,
                                       uint8_t byteCount);
 };
+
+
+/***** Instanciation *****/
+
+extern IURTDExtension iuRTDExtension;
+
+#endif // RTD_DAUGHTER_BOARD
 
 #endif // IURTDEXTENSION_H

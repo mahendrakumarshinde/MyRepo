@@ -37,16 +37,16 @@ Conductor::Conductor(const char* version, const char* macAddress) :
  */
 void Conductor::sleep(uint32_t duration)
 {
-    for (uint8_t i = 0; i < SENSOR_COUNT; ++i)
+    for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
     {
-        SENSORS[i]->sleep();
+        Sensor::instances[i]->sleep();
     }
     iuRGBLed.changeColor(IURGBLed::SLEEP);
     STM32.stop(duration);
     iuRGBLed.changeColor(IURGBLed::BLUE);
-    for (uint8_t i = 0; i < SENSOR_COUNT; ++i)
+    for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
     {
-        SENSORS[i]->wakeUp();
+        Sensor::instances[i]->wakeUp();
     }
 }
 
@@ -66,16 +66,16 @@ void Conductor::suspend(uint32_t duration)
     {
         iuWiFi.suspend();
     }
-    for (uint8_t i = 0; i < SENSOR_COUNT; ++i)
+    for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
     {
-        SENSORS[i]->suspend();
+        Sensor::instances[i]->suspend();
     }
     iuRGBLed.changeColor(IURGBLed::SLEEP);
     STM32.stop(duration * 1000);
     iuRGBLed.changeColor(IURGBLed::BLUE);
-    for (uint8_t i = 0; i < SENSOR_COUNT; ++i)
+    for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
     {
-        SENSORS[i]->wakeUp();
+        Sensor::instances[i]->wakeUp();
     }
 }
 
@@ -171,6 +171,153 @@ bool Conductor::configure(JsonVariant &my_config)
     return true;
 }
 
+/**
+ * Activate the computation of a feature
+ *
+ * Also recursively activate the computation of all the feature's required
+ * components (ie the sources of its computer).
+ */
+void Conductor::activateFeature(Feature* feature)
+{
+    feature->activate();
+    uint8_t compId = feature->getComputerId();
+    if (compId == 0)
+    {
+        return;
+    }
+    FeatureComputer* computer = FeatureComputer::getInstanceById(compId);
+    if (computer != NULL)
+    {
+        // Activate the feature's computer
+        computer->activate();
+        // Activate the computer's sources
+        for (uint8_t i = 0; i < computer->getSourceCount(); ++i)
+        {
+            activateFeature(computer->getSource(i));
+        }
+    }
+    // TODO Activate sensors as well?
+}
+
+/**
+ * Check whether the feature computation can be deactivated.
+ *
+ * A feature is deactivatable if:
+ *  - it is not streaming
+ *  - all it's receivers (computers who use it as source) are deactivated
+ */
+bool Conductor::isFeatureDeactivatable(Feature* feature)
+{
+    if (feature->isStreaming())
+    {
+        return false;
+    }
+    FeatureComputer* computer;
+    for (uint8_t i = 0; i < feature->getReceiverCount(); ++i)
+    {
+        computer = FeatureComputer::getInstanceById(feature->getReceiverId(i));
+        if (computer != NULL && !computer->isActive())
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+
+/**
+ * Deactivate the computation of a feature
+ *
+ * Will also disable the feature streaming.
+ * Will also check if the computation of the feature's required components can
+ * be deactivated.
+ */
+void Conductor::deactivateFeature(Feature* feature)
+{
+    feature->deactivate();
+    uint8_t compId = feature->getComputerId();
+    if (compId != 0)
+    {
+        FeatureComputer* computer = FeatureComputer::getInstanceById(compId);
+        if (computer != NULL)
+        {
+            // If none of the computer's destinations are active, the computer
+            // can be deactivated too.
+            bool deactivatable = true;
+            for (uint8_t i = 0; i < computer->getDestinationCount(); ++i)
+            {
+                deactivatable &= (!computer->getDestination(i)->isActive());
+            }
+            if (deactivatable)
+            {
+                computer->deactivate();
+                Feature* antecedent;
+                for (uint8_t i = 0; i < computer->getSourceCount(); ++i)
+                {
+                    antecedent = computer->getSource(i);
+                    if (!isFeatureDeactivatable(antecedent))
+                    {
+                        deactivateFeature(antecedent);
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Deactivate all features and feature computers
+ */
+void Conductor::deactivateAllFeatures()
+{
+    for (uint8_t i = 0; i < Feature::instanceCount; ++i)
+    {
+        Feature::instances[i]->deactivate();
+    }
+    for (uint8_t i = 0; i < FeatureComputer::instanceCount; ++i)
+    {
+        FeatureComputer::instances[i]->deactivate();
+    }
+}
+
+/**
+ *
+ */
+void Conductor::activateGroup(FeatureGroup *group)
+{
+    group->activate();
+    Feature *feature;
+    for (uint8_t i = 0; i < group->getFeatureCount(); ++i)
+    {
+        feature = group->getFeature(i);
+        activateFeature(feature);
+        feature->enableStreaming();
+    }
+}
+
+/**
+ *
+ */
+void Conductor::deactivateGroup(FeatureGroup *group)
+{
+    group->deactivate();
+    for (uint8_t i = 0; i < group->getFeatureCount(); ++i)
+    {
+        deactivateFeature(group->getFeature(i));
+    }
+}
+
+/**
+ *
+ */
+void Conductor::deactivateAllGroups()
+{
+    for (uint8_t i = 0; i < FeatureGroup::instanceCount; ++i)
+    {
+        FeatureGroup::instances[i]->deactivate();
+    }
+    deactivateAllFeatures();
+}
 
 /* =============================================================================
     Time management
@@ -283,11 +430,11 @@ void Conductor::acquireData(bool asynchronous)
     {
         if (m_streamingMode == StreamingMode::WIRED)
         {
-            for (uint8_t i = 0; i < SENSOR_COUNT; ++i)
+            for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
             {
-                if (SENSORS[i]->isAsynchronous() == asynchronous)
+                if (Sensor::instances[i]->isAsynchronous() == asynchronous)
                 {
-                    SENSORS[i]->sendData(iuUSB.port);
+                    Sensor::instances[i]->sendData(iuUSB.port);
                 }
             }
         }
@@ -297,11 +444,11 @@ void Conductor::acquireData(bool asynchronous)
         }
     }
     // Collect the new data
-    for (uint8_t i = 0; i < SENSOR_COUNT; ++i)
+    for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
     {
-        if (SENSORS[i]->isAsynchronous() == asynchronous)
+        if (Sensor::instances[i]->isAsynchronous() == asynchronous)
         {
-            SENSORS[i]->acquireData();
+            Sensor::instances[i]->acquireData();
         }
     }
 }
@@ -318,9 +465,9 @@ void Conductor::computeFeatures()
         return;
     }
     // Run feature computers
-    for (uint8_t i = 0; i < FEATURE_COMPUTER_COUNT; ++i)
+    for (uint8_t i = 0; i < FeatureComputer::instanceCount; ++i)
     {
-        FEATURE_COMPUTERS[i]->compute();
+        FeatureComputer::instances[i]->compute();
     }
 }
 
@@ -340,10 +487,10 @@ void Conductor::updateOperationState()
     }
     OperationState::option newState = OperationState::IDLE;
     OperationState::option featState;
-    for (uint8_t i = 0; i < FEATURE_COUNT; ++i)
+    for (uint8_t i = 0; i < Feature::instanceCount; ++i)
     {
-        FEATURES[i]->getOperationState();
-        featState = FEATURES[i]->getOperationState();
+        Feature::instances[i]->getOperationState();
+        featState = Feature::instances[i]->getOperationState();
         if ((uint8_t) newState < (uint8_t) featState)
         {
             newState = featState;
@@ -392,12 +539,12 @@ void Conductor::streamFeatures()
     }
     double timestamp = getDatetime();
     float batteryLoad = iuBattery.getBatteryLoad();
-    for (uint8_t i = 0; i < FEATURE_PROFILE_COUNT; ++i)
+    for (uint8_t i = 0; i < FeatureGroup::instanceCount; ++i)
     {
         // TODO Switch to new streaming format once the backend is ready
-//        FEATURE_PROFILES[i]->stream(port, m_operationState, timestamp);
-        FEATURE_PROFILES[i]->legacyStream(port, m_macAddress, m_operationState,
-                                          batteryLoad, timestamp);
+//        FeatureGroup::instances[i]->stream(port, m_operationState, timestamp);
+        FeatureGroup::instances[i]->legacyStream(
+            port, m_macAddress, m_operationState, batteryLoad, timestamp);
     }
 
 
@@ -497,8 +644,8 @@ void Conductor::changeUsageMode(UsageMode::option usage)
     switch (m_usageMode)
     {
         case UsageMode::CALIBRATION:
-            deactivateAllProfiles();
-            activateProfile(&calibrationProfile);
+            deactivateAllGroups();
+            activateGroup(&calibrationGroup);
             iuRGBLed.changeColor(IURGBLed::CYAN);
             iuRGBLed.lock();
             msg = "calibration";
@@ -509,8 +656,8 @@ void Conductor::changeUsageMode(UsageMode::option usage)
         case UsageMode::OPERATION:
             iuRGBLed.unlock();
             iuRGBLed.changeColor(IURGBLed::BLUE);
-            deactivateAllProfiles();
-            activateProfile(&motorStandardProfile);
+            deactivateAllGroups();
+            activateGroup(&motorStandardGroup);
             accelRMS512Total.enableOperationState();
             accelRMS512Total.setThresholds(110, 130, 150);
 //            accelRMS512X.enableOperationState();

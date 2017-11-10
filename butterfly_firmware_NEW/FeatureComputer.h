@@ -14,12 +14,18 @@ class FeatureComputer
     public:
         static const uint8_t maxSourceCount = 5;
         static const uint8_t maxDestinationCount = 5;
+        /***** Instance registry *****/
+        static const uint8_t MAX_INSTANCE_COUNT = 20;
+        static uint8_t instanceCount;
+        static FeatureComputer *instances[MAX_INSTANCE_COUNT];
+        /***** Core *****/
         FeatureComputer(uint8_t id, uint8_t destinationCount=0,
                         Feature *destination0=NULL, Feature *destination1=NULL,
                         Feature *destination2=NULL, Feature *destination3=NULL,
                         Feature *destination4=NULL);
-        virtual ~FeatureComputer() {}
+        virtual ~FeatureComputer();
         virtual uint8_t getId() { return m_id; }
+        static FeatureComputer *getInstanceById(const uint8_t id);
         /***** Configuration *****/
         virtual void activate() { m_active = true; }
         virtual void deactivate() { m_active = false; }
@@ -38,6 +44,8 @@ class FeatureComputer
         void exposeConfig();
 
     protected:
+        /***** Instance registry *****/
+        uint8_t m_instanceIdx;
         /***** Configuration *****/
         uint8_t m_id;
         bool m_active;
@@ -184,6 +192,46 @@ class AudioDBComputer: public FeatureComputer
     protected:
         virtual void m_specializedCompute();
 };
+
+
+/* =============================================================================
+    Instanciations
+============================================================================= */
+
+// Shared computation space
+extern q15_t allocatedFFTSpace[1024];
+
+
+/***** Accelerometer Features *****/
+
+// 128 sample long accel computers
+extern SignalRMSComputer accel128ComputerX;
+extern SignalRMSComputer accel128ComputerY;
+extern SignalRMSComputer accel128ComputerZ;
+extern MultiSourceSumComputer accelRMS128TotalComputer;
+
+// 512 sample long accel computers
+extern SectionSumComputer accel512ComputerX;
+extern SectionSumComputer accel512ComputerY;
+extern SectionSumComputer accel512ComputerZ;
+extern SectionSumComputer accel512TotalComputer;
+
+
+// computers for FFT feature from 512 sample long accel data
+extern Q15FFTComputer accelFFTComputerX;
+extern Q15FFTComputer accelFFTComputerY;
+extern Q15FFTComputer accelFFTComputerZ;
+
+
+/***** Audio Features *****/
+
+extern AudioDBComputer audioDB2048Computer;
+extern AudioDBComputer audioDB4096Computer;
+
+
+/***** Set up sources *****/
+
+extern void setUpComputerSources();
 
 
 #endif // FEATURECOMPUTER_H

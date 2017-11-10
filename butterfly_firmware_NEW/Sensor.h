@@ -24,19 +24,21 @@ class Sensor : public Component
                                     P_HIGH     = 3,
                                     COUNT    = 4};
         static const uint8_t maxDestinationCount = 3;
-        /***** Constructors and destructors *****/
+        /***** Instance registry *****/
+        static const uint8_t MAX_INSTANCE_COUNT = 10;
+        static uint8_t instanceCount;
+        static Sensor *instances[MAX_INSTANCE_COUNT];
+        /***** Core *****/
         Sensor(const char* name, uint8_t destinationCount=0,
                Feature *destination0=NULL, Feature *destination1=NULL,
                Feature *destination2=NULL);
-        virtual ~Sensor() {}
-        /***** Core *****/
+        virtual ~Sensor();
         virtual char* getName() { return m_name; }
         virtual bool isNamed(const char* name)
             { return strcmp(m_name, name) == 0; }
-        virtual uint8_t getDestinationCount()
-            { return m_destinationCount; }
-        virtual uint8_t getMaxDestinationCount()
-            { return maxDestinationCount; }
+        static Sensor *getInstanceByName(const char *name);
+        virtual uint8_t getDestinationCount() { return m_destinationCount; }
+        virtual uint8_t getMaxDestinationCount() { return maxDestinationCount; }
         /***** Configuration *****/
         virtual bool configure(JsonVariant &config) { return true; }
         /***** Sampling and resolution *****/
@@ -54,6 +56,8 @@ class Sensor : public Component
         virtual void exposeCalibration() {}
 
     protected:
+        /***** Instance registry *****/
+        uint8_t m_instanceIdx;
         /***** Core *****/
         char m_name[4];
         uint8_t m_destinationCount;

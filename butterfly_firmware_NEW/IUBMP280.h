@@ -134,7 +134,7 @@ class IUBMP280 : public SynchronousSensor
 
 
 /***** Instanciation *****/
-//
-//extern IUBMP280 iuAltimeter;
+
+extern IUBMP280 iuAltimeter;
 
 #endif // IUBMP280_H

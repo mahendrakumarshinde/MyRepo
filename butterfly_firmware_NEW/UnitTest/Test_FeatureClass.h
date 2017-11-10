@@ -11,8 +11,7 @@
  */
 test(FeatureClass__initialization)
 {
-    /* Feature(const char* name, uint8_t sectionCount=2,
-               uint16_t sectionSize=1, slideOption sliding=FIXED) */
+    uint8_t initialFeatureCount = Feature::instanceCount;
     Feature feature("TST", 2, 10);
     feature.addReceiver(1);
     feature.addReceiver(2);
@@ -21,6 +20,12 @@ test(FeatureClass__initialization)
     assertEqual(feature.getReceiverId(0), 1);
     assertEqual(feature.getReceiverId(1), 2);
     assertEqual(feature.getSectionSize(), 10);
+
+    // Instance registration
+    assertEqual(Feature::instanceCount - initialFeatureCount, 1);
+    Feature *foundFeature = Feature::getInstanceByName("TST");
+    assertTrue(foundFeature != NULL);
+    assertTrue(foundFeature->isNamed("TST"));
 
     assertFalse(feature.isScalar());
     // Also test when isScalar should be true.
@@ -132,9 +137,6 @@ test(FeatureClass__buffer_state_tracking)
     assertFalse(feature.isReadyToCompute(0, 2));
     assertFalse(feature.isReadyToCompute(1));
     assertFalse(feature.isReadyToCompute(1, 2));
-
-
-
 }
 
 
