@@ -15,7 +15,7 @@
 /* Comment / Uncomment the "define" lines to toggle / untoggle unit or quality
 test mode */
 
-//#define UNITTEST
+#define UNITTEST
 #ifdef UNITTEST
   #include "UnitTest/Test_Component.h"
   #include "UnitTest/Test_Configurator.h"
@@ -23,6 +23,7 @@ test mode */
   #include "UnitTest/Test_FeatureComputer.h"
   #include "UnitTest/Test_FeatureGraph.h"
   #include "UnitTest/Test_FeatureProfile.h"
+//  #include "UnitTest/Test_IUSPIFlash.h"
   #include "UnitTest/Test_Sensor.h"
   #include "UnitTest/Test_Utilities.h"
 #endif
@@ -85,8 +86,11 @@ Conductor conductor(FIRMWARE_VERSION, MAC_ADDRESS);
 void setup()
 {
     // Setup USB first for Serial communication
-    iuUSB.setupHardware();
-    
+//    iuUSB.setupHardware();
+//    iuSPIFlash.setupHardware();
+//    SPI.begin();
+    Serial.begin(115200);
+    delay(100);
     #ifdef UNITTEST
         memoryLog("UNIT TEST");
         Serial.println(' ');

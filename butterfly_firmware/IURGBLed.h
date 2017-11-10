@@ -24,7 +24,7 @@ class IURGBLed
   public:
     enum PIN : uint8_t {RED_PIN = A5,
                         GREEN_PIN = A3,
-                        BLUE_PIN = A4};  // A0 on v.03
+                        BLUE_PIN = A0};  // A0 on v.03
     enum LEDColors {RED, BLUE, GREEN, ORANGE, PURPLE, CYAN, WHITE, SLEEP};
     // Color code                  R  G  B
     const bool COLORCODE[8][3] = {{1, 0, 0}, // RED
