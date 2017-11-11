@@ -400,3 +400,11 @@ void IUBMX055Acc::exposeCalibration()
     debugPrint(' ');
     #endif
 }
+
+
+/* =============================================================================
+    Instantiation
+============================================================================= */
+
+IUBMX055Acc iuAccelerometer(&iuI2C, "ACC", &accelerationX, &accelerationY,
+                            &accelerationZ);

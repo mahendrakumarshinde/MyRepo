@@ -3,15 +3,40 @@
 
 #include <Arduino.h>
 
+#include "FeatureClass.h"
+#include "FeatureComputer.h"
+#include "FeatureGroup.h"
+#include "IUI2C.h"
 #include "IUSerial.h"
 #include "IUBMD350.h"
 #include "IUESP8285.h"
+#include "IUSPIFlash.h"
 #include "IURGBLed.h"
-#include "FeatureGraph.h"
-
+#include "IUBattery.h"
+#include "IUBMP280.h"
+#include "IUBMX055Acc.h"
+#include "IUBMX055Gyro.h"
+#include "IUBMX055Mag.h"
+#include "IUCAMM8Q.h"
+#include "IUI2S.h"
+#include "IURTDExtension.h"
 
 /**
  *
+ * A representaton of the relations between data sources, computers and features
+ *
+ * In the feature, roles are as follow:
+ *  - sensors: the data sources
+ *  - features: the graph edges
+ *  - computers: the graph nodes
+ *  - (USB, BLE or WiFi interfaces): the "sinks" - They are not included in the
+ *  graph for now, but features have functions to be streamed through those
+ *  sinks.
+ * FeatureGraph class packs method to activate / deactivate part of the graph,
+ * that means enabling / disabling feature computations.
+ * The FeatureGraph instance also has a collection of FeatureGroups (which are
+ * a collection of features). Activating a FeatureGroup is equivalent to
+ * activating the corresponding part of the graph + the required dependencies.
  */
 class Conductor
 {
@@ -36,6 +61,13 @@ class Conductor
         void manageSleepCycles();
         /***** Configuration *****/
         bool configure(JsonVariant &my_config);
+        void activateFeature(Feature* feature);
+        bool isFeatureDeactivatable(Feature* feature);
+        void deactivateFeature(Feature* feature);
+        void deactivateAllFeatures();
+        void activateGroup(FeatureGroup *group);
+        void deactivateGroup(FeatureGroup *group);
+        void deactivateAllGroups();
         /***** Time management *****/
         void setRefDatetime(double refDatetime);
         double getDatetime();

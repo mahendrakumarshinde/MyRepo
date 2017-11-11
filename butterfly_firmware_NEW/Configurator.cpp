@@ -105,18 +105,18 @@ void Configurator::processConfiguration(char *json)
  */
 void Configurator::configureDeviceFunctions(JsonVariant &config)
 {
-    deactivateAllProfiles();
-    FeatureProfile *profile;
-    JsonVariant profileName;
-    for (uint8_t i = 0; i < FEATURE_PROFILE_COUNT; ++i)
+    conductor.deactivateAllGroups();
+    FeatureGroup *group;
+    JsonVariant groupName;
+    for (uint8_t i = 0; i < FeatureGroup::instanceCount; ++i)
     {
-        profileName = config[i];
-        if (profileName.success())
+        groupName = config[i];
+        if (groupName.success())
         {
-            profile = getProfileByName(profileName.as<char*>());
-            if (profile)
+            group = FeatureGroup::getInstanceByName(groupName.as<char*>());
+            if (group)
             {
-                activateProfile(profile);
+                conductor.activateGroup(group);
             }
         }
     }
@@ -127,9 +127,9 @@ void Configurator::configureDeviceFunctions(JsonVariant &config)
  */
 void Configurator::configureAllFeatures(JsonVariant &config)
 {
-    for (uint8_t i = 0; i < FEATURE_COUNT; ++i)
+    for (uint8_t i = 0; i < Feature::instanceCount; ++i)
     {
-        FEATURES[i]->configure(config);
+        Feature::instances[i]->configure(config);
     }
 }
 
@@ -138,9 +138,9 @@ void Configurator::configureAllFeatures(JsonVariant &config)
  */
 void Configurator::configureAllSensors(JsonVariant &config)
 {
-    for (uint8_t i = 0; i < SENSOR_COUNT; ++i)
+    for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
     {
-        SENSORS[i]->configure(config);
+        Sensor::instances[i]->configure(config);
     }
 }
 
@@ -340,21 +340,21 @@ void Configurator::processLegacyBLECommands(char *buff)
 void Configurator::exposeAllConfigurations()
 {
     #ifdef DEBUGMODE
-    for (uint8_t i = 0; i < SENSOR_COUNT; ++i)
+    for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
     {
-        SENSORS[i]->expose();
+        Sensor::instances[i]->expose();
     }
     debugPrint("");
-    for (uint8_t i = 0; i < FEATURE_COUNT; ++i)
+    for (uint8_t i = 0; i < Feature::instanceCount; ++i)
     {
-        FEATURES[i]->exposeConfig();
-        FEATURES[i]->exposeCounters();
+        Feature::instances[i]->exposeConfig();
+        Feature::instances[i]->exposeCounters();
         debugPrint("_____");
     }
     debugPrint("");
-    for (uint8_t i = 0; i < FEATURE_COMPUTER_COUNT; ++i)
+    for (uint8_t i = 0; i < FeatureComputer::instanceCount; ++i)
     {
-        FEATURE_COMPUTERS[i]->exposeConfig();
+        FeatureComputer::instances[i]->exposeConfig();
     }
     #endif
 }

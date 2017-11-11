@@ -116,4 +116,8 @@ class IUBMX055Acc : public AsynchronousSensor
         void processData();
 };
 
+/***** Instantiation *****/
+
+extern IUBMX055Acc iuAccelerometer;
+
 #endif // IUBMX055ACC_H

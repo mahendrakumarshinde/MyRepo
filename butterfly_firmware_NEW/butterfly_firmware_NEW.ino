@@ -17,19 +17,19 @@ test mode */
 
 //#define UNITTEST
 #ifdef UNITTEST
-  #include "UnitTest/Test_Component.h"
-  #include "UnitTest/Test_Configurator.h"
-  #include "UnitTest/Test_FeatureClass.h"
-  #include "UnitTest/Test_FeatureComputer.h"
-  #include "UnitTest/Test_FeatureGraph.h"
-  #include "UnitTest/Test_FeatureProfile.h"
-  #include "UnitTest/Test_Sensor.h"
-  #include "UnitTest/Test_Utilities.h"
+    #include "UnitTest/Test_Component.h"
+    #include "UnitTest/Test_Configurator.h"
+    #include "UnitTest/Test_FeatureClass.h"
+    #include "UnitTest/Test_FeatureComputer.h"
+    #include "UnitTest/Test_FeatureGroup.h"
+    #include "UnitTest/Test_Sensor.h"
+    #include "UnitTest/Test_Utilities.h"
 #endif
 
-//#define QUALITYTEST
-#ifdef QUALITYTEST
-  #include "QualityTest/QA_IUBMX055.h"
+//#define INTEGRATEDTEST
+#ifdef INTEGRATEDTEST
+    #include "IntegratedTest/IT_IUBMX055.h"
+    #include "IntegratedTest/IT_IUSPIFlash.h"
 #endif
 
 
@@ -85,13 +85,14 @@ Conductor conductor(FIRMWARE_VERSION, MAC_ADDRESS);
 void setup()
 {
     // Setup USB first for Serial communication
-    #ifdef UNITTEST
+    #if defined(UNITTEST) || defined(INTEGRATEDTEST)
         Serial.begin(115200);
         delay(2000);
-        memoryLog("UNIT TEST");
+        memoryLog("TESTING");
         Serial.println(' ');
     #else
         iuUSB.setupHardware();
+        iuSPIFlash.setupHardware();
         if (debugMode)
         {
           memoryLog("Start");
@@ -123,10 +124,10 @@ void setup()
         {
             debugPrint(F("\nSetting up default feature configuration..."));
         }
-        setUpComputerSource();
-        setUpProfiles();
-        // Activate a profile by default
-        activateProfile(&motorStandardProfile);
+        setUpComputerSources();
+        populateFeatureGroups();
+        // Activate a group by default
+        conductor.activateGroup(&motorStandardGroup);
         accelRMS512Total.enableOperationState();
         accelRMS512Total.setThresholds(110, 130, 150);
 //        accelRMS512X.enableOperationState();
@@ -145,12 +146,12 @@ void setup()
             debugPrint(F("\nInitializing sensors..."));
         }
         uint16_t callbackRate = iuI2S.getCallbackRate();
-        for (uint8_t i = 0; i < SENSOR_COUNT; ++i)
+        for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
         {
-            SENSORS[i]->setupHardware();
-            if (SENSORS[i]->isAsynchronous())
+            Sensor::instances[i]->setupHardware();
+            if (Sensor::instances[i]->isAsynchronous())
             {
-                SENSORS[i]->setCallbackRate(callbackRate);
+                Sensor::instances[i]->setCallbackRate(callbackRate);
             }
         }
         if (debugMode)
@@ -185,6 +186,9 @@ void setup()
 void loop()
 {
     #ifdef UNITTEST
+        Test::run();
+    #elif defined(INTEGRATEDTEST)
+//        IUSPIFlash__test();
         Test::run();
     #else
         if (loopDebugMode)
