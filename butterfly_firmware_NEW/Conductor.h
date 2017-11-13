@@ -2,6 +2,7 @@
 #define CONDUCTOR_H
 
 #include <Arduino.h>
+#include <ArduinoJson.h>
 
 #include "FeatureClass.h"
 #include "FeatureComputer.h"
@@ -46,6 +47,8 @@ class Conductor
                                   AUTO     = 1,
                                   PERIODIC = 2,
                                   COUNT    = 3};
+        static char START_CONFIRM[12];
+        static char END_CONFIRM[10];
         // Default start datetime
         static constexpr double defaultTimestamp = 1492144654.00;
         // Operation state shown on LED every X ms
@@ -59,8 +62,16 @@ class Conductor
         void sleep(uint32_t duration);
         void suspend(uint32_t duration);
         void manageSleepCycles();
-        /***** Configuration *****/
-        bool configure(JsonVariant &my_config);
+        /***** Serial Reading & command processing*****/
+        void readFromSerial(IUSerial *iuSerial);
+        void processConfiguration(char *json);
+        bool configureMainOptions(JsonVariant &config);
+        void configureAllFeatures(JsonVariant &config);
+        void configureAllSensors(JsonVariant &config);
+        void processLegacyUSBCommands(char *buff);
+        void processLegacyBLECommands(char *buff);
+
+        /***** Features and groups Management *****/
         void activateFeature(Feature* feature);
         bool isFeatureDeactivatable(Feature* feature);
         void deactivateFeature(Feature* feature);
@@ -71,6 +82,10 @@ class Conductor
         /***** Time management *****/
         void setRefDatetime(double refDatetime);
         double getDatetime();
+        /***** Mode management *****/
+        void changeAcquisitionMode(AcquisitionMode::option mode);
+        void changeStreamingMode(StreamingMode::option mode);
+        void changeUsageMode(UsageMode::option usage);
         /***** Operations *****/
         void setCallback(void (*callback)()) { m_callback = callback; };
         bool beginDataAcquisition();
@@ -81,14 +96,8 @@ class Conductor
         void updateOperationState();
         void streamFeatures();
         void storeData() {}  // TODO => implement
-        /***** Mode management *****/
-        void changeAcquisitionMode(AcquisitionMode::option mode);
-        AcquisitionMode::option getAcquisitionMode()
-            { return m_acquisitionMode; }
-        void changeStreamingMode(StreamingMode::option mode);
-        StreamingMode::option getStreamingMode() { return m_streamingMode; }
-        void changeUsageMode(UsageMode::option usage);
-        UsageMode::option getUsageMode() { return m_usageMode; }
+        /***** Debugging *****/
+        void exposeAllConfigurations();
 
     protected:
         char m_macAddress[18];
@@ -120,6 +129,63 @@ class Conductor
         UsageMode::option m_usageMode;
         AcquisitionMode::option m_acquisitionMode;
         StreamingMode::option m_streamingMode;
+        // Static JSON buffer to parse config
+        StaticJsonBuffer<1600> jsonBuffer;
+        // eg: can hold the following config (remove the space and line breaks)
+//        {
+//          "features": {
+//            "A93": {
+//              "STREAM": 1,
+//              "OPS": 1,
+//              "TRH": [100, 110, 120]
+//            },
+//            "VAX": {
+//              "STREAM": 1,
+//              "OPS": 0,
+//              "TRH": [0.5, 1.2, 1.5]
+//            },
+//            "VAY": {
+//              "STREAM": 1,
+//              "OPS": 0,
+//              "TRH": [0.5, 1.2, 1.5]
+//            },
+//            "VAZ": {
+//              "STREAM": 1,
+//              "OPS": 0,
+//              "TRH": [0.5, 1.2, 1.5]
+//            },
+//           "TMP": {
+//              "STREAM": 1,
+//              "OPS": 0,
+//              "TRH": [40, 80, 120]
+//            },
+//            "S12": {
+//              "STREAM": 1,
+//              "OPS": 0,
+//              "TRH": [500, 100, 1500]
+//            },
+//            "XXX": {
+//              "STREAM": 1,
+//              "OPS": 0,
+//              "TRH": [500, 100, 1500]
+//            },
+//            "XXX": {
+//              "STREAM": 1,
+//              "OPS": 0,
+//              "TRH": [500, 100, 1500]
+//            },
+//            "XXX": {
+//              "STREAM": 1,
+//              "OPS": 0,
+//              "TRH": [500, 100, 1500]
+//            },
+//            "XXX": {
+//              "STREAM": 1,
+//              "OPS": 0,
+//              "TRH": [500, 100, 1500]
+//            }
+//          }
+//        }
 };
 
 

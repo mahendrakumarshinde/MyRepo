@@ -10,7 +10,6 @@
 
 
 #include "Conductor.h"
-#include "Configurator.h"
 
 /* Comment / Uncomment the "define" lines to toggle / untoggle unit or quality
 test mode */
@@ -18,7 +17,6 @@ test mode */
 //#define UNITTEST
 #ifdef UNITTEST
     #include "UnitTest/Test_Component.h"
-    #include "UnitTest/Test_Configurator.h"
     #include "UnitTest/Test_FeatureClass.h"
     #include "UnitTest/Test_FeatureComputer.h"
     #include "UnitTest/Test_FeatureGroup.h"
@@ -28,6 +26,7 @@ test mode */
 
 //#define INTEGRATEDTEST
 #ifdef INTEGRATEDTEST
+    #include "IntegratedTest/IT_Conductor.h"
     #include "IntegratedTest/IT_IUBMX055.h"
     #include "IntegratedTest/IT_IUSPIFlash.h"
 #endif
@@ -160,7 +159,7 @@ void setup()
         }
         if (setupDebugMode)
         {
-            configurator.exposeAllConfigurations();
+            conductor.exposeAllConfigurations();
             if (iuI2C.isError())
             {
                 debugPrint(F("\nI2C Satus: Error"));
@@ -214,11 +213,11 @@ void loop()
         conductor.manageSleepCycles();
         iuRGBLed.autoTurnOff();
         // Configuration
-        configurator.readFromSerial(&iuUSB);
+        conductor.readFromSerial(&iuUSB);
         iuRGBLed.autoTurnOff();
-        configurator.readFromSerial(&iuBluetooth);
+        conductor.readFromSerial(&iuBluetooth);
         iuRGBLed.autoTurnOff();
-        configurator.readFromSerial(&iuWiFi);
+        conductor.readFromSerial(&iuWiFi);
         iuRGBLed.autoTurnOff();
         // Acquire data from synchronous sensor
         conductor.acquireData(false);

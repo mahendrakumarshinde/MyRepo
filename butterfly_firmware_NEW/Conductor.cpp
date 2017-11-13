@@ -1,6 +1,9 @@
 #include "Conductor.h"
 
 
+char Conductor::START_CONFIRM[12] = "IUCMD_START";
+char Conductor::END_CONFIRM[10] = "IUCMD_END";
+
 /* =============================================================================
     Constructors and destructors
 ============================================================================= */
@@ -114,15 +117,96 @@ void Conductor::manageSleepCycles()
 
 
 /* =============================================================================
-    Configuration
+    Serial Reading & command processing
 ============================================================================= */
+
+/**
+ * Read from USB and process the command, if one was received.
+ */
+void Conductor::readFromSerial(IUSerial *iuSerial)
+{
+    while(true)
+    {
+        iuSerial->readToBuffer();
+        if (!iuSerial->hasNewMessage())
+        {
+            break;
+        }
+        char *buffer = iuSerial->getBuffer();
+        // Buffer Size, including NUL char '\0'
+        uint16_t buffSize =  iuSerial->getCurrentBufferLength();
+        if(setupDebugMode)
+        {
+            debugPrint(F("USB input is: "), false);
+            debugPrint(buffer);
+        }
+        if (buffer[0] == '{' && buffer[buffSize - 1] == '}')
+        {
+            processConfiguration(buffer);
+        }
+        else
+        {
+            // Also check for legacy commands
+            switch (iuSerial->interface)
+            {
+                case InterfaceType::INT_USB:
+                    processLegacyUSBCommands(buffer);
+                    break;
+                case InterfaceType::INT_BLE:
+                    processLegacyBLECommands(buffer);
+                    break;
+                default:
+                    if (loopDebugMode)
+                    {
+                        debugPrint(F("Unhandled interface type: "), false);
+                        debugPrint(iuSerial->interface);
+                    }
+            }
+        }
+        iuSerial->resetBuffer();    // Clear wire buffer
+    }
+}
+
+/**
+ * Parse the given config json and apply the configuration
+ */
+void Conductor::processConfiguration(char *json)
+{
+    JsonObject& root = jsonBuffer.parseObject(json);
+    if (!root.success())
+    {
+        if (debugMode)
+        {
+            debugPrint("parseObject() failed");
+        }
+        return;
+    }
+    // Device level configuration
+    JsonVariant sub_config = root["device"];
+    if (sub_config.success())
+    {
+        configureMainOptions(sub_config);
+    }
+    // Component configuration
+    sub_config = root["components"];
+    if (sub_config.success())
+    {
+        configureAllSensors(sub_config);
+    }
+    // Feature configuration
+    sub_config = root["features"];
+    if (sub_config.success())
+    {
+        configureAllFeatures(sub_config);
+    }
+}
 
 /**
  * Device level configuration
  *
  * @return True if the configuration is valid, else false.
  */
-bool Conductor::configure(JsonVariant &my_config)
+bool Conductor::configureMainOptions(JsonVariant &my_config)
 {
     // Firmware and config version check
     const char* vers = my_config["VERS"].as<char*>();
@@ -138,38 +222,268 @@ bool Conductor::configure(JsonVariant &my_config)
         }
         return false;
     }
+    JsonVariant value = my_config["GRP"];
+    if (value.success())
+    {
+        deactivateAllGroups();
+        FeatureGroup *group;
+        JsonVariant groupName;
+        for (uint8_t i = 0; i < FeatureGroup::instanceCount; ++i)
+        {
+            groupName = my_config[i];
+            if (groupName.success())
+            {
+                group = FeatureGroup::getInstanceByName(groupName.as<char*>());
+                if (group)
+                {
+                    activateGroup(group);
+                }
+            }
+        }
+    }
     // Sleep management
-    bool changed = false;
-    JsonVariant value = my_config["POW"];
+    bool resetCycleTime = false;
+    value = my_config["POW"];
     if (value.success())
     {
         m_sleepMode = (sleepMode) (value.as<int>());
-        changed = true;
+        resetCycleTime = true;
     }
     value = my_config["TSL"];
     if (value.success())
     {
         m_autoSleepDelay = (uint32_t) (value.as<int>());
-        changed = true;
+        resetCycleTime = true;
     }
     value = my_config["TOFF"];
     if (value.success())
     {
         m_sleepDuration = (uint32_t) (value.as<int>());
-        changed = true;
+        resetCycleTime = true;
     }
     value = my_config["TCY"];
     if (value.success())
     {
         m_cycleTime = (uint32_t) (value.as<int>());
-        changed = true;
+        resetCycleTime = true;
     }
-    if (changed)
+    if (resetCycleTime)
     {
         m_startTime = millis();
     }
     return true;
 }
+
+/**
+ * Apply the given config to the designated features.
+ */
+void Conductor::configureAllFeatures(JsonVariant &config)
+{
+    for (uint8_t i = 0; i < Feature::instanceCount; ++i)
+    {
+        Feature::instances[i]->configure(config);
+    }
+}
+
+/**
+ * Apply the given config to the designated sensors.
+ */
+void Conductor::configureAllSensors(JsonVariant &config)
+{
+    for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
+    {
+        Sensor::instances[i]->configure(config);
+    }
+}
+
+/**
+ * Process the USB commands (legacy)
+ */
+void Conductor::processLegacyUSBCommands(char *buff)
+{
+    // Usage mode Mode switching
+    char *result = NULL;
+    switch (m_usageMode)
+    {
+        case UsageMode::CALIBRATION:
+            if (strcmp(buff, "IUCAL_END") == 0)
+            {
+                iuUSB.port->println(END_CONFIRM);
+                changeUsageMode(UsageMode::OPERATION);
+            }
+            break;
+        case UsageMode::EXPERIMENT:
+            if (strcmp(buff, "IUCMD_END") == 0)
+            {
+                iuUSB.port->println(END_CONFIRM);
+                changeUsageMode(UsageMode::OPERATION);
+                return;
+            }
+            result = strstr(buff, "Arange");
+            if (result != NULL)
+            {
+                switch (result[7] - '0')
+                {
+                    case 0:
+                        iuAccelerometer.setScale(iuAccelerometer.AFS_2G);
+                        break;
+                    case 1:
+                        iuAccelerometer.setScale(iuAccelerometer.AFS_4G);
+                        break;
+                    case 2:
+                        iuAccelerometer.setScale(iuAccelerometer.AFS_8G);
+                        break;
+                    case 3:
+                        iuAccelerometer.setScale(iuAccelerometer.AFS_16G);
+                        break;
+                }
+                return;
+            }
+            result = strstr(buff, "rgb");
+            if (result != NULL)
+            {
+                iuRGBLed.changeColor((bool) (result[7] - '0'),
+                                     (bool) (result[8] - '0'),
+                                     (bool) (result[9] - '0'));
+                return;
+            }
+            result = strstr(buff, "acosr");
+            if (result != NULL)
+            {
+                // Change audio sampling rate
+                int A = result[6] - '0';
+                int B = result[7] - '0';
+                uint16_t samplingRate = (uint16_t) ((A * 10 + B) * 1000);
+                iuI2S.setSamplingRate(samplingRate);
+                return;
+            }
+            result = strstr(buff, "accsr");
+            if (result != NULL)
+            {
+                int A = result[6] - '0';
+                int B = result[7] - '0';
+                int C = result[8] - '0';
+                int D = result[9] - '0';
+                int samplingRate = (A * 1000 + B * 100 + C * 10 + D);
+                iuAccelerometer.setSamplingRate(samplingRate);
+            }
+            break;
+        case UsageMode::OPERATION:
+            if (strcmp(buff, "IUCAL_START") == 0)
+            {
+                iuUSB.port->println(START_CONFIRM);
+                changeUsageMode(UsageMode::CALIBRATION);
+            }
+            if (strcmp(buff, "IUCMD_START") == 0)
+            {
+                iuUSB.port->println(START_CONFIRM);
+                changeUsageMode(UsageMode::EXPERIMENT);
+            }
+            break;
+        default:
+            if (loopDebugMode)
+            {
+                debugPrint(F("Unhandled usage mode: "), false);
+                debugPrint(m_usageMode);
+            }
+    }
+}
+
+/**
+ * Process the instructions sent over Bluetooth
+ */
+void Conductor::processLegacyBLECommands(char *buff)
+{
+    if (m_streamingMode == StreamingMode::WIRED)
+    {
+        return; // Do not listen to BLE when wired
+    }
+    switch(buff[0])
+    {
+        case '0': // DEPRECATED - Set feature thresholds
+            if (debugMode)
+            {
+                debugPrint(F("BLE command is DEPRECATED"));
+            }
+            break;
+        case '1': // Receive the timestamp data from the bluetooth hub
+            if (buff[1] == ':' && buff[12] == '.')
+            {
+                int flag(0), ts(0), ms(0);
+                sscanf(buff, "%d:%d.%d", &flag, &ts, &ms);
+                setRefDatetime((double) ts + (double) ms / (double) 1000000);
+            }
+            break;
+        case '2': // DEPRECATED - Bluetooth parameter setting
+            if (debugMode)
+            {
+                debugPrint(F("BLE command is DEPRECATED"));
+            }
+            break;
+        case '3': // Record button pressed - go into EXTENSIVE mode to record FFTs
+            if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
+                buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
+            {
+                if (loopDebugMode)
+                {
+                    debugPrint("Record mode");
+                }
+                /* TODO - Reimplement the following */
+//                IUFeature *feat = getFeatureByName("A0X");
+//                if (feat)
+//                {
+//                    feat.streamSourceData(iuBluetooth.port, "X");
+//                }
+//                feat = getFeatureByName("A0Y");
+//                if (feat)
+//                {
+//                    feat.streamSourceData(iuBluetooth.port, "Y");
+//                }
+//                feat = getFeatureByName("A0Z");
+//                if (feat)
+//                {
+//                    feat.streamSourceData(iuBluetooth.port, "Z");
+//                }
+            }
+            break;
+        case '4': // DEPRECATED - Exit record mode
+            if (debugMode)
+            {
+                debugPrint(F("BLE command is DEPRECATED"));
+            }
+            break;
+        case '5':
+            if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
+                buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
+            {
+                iuBluetooth.port->print("HB,");
+                iuBluetooth.port->print(conductor.getMacAddress());
+                iuBluetooth.port->print(",");
+                if (iuI2C.isError())
+                {
+                    iuBluetooth.port->print("I2CERR");
+                }
+                else
+                {
+                    iuBluetooth.port->print("ALL_OK");
+                }
+                iuBluetooth.port->print(";");
+                iuBluetooth.port->flush();
+            }
+            break;
+        case '6': // DEPRECATED - Set which feature are used for OperationState
+            if (debugMode)
+            {
+                debugPrint(F("BLE command is DEPRECATED"));
+            }
+            break;
+    }
+}
+
+
+/* =============================================================================
+    Features and groups Management
+============================================================================= */
 
 /**
  * Activate the computation of a feature
@@ -319,6 +633,7 @@ void Conductor::deactivateAllGroups()
     deactivateAllFeatures();
 }
 
+
 /* =============================================================================
     Time management
 ============================================================================= */
@@ -345,6 +660,138 @@ double Conductor::getDatetime()
     uint32_t now = millis();
     // TODO millis doesn't take into account time while STM32.stop()
     return m_refDatetime + (double) (now - m_lastSynchroTime) / 1000.;
+}
+
+
+/* =============================================================================
+    Mode management
+============================================================================= */
+
+/**
+ * Switch to a new operation mode
+ *
+ * 1. When switching to "run", "record" or "data collection" mode, start data
+ *    acquisition with beginDataAcquisition().
+ * 2. When switching to any other modes, end data acquisition
+ *    with endDataAcquisition().
+ */
+void Conductor::changeAcquisitionMode(AcquisitionMode::option mode)
+{
+    if (m_acquisitionMode == mode)
+    {
+        return; // Nothing to do
+    }
+    m_acquisitionMode = mode;
+    /* TODO => normally we should resetDataAcquisition in RAWDATA and FEATURE
+    modes, but that blocks so far, need to check why */
+    switch (m_acquisitionMode)
+    {
+        case AcquisitionMode::RAWDATA:
+            iuRGBLed.changeColor(IURGBLed::CYAN);
+            beginDataAcquisition();
+            break;
+        case AcquisitionMode::FEATURE:
+            iuRGBLed.changeColor(IURGBLed::BLUE);
+            beginDataAcquisition();
+            break;
+        case AcquisitionMode::NONE:
+            endDataAcquisition();
+            break;
+        default:
+            if (loopDebugMode)
+            {
+                debugPrint(F("Invalid acquisition Mode"));
+            }
+            break;
+    }
+}
+
+/**
+ * Switch to a StreamingMode
+ */
+void Conductor::changeStreamingMode(StreamingMode::option mode)
+{
+    if (m_streamingMode == mode)
+    {
+        return; // Nothing to do
+    }
+    m_streamingMode = mode;
+    if (loopDebugMode)
+    {
+        debugPrint(F("\nStreaming mode is: "), false);
+        switch (m_streamingMode)
+        {
+        case StreamingMode::WIRED:
+            debugPrint(F("USB"));
+            break;
+        case StreamingMode::BLE:
+            debugPrint(F("BLE"));
+            break;
+        case StreamingMode::WIFI:
+            debugPrint(F("WIFI"));
+            break;
+        case StreamingMode::STORE:
+            debugPrint(F("SPI STORAGE"));
+            break;
+        default:
+            debugPrint(F("Invalid streaming Mode"));
+            break;
+        }
+    }
+}
+
+/**
+ * Switch to a new Usage Mode
+ */
+void Conductor::changeUsageMode(UsageMode::option usage)
+{
+    if (m_usageMode == usage)
+    {
+        return; // Nothing to do
+    }
+    m_usageMode = usage;
+    changeAcquisitionMode(UsageMode::acquisitionModeDetails[m_usageMode]);
+    changeStreamingMode(UsageMode::streamingModeDetails[m_usageMode]);
+    String msg;
+    switch (m_usageMode)
+    {
+        case UsageMode::CALIBRATION:
+            deactivateAllGroups();
+            activateGroup(&calibrationGroup);
+            iuRGBLed.changeColor(IURGBLed::CYAN);
+            iuRGBLed.lock();
+            msg = "calibration";
+            break;
+        case UsageMode::EXPERIMENT:
+            msg = "experiment";
+            break;
+        case UsageMode::OPERATION:
+            iuRGBLed.unlock();
+            iuRGBLed.changeColor(IURGBLed::BLUE);
+            deactivateAllGroups();
+            activateGroup(&motorStandardGroup);
+            accelRMS512Total.enableOperationState();
+            accelRMS512Total.setThresholds(110, 130, 150);
+//            accelRMS512X.enableOperationState();
+//            accelRMS512Total.setThresholds(0.05, 1.2, 1.8);
+//            accelRMS512Y.enableOperationState();
+//            accelRMS512Total.setThresholds(0.05, 1.2, 1.8);
+//            accelRMS512Z.enableOperationState();
+//            accelRMS512Total.setThresholds(0.05, 1.2, 1.8);
+            iuAccelerometer.resetScale();
+            msg = "operation";
+            break;
+        default:
+            if (loopDebugMode)
+            {
+                debugPrint(F("Invalid usage mode preset"));
+            }
+            return;
+    }
+    if (loopDebugMode)
+    {
+        debugPrint("\nSet up for " + msg + "\n");
+    }
 }
 
 
@@ -552,133 +999,30 @@ void Conductor::streamFeatures()
 
 
 /* =============================================================================
-    Configuration and Mode management
+    Debugging
 ============================================================================= */
 
 /**
- * Switch to a new operation mode
- *
- * 1. When switching to "run", "record" or "data collection" mode, start data
- *    acquisition with beginDataAcquisition().
- * 2. When switching to any other modes, end data acquisition
- *    with endDataAcquisition().
+ * Expose current configurations
  */
-void Conductor::changeAcquisitionMode(AcquisitionMode::option mode)
+void Conductor::exposeAllConfigurations()
 {
-    if (m_acquisitionMode == mode)
+    #ifdef DEBUGMODE
+    for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
     {
-        return; // Nothing to do
+        Sensor::instances[i]->expose();
     }
-    m_acquisitionMode = mode;
-    /* TODO => normally we should resetDataAcquisition in RAWDATA and FEATURE
-    modes, but that blocks so far, need to check why */
-    switch (m_acquisitionMode)
+    debugPrint("");
+    for (uint8_t i = 0; i < Feature::instanceCount; ++i)
     {
-        case AcquisitionMode::RAWDATA:
-            iuRGBLed.changeColor(IURGBLed::CYAN);
-            beginDataAcquisition();
-            break;
-        case AcquisitionMode::FEATURE:
-            iuRGBLed.changeColor(IURGBLed::BLUE);
-            beginDataAcquisition();
-            break;
-        case AcquisitionMode::NONE:
-            endDataAcquisition();
-            break;
-        default:
-            if (loopDebugMode)
-            {
-                debugPrint(F("Invalid acquisition Mode"));
-            }
-            break;
+        Feature::instances[i]->exposeConfig();
+        Feature::instances[i]->exposeCounters();
+        debugPrint("_____");
     }
+    debugPrint("");
+    for (uint8_t i = 0; i < FeatureComputer::instanceCount; ++i)
+    {
+        FeatureComputer::instances[i]->exposeConfig();
+    }
+    #endif
 }
-
-/**
- * Switch to a StreamingMode
- */
-void Conductor::changeStreamingMode(StreamingMode::option mode)
-{
-    if (m_streamingMode == mode)
-    {
-        return; // Nothing to do
-    }
-    m_streamingMode = mode;
-    if (loopDebugMode)
-    {
-        debugPrint(F("\nStreaming mode is: "), false);
-        switch (m_streamingMode)
-        {
-        case StreamingMode::WIRED:
-            debugPrint(F("USB"));
-            break;
-        case StreamingMode::BLE:
-            debugPrint(F("BLE"));
-            break;
-        case StreamingMode::WIFI:
-            debugPrint(F("WIFI"));
-            break;
-        case StreamingMode::STORE:
-            debugPrint(F("SPI STORAGE"));
-            break;
-        default:
-            debugPrint(F("Invalid streaming Mode"));
-            break;
-        }
-    }
-}
-
-/**
- * Switch to a new Usage Mode
- */
-void Conductor::changeUsageMode(UsageMode::option usage)
-{
-    if (m_usageMode == usage)
-    {
-        return; // Nothing to do
-    }
-    m_usageMode = usage;
-    changeAcquisitionMode(UsageMode::acquisitionModeDetails[m_usageMode]);
-    changeStreamingMode(UsageMode::streamingModeDetails[m_usageMode]);
-    String msg;
-    switch (m_usageMode)
-    {
-        case UsageMode::CALIBRATION:
-            deactivateAllGroups();
-            activateGroup(&calibrationGroup);
-            iuRGBLed.changeColor(IURGBLed::CYAN);
-            iuRGBLed.lock();
-            msg = "calibration";
-            break;
-        case UsageMode::EXPERIMENT:
-            msg = "experiment";
-            break;
-        case UsageMode::OPERATION:
-            iuRGBLed.unlock();
-            iuRGBLed.changeColor(IURGBLed::BLUE);
-            deactivateAllGroups();
-            activateGroup(&motorStandardGroup);
-            accelRMS512Total.enableOperationState();
-            accelRMS512Total.setThresholds(110, 130, 150);
-//            accelRMS512X.enableOperationState();
-//            accelRMS512Total.setThresholds(0.05, 1.2, 1.8);
-//            accelRMS512Y.enableOperationState();
-//            accelRMS512Total.setThresholds(0.05, 1.2, 1.8);
-//            accelRMS512Z.enableOperationState();
-//            accelRMS512Total.setThresholds(0.05, 1.2, 1.8);
-            iuAccelerometer.resetScale();
-            msg = "operation";
-            break;
-        default:
-            if (loopDebugMode)
-            {
-                debugPrint(F("Invalid usage mode preset"));
-            }
-            return;
-    }
-    if (loopDebugMode)
-    {
-        debugPrint("\nSet up for " + msg + "\n");
-    }
-}
-
