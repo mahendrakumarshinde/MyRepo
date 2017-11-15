@@ -40,7 +40,7 @@ class Sensor : public Component
         virtual uint8_t getDestinationCount() { return m_destinationCount; }
         virtual uint8_t getMaxDestinationCount() { return maxDestinationCount; }
         /***** Configuration *****/
-        virtual bool configure(JsonVariant &config) { return true; }
+        virtual void configure(JsonVariant &config) { }
         /***** Sampling and resolution *****/
         virtual bool isAsynchronous() { return false; }
         virtual void setCallbackRate(uint16_t callbackRate) {} // For asynchronous sensors
@@ -50,7 +50,7 @@ class Sensor : public Component
         virtual void acquireData() {}
         virtual void readData() {}  // May be defined in Child class
         /***** Communication *****/
-        void sendData(HardwareSerial *port) { }
+        virtual void sendData(HardwareSerial *port) { }
         /***** Debugging *****/
         virtual void expose();
         virtual void exposeCalibration() {}
@@ -88,7 +88,7 @@ class AsynchronousSensor : public Sensor
                            Feature *destination2=NULL);
         virtual ~AsynchronousSensor() {}
         /***** Configuration *****/
-        virtual bool configure(JsonVariant &config);
+        virtual void configure(JsonVariant &config);
         /***** Sampling and resolution *****/
         virtual bool isAsynchronous() { return true; }
         virtual void setCallbackRate(uint16_t callbackRate);
@@ -130,7 +130,7 @@ class SynchronousSensor : public Sensor
                            Feature *destination2=NULL);
         virtual ~SynchronousSensor() {}
         /***** Configuration *****/
-        virtual bool configure(JsonVariant &config);
+        virtual void configure(JsonVariant &config);
         virtual void changeUsagePreset(Sensor::usagePreset usage);
         virtual Sensor::usagePreset getUsagePreset() { return m_usagePreset; }
         virtual void switchToLowUsage() { m_usagePreset = Sensor::P_LOW; }

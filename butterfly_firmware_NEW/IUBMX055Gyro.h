@@ -62,8 +62,9 @@ class IUBMX055Gyro : public AsynchronousSensor
         virtual void sleep();
         virtual void suspend();
         /***** Configuration and calibration *****/
-        virtual bool configure(JsonVariant &config);
+        virtual void configure(JsonVariant &config);
         void setScale(scaleOption scale);
+        scaleOption getScale() { return m_scale; }
         void setBandwidth(bandwidthOption scale);
         /***** Data acquisition *****/
         virtual void readData() {}             // Not implemented

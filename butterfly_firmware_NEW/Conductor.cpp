@@ -8,7 +8,7 @@ char Conductor::END_CONFIRM[10] = "IUCMD_END";
     Constructors and destructors
 ============================================================================= */
 
-Conductor::Conductor(const char* version, const char* macAddress) :
+Conductor::Conductor(const char* macAddress) :
     m_sleepMode(sleepMode::NONE),
     m_startTime(0),
     m_autoSleepDelay(60000),
@@ -19,11 +19,10 @@ Conductor::Conductor(const char* version, const char* macAddress) :
     m_operationState(OperationState::IDLE),
     m_inDataAcquistion(false),
     m_lastLitLedTime(0),
-    m_usageMode(UsageMode::OPERATION),
+    m_usageMode(UsageMode::COUNT),
     m_acquisitionMode(AcquisitionMode::NONE),
-    m_streamingMode(StreamingMode::BLE)
+    m_streamingMode(StreamingMode::COUNT)
 {
-    strcpy(m_version, version);
     strcpy(m_macAddress, macAddress);
 }
 
@@ -170,7 +169,7 @@ void Conductor::readFromSerial(IUSerial *iuSerial)
 /**
  * Parse the given config json and apply the configuration
  */
-void Conductor::processConfiguration(char *json)
+bool Conductor::processConfiguration(char *json)
 {
     JsonObject& root = jsonBuffer.parseObject(json);
     if (!root.success())
@@ -179,13 +178,18 @@ void Conductor::processConfiguration(char *json)
         {
             debugPrint("parseObject() failed");
         }
-        return;
+        return false;
     }
     // Device level configuration
+    bool valid = false;
     JsonVariant sub_config = root["device"];
     if (sub_config.success())
     {
-        configureMainOptions(sub_config);
+        valid = configureMainOptions(sub_config);
+    }
+    if (!valid)
+    {
+        return false;
     }
     // Component configuration
     sub_config = root["components"];
@@ -199,6 +203,7 @@ void Conductor::processConfiguration(char *json)
     {
         configureAllFeatures(sub_config);
     }
+    return true;
 }
 
 /**
@@ -210,14 +215,14 @@ bool Conductor::configureMainOptions(JsonVariant &my_config)
 {
     // Firmware and config version check
     const char* vers = my_config["VERS"].as<char*>();
-    if (vers == NULL || strcmp(m_version, vers) > 0)
+    if (vers == NULL || strcmp(FIRMWARE_VERSION, vers) > 0)
     {
         if (debugMode)
         {
             debugPrint(F("Config error: received config version '"), false);
             debugPrint(vers, false);
             debugPrint(F("', expected '"), false);
-            debugPrint(m_version, false);
+            debugPrint(FIRMWARE_VERSION, false);
             debugPrint(F("'"));
         }
         return false;
@@ -226,14 +231,15 @@ bool Conductor::configureMainOptions(JsonVariant &my_config)
     if (value.success())
     {
         deactivateAllGroups();
+        activateGroup(&healthCheckGroup);  // Heartbeat is always active
         FeatureGroup *group;
-        JsonVariant groupName;
+        const char* groupName;
         for (uint8_t i = 0; i < FeatureGroup::instanceCount; ++i)
         {
-            groupName = my_config[i];
-            if (groupName.success())
+            groupName = value[i];
+            if (groupName != NULL)
             {
-                group = FeatureGroup::getInstanceByName(groupName.as<char*>());
+                group = FeatureGroup::getInstanceByName(groupName);
                 if (group)
                 {
                     activateGroup(group);
@@ -275,24 +281,48 @@ bool Conductor::configureMainOptions(JsonVariant &my_config)
 }
 
 /**
- * Apply the given config to the designated features.
- */
-void Conductor::configureAllFeatures(JsonVariant &config)
-{
-    for (uint8_t i = 0; i < Feature::instanceCount; ++i)
-    {
-        Feature::instances[i]->configure(config);
-    }
-}
-
-/**
  * Apply the given config to the designated sensors.
  */
 void Conductor::configureAllSensors(JsonVariant &config)
 {
+    JsonVariant my_config;
     for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
     {
-        Sensor::instances[i]->configure(config);
+        my_config = config[Sensor::instances[i]->getName()];
+        if (my_config.success())
+        {
+            Sensor::instances[i]->configure(my_config);
+        }
+    }
+}
+
+/**
+ * Apply the given config to the designated features.
+ */
+void Conductor::configureAllFeatures(JsonVariant &config)
+{
+    JsonVariant my_config;
+    Feature *feature;
+    FeatureComputer *computer;
+    for (uint8_t i = 0; i < Feature::instanceCount; ++i)
+    {
+        feature = Feature::instances[i];
+        /* Disable all operationStates by default, they will be reactivated in
+        feature->configure if needed. */
+        feature->disableOperationState();
+        my_config = config[feature->getName()];
+        if (my_config.success())
+        {
+            feature->configure(my_config);  // Configure the feature
+            computer = FeatureComputer::getInstanceById(
+                feature->getComputerId());
+            computer->configure(my_config);  // Configure the computer
+            if (debugMode)
+            {
+                debugPrint(F("Configured feature "), false);
+                debugPrint(feature->getName());
+            }
+        }
     }
 }
 
@@ -342,9 +372,11 @@ void Conductor::processLegacyUSBCommands(char *buff)
             result = strstr(buff, "rgb");
             if (result != NULL)
             {
+                iuRGBLed.unlock();
                 iuRGBLed.changeColor((bool) (result[7] - '0'),
                                      (bool) (result[8] - '0'),
                                      (bool) (result[9] - '0'));
+                iuRGBLed.lock();
                 return;
             }
             result = strstr(buff, "acosr");
@@ -396,17 +428,11 @@ void Conductor::processLegacyBLECommands(char *buff)
 {
     if (m_streamingMode == StreamingMode::WIRED)
     {
-        return; // Do not listen to BLE when wired
+        return;  // Do not listen to BLE when wired
     }
     switch(buff[0])
     {
-        case '0': // DEPRECATED - Set feature thresholds
-            if (debugMode)
-            {
-                debugPrint(F("BLE command is DEPRECATED"));
-            }
-            break;
-        case '1': // Receive the timestamp data from the bluetooth hub
+        case '1':  // Receive the timestamp data from the bluetooth hub
             if (buff[1] == ':' && buff[12] == '.')
             {
                 int flag(0), ts(0), ms(0);
@@ -414,45 +440,7 @@ void Conductor::processLegacyBLECommands(char *buff)
                 setRefDatetime((double) ts + (double) ms / (double) 1000000);
             }
             break;
-        case '2': // DEPRECATED - Bluetooth parameter setting
-            if (debugMode)
-            {
-                debugPrint(F("BLE command is DEPRECATED"));
-            }
-            break;
-        case '3': // Record button pressed - go into EXTENSIVE mode to record FFTs
-            if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
-                buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
-            {
-                if (loopDebugMode)
-                {
-                    debugPrint("Record mode");
-                }
-                /* TODO - Reimplement the following */
-//                IUFeature *feat = getFeatureByName("A0X");
-//                if (feat)
-//                {
-//                    feat.streamSourceData(iuBluetooth.port, "X");
-//                }
-//                feat = getFeatureByName("A0Y");
-//                if (feat)
-//                {
-//                    feat.streamSourceData(iuBluetooth.port, "Y");
-//                }
-//                feat = getFeatureByName("A0Z");
-//                if (feat)
-//                {
-//                    feat.streamSourceData(iuBluetooth.port, "Z");
-//                }
-            }
-            break;
-        case '4': // DEPRECATED - Exit record mode
-            if (debugMode)
-            {
-                debugPrint(F("BLE command is DEPRECATED"));
-            }
-            break;
-        case '5':
+        case '5':  // Get status
             if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
                 buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
             {
@@ -471,7 +459,36 @@ void Conductor::processLegacyBLECommands(char *buff)
                 iuBluetooth.port->flush();
             }
             break;
+        case '0':  // DEPRECATED - Set feature thresholds
+        case '2':  // DEPRECATED - Bluetooth parameter setting
+        case '3':  // DEPRECATED - Collect acceleration raw data
+//            if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
+//                buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
+//            {
+//                if (loopDebugMode)
+//                {
+//                    debugPrint("Record mode");
+//                }
+//                Feature *feature = Feature::getInstanceByName("A0X");
+//                if (feature)
+//                {
+//                    feature.stream(iuBluetooth.port);
+//                }
+//                feature = Feature::getInstanceByName("A0Y");
+//                if (feature)
+//                {
+//                    feature.stream(iuBluetooth.port);
+//                }
+//                feature = Feature::getInstanceByName("A0Z");
+//                if (feature)
+//                {
+//                    feature.stream(iuBluetooth.port);
+//                }
+//            }
+//            break;
+        case '4':  // DEPRECATED - Exit record mode
         case '6': // DEPRECATED - Set which feature are used for OperationState
+        default:
             if (debugMode)
             {
                 debugPrint(F("BLE command is DEPRECATED"));
@@ -677,22 +694,24 @@ double Conductor::getDatetime()
  */
 void Conductor::changeAcquisitionMode(AcquisitionMode::option mode)
 {
+    Serial.print("Current acquisition mode: ");
+    Serial.println(m_acquisitionMode);
     if (m_acquisitionMode == mode)
     {
+        Serial.println("m_acquisitionMode already");
         return; // Nothing to do
     }
+    Serial.println("m_acquisitionMode changed");
     m_acquisitionMode = mode;
-    /* TODO => normally we should resetDataAcquisition in RAWDATA and FEATURE
-    modes, but that blocks so far, need to check why */
     switch (m_acquisitionMode)
     {
         case AcquisitionMode::RAWDATA:
             iuRGBLed.changeColor(IURGBLed::CYAN);
-            beginDataAcquisition();
+            resetDataAcquisition();
             break;
         case AcquisitionMode::FEATURE:
             iuRGBLed.changeColor(IURGBLed::BLUE);
-            beginDataAcquisition();
+            resetDataAcquisition();
             break;
         case AcquisitionMode::NONE:
             endDataAcquisition();
@@ -745,13 +764,15 @@ void Conductor::changeStreamingMode(StreamingMode::option mode)
  */
 void Conductor::changeUsageMode(UsageMode::option usage)
 {
+    Serial.print("Current usage mode: ");
+    Serial.println(m_usageMode);
     if (m_usageMode == usage)
     {
+        Serial.println("Already in mode");
         return; // Nothing to do
     }
+    Serial.println("Changing mode");
     m_usageMode = usage;
-    changeAcquisitionMode(UsageMode::acquisitionModeDetails[m_usageMode]);
-    changeStreamingMode(UsageMode::streamingModeDetails[m_usageMode]);
     String msg;
     switch (m_usageMode)
     {
@@ -764,20 +785,18 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             break;
         case UsageMode::EXPERIMENT:
             msg = "experiment";
+            iuRGBLed.changeColor(IURGBLed::PURPLE);
+            iuRGBLed.lock();
             break;
         case UsageMode::OPERATION:
             iuRGBLed.unlock();
             iuRGBLed.changeColor(IURGBLed::BLUE);
             deactivateAllGroups();
+            activateGroup(&healthCheckGroup);
             activateGroup(&motorStandardGroup);
+            // TODO - Set up default feature thresholds - Remove?
             accelRMS512Total.enableOperationState();
             accelRMS512Total.setThresholds(110, 130, 150);
-//            accelRMS512X.enableOperationState();
-//            accelRMS512Total.setThresholds(0.05, 1.2, 1.8);
-//            accelRMS512Y.enableOperationState();
-//            accelRMS512Total.setThresholds(0.05, 1.2, 1.8);
-//            accelRMS512Z.enableOperationState();
-//            accelRMS512Total.setThresholds(0.05, 1.2, 1.8);
             iuAccelerometer.resetScale();
             msg = "operation";
             break;
@@ -788,6 +807,12 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             }
             return;
     }
+    Serial.print("New acquisition mode: ");
+    Serial.println(UsageMode::acquisitionModeDetails[m_usageMode]);
+    changeAcquisitionMode(UsageMode::acquisitionModeDetails[m_usageMode]);
+    Serial.print("New streaming mode: ");
+    Serial.println(UsageMode::streamingModeDetails[m_usageMode]);
+    changeStreamingMode(UsageMode::streamingModeDetails[m_usageMode]);
     if (loopDebugMode)
     {
         debugPrint("\nSet up for " + msg + "\n");
@@ -826,14 +851,18 @@ bool Conductor::beginDataAcquisition()
  */
 void Conductor::endDataAcquisition()
 {
-  if (!m_inDataAcquistion)
-  {
-    return; // nothing to do
-  }
-  iuI2S.endDataAcquisition();
-  m_inDataAcquistion = false;
-  // Delay to make sure that the I2S callback function is called one more time
-  delay(50);
+    if (!m_inDataAcquistion)
+    {
+        return; // nothing to do
+    }
+    iuI2S.endDataAcquisition();
+    m_inDataAcquistion = false;
+    for (uint8_t i = 0; i < Feature::instanceCount; ++i)
+    {
+        Feature::instances[i]->reset();
+    }
+    // Delay to make sure that the I2S callback function is called one more time
+    delay(500);
 }
 
 /**
@@ -843,10 +872,9 @@ void Conductor::endDataAcquisition()
  */
 bool Conductor::resetDataAcquisition()
 {
-  endDataAcquisition();
-  /* TODO Reset feature counters */
-  delay(500);
-  return beginDataAcquisition();
+    Serial.println("resetDataAcquisition");
+    endDataAcquisition();
+    return beginDataAcquisition();
 }
 
 /**
@@ -872,22 +900,19 @@ void Conductor::acquireData(bool asynchronous)
         iuI2S.readData();         // Empty I2S buffer to continue
         return;
     }
-    // If RAWDATA mode, send last data batch before collecting the new data
-    if (m_acquisitionMode == AcquisitionMode::RAWDATA)
+    // If EXPERIMENT mode, send last data batch before collecting the new data
+    if (m_usageMode == UsageMode::EXPERIMENT)
     {
-        if (m_streamingMode == StreamingMode::WIRED)
+        if (loopDebugMode && (m_acquisitionMode != AcquisitionMode::RAWDATA ||
+                              m_streamingMode != StreamingMode::WIRED))
         {
-            for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
-            {
-                if (Sensor::instances[i]->isAsynchronous() == asynchronous)
-                {
-                    Sensor::instances[i]->sendData(iuUSB.port);
-                }
-            }
+            debugPrint(F("EXPERIMENT should be RAW DATA + WIRED mode."));
         }
-        else if (loopDebugMode)
+        if (asynchronous)
         {
-            debugPrint(F("Can only send RAW DATA in WIRED mode."));
+            Serial.println("async dd");
+            iuI2S.sendData(iuUSB.port);
+            iuAccelerometer.sendData(iuUSB.port);
         }
     }
     // Collect the new data
@@ -993,8 +1018,6 @@ void Conductor::streamFeatures()
         FeatureGroup::instances[i]->legacyStream(
             port, m_macAddress, m_operationState, batteryLoad, timestamp);
     }
-
-
 }
 
 

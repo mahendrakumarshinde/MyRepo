@@ -18,19 +18,6 @@ FeatureGroup::FeatureGroup(const char *name, uint16_t dataSendPeriod) :
     strcpy(m_name, name);
     reset();
     // Instance registration
-    if (debugMode)
-    {
-        FeatureGroup *existing = getInstanceByName(name);
-        if (existing != NULL)
-        {
-            debugPrint(F("WARNING - Duplicate group name "), false);
-            debugPrint(name);
-        }
-        if (instanceCount >= MAX_INSTANCE_COUNT)
-        {
-            raiseException("Max group count exceeded");
-        }
-    }
     m_instanceIdx = instanceCount;
     instances[m_instanceIdx] = this;
     instanceCount++;
@@ -222,6 +209,8 @@ void FeatureGroup::legacyStream(HardwareSerial *port, const char *macAddress,
 FeatureGroup healthCheckGroup("HEALTH", 500);
 // Calibration
 FeatureGroup calibrationGroup("CAL001", 512);
+// Raw acceleration data
+FeatureGroup rawAccelGroup("RAWACC", 512);
 // Standard Press Monitoring
 FeatureGroup pressStandardGroup("PRSSTD", 512);
 // Standard Motor Monitoring
@@ -234,21 +223,24 @@ void populateFeatureGroups()
 {
     /** Health Check **/
     healthCheckGroup.addFeature(&batteryLoad);
-    // TODO => configure full HealthCheckGroup
+    // TODO => configure HealthCheckGroup
 
     /** Calibration **/
-    // Previously VX3, VY3, VZ3, T10, FX3, FY3, FZ3, RX3, RY3, RZ3
-    // TODO Fix CalibrationGroup features
     calibrationGroup.addFeature(&velRMS512X);
     calibrationGroup.addFeature(&velRMS512Y);
     calibrationGroup.addFeature(&velRMS512Z);
     pressStandardGroup.addFeature(&temperature);
-    calibrationGroup.addFeature(&dispRMS512X);
-    calibrationGroup.addFeature(&dispRMS512Y);
-    calibrationGroup.addFeature(&dispRMS512Z);
+    calibrationGroup.addFeature(&accelMainFreqX);
+    calibrationGroup.addFeature(&accelMainFreqY);
+    calibrationGroup.addFeature(&accelMainFreqZ);
     calibrationGroup.addFeature(&accelRMS512X);
     calibrationGroup.addFeature(&accelRMS512Y);
     calibrationGroup.addFeature(&accelRMS512Z);
+
+    /** Raw acceleration data **/
+    rawAccelGroup.addFeature(&accelerationX);
+    rawAccelGroup.addFeature(&accelerationY);
+    rawAccelGroup.addFeature(&accelerationZ);
 
     /** Standard Press Monitoring **/
     pressStandardGroup.addFeature(&accelRMS512Total);

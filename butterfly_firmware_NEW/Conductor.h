@@ -54,20 +54,23 @@ class Conductor
         // Operation state shown on LED every X ms
         static const uint16_t showOpStateTimer = 500;
         /***** Constructors and destructor *****/
-        Conductor(const char* version, const char* macAddress);
+        Conductor(const char* macAddress);
         virtual ~Conductor() {}
-        char* getVersion() { return m_version; }
         char* getMacAddress() { return m_macAddress; }
         /***** Hardware & power management *****/
         void sleep(uint32_t duration);
         void suspend(uint32_t duration);
         void manageSleepCycles();
+        sleepMode getSleepMode() { return m_sleepMode; }
+        uint32_t getAutoSleepDelay() { return m_autoSleepDelay; }
+        uint32_t getSleepDuration() { return m_sleepDuration; }
+        uint32_t getCycleTime() { return m_cycleTime; }
         /***** Serial Reading & command processing*****/
         void readFromSerial(IUSerial *iuSerial);
-        void processConfiguration(char *json);
+        bool processConfiguration(char *json);
         bool configureMainOptions(JsonVariant &config);
-        void configureAllFeatures(JsonVariant &config);
         void configureAllSensors(JsonVariant &config);
+        void configureAllFeatures(JsonVariant &config);
         void processLegacyUSBCommands(char *buff);
         void processLegacyBLECommands(char *buff);
 
@@ -101,7 +104,6 @@ class Conductor
 
     protected:
         char m_macAddress[18];
-        char m_version[6];  // eg: "1.0.0"
         /***** Hardware & power management *****/
         sleepMode m_sleepMode;
         // Timestamp at which idle phase (or cycle) started for AUTO (or

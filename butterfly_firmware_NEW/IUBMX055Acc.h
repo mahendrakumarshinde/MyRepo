@@ -83,8 +83,9 @@ class IUBMX055Acc : public AsynchronousSensor
         virtual void sleep();
         virtual void suspend();
         /***** Configuration and calibration *****/
-        virtual bool configure(JsonVariant &config);
+        virtual void configure(JsonVariant &config);
         void setScale(scaleOption scale);
+        scaleOption getScale() { return m_scale; }
         void resetScale() { setScale(defaultScale); }
         void setBandwidth(bandwidthOption bandwidth);
         void useFilteredData(bandwidthOption bandwidth);

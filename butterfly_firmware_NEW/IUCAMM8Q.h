@@ -33,7 +33,7 @@ class IUCAMM8Q : public SynchronousSensor
         virtual void sleep();
         virtual void suspend();
         /***** Configuration and calibration *****/
-        virtual bool configure(JsonVariant &config);
+        virtual void configure(JsonVariant &config);
         void setPeriodic(uint32_t onTime, uint32_t period,
                          bool forced=false);
         void enterForcedMode();

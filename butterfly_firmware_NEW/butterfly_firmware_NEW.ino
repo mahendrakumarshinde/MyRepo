@@ -33,10 +33,9 @@ test mode */
 
 
 /* =============================================================================
-    MAC Address and Firmware version
+    MAC Address
 ============================================================================= */
 
-const char FIRMWARE_VERSION[6] = "1.0.0";
 const char MAC_ADDRESS[18] = "94:54:93:0F:67:01";
 
 
@@ -69,6 +68,7 @@ void callback()
     {
         startT = micros();
     }
+    Serial.println('c');
     conductor.acquireData(true);
     if (callbackDebugMode)
     {
@@ -79,11 +79,10 @@ void callback()
 
 /***** Begin *****/
 
-Conductor conductor(FIRMWARE_VERSION, MAC_ADDRESS);
+Conductor conductor(MAC_ADDRESS);
 
 void setup()
 {
-    // Setup USB first for Serial communication
     #if defined(UNITTEST) || defined(INTEGRATEDTEST)
         Serial.begin(115200);
         delay(2000);
@@ -125,16 +124,6 @@ void setup()
         }
         setUpComputerSources();
         populateFeatureGroups();
-        // Activate a group by default
-        conductor.activateGroup(&motorStandardGroup);
-        accelRMS512Total.enableOperationState();
-        accelRMS512Total.setThresholds(110, 130, 150);
-//        accelRMS512X.enableOperationState();
-//        accelRMS512Total.setThresholds(0.5, 1.2, 1.8);
-//        accelRMS512Y.enableOperationState();
-//        accelRMS512Total.setThresholds(0.5, 1.2, 1.8);
-//        accelRMS512Z.enableOperationState();
-//        accelRMS512Total.setThresholds(0.5, 1.2, 1.8);
         if (debugMode)
         {
             memoryLog(F("=> Succesfully configured default features"));
@@ -157,6 +146,9 @@ void setup()
         {
           memoryLog(F("=> Successfully initialized sensors"));
         }
+//        conductor.activateGroup(&motorStandardGroup);
+//        accelRMS512Total.enableOperationState();
+//        accelRMS512Total.setThresholds(110, 130, 150);
         if (setupDebugMode)
         {
             conductor.exposeAllConfigurations();
@@ -173,7 +165,8 @@ void setup()
             debugPrint(F("***\n"));
         }
         conductor.setCallback(callback);
-        conductor.changeAcquisitionMode(AcquisitionMode::FEATURE);
+        conductor.changeUsageMode(UsageMode::OPERATION);
+//        conductor.changeAcquisitionMode(AcquisitionMode::FEATURE);
     #endif
 }
 

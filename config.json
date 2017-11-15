@@ -5,7 +5,7 @@
     "TSL": 60,
     "TOFF": 300,
     "TCY": 3600,
-    "GRP": ["HEALTH", "PRSSTD"],
+    "GRP": ["HEALTH", "PRSSTD"]
   },
   "components": {
     "ACC": {

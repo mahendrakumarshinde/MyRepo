@@ -31,19 +31,6 @@ FeatureComputer::FeatureComputer(uint8_t id, uint8_t destinationCount,
         m_destinations[i]->setComputerId(m_id);
     }
     // Instance registration
-    if (debugMode)
-    {
-        FeatureComputer *existing = getInstanceById(id);
-        if (existing != NULL)
-        {
-            debugPrint(F("WARNING - Duplicate computer id "), false);
-            debugPrint(id);
-        }
-        if (instanceCount >= MAX_INSTANCE_COUNT)
-        {
-            raiseException("Max computer count exceeded");
-        }
-    }
     m_instanceIdx = instanceCount;
     instances[m_instanceIdx] = this;
     instanceCount++;
@@ -204,6 +191,24 @@ SignalRMSComputer::SignalRMSComputer(uint8_t id, Feature *rms, bool removeMean,
 }
 
 /**
+ * Configure the computer parameters from given json
+ */
+void SignalRMSComputer::configure(JsonVariant &config)
+{
+    FeatureComputer::configure(config);
+    JsonVariant my_config = config["NODC"];
+    if (my_config.success())
+    {
+        setRemoveMean(my_config.as<int>() > 0);
+    }
+    my_config = config["NORM"];
+    if (my_config.success())
+    {
+        setNormalize(my_config.as<int>() > 0);
+    }
+}
+
+/**
  * Compute the total energy, power and RMS of a signal
  *
  * NB: Since the signal energy is squared, the resulting scaling factor will be
@@ -253,12 +258,31 @@ SectionSumComputer::SectionSumComputer(uint8_t id, uint8_t destinationCount,
                                        Feature *destination0,
                                        Feature *destination1,
                                        Feature *destination2,
-                                       bool normalize) :
+                                       bool normalize, bool rmsLike) :
     FeatureComputer(id, destinationCount, destination0, destination1,
                     destination2),
-    m_normalize(normalize)
+    m_normalize(normalize),
+    m_rmsLike(rmsLike)
 {
     // Constructor
+}
+
+/**
+ * Configure the computer parameters from given json
+ */
+void SectionSumComputer::configure(JsonVariant &config)
+{
+    FeatureComputer::configure(config);
+    JsonVariant my_config = config["NORM"];
+    if (my_config.success())
+    {
+        setNormalize(my_config.as<int>() > 0);
+    }
+    my_config = config["RMS"];
+    if (my_config.success())
+    {
+        setRMSLike(my_config.as<int>() > 0);
+    }
 }
 
 /**
@@ -276,13 +300,27 @@ void SectionSumComputer::m_specializedCompute()
         length = m_sources[i]->getSectionSize() * m_sectionCount[i];
         values = m_sources[i]->getNextFloatValues(m_indexesAsReceiver[i]);
         total = 0;
-        for (uint16_t j = 0; j < length; ++j)
+        if (m_rmsLike)
         {
-            total += values[j];
+            for (uint16_t j = 0; j < length; ++j)
+            {
+                total += sq(values[j]);
+            }
         }
-        if (m_normalize)
+        else
+        {
+            for (uint16_t j = 0; j < length; ++j)
+            {
+                total += values[j];
+            }
+        }
+        if (m_normalize || m_rmsLike)
         {
             total = total / (float) length;
+        }
+        if (m_rmsLike)
+        {
+            total = sqrt(total);
         }
         m_destinations[i]->addFloatValue(total);
         if (featureDebugMode)
@@ -303,6 +341,24 @@ MultiSourceSumComputer::MultiSourceSumComputer(uint8_t id,
     m_rmsLike(rmsLike)
 {
     // Constructor
+}
+
+/**
+ * Configure the computer parameters from given json
+ */
+void MultiSourceSumComputer::configure(JsonVariant &config)
+{
+    FeatureComputer::configure(config);
+    JsonVariant my_config = config["NORM"];
+    if (my_config.success())
+    {
+        setNormalize(my_config.as<int>() > 0);
+    }
+    my_config = config["RMS"];
+    if (my_config.success())
+    {
+        setRMSLike(my_config.as<int>() > 0);
+    }
 }
 
 /**
@@ -327,7 +383,6 @@ void MultiSourceSumComputer::m_specializedCompute()
                 total += sq(m_sources[i]->getNextFloatValues(
                     m_indexesAsReceiver[i])[k]);
             }
-            total = sqrt(total);
         }
         else
         {
@@ -337,9 +392,13 @@ void MultiSourceSumComputer::m_specializedCompute()
                     m_indexesAsReceiver[i])[k];
             }
         }
-        if (m_normalize)
+        if (m_normalize || m_rmsLike)
         {
             total = total / (float) m_sourceCount;
+        }
+        if (m_rmsLike)
+        {
+            total = sqrt(total);
         }
         m_destinations[0]->addFloatValue(total);
         if (featureDebugMode)
@@ -356,16 +415,36 @@ void MultiSourceSumComputer::m_specializedCompute()
 
 Q15FFTComputer::Q15FFTComputer(uint8_t id,
                                Feature *reducedFFT,
+                               Feature *mainFrequency,
                                Feature *integralRMS,
                                Feature *doubleIntegralRMS,
                                q15_t *allocatedFFTSpace,
                                uint16_t lowCutFrequency,
                                uint16_t highCutFrequency) :
-    FeatureComputer(id, 3, reducedFFT, integralRMS, doubleIntegralRMS),
+    FeatureComputer(id, 4, reducedFFT, mainFrequency, integralRMS,
+                    doubleIntegralRMS),
     m_lowCutFrequency(lowCutFrequency),
     m_highCutFrequency(highCutFrequency)
 {
     m_allocatedFFTSpace = allocatedFFTSpace;
+}
+
+/**
+ * Configure the computer parameters from given json
+ */
+void Q15FFTComputer::configure(JsonVariant &config)
+{
+    FeatureComputer::configure(config);
+    JsonVariant freq = config["FREQ"][0];
+    if (freq.success())
+    {
+        setLowCutFrequency((uint16_t) (freq.as<int>()));
+    }
+    freq = config["FREQ"][1];
+    if (freq.success())
+    {
+        setHighCutFrequency((uint16_t) (freq.as<int>()));
+    }
 }
 
 /**
@@ -378,22 +457,29 @@ void Q15FFTComputer::m_specializedCompute()
 {
     // 0. Preparation
     uint16_t samplingRate = m_sources[0]->getSamplingRate();
+    float resolution = m_sources[0]->getResolution();
+    uint16_t sampleCount = m_sources[0]->getSectionSize() * m_sectionCount[0];
+    float df = (float) samplingRate / (float) sampleCount;
+    q15_t *values = m_sources[0]->getNextQ15Values(m_indexesAsReceiver[0]);
     for (uint8_t i = 0; i < m_destinationCount; ++i)
     {
         m_destinations[i]->setSamplingRate(samplingRate);
     }
-    float resolution = m_sources[0]->getResolution();
-    uint16_t sampleCount = m_sources[0]->getSectionSize() * m_sectionCount[0];
-    uint16_t reducedLength = m_destinations[0]->getSectionSize() / 3;
-    q15_t *values = m_sources[0]->getNextQ15Values(m_indexesAsReceiver[0]);
+    m_destinations[0]->setResolution(resolution);
+    m_destinations[1]->setResolution(1);
+    m_destinations[2]->setResolution(resolution);
+    m_destinations[3]->setResolution(resolution);
+    // 1. Compute FFT and get amplitudes
     uint32_t amplitudeCount = sampleCount / 2 + 1;
     q15_t amplitudes[amplitudeCount];
-    // 1. Compute FFT and get amplitudes
     RFFT::computeRFFT(values, m_allocatedFFTSpace, sampleCount, false);
     RFFTAmplitudes::getAmplitudes(m_allocatedFFTSpace, sampleCount, amplitudes);
     // 2. Keep the K max coefficients (K = reducedLength)
+    uint16_t reducedLength = m_destinations[0]->getSectionSize() / 3;
     q15_t maxVal;
     uint32_t maxIdx;
+    bool mainFreqSaved(false);
+    float freq(0);
     q15_t amplitudesCopy[amplitudeCount];
     copyArray(amplitudes, amplitudesCopy, amplitudeCount);
     for (uint16_t i = 0; i < reducedLength; ++i)
@@ -403,6 +489,15 @@ void Q15FFTComputer::m_specializedCompute()
         m_destinations[0]->addQ15Value((q15_t) maxIdx);
         m_destinations[0]->addQ15Value(m_allocatedFFTSpace[2 * maxIdx]);
         m_destinations[0]->addQ15Value(m_allocatedFFTSpace[2 * maxIdx + 1]);
+        if (!mainFreqSaved)
+        {
+            freq = df * (float) maxIdx;
+            if (freq > m_lowCutFrequency && freq < m_highCutFrequency)
+            {
+                m_destinations[1]->addFloatValue(freq);
+                mainFreqSaved = true;
+            }
+        }
     }
     if (featureDebugMode)
     {
@@ -417,8 +512,7 @@ void Q15FFTComputer::m_specializedCompute()
                                        scaling1, false);
     float integratedRMS1 = RFFTAmplitudes::getRMS(amplitudes, sampleCount);
     integratedRMS1 *= 1000 / ((float) scaling1);
-    m_destinations[1]->addFloatValue(integratedRMS1);
-    m_destinations[1]->setResolution(resolution);
+    m_destinations[2]->addFloatValue(integratedRMS1);
     if (featureDebugMode)
     {
         debugPrint(m_destinations[1]->getName(), false);
@@ -433,8 +527,7 @@ void Q15FFTComputer::m_specializedCompute()
                                        scaling2, false);
     float integratedRMS2 = RFFTAmplitudes::getRMS(amplitudes, sampleCount);
     integratedRMS2 *= 1000 / ((float) scaling1 * (float) scaling2);
-    m_destinations[2]->addFloatValue(integratedRMS2);
-    m_destinations[2]->setResolution(resolution);
+    m_destinations[3]->addFloatValue(integratedRMS2);
     if (featureDebugMode)
     {
         debugPrint(m_destinations[2]->getName(), false);
@@ -517,31 +610,37 @@ q15_t allocatedFFTSpace[1024];
 SignalRMSComputer accel128ComputerX(1,&accelRMS128X);
 SignalRMSComputer accel128ComputerY(2, &accelRMS128Y);
 SignalRMSComputer accel128ComputerZ(3, &accelRMS128Z);
-MultiSourceSumComputer accelRMS128TotalComputer(4, &accelRMS128Total, false,
-                                                true);
+MultiSourceSumComputer accelRMS128TotalComputer(4, &accelRMS128Total,
+                                                false, true);
 
 
 // 512 sample long accel computers
-SectionSumComputer accel512ComputerX(5, 1, &accelRMS512X, NULL, NULL, true);
-SectionSumComputer accel512ComputerY(6, 1, &accelRMS512Y, NULL, NULL, true);
-SectionSumComputer accel512ComputerZ(7, 1, &accelRMS512Z, NULL, NULL, true);
+SectionSumComputer accel512ComputerX(5, 1, &accelRMS512X, NULL, NULL,
+                                     false, true);
+SectionSumComputer accel512ComputerY(6, 1, &accelRMS512Y, NULL, NULL,
+                                     false, true);
+SectionSumComputer accel512ComputerZ(7, 1, &accelRMS512Z, NULL, NULL,
+                                     false, true);
 SectionSumComputer accel512TotalComputer(8, 1, &accelRMS512Total, NULL, NULL,
-                                         true);
+                                         false, true);
 
 
 // Computers for FFT feature from 512 sample long accel data
 Q15FFTComputer accelFFTComputerX(9,
                                  &accelReducedFFTX,
+                                 &accelMainFreqX,
                                  &velRMS512X,
                                  &dispRMS512X,
                                  allocatedFFTSpace);
 Q15FFTComputer accelFFTComputerY(10,
                                  &accelReducedFFTY,
+                                 &accelMainFreqY,
                                  &velRMS512Y,
                                  &dispRMS512Y,
                                  allocatedFFTSpace);
 Q15FFTComputer accelFFTComputerZ(11,
                                  &accelReducedFFTZ,
+                                 &accelMainFreqZ,
                                  &velRMS512Z,
                                  &dispRMS512Z,
                                  allocatedFFTSpace);

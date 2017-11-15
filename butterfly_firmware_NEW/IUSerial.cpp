@@ -31,7 +31,7 @@ IUSerial::IUSerial(InterfaceType::option interType, HardwareSerial *serialPort,
 void IUSerial::setupHardware()
 {
     port->begin(baudRate);
-    delay(10);
+    delay(500);
     wakeUp();
 }
 

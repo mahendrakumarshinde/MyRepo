@@ -66,7 +66,7 @@ class IUBMX055Mag : public AsynchronousSensor
         virtual void sleep();
         virtual void suspend();
         /***** Configuration and calibration *****/
-        virtual bool configure(JsonVariant &config);
+        virtual void configure(JsonVariant &config);
         void enterForcedMode();
         void exitForcedMode();
         void setODR(ODROption ODR);

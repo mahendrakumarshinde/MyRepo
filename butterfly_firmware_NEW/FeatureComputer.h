@@ -27,6 +27,7 @@ class FeatureComputer
         virtual uint8_t getId() { return m_id; }
         static FeatureComputer *getInstanceById(const uint8_t id);
         /***** Configuration *****/
+        virtual void configure(JsonVariant &config) {}
         virtual void activate() { m_active = true; }
         virtual void deactivate() { m_active = false; }
         virtual bool isActive() { return m_active; }
@@ -41,7 +42,7 @@ class FeatureComputer
         virtual bool compute();
         virtual void acknowledgeSectionToSources();
         /***** Debugging *****/
-        void exposeConfig();
+        virtual void exposeConfig();
 
     protected:
         /***** Instance registry *****/
@@ -80,7 +81,8 @@ class SignalRMSComputer: public FeatureComputer
     public:
         SignalRMSComputer(uint8_t id, Feature *rms=NULL,
                           bool removeMean=false, bool normalize=false);
-        // Change parameters
+        /***** Configuration *****/
+        virtual void configure(JsonVariant &config);
         void setRemoveMean(bool value) { m_removeMean = value; }
         void setNormalize(bool value) { m_normalize = value; }
 
@@ -108,13 +110,16 @@ class SectionSumComputer: public FeatureComputer
                            Feature *destination0=NULL,
                            Feature *destination1=NULL,
                            Feature *destination2=NULL,
-                           bool normalize=false);
-        // Change parameters
+                           bool normalize=false, bool rmsLike=false);
+        /***** Configuration *****/
+        virtual void configure(JsonVariant &config);
         void setNormalize(bool value) { m_normalize = value; }
+        void setRMSLike(bool value) { m_rmsLike = value; }
 
     protected:
         virtual void m_specializedCompute();
         bool m_normalize;  // Return the average instead of the sum
+        bool m_rmsLike;  // Return the average instead of the sum
 };
 
 
@@ -133,7 +138,8 @@ class MultiSourceSumComputer: public FeatureComputer
     public:
         MultiSourceSumComputer(uint8_t id, Feature *destination0=NULL,
                                bool normalize=false, bool rmsLike=false);
-        // Change parameters
+        /***** Configuration *****/
+        virtual void configure(JsonVariant &config);
         void setNormalize(bool value) { m_normalize = value; }
         void setRMSLike(bool value) { m_rmsLike = value; }
 
@@ -150,7 +156,7 @@ class MultiSourceSumComputer: public FeatureComputer
  * Sources:
  *      - A Q15 buffer
  * Destinations:
- *      - Reduced FFT values: A Q15 buffer
+ *      - Reduced FFT values: A FFTFeature
  *      - Integrated RMS: A Q15 buffer
  *      - Double-integrated RMS: A Q15 buffer
  */
@@ -159,12 +165,14 @@ class Q15FFTComputer: public FeatureComputer
     public:
         Q15FFTComputer(uint8_t id,
                        Feature *reducedFFT=NULL,
+                       Feature *mainFrequency=NULL,
                        Feature *integralRMS=NULL,
                        Feature *doubleIntegralRMS=NULL,
                        q15_t *allocatedFFTSpace=NULL,
                        uint16_t lowCutFrequency=5,
                        uint16_t highCutFrequency=550);
-        // Change parameters
+        /***** Configuration *****/
+        virtual void configure(JsonVariant &config);
         void setLowCutFrequency(uint16_t value) { m_lowCutFrequency = value; }
         void setHighCutFrequency(uint16_t value) { m_highCutFrequency = value; }
 

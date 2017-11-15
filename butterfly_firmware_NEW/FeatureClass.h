@@ -71,7 +71,7 @@ class Feature
         virtual void activate() { m_active = true; }
         virtual void deactivate();
         virtual bool isActive() { return m_active; }
-        bool configure(JsonVariant &config);
+        virtual void configure(JsonVariant &config);
         /***** OperationState and Thresholds *****/
         virtual OperationState::option getOperationState()
             { return m_operationState; }
@@ -109,10 +109,10 @@ class Feature
         virtual void incrementFillingIndex();
         virtual void acknowledge(uint8_t receiverIdx, uint8_t sectionCount=1);
         /***** Communication *****/
-        void stream(HardwareSerial *port);
+        virtual void stream(HardwareSerial *port);
         /***** Debugging *****/
-        void exposeConfig();
-        void exposeCounters();
+        virtual void exposeConfig();
+        virtual void exposeCounters();
 
 
     protected:
@@ -163,7 +163,7 @@ class Feature
 /**
  * A Feature which values are float numbers
  *
- * Values should be an array of size = sectionCount * sectionCount
+ * Values should be an array of size = sectionCount * sectionSize
  */
 class FloatFeature : public Feature
 {
@@ -187,23 +187,34 @@ class FloatFeature : public Feature
 /**
  * A Feature which values are q15_t numbers
  *
- * Values should be an array of size = sectionCount * sectionCount
+ * Values should be an array of size = sectionCount * sectionSize
+ *
+ * The parameter "isFFT" gives meaning to the feature content. If true, the
+ * feature contains FFT coeffs, organised as follow:
+ *  - 3 * i: Index of the Fourrier coefficient
+ *  - 3 * i + 1: Real part the Fourrier coefficient
+ *  - 3 * i + 2: Imaginary part the Fourrier coefficient
+ * That means that if the FFT feature must hold 50 Fourrier coefficients, its
+ * sectionSize should be 150.
+ * If the feature contains FFT coef, the resolution will naturally only apply
+ * to the real and imaginary parts of the coefficients, not to the indexes.
  */
 class Q15Feature : public Feature
 {
     public:
         Q15Feature(const char* name, uint8_t sectionCount=2,
                    uint16_t sectionSize=1, q15_t *values=NULL,
-                   Feature::slideOption sliding=Feature::FIXED);
+                   Feature::slideOption sliding=Feature::FIXED,
+                   bool isFFT=false);
         virtual ~Q15Feature() {}
         virtual q15_t* getNextQ15Values(uint8_t receiverIdx);
         virtual void addQ15Value(q15_t value);
 
     protected:
         q15_t *m_values;
+        bool m_isFFT;
         virtual void m_specializedStream(HardwareSerial *port,
-                                         uint8_t sectionIdx)
-            { raiseException(F("Q15Feature streaming not implemented")); }
+                                         uint8_t sectionIdx);
 };
 
 
@@ -211,22 +222,33 @@ class Q15Feature : public Feature
  * A Feature which values are q31_t numbers
  *
  * Values should be an array of size = sectionCount * sectionCount
+ *
+ * The parameter "isFFT" gives meaning to the feature content. If true, the
+ * feature contains FFT coeffs, organised as follow:
+ *  - 3 * i: Index of the Fourrier coefficient
+ *  - 3 * i + 1: Real part the Fourrier coefficient
+ *  - 3 * i + 2: Imaginary part the Fourrier coefficient
+ * That means that if the FFT feature must hold 50 Fourrier coefficients, its
+ * sectionSize should be 150.
+ * If the feature contains FFT coef, the resolution will naturally only apply
+ * to the real and imaginary parts of the coefficients, not to the indexes.
  */
 class Q31Feature : public Feature
 {
     public:
         Q31Feature(const char* name, uint8_t sectionCount=2,
                    uint16_t sectionSize=1, q31_t *values=NULL,
-                   Feature::slideOption sliding=Feature::FIXED);
+                   Feature::slideOption sliding=Feature::FIXED,
+                   bool isFFT=false);
         virtual ~Q31Feature() {}
         virtual q31_t* getNextQ31Values(uint8_t receiverIdx);
         virtual void addQ31Value(q31_t value);
 
     protected:
         q31_t *m_values;
+        bool m_isFFT;
         virtual void m_specializedStream(HardwareSerial *port,
-                                         uint8_t sectionIdx)
-            { raiseException(F("Q31Feature streaming not implemented")); }
+                                         uint8_t sectionIdx);
 };
 
 
@@ -278,6 +300,14 @@ extern __attribute__((section(".noinit2"))) q15_t accelReducedFFTZValues[300];
 extern Q15Feature accelReducedFFTX;
 extern Q15Feature accelReducedFFTY;
 extern Q15Feature accelReducedFFTZ;
+
+// Acceleration main Frequency features from 512 sample long accel data
+extern __attribute__((section(".noinit2"))) float accelMainFreqXValues[2];
+extern __attribute__((section(".noinit2"))) float accelMainFreqYValues[2];
+extern __attribute__((section(".noinit2"))) float accelMainFreqZValues[2];
+extern FloatFeature accelMainFreqX;
+extern FloatFeature accelMainFreqY;
+extern FloatFeature accelMainFreqZ;
 
 // Velocity features from 512 sample long accel data
 extern __attribute__((section(".noinit2"))) float velRMS512XValues[2];

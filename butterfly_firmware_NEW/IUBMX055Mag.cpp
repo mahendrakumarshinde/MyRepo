@@ -112,26 +112,18 @@ void IUBMX055Mag::suspend()
     Configuration and calibration
 ============================================================================= */
 
-bool IUBMX055Mag::configure(JsonVariant &config)
+void IUBMX055Mag::configure(JsonVariant &config)
 {
-    JsonVariant my_config = config[m_name];
-    if (!my_config)
-    {
-        return false;
-    }
-    // ODR
-    JsonVariant value = my_config["FREQ"];
+    JsonVariant value = config["FREQ"];  // ODR
     if (value.success())
     {
         setODR((ODROption) (value.as<int>()));
     }
-    // Accuracy Preset
-    value = my_config["ACY"];
+    value = config["ACY"];  // Accuracy Preset
     if (value.success())
     {
         setAccuracy((accuracyPreset) (value.as<int>()));
     }
-    return true;
 }
 
 /**

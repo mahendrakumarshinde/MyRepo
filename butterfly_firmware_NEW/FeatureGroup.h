@@ -67,6 +67,7 @@ class FeatureGroup
 
 extern FeatureGroup healthCheckGroup;
 extern FeatureGroup calibrationGroup;
+extern FeatureGroup rawAccelGroup;
 extern FeatureGroup pressStandardGroup;
 extern FeatureGroup motorStandardGroup;
 

@@ -12,10 +12,10 @@
 
 #ifdef DEBUGMODE
     const bool setupDebugMode = false;
-    const bool loopDebugMode = false;
-    const bool featureDebugMode = false;
+    const bool loopDebugMode = true;
+    const bool featureDebugMode = true;
     const bool highVerbosity = false;
-    const bool callbackDebugMode = false;
+    const bool callbackDebugMode = true;
 #else
     const bool setupDebugMode = false;
     const bool loopDebugMode = false;
