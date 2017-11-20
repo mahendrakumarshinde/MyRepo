@@ -40,8 +40,7 @@ class FeatureGroup
         void setDataSendPeriod(uint16_t dataSendPeriod);
         bool isDataSendTime();
         /***** Communication *****/
-        void stream(HardwareSerial *port, OperationState::option opState,
-                    double timestamp);
+        void stream(HardwareSerial *port, double timestamp);
         void legacyStream(HardwareSerial *port, const char *macAddress,
                           OperationState::option opState, float batteryLoad,
                           double timestamp);

@@ -24,11 +24,12 @@ test mode */
     #include "UnitTest/Test_Utilities.h"
 #endif
 
-//#define INTEGRATEDTEST
+#define INTEGRATEDTEST
 #ifdef INTEGRATEDTEST
     #include "IntegratedTest/IT_Conductor.h"
     #include "IntegratedTest/IT_IUBMX055.h"
     #include "IntegratedTest/IT_IUSPIFlash.h"
+    #include "IntegratedTest/IT_Sensors.h"
 #endif
 
 
@@ -88,9 +89,9 @@ void setup()
         delay(2000);
         memoryLog("TESTING");
         Serial.println(' ');
+        iuI2C.setupHardware();
     #else
-        iuUSB.setupHardware();
-        iuSPIFlash.setupHardware();
+        iuUSB.setupHardware();  // Start with USB for Serial communication
         if (debugMode)
         {
           memoryLog("Start");
@@ -108,6 +109,7 @@ void setup()
         }
         iuBluetooth.setupHardware();
         iuWiFi.setupHardware();
+        iuSPIFlash.setupHardware();
         if(debugMode)
         {
             memoryLog(F("=> Successfully initialized interfaces"));
@@ -122,6 +124,7 @@ void setup()
         {
             debugPrint(F("\nSetting up default feature configuration..."));
         }
+        conductor.setCallback(callback);
         setUpComputerSources();
         populateFeatureGroups();
         if (debugMode)
@@ -164,7 +167,6 @@ void setup()
             debugPrint(millis(), false);
             debugPrint(F("***\n"));
         }
-        conductor.setCallback(callback);
         conductor.changeUsageMode(UsageMode::OPERATION);
 //        conductor.changeAcquisitionMode(AcquisitionMode::FEATURE);
     #endif
@@ -177,10 +179,7 @@ void setup()
  */
 void loop()
 {
-    #ifdef UNITTEST
-        Test::run();
-    #elif defined(INTEGRATEDTEST)
-//        IUSPIFlash__test();
+    #if defined(UNITTEST) || defined(INTEGRATEDTEST)
         Test::run();
     #else
         if (loopDebugMode)

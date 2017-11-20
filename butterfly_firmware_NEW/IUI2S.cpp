@@ -99,7 +99,6 @@ void IUI2S::processAudioData(q31_t *data)
  */
 void IUI2S::readData()
 {
-    Serial.println('i');
     int readBitCount = I2S.read(m_rawAudioData, sizeof(m_rawAudioData));
     if (readBitCount)
     {

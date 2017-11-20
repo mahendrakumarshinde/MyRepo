@@ -131,8 +131,7 @@ bool FeatureGroup::isDataSendTime()
  * Sends the values of the group features through given serial.
  */
 void FeatureGroup::stream(HardwareSerial *port,
-                            OperationState::option opState,
-                            double timestamp)
+                          double timestamp)
 {
     if (!m_active)
     {
@@ -143,17 +142,17 @@ void FeatureGroup::stream(HardwareSerial *port,
         return;
     }
     port->print(m_name);
-    port->print(",");
-    port->print(timestamp);
-    port->print(",");
-    port->print(opState);
     for (uint8_t i = 0; i < m_featureCount; ++i)
     {
         if (m_features[i] != NULL)
         {
+            port->print(",");
+            port->print(m_features[i]->getName());
             m_features[i]->stream(port);
         }
     }
+    port->print(",");
+    port->print(timestamp);
     port->print(";");
     if (loopDebugMode)
     {

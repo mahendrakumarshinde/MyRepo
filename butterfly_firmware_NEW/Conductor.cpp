@@ -961,7 +961,7 @@ void Conductor::updateOperationState()
     OperationState::option featState;
     for (uint8_t i = 0; i < Feature::instanceCount; ++i)
     {
-        Feature::instances[i]->getOperationState();
+        Feature::instances[i]->updateOperationState();
         featState = Feature::instances[i]->getOperationState();
         if ((uint8_t) newState < (uint8_t) featState)
         {
@@ -1014,7 +1014,7 @@ void Conductor::streamFeatures()
     for (uint8_t i = 0; i < FeatureGroup::instanceCount; ++i)
     {
         // TODO Switch to new streaming format once the backend is ready
-//        FeatureGroup::instances[i]->stream(port, m_operationState, timestamp);
+//        FeatureGroup::instances[i]->stream(port, timestamp);
         FeatureGroup::instances[i]->legacyStream(
             port, m_macAddress, m_operationState, batteryLoad, timestamp);
     }
