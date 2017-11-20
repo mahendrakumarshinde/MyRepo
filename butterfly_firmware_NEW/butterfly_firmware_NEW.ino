@@ -10,7 +10,8 @@
 
 
 #include "Conductor.h"
-#include "Configurator.h"
+#include "IUSPIFlash.h"  // FIXME For some reason, if this is included in
+// conductor, it blocks the I2S callback
 
 /* Comment / Uncomment the "define" lines to toggle / untoggle unit or quality
 test mode */
@@ -18,7 +19,6 @@ test mode */
 //#define UNITTEST
 #ifdef UNITTEST
     #include "UnitTest/Test_Component.h"
-    #include "UnitTest/Test_Configurator.h"
     #include "UnitTest/Test_FeatureClass.h"
     #include "UnitTest/Test_FeatureComputer.h"
     #include "UnitTest/Test_FeatureGroup.h"
@@ -28,16 +28,17 @@ test mode */
 
 //#define INTEGRATEDTEST
 #ifdef INTEGRATEDTEST
+    #include "IntegratedTest/IT_Conductor.h"
     #include "IntegratedTest/IT_IUBMX055.h"
     #include "IntegratedTest/IT_IUSPIFlash.h"
+    #include "IntegratedTest/IT_Sensors.h"
 #endif
 
 
 /* =============================================================================
-    MAC Address and Firmware version
+    MAC Address
 ============================================================================= */
 
-const char FIRMWARE_VERSION[6] = "1.0.0";
 const char MAC_ADDRESS[18] = "94:54:93:0F:67:01";
 
 
@@ -80,19 +81,18 @@ void callback()
 
 /***** Begin *****/
 
-Conductor conductor(FIRMWARE_VERSION, MAC_ADDRESS);
+Conductor conductor(MAC_ADDRESS);
 
 void setup()
 {
-    // Setup USB first for Serial communication
     #if defined(UNITTEST) || defined(INTEGRATEDTEST)
         Serial.begin(115200);
         delay(2000);
         memoryLog("TESTING");
         Serial.println(' ');
+        iuI2C.setupHardware();
     #else
-        iuUSB.setupHardware();
-        iuSPIFlash.setupHardware();
+        iuUSB.setupHardware();  // Start with USB for Serial communication
         if (debugMode)
         {
           memoryLog("Start");
@@ -110,6 +110,7 @@ void setup()
         }
         iuBluetooth.setupHardware();
         iuWiFi.setupHardware();
+        iuSPIFlash.setupHardware();
         if(debugMode)
         {
             memoryLog(F("=> Successfully initialized interfaces"));
@@ -124,18 +125,9 @@ void setup()
         {
             debugPrint(F("\nSetting up default feature configuration..."));
         }
+        conductor.setCallback(callback);
         setUpComputerSources();
         populateFeatureGroups();
-        // Activate a group by default
-        conductor.activateGroup(&motorStandardGroup);
-        accelRMS512Total.enableOperationState();
-        accelRMS512Total.setThresholds(110, 130, 150);
-//        accelRMS512X.enableOperationState();
-//        accelRMS512Total.setThresholds(0.5, 1.2, 1.8);
-//        accelRMS512Y.enableOperationState();
-//        accelRMS512Total.setThresholds(0.5, 1.2, 1.8);
-//        accelRMS512Z.enableOperationState();
-//        accelRMS512Total.setThresholds(0.5, 1.2, 1.8);
         if (debugMode)
         {
             memoryLog(F("=> Succesfully configured default features"));
@@ -158,9 +150,12 @@ void setup()
         {
           memoryLog(F("=> Successfully initialized sensors"));
         }
+//        conductor.activateGroup(&motorStandardGroup);
+//        accelRMS512Total.enableOperationState();
+//        accelRMS512Total.setThresholds(110, 130, 150);
         if (setupDebugMode)
         {
-            configurator.exposeAllConfigurations();
+            conductor.exposeAllConfigurations();
             if (iuI2C.isError())
             {
                 debugPrint(F("\nI2C Satus: Error"));
@@ -173,8 +168,8 @@ void setup()
             debugPrint(millis(), false);
             debugPrint(F("***\n"));
         }
-        conductor.setCallback(callback);
-        conductor.changeAcquisitionMode(AcquisitionMode::FEATURE);
+        conductor.changeUsageMode(UsageMode::OPERATION);
+//        conductor.changeAcquisitionMode(AcquisitionMode::FEATURE);
     #endif
 }
 
@@ -185,10 +180,7 @@ void setup()
  */
 void loop()
 {
-    #ifdef UNITTEST
-        Test::run();
-    #elif defined(INTEGRATEDTEST)
-//        IUSPIFlash__test();
+    #if defined(UNITTEST) || defined(INTEGRATEDTEST)
         Test::run();
     #else
         if (loopDebugMode)
@@ -214,11 +206,11 @@ void loop()
         conductor.manageSleepCycles();
         iuRGBLed.autoTurnOff();
         // Configuration
-        configurator.readFromSerial(&iuUSB);
+        conductor.readFromSerial(&iuUSB);
         iuRGBLed.autoTurnOff();
-        configurator.readFromSerial(&iuBluetooth);
+        conductor.readFromSerial(&iuBluetooth);
         iuRGBLed.autoTurnOff();
-        configurator.readFromSerial(&iuWiFi);
+        conductor.readFromSerial(&iuWiFi);
         iuRGBLed.autoTurnOff();
         // Acquire data from synchronous sensor
         conductor.acquireData(false);

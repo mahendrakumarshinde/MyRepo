@@ -139,8 +139,6 @@
 		<Unit filename="Component.h" />
 		<Unit filename="Conductor.cpp" />
 		<Unit filename="Conductor.h" />
-		<Unit filename="Configurator.cpp" />
-		<Unit filename="Configurator.h" />
 		<Unit filename="FeatureClass.cpp" />
 		<Unit filename="FeatureClass.h" />
 		<Unit filename="FeatureComputer.cpp" />
@@ -175,14 +173,15 @@
 		<Unit filename="IUSPIFlash.h" />
 		<Unit filename="IUSerial.cpp" />
 		<Unit filename="IUSerial.h" />
+		<Unit filename="IntegratedTest/IT_Conductor.h" />
 		<Unit filename="IntegratedTest/IT_IUBMX055.h" />
 		<Unit filename="IntegratedTest/IT_IUSPIFlash.h" />
+		<Unit filename="IntegratedTest/IT_Sensors.h" />
 		<Unit filename="Keywords.h" />
 		<Unit filename="Logger.h" />
 		<Unit filename="Sensor.cpp" />
 		<Unit filename="Sensor.h" />
 		<Unit filename="UnitTest/Test_Component.h" />
-		<Unit filename="UnitTest/Test_Configurator.h" />
 		<Unit filename="UnitTest/Test_FeatureClass.h" />
 		<Unit filename="UnitTest/Test_FeatureComputer.h" />
 		<Unit filename="UnitTest/Test_FeatureGroup.h" />

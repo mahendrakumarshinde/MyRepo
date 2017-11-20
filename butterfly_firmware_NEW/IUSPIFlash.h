@@ -6,7 +6,6 @@
 
 #include "Component.h"
 
-
 /**
  * 1MB Flash Memory, accessible through SPI
  *
@@ -59,7 +58,7 @@ class IUSPIFlash : public Component
         static const uint16_t BLOCK_32KB_PAGE_COUNT = 128;
         static const uint16_t BLOCK_64KB_PAGE_COUNT = 256;
         /***** Constructors & desctructors *****/
-        IUSPIFlash();
+        IUSPIFlash(uint8_t placeHolder);
         virtual ~IUSPIFlash() { }
         /***** Hardware & power management methods *****/
         virtual void setupHardware();

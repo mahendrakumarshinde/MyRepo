@@ -24,19 +24,6 @@ Sensor::Sensor(const char* name, uint8_t destinationCount,
     m_destinations[2] = destination2;
     setResolution(1); // Default resolution
     // Instance registration
-    if (debugMode)
-    {
-        Sensor *existing = getInstanceByName(name);
-        if (existing != NULL)
-        {
-            debugPrint(F("WARNING - Duplicate sensor name "), false);
-            debugPrint(name);
-        }
-        if (instanceCount >= MAX_INSTANCE_COUNT)
-        {
-            raiseException("Max sensor count exceeded");
-        }
-    }
     m_instanceIdx = instanceCount;
     instances[m_instanceIdx] = this;
     instanceCount++;
@@ -126,22 +113,15 @@ AsynchronousSensor::AsynchronousSensor(const char* name,
  * Read and apply the config
  *
  * @param config A reference to a JsonVariant, ie a parsed JSON
- * @return True if a config was found and applied for the sensor, else false
  */
-bool AsynchronousSensor::configure(JsonVariant &config)
+void AsynchronousSensor::configure(JsonVariant &config)
 {
-
-    JsonVariant my_config = config[m_name];
-    if (!my_config)
-    {
-        return false;
-    }
-    uint16_t samplingRate = my_config["FREQ"];
+    Sensor::configure(config);
+    uint16_t samplingRate = config["FREQ"];
     if (samplingRate)
     {
         setSamplingRate(samplingRate);
     }
-    return Sensor::configure(config);
 }
 
 
@@ -230,22 +210,15 @@ SynchronousSensor::SynchronousSensor(const char* name,
  * Read and apply the config
  *
  * @param config A reference to a JsonVariant, ie a parsed JSON
- * @return True if a config was found and applied for the sensor, else false
  */
-bool SynchronousSensor::configure(JsonVariant &config)
+void SynchronousSensor::configure(JsonVariant &config)
 {
-
-    JsonVariant my_config = config[m_name];
-    if (!my_config)
-    {
-        return false;
-    }
-    JsonVariant value = my_config["USG"];
+    Sensor::configure(config);
+    JsonVariant value = config["USG"];
     if (value.success())
     {
         changeUsagePreset((usagePreset) (value.as<int>()));
     }
-    return Sensor::configure(config);
 }
 
 /**

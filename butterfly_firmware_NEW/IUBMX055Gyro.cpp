@@ -93,26 +93,18 @@ void IUBMX055Gyro::suspend()
     Configuration and calibration
 ============================================================================= */
 
-bool IUBMX055Gyro::configure(JsonVariant &config)
+void IUBMX055Gyro::configure(JsonVariant &config)
 {
-    JsonVariant my_config = config[m_name];
-    if (!my_config)
-    {
-        return false;
-    }
-    // Sampling Rate and bandwidth
-    JsonVariant value = my_config["FREQ"];
+    JsonVariant value = config["FREQ"];  // Sampling Rate and bandwidth
     if (value.success())
     {
         setBandwidth((bandwidthOption) (value.as<int>()));
     }
-    // Full Scale Range
-    value = my_config["FSR"];
+    value = config["FSR"];  // Full Scale Range
     if (value.success())
     {
         setScale((scaleOption) (value.as<int>()));
     }
-    return true;
 }
 
 /**

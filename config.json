@@ -4,9 +4,9 @@
     "POW": 0,
     "TSL": 60,
     "TOFF": 300,
-    "TCY": 3600
+    "TCY": 3600,
+    "GRP": ["HEALTH", "PRSSTD"]
   },
-  "functions": ["HEALTH", "PRSSTD"],
   "components": {
     "ACC": {
       "FSR": 5

@@ -7,7 +7,7 @@
 
 uint8_t IUSPIFlash::ID_BYTES[IUSPIFlash::ID_BYTE_COUNT] = {0xEF, 0x40, 0x14};
 
-IUSPIFlash::IUSPIFlash() :
+IUSPIFlash::IUSPIFlash(uint8_t placeHolder) :
     Component(),
     m_busy(false)
 {
@@ -341,4 +341,4 @@ uint16_t IUSPIFlash::getPageFromAddress(uint32_t addr)
     Instanciation
 ============================================================================= */
 
-IUSPIFlash iuSPIFlash = IUSPIFlash();
+IUSPIFlash iuSPIFlash(0);

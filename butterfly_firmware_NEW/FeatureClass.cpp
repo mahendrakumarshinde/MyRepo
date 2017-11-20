@@ -38,19 +38,6 @@ Feature::Feature(const char* name, uint8_t sectionCount, uint16_t sectionSize,
     m_totalSize = m_sectionCount * m_sectionSize;
     reset();
     // Instance registration
-    if (debugMode)
-    {
-        Feature *existingFeature = getInstanceByName(name);
-        if (existingFeature != NULL)
-        {
-            debugPrint(F("WARNING - Duplicate feature name "), false);
-            debugPrint(name);
-        }
-        if (instanceCount >= MAX_INSTANCE_COUNT)
-        {
-            raiseException("Max feature count exceeded");
-        }
-    }
     m_instanceIdx = instanceCount;
     instances[m_instanceIdx] = this;
     instanceCount++;
@@ -137,42 +124,26 @@ void Feature::deactivate()
 
 
 /**
- * Applied the given config to the feature.
+ * Apply the given config to the feature.
  */
-bool Feature::configure(JsonVariant &config)
+void Feature::configure(JsonVariant &config)
 {
-    JsonVariant my_config = config[m_name];
-    if (!my_config)
-    {
-        return false;
-    }
-    JsonVariant value = my_config["OPS"];
-    if (value)
-    {
-        if (value.as<int>())
-        {
-            enableOperationState();
-        }
-        else
-        {
-            disableOperationState();
-        }
-    }
-    // Thresholds setting
+    // Thresholds setting for OperationState
+    float threshold;
+    bool thresholdUpdated = false;
     for (uint8_t i = 0; i < 3; ++i)
     {
-        value = my_config["TRH"][i];
-        if (value.success())
+        threshold = config["TRH"][i];
+        if (threshold)
         {
-            setThreshold(i, value);
+            setThreshold(i, threshold);
+            thresholdUpdated = true;
         }
     }
-    if (debugMode)
+    if (thresholdUpdated)
     {
-        debugPrint(F("Configured feature "), false);
-        debugPrint(m_name);
+        enableOperationState();
     }
-    return true;
 }
 
 
@@ -497,10 +468,15 @@ void FloatFeature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx)
 
 Q15Feature::Q15Feature(const char* name, uint8_t sectionCount,
                        uint16_t sectionSize, q15_t *values,
-                       Feature::slideOption sliding) :
-    Feature(name, sectionCount, sectionSize, sliding)
+                       Feature::slideOption sliding, bool isFFT) :
+    Feature(name, sectionCount, sectionSize, sliding),
+    m_isFFT(isFFT)
 {
     m_values = values;
+    if (setupDebugMode && isFFT && sectionSize % 3 > 0)
+    {
+        raiseException(F("FFT Feature section size must be divisible by 3"));
+    }
 }
 
 /**
@@ -521,15 +497,49 @@ void Q15Feature::addQ15Value(q15_t value)
     incrementFillingIndex();
 }
 
+/**
+ * Stream the content of the section at sectionIdx
+ */
+void Q15Feature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx)
+{
+    if (m_isFFT)
+    {
+        for (uint16_t i = sectionIdx * m_sectionSize / 3;
+             i < (sectionIdx + 1) * m_sectionSize / 3; ++i)
+        {
+            port->print(",");
+            port->print(m_values[3 * i]);
+            port->print(",");
+            port->print(((float) m_values[3 * i + 1]) * m_resolution);
+            port->print(",");
+            port->print(((float) m_values[3 * i + 2]) * m_resolution);
+        }
+    }
+    else
+    {
+        for (uint16_t i = sectionIdx * m_sectionSize;
+             i < (sectionIdx + 1) * m_sectionSize; ++i)
+        {
+            port->print(",");
+            port->print(((float) m_values[i]) * m_resolution);
+        }
+    }
+}
+
 
 /***** Q31 Buffer *****/
 
 Q31Feature::Q31Feature(const char* name, uint8_t sectionCount,
                        uint16_t sectionSize, q31_t *values,
-                       Feature::slideOption sliding) :
-    Feature(name, sectionCount, sectionSize, sliding)
+                       Feature::slideOption sliding, bool isFFT) :
+    Feature(name, sectionCount, sectionSize, sliding),
+    m_isFFT(isFFT)
 {
     m_values = values;
+    if (setupDebugMode && isFFT && sectionSize % 3 > 0)
+    {
+        raiseException(F("FFT Feature section size must be divisible by 3"));
+    }
 }
 
 /**
@@ -548,6 +558,35 @@ void Q31Feature::addQ31Value(q31_t value)
 {
     m_values[m_fillingIndex] = value;
     incrementFillingIndex();
+}
+
+/**
+ * Stream the content of the section at sectionIdx
+ */
+void Q31Feature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx)
+{
+    if (m_isFFT)
+    {
+        for (uint16_t i = sectionIdx * m_sectionSize / 3;
+             i < (sectionIdx + 1) * m_sectionSize / 3; ++i)
+        {
+            port->print(",");
+            port->print(m_values[3 * i]);
+            port->print(",");
+            port->print(((float) m_values[3 * i + 1]) * m_resolution);
+            port->print(",");
+            port->print(((float) m_values[3 * i + 2]) * m_resolution);
+        }
+    }
+    else
+    {
+        for (uint16_t i = sectionIdx * m_sectionSize;
+             i < (sectionIdx + 1) * m_sectionSize; ++i)
+        {
+            port->print(",");
+            port->print(((float) m_values[i]) * m_resolution);
+        }
+    }
 }
 
 
@@ -598,9 +637,21 @@ FloatFeature accelRMS512Total("A93", 2, 1, accelRMS512TotalValues);
 __attribute__((section(".noinit2"))) q15_t accelReducedFFTXValues[300];
 __attribute__((section(".noinit2"))) q15_t accelReducedFFTYValues[300];
 __attribute__((section(".noinit2"))) q15_t accelReducedFFTZValues[300];
-Q15Feature accelReducedFFTX("FAX", 2, 150, accelReducedFFTXValues);
-Q15Feature accelReducedFFTY("FAY", 2, 150, accelReducedFFTYValues);
-Q15Feature accelReducedFFTZ("FAZ", 2, 150, accelReducedFFTZValues);
+Q15Feature accelReducedFFTX("FAX", 2, 150, accelReducedFFTXValues,
+                            Feature::FIXED, true);
+Q15Feature accelReducedFFTY("FAY", 2, 150, accelReducedFFTYValues,
+                            Feature::FIXED, true);
+Q15Feature accelReducedFFTZ("FAZ", 2, 150, accelReducedFFTZValues,
+                            Feature::FIXED, true);
+
+
+// Acceleration main Frequency features from 512 sample long accel data
+__attribute__((section(".noinit2"))) float accelMainFreqXValues[2];
+__attribute__((section(".noinit2"))) float accelMainFreqYValues[2];
+__attribute__((section(".noinit2"))) float accelMainFreqZValues[2];
+FloatFeature accelMainFreqX("FRX", 2, 1, accelMainFreqXValues);
+FloatFeature accelMainFreqY("FRY", 2, 1, accelMainFreqYValues);
+FloatFeature accelMainFreqZ("FRZ", 2, 1, accelMainFreqZValues);
 
 // Velocity features from 512 sample long accel data
 __attribute__((section(".noinit2"))) float velRMS512XValues[2];

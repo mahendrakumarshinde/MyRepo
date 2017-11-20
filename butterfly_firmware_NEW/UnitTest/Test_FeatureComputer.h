@@ -291,7 +291,6 @@ test(FeatureComputer__section_sum)
     assertEqual(round(dest1Values[0] * 100), 400);
     assertEqual(round(dest2Values[0] * 100), 1200);
 
-
     // With averaging / normalize = true (ie mean value)
     source1.reset();
     source2.reset();
@@ -309,6 +308,25 @@ test(FeatureComputer__section_sum)
     assertTrue(sumComputer.compute());
     assertEqual(round(dest1Values[0] * 100), 200);
     assertEqual(round(dest2Values[0] * 100), 300);
+
+    // With rmsLike = True
+    source1.reset();
+    source2.reset();
+    dest1.reset();
+    dest2.reset();
+    sumComputer.setNormalize(false);
+    sumComputer.setRMSLike(true);
+    for (uint16_t i = 0; i < 2; ++i)  // Need to fill 1 section
+    {
+        source1.addFloatValue(i + 1.5);
+    }
+    source2.addFloatValue(8099.0565);
+    source2.addFloatValue(8070.6166);
+    source2.addFloatValue(8032.1981);
+    source2.addFloatValue(8036.6844);
+    assertTrue(sumComputer.compute());
+    assertEqual(round(dest1Values[0] * 100), 206);
+    assertEqual(round(dest2Values[0] * 100), 805969);
 }
 
 
@@ -373,6 +391,29 @@ test(FeatureComputer__multi_source_sum)
     assertEqual(round(dest2Values[1] * 100), 225);
     assertEqual(round(dest2Values[2] * 100), 375);
     assertEqual(round(dest2Values[3] * 100), 525);
+
+    // With rmsLike = True
+    source1.reset();
+    source2.reset();
+    dest1.reset();
+    dest2.reset();
+    sumComputer.setNormalize(false);
+    sumComputer2.setNormalize(false);
+    sumComputer.setRMSLike(true);
+    sumComputer2.setRMSLike(true);
+    for (uint16_t i = 0; i < 4; ++i)  // Need to fill 1 section
+    {
+        source1.addFloatValue(i + 1.5);
+        source2.addFloatValue(2 * i);
+    }
+    assertTrue(sumComputer.compute());
+    assertTrue(sumComputer2.compute());
+    assertEqual(round(dest1Values[0] * 1000), 1061);
+    assertEqual(round(dest1Values[1] * 1000), 2264);
+    assertEqual(round(dest2Values[0] * 1000), 1061);
+    assertEqual(round(dest2Values[1] * 1000), 2264);
+    assertEqual(round(dest2Values[2] * 1000), 3758);
+    assertEqual(round(dest2Values[3] * 1000), 5303);
 }
 
 
@@ -388,16 +429,16 @@ test(FeatureComputer__q15_fft)
     // Creating destinations
     q15_t reducedFFTValues[300];
     Q15Feature reducedFFT("FFT", 2, 150, reducedFFTValues);
+    float mainFreqValues[2];
+    FloatFeature mainFreq("FRQ", 2, 1, mainFreqValues);
     float integralRMSValues[2];
     FloatFeature integralRMS("RM1", 2, 1, integralRMSValues);
     float doubleIntegralRMSValues[2];
     FloatFeature doubleIntegralRMS("RM2", 2, 1, doubleIntegralRMSValues);
 
-    Q15FFTComputer fftComputer = Q15FFTComputer(1, &reducedFFT, &integralRMS,
-                                                &doubleIntegralRMS,
-                                                sharedTestArray,
-                                                5,  // lowCutFrequency
-                                                550);  // highCutFrequency
+    Q15FFTComputer fftComputer = Q15FFTComputer(
+        1, &reducedFFT, &mainFreq, &integralRMS, &doubleIntegralRMS,
+        sharedTestArray, 5, 550);
     fftComputer.addSource(&source, 1);
     fftComputer.activate();
     // Fill source and compute
@@ -419,6 +460,9 @@ test(FeatureComputer__q15_fft)
     assertEqual(reducedFFTValues[147], 79);
     assertEqual(reducedFFTValues[148], -5);
     assertEqual(reducedFFTValues[149], -1);
+    // mainFreq validation
+    assertEqual(round(mainFreqValues[0] * 100), 8008);
+    assertEqual(round(mainFreq.getResolution()), 1);
     // integralRMS validation
     assertEqual(round(integralRMSValues[0]), 3362);
     assertEqual(round(integralRMS.getResolution()), 1);
