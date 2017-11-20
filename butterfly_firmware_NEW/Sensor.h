@@ -24,21 +24,23 @@ class Sensor : public Component
                                     P_HIGH     = 3,
                                     COUNT    = 4};
         static const uint8_t maxDestinationCount = 3;
-        /***** Constructors and destructors *****/
+        /***** Instance registry *****/
+        static const uint8_t MAX_INSTANCE_COUNT = 10;
+        static uint8_t instanceCount;
+        static Sensor *instances[MAX_INSTANCE_COUNT];
+        /***** Core *****/
         Sensor(const char* name, uint8_t destinationCount=0,
                Feature *destination0=NULL, Feature *destination1=NULL,
                Feature *destination2=NULL);
-        virtual ~Sensor() {}
-        /***** Core *****/
+        virtual ~Sensor();
         virtual char* getName() { return m_name; }
         virtual bool isNamed(const char* name)
             { return strcmp(m_name, name) == 0; }
-        virtual uint8_t getDestinationCount()
-            { return m_destinationCount; }
-        virtual uint8_t getMaxDestinationCount()
-            { return maxDestinationCount; }
+        static Sensor *getInstanceByName(const char *name);
+        virtual uint8_t getDestinationCount() { return m_destinationCount; }
+        virtual uint8_t getMaxDestinationCount() { return maxDestinationCount; }
         /***** Configuration *****/
-        virtual bool configure(JsonVariant &config) { return true; }
+        virtual void configure(JsonVariant &config) { }
         /***** Sampling and resolution *****/
         virtual bool isAsynchronous() { return false; }
         virtual void setCallbackRate(uint16_t callbackRate) {} // For asynchronous sensors
@@ -48,12 +50,14 @@ class Sensor : public Component
         virtual void acquireData() {}
         virtual void readData() {}  // May be defined in Child class
         /***** Communication *****/
-        void sendData(HardwareSerial *port) { }
+        virtual void sendData(HardwareSerial *port) { }
         /***** Debugging *****/
         virtual void expose();
         virtual void exposeCalibration() {}
 
     protected:
+        /***** Instance registry *****/
+        uint8_t m_instanceIdx;
         /***** Core *****/
         char m_name[4];
         uint8_t m_destinationCount;
@@ -84,7 +88,7 @@ class AsynchronousSensor : public Sensor
                            Feature *destination2=NULL);
         virtual ~AsynchronousSensor() {}
         /***** Configuration *****/
-        virtual bool configure(JsonVariant &config);
+        virtual void configure(JsonVariant &config);
         /***** Sampling and resolution *****/
         virtual bool isAsynchronous() { return true; }
         virtual void setCallbackRate(uint16_t callbackRate);
@@ -126,7 +130,7 @@ class SynchronousSensor : public Sensor
                            Feature *destination2=NULL);
         virtual ~SynchronousSensor() {}
         /***** Configuration *****/
-        virtual bool configure(JsonVariant &config);
+        virtual void configure(JsonVariant &config);
         virtual void changeUsagePreset(Sensor::usagePreset usage);
         virtual Sensor::usagePreset getUsagePreset() { return m_usagePreset; }
         virtual void switchToLowUsage() { m_usagePreset = Sensor::P_LOW; }

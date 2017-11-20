@@ -62,8 +62,9 @@ class IUBMX055Gyro : public AsynchronousSensor
         virtual void sleep();
         virtual void suspend();
         /***** Configuration and calibration *****/
-        virtual bool configure(JsonVariant &config);
+        virtual void configure(JsonVariant &config);
         void setScale(scaleOption scale);
+        scaleOption getScale() { return m_scale; }
         void setBandwidth(bandwidthOption scale);
         /***** Data acquisition *****/
         virtual void readData() {}             // Not implemented
@@ -82,5 +83,9 @@ class IUBMX055Gyro : public AsynchronousSensor
         int16_t m_rawData[3];  // 16-bit signed gyro sensor output
         q15_t m_data[3];  // Latest data values
 };
+
+/***** Instantiation *****/
+
+extern IUBMX055Gyro iuGyroscope;
 
 #endif // IUBMX055GYRO_H

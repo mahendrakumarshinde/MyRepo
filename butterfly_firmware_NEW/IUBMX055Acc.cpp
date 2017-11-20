@@ -118,26 +118,20 @@ void IUBMX055Acc::suspend()
     Configuration and calibration
 ============================================================================= */
 
-bool IUBMX055Acc::configure(JsonVariant &config)
+void IUBMX055Acc::configure(JsonVariant &config)
 {
-    JsonVariant my_config = config[m_name];
-    if (!my_config)
-    {
-        return false;
-    }
-    // Full Scale Range
-    JsonVariant value = my_config["FSR"];
+    AsynchronousSensor::configure(config);  // General sensor config
+    JsonVariant value = config["FSR"];  // Full Scale Range
     if (value.success())
     {
         setScale((scaleOption) (value.as<int>()));
     }
-    // Filtering and bandwidth
-    value = my_config["BW"];
+    value = config["BW"];  // Bandwidth for filtering
     if (value.success())
     {
         setBandwidth((bandwidthOption) (value.as<int>()));
     }
-    value = my_config["HPF"];
+    value = config["HPF"];  // Enable filtering
     if (value.success())
     {
         if (value.as<int>())
@@ -149,8 +143,6 @@ bool IUBMX055Acc::configure(JsonVariant &config)
             useUnfilteredData();
         }
     }
-    // General sensor config
-    return AsynchronousSensor::configure(config);
 }
 
 /**
@@ -400,3 +392,11 @@ void IUBMX055Acc::exposeCalibration()
     debugPrint(' ');
     #endif
 }
+
+
+/* =============================================================================
+    Instantiation
+============================================================================= */
+
+IUBMX055Acc iuAccelerometer(&iuI2C, "ACC", &accelerationX, &accelerationY,
+                            &accelerationZ);

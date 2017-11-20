@@ -2,13 +2,18 @@
 
 
 /* =============================================================================
-    Generic Feature buffers
+    Generic features
 ============================================================================= */
 
-//Feature *instances[20] = {NULL, NULL, NULL, NULL, NULL,
-//                          NULL, NULL, NULL, NULL, NULL,
-//                          NULL, NULL, NULL, NULL, NULL,
-//                          NULL, NULL, NULL, NULL, NULL};
+uint8_t Feature::instanceCount = 0;
+
+Feature *Feature::instances[Feature::MAX_INSTANCE_COUNT] = {
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
 Feature::Feature(const char* name, uint8_t sectionCount, uint16_t sectionSize,
                  Feature::slideOption sliding) :
@@ -32,6 +37,22 @@ Feature::Feature(const char* name, uint8_t sectionCount, uint16_t sectionSize,
     }
     m_totalSize = m_sectionCount * m_sectionSize;
     reset();
+    // Instance registration
+    m_instanceIdx = instanceCount;
+    instances[m_instanceIdx] = this;
+    instanceCount++;
+}
+
+Feature::~Feature()
+{
+    instances[m_instanceIdx] = NULL;
+    for (uint8_t i = m_instanceIdx + 1; i < instanceCount; ++i)
+    {
+        instances[i]->m_instanceIdx--;
+        instances[i -1] = instances[i];
+    }
+    instances[instanceCount] = NULL;
+    instanceCount--;
 }
 
 /**
@@ -69,6 +90,24 @@ uint8_t Feature::addReceiver(uint8_t receiverId)
 }
 
 
+/***** Feature designation *****/
+
+Feature *Feature::getInstanceByName(const char *name)
+{
+    for (uint8_t i = 0; i < instanceCount; ++i)
+    {
+        if (instances[i] != NULL)
+        {
+            if(instances[i]->isNamed(name))
+            {
+                return instances[i];
+            }
+        }
+    }
+    return NULL;
+}
+
+
 /***** Configuration *****/
 
 /**
@@ -85,42 +124,26 @@ void Feature::deactivate()
 
 
 /**
- * Applied the given config to the feature.
+ * Apply the given config to the feature.
  */
-bool Feature::configure(JsonVariant &config)
+void Feature::configure(JsonVariant &config)
 {
-    JsonVariant my_config = config[m_name];
-    if (!my_config)
-    {
-        return false;
-    }
-    JsonVariant value = my_config["OPS"];
-    if (value)
-    {
-        if (value.as<int>())
-        {
-            enableOperationState();
-        }
-        else
-        {
-            disableOperationState();
-        }
-    }
-    // Thresholds setting
+    // Thresholds setting for OperationState
+    float threshold;
+    bool thresholdUpdated = false;
     for (uint8_t i = 0; i < 3; ++i)
     {
-        value = my_config["TRH"][i];
-        if (value.success())
+        threshold = config["TRH"][i];
+        if (threshold)
         {
-            setThreshold(i, value);
+            setThreshold(i, threshold);
+            thresholdUpdated = true;
         }
     }
-    if (debugMode)
+    if (thresholdUpdated)
     {
-        debugPrint(F("Configured feature "), false);
-        debugPrint(m_name);
+        enableOperationState();
     }
-    return true;
 }
 
 
@@ -382,7 +405,7 @@ void Feature::exposeCounters()
 
 
 /* =============================================================================
-    Format specific buffers
+    Format specific features
 ============================================================================= */
 
 /***** Float Buffer *****/
@@ -445,10 +468,15 @@ void FloatFeature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx)
 
 Q15Feature::Q15Feature(const char* name, uint8_t sectionCount,
                        uint16_t sectionSize, q15_t *values,
-                       Feature::slideOption sliding) :
-    Feature(name, sectionCount, sectionSize, sliding)
+                       Feature::slideOption sliding, bool isFFT) :
+    Feature(name, sectionCount, sectionSize, sliding),
+    m_isFFT(isFFT)
 {
     m_values = values;
+    if (setupDebugMode && isFFT && sectionSize % 3 > 0)
+    {
+        raiseException(F("FFT Feature section size must be divisible by 3"));
+    }
 }
 
 /**
@@ -469,15 +497,49 @@ void Q15Feature::addQ15Value(q15_t value)
     incrementFillingIndex();
 }
 
+/**
+ * Stream the content of the section at sectionIdx
+ */
+void Q15Feature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx)
+{
+    if (m_isFFT)
+    {
+        for (uint16_t i = sectionIdx * m_sectionSize / 3;
+             i < (sectionIdx + 1) * m_sectionSize / 3; ++i)
+        {
+            port->print(",");
+            port->print(m_values[3 * i]);
+            port->print(",");
+            port->print(((float) m_values[3 * i + 1]) * m_resolution);
+            port->print(",");
+            port->print(((float) m_values[3 * i + 2]) * m_resolution);
+        }
+    }
+    else
+    {
+        for (uint16_t i = sectionIdx * m_sectionSize;
+             i < (sectionIdx + 1) * m_sectionSize; ++i)
+        {
+            port->print(",");
+            port->print(((float) m_values[i]) * m_resolution);
+        }
+    }
+}
+
 
 /***** Q31 Buffer *****/
 
 Q31Feature::Q31Feature(const char* name, uint8_t sectionCount,
                        uint16_t sectionSize, q31_t *values,
-                       Feature::slideOption sliding) :
-    Feature(name, sectionCount, sectionSize, sliding)
+                       Feature::slideOption sliding, bool isFFT) :
+    Feature(name, sectionCount, sectionSize, sliding),
+    m_isFFT(isFFT)
 {
     m_values = values;
+    if (setupDebugMode && isFFT && sectionSize % 3 > 0)
+    {
+        raiseException(F("FFT Feature section size must be divisible by 3"));
+    }
 }
 
 /**
@@ -497,3 +559,169 @@ void Q31Feature::addQ31Value(q31_t value)
     m_values[m_fillingIndex] = value;
     incrementFillingIndex();
 }
+
+/**
+ * Stream the content of the section at sectionIdx
+ */
+void Q31Feature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx)
+{
+    if (m_isFFT)
+    {
+        for (uint16_t i = sectionIdx * m_sectionSize / 3;
+             i < (sectionIdx + 1) * m_sectionSize / 3; ++i)
+        {
+            port->print(",");
+            port->print(m_values[3 * i]);
+            port->print(",");
+            port->print(((float) m_values[3 * i + 1]) * m_resolution);
+            port->print(",");
+            port->print(((float) m_values[3 * i + 2]) * m_resolution);
+        }
+    }
+    else
+    {
+        for (uint16_t i = sectionIdx * m_sectionSize;
+             i < (sectionIdx + 1) * m_sectionSize; ++i)
+        {
+            port->print(",");
+            port->print(((float) m_values[i]) * m_resolution);
+        }
+    }
+}
+
+
+/* =============================================================================
+    Instanciations
+============================================================================= */
+
+/***** Battery load *****/
+
+float batteryLoadValues[2];
+FloatFeature batteryLoad("BAT", 2, 1, batteryLoadValues);
+
+
+/***** Accelerometer Features *****/
+
+// Sensor data
+__attribute__((section(".noinit2"))) q15_t accelerationXValues[1024];
+__attribute__((section(".noinit2"))) q15_t accelerationYValues[1024];
+__attribute__((section(".noinit2"))) q15_t accelerationZValues[1024];
+Q15Feature accelerationX("A0X", 8, 128, accelerationXValues);
+Q15Feature accelerationY("A0Y", 8, 128, accelerationYValues);
+Q15Feature accelerationZ("A0Z", 8, 128, accelerationZValues);
+
+
+// 128 sample long accel features
+__attribute__((section(".noinit2"))) float accelRMS128XValues[8];
+__attribute__((section(".noinit2"))) float accelRMS128YValues[8];
+__attribute__((section(".noinit2"))) float accelRMS128ZValues[8];
+__attribute__((section(".noinit2"))) float accelRMS128TotalValues[8];
+FloatFeature accelRMS128X("A7X", 2, 4, accelRMS128XValues);
+FloatFeature accelRMS128Y("A7Y", 2, 4, accelRMS128YValues);
+FloatFeature accelRMS128Z("A7Z", 2, 4, accelRMS128ZValues);
+FloatFeature accelRMS128Total("A73", 2, 4, accelRMS128TotalValues);
+
+
+// 512 sample long accel features
+__attribute__((section(".noinit2"))) float accelRMS512XValues[2];
+__attribute__((section(".noinit2"))) float accelRMS512YValues[2];
+__attribute__((section(".noinit2"))) float accelRMS512ZValues[2];
+__attribute__((section(".noinit2"))) float accelRMS512TotalValues[2];
+FloatFeature accelRMS512X("A9X", 2, 1, accelRMS512XValues);
+FloatFeature accelRMS512Y("A9Y", 2, 1, accelRMS512YValues);
+FloatFeature accelRMS512Z("A9Z", 2, 1, accelRMS512ZValues);
+FloatFeature accelRMS512Total("A93", 2, 1, accelRMS512TotalValues);
+
+
+// FFT feature from 512 sample long accel data
+__attribute__((section(".noinit2"))) q15_t accelReducedFFTXValues[300];
+__attribute__((section(".noinit2"))) q15_t accelReducedFFTYValues[300];
+__attribute__((section(".noinit2"))) q15_t accelReducedFFTZValues[300];
+Q15Feature accelReducedFFTX("FAX", 2, 150, accelReducedFFTXValues,
+                            Feature::FIXED, true);
+Q15Feature accelReducedFFTY("FAY", 2, 150, accelReducedFFTYValues,
+                            Feature::FIXED, true);
+Q15Feature accelReducedFFTZ("FAZ", 2, 150, accelReducedFFTZValues,
+                            Feature::FIXED, true);
+
+
+// Acceleration main Frequency features from 512 sample long accel data
+__attribute__((section(".noinit2"))) float accelMainFreqXValues[2];
+__attribute__((section(".noinit2"))) float accelMainFreqYValues[2];
+__attribute__((section(".noinit2"))) float accelMainFreqZValues[2];
+FloatFeature accelMainFreqX("FRX", 2, 1, accelMainFreqXValues);
+FloatFeature accelMainFreqY("FRY", 2, 1, accelMainFreqYValues);
+FloatFeature accelMainFreqZ("FRZ", 2, 1, accelMainFreqZValues);
+
+// Velocity features from 512 sample long accel data
+__attribute__((section(".noinit2"))) float velRMS512XValues[2];
+__attribute__((section(".noinit2"))) float velRMS512YValues[2];
+__attribute__((section(".noinit2"))) float velRMS512ZValues[2];
+FloatFeature velRMS512X("VAX", 2, 1, velRMS512XValues);
+FloatFeature velRMS512Y("VAY", 2, 1, velRMS512YValues);
+FloatFeature velRMS512Z("VAZ", 2, 1, velRMS512ZValues);
+
+// Displacements features from 512 sample long accel data
+__attribute__((section(".noinit2"))) float dispRMS512XValues[2];
+__attribute__((section(".noinit2"))) float dispRMS512YValues[2];
+__attribute__((section(".noinit2"))) float dispRMS512ZValues[2];
+FloatFeature dispRMS512X("DAX", 2, 1, dispRMS512XValues);
+FloatFeature dispRMS512Y("DAX", 2, 1, dispRMS512YValues);
+FloatFeature dispRMS512Z("DAZ", 2, 1, dispRMS512ZValues);
+
+
+/***** Gyroscope Features *****/
+
+// Sensor data
+__attribute__((section(".noinit2"))) q15_t tiltXValues[2];
+__attribute__((section(".noinit2"))) q15_t tiltYValues[2];
+__attribute__((section(".noinit2"))) q15_t tiltZValues[2];
+Q15Feature tiltX("T0X", 2, 1, tiltXValues);
+Q15Feature tiltY("T0Y", 2, 1, tiltYValues);
+Q15Feature tiltZ("T0Z", 2, 1, tiltZValues);
+
+
+/***** Magnetometer Features *****/
+
+// Sensor data
+__attribute__((section(".noinit2"))) q15_t magneticXValues[2];
+__attribute__((section(".noinit2"))) q15_t magneticYValues[2];
+__attribute__((section(".noinit2"))) q15_t magneticZValues[2];
+Q15Feature magneticX("M0X", 2, 1, magneticXValues);
+Q15Feature magneticY("M0Y", 2, 1, magneticYValues);
+Q15Feature magneticZ("M0Z", 2, 1, magneticZValues);
+
+
+/***** Barometer Features *****/
+
+// Sensor data
+__attribute__((section(".noinit2"))) float temperatureValues[2];
+__attribute__((section(".noinit2"))) float pressureValues[2];
+FloatFeature temperature("TMP", 2, 1, temperatureValues);
+FloatFeature pressure("PRS", 2, 1, pressureValues);
+
+
+/***** Audio Features *****/
+
+// Sensor data
+q15_t audioValues[8192];
+Q15Feature audio("SND", 2, 2048, audioValues);
+
+// 2048 sample long features
+__attribute__((section(".noinit2"))) float audioDB2048Values[4];
+FloatFeature audioDB2048("S11", 4, 1, audioDB2048Values);
+
+// 4096 sample long features
+__attribute__((section(".noinit2"))) float audioDB4096Values[2];
+FloatFeature audioDB4096("S12", 2, 1, audioDB4096Values);
+
+
+/***** GNSS Feature *****/
+
+
+/***** RTD Temperature features *****/
+
+#ifdef RTD_DAUGHTER_BOARD // Optionnal hardware
+__attribute__((section(".noinit2"))) float rtdTempValues[8];
+FloatFeature rtdTemp("RTD", 2, 4, rtdTempValues);
+#endif // RTD_DAUGHTER_BOARD

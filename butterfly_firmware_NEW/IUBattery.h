@@ -48,6 +48,8 @@ class IUBattery : public SynchronousSensor
         float m_batteryLoad;
 };
 
+/***** Instantiation *****/
+
 extern IUBattery iuBattery;
 
 #endif // IUBATTERY_H

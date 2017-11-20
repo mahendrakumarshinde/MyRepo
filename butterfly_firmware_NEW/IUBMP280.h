@@ -31,6 +31,7 @@ class IUBMP280 : public SynchronousSensor
 {
     public:
         /***** Preset values and default settings *****/
+        static const uint8_t ADDRESS            = 0x76;
         static const uint8_t WHO_AM_I           = 0xD0;
         static const uint8_t WHO_AM_I_ANSWER    = 0x58;
         static const uint8_t TEMP_MSB           = 0xFA;
@@ -40,7 +41,6 @@ class IUBMP280 : public SynchronousSensor
         static const uint8_t STATUS             = 0xF3;
         static const uint8_t RESET              = 0xE0;
         static const uint8_t CALIB00            = 0x88;
-        static const uint8_t ADDRESS            = 0x76;
         enum powerModeBytes : uint8_t {SLEEP = 0,
                                        FORCED = 1,
                                        NORMAL = 3};
@@ -134,7 +134,7 @@ class IUBMP280 : public SynchronousSensor
 
 
 /***** Instanciation *****/
-//
-//extern IUBMP280 iuAltimeter;
+
+extern IUBMP280 iuAltimeter;
 
 #endif // IUBMP280_H

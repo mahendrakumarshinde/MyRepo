@@ -10,34 +10,35 @@
 
 
 #include "Conductor.h"
-#include "Configurator.h"
+#include "IUSPIFlash.h"  // FIXME For some reason, if this is included in
+// conductor, it blocks the I2S callback
 
 /* Comment / Uncomment the "define" lines to toggle / untoggle unit or quality
 test mode */
 
 //#define UNITTEST
 #ifdef UNITTEST
-  #include "UnitTest/Test_Component.h"
-  #include "UnitTest/Test_Configurator.h"
-  #include "UnitTest/Test_FeatureClass.h"
-  #include "UnitTest/Test_FeatureComputer.h"
-  #include "UnitTest/Test_FeatureGraph.h"
-  #include "UnitTest/Test_FeatureProfile.h"
-  #include "UnitTest/Test_Sensor.h"
-  #include "UnitTest/Test_Utilities.h"
+    #include "UnitTest/Test_Component.h"
+    #include "UnitTest/Test_FeatureClass.h"
+    #include "UnitTest/Test_FeatureComputer.h"
+    #include "UnitTest/Test_FeatureGroup.h"
+    #include "UnitTest/Test_Sensor.h"
+    #include "UnitTest/Test_Utilities.h"
 #endif
 
-//#define QUALITYTEST
-#ifdef QUALITYTEST
-  #include "QualityTest/QA_IUBMX055.h"
+//#define INTEGRATEDTEST
+#ifdef INTEGRATEDTEST
+    #include "IntegratedTest/IT_Conductor.h"
+    #include "IntegratedTest/IT_IUBMX055.h"
+    #include "IntegratedTest/IT_IUSPIFlash.h"
+    #include "IntegratedTest/IT_Sensors.h"
 #endif
 
 
 /* =============================================================================
-    MAC Address and Firmware version
+    MAC Address
 ============================================================================= */
 
-const char FIRMWARE_VERSION[6] = "1.0.0";
 const char MAC_ADDRESS[18] = "94:54:93:0F:67:01";
 
 
@@ -80,17 +81,18 @@ void callback()
 
 /***** Begin *****/
 
-Conductor conductor(FIRMWARE_VERSION, MAC_ADDRESS);
+Conductor conductor(MAC_ADDRESS);
 
 void setup()
 {
-    // Setup USB first for Serial communication
-    iuUSB.setupHardware();
-    
-    #ifdef UNITTEST
-        memoryLog("UNIT TEST");
+    #if defined(UNITTEST) || defined(INTEGRATEDTEST)
+        Serial.begin(115200);
+        delay(2000);
+        memoryLog("TESTING");
         Serial.println(' ');
+        iuI2C.setupHardware();
     #else
+        iuUSB.setupHardware();  // Start with USB for Serial communication
         if (debugMode)
         {
           memoryLog("Start");
@@ -108,6 +110,7 @@ void setup()
         }
         iuBluetooth.setupHardware();
         iuWiFi.setupHardware();
+        iuSPIFlash.setupHardware();
         if(debugMode)
         {
             memoryLog(F("=> Successfully initialized interfaces"));
@@ -122,18 +125,9 @@ void setup()
         {
             debugPrint(F("\nSetting up default feature configuration..."));
         }
-        setUpComputerSource();
-        setUpProfiles();
-        // Activate a profile by default
-        activateProfile(&motorStandardProfile);
-        accelRMS512Total.enableOperationState();
-        accelRMS512Total.setThresholds(110, 130, 150);
-//        accelRMS512X.enableOperationState();
-//        accelRMS512Total.setThresholds(0.5, 1.2, 1.8);
-//        accelRMS512Y.enableOperationState();
-//        accelRMS512Total.setThresholds(0.5, 1.2, 1.8);
-//        accelRMS512Z.enableOperationState();
-//        accelRMS512Total.setThresholds(0.5, 1.2, 1.8);
+        conductor.setCallback(callback);
+        setUpComputerSources();
+        populateFeatureGroups();
         if (debugMode)
         {
             memoryLog(F("=> Succesfully configured default features"));
@@ -144,21 +138,24 @@ void setup()
             debugPrint(F("\nInitializing sensors..."));
         }
         uint16_t callbackRate = iuI2S.getCallbackRate();
-        for (uint8_t i = 0; i < SENSOR_COUNT; ++i)
+        for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
         {
-            SENSORS[i]->setupHardware();
-            if (SENSORS[i]->isAsynchronous())
+            Sensor::instances[i]->setupHardware();
+            if (Sensor::instances[i]->isAsynchronous())
             {
-                SENSORS[i]->setCallbackRate(callbackRate);
+                Sensor::instances[i]->setCallbackRate(callbackRate);
             }
         }
         if (debugMode)
         {
           memoryLog(F("=> Successfully initialized sensors"));
         }
+//        conductor.activateGroup(&motorStandardGroup);
+//        accelRMS512Total.enableOperationState();
+//        accelRMS512Total.setThresholds(110, 130, 150);
         if (setupDebugMode)
         {
-            configurator.exposeAllConfigurations();
+            conductor.exposeAllConfigurations();
             if (iuI2C.isError())
             {
                 debugPrint(F("\nI2C Satus: Error"));
@@ -171,8 +168,8 @@ void setup()
             debugPrint(millis(), false);
             debugPrint(F("***\n"));
         }
-        conductor.setCallback(callback);
-        conductor.changeAcquisitionMode(AcquisitionMode::FEATURE);
+        conductor.changeUsageMode(UsageMode::OPERATION);
+//        conductor.changeAcquisitionMode(AcquisitionMode::FEATURE);
     #endif
 }
 
@@ -183,7 +180,7 @@ void setup()
  */
 void loop()
 {
-    #ifdef UNITTEST
+    #if defined(UNITTEST) || defined(INTEGRATEDTEST)
         Test::run();
     #else
         if (loopDebugMode)
@@ -209,11 +206,11 @@ void loop()
         conductor.manageSleepCycles();
         iuRGBLed.autoTurnOff();
         // Configuration
-        configurator.readFromSerial(&iuUSB);
+        conductor.readFromSerial(&iuUSB);
         iuRGBLed.autoTurnOff();
-        configurator.readFromSerial(&iuBluetooth);
+        conductor.readFromSerial(&iuBluetooth);
         iuRGBLed.autoTurnOff();
-        configurator.readFromSerial(&iuWiFi);
+        conductor.readFromSerial(&iuWiFi);
         iuRGBLed.autoTurnOff();
         // Acquire data from synchronous sensor
         conductor.acquireData(false);

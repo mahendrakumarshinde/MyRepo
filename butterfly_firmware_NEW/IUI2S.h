@@ -74,4 +74,8 @@ class IUI2S : public AsynchronousSensor
         uint16_t m_targetSample;
 };
 
+/***** Instantiation *****/
+
+extern IUI2S iuI2S;
+
 #endif // IUI2S_H

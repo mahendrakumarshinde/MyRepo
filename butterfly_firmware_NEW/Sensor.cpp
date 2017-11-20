@@ -5,7 +5,12 @@
     Generic Sensor class
 ============================================================================= */
 
-/***** Constructors and destructors *****/
+uint8_t Sensor::instanceCount = 0;
+
+Sensor *Sensor::instances[Sensor::MAX_INSTANCE_COUNT] = {
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+
+/***** Core *****/
 
 Sensor::Sensor(const char* name, uint8_t destinationCount,
                Feature *destination0, Feature *destination1,
@@ -18,6 +23,37 @@ Sensor::Sensor(const char* name, uint8_t destinationCount,
     m_destinations[1] = destination1;
     m_destinations[2] = destination2;
     setResolution(1); // Default resolution
+    // Instance registration
+    m_instanceIdx = instanceCount;
+    instances[m_instanceIdx] = this;
+    instanceCount++;
+}
+
+Sensor::~Sensor()
+{
+    instances[m_instanceIdx] = NULL;
+    for (uint8_t i = m_instanceIdx + 1; i < instanceCount; ++i)
+    {
+        instances[i]->m_instanceIdx--;
+        instances[i -1] = instances[i];
+    }
+    instances[instanceCount] = NULL;
+    instanceCount--;
+}
+
+Sensor *Sensor::getInstanceByName(const char *name)
+{
+    for (uint8_t i = 0; i < instanceCount; ++i)
+    {
+        if (instances[i] != NULL)
+        {
+            if(instances[i]->isNamed(name))
+            {
+                return instances[i];
+            }
+        }
+    }
+    return NULL;
 }
 
 
@@ -77,22 +113,15 @@ AsynchronousSensor::AsynchronousSensor(const char* name,
  * Read and apply the config
  *
  * @param config A reference to a JsonVariant, ie a parsed JSON
- * @return True if a config was found and applied for the sensor, else false
  */
-bool AsynchronousSensor::configure(JsonVariant &config)
+void AsynchronousSensor::configure(JsonVariant &config)
 {
-
-    JsonVariant my_config = config[m_name];
-    if (!my_config)
-    {
-        return false;
-    }
-    uint16_t samplingRate = my_config["FREQ"];
+    Sensor::configure(config);
+    uint16_t samplingRate = config["FREQ"];
     if (samplingRate)
     {
         setSamplingRate(samplingRate);
     }
-    return Sensor::configure(config);
 }
 
 
@@ -181,22 +210,15 @@ SynchronousSensor::SynchronousSensor(const char* name,
  * Read and apply the config
  *
  * @param config A reference to a JsonVariant, ie a parsed JSON
- * @return True if a config was found and applied for the sensor, else false
  */
-bool SynchronousSensor::configure(JsonVariant &config)
+void SynchronousSensor::configure(JsonVariant &config)
 {
-
-    JsonVariant my_config = config[m_name];
-    if (!my_config)
-    {
-        return false;
-    }
-    JsonVariant value = my_config["USG"];
+    Sensor::configure(config);
+    JsonVariant value = config["USG"];
     if (value.success())
     {
         changeUsagePreset((usagePreset) (value.as<int>()));
     }
-    return Sensor::configure(config);
 }
 
 /**

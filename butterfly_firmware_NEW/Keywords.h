@@ -5,6 +5,25 @@
 
 
 /* =============================================================================
+    Optionnal hardware specification
+
+    Comment / uncomment lines below to define the optionnal components currently
+    used.
+============================================================================= */
+
+/***** Board version *****/
+//#define BUTTERFLY_V03
+#define BUTTERFLY_V04
+
+/***** Optionnal components *****/
+//#define RTD_DAUGHTER_BOARD
+
+
+/***** Firmware version *****/
+const char FIRMWARE_VERSION[6] = "1.0.0";
+
+
+/* =============================================================================
     Axis
 ============================================================================= */
 

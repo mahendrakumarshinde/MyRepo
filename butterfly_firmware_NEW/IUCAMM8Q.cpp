@@ -72,33 +72,25 @@ void IUCAMM8Q::suspend()
     Configuration and calibration
 ============================================================================= */
 
-bool IUCAMM8Q::configure(JsonVariant &config)
+void IUCAMM8Q::configure(JsonVariant &config)
 {
-    JsonVariant my_config = config[m_name];
-    if (!my_config)
-    {
-        return false;
-    }
-    // Active duration
-    JsonVariant value = my_config["TON"];
+    SynchronousSensor::configure(config);  // General sensor config
+    JsonVariant value = config["TON"];  // Active duration
     if (value.success())
     {
         m_onTime = (uint32_t) (value.as<int>());
     }
-    // Cycle duration
-    value = my_config["TCY"];
+    value = config["TCY"];  // Cycle duration
     if (value.success())
     {
         m_period = (uint32_t) (value.as<int>());
     }
-    // Forced mode
-    value = my_config["FORCE"];
+    value = config["FORCE"];  // Forced mode
     if (value.success())
     {
         m_forcedMode = (bool) (value.as<int>());
     }
     setPeriodic(m_onTime, m_period, m_forcedMode);
-    return SynchronousSensor::configure(config);
 }
 
 /**
@@ -175,3 +167,10 @@ void IUCAMM8Q::exposeCalibration()
     // TODO Implement
     #endif
 }
+
+
+/* =============================================================================
+    Instantiation
+============================================================================= */
+
+IUCAMM8Q iuGNSS(&iuI2C, "GPS");

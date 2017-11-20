@@ -66,7 +66,7 @@ class IUBMX055Mag : public AsynchronousSensor
         virtual void sleep();
         virtual void suspend();
         /***** Configuration and calibration *****/
-        virtual bool configure(JsonVariant &config);
+        virtual void configure(JsonVariant &config);
         void enterForcedMode();
         void exitForcedMode();
         void setODR(ODROption ODR);
@@ -90,5 +90,9 @@ class IUBMX055Mag : public AsynchronousSensor
         q15_t m_data[3];       // Latest data values
 
 };
+
+/***** Instantiation *****/
+
+extern IUBMX055Mag iuMagnetometer;
 
 #endif // IUBMX055MAG_H

@@ -31,7 +31,7 @@ IUSerial::IUSerial(InterfaceType::option interType, HardwareSerial *serialPort,
 void IUSerial::setupHardware()
 {
     port->begin(baudRate);
-    delay(10);
+    delay(500);
     wakeUp();
 }
 
@@ -104,7 +104,7 @@ bool IUSerial::readToBuffer()
  * Time since last reception is compared to m_dataReceptionTimeout.
  * @return true if a timeout happened and that the buffer needs to be reset,
  * else false.
-*/
+ */
 bool IUSerial::hasTimedOut()
 {
     if (m_bufferIndex > 0 && (millis() -
