@@ -694,14 +694,10 @@ double Conductor::getDatetime()
  */
 void Conductor::changeAcquisitionMode(AcquisitionMode::option mode)
 {
-    Serial.print("Current acquisition mode: ");
-    Serial.println(m_acquisitionMode);
     if (m_acquisitionMode == mode)
     {
-        Serial.println("m_acquisitionMode already");
         return; // Nothing to do
     }
-    Serial.println("m_acquisitionMode changed");
     m_acquisitionMode = mode;
     switch (m_acquisitionMode)
     {
@@ -764,14 +760,10 @@ void Conductor::changeStreamingMode(StreamingMode::option mode)
  */
 void Conductor::changeUsageMode(UsageMode::option usage)
 {
-    Serial.print("Current usage mode: ");
-    Serial.println(m_usageMode);
     if (m_usageMode == usage)
     {
-        Serial.println("Already in mode");
         return; // Nothing to do
     }
-    Serial.println("Changing mode");
     m_usageMode = usage;
     String msg;
     switch (m_usageMode)
@@ -807,11 +799,7 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             }
             return;
     }
-    Serial.print("New acquisition mode: ");
-    Serial.println(UsageMode::acquisitionModeDetails[m_usageMode]);
     changeAcquisitionMode(UsageMode::acquisitionModeDetails[m_usageMode]);
-    Serial.print("New streaming mode: ");
-    Serial.println(UsageMode::streamingModeDetails[m_usageMode]);
     changeStreamingMode(UsageMode::streamingModeDetails[m_usageMode]);
     if (loopDebugMode)
     {
@@ -872,7 +860,6 @@ void Conductor::endDataAcquisition()
  */
 bool Conductor::resetDataAcquisition()
 {
-    Serial.println("resetDataAcquisition");
     endDataAcquisition();
     return beginDataAcquisition();
 }
@@ -910,7 +897,6 @@ void Conductor::acquireData(bool asynchronous)
         }
         if (asynchronous)
         {
-            Serial.println("async dd");
             iuI2S.sendData(iuUSB.port);
             iuAccelerometer.sendData(iuUSB.port);
         }

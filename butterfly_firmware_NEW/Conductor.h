@@ -11,7 +11,6 @@
 #include "IUSerial.h"
 #include "IUBMD350.h"
 #include "IUESP8285.h"
-#include "IUSPIFlash.h"
 #include "IURGBLed.h"
 #include "IUBattery.h"
 #include "IUBMP280.h"

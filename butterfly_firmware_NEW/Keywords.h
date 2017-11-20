@@ -12,8 +12,8 @@
 ============================================================================= */
 
 /***** Board version *****/
-#define BUTTERFLY_V03
-//#define BUTTERFLY_V04
+//#define BUTTERFLY_V03
+#define BUTTERFLY_V04
 
 /***** Optionnal components *****/
 //#define RTD_DAUGHTER_BOARD

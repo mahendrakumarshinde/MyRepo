@@ -10,6 +10,8 @@
 
 
 #include "Conductor.h"
+#include "IUSPIFlash.h"  // FIXME For some reason, if this is included in
+// conductor, it blocks the I2S callback
 
 /* Comment / Uncomment the "define" lines to toggle / untoggle unit or quality
 test mode */
@@ -24,7 +26,7 @@ test mode */
     #include "UnitTest/Test_Utilities.h"
 #endif
 
-#define INTEGRATEDTEST
+//#define INTEGRATEDTEST
 #ifdef INTEGRATEDTEST
     #include "IntegratedTest/IT_Conductor.h"
     #include "IntegratedTest/IT_IUBMX055.h"
@@ -69,7 +71,6 @@ void callback()
     {
         startT = micros();
     }
-    Serial.println('c');
     conductor.acquireData(true);
     if (callbackDebugMode)
     {

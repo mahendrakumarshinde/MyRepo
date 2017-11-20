@@ -6,7 +6,6 @@
 
 #include "Component.h"
 
-
 /**
  * 1MB Flash Memory, accessible through SPI
  *
