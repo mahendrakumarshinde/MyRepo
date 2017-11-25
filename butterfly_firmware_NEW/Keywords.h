@@ -37,19 +37,6 @@ namespace Axis
 
 
 /* =============================================================================
-    Interface Types
-============================================================================= */
-
-namespace InterfaceType
-{
-    enum option : uint8_t {INT_USB   = 0,
-                           INT_BLE   = 1,
-                           INT_WIFI  = 2,
-                           COUNT = 3};
-}
-
-
-/* =============================================================================
     Component Power Modes
 ============================================================================= */
 
@@ -85,11 +72,12 @@ namespace AcquisitionMode
  */
 namespace StreamingMode
 {
-    enum option : uint8_t {WIRED = 0,  // Send over Serial
-                           BLE   = 1,  // Send over Bluetooth Low Energy
-                           WIFI  = 2,  // Send over WiFi
-                           STORE = 3,  // Store in SPI Flash to stream later
-                           COUNT = 4};
+    enum option : uint8_t {WIRED  = 0,  // Send over Serial
+                           BLE    = 1,  // Send over Bluetooth Low Energy
+                           WIFI   = 2,  // Send over WiFi
+                           EXTERN = 3,  // Send through Serial3 to another board
+                           STORE  = 4,  // Store in SPI Flash to stream later
+                           COUNT  = 5};
 }
 
 
@@ -102,15 +90,17 @@ namespace StreamingMode
  */
 namespace UsageMode
 {
-    enum option : uint8_t {CALIBRATION = 0,
-                           EXPERIMENT  = 1,
-                           OPERATION   = 2,
-                           COUNT       = 3};
+    enum option : uint8_t {CALIBRATION     = 0,
+                           EXPERIMENT      = 1,
+                           OPERATION       = 2,
+                           OPERATION_BIS   = 3,
+                           COUNT           = 4};
     // Related default config
     const AcquisitionMode::option acquisitionModeDetails[COUNT] =
     {
         AcquisitionMode::FEATURE,
         AcquisitionMode::RAWDATA,
+        AcquisitionMode::FEATURE,
         AcquisitionMode::FEATURE,
     };
     const StreamingMode::option streamingModeDetails[COUNT] =
@@ -118,6 +108,7 @@ namespace UsageMode
         StreamingMode::WIRED,
         StreamingMode::WIRED,
         StreamingMode::BLE,
+        StreamingMode::EXTERN,
     };
 }
 

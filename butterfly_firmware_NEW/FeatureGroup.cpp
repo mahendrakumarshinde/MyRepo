@@ -130,8 +130,8 @@ bool FeatureGroup::isDataSendTime()
 /**
  * Sends the values of the group features through given serial.
  */
-void FeatureGroup::stream(HardwareSerial *port,
-                          double timestamp)
+void FeatureGroup::stream(HardwareSerial *port, const char *macAddress,
+                          double timestamp, bool sendMACAddress)
 {
     if (!m_active)
     {
@@ -142,6 +142,11 @@ void FeatureGroup::stream(HardwareSerial *port,
         return;
     }
     port->print(m_name);
+    if (sendMACAddress)
+    {
+        port->print(",");
+        port->print(macAddress);
+    }
     for (uint8_t i = 0; i < m_featureCount; ++i)
     {
         if (m_features[i] != NULL)
@@ -164,8 +169,8 @@ void FeatureGroup::stream(HardwareSerial *port,
 
 
 void FeatureGroup::legacyStream(HardwareSerial *port, const char *macAddress,
-                                  OperationState::option opState,
-                                  float batteryLoad, double timestamp)
+                                OperationState::option opState,
+                                float batteryLoad, double timestamp)
 {
     if (!m_active)
     {
@@ -205,7 +210,7 @@ void FeatureGroup::legacyStream(HardwareSerial *port, const char *macAddress,
 ============================================================================= */
 
 // Health Check
-FeatureGroup healthCheckGroup("HEALTH", 500);
+FeatureGroup healthCheckGroup("HEALTH", 45000);
 // Calibration
 FeatureGroup calibrationGroup("CAL001", 512);
 // Raw acceleration data
@@ -228,7 +233,7 @@ void populateFeatureGroups()
     calibrationGroup.addFeature(&velRMS512X);
     calibrationGroup.addFeature(&velRMS512Y);
     calibrationGroup.addFeature(&velRMS512Z);
-    pressStandardGroup.addFeature(&temperature);
+    calibrationGroup.addFeature(&temperature);
     calibrationGroup.addFeature(&accelMainFreqX);
     calibrationGroup.addFeature(&accelMainFreqY);
     calibrationGroup.addFeature(&accelMainFreqZ);

@@ -7,7 +7,7 @@
 
 IUBMD350::IUBMD350(HardwareSerial *serialPort, uint32_t rate,
                    uint16_t dataReceptionTimeout) :
-    IUSerial(InterfaceType::INT_BLE, serialPort, rate, 500, ';',
+    IUSerial(StreamingMode::BLE, serialPort, rate, 500, ';',
              dataReceptionTimeout),
     m_ATCmdEnabled(false),
     m_beaconEnabled(IUBMD350::defaultBeaconEnabled),

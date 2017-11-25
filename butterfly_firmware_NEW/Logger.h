@@ -24,7 +24,7 @@
     const bool callbackDebugMode = false;
 #endif
 
-const bool debugMode = (setupDebugMode || loopDebugMode || 
+const bool debugMode = (setupDebugMode || loopDebugMode ||
     featureDebugMode || callbackDebugMode);
 
 template <typename T>

@@ -18,12 +18,12 @@
 class IUSerial : public Component
 {
     public:
-        IUSerial(InterfaceType::option interType, HardwareSerial *serialPort,
+        IUSerial(StreamingMode::option interface, HardwareSerial *serialPort,
                  uint32_t rate=57600, uint16_t buffSize=20, char stop=';',
                  uint16_t dataReceptionTimeout=2000);
         virtual ~IUSerial() {}
         /***** Public constants *****/
-        const InterfaceType::option interface;
+        const StreamingMode::option interfaceType;
         HardwareSerial *port;
         const uint32_t baudRate;
         const uint16_t bufferSize;
@@ -53,5 +53,6 @@ class IUSerial : public Component
 /***** Instanciation *****/
 
 extern IUSerial iuUSB;
+extern IUSerial iuSerial3;
 
 #endif // IUSERIAL_H
