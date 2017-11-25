@@ -7,7 +7,7 @@
 
 IUESP8285::IUESP8285(HardwareSerial *serialPort, uint32_t rate,
                      uint16_t dataReceptionTimeout) :
-    IUSerial(InterfaceType::INT_WIFI, serialPort, rate, 20, ';',
+    IUSerial(StreamingMode::WIFI, serialPort, rate, 20, ';',
              dataReceptionTimeout)
 {
 }

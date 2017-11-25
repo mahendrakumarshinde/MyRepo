@@ -5,11 +5,11 @@
     Constructor & desctructors
 ============================================================================= */
 
-IUSerial::IUSerial(InterfaceType::option interType, HardwareSerial *serialPort,
+IUSerial::IUSerial(StreamingMode::option interface, HardwareSerial *serialPort,
                    uint32_t rate, uint16_t buffSize, char stop,
                    uint16_t dataReceptionTimeout) :
     Component(),
-    interface(interType),
+    interfaceType(interface),
     port(serialPort),
     baudRate(rate),
     bufferSize(buffSize),
@@ -121,4 +121,5 @@ bool IUSerial::hasTimedOut()
     Instanciation
 ============================================================================= */
 
-IUSerial iuUSB(InterfaceType::INT_USB, &Serial, 115200, 20, '\n', 2000);
+IUSerial iuUSB(StreamingMode::WIRED, &Serial, 115200, 20, '\n', 2000);
+IUSerial iuSerial3(StreamingMode::EXTERN, &Serial3, 115200, 500, ';', 500);

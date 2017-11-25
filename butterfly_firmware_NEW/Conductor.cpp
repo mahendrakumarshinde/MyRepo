@@ -1,8 +1,8 @@
 #include "Conductor.h"
 
 
-char Conductor::START_CONFIRM[12] = "IUCMD_START";
-char Conductor::END_CONFIRM[10] = "IUCMD_END";
+char Conductor::START_CONFIRM[11] = "IUOK_START";
+char Conductor::END_CONFIRM[9] = "IUOK_END";
 
 /* =============================================================================
     Constructors and destructors
@@ -136,7 +136,9 @@ void Conductor::readFromSerial(IUSerial *iuSerial)
         uint16_t buffSize =  iuSerial->getCurrentBufferLength();
         if(setupDebugMode)
         {
-            debugPrint(F("USB input is: "), false);
+            debugPrint(F("Interface "), false);
+            debugPrint(iuSerial->interfaceType, false);
+            debugPrint(F(" input is: "), false);
             debugPrint(buffer);
         }
         if (buffer[0] == '{' && buffer[buffSize - 1] == '}')
@@ -146,19 +148,19 @@ void Conductor::readFromSerial(IUSerial *iuSerial)
         else
         {
             // Also check for legacy commands
-            switch (iuSerial->interface)
+            switch (iuSerial->interfaceType)
             {
-                case InterfaceType::INT_USB:
+                case StreamingMode::WIRED:
                     processLegacyUSBCommands(buffer);
                     break;
-                case InterfaceType::INT_BLE:
+                case StreamingMode::BLE:
                     processLegacyBLECommands(buffer);
                     break;
                 default:
                     if (loopDebugMode)
                     {
                         debugPrint(F("Unhandled interface type: "), false);
-                        debugPrint(iuSerial->interface);
+                        debugPrint(iuSerial->interfaceType);
                     }
             }
         }
@@ -426,7 +428,8 @@ void Conductor::processLegacyUSBCommands(char *buff)
  */
 void Conductor::processLegacyBLECommands(char *buff)
 {
-    if (m_streamingMode == StreamingMode::WIRED)
+    if (m_streamingMode == StreamingMode::WIRED ||
+        m_streamingMode == StreamingMode::EXTERN)
     {
         return;  // Do not listen to BLE when wired
     }
@@ -745,8 +748,11 @@ void Conductor::changeStreamingMode(StreamingMode::option mode)
         case StreamingMode::WIFI:
             debugPrint(F("WIFI"));
             break;
+        case StreamingMode::EXTERN:
+            debugPrint(F("EXTERN"));
+            break;
         case StreamingMode::STORE:
-            debugPrint(F("SPI STORAGE"));
+            debugPrint(F("Flash storage"));
             break;
         default:
             debugPrint(F("Invalid streaming Mode"));
@@ -781,6 +787,7 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             iuRGBLed.lock();
             break;
         case UsageMode::OPERATION:
+        case UsageMode::OPERATION_BIS:
             iuRGBLed.unlock();
             iuRGBLed.changeColor(IURGBLed::BLUE);
             deactivateAllGroups();
@@ -893,7 +900,7 @@ void Conductor::acquireData(bool asynchronous)
         if (loopDebugMode && (m_acquisitionMode != AcquisitionMode::RAWDATA ||
                               m_streamingMode != StreamingMode::WIRED))
         {
-            debugPrint(F("EXPERIMENT should be RAW DATA + WIRED mode."));
+            debugPrint(F("EXPERIMENT should be RAW DATA + USB mode."));
         }
         if (asynchronous)
         {
@@ -965,7 +972,7 @@ void Conductor::updateOperationState()
 }
 
 /**
- * Send feature data through Serial, BLE or WiFi depending on StreamingMode
+ * Send feature data through a Serial port, depending on StreamingMode
  *
  * NB: If the AcquisitionMode is not FEATURE, does nothing.
  * @return true if data was sent, else false
@@ -977,6 +984,7 @@ void Conductor::streamFeatures()
         return;
     }
     HardwareSerial *port = NULL;
+    bool sendMACAddress = false;
     switch (m_streamingMode)
     {
         case StreamingMode::WIRED:
@@ -987,6 +995,10 @@ void Conductor::streamFeatures()
             break;
         case StreamingMode::WIFI:
             port = iuWiFi.port;
+            break;
+        case StreamingMode::EXTERN:
+            port = iuSerial3.port;
+            sendMACAddress = true;
             break;
         default:
             if (loopDebugMode)
@@ -1000,9 +1012,16 @@ void Conductor::streamFeatures()
     for (uint8_t i = 0; i < FeatureGroup::instanceCount; ++i)
     {
         // TODO Switch to new streaming format once the backend is ready
-//        FeatureGroup::instances[i]->stream(port, timestamp);
-        FeatureGroup::instances[i]->legacyStream(
-            port, m_macAddress, m_operationState, batteryLoad, timestamp);
+        if (m_usageMode == UsageMode::CALIBRATION)
+        {
+            FeatureGroup::instances[i]->legacyStream(port, m_macAddress,
+                m_operationState, batteryLoad, timestamp);
+        }
+        else
+        {
+            FeatureGroup::instances[i]->stream(port, m_macAddress, timestamp,
+                                               sendMACAddress);
+        }
     }
 }
 

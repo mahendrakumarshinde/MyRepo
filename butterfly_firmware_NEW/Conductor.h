@@ -29,8 +29,8 @@
  *  - sensors: the data sources
  *  - features: the graph edges
  *  - computers: the graph nodes
- *  - (USB, BLE or WiFi interfaces): the "sinks" - They are not included in the
- *  graph for now, but features have functions to be streamed through those
+ *  - Serial interfaces (or SPI Flash): the "sinks" - They are not included in
+ *  the graph for now, but features have functions to be streamed through those
  *  sinks.
  * FeatureGraph class packs method to activate / deactivate part of the graph,
  * that means enabling / disabling feature computations.
@@ -46,8 +46,8 @@ class Conductor
                                   AUTO     = 1,
                                   PERIODIC = 2,
                                   COUNT    = 3};
-        static char START_CONFIRM[12];
-        static char END_CONFIRM[10];
+        static char START_CONFIRM[11];
+        static char END_CONFIRM[9];
         // Default start datetime
         static constexpr double defaultTimestamp = 1492144654.00;
         // Operation state shown on LED every X ms
