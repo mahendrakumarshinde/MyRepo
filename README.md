@@ -18,5 +18,6 @@ This repository contains several firmware versions, depending on the functionnal
 - **/teensy_idle_firmware** Version of the Teensy firmware (see teensy_standard_firmware) where the last feature (by default audio dB) has been replaced by the maxAscent.
 - **/teensy_press_firmware** Version of the Teensy firmware (see teensy_standard_firmware) with press features (total accel energy over 512ms, 4x total accel energies over 128ms, audio DB)
 - **/teensy_standard_firmware** The firmware for the IDE (that is based on a Teensy) with standard features (total accel energy over 512ms, velocities X, Y and Z, temperature and audio DB)
+- **/Windows builds** Executables for windows, to calibrate or interact with the devices in EXPERIMENT mode
 - **ble.js** a node.js script for checking BLE communication with the module; this script was used to run end-to-end battery test. After BLE pairing, this module will print connection timestamp and disconnction timestamp.
 - **config.json and config.yaml** Example config files to configure an IDE+ remotely
