@@ -108,7 +108,7 @@ void setup()
             iuI2C.scanDevices();
             debugPrint("");
         }
-        iuSerial3.setupHardware();
+//        iuSerial3.setupHardware();
         iuBluetooth.setupHardware();
         iuWiFi.setupHardware();
         iuSPIFlash.setupHardware();
