@@ -18,19 +18,12 @@ IUESP8285::IUESP8285(HardwareSerial *serialPort, uint32_t rate,
 ============================================================================= */
 
 /**
- * Set up the component and finalize the object initialization
- */
-void IUESP8285::setupHardware()
-{
-    IUSerial::setupHardware();
-}
-
-/**
  * Switch to ACTIVE power mode
  */
 void IUESP8285::wakeUp()
 {
-    m_powerMode = PowerMode::ACTIVE;
+    // TODO Implement power mode change at EESP8285 level
+    IUSerial::wakeUp();
 }
 
 /**
@@ -38,7 +31,8 @@ void IUESP8285::wakeUp()
  */
 void IUESP8285::sleep()
 {
-    m_powerMode = PowerMode::SLEEP;
+    // TODO Implement power mode change at EESP8285 level
+    IUSerial::sleep();
     // Passing 0 makes the WiFi sleep indefinitly
     //WiFiSerial::Put_WiFi_To_Sleep(0.0f);
 }
@@ -48,16 +42,26 @@ void IUESP8285::sleep()
  */
 void IUESP8285::suspend()
 {
-    m_powerMode = PowerMode::SUSPEND;
+    // TODO Implement power mode change at EESP8285 level
+    IUSerial::suspend();
     // Passing 0 makes the WiFi sleep indefinitly
     //WiFiSerial::Put_WiFi_To_Sleep(0.0f);
 }
 
 
 /* =============================================================================
-    WiFi communication
+    Communication with WiFi chip
 ============================================================================= */
 
+/**
+ * Print the given MAC address to ESP8285 UART (with header)
+ */
+void IUESP8285::sendBleMacAddress(char *macAddress)
+{
+    port->print("BLEMAC-");
+    port->print(macAddress);
+    port->print(";");
+}
 
 
 /* =============================================================================

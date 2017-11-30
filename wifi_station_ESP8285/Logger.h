@@ -2,7 +2,6 @@
 #define LOGGER_H
 
 #include <Arduino.h>
-#include <MemoryFree.h>
 
 /* ============================= Debugging ============================= */
 
@@ -10,21 +9,12 @@
 #define DEBUGMODE
 
 #ifdef DEBUGMODE
-    const bool setupDebugMode = false;
-    const bool loopDebugMode = false;
-    const bool featureDebugMode = false;
-    const bool highVerbosity = false;
-    const bool callbackDebugMode = false;
+    const bool debugMode = false;
 #else
-    const bool setupDebugMode = false;
-    const bool loopDebugMode = false;
-    const bool featureDebugMode = false;
-    const bool highVerbosity = false;
-    const bool callbackDebugMode = false;
+    const bool debugMode = true;
 #endif
 
-const bool debugMode = (setupDebugMode || loopDebugMode ||
-    featureDebugMode || callbackDebugMode);
+
 
 template <typename T>
 inline void debugPrint(T msg, bool endline = true)
@@ -51,23 +41,6 @@ inline void raiseException(T msg)
     #ifdef DEBUGMODE
     debugPrint(F("Error: "), false);
     debugPrint(msg);
-    #endif
-}
-
-inline void memoryLog()
-{
-    #ifdef DEBUGMODE
-    Serial.print(F("Available Memory: "));
-    Serial.println(freeMemory(), DEC);
-    #endif
-}
-
-inline void memoryLog(String msg)
-{
-    #ifdef DEBUGMODE
-    Serial.print(msg);
-    Serial.print(F(" - "));
-    memoryLog();
     #endif
 }
 

@@ -3,9 +3,7 @@
 
 #include <Arduino.h>
 
-#include "Host_WiFiserial.h"
 #include "IUSerial.h"
-
 
 /**
  * Wifi chip
@@ -20,15 +18,15 @@ class IUESP8285 : public IUSerial
 {
     public:
         /***** Constructors & desctructors *****/
-        IUESP8285(HardwareSerial *serialPort, uint32_t rate=57600,
+        IUESP8285(HardwareSerial *serialPort, uint32_t rate=115200,
                   uint16_t dataReceptionTimeout=2000);
         virtual ~IUESP8285() {}
         /***** Hardware and power management *****/
-        virtual void setupHardware();
         virtual void wakeUp();
         virtual void sleep();
         virtual void suspend();
-        /***** WiFi communication *****/
+        /***** Communication with WiFi chip *****/
+        void sendBleMacAddress(char *macAddress);
 
     protected:
         /***** Communication *****/

@@ -1,135 +1,167 @@
 /*
- Basic ESP8266 MQTT example
-
- This sketch demonstrates the capabilities of the pubsub library in combination
- with the ESP8266 board/library.
-
- It connects to an MQTT server then:
-  - publishes "hello world" to the topic "outTopic" every two seconds
-  - subscribes to the topic "inTopic", printing out any messages
-    it receives. NB - it assumes the received payloads are strings not binary
-  - If the first character of the topic "inTopic" is an 1, do something.
-
- It will reconnect to the server if the connection is lost using a blocking
- reconnect function. See the 'mqtt_reconnect_nonblocking' example for how to
- achieve the same result without blocking the main loop.
-
- To install the ESP8266 board, (using Arduino 1.6.4+):
+ To install the ESP8266 board, (using Arduino 1.8.1+):
   - Add the following 3rd party board manager under "File -> Preferences -> Additional Boards Manager URLs":
        http://arduino.esp8266.com/stable/package_esp8266com_index.json
   - Open the "Tools -> Board -> Board Manager" and click install for the ESP8266"
   - Select your ESP8266 in "Tools -> Board"
-
 */
 
 #include <ESP8266WiFi.h>
-#include <PubSubClient.h>
+#include <ESP8266HTTPClient.h>
 
-// Update these with values suitable for your network.
+#include "IUMQTTHelper.h"
+#include "IUWiFiManager.h"
+#include "IUSerial.h"
 
-const char* ssid     = "Bernadette Chirac's Wifi";
-const char* password = "QXEF6CGM";
 
-//IPAddress mqttAddress(52, 53, 157, 92);
-IPAddress mqttAddress(192, 168, 43, 175);
+/* =============================================================================
+    Global Variables
+============================================================================= */
+
+// BLE MAC Address (used as device MAC address)
+char BLE_MAC_ADDRESS[18] = "";
+bool unknownBleMacAddress = true;
+// Wifi MAC 60:01:94:80:00:BA
+
+/***** Testing *****/
 // const char* mqtt_server = "broker.mqtt-dashboard.com";
-
-WiFiClient espClient;
-PubSubClient client(espClient);
 long lastMsg = 0;
 char msg[50];
 int value = 0;
 
-void setup_wifi()
+
+/* =============================================================================
+    MQTT functions
+============================================================================= */
+
+/**
+ *
+ */
+void mqttPublishNetworkInfo()
 {
-  // We start by connecting to a WiFi network
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
-  
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
-
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
-  // print the received signal strength:
-  long rssi = WiFi.RSSI();
-  Serial.print("signal strength (RSSI):");
-  Serial.print(rssi);
-  Serial.println(" dBm");
+    // TODO Implement
+    iuMQTTHelper.client.publish(iuMQTTHelper.PUB_NETWORK, "");
 }
 
-void callback(char* topic, byte* payload, unsigned int length) {
-  Serial.print("Message arrived [");
-  Serial.print(topic);
-  Serial.print("] ");
-  for (int i = 0; i < length; i++) {
-    Serial.print((char)payload[i]);
-  }
-  Serial.println();
 
-  if ((char)payload[0] == '1')
-  {
-    Serial.println("case 1");
-  } else {
-    Serial.println("case not 1");
-  }
+/* =============================================================================
+    HTTP functions
+============================================================================= */
 
-}
-
-void reconnect() {
-  // Loop until we're reconnected
-  while (!client.connected()) {
-    Serial.print("Attempting MQTT connection...");
-    String clientId = "ESP8266Client-00";
-    // Attempt to connect
-    if (client.connect(clientId.c_str())) {
-      Serial.println("connected");
-      // Once connected, publish an announcement...
-      client.publish("outTopic", "hello world");
-      // ... and resubscribe
-      client.subscribe("inTopic");
-    } else {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
-      delay(5000);
+/**
+ * 
+ */
+int requestHttpGet(const char *url, char* responseBody,
+                   uint16_t maxResponseLength, const char *httpsFingerprint=NULL)
+{
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        if (debugMode)
+        {
+            debugPrint("WiFi disconnected: GET request failed");
+        }
+        return 0;
     }
-  }
+    HTTPClient http;
+    if (httpsFingerprint)
+    {
+        http.begin(String(url));
+    }
+    else
+    {
+        http.begin(String(url), String(httpsFingerprint));
+    }
+    int httpCode = http.GET();
+    if (httpCode > 0)
+    {
+        http.getString().toCharArray(responseBody, maxResponseLength);
+        if (debugMode)
+        {
+            debugPrint(responseBody);
+        }
+    }
+    http.end();
+    return httpCode;
 }
+
+
+/* =============================================================================
+    OTA functions
+============================================================================= */
+
+
+
+/* =============================================================================
+    Communication to main board functions
+============================================================================= */
+
+void askBleMacAddress()
+{
+    hostSerial.port->print("1;");
+}
+
+void readAllMessagesFromHost()
+{
+    while(true)
+    {
+        hostSerial->readToBuffer();
+        if (!hostSerial->hasNewMessage())
+        {
+            break;
+        }
+        processMessageFromHost(hostSerial.getBuffer());
+        hostSerial.resetBuffer();
+    }
+}
+
+void processMessageFromHost(char *buff)
+{
+    // Check if it is the BLE MAC in format "BLEMAC-XX:XX:XX:XX:XX:XX"
+    if (strlen(buff) == 25 && ( strncmp("BLEMAC-", buff, 7) == 0 ))
+    {
+        strncpy(BLE_MAC_ADDRESS, &buff[7], 18);
+        unknownBleMacAddress = false;
+        if (debugMode)
+        {
+            debugPrint("Received BLE MAC from host: ", false);
+            debugPrint(BLE_MAC_ADDRESS);
+        }
+        return;
+    }
+    // Else, just try to post the message to MQTT topic
+    
+}
+
+
+/* =============================================================================
+    Main setup and loop
+============================================================================= */
 
 void setup()
 {
-  Serial.begin(115200);
-  delay(100);
-  setup_wifi();
-//  client.setServer(mqtt_server, 1883);
-  client.setServer(mqttAddress, 1883);
-  client.setCallback(callback);
+    Serial.begin(115200);
+    delay(100);
+    iuWifiManager.manageWifi();
+    iuWifiManager.printWifiInfo();
 }
 
-void loop() {
-
-  if (!client.connected()) {
-    reconnect();
-  }
-  client.loop();
-
-  long now = millis();
-  if (now - lastMsg > 2000) {
-    lastMsg = now;
-    ++value;
-    snprintf (msg, 75, "hello world #%ld", value);
-    Serial.print("Publish message: ");
-    Serial.println(msg);
-    client.publish("outTopic", msg);
-  }
+void loop()
+{
+    if (unknownBleMacAddress)
+    {
+        // Don't run normal operation loop until BLE MAC Address is known.
+        askBleMacAddress();
+        readAllMessagesFromHost();
+        return;
+    }
+    iuMQTTHelper.loop(BLE_MAC_ADDRESS);
+    long now = millis();
+    if (now - lastMsg > 2000) {
+        lastMsg = now;
+        ++value;
+        snprintf (msg, 75, "hello world #%ld", value);
+        Serial.print("Publish message: ");
+        Serial.println(msg);
+        iuMQTTHelper.client.publish("outTopic", msg);
+    }
 }

@@ -156,6 +156,9 @@ void Conductor::readFromSerial(IUSerial *iuSerial)
                 case StreamingMode::BLE:
                     processLegacyBLECommands(buffer);
                     break;
+                case StreamingMode::WIFI:
+                    processWIFICommands(buffer);
+                    break;
                 default:
                     if (loopDebugMode)
                     {
@@ -494,7 +497,26 @@ void Conductor::processLegacyBLECommands(char *buff)
         default:
             if (debugMode)
             {
-                debugPrint(F("BLE command is DEPRECATED"));
+                debugPrint(F("Unknown BLE command (may be DEPRECATED)"));
+            }
+            break;
+    }
+}
+
+/**
+ * Process the instructions from the WiFi chip
+ */
+void Conductor::processWIFICommands(char *buff)
+{
+    switch(buff[0])
+    {
+        case '1':  // Send the MAC Address to WiFi chip
+            iuWiFi.sendBleMacAddress(m_macAddress);
+            break;
+        default:
+            if (debugMode)
+            {
+                debugPrint(F("Unknown WIFI command"));
             }
             break;
     }

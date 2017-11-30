@@ -72,6 +72,7 @@ class Conductor
         void configureAllFeatures(JsonVariant &config);
         void processLegacyUSBCommands(char *buff);
         void processLegacyBLECommands(char *buff);
+        void processWIFICommands(char *buff);
 
         /***** Features and groups Management *****/
         void activateFeature(Feature* feature);
