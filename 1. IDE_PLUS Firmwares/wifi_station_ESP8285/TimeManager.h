@@ -18,7 +18,9 @@ class TimeManager
         TimeManager(uint16_t udpPort, const char* serverName);
         virtual ~TimeManager() { }
         void begin();
-        void updateTimeReference();
+        void updateTimeReferenceFromNTP();
+        void updateTimeReferenceFromIU(byte *payload,
+                                       uint16_t payloadLength);
         time_t getCurrentTime();
 
     protected:

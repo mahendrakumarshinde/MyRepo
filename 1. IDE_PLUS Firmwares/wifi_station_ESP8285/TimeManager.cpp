@@ -30,7 +30,7 @@ void TimeManager::begin()
 /**
  *
  */
-void TimeManager::updateTimeReference()
+void TimeManager::updateTimeReferenceFromNTP()
 {
     uint32_t current = millis();
     if (m_requestSent) // If request sent, always try to read the response
@@ -61,6 +61,26 @@ void TimeManager::updateTimeReference()
         {
             sendNTPpacket();
             m_requestSent = true;
+        }
+    }
+}
+
+/**
+ * 
+ */
+void TimeManager::updateTimeReferenceFromIU(byte *payload,
+                                            uint16_t payloadLength)
+{
+    const char *buff = reinterpret_cast<const char*>(payload);
+    int32_t ts = atol(&buff[2]);
+    if (ts > 0)
+    {
+        m_timeReference = (time_t) ts;
+        m_lastTimeUpdate = millis();
+        if (debugMode)
+        {
+            debugPrint("Updated time ref from IU msg: ", false);
+            debugPrint(ctime(&m_timeReference));
         }
     }
 }

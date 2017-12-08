@@ -16,8 +16,8 @@ class IUSerial
         const char stopChar;
         /***** Core *****/
         IUSerial(HardwareSerial *serialPort, uint32_t rate=115200,
-                 uint16_t buffSize=256, char stop=';',
-                 uint16_t dataReceptionTimeout=200);
+                 uint16_t buffSize=2048, char stop=';',
+                 uint16_t dataReceptionTimeout=100);
         virtual ~IUSerial() { }
         void begin();
         /***** Communication with host *****/
@@ -30,7 +30,7 @@ class IUSerial
 
     protected:
         /***** Communication *****/
-        char m_buffer[256];
+        char m_buffer[2048];
         uint16_t m_bufferIndex;
         bool m_newMessage;
         // Data reception robustness variables

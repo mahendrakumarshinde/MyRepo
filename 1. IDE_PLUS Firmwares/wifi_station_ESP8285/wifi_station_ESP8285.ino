@@ -43,7 +43,7 @@ char WILL_MESSAGE[44] = "XXXAdmin;;;00:00:00:00:00:00;;;disconnected";
  * @param payload The message it self, as an array of bytes
  * @param length The number of byte in payload
  */
-void mqttNewMessageCallback(char* topic, byte* payload, unsigned int length)
+void mqttNewMessageCallback(char* topic, byte* payload, uint16_t length)
 {
     if (debugMode)
     {
@@ -86,6 +86,10 @@ void mqttNewMessageCallback(char* topic, byte* payload, unsigned int length)
             hostSerial.port->print((char)payload[i]);
         }
         hostSerial.port->print(";");
+        if ((char)payload[0] == '1' && (char)payload[1] == ':')
+        {
+            timeManager.updateTimeReferenceFromIU(payload, length);
+        }
     }
 }
 
@@ -300,7 +304,8 @@ void setup()
     iuMQTTHelper.client.setCallback(mqttNewMessageCallback);
     /***** Prepare to query time from NTP server *****/
     timeManager.begin();
-    timeManager.updateTimeReference();
+    // Try to get the time from NTP server at least once
+    timeManager.updateTimeReferenceFromNTP();
     delay(1000);
 }
 
@@ -314,7 +319,10 @@ void loop()
         return;
     }
     /***** Time update loop *****/
-    timeManager.updateTimeReference();
+    // As long as we keep receiving time from IU server, this function will do
+    // nothing (see timeManager.TIME_UPDATE_INTERVAL for max delay before time 
+    // update from NTP server)
+    timeManager.updateTimeReferenceFromNTP();
     /***** MQTT Connection loop *****/
     iuMQTTHelper.loop(DIAGNOSTIC_TOPIC, WILL_MESSAGE, onMQTTConnection);
     /***** Send wifi status *****/
