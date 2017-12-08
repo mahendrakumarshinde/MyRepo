@@ -6,18 +6,9 @@ This repository contains several firmware versions, depending on the functionnal
 
 
 ## Repository content ##
-- **/IU_ESP82XX_WiFi_UART_Bridge_STA_OTA_V0.0** A firmware to flash to the ESP8285, that can be used for OTA (untested).
-- **/IU_ESP82XX_WiFi_UART_Bridge_STA_V0.0** A firmware to flash to the ESP8285.
-- **/butterfly_firmware** The current firmware for the IDE+
-- **/butterfly_firmware_former+low_power_mode** *DEPRECATED* An intermediary firmware for the IDE+, which defines low power modes
-- **/calibration_ui** A UI, written in Python, to calibrate IDEs and print calibration reports
-- **/datasheets** The datasheets of all the components used so far on one of IU boards
-- **/libraries** All libraries that are referenced by one or more firmwares in this directory
-- **/teensy_MOTOR** Reference version of the Teensy firmware (see teensy_standard_firmware) for motors and rotating equipments
-- **/teensy_NON_MOTOR** Reference version of the Teensy firmware (see teensy_standard_firmware) for all machines that are not motors or rotating equipments
-- **/teensy_idle_firmware** Version of the Teensy firmware (see teensy_standard_firmware) where the last feature (by default audio dB) has been replaced by the maxAscent.
-- **/teensy_press_firmware** Version of the Teensy firmware (see teensy_standard_firmware) with press features (total accel energy over 512ms, 4x total accel energies over 128ms, audio DB)
-- **/teensy_standard_firmware** The firmware for the IDE (that is based on a Teensy) with standard features (total accel energy over 512ms, velocities X, Y and Z, temperature and audio DB)
-- **/Windows builds** Executables for windows, to calibrate or interact with the devices in EXPERIMENT mode
-- **ble.js** a node.js script for checking BLE communication with the module; this script was used to run end-to-end battery test. After BLE pairing, this module will print connection timestamp and disconnction timestamp.
-- **config.json and config.yaml** Example config files to configure an IDE+ remotely
+- **1. IDE_PLUS Firmwares**: The most up-to-date firmwares for IDE+
+- **2. IDE Firmwares**: The most up-to-date firmwares for IDE
+- **3. Arduino Libraries**: The required Arduino libraries to flash IDE and IDE+
+- **4. Windows and Android**: Windows and Android applications, to calibrate or interact with the devices
+- **5. Datasheets**: The datasheets of all the components used so far on either the IDE or the IDE+
+- **6. Other Firmwares**: Firmwares under development, archives or purpose specific firmwares

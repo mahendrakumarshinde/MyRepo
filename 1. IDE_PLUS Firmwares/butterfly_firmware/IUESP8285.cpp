@@ -1,13 +1,12 @@
 #include "IUESP8285.h"
 
-
 /* =============================================================================
     Constructor & desctructors
 ============================================================================= */
 
 IUESP8285::IUESP8285(HardwareSerial *serialPort, uint32_t rate,
                      uint16_t dataReceptionTimeout) :
-    IUSerial(StreamingMode::WIFI, serialPort, rate, 20, ';',
+    IUSerial(StreamingMode::WIFI, serialPort, rate, 500, ';',
              dataReceptionTimeout)
 {
 }
@@ -16,6 +15,26 @@ IUESP8285::IUESP8285(HardwareSerial *serialPort, uint32_t rate,
 /* =============================================================================
     Hardware & power management
 ============================================================================= */
+
+/**
+ * Set up the component and finalize the object initialization
+ */
+void IUESP8285::setupHardware()
+{
+    // Check if UART is being driven by something else (eg: FTDI connnector)
+    // used to flash the ESP8285
+    // TODO Test the following
+//    pinMode(UART_TX_PIN, INPUT_PULLDOWN);
+//    delay(100);
+//    if(digitalRead(UART_TX_PIN))
+//    {
+//        // UART driven by something else
+//        // TODO How does this behave when there is a battery?
+//        IUSerial::suspend();
+//        return;
+//    }
+    IUSerial::setupHardware();
+}
 
 /**
  * Switch to ACTIVE power mode
@@ -68,4 +87,4 @@ void IUESP8285::sendBleMacAddress(char *macAddress)
     Instanciation
 ============================================================================= */
 
-IUESP8285 iuWiFi(&Serial1, 57600, 2000);
+IUESP8285 iuWiFi(&Serial3, 115200, 2000);

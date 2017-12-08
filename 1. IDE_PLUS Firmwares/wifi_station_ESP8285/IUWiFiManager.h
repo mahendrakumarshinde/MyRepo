@@ -1,7 +1,6 @@
 #ifndef IUWIFIMANAGER_H
 #define IUWIFIMANAGER_H
 
-#include <ESP8266WiFi.h>
 // Local DNS Server used for redirecting all requests to the configuration portal
 #include <DNSServer.h>
 // Local WebServer used to serve the configuration portal
@@ -9,7 +8,7 @@
 // https://github.com/tzapu/WiFiManager WiFi Configuration Magic
 #include <WiFiManager.h>
 
-#include "Logger.h"
+#include "Utilities.h"
 
 /**
  *
@@ -17,11 +16,16 @@
 class IUWiFiManager
 {
     public:
+        static const uint32_t reconnectionInterval = 30000;  // ms
+        static const uint32_t heartbeatInterval = 900000;  // ms
         /***** Core *****/
         IUWiFiManager(uint32_t timeout, int minSignalQuality);
         virtual ~IUWiFiManager() {}
-        void manageWifi(char const *apName=NULL, char const *apPassword=NULL,
-                        bool printInfo=true);
+        void manageWifi(const char *apName, const char *apPassword,
+                        void (*onConnectionCallback)());
+        bool reconnect(const char *apName, const char *apPassword,
+                       void (*onConnectionCallback)());
+        bool isTimeToSendWifiInfo();
         /***** Static IP settings *****/
         void setStaticIpConfig(char *staticIp, char *staticGateway,
                                char *staticSubnet);
@@ -29,7 +33,7 @@ class IUWiFiManager
         char *getStaticGateway() { return m_staticGateway; }
         char *getStaticSubnet() { return m_staticSubnet; }
         /***** Debugging *****/
-        void printWifiInfo();
+        void getWifiInfo(char *destination);
 
     protected:
         uint32_t m_timeout;
@@ -37,6 +41,9 @@ class IUWiFiManager
         char m_staticIp[16];
         char m_staticGateway[16];
         char m_staticSubnet[16];
+        /***** *****/
+        uint32_t m_lastReconnectionAttempt;
+        uint32_t m_lastSentHeartbeat;
 };
 
 

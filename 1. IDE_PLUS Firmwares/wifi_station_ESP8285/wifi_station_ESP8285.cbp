@@ -31,6 +31,15 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
+		<Unit filename="IUMQTTHelper.cpp" />
+		<Unit filename="IUMQTTHelper.h" />
+		<Unit filename="IUSerial.cpp" />
+		<Unit filename="IUSerial.h" />
+		<Unit filename="IUWiFiManager.cpp" />
+		<Unit filename="IUWiFiManager.h" />
+		<Unit filename="TimeManager.cpp" />
+		<Unit filename="TimeManager.h" />
+		<Unit filename="Utilities.h" />
 		<Extensions>
 			<code_completion />
 			<debugger />

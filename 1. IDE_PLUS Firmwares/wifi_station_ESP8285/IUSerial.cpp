@@ -1,5 +1,10 @@
 #include "IUSerial.h"
 
+
+/* =============================================================================
+    Core
+============================================================================= */
+
 IUSerial::IUSerial(HardwareSerial *serialPort, uint32_t rate, uint16_t buffSize,
                    char stop, uint16_t dataReceptionTimeout) :
     port(serialPort),
@@ -10,6 +15,16 @@ IUSerial::IUSerial(HardwareSerial *serialPort, uint32_t rate, uint16_t buffSize,
     m_lastReadTime(0)
 {
     resetBuffer();
+}
+
+/**
+ * 
+ */
+void IUSerial::begin()
+{
+    port->begin(baudRate);
+    port->setRxBufferSize(bufferSize);
+    delay(100);
 }
 
 
@@ -66,7 +81,7 @@ bool IUSerial::readToBuffer()
         if (newChar == stopChar)
         {
             // Replace stopChar with end of string char.
-            m_buffer[m_bufferIndex - 1] = '\0';
+            m_buffer[m_bufferIndex - 1] = 0; //'\0';
             m_newMessage = true;
             return true;
         }
@@ -98,4 +113,4 @@ bool IUSerial::hasTimedOut()
     Instanciation
 ============================================================================= */
 
-IUSerial hostSerial(&Serial1);
+IUSerial hostSerial(&Serial);

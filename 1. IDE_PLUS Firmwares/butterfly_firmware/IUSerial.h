@@ -1,22 +1,36 @@
 #ifndef IUSERIAL_H
 #define IUSERIAL_H
 
+#include <Arduino.h>
 
-class IUSerial
+#include "Keywords.h"
+#include "Component.h"
+
+
+/**
+ * Custom implementation of Serial port (UART)
+ *
+ * Component:
+ *   Name: -
+ * Description:
+ *   Serial port, UART
+ */
+class IUSerial : public Component
 {
     public:
+        IUSerial(StreamingMode::option interface, HardwareSerial *serialPort,
+                 uint32_t rate=57600, uint16_t buffSize=20, char stop=';',
+                 uint16_t dataReceptionTimeout=2000);
+        virtual ~IUSerial() {}
         /***** Public constants *****/
+        const StreamingMode::option interfaceType;
         HardwareSerial *port;
         const uint32_t baudRate;
         const uint16_t bufferSize;
         const char stopChar;
-        /***** Core *****/
-        IUSerial(HardwareSerial *serialPort, uint32_t rate=115200,
-                 uint16_t buffSize=200, char stop=';',
-                 uint16_t dataReceptionTimeout=200);
-        virtual ~IUSerial() { }
-        void begin() { port->begin(baudRate); }
-        /***** Communication with host *****/
+        /***** Hardware and power management *****/
+        virtual void setupHardware();
+        /***** Communication *****/
         virtual void resetBuffer();
         virtual bool readToBuffer();
         virtual bool hasTimedOut();
@@ -33,12 +47,15 @@ class IUSerial
         // Buffer is emptied if now - lastReadTime > dataReceptionTimeout
         uint16_t m_dataReceptionTimeout;  // in ms
         uint32_t m_lastReadTime;  // in ms, as outputed by millis()
-
 };
 
 
 /***** Instanciation *****/
 
-extern IUSerial hostSerial;
+extern IUSerial iuUSB;
+
+#ifdef EXTERNAL_WIFI
+    extern IUSerial iuWiFi;
+#endif
 
 #endif // IUSERIAL_H

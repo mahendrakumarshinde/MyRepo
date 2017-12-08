@@ -19,6 +19,7 @@ Conductor::Conductor(const char* macAddress) :
     m_operationState(OperationState::IDLE),
     m_inDataAcquistion(false),
     m_lastLitLedTime(0),
+    m_wifiConnected(false),
     m_usageMode(UsageMode::COUNT),
     m_acquisitionMode(AcquisitionMode::NONE),
     m_streamingMode(StreamingMode::COUNT)
@@ -431,13 +432,44 @@ void Conductor::processLegacyUSBCommands(char *buff)
  */
 void Conductor::processLegacyBLECommands(char *buff)
 {
-    if (m_streamingMode == StreamingMode::WIRED ||
-        m_streamingMode == StreamingMode::EXTERN)
+    if (m_streamingMode == StreamingMode::WIRED)
     {
         return;  // Do not listen to BLE when wired
     }
     switch(buff[0])
     {
+        case '0': // DEPRECATED Set Thresholds
+            if (buff[4] == '-' && buff[9] == '-' && buff[14] == '-')
+            {
+                int idx(0), th1(0), th2(0), th3(0);
+                sscanf(buff, "%d-%d-%d-%d", &idx, &th1, &th2, &th3);
+                Feature *feat = motorStandardGroup.getFeature(idx + 1);
+                if (feat)
+                {
+                    if (idx == 1 || idx == 2 || idx == 3)
+                    {
+                        feat->setThresholds((float) th1 / 100.,
+                                            (float) th2 / 100.,
+                                            (float) th3 / 100.);
+                    }
+                    else
+                    {
+                        feat->setThresholds((float) th1, (float) th2,
+                                            (float) th3);
+                    }
+                    if (loopDebugMode)
+                    {
+                        debugPrint(feat->getName(), false);
+                        debugPrint(':', false);
+                        debugPrint(feat->getThreshold(0), false);
+                        debugPrint(" - ", false);
+                        debugPrint(feat->getThreshold(1), false);
+                        debugPrint(" - ", false);
+                        debugPrint(feat->getThreshold(2));
+                    }
+                }
+            }
+            break;
         case '1':  // Receive the timestamp data from the bluetooth hub
             if (buff[1] == ':' && buff[12] == '.')
             {
@@ -446,6 +478,54 @@ void Conductor::processLegacyBLECommands(char *buff)
                 setRefDatetime((double) ts + (double) ms / (double) 1000000);
             }
             break;
+        case '2':  // DEPRECATED - Bluetooth parameter setting
+            if (buff[1] == ':' && buff[7] == '-' && buff[13] == '-')
+            {
+                int dataRecTimeout(0), paramtag(0);
+                int startSleepTimer(0), dataSendPeriod(0);
+                sscanf(buff, "%d:%d-%d-%d", &paramtag, &dataSendPeriod,
+                       startSleepTimer, &dataRecTimeout);
+                // We currently only use the data send period option
+                motorStandardGroup.setDataSendPeriod((uint16_t) dataSendPeriod);
+            }
+            break;
+        case '3':  // DEPRECATED - Collect acceleration raw data
+            if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
+                buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
+            {
+//                if (loopDebugMode)
+//                {
+//                    debugPrint("Record mode");
+//                }
+//                Feature *feature = Feature::getInstanceByName("A0X");
+//                if (feature)
+//                {
+//                    iuBluetooth.port->print("REC,");
+//                    iuBluetooth.port->print(m_macAddress);
+//                    iuBluetooth.port->print(',X');
+//                    feature.stream(iuBluetooth.port);
+//                    iuBluetooth.port->flush();
+//                }
+//                feature = Feature::getInstanceByName("A0Y");
+//                if (feature)
+//                {
+//                    iuBluetooth.port->print("REC,");
+//                    iuBluetooth.port->print(m_macAddress);
+//                    iuBluetooth.port->print(',Y');
+//                    feature.stream(iuBluetooth.port);
+//                    iuBluetooth.port->flush();
+//                }
+//                feature = Feature::getInstanceByName("A0Z");
+//                if (feature)
+//                {
+//                    iuBluetooth.port->print("REC,");
+//                    iuBluetooth.port->print(m_macAddress);
+//                    iuBluetooth.port->print(',Z');
+//                    feature.stream(iuBluetooth.port);
+//                    iuBluetooth.port->flush();
+//                }
+            }
+           break;
         case '5':  // Get status
             if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
                 buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
@@ -465,35 +545,34 @@ void Conductor::processLegacyBLECommands(char *buff)
                 iuBluetooth.port->flush();
             }
             break;
-        case '0':  // DEPRECATED - Set feature thresholds
-        case '2':  // DEPRECATED - Bluetooth parameter setting
-        case '3':  // DEPRECATED - Collect acceleration raw data
-//            if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
-//                buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
-//            {
-//                if (loopDebugMode)
-//                {
-//                    debugPrint("Record mode");
-//                }
-//                Feature *feature = Feature::getInstanceByName("A0X");
-//                if (feature)
-//                {
-//                    feature.stream(iuBluetooth.port);
-//                }
-//                feature = Feature::getInstanceByName("A0Y");
-//                if (feature)
-//                {
-//                    feature.stream(iuBluetooth.port);
-//                }
-//                feature = Feature::getInstanceByName("A0Z");
-//                if (feature)
-//                {
-//                    feature.stream(iuBluetooth.port);
-//                }
-//            }
-//            break;
-        case '4':  // DEPRECATED - Exit record mode
         case '6': // DEPRECATED - Set which feature are used for OperationState
+            if (buff[7] == ':' && buff[9] == '.' && buff[11] == '.' &&
+                buff[13] == '.' && buff[15] == '.' && buff[17] == '.')
+            {
+                int parametertag(0);
+                int fcheck[6] = {0, 0, 0, 0, 0, 0};
+                sscanf(buff, "%d:%d.%d.%d.%d.%d.%d", &parametertag, &fcheck[0],
+                       &fcheck[1], &fcheck[2], &fcheck[3], &fcheck[4],
+                       &fcheck[5]);
+                Feature *feat;
+                for (uint8_t i = 0; i < 6; i++)
+                {
+                    feat = motorStandardGroup.getFeature(i);
+                    if (feat)
+                    {
+                        if (fcheck[i] > 0)
+                        {
+                            feat->enableOperationState();
+                        }
+                        else
+                        {
+                            feat->disableOperationState();
+                        }
+                    }
+                }
+            }
+            break;
+        case '4':  // DEPRECATED - Exit record mode
         default:
             if (debugMode)
             {
@@ -510,8 +589,179 @@ void Conductor::processWIFICommands(char *buff)
 {
     switch(buff[0])
     {
-        case '1':  // Send the MAC Address to WiFi chip
+        case '0': // DEPRECATED Set Thresholds
+            if (buff[4] == '-' && buff[9] == '-' && buff[14] == '-')
+            {
+                int idx(0), th1(0), th2(0), th3(0);
+                sscanf(buff, "%d-%d-%d-%d", &idx, &th1, &th2, &th3);
+                Feature *feat = motorStandardGroup.getFeature(idx + 1);
+                if (feat)
+                {
+                    if (idx == 1 || idx == 2 || idx == 3)
+                    {
+                        feat->setThresholds((float) th1 / 100.,
+                                            (float) th2 / 100.,
+                                            (float) th3 / 100.);
+                    }
+                    else
+                    {
+                        feat->setThresholds((float) th1, (float) th2,
+                                            (float) th3);
+                    }
+                    if (loopDebugMode)
+                    {
+                        debugPrint(feat->getName(), false);
+                        debugPrint(':', false);
+                        debugPrint(feat->getThreshold(0), false);
+                        debugPrint(" - ", false);
+                        debugPrint(feat->getThreshold(1), false);
+                        debugPrint(" - ", false);
+                        debugPrint(feat->getThreshold(2));
+                    }
+                }
+            }
+            break;
+        case '1':  // Receive the timestamp data from the bluetooth hub
+            if (buff[1] == ':' && buff[12] == '.')
+            {
+                int flag(0), ts(0), ms(0);
+                sscanf(buff, "%d:%d.%d", &flag, &ts, &ms);
+                setRefDatetime((double) ts + (double) ms / (double) 1000000);
+                iuWiFi.port->print("DT,Sent Time=");
+                iuWiFi.port->print(buff);
+                iuWiFi.port->print(";");
+//                iuWiFi.port->flush();
+            }
+            break;
+        case '2':  // DEPRECATED - Bluetooth parameter setting
+            if (buff[1] == ':' && buff[7] == '-' && buff[13] == '-')
+            {
+                int dataRecTimeout(0), paramtag(0);
+                int startSleepTimer(0), dataSendPeriod(0);
+                sscanf(buff, "%d:%d-%d-%d", &paramtag, &dataSendPeriod,
+                       startSleepTimer, &dataRecTimeout);
+                // We currently only use the data send period option
+                motorStandardGroup.setDataSendPeriod((uint16_t) dataSendPeriod);
+                if (loopDebugMode)
+                {
+                    debugPrint(F("Set data send period: "), false);
+                    debugPrint((uint16_t) dataSendPeriod);
+                }
+            }
+            break;
+        case '3':  // DEPRECATED - Collect acceleration raw data
+            if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
+                buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
+            {
+                if (loopDebugMode)
+                {
+                    debugPrint("Record mode");
+                }
+//                Feature *feature = Feature::getInstanceByName("A0X");
+//                if (feature)
+//                {
+//                    iuWiFi.port->print("REC,");
+//                    iuWiFi.port->print(m_macAddress);
+//                    iuWiFi.port->print(',X');
+//                    feature.stream(iuWiFi.port);
+//                    iuWiFi.port->flush();
+//                }
+//                feature = Feature::getInstanceByName("A0Y");
+//                if (feature)
+//                {
+//                    iuWiFi.port->print("REC,");
+//                    iuWiFi.port->print(m_macAddress);
+//                    iuWiFi.port->print(',Y');
+//                    feature.stream(iuWiFi.port);
+//                    iuWiFi.port->flush();
+//                }
+//                feature = Feature::getInstanceByName("A0Z");
+//                if (feature)
+//                {
+//                    iuWiFi.port->print("REC,");
+//                    iuWiFi.port->print(m_macAddress);
+//                    iuWiFi.port->print(',Z');
+//                    feature.stream(iuWiFi.port);
+//                    iuWiFi.port->flush();
+//                }
+            }
+           break;
+        case '5':  // Get status
+            if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
+                buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
+            {
+                iuWiFi.port->print("HB,");
+                if (iuI2C.isError())
+                {
+                    iuWiFi.port->print("I2CERR");
+                }
+                else
+                {
+                    iuWiFi.port->print("ALL_OK");
+                }
+                iuWiFi.port->print(";");
+//                iuWiFi.port->flush();
+            }
+            break;
+        case '6': // DEPRECATED - Set which feature are used for OperationState
+            if (buff[7] == ':' && buff[9] == '.' && buff[11] == '.' &&
+                buff[13] == '.' && buff[15] == '.' && buff[17] == '.')
+            {
+                int parametertag(0);
+                int fcheck[6] = {0, 0, 0, 0, 0, 0};
+                sscanf(buff, "%d:%d.%d.%d.%d.%d.%d", &parametertag, &fcheck[0],
+                       &fcheck[1], &fcheck[2], &fcheck[3], &fcheck[4],
+                       &fcheck[5]);
+                Feature *feat;
+                for (uint8_t i = 0; i < 6; i++)
+                {
+                    feat = motorStandardGroup.getFeature(i);
+                    if (feat)
+                    {
+                        if (fcheck[i] > 0)
+                        {
+                            feat->enableOperationState();
+                            if (true) // loopDebugMode
+                            {
+                                debugPrint(feat->getName(), false);
+                                debugPrint(F(": op state is enabled"));
+                            }
+                        }
+                        else
+                        {
+                            feat->disableOperationState();
+                            if (true) // loopDebugMode
+                            {
+                                debugPrint(feat->getName(), false);
+                                debugPrint(F(": op state is disabled"));
+                            }
+                        }
+                    }
+                }
+            }
+            break;
+        case '7':  // Send the MAC Address to WiFi chip
             iuWiFi.sendBleMacAddress(m_macAddress);
+            break;
+        case '8':
+            if (strcmp(buff, "88-OK") == 0)
+            {
+                m_wifiConnected = true;
+                changeStreamingMode(StreamingMode::WIFI);
+                if (debugMode)
+                {
+                    debugPrint(F("Wifi is connected"));
+                }
+            }
+            else if (strcmp(buff, "88-NOK") == 0)
+            {
+                m_wifiConnected = false;
+                changeStreamingMode(StreamingMode::BLE);
+                if (debugMode)
+                {
+                    debugPrint(F("Wifi is disconnected"));
+                }
+            }
             break;
         default:
             if (debugMode)
@@ -770,9 +1020,6 @@ void Conductor::changeStreamingMode(StreamingMode::option mode)
         case StreamingMode::WIFI:
             debugPrint(F("WIFI"));
             break;
-        case StreamingMode::EXTERN:
-            debugPrint(F("EXTERN"));
-            break;
         case StreamingMode::STORE:
             debugPrint(F("Flash storage"));
             break;
@@ -794,6 +1041,7 @@ void Conductor::changeUsageMode(UsageMode::option usage)
     }
     m_usageMode = usage;
     String msg;
+    StreamingMode::option streamMode;
     switch (m_usageMode)
     {
         case UsageMode::CALIBRATION:
@@ -801,24 +1049,34 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             activateGroup(&calibrationGroup);
             iuRGBLed.changeColor(IURGBLed::CYAN);
             iuRGBLed.lock();
+            streamMode = StreamingMode::WIRED;
             msg = "calibration";
             break;
         case UsageMode::EXPERIMENT:
             msg = "experiment";
             iuRGBLed.changeColor(IURGBLed::PURPLE);
             iuRGBLed.lock();
+            streamMode = StreamingMode::WIRED;
             break;
         case UsageMode::OPERATION:
         case UsageMode::OPERATION_BIS:
             iuRGBLed.unlock();
             iuRGBLed.changeColor(IURGBLed::BLUE);
             deactivateAllGroups();
-            activateGroup(&healthCheckGroup);
+//            activateGroup(&healthCheckGroup);
             activateGroup(&motorStandardGroup);
             // TODO - Set up default feature thresholds - Remove?
             accelRMS512Total.enableOperationState();
             accelRMS512Total.setThresholds(110, 130, 150);
             iuAccelerometer.resetScale();
+            if (m_wifiConnected)
+            {
+                streamMode = StreamingMode::WIFI;
+            }
+            else
+            {
+                streamMode = StreamingMode::BLE;
+            }
             msg = "operation";
             break;
         default:
@@ -829,7 +1087,7 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             return;
     }
     changeAcquisitionMode(UsageMode::acquisitionModeDetails[m_usageMode]);
-    changeStreamingMode(UsageMode::streamingModeDetails[m_usageMode]);
+    changeStreamingMode(streamMode);
     if (loopDebugMode)
     {
         debugPrint("\nSet up for " + msg + "\n");
@@ -1007,6 +1265,7 @@ void Conductor::streamFeatures()
     }
     HardwareSerial *port = NULL;
     bool sendMACAddress = false;
+    bool sendFeatureGroupName = false;
     switch (m_streamingMode)
     {
         case StreamingMode::WIRED:
@@ -1017,10 +1276,8 @@ void Conductor::streamFeatures()
             break;
         case StreamingMode::WIFI:
             port = iuWiFi.port;
-            break;
-        case StreamingMode::EXTERN:
-            port = iuSerial3.port;
             sendMACAddress = true;
+            sendFeatureGroupName = true;
             break;
         default:
             if (loopDebugMode)
@@ -1034,6 +1291,7 @@ void Conductor::streamFeatures()
     for (uint8_t i = 0; i < FeatureGroup::instanceCount; ++i)
     {
         // TODO Switch to new streaming format once the backend is ready
+        /*
         if (m_usageMode == UsageMode::CALIBRATION)
         {
             FeatureGroup::instances[i]->legacyStream(port, m_macAddress,
@@ -1044,6 +1302,9 @@ void Conductor::streamFeatures()
             FeatureGroup::instances[i]->stream(port, m_macAddress, timestamp,
                                                sendMACAddress);
         }
+        */
+        FeatureGroup::instances[i]->legacyStream(port, m_macAddress,
+                m_operationState, batteryLoad, timestamp, sendFeatureGroupName);
     }
 }
 

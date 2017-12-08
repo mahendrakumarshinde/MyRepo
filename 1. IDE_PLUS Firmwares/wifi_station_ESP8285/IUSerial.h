@@ -1,36 +1,26 @@
 #ifndef IUSERIAL_H
 #define IUSERIAL_H
 
-#include <Arduino.h>
-
-#include "Keywords.h"
-#include "Component.h"
-
+#include "Utilities.h"
 
 /**
- * Custom implementation of Serial port (UART)
- *
- * Component:
- *   Name: -
- * Description:
- *   Serial port, UART
+ * 
  */
-class IUSerial : public Component
+class IUSerial
 {
     public:
-        IUSerial(StreamingMode::option interface, HardwareSerial *serialPort,
-                 uint32_t rate=57600, uint16_t buffSize=20, char stop=';',
-                 uint16_t dataReceptionTimeout=2000);
-        virtual ~IUSerial() {}
         /***** Public constants *****/
-        const StreamingMode::option interfaceType;
         HardwareSerial *port;
         const uint32_t baudRate;
         const uint16_t bufferSize;
         const char stopChar;
-        /***** Hardware and power management *****/
-        virtual void setupHardware();
-        /***** Communication *****/
+        /***** Core *****/
+        IUSerial(HardwareSerial *serialPort, uint32_t rate=115200,
+                 uint16_t buffSize=256, char stop=';',
+                 uint16_t dataReceptionTimeout=200);
+        virtual ~IUSerial() { }
+        void begin();
+        /***** Communication with host *****/
         virtual void resetBuffer();
         virtual bool readToBuffer();
         virtual bool hasTimedOut();
@@ -40,19 +30,19 @@ class IUSerial : public Component
 
     protected:
         /***** Communication *****/
-        char m_buffer[20];
+        char m_buffer[256];
         uint16_t m_bufferIndex;
         bool m_newMessage;
         // Data reception robustness variables
         // Buffer is emptied if now - lastReadTime > dataReceptionTimeout
         uint16_t m_dataReceptionTimeout;  // in ms
         uint32_t m_lastReadTime;  // in ms, as outputed by millis()
+
 };
 
 
 /***** Instanciation *****/
 
-extern IUSerial iuUSB;
-extern IUSerial iuSerial3;
+extern IUSerial hostSerial;
 
 #endif // IUSERIAL_H

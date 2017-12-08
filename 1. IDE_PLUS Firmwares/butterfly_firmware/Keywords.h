@@ -12,8 +12,12 @@
 ============================================================================= */
 
 /***** Board version *****/
-//#define BUTTERFLY_V03
-#define BUTTERFLY_V04
+#define BUTTERFLY_V03
+//#define BUTTERFLY_V04
+
+/***** WiFi Option *****/
+//#define EXTERNAL_WIFI
+#define INTERNAL_ESP8285
 
 /***** Optionnal components *****/
 //#define RTD_DAUGHTER_BOARD
@@ -75,9 +79,8 @@ namespace StreamingMode
     enum option : uint8_t {WIRED  = 0,  // Send over Serial
                            BLE    = 1,  // Send over Bluetooth Low Energy
                            WIFI   = 2,  // Send over WiFi
-                           EXTERN = 3,  // Send through Serial3 to another board
-                           STORE  = 4,  // Store in SPI Flash to stream later
-                           COUNT  = 5};
+                           STORE  = 3,  // Store in SPI Flash to stream later
+                           COUNT  = 4};
 }
 
 
@@ -102,13 +105,6 @@ namespace UsageMode
         AcquisitionMode::RAWDATA,
         AcquisitionMode::FEATURE,
         AcquisitionMode::FEATURE,
-    };
-    const StreamingMode::option streamingModeDetails[COUNT] =
-    {
-        StreamingMode::WIRED,
-        StreamingMode::WIRED,
-        StreamingMode::BLE,
-        StreamingMode::EXTERN,
     };
 }
 

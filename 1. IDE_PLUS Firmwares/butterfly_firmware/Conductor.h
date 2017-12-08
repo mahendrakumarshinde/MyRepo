@@ -10,7 +10,6 @@
 #include "IUI2C.h"
 #include "IUSerial.h"
 #include "IUBMD350.h"
-#include "IUESP8285.h"
 #include "IURGBLed.h"
 #include "IUBattery.h"
 #include "IUBMP280.h"
@@ -19,7 +18,16 @@
 #include "IUBMX055Mag.h"
 #include "IUCAMM8Q.h"
 #include "IUI2S.h"
-#include "IURTDExtension.h"
+
+#ifdef INTERNAL_ESP8285  // Wifi options
+    #include "IUESP8285.h"
+#endif
+
+#ifdef RTD_DAUGHTER_BOARD  // Optionnal hardware
+    #include "IURTDExtension.h"
+#endif
+
+
 
 /**
  *
@@ -127,6 +135,8 @@ class Conductor
         bool m_inDataAcquistion;
         // The last time the LED was lit to reflect the OP state.
         uint32_t m_lastLitLedTime;
+        /***** WiFi *****/
+        bool m_wifiConnected;
         /***** Configuration and Mode management *****/
         UsageMode::option m_usageMode;
         AcquisitionMode::option m_acquisitionMode;

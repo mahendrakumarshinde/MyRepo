@@ -31,7 +31,7 @@ IUSerial::IUSerial(StreamingMode::option interface, HardwareSerial *serialPort,
 void IUSerial::setupHardware()
 {
     port->begin(baudRate);
-    delay(500);
+    delay(100);
     wakeUp();
 }
 
@@ -122,4 +122,8 @@ bool IUSerial::hasTimedOut()
 ============================================================================= */
 
 IUSerial iuUSB(StreamingMode::WIRED, &Serial, 115200, 20, '\n', 2000);
-IUSerial iuSerial3(StreamingMode::EXTERN, &Serial3, 115200, 500, ';', 500);
+
+#ifdef EXTERNAL_WIFI
+    extern IUSerial iuWiFi(StreamingMode::WIFI, &Serial3, 115200, 500, ';',
+                           500);
+#endif

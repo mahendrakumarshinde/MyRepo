@@ -7,7 +7,9 @@
 
 IUWiFiManager::IUWiFiManager(uint32_t timeout, int minSignalQuality) :
     m_timeout(timeout),
-    m_minSignalQuality(minSignalQuality)
+    m_minSignalQuality(minSignalQuality),
+    m_lastReconnectionAttempt(0),
+    m_lastSentHeartbeat(0)
 {
     strcpy(m_staticIp, "");
     strcpy(m_staticGateway, "");
@@ -21,10 +23,11 @@ IUWiFiManager::IUWiFiManager(uint32_t timeout, int minSignalQuality) :
  * fails, will switch the ESP to AP mode and launch web portal to set up
  * targe tWiFi SSID and password.
  */
-void IUWiFiManager::manageWifi(char const *apName, char const *apPassword,
-                               bool printInfo)
+void IUWiFiManager::manageWifi(const char *apName, const char *apPassword,
+                               void (*onConnectionCallback)())
 {
     WiFiManager wifiManager;
+    wifiManager.setDebugOutput(debugMode);
 
     // TODO Finish the static IP setup
     // WiFiManagerParameter staticIpParam(
@@ -44,10 +47,7 @@ void IUWiFiManager::manageWifi(char const *apName, char const *apPassword,
 
     //reset settings - for testing
     //wifiManager.resetSettings();
-    if (printInfo)
-    {
-        wifiManager.setAPCallback(webPortalStartedCallback);
-    }
+    wifiManager.setAPCallback(webPortalStartedCallback);
     wifiManager.setTimeout(m_timeout);
 
     //fetches ssid and pass and tries to connect
@@ -70,12 +70,60 @@ void IUWiFiManager::manageWifi(char const *apName, char const *apPassword,
         ESP.reset();
         delay(1000);
     }
+    onConnectionCallback();
     if (debugMode)
     {
         debugPrint("Connected to ", false);
         debugPrint(WiFi.SSID());
     }
 }
+
+/**
+ * Check if the WiFi is connected and if not, attempt to reconnect.
+ */
+bool IUWiFiManager::reconnect(const char *apName, const char *apPassword,
+                              void (*onConnectionCallback)())
+{
+    uint32_t current = millis();
+    // Reconnection if needed
+    if (WiFi.isConnected())
+    {
+        m_lastReconnectionAttempt = 0;
+        return true;
+    }
+    else
+    {
+        if (current > m_lastReconnectionAttempt + reconnectionInterval ||
+            m_lastReconnectionAttempt > current)  // Handle millis overflow
+        {
+            manageWifi(apName, apPassword, onConnectionCallback);
+            m_lastReconnectionAttempt = millis();
+        }
+        return WiFi.isConnected();
+    }
+}
+
+/**
+ *
+ */
+bool IUWiFiManager::isTimeToSendWifiInfo()
+{
+    uint32_t current = millis();
+    if (WiFi.isConnected())
+    {
+        if (m_lastSentHeartbeat == 0 ||
+            current > m_lastSentHeartbeat + heartbeatInterval ||
+            m_lastSentHeartbeat > current)  // Handle millis overflow
+        {
+            m_lastSentHeartbeat = current;
+            return true;
+        }
+    }
+    return false;
+}
+
+
+
 
 
 /* =============================================================================
@@ -93,37 +141,32 @@ void IUWiFiManager::setStaticIpConfig(char *staticIp, char *staticGateway,
 
 
 /* =============================================================================
-    Core
+    Debugging
 ============================================================================= */
 
 /**
+ * Format and output wifi info into a JSON-parsable char array.
  *
+ * @param destination A char array to hold the function output. Must be at least
+ *  200 char long.
  */
-void IUWiFiManager::printWifiInfo()
+void IUWiFiManager::getWifiInfo(char *destination)
 {
-    #ifdef DEBUGMODE
-    debugPrint("WiFi mac: ", false);
-    debugPrint(WiFi.macAddress());
-    debugPrint("SSID: ", false);
-    debugPrint(WiFi.SSID());
-    debugPrint("Status: ", false);
-    if (!WiFi.isConnected())
-    {
-        debugPrint("dis", false);
-    }
-    debugPrint("connected");
-    debugPrint("signal strength (RSSI):", false);
-    debugPrint(WiFi.RSSI(), false);
-    debugPrint(" dBm");
-    debugPrint("Local IP: ", false);
-    debugPrint(WiFi.localIP());
-    debugPrint("Subnet Mask: ", false);
-    debugPrint(WiFi.subnetMask());
-    debugPrint("Gateway IP: ", false);
-    debugPrint(WiFi.gatewayIP());
-    debugPrint("DNS IP: ", false);
-    debugPrint(WiFi.dnsIP());
-    #endif
+    strcpy(destination, "{\"ssid\":\"");
+    strcat(destination, WiFi.SSID().c_str());
+    strcat(destination, "\",\"rssi\":");
+    strcat(destination, String(WiFi.RSSI()).c_str());
+    strcat(destination, ",\"local_ip\":\"");
+    strcat(destination, WiFi.localIP().toString().c_str());
+    strcat(destination, "\",\"subnet\":\"");
+    strcat(destination, WiFi.subnetMask().toString().c_str());
+    strcat(destination, "\",\"gateway\":\"");
+    strcat(destination, WiFi.gatewayIP().toString().c_str());
+    strcat(destination, "\",\"dns\":\"");
+    strcat(destination, WiFi.dnsIP().toString().c_str());
+    strcat(destination, "\",\"wifi_mac\":\"");
+    strcat(destination, WiFi.macAddress().c_str());
+    strcat(destination, "\"}");
 }
 
 
