@@ -540,11 +540,7 @@ void compute_features() {
   record_feature_now[buffer_compute_index] = false;
   highest_danger_level = 0;
 
-  feature_value[0] = feature_energy();
-  if (feature0check == 1) {
-    current_danger_level = threshold_feature(0, feature_value[0]);
-    highest_danger_level = max(highest_danger_level, current_danger_level);
-  }
+  float accelEnergyFeature = feature_energy();
 
   getVelocityAndDisplacement(accel_x_batch[buffer_compute_index], TARGET_ACCEL_SAMPLE,
                              ACCEL_NFFT, 5, 600, featureMainFreqX, featureVelX,
@@ -556,32 +552,37 @@ void compute_features() {
                              ACCEL_NFFT, 5, 600, featureMainFreqZ, featureVelZ,
                              featureDispZ);
 
+  feature_value[0] = featureVelX;
+  if (feature0check == 1) {
+    current_danger_level = threshold_feature(0, feature_value[0]);
+    highest_danger_level = max(highest_danger_level, current_danger_level);
+  }
 
-  feature_value[1] = featureVelX;
+  feature_value[1] = featureVelY;
   if (feature1check == 1) {
     current_danger_level = threshold_feature(1, feature_value[1]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
 
-  feature_value[2] = featureVelY;
+  feature_value[2] = featureVelZ;
   if (feature2check == 1) {
     current_danger_level = threshold_feature(2, feature_value[2]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
 
-  feature_value[3] = featureVelZ;
+  feature_value[3] = featureDispX;
   if (feature3check == 1) {
     current_danger_level = threshold_feature(3, feature_value[3]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
 
-  feature_value[4] = currentTemperature();
+  feature_value[4] = featureDispY;
   if (feature4check == 1) {
     current_danger_level = threshold_feature(4, feature_value[4]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
 
-  feature_value[5] = audioDB();
+  feature_value[5] = featureDispZ;
   if (feature5check == 1) {
     current_danger_level = threshold_feature(5, feature_value[5]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
