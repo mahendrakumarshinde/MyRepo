@@ -25,7 +25,9 @@
   Module Configuration Variables
 ============================================================================= */
 
-String MAC_ADDRESS = "88:4A:EA:69:38:22";
+String MAC_ADDRESS = "88:4A:EA:69:DE:D3";
+
+const float minAccelEnergyForVelocity = 102;
 
 
 const bool featureDebugMode = false;
@@ -542,15 +544,29 @@ void compute_features() {
 
   float accelEnergyFeature = feature_energy();
 
-  getVelocityAndDisplacement(accel_x_batch[buffer_compute_index], TARGET_ACCEL_SAMPLE,
-                             ACCEL_NFFT, 5, 600, featureMainFreqX, featureVelX,
-                             featureDispX);
-  getVelocityAndDisplacement(accel_y_batch[buffer_compute_index], TARGET_ACCEL_SAMPLE,
-                             ACCEL_NFFT, 5, 600, featureMainFreqY, featureVelY,
-                             featureDispY);
-  getVelocityAndDisplacement(accel_z_batch[buffer_compute_index], TARGET_ACCEL_SAMPLE,
-                             ACCEL_NFFT, 5, 600, featureMainFreqZ, featureVelZ,
-                             featureDispZ);
+  if (accelEnergyFeature >= minAccelEnergyForVelocity) {
+      getVelocityAndDisplacement(accel_x_batch[buffer_compute_index], TARGET_ACCEL_SAMPLE,
+                                 ACCEL_NFFT, 5, 600, featureMainFreqX, featureVelX,
+                                 featureDispX);
+      getVelocityAndDisplacement(accel_y_batch[buffer_compute_index], TARGET_ACCEL_SAMPLE,
+                                 ACCEL_NFFT, 5, 600, featureMainFreqY, featureVelY,
+                                 featureDispY);
+      getVelocityAndDisplacement(accel_z_batch[buffer_compute_index], TARGET_ACCEL_SAMPLE,
+                                 ACCEL_NFFT, 5, 600, featureMainFreqZ, featureVelZ,
+                                 featureDispZ);
+  }
+  else
+  {
+    featureMainFreqX = 0;
+    featureMainFreqY = 0;
+    featureMainFreqZ = 0;
+    featureVelX = 0;
+    featureVelY = 0;
+    featureVelZ = 0;
+    featureDispX= 0;
+    featureDispY = 0;
+    featureDispZ = 0;
+  }
 
   feature_value[0] = featureVelX;
   if (feature0check == 1) {
