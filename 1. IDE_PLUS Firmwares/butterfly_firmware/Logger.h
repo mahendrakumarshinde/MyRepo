@@ -2,7 +2,6 @@
 #define LOGGER_H
 
 #include <Arduino.h>
-#include <ArduinoUnit.h>
 #include <MemoryFree.h>
 
 /* ============================= Debugging ============================= */

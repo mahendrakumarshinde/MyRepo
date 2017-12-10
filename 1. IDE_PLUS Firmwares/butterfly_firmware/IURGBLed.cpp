@@ -8,8 +8,9 @@
 /**
 * LED is activated at construction
 */
-IURGBLed::IURGBLed() :
+IURGBLed::IURGBLed(bool blinking) :
     Component(),
+    m_blinking(blinking),
     m_nextOffTime(0)
 {
   pinMode(RED_PIN, OUTPUT);
@@ -63,14 +64,19 @@ void IURGBLed::turnOff()
 }
 
 /**
- * Automatically turn off the LEDs after they have been on for more than onTimer
+ * Automatically turn off the LED after it has been on for more than onTimer.
+ *
+ * Does nothing if the blinking is deactivated.
  */
 void IURGBLed::autoTurnOff()
 {
-    uint32_t now = millis();
-    if (now > m_nextOffTime)
+    if (m_blinking)
     {
-        turnOff();
+        uint32_t now = millis();
+        if (now > m_nextOffTime)
+        {
+            turnOff();
+        }
     }
 }
 

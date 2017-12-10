@@ -53,6 +53,9 @@ class IUSerial : public Component
 /***** Instanciation *****/
 
 extern IUSerial iuUSB;
-extern IUSerial iuSerial3;
+
+#ifdef EXTERNAL_WIFI
+    extern IUSerial iuWiFi;
+#endif
 
 #endif // IUSERIAL_H

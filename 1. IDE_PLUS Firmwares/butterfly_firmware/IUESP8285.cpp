@@ -1,13 +1,12 @@
 #include "IUESP8285.h"
 
-
 /* =============================================================================
     Constructor & desctructors
 ============================================================================= */
 
 IUESP8285::IUESP8285(HardwareSerial *serialPort, uint32_t rate,
                      uint16_t dataReceptionTimeout) :
-    IUSerial(StreamingMode::WIFI, serialPort, rate, 20, ';',
+    IUSerial(StreamingMode::WIFI, serialPort, rate, 500, ';',
              dataReceptionTimeout)
 {
 }
@@ -22,6 +21,18 @@ IUESP8285::IUESP8285(HardwareSerial *serialPort, uint32_t rate,
  */
 void IUESP8285::setupHardware()
 {
+    // Check if UART is being driven by something else (eg: FTDI connnector)
+    // used to flash the ESP8285
+    // TODO Test the following
+//    pinMode(UART_TX_PIN, INPUT_PULLDOWN);
+//    delay(100);
+//    if(digitalRead(UART_TX_PIN))
+//    {
+//        // UART driven by something else
+//        // TODO How does this behave when there is a battery?
+//        IUSerial::suspend();
+//        return;
+//    }
     IUSerial::setupHardware();
 }
 
@@ -30,7 +41,8 @@ void IUESP8285::setupHardware()
  */
 void IUESP8285::wakeUp()
 {
-    m_powerMode = PowerMode::ACTIVE;
+    // TODO Implement power mode change at EESP8285 level
+    IUSerial::wakeUp();
 }
 
 /**
@@ -38,7 +50,8 @@ void IUESP8285::wakeUp()
  */
 void IUESP8285::sleep()
 {
-    m_powerMode = PowerMode::SLEEP;
+    // TODO Implement power mode change at EESP8285 level
+    IUSerial::sleep();
     // Passing 0 makes the WiFi sleep indefinitly
     //WiFiSerial::Put_WiFi_To_Sleep(0.0f);
 }
@@ -48,20 +61,30 @@ void IUESP8285::sleep()
  */
 void IUESP8285::suspend()
 {
-    m_powerMode = PowerMode::SUSPEND;
+    // TODO Implement power mode change at EESP8285 level
+    IUSerial::suspend();
     // Passing 0 makes the WiFi sleep indefinitly
     //WiFiSerial::Put_WiFi_To_Sleep(0.0f);
 }
 
 
 /* =============================================================================
-    WiFi communication
+    Communication with WiFi chip
 ============================================================================= */
 
+/**
+ * Print the given MAC address to ESP8285 UART (with header)
+ */
+void IUESP8285::sendBleMacAddress(char *macAddress)
+{
+    port->print("BLEMAC-");
+    port->print(macAddress);
+    port->print(";");
+}
 
 
 /* =============================================================================
     Instanciation
 ============================================================================= */
 
-IUESP8285 iuWiFi(&Serial1, 57600, 2000);
+IUESP8285 iuWiFi(&Serial3, 115200, 2000);

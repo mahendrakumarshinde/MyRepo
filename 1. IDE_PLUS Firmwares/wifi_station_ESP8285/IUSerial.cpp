@@ -2,14 +2,11 @@
 
 
 /* =============================================================================
-    Constructor & desctructors
+    Core
 ============================================================================= */
 
-IUSerial::IUSerial(StreamingMode::option interface, HardwareSerial *serialPort,
-                   uint32_t rate, uint16_t buffSize, char stop,
-                   uint16_t dataReceptionTimeout) :
-    Component(),
-    interfaceType(interface),
+IUSerial::IUSerial(HardwareSerial *serialPort, uint32_t rate, uint16_t buffSize,
+                   char stop, uint16_t dataReceptionTimeout) :
     port(serialPort),
     baudRate(rate),
     bufferSize(buffSize),
@@ -20,24 +17,19 @@ IUSerial::IUSerial(StreamingMode::option interface, HardwareSerial *serialPort,
     resetBuffer();
 }
 
-
-/* =============================================================================
-    Hardware & power management
-============================================================================= */
-
 /**
- * Set up the component and finalize the object initialization
+ * 
  */
-void IUSerial::setupHardware()
+void IUSerial::begin()
 {
     port->begin(baudRate);
-    delay(500);
-    wakeUp();
+    port->setRxBufferSize(bufferSize);
+    delay(100);
 }
 
 
 /* =============================================================================
-    Communication
+    Communication with host
 ============================================================================= */
 
 /**
@@ -89,7 +81,7 @@ bool IUSerial::readToBuffer()
         if (newChar == stopChar)
         {
             // Replace stopChar with end of string char.
-            m_buffer[m_bufferIndex - 1] = '\0';
+            m_buffer[m_bufferIndex - 1] = 0; //'\0';
             m_newMessage = true;
             return true;
         }
@@ -121,5 +113,4 @@ bool IUSerial::hasTimedOut()
     Instanciation
 ============================================================================= */
 
-IUSerial iuUSB(StreamingMode::WIRED, &Serial, 115200, 20, '\n', 2000);
-IUSerial iuSerial3(StreamingMode::EXTERN, &Serial3, 115200, 500, ';', 500);
+IUSerial hostSerial(&Serial);

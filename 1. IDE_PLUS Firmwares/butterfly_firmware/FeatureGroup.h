@@ -44,7 +44,7 @@ class FeatureGroup
                     double timestamp, bool sendMACAddress=false);
         void legacyStream(HardwareSerial *port, const char *macAddress,
                           OperationState::option opState, float batteryLoad,
-                          double timestamp);
+                          double timestamp, bool sendName=false);
 
     protected:
         /***** Instance registry *****/
