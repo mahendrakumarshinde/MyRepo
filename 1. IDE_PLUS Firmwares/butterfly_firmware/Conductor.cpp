@@ -135,7 +135,7 @@ void Conductor::readFromSerial(IUSerial *iuSerial)
         char *buffer = iuSerial->getBuffer();
         // Buffer Size, including NUL char '\0'
         uint16_t buffSize =  iuSerial->getCurrentBufferLength();
-        if(setupDebugMode)
+        if (setupDebugMode)
         {
             debugPrint(F("Interface "), false);
             debugPrint(iuSerial->interfaceType, false);
@@ -443,7 +443,7 @@ void Conductor::processLegacyBLECommands(char *buff)
             {
                 int idx(0), th1(0), th2(0), th3(0);
                 sscanf(buff, "%d-%d-%d-%d", &idx, &th1, &th2, &th3);
-                Feature *feat = motorStandardGroup.getFeature(idx + 1);
+                Feature *feat = motorStandardGroup.getFeature(idx);
                 if (feat)
                 {
                     if (idx == 1 || idx == 2 || idx == 3)
@@ -493,37 +493,37 @@ void Conductor::processLegacyBLECommands(char *buff)
             if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
                 buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
             {
-//                if (loopDebugMode)
-//                {
-//                    debugPrint("Record mode");
-//                }
-//                Feature *feature = Feature::getInstanceByName("A0X");
-//                if (feature)
-//                {
-//                    iuBluetooth.port->print("REC,");
-//                    iuBluetooth.port->print(m_macAddress);
-//                    iuBluetooth.port->print(',X');
-//                    feature.stream(iuBluetooth.port);
-//                    iuBluetooth.port->flush();
-//                }
-//                feature = Feature::getInstanceByName("A0Y");
-//                if (feature)
-//                {
-//                    iuBluetooth.port->print("REC,");
-//                    iuBluetooth.port->print(m_macAddress);
-//                    iuBluetooth.port->print(',Y');
-//                    feature.stream(iuBluetooth.port);
-//                    iuBluetooth.port->flush();
-//                }
-//                feature = Feature::getInstanceByName("A0Z");
-//                if (feature)
-//                {
-//                    iuBluetooth.port->print("REC,");
-//                    iuBluetooth.port->print(m_macAddress);
-//                    iuBluetooth.port->print(',Z');
-//                    feature.stream(iuBluetooth.port);
-//                    iuBluetooth.port->flush();
-//                }
+                if (loopDebugMode)
+                {
+                    debugPrint("Record mode");
+                }
+                Feature *feature = Feature::getInstanceByName("A0X");
+                if (feature)
+                {
+                    iuBluetooth.port->print("REC,");
+                    iuBluetooth.port->print(m_macAddress);
+                    iuBluetooth.port->print(",X");
+                    feature->stream(iuBluetooth.port);
+                    iuBluetooth.port->flush();
+                }
+                feature = Feature::getInstanceByName("A0Y");
+                if (feature)
+                {
+                    iuBluetooth.port->print("REC,");
+                    iuBluetooth.port->print(m_macAddress);
+                    iuBluetooth.port->print(",Y");
+                    feature->stream(iuBluetooth.port);
+                    iuBluetooth.port->flush();
+                }
+                feature = Feature::getInstanceByName("A0Z");
+                if (feature)
+                {
+                    iuBluetooth.port->print("REC,");
+                    iuBluetooth.port->print(m_macAddress);
+                    iuBluetooth.port->print(",Z");
+                    feature->stream(iuBluetooth.port);
+                    iuBluetooth.port->flush();
+                }
             }
            break;
         case '5':  // Get status
@@ -594,7 +594,7 @@ void Conductor::processWIFICommands(char *buff)
             {
                 int idx(0), th1(0), th2(0), th3(0);
                 sscanf(buff, "%d-%d-%d-%d", &idx, &th1, &th2, &th3);
-                Feature *feat = motorStandardGroup.getFeature(idx + 1);
+                Feature *feat = motorStandardGroup.getFeature(idx);
                 if (feat)
                 {
                     if (idx == 1 || idx == 2 || idx == 3)
@@ -662,8 +662,8 @@ void Conductor::processWIFICommands(char *buff)
 //                {
 //                    iuWiFi.port->print("REC,");
 //                    iuWiFi.port->print(m_macAddress);
-//                    iuWiFi.port->print(',X');
-//                    feature.stream(iuWiFi.port);
+//                    iuWiFi.port->print(",X");
+//                    feature->stream(iuWiFi.port);
 //                    iuWiFi.port->flush();
 //                }
 //                feature = Feature::getInstanceByName("A0Y");
@@ -671,8 +671,8 @@ void Conductor::processWIFICommands(char *buff)
 //                {
 //                    iuWiFi.port->print("REC,");
 //                    iuWiFi.port->print(m_macAddress);
-//                    iuWiFi.port->print(',Y');
-//                    feature.stream(iuWiFi.port);
+//                    iuWiFi.port->print(",Y");
+//                    feature->stream(iuWiFi.port);
 //                    iuWiFi.port->flush();
 //                }
 //                feature = Feature::getInstanceByName("A0Z");
@@ -680,8 +680,8 @@ void Conductor::processWIFICommands(char *buff)
 //                {
 //                    iuWiFi.port->print("REC,");
 //                    iuWiFi.port->print(m_macAddress);
-//                    iuWiFi.port->print(',Z');
-//                    feature.stream(iuWiFi.port);
+//                    iuWiFi.port->print(",Z");
+//                    feature->stream(iuWiFi.port);
 //                    iuWiFi.port->flush();
 //                }
             }
@@ -721,7 +721,7 @@ void Conductor::processWIFICommands(char *buff)
                         if (fcheck[i] > 0)
                         {
                             feat->enableOperationState();
-                            if (true) // loopDebugMode
+                            if (loopDebugMode)
                             {
                                 debugPrint(feat->getName(), false);
                                 debugPrint(F(": op state is enabled"));
@@ -730,7 +730,7 @@ void Conductor::processWIFICommands(char *buff)
                         else
                         {
                             feat->disableOperationState();
-                            if (true) // loopDebugMode
+                            if (loopDebugMode)
                             {
                                 debugPrint(feat->getName(), false);
                                 debugPrint(F(": op state is disabled"));

@@ -39,7 +39,8 @@ class IUBMD350 : public IUSerial
         static const txPowerOption defaultTxPower = txPowerOption::DBm4;
 
         /***** Constructors & destructor *****/
-        IUBMD350(HardwareSerial *serialPort, uint32_t rate=57600,
+        IUBMD350(HardwareSerial *serialPort, char *charBuffer,
+                 uint16_t bufferSize,  uint32_t rate=57600,
                  uint16_t dataReceptionTimeout=2000);
         virtual ~IUBMD350() {}
         /***** Hardware and power management *****/
@@ -92,6 +93,7 @@ class IUBMD350 : public IUSerial
 
 /***** Instanciation *****/
 
+extern char iuBluetoothBuffer[500];
 extern IUBMD350 iuBluetooth;
 
 #endif // IUBMD350_H

@@ -272,7 +272,8 @@ void SynchronousSensor::setSamplingPeriod(uint32_t samplingPeriod)
 void SynchronousSensor::acquireData()
 {
     uint32_t now = millis();
-    if (m_lastAcquisitionTime + m_samplingPeriod > now
+    if (m_lastAcquisitionTime > 0 &&
+        m_lastAcquisitionTime + m_samplingPeriod > now
             && m_lastAcquisitionTime < now )  // Handle millis() overflow
     {
         return;

@@ -20,7 +20,7 @@ char DEVICE_TYPE[9] = "ide_plus";
 char CUSTOMER_PLACEHOLDER[9] = "XXXAdmin";
 
 // BLE MAC Address (used as device MAC address)
-char BLE_MAC_ADDRESS[18] = "";
+char BLE_MAC_ADDRESS[18] = "";                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
 bool unknownBleMacAddress = true;
 
 // Access point name

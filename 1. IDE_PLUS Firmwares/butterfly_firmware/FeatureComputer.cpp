@@ -420,11 +420,13 @@ Q15FFTComputer::Q15FFTComputer(uint8_t id,
                                Feature *doubleIntegralRMS,
                                q15_t *allocatedFFTSpace,
                                uint16_t lowCutFrequency,
-                               uint16_t highCutFrequency) :
+                               uint16_t highCutFrequency,
+                               float minAgitationRMS) :
     FeatureComputer(id, 4, reducedFFT, mainFrequency, integralRMS,
                     doubleIntegralRMS),
     m_lowCutFrequency(lowCutFrequency),
-    m_highCutFrequency(highCutFrequency)
+    m_highCutFrequency(highCutFrequency),
+    m_minAgitationRMS(minAgitationRMS)
 {
     m_allocatedFFTSpace = allocatedFFTSpace;
 }
@@ -474,11 +476,18 @@ void Q15FFTComputer::m_specializedCompute()
     q15_t amplitudes[amplitudeCount];
     RFFT::computeRFFT(values, m_allocatedFFTSpace, sampleCount, false);
     RFFTAmplitudes::getAmplitudes(m_allocatedFFTSpace, sampleCount, amplitudes);
+    float agitation = RFFTAmplitudes::getRMS(amplitudes, sampleCount, true);
+    bool isInMotion = (agitation * resolution) > m_minAgitationRMS ;
+    if (!isInMotion && featureDebugMode)
+    {
+        debugPrint(F("Device is still - Freq, vel & disp defaulted to 0."));
+    }
     // 2. Keep the K max coefficients (K = reducedLength)
     uint16_t reducedLength = m_destinations[0]->getSectionSize() / 3;
     q15_t maxVal;
     uint32_t maxIdx;
-    bool mainFreqSaved(false);
+    // If board is still, freq is defaulted to 0.
+    bool mainFreqSaved = !isInMotion;
     float freq(0);
     q15_t amplitudesCopy[amplitudeCount];
     copyArray(amplitudes, amplitudesCopy, amplitudeCount);
@@ -503,36 +512,54 @@ void Q15FFTComputer::m_specializedCompute()
     {
         debugPrint(m_destinations[0]->getName(), false);
         debugPrint(": was computed");
-    }
-    // 3. 1st integration in frequency domain
-    q15_t scaling1 = RFFTAmplitudes::getRescalingFactorForIntegral(
-        amplitudes, sampleCount, samplingRate);
-    RFFTAmplitudes::filterAndIntegrate(amplitudes, sampleCount, samplingRate,
-                                       m_lowCutFrequency, m_highCutFrequency,
-                                       scaling1, false);
-    float integratedRMS1 = RFFTAmplitudes::getRMS(amplitudes, sampleCount);
-    integratedRMS1 *= 1000 / ((float) scaling1);
-    m_destinations[2]->addFloatValue(integratedRMS1);
-    if (featureDebugMode)
-    {
         debugPrint(m_destinations[1]->getName(), false);
         debugPrint(": ", false);
-        debugPrint(integratedRMS1 * resolution);
+        debugPrint(freq);
     }
-    // 4. 2nd integration in frequency domain
-    q15_t scaling2 = RFFTAmplitudes::getRescalingFactorForIntegral(
-        amplitudes, sampleCount, samplingRate);
-    RFFTAmplitudes::filterAndIntegrate(amplitudes, sampleCount, samplingRate,
-                                       m_lowCutFrequency, m_highCutFrequency,
-                                       scaling2, false);
-    float integratedRMS2 = RFFTAmplitudes::getRMS(amplitudes, sampleCount);
-    integratedRMS2 *= 1000 / ((float) scaling1 * (float) scaling2);
-    m_destinations[3]->addFloatValue(integratedRMS2);
-    if (featureDebugMode)
+    // 3. 1st integration in frequency domain
+    if (isInMotion)
     {
-        debugPrint(m_destinations[2]->getName(), false);
-        debugPrint(": ", false);
-        debugPrint(integratedRMS2 * resolution);
+        q15_t scaling1 = RFFTAmplitudes::getRescalingFactorForIntegral(
+            amplitudes, sampleCount, samplingRate);
+        RFFTAmplitudes::filterAndIntegrate(
+            amplitudes, sampleCount, samplingRate, m_lowCutFrequency,
+            m_highCutFrequency, scaling1, false);
+        float integratedRMS1 = RFFTAmplitudes::getRMS(amplitudes, sampleCount);
+        integratedRMS1 *= 1000 / ((float) scaling1);
+        m_destinations[2]->addFloatValue(integratedRMS1);
+        if (featureDebugMode)
+        {
+            debugPrint(m_destinations[2]->getName(), false);
+            debugPrint(": ", false);
+            debugPrint(integratedRMS1 * resolution);
+        }
+        // 4. 2nd integration in frequency domain
+        q15_t scaling2 = RFFTAmplitudes::getRescalingFactorForIntegral(
+            amplitudes, sampleCount, samplingRate);
+        RFFTAmplitudes::filterAndIntegrate(
+            amplitudes, sampleCount, samplingRate, m_lowCutFrequency,
+            m_highCutFrequency, scaling2, false);
+        float integratedRMS2 = RFFTAmplitudes::getRMS(amplitudes, sampleCount);
+        integratedRMS2 *= 1000 / ((float) scaling1 * (float) scaling2);
+        m_destinations[3]->addFloatValue(integratedRMS2);
+        if (featureDebugMode)
+        {
+            debugPrint(m_destinations[3]->getName(), false);
+            debugPrint(": ", false);
+            debugPrint(integratedRMS2 * resolution);
+        }
+    }
+    else
+    {
+        m_destinations[2]->addFloatValue(0);
+        m_destinations[3]->addFloatValue(0);
+        if (featureDebugMode)
+        {
+            debugPrint(m_destinations[2]->getName(), false);
+            debugPrint(": 0");
+            debugPrint(m_destinations[3]->getName(), false);
+            debugPrint(": 0");
+        }
     }
 }
 

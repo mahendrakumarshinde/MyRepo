@@ -5,9 +5,10 @@
     Constructor & desctructors
 ============================================================================= */
 
-IUBMD350::IUBMD350(HardwareSerial *serialPort, uint32_t rate,
+IUBMD350::IUBMD350(HardwareSerial *serialPort, char *charBuffer,
+                   uint16_t bufferSize,  uint32_t rate,
                    uint16_t dataReceptionTimeout) :
-    IUSerial(StreamingMode::BLE, serialPort, rate, 500, ';',
+    IUSerial(StreamingMode::BLE, serialPort, charBuffer, bufferSize, rate, ';',
              dataReceptionTimeout),
     m_ATCmdEnabled(false),
     m_beaconEnabled(IUBMD350::defaultBeaconEnabled),
@@ -560,4 +561,5 @@ void IUBMD350::getBMDwareInfo(char *BMDVersion, char *bootVersion,
     Instanciation
 ============================================================================= */
 
-IUBMD350 iuBluetooth(&Serial1, 57600, 2000);
+char iuBluetoothBuffer[500] = "";
+IUBMD350 iuBluetooth(&Serial1, iuBluetoothBuffer, 500, 57600, 2000);

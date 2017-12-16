@@ -39,19 +39,19 @@ void IUBattery::switchToLowUsage()
 void IUBattery::switchToRegularUsage()
 {
     m_usagePreset = usagePreset::P_REGULAR;
-    setSamplingPeriod(900000);  // 15 min
+    setSamplingPeriod(30000);  // 30s
 }
 
 void IUBattery::switchToEnhancedUsage()
 {
     m_usagePreset = usagePreset::P_ENHANCED;
-    setSamplingPeriod(300000);  // 5 min
+    setSamplingPeriod(10000);  // 10s
 }
 
 void IUBattery::switchToHighUsage()
 {
     m_usagePreset = usagePreset::P_HIGH;
-    setSamplingPeriod(30000);  // 30s
+    setSamplingPeriod(5000);  // 5s
 }
 
 

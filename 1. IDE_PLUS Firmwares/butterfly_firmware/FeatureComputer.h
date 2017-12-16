@@ -170,17 +170,20 @@ class Q15FFTComputer: public FeatureComputer
                        Feature *doubleIntegralRMS=NULL,
                        q15_t *allocatedFFTSpace=NULL,
                        uint16_t lowCutFrequency=5,
-                       uint16_t highCutFrequency=550);
+                       uint16_t highCutFrequency=550,
+                       float minAgitationRMS=0.1);
         /***** Configuration *****/
         virtual void configure(JsonVariant &config);
         void setLowCutFrequency(uint16_t value) { m_lowCutFrequency = value; }
         void setHighCutFrequency(uint16_t value) { m_highCutFrequency = value; }
+        void setMinAgitationRMS(float value) { m_minAgitationRMS = value; }
 
     protected:
         virtual void m_specializedCompute();
         q15_t *m_allocatedFFTSpace;
         uint16_t m_lowCutFrequency;
         uint16_t m_highCutFrequency;
+        float m_minAgitationRMS;
 };
 
 

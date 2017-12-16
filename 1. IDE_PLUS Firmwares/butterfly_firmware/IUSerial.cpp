@@ -6,17 +6,20 @@
 ============================================================================= */
 
 IUSerial::IUSerial(StreamingMode::option interface, HardwareSerial *serialPort,
-                   uint32_t rate, uint16_t buffSize, char stop,
-                   uint16_t dataReceptionTimeout) :
+                   char *charBuffer, uint16_t bufferSize, uint32_t rate,
+                   char stop, uint16_t dataReceptionTimeout,
+                   uint16_t forceMessageSize) :
     Component(),
     interfaceType(interface),
     port(serialPort),
+    m_bufferSize(bufferSize),
     baudRate(rate),
-    bufferSize(buffSize),
     stopChar(stop),
     m_dataReceptionTimeout(dataReceptionTimeout),
-    m_lastReadTime(0)
+    m_lastReadTime(0),
+    m_forceMessageSize(forceMessageSize)
 {
+    m_buffer = charBuffer;
     resetBuffer();
 }
 
@@ -46,7 +49,7 @@ void IUSerial::setupHardware()
 void IUSerial::resetBuffer()
 {
     m_bufferIndex = 0;
-    m_buffer[0] = '\0';  // End of string at 1st character (ie buffer is empty)
+//    m_buffer[0] = '\0';  // End of string at 1st character (ie buffer is empty)
     m_newMessage = false;
 }
 
@@ -74,7 +77,7 @@ bool IUSerial::readToBuffer()
     char newChar;
     while (port->available() > 0)
     {
-        if (m_bufferIndex >= bufferSize) // overflowing
+        if (m_bufferIndex >= m_bufferSize) // overflowing
         {
             m_bufferIndex = 0;
             if (debugMode)
@@ -90,6 +93,12 @@ bool IUSerial::readToBuffer()
         {
             // Replace stopChar with end of string char.
             m_buffer[m_bufferIndex - 1] = '\0';
+            m_newMessage = true;
+            return true;
+        }
+        if (m_forceMessageSize > 0 && m_bufferIndex >= m_forceMessageSize)
+        {
+            m_buffer[m_bufferIndex] = '\0';
             m_newMessage = true;
             return true;
         }
@@ -121,9 +130,12 @@ bool IUSerial::hasTimedOut()
     Instanciation
 ============================================================================= */
 
-IUSerial iuUSB(StreamingMode::WIRED, &Serial, 115200, 20, '\n', 2000);
+char iuUSBBuffer[20] = "";
+IUSerial iuUSB(StreamingMode::WIRED, &Serial, iuUSBBuffer, 20, 115200, '\n',
+               2000);
 
 #ifdef EXTERNAL_WIFI
-    extern IUSerial iuWiFi(StreamingMode::WIFI, &Serial3, 115200, 500, ';',
-                           500);
+    char iuWiFiBuffer[500] = ""
+    IUSerial iuWiFi(StreamingMode::WIFI, &Serial3, iuWiFiBuffer, 500, 
+                    115200, ';', 500);
 #endif

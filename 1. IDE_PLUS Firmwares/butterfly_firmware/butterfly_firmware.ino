@@ -36,10 +36,14 @@ test mode */
 
 
 /* =============================================================================
-    MAC Address
+    MAC Address 
 ============================================================================= */
 
 const char MAC_ADDRESS[18] = "94:54:93:0F:67:01";
+    // "94:54:93:0E:63:FC";
+    // "94:54:93:0E:81:A4";
+    // "94:54:93:0E:7B:2B";
+    // "94:54:93:OE:81:44";
 
 
 /* =============================================================================
@@ -108,6 +112,7 @@ void setup()
             iuI2C.scanDevices();
             debugPrint("");
         }
+        iuBluetooth.setForceMessageSize(19);
         iuBluetooth.setupHardware();
         iuWiFi.setupHardware();
         iuSPIFlash.setupHardware();

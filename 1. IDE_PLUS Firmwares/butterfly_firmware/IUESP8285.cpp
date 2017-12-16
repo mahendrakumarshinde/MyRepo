@@ -4,10 +4,11 @@
     Constructor & desctructors
 ============================================================================= */
 
-IUESP8285::IUESP8285(HardwareSerial *serialPort, uint32_t rate,
+IUESP8285::IUESP8285(HardwareSerial *serialPort, char *charBuffer,
+                     uint16_t bufferSize,  uint32_t rate,
                      uint16_t dataReceptionTimeout) :
-    IUSerial(StreamingMode::WIFI, serialPort, rate, 500, ';',
-             dataReceptionTimeout)
+    IUSerial(StreamingMode::WIFI, serialPort, charBuffer, bufferSize, rate,
+             ';', dataReceptionTimeout)
 {
 }
 
@@ -87,4 +88,5 @@ void IUESP8285::sendBleMacAddress(char *macAddress)
     Instanciation
 ============================================================================= */
 
-IUESP8285 iuWiFi(&Serial3, 115200, 2000);
+char iuWiFiBuffer[500] = "";
+IUESP8285 iuWiFi(&Serial3, iuWiFiBuffer, 500, 115200, 2000);

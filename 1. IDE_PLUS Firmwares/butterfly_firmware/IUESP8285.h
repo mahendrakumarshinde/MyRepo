@@ -20,7 +20,8 @@ class IUESP8285 : public IUSerial
         /***** Preset values and default settings *****/
 //        static const uint8_t UART_TX_PIN = D9;
         /***** Constructors & desctructors *****/
-        IUESP8285(HardwareSerial *serialPort, uint32_t rate=115200,
+        IUESP8285(HardwareSerial *serialPort, char *charBuffer,
+                  uint16_t bufferSize, uint32_t rate=115200,
                   uint16_t dataReceptionTimeout=2000);
         virtual ~IUESP8285() {}
         /***** Hardware and power management *****/
@@ -40,6 +41,7 @@ class IUESP8285 : public IUSerial
 
 /***** Instanciation *****/
 
+extern char iuWiFiBuffer[500];
 extern IUESP8285 iuWiFi;
 
 #endif // IUESP8285_H

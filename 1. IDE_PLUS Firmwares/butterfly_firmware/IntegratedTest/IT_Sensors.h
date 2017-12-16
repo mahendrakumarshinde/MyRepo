@@ -36,7 +36,6 @@ test(Sensors__declerations)
 
 inline void i2sCallbackTestFunction()
 {
-    Serial.println('c');
     iuI2S.acquireData();
 }
 

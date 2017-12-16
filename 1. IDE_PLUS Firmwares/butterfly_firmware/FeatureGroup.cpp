@@ -190,7 +190,7 @@ void FeatureGroup::legacyStream(HardwareSerial *port, const char *macAddress,
     port->print(",0");
     port->print((uint8_t) opState);
     port->print(",");
-    port->print((int) round(batteryLoad * 100));
+    port->print((int) round(batteryLoad));
     for (uint8_t i = 0; i < m_featureCount; ++i)
     {
         port->print(",000");
