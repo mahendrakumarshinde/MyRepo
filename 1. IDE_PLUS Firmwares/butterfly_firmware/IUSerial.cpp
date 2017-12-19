@@ -102,6 +102,16 @@ bool IUSerial::readToBuffer()
             m_newMessage = true;
             return true;
         }
+        if (interfaceType == StreamingMode::WIRED)
+        {
+            if ((m_bufferIndex == 11 && strncmp(m_buffer, "IUCMD_START", 11) == 0) ||
+                (m_bufferIndex == 9 && strncmp(m_buffer, "IUCMD_END", 9) == 0))
+            {
+                m_buffer[m_bufferIndex] = '\0';
+                m_newMessage = true;
+                return true;
+            }
+        }
     }
     m_lastReadTime = millis();
     return false;
