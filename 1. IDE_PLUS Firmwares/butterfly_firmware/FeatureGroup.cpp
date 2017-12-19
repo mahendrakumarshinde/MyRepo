@@ -164,7 +164,6 @@ void FeatureGroup::stream(HardwareSerial *port, const char *macAddress,
         // Add a line break to ease readability in debug mode
         port->println("");
     }
-    port->flush();
 }
 
 
@@ -207,7 +206,6 @@ void FeatureGroup::legacyStream(HardwareSerial *port, const char *macAddress,
     {
         port->println("");
     }
-    port->flush();
 }
 
 

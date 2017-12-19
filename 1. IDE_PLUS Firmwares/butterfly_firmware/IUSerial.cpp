@@ -82,7 +82,9 @@ bool IUSerial::readToBuffer()
             m_bufferIndex = 0;
             if (debugMode)
             {
-                debugPrint(F("Reception buffer is overflowing: "), false);
+                debugPrint(F("Interface #"), false);
+                debugPrint(interfaceType, false);
+                debugPrint(F(" reception buffer is overflowing: "), false);
                 debugPrint(m_buffer);
             }
         }

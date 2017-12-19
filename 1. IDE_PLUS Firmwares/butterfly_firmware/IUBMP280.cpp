@@ -417,7 +417,6 @@ void IUBMP280::sendData(HardwareSerial *port)
         port->println(m_temperature, 4);
         port->print("P: ");
         port->println(m_pressure, 4);
-        port->flush();
     }
 }
 

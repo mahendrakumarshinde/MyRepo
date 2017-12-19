@@ -353,7 +353,6 @@ void IUBMX055Acc::sendData(HardwareSerial *port)
         port->println((float) m_data[1] * m_resolution / 9.80665, 4);
         port->print("AZ: ");
         port->println((float) m_data[2] * m_resolution / 9.80665, 4);
-        port->flush();
     }
     else  // Send bytes (faster ?)
     {

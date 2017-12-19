@@ -135,7 +135,7 @@ void Conductor::readFromSerial(IUSerial *iuSerial)
         char *buffer = iuSerial->getBuffer();
         // Buffer Size, including NUL char '\0'
         uint16_t buffSize =  iuSerial->getCurrentBufferLength();
-        if (setupDebugMode)
+        if (loopDebugMode)
         {
             debugPrint(F("Interface "), false);
             debugPrint(iuSerial->interfaceType, false);
@@ -497,32 +497,32 @@ void Conductor::processLegacyBLECommands(char *buff)
                 {
                     debugPrint("Record mode");
                 }
-                Feature *feature = Feature::getInstanceByName("A0X");
-                if (feature)
+                Feature *accelX = Feature::getInstanceByName("A0X");
+                Feature *accelY = Feature::getInstanceByName("A0Y");
+                Feature *accelZ = Feature::getInstanceByName("A0Z");
+                if (accelX)
                 {
                     iuBluetooth.port->print("REC,");
                     iuBluetooth.port->print(m_macAddress);
                     iuBluetooth.port->print(",X");
-                    feature->stream(iuBluetooth.port);
-                    iuBluetooth.port->flush();
+                    accelX->stream(iuBluetooth.port);
+                    delay(10);
                 }
-                feature = Feature::getInstanceByName("A0Y");
-                if (feature)
+                if (accelY)
                 {
                     iuBluetooth.port->print("REC,");
                     iuBluetooth.port->print(m_macAddress);
                     iuBluetooth.port->print(",Y");
-                    feature->stream(iuBluetooth.port);
-                    iuBluetooth.port->flush();
+                    accelY->stream(iuBluetooth.port);
+                    delay(10);
                 }
-                feature = Feature::getInstanceByName("A0Z");
-                if (feature)
+                if (accelZ)
                 {
                     iuBluetooth.port->print("REC,");
                     iuBluetooth.port->print(m_macAddress);
                     iuBluetooth.port->print(",Z");
-                    feature->stream(iuBluetooth.port);
-                    iuBluetooth.port->flush();
+                    accelZ->stream(iuBluetooth.port);
+                    delay(10);
                 }
             }
            break;
@@ -542,7 +542,6 @@ void Conductor::processLegacyBLECommands(char *buff)
                     iuBluetooth.port->print("ALL_OK");
                 }
                 iuBluetooth.port->print(";");
-                iuBluetooth.port->flush();
             }
             break;
         case '6': // DEPRECATED - Set which feature are used for OperationState
@@ -630,7 +629,6 @@ void Conductor::processWIFICommands(char *buff)
                 iuWiFi.port->print("DT,Sent Time=");
                 iuWiFi.port->print(buff);
                 iuWiFi.port->print(";");
-//                iuWiFi.port->flush();
             }
             break;
         case '2':  // DEPRECATED - Bluetooth parameter setting
@@ -657,33 +655,33 @@ void Conductor::processWIFICommands(char *buff)
                 {
                     debugPrint("Record mode");
                 }
-//                Feature *feature = Feature::getInstanceByName("A0X");
-//                if (feature)
-//                {
-//                    iuWiFi.port->print("REC,");
-//                    iuWiFi.port->print(m_macAddress);
-//                    iuWiFi.port->print(",X");
-//                    feature->stream(iuWiFi.port);
-//                    iuWiFi.port->flush();
-//                }
-//                feature = Feature::getInstanceByName("A0Y");
-//                if (feature)
-//                {
-//                    iuWiFi.port->print("REC,");
-//                    iuWiFi.port->print(m_macAddress);
-//                    iuWiFi.port->print(",Y");
-//                    feature->stream(iuWiFi.port);
-//                    iuWiFi.port->flush();
-//                }
-//                feature = Feature::getInstanceByName("A0Z");
-//                if (feature)
-//                {
-//                    iuWiFi.port->print("REC,");
-//                    iuWiFi.port->print(m_macAddress);
-//                    iuWiFi.port->print(",Z");
-//                    feature->stream(iuWiFi.port);
-//                    iuWiFi.port->flush();
-//                }
+                Feature *accelX = Feature::getInstanceByName("A0X");
+                Feature *accelY = Feature::getInstanceByName("A0Y");
+                Feature *accelZ = Feature::getInstanceByName("A0Z");
+                if (accelX)
+                {
+                    iuWiFi.port->print("REC,");
+                    iuWiFi.port->print(m_macAddress);
+                    iuWiFi.port->print(",X");
+                    accelX->stream(iuWiFi.port);
+                    delay(10);
+                }
+                if (accelY)
+                {
+                    iuWiFi.port->print("REC,");
+                    iuWiFi.port->print(m_macAddress);
+                    iuWiFi.port->print(",Y");
+                    accelY->stream(iuWiFi.port);
+                    delay(10);
+                }
+                if (accelZ)
+                {
+                    iuWiFi.port->print("REC,");
+                    iuWiFi.port->print(m_macAddress);
+                    iuWiFi.port->print(",Z");
+                    accelZ->stream(iuWiFi.port);
+                    delay(10);
+                }
             }
            break;
         case '5':  // Get status
@@ -700,7 +698,6 @@ void Conductor::processWIFICommands(char *buff)
                     iuWiFi.port->print("ALL_OK");
                 }
                 iuWiFi.port->print(";");
-//                iuWiFi.port->flush();
             }
             break;
         case '6': // DEPRECATED - Set which feature are used for OperationState

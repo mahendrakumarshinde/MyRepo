@@ -74,6 +74,7 @@ class IUCAMM8Q : public SynchronousSensor
 
 /***** Instantiation *****/
 
-extern IUCAMM8Q iuGNSS;
+// GPS deactivated for now
+//extern IUCAMM8Q iuGNSS;
 
 #endif // IUCAMM8Q_H

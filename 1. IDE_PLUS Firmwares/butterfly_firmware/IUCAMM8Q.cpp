@@ -173,4 +173,4 @@ void IUCAMM8Q::exposeCalibration()
     Instantiation
 ============================================================================= */
 
-IUCAMM8Q iuGNSS(&iuI2C, "GPS");
+//IUCAMM8Q iuGNSS(&iuI2C, "GPS");

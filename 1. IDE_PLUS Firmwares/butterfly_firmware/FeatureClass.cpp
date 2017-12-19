@@ -336,6 +336,7 @@ void Feature::stream(HardwareSerial *port)
     m_locked[k] = false;
 }
 
+
 /***** Debugging *****/
 
 /**

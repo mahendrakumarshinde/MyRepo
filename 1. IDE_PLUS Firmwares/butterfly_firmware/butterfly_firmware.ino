@@ -40,10 +40,10 @@ test mode */
 ============================================================================= */
 
 const char MAC_ADDRESS[18] = "94:54:93:0F:67:01";
+    // "94:54:93:0E:81:44";
     // "94:54:93:0E:63:FC";
     // "94:54:93:0E:81:A4";
     // "94:54:93:0E:7B:2B";
-    // "94:54:93:OE:81:44";
 
 
 /* =============================================================================
@@ -53,7 +53,7 @@ const char MAC_ADDRESS[18] = "94:54:93:0F:67:01";
 /***** Configuration variables *****/
 
 bool doOnce = true;
-uint32_t interval = 500;
+uint32_t interval = 30000;
 uint32_t lastDone = 0;
 
 
@@ -199,11 +199,13 @@ void loop()
                 /*======*/
             }
             uint32_t now = millis();
-            if(now - lastDone > interval || now < lastDone)
+            if(lastDone == 0 || lastDone + interval < now || now < lastDone)
             {
                 lastDone = now;
                 /* === Place your code to excute at fixed interval here ===*/
-
+                debugPrint(now, false);
+                debugPrint(": ", false);
+                memoryLog("Loop");
                 /*======*/
             }
         }
