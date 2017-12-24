@@ -175,11 +175,11 @@ int bat = 100;  // Battery status
 
 //Regular data transmit variables
 boolean datasendtime = false;
-int datasendlimit = 3000;
-int currentmillis = 0;
-int prevmillis = 0;
-int currenttime = 0;
-int prevtime = 0;
+uint32_t datasendlimit = 3000;
+uint32_t currentmillis = 0;
+uint32_t prevmillis = 0;
+uint32_t currenttime = 0;
+uint32_t prevtime = 0;
 
 //Feature selection parameters
 int feature0check = 1;
@@ -190,16 +190,16 @@ int feature4check = 0;
 int feature5check = 0;
 
 //Data reception robustness variables
-int buffnow = 0;
-int buffprev = 0;
-int datareceptiontimeout = 2000;
+uint32_t buffnow = 0;
+uint32_t buffprev = 0;
+uint32_t datareceptiontimeout = 2000;
 
 //Sleep mode variables
 int blue = 0;
 boolean sleepmode = false;
-int bluemillisnow = 0;
-int bluesleeplimit = 60000;
-int bluetimerstart = 0;
+uint32_t bluemillisnow = 0;
+uint32_t bluesleeplimit = 60000;
+uint32_t bluetimerstart = 0;
 
 bool recordmode = false;
 
@@ -1083,7 +1083,7 @@ void i2s_rx_callback( int32_t *pBuf )
         //                (((pBuf[0] >> 8) & 0xFF) << 8) | ((pBuf[0] >> 16) & 0xFF);
         audioSamplingCount ++;
 
-        if (accel_counter == ACCEL_COUNTER_TARGET) {
+        if (accel_counter >= ACCEL_COUNTER_TARGET) {
           readAccelData(accelCount);
           if (readFlag)
           {
@@ -1104,7 +1104,7 @@ void i2s_rx_callback( int32_t *pBuf )
       Serial.write((pBuf[0] >> 8) & 0xFF);
       Serial.write(pBuf[0] & 0xFF);
 
-      if (accel_counter == ACCEL_COUNTER_TARGET) {
+      if (accel_counter >= ACCEL_COUNTER_TARGET) {
 //        readAccelData(accelCount);
 
         if (accelDataReadyFlag)
@@ -1280,7 +1280,7 @@ void loop()
   }
 
   currenttime = millis();
-  dateyear = bleDateyear + (currenttime - prevtime) / 1000.0;
+  dateyear = bleDateyear + (double) (currenttime - prevtime) / (double) 1000.0;
 
   //Robustness for data reception//
   buffnow = millis();
@@ -1346,7 +1346,13 @@ void loop()
         else if (bleBuffer[0] == '2')      // Wireless parameter setting
         {
           if (bleBuffer[1] == ':' && bleBuffer[7] == '-' && bleBuffer[13] == '-') {
-            sscanf(bleBuffer, "%d:%d-%d-%d", &parametertag, &datasendlimit, &bluesleeplimit, &datareceptiontimeout);
+            int dsl(3000);
+            int bsl(60000);
+            int drt(2000);
+            sscanf(bleBuffer, "%d:%d-%d-%d", &parametertag, &dsl, &bsl, &drt);
+            datasendlimit = (uint32_t) dsl;
+            bluesleeplimit = (uint32_t) bsl;
+            datareceptiontimeout = (uint32_t) drt;
             Serial.print("Data send limit is : ");
             Serial.println(datasendlimit);
           }
