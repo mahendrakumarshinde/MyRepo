@@ -487,8 +487,13 @@ void Q15FFTComputer::m_specializedCompute()
     q15_t maxVal;
     uint32_t maxIdx;
     // If board is still, freq is defaulted to 0.
-    bool mainFreqSaved = !isInMotion;
+    bool mainFreqSaved = false;
     float freq(0);
+    if (!isInMotion)
+    {
+        m_destinations[1]->addFloatValue(freq);
+        mainFreqSaved = true;
+    }
     q15_t amplitudesCopy[amplitudeCount];
     copyArray(amplitudes, amplitudesCopy, amplitudeCount);
     for (uint16_t i = 0; i < reducedLength; ++i)

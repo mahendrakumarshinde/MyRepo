@@ -18,7 +18,7 @@
  * Destinations:
  *      - temperatures: a FloatFeature with section size = rtdCount
  */
-class IURTDExtension : public SynchronousSensor
+class IURTDExtension : public LowFreqSensor
 {
     public:
         /***** Preset values and default settings *****/
@@ -40,7 +40,7 @@ class IURTDExtension : public SynchronousSensor
         /***** Configuration and calibration *****/
 
         /***** Data acquisition *****/
-        virtual void acquireData();
+        virtual void acquireData(bool inCallback=false);
         virtual void readData();
         /***** Debugging *****/
         virtual void exposeCalibration();

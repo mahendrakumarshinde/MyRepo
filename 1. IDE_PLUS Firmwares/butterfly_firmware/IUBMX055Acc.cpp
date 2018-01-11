@@ -30,7 +30,7 @@ void accelReadCallback(uint8_t wireStatus)
  */
 IUBMX055Acc::IUBMX055Acc(IUI2C *iuI2C, const char* name, Feature *accelerationX,
                          Feature *accelerationY, Feature *accelerationZ) :
-    AsynchronousSensor(name, 3, accelerationX,accelerationY, accelerationZ),
+    DrivenSensor(name, 3, accelerationX,accelerationY, accelerationZ),
     m_scale(defaultScale),
     m_bandwidth(defaultBandwidth),
     m_filteredData(false)
@@ -82,7 +82,7 @@ void IUBMX055Acc::softReset()
  */
 void IUBMX055Acc::wakeUp()
 {
-    AsynchronousSensor::wakeUp();
+    DrivenSensor::wakeUp();
     m_iuI2C->writeByte(ADDRESS, PMU_LPW, 0x00);
     delay(100);
 }
@@ -96,7 +96,7 @@ void IUBMX055Acc::wakeUp()
  */
 void IUBMX055Acc::sleep()
 {
-    AsynchronousSensor::sleep();
+    DrivenSensor::sleep();
     m_iuI2C->writeByte(ADDRESS, PMU_LPW, 0x80);
 }
 
@@ -109,7 +109,7 @@ void IUBMX055Acc::sleep()
  */
 void IUBMX055Acc::suspend()
 {
-    AsynchronousSensor::suspend();
+    DrivenSensor::suspend();
     m_iuI2C->writeByte(ADDRESS, PMU_LPW, 0x20);
 }
 
@@ -120,7 +120,7 @@ void IUBMX055Acc::suspend()
 
 void IUBMX055Acc::configure(JsonVariant &config)
 {
-    AsynchronousSensor::configure(config);  // General sensor config
+    DrivenSensor::configure(config);  // General sensor config
     JsonVariant value = config["FSR"];  // Full Scale Range
     if (value.success())
     {
@@ -274,16 +274,16 @@ void IUBMX055Acc::doFastCompensation(float * dest1)
 /**
  * Acquire new data, while handling down-clocking
  */
-void IUBMX055Acc::acquireData()
+void IUBMX055Acc::acquireData(bool inCallback)
 {
     // Process data from last acquisition if needed
     processData();
     // Acquire new data
-    AsynchronousSensor::acquireData();
+    DrivenSensor::acquireData(inCallback);
 }
 
 /**
- * Asynchronously read acceleration data
+ * Read acceleration data
  *
  * Data is read from device as 2 bytes: LSB first (4 bits to use) then MSB
  * (8 bits to use) 4 last bits of LSB byte are used as flags (new data, etc).

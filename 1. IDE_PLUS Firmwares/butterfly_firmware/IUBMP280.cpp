@@ -41,7 +41,7 @@ void pressureReadCallback(uint8_t wireStatus)
 
 IUBMP280::IUBMP280(IUI2C *iuI2C, const char* name, Feature *temperature,
                    Feature *pressure) :
-    SynchronousSensor(name, 2, temperature, pressure),
+    LowFreqSensor(name, 2, temperature, pressure),
     m_temperature(28),
     m_fineTemperature(0),
     m_pressure(1013)
@@ -93,7 +93,7 @@ void IUBMP280::softReset()
  */
 void IUBMP280::wakeUp()
 {
-    SynchronousSensor::wakeUp();
+    LowFreqSensor::wakeUp();
     changeUsagePreset(m_usagePreset);
 }
 
@@ -102,7 +102,7 @@ void IUBMP280::wakeUp()
  */
 void IUBMP280::sleep()
 {
-    SynchronousSensor::sleep();
+    LowFreqSensor::sleep();
     writeControlMeasureRegister();
 }
 
@@ -111,7 +111,7 @@ void IUBMP280::sleep()
  */
 void IUBMP280::suspend()
 {
-    SynchronousSensor::suspend();
+    LowFreqSensor::suspend();
     writeControlMeasureRegister();
 }
 
@@ -383,13 +383,13 @@ float IUBMP280::compensatePressure(int32_t rawP)
 /**
  * Acquire new data, while handling sampling period
  */
-void IUBMP280::acquireData()
+void IUBMP280::acquireData(bool inCallback)
 {
     // Process data from last acquisition if needed
     processTemperatureData();
     processPressureData();
     // Acquire new data
-    SynchronousSensor::acquireData();
+    LowFreqSensor::acquireData(inCallback);
 }
 
 void IUBMP280::readData()

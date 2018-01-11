@@ -22,7 +22,7 @@
  *      - tiltY: a Q15Feature with section size = 128
  *      - tiltZ: a Q15Feature with section size = 128
  */
-class IUBMX055Gyro : public AsynchronousSensor
+class IUBMX055Gyro : public DrivenSensor
 {
     public:
         /***** Preset values and default settings *****/

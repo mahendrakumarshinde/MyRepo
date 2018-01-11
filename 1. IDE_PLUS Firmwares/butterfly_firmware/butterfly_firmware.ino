@@ -57,7 +57,7 @@ uint32_t interval = 30000;
 uint32_t lastDone = 0;
 
 
-/***** Asynchronous acquisition callback *****/
+/***** Driven sensors acquisition callback *****/
 
 /**
  * This function will be called every time the Microphone sends an interrupt.
@@ -146,7 +146,7 @@ void setup()
         for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
         {
             Sensor::instances[i]->setupHardware();
-            if (Sensor::instances[i]->isAsynchronous())
+            if (Sensor::instances[i]->isDriven())
             {
                 Sensor::instances[i]->setCallbackRate(callbackRate);
             }
@@ -219,7 +219,7 @@ void loop()
         iuRGBLed.autoTurnOff();
         conductor.readFromSerial(&iuWiFi);
         iuRGBLed.autoTurnOff();
-        // Acquire data from synchronous sensor
+        // Acquire data from sensors
         conductor.acquireData(false);
         iuRGBLed.autoTurnOff();
         // Feature computation depending on operation mode

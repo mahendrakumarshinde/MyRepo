@@ -102,7 +102,7 @@ class Conductor
         bool beginDataAcquisition();
         void endDataAcquisition();
         bool resetDataAcquisition();
-        void acquireData(bool asynchronous);
+        void acquireData(bool inCallback);
         void computeFeatures();
         void updateOperationState();
         void streamFeatures();

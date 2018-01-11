@@ -1098,7 +1098,7 @@ void Conductor::changeUsageMode(UsageMode::option usage)
 
 /**
  * Start data acquisition by beginning I2S data acquisition
- * NB: Other sensor data acquisition depends on I2S drumbeat
+ * NB: Driven sensor data acquisition depends on I2S drumbeat
  */
 bool Conductor::beginDataAcquisition()
 {
@@ -1117,9 +1117,8 @@ bool Conductor::beginDataAcquisition()
 }
 
 /**
- * End data acquisition by disabling I2S data acquisition
- *
- * Note that asynchronous sensor data acquisition depends on I2S drumbeat.
+ * End data acquisition by disabling I2S data acquisition.
+ * NB: Driven sensor data acquisition depends on I2S drumbeat
  */
 void Conductor::endDataAcquisition()
 {
@@ -1152,10 +1151,12 @@ bool Conductor::resetDataAcquisition()
  * Data acquisition function
  *
  * Method formerly benchmarked for (accel + sound) at 10microseconds.
- * @param asynchronous  When true, acquire data from asynchronous sensors,
- *  else acquire data from synchronous sensors.
+ * @param inCallback  Set to true if the function is called from the I2S
+ *  callback loop. In that case, only the I2S will be read (to allow the
+ *  triggering of the next callback). If false, the function is called from main
+ *  loop and all sensors can be read (including slow readings).
  */
-void Conductor::acquireData(bool asynchronous)
+void Conductor::acquireData(bool inCallback)
 {
     if (!m_inDataAcquistion || m_acquisitionMode == AcquisitionMode::NONE)
     {
@@ -1179,7 +1180,7 @@ void Conductor::acquireData(bool asynchronous)
         {
             debugPrint(F("EXPERIMENT should be RAW DATA + USB mode."));
         }
-        if (asynchronous)
+        if (inCallback)
         {
             iuI2S.sendData(iuUSB.port);
             iuAccelerometer.sendData(iuUSB.port);
@@ -1188,10 +1189,7 @@ void Conductor::acquireData(bool asynchronous)
     // Collect the new data
     for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
     {
-        if (Sensor::instances[i]->isAsynchronous() == asynchronous)
-        {
-            Sensor::instances[i]->acquireData();
-        }
+        Sensor::instances[i]->acquireData(inCallback);
     }
 }
 
