@@ -32,13 +32,17 @@
 #ifdef TEST_TOPICS
     const uint8_t FEATURE_TOPIC_LENGTH = 20;
     const uint8_t DIAGNOSTIC_TOPIC_LENGTH = 14;
+//    const uint8_t RAW_DATA_TOPIC_LENGTH = 17;
     const char FEATURE_TOPIC[FEATURE_TOPIC_LENGTH] = "iu_device_data_test";
     const char DIAGNOSTIC_TOPIC[DIAGNOSTIC_TOPIC_LENGTH] = "iu_error_test";
+//    const char RAW_DATA_TOPIC[RAW_DATA_TOPIC_LENGTH] = "iu_raw_data_test";
 #else
     const uint8_t FEATURE_TOPIC_LENGTH = 15;
     const uint8_t DIAGNOSTIC_TOPIC_LENGTH = 9;
+//    const uint8_t RAW_DATA_TOPIC_LENGTH = 12;
     const char FEATURE_TOPIC[FEATURE_TOPIC_LENGTH] = "iu_device_data";
     const char DIAGNOSTIC_TOPIC[DIAGNOSTIC_TOPIC_LENGTH] = "iu_error";
+//    const char RAW_DATA_TOPIC[RAW_DATA_TOPIC_LENGTH] = "iu_raw_data";
 #endif  // TEST_TOPICS
 
 
@@ -81,10 +85,16 @@ inline void raiseException(T msg)
 ============================================================================= */
 
 /**
+ * Sends an HTTP GET request - HTTPS is used if fingerprint is given.
  * 
+ * @param url
+ * @param responseBody
+ * @param maxResponseLength
+ * @param httpsFingerprint
  */
-inline int requestHttpGet(const char *url, char* responseBody,
-                   uint16_t maxResponseLength, const char *httpsFingerprint=NULL)
+inline int httpGetRequest(const char *url, char* responseBody,
+                          uint16_t maxResponseLength,
+                          const char *httpsFingerprint=NULL)
 {
     if (WiFi.status() != WL_CONNECTED)
     {
@@ -97,13 +107,58 @@ inline int requestHttpGet(const char *url, char* responseBody,
     HTTPClient http;
     if (httpsFingerprint)
     {
-        http.begin(String(url));
+        http.begin(String(url), String(httpsFingerprint));
     }
     else
     {
-        http.begin(String(url), String(httpsFingerprint));
+        http.begin(String(url));
     }
     int httpCode = http.GET();
+    if (httpCode > 0)
+    {
+        http.getString().toCharArray(responseBody, maxResponseLength);
+        if (debugMode)
+        {
+            debugPrint(responseBody);
+        }
+    }
+    http.end();
+    return httpCode;
+}
+
+/**
+ * Sends an HTTP POST request - HTTPS is used if fingerprint is given.
+ * 
+ * @param url
+ * @param payload
+ * @param payloadLength
+ * @param responseBody
+ * @param maxResponseLength
+ * @param httpsFingerprint
+ */
+inline int httpPostRequest(const char *url, char *payload,
+                           uint16_t payloadLength, char* responseBody,
+                           uint16_t maxResponseLength,
+                           const char *httpsFingerprint=NULL)
+{
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        if (debugMode)
+        {
+            debugPrint("WiFi disconnected: POST request failed");
+        }
+        return 0;
+    }
+    HTTPClient http;
+    if (httpsFingerprint)
+    {
+        http.begin(String(url), String(httpsFingerprint));
+    }
+    else
+    {
+        http.begin(String(url));
+    }
+    int httpCode = http.POST((uint8_t*) payload, (size_t) payloadLength);
     if (httpCode > 0)
     {
         http.getString().toCharArray(responseBody, maxResponseLength);

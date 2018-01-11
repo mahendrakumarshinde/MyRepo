@@ -29,6 +29,15 @@ const char AP_NAME_PREFIX[9] = "IUsetup-";
 
 char WILL_MESSAGE[44] = "XXXAdmin;;;00:00:00:00:00:00;;;disconnected";
 
+const uint16_t MAX_RAW_DATA_PAYLOAD_LENGTH = 10000;
+char RAW_DATA_PAYLOAD[MAX_RAW_DATA_PAYLOAD_LENGTH] = "";
+uint32_t RAW_DATA_TIMEOUT = 30000;  // After 30s, RAW_DATA_PAYLOAD is cleared
+// even if it has not been sent
+
+uint32_t rawDataStartTime = 0;
+bool rawDataAdded[3] = {false, false, false};  // 3 booleans saying if X, Y and Z
+// data have been added to the payload.
+uint16_t rawDataCounter = 0;
 
 /* =============================================================================
     MQTT message reception callback
@@ -131,6 +140,42 @@ bool publishFeature(const char *rawMsg, const uint16_t msgLength,
                     const char *topicExtension=NULL,
                     const uint16_t extensionLength=0)
 {
+    uint16_t nameLength = strlen(CUSTOMER_PLACEHOLDER);
+    char message[msgLength + nameLength + 24];
+    strcpy(message, CUSTOMER_PLACEHOLDER);
+    strcat(message, ";;;");
+    strcat(message, BLE_MAC_ADDRESS);
+    strcat(message, ";;;");
+    strncat(message, rawMsg, msgLength);
+    if (topicExtension && extensionLength > 0)
+    {
+        char topic[FEATURE_TOPIC_LENGTH + extensionLength + 1];
+        strcpy(topic, FEATURE_TOPIC);
+        strcat(topic, "/");
+        strncat(topic, topicExtension, extensionLength);
+        return iuMQTTHelper.publish(topic, message);
+    }
+    else
+    {
+        return iuMQTTHelper.publish(DIAGNOSTIC_TOPIC, message);
+    }
+}
+/* =============================================================================
+/**
+ * Publish the raw data to an URL as an HTTP post payload.
+ * 
+ * Unlike the feature and diagnostic publication, the raw data publication uses
+ * an HTTP POST request and not a MQTT message. This is because of the raw data
+ * size, that would force us to use very large MQTT payload.
+ */
+bool publishRawData(const char *rawMsg, const uint16_t msgLength,
+                    const char *topicExtension=NULL,
+                    const uint16_t extensionLength=0)
+{
+//    inline int httpPostRequest(const char *url, const char *payload,
+//                           uint16_t payloadLength, char* responseBody,
+//                           uint16_t maxResponseLength,
+//                           const char *httpsFingerprint=NULL)
     uint16_t nameLength = strlen(CUSTOMER_PLACEHOLDER);
     char message[msgLength + nameLength + 24];
     strcpy(message, CUSTOMER_PLACEHOLDER);
@@ -265,6 +310,25 @@ void processMessageFromHost(char *buff)
         {
             debugPrint("Received BLE MAC from host: ", false);
             debugPrint(BLE_MAC_ADDRESS);
+        }
+    }
+    else if (strncmp("REC,", buff, 4) == 0) // RAW DATA, eg: REC,X,<data>
+    {
+//        const uint16_t MAX_RAW_DATA_PAYLOAD_LENGTH = 10000;
+//        char RAW_DATA_PAYLOAD[MAX_RAW_DATA_PAYLOAD_LENGTH] = "";
+//        uint16_t RAW_DATA_TIMEOUT = 30000;  // After 30s, RAW_DATA_PAYLOAD is cleared
+//        // even if it has not been sent
+//        
+//        uint32_t rawDataStartTime = 0;
+//        bool rawDataAdded[3] = {false, false, false};  // 3 booleans saying if X, Y and Z
+//        // data have been added to the payload.
+//        uint16_t rawDataCounter = 0;
+// =============================================================================
+        uint32_t now = millis();
+        if (rawDataCounter > 0 && (now - rawDataStartTime > RAW_DATA_TIMEOUT))
+        {
+            m_bufferIndex = 0;
+            return true;
         }
     }
     else if (buff[6] == ',')  // Feature
