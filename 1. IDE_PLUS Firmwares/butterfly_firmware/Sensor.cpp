@@ -98,8 +98,7 @@ void Sensor::expose()
 DrivenSensor::DrivenSensor(const char* name, uint8_t destinationCount,
                            Feature *destination0, Feature *destination1,
                            Feature *destination2) :
-    Sensor(name, destinationCount, destination0, destination1, destination2),
-    m_readAsap(false)
+    Sensor(name, destinationCount, destination0, destination1, destination2)
 {
     m_callbackRate = defaultCallbackRate;
     setSamplingRate(defaultSamplingRate);
@@ -186,12 +185,7 @@ void DrivenSensor::acquireData(bool inCallback)
                 return;
             }
         }
-        m_readAsap = true;
-    }
-    else if (m_readAsap)
-    {
         readData();
-        m_readAsap = false;
     }
 }
 

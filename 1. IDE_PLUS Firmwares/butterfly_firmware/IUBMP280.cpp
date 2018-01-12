@@ -10,6 +10,7 @@ bool newPressureData = false;
 
 void temperatureReadCallback(uint8_t wireStatus)
 {
+    iuI2C.endReadOperation();
     if (wireStatus == 0)
     {
         newTemperatureData = true;
@@ -23,6 +24,7 @@ void temperatureReadCallback(uint8_t wireStatus)
 
 void pressureReadCallback(uint8_t wireStatus)
 {
+    iuI2C.endReadOperation();
     if (wireStatus == 0)
     {
         newPressureData = true;

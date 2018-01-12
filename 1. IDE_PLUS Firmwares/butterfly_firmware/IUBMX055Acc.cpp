@@ -9,12 +9,16 @@ bool newAccelData = false;
 
 void accelReadCallback(uint8_t wireStatus)
 {
+    iuI2C.endReadOperation();
     if (wireStatus == 0)
     {
         newAccelData = true;
+//        Serial.print("A 02: ");
+//        Serial.println(micros());
     }
-    else if (callbackDebugMode)
+    else if (true) //callbackDebugMode)
     {
+//        Serial.println("\nACCEL READ ERROR\n");
         debugPrint(F("Acceleration read error "), false);
         debugPrint(wireStatus);
     }
@@ -276,10 +280,10 @@ void IUBMX055Acc::doFastCompensation(float * dest1)
  */
 void IUBMX055Acc::acquireData(bool inCallback)
 {
-    // Process data from last acquisition if needed
-    processData();
     // Acquire new data
     DrivenSensor::acquireData(inCallback);
+    // Process data from last acquisition if needed
+    processData();
 }
 
 /**
@@ -313,10 +317,12 @@ void IUBMX055Acc::processData()
     {
         return;
     }
+//    Serial.print("A 03: ");
     // Check that all 3 axes have new data, if not return
     if(!((m_rawBytes[0] & 0x01) && (m_rawBytes[2] & 0x01) &&
          (m_rawBytes[4] & 0x01)))
     {
+//        Serial.println("\nNO NEW DATA\n");
         return;
     }
     for (uint8_t i = 0; i < 3; ++i)
@@ -330,6 +336,7 @@ void IUBMX055Acc::processData()
         m_data[i] = m_rawData[i] + m_bias[i];
         m_destinations[i]->addQ15Value(m_data[i]);
     }
+//    Serial.println("OK");
     newAccelData = false;
 }
 
@@ -354,7 +361,7 @@ void IUBMX055Acc::sendData(HardwareSerial *port)
         port->print("AZ: ");
         port->println((float) m_data[2] * m_resolution / 9.80665, 4);
     }
-    else  // Send bytes (faster ?)
+    else  // Send bytes
     {
         float accel;
         byte* data;

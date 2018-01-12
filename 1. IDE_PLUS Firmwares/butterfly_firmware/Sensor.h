@@ -107,7 +107,6 @@ class DrivenSensor : public Sensor
         uint16_t m_samplingRate;
         uint16_t m_downclocking;
         uint16_t m_downclockingCount;
-        bool m_readAsap;
 };
 
 
