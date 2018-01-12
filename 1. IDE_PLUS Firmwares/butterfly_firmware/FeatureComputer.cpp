@@ -639,9 +639,9 @@ q15_t allocatedFFTSpace[1024];
 /***** Accelerometer Features *****/
 
 // 128 sample long accel computers
-SignalRMSComputer accel128ComputerX(1,&accelRMS128X);
-SignalRMSComputer accel128ComputerY(2, &accelRMS128Y);
-SignalRMSComputer accel128ComputerZ(3, &accelRMS128Z);
+SignalRMSComputer accel128ComputerX(1,&accelRMS128X, true, true);
+SignalRMSComputer accel128ComputerY(2, &accelRMS128Y, true, true);
+SignalRMSComputer accel128ComputerZ(3, &accelRMS128Z, true, true);
 MultiSourceSumComputer accelRMS128TotalComputer(4, &accelRMS128Total,
                                                 false, true);
 
