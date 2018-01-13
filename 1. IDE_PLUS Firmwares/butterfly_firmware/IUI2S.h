@@ -13,7 +13,7 @@
  * Class to handle both the I2S and the related ICS43432 microphone
  *
  * Also implement a callback mechanism (with callback rate vs sampling rate)
- * to drive the sampling rate of other asynchronous sensors.
+ * to drive the sampling rate of other driven sensors.
  *
  * Component:
  *  Name:
@@ -30,7 +30,7 @@
  * Destinations:
  *      - audio: a Q15Feature
  */
-class IUI2S : public AsynchronousSensor
+class IUI2S : public DrivenSensor
 {
     public:
         /***** Preset values and default settings *****/
@@ -56,7 +56,8 @@ class IUI2S : public AsynchronousSensor
         bool endDataAcquisition();
         void processAudioData(q31_t *data);
         virtual void readData();
-        virtual void acquireData();
+        virtual void acquireData(bool inCallback=false,
+                                 bool force=false);
         /***** Communication *****/
         void sendData(HardwareSerial *port);
         /***** Debugging *****/

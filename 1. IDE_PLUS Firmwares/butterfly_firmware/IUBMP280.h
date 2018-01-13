@@ -27,7 +27,7 @@ void pressureReadCallback(uint8_t wireStatus);
  *      - temperature: a FloatFeature with section size = 1
  *      - pressure: a FloatFeature with section size = 1
  */
-class IUBMP280 : public SynchronousSensor
+class IUBMP280 : public LowFreqSensor
 {
     public:
         /***** Preset values and default settings *****/
@@ -97,7 +97,8 @@ class IUBMP280 : public SynchronousSensor
         void readPressure();
         int16_t getPressure() { return m_pressure; }
         // Acquisition
-        virtual void acquireData();
+        virtual void acquireData(bool inCallback=false,
+                                 bool force=false);
         virtual void readData();
         /***** Communication *****/
         void sendData(HardwareSerial *port);

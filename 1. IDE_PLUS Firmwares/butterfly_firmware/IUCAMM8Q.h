@@ -17,7 +17,7 @@
  *    GNSS
  * Destinations:
  */
-class IUCAMM8Q : public SynchronousSensor
+class IUCAMM8Q : public LowFreqSensor
 {
     public:
         /***** Preset values and default settings *****/

@@ -36,7 +36,7 @@ test mode */
 
 
 /* =============================================================================
-    MAC Address 
+    MAC Address
 ============================================================================= */
 
 const char MAC_ADDRESS[18] = "94:54:93:0F:67:01";
@@ -47,17 +47,42 @@ const char MAC_ADDRESS[18] = "94:54:93:0F:67:01";
 
 
 /* =============================================================================
+    Configuration Variables
+============================================================================= */
+
+/***** Accelerometer Calibration parameters *****/
+
+float ACCEL_RMS_SCALING = 1.04;
+float VELOCITY_RMS_SCALING = 1.;
+float DISPLACEMENT_RMS_SCALING = 1.;
+
+
+/***** Acceleration Energy 512 default thresholds *****/
+
+float DEFAULT_ACCEL_ENERGY_NORMAL_TH = 2;  // 110;
+float DEFAULT_ACCEL_ENERGY_WARNING_TH = 5;  // 130;
+float DEFAULT_ACCEL_ENERGY_HIGH_TH = 8;  // 150;
+
+
+/***** Accelerometer Feature computation parameters *****/
+
+uint16_t DEFAULT_LOW_CUT_FREQUENCY = 5;  // Hz
+uint16_t DEFAULT_HIGH_CUT_FREQUENCY = 500;  // Hz
+float DEFAULT_MIN_AGITATION = 0.1;
+
+
+/* =============================================================================
     Main
 ============================================================================= */
 
-/***** Configuration variables *****/
+/***** Debbugging variables *****/
 
 bool doOnce = true;
 uint32_t interval = 30000;
 uint32_t lastDone = 0;
 
 
-/***** Asynchronous acquisition callback *****/
+/***** Driven sensors acquisition callback *****/
 
 /**
  * This function will be called every time the Microphone sends an interrupt.
@@ -146,7 +171,7 @@ void setup()
         for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
         {
             Sensor::instances[i]->setupHardware();
-            if (Sensor::instances[i]->isAsynchronous())
+            if (Sensor::instances[i]->isDriven())
             {
                 Sensor::instances[i]->setCallbackRate(callbackRate);
             }
@@ -155,9 +180,6 @@ void setup()
         {
           memoryLog(F("=> Successfully initialized sensors"));
         }
-//        conductor.activateGroup(&motorStandardGroup);
-//        accelRMS512Total.enableOperationState();
-//        accelRMS512Total.setThresholds(110, 130, 150);
         if (setupDebugMode)
         {
             conductor.exposeAllConfigurations();
@@ -174,7 +196,6 @@ void setup()
             debugPrint(F("***\n"));
         }
         conductor.changeUsageMode(UsageMode::OPERATION);
-//        conductor.changeAcquisitionMode(AcquisitionMode::FEATURE);
     #endif
 }
 
@@ -219,7 +240,7 @@ void loop()
         iuRGBLed.autoTurnOff();
         conductor.readFromSerial(&iuWiFi);
         iuRGBLed.autoTurnOff();
-        // Acquire data from synchronous sensor
+        // Acquire data from sensors
         conductor.acquireData(false);
         iuRGBLed.autoTurnOff();
         // Feature computation depending on operation mode

@@ -42,12 +42,13 @@ class Sensor : public Component
         /***** Configuration *****/
         virtual void configure(JsonVariant &config) { }
         /***** Sampling and resolution *****/
-        virtual bool isAsynchronous() { return false; }
-        virtual void setCallbackRate(uint16_t callbackRate) {} // For asynchronous sensors
+        virtual bool isDriven() { return false; }
+        virtual void setCallbackRate(uint16_t callbackRate) {} // For driven sensors
         virtual void setResolution(float resolution);
         virtual float getResolution() { return m_resolution; }
         /***** Data acquisition *****/
-        virtual void acquireData() {}
+        virtual void acquireData(bool inCallback=false,
+                                 bool force=false) {}
         virtual void readData() {}  // May be defined in Child class
         /***** Communication *****/
         virtual void sendData(HardwareSerial *port) { }
@@ -68,36 +69,39 @@ class Sensor : public Component
 
 
 /**
- * Asynchronous Sensor class
+ * A class for high frequency sensors, read based on an I2S interrupt.
  *
- * Asynchronous sensors acquire data based on an interrupt, so their sampling
- * rate is fairly accurate. This class should used for:
- * - sensors that can read data in a short time.
- * - data that needs to be regularly sampled.
+ * Driven sensors acquire data on a fixed sampling rate, and the data
+ * acquisition itself is based on an I2S interrupt, so their sampling
+ * rate is fairly accurate.
+ * I2S sensors are naturally DrivenSensors, and their data can be read directly
+ * in the I2S interrupt callback. Other DrivenSensors can have a reading time
+ * that is fairly long, so these sensors would typically be declared "ready for
+ * acquisition" in the I2S callback, but read in the main loop.
  */
-class AsynchronousSensor : public Sensor
+class DrivenSensor : public Sensor
 {
     public:
         /***** Preset values and default settings *****/
         static const uint16_t defaultSamplingRate = 2; // Hz
         static const uint16_t defaultCallbackRate = 1000; // Hz
         /***** Constructors and destructors *****/
-        AsynchronousSensor(const char* name, uint8_t destinationCount=0,
-                           Feature *destination0=NULL,
-                           Feature *destination1=NULL,
-                           Feature *destination2=NULL);
-        virtual ~AsynchronousSensor() {}
+        DrivenSensor(const char* name, uint8_t destinationCount=0,
+                     Feature *destination0=NULL, Feature *destination1=NULL,
+                     Feature *destination2=NULL);
+        virtual ~DrivenSensor() {}
         /***** Configuration *****/
         virtual void configure(JsonVariant &config);
         /***** Sampling and resolution *****/
-        virtual bool isAsynchronous() { return true; }
+        virtual bool isDriven() { return true; }
         virtual void setCallbackRate(uint16_t callbackRate);
         virtual uint16_t getCallbackRate() { return m_callbackRate; }
         virtual void setSamplingRate(uint16_t samplingRate);
         virtual uint16_t getSamplingRate() { return m_samplingRate; }
         virtual void computeDownclockingRate();
         /***** Data acquisition *****/
-        virtual void acquireData();
+        virtual void acquireData(bool inCallback=false,
+                                 bool force=false);
 
     protected:
         /***** Sampling and resolution *****/
@@ -109,26 +113,25 @@ class AsynchronousSensor : public Sensor
 
 
 /**
- * Synchronous Sensor class
+ * A class for sensors of which data is read at low frequency (typically < 2Hz)
  *
- * Synchronous sensor acquires data in the main process loop, and respect at
- * least samplingPeriod between each sampling. This class should used for:
+ * Low frequency sensors acquires data in the main process loop, and respect at
+ * least samplingPeriod between each sampling.
+ * This class should used for:
  * - sensors that can take a fairly long time to read data.
  * - data that doesn't need to be regularly sampled.
- * The samplingPeriod would typically be > 500ms and could be several hours.
  */
-class SynchronousSensor : public Sensor
+class LowFreqSensor : public Sensor
 {
     public:
         /***** Preset values and default settings *****/
         static const usagePreset defaultUsagePreset = P_REGULAR;
         static const uint32_t defaultSamplingPeriod = 1000; // ms
         /***** Constructors and destructors *****/
-        SynchronousSensor(const char* name, uint8_t destinationCount=0,
-                           Feature *destination0=NULL,
-                           Feature *destination1=NULL,
-                           Feature *destination2=NULL);
-        virtual ~SynchronousSensor() {}
+        LowFreqSensor(const char* name, uint8_t destinationCount=0,
+                      Feature *destination0=NULL, Feature *destination1=NULL,
+                      Feature *destination2=NULL);
+        virtual ~LowFreqSensor() {}
         /***** Configuration *****/
         virtual void configure(JsonVariant &config);
         virtual void changeUsagePreset(Sensor::usagePreset usage);
@@ -140,13 +143,14 @@ class SynchronousSensor : public Sensor
             { m_usagePreset = Sensor::P_ENHANCED; }
         virtual void switchToHighUsage() { m_usagePreset = Sensor::P_HIGH; }
         /***** Sampling and resolution *****/
-        virtual bool isAsynchronous() { return false; }
+        virtual bool isDriven() { return false; }
         virtual void setSamplingPeriod(uint32_t samplingPeriod);
         virtual uint32_t getSamplingPeriod() { return m_samplingPeriod; }
         virtual float getSamplingRate()
             { return 1.0f / (float) m_samplingPeriod; }
         /***** Data acquisition *****/
-        virtual void acquireData();
+        virtual void acquireData(bool inCallback=false,
+                                 bool force=false);
 
     protected:
         /***** Configuration *****/

@@ -1017,11 +1017,14 @@ void Conductor::changeStreamingMode(StreamingMode::option mode)
         case StreamingMode::WIFI:
             debugPrint(F("WIFI"));
             break;
+        case StreamingMode::WIFI_AND_BLE:
+            debugPrint(F("WIFI & BLE"));
+            break;
         case StreamingMode::STORE:
             debugPrint(F("Flash storage"));
             break;
         default:
-            debugPrint(F("Invalid streaming Mode"));
+            debugPrint(F("Unhandled streaming Mode"));
             break;
         }
     }
@@ -1064,7 +1067,9 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             activateGroup(&motorStandardGroup);
             // TODO - Set up default feature thresholds - Remove?
             accelRMS512Total.enableOperationState();
-            accelRMS512Total.setThresholds(110, 130, 150);
+            accelRMS512Total.setThresholds(DEFAULT_ACCEL_ENERGY_NORMAL_TH,
+                                           DEFAULT_ACCEL_ENERGY_WARNING_TH,
+                                           DEFAULT_ACCEL_ENERGY_HIGH_TH);
             iuAccelerometer.resetScale();
             if (m_wifiConnected)
             {
@@ -1098,7 +1103,7 @@ void Conductor::changeUsageMode(UsageMode::option usage)
 
 /**
  * Start data acquisition by beginning I2S data acquisition
- * NB: Other sensor data acquisition depends on I2S drumbeat
+ * NB: Driven sensor data acquisition depends on I2S drumbeat
  */
 bool Conductor::beginDataAcquisition()
 {
@@ -1117,9 +1122,8 @@ bool Conductor::beginDataAcquisition()
 }
 
 /**
- * End data acquisition by disabling I2S data acquisition
- *
- * Note that asynchronous sensor data acquisition depends on I2S drumbeat.
+ * End data acquisition by disabling I2S data acquisition.
+ * NB: Driven sensor data acquisition depends on I2S drumbeat
  */
 void Conductor::endDataAcquisition()
 {
@@ -1152,10 +1156,12 @@ bool Conductor::resetDataAcquisition()
  * Data acquisition function
  *
  * Method formerly benchmarked for (accel + sound) at 10microseconds.
- * @param asynchronous  When true, acquire data from asynchronous sensors,
- *  else acquire data from synchronous sensors.
+ * @param inCallback  Set to true if the function is called from the I2S
+ *  callback loop. In that case, only the I2S will be read (to allow the
+ *  triggering of the next callback). If false, the function is called from main
+ *  loop and all sensors can be read (including slow readings).
  */
-void Conductor::acquireData(bool asynchronous)
+void Conductor::acquireData(bool inCallback)
 {
     if (!m_inDataAcquistion || m_acquisitionMode == AcquisitionMode::NONE)
     {
@@ -1171,6 +1177,7 @@ void Conductor::acquireData(bool asynchronous)
         iuI2S.readData();         // Empty I2S buffer to continue
         return;
     }
+    bool force = false;
     // If EXPERIMENT mode, send last data batch before collecting the new data
     if (m_usageMode == UsageMode::EXPERIMENT)
     {
@@ -1179,19 +1186,17 @@ void Conductor::acquireData(bool asynchronous)
         {
             debugPrint(F("EXPERIMENT should be RAW DATA + USB mode."));
         }
-        if (asynchronous)
+        if (inCallback)
         {
             iuI2S.sendData(iuUSB.port);
             iuAccelerometer.sendData(iuUSB.port);
         }
+        force = true;
     }
     // Collect the new data
     for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
     {
-        if (Sensor::instances[i]->isAsynchronous() == asynchronous)
-        {
-            Sensor::instances[i]->acquireData();
-        }
+        Sensor::instances[i]->acquireData(inCallback, force);
     }
 }
 
@@ -1260,21 +1265,30 @@ void Conductor::streamFeatures()
     {
         return;
     }
-    HardwareSerial *port = NULL;
-    bool sendMACAddress = false;
-    bool sendFeatureGroupName = false;
+    HardwareSerial *port1 = NULL;
+    bool sendMACAddress1 = false;
+    bool sendFeatureGroupName1 = false;
+    HardwareSerial *port2 = NULL;
+    bool sendMACAddress2 = false;
+    bool sendFeatureGroupName2 = false;
     switch (m_streamingMode)
     {
         case StreamingMode::WIRED:
-            port = iuUSB.port;
+            port1 = iuUSB.port;
             break;
         case StreamingMode::BLE:
-            port = iuBluetooth.port;
+            port1 = iuBluetooth.port;
             break;
         case StreamingMode::WIFI:
-            port = iuWiFi.port;
-            sendMACAddress = true;
-            sendFeatureGroupName = true;
+            port1 = iuWiFi.port;
+            sendMACAddress1 = true;
+            sendFeatureGroupName1 = true;
+            break;
+        case StreamingMode::WIFI_AND_BLE:
+            port1 = iuWiFi.port;
+            sendMACAddress1 = true;
+            sendFeatureGroupName1 = true;
+            port2 = iuBluetooth.port;
             break;
         default:
             if (loopDebugMode)
@@ -1291,17 +1305,25 @@ void Conductor::streamFeatures()
         /*
         if (m_usageMode == UsageMode::CALIBRATION)
         {
-            FeatureGroup::instances[i]->legacyStream(port, m_macAddress,
+            FeatureGroup::instances[i]->legacyStream(port1, m_macAddress,
                 m_operationState, batteryLoad, timestamp);
         }
         else
         {
-            FeatureGroup::instances[i]->stream(port, m_macAddress, timestamp,
-                                               sendMACAddress);
+            FeatureGroup::instances[i]->stream(port1, m_macAddress, timestamp,
+                                               sendMACAddress1);
         }
         */
-        FeatureGroup::instances[i]->legacyStream(port, m_macAddress,
-                m_operationState, batteryLoad, timestamp, sendFeatureGroupName);
+        if (port1)
+        {
+            FeatureGroup::instances[i]->legacyStream(port1, m_macAddress,
+                m_operationState, batteryLoad, timestamp, sendFeatureGroupName1);
+        }
+        if (port2)
+        {
+            FeatureGroup::instances[i]->legacyStream(port2, m_macAddress,
+                m_operationState, batteryLoad, timestamp, sendFeatureGroupName2);
+        }
     }
 }
 

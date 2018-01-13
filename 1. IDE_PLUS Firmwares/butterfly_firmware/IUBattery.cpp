@@ -6,7 +6,7 @@
 ============================================================================= */
 
 IUBattery::IUBattery(IUI2C *iuI2C, const char* name, Feature *batteryLoad) :
-  SynchronousSensor(name, 1, batteryLoad),
+  LowFreqSensor(name, 1, batteryLoad),
   m_iuI2C(iuI2C),
   m_VDDA(0),
   m_vBattery(0)

@@ -7,7 +7,7 @@
 
 IUBMX055Gyro::IUBMX055Gyro(IUI2C *iuI2C, const char* name, Feature *tiltX,
                            Feature *tiltY, Feature *tiltZ) :
-    AsynchronousSensor(name, 3, tiltX, tiltY, tiltZ)
+    DrivenSensor(name, 3, tiltX, tiltY, tiltZ)
 {
     m_iuI2C = iuI2C;
     // Fast Power Up is disabled at POR (Power-On Reset)
@@ -54,7 +54,7 @@ void IUBMX055Gyro::softReset()
  */
 void IUBMX055Gyro::wakeUp()
 {
-    AsynchronousSensor::wakeUp();
+    DrivenSensor::wakeUp();
     // Write {0, 0} to {suspend (bit7), deep-suspend (bit5)}
     m_iuI2C->writeByte(ADDRESS,  LPM1, 0x00);
 }
@@ -66,7 +66,7 @@ void IUBMX055Gyro::wakeUp()
  */
 void IUBMX055Gyro::sleep()
 {
-    AsynchronousSensor::sleep();
+    DrivenSensor::sleep();
     m_fastPowerUpEnabled = true;
     // Write {1, 0} to {suspend (bit7), deep-suspend (bit5)}
     m_iuI2C->writeByte(ADDRESS,  LPM1, 0x80);
@@ -82,7 +82,7 @@ void IUBMX055Gyro::sleep()
  */
 void IUBMX055Gyro::suspend()
 {
-    AsynchronousSensor::suspend();
+    DrivenSensor::suspend();
     m_fastPowerUpEnabled = false;
     // Write {0, 1} to {suspend (bit7), deep-suspend (bit5)}
     m_iuI2C->writeByte(ADDRESS,  LPM1, 0x20);

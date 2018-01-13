@@ -14,7 +14,7 @@
 #include "../IURTDExtension.h"
 
 
-test(Sensors__declerations)
+test(Sensors__declarations)
 {
     #if defined(RTD_DAUGHTER_BOARD)
         assertEqual(Sensor::instanceCount, 8);

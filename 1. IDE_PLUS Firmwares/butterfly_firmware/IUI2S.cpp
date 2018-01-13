@@ -6,7 +6,7 @@
 ============================================================================= */
 
 IUI2S::IUI2S(IUI2C *iuI2C, const char* name, Feature *audio) :
-  AsynchronousSensor(name, 1, audio),
+  DrivenSensor(name, 1, audio),
   m_iuI2C(iuI2C),
   m_firstI2STrigger(true)
 {
@@ -69,7 +69,10 @@ bool IUI2S::triggerDataAcquisition(void (*callback)())
 bool IUI2S::endDataAcquisition()
 {
     //I2S.end();
-    if (loopDebugMode) { debugPrint("\nData acquisition disabled\n"); }
+    if (loopDebugMode)
+    {
+        debugPrint("\nData acquisition disabled\n");
+    }
     return true;
 }
 
@@ -106,7 +109,7 @@ void IUI2S::readData()
     }
 }
 
-void IUI2S::acquireData()
+void IUI2S::acquireData(bool inCallback, bool force)
 {
     readData();
 }

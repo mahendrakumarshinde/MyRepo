@@ -1,36 +1,52 @@
 #include "IUBMX055Acc.h"
 
 
-/* =============================================================================
+/*  =============================================================================
     Data Acquisition callbacks
-============================================================================= */
+    ============================================================================= */
 
 bool newAccelData = false;
 
 void accelReadCallback(uint8_t wireStatus)
 {
+    iuI2C.endReadOperation();
     if (wireStatus == 0)
     {
         newAccelData = true;
     }
     else if (callbackDebugMode)
     {
-        debugPrint(F("Acceleration read error "), false);
+        debugPrint(micros(), false);
+        debugPrint(F(" Acceleration read error "), false);
         debugPrint(wireStatus);
+//        while (true)
+//        {
+//            if (iuI2C.checkComponentWhoAmI("BMX055 ACC", IUBMX055Acc::ADDRESS,
+//                                           IUBMX055Acc::WHO_AM_I,
+//                                           IUBMX055Acc::I_AM))
+//            {
+//                Serial.println("I'm here");
+//            }
+//            else
+//            {
+//                Serial.println("no response");
+//            }
+//            delay(1000);
+//        }
     }
 }
 
 
-/* =============================================================================
+/*  =============================================================================
     Constructors and destructors
-============================================================================= */
+    ============================================================================= */
 
 /**
- * Initialize and configure the BMX055 for the accelerometer
- */
+    Initialize and configure the BMX055 for the accelerometer
+*/
 IUBMX055Acc::IUBMX055Acc(IUI2C *iuI2C, const char* name, Feature *accelerationX,
                          Feature *accelerationY, Feature *accelerationZ) :
-    AsynchronousSensor(name, 3, accelerationX,accelerationY, accelerationZ),
+    DrivenSensor(name, 3, accelerationX, accelerationY, accelerationZ),
     m_scale(defaultScale),
     m_bandwidth(defaultBandwidth),
     m_filteredData(false)
@@ -39,13 +55,13 @@ IUBMX055Acc::IUBMX055Acc(IUI2C *iuI2C, const char* name, Feature *accelerationX,
 }
 
 
-/* =============================================================================
+/*  =============================================================================
     Hardware & power management
-============================================================================= */
+    ============================================================================= */
 
 /**
- * Set up the component and finalize the object initialization
- */
+    Set up the component and finalize the object initialization
+*/
 void IUBMX055Acc::setupHardware()
 {
     if (!m_iuI2C->checkComponentWhoAmI("BMX055 ACC", ADDRESS, WHO_AM_I, I_AM))
@@ -56,8 +72,8 @@ void IUBMX055Acc::setupHardware()
         }
         return;
     }
-    // Setup interrupt pin on the STM32 as IPUT
-    pinMode(INT_PIN, INPUT);
+    // Setup interrupt pin on the STM32 as INPUT
+    //    pinMode(INT_PIN, INPUT);
     softReset();
     wakeUp();
     setScale(m_scale);
@@ -67,8 +83,8 @@ void IUBMX055Acc::setupHardware()
 }
 
 /**
- * Reset BMX055 configuration and return to normal power mode
- */
+    Reset BMX055 configuration and return to normal power mode
+*/
 void IUBMX055Acc::softReset()
 {
     m_iuI2C->writeByte(ADDRESS, BGW_SOFTRESET, 0xB6);
@@ -78,49 +94,49 @@ void IUBMX055Acc::softReset()
 }
 
 /**
- * Set the power mode to ACTIVE (130μA)
- */
+    Set the power mode to ACTIVE (130μA)
+*/
 void IUBMX055Acc::wakeUp()
 {
-    AsynchronousSensor::wakeUp();
+    DrivenSensor::wakeUp();
     m_iuI2C->writeByte(ADDRESS, PMU_LPW, 0x00);
     delay(100);
 }
 
 /**
- * Set the power mode to SLEEP (2.1μA)
- *
- * IU 'SLEEP' mode correspond to the Accelerometer 'suspend' mode
- * "Suspend mode is entered (left) by writing 1 (0) to the (ACC 0 11) suspend
- * bit after bit (ACC 0x12) lowpower_mode has been set to 0."
- */
+    Set the power mode to SLEEP (2.1μA)
+
+    IU 'SLEEP' mode correspond to the Accelerometer 'suspend' mode
+    "Suspend mode is entered (left) by writing 1 (0) to the (ACC 0 11) suspend
+    bit after bit (ACC 0x12) lowpower_mode has been set to 0."
+*/
 void IUBMX055Acc::sleep()
 {
-    AsynchronousSensor::sleep();
+    DrivenSensor::sleep();
     m_iuI2C->writeByte(ADDRESS, PMU_LPW, 0x80);
 }
 
 /**
- * Set the power mode to SUSPEND (1μA)
- *
- * IU 'SUSPEND' mode correspond to the Accelerometer 'deep-suspend' mode
- * "Deep suspend mode is entered (left) by writing 1 (0) to the (ACC 0x11)
- * deep_suspend bit while (ACC 0x11) suspend bit is set to 0."
- */
+    Set the power mode to SUSPEND (1μA)
+
+    IU 'SUSPEND' mode correspond to the Accelerometer 'deep-suspend' mode
+    "Deep suspend mode is entered (left) by writing 1 (0) to the (ACC 0x11)
+    deep_suspend bit while (ACC 0x11) suspend bit is set to 0."
+*/
 void IUBMX055Acc::suspend()
 {
-    AsynchronousSensor::suspend();
+    DrivenSensor::suspend();
     m_iuI2C->writeByte(ADDRESS, PMU_LPW, 0x20);
 }
 
 
-/* =============================================================================
+/*  =============================================================================
     Configuration and calibration
-============================================================================= */
+    ============================================================================= */
 
 void IUBMX055Acc::configure(JsonVariant &config)
 {
-    AsynchronousSensor::configure(config);  // General sensor config
+    DrivenSensor::configure(config);  // General sensor config
     JsonVariant value = config["FSR"];  // Full Scale Range
     if (value.success())
     {
@@ -146,34 +162,34 @@ void IUBMX055Acc::configure(JsonVariant &config)
 }
 
 /**
- * Set the scale then recompute resolution
- *
- * Resolution is m/s2 per LSB.
- */
+    Set the scale then recompute resolution
+
+    Resolution is m/s2 per LSB.
+*/
 void IUBMX055Acc::setScale(IUBMX055Acc::scaleOption scale)
 {
     m_scale = scale;
     m_iuI2C->writeByte(ADDRESS, PMU_RANGE, (uint8_t) m_scale & 0x0F);
     switch (m_scale)
     {
-    case AFS_2G:
-        setResolution(2.0 * 9.80665 / 32768.0);
-        break;
-    case AFS_4G:
-        setResolution(4.0 * 9.80665 / 32768.0);
-        break;
-    case AFS_8G:
-        setResolution(8.0 * 9.80665 / 32768.0);
-        break;
-    case AFS_16G:
-        setResolution(16.0 * 9.80665 / 32768.0);
-        break;
+        case AFS_2G:
+            setResolution(2.0 * 9.80665 / 32768.0);
+            break;
+        case AFS_4G:
+            setResolution(4.0 * 9.80665 / 32768.0);
+            break;
+        case AFS_8G:
+            setResolution(8.0 * 9.80665 / 32768.0);
+            break;
+        case AFS_16G:
+            setResolution(16.0 * 9.80665 / 32768.0);
+            break;
     }
 }
 
 /**
- * Set the accelerometer bandwidth
- */
+    Set the accelerometer bandwidth
+*/
 void IUBMX055Acc::setBandwidth(IUBMX055Acc::bandwidthOption bandwidth)
 {
     m_bandwidth = bandwidth;
@@ -186,11 +202,11 @@ void IUBMX055Acc::setBandwidth(IUBMX055Acc::bandwidthOption bandwidth)
 }
 
 /**
- * Use accelerometer build in low-pass filter and set the bandwidth option
- *
- * The sampling rate of the filtered data depends on the selected filter
- * bandwidth and is always twice the selected bandwidth (BW = ODR/2).
- */
+    Use accelerometer build in low-pass filter and set the bandwidth option
+
+    The sampling rate of the filtered data depends on the selected filter
+    bandwidth and is always twice the selected bandwidth (BW = ODR/2).
+*/
 void IUBMX055Acc::useFilteredData(IUBMX055Acc::bandwidthOption bandwidth)
 {
     m_filteredData = true;
@@ -199,10 +215,10 @@ void IUBMX055Acc::useFilteredData(IUBMX055Acc::bandwidthOption bandwidth)
 }
 
 /**
- * Use unfiltered acceleration data
- *
- * The unfiltered data is sampled with 2kHz.
- */
+    Use unfiltered acceleration data
+
+    The unfiltered data is sampled with 2kHz.
+*/
 void IUBMX055Acc::useUnfilteredData()
 {
     m_iuI2C->writeByte(ADDRESS, D_HBW, 0x01);
@@ -210,8 +226,8 @@ void IUBMX055Acc::useUnfilteredData()
 }
 
 /**
- * Configure the interrupt pins
- */
+    Configure the interrupt pins
+*/
 void IUBMX055Acc::configureInterrupts()
 {
     // Enable ACC data ready interrupt
@@ -225,8 +241,8 @@ void IUBMX055Acc::configureInterrupts()
 }
 
 /**
- * Run fast compensation
- */
+    Run fast compensation
+*/
 void IUBMX055Acc::doFastCompensation(float * dest1)
 {
     // set all offset compensation registers to zero
@@ -242,7 +258,7 @@ void IUBMX055Acc::doFastCompensation(float * dest1)
         m_iuI2C->writeByte(ADDRESS, OFC_CTRL, offsetCmd[i]);
         // check if fast calibration complete. While not complete, wait.
         c = m_iuI2C->readByte(ADDRESS, OFC_CTRL);
-        while(!(c & 0x10))
+        while (!(c & 0x10))
         {
             delay(10);
             c = m_iuI2C->readByte(ADDRESS, OFC_CTRL);
@@ -267,32 +283,32 @@ void IUBMX055Acc::doFastCompensation(float * dest1)
 }
 
 
-/* =============================================================================
+/*  =============================================================================
     Data Collection
-============================================================================= */
+    ============================================================================= */
 
 /**
- * Acquire new data, while handling down-clocking
- */
-void IUBMX055Acc::acquireData()
+    Acquire new data, while handling down-clocking
+*/
+void IUBMX055Acc::acquireData(bool inCallback, bool force)
 {
     // Process data from last acquisition if needed
     processData();
     // Acquire new data
-    AsynchronousSensor::acquireData();
+    DrivenSensor::acquireData(inCallback, force);
 }
 
 /**
- * Asynchronously read acceleration data
- *
- * Data is read from device as 2 bytes: LSB first (4 bits to use) then MSB
- * (8 bits to use) 4 last bits of LSB byte are used as flags (new data, etc).
- */
+    Read acceleration data
+
+    Data is read from device as 2 bytes: LSB first (4 bits to use) then MSB
+    (8 bits to use) 4 last bits of LSB byte are used as flags (new data, etc).
+*/
 void IUBMX055Acc::readData()
 {
     // Read the six raw data registers into data array
-    if(!m_iuI2C->readBytes(ADDRESS, D_X_LSB, 6, &m_rawBytes[0],
-                           accelReadCallback))
+    if (!m_iuI2C->readBytes(ADDRESS, D_X_LSB, 6, &m_rawBytes[0],
+                            accelReadCallback))
     {
         if (callbackDebugMode)
         {
@@ -302,11 +318,11 @@ void IUBMX055Acc::readData()
 }
 
 /**
- * Process acceleration data and store it as a Q15 (signed 15-fractional-bit)
- *
- * Data is read from device as 2 bytes: LSB first (4 bits to use) then MSB
- * (8 bits to use) 4 last bits of LSB byte are used as flags (new data, etc).
- */
+    Process acceleration data and store it as a Q15 (signed 15-fractional-bit)
+
+    Data is read from device as 2 bytes: LSB first (4 bits to use) then MSB
+    (8 bits to use) 4 last bits of LSB byte are used as flags (new data, etc).
+*/
 void IUBMX055Acc::processData()
 {
     if (!newAccelData)
@@ -314,19 +330,19 @@ void IUBMX055Acc::processData()
         return;
     }
     // Check that all 3 axes have new data, if not return
-    if(!((m_rawBytes[0] & 0x01) && (m_rawBytes[2] & 0x01) &&
-         (m_rawBytes[4] & 0x01)))
+    if (!((m_rawBytes[0] & 0x01) && (m_rawBytes[2] & 0x01) &&
+            (m_rawBytes[4] & 0x01)))
     {
         return;
     }
     for (uint8_t i = 0; i < 3; ++i)
     {
-        /* Convert to Q15: LSB = LLLLXXXX, MSB = MMMMMMMMM =>
-        rawAccel = MMMMMMMMLLLL0000
-        use 8 bits of MSB and only the 4 left-most bits of LSB
-        NB: Casting has precedence over << or >> operators */
+        /*  Convert to Q15: LSB = LLLLXXXX, MSB = MMMMMMMMM =>
+            rawAccel = MMMMMMMMLLLL0000
+            use 8 bits of MSB and only the 4 left-most bits of LSB
+            NB: Casting has precedence over << or >> operators */
         m_rawData[i] = (int16_t) (((int16_t)m_rawBytes[2 * i + 1] << 8) | \
-            (m_rawBytes[2 * i] & 0xF0));
+                                  (m_rawBytes[2 * i] & 0xF0));
         m_data[i] = m_rawData[i] + m_bias[i];
         m_destinations[i]->addQ15Value(m_data[i]);
     }
@@ -334,15 +350,15 @@ void IUBMX055Acc::processData()
 }
 
 
-/* =============================================================================
+/*  =============================================================================
     Communication
-============================================================================= */
+    ============================================================================= */
 
 /**
- * Dump acceleration data to serial - unit is G, in float format
- *
- * NB: We want to do this in *DATA COLLECTION* mode
- */
+    Dump acceleration data to serial - unit is G, in float format
+
+    NB: We want to do this in *DATA COLLECTION* mode
+*/
 void IUBMX055Acc::sendData(HardwareSerial *port)
 {
     if (loopDebugMode)  // Human readable in the console
@@ -354,7 +370,7 @@ void IUBMX055Acc::sendData(HardwareSerial *port)
         port->print("AZ: ");
         port->println((float) m_data[2] * m_resolution / 9.80665, 4);
     }
-    else  // Send bytes (faster ?)
+    else  // Send bytes
     {
         float accel;
         byte* data;
@@ -369,16 +385,16 @@ void IUBMX055Acc::sendData(HardwareSerial *port)
 }
 
 
-/* =============================================================================
+/*  =============================================================================
     Debugging
-============================================================================= */
+    ============================================================================= */
 
 /*
- * Show calibration info
- */
+    Show calibration info
+*/
 void IUBMX055Acc::exposeCalibration()
 {
-    #ifdef DEBUGMODE
+#ifdef DEBUGMODE
     debugPrint(F("Accelerometer calibration data: "));
     debugPrint(F("Resolution (m.s-2): "));
     debugPrint(m_resolution, 7);
@@ -389,13 +405,13 @@ void IUBMX055Acc::exposeCalibration()
         debugPrint(", ", false);
     }
     debugPrint(' ');
-    #endif
+#endif
 }
 
 
-/* =============================================================================
+/*  =============================================================================
     Instantiation
-============================================================================= */
+    ============================================================================= */
 
 IUBMX055Acc iuAccelerometer(&iuI2C, "ACC", &accelerationX, &accelerationY,
                             &accelerationZ);

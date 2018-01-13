@@ -29,7 +29,7 @@ void accelReadCallback(uint8_t wireStatus);
  *      - accelerationY: a Q15Feature with section size = 128
  *      - accelerationZ: a Q15Feature with section size = 128
  */
-class IUBMX055Acc : public AsynchronousSensor
+class IUBMX055Acc : public DrivenSensor
 {
     public:
         /***** Preset values and default settings *****/
@@ -93,7 +93,8 @@ class IUBMX055Acc : public AsynchronousSensor
         void configureInterrupts();
         void doFastCompensation(float *destination);
         /***** Data acquisition *****/
-        virtual void acquireData();
+        virtual void acquireData(bool inCallback=false,
+                                 bool force=false);
         virtual void readData();
         q15_t getData(uint8_t index) { return m_data[index]; }
         /***** Communication *****/
