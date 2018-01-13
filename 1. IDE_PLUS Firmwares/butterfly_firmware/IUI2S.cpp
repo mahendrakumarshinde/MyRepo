@@ -69,7 +69,10 @@ bool IUI2S::triggerDataAcquisition(void (*callback)())
 bool IUI2S::endDataAcquisition()
 {
     //I2S.end();
-    if (loopDebugMode) { debugPrint("\nData acquisition disabled\n"); }
+    if (loopDebugMode)
+    {
+        debugPrint("\nData acquisition disabled\n");
+    }
     return true;
 }
 
@@ -106,7 +109,7 @@ void IUI2S::readData()
     }
 }
 
-void IUI2S::acquireData(bool inCallback)
+void IUI2S::acquireData(bool inCallback, bool force)
 {
     readData();
 }

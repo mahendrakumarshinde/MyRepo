@@ -47,7 +47,8 @@ class Sensor : public Component
         virtual void setResolution(float resolution);
         virtual float getResolution() { return m_resolution; }
         /***** Data acquisition *****/
-        virtual void acquireData(bool inCallback=false) {}
+        virtual void acquireData(bool inCallback=false,
+                                 bool force=false) {}
         virtual void readData() {}  // May be defined in Child class
         /***** Communication *****/
         virtual void sendData(HardwareSerial *port) { }
@@ -99,7 +100,8 @@ class DrivenSensor : public Sensor
         virtual uint16_t getSamplingRate() { return m_samplingRate; }
         virtual void computeDownclockingRate();
         /***** Data acquisition *****/
-        virtual void acquireData(bool inCallback=false);
+        virtual void acquireData(bool inCallback=false,
+                                 bool force=false);
 
     protected:
         /***** Sampling and resolution *****/
@@ -147,7 +149,8 @@ class LowFreqSensor : public Sensor
         virtual float getSamplingRate()
             { return 1.0f / (float) m_samplingPeriod; }
         /***** Data acquisition *****/
-        virtual void acquireData(bool inCallback=false);
+        virtual void acquireData(bool inCallback=false,
+                                 bool force=false);
 
     protected:
         /***** Configuration *****/

@@ -17,7 +17,8 @@ void temperatureReadCallback(uint8_t wireStatus)
     }
     else if (callbackDebugMode)
     {
-        debugPrint(F("Temperature read error "), false);
+        debugPrint(micros(), false);
+        debugPrint(F(" Temperature read error "), false);
         debugPrint(wireStatus);
     }
 }
@@ -31,7 +32,8 @@ void pressureReadCallback(uint8_t wireStatus)
     }
     else if (callbackDebugMode)
     {
-        debugPrint(F("Pressure read error "), false);
+        debugPrint(micros(), false);
+        debugPrint(F(" Pressure read error "), false);
         debugPrint(wireStatus);
     }
 }
@@ -385,13 +387,13 @@ float IUBMP280::compensatePressure(int32_t rawP)
 /**
  * Acquire new data, while handling sampling period
  */
-void IUBMP280::acquireData(bool inCallback)
+void IUBMP280::acquireData(bool inCallback, bool force)
 {
     // Process data from last acquisition if needed
     processTemperatureData();
     processPressureData();
     // Acquire new data
-    LowFreqSensor::acquireData(inCallback);
+    LowFreqSensor::acquireData(inCallback, force);
 }
 
 void IUBMP280::readData()

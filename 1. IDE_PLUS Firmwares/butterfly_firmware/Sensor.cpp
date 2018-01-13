@@ -167,7 +167,7 @@ void DrivenSensor::computeDownclockingRate()
  *
  * @param inCallback  set to true if the function is called from a callback.
  */
-void DrivenSensor::acquireData(bool inCallback)
+void DrivenSensor::acquireData(bool inCallback, bool force)
 {
     if (inCallback)
     {
@@ -180,7 +180,7 @@ void DrivenSensor::acquireData(bool inCallback)
         // Check if destinations are ready
         for (uint8_t i = 0; i < m_destinationCount; ++i)
         {
-            if(!m_destinations[i]->isReadyToRecord())
+            if(!force && !m_destinations[i]->isReadyToRecord())
             {
                 return;
             }
@@ -274,7 +274,7 @@ void LowFreqSensor::setSamplingPeriod(uint32_t samplingPeriod)
  *  Note that in that case, data acquisition will be skipped as low freq sensors
  *  are not meant to be read in callbacks.
  */
-void LowFreqSensor::acquireData(bool inCallback)
+void LowFreqSensor::acquireData(bool inCallback, bool force)
 {
     if (inCallback)
     {
@@ -290,7 +290,7 @@ void LowFreqSensor::acquireData(bool inCallback)
     // Check if destinations are ready
     for (uint8_t i = 0; i < m_destinationCount; ++i)
     {
-        if(!m_destinations[i]->isReadyToRecord())
+        if(!force && !m_destinations[i]->isReadyToRecord())
         {
             return ;
         }

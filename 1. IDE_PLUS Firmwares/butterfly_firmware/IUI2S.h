@@ -56,7 +56,8 @@ class IUI2S : public DrivenSensor
         bool endDataAcquisition();
         void processAudioData(q31_t *data);
         virtual void readData();
-        virtual void acquireData(bool inCallback=false);
+        virtual void acquireData(bool inCallback=false,
+                                 bool force=false);
         /***** Communication *****/
         void sendData(HardwareSerial *port);
         /***** Debugging *****/

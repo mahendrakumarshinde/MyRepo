@@ -28,6 +28,10 @@
 #endif
 
 
+extern float DEFAULT_ACCEL_ENERGY_NORMAL_TH;
+extern float DEFAULT_ACCEL_ENERGY_WARNING_TH;
+extern float DEFAULT_ACCEL_ENERGY_HIGH_TH;
+
 
 /**
  *

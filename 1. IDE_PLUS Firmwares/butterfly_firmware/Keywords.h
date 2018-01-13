@@ -76,11 +76,13 @@ namespace AcquisitionMode
  */
 namespace StreamingMode
 {
-    enum option : uint8_t {WIRED  = 0,  // Send over Serial
-                           BLE    = 1,  // Send over Bluetooth Low Energy
-                           WIFI   = 2,  // Send over WiFi
-                           STORE  = 3,  // Store in SPI Flash to stream later
-                           COUNT  = 4};
+    enum option : uint8_t {
+        WIRED        = 0,       // Send over Serial
+        BLE          = 1,       // Send over Bluetooth Low Energy
+        WIFI         = 2,       // Send over WiFi
+        WIFI_AND_BLE = 3,       // Send over both WiFi and BLE
+        STORE        = 4,       // Store in SPI Flash to stream later
+        COUNT        = 5};
 }
 
 

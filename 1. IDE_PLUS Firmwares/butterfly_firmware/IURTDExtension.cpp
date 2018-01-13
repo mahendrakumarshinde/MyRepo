@@ -45,9 +45,9 @@ void IURTDExtension::setupHardware()
 /**
  * Acquire new data, while handling sampling period
  */
-void IURTDExtension::acquireData(bool inCallback)
+void IURTDExtension::acquireData(bool inCallback, bool force)
 {
-    LowFreqSensor::acquireData(inCallback);
+    LowFreqSensor::acquireData(inCallback, force);
 }
 
 /**

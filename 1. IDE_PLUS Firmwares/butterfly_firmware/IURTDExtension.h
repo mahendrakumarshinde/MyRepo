@@ -40,7 +40,8 @@ class IURTDExtension : public LowFreqSensor
         /***** Configuration and calibration *****/
 
         /***** Data acquisition *****/
-        virtual void acquireData(bool inCallback=false);
+        virtual void acquireData(bool inCallback=false,
+                                 bool force=false);
         virtual void readData();
         /***** Debugging *****/
         virtual void exposeCalibration();

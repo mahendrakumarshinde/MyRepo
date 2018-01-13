@@ -93,7 +93,8 @@ class IUBMX055Acc : public DrivenSensor
         void configureInterrupts();
         void doFastCompensation(float *destination);
         /***** Data acquisition *****/
-        virtual void acquireData(bool inCallback=false);
+        virtual void acquireData(bool inCallback=false,
+                                 bool force=false);
         virtual void readData();
         q15_t getData(uint8_t index) { return m_data[index]; }
         /***** Communication *****/

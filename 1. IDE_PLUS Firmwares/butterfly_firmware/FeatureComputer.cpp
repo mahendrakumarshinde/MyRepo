@@ -182,10 +182,11 @@ void FeatureComputer::exposeConfig()
 /***** Signal Energy, Power and RMS *****/
 
 SignalRMSComputer::SignalRMSComputer(uint8_t id, Feature *rms, bool removeMean,
-                                     bool normalize) :
+                                     bool normalize, float calibrationScaling) :
     FeatureComputer(id, 1, rms),
     m_removeMean(removeMean),
-    m_normalize(normalize)
+    m_normalize(normalize),
+    m_calibrationScaling(calibrationScaling)
 {
     // Constructor
 }
@@ -242,7 +243,7 @@ void SignalRMSComputer::m_specializedCompute()
     total = sqrt(total);
     m_destinations[0]->setSamplingRate(m_sources[0]->getSamplingRate());
     m_destinations[0]->setResolution(resolution);
-    m_destinations[0]->addFloatValue(total);
+    m_destinations[0]->addFloatValue(total * m_calibrationScaling);
     if (featureDebugMode)
     {
         debugPrint(m_destinations[0]->getName(), false);
@@ -421,12 +422,16 @@ Q15FFTComputer::Q15FFTComputer(uint8_t id,
                                q15_t *allocatedFFTSpace,
                                uint16_t lowCutFrequency,
                                uint16_t highCutFrequency,
-                               float minAgitationRMS) :
+                               float minAgitationRMS,
+                               float calibrationScaling1,
+                               float calibrationScaling2) :
     FeatureComputer(id, 4, reducedFFT, mainFrequency, integralRMS,
                     doubleIntegralRMS),
     m_lowCutFrequency(lowCutFrequency),
     m_highCutFrequency(highCutFrequency),
-    m_minAgitationRMS(minAgitationRMS)
+    m_minAgitationRMS(minAgitationRMS),
+    m_calibrationScaling1(calibrationScaling1),
+    m_calibrationScaling2(calibrationScaling2)
 {
     m_allocatedFFTSpace = allocatedFFTSpace;
 }
@@ -521,16 +526,16 @@ void Q15FFTComputer::m_specializedCompute()
         debugPrint(": ", false);
         debugPrint(freq);
     }
-    // 3. 1st integration in frequency domain
     if (isInMotion)
     {
+        // 3. 1st integration in frequency domain
         q15_t scaling1 = RFFTAmplitudes::getRescalingFactorForIntegral(
             amplitudes, sampleCount, samplingRate);
         RFFTAmplitudes::filterAndIntegrate(
             amplitudes, sampleCount, samplingRate, m_lowCutFrequency,
             m_highCutFrequency, scaling1, false);
         float integratedRMS1 = RFFTAmplitudes::getRMS(amplitudes, sampleCount);
-        integratedRMS1 *= 1000 / ((float) scaling1);
+        integratedRMS1 *= 1000 / ((float) scaling1) * m_calibrationScaling1;
         m_destinations[2]->addFloatValue(integratedRMS1);
         if (featureDebugMode)
         {
@@ -545,7 +550,8 @@ void Q15FFTComputer::m_specializedCompute()
             amplitudes, sampleCount, samplingRate, m_lowCutFrequency,
             m_highCutFrequency, scaling2, false);
         float integratedRMS2 = RFFTAmplitudes::getRMS(amplitudes, sampleCount);
-        integratedRMS2 *= 1000 / ((float) scaling1 * (float) scaling2);
+        integratedRMS2 *= 1000 / ((float) scaling1 * (float) scaling2) *
+            m_calibrationScaling2;
         m_destinations[3]->addFloatValue(integratedRMS2);
         if (featureDebugMode)
         {
@@ -631,17 +637,19 @@ void AudioDBComputer::m_specializedCompute()
     Instanciations
 ============================================================================= */
 
+
 // Shared computation space
 q15_t allocatedFFTSpace[1024];
+
 
 // Note that computer_id 0 is reserved to designate an absence of computer.
 
 /***** Accelerometer Features *****/
 
 // 128 sample long accel computers
-SignalRMSComputer accel128ComputerX(1,&accelRMS128X, true, true);
-SignalRMSComputer accel128ComputerY(2, &accelRMS128Y, true, true);
-SignalRMSComputer accel128ComputerZ(3, &accelRMS128Z, true, true);
+SignalRMSComputer accel128ComputerX(1,&accelRMS128X, true, true, ACCEL_RMS_SCALING);
+SignalRMSComputer accel128ComputerY(2, &accelRMS128Y, true, true, ACCEL_RMS_SCALING);
+SignalRMSComputer accel128ComputerZ(3, &accelRMS128Z, true, true, ACCEL_RMS_SCALING);
 MultiSourceSumComputer accelRMS128TotalComputer(4, &accelRMS128Total,
                                                 false, true);
 
@@ -663,19 +671,34 @@ Q15FFTComputer accelFFTComputerX(9,
                                  &accelMainFreqX,
                                  &velRMS512X,
                                  &dispRMS512X,
-                                 allocatedFFTSpace);
+                                 allocatedFFTSpace,
+                                 DEFAULT_LOW_CUT_FREQUENCY,
+                                 DEFAULT_HIGH_CUT_FREQUENCY,
+                                 DEFAULT_MIN_AGITATION,
+                                 VELOCITY_RMS_SCALING,
+                                 DISPLACEMENT_RMS_SCALING);
 Q15FFTComputer accelFFTComputerY(10,
                                  &accelReducedFFTY,
                                  &accelMainFreqY,
                                  &velRMS512Y,
                                  &dispRMS512Y,
-                                 allocatedFFTSpace);
+                                 allocatedFFTSpace,
+                                 DEFAULT_LOW_CUT_FREQUENCY,
+                                 DEFAULT_HIGH_CUT_FREQUENCY,
+                                 DEFAULT_MIN_AGITATION,
+                                 VELOCITY_RMS_SCALING,
+                                 DISPLACEMENT_RMS_SCALING);
 Q15FFTComputer accelFFTComputerZ(11,
                                  &accelReducedFFTZ,
                                  &accelMainFreqZ,
                                  &velRMS512Z,
                                  &dispRMS512Z,
-                                 allocatedFFTSpace);
+                                 allocatedFFTSpace,
+                                 DEFAULT_LOW_CUT_FREQUENCY,
+                                 DEFAULT_HIGH_CUT_FREQUENCY,
+                                 DEFAULT_MIN_AGITATION,
+                                 VELOCITY_RMS_SCALING,
+                                 DISPLACEMENT_RMS_SCALING);
 
 
 /***** Audio Features *****/

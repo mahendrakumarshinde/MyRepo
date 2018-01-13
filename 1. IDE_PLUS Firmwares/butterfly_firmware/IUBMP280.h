@@ -97,7 +97,8 @@ class IUBMP280 : public LowFreqSensor
         void readPressure();
         int16_t getPressure() { return m_pressure; }
         // Acquisition
-        virtual void acquireData(bool inCallback=false);
+        virtual void acquireData(bool inCallback=false,
+                                 bool force=false);
         virtual void readData();
         /***** Communication *****/
         void sendData(HardwareSerial *port);
