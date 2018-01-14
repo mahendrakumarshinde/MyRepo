@@ -18,12 +18,12 @@ IUSerial::IUSerial(HardwareSerial *serialPort, uint32_t rate, uint16_t buffSize,
 }
 
 /**
- * 
+ *
  */
 void IUSerial::begin()
 {
     port->begin(baudRate);
-    port->setRxBufferSize(bufferSize);
+//    port->setRxBufferSize(bufferSize);
     delay(100);
 }
 
@@ -99,6 +99,10 @@ bool IUSerial::readToBuffer()
  */
 bool IUSerial::hasTimedOut()
 {
+    if (m_lastReadTime == 0)
+    {
+        return false;
+    }
     if (m_bufferIndex > 0 && (millis() -
             m_lastReadTime > m_dataReceptionTimeout))
     {

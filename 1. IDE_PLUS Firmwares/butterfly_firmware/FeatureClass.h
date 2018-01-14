@@ -109,7 +109,7 @@ class Feature
         virtual void incrementFillingIndex();
         virtual void acknowledge(uint8_t receiverIdx, uint8_t sectionCount=1);
         /***** Communication *****/
-        virtual void stream(HardwareSerial *port);
+        virtual void stream(HardwareSerial *port, uint8_t sectionCount=1);
         /***** Debugging *****/
         virtual void exposeConfig();
         virtual void exposeCounters();
@@ -152,7 +152,8 @@ class Feature
         // consistency at section level
         bool m_locked[maxSectionCount];
         virtual void m_specializedStream(HardwareSerial *port,
-                                         uint8_t sectionIdx) {}
+                                         uint8_t sectionIdx,
+                                         uint8_t sectionCount=1) {}
 };
 
 
@@ -180,7 +181,8 @@ class FloatFeature : public Feature
     protected:
         float *m_values;
         virtual void m_specializedStream(HardwareSerial *port,
-                                         uint8_t sectionIdx);
+                                         uint8_t sectionIdx,
+                                         uint8_t sectionCount=1);
 };
 
 
@@ -214,7 +216,8 @@ class Q15Feature : public Feature
         q15_t *m_values;
         bool m_isFFT;
         virtual void m_specializedStream(HardwareSerial *port,
-                                         uint8_t sectionIdx);
+                                         uint8_t sectionIdx,
+                                         uint8_t sectionCount=1);
 };
 
 
@@ -248,7 +251,8 @@ class Q31Feature : public Feature
         q31_t *m_values;
         bool m_isFFT;
         virtual void m_specializedStream(HardwareSerial *port,
-                                         uint8_t sectionIdx);
+                                         uint8_t sectionIdx,
+                                         uint8_t sectionCount=1);
 };
 
 

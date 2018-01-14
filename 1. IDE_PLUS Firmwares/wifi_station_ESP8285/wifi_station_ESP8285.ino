@@ -8,6 +8,7 @@
 #include "IUWiFiManager.h"
 #include "IUSerial.h"
 #include "TimeManager.h"
+#include "IURawDataHandler.h"
 
 /* =============================================================================
     Global Variables
@@ -28,7 +29,6 @@ char AP_NAME[30] = "IUsetup";
 const char AP_NAME_PREFIX[9] = "IUsetup-";
 
 char WILL_MESSAGE[44] = "XXXAdmin;;;00:00:00:00:00:00;;;disconnected";
-
 
 /* =============================================================================
     MQTT message reception callback
@@ -153,6 +153,38 @@ bool publishFeature(const char *rawMsg, const uint16_t msgLength,
 }
 
 /**
+ * 
+ */
+bool publishAccelRawDataIfReady()
+{
+    if (accelRawDataHandler.hasTimedOut())
+    {
+        accelRawDataHandler.resetPayload();
+        return false;
+    }
+    if (!accelRawDataHandler.areAllKeyPresent())
+    {
+        // Raw Data payload is not ready
+        return false;
+    }
+    int httpCode = accelRawDataHandler.httpPostPayload(BLE_MAC_ADDRESS);
+    if (debugMode)
+    {
+        debugPrint("Post raw data: ", false);
+        debugPrint(httpCode);
+    }
+    if (httpCode == 200)
+    {
+        accelRawDataHandler.resetPayload();
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+/**
  * Subscribe to all the required device subscriptions
  *
  * Should be called after each reconnection.
@@ -267,6 +299,22 @@ void processMessageFromHost(char *buff)
             debugPrint(BLE_MAC_ADDRESS);
         }
     }
+    //
+    else if (strcmp("WIFI-HARDRESET", buff) == 0)
+    {
+        ESP.reset();
+//        ESP.restart();
+    }
+    // Check if RAW DATA, eg: REC,X,<data>
+    else if (strncmp("REC,", buff, 4) == 0 && buff[5] == ',')
+    {
+        if (accelRawDataHandler.hasTimedOut())
+        {
+            accelRawDataHandler.resetPayload();
+        }
+        accelRawDataHandler.addKeyValuePair(buff[4], &buff[6], strlen(buff) - 6);
+        publishAccelRawDataIfReady();
+    }
     else if (buff[6] == ',')  // Feature
     {
         publishFeature(&buff[7], strlen(buff) - 7, buff, 6);
@@ -334,4 +382,6 @@ void loop()
     }
     /***** Read message from main board and process them *****/
     readAllMessagesFromHost();
+    // Second call to publishAccelRawDataIfReady in case first request failed
+    publishAccelRawDataIfReady();
 }
