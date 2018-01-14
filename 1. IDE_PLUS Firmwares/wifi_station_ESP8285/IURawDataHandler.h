@@ -19,7 +19,10 @@ class IURawDataHandler
     public:
         /***** Public constants *****/
         static const uint16_t MAX_PAYLOAD_LENGTH = 10000;
-        static char BASE_URL[66];
+        static char ENDPOINT_HOST[45];
+        static char ENDPOINT_URL[19];
+        static const uint16_t ENDPOINT_PORT = 80;
+
         // Expected keys for the JSON creation of keys (at top level).
         static const uint8_t EXPECTED_KEY_COUNT = 3;
         static char EXPECTED_KEYS[EXPECTED_KEY_COUNT + 1];
@@ -33,9 +36,7 @@ class IURawDataHandler
                                      uint16_t valueLength);
         virtual bool areAllKeyPresent();
         /***** HTTP Post request *****/
-        virtual int httpPostPayload(const char *macAddress, char* responseBody,
-                                    uint16_t maxResponseLength,
-                                    const char *httpsFingerprint=NULL);
+        virtual int httpPostPayload(const char *macAddress);
 
     protected:
         char m_payload[MAX_PAYLOAD_LENGTH];

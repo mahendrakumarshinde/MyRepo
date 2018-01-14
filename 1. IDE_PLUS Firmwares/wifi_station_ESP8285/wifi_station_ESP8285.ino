@@ -157,21 +157,21 @@ bool publishFeature(const char *rawMsg, const uint16_t msgLength,
  */
 bool publishAccelRawDataIfReady()
 {
-    if (accelRawDataHandler.hasTimedOut() ||
-        !accelRawDataHandler.areAllKeyPresent())
+    if (accelRawDataHandler.hasTimedOut())
+    {
+        accelRawDataHandler.resetPayload();
+        return false;
+    }
+    if (!accelRawDataHandler.areAllKeyPresent())
     {
         // Raw Data payload is not ready
         return false;
     }
-    char responseBody[20] = "";
-    int httpCode = accelRawDataHandler.httpPostPayload(BLE_MAC_ADDRESS,
-                                                       responseBody, 20);
+    int httpCode = accelRawDataHandler.httpPostPayload(BLE_MAC_ADDRESS);
     if (debugMode)
     {
         debugPrint("Post raw data: ", false);
-        debugPrint(httpCode, false);
-        debugPrint(", ", false);
-        debugPrint(responseBody);
+        debugPrint(httpCode);
     }
     if (httpCode == 200)
     {
@@ -298,6 +298,12 @@ void processMessageFromHost(char *buff)
             debugPrint("Received BLE MAC from host: ", false);
             debugPrint(BLE_MAC_ADDRESS);
         }
+    }
+    //
+    else if (strcmp("WIFI-HARDRESET", buff) == 0)
+    {
+        ESP.reset();
+//        ESP.restart();
     }
     // Check if RAW DATA, eg: REC,X,<data>
     else if (strncmp("REC,", buff, 4) == 0 && buff[5] == ',')

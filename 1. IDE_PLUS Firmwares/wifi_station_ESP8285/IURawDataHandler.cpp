@@ -8,8 +8,10 @@
 char IURawDataHandler::EXPECTED_KEYS[
     IURawDataHandler::EXPECTED_KEY_COUNT + 1] = "XYZ";
 
-char IURawDataHandler::BASE_URL[66] =
-    "http://gateway-dot-infinite-uptime-1232.appspot.com/api/raw_data/";
+char IURawDataHandler::ENDPOINT_HOST[45] =
+    "gateway-dot-infinite-uptime-1232.appspot.com";
+
+char IURawDataHandler::ENDPOINT_URL[19] = "/api/raw_data?mac=";
 
 IURawDataHandler::IURawDataHandler(uint32_t timeout) :
     m_payloadCounter(0),
@@ -57,6 +59,10 @@ bool IURawDataHandler::hasTimedOut()
     if (m_payloadCounter > 0 && (millis() -
             m_payloadStartTime > m_timeout))
     {
+        if (debugMode)
+        {
+            debugPrint("Raw data payload has timed out.");
+        }
         return true;
     }
     return false;
@@ -85,13 +91,15 @@ bool IURawDataHandler::addKeyValuePair(char key, const char *value,
         }
         return false;
     }
-    uint8_t idx = (uint8_t) (EXPECTED_KEYS - foundKey);
+    uint8_t idx = (uint8_t) (foundKey - EXPECTED_KEYS);
     if (m_keyAdded[idx])
     {
         if (debugMode)
         {
             debugPrint("Raw data handler received twice the key: ", false);
-            debugPrint(key);
+            debugPrint(key, false);
+            debugPrint(" at idx: ", false);
+            debugPrint(idx);
         }
         return false;
     }
@@ -120,6 +128,12 @@ bool IURawDataHandler::addKeyValuePair(char key, const char *value,
     char quote = '\"';
     strncat(m_payload, &quote, 1);
     m_payloadCounter += valueLength + 7;
+    // Handle key duplication and timeout
+    if (m_payloadStartTime == 0)
+    {
+        m_payloadStartTime = millis();
+    }
+    m_keyAdded[idx] = true;
     return true;
 }
 
@@ -146,9 +160,7 @@ bool IURawDataHandler::areAllKeyPresent()
 /**
  * Post the payload - HTTPS is used if fingerprint is given.
  */
-int IURawDataHandler::httpPostPayload(const char *macAddress, char* responseBody,
-                                      uint16_t maxResponseLength,
-                                      const char *httpsFingerprint)
+int IURawDataHandler::httpPostPayload(const char *macAddress)
 {
     // Close JSON first (last curled brace) if not closed yet
     char closingBrace = '}';
@@ -157,11 +169,15 @@ int IURawDataHandler::httpPostPayload(const char *macAddress, char* responseBody
         strncat(m_payload, &closingBrace, 1);
         m_payloadCounter++;
     }
-    char fullUrl[strlen(BASE_URL) + 18];
-    strcpy(fullUrl, BASE_URL);
+    char fullUrl[strlen(ENDPOINT_URL) + 18];
+    strcpy(fullUrl, ENDPOINT_URL);
     strncat(fullUrl, macAddress, 18);
-    return httpPostRequest(fullUrl, m_payload, m_payloadCounter, responseBody,
-                           maxResponseLength, httpsFingerprint);
+    return httpPostBigJsonRequest(ENDPOINT_HOST, fullUrl, ENDPOINT_PORT,
+                                  (uint8_t*) m_payload, m_payloadCounter);
+
+//    const char *endpointHost, const char *endpointURL,
+//    uint16_t endpointPort, uint8_t *payload, uint16_t payloadLength,
+//    size_t chunkSize, uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT)
 }
 
 
@@ -170,5 +186,5 @@ int IURawDataHandler::httpPostPayload(const char *macAddress, char* responseBody
 ============================================================================= */
 
 
-extern IURawDataHandler accelRawDataHandler(10000);  // 10s timeout
+IURawDataHandler accelRawDataHandler(10000);  // 10s timeout
 

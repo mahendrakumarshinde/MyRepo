@@ -660,25 +660,19 @@ void Conductor::processWIFICommands(char *buff)
                 Feature *accelZ = Feature::getInstanceByName("A0Z");
                 if (accelX)
                 {
-                    iuWiFi.port->print("REC,");
-                    iuWiFi.port->print(m_macAddress);
-                    iuWiFi.port->print(",X");
+                    iuWiFi.port->print("REC,X");
                     accelX->stream(iuWiFi.port);
                     delay(10);
                 }
                 if (accelY)
                 {
-                    iuWiFi.port->print("REC,");
-                    iuWiFi.port->print(m_macAddress);
-                    iuWiFi.port->print(",Y");
+                    iuWiFi.port->print("REC,Y");
                     accelY->stream(iuWiFi.port);
                     delay(10);
                 }
                 if (accelZ)
                 {
-                    iuWiFi.port->print("REC,");
-                    iuWiFi.port->print(m_macAddress);
-                    iuWiFi.port->print(",Z");
+                    iuWiFi.port->print("REC,Z");
                     accelZ->stream(iuWiFi.port);
                     delay(10);
                 }
