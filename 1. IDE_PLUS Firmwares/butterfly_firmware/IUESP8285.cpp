@@ -36,7 +36,7 @@ void IUESP8285::setupHardware()
 //    }
     IUSerial::setupHardware();
     delay(10);
-    port.print("WIFI-HARDRESET");
+    port->print("WIFI-HARDRESET;");
 }
 
 /**

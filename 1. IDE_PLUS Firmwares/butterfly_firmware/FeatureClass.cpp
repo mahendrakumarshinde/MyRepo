@@ -327,12 +327,12 @@ void Feature::acknowledge(uint8_t receiverIdx, uint8_t sectionCount)
 /**
  * Send the data from latest recorded section to given Serial
  */
-void Feature::stream(HardwareSerial *port)
+void Feature::stream(HardwareSerial *port, uint8_t sectionCount)
 {
     // Lock and print the last recorded section (= recordIndex - 1)
-    uint8_t k = (m_sectionCount + m_recordIndex - 1) % m_sectionCount;
+    uint8_t k = (m_sectionCount + m_recordIndex - sectionCount) % m_sectionCount;
     m_locked[k] = true;
-    m_specializedStream(port, k);
+    m_specializedStream(port, k, sectionCount);
     m_locked[k] = false;
 }
 
@@ -454,13 +454,19 @@ float FloatFeature::getValueToCompareToThresholds()
 /**
  * Stream the content of the section at sectionIdx
  */
-void FloatFeature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx)
+void FloatFeature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx,
+                                       uint8_t sectionCount)
 {
-    for (uint16_t i = sectionIdx * m_sectionSize;
-         i < (sectionIdx + 1) * m_sectionSize; ++i)
+    uint8_t sIdx = 0;
+    for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++)
     {
-        port->print(",");
-        port->print(m_values[i] * m_resolution);
+        sIdx = k % sectionCount;
+        for (uint16_t i = sIdx * m_sectionSize;
+             i < (sIdx + 1) * m_sectionSize; ++i)
+        {
+            port->print(",");
+            port->print(m_values[i] * m_resolution);
+        }
     }
 }
 
@@ -501,28 +507,34 @@ void Q15Feature::addQ15Value(q15_t value)
 /**
  * Stream the content of the section at sectionIdx
  */
-void Q15Feature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx)
+void Q15Feature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx,
+                                     uint8_t sectionCount)
 {
-    if (m_isFFT)
+    uint8_t sIdx = 0;
+    for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++)
     {
-        for (uint16_t i = sectionIdx * m_sectionSize / 3;
-             i < (sectionIdx + 1) * m_sectionSize / 3; ++i)
+        sIdx = k % sectionCount;
+        if (m_isFFT)
         {
-            port->print(",");
-            port->print(m_values[3 * i]);
-            port->print(",");
-            port->print(((float) m_values[3 * i + 1]) * m_resolution);
-            port->print(",");
-            port->print(((float) m_values[3 * i + 2]) * m_resolution);
+            for (uint16_t i = sIdx * m_sectionSize / 3;
+                 i < (sIdx + 1) * m_sectionSize / 3; ++i)
+            {
+                port->print(",");
+                port->print(m_values[3 * i]);
+                port->print(",");
+                port->print(((float) m_values[3 * i + 1]) * m_resolution);
+                port->print(",");
+                port->print(((float) m_values[3 * i + 2]) * m_resolution);
+            }
         }
-    }
-    else
-    {
-        for (uint16_t i = sectionIdx * m_sectionSize;
-             i < (sectionIdx + 1) * m_sectionSize; ++i)
+        else
         {
-            port->print(",");
-            port->print(((float) m_values[i]) * m_resolution);
+            for (uint16_t i = sIdx * m_sectionSize;
+                 i < (sIdx + 1) * m_sectionSize; ++i)
+            {
+                port->print(",");
+                port->print(((float) m_values[i]) * m_resolution);
+            }
         }
     }
 }
@@ -564,28 +576,34 @@ void Q31Feature::addQ31Value(q31_t value)
 /**
  * Stream the content of the section at sectionIdx
  */
-void Q31Feature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx)
+void Q31Feature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx,
+                                     uint8_t sectionCount)
 {
-    if (m_isFFT)
+    uint8_t sIdx = 0;
+    for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++)
     {
-        for (uint16_t i = sectionIdx * m_sectionSize / 3;
-             i < (sectionIdx + 1) * m_sectionSize / 3; ++i)
+        sIdx = k % sectionCount;
+        if (m_isFFT)
         {
-            port->print(",");
-            port->print(m_values[3 * i]);
-            port->print(",");
-            port->print(((float) m_values[3 * i + 1]) * m_resolution);
-            port->print(",");
-            port->print(((float) m_values[3 * i + 2]) * m_resolution);
+            for (uint16_t i = sIdx * m_sectionSize / 3;
+                 i < (sIdx + 1) * m_sectionSize / 3; ++i)
+            {
+                port->print(",");
+                port->print(m_values[3 * i]);
+                port->print(",");
+                port->print(((float) m_values[3 * i + 1]) * m_resolution);
+                port->print(",");
+                port->print(((float) m_values[3 * i + 2]) * m_resolution);
+            }
         }
-    }
-    else
-    {
-        for (uint16_t i = sectionIdx * m_sectionSize;
-             i < (sectionIdx + 1) * m_sectionSize; ++i)
+        else
         {
-            port->print(",");
-            port->print(((float) m_values[i]) * m_resolution);
+            for (uint16_t i = sIdx * m_sectionSize;
+                 i < (sIdx + 1) * m_sectionSize; ++i)
+            {
+                port->print(",");
+                port->print(((float) m_values[i]) * m_resolution);
+            }
         }
     }
 }
