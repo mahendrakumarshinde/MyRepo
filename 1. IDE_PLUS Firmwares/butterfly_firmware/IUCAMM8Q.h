@@ -72,9 +72,9 @@ class IUCAMM8Q : public LowFreqSensor
 
 };
 
+
 /***** Instantiation *****/
 
-// GPS deactivated for now
-//extern IUCAMM8Q iuGNSS;
+extern IUCAMM8Q iuGNSS;
 
 #endif // IUCAMM8Q_H

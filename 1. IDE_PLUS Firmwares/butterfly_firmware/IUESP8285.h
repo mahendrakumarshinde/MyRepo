@@ -31,6 +31,8 @@ class IUESP8285 : public IUSerial
         virtual void suspend();
         /***** Communication with WiFi chip *****/
         void sendBleMacAddress(char *macAddress);
+        void preventFromSleeping() { port->print("WIFI-NOSLEEP;"); }
+        void authorizeSleeping() { port->print("WIFI-SLEEPOK;"); }
 
     protected:
         /***** Communication *****/

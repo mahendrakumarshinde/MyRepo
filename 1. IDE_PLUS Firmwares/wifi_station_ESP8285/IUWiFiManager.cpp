@@ -68,7 +68,6 @@ void IUWiFiManager::manageWifi(const char *apName, const char *apPassword,
             debugPrint("Failed to connect and hit timeout => resetting");
         }
         ESP.reset();
-        delay(1000);
     }
     onConnectionCallback();
     if (debugMode)

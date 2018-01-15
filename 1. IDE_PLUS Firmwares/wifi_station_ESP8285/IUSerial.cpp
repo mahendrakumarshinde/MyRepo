@@ -23,7 +23,7 @@ IUSerial::IUSerial(HardwareSerial *serialPort, uint32_t rate, uint16_t buffSize,
 void IUSerial::begin()
 {
     port->begin(baudRate);
-//    port->setRxBufferSize(bufferSize);
+    port->setRxBufferSize(bufferSize);
     delay(100);
 }
 
