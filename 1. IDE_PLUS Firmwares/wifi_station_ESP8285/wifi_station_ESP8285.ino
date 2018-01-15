@@ -318,7 +318,7 @@ void processMessageFromHost(char *buff)
         AUTHORIZED_TO_SLEEP = true;
     }
     //
-    else if (strncmp("WIFI-SLEEP-", buff, 11 && strlen(buff) == 18) == 0)
+    else if (strncmp("WIFI-SLEEP-", buff, 11) == 0 && strlen(buff) == 18)
     {
         uint16_t duration = (uint16_t) atoi(&buff[11]);
         delay(duration);
