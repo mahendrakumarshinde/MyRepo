@@ -139,7 +139,7 @@ void IUCAMM8Q::exitForcedMode()
  */
 void IUCAMM8Q::readData()
 {
-  m_location = GNSS.read();
+//  m_location = GNSS.read();
 }
 
 

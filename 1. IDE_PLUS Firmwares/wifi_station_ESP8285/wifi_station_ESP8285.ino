@@ -411,7 +411,8 @@ void loop()
     // update from NTP server)
     timeManager.updateTimeReferenceFromNTP();
     /***** MQTT Connection loop *****/
-    iuMQTTHelper.loop(DIAGNOSTIC_TOPIC, WILL_MESSAGE, onMQTTConnection);
+    iuMQTTHelper.loop(DIAGNOSTIC_TOPIC, WILL_MESSAGE, onMQTTConnection,
+                      15000);
     /***** Send wifi status *****/
     if (iuWifiManager.isTimeToSendWifiInfo())
     {

@@ -252,6 +252,11 @@ void loop()
         // Stream features
         conductor.streamFeatures();
         iuRGBLed.autoTurnOff();
+        uint32_t stopYield = millis() + 10;
+        while (millis() < stopYield)
+        {
+            yield();
+        }
     #endif
 }
 
