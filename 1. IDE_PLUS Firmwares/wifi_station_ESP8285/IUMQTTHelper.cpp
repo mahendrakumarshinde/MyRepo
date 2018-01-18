@@ -97,7 +97,7 @@ void IUMQTTHelper::loop(const char *willTopic, const char *willMsg,
                         void (*onConnectionCallback)(), uint32_t timeout)
 {
     if (!client.connected()) {
-        reconnect(willTopic, willMsg, onConnectionCallback);
+        reconnect(willTopic, willMsg, onConnectionCallback, timeout);
     }
     client.loop();
 }
