@@ -138,6 +138,80 @@ bool IUSerial::hasTimedOut()
 }
 
 
+/*==============================================================================
+    MSP (Multiwii Serial Protocol)
+============================================================================= */
+
+
+/**
+* @fn: serialCom()
+*
+* @brief: Main MultiWii Serial Protocol (MSP) function; manages port state and packet logistics
+* @params:
+* @returns:
+*/
+void IUSerial::readMspMessages()
+{
+    uint8_t c;
+    while (port->available())
+    {
+        // Ensure there is enough free TX buffer to go further (50 bytes margin)
+        if (m_bufferSize - m_bufferIndex  < 50 )
+        {
+            return;
+        }
+        c = port->read();
+        switch (m_state)
+        {
+            case WSP_IDLE:
+                m_state = (c == '$') ? WSP_HEADER_START : WSP_IDLE;
+                break;
+            case WSP_HEADER_START:
+                m_state = (c == 'M') ? WSP_HEADER_M : WSP_IDLE;
+                break;
+            case WSP_HEADER_M:
+                m_state = ( c=='<' ) ? WSP_HEADER_ARROW : WSP_IDLE;
+                break;
+            case WSP_HEADER_ARROW:
+                if (c > m_bufferSize)
+                {
+                    m_state = WSP_IDLE;
+                    continue;
+                }
+                m_wspDataSize = c;
+                m_bufferIndex = 0;
+                m_checksum = 0;
+                m_checksum ^= c;
+                m_state = WSP_HEADER_SIZE;  // The command is to follow
+                break;
+            case WSP_HEADER_SIZE:
+                m_command = c;
+                m_checksum ^= c;
+                m_state = WSP_HEADER_CMD;
+                break;
+            case WSP_HEADER_CMD:
+                if (m_bufferIndex < m_wspDataSize)
+                {
+                    m_checksum ^= c;
+                    m_buffer[m_bufferIndex++] = (char) c;
+                }
+                else
+                {
+                    // Compare calculated and transferred checksum
+                    if (m_checksum == c)
+                    {
+                        // We got a valid packet, evaluate it
+//                        WiFiSerial::evaluateCommand();
+                    }
+                    m_state = WSP_IDLE;
+                }
+                break;
+        }
+    }
+}
+
+
+
 /* =============================================================================
     Instanciation
 ============================================================================= */
@@ -148,6 +222,6 @@ IUSerial iuUSB(StreamingMode::WIRED, &Serial, iuUSBBuffer, 20, 115200, '\n',
 
 #ifdef EXTERNAL_WIFI
     char iuWiFiBuffer[500] = ""
-    IUSerial iuWiFi(StreamingMode::WIFI, &Serial3, iuWiFiBuffer, 500, 
+    IUSerial iuWiFi(StreamingMode::WIFI, &Serial3, iuWiFiBuffer, 500,
                     115200, ';', 500);
 #endif
