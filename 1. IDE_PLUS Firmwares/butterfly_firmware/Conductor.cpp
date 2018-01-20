@@ -156,8 +156,6 @@ void Conductor::readFromSerial(IUSerial *iuSerial)
                     processLegacyUSBCommands(buffer);
                     break;
                 case StreamingMode::BLE:
-                    Serial.print("BLE msg: "),
-                    Serial.println(buffer);
                     processLegacyBLECommands(buffer);
                     break;
                 case StreamingMode::WIFI:
@@ -450,6 +448,7 @@ void Conductor::processLegacyUSBCommands(char *buff)
  */
 void Conductor::processLegacyBLECommands(char *buff)
 {
+//    Serial.println(buff);
     if (m_streamingMode == StreamingMode::WIRED)
     {
         return;  // Do not listen to BLE when wired
@@ -621,7 +620,7 @@ void Conductor::processLegacyBLECommands(char *buff)
  */
 void Conductor::processWIFICommands(char *buff)
 {
-    Serial.println(buff);
+//    Serial.println(buff);
     switch(buff[0])
     {
         case '0': // DEPRECATED Set Thresholds
@@ -777,7 +776,7 @@ void Conductor::processWIFICommands(char *buff)
             if (strcmp(buff, "88-OK") == 0)
             {
                 m_wifiConnected = true;
-                changeStreamingMode(StreamingMode::WIFI);
+                changeStreamingMode(StreamingMode::WIFI_AND_BLE);
                 if (debugMode)
                 {
                     debugPrint(F("Wifi is connected"));
@@ -1298,10 +1297,8 @@ void Conductor::streamFeatures()
         return;
     }
     HardwareSerial *port1 = NULL;
-    bool sendMACAddress1 = false;
     bool sendFeatureGroupName1 = false;
     HardwareSerial *port2 = NULL;
-    bool sendMACAddress2 = false;
     bool sendFeatureGroupName2 = false;
     switch (m_streamingMode)
     {
@@ -1313,12 +1310,10 @@ void Conductor::streamFeatures()
             break;
         case StreamingMode::WIFI:
             port1 = iuWiFi.port;
-            sendMACAddress1 = true;
             sendFeatureGroupName1 = true;
             break;
         case StreamingMode::WIFI_AND_BLE:
             port1 = iuWiFi.port;
-            sendMACAddress1 = true;
             sendFeatureGroupName1 = true;
             port2 = iuBluetooth.port;
             break;
@@ -1334,21 +1329,10 @@ void Conductor::streamFeatures()
     for (uint8_t i = 0; i < FeatureGroup::instanceCount; ++i)
     {
         // TODO Switch to new streaming format once the backend is ready
-        /*
-        if (m_usageMode == UsageMode::CALIBRATION)
-        {
-            FeatureGroup::instances[i]->legacyStream(port1, m_macAddress,
-                m_operationState, batteryLoad, timestamp);
-        }
-        else
-        {
-            FeatureGroup::instances[i]->stream(port1, m_macAddress, timestamp,
-                                               sendMACAddress1);
-        }
-        */
         if (port1)
         {
-            if (m_streamingMode == StreamingMode::WIFI)
+            if (m_streamingMode == StreamingMode::WIFI ||
+                m_streamingMode == StreamingMode::WIFI_AND_BLE)
             {
                 FeatureGroup::instances[i]->legacyBufferStream(port1, m_macAddress,
                     m_operationState, batteryLoad, timestamp, sendFeatureGroupName1);
@@ -1362,7 +1346,8 @@ void Conductor::streamFeatures()
         if (port2)
         {
             FeatureGroup::instances[i]->legacyStream(port2, m_macAddress,
-                m_operationState, batteryLoad, timestamp, sendFeatureGroupName2);
+                m_operationState, batteryLoad, timestamp, sendFeatureGroupName2,
+                true);
         }
     }
 }

@@ -47,7 +47,8 @@ class FeatureGroup
                     double timestamp, bool sendMACAddress=false);
         void legacyStream(HardwareSerial *port, const char *macAddress,
                           OperationState::option opState, float batteryLoad,
-                          double timestamp, bool sendName=false);
+                          double timestamp, bool sendName=false,
+                          bool resendData=false);
         void legacyBufferStream(HardwareSerial *port, const char *macAddress,
                                 OperationState::option opState, float batteryLoad,
                                 double timestamp, bool sendName=false);

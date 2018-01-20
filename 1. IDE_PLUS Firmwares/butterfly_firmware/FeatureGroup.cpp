@@ -172,15 +172,18 @@ void FeatureGroup::stream(HardwareSerial *port, const char *macAddress,
 void FeatureGroup::legacyStream(HardwareSerial *port, const char *macAddress,
                                 OperationState::option opState,
                                 float batteryLoad, double timestamp,
-                                bool sendName)
+                                bool sendName, bool resendData)
 {
-    if (!m_active)
+    if (m_featureCount == 0 || !m_active)
     {
         return;  // Only stream if group is active
     }
-    if (m_featureCount == 0 || !isDataSendTime())
+    if (!resendData)
     {
-        return;
+         if (!isDataSendTime())
+        {
+            return;
+        }
     }
     if (sendName)
     {

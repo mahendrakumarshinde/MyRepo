@@ -175,6 +175,7 @@ void setup()
                 Sensor::instances[i]->setCallbackRate(callbackRate);
             }
         }
+        iuGyroscope.suspend();
         if (debugMode)
         {
           memoryLog(F("=> Successfully initialized sensors"));
