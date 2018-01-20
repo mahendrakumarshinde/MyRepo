@@ -230,8 +230,7 @@ void FeatureGroup::legacyBufferStream(HardwareSerial *port, const char *macAddre
         maxBufferSize - m_bufferIndex < maxBufferMargin)
     {
         m_featureBuffer[m_bufferIndex] = '\0';
-//        port->print(m_featureBuffer);
-        Serial.println(m_featureBuffer);
+        port->print(m_featureBuffer);
         if (loopDebugMode)
         {
             port->println("");
@@ -294,7 +293,7 @@ FeatureGroup rawAccelGroup("RAWACC", 512);
 // Standard Press Monitoring
 FeatureGroup pressStandardGroup("PRSSTD", 512);
 // Standard Motor Monitoring
-FeatureGroup motorStandardGroup("MOTSTD", 512);
+FeatureGroup motorStandardGroup("MOTSTD", 1500);
 
 
 /***** Populate groups *****/

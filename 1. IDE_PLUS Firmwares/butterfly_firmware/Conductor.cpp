@@ -465,8 +465,8 @@ void Conductor::processLegacyBLECommands(char *buff)
             debugPrint("Forwarding message to WiFi chip: ", false);
             debugPrint(buff);
         }
-//        iuWiFi.port->print(buff);
-//        iuWiFi.port->print(';');
+        iuWiFi.port->print(buff);
+        iuWiFi.port->print(';');
     }
     else
     {
