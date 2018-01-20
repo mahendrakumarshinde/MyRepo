@@ -1346,8 +1346,7 @@ void Conductor::streamFeatures()
         if (port2)
         {
             FeatureGroup::instances[i]->legacyStream(port2, m_macAddress,
-                m_operationState, batteryLoad, timestamp, sendFeatureGroupName2,
-                true);
+                m_operationState, batteryLoad, timestamp, sendFeatureGroupName2, 1);
         }
     }
 }

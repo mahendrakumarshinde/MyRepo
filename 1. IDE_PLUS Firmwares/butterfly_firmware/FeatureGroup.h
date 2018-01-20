@@ -41,14 +41,14 @@ class FeatureGroup
         bool isActive() { return m_active; }
         /***** Time management *****/
         void setDataSendPeriod(uint16_t dataSendPeriod);
-        bool isDataSendTime();
+        bool isDataSendTime(uint8_t idx=0);
         /***** Communication *****/
         void stream(HardwareSerial *port, const char *macAddress,
                     double timestamp, bool sendMACAddress=false);
         void legacyStream(HardwareSerial *port, const char *macAddress,
                           OperationState::option opState, float batteryLoad,
                           double timestamp, bool sendName=false,
-                          bool resendData=false);
+                          uint8_t portIdx=0);
         void legacyBufferStream(HardwareSerial *port, const char *macAddress,
                                 OperationState::option opState, float batteryLoad,
                                 double timestamp, bool sendName=false);
@@ -65,7 +65,7 @@ class FeatureGroup
         bool m_active;
         /***** Time management *****/
         uint16_t m_dataSendPeriod;  // ms
-        uint32_t m_lastSentTime;
+        uint32_t m_lastSentTime[2];
         /***** Feature Buffering *****/
         char m_featureBuffer[maxBufferSize];
         uint16_t m_bufferIndex;
