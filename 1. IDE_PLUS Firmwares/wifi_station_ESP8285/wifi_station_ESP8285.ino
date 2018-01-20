@@ -11,7 +11,7 @@
 #include "IURawDataHandler.h"
 
 /* =============================================================================
-    Global Variables
+    Global Configuration Variables
 ============================================================================= */
 
 // Device Type for command subscription
@@ -30,7 +30,17 @@ const char AP_NAME_PREFIX[9] = "IUsetup-";
 
 char WILL_MESSAGE[44] = "XXXAdmin;;;00:00:00:00:00:00;;;disconnected";
 
+
+/* =============================================================================
+    Global Operation Variables
+============================================================================= */
+
 bool AUTHORIZED_TO_SLEEP = true;
+bool WIFI_ENABLED = true;
+
+uint32_t WIFI_STATUS_REFRESH_INTERVAL = 30000; // 30s
+uint32_t lastWifiStatusRefresh = 0;
+
 
 /* =============================================================================
     MQTT message reception callback
@@ -195,12 +205,9 @@ bool publishAccelRawDataIfReady()
  */
 void onMQTTConnection()
 {
-    // Config subscription
-    iuMQTTHelper.subscribe("config");
-    // Time synchornisation subscription
-    iuMQTTHelper.subscribe("time_sync");
-    // Legacy command format subscription
-    iuMQTTHelper.subscribe("legacy");
+    iuMQTTHelper.subscribe("config");  // Config subscription
+    iuMQTTHelper.subscribe("time_sync");  // Time synchornisation subscription
+    iuMQTTHelper.subscribe("legacy");  // Legacy command format subscription
     publishDiagnostic("connected", 9);
 }
 
@@ -237,6 +244,21 @@ void sendWifiStatus(bool isConnected)
 void onWifiConnection()
 {
     sendWifiStatus(true);
+}
+
+/**
+ * 
+ */
+void refreshWifiStatus()
+{
+    uint32_t now = millis();
+    if (lastWifiStatusRefresh == 0 ||
+        now > lastWifiStatusRefresh + WIFI_STATUS_REFRESH_INTERVAL ||
+        now < lastWifiStatusRefresh)
+    {
+        sendWifiStatus(WiFi.isConnected());
+        lastWifiStatusRefresh = now;
+    }
 }
 
 /**
@@ -305,23 +327,77 @@ void processMessageFromHost(char *buff)
     else if (strcmp("WIFI-HARDRESET", buff) == 0)
     {
         ESP.reset();
-//        ESP.restart();
     }
-    //
+    else if (strcmp(buff, "WIFI-USE-SAVED") == 0)
+    {
+        if (debugMode)
+        {
+            debugPrint("Activating Wifi & using saved credentials...");
+        }
+        enableWifi();
+    }
+    else if (strncmp(buff, "WIFI-SSID-", 10) == 0)
+    {
+        uint16_t len = strlen(buff);
+        if (strcmp(&buff[len - 10], "-DISS-IFIW") != 0)
+        {
+            if (debugMode)
+            {
+                debugPrint("Unparsable SSID");
+            }
+            return;
+        }
+        char *wifiSSID = &buff[10];
+        if (debugMode)
+        {
+            debugPrint("Activating Wifi with SSID: ", false);
+            debugPrint(wifiSSID);
+        }
+        enableWifi();
+    }
+    else if (strncmp(buff, "WIFI-PW-", 8) == 0)
+    {
+        uint16_t len = strlen(buff);
+        if (strcmp(&buff[len - 8], "-WP-IFIW") != 0)
+        {
+            if (debugMode)
+            {
+                debugPrint("Unparsable password");
+            }
+            return;
+        }
+        char *wifiPW = &buff[10];
+        if (debugMode)
+        {
+            debugPrint("Wifi PW: ", false);
+            debugPrint(wifiPW);
+        }
+        // TODO
+    }
+    else if (strcmp(buff, "WIFI-DISABLE") == 0)
+    {
+        disableWifi();
+    }
     else if (strcmp("WIFI-NOSLEEP", buff) == 0)
     {
         AUTHORIZED_TO_SLEEP = false;
+        if (debugMode)
+        {
+            debugPrint("Not authorized to sleep");
+        }
     }
-    //
     else if (strcmp("WIFI-SLEEPOK", buff) == 0)
     {
         AUTHORIZED_TO_SLEEP = true;
+        if (debugMode)
+        {
+            debugPrint("Authorized to sleep");
+        }
     }
-    //
-    else if (strncmp("WIFI-SLEEP-", buff, 11) == 0 && strlen(buff) == 18)
+    else if (strncmp("WIFI-DEEPSLEEP-", buff, 15) == 0 && strlen(buff) == 20)
     {
-        uint16_t duration = (uint16_t) atoi(&buff[11]);
-        delay(duration);
+        uint64_t durationSec = (uint64_t) atoi(&buff[11]);
+        ESP.deepSleep(durationSec * 1000000, RF_DEFAULT);
     }
     // Check if RAW DATA, eg: REC,X,<data>
     else if (strncmp("REC,", buff, 4) == 0 && buff[5] == ',')
@@ -350,8 +426,127 @@ void processMessageFromHost(char *buff)
 
 
 /* =============================================================================
+    Connection management function
+============================================================================= */
+
+void enableWifi()
+{
+    /***** Wifi Connection loop *****/
+    if(!iuWifiManager.reconnect(AP_NAME, NULL))
+    {
+        sendWifiStatus(false);
+        return;
+    }
+    else if (WiFi.getSleepMode() != WIFI_LIGHT_SLEEP)
+    {
+        if (!WiFi.setSleepMode(WIFI_LIGHT_SLEEP))
+        {
+            if (debugMode)
+            {
+                debugPrint("Failed to set light sleep mode");
+            }
+        }
+    }
+    refreshWifiStatus();
+    /***** Prepare to query time from NTP server *****/
+    timeManager.begin();
+    /***** Status update *****/
+    if (!WIFI_ENABLED && debugMode)
+    {
+        debugPrint("Wifi is enabled.");
+    }
+    WIFI_ENABLED = true;
+}
+
+void disableWifi()
+{
+    /***** End NTP server connection *****/
+    timeManager.end();
+    /***** Disconnect MQTT client *****/
+    if (iuMQTTHelper.client.connected())
+    {
+        iuMQTTHelper.client.disconnect();
+    }
+    /***** Turn off Wifi *****/
+    if (WiFi.isConnected())
+    {
+        WiFi.disconnect(true);
+        if (debugMode)
+        {
+            debugPrint("WiFi is off");
+        }
+    }
+    /***** Status update *****/
+    if (WIFI_ENABLED && debugMode)
+    {
+        debugPrint("Wifi is disabled.");
+    }
+    WIFI_ENABLED = false;
+}
+
+
+/* =============================================================================
     Main setup and loop
 ============================================================================= */
+
+//void setup()
+//{
+//    hostSerial.begin();
+//    /***** Get device (=BLE) MAC address*****/
+//    while (unknownBleMacAddress)
+//    {
+//        // Do not start normal operation until BLE MAC Address is known.
+//        askBleMacAddress();
+//        readAllMessagesFromHost();
+//        delay(100);
+//    }
+//    /***** Turn on WiFi *****/
+//    enableWifi();
+//    /***** Prepare to receive MQTT messages *****/
+//    iuMQTTHelper.client.setCallback(mqttNewMessageCallback);
+//    /***** Try to get the time from NTP server at least once *****/
+//    delay(1000);
+//}
+//
+//void loop()
+//{
+//    if (WIFI_ENABLED)
+//    {
+//        /***** WiFi maintenance loop *****/
+//        enableWifi();
+//        /***** Time update loop *****/
+//        timeManager.updateTimeReferenceFromNTP();
+//        /***** MQTT Connection loop *****/
+//        iuMQTTHelper.loop(DIAGNOSTIC_TOPIC, WILL_MESSAGE, onMQTTConnection,
+//                          15000);
+//        /***** Send wifi status *****/
+//        if (iuWifiManager.isTimeToSendWifiInfo())
+//        {
+//            char message[256];
+//            iuWifiManager.getWifiInfo(message);
+//            publishDiagnostic(message, strlen(message));
+//        }
+//        // Second call to publishAccelRawDataIfReady in case first request failed
+//        publishAccelRawDataIfReady();
+//    }
+//    else
+//    {
+//        /***** WiFi maintenance loop *****/
+//        disableWifi();
+//    }
+//    /***** Read message from main board and process them *****/
+//    readAllMessagesFromHost();
+////    if (AUTHORIZED_TO_SLEEP)
+////    {
+////        uint32_t sleepEnd = millis() + 1000;
+////        while (millis() < sleepEnd && Serial.available() == 0)
+////        {
+////            delay(10);
+////        }
+////    }
+//}
+
+
 
 void setup()
 {
@@ -424,9 +619,13 @@ void loop()
     readAllMessagesFromHost();
     // Second call to publishAccelRawDataIfReady in case first request failed
     publishAccelRawDataIfReady();
-//    if (AUTHORIZED_TO_SLEEP)
-//    {
-//        Serial.println("Sleep...");
-//        delay(1000);
-//    }
+    if (AUTHORIZED_TO_SLEEP)
+    {
+        uint32_t sleepEnd = millis() + 1000;
+        while (millis() < sleepEnd && Serial.available() == 0)
+        {
+            delay(10);
+        }
+    }
 }
+

@@ -137,7 +137,6 @@ void setup()
             iuI2C.scanDevices();
             debugPrint("");
         }
-        iuBluetooth.setForceMessageSize(19);
         iuBluetooth.setupHardware();
         iuWiFi.setupHardware();
         iuSPIFlash.setupHardware();
@@ -251,6 +250,7 @@ void loop()
         iuRGBLed.autoTurnOff();
         // Stream features
         conductor.streamFeatures();
+        conductor.sendHeartbeat();
         iuRGBLed.autoTurnOff();
         uint32_t stopYield = millis() + 10;
         while (millis() < stopYield)

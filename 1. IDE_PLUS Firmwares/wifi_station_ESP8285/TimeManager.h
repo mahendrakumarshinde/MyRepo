@@ -18,6 +18,8 @@ class TimeManager
         TimeManager(uint16_t udpPort, const char* serverName);
         virtual ~TimeManager() { }
         void begin();
+        void end();
+        bool active() { return m_active; }
         void updateTimeReferenceFromNTP();
         void updateTimeReferenceFromIU(byte *payload,
                                        uint16_t payloadLength);
@@ -25,6 +27,7 @@ class TimeManager
 
     protected:
         /***** NTP request *****/
+        bool m_active;
         uint16_t m_port;
         char  m_serverName[50];
         IPAddress m_serverIP;

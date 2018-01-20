@@ -13,7 +13,9 @@ FeatureGroup *FeatureGroup::instances[FeatureGroup::MAX_INSTANCE_COUNT] = {
 FeatureGroup::FeatureGroup(const char *name, uint16_t dataSendPeriod) :
     m_active(false),
     m_dataSendPeriod(dataSendPeriod),
-    m_lastSentTime(0)
+    m_lastSentTime(0),
+    m_bufferIndex(0),
+    m_bufferStartTime(0)
 {
     strcpy(m_name, name);
     reset();
@@ -206,6 +208,76 @@ void FeatureGroup::legacyStream(HardwareSerial *port, const char *macAddress,
     {
         port->println("");
     }
+}
+
+
+void FeatureGroup::legacyBufferStream(HardwareSerial *port, const char *macAddress,
+                                      OperationState::option opState,
+                                      float batteryLoad, double timestamp,
+                                      bool sendName)
+{
+    if (!m_active)
+    {
+        return;  // Only stream if group is active
+    }
+    if (m_featureCount == 0 || !isDataSendTime())
+    {
+        return;
+    }
+    uint32_t now = millis();
+    if (m_bufferStartTime == 0 || m_bufferStartTime > now ||
+        m_bufferStartTime + maxBufferDelay < now ||
+        maxBufferSize - m_bufferIndex < maxBufferMargin)
+    {
+        m_featureBuffer[m_bufferIndex] = '\0';
+//        port->print(m_featureBuffer);
+        Serial.println(m_featureBuffer);
+        if (loopDebugMode)
+        {
+            port->println("");
+        }
+        m_bufferIndex = 0;
+        for (uint16_t i = 0; i < maxBufferSize; ++i)
+        {
+            m_featureBuffer[i] = '\0';
+        }
+    }
+    if (m_bufferIndex == 0)
+    {
+        m_bufferStartTime = millis();
+    }
+    if (sendName)
+    {
+        strcat(m_featureBuffer, m_name);
+        m_bufferIndex += strlen(m_name);
+        m_featureBuffer[m_bufferIndex++] = ',';
+    }
+    strcat(m_featureBuffer, macAddress);
+    m_bufferIndex += strlen(macAddress);
+    m_featureBuffer[m_bufferIndex++] = ',';
+    m_featureBuffer[m_bufferIndex++] = '0';
+    m_featureBuffer[m_bufferIndex++] = (uint8_t) opState + 48;
+    m_featureBuffer[m_bufferIndex++] = ',';
+    strcat(m_featureBuffer, String((int) round(batteryLoad)).c_str());
+    m_bufferIndex += 2;
+    for (uint8_t i = 0; i < m_featureCount; ++i)
+    {
+        m_featureBuffer[m_bufferIndex++] = ',';
+        m_featureBuffer[m_bufferIndex++] = '0';
+        m_featureBuffer[m_bufferIndex++] = '0';
+        m_featureBuffer[m_bufferIndex++] = '0';
+        m_featureBuffer[m_bufferIndex++] = i + 49;
+        if (m_features[i] != NULL)
+        {
+            m_features[i]->bufferStream(m_featureBuffer,
+                                        m_bufferIndex);
+        }
+    }
+    m_featureBuffer[m_bufferIndex++] = ',';
+    String stringTS = String(timestamp, 2);
+    strcat(m_featureBuffer, stringTS.c_str());
+    m_bufferIndex += stringTS.length();
+    m_featureBuffer[m_bufferIndex++] = ';';
 }
 
 

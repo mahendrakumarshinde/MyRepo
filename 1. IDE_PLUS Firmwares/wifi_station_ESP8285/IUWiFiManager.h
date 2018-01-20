@@ -17,14 +17,14 @@ class IUWiFiManager
 {
     public:
         static const uint32_t reconnectionInterval = 30000;  // ms
-        static const uint32_t heartbeatInterval = 900000;  // ms
+        static const uint32_t heartbeatInterval = 300000;  // ms
         /***** Core *****/
         IUWiFiManager(uint32_t timeout, int minSignalQuality);
         virtual ~IUWiFiManager() {}
         void manageWifi(const char *apName, const char *apPassword,
-                        void (*onConnectionCallback)());
+                        void (*onConnectionCallback)()=NULL);
         bool reconnect(const char *apName, const char *apPassword,
-                       void (*onConnectionCallback)());
+                       void (*onConnectionCallback)()=NULL);
         bool isTimeToSendWifiInfo();
         /***** Static IP settings *****/
         void setStaticIpConfig(char *staticIp, char *staticGateway,

@@ -60,6 +60,7 @@ class Conductor
                                   COUNT    = 3};
         static char START_CONFIRM[11];
         static char END_CONFIRM[9];
+        static const uint32_t HEARTBEAT_PERIOD = 30000; // Every 30s
         // Default start datetime
         static constexpr double defaultTimestamp = 1492144654.00;
         // Operation state shown on LED every X ms
@@ -110,6 +111,7 @@ class Conductor
         void computeFeatures();
         void updateOperationState();
         void streamFeatures();
+        void sendHeartbeat();
         void storeData() {}  // TODO => implement
         /***** Debugging *****/
         void exposeAllConfigurations();
@@ -139,6 +141,7 @@ class Conductor
         bool m_inDataAcquistion;
         // The last time the LED was lit to reflect the OP state.
         uint32_t m_lastLitLedTime;
+        uint32_t m_lastSentHeartBeat;
         /***** WiFi *****/
         bool m_wifiConnected;
         /***** Configuration and Mode management *****/

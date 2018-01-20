@@ -89,6 +89,10 @@ bool IUSerial::readToBuffer()
             }
         }
         newChar = port->read();
+        if (interfaceType == StreamingMode::BLE)
+        {
+            Serial.print(newChar);
+        }
         m_buffer[m_bufferIndex] = newChar;
         m_bufferIndex++;
         if (newChar == stopChar)
@@ -103,6 +107,17 @@ bool IUSerial::readToBuffer()
             m_buffer[m_bufferIndex] = '\0';
             m_newMessage = true;
             return true;
+        }
+        if (interfaceType == StreamingMode::BLE && m_bufferIndex == 19)
+        {
+            if (m_buffer[0] == '0' || m_buffer[0] == '1' || m_buffer[0] == '2' ||
+                m_buffer[0] == '3' || m_buffer[0] == '4' || m_buffer[0] == '5' ||
+                m_buffer[0] == '6')
+            {
+                m_buffer[m_bufferIndex] = '\0';
+                m_newMessage = true;
+                return true;
+            }
         }
         if (interfaceType == StreamingMode::WIRED)
         {

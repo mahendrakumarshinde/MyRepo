@@ -17,6 +17,9 @@ class FeatureGroup
     public:
         /***** Preset values and default settings *****/
         static const uint8_t maxFeatureCount = 10;
+        static const uint16_t maxBufferSize = 700;
+        static const uint16_t maxBufferMargin = 200;
+        static const uint32_t maxBufferDelay = 3000;
         /***** Instance registry *****/
         static const uint8_t MAX_INSTANCE_COUNT = 10;
         static uint8_t instanceCount;
@@ -45,6 +48,9 @@ class FeatureGroup
         void legacyStream(HardwareSerial *port, const char *macAddress,
                           OperationState::option opState, float batteryLoad,
                           double timestamp, bool sendName=false);
+        void legacyBufferStream(HardwareSerial *port, const char *macAddress,
+                                OperationState::option opState, float batteryLoad,
+                                double timestamp, bool sendName=false);
 
     protected:
         /***** Instance registry *****/
@@ -59,7 +65,10 @@ class FeatureGroup
         /***** Time management *****/
         uint16_t m_dataSendPeriod;  // ms
         uint32_t m_lastSentTime;
-
+        /***** Feature Buffering *****/
+        char m_featureBuffer[maxBufferSize];
+        uint16_t m_bufferIndex;
+        uint32_t m_bufferStartTime;
 };
 
 
