@@ -741,6 +741,7 @@ void Conductor::processWIFICommands(char *buff)
             if (strcmp(buff, "88-OK") == 0)
             {
                 m_wifiConnected = true;
+//                iuBMD350.suspend();
                 changeStreamingMode(StreamingMode::WIFI);
                 if (debugMode)
                 {
@@ -750,6 +751,7 @@ void Conductor::processWIFICommands(char *buff)
             else if (strcmp(buff, "88-NOK") == 0)
             {
                 m_wifiConnected = false;
+//                iuBMD350.wakeUp();
                 changeStreamingMode(StreamingMode::BLE);
                 if (debugMode)
                 {

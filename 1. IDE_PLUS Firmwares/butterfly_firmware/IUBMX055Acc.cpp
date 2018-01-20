@@ -19,20 +19,6 @@ void accelReadCallback(uint8_t wireStatus)
         debugPrint(micros(), false);
         debugPrint(F(" Acceleration read error "), false);
         debugPrint(wireStatus);
-//        while (true)
-//        {
-//            if (iuI2C.checkComponentWhoAmI("BMX055 ACC", IUBMX055Acc::ADDRESS,
-//                                           IUBMX055Acc::WHO_AM_I,
-//                                           IUBMX055Acc::I_AM))
-//            {
-//                Serial.println("I'm here");
-//            }
-//            else
-//            {
-//                Serial.println("no response");
-//            }
-//            delay(1000);
-//        }
     }
 }
 

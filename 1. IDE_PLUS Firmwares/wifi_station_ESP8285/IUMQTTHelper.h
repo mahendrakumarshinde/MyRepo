@@ -46,9 +46,9 @@ class IUMQTTHelper
         void setDeviceInfo(const char *deviceType,
                            const char *deviceMacAddress);
         void reconnect(const char *statusTopic, const char *willMsg,
-                       void (*onConnectionCallback)());
+                       void (*onConnectionCallback)(), uint32_t timeout);
         void loop(const char *statusTopic, const char *willMsg,
-                  void (*onConnectionCallback)());
+                  void (*onConnectionCallback)(), uint32_t timeout);
         bool publish(const char* topic, const char* payload);
         bool subscribe(const char* topic);
         /***** Public Client for convenience *****/

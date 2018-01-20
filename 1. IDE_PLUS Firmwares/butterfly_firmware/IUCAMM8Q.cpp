@@ -25,14 +25,16 @@ IUCAMM8Q::IUCAMM8Q(IUI2C *iuI2C, const char* name) :
 void IUCAMM8Q::setupHardware()
 {
     // Start GNSS
-    GNSS.begin(Serial2, GNSS.MODE_UBLOX, GNSS.RATE_5HZ);
+    GNSS.begin(Serial2, GNSS.MODE_UBLOX, GNSS.RATE_1HZ);
     while (!GNSS.done()) { }
+    /*
     // Choose satellites
     GNSS.setConstellation(GNSS.CONSTELLATION_GPS);
     while (!GNSS.done()) { }
     GNSS.setSBAS(true);
     while (!GNSS.done()) { }
     wakeUp();
+    */
     // GNSS deactivated for now, irregardless of the power mode
     GNSS.sleep();
 }
@@ -137,7 +139,7 @@ void IUCAMM8Q::exitForcedMode()
  */
 void IUCAMM8Q::readData()
 {
-  m_location = GNSS.read();
+//  m_location = GNSS.read();
 }
 
 
@@ -173,4 +175,4 @@ void IUCAMM8Q::exposeCalibration()
     Instantiation
 ============================================================================= */
 
-//IUCAMM8Q iuGNSS(&iuI2C, "GPS");
+IUCAMM8Q iuGNSS(&iuI2C, "GPS");

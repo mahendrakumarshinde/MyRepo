@@ -30,6 +30,8 @@ const char AP_NAME_PREFIX[9] = "IUsetup-";
 
 char WILL_MESSAGE[44] = "XXXAdmin;;;00:00:00:00:00:00;;;disconnected";
 
+bool AUTHORIZED_TO_SLEEP = true;
+
 /* =============================================================================
     MQTT message reception callback
 ============================================================================= */
@@ -299,11 +301,27 @@ void processMessageFromHost(char *buff)
             debugPrint(BLE_MAC_ADDRESS);
         }
     }
-    //
+    // Reset the ESP - Typically sent by the STM32 when it restarts
     else if (strcmp("WIFI-HARDRESET", buff) == 0)
     {
         ESP.reset();
 //        ESP.restart();
+    }
+    //
+    else if (strcmp("WIFI-NOSLEEP", buff) == 0)
+    {
+        AUTHORIZED_TO_SLEEP = false;
+    }
+    //
+    else if (strcmp("WIFI-SLEEPOK", buff) == 0)
+    {
+        AUTHORIZED_TO_SLEEP = true;
+    }
+    //
+    else if (strncmp("WIFI-SLEEP-", buff, 11) == 0 && strlen(buff) == 18)
+    {
+        uint16_t duration = (uint16_t) atoi(&buff[11]);
+        delay(duration);
     }
     // Check if RAW DATA, eg: REC,X,<data>
     else if (strncmp("REC,", buff, 4) == 0 && buff[5] == ',')
@@ -348,6 +366,13 @@ void setup()
     }
     /***** Connect to WiFi for the first time *****/
     iuWifiManager.manageWifi(AP_NAME, NULL, onWifiConnection);
+    if (!WiFi.setSleepMode(WIFI_LIGHT_SLEEP))
+    {
+        if (debugMode)
+        {
+            debugPrint("Setup - Failed to set light sleep mode");
+        }
+    }
     /***** Prepare to receive MQTT messages *****/
     iuMQTTHelper.client.setCallback(mqttNewMessageCallback);
     /***** Prepare to query time from NTP server *****/
@@ -366,13 +391,28 @@ void loop()
         sendWifiStatus(false);
         return;
     }
+    else if (WiFi.getSleepMode() != WIFI_LIGHT_SLEEP)
+    {
+        if (debugMode)
+        {
+            debugPrint("Back to light sleep mode");
+        }
+        if (!WiFi.setSleepMode(WIFI_LIGHT_SLEEP))
+        {
+            if (debugMode)
+            {
+                debugPrint("Failed to set light sleep mode");
+            }
+        }
+    }
     /***** Time update loop *****/
     // As long as we keep receiving time from IU server, this function will do
     // nothing (see timeManager.TIME_UPDATE_INTERVAL for max delay before time 
     // update from NTP server)
     timeManager.updateTimeReferenceFromNTP();
     /***** MQTT Connection loop *****/
-    iuMQTTHelper.loop(DIAGNOSTIC_TOPIC, WILL_MESSAGE, onMQTTConnection);
+    iuMQTTHelper.loop(DIAGNOSTIC_TOPIC, WILL_MESSAGE, onMQTTConnection,
+                      15000);
     /***** Send wifi status *****/
     if (iuWifiManager.isTimeToSendWifiInfo())
     {
@@ -384,4 +424,9 @@ void loop()
     readAllMessagesFromHost();
     // Second call to publishAccelRawDataIfReady in case first request failed
     publishAccelRawDataIfReady();
+//    if (AUTHORIZED_TO_SLEEP)
+//    {
+//        Serial.println("Sleep...");
+//        delay(1000);
+//    }
 }

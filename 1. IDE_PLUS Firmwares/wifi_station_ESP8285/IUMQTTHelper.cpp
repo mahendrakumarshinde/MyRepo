@@ -38,13 +38,18 @@ void IUMQTTHelper::setDeviceInfo(const char *deviceType,
  * Note that this function is blocking, but if needed the library doc mentions
  * non-blocking ways to do the same.
  * 
- * @param willTopic MQTT topic name to be used as will topic.
- * @param onConnectionCallback
+ * @param willTopic MQTT topic name to publish message upon succesful connection,
+ *  and to be used as will topic.
+ * @param willMsg  MQTT message to publish upon disconnection from server.
+ * @param onConnectionCallback  callback to be run upon connecting to MQTT server.
+ * @param timeout  The duration after which the MQTT reconnection attempt is
+ *  abandonned if not successful.
  */
 void IUMQTTHelper::reconnect(const char *willTopic, const char *willMsg,
-                             void (*onConnectionCallback)())
+                             void (*onConnectionCallback)(), uint32_t timeout)
 {
-    while (!client.connected())
+    uint32_t maxTime = millis() + timeout;
+    while (!client.connected() && millis() < maxTime)
     {
         if (debugMode)
         {
@@ -83,13 +88,16 @@ void IUMQTTHelper::reconnect(const char *willTopic, const char *willMsg,
  * 
  * @param willTopic MQTT topic name to publish message upon succesful connection,
  *  and to be used as will topic.
- *  @param onConnectionCallback
+ * @param willMsg  MQTT message to publish upon disconnection from server.
+ * @param onConnectionCallback  callback to be run upon connecting to MQTT server.
+ * @param timeout  The duration after which the MQTT reconnection attempt is
+ *  abandonned if not successful.
  */
 void IUMQTTHelper::loop(const char *willTopic, const char *willMsg,
-                        void (*onConnectionCallback)())
+                        void (*onConnectionCallback)(), uint32_t timeout)
 {
     if (!client.connected()) {
-        reconnect(willTopic, willMsg, onConnectionCallback);
+        reconnect(willTopic, willMsg, onConnectionCallback, timeout);
     }
     client.loop();
 }
