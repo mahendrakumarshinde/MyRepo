@@ -49,7 +49,7 @@ void IUMQTTHelper::reconnect(const char *willTopic, const char *willMsg,
                              void (*onConnectionCallback)(), uint32_t timeout)
 {
     uint32_t maxTime = millis() + timeout;
-    while (!client.connected() && millis() < timeout)
+    while (!client.connected() && millis() < maxTime)
     {
         if (debugMode)
         {
