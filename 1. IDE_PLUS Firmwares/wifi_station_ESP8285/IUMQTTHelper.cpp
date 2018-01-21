@@ -5,7 +5,11 @@
     Preset values and default settings
 ====================================c========================================= */
 
-IPAddress IUMQTTHelper::SERVER_HOST(35, 197, 32, 136);
+/** US-WEST1-A server **/
+//IPAddress IUMQTTHelper::SERVER_HOST(35, 197, 32, 136);
+
+/** ASIA-SOUTH1-A (Mumbai) server **/
+IPAddress IUMQTTHelper::SERVER_HOST(35, 200, 183, 103);
 
 char IUMQTTHelper::USER_NAME[9] = "ide_plus";
 char IUMQTTHelper::PASSWORD[13] = "nW$Pg81o@EJD";
@@ -16,7 +20,8 @@ char IUMQTTHelper::PASSWORD[13] = "nW$Pg81o@EJD";
 
 IUMQTTHelper::IUMQTTHelper(uint8_t placeholder) :
     m_wifiClient(),
-    client(SERVER_HOST, SERVER_PORT, m_wifiClient)
+    client(SERVER_HOST, SERVER_PORT, m_wifiClient),
+    m_enfOfLife(0)
 {
     strcpy(m_deviceMacAddress, "00:00:00:00:00:00");
 }
@@ -72,9 +77,9 @@ void IUMQTTHelper::reconnect(const char *willTopic, const char *willMsg,
             {
                 debugPrint("failed, rc=", false);
                 debugPrint(client.state(), false);
-                debugPrint(", try again in 5 seconds");
+                debugPrint(", try again in 3 seconds");
             }
-            delay(5000);
+            delay(3000);
         }
     }
 }
@@ -135,6 +140,29 @@ bool IUMQTTHelper::subscribe(const char* topic)
         debugPrint(subscription);
     }
     return result;
+}
+
+
+/* =============================================================================
+    Faster disconnection detection
+============================================================================= */
+
+/**
+ * 
+ */
+void IUMQTTHelper::extendLifetime(uint16_t durationSec)
+{
+    m_enfOfLife = millis() + (durationSec * 1000);
+}
+
+/**
+ * 
+ */
+bool IUMQTTHelper::keepAlive()
+{
+    uint32_t now = millis();
+    return (m_enfOfLife == 0 || now < m_enfOfLife);
+    
 }
 
 
