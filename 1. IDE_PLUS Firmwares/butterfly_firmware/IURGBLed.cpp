@@ -10,8 +10,12 @@
 */
 IURGBLed::IURGBLed(bool blinking) :
     Component(),
+    m_color(LEDColors::SLEEP),
     m_blinking(blinking),
-    m_nextOffTime(0)
+    m_nextOffTime(0),
+    m_status(LEDStatus::NONE),
+    m_showingStatus(false),
+    m_nextSwitchTime(0)
 {
   pinMode(RED_PIN, OUTPUT);
   pinMode(GREEN_PIN, OUTPUT);
@@ -81,12 +85,75 @@ void IURGBLed::autoTurnOff()
 }
 
 /**
+ * 
+ */
+void IURGBLed::autoManage()
+{
+    if (m_locked)
+    {
+        return;
+    }
+    uint32_t current = millis();
+    switch (m_status)
+    {
+        case LEDStatus::NONE:
+            autoTurnOff();
+            break;
+        case LEDStatus::WIFI_WORKING:
+        case LEDStatus::WIFI_CONNECTED:
+            if (m_showingStatus)
+            {
+                if (m_nextSwitchTime < current)
+                {
+                    changeColor(m_color, true);
+                    m_showingStatus = true;
+                    m_nextSwitchTime = current + 
+                            (1000 - statusShowTime[(uint8_t) m_status]);
+                }
+            }
+            else
+            {
+                if (m_nextSwitchTime < current)
+                {
+                    changeColor(statusColors[(uint8_t) m_status],
+                                true);
+                    m_showingStatus = false;
+                    m_nextSwitchTime = current + 
+                            statusShowTime[(uint8_t) m_status];
+                }
+            }
+            break;
+        default:
+            if (loopDebugMode)
+            {
+                debugPrint(F("Unmanaged LED status: "), false);
+                debugPrint((uint8_t) m_status);
+            }
+    }
+}
+
+/**
+ * Turn on / off the LEDs to create the requested RGB color
+ */
+void IURGBLed::changeColor(IURGBLed::LEDColors color, bool temporary)
+{
+    if (!m_locked)
+    {
+        if (!temporary)
+        {
+            m_color = color;
+        }
+        specialChangeColor(COLORCODE[color][0], COLORCODE[color][1], COLORCODE[color][2]);
+    }
+}
+
+/**
  * Turn on / off each LED
  *
  * The color can't be changed if the LEDs are locked or if their current
  * PowerMode is not ACTIVE.
  */
-void IURGBLed::changeColor(bool R, bool G, bool B)
+void IURGBLed::specialChangeColor(bool R, bool G, bool B)
 {
     if (!m_locked && m_powerMode == PowerMode::ACTIVE)
     {
@@ -95,14 +162,6 @@ void IURGBLed::changeColor(bool R, bool G, bool B)
         digitalWrite(BLUE_PIN, (int) (!B));
         m_nextOffTime = millis() + onTimer;
     }
-}
-
-/**
- * Turn on / off the LEDs to create the requested RGB color
- */
-void IURGBLed::changeColor(IURGBLed::LEDColors color)
-{
-    changeColor(COLORCODE[color][0], COLORCODE[color][1], COLORCODE[color][2]);
 }
 
 /**

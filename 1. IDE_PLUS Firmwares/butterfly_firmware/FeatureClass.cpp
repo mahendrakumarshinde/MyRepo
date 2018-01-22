@@ -336,6 +336,20 @@ void Feature::stream(HardwareSerial *port, uint8_t sectionCount)
     m_locked[k] = false;
 }
 
+/**
+ * Send the data from latest recorded section to given Serial
+ */
+void Feature::bufferStream(char *destination, uint16_t &destIndex,
+                           uint8_t sectionCount)
+{
+    // Lock and print the last recorded section (= recordIndex - 1)
+    uint8_t k = (m_sectionCount + m_recordIndex - sectionCount) % m_sectionCount;
+    m_locked[k] = true;
+    m_specializedBufferStream(k, destination, destIndex, sectionCount);
+    
+    m_locked[k] = false;
+}
+
 
 /***** Debugging *****/
 
@@ -470,6 +484,27 @@ void FloatFeature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx,
     }
 }
 
+/**
+ * Stream the content of the section at sectionIdx
+ */
+void FloatFeature::m_specializedBufferStream(uint8_t sectionIdx, 
+    char *destination, uint16_t &destIndex, uint8_t sectionCount)
+{
+    uint8_t sIdx = 0;
+    String strVal = "";
+    for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++)
+    {
+        sIdx = k % sectionCount;
+        for (uint16_t i = sIdx * m_sectionSize;
+             i < (sIdx + 1) * m_sectionSize; ++i)
+        {
+            destination[destIndex++] = ',';
+            strVal = String(m_values[i] * m_resolution, 2);
+            strcat(destination, strVal.c_str());
+            destIndex += strVal.length();
+        }
+    }
+}
 
 /***** Q15 Buffer *****/
 
@@ -539,6 +574,51 @@ void Q15Feature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx,
     }
 }
 
+/**
+ * Stream the content of the section at sectionIdx
+ */
+void Q15Feature::m_specializedBufferStream(uint8_t sectionIdx,
+    char *destination, uint16_t &destIndex, uint8_t sectionCount)
+{
+    uint8_t sIdx = 0;
+    String strVal = "";
+    for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++)
+    {
+        sIdx = k % sectionCount;
+        if (m_isFFT)
+        {
+            for (uint16_t i = sIdx * m_sectionSize / 3;
+                 i < (sIdx + 1) * m_sectionSize / 3; ++i)
+            {
+                destination[destIndex++] = ',';
+                strcat(destination, String(m_values[3 * i]).c_str());
+                if (m_values[3 * i] < 10) { destIndex++; }
+                else if (m_values[3 * i] < 100) { destIndex += 2; }
+                else { destIndex += 3; }
+                destination[destIndex++] = ',';
+                strVal = String(((float) m_values[3 * i + 1]) * m_resolution, 2);
+                strcat(destination, strVal.c_str());
+                destIndex += strVal.length();
+                destination[destIndex++] = ',';
+                strVal = String(((float) m_values[3 * i + 2]) * m_resolution, 2);
+                strcat(destination, strVal.c_str());
+                destIndex += strVal.length();
+            }
+        }
+        else
+        {
+            for (uint16_t i = sIdx * m_sectionSize;
+                 i < (sIdx + 1) * m_sectionSize; ++i)
+            {
+                destination[destIndex++] = ',';
+                strVal = String(((float) m_values[i]) * m_resolution, 2);
+                strcat(destination, strVal.c_str());
+                destIndex += strVal.length();
+            }
+        }
+    }
+}
+
 
 /***** Q31 Buffer *****/
 
@@ -603,6 +683,51 @@ void Q31Feature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx,
             {
                 port->print(",");
                 port->print(((float) m_values[i]) * m_resolution);
+            }
+        }
+    }
+}
+
+/**
+ * Stream the content of the section at sectionIdx
+ */
+void Q31Feature::m_specializedBufferStream(uint8_t sectionIdx,
+    char *destination, uint16_t &destIndex, uint8_t sectionCount)
+{
+    uint8_t sIdx = 0;
+    String strVal = "";
+    for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++)
+    {
+        sIdx = k % sectionCount;
+        if (m_isFFT)
+        {
+            for (uint16_t i = sIdx * m_sectionSize / 3;
+                 i < (sIdx + 1) * m_sectionSize / 3; ++i)
+            {
+                destination[destIndex++] = ',';
+                strcat(destination, String(m_values[3 * i]).c_str());
+                if (m_values[3 * i] < 10) { destIndex++; }
+                else if (m_values[3 * i] < 100) { destIndex += 2; }
+                else { destIndex += 3; }
+                destination[destIndex++] = ',';
+                strVal = String(((float) m_values[3 * i + 1]) * m_resolution, 2);
+                strcat(destination, strVal.c_str());
+                destIndex += strVal.length();
+                destination[destIndex++] = ',';
+                strVal = String(((float) m_values[3 * i + 2]) * m_resolution, 2);
+                strcat(destination, strVal.c_str());
+                destIndex += strVal.length();
+            }
+        }
+        else
+        {
+            for (uint16_t i = sIdx * m_sectionSize;
+                 i < (sIdx + 1) * m_sectionSize; ++i)
+            {
+                destination[destIndex++] = ',';
+                strVal = String(((float) m_values[i]) * m_resolution, 2);
+                strcat(destination, strVal.c_str());
+                destIndex += strVal.length();
             }
         }
     }

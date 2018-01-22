@@ -137,7 +137,6 @@ void setup()
             iuI2C.scanDevices();
             debugPrint("");
         }
-        iuBluetooth.setForceMessageSize(19);
         iuBluetooth.setupHardware();
         iuWiFi.setupHardware();
         iuSPIFlash.setupHardware();
@@ -176,6 +175,7 @@ void setup()
                 Sensor::instances[i]->setCallbackRate(callbackRate);
             }
         }
+        iuGyroscope.suspend();
         if (debugMode)
         {
           memoryLog(F("=> Successfully initialized sensors"));
@@ -201,8 +201,7 @@ void setup()
 
 /**
  *
- * The regular calls to iuRGBLed.autoTurnOff() turns the LEDs off to save
- * power, once they've been lit long enough based on their internal timer.
+ * The regular calls to iuRGBLed.autoManage() manage any required LED blinking.
  */
 void loop()
 {
@@ -232,26 +231,26 @@ void loop()
         }
         // Power saving
         conductor.manageSleepCycles();
-        iuRGBLed.autoTurnOff();
+        iuRGBLed.autoManage();
         // Configuration
         conductor.readFromSerial(&iuUSB);
-        iuRGBLed.autoTurnOff();
+        iuRGBLed.autoManage();
         conductor.readFromSerial(&iuBluetooth);
-        iuRGBLed.autoTurnOff();
+        iuRGBLed.autoManage();
         conductor.readFromSerial(&iuWiFi);
-        iuRGBLed.autoTurnOff();
+        iuRGBLed.autoManage();
         // Acquire data from sensors
         conductor.acquireData(false);
-        iuRGBLed.autoTurnOff();
+        iuRGBLed.autoManage();
         // Feature computation depending on operation mode
         conductor.computeFeatures();
-        iuRGBLed.autoTurnOff();
+        iuRGBLed.autoManage();
         // Update the OperationState
         conductor.updateOperationState();
-        iuRGBLed.autoTurnOff();
+        iuRGBLed.autoManage();
         // Stream features
         conductor.streamFeatures();
-        iuRGBLed.autoTurnOff();
+        iuRGBLed.autoManage();
         uint32_t stopYield = millis() + 10;
         while (millis() < stopYield)
         {

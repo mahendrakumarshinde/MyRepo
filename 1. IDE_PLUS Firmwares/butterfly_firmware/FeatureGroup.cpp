@@ -13,10 +13,13 @@ FeatureGroup *FeatureGroup::instances[FeatureGroup::MAX_INSTANCE_COUNT] = {
 FeatureGroup::FeatureGroup(const char *name, uint16_t dataSendPeriod) :
     m_active(false),
     m_dataSendPeriod(dataSendPeriod),
-    m_lastSentTime(0)
+    m_bufferIndex(0),
+    m_bufferStartTime(0)
 {
     strcpy(m_name, name);
     reset();
+    m_lastSentTime[0] = 0;
+    m_lastSentTime[1] = 0;
     // Instance registration
     m_instanceIdx = instanceCount;
     instances[m_instanceIdx] = this;
@@ -106,17 +109,17 @@ void FeatureGroup::setDataSendPeriod(uint16_t dataSendPeriod)
  *
  * NB: Data streaming is always disabled when in "sleep" operation mode.
  */
-bool FeatureGroup::isDataSendTime()
+bool FeatureGroup::isDataSendTime(uint8_t idx)
 {
     // Timer to send data regularly
     uint32_t now = millis();
-    if (m_lastSentTime > now)
+    if (m_lastSentTime[idx] > now)
     {
-        m_lastSentTime = 0; // Manage millis uint32_t overflow
+        m_lastSentTime[idx] = 0; // Manage millis uint32_t overflow
     }
-    if (m_lastSentTime + m_dataSendPeriod < now)
+    if (m_lastSentTime[idx] + m_dataSendPeriod < now)
     {
-        m_lastSentTime = now;
+        m_lastSentTime[idx] = now;
         return true;
     }
     return false;
@@ -170,13 +173,13 @@ void FeatureGroup::stream(HardwareSerial *port, const char *macAddress,
 void FeatureGroup::legacyStream(HardwareSerial *port, const char *macAddress,
                                 OperationState::option opState,
                                 float batteryLoad, double timestamp,
-                                bool sendName)
+                                bool sendName, uint8_t portIdx)
 {
-    if (!m_active)
+    if (m_featureCount == 0 || !m_active)
     {
         return;  // Only stream if group is active
     }
-    if (m_featureCount == 0 || !isDataSendTime())
+     if (!isDataSendTime(portIdx))
     {
         return;
     }
@@ -209,6 +212,75 @@ void FeatureGroup::legacyStream(HardwareSerial *port, const char *macAddress,
 }
 
 
+void FeatureGroup::legacyBufferStream(HardwareSerial *port, const char *macAddress,
+                                      OperationState::option opState,
+                                      float batteryLoad, double timestamp,
+                                      bool sendName)
+{
+    if (!m_active)
+    {
+        return;  // Only stream if group is active
+    }
+    if (m_featureCount == 0 || !isDataSendTime())
+    {
+        return;
+    }
+    uint32_t now = millis();
+    if (m_bufferStartTime == 0 || m_bufferStartTime > now ||
+        m_bufferStartTime + maxBufferDelay < now ||
+        maxBufferSize - m_bufferIndex < maxBufferMargin)
+    {
+        m_featureBuffer[m_bufferIndex] = '\0';
+        port->print(m_featureBuffer);
+        if (loopDebugMode)
+        {
+            port->println("");
+        }
+        m_bufferIndex = 0;
+        for (uint16_t i = 0; i < maxBufferSize; ++i)
+        {
+            m_featureBuffer[i] = '\0';
+        }
+    }
+    if (m_bufferIndex == 0)
+    {
+        m_bufferStartTime = millis();
+    }
+    if (sendName)
+    {
+        strcat(m_featureBuffer, m_name);
+        m_bufferIndex += strlen(m_name);
+        m_featureBuffer[m_bufferIndex++] = ',';
+    }
+    strcat(m_featureBuffer, macAddress);
+    m_bufferIndex += strlen(macAddress);
+    m_featureBuffer[m_bufferIndex++] = ',';
+    m_featureBuffer[m_bufferIndex++] = '0';
+    m_featureBuffer[m_bufferIndex++] = (uint8_t) opState + 48;
+    m_featureBuffer[m_bufferIndex++] = ',';
+    strcat(m_featureBuffer, String((int) round(batteryLoad)).c_str());
+    m_bufferIndex += 2;
+    for (uint8_t i = 0; i < m_featureCount; ++i)
+    {
+        m_featureBuffer[m_bufferIndex++] = ',';
+        m_featureBuffer[m_bufferIndex++] = '0';
+        m_featureBuffer[m_bufferIndex++] = '0';
+        m_featureBuffer[m_bufferIndex++] = '0';
+        m_featureBuffer[m_bufferIndex++] = i + 49;
+        if (m_features[i] != NULL)
+        {
+            m_features[i]->bufferStream(m_featureBuffer,
+                                        m_bufferIndex);
+        }
+    }
+    m_featureBuffer[m_bufferIndex++] = ',';
+    String stringTS = String(timestamp, 2);
+    strcat(m_featureBuffer, stringTS.c_str());
+    m_bufferIndex += stringTS.length();
+    m_featureBuffer[m_bufferIndex++] = ';';
+}
+
+
 /* =============================================================================
     Instantiation
 ============================================================================= */
@@ -222,7 +294,7 @@ FeatureGroup rawAccelGroup("RAWACC", 512);
 // Standard Press Monitoring
 FeatureGroup pressStandardGroup("PRSSTD", 512);
 // Standard Motor Monitoring
-FeatureGroup motorStandardGroup("MOTSTD", 512);
+FeatureGroup motorStandardGroup("MOTSTD", 1500);
 
 
 /***** Populate groups *****/

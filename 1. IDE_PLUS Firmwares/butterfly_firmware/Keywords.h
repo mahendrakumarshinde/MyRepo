@@ -22,6 +22,8 @@
 /***** Optionnal components *****/
 //#define RTD_DAUGHTER_BOARD
 
+/***** GPS Option *****/
+//#define NO_GPS
 
 /***** Firmware version *****/
 const char FIRMWARE_VERSION[6] = "1.0.0";

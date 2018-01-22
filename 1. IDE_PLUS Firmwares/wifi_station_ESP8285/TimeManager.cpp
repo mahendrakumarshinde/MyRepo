@@ -5,6 +5,7 @@
 ============================================================================= */
 
 TimeManager::TimeManager(uint16_t udpPort, const char* serverName) :
+    m_active(false),
     m_port(udpPort),
     m_requestSent(false),
     m_requestSentTime(0),
@@ -19,7 +20,12 @@ TimeManager::TimeManager(uint16_t udpPort, const char* serverName) :
  */
 void TimeManager::begin()
 {
+    if (m_active)
+    {
+        return;
+    }
     m_udp.begin(m_port);
+    m_active = true;
     if (debugMode)
     {
         debugPrint("Starting UDP at port: ", false);
@@ -30,8 +36,29 @@ void TimeManager::begin()
 /**
  *
  */
+void TimeManager::end()
+{
+    if (!m_active)
+    {
+        return;
+    }
+    m_udp.stop();
+    m_active = false;
+}
+
+/**
+ * Update the Time from an NTP server, while prioritizing IU server time.
+ *
+ * As long as we keep receiving time from IU server, this function will do
+ * nothing (see IME_UPDATE_INTERVAL for max delay before update from NTP
+ * server).
+ */
 void TimeManager::updateTimeReferenceFromNTP()
 {
+    if (!m_active)
+    {
+        return;
+    }
     uint32_t current = millis();
     if (m_requestSent) // If request sent, always try to read the response
     {
