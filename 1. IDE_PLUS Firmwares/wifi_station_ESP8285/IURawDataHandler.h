@@ -20,7 +20,7 @@ class IURawDataHandler
         /***** Public constants *****/
         static const uint16_t MAX_PAYLOAD_LENGTH = 10000;
         static char ENDPOINT_HOST[45];
-        static char ENDPOINT_URL[19];
+        static char ENDPOINT_URL[15];
         static const uint16_t ENDPOINT_PORT = 80;
 
         // Expected keys for the JSON creation of keys (at top level).

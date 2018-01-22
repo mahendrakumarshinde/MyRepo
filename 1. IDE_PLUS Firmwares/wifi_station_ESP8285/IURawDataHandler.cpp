@@ -9,9 +9,9 @@ char IURawDataHandler::EXPECTED_KEYS[
     IURawDataHandler::EXPECTED_KEY_COUNT + 1] = "XYZ";
 
 char IURawDataHandler::ENDPOINT_HOST[45] =
-    "gateway-dot-infinite-uptime-1232.appspot.com";
+    "ideplus-dot-infinite-uptime-1232.appspot.com";
 
-char IURawDataHandler::ENDPOINT_URL[19] = "/api/raw_data?mac=";
+char IURawDataHandler::ENDPOINT_URL[15] = "/raw_data?mac=";
 
 IURawDataHandler::IURawDataHandler(uint32_t timeout) :
     m_payloadCounter(0),
