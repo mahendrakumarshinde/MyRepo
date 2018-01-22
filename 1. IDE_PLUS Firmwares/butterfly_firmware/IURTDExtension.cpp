@@ -8,7 +8,7 @@
 
 IURTDExtension::IURTDExtension(IUI2C *iuI2C, const char* name,
                                Feature *temperatures, uint8_t rtdCount) :
-    SynchronousSensor(name, 1, temperatures),
+    LowFreqSensor(name, 1, temperatures),
     m_rtdCount(rtdCount)
 {
     m_iuI2C = iuI2C;
@@ -45,9 +45,9 @@ void IURTDExtension::setupHardware()
 /**
  * Acquire new data, while handling sampling period
  */
-void IURTDExtension::acquireData()
+void IURTDExtension::acquireData(bool inCallback, bool force)
 {
-    SynchronousSensor::acquireData();
+    LowFreqSensor::acquireData(inCallback, force);
 }
 
 /**

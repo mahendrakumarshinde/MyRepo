@@ -80,16 +80,19 @@ class SignalRMSComputer: public FeatureComputer
 {
     public:
         SignalRMSComputer(uint8_t id, Feature *rms=NULL,
-                          bool removeMean=false, bool normalize=false);
+                          bool removeMean=false, bool normalize=false,
+                          float calibrationScaling=1.);
         /***** Configuration *****/
         virtual void configure(JsonVariant &config);
         void setRemoveMean(bool value) { m_removeMean = value; }
         void setNormalize(bool value) { m_normalize = value; }
+        void setCalibrationScaling(float val) { m_calibrationScaling = val; }
 
     protected:
         virtual void m_specializedCompute();
         bool m_removeMean;  // Remove mean before computing Signal Energy ?
         bool m_normalize;  // Divide by source sectionSize ?
+        float m_calibrationScaling;  // Scaling factor
 };
 
 
@@ -170,13 +173,17 @@ class Q15FFTComputer: public FeatureComputer
                        Feature *doubleIntegralRMS=NULL,
                        q15_t *allocatedFFTSpace=NULL,
                        uint16_t lowCutFrequency=5,
-                       uint16_t highCutFrequency=550,
-                       float minAgitationRMS=0.1);
+                       uint16_t highCutFrequency=500,
+                       float minAgitationRMS=0.1,
+                       float calibrationScaling1=1.,
+                       float calibrationScaling2=1.);
         /***** Configuration *****/
         virtual void configure(JsonVariant &config);
         void setLowCutFrequency(uint16_t value) { m_lowCutFrequency = value; }
         void setHighCutFrequency(uint16_t value) { m_highCutFrequency = value; }
         void setMinAgitationRMS(float value) { m_minAgitationRMS = value; }
+        void setCalibrationScaling1(float val) { m_calibrationScaling1 = val; }
+        void setCalibrationScaling2(float val) { m_calibrationScaling2 = val; }
 
     protected:
         virtual void m_specializedCompute();
@@ -184,6 +191,8 @@ class Q15FFTComputer: public FeatureComputer
         uint16_t m_lowCutFrequency;
         uint16_t m_highCutFrequency;
         float m_minAgitationRMS;
+        bool m_calibrationScaling1;  // Scaling factor for 1st derivative RMS
+        bool m_calibrationScaling2;  // Scaling factor for 2nd derivative RMS
 };
 
 
@@ -211,6 +220,20 @@ class AudioDBComputer: public FeatureComputer
 
 // Shared computation space
 extern q15_t allocatedFFTSpace[1024];
+
+
+/***** Accelerometer Calibration parameters *****/
+
+extern float ACCEL_RMS_SCALING;
+extern float VELOCITY_RMS_SCALING;
+extern float DISPLACEMENT_RMS_SCALING;
+
+
+/***** Accelerometer Feature computation parameters *****/
+
+extern uint16_t DEFAULT_LOW_CUT_FREQUENCY;
+extern uint16_t DEFAULT_HIGH_CUT_FREQUENCY;
+extern float DEFAULT_MIN_AGITATION;
 
 
 /***** Accelerometer Features *****/

@@ -92,14 +92,12 @@ void Sensor::expose()
 
 
 /* =============================================================================
-    Asynchronous Sensor
+    Driven Sensor
 ============================================================================= */
 
-AsynchronousSensor::AsynchronousSensor(const char* name,
-                                       uint8_t destinationCount,
-                                       Feature *destination0,
-                                       Feature *destination1,
-                                       Feature *destination2) :
+DrivenSensor::DrivenSensor(const char* name, uint8_t destinationCount,
+                           Feature *destination0, Feature *destination1,
+                           Feature *destination2) :
     Sensor(name, destinationCount, destination0, destination1, destination2)
 {
     m_callbackRate = defaultCallbackRate;
@@ -114,7 +112,7 @@ AsynchronousSensor::AsynchronousSensor(const char* name,
  *
  * @param config A reference to a JsonVariant, ie a parsed JSON
  */
-void AsynchronousSensor::configure(JsonVariant &config)
+void DrivenSensor::configure(JsonVariant &config)
 {
     Sensor::configure(config);
     uint16_t samplingRate = config["FREQ"];
@@ -131,7 +129,7 @@ void AsynchronousSensor::configure(JsonVariant &config)
 /**
  * Rate cannot be set to zero + call computeDownclockingRate at the end
  */
-void AsynchronousSensor::setCallbackRate(uint16_t callbackRate)
+void DrivenSensor::setCallbackRate(uint16_t callbackRate)
 {
     m_callbackRate = callbackRate;
     computeDownclockingRate();
@@ -140,7 +138,7 @@ void AsynchronousSensor::setCallbackRate(uint16_t callbackRate)
 /**
  * Rate cannot be set to zero + call computeDownclockingRate at the end
  */
-void AsynchronousSensor::setSamplingRate(uint16_t samplingRate)
+void DrivenSensor::setSamplingRate(uint16_t samplingRate)
 {
     m_samplingRate = samplingRate;
     for (uint8_t i = 0; i < getDestinationCount(); ++i)
@@ -155,7 +153,7 @@ void AsynchronousSensor::setSamplingRate(uint16_t samplingRate)
  *
  * Should be called every time the callback or sampling rates are modified.
  */
-void AsynchronousSensor::computeDownclockingRate()
+void DrivenSensor::computeDownclockingRate()
 {
     m_downclocking = m_callbackRate / m_samplingRate;
     m_downclockingCount = 0;
@@ -166,24 +164,29 @@ void AsynchronousSensor::computeDownclockingRate()
 
 /**
  * Acquire new data, while handling down-clocking
+ *
+ * @param inCallback  set to true if the function is called from a callback.
  */
-void AsynchronousSensor::acquireData()
+void DrivenSensor::acquireData(bool inCallback, bool force)
 {
-    m_downclockingCount++;
-    if (m_downclockingCount < m_downclocking)
+    if (inCallback)
     {
-        return;
-    }
-    m_downclockingCount = 0;
-    // Check if destinations are ready
-    for (uint8_t i = 0; i < m_destinationCount; ++i)
-    {
-        if(!m_destinations[i]->isReadyToRecord())
+        m_downclockingCount++;
+        if (m_downclockingCount < m_downclocking)
         {
             return;
         }
+        m_downclockingCount = 0;
+        // Check if destinations are ready
+        for (uint8_t i = 0; i < m_destinationCount; ++i)
+        {
+            if(!force && !m_destinations[i]->isReadyToRecord())
+            {
+                return;
+            }
+        }
+        readData();
     }
-    readData();
 }
 
 
@@ -191,13 +194,11 @@ void AsynchronousSensor::acquireData()
     Synchronous Sensor
 ============================================================================= */
 
-SynchronousSensor::SynchronousSensor(const char* name,
-                                     uint8_t destinationCount,
-                                     Feature *destination0,
-                                     Feature *destination1,
-                                     Feature *destination2) :
+LowFreqSensor::LowFreqSensor(const char* name, uint8_t destinationCount,
+                             Feature *destination0, Feature *destination1,
+                             Feature *destination2) :
     Sensor(name, destinationCount, destination0, destination1, destination2),
-    m_usagePreset(SynchronousSensor::defaultUsagePreset),
+    m_usagePreset(LowFreqSensor::defaultUsagePreset),
     m_lastAcquisitionTime(0)
 {
     setSamplingPeriod(defaultSamplingPeriod);
@@ -211,7 +212,7 @@ SynchronousSensor::SynchronousSensor(const char* name,
  *
  * @param config A reference to a JsonVariant, ie a parsed JSON
  */
-void SynchronousSensor::configure(JsonVariant &config)
+void LowFreqSensor::configure(JsonVariant &config)
 {
     Sensor::configure(config);
     JsonVariant value = config["USG"];
@@ -226,7 +227,7 @@ void SynchronousSensor::configure(JsonVariant &config)
  *
  * @param usage A usagePreset (Low, Regular, Enhanced, High)
  */
-void SynchronousSensor::changeUsagePreset(Sensor::usagePreset usage)
+void LowFreqSensor::changeUsagePreset(Sensor::usagePreset usage)
 {
     switch (m_usagePreset)
     {
@@ -252,12 +253,12 @@ void SynchronousSensor::changeUsagePreset(Sensor::usagePreset usage)
 }
 
 
-void SynchronousSensor::setSamplingPeriod(uint32_t samplingPeriod)
+void LowFreqSensor::setSamplingPeriod(uint32_t samplingPeriod)
 {
     m_samplingPeriod = samplingPeriod;
     for (uint8_t i = 0; i < getDestinationCount(); ++i)
     {
-        /* TODO For now synchronous sensors sends 0 as sampling rates to their
+        /* TODO For now low freq sensors sends 0 as sampling rates to their
         receivers. Change this? Is it worth it? */
         m_destinations[i]->setSamplingRate(0);
     }
@@ -268,9 +269,17 @@ void SynchronousSensor::setSamplingPeriod(uint32_t samplingPeriod)
 
 /**
  * Acquire new data, while handling sampling period
+ *
+ * @param inCallback  set to true if the function is called from a callback.
+ *  Note that in that case, data acquisition will be skipped as low freq sensors
+ *  are not meant to be read in callbacks.
  */
-void SynchronousSensor::acquireData()
+void LowFreqSensor::acquireData(bool inCallback, bool force)
 {
+    if (inCallback)
+    {
+        return;  // Do not read low freq sensors in callback
+    }
     uint32_t now = millis();
     if (m_lastAcquisitionTime > 0 &&
         m_lastAcquisitionTime + m_samplingPeriod > now
@@ -281,7 +290,7 @@ void SynchronousSensor::acquireData()
     // Check if destinations are ready
     for (uint8_t i = 0; i < m_destinationCount; ++i)
     {
-        if(!m_destinations[i]->isReadyToRecord())
+        if(!force && !m_destinations[i]->isReadyToRecord())
         {
             return ;
         }

@@ -46,11 +46,14 @@ class IUMQTTHelper
         void setDeviceInfo(const char *deviceType,
                            const char *deviceMacAddress);
         void reconnect(const char *statusTopic, const char *willMsg,
-                       void (*onConnectionCallback)());
+                       void (*onConnectionCallback)(), uint32_t timeout);
         void loop(const char *statusTopic, const char *willMsg,
-                  void (*onConnectionCallback)());
+                  void (*onConnectionCallback)(), uint32_t timeout);
         bool publish(const char* topic, const char* payload);
         bool subscribe(const char* topic);
+        /***** Faster disconnection detection *****/
+        void extendLifetime(uint16_t durationSec);
+        bool keepAlive();
         /***** Public Client for convenience *****/
         PubSubClient client;
 
@@ -58,6 +61,7 @@ class IUMQTTHelper
         WiFiClient m_wifiClient;
         char m_deviceType[10];
         char m_deviceMacAddress[18];
+        uint32_t m_enfOfLife;
         /***** Utility functions *****/
         void getFullSubscriptionName(char *destination,
                                      const char *commandName);

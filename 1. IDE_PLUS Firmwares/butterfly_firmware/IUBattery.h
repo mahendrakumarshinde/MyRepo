@@ -17,7 +17,7 @@
  * Destinations:
  *      - batteryLoad: Float data buffer with sectionSize = 1
  */
-class IUBattery : public SynchronousSensor
+class IUBattery : public LowFreqSensor
 {
     public:
         /***** Preset values and default settings *****/

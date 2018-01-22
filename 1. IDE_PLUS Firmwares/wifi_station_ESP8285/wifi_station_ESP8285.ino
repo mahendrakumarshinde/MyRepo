@@ -8,9 +8,10 @@
 #include "IUWiFiManager.h"
 #include "IUSerial.h"
 #include "TimeManager.h"
+#include "IURawDataHandler.h"
 
 /* =============================================================================
-    Global Variables
+    Global Configuration Variables
 ============================================================================= */
 
 // Device Type for command subscription
@@ -28,6 +29,17 @@ char AP_NAME[30] = "IUsetup";
 const char AP_NAME_PREFIX[9] = "IUsetup-";
 
 char WILL_MESSAGE[44] = "XXXAdmin;;;00:00:00:00:00:00;;;disconnected";
+
+
+/* =============================================================================
+    Global Operation Variables
+============================================================================= */
+
+bool AUTHORIZED_TO_SLEEP = true;
+bool WIFI_ENABLED = true;
+
+uint32_t WIFI_STATUS_REFRESH_INTERVAL = 15000;  // ms
+uint32_t lastWifiStatusRefresh = 0;
 
 
 /* =============================================================================
@@ -153,6 +165,38 @@ bool publishFeature(const char *rawMsg, const uint16_t msgLength,
 }
 
 /**
+ * 
+ */
+bool publishAccelRawDataIfReady()
+{
+    if (accelRawDataHandler.hasTimedOut())
+    {
+        accelRawDataHandler.resetPayload();
+        return false;
+    }
+    if (!accelRawDataHandler.areAllKeyPresent())
+    {
+        // Raw Data payload is not ready
+        return false;
+    }
+    int httpCode = accelRawDataHandler.httpPostPayload(BLE_MAC_ADDRESS);
+    if (debugMode)
+    {
+        debugPrint("Post raw data: ", false);
+        debugPrint(httpCode);
+    }
+    if (httpCode == 200)
+    {
+        accelRawDataHandler.resetPayload();
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+/**
  * Subscribe to all the required device subscriptions
  *
  * Should be called after each reconnection.
@@ -161,12 +205,9 @@ bool publishFeature(const char *rawMsg, const uint16_t msgLength,
  */
 void onMQTTConnection()
 {
-    // Config subscription
-    iuMQTTHelper.subscribe("config");
-    // Time synchornisation subscription
-    iuMQTTHelper.subscribe("time_sync");
-    // Legacy command format subscription
-    iuMQTTHelper.subscribe("legacy");
+    iuMQTTHelper.subscribe("config");  // Config subscription
+    iuMQTTHelper.subscribe("time_sync");  // Time synchornisation subscription
+    iuMQTTHelper.subscribe("legacy");  // Legacy command format subscription
     publishDiagnostic("connected", 9);
 }
 
@@ -187,7 +228,7 @@ void askBleMacAddress()
  */
 void sendWifiStatus(bool isConnected)
 {
-    if(isConnected)
+    if (isConnected)
     {
         hostSerial.port->print("88-OK;");
     }
@@ -199,10 +240,59 @@ void sendWifiStatus(bool isConnected)
 
 /**
  * 
+ * Get current status, send message to host (STM32) and server, and reset
+ * the ESP if cannot get connection for more than timeout.
  */
-void onWifiConnection()
+bool maintainConnectionStatus()
 {
-    sendWifiStatus(true);
+    bool connectStatus = (WiFi.isConnected() &&
+                          iuMQTTHelper.client.connected());
+    uint32_t now = millis();
+    if (lastWifiStatusRefresh == 0 ||
+        now > lastWifiStatusRefresh + WIFI_STATUS_REFRESH_INTERVAL ||
+        now < lastWifiStatusRefresh)
+    {
+        if (connectStatus)
+        {
+            sendWifiStatus(true);
+            iuWifiManager.hasTimedOut(true);
+        }
+        else
+        {
+            sendWifiStatus(false);
+            if (WIFI_ENABLED)
+            {
+                bool timedOut = iuWifiManager.hasTimedOut(false);
+                if (timedOut)
+                {
+                    if (debugMode)
+                    {
+                        debugPrint("Reached WiFi Manager timeout... Resetting");
+                    }
+                    delay(10);
+                    ESP.reset();
+                }
+            }
+            else
+            {
+                // Not connected, but wifi is disabled => do not time out
+                iuWifiManager.hasTimedOut(true);
+            }
+        }
+        lastWifiStatusRefresh = now;
+    }
+    // Send message to server
+    if (iuWifiManager.isTimeToSendWifiInfo())
+    {
+        if (connectStatus)
+        {
+            char message[256];
+            iuWifiManager.getWifiInfo(message, true);
+            publishDiagnostic(message, strlen(message));
+        }
+        iuWifiManager.debugPrintWifiInfo();
+    }
+    return connectStatus;
 }
 
 /**
@@ -267,6 +357,94 @@ void processMessageFromHost(char *buff)
             debugPrint(BLE_MAC_ADDRESS);
         }
     }
+    // Reset the ESP - Typically sent by the STM32 when it restarts
+    else if (strcmp("WIFI-HARDRESET", buff) == 0)
+    {
+        ESP.reset();
+    }
+    else if (strcmp(buff, "WIFI-USE-SAVED") == 0)
+    {
+        if (debugMode)
+        {
+            debugPrint("Activating Wifi & using saved credentials...");
+        }
+        if (!iuWifiManager.hasSavedCredentials())
+        {
+            hostSerial.port->print("WIFI-NOSAVEDCRED;");
+        }
+        else
+        {
+            iuWifiManager.debugPrintWifiInfo();
+            enableWifi();
+        }
+    }
+    else if (strncmp(buff, "WIFI-SSID-", 10) == 0)
+    {
+        uint16_t len = strlen(buff);
+        if (strcmp(&buff[len - 10], "-DISS-IFIW") != 0)
+        {
+            if (debugMode)
+            {
+                debugPrint("Unparsable SSID");
+            }
+            return;
+        }
+        enableWifi();
+        iuWifiManager.addUserSSID(&buff[10], len - 20);
+    }
+    else if (strncmp(buff, "WIFI-PW-", 8) == 0)
+    {
+        uint16_t len = strlen(buff);
+        if (strcmp(&buff[len - 8], "-WP-IFIW") != 0)
+        {
+            if (debugMode)
+            {
+                debugPrint("Unparsable password");
+            }
+            return;
+        }
+        enableWifi();
+        iuWifiManager.addUserPassword(&buff[8], len - 16);
+    }
+    else if (strcmp(buff, "WIFI-DISABLE") == 0)
+    {
+        disableWifi(true, true);
+    }
+    else if (strcmp(buff, "WIFI-FORGET") == 0)
+    {
+        disableWifi(true, false);
+    }
+    else if (strcmp("WIFI-NOSLEEP", buff) == 0)
+    {
+        AUTHORIZED_TO_SLEEP = false;
+        if (debugMode)
+        {
+            debugPrint("Not authorized to sleep");
+        }
+    }
+    else if (strcmp("WIFI-SLEEPOK", buff) == 0)
+    {
+        AUTHORIZED_TO_SLEEP = true;
+        if (debugMode)
+        {
+            debugPrint("Authorized to sleep");
+        }
+    }
+    else if (strncmp("WIFI-DEEPSLEEP-", buff, 15) == 0 && strlen(buff) == 20)
+    {
+        uint64_t durationSec = (uint64_t) atoi(&buff[11]);
+        ESP.deepSleep(durationSec * 1000000, RF_DEFAULT);
+    }
+    // Check if RAW DATA, eg: REC,X,<data>
+    else if (strncmp("REC,", buff, 4) == 0 && buff[5] == ',')
+    {
+        if (accelRawDataHandler.hasTimedOut())
+        {
+            accelRawDataHandler.resetPayload();
+        }
+        accelRawDataHandler.addKeyValuePair(buff[4], &buff[6], strlen(buff) - 6);
+        publishAccelRawDataIfReady();
+    }
     else if (buff[6] == ',')  // Feature
     {
         publishFeature(&buff[7], strlen(buff) - 7, buff, 6);
@@ -280,6 +458,57 @@ void processMessageFromHost(char *buff)
     {
         debugPrint("Unknown message from host");
     }
+}
+
+
+/* =============================================================================
+    Connection management function
+============================================================================= */
+
+void enableWifi()
+{
+    if (!WIFI_ENABLED && debugMode)
+    {
+        debugPrint("Wifi is enabled.");
+    }
+    WIFI_ENABLED = true;
+}
+
+/**
+ * Disconnect the clients and the WiFi
+ * 
+ * @param turnOffWiFi If true, the WiFi will go off (no STA, no AP). That
+ * also make the ESP8285 "forget" the last saved SSID + credentials.
+ */
+void disableWifi(bool turnOffWiFi, bool retainCredentials)
+{
+    if (retainCredentials)
+    {
+        iuWifiManager.saveCurrentCredentials();
+    }
+    else
+    {
+        iuWifiManager.resetUserSSID();
+        iuWifiManager.resetUserPassword();
+    }
+    /***** End NTP server connection *****/
+    timeManager.end();
+    /***** Disconnect MQTT client *****/
+    if (iuMQTTHelper.client.connected())
+    {
+        iuMQTTHelper.client.disconnect();
+    }
+    /***** Turn off Wifi *****/
+    if (WiFi.isConnected())
+    {
+        WiFi.disconnect(turnOffWiFi);
+    }
+    if (WIFI_ENABLED && debugMode)
+    {
+        debugPrint("Wifi is disabled.");
+    }
+    sendWifiStatus(false);
+    WIFI_ENABLED = false;
 }
 
 
@@ -298,40 +527,69 @@ void setup()
         readAllMessagesFromHost();
         delay(100);
     }
-    /***** Connect to WiFi for the first time *****/
-    iuWifiManager.manageWifi(AP_NAME, NULL, onWifiConnection);
+    /***** Turn on WiFi *****/
+    if (iuWifiManager.hasSavedCredentials())
+    {
+        if (debugMode)
+        {
+            debugPrint("Saved credentials found: starting WiFi...");
+        }
+        enableWifi();
+    }
+    else
+    {
+        if (debugMode)
+        {
+            debugPrint("Saved credentials not found: stopping WiFi...");
+        }
+        disableWifi(true, false);
+    }
     /***** Prepare to receive MQTT messages *****/
     iuMQTTHelper.client.setCallback(mqttNewMessageCallback);
-    /***** Prepare to query time from NTP server *****/
-    timeManager.begin();
-    // Try to get the time from NTP server at least once
-    timeManager.updateTimeReferenceFromNTP();
     delay(1000);
 }
 
-
 void loop()
 {
-    /***** Wifi Connection loop *****/
-    if(!iuWifiManager.reconnect(AP_NAME, NULL, onWifiConnection))
+    /***** WiFi connection maintenance *****/
+    if (WIFI_ENABLED && iuWifiManager.reconnect())
     {
-        sendWifiStatus(false);
-        return;
+        /***** Sleep mode *****/
+        if (WiFi.getSleepMode() != WIFI_LIGHT_SLEEP)
+        {
+            if (!WiFi.setSleepMode(WIFI_LIGHT_SLEEP))
+            {
+                if (debugMode)
+                {
+                    debugPrint("Failed to set light sleep mode");
+                }
+            }
+        }
+        /***** Time management (from IU and / or NTP server) *****/
+        if (!timeManager.active())
+        {
+            //Prepare to query time from NTP server
+            timeManager.begin();
+        }
+        timeManager.updateTimeReferenceFromNTP();
+        /***** MQTT Connection loop *****/
+        iuMQTTHelper.loop(DIAGNOSTIC_TOPIC, WILL_MESSAGE, onMQTTConnection,
+                          1000);
+        // Publish raw data (HTTP POST request)
+        publishAccelRawDataIfReady();
     }
-    /***** Time update loop *****/
-    // As long as we keep receiving time from IU server, this function will do
-    // nothing (see timeManager.TIME_UPDATE_INTERVAL for max delay before time 
-    // update from NTP server)
-    timeManager.updateTimeReferenceFromNTP();
-    /***** MQTT Connection loop *****/
-    iuMQTTHelper.loop(DIAGNOSTIC_TOPIC, WILL_MESSAGE, onMQTTConnection);
-    /***** Send wifi status *****/
-    if (iuWifiManager.isTimeToSendWifiInfo())
-    {
-        char message[256];
-        iuWifiManager.getWifiInfo(message);
-        publishDiagnostic(message, strlen(message));
-    }
+    /***** Maintain wifi status and send it to host and server *****/
+    maintainConnectionStatus();
     /***** Read message from main board and process them *****/
     readAllMessagesFromHost();
+    /***** Sleep (but listen to serial) *****/
+    if (AUTHORIZED_TO_SLEEP)
+    {
+        uint32_t sleepEnd = millis() + 1000;
+        while (millis() < sleepEnd && Serial.available() == 0)
+        {
+            delay(10);
+        }
+    }
 }
+

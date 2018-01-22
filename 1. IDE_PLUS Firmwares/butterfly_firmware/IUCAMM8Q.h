@@ -17,7 +17,7 @@
  *    GNSS
  * Destinations:
  */
-class IUCAMM8Q : public SynchronousSensor
+class IUCAMM8Q : public LowFreqSensor
 {
     public:
         /***** Preset values and default settings *****/
@@ -72,8 +72,12 @@ class IUCAMM8Q : public SynchronousSensor
 
 };
 
+
 /***** Instantiation *****/
 
-extern IUCAMM8Q iuGNSS;
+#ifdef NO_GPS
+#else
+    extern IUCAMM8Q iuGNSS;
+#endif
 
 #endif // IUCAMM8Q_H

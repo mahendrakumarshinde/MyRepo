@@ -13,7 +13,7 @@
  */
 IUBMX055Mag::IUBMX055Mag(IUI2C *iuI2C, const char* name, Feature *magneticX,
                          Feature *magneticY, Feature *magneticZ) :
-    AsynchronousSensor(name, 3, magneticX, magneticY, magneticZ),
+    DrivenSensor(name, 3, magneticX, magneticY, magneticZ),
     m_forcedMode(false),
     m_odr(defaultODR),
     m_accuracy(defaultAccuracy)
@@ -53,7 +53,7 @@ void IUBMX055Mag::softReset()
     m_iuI2C->writeByte(ADDRESS, PWR_CNTL1, 0x82);
     delay(1000);
     // Reflect the actual state of the sensor
-    AsynchronousSensor::sleep();
+    DrivenSensor::sleep();
     m_forcedMode = true;
     setAccuracy(m_accuracy);
     setODR(defaultODR);
@@ -75,7 +75,7 @@ void IUBMX055Mag::wakeUp()
         setAccuracy(m_accuracy);
     }
     enterForcedMode();
-    AsynchronousSensor::wakeUp();
+    DrivenSensor::wakeUp();
 }
 
 /**
@@ -93,7 +93,7 @@ void IUBMX055Mag::sleep()
     }
     m_iuI2C->writeByte(ADDRESS, PWR_CNTL2, 0x06);
     m_forcedMode = true;  // Reflect the actual state of the sensor
-    AsynchronousSensor::sleep();
+    DrivenSensor::sleep();
 }
 
 /**
@@ -104,7 +104,7 @@ void IUBMX055Mag::sleep()
 void IUBMX055Mag::suspend()
 {
     m_iuI2C->writeByte(ADDRESS, PWR_CNTL1, 0x00);
-    AsynchronousSensor::suspend();
+    DrivenSensor::suspend();
 }
 
 

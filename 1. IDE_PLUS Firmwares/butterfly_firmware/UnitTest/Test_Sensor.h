@@ -27,15 +27,15 @@ test(Sensor__base_class_test)
 }
 
 
-test(Sensor__AsynchronousSensor)
+test(Sensor__DrivenSensor)
 {
     Feature dest1("001", 2, 1);
     Feature dest2("002", 2, 1);
-    AsynchronousSensor sensor("ASN", 2, &dest1, &dest2);
+    DrivenSensor sensor("ASN", 2, &dest1, &dest2);
 
     /***** Values after initialization *****/
     assertTrue(sensor.isNamed("ASN"));
-    assertTrue(sensor.isAsynchronous());
+    assertTrue(sensor.isDriven());
     assertEqual(dest1.getSamplingRate(), sensor.getSamplingRate());
     assertEqual(dest2.getSamplingRate(), sensor.getSamplingRate());
 
@@ -46,15 +46,15 @@ test(Sensor__AsynchronousSensor)
 }
 
 
-test(Sensor__SynchronousSensor)
+test(Sensor__LowFreqSensor)
 {
     Feature dest1("001", 2, 1);
     Feature dest2("002", 2, 1);
-    SynchronousSensor sensor("SYN", 2, &dest1, &dest2);
+    LowFreqSensor sensor("SYN", 2, &dest1, &dest2);
 
     /***** Values after initialization *****/
     assertTrue(sensor.isNamed("SYN"));
-    assertFalse(sensor.isAsynchronous());
+    assertFalse(sensor.isDriven());
     assertEqual(sensor.getSamplingPeriod(), 1000);
     assertEqual(round(sensor.getSamplingRate() * 10000),
                 round(10000.0f / (float) sensor.defaultSamplingPeriod))  ;

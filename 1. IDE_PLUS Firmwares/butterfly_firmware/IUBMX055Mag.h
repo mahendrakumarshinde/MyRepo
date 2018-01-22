@@ -22,7 +22,7 @@
  *      - magneticY: a Q15Feature with section size = 128
  *      - magneticZ: a Q15Feature with section size = 128
  */
-class IUBMX055Mag : public AsynchronousSensor
+class IUBMX055Mag : public DrivenSensor
 {
     public:
         /***** Preset values and default settings *****/

@@ -28,6 +28,10 @@
 #endif
 
 
+extern float DEFAULT_ACCEL_ENERGY_NORMAL_TH;
+extern float DEFAULT_ACCEL_ENERGY_WARNING_TH;
+extern float DEFAULT_ACCEL_ENERGY_HIGH_TH;
+
 
 /**
  *
@@ -102,7 +106,7 @@ class Conductor
         bool beginDataAcquisition();
         void endDataAcquisition();
         bool resetDataAcquisition();
-        void acquireData(bool asynchronous);
+        void acquireData(bool inCallback);
         void computeFeatures();
         void updateOperationState();
         void streamFeatures();

@@ -6,7 +6,7 @@
 ============================================================================= */
 
 IUCAMM8Q::IUCAMM8Q(IUI2C *iuI2C, const char* name) :
-    SynchronousSensor(name, 0),
+    LowFreqSensor(name, 0),
     m_iuI2C(iuI2C),
     m_onTime(defaultOnTime),
     m_period(defaultPeriod),
@@ -25,14 +25,16 @@ IUCAMM8Q::IUCAMM8Q(IUI2C *iuI2C, const char* name) :
 void IUCAMM8Q::setupHardware()
 {
     // Start GNSS
-    GNSS.begin(Serial2, GNSS.MODE_UBLOX, GNSS.RATE_5HZ);
+    GNSS.begin(Serial2, GNSS.MODE_UBLOX, GNSS.RATE_1HZ);
     while (!GNSS.done()) { }
+    /*
     // Choose satellites
     GNSS.setConstellation(GNSS.CONSTELLATION_GPS);
     while (!GNSS.done()) { }
     GNSS.setSBAS(true);
     while (!GNSS.done()) { }
     wakeUp();
+    */
     // GNSS deactivated for now, irregardless of the power mode
     GNSS.sleep();
 }
@@ -42,7 +44,7 @@ void IUCAMM8Q::setupHardware()
  */
 void IUCAMM8Q::wakeUp()
 {
-    SynchronousSensor::wakeUp();
+    LowFreqSensor::wakeUp();
     //setPeriodic(m_onTime, m_period, true);
 }
 
@@ -51,7 +53,7 @@ void IUCAMM8Q::wakeUp()
  */
 void IUCAMM8Q::sleep()
 {
-    SynchronousSensor::sleep();
+    LowFreqSensor::sleep();
     //GNSS.sleep();
 }
 
@@ -63,7 +65,7 @@ void IUCAMM8Q::sleep()
  */
 void IUCAMM8Q::suspend()
 {
-    SynchronousSensor::suspend();
+    LowFreqSensor::suspend();
     //GNSS.sleep();
 }
 
@@ -74,7 +76,7 @@ void IUCAMM8Q::suspend()
 
 void IUCAMM8Q::configure(JsonVariant &config)
 {
-    SynchronousSensor::configure(config);  // General sensor config
+    LowFreqSensor::configure(config);  // General sensor config
     JsonVariant value = config["TON"];  // Active duration
     if (value.success())
     {
@@ -137,7 +139,7 @@ void IUCAMM8Q::exitForcedMode()
  */
 void IUCAMM8Q::readData()
 {
-  m_location = GNSS.read();
+//  m_location = GNSS.read();
 }
 
 
@@ -173,4 +175,7 @@ void IUCAMM8Q::exposeCalibration()
     Instantiation
 ============================================================================= */
 
-IUCAMM8Q iuGNSS(&iuI2C, "GPS");
+#ifdef NO_GPS
+#else
+    IUCAMM8Q iuGNSS(&iuI2C, "GPS");
+#endif

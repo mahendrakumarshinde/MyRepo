@@ -157,6 +157,8 @@ bool IUI2C::readBytes(uint8_t address, uint8_t subAddress, uint8_t count,
 /**
  * Read several bytes and store them in destination array
  *
+ * Note that the callback function MUST call endReadOperation to free the I2C.
+ *
  * @param address Where to read the byte from
  * @param subAddress Where to read the byte from
  * @param The number of byte to read
@@ -179,7 +181,6 @@ bool IUI2C::readBytes(uint8_t address, uint8_t subAddress, uint8_t count,
             debugPrint(F("I2C error"));
         }
     }
-    m_readFlag = true;
     return success;
 }
 
