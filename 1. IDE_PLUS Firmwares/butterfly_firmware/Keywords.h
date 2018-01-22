@@ -12,8 +12,8 @@
 ============================================================================= */
 
 /***** Board version *****/
-#define BUTTERFLY_V03
-//#define BUTTERFLY_V04
+//#define BUTTERFLY_V03
+#define BUTTERFLY_V04
 
 /***** WiFi Option *****/
 //#define EXTERNAL_WIFI
@@ -22,6 +22,8 @@
 /***** Optionnal components *****/
 //#define RTD_DAUGHTER_BOARD
 
+/***** GPS Option *****/
+//#define NO_GPS
 
 /***** Firmware version *****/
 const char FIRMWARE_VERSION[6] = "1.0.0";

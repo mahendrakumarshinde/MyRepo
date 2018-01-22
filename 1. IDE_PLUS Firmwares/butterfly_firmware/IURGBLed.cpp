@@ -106,10 +106,10 @@ void IURGBLed::autoManage()
                 if (m_nextSwitchTime < current)
                 {
                     changeColor(m_color, true);
+                    m_showingStatus = true;
+                    m_nextSwitchTime = current + 
+                            (1000 - statusShowTime[(uint8_t) m_status]);
                 }
-                m_showingStatus = true;
-                m_nextSwitchTime = current + 
-                        (1000 - statusShowTime[(uint8_t) m_status]);
             }
             else
             {
@@ -117,10 +117,10 @@ void IURGBLed::autoManage()
                 {
                     changeColor(statusColors[(uint8_t) m_status],
                                 true);
+                    m_showingStatus = false;
+                    m_nextSwitchTime = current + 
+                            statusShowTime[(uint8_t) m_status];
                 }
-                m_showingStatus = true;
-                m_nextSwitchTime = current + 
-                        statusShowTime[(uint8_t) m_status];
             }
             break;
         default:
