@@ -134,7 +134,7 @@ void IUBMP280::switchToLowUsage()
     m_iirFilter = IIRFilterCoeffs::OFF;
     m_standByDuration = StandByDurations::t_4000ms;
     writeConfigRegister();
-    setSamplingPeriod(60000);  // 1 min
+    setSamplingPeriod(30000);  // 30s
 }
 
 void IUBMP280::switchToRegularUsage()
@@ -147,7 +147,7 @@ void IUBMP280::switchToRegularUsage()
     m_iirFilter = IIRFilterCoeffs::OFF;
     m_standByDuration = StandByDurations::t_4000ms;
     writeConfigRegister();
-    setSamplingPeriod(15000);  // 15s
+    setSamplingPeriod(5000);  // 5s
 }
 
 void IUBMP280::switchToEnhancedUsage()
@@ -160,7 +160,7 @@ void IUBMP280::switchToEnhancedUsage()
     m_iirFilter = IIRFilterCoeffs::OFF;
     m_standByDuration = StandByDurations::t_2000ms;
     writeConfigRegister();
-    setSamplingPeriod(5000);  // 5s
+    setSamplingPeriod(2000);  // 2s
 }
 
 void IUBMP280::switchToHighUsage()

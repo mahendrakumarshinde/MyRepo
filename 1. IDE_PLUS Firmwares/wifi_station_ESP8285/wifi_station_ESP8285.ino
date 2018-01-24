@@ -528,6 +528,10 @@ void setup()
         delay(100);
     }
     /***** Turn on WiFi *****/
+    if (WiFi.getMode() == WIFI_AP)
+    {
+        WiFi.mode(WIFI_OFF);
+    }
     if (iuWifiManager.hasSavedCredentials())
     {
         if (debugMode)

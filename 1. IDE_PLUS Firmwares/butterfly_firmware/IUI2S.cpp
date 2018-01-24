@@ -47,12 +47,13 @@ bool IUI2S::triggerDataAcquisition(void (*callback)())
     // trigger a read to kick things off
     if (m_firstI2STrigger)
     {
-        I2S.onReceive(callback); // add the receiver callback
-        if (!I2S.begin(I2S_PHILIPS_MODE, clockRate, bitsPerAudioSample))
+        Butterfly_I2S.onReceive(callback); // add the receiver callback
+        if (!Butterfly_I2S.begin(I2S_PHILIPS_MODE, clockRate,
+                                 bitsPerAudioSample))
         {
             return false;
         }
-        I2S.read();
+        Butterfly_I2S.read();
         m_firstI2STrigger = false;
     }
     else
@@ -102,7 +103,8 @@ void IUI2S::processAudioData(q31_t *data)
  */
 void IUI2S::readData()
 {
-    int readBitCount = I2S.read(m_rawAudioData, sizeof(m_rawAudioData));
+    int readBitCount = Butterfly_I2S.read(m_rawAudioData,
+                                          sizeof(m_rawAudioData));
     if (readBitCount)
     {
         processAudioData((q31_t*) m_rawAudioData);

@@ -9,6 +9,13 @@
 #include "IUI2C.h"
 
 
+#ifdef BUTTERFLY_V03
+    #define Butterfly_I2S I2S
+#else
+    #define Butterfly_I2S I2S1
+#endif
+
+
 /**
  * Class to handle both the I2S and the related ICS43432 microphone
  *
