@@ -106,7 +106,9 @@ class CalibrationExperiment:
         Get values from data generator updates the calibration results
         """
         values = defaultdict(list)
-        for data_byte in data_generator:
+        for i, data_byte in enumerate(data_generator):
+            if i == 0:
+                continue
             data = CalibrationData(data_byte)
             for field, factor in zip(self.fields,
                                      self.unit_conversion_factors):
@@ -283,9 +285,10 @@ class CalibrationInterface(tk.Frame):
         VibrationCalibration([2000, 15.92, 20], [5, 5, 5]),
         VibrationCalibration([1000, 40, 4], [5, 5, 5]),
         VibrationCalibration([2000, 40, 8], [5, 5, 5]),
-        VibrationCalibration([5000, 40, 20], [5, 5, 5]),
+#        VibrationCalibration([5000, 40, 20], [5, 5, 5]),
         VibrationCalibration([2000, 80, 4], [5, 5, 5]),
         VibrationCalibration([5000, 80, 10], [5, 5, 5]),
+        VibrationCalibration([10000, 80, 20], [5, 5, 5]),
         ]
 
     # Additionnal Calibration Information
@@ -350,7 +353,7 @@ class CalibrationInterface(tk.Frame):
                                     self.end_calibration_confirm)
         return self._data_collecter
 
-    def run_calibration(self, calibration_experiment, timeout=5.5):
+    def run_calibration(self, calibration_experiment, timeout=6):
         """
         Run a calibration experiment
         """
