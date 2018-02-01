@@ -577,8 +577,10 @@ void Q15FFTComputer::m_specializedCompute()
 
 /***** Audio DB *****/
 
-AudioDBComputer::AudioDBComputer(uint8_t id, Feature *audioDB) :
-    FeatureComputer(id, 1, audioDB)
+AudioDBComputer::AudioDBComputer(uint8_t id, Feature *audioDB,
+                                 float calibrationScaling) :
+    FeatureComputer(id, 1, audioDB),
+    m_calibrationScaling(calibrationScaling)
 {
 }
 
@@ -623,6 +625,7 @@ void AudioDBComputer::m_specializedCompute()
     }
     audioDB += log10(accu);
     float result = 20.0 * audioDB / (float) length;
+    result *= m_calibrationScaling;
     m_destinations[0]->addFloatValue(result);
     if (featureDebugMode)
     {
@@ -703,8 +706,8 @@ Q15FFTComputer accelFFTComputerZ(11,
 
 /***** Audio Features *****/
 
-AudioDBComputer audioDB2048Computer(12, &audioDB2048);
-AudioDBComputer audioDB4096Computer(13, &audioDB4096);
+AudioDBComputer audioDB2048Computer(12, &audioDB2048, AUDIO_DB_SCALING);
+AudioDBComputer audioDB4096Computer(13, &audioDB4096, AUDIO_DB_SCALING);
 
 
 /***** Set up sources *****/

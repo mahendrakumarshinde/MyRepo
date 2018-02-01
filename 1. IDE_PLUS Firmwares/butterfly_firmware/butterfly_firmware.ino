@@ -71,6 +71,11 @@ uint16_t DEFAULT_HIGH_CUT_FREQUENCY = 500;  // Hz
 float DEFAULT_MIN_AGITATION = 0.1;
 
 
+/***** Audio DB calibration parameters *****/
+
+float AUDIO_DB_SCALING = 1.1;
+
+
 /* =============================================================================
     Main
 ============================================================================= */

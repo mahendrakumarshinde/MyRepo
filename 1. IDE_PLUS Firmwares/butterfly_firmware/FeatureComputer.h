@@ -207,10 +207,13 @@ class Q15FFTComputer: public FeatureComputer
 class AudioDBComputer: public FeatureComputer
 {
     public:
-        AudioDBComputer(uint8_t id, Feature *audioDB=NULL);
+        AudioDBComputer(uint8_t id, Feature *audioDB=NULL,
+                        float calibrationScaling=1.);
+        void setCalibrationScaling(float val) { m_calibrationScaling = val; }
 
     protected:
         virtual void m_specializedCompute();
+        float m_calibrationScaling;  // Scaling factor
 };
 
 
@@ -255,6 +258,11 @@ extern SectionSumComputer accel512TotalComputer;
 extern Q15FFTComputer accelFFTComputerX;
 extern Q15FFTComputer accelFFTComputerY;
 extern Q15FFTComputer accelFFTComputerZ;
+
+
+/***** Accelerometer Calibration parameters *****/
+
+extern float AUDIO_DB_SCALING;
 
 
 /***** Audio Features *****/
