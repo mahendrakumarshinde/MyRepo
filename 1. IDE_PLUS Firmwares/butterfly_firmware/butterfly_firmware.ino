@@ -223,16 +223,6 @@ void loop()
                 debugPrint(' ');
                 /*======*/
             }
-            uint32_t now = millis();
-            if(lastDone == 0 || lastDone + interval < now || now < lastDone)
-            {
-                lastDone = now;
-                /* === Place your code to excute at fixed interval here ===*/
-                debugPrint(now, false);
-                debugPrint(": ", false);
-                memoryLog("Loop");
-                /*======*/
-            }
         }
         // Power saving
         conductor.manageSleepCycles();
@@ -256,6 +246,14 @@ void loop()
         // Stream features
         conductor.streamFeatures();
         iuRGBLed.autoManage();
+        uint32_t now = millis();
+        if(lastDone == 0 || lastDone + interval < now || now < lastDone)
+        {
+            lastDone = now;
+            /* === Place your code to excute at fixed interval here ===*/
+            conductor.streamMCUUInfo();
+            /*======*/
+        }
         uint32_t stopYield = millis() + 10;
         while (millis() < stopYield)
         {

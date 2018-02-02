@@ -112,6 +112,8 @@ class Conductor
         void streamFeatures();
         void storeData() {}  // TODO => implement
         /***** Debugging *****/
+        void getMCUInfo(char *destination);
+        void  streamMCUUInfo();
         void exposeAllConfigurations();
 
     protected:

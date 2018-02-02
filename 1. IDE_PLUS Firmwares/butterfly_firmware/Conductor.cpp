@@ -1368,6 +1368,42 @@ void Conductor::streamFeatures()
 ============================================================================= */
 
 /**
+ * Write info from on the MCU state in destination.
+ */
+void Conductor::getMCUInfo(char *destination)
+{
+    float vdda = STM32.getVREF();
+    float temperature = STM32.getTemperature();
+    if (debugMode)
+    {
+        debugPrint("VDDA = ", false);
+        debugPrint(vdda);
+        debugPrint("MCU Temp = ", false);
+        debugPrint(temperature);
+    }
+    size_t len = strlen(destination);
+    for (size_t i = 0; i < len; i++)
+    {
+        destination[i] = '\0';
+    }
+    strcpy(destination, "{\"VDDA\":");
+    strcat(destination, String(vdda).c_str());
+    strcat(destination, ", \"temp\":");
+    strcat(destination, String(temperature).c_str());
+    strcat(destination, "}");
+}
+
+void  Conductor::streamMCUUInfo()
+{
+    char destination[50];
+    getMCUInfo(destination);
+    // TODO Change to "ST" ?
+    iuWiFi.port->print("HB,");
+    iuWiFi.port->print(destination);
+    iuWiFi.port->print(';');
+}
+
+/**
  * Expose current configurations
  */
 void Conductor::exposeAllConfigurations()

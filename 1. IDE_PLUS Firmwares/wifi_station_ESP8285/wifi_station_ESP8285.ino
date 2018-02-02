@@ -450,7 +450,8 @@ void processMessageFromHost(char *buff)
         publishFeature(&buff[7], strlen(buff) - 7, buff, 6);
     }
     else if (strncmp(buff, "HB,", 3) == 0 ||
-             strncmp(buff, "DT,", 3) == 0)  // Diagnsotic
+             strncmp(buff, "DT,", 3) == 0 ||
+             strncmp(buff, "ST,", 3) == 0)  // Diagnsotic
     {
         publishDiagnostic(&buff[3], strlen(buff) - 3);
     }
