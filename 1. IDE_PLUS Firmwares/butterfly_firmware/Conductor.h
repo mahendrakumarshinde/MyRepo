@@ -9,6 +9,7 @@
 #include "FeatureGroup.h"
 #include "IUI2C.h"
 #include "IUSerial.h"
+#include "IUUSB.h"
 #include "IUBMD350.h"
 #include "IURGBLed.h"
 #include "IUBattery.h"
@@ -77,7 +78,8 @@ class Conductor
         uint32_t getSleepDuration() { return m_sleepDuration; }
         uint32_t getCycleTime() { return m_cycleTime; }
         /***** Serial Reading & command processing*****/
-        void readFromSerial(IUSerial *iuSerial);
+        void readFromSerial(StreamingMode::option interfaceType,
+                            IUSerial *iuSerial);
         bool processConfiguration(char *json);
         bool configureMainOptions(JsonVariant &config);
         void configureAllSensors(JsonVariant &config);

@@ -38,8 +38,16 @@ char WILL_MESSAGE[44] = "XXXAdmin;;;00:00:00:00:00:00;;;disconnected";
 bool AUTHORIZED_TO_SLEEP = true;
 bool WIFI_ENABLED = true;
 
-uint32_t WIFI_STATUS_REFRESH_INTERVAL = 15000;  // ms
+uint32_t STAY_AWAKE_DURATION = 600000;  // ms
+uint32_t stayAwakeOrderTime = 0;
+uint64_t DEEP_SLEEP_DURATION = 30000000;  // in micro seconds
+
+uint32_t WIFI_STATUS_REFRESH_INTERVAL = 10000;  // ms
 uint32_t lastWifiStatusRefresh = 0;
+
+char hostSerialBuffer[3072];
+IUSerial hostSerial(&Serial, hostSerialBuffer, 3072, IUSerial::LEGACY_PROTOCOL,
+                    115200, ';', 100);
 
 
 /* =============================================================================
@@ -238,6 +246,19 @@ void sendWifiStatus(bool isConnected)
     }
 }
 
+bool canSleep()
+{
+    if (!AUTHORIZED_TO_SLEEP)
+    {
+        if (stayAwakeOrderTime + STAY_AWAKE_DURATION < millis())
+        {
+            AUTHORIZED_TO_SLEEP = true;
+            stayAwakeOrderTime = 0;
+        }
+    }
+    return AUTHORIZED_TO_SLEEP;
+}
+
 /**
  * 
  * Get current status, send message to host (STM32) and server, and reset
@@ -267,10 +288,35 @@ bool maintainConnectionStatus()
                 {
                     if (debugMode)
                     {
-                        debugPrint("Reached WiFi Manager timeout... Resetting");
+                        debugPrint(millis(), false);
+                        debugPrint(": Reached WiFi Manager timeout");
                     }
-                    delay(10);
-                    ESP.reset();
+//                    ESP.reset();
+                    if (canSleep())
+                    {
+                        if (debugMode)
+                        {
+                            debugPrint("Sleeping...");
+                            delay(1);
+                        }
+                        ESP.deepSleep(DEEP_SLEEP_DURATION);  // in micro seconds
+                    }
+//                    sendWifiStatus(false);
+//                    uint32_t sleepEnd1 = millis() + 1000;
+//                    while (millis() < sleepEnd1 && Serial.available() == 0)
+//                    {
+//                        delay(10);
+//                    }
+//                    if (Serial.available() == 0)
+//                    {
+//                        iuWifiManager.saveCurrentCredentials();
+//                        WiFi.mode(WIFI_OFF);
+//                        uint32_t sleepEnd2 = millis() + 50000;
+//                        while (millis() < sleepEnd2 && Serial.available() == 0)
+//                        {
+//                            delay(10);
+//                        }
+//                    }
                 }
             }
             else
@@ -417,6 +463,7 @@ void processMessageFromHost(char *buff)
     else if (strcmp("WIFI-NOSLEEP", buff) == 0)
     {
         AUTHORIZED_TO_SLEEP = false;
+        stayAwakeOrderTime = millis();
         if (debugMode)
         {
             debugPrint("Not authorized to sleep");
@@ -425,6 +472,7 @@ void processMessageFromHost(char *buff)
     else if (strcmp("WIFI-SLEEPOK", buff) == 0)
     {
         AUTHORIZED_TO_SLEEP = true;
+        stayAwakeOrderTime = 0;
         if (debugMode)
         {
             debugPrint("Authorized to sleep");
@@ -552,6 +600,17 @@ void setup()
     /***** Prepare to receive MQTT messages *****/
     iuMQTTHelper.client.setCallback(mqttNewMessageCallback);
     delay(1000);
+    // Reset WiFiManager timer
+    iuWifiManager.hasTimedOut(true);
+    if (debugMode)
+    {
+        debugPrint("Ended setup at ", false);
+        debugPrint(millis(), false);
+        debugPrint(';');
+    }
+//    Serial.print("Ended setup at ");
+//    Serial.print(millis());
+//    Serial.println(';');
 }
 
 void loop()
@@ -587,14 +646,11 @@ void loop()
     maintainConnectionStatus();
     /***** Read message from main board and process them *****/
     readAllMessagesFromHost();
-    /***** Sleep (but listen to serial) *****/
-    if (AUTHORIZED_TO_SLEEP)
+    /***** Light sleep (and listen to serial) *****/
+    uint32_t sleepEnd = millis() + 1000;
+    while (millis() < sleepEnd && Serial.available() == 0)
     {
-        uint32_t sleepEnd = millis() + 1000;
-        while (millis() < sleepEnd && Serial.available() == 0)
-        {
-            delay(10);
-        }
+        delay(10);
     }
 }
 

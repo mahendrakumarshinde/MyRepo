@@ -25,10 +25,10 @@ IUWiFiManager::IUWiFiManager(uint32_t connectTimeout, uint32_t timeout,
 /**
  * 
  */
-bool IUWiFiManager::hasTimedOut(bool currentlyConnected)
+bool IUWiFiManager::hasTimedOut(bool resetTimer)
 {
     uint32_t current = millis();
-    if (currentlyConnected)
+    if (resetTimer)
     {
          m_lastConnected = current;
          return false;
@@ -411,4 +411,4 @@ void IUWiFiManager::debugPrintWifiInfo()
     Instanciation
 ============================================================================= */
 
-IUWiFiManager iuWifiManager(1000, 180000, 8);
+IUWiFiManager iuWifiManager(1000, 20000, 8);

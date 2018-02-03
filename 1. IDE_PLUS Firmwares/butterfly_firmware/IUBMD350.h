@@ -4,6 +4,7 @@
 #include <Arduino.h>
 
 #include "IUSerial.h"
+#include "Component.h"
 
 
 /**
@@ -16,7 +17,7 @@
  *   Bluetooth Low Energy for Butterfly board
  *   BMD-350 UART connected to Serial 2 (pins 30/31) on Butterfly
  */
-class IUBMD350 : public IUSerial
+class IUBMD350 : public IUSerial, public Component
 {
     public:
         /***** Preset values and default settings *****/
@@ -37,11 +38,10 @@ class IUBMD350 : public IUSerial
                                       DBm16 = 240,  // -4 DB
                                       DBm30 = 226}; // -30 DB
         static const txPowerOption defaultTxPower = txPowerOption::DBm4;
-
         /***** Constructors & destructor *****/
         IUBMD350(HardwareSerial *serialPort, char *charBuffer,
-                 uint16_t bufferSize,  uint32_t rate=57600,
-                 uint16_t dataReceptionTimeout=2000);
+                 uint16_t bufferSize, PROTOCOL_OPTIONS protocol,
+                 uint32_t rate=57600, uint16_t dataReceptionTimeout=2000);
         virtual ~IUBMD350() {}
         /***** Hardware and power management *****/
         virtual void setupHardware();
@@ -79,8 +79,6 @@ class IUBMD350 : public IUSerial
                             uint8_t len3 = 3, uint8_t len4 = 13);
 
     protected:
-        /***** Communication *****/
-        char m_buffer[500];
         /***** Bluetooth Configuration *****/
         bool m_ATCmdEnabled;  // AT Command Interface
         char m_deviceName[9];  // max 8 chars + 1 char end of string

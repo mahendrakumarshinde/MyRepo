@@ -8,10 +8,11 @@
     Library imports
 ============================================================================= */
 
-
 #include "Conductor.h"
 #include "IUSPIFlash.h"  // FIXME For some reason, if this is included in
 // conductor, it blocks the I2S callback
+
+#include <MemoryFree.h>
 
 /* Comment / Uncomment the "define" lines to toggle / untoggle unit or quality
 test mode */
@@ -39,7 +40,7 @@ test mode */
     MAC Address
 ============================================================================= */
 
-const char MAC_ADDRESS[18] = "94:54:93:0F:7B:53";
+const char MAC_ADDRESS[18] = "94:54:93:0F:67:01";
     // "94:54:93:0E:81:44";
     // "94:54:93:0E:63:FC";
     // "94:54:93:0E:81:A4";
@@ -120,23 +121,28 @@ Conductor conductor(MAC_ADDRESS);
 void setup()
 {
     #if defined(UNITTEST) || defined(INTEGRATEDTEST)
-        Serial.begin(115200);
+        iuUSB.begin();
         delay(2000);
-        memoryLog("TESTING");
-        Serial.println(' ');
-        iuI2C.setupHardware();
-    #else
-        iuUSB.setupHardware();  // Start with USB for Serial communication
         if (debugMode)
         {
-          memoryLog("Start");
+            debugPrint(F("TESTING - Mem: "), false);
+            debugPrint(String(freeMemory(), DEC));
+            debugPrint(' ');
         }
+        iuI2C.begin();
+    #else
+        iuUSB.begin();  // Start with USB for Serial communication
+        if (debugMode)
+        {
+          debugPrint(F("Start - Mem: "), false);
+          debugPrint(String(freeMemory(), DEC));
+        }
+        iuI2C.begin();
         // Interfaces
         if (debugMode)
         {
             debugPrint(F("\nInitializing interfaces..."));
         }
-        iuI2C.setupHardware();
         if (setupDebugMode)
         {
             iuI2C.scanDevices();
@@ -147,7 +153,9 @@ void setup()
         iuSPIFlash.setupHardware();
         if(debugMode)
         {
-            memoryLog(F("=> Successfully initialized interfaces"));
+            debugPrint(F("=> Successfully initialized interfaces - Mem: "),
+                       false);
+            debugPrint(String(freeMemory(), DEC));
         }
         if (setupDebugMode)
         {
@@ -164,7 +172,9 @@ void setup()
         populateFeatureGroups();
         if (debugMode)
         {
-            memoryLog(F("=> Succesfully configured default features"));
+            debugPrint(F("=> Succesfully configured default features - Mem: "),
+                        false);
+            debugPrint(String(freeMemory(), DEC));
         }
         // Sensors
         if (debugMode)
@@ -183,7 +193,9 @@ void setup()
         iuGyroscope.suspend();
         if (debugMode)
         {
-          memoryLog(F("=> Successfully initialized sensors"));
+            debugPrint(F("=> Succesfully initialized sensors - Mem: "),
+                        false);
+            debugPrint(String(freeMemory(), DEC));
         }
         if (setupDebugMode)
         {
@@ -201,6 +213,7 @@ void setup()
             debugPrint(F("***\n"));
         }
         conductor.changeUsageMode(UsageMode::OPERATION);
+        iuWiFi.preventFromSleeping();
     #endif
 }
 
@@ -219,7 +232,12 @@ void loop()
             {
                 doOnce = false;
                 /* === Place your code to excute once here ===*/
-                if (setupDebugMode) { memoryLog(F("Loop")); }
+                if (setupDebugMode)
+                {
+                    debugPrint(F("Loop - Mem: "),
+                                false);
+                    debugPrint(String(freeMemory(), DEC));
+                }
                 debugPrint(' ');
                 /*======*/
             }
@@ -228,11 +246,11 @@ void loop()
         conductor.manageSleepCycles();
         iuRGBLed.autoManage();
         // Configuration
-        conductor.readFromSerial(&iuUSB);
+        conductor.readFromSerial(StreamingMode::WIRED, &iuUSB);
         iuRGBLed.autoManage();
-        conductor.readFromSerial(&iuBluetooth);
+        conductor.readFromSerial(StreamingMode::BLE, &iuBluetooth);
         iuRGBLed.autoManage();
-        conductor.readFromSerial(&iuWiFi);
+        conductor.readFromSerial(StreamingMode::WIFI, &iuWiFi);
         iuRGBLed.autoManage();
         // Acquire data from sensors
         conductor.acquireData(false);

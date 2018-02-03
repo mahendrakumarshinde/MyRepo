@@ -123,7 +123,8 @@ void Conductor::manageSleepCycles()
 /**
  * Read from USB and process the command, if one was received.
  */
-void Conductor::readFromSerial(IUSerial *iuSerial)
+void Conductor::readFromSerial(StreamingMode::option interfaceType,
+                               IUSerial *iuSerial)
 {
     while(true)
     {
@@ -138,7 +139,7 @@ void Conductor::readFromSerial(IUSerial *iuSerial)
         if (loopDebugMode)
         {
             debugPrint(F("Interface "), false);
-            debugPrint(iuSerial->interfaceType, false);
+            debugPrint(interfaceType, false);
             debugPrint(F(" input is: "), false);
             debugPrint(buffer);
         }
@@ -149,7 +150,7 @@ void Conductor::readFromSerial(IUSerial *iuSerial)
         else
         {
             // Also check for legacy commands
-            switch (iuSerial->interfaceType)
+            switch (interfaceType)
             {
                 case StreamingMode::WIRED:
                     processLegacyUSBCommands(buffer);
@@ -164,7 +165,7 @@ void Conductor::readFromSerial(IUSerial *iuSerial)
                     if (loopDebugMode)
                     {
                         debugPrint(F("Unhandled interface type: "), false);
-                        debugPrint(iuSerial->interfaceType);
+                        debugPrint(interfaceType);
                     }
             }
         }
@@ -1044,6 +1045,19 @@ void Conductor::changeStreamingMode(StreamingMode::option mode)
     if (m_streamingMode == mode)
     {
         return; // Nothing to do
+    }
+    if (m_usageMode == UsageMode::CALIBRATION ||
+        m_usageMode == UsageMode::EXPERIMENT)
+    {
+        if (mode != StreamingMode::WIRED)
+        {
+            if (debugMode)
+            {
+                debugPrint(F("Streaming mode locked to WIRED during "
+                             "calibration and experiment"));
+            }
+            return;
+        }
     }
     m_streamingMode = mode;
     if (loopDebugMode)
