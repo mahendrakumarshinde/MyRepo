@@ -6,9 +6,9 @@
 ============================================================================= */
 
 IUBMD350::IUBMD350(HardwareSerial *serialPort, char *charBuffer,
-                   uint16_t bufferSize,  uint32_t rate,
-                   uint16_t dataReceptionTimeout) :
-    IUSerial(StreamingMode::BLE, serialPort, charBuffer, bufferSize, rate, ';',
+                   uint16_t bufferSize, PROTOCOL_OPTIONS protocol,
+                   uint32_t rate, uint16_t dataReceptionTimeout) :
+    IUSerial(serialPort, charBuffer, bufferSize, protocol, rate, ';',
              dataReceptionTimeout),
     m_ATCmdEnabled(false),
     m_beaconEnabled(IUBMD350::defaultBeaconEnabled),
@@ -26,8 +26,7 @@ IUBMD350::IUBMD350(HardwareSerial *serialPort, char *charBuffer,
  */
 void IUBMD350::setupHardware()
 {
-    port->begin(baudRate);
-    delay(10);
+    begin();
     // Configure pins and port
     pinMode(ATCmdPin, OUTPUT);
     pinMode(resetPin, OUTPUT);
@@ -60,7 +59,7 @@ void IUBMD350::softReset()
  */
 void IUBMD350::wakeUp()
 {
-    IUSerial::wakeUp();
+    Component::wakeUp();
     enterATCommandInterface();
     setTxPowers(defaultTxPower);
     exitATCommandInterface();
@@ -73,7 +72,7 @@ void IUBMD350::wakeUp()
  */
 void IUBMD350::sleep()
 {
-    IUSerial::sleep();
+    Component::sleep();
     enterATCommandInterface();
     setTxPowers(defaultTxPower);
     exitATCommandInterface();
@@ -86,7 +85,7 @@ void IUBMD350::sleep()
  */
 void IUBMD350::suspend()
 {
-    IUSerial::suspend();
+    Component::suspend();
     enterATCommandInterface();
     setTxPowers(txPowerOption::DBm30);
     exitATCommandInterface();
@@ -562,4 +561,5 @@ void IUBMD350::getBMDwareInfo(char *BMDVersion, char *bootVersion,
 ============================================================================= */
 
 char iuBluetoothBuffer[500] = "";
-IUBMD350 iuBluetooth(&Serial1, iuBluetoothBuffer, 500, 57600, 2000);
+IUBMD350 iuBluetooth(&Serial1, iuBluetoothBuffer, 500,
+                     IUSerial::LEGACY_PROTOCOL, 57600, 2000);

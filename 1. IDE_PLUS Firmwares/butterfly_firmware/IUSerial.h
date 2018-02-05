@@ -3,40 +3,38 @@
 
 #include <Arduino.h>
 
-#include "Keywords.h"
-#include "Component.h"
+#include "Logger.h"
 
 
 /**
  * Custom implementation of Serial port (UART)
  *
- * Component:
- *   Name: -
- * Description:
- *   Serial port, UART
+ * Class implements function to read data from Serial using a protocol.
+ * Protocol are implemented by default and child class can define their custom
+ * protocol.
  */
-class IUSerial : public Component
+class IUSerial
 {
     public:
         /***** Public constants *****/
-        const StreamingMode::option interfaceType;
         HardwareSerial *port;
         const uint32_t baudRate;
-        const char stopChar;
-        enum WSP_STATE : uint8_t {WSP_IDLE,
-                                  WSP_HEADER_START,
-                                  WSP_HEADER_M,
-                                  WSP_HEADER_ARROW,
-                                  WSP_HEADER_SIZE,
-                                  WSP_HEADER_CMD};
+        enum PROTOCOL_OPTIONS : uint8_t {LEGACY_PROTOCOL,
+                                         MS_PROTOCOL,
+                                         CUSTOM_PROTOCOL};
+        enum MSP_STATE : uint8_t {MSP_IDLE,
+                                  MSP_HEADER_START,
+                                  MSP_HEADER_M,
+                                  MSP_HEADER_ARROW,
+                                  MSP_HEADER_SIZE,
+                                  MSP_HEADER_CMD};
         /***** Core *****/
-        IUSerial(StreamingMode::option interface, HardwareSerial *serialPort,
-                 char *charBuffer, uint16_t bufferSize, uint32_t rate=57600,
-                 char stop=';', uint16_t dataReceptionTimeout=2000,
-                 uint16_t forceMessageSize=0);
+        IUSerial(HardwareSerial *serialPort, char *charBuffer,
+                 uint16_t bufferSize, PROTOCOL_OPTIONS protocol,
+                 uint32_t rate=57600, char stopChar=';',
+                 uint16_t dataReceptionTimeout=2000);
         virtual ~IUSerial() {}
-        /***** Hardware and power management *****/
-        virtual void setupHardware();
+        virtual void begin();
         /***** Communication *****/
         virtual void resetBuffer();
         virtual bool readToBuffer();
@@ -44,12 +42,6 @@ class IUSerial : public Component
         virtual bool hasNewMessage() { return m_newMessage; }
         virtual char* getBuffer() { return m_buffer; }
         virtual uint16_t getCurrentBufferLength() { return m_bufferIndex; }
-        virtual void setForceMessageSize(uint16_t messageSize)
-            { m_forceMessageSize = messageSize; }
-        /***** MSP (Multiwii Serial Protocol) *****/
-        virtual void readMspMessages();
-
-
 
     protected:
         /***** Communication *****/
@@ -57,29 +49,23 @@ class IUSerial : public Component
         uint16_t m_bufferSize;
         bool m_newMessage;
         uint16_t m_bufferIndex;
-        // Data reception robustness variables
+        /***** Data reception robustness variables *****/
         // Buffer is emptied if now - lastReadTime > dataReceptionTimeout
         uint16_t m_dataReceptionTimeout;  // in ms
         uint32_t m_lastReadTime;  // in ms, as outputed by millis()
-        uint16_t m_forceMessageSize;
+        /***** Protocol selection *****/
+        PROTOCOL_OPTIONS m_protocol;
+        /***** Legacy Protocol *****/
+        virtual bool readCharLegacyProtocol();
+        char m_stopChar;
         /***** MSP (Multiwii Serial Protocol) *****/
-        WSP_STATE m_state;
-        uint8_t m_command;
-        uint8_t m_wspDataSize;
-        uint8_t m_checksum;
-        uint8_t m_indRX;
-
+        virtual bool readCharMsp();
+        MSP_STATE m_mspState;
+        uint8_t m_mspCommand;
+        uint8_t m_mspDataSize;
+        uint8_t m_mspChecksum;
+        /***** Custom Protocol *****/
+        virtual bool readCharCustomProtocol();
 };
-
-
-/***** Instanciation *****/
-
-extern char iuUSBBuffer[20];
-extern IUSerial iuUSB;
-
-#ifdef EXTERNAL_WIFI
-    extern char iuWiFiBuffer[500];
-    extern IUSerial iuWiFi;
-#endif
 
 #endif // IUSERIAL_H
