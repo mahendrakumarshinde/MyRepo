@@ -137,9 +137,9 @@ void IUI2S::sendData(HardwareSerial *port)
         for (int j = 0; j < m_downclocking; ++j)
         {
             // stream 3 most significant bytes from 32bits value
-            port->write((m_audioData[j] >> 24) & 0xFF);
-            port->write((m_audioData[j] >> 16) & 0xFF);
-            port->write((m_audioData[j] >> 8) & 0xFF);
+            port->write((m_rawAudioData[j * 2 + 1]) & 0xFF);
+            port->write((m_rawAudioData[j * 2 + 2]) & 0xFF);
+            port->write((m_rawAudioData[j * 2 + 3]) & 0xFF);
         }
     }
 }

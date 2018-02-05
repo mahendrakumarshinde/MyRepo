@@ -3,8 +3,13 @@
 
 #include "Utilities.h"
 
+
 /**
- * 
+ * Custom implementation of Serial port (UART)
+ *
+ * Class implements function to read data from Serial using a protocol.
+ * Protocol are implemented by default and child class can define their custom
+ * protocol.
  */
 class IUSerial
 {
@@ -12,15 +17,23 @@ class IUSerial
         /***** Public constants *****/
         HardwareSerial *port;
         const uint32_t baudRate;
-        const uint16_t bufferSize;
-        const char stopChar;
+        enum PROTOCOL_OPTIONS : uint8_t {LEGACY_PROTOCOL,
+                                         MS_PROTOCOL,
+                                         CUSTOM_PROTOCOL};
+        enum MSP_STATE : uint8_t {MSP_IDLE,
+                                  MSP_HEADER_START,
+                                  MSP_HEADER_M,
+                                  MSP_HEADER_ARROW,
+                                  MSP_HEADER_SIZE,
+                                  MSP_HEADER_CMD};
         /***** Core *****/
-        IUSerial(HardwareSerial *serialPort, uint32_t rate=115200,
-                 uint16_t buffSize=3072, char stop=';',
-                 uint16_t dataReceptionTimeout=100);
-        virtual ~IUSerial() { }
-        void begin();
-        /***** Communication with host *****/
+        IUSerial(HardwareSerial *serialPort, char *charBuffer,
+                 uint16_t bufferSize, PROTOCOL_OPTIONS protocol,
+                 uint32_t rate=57600, char stopChar=';',
+                 uint16_t dataReceptionTimeout=2000);
+        virtual ~IUSerial() {}
+        virtual void begin();
+        /***** Communication *****/
         virtual void resetBuffer();
         virtual bool readToBuffer();
         virtual bool hasTimedOut();
@@ -30,19 +43,27 @@ class IUSerial
 
     protected:
         /***** Communication *****/
-        char m_buffer[3072];
-        uint16_t m_bufferIndex;
+        char *m_buffer;
+        uint16_t m_bufferSize;
         bool m_newMessage;
-        // Data reception robustness variables
+        uint16_t m_bufferIndex;
+        /***** Data reception robustness variables *****/
         // Buffer is emptied if now - lastReadTime > dataReceptionTimeout
         uint16_t m_dataReceptionTimeout;  // in ms
         uint32_t m_lastReadTime;  // in ms, as outputed by millis()
-
+        /***** Protocol selection *****/
+        PROTOCOL_OPTIONS m_protocol;
+        /***** Legacy Protocol *****/
+        virtual bool readCharLegacyProtocol();
+        char m_stopChar;
+        /***** MSP (Multiwii Serial Protocol) *****/
+        virtual bool readCharMsp();
+        MSP_STATE m_mspState;
+        uint8_t m_mspCommand;
+        uint8_t m_mspDataSize;
+        uint8_t m_mspChecksum;
+        /***** Custom Protocol *****/
+        virtual bool readCharCustomProtocol();
 };
-
-
-/***** Instanciation *****/
-
-extern IUSerial hostSerial;
 
 #endif // IUSERIAL_H

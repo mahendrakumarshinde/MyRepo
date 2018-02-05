@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include "Sensor.h"
 #include "IUI2C.h"
+#include "Utilities.h"
 
 
 /***** Data Acquisition callbacks *****/
