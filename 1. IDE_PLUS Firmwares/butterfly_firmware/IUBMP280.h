@@ -133,9 +133,4 @@ class IUBMP280 : public LowFreqSensor
         float compensatePressure(int32_t rawP);
 };
 
-
-/***** Instanciation *****/
-
-extern IUBMP280 iuAltimeter;
-
 #endif // IUBMP280_H

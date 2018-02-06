@@ -564,7 +564,7 @@ void Conductor::processLegacyBLECommands(char *buff)
                     buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
                 {
                     iuBluetooth.port->print("HB,");
-                    iuBluetooth.port->print(conductor.getMacAddress());
+                    iuBluetooth.port->print(m_macAddress);
                     iuBluetooth.port->print(",");
                     if (iuI2C.isError())
                     {

@@ -83,9 +83,4 @@ class IURGBLed : public Component
         uint32_t m_nextSwitchTime;
 };
 
-
-/***** Instanciation *****/
-
-extern IURGBLed iuRGBLed;
-
 #endif // IURGBLED_H

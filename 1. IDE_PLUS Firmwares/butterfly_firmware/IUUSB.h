@@ -23,10 +23,4 @@ class IUUSB : public IUSerial
         virtual bool readCharCustomProtocol();
 };
 
-
-/***** Instanciation *****/
-
-extern char iuUSBBuffer[20];
-extern IUUSB iuUSB;
-
 #endif // IUUSB_H

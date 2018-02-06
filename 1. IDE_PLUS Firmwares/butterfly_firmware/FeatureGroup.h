@@ -72,18 +72,4 @@ class FeatureGroup
         uint32_t m_bufferStartTime;
 };
 
-
-/***** Instantiation *****/
-
-extern FeatureGroup healthCheckGroup;
-extern FeatureGroup calibrationGroup;
-extern FeatureGroup rawAccelGroup;
-extern FeatureGroup pressStandardGroup;
-extern FeatureGroup motorStandardGroup;
-
-
-/***** Populate groups *****/
-
-extern void populateFeatureGroups();
-
 #endif // FEATUREGROUP_H

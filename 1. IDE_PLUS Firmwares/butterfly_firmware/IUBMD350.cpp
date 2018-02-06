@@ -554,12 +554,3 @@ void IUBMD350::getBMDwareInfo(char *BMDVersion, char *bootVersion,
     sendATCommand("pver?", protocolVersion, len3);
     sendATCommand("hwinfo?", hardwareInfo, len4);
 }
-
-
-/* =============================================================================
-    Instanciation
-============================================================================= */
-
-char iuBluetoothBuffer[500] = "";
-IUBMD350 iuBluetooth(&Serial1, iuBluetoothBuffer, 500,
-                     IUSerial::LEGACY_PROTOCOL, 57600, 2000);

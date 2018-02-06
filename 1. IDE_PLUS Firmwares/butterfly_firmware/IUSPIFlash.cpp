@@ -8,26 +8,19 @@
 uint8_t IUSPIFlash::ID_BYTES[IUSPIFlash::ID_BYTE_COUNT] = {0xEF, 0x40, 0x14};
 
 IUSPIFlash::IUSPIFlash(uint8_t placeHolder) :
-    Component(),
     m_busy(false)
 {
     //ctor
 }
 
-
-/* =============================================================================
-    Hardware & power management methods
-============================================================================= */
-
 /**
  * Set up the component and finalize the object initialization
  */
-void IUSPIFlash::setupHardware()
+void IUSPIFlash::begin()
 {
     pinMode(CSPIN, OUTPUT);
     digitalWrite(CSPIN, HIGH);
     SPI.begin();
-    wakeUp();
 }
 
 /**
@@ -335,10 +328,3 @@ uint16_t IUSPIFlash::getPageFromAddress(uint32_t addr)
 {
   return (uint16_t) (addr >> 8);
 }
-
-
-/* =============================================================================
-    Instanciation
-============================================================================= */
-
-IUSPIFlash iuSPIFlash(0);

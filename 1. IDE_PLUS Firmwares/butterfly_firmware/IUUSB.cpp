@@ -41,13 +41,3 @@ bool IUUSB::readCharCustomProtocol()
     }
     return messageIsComplete;
 }
-
-
-/* =============================================================================
-    Instanciation
-============================================================================= */
-
-char iuUSBBuffer[20] = "";
-IUUSB iuUSB(&Serial, iuUSBBuffer, 20, IUSerial::CUSTOM_PROTOCOL, 115200, '\n',
-            2000);
-

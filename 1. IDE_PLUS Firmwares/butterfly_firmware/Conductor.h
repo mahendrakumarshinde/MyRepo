@@ -4,28 +4,10 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 
-#include "FeatureClass.h"
-#include "FeatureComputer.h"
-#include "FeatureGroup.h"
-#include "IUI2C.h"
-#include "IUSerial.h"
-#include "IUUSB.h"
-#include "IUBMD350.h"
-#include "IURGBLed.h"
-#include "IUBattery.h"
-#include "IUBMP280.h"
-#include "IUBMX055Acc.h"
-#include "IUBMX055Gyro.h"
-#include "IUBMX055Mag.h"
-#include "IUCAMM8Q.h"
-#include "IUI2S.h"
-
-#ifdef INTERNAL_ESP8285  // Wifi options
-    #include "IUESP8285.h"
-#endif
-
-#ifdef RTD_DAUGHTER_BOARD  // Optionnal hardware
-    #include "IURTDExtension.h"
+#ifdef DRAGONFLY_V03
+    #include "InstancesDragonfly.h"
+#else
+    #include "InstancesButterfly.h"
 #endif
 
 
@@ -208,11 +190,4 @@ class Conductor
 //        }
 };
 
-
-/***** Instanciation *****/
-
-extern Conductor conductor;
-
-
 #endif // CONDUCTOR_H
-

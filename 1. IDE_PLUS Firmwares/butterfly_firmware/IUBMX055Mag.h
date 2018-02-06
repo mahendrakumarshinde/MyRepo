@@ -91,8 +91,4 @@ class IUBMX055Mag : public DrivenSensor
 
 };
 
-/***** Instantiation *****/
-
-extern IUBMX055Mag iuMagnetometer;
-
 #endif // IUBMX055MAG_H

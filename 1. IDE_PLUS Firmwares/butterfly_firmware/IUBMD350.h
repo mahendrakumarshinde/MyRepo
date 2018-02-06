@@ -88,11 +88,5 @@ class IUBMD350 : public IUSerial, public Component
         txPowerOption m_connectedTxPower;
 };
 
-
-/***** Instanciation *****/
-
-extern char iuBluetoothBuffer[500];
-extern IUBMD350 iuBluetooth;
-
 #endif // IUBMD350_H
 

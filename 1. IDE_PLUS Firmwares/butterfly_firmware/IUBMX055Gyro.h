@@ -84,8 +84,4 @@ class IUBMX055Gyro : public DrivenSensor
         q15_t m_data[3];  // Latest data values
 };
 
-/***** Instantiation *****/
-
-extern IUBMX055Gyro iuGyroscope;
-
 #endif // IUBMX055GYRO_H

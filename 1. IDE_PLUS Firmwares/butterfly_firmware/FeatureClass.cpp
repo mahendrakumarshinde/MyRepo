@@ -346,7 +346,7 @@ void Feature::bufferStream(char *destination, uint16_t &destIndex,
     uint8_t k = (m_sectionCount + m_recordIndex - sectionCount) % m_sectionCount;
     m_locked[k] = true;
     m_specializedBufferStream(k, destination, destIndex, sectionCount);
-    
+
     m_locked[k] = false;
 }
 
@@ -487,7 +487,7 @@ void FloatFeature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx,
 /**
  * Stream the content of the section at sectionIdx
  */
-void FloatFeature::m_specializedBufferStream(uint8_t sectionIdx, 
+void FloatFeature::m_specializedBufferStream(uint8_t sectionIdx,
     char *destination, uint16_t &destIndex, uint8_t sectionCount)
 {
     uint8_t sIdx = 0;
@@ -732,140 +732,3 @@ void Q31Feature::m_specializedBufferStream(uint8_t sectionIdx,
         }
     }
 }
-
-
-/* =============================================================================
-    Instanciations
-============================================================================= */
-
-/***** Battery load *****/
-
-float batteryLoadValues[2];
-FloatFeature batteryLoad("BAT", 2, 1, batteryLoadValues);
-
-
-/***** Accelerometer Features *****/
-
-// Sensor data
-__attribute__((section(".noinit2"))) q15_t accelerationXValues[1024];
-__attribute__((section(".noinit2"))) q15_t accelerationYValues[1024];
-__attribute__((section(".noinit2"))) q15_t accelerationZValues[1024];
-Q15Feature accelerationX("A0X", 8, 128, accelerationXValues);
-Q15Feature accelerationY("A0Y", 8, 128, accelerationYValues);
-Q15Feature accelerationZ("A0Z", 8, 128, accelerationZValues);
-
-
-// 128 sample long accel features
-__attribute__((section(".noinit2"))) float accelRMS128XValues[8];
-__attribute__((section(".noinit2"))) float accelRMS128YValues[8];
-__attribute__((section(".noinit2"))) float accelRMS128ZValues[8];
-__attribute__((section(".noinit2"))) float accelRMS128TotalValues[8];
-FloatFeature accelRMS128X("A7X", 2, 4, accelRMS128XValues);
-FloatFeature accelRMS128Y("A7Y", 2, 4, accelRMS128YValues);
-FloatFeature accelRMS128Z("A7Z", 2, 4, accelRMS128ZValues);
-FloatFeature accelRMS128Total("A73", 2, 4, accelRMS128TotalValues);
-
-
-// 512 sample long accel features
-__attribute__((section(".noinit2"))) float accelRMS512XValues[2];
-__attribute__((section(".noinit2"))) float accelRMS512YValues[2];
-__attribute__((section(".noinit2"))) float accelRMS512ZValues[2];
-__attribute__((section(".noinit2"))) float accelRMS512TotalValues[2];
-FloatFeature accelRMS512X("A9X", 2, 1, accelRMS512XValues);
-FloatFeature accelRMS512Y("A9Y", 2, 1, accelRMS512YValues);
-FloatFeature accelRMS512Z("A9Z", 2, 1, accelRMS512ZValues);
-FloatFeature accelRMS512Total("A93", 2, 1, accelRMS512TotalValues);
-
-
-// FFT feature from 512 sample long accel data
-__attribute__((section(".noinit2"))) q15_t accelReducedFFTXValues[300];
-__attribute__((section(".noinit2"))) q15_t accelReducedFFTYValues[300];
-__attribute__((section(".noinit2"))) q15_t accelReducedFFTZValues[300];
-Q15Feature accelReducedFFTX("FAX", 2, 150, accelReducedFFTXValues,
-                            Feature::FIXED, true);
-Q15Feature accelReducedFFTY("FAY", 2, 150, accelReducedFFTYValues,
-                            Feature::FIXED, true);
-Q15Feature accelReducedFFTZ("FAZ", 2, 150, accelReducedFFTZValues,
-                            Feature::FIXED, true);
-
-
-// Acceleration main Frequency features from 512 sample long accel data
-__attribute__((section(".noinit2"))) float accelMainFreqXValues[2];
-__attribute__((section(".noinit2"))) float accelMainFreqYValues[2];
-__attribute__((section(".noinit2"))) float accelMainFreqZValues[2];
-FloatFeature accelMainFreqX("FRX", 2, 1, accelMainFreqXValues);
-FloatFeature accelMainFreqY("FRY", 2, 1, accelMainFreqYValues);
-FloatFeature accelMainFreqZ("FRZ", 2, 1, accelMainFreqZValues);
-
-// Velocity features from 512 sample long accel data
-__attribute__((section(".noinit2"))) float velRMS512XValues[2];
-__attribute__((section(".noinit2"))) float velRMS512YValues[2];
-__attribute__((section(".noinit2"))) float velRMS512ZValues[2];
-FloatFeature velRMS512X("VAX", 2, 1, velRMS512XValues);
-FloatFeature velRMS512Y("VAY", 2, 1, velRMS512YValues);
-FloatFeature velRMS512Z("VAZ", 2, 1, velRMS512ZValues);
-
-// Displacements features from 512 sample long accel data
-__attribute__((section(".noinit2"))) float dispRMS512XValues[2];
-__attribute__((section(".noinit2"))) float dispRMS512YValues[2];
-__attribute__((section(".noinit2"))) float dispRMS512ZValues[2];
-FloatFeature dispRMS512X("DAX", 2, 1, dispRMS512XValues);
-FloatFeature dispRMS512Y("DAX", 2, 1, dispRMS512YValues);
-FloatFeature dispRMS512Z("DAZ", 2, 1, dispRMS512ZValues);
-
-
-/***** Gyroscope Features *****/
-
-// Sensor data
-__attribute__((section(".noinit2"))) q15_t tiltXValues[2];
-__attribute__((section(".noinit2"))) q15_t tiltYValues[2];
-__attribute__((section(".noinit2"))) q15_t tiltZValues[2];
-Q15Feature tiltX("T0X", 2, 1, tiltXValues);
-Q15Feature tiltY("T0Y", 2, 1, tiltYValues);
-Q15Feature tiltZ("T0Z", 2, 1, tiltZValues);
-
-
-/***** Magnetometer Features *****/
-
-// Sensor data
-__attribute__((section(".noinit2"))) q15_t magneticXValues[2];
-__attribute__((section(".noinit2"))) q15_t magneticYValues[2];
-__attribute__((section(".noinit2"))) q15_t magneticZValues[2];
-Q15Feature magneticX("M0X", 2, 1, magneticXValues);
-Q15Feature magneticY("M0Y", 2, 1, magneticYValues);
-Q15Feature magneticZ("M0Z", 2, 1, magneticZValues);
-
-
-/***** Barometer Features *****/
-
-// Sensor data
-__attribute__((section(".noinit2"))) float temperatureValues[2];
-__attribute__((section(".noinit2"))) float pressureValues[2];
-FloatFeature temperature("TMP", 2, 1, temperatureValues);
-FloatFeature pressure("PRS", 2, 1, pressureValues);
-
-
-/***** Audio Features *****/
-
-// Sensor data
-q15_t audioValues[8192];
-Q15Feature audio("SND", 2, 2048, audioValues);
-
-// 2048 sample long features
-__attribute__((section(".noinit2"))) float audioDB2048Values[4];
-FloatFeature audioDB2048("S11", 4, 1, audioDB2048Values);
-
-// 4096 sample long features
-__attribute__((section(".noinit2"))) float audioDB4096Values[2];
-FloatFeature audioDB4096("S12", 2, 1, audioDB4096Values);
-
-
-/***** GNSS Feature *****/
-
-
-/***** RTD Temperature features *****/
-
-#ifdef RTD_DAUGHTER_BOARD // Optionnal hardware
-__attribute__((section(".noinit2"))) float rtdTempValues[8];
-FloatFeature rtdTemp("RTD", 2, 4, rtdTempValues);
-#endif // RTD_DAUGHTER_BOARD

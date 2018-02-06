@@ -48,8 +48,4 @@ class IUBattery : public LowFreqSensor
         float m_batteryLoad;
 };
 
-/***** Instantiation *****/
-
-extern IUBattery iuBattery;
-
 #endif // IUBATTERY_H

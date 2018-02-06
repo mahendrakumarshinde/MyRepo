@@ -9,7 +9,7 @@
 ============================================================================= */
 
 #include "Conductor.h"
-#include "IUSPIFlash.h"  // FIXME For some reason, if this is included in
+//#include "IUSPIFlash.h"  // FIXME For some reason, if this is included in
 // conductor, it blocks the I2S callback
 
 #include <MemoryFree.h>
@@ -88,6 +88,11 @@ uint32_t interval = 30000;
 uint32_t lastDone = 0;
 
 
+/***** Main operator *****/
+
+Conductor conductor(MAC_ADDRESS);
+
+
 /***** Driven sensors acquisition callback *****/
 
 /**
@@ -115,8 +120,6 @@ void callback()
 
 
 /***** Begin *****/
-
-Conductor conductor(MAC_ADDRESS);
 
 void setup()
 {
@@ -150,7 +153,7 @@ void setup()
         }
         iuBluetooth.setupHardware();
         iuWiFi.setupHardware();
-        iuSPIFlash.setupHardware();
+        iuSPIFlash.begin();
         if(debugMode)
         {
             debugPrint(F("=> Successfully initialized interfaces - Mem: "),

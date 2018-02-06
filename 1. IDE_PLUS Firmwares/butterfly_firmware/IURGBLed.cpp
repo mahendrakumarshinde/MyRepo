@@ -85,7 +85,7 @@ void IURGBLed::autoTurnOff()
 }
 
 /**
- * 
+ *
  */
 void IURGBLed::autoManage()
 {
@@ -107,7 +107,7 @@ void IURGBLed::autoManage()
                 {
                     changeColor(m_color, true);
                     m_showingStatus = true;
-                    m_nextSwitchTime = current + 
+                    m_nextSwitchTime = current +
                             (1000 - statusShowTime[(uint8_t) m_status]);
                 }
             }
@@ -118,7 +118,7 @@ void IURGBLed::autoManage()
                     changeColor(statusColors[(uint8_t) m_status],
                                 true);
                     m_showingStatus = false;
-                    m_nextSwitchTime = current + 
+                    m_nextSwitchTime = current +
                             statusShowTime[(uint8_t) m_status];
                 }
             }
@@ -189,10 +189,3 @@ void IURGBLed::showOperationState(OperationState::option state)
         turnOff();
     }
 }
-
-
-/* =============================================================================
-    Instanciation
-============================================================================= */
-
-IURGBLed iuRGBLed = IURGBLed();

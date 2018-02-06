@@ -36,15 +36,4 @@ class IUESP8285 : public IUSerial, public Component
         void authorizeSleeping() { port->print("WIFI-SLEEPOK;"); }
 };
 
-
-/***** Instanciation *****/
-
-extern char iuWiFiBuffer[500];
-
-#ifdef EXTERNAL_WIFI
-    extern IUSerial iuWiFi;
-#else
-    extern IUESP8285 iuWiFi;
-#endif
-
 #endif // IUESP8285_H

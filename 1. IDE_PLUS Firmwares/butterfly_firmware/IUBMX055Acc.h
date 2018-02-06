@@ -119,8 +119,4 @@ class IUBMX055Acc : public DrivenSensor
         void processData();
 };
 
-/***** Instantiation *****/
-
-extern IUBMX055Acc iuAccelerometer;
-
 #endif // IUBMX055ACC_H

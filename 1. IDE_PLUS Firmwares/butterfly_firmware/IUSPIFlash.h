@@ -4,7 +4,8 @@
 #include <Arduino.h>
 #include <SPI.h>
 
-#include "Component.h"
+#include "Logger.h"
+
 
 /**
  * 1MB Flash Memory, accessible through SPI
@@ -20,7 +21,7 @@
  *    - sectors: each sector is 4kB, which is 16 pages
  *    - blocks: 32kB or 64kB blocks (resp 8 or 16 sectors)
  */
-class IUSPIFlash : public Component
+class IUSPIFlash
 {
     public:
         /***** Preset values and default settings *****/
@@ -60,8 +61,7 @@ class IUSPIFlash : public Component
         /***** Constructors & desctructors *****/
         IUSPIFlash(uint8_t placeHolder);
         virtual ~IUSPIFlash() { }
-        /***** Hardware & power management methods *****/
-        virtual void setupHardware();
+        virtual void begin();
         void hardReset();
         /***** Utility function *****/
         uint16_t getBlockIndex(pageBlockTypes blockType, uint16_t pageIndex);
@@ -84,12 +84,6 @@ class IUSPIFlash : public Component
         void waitForAvailability();
         uint32_t getAddressFromPage(uint16_t pageIndex);
         uint16_t getPageFromAddress(uint32_t addr);
-
 };
-
-
-/***** Instanciation *****/
-
-extern IUSPIFlash iuSPIFlash;
 
 #endif // IUSPIFLASH_H
