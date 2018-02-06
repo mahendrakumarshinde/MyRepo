@@ -19,9 +19,10 @@ IUSerial::IUSerial(HardwareSerial *serialPort, char *charBuffer,
     m_stopChar(stopChar),
     // MSP specific variables
     m_mspState(MSP_IDLE),
-    m_mspCommand(255),
+    m_mspCommand(MSPCommand::NONE),
     m_mspDataSize(0),
-    m_mspChecksum(0)
+    m_mspChecksumIn(0),
+    m_mspChecksumOut(0)
 {
     m_buffer = charBuffer;
     resetBuffer();
@@ -52,7 +53,7 @@ void IUSerial::begin()
 void IUSerial::resetBuffer()
 {
     m_bufferIndex = 0;
-//    m_buffer[0] = '\0';  // End of string at 1st character (ie buffer is empty)
+    m_mspCommand = MSPCommand::NONE;
     m_newMessage = false;
 }
 
@@ -62,8 +63,7 @@ void IUSerial::resetBuffer()
  * If m_newMessage is true, the function will return True immediatly. Else, it
  * will return true as soon as a new message has been received.
  * To read several messages, the function should be called repeatedly.
- * Also, a data reception timeout check is performed before reading (see
- * hasTimedOut).
+ * Also, a data reception timeout check is performed before reading.
  * @return True if a full message has been received, else false
  */
 bool IUSerial::readToBuffer()
@@ -72,7 +72,8 @@ bool IUSerial::readToBuffer()
     {
         return true;
     }
-    if (hasTimedOut())
+    if (m_bufferIndex > 0 &&
+        millis() - m_lastReadTime > m_dataReceptionTimeout)
     {
         resetBuffer();
     }
@@ -106,24 +107,6 @@ bool IUSerial::readToBuffer()
         }
     }
     m_lastReadTime = millis();
-    return false;
-}
-
-/**
- * Reset the buffer if too much time passed since last reception
- *
- * Time since last reception is compared to m_dataReceptionTimeout.
- * @return true if a timeout happened and that the buffer needs to be reset,
- * else false.
- */
-bool IUSerial::hasTimedOut()
-{
-    if (m_bufferIndex > 0 && (millis() -
-            m_lastReadTime > m_dataReceptionTimeout))
-    {
-        m_bufferIndex = 0;
-        return true;
-    }
     return false;
 }
 
@@ -195,43 +178,96 @@ bool IUSerial::readCharMsp()
             {
                 m_mspDataSize = c;
                 m_bufferIndex = 0;
-                m_mspChecksum = 0;
-                m_mspChecksum ^= c;
+                m_mspChecksumIn = 0;
+                m_mspChecksumIn ^= c;
                 m_mspState = MSP_HEADER_SIZE;
             }
             break;
         case MSP_HEADER_SIZE:
-            m_mspCommand = c;
-            m_mspChecksum ^= c;
+            m_mspCommand = (MSPCommand::command) c;
+            m_mspChecksumIn ^= c;
             m_mspState = MSP_HEADER_CMD;
             break;
         case MSP_HEADER_CMD:
             if (m_bufferIndex < m_mspDataSize)
             {
-                m_mspChecksum ^= c;
+                m_mspChecksumIn ^= c;
                 m_buffer[m_bufferIndex++] = (char) c;
             }
             else
             {
-                if (debugMode)
+                // Compare calculated and transferred checksum
+                if (m_mspChecksumIn == c)
                 {
-                    debugPrint("Skipping checksum comparison: ", false);
-                    debugPrint(m_mspChecksum);
+                    // We got a valid packet
                     messageIsComplete = true;
-                }
-                else
-                {
-                    // Compare calculated and transferred checksum
-                    if (m_mspChecksum == c)  // packet is valid
-                    {
-                        messageIsComplete = true;
-                    }
                 }
                 m_mspState = MSP_IDLE;
             }
             break;
     }
     return messageIsComplete;
+}
+
+/**
+ *
+ */
+bool IUSerial::sendMSPCommand(MSPCommand::command cmd)
+{
+    sendMspCommandHeader(0, cmd);
+    sendMspCommandTail();
+}
+
+/**
+ *
+ */
+bool IUSerial::sendMSPCommand(MSPCommand::command cmd, char* cmdMsg)
+{
+    if (cmdMsg != NULL)
+    {
+        uint8_t cmdSize = (uint8_t) strlen(cmdMsg);
+        sendMspCommandHeader(cmdSize, cmd);
+        for (uint8_t i = 0; i < cmdSize; ++i)
+        {
+            mspChecksumAndSend(cmdMsg[i]);
+        }
+    }
+    else
+    {
+        sendMspCommandHeader(0, cmd);
+    }
+    sendMspCommandTail();
+}
+
+/**
+ *
+ */
+size_t IUSerial::sendMspCommandHeader(uint8_t cmdSize, MSPCommand::command cmd)
+{
+    size_t n = 0;
+    n += port->write('$');
+    n += port->write('M');
+    n += port->write('<');
+    n += mspChecksumAndSend(cmdSize);
+    n += mspChecksumAndSend((uint8_t) cmd);
+    return n;
+}
+
+/**
+ *
+ */
+size_t IUSerial::sendMspCommandTail()
+{
+    return port->write(m_mspChecksumOut);
+}
+
+/**
+ *
+ */
+size_t IUSerial::mspChecksumAndSend(uint8_t b)
+{
+    m_mspChecksumOut ^= b;
+    return port->write(b);
 }
 
 
@@ -256,4 +292,3 @@ bool IUSerial::readCharCustomProtocol()
     }
     return false;
 }
-

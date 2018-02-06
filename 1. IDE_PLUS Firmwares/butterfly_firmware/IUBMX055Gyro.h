@@ -59,7 +59,7 @@ class IUBMX055Gyro : public DrivenSensor
         virtual void setupHardware();
         void softReset();
         virtual void wakeUp();
-        virtual void sleep();
+        virtual void lowPower();
         virtual void suspend();
         /***** Configuration and calibration *****/
         virtual void configure(JsonVariant &config);

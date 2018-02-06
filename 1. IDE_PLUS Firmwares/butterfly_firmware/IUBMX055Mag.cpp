@@ -53,7 +53,7 @@ void IUBMX055Mag::softReset()
     m_iuI2C->writeByte(ADDRESS, PWR_CNTL1, 0x82);
     delay(1000);
     // Reflect the actual state of the sensor
-    DrivenSensor::sleep();
+    DrivenSensor::lowPower();
     m_forcedMode = true;
     setAccuracy(m_accuracy);
     setODR(defaultODR);
@@ -79,11 +79,11 @@ void IUBMX055Mag::wakeUp()
 }
 
 /**
- * Set the power mode to SLEEP
+ * Set the power mode to ECONOMY
  *
  * The registers can be read but no data acquisition can be performed.
  */
-void IUBMX055Mag::sleep()
+void IUBMX055Mag::lowPower()
 {
     // When exiting suspend mode, need to rewrite configurations
     if (m_powerMode == PowerMode::SUSPEND)
@@ -93,7 +93,7 @@ void IUBMX055Mag::sleep()
     }
     m_iuI2C->writeByte(ADDRESS, PWR_CNTL2, 0x06);
     m_forcedMode = true;  // Reflect the actual state of the sensor
-    DrivenSensor::sleep();
+    DrivenSensor::lowPower();
 }
 
 /**

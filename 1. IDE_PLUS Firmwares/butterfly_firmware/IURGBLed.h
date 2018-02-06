@@ -55,28 +55,29 @@ class IURGBLed : public Component
         // The default duration the LED stays on after being lit.
         static const uint8_t onTimer = 50;  //ms
         /***** Constructors & desctructors *****/
-        IURGBLed(bool blinking=false);
+        IURGBLed();
         virtual ~IURGBLed() {}
         void changeStatus(LEDStatus newStatus) { m_status = newStatus; }
         /***** Hardware and power management *****/
         void setBlinking(bool blinking) { m_blinking = blinking; }
-        virtual void sleep();
+        virtual void wakeUp();
+        virtual void lowPower();
         virtual void suspend();
         /***** Color management *****/
         void turnOff();
-        void autoTurnOff();
+        void autoTurnOff(uint32_t currentTime=0);
         void autoManage();
         void lock() { m_locked = true; }
         void unlock() { m_locked = false; }
         void changeColor(LEDColors color, bool temporary=false);
-        void specialChangeColor(bool R, bool G, bool B);
+        void manualChangeColor(bool R, bool G, bool B);
         void showOperationState(OperationState::option state);
 
     private:
         LEDColors m_color;
         bool m_blinking;
         bool m_locked;
-        uint32_t m_nextOffTime;
+        uint32_t m_startTime;
         /***** Status management *****/
         LEDStatus m_status;
         bool m_showingStatus;

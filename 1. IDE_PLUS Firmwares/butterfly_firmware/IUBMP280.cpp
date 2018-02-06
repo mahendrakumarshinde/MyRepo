@@ -102,11 +102,11 @@ void IUBMP280::wakeUp()
 }
 
 /**
- * Switch to SLEEP power mode
+ * Switch to ECONOMY power mode
  */
-void IUBMP280::sleep()
+void IUBMP280::lowPower()
 {
-    LowFreqSensor::sleep();
+    LowFreqSensor::lowPower();
     writeControlMeasureRegister();
 }
 

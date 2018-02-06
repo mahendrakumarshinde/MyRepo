@@ -6,7 +6,7 @@
 
 #include "IUMQTTHelper.h"
 #include "IUWiFiManager.h"
-#include "IUSerial.h"
+#include "HostSerial.h"
 #include "TimeManager.h"
 #include "IURawDataHandler.h"
 
@@ -46,8 +46,8 @@ uint32_t WIFI_STATUS_REFRESH_INTERVAL = 10000;  // ms
 uint32_t lastWifiStatusRefresh = 0;
 
 char hostSerialBuffer[3072];
-IUSerial hostSerial(&Serial, hostSerialBuffer, 3072, IUSerial::LEGACY_PROTOCOL,
-                    115200, ';', 100);
+HostSerial hostSerial(&Serial, hostSerialBuffer, 3072, IUSerial::LEGACY_PROTOCOL,
+                      115200, ';', 100);
 
 
 /* =============================================================================
@@ -260,7 +260,6 @@ bool canSleep()
 }
 
 /**
- * 
  * Get current status, send message to host (STM32) and server, and reset
  * the ESP if cannot get connection for more than timeout.
  */

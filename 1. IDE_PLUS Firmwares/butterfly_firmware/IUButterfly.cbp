@@ -173,6 +173,8 @@
 		<Unit filename="IUSPIFlash.h" />
 		<Unit filename="IUSerial.cpp" />
 		<Unit filename="IUSerial.h" />
+		<Unit filename="IUUSB.cpp" />
+		<Unit filename="IUUSB.h" />
 		<Unit filename="IntegratedTest/IT_Conductor.h" />
 		<Unit filename="IntegratedTest/IT_IUBMX055.h" />
 		<Unit filename="IntegratedTest/IT_IUSPIFlash.h" />

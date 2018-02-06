@@ -113,11 +113,7 @@ bool FeatureGroup::isDataSendTime(uint8_t idx)
 {
     // Timer to send data regularly
     uint32_t now = millis();
-    if (m_lastSentTime[idx] > now)
-    {
-        m_lastSentTime[idx] = 0; // Manage millis uint32_t overflow
-    }
-    if (m_lastSentTime[idx] + m_dataSendPeriod < now)
+    if (now - m_lastSentTime[idx] > m_dataSendPeriod)
     {
         m_lastSentTime[idx] = now;
         return true;
@@ -212,7 +208,8 @@ void FeatureGroup::legacyStream(HardwareSerial *port, const char *macAddress,
 }
 
 
-void FeatureGroup::legacyBufferStream(HardwareSerial *port, const char *macAddress,
+void FeatureGroup::legacyBufferStream(HardwareSerial *port,
+                                      const char *macAddress,
                                       OperationState::option opState,
                                       float batteryLoad, double timestamp,
                                       bool sendName)
@@ -226,25 +223,24 @@ void FeatureGroup::legacyBufferStream(HardwareSerial *port, const char *macAddre
         return;
     }
     uint32_t now = millis();
-    if (m_bufferStartTime == 0 || m_bufferStartTime > now ||
-        m_bufferStartTime + maxBufferDelay < now ||
+    if (m_bufferStartTime == 0 ||
+        now - m_bufferStartTime > maxBufferDelay ||
         maxBufferSize - m_bufferIndex < maxBufferMargin)
     {
+        // Send current data
         m_featureBuffer[m_bufferIndex] = '\0';
         port->print(m_featureBuffer);
         if (loopDebugMode)
         {
             port->println("");
         }
+        // Reset buffer
         m_bufferIndex = 0;
+        m_bufferStartTime = now;
         for (uint16_t i = 0; i < maxBufferSize; ++i)
         {
             m_featureBuffer[i] = '\0';
         }
-    }
-    if (m_bufferIndex == 0)
-    {
-        m_bufferStartTime = millis();
     }
     if (sendName)
     {

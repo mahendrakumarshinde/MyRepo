@@ -30,7 +30,7 @@ class IUCAMM8Q : public LowFreqSensor
         /***** Hardware & power management *****/
         virtual void setupHardware();
         virtual void wakeUp();
-        virtual void sleep();
+        virtual void lowPower();
         virtual void suspend();
         /***** Configuration and calibration *****/
         virtual void configure(JsonVariant &config);

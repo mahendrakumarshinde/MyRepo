@@ -47,7 +47,7 @@ class IUBMD350 : public IUSerial, public Component
         virtual void setupHardware();
         void softReset();
         virtual void wakeUp();
-        virtual void sleep();
+        virtual void lowPower();
         virtual void suspend();
         /***** Bluetooth Configuration *****/
         // AT Command Interface

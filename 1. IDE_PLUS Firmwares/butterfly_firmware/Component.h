@@ -16,7 +16,7 @@ class Component
         /***** Hardware & power management methods *****/
         virtual void setupHardware() {}
         virtual void wakeUp() { m_powerMode = PowerMode::ACTIVE; }
-        virtual void sleep() { m_powerMode = PowerMode::SLEEP; }
+        virtual void lowPower() { m_powerMode = PowerMode::ECONOMY; }
         virtual void suspend() { m_powerMode = PowerMode::SUSPEND; }
         virtual PowerMode::option getPowerMode() { return m_powerMode; }
         virtual void switchToPowerMode(PowerMode::option pMode)
@@ -26,8 +26,8 @@ class Component
             case PowerMode::ACTIVE:
                 wakeUp();
                 break;
-            case PowerMode::SLEEP:
-                sleep();
+            case PowerMode::ECONOMY:
+                lowPower();
                 break;
             case PowerMode::SUSPEND:
                 suspend();

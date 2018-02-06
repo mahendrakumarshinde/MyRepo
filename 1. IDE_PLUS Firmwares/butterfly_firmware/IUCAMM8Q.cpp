@@ -51,22 +51,22 @@ void IUCAMM8Q::wakeUp()
 /**
  * Set the power mode to SLEEP
  */
-void IUCAMM8Q::sleep()
+void IUCAMM8Q::lowPower()
 {
-    LowFreqSensor::sleep();
-    //GNSS.sleep();
+    LowFreqSensor::lowPower();
+    GNSS.sleep();
 }
 
 /**
  * Set the power mode to SUSPEND
  *
- * The SUSPEND mode is actually the same than the SLEEP mode,
+ * The SUSPEND mode is actually the same than the ECONOMY mode,
  * since GNSS API doesn't offer a suspend mode.
  */
 void IUCAMM8Q::suspend()
 {
     LowFreqSensor::suspend();
-    //GNSS.sleep();
+    GNSS.sleep();
 }
 
 

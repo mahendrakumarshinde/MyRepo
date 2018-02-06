@@ -13,6 +13,7 @@
 // conductor, it blocks the I2S callback
 
 #include <MemoryFree.h>
+#include <Timer.h>
 
 /* Comment / Uncomment the "define" lines to toggle / untoggle unit or quality
 test mode */
@@ -213,7 +214,6 @@ void setup()
             debugPrint(F("***\n"));
         }
         conductor.changeUsageMode(UsageMode::OPERATION);
-        iuWiFi.preventFromSleeping();
     #endif
 }
 

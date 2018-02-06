@@ -66,13 +66,13 @@ void IUBMD350::wakeUp()
 }
 
 /**
- * Switch to SLEEP power mode
+ * Switch to ECONOMY power mode
  *
- * SLEEP mode consist of disabled Beacon and enabled UART settings
+ * ECONOMY mode consist of disabled Beacon and enabled UART settings
  */
-void IUBMD350::sleep()
+void IUBMD350::lowPower()
 {
-    Component::sleep();
+    Component::lowPower();
     enterATCommandInterface();
     setTxPowers(defaultTxPower);
     exitATCommandInterface();
@@ -81,7 +81,7 @@ void IUBMD350::sleep()
 /**
  * Switch to SUSPEND power mode
  *
- * SLEEP mode consist of disabled Beacon and UART modes
+ * SUSPEND mode consist of disabled Beacon and UART modes
  */
 void IUBMD350::suspend()
 {

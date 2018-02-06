@@ -52,7 +52,7 @@ namespace Axis
 namespace PowerMode
 {
     enum option : uint8_t {ACTIVE  = 0,
-                           SLEEP   = 1,
+                           ECONOMY = 1,
                            SUSPEND = 2,
                            COUNT   = 3};
 }

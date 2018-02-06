@@ -8,7 +8,14 @@ IUESP8285::IUESP8285(HardwareSerial *serialPort, char *charBuffer,
                      uint16_t bufferSize, PROTOCOL_OPTIONS protocol,
                      uint32_t rate, uint16_t dataReceptionTimeout) :
     IUSerial(serialPort, charBuffer, bufferSize, protocol, rate, ';',
-             dataReceptionTimeout)
+             dataReceptionTimeout),
+    m_connected(false),
+    m_sleeping(false),
+    m_lastConnectedTime(0),
+    m_sleepStartTime(0),
+    m_autoSleepDelay(defaultAutoSleepDelay),
+    m_autoSleepDuration(defaultAutoSleepDuration),
+    m_working(false)
 {
 }
 
@@ -35,7 +42,8 @@ void IUESP8285::setupHardware()
 //        return;
 //    }
     begin();
-    port->print("WIFI-HARDRESET;");
+    hardReset();
+    wakeUp();
 }
 
 /**
@@ -43,19 +51,20 @@ void IUESP8285::setupHardware()
  */
 void IUESP8285::wakeUp()
 {
-    // TODO Implement power mode change at EESP8285 level
     Component::wakeUp();
+    manageAutoSleep();
 }
 
 /**
- * Switch to SLEEP power mode
+ * Switch to ECONOMY power mode
+ *
+ * WiFi cycle through connection attempts / sleeping phase if not connected.
+ * When connected however, this mode is in practise the same as wakeUp.
  */
-void IUESP8285::sleep()
+void IUESP8285::lowPower()
 {
-    // TODO Implement power mode change at EESP8285 level
-    Component::sleep();
-    // Passing 0 makes the WiFi sleep indefinitly
-    //WiFiSerial::Put_WiFi_To_Sleep(0.0f);
+    Component::lowPower();
+    manageAutoSleep();
 }
 
 /**
@@ -63,25 +72,159 @@ void IUESP8285::sleep()
  */
 void IUESP8285::suspend()
 {
-    // TODO Implement power mode change at EESP8285 level
+    // TODO Implement sleep duration
     Component::suspend();
-    // Passing 0 makes the WiFi sleep indefinitly
-    //WiFiSerial::Put_WiFi_To_Sleep(0.0f);
+    manageAutoSleep();
 }
 
 
 /* =============================================================================
-    Communication with WiFi chip
+    WiFi Maintenance functions
 ============================================================================= */
 
 /**
- * Print the given MAC address to ESP8285 UART (with header)
+ *
  */
-void IUESP8285::sendBleMacAddress(char *macAddress)
+void IUESP8285::manageAutoSleep()
 {
-    port->print("BLEMAC-");
-    port->print(macAddress);
-    port->print(";");
+    uint32_t now = millis();
+    switch (m_powerMode)
+    {
+        case PowerMode::ACTIVE:
+            sendMSPCommand(MSPCommand::WIFI_WAKE_UP);
+            break;
+        case PowerMode::ECONOMY:
+            if (m_connected)
+            {
+                sendMSPCommand(MSPCommand::WIFI_WAKE_UP);
+            }
+            else if (m_sleeping)  // Not connected, already sleeping
+            {
+                if (now - m_sleepStartTime > m_autoSleepDuration)
+                {
+                    sendMSPCommand(MSPCommand::WIFI_WAKE_UP);
+                }
+                else
+                {
+                    sendMSPCommand(MSPCommand::WIFI_DEEP_SLEEP);
+                }
+            }
+            else  // Not connected and not sleeping
+            {
+                if (now - m_lastConnectedTime > m_autoSleepDelay)
+                {
+                    sendMSPCommand(MSPCommand::WIFI_DEEP_SLEEP);
+                }
+                else
+                {
+                    sendMSPCommand(MSPCommand::WIFI_WAKE_UP);
+                }
+            }
+            break;
+        case PowerMode::SUSPEND:
+            sendMSPCommand(MSPCommand::WIFI_DEEP_SLEEP);
+            break;
+        default:
+            if (debugMode)
+            {
+                debugPrint(F("Unmanaged power mode "), false);
+                debugPrint(m_powerMode);
+            }
+            sendMSPCommand(MSPCommand::WIFI_DEEP_SLEEP);
+            break;
+    }
+}
+
+
+/* =============================================================================
+    Inbound communication
+============================================================================= */
+
+/**
+ *
+ */
+bool IUESP8285::processMessage()
+{
+    bool commandFound = true;
+    switch (m_mspCommand)
+    {
+        case MSPCommand::WIFI_ALERT_CONNECTED:
+            m_connected = true;
+            m_working = false;
+            m_lastConnectedTime = millis();
+            break;
+        case MSPCommand::WIFI_ALERT_DISCONNECTED:
+            m_connected = false;
+            m_working = false;
+            break;
+        case MSPCommand::WIFI_ALERT_NO_SAVED_CREDENTIALS:
+            m_working = false;
+            break;
+        case MSPCommand::WIFI_ALERT_AWAKE:
+            m_sleeping = false;
+            break;
+        case MSPCommand::WIFI_ALERT_SLEEPING:
+            m_sleeping = true;
+            m_sleepStartTime = millis();
+            break;
+        case MSPCommand::WIFI_REQUEST_ACTION:
+            manageAutoSleep();
+            break;
+        default:
+            commandFound = false;
+            break;
+    }
+    return commandFound;
+}
+
+
+/* =============================================================================
+    Outbound communication
+============================================================================= */
+
+/**
+ *
+ */
+void IUESP8285::setSSID(char *ssid)
+{
+    sendMSPCommand(MSPCommand::WIFI_RECEIVE_SSID, ssid);
+    m_working = true;
+}
+
+/**
+ *
+ */
+void IUESP8285::setPassword(char *password)
+{
+    sendMSPCommand(MSPCommand::WIFI_RECEIVE_PASSWORD, password);
+    m_working = true;
+}
+
+/**
+ *
+ */
+void IUESP8285::forgetCredentials()
+{
+    sendMSPCommand(MSPCommand::WIFI_FORGET_CREDENTIALS);
+    m_working = true;
+}
+
+/**
+ *
+ */
+void IUESP8285::connect()
+{
+    sendMSPCommand(MSPCommand::WIFI_CONNECT);
+    m_working = true;
+}
+
+/**
+ *
+ */
+void IUESP8285::disconnect()
+{
+    sendMSPCommand(MSPCommand::WIFI_DISCONNECT);
+    m_working = true;
 }
 
 
@@ -96,5 +239,5 @@ char iuWiFiBuffer[500] = "";
                     115200, ';', 500);
 #else
     IUESP8285 iuWiFi(&Serial3, iuWiFiBuffer, 500, IUSerial::LEGACY_PROTOCOL,
-                     115200, 2000);
+                     115200, 100);
 #endif

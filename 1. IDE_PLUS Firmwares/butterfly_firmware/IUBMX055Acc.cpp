@@ -90,15 +90,15 @@ void IUBMX055Acc::wakeUp()
 }
 
 /**
-    Set the power mode to SLEEP (2.1μA)
+    Set the power mode to ECONOMY (2.1μA)
 
-    IU 'SLEEP' mode correspond to the Accelerometer 'suspend' mode
+    IU 'ECONOMY' mode correspond to the Accelerometer 'suspend' mode
     "Suspend mode is entered (left) by writing 1 (0) to the (ACC 0 11) suspend
     bit after bit (ACC 0x12) lowpower_mode has been set to 0."
 */
-void IUBMX055Acc::sleep()
+void IUBMX055Acc::lowPower()
 {
-    DrivenSensor::sleep();
+    DrivenSensor::lowPower();
     m_iuI2C->writeByte(ADDRESS, PMU_LPW, 0x80);
 }
 

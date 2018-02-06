@@ -281,20 +281,18 @@ void LowFreqSensor::acquireData(bool inCallback, bool force)
         return;  // Do not read low freq sensors in callback
     }
     uint32_t now = millis();
-    if (m_lastAcquisitionTime > 0 &&
-        m_lastAcquisitionTime + m_samplingPeriod > now
-            && m_lastAcquisitionTime < now )  // Handle millis() overflow
+    if (now - m_lastAcquisitionTime > m_samplingPeriod ||
+        m_lastAcquisitionTime == 0)  // Aquire at device start up
     {
-        return;
-    }
-    // Check if destinations are ready
-    for (uint8_t i = 0; i < m_destinationCount; ++i)
-    {
-        if(!force && !m_destinations[i]->isReadyToRecord())
+        // Check if destinations are ready
+        for (uint8_t i = 0; i < m_destinationCount; ++i)
         {
-            return ;
+            if(!force && !m_destinations[i]->isReadyToRecord())
+            {
+                return ;
+            }
         }
+        readData();
+        m_lastAcquisitionTime = now;
     }
-    readData();
-    m_lastAcquisitionTime = now;
 }

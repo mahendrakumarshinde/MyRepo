@@ -63,8 +63,6 @@ class Conductor
         static char END_CONFIRM[9];
         // Default start datetime
         static constexpr double defaultTimestamp = 1492144654.00;
-        // Operation state shown on LED every X ms
-        static const uint16_t showOpStateTimer = 500;
         /***** Constructors and destructor *****/
         Conductor(const char* macAddress);
         virtual ~Conductor() {}
@@ -141,8 +139,6 @@ class Conductor
         OperationState::option m_operationState;
         void (*m_callback)();
         bool m_inDataAcquistion;
-        // The last time the LED was lit to reflect the OP state.
-        uint32_t m_lastLitLedTime;
         /***** WiFi *****/
         bool m_wifiConnected;
         /***** Configuration and Mode management *****/

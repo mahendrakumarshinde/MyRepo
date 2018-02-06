@@ -60,13 +60,14 @@ void IUBMX055Gyro::wakeUp()
 }
 
 /**
- * Set the power mode to SLEEP (25μA)
+ * Set the power mode to ECONOMY (25μA)
  *
- * This implementation SLEEP mode corresponds to the gyroscope 'suspend' mode.
+ * In this implementation, ECONOMY mode corresponds to the gyroscope 'suspend'
+ * mode.
  */
-void IUBMX055Gyro::sleep()
+void IUBMX055Gyro::lowPower()
 {
-    DrivenSensor::sleep();
+    DrivenSensor::lowPower();
     m_fastPowerUpEnabled = true;
     // Write {1, 0} to {suspend (bit7), deep-suspend (bit5)}
     m_iuI2C->writeByte(ADDRESS,  LPM1, 0x80);

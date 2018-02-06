@@ -8,11 +8,11 @@
 /**
 * LED is activated at construction
 */
-IURGBLed::IURGBLed(bool blinking) :
+IURGBLed::IURGBLed() :
     Component(),
     m_color(LEDColors::SLEEP),
-    m_blinking(blinking),
-    m_nextOffTime(0),
+    m_blinking(false),
+    m_startTime(0),
     m_status(LEDStatus::NONE),
     m_showingStatus(false),
     m_nextSwitchTime(0)
@@ -31,12 +31,21 @@ IURGBLed::IURGBLed(bool blinking) :
 ============================================================================= */
 
 /**
- * Switch to SLEEP power mode
+ * Switch to ACTIVE power mode
  */
-void IURGBLed::sleep()
+void IURGBLed::wakeUp()
 {
-    Component::sleep();
-    turnOff();
+    Component::wakeUp();
+    setBlinking(false);
+}
+
+/**
+ * Switch to ECONOMY power mode
+ */
+void IURGBLed::lowPower()
+{
+    Component::lowPower();
+    setBlinking(true);
 }
 
 /**
@@ -72,12 +81,20 @@ void IURGBLed::turnOff()
  *
  * Does nothing if the blinking is deactivated.
  */
-void IURGBLed::autoTurnOff()
+void IURGBLed::autoTurnOff(uint32_t currentTime)
 {
+    uint32_t now;
+    if (currentTime > 0)
+    {
+        now = currentTime;
+    }
+    else
+    {
+        now = millis();
+    }
     if (m_blinking)
     {
-        uint32_t now = millis();
-        if (now > m_nextOffTime)
+        if (now - m_startTime > onTimer)
         {
             turnOff();
         }
@@ -85,7 +102,7 @@ void IURGBLed::autoTurnOff()
 }
 
 /**
- * 
+ *
  */
 void IURGBLed::autoManage()
 {
@@ -97,7 +114,7 @@ void IURGBLed::autoManage()
     switch (m_status)
     {
         case LEDStatus::NONE:
-            autoTurnOff();
+            autoTurnOff(current);
             break;
         case LEDStatus::WIFI_WORKING:
         case LEDStatus::WIFI_CONNECTED:
@@ -107,7 +124,7 @@ void IURGBLed::autoManage()
                 {
                     changeColor(m_color, true);
                     m_showingStatus = true;
-                    m_nextSwitchTime = current + 
+                    m_nextSwitchTime = current +
                             (1000 - statusShowTime[(uint8_t) m_status]);
                 }
             }
@@ -118,7 +135,7 @@ void IURGBLed::autoManage()
                     changeColor(statusColors[(uint8_t) m_status],
                                 true);
                     m_showingStatus = false;
-                    m_nextSwitchTime = current + 
+                    m_nextSwitchTime = current +
                             statusShowTime[(uint8_t) m_status];
                 }
             }
@@ -143,7 +160,8 @@ void IURGBLed::changeColor(IURGBLed::LEDColors color, bool temporary)
         {
             m_color = color;
         }
-        specialChangeColor(COLORCODE[color][0], COLORCODE[color][1], COLORCODE[color][2]);
+        manualChangeColor(COLORCODE[color][0], COLORCODE[color][1],
+                          COLORCODE[color][2]);
     }
 }
 
@@ -153,14 +171,14 @@ void IURGBLed::changeColor(IURGBLed::LEDColors color, bool temporary)
  * The color can't be changed if the LEDs are locked or if their current
  * PowerMode is not ACTIVE.
  */
-void IURGBLed::specialChangeColor(bool R, bool G, bool B)
+void IURGBLed::manualChangeColor(bool R, bool G, bool B)
 {
     if (!m_locked && m_powerMode == PowerMode::ACTIVE)
     {
         digitalWrite(RED_PIN, (int) (!R));
         digitalWrite(GREEN_PIN, (int) (!G));
         digitalWrite(BLUE_PIN, (int) (!B));
-        m_nextOffTime = millis() + onTimer;
+        m_startTime = millis();
     }
 }
 
