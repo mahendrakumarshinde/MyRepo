@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 
+#include "Keywords.h"
 #ifdef DRAGONFLY_V03
     #include "InstancesDragonfly.h"
 #else

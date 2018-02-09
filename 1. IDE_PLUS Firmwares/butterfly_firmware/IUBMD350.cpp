@@ -177,7 +177,7 @@ int IUBMD350::sendATCommand(String cmd, char *response, uint8_t responseLength)
     port->write('\r');
     port->flush();
     uint8_t i = 0;
-    while (!port->available() && i <= 50)
+    while (!port->available() && i <= 20)
     {
         delay(100);
         i++;

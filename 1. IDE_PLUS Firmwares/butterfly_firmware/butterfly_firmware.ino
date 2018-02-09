@@ -9,10 +9,16 @@
 ============================================================================= */
 
 #include "Conductor.h"
-//#include "IUSPIFlash.h"  // FIXME For some reason, if this is included in
-// conductor, it blocks the I2S callback
 
 #include <MemoryFree.h>
+
+#ifdef DRAGONFLY_V03
+#else
+    // FIXME For some reason, if this is included in conductor,
+    // it blocks the I2S callback
+    #include "IUSPIFlash.h"  
+    IUSPIFlash iuSPIFlash(&SPI, A1, SPISettings(50000000, MSBFIRST, SPI_MODE0));
+#endif
 
 /* Comment / Uncomment the "define" lines to toggle / untoggle unit or quality
 test mode */
@@ -40,11 +46,7 @@ test mode */
     MAC Address
 ============================================================================= */
 
-const char MAC_ADDRESS[18] = "94:54:93:0F:67:01";
-    // "94:54:93:0E:81:44";
-    // "94:54:93:0E:63:FC";
-    // "94:54:93:0E:81:A4";
-    // "94:54:93:0E:7B:2B";
+const char MAC_ADDRESS[18] = "94:54:93:0F:66:F0";
 
 
 /* =============================================================================
@@ -87,6 +89,12 @@ bool doOnce = true;
 uint32_t interval = 30000;
 uint32_t lastDone = 0;
 
+#ifdef DRAGONFLY_V03
+    uint32_t initialDelay = 25000;
+#else
+    uint32_t initialDelay = 2000;
+#endif
+
 
 /***** Main operator *****/
 
@@ -125,7 +133,7 @@ void setup()
 {
     #if defined(UNITTEST) || defined(INTEGRATEDTEST)
         iuUSB.begin();
-        delay(2000);
+        delay(initialDelay);
         if (debugMode)
         {
             debugPrint(F("TESTING - Mem: "), false);
@@ -137,6 +145,7 @@ void setup()
         iuUSB.begin();  // Start with USB for Serial communication
         if (debugMode)
         {
+          delay(initialDelay);
           debugPrint(F("Start - Mem: "), false);
           debugPrint(String(freeMemory(), DEC));
         }
@@ -151,9 +160,14 @@ void setup()
             iuI2C.scanDevices();
             debugPrint("");
         }
-        iuBluetooth.setupHardware();
+        #ifdef DRAGONFLY_V03
+            iuBluetooth.begin();
+            iuBluetooth.softReset();
+        #else
+            iuBluetooth.setupHardware();
+            iuSPIFlash.begin();
+        #endif
         iuWiFi.setupHardware();
-        iuSPIFlash.begin();
         if(debugMode)
         {
             debugPrint(F("=> Successfully initialized interfaces - Mem: "),
@@ -163,7 +177,10 @@ void setup()
         if (setupDebugMode)
         {
             debugPrint(' ');
-            iuBluetooth.exposeInfo();
+            #ifdef DRAGONFLY_V03
+            #else
+                iuBluetooth.exposeInfo();
+            #endif
         }
         // Default feature configuration
         if (debugMode)
@@ -193,7 +210,9 @@ void setup()
                 Sensor::instances[i]->setCallbackRate(callbackRate);
             }
         }
-        iuGyroscope.suspend();
+        #ifdef BUTTERFLY_V04
+            iuGyroscope.suspend();
+        #endif
         if (debugMode)
         {
             debugPrint(F("=> Succesfully initialized sensors - Mem: "),

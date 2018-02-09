@@ -59,11 +59,11 @@ class IUSPIFlash
         static const uint16_t BLOCK_32KB_PAGE_COUNT = 128;
         static const uint16_t BLOCK_64KB_PAGE_COUNT = 256;
         /***** Constructors & desctructors *****/
-        IUSPIFlash(uint8_t placeHolder);
+        IUSPIFlash(SPIClass *spiPtr, uint8_t csPin, SPISettings settings);
         virtual ~IUSPIFlash() { }
-        virtual void begin();
+        void begin();
         void hardReset();
-        /***** Utility function *****/
+        /***** Utilities *****/
         uint16_t getBlockIndex(pageBlockTypes blockType, uint16_t pageIndex);
         uint16_t getBlockFirstPage(pageBlockTypes blockType,
                                    uint16_t blockIndex);
@@ -76,8 +76,11 @@ class IUSPIFlash
                        const uint16_t pageCount, bool highSpeed);
 
     protected:
+        SPIClass *m_SPI;
+        uint8_t m_csPin;
+        SPISettings m_spiSettings;
         bool m_busy;
-        /***** Internal utility functions *****/
+        /***** Internal SPI utility functions *****/
         void beginTransaction(bool waitIfBusy=true);
         void endTransaction(bool waitForCompletion=false);
         uint8_t readStatus();

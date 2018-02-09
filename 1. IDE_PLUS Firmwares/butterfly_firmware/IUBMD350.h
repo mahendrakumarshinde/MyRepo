@@ -21,8 +21,14 @@ class IUBMD350 : public IUSerial, public Component
 {
     public:
         /***** Preset values and default settings *****/
-        static const uint8_t resetPin = 38; //  BMD-350 reset pin active LOW
-        static const uint8_t ATCmdPin = 26; //  toggle pin for AT Command
+        #ifdef DRAGONFLY_V03
+            static const uint8_t resetPin = 39; //  BMD-350 reset pin active LOW
+            static const uint8_t ATCmdPin = 40; //  toggle pin for AT Command
+
+        #else
+            static const uint8_t resetPin = 38; //  BMD-350 reset pin active LOW
+            static const uint8_t ATCmdPin = 26; //  toggle pin for AT Command
+        #endif // DRAGONFLY_V04
         // UART default configuration - Must match Serial1 configuration
         static const bool UART_ENABLED = true;
         static const bool UART_FLOW_CONTROL = false;

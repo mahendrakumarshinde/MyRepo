@@ -1,9 +1,9 @@
-#ifndef INSTANCESBUTTERFLY_H
-#define INSTANCESBUTTERFLY_H
+#ifndef INSTANCESDRAGONFLY_H
+#define INSTANCESDRAGONFLY_H
 
 #include "Keywords.h"
 
-#if defined(BUTTERFLY_V03) || defined(BUTTERFLY_V04)
+#ifdef DRAGONFLY_V03
 
 /***** Interfaces *****/
 #include "IURGBLed.h"
@@ -20,12 +20,10 @@
 
 /***** Sensors *****/
 #include "IUBattery.h"
-#include "IUBMP280.h"
-#include "IUBMX055Acc.h"
-#include "IUBMX055Gyro.h"
-#include "IUBMX055Mag.h"
 #include "IUCAMM8Q.h"
 #include "IUI2S.h"
+#include "IULSM6DSM.h"
+#include "IUMAX31865.h"
 
 
 /* =============================================================================
@@ -133,25 +131,13 @@ extern Q15Feature tiltY;
 extern Q15Feature tiltZ;
 
 
-/***** Magnetometer Features *****/
-
-// Sensor data
-extern __attribute__((section(".noinit2"))) q15_t magneticXValues[2];
-extern __attribute__((section(".noinit2"))) q15_t magneticYValues[2];
-extern __attribute__((section(".noinit2"))) q15_t magneticZValues[2];
-extern Q15Feature magneticX;
-extern Q15Feature magneticY;
-extern Q15Feature magneticZ;
-
-
 /***** Barometer Features *****/
 
 // Sensor data
-extern __attribute__((section(".noinit2"))) float temperatureValues[2];
-extern FloatFeature temperature;
-
-extern __attribute__((section(".noinit2"))) float pressureValues[2];
-extern FloatFeature pressure;
+extern __attribute__((section(".noinit2"))) float temperatureAValues[2];
+extern FloatFeature temperatureA;
+extern __attribute__((section(".noinit2"))) float temperatureBValues[2];
+extern FloatFeature temperatureB;
 
 
 /***** Audio Features *****/
@@ -186,11 +172,10 @@ extern FloatFeature rtdTemp;
 
 extern IUBattery iuBattery;
 
-extern IUBMP280 iuAltimeter;
+extern IUMAX31865 iuRTDSensorA;
+extern IUMAX31865 iuRTDSensorB;
 
-extern IUBMX055Acc iuAccelerometer;
-extern IUBMX055Gyro iuGyroscope;
-extern IUBMX055Mag iuMagnetometer;
+extern IULSM6DSM iuAccelerometer;
 
 #ifdef NO_GPS
 #else
@@ -273,6 +258,6 @@ extern FeatureGroup motorStandardGroup;
 /***** Populate groups *****/
 extern void populateFeatureGroups();
 
-#endif // BUTTERFLY
+#endif // DRAGONFLY
 
-#endif // INSTANCESBUTTERFLY_H
+#endif // INSTANCESDRAGONFLY_H

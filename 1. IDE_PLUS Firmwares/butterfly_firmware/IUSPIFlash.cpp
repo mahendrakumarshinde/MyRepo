@@ -7,20 +7,12 @@
 
 uint8_t IUSPIFlash::ID_BYTES[IUSPIFlash::ID_BYTE_COUNT] = {0xEF, 0x40, 0x14};
 
-IUSPIFlash::IUSPIFlash(uint8_t placeHolder) :
+IUSPIFlash::IUSPIFlash(SPIClass *spiPtr, uint8_t csPin, SPISettings settings) :
+    m_csPin(csPin),
+    m_spiSettings(settings),
     m_busy(false)
 {
-    //ctor
-}
-
-/**
- * Set up the component and finalize the object initialization
- */
-void IUSPIFlash::begin()
-{
-    pinMode(CSPIN, OUTPUT);
-    digitalWrite(CSPIN, HIGH);
-    SPI.begin();
+    m_SPI = spiPtr;
 }
 
 /**
@@ -31,14 +23,24 @@ void IUSPIFlash::begin()
  */
 void IUSPIFlash::hardReset()
 {
-    SPI.beginTransaction(SPISettings(50000000, MSBFIRST, SPI_MODE0));
-    SPI.transfer(CMD_RESET_DEVICE );
+    beginTransaction();
+    m_SPI->write(CMD_RESET_DEVICE);
     endTransaction();
     delayMicroseconds(50);
     while(readStatus() & STATUS_WIP);
     {
         // Wait for the hard reset to finish
     }
+}
+
+/**
+ *
+ */
+void IUSPIFlash::begin()
+{
+    pinMode(m_csPin, OUTPUT);
+    digitalWrite(m_csPin, HIGH);
+    m_SPI->begin();
 }
 
 
@@ -104,10 +106,10 @@ uint16_t IUSPIFlash::getBlockFirstPage(pageBlockTypes blockType,
 void IUSPIFlash::readId(uint8_t *destination, uint8_t destinationCount)
 {
     beginTransaction();
-    SPI.transfer(CMD_READ_ID);
+    m_SPI->transfer(CMD_READ_ID);
     for(uint8_t i = 0; i < destinationCount; ++i)
     {
-        destination[i] = SPI.transfer(0x00);
+        destination[i] = m_SPI->transfer(0x00);
     }
     endTransaction();
 }
@@ -118,10 +120,10 @@ void IUSPIFlash::readId(uint8_t *destination, uint8_t destinationCount)
 void IUSPIFlash::eraseChip(bool wait)
 {
     beginTransaction();
-    SPI.transfer(CMD_WRITE_ENABLE);
+    m_SPI->transfer(CMD_WRITE_ENABLE);
     digitalWrite(CSPIN, HIGH);
     digitalWrite(CSPIN, LOW);
-    SPI.transfer(CMD_CHIP_ERASE);
+    m_SPI->transfer(CMD_CHIP_ERASE);
     endTransaction();
     m_busy = true;
     if (wait)
@@ -165,14 +167,14 @@ void IUSPIFlash::erasePages(IUSPIFlash::pageBlockTypes blockType,
     }
     uint32_t address = getAddressFromPage(pageIndex);
     beginTransaction();
-    SPI.transfer(CMD_WRITE_ENABLE);
+    m_SPI->transfer(CMD_WRITE_ENABLE);
     digitalWrite(CSPIN, HIGH);
     digitalWrite(CSPIN, LOW);
-    SPI.transfer(eraseCommand);
+    m_SPI->transfer(eraseCommand);
     // Send the 3 byte address
-    SPI.transfer((address >> 16) & 0xff);
-    SPI.transfer((address >> 8) & 0xff);
-    SPI.transfer(address & 0xff);
+    m_SPI->transfer((address >> 16) & 0xff);
+    m_SPI->transfer((address >> 8) & 0xff);
+    m_SPI->transfer(address & 0xff);
     endTransaction();
     m_busy = true;
 }
@@ -191,17 +193,17 @@ void IUSPIFlash::programPage(uint8_t *content, uint16_t pageIndex)
     uint32_t address = getAddressFromPage(pageIndex);
     // Enable write
     beginTransaction();
-    SPI.transfer(CMD_WRITE_ENABLE);
+    m_SPI->transfer(CMD_WRITE_ENABLE);
     endTransaction();
     // Program the page
     beginTransaction(false);
-    SPI.transfer(CMD_PAGE_PROGRAM);
-    SPI.transfer((address >> 16) & 0xFF);
-    SPI.transfer((address >> 8) & 0xFF);
-    SPI.transfer(address & 0xFF);
+    m_SPI->transfer(CMD_PAGE_PROGRAM);
+    m_SPI->transfer((address >> 16) & 0xFF);
+    m_SPI->transfer((address >> 8) & 0xFF);
+    m_SPI->transfer(address & 0xFF);
     for(uint16_t i = 0; i < 256; i++)
     {
-        SPI.transfer(content[i]);
+        m_SPI->transfer(content[i]);
     }
     endTransaction();
     m_busy = true;
@@ -226,22 +228,22 @@ void IUSPIFlash::readPages(uint8_t *content, uint16_t pageIndex,
     beginTransaction();
     if (highSpeed)
     {
-        SPI.transfer(CMD_READ_HIGH_SPEED);
+        m_SPI->transfer(CMD_READ_HIGH_SPEED);
     }
     else
     {
-        SPI.transfer(CMD_READ_DATA);
+        m_SPI->transfer(CMD_READ_DATA);
     }
-    SPI.transfer((address >> 16) & 0xFF);
-    SPI.transfer((address >> 8) & 0xFF);
-    SPI.transfer(address & 0xFF);
+    m_SPI->transfer((address >> 16) & 0xFF);
+    m_SPI->transfer((address >> 8) & 0xFF);
+    m_SPI->transfer(address & 0xFF);
     if (highSpeed)
     {
-        SPI.transfer(0);  // send dummy byte
+        m_SPI->transfer(0);  // send dummy byte
     }
     uint32_t byteCount = (uint32_t) pageCount * 256;
     for(uint32_t i = 0; i < byteCount; ++i) {
-        content[i] = SPI.transfer(0);
+        content[i] = m_SPI->transfer(0);
     }
     endTransaction();
 }
@@ -262,8 +264,8 @@ void IUSPIFlash::beginTransaction(bool waitIfBusy)
     {
         waitForAvailability();
     }
-    SPI.beginTransaction(SPISettings(50000000, MSBFIRST, SPI_MODE0));
-    digitalWrite(CSPIN, LOW);
+    m_SPI->beginTransaction(m_spiSettings);
+    digitalWrite(m_csPin, LOW);
 }
 
 /**
@@ -273,8 +275,8 @@ void IUSPIFlash::beginTransaction(bool waitIfBusy)
  */
  void IUSPIFlash::endTransaction(bool waitForCompletion)
 {
-    digitalWrite(CSPIN, HIGH);
-    SPI.endTransaction();
+    digitalWrite(m_csPin, HIGH);
+    m_SPI->endTransaction();
     if (waitForCompletion)
     {
         waitForAvailability();
@@ -288,8 +290,8 @@ uint8_t IUSPIFlash::readStatus()
 {
     uint8_t c;
     beginTransaction(false);  // !!! Don't wait if busy !!!
-    SPI.transfer(CMD_READ_STATUS_REG);
-    c = SPI.transfer(0x00);
+    m_SPI->transfer(CMD_READ_STATUS_REG);
+    c = m_SPI->transfer(0x00);
     endTransaction();
     return(c);
 }

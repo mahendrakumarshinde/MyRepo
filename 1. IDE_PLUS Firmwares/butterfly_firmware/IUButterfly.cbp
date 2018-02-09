@@ -165,6 +165,8 @@
 		<Unit filename="IUI2C.h" />
 		<Unit filename="IUI2S.cpp" />
 		<Unit filename="IUI2S.h" />
+		<Unit filename="IULSM6DSM.cpp" />
+		<Unit filename="IULSM6DSM.h" />
 		<Unit filename="IURGBLed.cpp" />
 		<Unit filename="IURGBLed.h" />
 		<Unit filename="IURTDExtension.cpp" />
@@ -173,6 +175,12 @@
 		<Unit filename="IUSPIFlash.h" />
 		<Unit filename="IUSerial.cpp" />
 		<Unit filename="IUSerial.h" />
+		<Unit filename="IUUSB.cpp" />
+		<Unit filename="IUUSB.h" />
+		<Unit filename="InstancesButterfly.cpp" />
+		<Unit filename="InstancesButterfly.h" />
+		<Unit filename="InstancesDragonfly.cpp" />
+		<Unit filename="InstancesDragonfly.h" />
 		<Unit filename="IntegratedTest/IT_Conductor.h" />
 		<Unit filename="IntegratedTest/IT_IUBMX055.h" />
 		<Unit filename="IntegratedTest/IT_IUSPIFlash.h" />

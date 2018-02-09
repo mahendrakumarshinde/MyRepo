@@ -52,8 +52,8 @@ class IUBMX055Gyro : public DrivenSensor
         static const bandwidthOption defaultBandwidth = BW_200Hz23Hz;
         static const uint16_t defaultSamplingRate = 1000; // Hz
         /***** Constructors and destructors *****/
-        IUBMX055Gyro(IUI2C *iuI2C, const char* name, Feature *tiltX=NULL,
-                     Feature *tiltY=NULL, Feature *tiltZ=NULL);
+        IUBMX055Gyro(IUI2C *iuI2C, const char* name, Feature *tiltX,
+                     Feature *tiltY, Feature *tiltZ);
         virtual ~IUBMX055Gyro() {}
         /***** Hardware & power management *****/
         virtual void setupHardware();

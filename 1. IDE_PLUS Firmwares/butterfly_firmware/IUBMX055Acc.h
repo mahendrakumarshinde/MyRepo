@@ -74,8 +74,8 @@ class IUBMX055Acc : public DrivenSensor
         static const bandwidthOption defaultBandwidth = ABW_16Hz;
         static const uint16_t defaultSamplingRate = 1000; // Hz
         /***** Constructors and destructors *****/
-        IUBMX055Acc(IUI2C *iuI2C, const char* name, Feature *accelerationX=NULL,
-                    Feature *accelerationY=NULL, Feature *accelerationZ=NULL);
+        IUBMX055Acc(IUI2C *iuI2C, const char* name, Feature *accelerationX,
+                    Feature *accelerationY, Feature *accelerationZ);
         virtual ~IUBMX055Acc() {}
         /***** Hardware & power management *****/
         virtual void setupHardware();

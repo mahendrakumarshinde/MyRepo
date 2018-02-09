@@ -1,6 +1,6 @@
-#include "InstancesButterfly.h"
+#include "InstancesDragonfly.h"
 
-#if defined(BUTTERFLY_V03) || defined(BUTTERFLY_V04)
+#ifdef DRAGONFLY_V03
 
 /* =============================================================================
     Interfaces
@@ -13,15 +13,15 @@ IUUSB iuUSB(&Serial, iuUSBBuffer, 20, IUSerial::CUSTOM_PROTOCOL, 115200, '\n',
             2000);
 
 char iuBluetoothBuffer[500] = "";
-IUBMD350 iuBluetooth(&Serial1, iuBluetoothBuffer, 500,
+IUBMD350 iuBluetooth(&Serial3, iuBluetoothBuffer, 500,
                      IUSerial::LEGACY_PROTOCOL, 57600, 2000);
 
 char iuWiFiBuffer[500] = "";
 #ifdef EXTERNAL_WIFI
-    IUSerial iuWiFi(StreamingMode::WIFI, &Serial3, iuWiFiBuffer, 500,
+    IUSerial iuWiFi(StreamingMode::WIFI, &Serial1, iuWiFiBuffer, 500,
                     115200, ';', 500);
 #else
-    IUESP8285 iuWiFi(&Serial3, iuWiFiBuffer, 500, IUSerial::LEGACY_PROTOCOL,
+    IUESP8285 iuWiFi(&Serial1, iuWiFiBuffer, 500, IUSerial::LEGACY_PROTOCOL,
                      115200, 2000);
 #endif
 
@@ -131,10 +131,11 @@ Q15Feature magneticZ("M0Z", 2, 1, magneticZValues);
 /***** Barometer Features *****/
 
 // Sensor data
-__attribute__((section(".noinit2"))) float temperatureValues[2];
-__attribute__((section(".noinit2"))) float pressureValues[2];
-FloatFeature temperature("TMP", 2, 1, temperatureValues);
-FloatFeature pressure("PRS", 2, 1, pressureValues);
+__attribute__((section(".noinit2"))) float temperatureAValues[2];
+FloatFeature temperatureA("TMA", 2, 1, temperatureAValues);
+
+__attribute__((section(".noinit2"))) float temperatureBValues[2];
+FloatFeature temperatureB("TMB", 2, 1, temperatureBValues);
 
 
 /***** Audio Features *****/
@@ -169,12 +170,11 @@ FloatFeature rtdTemp("RTD", 2, 4, rtdTempValues);
 
 IUBattery iuBattery(&iuI2C, "BAT", &batteryLoad);
 
-IUBMP280 iuAltimeter(&iuI2C, "ALT", &temperature, &pressure);
+IUMAX31865 iuRTDSensorA(&SPI1, 42, SPISettings(), "THA", &temperatureA);
+IUMAX31865 iuRTDSensorB(&SPI1, 43, SPISettings(), "THB", &temperatureB);
 
-IUBMX055Acc iuAccelerometer(&iuI2C, "ACC", &accelerationX, &accelerationY,
-                            &accelerationZ);
-IUBMX055Gyro iuGyroscope(&iuI2C, "GYR", &tiltX, &tiltY, &tiltZ);
-IUBMX055Mag iuMagnetometer(&iuI2C, "MAG", &magneticX, &magneticY, &magneticZ);
+IULSM6DSM iuAccelerometer(&iuI2C, "ACC", &accelerationX, &accelerationY,
+                          &accelerationZ, &tiltX, &tiltY, &tiltZ);
 
 #ifdef NO_GPS
 #else
@@ -319,7 +319,7 @@ void populateFeatureGroups()
     calibrationGroup.addFeature(&velRMS512X);
     calibrationGroup.addFeature(&velRMS512Y);
     calibrationGroup.addFeature(&velRMS512Z);
-    calibrationGroup.addFeature(&temperature);
+    calibrationGroup.addFeature(&temperatureA);
     calibrationGroup.addFeature(&accelMainFreqX);
     calibrationGroup.addFeature(&accelMainFreqY);
     calibrationGroup.addFeature(&accelMainFreqZ);
@@ -337,7 +337,7 @@ void populateFeatureGroups()
     pressStandardGroup.addFeature(&accelRMS512X);
     pressStandardGroup.addFeature(&accelRMS512Y);
     pressStandardGroup.addFeature(&accelRMS512Z);
-    pressStandardGroup.addFeature(&temperature);
+    pressStandardGroup.addFeature(&temperatureA);
     pressStandardGroup.addFeature(&audioDB4096);
 
     /** Standard Motor Monitoring **/
@@ -345,8 +345,8 @@ void populateFeatureGroups()
     motorStandardGroup.addFeature(&velRMS512X);
     motorStandardGroup.addFeature(&velRMS512Y);
     motorStandardGroup.addFeature(&velRMS512Z);
-    motorStandardGroup.addFeature(&temperature);
+    motorStandardGroup.addFeature(&temperatureA);
     motorStandardGroup.addFeature(&audioDB4096);
 }
 
-#endif // BUTTERFLY
+#endif // DRAGONFLY

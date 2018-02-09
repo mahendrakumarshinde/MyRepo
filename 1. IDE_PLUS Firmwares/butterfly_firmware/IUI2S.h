@@ -9,10 +9,10 @@
 #include "IUI2C.h"
 
 
-#ifdef BUTTERFLY_V03
-    #define Butterfly_I2S I2S
+#ifdef BUTTERFLY_V04
+    #define _I2S I2S1
 #else
-    #define Butterfly_I2S I2S1
+    #define _I2S I2S
 #endif
 
 
@@ -50,7 +50,7 @@ class IUI2S : public DrivenSensor
             / (bitsPerAudioSample); // stereo recording
 
         /***** Constructors and destructors *****/
-        IUI2S(IUI2C *iuI2C, const char* name, Feature *audio=NULL);
+        IUI2S(IUI2C *iuI2C, const char* name, Feature *audio);
         virtual ~IUI2S() {}
         /***** Hardware and power management *****/
 
