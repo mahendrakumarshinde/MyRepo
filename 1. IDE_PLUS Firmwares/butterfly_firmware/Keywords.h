@@ -12,9 +12,9 @@
 ============================================================================= */
 
 /***** Board version *****/
-#define BUTTERFLY_V03
+//#define BUTTERFLY_V03
 //#define BUTTERFLY_V04
-//#define DRAGONFLY_V03
+#define DRAGONFLY_V03
 
 /***** WiFi Option *****/
 //#define EXTERNAL_WIFI

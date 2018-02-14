@@ -17,18 +17,25 @@ IURGBLed::IURGBLed(bool blinking) :
     m_showingStatus(false),
     m_nextSwitchTime(0)
 {
-  pinMode(RED_PIN, OUTPUT);
-  pinMode(GREEN_PIN, OUTPUT);
-  pinMode(BLUE_PIN, OUTPUT);
-  unlock();
-  wakeUp();
-  changeColor(LEDColors::WHITE);
 }
 
 
 /* =============================================================================
     Hardware & power management
 ============================================================================= */
+
+/**
+ * 
+ */
+void IURGBLed::setupHardware()
+{
+    pinMode(RED_PIN, OUTPUT);
+    pinMode(GREEN_PIN, OUTPUT);
+    pinMode(BLUE_PIN, OUTPUT);
+    unlock();
+    wakeUp();
+    changeColor(LEDColors::WHITE);
+}
 
 /**
  * Switch to SLEEP power mode

@@ -1,13 +1,148 @@
-#include "IUSPIFlash.h"
+#include "IUFlash.h"
 
 
 /* =============================================================================
-    Constructors and destructors
+    IUFSFlash - Flash with file system
 ============================================================================= */
+
+char IUFSFlash::WIFI_CONFIG_0_FP[12] = "/wifi0.conf";
+char IUFSFlash::WIFI_CONFIG_1_FP[12] = "/wifi1.conf";
+char IUFSFlash::WIFI_CONFIG_2_FP[12] = "/wifi2.conf";
+char IUFSFlash::WIFI_CONFIG_3_FP[12] = "/wifi3.conf";
+char IUFSFlash::WIFI_CONFIG_4_FP[12] = "/wifi4.conf";
+char IUFSFlash::DEVICE_CONFIG_FP[13] = "/device.conf";
+char IUFSFlash::COMPONENT_CONFIG_FP[17] = "/components.conf";
+char IUFSFlash::FEATURE_CONFIG_FP[15] = "/features.conf";
+
+
+/***** Core *****/
+
+void IUFSFlash::begin()
+{
+    DOSFS.begin();
+}
+
+
+/***** Config read / write functions *****/
+
+/**
+ * Read the relevant file to retrieve the stored config.
+ *
+ * Return the number of read chars. Returns 0 if the stored config type is
+ * unknown or if the filepath is not found.
+ */
+size_t IUFSFlash::readConfig(storedConfig configType, char *config,
+                             size_t maxLength)
+{
+    char *filepath = NULL;
+    switch (configType)
+    {
+        case WIFI_CONFIG_0:
+            filepath = &WIFI_CONFIG_0_FP[0];
+            break;
+        case WIFI_CONFIG_1:
+            filepath = &WIFI_CONFIG_1_FP[0];
+            break;
+        case WIFI_CONFIG_2:
+            filepath = &WIFI_CONFIG_2_FP[0];
+            break;
+        case WIFI_CONFIG_3:
+            filepath = &WIFI_CONFIG_3_FP[0];
+            break;
+        case WIFI_CONFIG_4:
+            filepath = &WIFI_CONFIG_4_FP[0];
+            break;
+        case FEATURE_CONFIG:
+            filepath = &FEATURE_CONFIG_FP[0];
+            break;
+        case COMPONENT_CONFIG:
+            filepath = &COMPONENT_CONFIG_FP[0];
+            break;
+        case DEVICE_CONFIG:
+            filepath = &DEVICE_CONFIG_FP[0];
+            break;
+        default:
+            if (debugMode)
+            {
+                debugPrint(F("Unknown wifi config index "), false);
+                debugPrint(configType);
+            }
+    }
+    if (filepath == NULL || !DOSFS.exists(filepath))
+    {
+        strcpy(config, "");
+        return 0;
+    }
+    File file = DOSFS.open(filepath, "r");
+    size_t readCharCount = file.readBytes(config, maxLength);
+    file.close();
+    return readCharCount;
+}
+
+/**
+ * Store the config in flash by write the config to the relevant file.
+ *
+ * Return the number of written chars. Returns 0 if the stored config type is
+ * unknown.
+ */
+size_t IUFSFlash::writeConfig(storedConfig configType, char *config)
+{
+    char *filepath = NULL;
+    switch (configType)
+    {
+        case WIFI_CONFIG_0:
+            filepath = &WIFI_CONFIG_0_FP[0];
+            break;
+        case WIFI_CONFIG_1:
+            filepath = &WIFI_CONFIG_1_FP[0];
+            break;
+        case WIFI_CONFIG_2:
+            filepath = &WIFI_CONFIG_2_FP[0];
+            break;
+        case WIFI_CONFIG_3:
+            filepath = &WIFI_CONFIG_3_FP[0];
+            break;
+        case WIFI_CONFIG_4:
+            filepath = &WIFI_CONFIG_4_FP[0];
+            break;
+        case FEATURE_CONFIG:
+            filepath = &FEATURE_CONFIG_FP[0];
+            break;
+        case COMPONENT_CONFIG:
+            filepath = &COMPONENT_CONFIG_FP[0];
+            break;
+        case DEVICE_CONFIG:
+            filepath = &DEVICE_CONFIG_FP[0];
+            break;
+        default:
+            if (debugMode)
+            {
+                debugPrint(F("Unknown wifi config index "), false);
+                debugPrint(configType);
+            }
+    }
+    if (filepath == NULL)
+    {
+        return 0;
+    }
+    File file = DOSFS.open(filepath, "w");
+    size_t configLength = strlen(config);
+    size_t writtenCharCount = file.write((uint8_t*) config, configLength);
+    file.close();
+    return writtenCharCount;
+}
+
+
+/* =============================================================================
+    IUSPIFlash - Flash accessible via SPI
+============================================================================= */
+
+/***** Core *****/
 
 uint8_t IUSPIFlash::ID_BYTES[IUSPIFlash::ID_BYTE_COUNT] = {0xEF, 0x40, 0x14};
 
 IUSPIFlash::IUSPIFlash(SPIClass *spiPtr, uint8_t csPin, SPISettings settings) :
+    IUFlash(),
     m_csPin(csPin),
     m_spiSettings(settings),
     m_busy(false)
@@ -44,9 +179,90 @@ void IUSPIFlash::begin()
 }
 
 
-/* =============================================================================
-    Utility function
-============================================================================= */
+/***** Config read / write functions *****/
+
+/**
+ *
+ */
+size_t IUSPIFlash::readConfig(storedConfig configType, char *config,
+                              size_t maxLength)
+{
+    // TODO Implement
+    return 0;
+}
+
+/**
+ *
+ */
+size_t IUSPIFlash::writeConfig(storedConfig configType, char *config)
+{
+    // TODO Implement
+    return 0;
+}
+
+
+/***** SPI utilities *****/
+
+/**
+ * Begin the SPI transaction and select the flash memory chip (with SS/CS pin)
+ *
+ * CS pin is set to LOW to select the flash memory chip.
+ */
+void IUSPIFlash::beginTransaction(bool waitIfBusy)
+{
+    if (waitIfBusy)
+    {
+        waitForAvailability();
+    }
+    m_SPI->beginTransaction(m_spiSettings);
+    digitalWrite(m_csPin, LOW);
+}
+
+/**
+ * Unselect the SPI slave (SS/CS pin)  and end the SPI transaction
+ *
+ * CS PIN is set to HIGH to unselect the flash memory chip.
+ */
+ void IUSPIFlash::endTransaction(bool waitForCompletion)
+{
+    digitalWrite(m_csPin, HIGH);
+    m_SPI->endTransaction();
+    if (waitForCompletion)
+    {
+        waitForAvailability();
+    }
+}
+
+/**
+ * Read and return the flash status (0 if available, else busy)
+ */
+uint8_t IUSPIFlash::readStatus()
+{
+    uint8_t c;
+    beginTransaction(false);  // !!! Don't wait if busy !!!
+    m_SPI->transfer(CMD_READ_STATUS_REG);
+    c = m_SPI->transfer(0x00);
+    endTransaction();
+    return(c);
+}
+
+/**
+ * Function returns only when the SPI Flash is available (holds the process)
+ */
+void IUSPIFlash::waitForAvailability()
+{
+    if(m_busy)
+    {
+        while(readStatus() & STATUS_WIP)
+        {
+            // wait
+        }
+        m_busy = false;
+    }
+}
+
+
+/***** Address Utilities *****/
 
 /**
  * Return the index of the sector / block containing the given page
@@ -91,10 +307,28 @@ uint16_t IUSPIFlash::getBlockFirstPage(pageBlockTypes blockType,
     }
 }
 
+/**
+ * Convert a page number to a 24-bit address
+ *
+ * @param pageIndex The page number
+ */
+uint32_t IUSPIFlash::getAddressFromPage(uint16_t pageIndex)
+{
+  return ((uint32_t) pageIndex) << 8;
+}
 
-/* =============================================================================
-    Read / write functions
-============================================================================= */
+/**
+ * Convert a 24-bit address to a page number
+ *
+ * @param addr The address
+ */
+uint16_t IUSPIFlash::getPageFromAddress(uint32_t addr)
+{
+  return (uint16_t) (addr >> 8);
+}
+
+
+/***** Read / write functions *****/
 
 /**
  * Read the flash memory chip ID
@@ -248,85 +482,3 @@ void IUSPIFlash::readPages(uint8_t *content, uint16_t pageIndex,
     endTransaction();
 }
 
-
-/* =============================================================================
-    Internal utility functions
-============================================================================= */
-
-/**
- * Begin the SPI transaction and select the flash memory chip (with SS/CS pin)
- *
- * CS pin is set to LOW to select the flash memory chip.
- */
-void IUSPIFlash::beginTransaction(bool waitIfBusy)
-{
-    if (waitIfBusy)
-    {
-        waitForAvailability();
-    }
-    m_SPI->beginTransaction(m_spiSettings);
-    digitalWrite(m_csPin, LOW);
-}
-
-/**
- * Unselect the SPI slave (SS/CS pin)  and end the SPI transaction
- *
- * CS PIN is set to HIGH to unselect the flash memory chip.
- */
- void IUSPIFlash::endTransaction(bool waitForCompletion)
-{
-    digitalWrite(m_csPin, HIGH);
-    m_SPI->endTransaction();
-    if (waitForCompletion)
-    {
-        waitForAvailability();
-    }
-}
-
-/**
- * Read and return the flash status (0 if available, else busy)
- */
-uint8_t IUSPIFlash::readStatus()
-{
-    uint8_t c;
-    beginTransaction(false);  // !!! Don't wait if busy !!!
-    m_SPI->transfer(CMD_READ_STATUS_REG);
-    c = m_SPI->transfer(0x00);
-    endTransaction();
-    return(c);
-}
-
-/**
- * Function returns only when the SPI Flash is available (holds the process)
- */
-void IUSPIFlash::waitForAvailability()
-{
-    if(m_busy)
-    {
-        while(readStatus() & STATUS_WIP)
-        {
-            // wait
-        }
-        m_busy = false;
-    }
-}
-
-/**
- * Convert a page number to a 24-bit address
- *
- * @param pageIndex The page number
- */
-uint32_t IUSPIFlash::getAddressFromPage(uint16_t pageIndex)
-{
-  return ((uint32_t) pageIndex) << 8;
-}
-
-/**
- * Convert a 24-bit address to a page number
- *
- * @param addr The address
- */
-uint16_t IUSPIFlash::getPageFromAddress(uint32_t addr)
-{
-  return (uint16_t) (addr >> 8);
-}

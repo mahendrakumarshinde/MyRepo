@@ -167,10 +167,14 @@
 		<Unit filename="IUI2S.h" />
 		<Unit filename="IULSM6DSM.cpp" />
 		<Unit filename="IULSM6DSM.h" />
+		<Unit filename="IUMAX31865.cpp" />
+		<Unit filename="IUMAX31865.h" />
 		<Unit filename="IURGBLed.cpp" />
 		<Unit filename="IURGBLed.h" />
 		<Unit filename="IURTDExtension.cpp" />
 		<Unit filename="IURTDExtension.h" />
+		<Unit filename="IUSPI.cpp" />
+		<Unit filename="IUSPI.h" />
 		<Unit filename="IUSPIFlash.cpp" />
 		<Unit filename="IUSPIFlash.h" />
 		<Unit filename="IUSerial.cpp" />

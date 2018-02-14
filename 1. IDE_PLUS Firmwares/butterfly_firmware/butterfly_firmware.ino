@@ -16,8 +16,8 @@
 #else
     // FIXME For some reason, if this is included in conductor,
     // it blocks the I2S callback
-    #include "IUSPIFlash.h"  
-    IUSPIFlash iuSPIFlash(&SPI, A1, SPISettings(50000000, MSBFIRST, SPI_MODE0));
+    #include "IUFlash.h"
+    IUSPIFlash iuFlash(&SPI, A1, SPISettings(50000000, MSBFIRST, SPI_MODE0));
 #endif
 
 /* Comment / Uncomment the "define" lines to toggle / untoggle unit or quality
@@ -37,7 +37,7 @@ test mode */
 #ifdef INTEGRATEDTEST
     #include "IntegratedTest/IT_Conductor.h"
     #include "IntegratedTest/IT_IUBMX055.h"
-    #include "IntegratedTest/IT_IUSPIFlash.h"
+    #include "IntegratedTest/IT_IUFlash.h"
     #include "IntegratedTest/IT_Sensors.h"
 #endif
 
@@ -90,7 +90,7 @@ uint32_t interval = 30000;
 uint32_t lastDone = 0;
 
 #ifdef DRAGONFLY_V03
-    uint32_t initialDelay = 25000;
+    uint32_t initialDelay = 15000;
 #else
     uint32_t initialDelay = 2000;
 #endif
@@ -140,6 +140,7 @@ void setup()
             debugPrint(String(freeMemory(), DEC));
             debugPrint(' ');
         }
+        iuRGBLed.setupHardware();
         iuI2C.begin();
     #else
         iuUSB.begin();  // Start with USB for Serial communication
@@ -149,6 +150,7 @@ void setup()
           debugPrint(F("Start - Mem: "), false);
           debugPrint(String(freeMemory(), DEC));
         }
+        iuRGBLed.setupHardware();
         iuI2C.begin();
         // Interfaces
         if (debugMode)
@@ -165,22 +167,22 @@ void setup()
             iuBluetooth.softReset();
         #else
             iuBluetooth.setupHardware();
-            iuSPIFlash.begin();
+            if (setupDebugMode)
+            {
+                iuBluetooth.exposeInfo();
+                debugPrint(' ');
+            }
         #endif
         iuWiFi.setupHardware();
+        if (!USBDevice.configured())
+        {
+            iuFlash.begin();
+        }
         if(debugMode)
         {
             debugPrint(F("=> Successfully initialized interfaces - Mem: "),
                        false);
             debugPrint(String(freeMemory(), DEC));
-        }
-        if (setupDebugMode)
-        {
-            debugPrint(' ');
-            #ifdef DRAGONFLY_V03
-            #else
-                iuBluetooth.exposeInfo();
-            #endif
         }
         // Default feature configuration
         if (debugMode)

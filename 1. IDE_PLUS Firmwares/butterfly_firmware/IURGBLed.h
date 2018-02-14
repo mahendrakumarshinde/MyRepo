@@ -20,7 +20,7 @@ class IURGBLed : public Component
 {
     public:
         /***** Preset values and default settings *****/
-        #ifdef DRAGONFLY_V04
+        #ifdef DRAGONFLY_V03
             static const uint8_t RED_PIN = 25;
             static const uint8_t GREEN_PIN = 26;
             static const uint8_t BLUE_PIN = 38;
@@ -32,7 +32,7 @@ class IURGBLed : public Component
             #else
                 static const uint8_t BLUE_PIN = A0;
             #endif //BUTTERFLY_V04
-        #endif // DRAGONFLY_V04
+        #endif // DRAGONFLY_V03
         enum LEDColors : uint8_t {RED,
                                   BLUE,
                                   GREEN,
@@ -65,6 +65,7 @@ class IURGBLed : public Component
         virtual ~IURGBLed() {}
         void changeStatus(LEDStatus newStatus) { m_status = newStatus; }
         /***** Hardware and power management *****/
+        virtual void setupHardware();
         void setBlinking(bool blinking) { m_blinking = blinking; }
         virtual void sleep();
         virtual void suspend();

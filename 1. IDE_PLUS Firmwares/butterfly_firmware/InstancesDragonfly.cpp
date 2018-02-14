@@ -27,6 +27,13 @@ char iuWiFiBuffer[500] = "";
 
 
 /* =============================================================================
+    Flash storage
+============================================================================= */
+
+IUFSFlash iuFlash = IUFSFlash();
+
+
+/* =============================================================================
     Instanciations
 ============================================================================= */
 
@@ -170,8 +177,8 @@ FloatFeature rtdTemp("RTD", 2, 4, rtdTempValues);
 
 IUBattery iuBattery(&iuI2C, "BAT", &batteryLoad);
 
-IUMAX31865 iuRTDSensorA(&SPI1, 42, SPISettings(), "THA", &temperatureA);
-IUMAX31865 iuRTDSensorB(&SPI1, 43, SPISettings(), "THB", &temperatureB);
+IUMAX31865 iuRTDSensorA(&SPI1, 42, SPISettings(500000, MSBFIRST, SPI_MODE1), "THA", &temperatureA);
+IUMAX31865 iuRTDSensorB(&SPI1, 43, SPISettings(500000, MSBFIRST, SPI_MODE1), "THB", &temperatureB);
 
 IULSM6DSM iuAccelerometer(&iuI2C, "ACC", &accelerationX, &accelerationY,
                           &accelerationZ, &tiltX, &tiltY, &tiltZ);

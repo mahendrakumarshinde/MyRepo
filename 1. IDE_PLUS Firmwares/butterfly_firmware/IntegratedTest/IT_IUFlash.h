@@ -1,9 +1,9 @@
-#ifndef IT_IUSPIFLASH_H
-#define IT_IUSPIFLASH_H
+#ifndef IT_IUFLASH_H
+#define IT_IUFLASH_H
 
 #include <Arduino.h>
 #include <ArduinoUnit.h>
-#include "../IUSPIFlash.h"
+#include "../IUFlash.h"
 
 
 test(IUSPIFlash__initialization)
@@ -81,4 +81,4 @@ test(IUSPIFlash__readWrite)
     assertEqual(pageContent[255], 255);
 }
 
-#endif // IT_IUSPIFLASH_H
+#endif // IT_IUFLASH_H

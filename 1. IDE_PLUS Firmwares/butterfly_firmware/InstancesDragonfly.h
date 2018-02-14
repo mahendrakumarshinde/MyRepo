@@ -13,6 +13,9 @@
     #include "IUESP8285.h"
 #endif
 
+/***** Flash storage *****/
+#include "IUFlash.h"
+
 /***** Features *****/
 #include "FeatureClass.h"
 #include "FeatureComputer.h"
@@ -45,6 +48,12 @@ extern char iuWiFiBuffer[500];
     extern IUESP8285 iuWiFi;
 #endif
 
+
+/* =============================================================================
+    Flash storage
+============================================================================= */
+
+extern IUFSFlash iuFlash;
 
 /* =============================================================================
     Features

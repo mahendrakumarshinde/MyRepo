@@ -40,6 +40,7 @@ void IUMAX31865::setupHardware()
     writeConfiguration();
     wakeUp();
     switchToRegularUsage();
+    delay(1000);
 }
 
 /**
@@ -249,20 +250,11 @@ void IUMAX31865::readTemperature()
     uint8_t rtdMSB = m_SPI->read();
     uint8_t rtdLSB = m_SPI->read();
     endTransaction();
-//    q15_t rtd = ((uint16_t) rtdMSB << 7) | (rtdLSB >> 1);
-    q15_t rtd = ((uint16_t) rtdMSB << 8) | rtdLSB;
+    uint16_t rtd = ((uint16_t) rtdMSB << 8) | rtdLSB;
+    rtd >>= 1;
     m_temperature = ((float) rtd / 32.0) - 256.0;
     m_destinations[0]->addFloatValue(m_temperature);
     m_onGoing1Shot = false;
-    if (loopDebugMode)
-    {
-        debugPrint("Read ", false);
-        debugPrint(m_name, false);
-        debugPrint(": ", false);
-        debugPrint(String(rtd, BIN), false);
-        debugPrint(", ", false);
-        debugPrint(m_temperature);
-    }
 }
 
 /**
