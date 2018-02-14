@@ -56,8 +56,8 @@ class IUBMX055Mag : public DrivenSensor
             accuracyPreset::LOWPOWER;
         static const uint16_t defaultSamplingRate = 20; // Hz
         /***** Constructors and destructors *****/
-        IUBMX055Mag(IUI2C *iuI2C, const char* name, Feature *magneticX=NULL,
-                    Feature *magneticY=NULL, Feature *magneticZ=NULL);
+        IUBMX055Mag(IUI2C *iuI2C, const char* name, Feature *magneticX,
+                    Feature *magneticY, Feature *magneticZ);
         virtual ~IUBMX055Mag() {}
         /***** Hardware & power management *****/
         virtual void setupHardware();
@@ -90,9 +90,5 @@ class IUBMX055Mag : public DrivenSensor
         q15_t m_data[3];       // Latest data values
 
 };
-
-/***** Instantiation *****/
-
-extern IUBMX055Mag iuMagnetometer;
 
 #endif // IUBMX055MAG_H

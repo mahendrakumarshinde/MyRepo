@@ -452,10 +452,3 @@ void IUBMP280::exposeCalibration()
     debugPrint(' ');
     #endif
 }
-
-
-/* =============================================================================
-    Instanciation
-============================================================================= */
-
-IUBMP280 iuAltimeter(&iuI2C, "ALT", &temperature, &pressure);

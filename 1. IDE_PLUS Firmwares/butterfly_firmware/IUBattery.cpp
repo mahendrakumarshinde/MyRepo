@@ -69,10 +69,3 @@ void IUBattery::readData()
     m_vBattery = m_batteryLoad * maxVoltage / 100.0f;
     m_destinations[0]->addFloatValue(m_batteryLoad);
 }
-
-
-/* =============================================================================
-    Instantiation
-============================================================================= */
-
-IUBattery iuBattery(&iuI2C, "BAT", &batteryLoad);

@@ -177,7 +177,7 @@ int IUBMD350::sendATCommand(String cmd, char *response, uint8_t responseLength)
     port->write('\r');
     port->flush();
     uint8_t i = 0;
-    while (!port->available() && i <= 50)
+    while (!port->available() && i <= 20)
     {
         delay(100);
         i++;
@@ -554,12 +554,3 @@ void IUBMD350::getBMDwareInfo(char *BMDVersion, char *bootVersion,
     sendATCommand("pver?", protocolVersion, len3);
     sendATCommand("hwinfo?", hardwareInfo, len4);
 }
-
-
-/* =============================================================================
-    Instanciation
-============================================================================= */
-
-char iuBluetoothBuffer[500] = "";
-IUBMD350 iuBluetooth(&Serial1, iuBluetoothBuffer, 500,
-                     IUSerial::LEGACY_PROTOCOL, 57600, 2000);

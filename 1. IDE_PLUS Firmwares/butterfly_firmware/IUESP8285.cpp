@@ -83,18 +83,3 @@ void IUESP8285::sendBleMacAddress(char *macAddress)
     port->print(macAddress);
     port->print(";");
 }
-
-
-/* =============================================================================
-    Instanciation
-============================================================================= */
-
-char iuWiFiBuffer[500] = "";
-
-#ifdef EXTERNAL_WIFI
-    IUSerial iuWiFi(StreamingMode::WIFI, &Serial3, iuWiFiBuffer, 500,
-                    115200, ';', 500);
-#else
-    IUESP8285 iuWiFi(&Serial3, iuWiFiBuffer, 500, IUSerial::LEGACY_PROTOCOL,
-                     115200, 2000);
-#endif

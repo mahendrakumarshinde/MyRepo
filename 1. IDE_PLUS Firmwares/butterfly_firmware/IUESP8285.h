@@ -19,7 +19,11 @@ class IUESP8285 : public IUSerial, public Component
 {
     public:
         /***** Preset values and default settings *****/
-//        static const uint8_t UART_TX_PIN = D9;
+        #ifdef DRAGONFLY_V04
+            static const uint8_t ENABLE_PIN = A2; // if Dragonfly
+        #else
+            //TODO Find the pin for the Butterfly
+        #endif // DRAGONFLY_V04
         /***** Constructors & desctructors *****/
         IUESP8285(HardwareSerial *serialPort, char *charBuffer,
                   uint16_t bufferSize, PROTOCOL_OPTIONS protocol,
@@ -35,16 +39,5 @@ class IUESP8285 : public IUSerial, public Component
         void preventFromSleeping() { port->print("WIFI-NOSLEEP;"); }
         void authorizeSleeping() { port->print("WIFI-SLEEPOK;"); }
 };
-
-
-/***** Instanciation *****/
-
-extern char iuWiFiBuffer[500];
-
-#ifdef EXTERNAL_WIFI
-    extern IUSerial iuWiFi;
-#else
-    extern IUESP8285 iuWiFi;
-#endif
 
 #endif // IUESP8285_H
