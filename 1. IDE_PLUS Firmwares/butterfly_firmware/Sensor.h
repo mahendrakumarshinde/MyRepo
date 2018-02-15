@@ -23,7 +23,7 @@ class Sensor : public Component
                                     P_ENHANCED = 2,
                                     P_HIGH     = 3,
                                     COUNT    = 4};
-        static const uint8_t maxDestinationCount = 3;
+        static const uint8_t maxDestinationCount = 6;
         /***** Instance registry *****/
         static const uint8_t MAX_INSTANCE_COUNT = 10;
         static uint8_t instanceCount;
@@ -31,7 +31,8 @@ class Sensor : public Component
         /***** Core *****/
         Sensor(const char* name, uint8_t destinationCount=0,
                Feature *destination0=NULL, Feature *destination1=NULL,
-               Feature *destination2=NULL);
+               Feature *destination2=NULL, Feature *destination3=NULL,
+               Feature *destination4=NULL, Feature *destination5=NULL);
         virtual ~Sensor();
         virtual char* getName() { return m_name; }
         virtual bool isNamed(const char* name)
@@ -88,7 +89,8 @@ class DrivenSensor : public Sensor
         /***** Constructors and destructors *****/
         DrivenSensor(const char* name, uint8_t destinationCount=0,
                      Feature *destination0=NULL, Feature *destination1=NULL,
-                     Feature *destination2=NULL);
+                     Feature *destination2=NULL, Feature *destination3=NULL,
+                     Feature *destination4=NULL, Feature *destination5=NULL);
         virtual ~DrivenSensor() {}
         /***** Configuration *****/
         virtual void configure(JsonVariant &config);
@@ -130,7 +132,8 @@ class LowFreqSensor : public Sensor
         /***** Constructors and destructors *****/
         LowFreqSensor(const char* name, uint8_t destinationCount=0,
                       Feature *destination0=NULL, Feature *destination1=NULL,
-                      Feature *destination2=NULL);
+                      Feature *destination2=NULL, Feature *destination3=NULL,
+                      Feature *destination4=NULL, Feature *destination5=NULL);
         virtual ~LowFreqSensor() {}
         /***** Configuration *****/
         virtual void configure(JsonVariant &config);

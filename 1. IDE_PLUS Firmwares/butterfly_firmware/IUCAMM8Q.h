@@ -72,12 +72,4 @@ class IUCAMM8Q : public LowFreqSensor
 
 };
 
-
-/***** Instantiation *****/
-
-#ifdef NO_GPS
-#else
-    extern IUCAMM8Q iuGNSS;
-#endif
-
 #endif // IUCAMM8Q_H

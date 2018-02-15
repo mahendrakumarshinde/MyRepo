@@ -17,18 +17,25 @@ IURGBLed::IURGBLed() :
     m_showingStatus(false),
     m_nextSwitchTime(0)
 {
-  pinMode(RED_PIN, OUTPUT);
-  pinMode(GREEN_PIN, OUTPUT);
-  pinMode(BLUE_PIN, OUTPUT);
-  unlock();
-  wakeUp();
-  changeColor(LEDColors::WHITE);
 }
 
 
 /* =============================================================================
     Hardware & power management
 ============================================================================= */
+
+/**
+ * Set up the LED pins, unlock and wake up the LED.
+ */
+void IURGBLed::setupHardware()
+{
+    pinMode(RED_PIN, OUTPUT);
+    pinMode(GREEN_PIN, OUTPUT);
+    pinMode(BLUE_PIN, OUTPUT);
+    unlock();
+    wakeUp();
+    changeColor(LEDColors::WHITE);
+}
 
 /**
  * Switch to ACTIVE power mode
@@ -207,10 +214,3 @@ void IURGBLed::showOperationState(OperationState::option state)
         turnOff();
     }
 }
-
-
-/* =============================================================================
-    Instanciation
-============================================================================= */
-
-IURGBLed iuRGBLed = IURGBLed();

@@ -9,6 +9,11 @@ IUUSB::IUUSB(HardwareSerial *serialPort, char *charBuffer, uint16_t bufferSize,
     //ctor
 }
 
+void IUUSB::begin()
+{
+    port->begin(baudRate);
+    port->flush();
+}
 
 /* =============================================================================
     Custom protocol
@@ -41,13 +46,3 @@ bool IUUSB::readCharCustomProtocol()
     }
     return messageIsComplete;
 }
-
-
-/* =============================================================================
-    Instanciation
-============================================================================= */
-
-char iuUSBBuffer[20] = "";
-IUUSB iuUSB(&Serial, iuUSBBuffer, 20, IUSerial::CUSTOM_PROTOCOL, 115200, '\n',
-            2000);
-

@@ -58,8 +58,6 @@ void IUBMX055Acc::setupHardware()
         }
         return;
     }
-    // Setup interrupt pin on the STM32 as INPUT
-    //    pinMode(INT_PIN, INPUT);
     softReset();
     wakeUp();
     setScale(m_scale);
@@ -216,6 +214,8 @@ void IUBMX055Acc::useUnfilteredData()
 */
 void IUBMX055Acc::configureInterrupts()
 {
+    // Setup interrupt pin on the STM32 as INPUT
+    //    pinMode(INT_PIN, INPUT);
     // Enable ACC data ready interrupt
     m_iuI2C->writeByte(ADDRESS, INT_EN_1, 0x10);
     // Set interrupts push-pull, active high for INT1 and INT2
@@ -286,9 +286,6 @@ void IUBMX055Acc::acquireData(bool inCallback, bool force)
 
 /**
     Read acceleration data
-
-    Data is read from device as 2 bytes: LSB first (4 bits to use) then MSB
-    (8 bits to use) 4 last bits of LSB byte are used as flags (new data, etc).
 */
 void IUBMX055Acc::readData()
 {
@@ -393,11 +390,3 @@ void IUBMX055Acc::exposeCalibration()
     debugPrint(' ');
 #endif
 }
-
-
-/*  =============================================================================
-    Instantiation
-    ============================================================================= */
-
-IUBMX055Acc iuAccelerometer(&iuI2C, "ACC", &accelerationX, &accelerationY,
-                            &accelerationZ);

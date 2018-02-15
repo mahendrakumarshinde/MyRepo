@@ -47,13 +47,13 @@ bool IUI2S::triggerDataAcquisition(void (*callback)())
     // trigger a read to kick things off
     if (m_firstI2STrigger)
     {
-        Butterfly_I2S.onReceive(callback); // add the receiver callback
-        if (!Butterfly_I2S.begin(I2S_PHILIPS_MODE, clockRate,
+        _I2S.onReceive(callback); // add the receiver callback
+        if (!_I2S.begin(I2S_PHILIPS_MODE, clockRate,
                                  bitsPerAudioSample))
         {
             return false;
         }
-        Butterfly_I2S.read();
+        _I2S.read();
         m_firstI2STrigger = false;
     }
     else
@@ -103,7 +103,7 @@ void IUI2S::processAudioData(q31_t *data)
  */
 void IUI2S::readData()
 {
-    int readBitCount = Butterfly_I2S.read(m_rawAudioData,
+    int readBitCount = _I2S.read(m_rawAudioData,
                                           sizeof(m_rawAudioData));
     if (readBitCount)
     {
@@ -169,10 +169,3 @@ void IUI2S::expose()
     debugPrint(m_downclocking);
     #endif
 }
-
-
-/* =============================================================================
-    Instantiation
-============================================================================= */
-
-IUI2S iuI2S(&iuI2C, "MIC", &audio);
