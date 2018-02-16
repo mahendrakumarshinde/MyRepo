@@ -8,8 +8,11 @@
 /**
 * LED is activated at construction
 */
-IURGBLed::IURGBLed() :
+IURGBLed::IURGBLed(uint8_t redPin, uint8_t greenPin, uint8_t bluePin) :
     Component(),
+    m_redPin(redPin),
+    m_greenPin(greenPin),
+    m_bluePin(bluePin),
     m_color(LEDColors::SLEEP),
     m_blinking(false),
     m_startTime(0),
@@ -29,39 +32,45 @@ IURGBLed::IURGBLed() :
  */
 void IURGBLed::setupHardware()
 {
-    pinMode(RED_PIN, OUTPUT);
-    pinMode(GREEN_PIN, OUTPUT);
-    pinMode(BLUE_PIN, OUTPUT);
-    unlock();
-    wakeUp();
+    pinMode(m_redPin, OUTPUT);
+    pinMode(m_greenPin, OUTPUT);
+    pinMode(m_bluePin, OUTPUT);
+    setPowerMode(PowerMode::REGULAR);
     changeColor(LEDColors::WHITE);
 }
 
 /**
- * Switch to ACTIVE power mode
+ * Manage component power modes
  */
-void IURGBLed::wakeUp()
+void IURGBLed::setPowerMode(PowerMode::option pMode)
 {
-    Component::wakeUp();
-    setBlinking(false);
-}
-
-/**
- * Switch to ECONOMY power mode
- */
-void IURGBLed::lowPower()
-{
-    Component::lowPower();
-    setBlinking(true);
-}
-
-/**
- * Switch to SUSPEND power mode
- */
-void IURGBLed::suspend()
-{
-    Component::suspend();
-    turnOff();
+    m_powerMode = pMode;
+    switch (m_powerMode)
+    {
+        case PowerMode::PERFORMANCE:
+        case PowerMode::ENHANCED:
+        case PowerMode::REGULAR:
+            setBlinking(false);
+            unlock();
+            break;
+        case PowerMode::LOW_1:
+        case PowerMode::LOW_2:
+            setBlinking(true);
+            unlock();
+            break;
+        case PowerMode::SLEEP:
+        case PowerMode::DEEP_SLEEP:
+        case PowerMode::SUSPEND:
+            unlock();
+            turnOff();
+            lock();
+        default:
+            if (debugMode)
+            {
+                debugPrint(F("Unhandled power Mode "), false);
+                debugPrint(m_powerMode);
+            }
+    }
 }
 
 
@@ -78,9 +87,9 @@ void IURGBLed::turnOff()
     {
         return;  // Do not turn off when locked
     }
-    digitalWrite(RED_PIN, HIGH);
-    digitalWrite(GREEN_PIN, HIGH);
-    digitalWrite(BLUE_PIN, HIGH);
+    digitalWrite(m_redPin, HIGH);
+    digitalWrite(m_greenPin, HIGH);
+    digitalWrite(m_bluePin, HIGH);
 }
 
 /**
@@ -180,37 +189,11 @@ void IURGBLed::changeColor(IURGBLed::LEDColors color, bool temporary)
  */
 void IURGBLed::manualChangeColor(bool R, bool G, bool B)
 {
-    if (!m_locked && m_powerMode == PowerMode::ACTIVE)
+    if (!m_locked)
     {
-        digitalWrite(RED_PIN, (int) (!R));
-        digitalWrite(GREEN_PIN, (int) (!G));
-        digitalWrite(BLUE_PIN, (int) (!B));
+        digitalWrite(m_redPin, (int) (!R));
+        digitalWrite(m_greenPin, (int) (!G));
+        digitalWrite(m_bluePin, (int) (!B));
         m_startTime = millis();
-    }
-}
-
-/**
- * Lit the LEDs with a color specific to the OperationState
- *
- * Colors are BLUE (idle), GREEN (normal), ORANGE (warning) and RED (danger).
- */
-void IURGBLed::showOperationState(OperationState::option state)
-{
-    switch (state)
-    {
-    case OperationState::IDLE:
-        changeColor(LEDColors::BLUE);
-        break;
-    case OperationState::NORMAL:
-        changeColor(LEDColors::GREEN);
-        break;
-    case OperationState::WARNING:
-        changeColor(LEDColors::ORANGE);
-        break;
-    case OperationState::DANGER:
-        changeColor(LEDColors::RED);
-        break;
-    default:
-        turnOff();
     }
 }

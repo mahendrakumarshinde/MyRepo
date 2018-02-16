@@ -6,8 +6,26 @@
 /* CMSIS-DSP library for RFFT */
 #include <arm_math.h>
 
-#include "Keywords.h"
 #include "Logger.h"
+
+
+/* =============================================================================
+    Feature Operation States
+============================================================================= */
+
+/**
+ * Operation states describe the production status
+ *
+ * The state is determined by features values and user-defined thresholds.
+ */
+namespace OperationState
+{
+    enum option : uint8_t {IDLE    = 0,
+                           NORMAL  = 1,
+                           WARNING = 2,
+                           DANGER  = 3,
+                           COUNT   = 4};
+}
 
 
 /* =============================================================================

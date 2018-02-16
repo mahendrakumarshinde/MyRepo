@@ -43,14 +43,14 @@ void Conductor::sleep(uint32_t duration)
 {
     for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
     {
-        Sensor::instances[i]->lowPower();
+        Sensor::instances[i]->setPowerMode(PowerMode::SLEEP);
     }
-    iuRGBLed.changeColor(IURGBLed::SLEEP);
+    iuRGBLed.setPowerMode(PowerMode::SLEEP);
     STM32.stop(duration);
-    iuRGBLed.changeColor(IURGBLed::BLUE);
+    iuRGBLed.setPowerMode(PowerMode::REGULAR);
     for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
     {
-        Sensor::instances[i]->wakeUp();
+        Sensor::instances[i]->setPowerMode(PowerMode::REGULAR);
     }
 }
 
@@ -62,24 +62,20 @@ void Conductor::sleep(uint32_t duration)
  */
 void Conductor::suspend(uint32_t duration)
 {
-    if (iuBluetooth.getPowerMode() != PowerMode::SUSPEND)
-    {
-        iuBluetooth.suspend();
-    }
-    if (iuWiFi.getPowerMode() != PowerMode::SUSPEND)
-    {
-        iuWiFi.suspend();
-    }
+    iuBluetooth.setPowerMode(PowerMode::SUSPEND);
+    iuWiFi.setPowerMode(PowerMode::SUSPEND);
     for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
     {
-        Sensor::instances[i]->suspend();
+        Sensor::instances[i]->setPowerMode(PowerMode::SUSPEND);
     }
-    iuRGBLed.changeColor(IURGBLed::SLEEP);
+    iuRGBLed.setPowerMode(PowerMode::SUSPEND);
     STM32.stop(duration * 1000);
-    iuRGBLed.changeColor(IURGBLed::BLUE);
+    iuRGBLed.setPowerMode(PowerMode::REGULAR);
+    iuBluetooth.setPowerMode(PowerMode::REGULAR);
+    iuWiFi.setPowerMode(PowerMode::REGULAR);
     for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
     {
-        Sensor::instances[i]->wakeUp();
+        Sensor::instances[i]->setPowerMode(PowerMode::REGULAR);
     }
 }
 
@@ -637,7 +633,7 @@ void Conductor::processWIFICommands(char *buff)
             iuWiFi.setBleMacAddress(m_macAddress);
             break;
         case MSPCommand::WIFI_ALERT_NO_SAVED_CREDENTIALS:
-            iuBluetooth.port->print('WIFI-NOSAVEDCRED;');
+            iuBluetooth.port->print("WIFI-NOSAVEDCRED;");
             break;
         case MSPCommand::CONFIG_FORWARD_CMD:
             switch(buff[0])
@@ -1284,7 +1280,23 @@ void Conductor::updateOperationState()
         }
     }
     m_operationState = newState;
-    iuRGBLed.showOperationState(m_operationState);
+    switch (m_operationState)
+    {
+        case OperationState::IDLE:
+            iuRGBLed.changeColor(IURGBLed::BLUE);
+            break;
+        case OperationState::NORMAL:
+            iuRGBLed.changeColor(IURGBLed::GREEN);
+            break;
+        case OperationState::WARNING:
+            iuRGBLed.changeColor(IURGBLed::ORANGE);
+            break;
+        case OperationState::DANGER:
+            iuRGBLed.changeColor(IURGBLed::RED);
+            break;
+        default:
+            iuRGBLed.turnOff();
+    }
 }
 
 /**

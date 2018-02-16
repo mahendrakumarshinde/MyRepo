@@ -7,27 +7,12 @@
 #include <ESP8266HTTPClient.h>
 #include <time.h>
 
-
 /* =============================================================================
-    Debugging and testing definitions
+    PubSub topic names
 ============================================================================= */
 
 // Define TEST_TOPICS to use the PubSub test topics (instead of prod ones)
 //#define TEST_TOPICS
-
-// Define DEBUGMODE to enable debug level messages from the whole firmware
-//#define DEBUGMODE
-
-#ifdef DEBUGMODE
-    const bool debugMode = true;
-#else
-    const bool debugMode = false;
-#endif
-
-
-/* =============================================================================
-    PubSub topic names
-============================================================================= */
 
 #ifdef TEST_TOPICS
     const uint8_t FEATURE_TOPIC_LENGTH = 20;
@@ -47,46 +32,12 @@
 
 
 /* =============================================================================
-    Debugging utilities
-============================================================================= */
-
-
-template <typename T>
-inline void debugPrint(T msg, bool endline = true)
-{
-    #ifdef DEBUGMODE
-    if (endline) { Serial.println(msg); }
-    else { Serial.print(msg); }
-    #endif
-}
-
-//Specialization for float printing with fixed decimal count
-template <>
-inline void debugPrint(float msg, bool endline)
-{
-    #ifdef DEBUGMODE
-    if (endline) { Serial.println(msg, 6); }
-    else { Serial.print(msg, 6); }
-    #endif
-}
-
-template <typename T>
-inline void raiseException(T msg)
-{
-    #ifdef DEBUGMODE
-    debugPrint(F("Error: "), false);
-    debugPrint(msg);
-    #endif
-}
-
-
-/* =============================================================================
     HTTP functions
 ============================================================================= */
 
 /**
  * Sends an HTTP GET request - HTTPS is used if fingerprint is given.
- * 
+ *
  * @param url
  * @param responseBody
  * @param maxResponseLength
@@ -128,7 +79,7 @@ inline int httpGetRequest(const char *url, char* responseBody,
 
 /**
  * Sends an HTTP POST request - HTTPS is used if fingerprint is given.
- * 
+ *
  * @param url
  * @param payload
  * @param payloadLength
@@ -232,7 +183,8 @@ inline int httpPostBigJsonRequest(
     // now we need to chunk the payload into 1000 byte chunks
     size_t cIndex;
     size_t retSize;
-    for (cIndex = 0; cIndex < payloadLength - chunkSize; cIndex = cIndex + chunkSize)
+    for (cIndex = 0; cIndex < payloadLength - chunkSize;
+         cIndex = cIndex + chunkSize)
     {
         retSize = client.write(&payload[cIndex], chunkSize);
         if(retSize != chunkSize)
@@ -266,7 +218,8 @@ inline int httpPostBigJsonRequest(
             lastDataTime = millis();
 
             if(headerLine.startsWith("HTTP/1.")) {
-                returnCode = headerLine.substring(9, headerLine.indexOf(' ', 9)).toInt();
+                returnCode = headerLine.substring(
+                    9, headerLine.indexOf(' ', 9)).toInt();
             }
             if(headerLine == "")
             {

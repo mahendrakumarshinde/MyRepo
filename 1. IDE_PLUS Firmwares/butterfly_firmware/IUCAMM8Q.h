@@ -4,7 +4,6 @@
 #include <Arduino.h>
 #include <GNSS.h>
 #include "Sensor.h"
-#include "IUI2C.h"
 
 
 /**
@@ -25,13 +24,11 @@ class IUCAMM8Q : public LowFreqSensor
         static const uint32_t defaultPeriod = 1000;
         static const bool defaultForcedMode = true;
         /***** Constructor and destructor *****/
-        IUCAMM8Q(IUI2C *iuI2C, const char* name);
+        IUCAMM8Q(Uart *serial, const char* name);
         virtual ~IUCAMM8Q() {}
         /***** Hardware & power management *****/
         virtual void setupHardware();
-        virtual void wakeUp();
-        virtual void lowPower();
-        virtual void suspend();
+        virtual void setPowerMode(PowerMode::option pMode);
         /***** Configuration and calibration *****/
         virtual void configure(JsonVariant &config);
         void setPeriodic(uint32_t onTime, uint32_t period,
@@ -47,7 +44,7 @@ class IUCAMM8Q : public LowFreqSensor
 
     protected:
         /***** Core *****/
-        IUI2C *m_iuI2C;
+        Uart *m_serial;
         /***** Configuration and calibration *****/
         uint32_t m_onTime;
         uint32_t m_period;

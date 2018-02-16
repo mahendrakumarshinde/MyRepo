@@ -208,13 +208,13 @@ void setup()
         for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
         {
             Sensor::instances[i]->setupHardware();
-            if (Sensor::instances[i]->isDriven())
+            if (Sensor::instances[i]->isHighFrequency())
             {
                 Sensor::instances[i]->setCallbackRate(callbackRate);
             }
         }
         #ifdef BUTTERFLY_V04
-            iuGyroscope.suspend();
+            iuGyroscope.setPowerMode(PowerMode::SUSPEND);
         #endif
         if (debugMode)
         {

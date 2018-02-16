@@ -6,8 +6,9 @@
 
 IUESP8285::IUESP8285(HardwareSerial *serialPort, char *charBuffer,
                      uint16_t bufferSize, PROTOCOL_OPTIONS protocol,
-                     uint32_t rate, uint16_t dataReceptionTimeout) :
-    IUSerial(serialPort, charBuffer, bufferSize, protocol, rate, ';',
+                     uint32_t rate, char stopChar,
+                     uint16_t dataReceptionTimeout) :
+    IUSerial(serialPort, charBuffer, bufferSize, protocol, rate, stopChar,
              dataReceptionTimeout),
     m_connected(false),
     m_sleeping(false),
@@ -43,37 +44,15 @@ void IUESP8285::setupHardware()
 //    }
     begin();
     hardReset();
-    wakeUp();
+    setPowerMode(PowerMode::REGULAR);
 }
 
 /**
- * Switch to ACTIVE power mode
+ * Manage component power modes
  */
-void IUESP8285::wakeUp()
+void IUESP8285::setPowerMode(PowerMode::option pMode)
 {
-    Component::wakeUp();
-    manageAutoSleep();
-}
-
-/**
- * Switch to ECONOMY power mode
- *
- * WiFi cycle through connection attempts / sleeping phase if not connected.
- * When connected however, this mode is in practise the same as wakeUp.
- */
-void IUESP8285::lowPower()
-{
-    Component::lowPower();
-    manageAutoSleep();
-}
-
-/**
- * Switch to SUSPEND power mode
- */
-void IUESP8285::suspend()
-{
-    // TODO Implement sleep duration
-    Component::suspend();
+    m_powerMode = pMode;
     manageAutoSleep();
 }
 
@@ -83,17 +62,25 @@ void IUESP8285::suspend()
 ============================================================================= */
 
 /**
+ * Send commands to WiFi chip to manage its sleeping cycle.
  *
+ * When not connected, WiFi cycle through connection attempts / sleeping phase.
+ * When connected, WiFi use light-sleep mode to maintain connection to AP at a
+ * lower energy cost.
  */
 void IUESP8285::manageAutoSleep()
 {
     uint32_t now = millis();
+
     switch (m_powerMode)
     {
-        case PowerMode::ACTIVE:
+        case PowerMode::PERFORMANCE:
+        case PowerMode::ENHANCED:
             sendMSPCommand(MSPCommand::WIFI_WAKE_UP);
             break;
-        case PowerMode::ECONOMY:
+        case PowerMode::REGULAR:
+        case PowerMode::LOW_1:
+        case PowerMode::LOW_2:
             if (m_connected)
             {
                 sendMSPCommand(MSPCommand::WIFI_WAKE_UP);
@@ -121,17 +108,19 @@ void IUESP8285::manageAutoSleep()
                 }
             }
             break;
+        case PowerMode::SLEEP:
+        case PowerMode::DEEP_SLEEP:
         case PowerMode::SUSPEND:
+            // TODO Implement sleep duration
             sendMSPCommand(MSPCommand::WIFI_DEEP_SLEEP);
             break;
         default:
             if (debugMode)
             {
-                debugPrint(F("Unmanaged power mode "), false);
+                debugPrint(F("Unhandled power Mode "), false);
                 debugPrint(m_powerMode);
             }
             sendMSPCommand(MSPCommand::WIFI_DEEP_SLEEP);
-            break;
     }
 }
 

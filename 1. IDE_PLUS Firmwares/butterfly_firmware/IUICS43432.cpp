@@ -1,13 +1,14 @@
-#include "IUI2S.h"
+#include "IUICS43432.h"
 
 
 /* =============================================================================
     Constructors and destructors
 ============================================================================= */
 
-IUI2S::IUI2S(IUI2C *iuI2C, const char* name, Feature *audio) :
-  DrivenSensor(name, 1, audio),
-  m_iuI2C(iuI2C),
+IUICS43432::IUICS43432(I2SClass *I2SInstance, const char* name,
+                       Feature *audio) :
+  HighFreqSensor(name, 1, audio),
+  m_I2S(I2SInstance),
   m_firstI2STrigger(true)
 {
     setSamplingRate(defaultSamplingRate);
@@ -28,7 +29,7 @@ IUI2S::IUI2S(IUI2C *iuI2C, const char* name, Feature *audio) :
  *
  * This must be called everytime the callback or sampling rates are modified.
  */
-void IUI2S::computeDownclockingRate()
+void IUICS43432::computeDownclockingRate()
 {
     m_downclocking = m_samplingRate / getCallbackRate();
     m_downclockingCount = 0;
@@ -42,18 +43,17 @@ void IUI2S::computeDownclockingRate()
  * The callback rate can then be determined based on the buffer size and on I2S
  * sampling rate (= filling rate of the buffer).
  */
-bool IUI2S::triggerDataAcquisition(void (*callback)())
+bool IUICS43432::triggerDataAcquisition(void (*callback)())
 {
     // trigger a read to kick things off
     if (m_firstI2STrigger)
     {
-        _I2S.onReceive(callback); // add the receiver callback
-        if (!_I2S.begin(I2S_PHILIPS_MODE, clockRate,
-                                 bitsPerAudioSample))
+        m_I2S->onReceive(callback); // add the receiver callback
+        if (!m_I2S->begin(I2S_PHILIPS_MODE, clockRate, bitsPerAudioSample))
         {
             return false;
         }
-        _I2S.read();
+        m_I2S->read();
         m_firstI2STrigger = false;
     }
     else
@@ -67,9 +67,9 @@ bool IUI2S::triggerDataAcquisition(void (*callback)())
     return true;
 }
 
-bool IUI2S::endDataAcquisition()
+bool IUICS43432::endDataAcquisition()
 {
-    //I2S.end();
+    //m_I2S->end();
     if (loopDebugMode)
     {
         debugPrint("\nData acquisition disabled\n");
@@ -84,7 +84,7 @@ bool IUI2S::endDataAcquisition()
  *  only keep the 16 most significant bit (lose 8bits in precision) and store
  *  them as q15_t.
  */
-void IUI2S::processAudioData(q31_t *data)
+void IUICS43432::processAudioData(q31_t *data)
 {
     for (int i = 0; i < m_downclocking; ++i)
     {
@@ -101,17 +101,16 @@ void IUI2S::processAudioData(q31_t *data)
  *
  * This function needs to run to empty I2S buffer, otherwise the process stop.
  */
-void IUI2S::readData()
+void IUICS43432::readData()
 {
-    int readBitCount = _I2S.read(m_rawAudioData,
-                                          sizeof(m_rawAudioData));
+    int readBitCount = m_I2S->read(m_rawAudioData, sizeof(m_rawAudioData));
     if (readBitCount)
     {
         processAudioData((q31_t*) m_rawAudioData);
     }
 }
 
-void IUI2S::acquireData(bool inCallback, bool force)
+void IUICS43432::acquireData(bool inCallback, bool force)
 {
     readData();
 }
@@ -126,7 +125,7 @@ void IUI2S::acquireData(bool inCallback, bool force)
  *
  * This should be done in DATA COLLECTION mode.
  */
-void IUI2S::sendData(HardwareSerial *port)
+void IUICS43432::sendData(HardwareSerial *port)
 {
     if (loopDebugMode)
     {
@@ -152,7 +151,7 @@ void IUI2S::sendData(HardwareSerial *port)
 /**
  * Shows the I2S + microphone config when in DEBUGMODE
  */
-void IUI2S::expose()
+void IUICS43432::expose()
 {
     #ifdef DEBUGMODE
     Sensor::expose();

@@ -22,7 +22,7 @@
  *      - tiltY: a Q15Feature with section size = 128
  *      - tiltZ: a Q15Feature with section size = 128
  */
-class IUBMX055Gyro : public DrivenSensor
+class IUBMX055Gyro : public HighFreqSensor
 {
     public:
         /***** Preset values and default settings *****/
@@ -58,9 +58,7 @@ class IUBMX055Gyro : public DrivenSensor
         /***** Hardware & power management *****/
         virtual void setupHardware();
         void softReset();
-        virtual void wakeUp();
-        virtual void lowPower();
-        virtual void suspend();
+        virtual void setPowerMode(PowerMode::option pMode);
         /***** Configuration and calibration *****/
         virtual void configure(JsonVariant &config);
         void setScale(scaleOption scale);

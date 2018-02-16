@@ -22,7 +22,7 @@
  *      - magneticY: a Q15Feature with section size = 128
  *      - magneticZ: a Q15Feature with section size = 128
  */
-class IUBMX055Mag : public DrivenSensor
+class IUBMX055Mag : public HighFreqSensor
 {
     public:
         /***** Preset values and default settings *****/
@@ -62,9 +62,7 @@ class IUBMX055Mag : public DrivenSensor
         /***** Hardware & power management *****/
         virtual void setupHardware();
         void softReset();
-        virtual void wakeUp();
-        virtual void lowPower();
-        virtual void suspend();
+        virtual void setPowerMode(PowerMode::option pMode);
         /***** Configuration and calibration *****/
         virtual void configure(JsonVariant &config);
         void enterForcedMode();

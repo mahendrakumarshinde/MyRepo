@@ -7,9 +7,13 @@
 
 IUBMD350::IUBMD350(HardwareSerial *serialPort, char *charBuffer,
                    uint16_t bufferSize, PROTOCOL_OPTIONS protocol,
-                   uint32_t rate, uint16_t dataReceptionTimeout) :
-    IUSerial(serialPort, charBuffer, bufferSize, protocol, rate, ';',
+                   uint32_t rate, char stopChar,
+                   uint16_t dataReceptionTimeout, uint8_t resetPin,
+                   uint8_t atCmdPin) :
+    IUSerial(serialPort, charBuffer, bufferSize, protocol, rate, stopChar,
              dataReceptionTimeout),
+    m_resetPin(resetPin),
+    m_atCmdPin(atCmdPin),
     m_ATCmdEnabled(false),
     m_beaconEnabled(IUBMD350::defaultBeaconEnabled),
     m_beaconAdInterval(IUBMD350::defaultbeaconAdInterval)
@@ -28,15 +32,15 @@ void IUBMD350::setupHardware()
 {
     begin();
     // Configure pins and port
-    pinMode(ATCmdPin, OUTPUT);
-    pinMode(resetPin, OUTPUT);
+    pinMode(m_atCmdPin, OUTPUT);
+    pinMode(m_resetPin, OUTPUT);
     delay(100);
     // Beacon and UART configuration
     enterATCommandInterface();
     queryDeviceName();
     configureBeacon(m_beaconEnabled, m_beaconAdInterval);
     configureUARTPassthrough();
-    wakeUp();
+    setPowerMode(PowerMode::REGULAR);
     exitATCommandInterface();
 }
 
@@ -47,48 +51,42 @@ void IUBMD350::setupHardware()
  */
 void IUBMD350::softReset()
 {
-    digitalWrite(resetPin, LOW); // reset BMD-350
+    digitalWrite(m_resetPin, LOW); // reset BMD-350
     delay(100); // wait a while
-    digitalWrite(resetPin, HIGH); // restart BMD-350
+    digitalWrite(m_resetPin, HIGH); // restart BMD-350
 }
 
 /**
- * Switch to ACTIVE power mode
- *
- * ACTIVE mode consist of default Beacon and UART settings
+ * Manage component power modes
  */
-void IUBMD350::wakeUp()
+void IUBMD350::setPowerMode(PowerMode::option pMode)
 {
-    Component::wakeUp();
-    enterATCommandInterface();
-    setTxPowers(defaultTxPower);
-    exitATCommandInterface();
-}
-
-/**
- * Switch to ECONOMY power mode
- *
- * ECONOMY mode consist of disabled Beacon and enabled UART settings
- */
-void IUBMD350::lowPower()
-{
-    Component::lowPower();
-    enterATCommandInterface();
-    setTxPowers(defaultTxPower);
-    exitATCommandInterface();
-}
-
-/**
- * Switch to SUSPEND power mode
- *
- * SUSPEND mode consist of disabled Beacon and UART modes
- */
-void IUBMD350::suspend()
-{
-    Component::suspend();
-    enterATCommandInterface();
-    setTxPowers(txPowerOption::DBm30);
-    exitATCommandInterface();
+    m_powerMode = pMode;
+    switch (m_powerMode)
+    {
+        case PowerMode::PERFORMANCE:
+        case PowerMode::ENHANCED:
+        case PowerMode::REGULAR:
+        case PowerMode::LOW_1:
+        case PowerMode::LOW_2:
+            enterATCommandInterface();
+            setTxPowers(defaultTxPower);
+            exitATCommandInterface();
+            break;
+        case PowerMode::SLEEP:
+        case PowerMode::DEEP_SLEEP:
+        case PowerMode::SUSPEND:
+            enterATCommandInterface();
+            setTxPowers(txPowerOption::DBm30);
+            exitATCommandInterface();
+            break;
+        default:
+            if (debugMode)
+            {
+                debugPrint(F("Unhandled power Mode "), false);
+                debugPrint(m_powerMode);
+            }
+    }
 }
 
 
@@ -113,7 +111,7 @@ void IUBMD350::enterATCommandInterface()
     {
         return; // Already in AT Command mode
     }
-    digitalWrite(ATCmdPin, LOW);
+    digitalWrite(m_atCmdPin, LOW);
     delay(100);
     softReset();
     // hold ATMD pin LOW for at least 2.5s. If not, AT Mode will not work
@@ -135,7 +133,7 @@ void IUBMD350::exitATCommandInterface()
     {
         return; // Already out of AT Command mode
     }
-    digitalWrite(ATCmdPin, HIGH);
+    digitalWrite(m_atCmdPin, HIGH);
     delay(100);
     softReset();
     m_ATCmdEnabled = false;

@@ -27,15 +27,15 @@ test(Sensor__base_class_test)
 }
 
 
-test(Sensor__DrivenSensor)
+test(Sensor__HighFreqSensor)
 {
     Feature dest1("001", 2, 1);
     Feature dest2("002", 2, 1);
-    DrivenSensor sensor("ASN", 2, &dest1, &dest2);
+    HighFreqSensor sensor("ASN", 2, &dest1, &dest2);
 
     /***** Values after initialization *****/
     assertTrue(sensor.isNamed("ASN"));
-    assertTrue(sensor.isDriven());
+    assertTrue(sensor.isHighFrequency());
     assertEqual(dest1.getSamplingRate(), sensor.getSamplingRate());
     assertEqual(dest2.getSamplingRate(), sensor.getSamplingRate());
 
@@ -54,7 +54,7 @@ test(Sensor__LowFreqSensor)
 
     /***** Values after initialization *****/
     assertTrue(sensor.isNamed("SYN"));
-    assertFalse(sensor.isDriven());
+    assertFalse(sensor.isHighFrequency());
     assertEqual(sensor.getSamplingPeriod(), 1000);
     assertEqual(round(sensor.getSamplingRate() * 10000),
                 round(10000.0f / (float) sensor.defaultSamplingPeriod))  ;

@@ -75,14 +75,8 @@ class IUBMP280 : public LowFreqSensor
         /***** Hardware and power management *****/
         virtual void setupHardware();
         void softReset();
-        virtual void wakeUp();
-        virtual void lowPower();
-        virtual void suspend();
+        virtual void setPowerMode(PowerMode::option pMode);
         /***** Configuration and calibration *****/
-        virtual void switchToLowUsage();
-        virtual void switchToRegularUsage();
-        virtual void switchToEnhancedUsage();
-        virtual void switchToHighUsage();
         void setOverSamplingRates(overSamplingRates pressureOSR,
                                   overSamplingRates temperatureOSR);
         void setIIRFiltering(IIRFilterCoeffs iirFilter);

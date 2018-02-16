@@ -34,7 +34,7 @@ IULSM6DSM::IULSM6DSM(IUI2C *iuI2C, const char* name, Feature *accelerationX,
                      Feature *accelerationY, Feature *accelerationZ,
                      Feature *tiltX, Feature *tiltY,
                      Feature *tiltZ) :
-    DrivenSensor(name, 6, accelerationX, accelerationY, accelerationZ, tiltX,
+    HighFreqSensor(name, 6, accelerationX, accelerationY, accelerationZ, tiltX,
                  tiltY, tiltZ),
     m_scale(defaultScale),
     m_gyroScale(defaultGyroScale),
@@ -76,7 +76,7 @@ void IULSM6DSM::setupHardware()
 //    uint8_t temp = m_iuI2C->readByte(ADDRESS, CTRL3_C);
 //    m_iuI2C->writeByte(ADDRESS, CTRL3_C, temp | 0x40 | 0x04);
 
-    wakeUp();
+    setPowerMode(PowerMode::REGULAR);
     setScale(m_scale);
     setGyroScale(m_gyroScale);
     setSamplingRate(defaultSamplingRate);
@@ -89,44 +89,43 @@ void IULSM6DSM::softReset()
 {
     // reset device: Read current register content and just put 1 to reset bit
     uint8_t temp = m_iuI2C->readByte(ADDRESS, CTRL3_C);
-    m_iuI2C->writeByte(ADDRESS, CTRL3_C, temp | 0x01); // Set bit 0 to 1 to reset LSM6DSM
+    // Set bit 0 to 1 to reset LSM6DSM
+    m_iuI2C->writeByte(ADDRESS, CTRL3_C, temp | 0x01);
     delay(100); // Wait for all registers to reset
 }
 
 /**
- * Set the power mode to ACTIVE
+ * Manage component power modes
  */
-void IULSM6DSM::wakeUp()
+void IULSM6DSM::setPowerMode(PowerMode::option pMode)
 {
-    DrivenSensor::wakeUp();
+    m_powerMode = pMode;
     // TODO Implement
+    switch (m_powerMode)
+    {
+        case PowerMode::PERFORMANCE:
+        case PowerMode::ENHANCED:
+        case PowerMode::REGULAR:
+        case PowerMode::LOW_1:
+        case PowerMode::LOW_2:
+        case PowerMode::SLEEP:
+        case PowerMode::DEEP_SLEEP:
+        case PowerMode::SUSPEND:
+        default:
+            if (debugMode)
+            {
+                debugPrint(F("Unhandled power Mode "), false);
+                debugPrint(m_powerMode);
+            }
+    }
 }
-
-/**
- * Set the power mode to SLEEP
- */
-void IULSM6DSM::sleep()
-{
-    DrivenSensor::sleep();
-    // TODO Implement
-}
-
-/**
- * Set the power mode to SUSPEND
- */
-void IULSM6DSM::suspend()
-{
-    DrivenSensor::suspend();
-    // TODO Implement
-}
-
 
 /**
  * Rate cannot be set to zero + call computeDownclockingRate at the end
  */
 void IULSM6DSM::setSamplingRate(uint16_t samplingRate)
 {
-    DrivenSensor::setSamplingRate(samplingRate);
+    HighFreqSensor::setSamplingRate(samplingRate);
     m_odr = ODR_12_5Hz;
     if (samplingRate > 12) { m_odr = ODR_26Hz; }
     else if (samplingRate > 26) { m_odr = ODR_52Hz; }
@@ -222,7 +221,7 @@ void IULSM6DSM::computeBias()
 
 void IULSM6DSM::configure(JsonVariant &config)
 {
-    DrivenSensor::configure(config);  // General sensor config
+    HighFreqSensor::configure(config);  // General sensor config
     JsonVariant value = config["FSR"];  // Full Scale Range
     if (value.success())
     {
@@ -298,7 +297,7 @@ void IULSM6DSM::acquireData(bool inCallback, bool force)
     // Process data from last acquisition if needed
     processData();
     // Acquire new data
-    DrivenSensor::acquireData(inCallback, force);
+    HighFreqSensor::acquireData(inCallback, force);
 }
 
 /**

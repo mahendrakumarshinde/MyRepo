@@ -19,17 +19,12 @@ class IUESP8285 : public IUSerial, public Component
 {
     public:
         /***** Preset values and default settings *****/
-        #ifdef DRAGONFLY_V04
-            static const uint8_t ENABLE_PIN = A2; // if Dragonfly
-        #else
-            //TODO Find the pin for the Butterfly
-        #endif // DRAGONFLY_V04
         static const uint32_t defaultAutoSleepDelay = 45000;  // ms
         static const uint32_t defaultAutoSleepDuration = 60000;  // ms
         /***** Constructors & desctructors *****/
         IUESP8285(HardwareSerial *serialPort, char *charBuffer,
-                  uint16_t bufferSize, PROTOCOL_OPTIONS protocol,
-                  uint32_t rate=115200, uint16_t dataReceptionTimeout=100);
+                  uint16_t bufferSize, PROTOCOL_OPTIONS protocol, uint32_t rate,
+                  char stopChar, uint16_t dataReceptionTimeout);
         virtual ~IUESP8285() {}
         bool isConnected() { return m_connected; }
         bool isAvailable() { return !m_sleeping; }
@@ -37,15 +32,13 @@ class IUESP8285 : public IUSerial, public Component
         bool isWorking() { return m_working; }
         /***** Hardware and power management *****/
         virtual void setupHardware();
-        virtual void wakeUp();
-        virtual void lowPower();
-        virtual void suspend();
-        void hardReset() { sendMSPCommand(MSPCommand::WIFI_HARD_RESET); }
+        virtual void setPowerMode(PowerMode::option pMode);
         void setAutoSleepDelay(uint32_t deltaT) { m_autoSleepDelay = deltaT; }
         void manageAutoSleep();
         /***** Inbound communication *****/
         bool processMessage();
         /***** Outbound communication *****/
+        void hardReset() { sendMSPCommand(MSPCommand::WIFI_HARD_RESET); }
         void sendBleMacAddress(char *macAddress)
             {
                 port->print("BLEMAC-");
@@ -54,16 +47,11 @@ class IUESP8285 : public IUSerial, public Component
             }
         void setBleMacAddress(char *macAddress)
             { sendMSPCommand(MSPCommand::RECEIVE_BLE_MAC, macAddress); }
-        void setSSID(char *ssid)
-            { sendMSPCommand(MSPCommand::WIFI_RECEIVE_SSID, ssid); }
-        void setPassword(char *password)
-            { sendMSPCommand(MSPCommand::WIFI_RECEIVE_PASSWORD, password); }
-        void forgetCredentials()
-            { sendMSPCommand(MSPCommand::WIFI_FORGET_CREDENTIALS); }
-        void connect()
-            { sendMSPCommand(MSPCommand::WIFI_CONNECT); }
-        void disconnect()
-            { sendMSPCommand(MSPCommand::WIFI_DISCONNECT); }
+        void setSSID(char *ssid);
+        void setPassword(char *password);
+        void forgetCredentials();
+        void connect();
+        void disconnect();
         void publishRawData(char *rawData)
             { sendMSPCommand(MSPCommand::PUBLISH_RAW_DATA, rawData); }
         void publishFeature(char *features)

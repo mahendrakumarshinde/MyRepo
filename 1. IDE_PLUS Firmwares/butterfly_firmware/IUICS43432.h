@@ -1,19 +1,10 @@
-#ifndef IUI2S_H
-#define IUI2S_H
+#ifndef IUICS43432_H
+#define IUICS43432_H
 
 #include <Arduino.h>
 #include <IUButterflyI2S.h>  /* I2S digital audio */
-#include <arm_math.h> /* CMSIS-DSP library for RFFT */
 
 #include "Sensor.h"
-#include "IUI2C.h"
-
-
-#ifdef BUTTERFLY_V04
-    #define _I2S I2S1
-#else
-    #define _I2S I2S
-#endif
 
 
 /**
@@ -37,7 +28,7 @@
  * Destinations:
  *      - audio: a Q15Feature
  */
-class IUI2S : public DrivenSensor
+class IUICS43432 : public HighFreqSensor
 {
     public:
         /***** Preset values and default settings *****/
@@ -50,8 +41,8 @@ class IUI2S : public DrivenSensor
             / (bitsPerAudioSample); // stereo recording
 
         /***** Constructors and destructors *****/
-        IUI2S(IUI2C *iuI2C, const char* name, Feature *audio);
-        virtual ~IUI2S() {}
+        IUICS43432(I2SClass *I2SInstance, const char* name, Feature *audio);
+        virtual ~IUICS43432() {}
         /***** Hardware and power management *****/
 
         /***** Configuration and calibration *****/
@@ -72,7 +63,7 @@ class IUI2S : public DrivenSensor
 
     protected:
         /***** Core *****/
-        IUI2C *m_iuI2C;
+        I2SClass *m_I2S;
         /***** Configuration and calibration *****/
         bool m_firstI2STrigger;
         /***** Data acquisition *****/
@@ -82,4 +73,4 @@ class IUI2S : public DrivenSensor
         uint16_t m_targetSample;
 };
 
-#endif // IUI2S_H
+#endif // IUICS43432_H

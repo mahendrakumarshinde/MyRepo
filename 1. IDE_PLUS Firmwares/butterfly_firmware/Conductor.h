@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 
-#include "Keywords.h"
+#include "BoardDefinition.h"
 #ifdef DRAGONFLY_V03
     #include "InstancesDragonfly.h"
 #else
@@ -12,9 +12,59 @@
 #endif
 
 
-extern float DEFAULT_ACCEL_ENERGY_NORMAL_TH;
-extern float DEFAULT_ACCEL_ENERGY_WARNING_TH;
-extern float DEFAULT_ACCEL_ENERGY_HIGH_TH;
+/* =============================================================================
+    Operation Mode
+============================================================================= */
+
+/**
+ * Define what type of data we want to acquire / compute
+ */
+namespace AcquisitionMode
+{
+    enum option : uint8_t {RAWDATA = 0,
+                           FEATURE = 1,
+                           NONE    = 2,
+                           COUNT   = 3};
+}
+
+/**
+ * Define the channel through which data will be sent
+ */
+namespace StreamingMode
+{
+    enum option : uint8_t {
+        WIRED        = 0,       // Send over Serial
+        BLE          = 1,       // Send over Bluetooth Low Energy
+        WIFI         = 2,       // Send over WiFi
+        WIFI_AND_BLE = 3,       // Send over both WiFi and BLE
+        STORE        = 4,       // Store in SPI Flash to stream later
+        COUNT        = 5};
+}
+
+
+/* =============================================================================
+    Operation Presets
+============================================================================= */
+
+/**
+ * Usage Mode are user controlled, they describe how the device is being used
+ */
+namespace UsageMode
+{
+    enum option : uint8_t {CALIBRATION     = 0,
+                           EXPERIMENT      = 1,
+                           OPERATION       = 2,
+                           OPERATION_BIS   = 3,
+                           COUNT           = 4};
+    // Related default config
+    const AcquisitionMode::option acquisitionModeDetails[COUNT] =
+    {
+        AcquisitionMode::FEATURE,
+        AcquisitionMode::RAWDATA,
+        AcquisitionMode::FEATURE,
+        AcquisitionMode::FEATURE,
+    };
+}
 
 
 /**
@@ -185,5 +235,15 @@ class Conductor
 //          }
 //        }
 };
+
+
+/* =============================================================================
+    Default thresholds
+============================================================================= */
+
+// TODO: put those in flash storage
+extern float DEFAULT_ACCEL_ENERGY_NORMAL_TH;
+extern float DEFAULT_ACCEL_ENERGY_WARNING_TH;
+extern float DEFAULT_ACCEL_ENERGY_HIGH_TH;
 
 #endif // CONDUCTOR_H

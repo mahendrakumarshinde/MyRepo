@@ -8,20 +8,12 @@
 ============================================================================= */
 
 // Define DEBUGMODE to enable debug level messages from the whole firmware
-#define DEBUGMODE
+//#define DEBUGMODE
 
 #ifdef DEBUGMODE
-    const bool setupDebugMode = false;
-    const bool loopDebugMode = true;
-    const bool featureDebugMode = false;
-    const bool highVerbosity = false;
-    const bool callbackDebugMode = false;
+    const bool debugMode = true;
 #else
-    const bool setupDebugMode = false;
-    const bool loopDebugMode = false;
-    const bool featureDebugMode = false;
-    const bool highVerbosity = false;
-    const bool callbackDebugMode = false;
+    const bool debugMode = false;
 #endif
 
 const bool debugMode = (setupDebugMode || loopDebugMode ||

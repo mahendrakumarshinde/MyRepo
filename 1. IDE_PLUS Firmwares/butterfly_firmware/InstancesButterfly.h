@@ -1,7 +1,7 @@
 #ifndef INSTANCESBUTTERFLY_H
 #define INSTANCESBUTTERFLY_H
 
-#include "Keywords.h"
+#include "BoardDefinition.h"
 
 #if defined(BUTTERFLY_V03) || defined(BUTTERFLY_V04)
 
@@ -25,7 +25,7 @@
 #include "IUBMX055Gyro.h"
 #include "IUBMX055Mag.h"
 #include "IUCAMM8Q.h"
-#include "IUI2S.h"
+#include "IUICS43432.h"
 
 
 /* =============================================================================
@@ -197,7 +197,7 @@ extern IUBMX055Mag iuMagnetometer;
     extern IUCAMM8Q iuGNSS;
 #endif
 
-extern IUI2S iuI2S;
+extern IUICS43432 iuI2S;
 
 
 /* =============================================================================

@@ -1,7 +1,7 @@
 #ifndef INSTANCESDRAGONFLY_H
 #define INSTANCESDRAGONFLY_H
 
-#include "Keywords.h"
+#include "BoardDefinition.h"
 
 #ifdef DRAGONFLY_V03
 
@@ -24,7 +24,7 @@
 /***** Sensors *****/
 #include "IUBattery.h"
 #include "IUCAMM8Q.h"
-#include "IUI2S.h"
+#include "IUICS43432.h"
 #include "IULSM6DSM.h"
 #include "IUMAX31865.h"
 
@@ -54,6 +54,7 @@ extern char iuWiFiBuffer[500];
 ============================================================================= */
 
 extern IUFSFlash iuFlash;
+
 
 /* =============================================================================
     Features
@@ -191,7 +192,7 @@ extern IULSM6DSM iuAccelerometer;
     extern IUCAMM8Q iuGNSS;
 #endif
 
-extern IUI2S iuI2S;
+extern IUICS43432 iuI2S;
 
 
 /* =============================================================================

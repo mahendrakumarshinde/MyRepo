@@ -28,14 +28,6 @@ IUSerial::IUSerial(HardwareSerial *serialPort, char *charBuffer,
     resetBuffer();
 }
 
-
-/* =============================================================================
-    Hardware & power management
-============================================================================= */
-
-/**
- * Set up the component and finalize the object initialization
- */
 void IUSerial::begin()
 {
     port->begin(baudRate);

@@ -6,28 +6,32 @@
     Interfaces
 ============================================================================= */
 
-IURGBLed iuRGBLed = IURGBLed();
+#ifdef BUTTERFLY_V04
+    IURGBLed iuRGBLed = IURGBLed(A5, A3, A4);
+#else
+    IURGBLed iuRGBLed = IURGBLed(A5, A3, A0);
+#endif
 
 char iuUSBBuffer[20] = "";
 IUUSB iuUSB(&Serial, iuUSBBuffer, 20, IUSerial::CUSTOM_PROTOCOL, 115200, '\n',
-            2000);
+            1000);
 
 char iuBluetoothBuffer[500] = "";
 IUBMD350 iuBluetooth(&Serial1, iuBluetoothBuffer, 500,
-                     IUSerial::LEGACY_PROTOCOL, 57600, 2000);
+                     IUSerial::LEGACY_PROTOCOL, 57600, ';', 2000, 38, 26);
 
 char iuWiFiBuffer[500] = "";
 #ifdef EXTERNAL_WIFI
-    IUSerial iuWiFi(StreamingMode::WIFI, &Serial3, iuWiFiBuffer, 500,
-                    115200, ';', 500);
+    IUSerial iuWiFi(&Serial3, iuWiFiBuffer, 500, IUSerial::LEGACY_PROTOCOL,
+                    115200, ';', 250);
 #else
     IUESP8285 iuWiFi(&Serial3, iuWiFiBuffer, 500, IUSerial::LEGACY_PROTOCOL,
-                     115200, 2000);
+                     115200, ';', 250);
 #endif
 
 
 /* =============================================================================
-    Instanciations
+    Features
 ============================================================================= */
 
 /***** Battery load *****/
@@ -167,7 +171,7 @@ FloatFeature rtdTemp("RTD", 2, 4, rtdTempValues);
     Sensors
 ============================================================================= */
 
-IUBattery iuBattery(&iuI2C, "BAT", &batteryLoad);
+IUBattery iuBattery("BAT", &batteryLoad);
 
 IUBMP280 iuAltimeter(&iuI2C, "ALT", &temperature, &pressure);
 
@@ -178,11 +182,14 @@ IUBMX055Mag iuMagnetometer(&iuI2C, "MAG", &magneticX, &magneticY, &magneticZ);
 
 #ifdef NO_GPS
 #else
-    IUCAMM8Q iuGNSS(&iuI2C, "GPS");
+    IUCAMM8Q iuGNSS(&Serial2, "GPS");
 #endif
 
-IUI2S iuI2S(&iuI2C, "MIC", &audio);
-
+#ifdef BUTTERFLY_V04
+    IUICS43432 iuI2S(&I2S1, "MIC", &audio);
+#else
+    IUICS43432 iuI2S(&I2S, "MIC", &audio);
+#endif
 
 
 /* =============================================================================

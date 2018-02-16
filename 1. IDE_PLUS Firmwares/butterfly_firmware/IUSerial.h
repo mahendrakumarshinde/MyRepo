@@ -20,9 +20,10 @@ class IUSerial
         /***** Public constants *****/
         HardwareSerial *port;
         const uint32_t baudRate;
+        // MS_PROTOCOL: MultiWii Serial Protocol. Note that current
+        // implementation skips the variable type in the header.
         enum PROTOCOL_OPTIONS : uint8_t {LEGACY_PROTOCOL,
-                                         MS_PROTOCOL,  // MultiWii Serial Protocol
-                                                       // Note that we skip the type in the header
+                                         MS_PROTOCOL,
                                          CUSTOM_PROTOCOL};
         enum MSP_STATE : uint8_t {MSP_IDLE,
                                   MSP_HEADER_START,
@@ -32,9 +33,8 @@ class IUSerial
                                   MSP_HEADER_CMD};
         /***** Core *****/
         IUSerial(HardwareSerial *serialPort, char *charBuffer,
-                 uint16_t bufferSize, PROTOCOL_OPTIONS protocol,
-                 uint32_t rate=57600, char stopChar=';',
-                 uint16_t dataReceptionTimeout=2000);
+                 uint16_t bufferSize, PROTOCOL_OPTIONS protocol, uint32_t rate,
+                 char stopChar, uint16_t dataReceptionTimeout);
         virtual ~IUSerial() {}
         virtual void begin();
         /***** Communication *****/
