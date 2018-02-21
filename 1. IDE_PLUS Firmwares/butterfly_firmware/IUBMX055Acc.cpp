@@ -9,7 +9,7 @@ bool newAccelData = false;
 
 void accelReadCallback(uint8_t wireStatus)
 {
-    iuI2C.endReadOperation();
+    iuI2C.releaseReadLock();
     if (wireStatus == 0)
     {
         newAccelData = true;

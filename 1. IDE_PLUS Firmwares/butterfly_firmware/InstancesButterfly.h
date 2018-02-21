@@ -6,7 +6,7 @@
 #if defined(BUTTERFLY_V03) || defined(BUTTERFLY_V04)
 
 /***** Interfaces *****/
-#include "IURGBLed.h"
+#include "RGBLed.h"
 #include "IUUSB.h"
 #include "IUBMD350.h"
 #ifdef INTERNAL_ESP8285  // Wifi options
@@ -28,11 +28,23 @@
 #include "IUICS43432.h"
 
 
+
+/* Comment / Uncomment the "define" lines to toggle / untoggle unit or quality
+test mode */
+
+#ifdef INTEGRATEDTEST
+    #include "IntegratedTest/IT_Conductor.h"
+    #include "IntegratedTest/IT_IUBMX055.h"
+    #include "IntegratedTest/IT_IUFlash.h"
+    #include "IntegratedTest/IT_Sensors.h"
+#endif
+
+
 /* =============================================================================
     Interfaces
 ============================================================================= */
 
-extern IURGBLed iuRGBLed;
+extern RGBLed rgbLed;
 
 extern char iuUSBBuffer[20];
 extern IUUSB iuUSB;

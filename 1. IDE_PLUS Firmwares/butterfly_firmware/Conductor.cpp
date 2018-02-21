@@ -45,9 +45,9 @@ void Conductor::sleep(uint32_t duration)
     {
         Sensor::instances[i]->setPowerMode(PowerMode::SLEEP);
     }
-    iuRGBLed.setPowerMode(PowerMode::SLEEP);
+    rgbLed.setPowerMode(PowerMode::SLEEP);
     STM32.stop(duration);
-    iuRGBLed.setPowerMode(PowerMode::REGULAR);
+    rgbLed.setPowerMode(PowerMode::REGULAR);
     for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
     {
         Sensor::instances[i]->setPowerMode(PowerMode::REGULAR);
@@ -68,9 +68,9 @@ void Conductor::suspend(uint32_t duration)
     {
         Sensor::instances[i]->setPowerMode(PowerMode::SUSPEND);
     }
-    iuRGBLed.setPowerMode(PowerMode::SUSPEND);
+    rgbLed.setPowerMode(PowerMode::SUSPEND);
     STM32.stop(duration * 1000);
-    iuRGBLed.setPowerMode(PowerMode::REGULAR);
+    rgbLed.setPowerMode(PowerMode::REGULAR);
     iuBluetooth.setPowerMode(PowerMode::REGULAR);
     iuWiFi.setPowerMode(PowerMode::REGULAR);
     for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
@@ -101,6 +101,71 @@ void Conductor::manageSleepCycles()
         suspend(m_sleepDuration);
         m_startTime = now;
     }
+}
+
+
+/* =============================================================================
+    Led colors
+============================================================================= */
+
+
+void Conductor::resetLed()
+{
+    rgbLed.unlockColors();
+    m_colorSequence[0] = RGB_BLACK;
+    m_colorSequence[1] = RGB_BLACK;
+    m_colorFadeIns[0] = 0;
+    m_colorFadeIns[1] = 0;
+    m_colorDurations[0] = 1000;
+    m_colorDurations[1] = 0;
+    rgbLed.startNewColorQueue(2, m_colorSequence, m_colorFadeIns,
+                              m_colorDurations);
+    showOperationStateOnLed();
+}
+
+void Conductor::overrideLedColor(RGBColor color)
+{
+    rgbLed.unlockColors();
+    rgbLed.deleteColorQueue();
+    rgbLed.queueColor(color, 0, 10000);
+    rgbLed.lockColors();
+}
+
+void Conductor::showOperationStateOnLed()
+{
+    if (rgbLed.lockedColors())
+    {
+        return;
+    }
+    switch (m_operationState)
+    {
+        case OperationState::IDLE:
+            m_colorSequence[0] = RGB_BLUE;
+            break;
+        case OperationState::NORMAL:
+            m_colorSequence[0] = RGB_GREEN;
+            break;
+        case OperationState::WARNING:
+            m_colorSequence[0] = RGB_ORANGE;
+            break;
+        case OperationState::DANGER:
+            m_colorSequence[0] = RGB_RED;
+            break;
+    }
+    rgbLed.replaceColor(0, m_colorSequence[0], m_colorFadeIns[0],
+                        m_colorDurations[0]);
+}
+
+void Conductor::showStatusOnLed(RGBColor color)
+{
+    m_colorSequence[0] = color;
+    m_colorFadeIns[0] = 25;
+    m_colorDurations[0] = 50;
+    m_colorSequence[1] = RGB_BLACK;
+    m_colorFadeIns[1] = 25;
+    m_colorDurations[1] = 50;
+    rgbLed.startNewColorQueue(2, m_colorSequence, m_colorFadeIns,
+                              m_colorDurations);
 }
 
 
@@ -379,11 +444,9 @@ void Conductor::processLegacyUSBCommands(char *buff)
                 result = strstr(buff, "rgb");
                 if (result != NULL)
                 {
-                    iuRGBLed.unlock();
-                    iuRGBLed.manualChangeColor((bool) (result[7] - '0'),
-                                               (bool) (result[8] - '0'),
-                                               (bool) (result[9] - '0'));
-                    iuRGBLed.lock();
+                    overrideLedColor(RGBColor(255 * (result[7] - '0'),
+                                              255 * (result[8] - '0'),
+                                              255 * (result[9] - '0')));
                     return;
                 }
                 result = strstr(buff, "acosr");
@@ -453,7 +516,7 @@ void Conductor::processLegacyBLECommands(char *buff)
         }
         iuWiFi.port->print(buff);
         iuWiFi.port->print(';');
-        iuRGBLed.changeStatus(IURGBLed::WIFI_WORKING);
+        showStatusOnLed(RGB_PURPLE);
     }
     else
     {
@@ -612,11 +675,11 @@ void Conductor::processWIFICommands(char *buff)
     {
         if (iuWiFi.isWorking())
         {
-            iuRGBLed.changeStatus(IURGBLed::WIFI_WORKING);
+            showStatusOnLed(RGB_PURPLE);
         }
         else
         {
-            iuRGBLed.changeStatus(IURGBLed::NONE);
+            resetLed();
         }
         if (iuWiFi.isConnected())
         {
@@ -997,15 +1060,16 @@ void Conductor::changeAcquisitionMode(AcquisitionMode::option mode)
     switch (m_acquisitionMode)
     {
         case AcquisitionMode::RAWDATA:
-            iuRGBLed.changeColor(IURGBLed::CYAN);
+            overrideLedColor(RGB_CYAN);
             resetDataAcquisition();
             break;
         case AcquisitionMode::FEATURE:
-            iuRGBLed.changeColor(IURGBLed::BLUE);
+            resetLed();
             resetDataAcquisition();
             break;
         case AcquisitionMode::NONE:
             endDataAcquisition();
+            overrideLedColor(RGB_BLACK);
             break;
         default:
             if (loopDebugMode)
@@ -1083,21 +1147,18 @@ void Conductor::changeUsageMode(UsageMode::option usage)
         case UsageMode::CALIBRATION:
             deactivateAllGroups();
             activateGroup(&calibrationGroup);
-            iuRGBLed.changeColor(IURGBLed::CYAN);
-            iuRGBLed.lock();
+            overrideLedColor(RGB_CYAN);
             streamMode = StreamingMode::WIRED;
             msg = "calibration";
             break;
         case UsageMode::EXPERIMENT:
             msg = "experiment";
-            iuRGBLed.changeColor(IURGBLed::PURPLE);
-            iuRGBLed.lock();
+            overrideLedColor(RGB_PURPLE);
             streamMode = StreamingMode::WIRED;
             break;
         case UsageMode::OPERATION:
         case UsageMode::OPERATION_BIS:
-            iuRGBLed.unlock();
-            iuRGBLed.changeColor(IURGBLed::BLUE);
+            resetLed();
             deactivateAllGroups();
 //            activateGroup(&healthCheckGroup);
             activateGroup(&motorStandardGroup);
@@ -1280,23 +1341,7 @@ void Conductor::updateOperationState()
         }
     }
     m_operationState = newState;
-    switch (m_operationState)
-    {
-        case OperationState::IDLE:
-            iuRGBLed.changeColor(IURGBLed::BLUE);
-            break;
-        case OperationState::NORMAL:
-            iuRGBLed.changeColor(IURGBLed::GREEN);
-            break;
-        case OperationState::WARNING:
-            iuRGBLed.changeColor(IURGBLed::ORANGE);
-            break;
-        case OperationState::DANGER:
-            iuRGBLed.changeColor(IURGBLed::RED);
-            break;
-        default:
-            iuRGBLed.turnOff();
-    }
+    showOperationStateOnLed();
 }
 
 /**

@@ -7,7 +7,6 @@
 
 IUBattery::IUBattery(const char* name, Feature *batteryLoad) :
   LowFreqSensor(name, 1, batteryLoad),
-  m_VDDA(0),
   m_vBattery(0)
 {
 }
@@ -64,11 +63,10 @@ void IUBattery::setPowerMode(PowerMode::option pMode)
 ============================================================================= */
 
 /**
- * Reads VDDA, battery voltage and compute battery load.
+ * Reads battery voltage and compute battery load.
  */
 void IUBattery::readData()
 {
-    m_VDDA = STM32.getVREF();
     m_batteryLoad = (float) (analogRead(voltagePin)) / 40.95f;
     m_vBattery = m_batteryLoad * maxVoltage / 100.0f;
     m_destinations[0]->addFloatValue(m_batteryLoad);

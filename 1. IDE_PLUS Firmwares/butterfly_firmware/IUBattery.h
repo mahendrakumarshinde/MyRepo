@@ -32,12 +32,10 @@ class IUBattery : public LowFreqSensor
         virtual void setPowerMode(PowerMode::option pMode);
         /***** Data acquisition *****/
         virtual void readData();
-        float getVDDA() { return m_VDDA; }
         float getVoltage() { return m_vBattery; }
         float getBatteryLoad() { return m_batteryLoad; }
 
     protected:
-        float m_VDDA;
         float m_vBattery;
         float m_batteryLoad;
 };

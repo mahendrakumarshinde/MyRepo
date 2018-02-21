@@ -89,8 +89,6 @@ class IUMAX31865 : public LowFreqSensor
         SPIClass *m_SPI;
         uint8_t m_csPin;
         SPISettings m_spiSettings;
-        /***** Hardware and power management *****/
-
         /***** Configuration and calibration *****/
         bool m_biasCorrectionEnabled;
         bool m_autoConversionEnabled;

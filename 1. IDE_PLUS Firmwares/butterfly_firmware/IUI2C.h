@@ -34,7 +34,7 @@ class IUI2C
         bool readBytes(uint8_t address, uint8_t subAddress, uint8_t count,
                        uint8_t *destination,
                        void(*callback)(uint8_t wireStatus));
-        void endReadOperation() { m_readFlag = true; }
+        void releaseReadLock() { m_readFlag = true; }
         // Detection and identification
         bool scanDevices();
         bool checkComponentWhoAmI(String componentName, uint8_t address,

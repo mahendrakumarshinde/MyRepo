@@ -8,6 +8,7 @@
     Library imports
 ============================================================================= */
 
+#include "BoardDefinition.h"
 #include "Conductor.h"
 
 #include <MemoryFree.h>
@@ -21,26 +22,6 @@
     IUSPIFlash iuFlash(&SPI, A1, SPISettings(50000000, MSBFIRST, SPI_MODE0));
 #endif
 
-/* Comment / Uncomment the "define" lines to toggle / untoggle unit or quality
-test mode */
-
-//#define UNITTEST
-#ifdef UNITTEST
-    #include "UnitTest/Test_Component.h"
-    #include "UnitTest/Test_FeatureClass.h"
-    #include "UnitTest/Test_FeatureComputer.h"
-    #include "UnitTest/Test_FeatureGroup.h"
-    #include "UnitTest/Test_Sensor.h"
-    #include "UnitTest/Test_Utilities.h"
-#endif
-
-//#define INTEGRATEDTEST
-#ifdef INTEGRATEDTEST
-    #include "IntegratedTest/IT_Conductor.h"
-    #include "IntegratedTest/IT_IUBMX055.h"
-    #include "IntegratedTest/IT_IUFlash.h"
-    #include "IntegratedTest/IT_Sensors.h"
-#endif
 
 
 /* =============================================================================
@@ -91,7 +72,7 @@ uint32_t interval = 30000;
 uint32_t lastDone = 0;
 
 #ifdef DRAGONFLY_V03
-    uint32_t initialDelay = 15000;
+    uint32_t initialDelay = 25000;
 #else
     uint32_t initialDelay = 2000;
 #endif
@@ -128,31 +109,34 @@ void callback()
 }
 
 
+/***** Led callback *****/
+
+static armv7m_timer_t led_timer;
+
+static void led_callback(void) {
+    rgbLed.updateColors();
+    armv7m_timer_start(&led_timer, 1);
+}
+
+
 /***** Begin *****/
 
 void setup()
 {
-    #if defined(UNITTEST) || defined(INTEGRATEDTEST)
-        iuUSB.begin();
-        delay(initialDelay);
-        if (debugMode)
-        {
-            debugPrint(F("TESTING - Mem: "), false);
-            debugPrint(String(freeMemory(), DEC));
-            debugPrint(' ');
-        }
-        iuRGBLed.setupHardware();
-        iuI2C.begin();
-    #else
-        iuUSB.begin();  // Start with USB for Serial communication
-        if (debugMode)
-        {
-          delay(initialDelay);
-          debugPrint(F("Start - Mem: "), false);
-          debugPrint(String(freeMemory(), DEC));
-        }
-        iuRGBLed.setupHardware();
-        iuI2C.begin();
+    iuUSB.begin();  // Start with USB for Serial communication
+    rgbLed.setupHardware();
+    armv7m_timer_create(&led_timer, (armv7m_timer_callback_t)led_callback);
+    armv7m_timer_start(&led_timer, 1);
+    conductor.showStatusOnLed(RGB_CYAN);
+    if (debugMode || testMode)
+    {
+      delay(initialDelay);
+      debugPrint(F("Start - Mem: "), false);
+      debugPrint(String(freeMemory(), DEC));
+    }
+    iuI2C.begin();
+    if (!testMode)
+    {
         // Interfaces
         if (debugMode)
         {
@@ -238,18 +222,30 @@ void setup()
             debugPrint(F("***\n"));
         }
         conductor.changeUsageMode(UsageMode::OPERATION);
-    #endif
+    }
 }
 
 /**
  *
- * The regular calls to iuRGBLed.autoManage() manage any required LED blinking.
+ * Note the regular calls to rgbLed.manageColorTransitions().
  */
 void loop()
 {
-    #if defined(UNITTEST) || defined(INTEGRATEDTEST)
+    if (testMode)
+    {
         Test::run();
-    #else
+        rgbLed.manageColorTransitions();
+        if (Test::getCurrentFailed() > 0)
+        {
+            conductor.showStatusOnLed(RGB_RED);
+        }
+        else
+        {
+            conductor.showStatusOnLed(RGB_GREEN);
+        }
+    }
+    else
+    {
         if (loopDebugMode)
         {
             if (doOnce)
@@ -268,26 +264,26 @@ void loop()
         }
         // Power saving
         conductor.manageSleepCycles();
-        iuRGBLed.autoManage();
+        rgbLed.manageColorTransitions();
         // Configuration
         conductor.readFromSerial(StreamingMode::WIRED, &iuUSB);
-        iuRGBLed.autoManage();
+        rgbLed.manageColorTransitions();
         conductor.readFromSerial(StreamingMode::BLE, &iuBluetooth);
-        iuRGBLed.autoManage();
+        rgbLed.manageColorTransitions();
         conductor.readFromSerial(StreamingMode::WIFI, &iuWiFi);
-        iuRGBLed.autoManage();
+        rgbLed.manageColorTransitions();
         // Acquire data from sensors
         conductor.acquireData(false);
-        iuRGBLed.autoManage();
+        rgbLed.manageColorTransitions();
         // Feature computation depending on operation mode
         conductor.computeFeatures();
-        iuRGBLed.autoManage();
+        rgbLed.manageColorTransitions();
         // Update the OperationState
         conductor.updateOperationState();
-        iuRGBLed.autoManage();
+        rgbLed.manageColorTransitions();
         // Stream features
         conductor.streamFeatures();
-        iuRGBLed.autoManage();
+        rgbLed.manageColorTransitions();
         uint32_t now = millis();
         if(lastDone == 0 || lastDone + interval < now || now < lastDone)
         {
@@ -301,6 +297,7 @@ void loop()
         {
             yield();
         }
-    #endif
+        rgbLed.manageColorTransitions();
+    }
 }
 

@@ -6,7 +6,7 @@
     Interfaces
 ============================================================================= */
 
-IURGBLed iuRGBLed = IURGBLed(25, 26, 38);
+RGBLed rgbLed(25, 26, 38);
 
 char iuUSBBuffer[20] = "";
 IUUSB iuUSB(&Serial, iuUSBBuffer, 20, IUSerial::CUSTOM_PROTOCOL, 115200, '\n',

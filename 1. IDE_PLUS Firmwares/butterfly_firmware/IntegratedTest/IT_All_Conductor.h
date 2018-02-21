@@ -3,8 +3,6 @@
 
 
 #include <ArduinoUnit.h>
-#include <ArduinoJson.h>
-
 #include "../Conductor.h"
 
 
@@ -34,7 +32,7 @@ test(Conductor__configurationReading)
 {
     char json[239] = "{\"device\":{\"VERS\":\"1.0.0\",\"POW\":0,\"TSL\":60,\"TO"
                      "FF\":300,\"TCY\":3600,\"GRP\":[\"PRSSTD\"]},"
-                     "\"components\":{\"ACC\":{\"FSR\":5},\"GYR\":{\"FSR\":1}},"
+                     "\"components\":{\"ACC\":{\"FSR\":5}},"
                      "\"features\":{\"A9X\":{\"TRH\":[0.25,0.5,0.75]},\"A9Y\":"
                      "{\"TRH\":[10,11,12]},\"A9Z\":{\"TRH\":[0.25,0.5,0.75]}}}";
 
@@ -70,8 +68,6 @@ test(Conductor__configurationReading)
     // Check sensor config
     assertEqual(iuAccelerometer.getScale(),
                 iuAccelerometer.scaleOption::AFS_4G);
-    assertEqual(iuGyroscope.getScale(),
-                iuGyroscope.scaleOption::GFS_1000DPS);
 }
 
 test(Conductor__featureAndGroups)

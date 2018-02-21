@@ -108,6 +108,11 @@ class Conductor
         uint32_t getAutoSleepDelay() { return m_autoSleepDelay; }
         uint32_t getSleepDuration() { return m_sleepDuration; }
         uint32_t getCycleTime() { return m_cycleTime; }
+        /***** Led colors *****/
+        void resetLed();
+        void overrideLedColor(RGBColor color);
+        void showOperationStateOnLed();
+        void showStatusOnLed(RGBColor color);
         /***** Serial Reading & command processing*****/
         void readFromSerial(StreamingMode::option interfaceType,
                             IUSerial *iuSerial);
@@ -164,6 +169,10 @@ class Conductor
         // Duration of total cycle (sleep + active) => Used with "PERIODIC"
         // sleep mode only
         uint32_t m_cycleTime;
+        /***** Led colors *****/
+        RGBColor m_colorSequence[2];  // Main color, secondary color
+        uint32_t m_colorFadeIns[2];   // Main color, secondary color
+        uint32_t m_colorDurations[2];   // Main color, secondary color
         /***** Time management *****/
         uint32_t m_lastSynchroTime;
         double m_refDatetime;  // last datetime received from bluetooth or wifi

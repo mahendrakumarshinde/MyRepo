@@ -1,5 +1,5 @@
-#ifndef IT_IUBMX055_H
-#define IT_IUBMX055_H
+#ifndef CMP_IUBMX055_H
+#define CMP_IUBMX055_H
 
 #include <ArduinoUnit.h>
 #include "../IUBMX055Acc.h"
@@ -9,4 +9,4 @@
 
 
 
-#endif // IT_IUBMX055_H
+#endif // CMP_IUBMX055_H

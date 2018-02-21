@@ -6,7 +6,7 @@
 #ifdef DRAGONFLY_V03
 
 /***** Interfaces *****/
-#include "IURGBLed.h"
+#include "RGBLed.h"
 #include "IUUSB.h"
 #include "IUBMD350.h"
 #ifdef INTERNAL_ESP8285  // Wifi options
@@ -33,7 +33,7 @@
     Interfaces
 ============================================================================= */
 
-extern IURGBLed iuRGBLed;
+extern RGBLed rgbLed;
 
 extern char iuUSBBuffer[20];
 extern IUUSB iuUSB;

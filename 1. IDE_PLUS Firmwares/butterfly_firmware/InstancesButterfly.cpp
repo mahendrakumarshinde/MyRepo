@@ -7,9 +7,9 @@
 ============================================================================= */
 
 #ifdef BUTTERFLY_V04
-    IURGBLed iuRGBLed = IURGBLed(A5, A3, A4);
+    RGBLed rgbLed(A5, A3, A4);
 #else
-    IURGBLed iuRGBLed = IURGBLed(A5, A3, A0);
+    RGBLed rgbLed(A5, A3, A0);
 #endif
 
 char iuUSBBuffer[20] = "";

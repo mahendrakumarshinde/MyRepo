@@ -9,7 +9,7 @@ bool newLSM6DSMAccelData = false;
 
 void LSM6DSMAccelReadCallback(uint8_t wireStatus)
 {
-    iuI2C.endReadOperation();
+    iuI2C.releaseReadLock();
     if (wireStatus == 0)
     {
         newLSM6DSMAccelData = true;
