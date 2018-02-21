@@ -25,7 +25,7 @@
   Module Configuration Variables
 ============================================================================= */
 
-String MAC_ADDRESS = "88:4A:EA:69:DE:D3";
+String MAC_ADDRESS = "88:4A:EA:69:E4:53";
 
 const float minAccelEnergyForVelocity = 102;
 
@@ -399,7 +399,7 @@ float press_energy(uint16_t startInd, uint32_t buffSize, bool removeMean=false)
 
 
 float feature_energy () {
-  float ene = press_energy(0, MAX_INTERVAL_ACCEL);
+  float ene = press_energy(0, MAX_INTERVAL_ACCEL, (currMode == CALIBRATION));
   //Serial.println(timestamp[buffer_compute_index]);
   //Serial.println(ene, DEC);
   return ene;
@@ -568,37 +568,37 @@ void compute_features() {
     featureDispZ = 0;
   }
 
-  feature_value[0] = featureVelX;
+  feature_value[0] = accelEnergyFeature; //featureVelX;
   if (feature0check == 1) {
     current_danger_level = threshold_feature(0, feature_value[0]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
 
-  feature_value[1] = featureVelY;
+  feature_value[1] = featureVelX;  // featureVelY;
   if (feature1check == 1) {
     current_danger_level = threshold_feature(1, feature_value[1]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
 
-  feature_value[2] = featureVelZ;
+  feature_value[2] = featureVelY;  // featureVelZ;
   if (feature2check == 1) {
     current_danger_level = threshold_feature(2, feature_value[2]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
 
-  feature_value[3] = featureDispX;
+  feature_value[3] = featureVelZ;  // featureDispX;
   if (feature3check == 1) {
     current_danger_level = threshold_feature(3, feature_value[3]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
 
-  feature_value[4] = featureDispY;
+  feature_value[4] = currentTemperature();  // featureDispY;
   if (feature4check == 1) {
     current_danger_level = threshold_feature(4, feature_value[4]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
 
-  feature_value[5] = featureDispZ;
+  feature_value[5] = audioDB();  // featureDispZ;
   if (feature5check == 1) {
     current_danger_level = threshold_feature(5, feature_value[5]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
