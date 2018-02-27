@@ -206,9 +206,11 @@
 		<Unit filename="UnitTest/Test_FeatureClass.h" />
 		<Unit filename="UnitTest/Test_FeatureComputer.h" />
 		<Unit filename="UnitTest/Test_FeatureGroup.h" />
+		<Unit filename="UnitTest/Test_IUSerial.h" />
 		<Unit filename="UnitTest/Test_Sensor.h" />
 		<Unit filename="UnitTest/Test_Utilities.h" />
 		<Unit filename="UnitTest/UnitTestData.h" />
+		<Unit filename="UnitTest/UnitTestUtilities.h" />
 		<Unit filename="Utilities.cpp" />
 		<Unit filename="Utilities.h" />
 		<Extensions>

@@ -36,7 +36,7 @@ class IURawDataHandler
                                      uint16_t valueLength);
         virtual bool areAllKeyPresent();
         /***** HTTP Post request *****/
-        virtual int httpPostPayload(const char *macAddress);
+        virtual int publishIfReady(const char *macAddress);
 
     protected:
         char m_payload[MAX_PAYLOAD_LENGTH];
@@ -44,6 +44,8 @@ class IURawDataHandler
         uint32_t m_payloadStartTime;  // For timing out
         bool m_keyAdded[EXPECTED_KEY_COUNT];
         uint32_t m_timeout;
+        /***** HTTP Post request *****/
+        virtual int httpPostPayload(const char *macAddress);
 };
 
 

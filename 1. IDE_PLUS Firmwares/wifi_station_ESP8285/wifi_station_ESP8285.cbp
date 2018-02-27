@@ -33,17 +33,17 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
-		<Unit filename="HostSerial.h" />
+		<Unit filename="Conductor.cpp" />
+		<Unit filename="Conductor.h" />
 		<Unit filename="IUMQTTHelper.cpp" />
 		<Unit filename="IUMQTTHelper.h" />
 		<Unit filename="IURawDataHandler.cpp" />
 		<Unit filename="IURawDataHandler.h" />
 		<Unit filename="IUSerial.cpp" />
 		<Unit filename="IUSerial.h" />
-		<Unit filename="IUWiFiManager.cpp" />
-		<Unit filename="IUWiFiManager.h" />
 		<Unit filename="Logger.h" />
 		<Unit filename="MSPCommands.h" />
+		<Unit filename="MultiMessageValidator.h" />
 		<Unit filename="TimeManager.cpp" />
 		<Unit filename="TimeManager.h" />
 		<Unit filename="Utilities.h" />

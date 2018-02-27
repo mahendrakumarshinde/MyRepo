@@ -30,6 +30,16 @@
 //    const char RAW_DATA_TOPIC[RAW_DATA_TOPIC_LENGTH] = "iu_raw_data";
 #endif  // TEST_TOPICS
 
+// TODO Find a better place for this
+const char DEVICE_TYPE[9] = "ide_plus";
+
+// TODO Move this in IUMQTTHelper
+const uint8_t CUSTOMER_PLACEHOLDER_LENGTH = 9;
+const char CUSTOMER_PLACEHOLDER[CUSTOMER_PLACEHOLDER_LENGTH] = "XXXAdmin";
+
+const char DEFAULT_WILL_MESSAGE[44] =
+    "XXXAdmin;;;00:00:00:00:00:00;;;disconnected";
+
 
 /* =============================================================================
     HTTP functions

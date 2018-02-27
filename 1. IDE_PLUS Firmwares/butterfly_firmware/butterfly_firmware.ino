@@ -23,12 +23,35 @@
 #endif
 
 
-
 /* =============================================================================
     MAC Address
 ============================================================================= */
 
 const char MAC_ADDRESS[18] = "94:54:93:0F:66:F0";
+
+
+/* =============================================================================
+    Unit test includes
+============================================================================= */
+
+#ifdef UNITTEST
+    #include "UnitTest/Test_Component.h"
+    #include "UnitTest/Test_FeatureClass.h"
+    #include "UnitTest/Test_FeatureComputer.h"
+    #include "UnitTest/Test_FeatureGroup.h"
+    #include "UnitTest/Test_Sensor.h"
+    #include "UnitTest/Test_IUSerial.h"
+    #include "UnitTest/Test_Utilities.h"
+#endif
+
+#ifdef INTEGRATEDTEST
+    #include "IntegratedTest/IT_All_Conductor.h"
+    #if defined(BUTTERFLY_V03) || defined(BUTTERFLY_V04)
+        #include "IntegratedTest/IT_Butterfly.h"
+    #elif defined(DRAGONFLY_V03)
+        #include "IntegratedTest/IT_Dragonfly.h"
+    #endif
+#endif
 
 
 /* =============================================================================
@@ -123,20 +146,22 @@ static void led_callback(void) {
 
 void setup()
 {
-    iuUSB.begin();  // Start with USB for Serial communication
+    iuUSB.begin();
     rgbLed.setupHardware();
     armv7m_timer_create(&led_timer, (armv7m_timer_callback_t)led_callback);
     armv7m_timer_start(&led_timer, 1);
     conductor.showStatusOnLed(RGB_CYAN);
-    if (debugMode || testMode)
-    {
-      delay(initialDelay);
-      debugPrint(F("Start - Mem: "), false);
-      debugPrint(String(freeMemory(), DEC));
-    }
-    iuI2C.begin();
-    if (!testMode)
-    {
+    #if defined(UNITTEST) || defined(COMPONENTTEST) || defined(INTEGRATEDTEST)
+        delay(initialDelay);
+        iuI2C.begin();
+    #else
+        if (debugMode)
+        {
+            delay(initialDelay);
+            debugPrint(F("Start - Mem: "), false);
+            debugPrint(String(freeMemory(), DEC));
+        }
+        iuI2C.begin();
         // Interfaces
         if (debugMode)
         {
@@ -222,7 +247,7 @@ void setup()
             debugPrint(F("***\n"));
         }
         conductor.changeUsageMode(UsageMode::OPERATION);
-    }
+    #endif
 }
 
 /**
@@ -231,8 +256,7 @@ void setup()
  */
 void loop()
 {
-    if (testMode)
-    {
+    #if defined(UNITTEST) || defined(COMPONENTTEST) || defined(INTEGRATEDTEST)
         Test::run();
         rgbLed.manageColorTransitions();
         if (Test::getCurrentFailed() > 0)
@@ -243,9 +267,7 @@ void loop()
         {
             conductor.showStatusOnLed(RGB_GREEN);
         }
-    }
-    else
-    {
+    #else
         if (loopDebugMode)
         {
             if (doOnce)
@@ -298,6 +320,6 @@ void loop()
             yield();
         }
         rgbLed.manageColorTransitions();
-    }
+    #endif
 }
 

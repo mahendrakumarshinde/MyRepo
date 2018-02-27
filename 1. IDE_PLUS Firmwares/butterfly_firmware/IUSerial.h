@@ -37,6 +37,7 @@ class IUSerial
                  char stopChar, uint16_t dataReceptionTimeout);
         virtual ~IUSerial() {}
         virtual void begin();
+        PROTOCOL_OPTIONS getProtocol() { return m_protocol; }
         /***** Communication *****/
         virtual void resetBuffer();
         virtual bool readToBuffer();
@@ -48,8 +49,6 @@ class IUSerial
         virtual MSPCommand::command getMspCommand() { return m_mspCommand; }
         virtual bool sendMSPCommand(MSPCommand::command cmd);
         virtual bool sendMSPCommand(MSPCommand::command cmd, char* cmdMsg);
-
-
 
     protected:
         /***** Communication *****/

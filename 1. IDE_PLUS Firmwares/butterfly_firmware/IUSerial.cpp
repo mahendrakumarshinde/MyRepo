@@ -170,8 +170,7 @@ bool IUSerial::readCharMsp()
             {
                 m_mspDataSize = c;
                 m_bufferIndex = 0;
-                m_mspChecksumIn = 0;
-                m_mspChecksumIn ^= c;
+                m_mspChecksumIn = 0 ^ c;
                 m_mspState = MSP_HEADER_SIZE;
             }
             break;
@@ -236,6 +235,7 @@ bool IUSerial::sendMSPCommand(MSPCommand::command cmd, char* cmdMsg)
  */
 size_t IUSerial::sendMspCommandHeader(uint8_t cmdSize, MSPCommand::command cmd)
 {
+    m_mspChecksumOut = 0;
     size_t n = 0;
     n += port->write('$');
     n += port->write('M');

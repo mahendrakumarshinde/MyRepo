@@ -174,7 +174,7 @@ void Conductor::showStatusOnLed(RGBColor color)
 ============================================================================= */
 
 /**
- * Read from USB and process the command, if one was received.
+ * Read from serial and process the command, if one was received.
  */
 void Conductor::readFromSerial(StreamingMode::option interfaceType,
                                IUSerial *iuSerial)
@@ -222,7 +222,7 @@ void Conductor::readFromSerial(StreamingMode::option interfaceType,
                     }
             }
         }
-        iuSerial->resetBuffer();    // Clear wire buffer
+        iuSerial->resetBuffer();  // Clear buffer
     }
 }
 

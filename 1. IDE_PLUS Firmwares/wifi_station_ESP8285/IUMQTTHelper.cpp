@@ -18,21 +18,34 @@ char IUMQTTHelper::PASSWORD[13] = "nW$Pg81o@EJD";
     Core
 ============================================================================= */
 
-IUMQTTHelper::IUMQTTHelper(uint8_t placeholder) :
+IUMQTTHelper::IUMQTTHelper(char *deviceType, char *willMessage) :
     m_wifiClient(),
     client(SERVER_HOST, SERVER_PORT, m_wifiClient),
     m_enfOfLife(0)
 {
+    strcpy(m_deviceType, deviceType, deviceTypeMaxLength);
     strcpy(m_deviceMacAddress, "00:00:00:00:00:00");
+    strncpy(m_willMessage, DEFAULT_WILL_MESSAGE, willMessageMaxLength);
 }
 
 /**
- * 
+ *
  */
-void IUMQTTHelper::setDeviceInfo(const char *deviceType,
-                                 const char *deviceMacAddress)
+void IUMQTTHelper::setDeviceMacAddress(const char *deviceMacAddress)
 {
-    strcpy(m_deviceType, deviceType);
+    // Replace MAC address in MQTT last will message
+    char *pch;
+    pch = strstr(m_willMessage, m_deviceMacAddress);  // Find current
+    if (pch)
+    {
+        strncpy(pch, deviceMacAddress, 17);  // Replace by new
+    }
+    if (debugMode)
+    {
+        debugPrint("MQTT last will updated: ", false);
+        debugPrint(m_willMessage);
+    }
+    // Copy new MAC address
     strcpy(m_deviceMacAddress, deviceMacAddress);
 }
 
@@ -42,7 +55,7 @@ void IUMQTTHelper::setDeviceInfo(const char *deviceType,
  * Should be called repeatedly.
  * Note that this function is blocking, but if needed the library doc mentions
  * non-blocking ways to do the same.
- * 
+ *
  * @param willTopic MQTT topic name to publish message upon succesful connection,
  *  and to be used as will topic.
  * @param willMsg  MQTT message to publish upon disconnection from server.
@@ -90,7 +103,7 @@ void IUMQTTHelper::reconnect(const char *willTopic, const char *willMsg,
  *
  * Handles the reconnection to he MQTT server if needed and the publications.
  * NB: Makes use of IUMQTT::reconnect function, which may block the execution.
- * 
+ *
  * @param willTopic MQTT topic name to publish message upon succesful connection,
  *  and to be used as will topic.
  * @param willMsg  MQTT message to publish upon disconnection from server.
@@ -109,8 +122,8 @@ void IUMQTTHelper::loop(const char *willTopic, const char *willMsg,
 }
 
 /**
- * 
- * 
+ *
+ *
  * @param topic
  * @param payload
  */
@@ -127,7 +140,7 @@ bool IUMQTTHelper::publish(const char* topic, const char* payload)
 }
 
 /**
- * 
+ *
  */
 bool IUMQTTHelper::subscribe(const char* topic)
 {
@@ -144,11 +157,86 @@ bool IUMQTTHelper::subscribe(const char* topic)
 
 
 /* =============================================================================
+    Infinite Uptime standard publications
+============================================================================= */
+
+/**
+ *
+ */
+bool IUMQTTHelper::publishDiagnostic(
+    const char *rawMsg, const uint16_t msgLength, time_t datetime,
+    const char *topicExtension=NULL, const uint16_t extensionLength=0)
+{
+    char message[msgLength + CUSTOMER_PLACEHOLDER_LENGTH + 51];
+    strcpy(message, CUSTOMER_PLACEHOLDER);
+    strcat(message, ";;;");
+    strcat(message, m_deviceMacAddress);
+    strcat(message, ";;;");
+    strcat(message, ctime(&datetime));
+    strcat(message, ";;;");
+    strncat(message, rawMsg, msgLength);
+    if (topicExtension && extensionLength > 0)
+    {
+        char topic[DIAGNOSTIC_TOPIC_LENGTH + extensionLength + 1];
+        strcpy(topic, DIAGNOSTIC_TOPIC);
+        strcat(topic, "/");
+        strncat(topic, topicExtension, extensionLength);
+        return publish(topic, message);
+    }
+    else
+    {
+        return publish(DIAGNOSTIC_TOPIC, message);
+    }
+}
+
+/**
+ *
+ */
+bool IUMQTTHelper::publishFeature(
+    const char *rawMsg, const uint16_t msgLength,
+    const char *topicExtension=NULL, const uint16_t extensionLength=0)
+{
+    char message[msgLength + CUSTOMER_PLACEHOLDER_LENGTH + 24];
+    strcpy(message, CUSTOMER_PLACEHOLDER);
+    strcat(message, ";;;");
+    strcat(message, m_deviceMacAddress);
+    strcat(message, ";;;");
+    strncat(message, rawMsg, msgLength);
+    if (topicExtension && extensionLength > 0)
+    {
+        char topic[FEATURE_TOPIC_LENGTH + extensionLength + 1];
+        strcpy(topic, FEATURE_TOPIC);
+        strcat(topic, "/");
+        strncat(topic, topicExtension, extensionLength);
+        return publish(topic, message);
+    }
+    else
+    {
+        return publish(DIAGNOSTIC_TOPIC, message);
+    }
+}
+
+/**
+* Subscribe to all the required device subscriptions
+*
+* Should be called after each reconnection.
+* This function should be edited when new subscriptions are required for the
+* device.
+*/
+void IUMQTTHelper::onConnection()
+{
+    subscribe("config");  // Config subscription
+    subscribe("time_sync");  // Time synchornisation subscription
+    subscribe("legacy");  // Legacy command format subscription
+    publishDiagnostic("connected", 9);
+}
+
+/* =============================================================================
     Faster disconnection detection
 ============================================================================= */
 
 /**
- * 
+ *
  */
 void IUMQTTHelper::extendLifetime(uint16_t durationSec)
 {
@@ -156,13 +244,13 @@ void IUMQTTHelper::extendLifetime(uint16_t durationSec)
 }
 
 /**
- * 
+ *
  */
 bool IUMQTTHelper::keepAlive()
 {
     uint32_t now = millis();
     return (m_enfOfLife == 0 || now < m_enfOfLife);
-    
+
 }
 
 
@@ -191,10 +279,3 @@ void IUMQTTHelper::getFullSubscriptionName(char *destination,
     strcat(destination, "/");
     strcat(destination, commandName);
 }
-
-
-/* =============================================================================
-    Instanciation
-============================================================================= */
-
-IUMQTTHelper iuMQTTHelper(0);

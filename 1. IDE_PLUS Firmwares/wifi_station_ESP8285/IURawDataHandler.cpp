@@ -72,7 +72,7 @@ bool IURawDataHandler::hasTimedOut()
  * Add a key-value pair to the JSON payload.
  *
  * Function checks that:
- *  - given key is part of the expected keys 
+ *  - given key is part of the expected keys
  *  - given keyhas not already been added.
  *  - the payload is large enough to add the key-value pair.
  *
@@ -158,7 +158,38 @@ bool IURawDataHandler::areAllKeyPresent()
 ============================================================================= */
 
 /**
- * Post the payload - HTTPS is used if fingerprint is given.
+ * Post the payload if ready
+ */
+int IURawDataHandler::publishIfReady(const char *macAddress)
+{
+    if (hasTimedOut())
+    {
+        resetPayload();
+        return false;
+    }
+    if (!areAllKeyPresent()) // Raw Data payload is not ready
+    {
+        return false;
+    }
+    int httpCode = httpPostPayload(macAddress);
+    if (debugMode)
+    {
+        debugPrint("Post raw data: ", false);
+        debugPrint(httpCode);
+    }
+    if (httpCode == 200)
+    {
+        resetPayload();
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+/**
+ * Post the payload
  */
 int IURawDataHandler::httpPostPayload(const char *macAddress)
 {

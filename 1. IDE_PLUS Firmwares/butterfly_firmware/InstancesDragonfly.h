@@ -9,7 +9,8 @@
 #include "RGBLed.h"
 #include "IUUSB.h"
 #include "IUBMD350.h"
-#ifdef INTERNAL_ESP8285  // Wifi options
+#ifdef USE_EXTERNAL_WIFI
+#else
     #include "IUESP8285.h"
 #endif
 
@@ -28,6 +29,19 @@
 #include "IULSM6DSM.h"
 #include "IUMAX31865.h"
 
+#ifdef COMPONENTTEST
+    // Interfaces
+    #include "ComponentTest/CMP_RGBLed.h"
+    #include "ComponentTest/CMP_IUBMD350.h"
+    #include "ComponentTest/CMP_IUESP8285.h"
+    // Sensors
+    #include "ComponentTest/CMP_IUBattery.h"
+    #include "ComponentTest/CMP_IUCAMM8Q.h"
+    #include "ComponentTest/CMP_IUICS43432.h"
+    #include "ComponentTest/CMP_IULSM6DSM.h"
+    #include "ComponentTest/CMP_IUMAX31865.h"
+#endif
+
 
 /* =============================================================================
     Interfaces
@@ -42,7 +56,7 @@ extern char iuBluetoothBuffer[500];
 extern IUBMD350 iuBluetooth;
 
 extern char iuWiFiBuffer[500];
-#ifdef EXTERNAL_WIFI
+#ifdef USE_EXTERNAL_WIFI
     extern IUSerial iuWiFi;
 #else
     extern IUESP8285 iuWiFi;

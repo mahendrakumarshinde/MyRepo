@@ -26,6 +26,8 @@ class IUMQTTHelper
 {
     public:
         /***** Preset values and default settings *****/
+        static const uint8_t deviceTypeMaxLength = 12;
+        static const uint8_t willMessageMaxLength = 50;
         // MQTT server access
         static IPAddress SERVER_HOST;
         static const uint16_t SERVER_PORT = 1883;
@@ -41,16 +43,23 @@ class IUMQTTHelper
         uint16_t HEARTBEAT_DELAY = 45;  // Seconds
         uint16_t NETWORK_DELAY = 300;  // Seconds
         /***** Core *****/
-        IUMQTTHelper(uint8_t placeholder);
+        IUMQTTHelper(char *deviceType, char *willMessage);
         virtual ~IUMQTTHelper() { }
-        void setDeviceInfo(const char *deviceType,
-                           const char *deviceMacAddress);
+        void setDeviceMacAddress(const char *deviceMacAddress);
         void reconnect(const char *statusTopic, const char *willMsg,
                        void (*onConnectionCallback)(), uint32_t timeout);
         void loop(const char *statusTopic, const char *willMsg,
                   void (*onConnectionCallback)(), uint32_t timeout);
         bool publish(const char* topic, const char* payload);
         bool subscribe(const char* topic);
+        /***** Infinite Uptime standard publications *****/
+        bool publishDiagnostic(const char *rawMsg, const uint16_t msgLength,
+                               time_t datetime, const char *topicExtension=NULL,
+                               const uint16_t extensionLength=0);
+        bool publishFeature(const char *rawMsg, const uint16_t msgLength,
+                            const char *topicExtension=NULL,
+                            const uint16_t extensionLength=0)
+        void onConnection();
         /***** Faster disconnection detection *****/
         void extendLifetime(uint16_t durationSec);
         bool keepAlive();
@@ -59,8 +68,9 @@ class IUMQTTHelper
 
     protected:
         WiFiClient m_wifiClient;
-        char m_deviceType[10];
+        char m_deviceType[deviceTypeMaxLength];
         char m_deviceMacAddress[18];
+        char m_willMessage[willMessageMaxLength];
         uint32_t m_enfOfLife;
         /***** Utility functions *****/
         void getFullSubscriptionName(char *destination,

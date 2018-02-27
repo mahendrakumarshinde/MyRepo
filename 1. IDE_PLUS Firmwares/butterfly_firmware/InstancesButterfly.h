@@ -9,7 +9,8 @@
 #include "RGBLed.h"
 #include "IUUSB.h"
 #include "IUBMD350.h"
-#ifdef INTERNAL_ESP8285  // Wifi options
+#ifdef USE_EXTERNAL_WIFI
+#else
     #include "IUESP8285.h"
 #endif
 
@@ -27,16 +28,17 @@
 #include "IUCAMM8Q.h"
 #include "IUICS43432.h"
 
-
-
-/* Comment / Uncomment the "define" lines to toggle / untoggle unit or quality
-test mode */
-
-#ifdef INTEGRATEDTEST
-    #include "IntegratedTest/IT_Conductor.h"
-    #include "IntegratedTest/IT_IUBMX055.h"
-    #include "IntegratedTest/IT_IUFlash.h"
-    #include "IntegratedTest/IT_Sensors.h"
+#ifdef COMPONENTTEST
+    // Interfaces
+    #include "ComponentTest/CMP_RGBLed.h"
+    #include "ComponentTest/CMP_IUBMD350.h"
+    #include "ComponentTest/CMP_IUESP8285.h"
+    // Sensors
+    #include "ComponentTest/CMP_IUBattery.h"
+    #include "ComponentTest/CMP_IUBMP280.h"
+    #include "ComponentTest/CMP_IUBMX055.h"
+    #include "ComponentTest/CMP_IUCAMM8Q.h"
+    #include "ComponentTest/CMP_IUICS43432.h"
 #endif
 
 
@@ -53,7 +55,7 @@ extern char iuBluetoothBuffer[500];
 extern IUBMD350 iuBluetooth;
 
 extern char iuWiFiBuffer[500];
-#ifdef EXTERNAL_WIFI
+#ifdef USE_EXTERNAL_WIFI
     extern IUSerial iuWiFi;
 #else
     extern IUESP8285 iuWiFi;

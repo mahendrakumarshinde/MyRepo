@@ -17,7 +17,7 @@ IUBMD350 iuBluetooth(&Serial3, iuBluetoothBuffer, 500,
                      IUSerial::LEGACY_PROTOCOL, 57600, ';', 2000, 39, 40);
 
 char iuWiFiBuffer[500] = "";
-#ifdef EXTERNAL_WIFI
+#ifdef USE_EXTERNAL_WIFI
     IUSerial iuWiFi(&Serial1, iuWiFiBuffer, 500, IUSerial::LEGACY_PROTOCOL,
                     115200, ';', 250);
 #else
