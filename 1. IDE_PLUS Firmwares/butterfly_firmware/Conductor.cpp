@@ -401,6 +401,10 @@ void Conductor::processLegacyUSBCommands(char *buff)
         iuWiFi.port->print(buff);
         iuWiFi.port->print(';');
     }
+    else if (strncmp(buff, "MCUINFO", 7) == 0)
+    {
+        streamMCUUInfo(iuUSB.port);
+    }
     else
     {
         // Usage mode Mode switching
@@ -1441,14 +1445,14 @@ void Conductor::getMCUInfo(char *destination)
     strcat(destination, "}");
 }
 
-void  Conductor::streamMCUUInfo()
+void  Conductor::streamMCUUInfo(HardwareSerial *port)
 {
     char destination[50];
     getMCUInfo(destination);
     // TODO Change to "ST" ?
-    iuWiFi.port->print("HB,");
-    iuWiFi.port->print(destination);
-    iuWiFi.port->print(';');
+    port->print("HB,");
+    port->print(destination);
+    port->print(';');
 }
 
 /**

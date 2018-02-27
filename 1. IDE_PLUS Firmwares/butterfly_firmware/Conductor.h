@@ -150,7 +150,7 @@ class Conductor
         void storeData() {}  // TODO => implement
         /***** Debugging *****/
         void getMCUInfo(char *destination);
-        void  streamMCUUInfo();
+        void  streamMCUUInfo(HardwareSerial *port);
         void exposeAllConfigurations();
 
     protected:

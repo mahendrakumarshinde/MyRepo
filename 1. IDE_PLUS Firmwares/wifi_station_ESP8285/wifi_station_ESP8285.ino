@@ -206,6 +206,12 @@ void setup()
         delay(100);
     }
     /***** Turn on WiFi *****/
+    if (debugMode)
+    {
+        WiFi.mode(WIFI_STA);
+        iuWifiManager.debugPrintWifiInfo();
+        WiFi.mode(WIFI_OFF);
+    }
     if (WiFi.getMode() == WIFI_AP)
     {
         WiFi.mode(WIFI_OFF);
