@@ -46,7 +46,7 @@ test mode */
     MAC Address
 ============================================================================= */
 
-const char MAC_ADDRESS[18] = "94:54:93:0F:66:F0";
+const char MAC_ADDRESS[18] = "94:54:93:0F:66:E4";
 
 
 /* =============================================================================
@@ -293,7 +293,7 @@ void loop()
         {
             lastDone = now;
             /* === Place your code to excute at fixed interval here ===*/
-            conductor.streamMCUUInfo();
+            conductor.streamMCUUInfo(iuWiFi.port);
             /*======*/
         }
         uint32_t stopYield = millis() + 10;

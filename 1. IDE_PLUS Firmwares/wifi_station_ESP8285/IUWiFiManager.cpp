@@ -382,6 +382,8 @@ void IUWiFiManager::debugPrintWifiInfo()
     debugPrint((uint8_t) currMode);
     if (currMode == WIFI_STA)
     {
+        debugPrint("WiFi MAC: ", false);
+        debugPrint(WiFi.macAddress());
         debugPrint("WiFi SSID: ", false);
         debugPrint(WiFi.SSID());
         debugPrint("WiFi psk: ", false);
