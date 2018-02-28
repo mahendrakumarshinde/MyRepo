@@ -50,7 +50,6 @@ namespace MSPCommand
         WIFI_ALERT_NO_SAVED_CREDENTIALS,  // Alert WiFi has no saved credential
         WIFI_ALERT_CONNECTED,  // Alert WiFi is connected
         WIFI_ALERT_DISCONNECTED,  // Alert WiFi is disconnected
-        WIFI_ALERT_AWAKE,  // Notify WiFi is awake
         WIFI_ALERT_SLEEPING,  // Notify WiFi is sleeping
         // Data publication
         WIFI_CONFIRM_PUBLICATION,  // Confirm publication of data

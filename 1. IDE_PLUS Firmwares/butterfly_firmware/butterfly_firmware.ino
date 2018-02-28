@@ -94,12 +94,6 @@ bool doOnce = true;
 uint32_t interval = 30000;
 uint32_t lastDone = 0;
 
-#ifdef DRAGONFLY_V03
-    uint32_t initialDelay = 25000;
-#else
-    uint32_t initialDelay = 2000;
-#endif
-
 
 /***** Main operator *****/
 
@@ -152,12 +146,12 @@ void setup()
     armv7m_timer_start(&led_timer, 1);
     conductor.showStatusOnLed(RGB_CYAN);
     #if defined(UNITTEST) || defined(COMPONENTTEST) || defined(INTEGRATEDTEST)
-        delay(initialDelay);
+        delay(2000);
         iuI2C.begin();
     #else
         if (debugMode)
         {
-            delay(initialDelay);
+            delay(2000);
             debugPrint(F("Start - Mem: "), false);
             debugPrint(String(freeMemory(), DEC));
         }

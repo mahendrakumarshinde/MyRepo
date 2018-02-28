@@ -1,12 +1,12 @@
-#ifndef TIMEMANAGER_H
-#define TIMEMANAGER_H
+#ifndef IUTIMEHELPER_H
+#define IUTIMEHELPER_H
 
 #include <WiFiUdp.h>
 
 #include "Utilities.h"
 
 
-class TimeManager
+class IUTimeHelper
 {
     public:
         // NTP time stamp is in the first 48 bytes of the message
@@ -15,8 +15,8 @@ class TimeManager
         static const uint32_t TIME_UPDATE_INTERVAL = 300000;  // ms
         static const uint32_t SEVENTY_YEARS = 2208988800UL;
         /***** Core *****/
-        TimeManager(uint16_t udpPort, const char* serverName);
-        virtual ~TimeManager() { }
+        IUTimeHelper(uint16_t udpPort, const char* serverName);
+        virtual ~IUTimeHelper() { }
         void begin();
         void end();
         bool active() { return m_active; }
@@ -44,9 +44,4 @@ class TimeManager
         bool readNTPpacket();
 };
 
-
-/***** Instanciation *****/
-
-extern TimeManager timeManager;
-
-#endif // TIMEMANAGER_H
+#endif // IUTIMEHELPER_H

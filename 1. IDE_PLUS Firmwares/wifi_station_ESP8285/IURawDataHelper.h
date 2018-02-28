@@ -1,5 +1,5 @@
-#ifndef IURAWDATAHANDLER_H
-#define IURAWDATAHANDLER_H
+#ifndef IURAWDATAHELPER_H
+#define IURAWDATAHELPER_H
 
 #include "Utilities.h"
 
@@ -14,7 +14,7 @@
  * @param timeout  duration in ms after which the raw data payload is cleared,
  *  even if it has not been sent
  */
-class IURawDataHandler
+class IURawDataHelper
 {
     public:
         /***** Public constants *****/
@@ -27,8 +27,8 @@ class IURawDataHandler
         static const uint8_t EXPECTED_KEY_COUNT = 3;
         static char EXPECTED_KEYS[EXPECTED_KEY_COUNT + 1];
         /***** Core *****/
-        IURawDataHandler(uint32_t timeout);
-        virtual ~IURawDataHandler() {}
+        IURawDataHelper(uint32_t timeout);
+        virtual ~IURawDataHelper() {}
         /***** Payload construction *****/
         virtual void resetPayload();
         virtual bool hasTimedOut();
@@ -48,9 +48,4 @@ class IURawDataHandler
         virtual int httpPostPayload(const char *macAddress);
 };
 
-
-/***** Instanciation *****/
-
-extern IURawDataHandler accelRawDataHandler;
-
-#endif // IURAWDATAHANDLER_H
+#endif // IURAWDATAHELPER_H

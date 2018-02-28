@@ -1,10 +1,10 @@
-#include "TimeManager.h"
+#include "IUTimeHelper.h"
 
 /* =============================================================================
     Core
 ============================================================================= */
 
-TimeManager::TimeManager(uint16_t udpPort, const char* serverName) :
+IUTimeHelper::IUTimeHelper(uint16_t udpPort, const char* serverName) :
     m_active(false),
     m_port(udpPort),
     m_requestSent(false),
@@ -18,7 +18,7 @@ TimeManager::TimeManager(uint16_t udpPort, const char* serverName) :
 /**
  *
  */
-void TimeManager::begin()
+void IUTimeHelper::begin()
 {
     if (m_active)
     {
@@ -36,7 +36,7 @@ void TimeManager::begin()
 /**
  *
  */
-void TimeManager::end()
+void IUTimeHelper::end()
 {
     if (!m_active)
     {
@@ -53,7 +53,7 @@ void TimeManager::end()
  * nothing (see IME_UPDATE_INTERVAL for max delay before update from NTP
  * server).
  */
-void TimeManager::updateTimeReferenceFromNTP()
+void IUTimeHelper::updateTimeReferenceFromNTP()
 {
     if (!m_active)
     {
@@ -93,9 +93,9 @@ void TimeManager::updateTimeReferenceFromNTP()
 }
 
 /**
- * 
+ *
  */
-void TimeManager::updateTimeReferenceFromIU(byte *payload,
+void IUTimeHelper::updateTimeReferenceFromIU(byte *payload,
                                             uint16_t payloadLength)
 {
     const char *buff = reinterpret_cast<const char*>(payload);
@@ -112,7 +112,7 @@ void TimeManager::updateTimeReferenceFromIU(byte *payload,
     }
 }
 
-time_t TimeManager::getCurrentTime()
+time_t IUTimeHelper::getCurrentTime()
 {
     return m_timeReference + (time_t) ((millis() - m_lastTimeUpdate) / 1000);
 }
@@ -125,7 +125,7 @@ time_t TimeManager::getCurrentTime()
 /**
  * Send an NTP request to the time server
  */
-void TimeManager::sendNTPpacket()
+void IUTimeHelper::sendNTPpacket()
 {
     if (debugMode)
     {
@@ -160,7 +160,7 @@ void TimeManager::sendNTPpacket()
 /**
  * Read NTP packet coming from the time server
  */
-bool TimeManager::readNTPpacket()
+bool IUTimeHelper::readNTPpacket()
 {
     if (debugMode)
     {
@@ -203,10 +203,3 @@ bool TimeManager::readNTPpacket()
         return true;
     }
 }
-
-
-/* =============================================================================
-    Instanciation
-============================================================================= */
-
-TimeManager timeManager(2390, "time.google.com");

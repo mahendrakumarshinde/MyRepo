@@ -9,13 +9,24 @@ char hostSerialBuffer[3072];
 IUSerial hostSerial(&Serial, hostSerialBuffer, 3072, IUSerial::MS_PROTOCOL,
                     115200, ';', 100);
 
+IURawDataHelper accelRawDataHelper(10000);  // 10s timeout
+
+IUMQTTHelper mqttHelper;
+
+IUTimeHelper timeHelper(2390, "time.google.com");
+
 
 /* =============================================================================
     Conductor
 ============================================================================= */
 
 Conductor::Conductor() :
-    m_unknownBleMacAddress(true)
+    m_unknownBleMacAddress(true),
+    m_shouldWakeUp(false),
+    m_radioOn(true),
+    m_lastConnectionAttempt(0),
+    m_lastConnected(0),
+    m_remainingConnectionAttempt(connectionRetry)
 {
     strncpy(m_bleMacAddress, "00:00:00:00:00:00", 18);
     strncpy(m_wifiMacAddress, "00:00:00:00:00:00", 18);
@@ -70,7 +81,7 @@ void Conductor::processMessageFromHost()
                 debugPrint("Received BLE MAC from host: ", false);
                 debugPrint(m_bleMacAddress);
             }
-            iuMQTTHelper.setDeviceMacAddress(m_bleMacAddress);
+            mqttHelper.setDeviceMacAddress(m_bleMacAddress);
             m_unknownBleMacAddress = false;
             break;
         case MSPCommand::ASK_WIFI_MAC:
@@ -166,6 +177,7 @@ void Conductor::processMessageFromHost()
             forgetWiFiStaticConfig();
             break;
         case MSPCommand::WIFI_WAKE_UP:
+            m_shouldWakeUp = true;
             // TODO Implement
             break;
         case MSPCommand::WIFI_DEEP_SLEEP:
@@ -235,11 +247,11 @@ void Conductor::processMessageFromHost()
 //    // Check if RAW DATA, eg: REC,X,<data>
 //    else if (strncmp("REC,", buff, 4) == 0 && buff[5] == ',')
 //    {
-//        if (accelRawDataHandler.hasTimedOut())
+//        if (accelRawDataHelper.hasTimedOut())
 //        {
-//            accelRawDataHandler.resetPayload();
+//            accelRawDataHelper.resetPayload();
 //        }
-//        accelRawDataHandler.addKeyValuePair(buff[4], &buff[6], strlen(buff) - 6);
+//        accelRawDataHelper.addKeyValuePair(buff[4], &buff[6], strlen(buff) - 6);
 //        publishAccelRawDataIfReady();
 //    }
 //    else if (buff[6] == ',')  // Feature
@@ -294,138 +306,144 @@ void Conductor::forgetWiFiStaticConfig()
 ============================================================================= */
 
 /**
+ * Turn off the WiFi radio for the given duration (in micro-seconds)
  *
+ * @param duration_us The duration for which the WiFi radio should be turned
+ *  off. If duration_us = 0, WiFi radio will be turned off indefinitely.
  */
-bool IUWiFiManager::reconnectionTimedOut(bool resetTimer)
+void Conductor::turnOffRadio(uint32_t duration_us)
 {
-    uint32_t current = millis();
-    if (resetTimer)
+    if (m_radioOn)
     {
-         m_lastConnected = current;
-         return false;
+        m_radioOn = false;
+        disconnectWifi();  // Make sure WiFi is disconnected
+        WiFi.mode(WIFI_OFF);
+        WiFi.forceSleepBegin(duration_us);
+        yield();  // better than delay(1); ?
     }
-    else if (m_timeout == 0) // No timeout
-    {
-        return false;
-    }
-    else if (current > m_lastConnected + m_timeout ||
-             m_lastConnected > current)  // Handle millis overflow
-    {
-        return true;
-    }
-    return false;
 }
 
 /**
- * Check if the WiFi is connected and if not, attempt to reconnect.
+ * Turn off the WiFi radio for the given duration (in micro-seconds)
+ */
+void Conductor::turnOnRadio()
+{
+    if (!m_radioOn)
+    {
+        m_radioOn = true;
+        WiFi.forceSleepWake();
+        yield();  // better than delay(1); ?
+    }
+}
+
+/**
+ * Disconnect the clients and the WiFi
+ *
+ * @param wifiOff If true, set WiFi mode to WIFI_OFF.
+ */
+void Conductor::disconnectWifi(bool wifiOff)
+{
+    /***** End NTP server connection *****/
+    timeHelper.end();
+    /***** Disconnect MQTT client *****/
+    if (mqttHelper.client.connected())
+    {
+        mqttHelper.client.disconnect();
+    }
+    /***** Turn off Wifi *****/
+    if (WiFi.isConnected())
+    {
+        m_lastConnected = current;
+        WiFi.disconnect(wifiOff);
+    }
+}
+
+/**
+ * Attempt to connect or reconnect to the WiFi
+ *
+ * If the WiFi is already connected to the "right" network (see param
+ * forceNewCredentials), this function will not affect the Wifi connection.
+ *
+ * @param forceNewCredentials If true, the function will connect to the
+ * user-input SSID and password (m_userSSID and m_userPassword). If the WiFi is
+ * already connected to a network with a different SSID and password, this
+ * former connection will be interrupted to use the new credentials.
  */
 bool Conductor::reconnect(bool forceNewCredentials)
 {
-    uint32_t current = millis();
-    String currentSSID = WiFi.SSID();
-    if (forceNewCredentials &&
-        !(currentSSID.length() > 0 &&
-          strcmp(currentSSID.c_str(), m_userSSID) == 0))
+    if (WiFi.getMode() != WIFI_STA)
     {
-        if (debugMode)
-        {
-            debugPrint("Forcing WiFi reconnection with new credentials and"
-                       " resetting main timeout");
-        }
-        m_lastConnected = current;
-        if (WiFi.isConnected())
-        {
-            WiFi.disconnect(true);
-        }
-        if (!m_credentialValidator.completed())
-        {
-            if (debugMode)
-            {
-                debugPrint("No new SSID or passsword (may have timed out");
-            }
-            return false;
-        }
-        if (debugMode)
-        {
-            debugPrint("Attempting connection with new credentials");
-            debugPrint(m_userSSID);
-            debugPrint(m_userPassword);
-        }
         WiFi.mode(WIFI_STA);
-        WiFi.begin(m_userSSID, m_userPassword);
-        m_lastReconnectionAttempt = 0;
     }
-    else if (WiFi.isConnected())
+    if (forceNewCredentials)
+    {
+        String currentSSID = WiFi.SSID();
+        String currentPW = WiFi.psk();
+        if (currentSSID.length() > 0 &&
+            strcmp(currentSSID.c_str(), currentSSID) == 0 &&
+            currentPW.length() > 0 &&
+            strcmp(currentPW.c_str(), m_userPassword) == 0)
+        {
+            // User input SSID & Password are the same than current
+        }
+        else
+        {
+            // New and different user input for SSID and Password => disconnect
+            // from current SSID then reconnect to new SSID
+            disconnectWifi();
+            delay(1000);  // Wait for effective disconnection
+        }
+    }
+    uint32_t current = millis();
+    if (WiFi.isConnected())
     {
         // Already connected with the right credentials
-        m_lastReconnectionAttempt = 0;
         return true;
     }
     else
     {
-        // No new credentials, but disconnected
-        if (current - m_lastReconnectionAttempt > reconnectionInterval)
+        WiFi.begin(m_userSSID, m_userPassword);
+        m_lastConnectionAttempt = current;
+        if (m_remainingConnectionAttempt > 0)
         {
-            if (debugMode)
-            {
-                debugPrint(current, false);
-                debugPrint(": WiFi is disconnected, attempting reconnection");
-            }
-            m_lastReconnectionAttempt = current;
-            WiFi.mode(WIFI_STA);
-            if (WiFi.SSID().length() > 0)
-            {
-                WiFi.begin();
-            }
-            else if (m_newSSID && m_newPassword)
-            {
-                WiFi.begin(m_userSSID, m_userPassword);
-            }
-            else
-            {
-                if (debugMode)
-                {
-                    debugPrint("There are no saved credentials!");
-                }
-                return false;
-            }
+            m_remainingConnectionAttempt--;
         }
+        bool connectSuccess = (waitForConnectResult() == WL_CONNECTED);
+        if (connectSuccess && debugMode)
+        {
+            debugPrint("Connected to ", false);
+            debugPrint(WiFi.SSID());
+        }
+        return connectSuccess;
     }
-    bool connectSuccess = (waitForConnectResult() == WL_CONNECTED);
-    if (connectSuccess && debugMode)
-    {
-        debugPrint("Connected to ", false);
-        debugPrint(WiFi.SSID());
-    }
-    return connectSuccess;
 }
 
 /**
+ * Wait for WiFi connection to reach a result
  *
+ * Unlike the ESP function WiFi.waitForConnectResult, this one handles a
+ * connection time-out. If the timeout=0, then it just calls the ESP library
+ * function.
+ *
+ * @return The status reached or disconnect if STA is off
  */
 uint8_t Conductor::waitForConnectResult()
 {
-    if (m_connectTimeout == 0)
+    if (connectionTimeout == 0)
     {
-        return WiFi.waitForConnectResult();
+        return WiFi.waitForConnectResult();  // Use ESP function
     }
     else
     {
         uint32_t startT = millis();
-        bool keepConnecting = true;
-        uint8_t status;
-        while (keepConnecting)
+        uint32_t current = startT;
+        uint8_t status = WiFi.status();
+        while(current - startT < connectionTimeout &&
+              status != WL_CONNECTED && status != WL_CONNECT_FAILED)
         {
-            status = WiFi.status();
-            if (millis() > startT + m_connectTimeout)
-            {
-                keepConnecting = false;
-            }
-            if (status == WL_CONNECTED || status == WL_CONNECT_FAILED)
-            {
-                keepConnecting = false;
-            }
             delay(100);
+            status = WiFi.status();
+            current = millis();
         }
         return status;
     }
@@ -491,9 +509,53 @@ void Conductor::processMessageFromMQTT(char* topic, byte* payload,
         hostSerial.port->print(";");
         if ((char)payload[0] == '1' && (char)payload[1] == ':')
         {
-            timeManager.updateTimeReferenceFromIU(payload, length);
+            timeHelper.updateTimeReferenceFromIU(payload, length);
         }
     }
+}
+
+
+/* =============================================================================
+    Main operations
+============================================================================= */
+
+
+void Conductor::setup()
+{
+    hostSerial.begin();
+    hostSerial.port->flush();
+    turnOffRadio();
+    /***** Request host to know if should sleep & get BLE MAC address *****/
+    uint32_t startTime = millis();
+    uint32_t current = startTime;
+    while (!m_shouldWakeUp || unknownBleMacAddress)
+    {
+        if (startTime - current < hostResponseTimeout)
+        {
+            ESP.deepSleep(deepSleepDuration);  // in micro seconds
+        }
+        hostSerial.sendMSPCommand(WIFI_REQUEST_ACTION);
+        hostSerial.sendMSPCommand(ASK_BLE_MAC);
+        readMessagesFromHost();
+        delay(100);
+        current = millis();
+    }
+    /***** Get device (=BLE) MAC address*****/
+    current = startTime = millis();
+    while (unknownBleMacAddress)
+    {
+        hostSerial.sendMSPCommand(ASK_BLE_MAC);
+        readMessagesFromHost();
+        delay(100);
+        current = millis();
+    }
+
+
+}
+
+void Conductor::loop()
+{
+
 }
 
 

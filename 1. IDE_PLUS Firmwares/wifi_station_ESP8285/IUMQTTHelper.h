@@ -26,7 +26,6 @@ class IUMQTTHelper
 {
     public:
         /***** Preset values and default settings *****/
-        static const uint8_t deviceTypeMaxLength = 12;
         static const uint8_t willMessageMaxLength = 50;
         // MQTT server access
         static IPAddress SERVER_HOST;
@@ -43,7 +42,7 @@ class IUMQTTHelper
         uint16_t HEARTBEAT_DELAY = 45;  // Seconds
         uint16_t NETWORK_DELAY = 300;  // Seconds
         /***** Core *****/
-        IUMQTTHelper(char *deviceType, char *willMessage);
+        IUMQTTHelper();
         virtual ~IUMQTTHelper() { }
         void setDeviceMacAddress(const char *deviceMacAddress);
         void reconnect(const char *statusTopic, const char *willMsg,
@@ -68,7 +67,6 @@ class IUMQTTHelper
 
     protected:
         WiFiClient m_wifiClient;
-        char m_deviceType[deviceTypeMaxLength];
         char m_deviceMacAddress[18];
         char m_willMessage[willMessageMaxLength];
         uint32_t m_enfOfLife;
@@ -76,9 +74,5 @@ class IUMQTTHelper
         void getFullSubscriptionName(char *destination,
                                      const char *commandName);
 };
-
-/***** Instanciation *****/
-
-extern IUMQTTHelper iuMQTTHelper;
 
 #endif // IUMQTTHELPER_H

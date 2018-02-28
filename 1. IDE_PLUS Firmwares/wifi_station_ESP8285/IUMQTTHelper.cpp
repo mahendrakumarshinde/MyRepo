@@ -18,12 +18,11 @@ char IUMQTTHelper::PASSWORD[13] = "nW$Pg81o@EJD";
     Core
 ============================================================================= */
 
-IUMQTTHelper::IUMQTTHelper(char *deviceType, char *willMessage) :
+IUMQTTHelper::IUMQTTHelper() :
     m_wifiClient(),
     client(SERVER_HOST, SERVER_PORT, m_wifiClient),
     m_enfOfLife(0)
 {
-    strcpy(m_deviceType, deviceType, deviceTypeMaxLength);
     strcpy(m_deviceMacAddress, "00:00:00:00:00:00");
     strncpy(m_willMessage, DEFAULT_WILL_MESSAGE, willMessageMaxLength);
 }
@@ -273,7 +272,7 @@ bool IUMQTTHelper::keepAlive()
 void IUMQTTHelper::getFullSubscriptionName(char *destination,
                                            const char *commandName)
 {
-    strcpy(destination, m_deviceType);
+    strcpy(destination, DEVICE_TYPE);
     strcat(destination, "/");
     strcat(destination, m_deviceMacAddress);
     strcat(destination, "/");

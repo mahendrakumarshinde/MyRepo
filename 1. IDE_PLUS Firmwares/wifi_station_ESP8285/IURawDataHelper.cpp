@@ -1,19 +1,19 @@
-#include "IURawDataHandler.h"
+#include "IURawDataHelper.h"
 
 
 /* =============================================================================
     Core
 ============================================================================= */
 
-char IURawDataHandler::EXPECTED_KEYS[
-    IURawDataHandler::EXPECTED_KEY_COUNT + 1] = "XYZ";
+char IURawDataHelper::EXPECTED_KEYS[IURawDataHelper::EXPECTED_KEY_COUNT + 1] =
+    "XYZ";
 
-char IURawDataHandler::ENDPOINT_HOST[45] =
+char IURawDataHelper::ENDPOINT_HOST[45] =
     "ideplus-dot-infinite-uptime-1232.appspot.com";
 
-char IURawDataHandler::ENDPOINT_URL[15] = "/raw_data?mac=";
+char IURawDataHelper::ENDPOINT_URL[15] = "/raw_data?mac=";
 
-IURawDataHandler::IURawDataHandler(uint32_t timeout) :
+IURawDataHelper::IURawDataHelper(uint32_t timeout) :
     m_payloadCounter(0),
     m_payloadStartTime(0),
     m_timeout(timeout)
@@ -33,7 +33,7 @@ IURawDataHandler::IURawDataHandler(uint32_t timeout) :
 /**
  * Empty the payload and reset the associated counters and booleans
  */
-void IURawDataHandler::resetPayload()
+void IURawDataHelper::resetPayload()
 {
     strcpy(m_payload, "");
     m_payloadCounter = 0;
@@ -50,7 +50,7 @@ void IURawDataHandler::resetPayload()
  * @return true if a timeout happened and that the payload has been reset,
  * else false.
  */
-bool IURawDataHandler::hasTimedOut()
+bool IURawDataHelper::hasTimedOut()
 {
     if (m_payloadStartTime == 0)
     {
@@ -78,7 +78,7 @@ bool IURawDataHandler::hasTimedOut()
  *
  * @return true if the key, value pair was succesfully added, else false.
  */
-bool IURawDataHandler::addKeyValuePair(char key, const char *value,
+bool IURawDataHelper::addKeyValuePair(char key, const char *value,
                                        uint16_t valueLength)
 {
     char *foundKey = strchr(EXPECTED_KEYS, key);
@@ -140,7 +140,7 @@ bool IURawDataHandler::addKeyValuePair(char key, const char *value,
 /**
  * Check whether all expected keys have been added to the payload.
  */
-bool IURawDataHandler::areAllKeyPresent()
+bool IURawDataHelper::areAllKeyPresent()
 {
     for (uint8_t i = 0; i < EXPECTED_KEY_COUNT; ++i)
     {
@@ -160,7 +160,7 @@ bool IURawDataHandler::areAllKeyPresent()
 /**
  * Post the payload if ready
  */
-int IURawDataHandler::publishIfReady(const char *macAddress)
+int IURawDataHelper::publishIfReady(const char *macAddress)
 {
     if (hasTimedOut())
     {
@@ -191,7 +191,7 @@ int IURawDataHandler::publishIfReady(const char *macAddress)
 /**
  * Post the payload
  */
-int IURawDataHandler::httpPostPayload(const char *macAddress)
+int IURawDataHelper::httpPostPayload(const char *macAddress)
 {
     // Close JSON first (last curled brace) if not closed yet
     char closingBrace = '}';
@@ -210,12 +210,3 @@ int IURawDataHandler::httpPostPayload(const char *macAddress)
 //    uint16_t endpointPort, uint8_t *payload, uint16_t payloadLength,
 //    size_t chunkSize, uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT)
 }
-
-
-/* =============================================================================
-    Instanciation
-============================================================================= */
-
-
-IURawDataHandler accelRawDataHandler(10000);  // 10s timeout
-
