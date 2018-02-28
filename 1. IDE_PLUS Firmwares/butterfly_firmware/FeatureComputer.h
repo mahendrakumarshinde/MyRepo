@@ -207,65 +207,14 @@ class Q15FFTComputer: public FeatureComputer
 class AudioDBComputer: public FeatureComputer
 {
     public:
-        AudioDBComputer(uint8_t id, Feature *audioDB=NULL);
+        AudioDBComputer(uint8_t id, Feature *audioDB=NULL,
+                        float calibrationScaling=1.);
+        void setCalibrationScaling(float val) { m_calibrationScaling = val; }
 
     protected:
         virtual void m_specializedCompute();
+        float m_calibrationScaling;  // Scaling factor
 };
-
-
-/* =============================================================================
-    Instanciations
-============================================================================= */
-
-// Shared computation space
-extern q15_t allocatedFFTSpace[1024];
-
-
-/***** Accelerometer Calibration parameters *****/
-
-extern float ACCEL_RMS_SCALING;
-extern float VELOCITY_RMS_SCALING;
-extern float DISPLACEMENT_RMS_SCALING;
-
-
-/***** Accelerometer Feature computation parameters *****/
-
-extern uint16_t DEFAULT_LOW_CUT_FREQUENCY;
-extern uint16_t DEFAULT_HIGH_CUT_FREQUENCY;
-extern float DEFAULT_MIN_AGITATION;
-
-
-/***** Accelerometer Features *****/
-
-// 128 sample long accel computers
-extern SignalRMSComputer accel128ComputerX;
-extern SignalRMSComputer accel128ComputerY;
-extern SignalRMSComputer accel128ComputerZ;
-extern MultiSourceSumComputer accelRMS128TotalComputer;
-
-// 512 sample long accel computers
-extern SectionSumComputer accel512ComputerX;
-extern SectionSumComputer accel512ComputerY;
-extern SectionSumComputer accel512ComputerZ;
-extern SectionSumComputer accel512TotalComputer;
-
-
-// computers for FFT feature from 512 sample long accel data
-extern Q15FFTComputer accelFFTComputerX;
-extern Q15FFTComputer accelFFTComputerY;
-extern Q15FFTComputer accelFFTComputerZ;
-
-
-/***** Audio Features *****/
-
-extern AudioDBComputer audioDB2048Computer;
-extern AudioDBComputer audioDB4096Computer;
-
-
-/***** Set up sources *****/
-
-extern void setUpComputerSources();
 
 
 #endif // FEATURECOMPUTER_H

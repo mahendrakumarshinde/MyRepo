@@ -4,6 +4,7 @@
 #include <Arduino.h>
 
 #include "IUSerial.h"
+#include "Component.h"
 
 
 /**
@@ -16,12 +17,18 @@
  *   Bluetooth Low Energy for Butterfly board
  *   BMD-350 UART connected to Serial 2 (pins 30/31) on Butterfly
  */
-class IUBMD350 : public IUSerial
+class IUBMD350 : public IUSerial, public Component
 {
     public:
         /***** Preset values and default settings *****/
-        static const uint8_t resetPin = 38; //  BMD-350 reset pin active LOW
-        static const uint8_t ATCmdPin = 26; //  toggle pin for AT Command
+        #ifdef DRAGONFLY_V03
+            static const uint8_t resetPin = 39; //  BMD-350 reset pin active LOW
+            static const uint8_t ATCmdPin = 40; //  toggle pin for AT Command
+
+        #else
+            static const uint8_t resetPin = 38; //  BMD-350 reset pin active LOW
+            static const uint8_t ATCmdPin = 26; //  toggle pin for AT Command
+        #endif // DRAGONFLY_V04
         // UART default configuration - Must match Serial1 configuration
         static const bool UART_ENABLED = true;
         static const bool UART_FLOW_CONTROL = false;
@@ -37,11 +44,10 @@ class IUBMD350 : public IUSerial
                                       DBm16 = 240,  // -4 DB
                                       DBm30 = 226}; // -30 DB
         static const txPowerOption defaultTxPower = txPowerOption::DBm4;
-
         /***** Constructors & destructor *****/
         IUBMD350(HardwareSerial *serialPort, char *charBuffer,
-                 uint16_t bufferSize,  uint32_t rate=57600,
-                 uint16_t dataReceptionTimeout=2000);
+                 uint16_t bufferSize, PROTOCOL_OPTIONS protocol,
+                 uint32_t rate=57600, uint16_t dataReceptionTimeout=2000);
         virtual ~IUBMD350() {}
         /***** Hardware and power management *****/
         virtual void setupHardware();
@@ -79,8 +85,6 @@ class IUBMD350 : public IUSerial
                             uint8_t len3 = 3, uint8_t len4 = 13);
 
     protected:
-        /***** Communication *****/
-        char m_buffer[500];
         /***** Bluetooth Configuration *****/
         bool m_ATCmdEnabled;  // AT Command Interface
         char m_deviceName[9];  // max 8 chars + 1 char end of string
@@ -89,12 +93,6 @@ class IUBMD350 : public IUSerial
         txPowerOption m_beaconTxPower;
         txPowerOption m_connectedTxPower;
 };
-
-
-/***** Instanciation *****/
-
-extern char iuBluetoothBuffer[500];
-extern IUBMD350 iuBluetooth;
 
 #endif // IUBMD350_H
 

@@ -22,8 +22,8 @@ class IURTDExtension : public LowFreqSensor
 {
     public:
         /***** Preset values and default settings *****/
-        /* PCA9534 & PCA9534A have a different slave addresses, allowing up to 16
-        devices '9534' type devices on the same I2C bus */
+        /* PCA9534 & PCA9534A have a different slave addresses, allowing up to
+        16 devices '9534' type devices on the same I2C bus */
         static const uint8_t ADDRESS            = 0x3c;
         static const uint8_t WHO_AM_I           = 0xD0;
         static const uint8_t WHO_AM_I_ANSWER    = 0x58;

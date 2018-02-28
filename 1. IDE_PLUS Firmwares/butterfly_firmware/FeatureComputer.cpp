@@ -577,8 +577,10 @@ void Q15FFTComputer::m_specializedCompute()
 
 /***** Audio DB *****/
 
-AudioDBComputer::AudioDBComputer(uint8_t id, Feature *audioDB) :
-    FeatureComputer(id, 1, audioDB)
+AudioDBComputer::AudioDBComputer(uint8_t id, Feature *audioDB,
+                                 float calibrationScaling) :
+    FeatureComputer(id, 1, audioDB),
+    m_calibrationScaling(calibrationScaling)
 {
 }
 
@@ -623,6 +625,7 @@ void AudioDBComputer::m_specializedCompute()
     }
     audioDB += log10(accu);
     float result = 20.0 * audioDB / (float) length;
+    result *= m_calibrationScaling;
     m_destinations[0]->addFloatValue(result);
     if (featureDebugMode)
     {
@@ -630,107 +633,4 @@ void AudioDBComputer::m_specializedCompute()
         debugPrint(": ", false);
         debugPrint(result * m_sources[0]->getResolution());
     }
-}
-
-
-/* =============================================================================
-    Instanciations
-============================================================================= */
-
-
-// Shared computation space
-q15_t allocatedFFTSpace[1024];
-
-
-// Note that computer_id 0 is reserved to designate an absence of computer.
-
-/***** Accelerometer Features *****/
-
-// 128 sample long accel computers
-SignalRMSComputer accel128ComputerX(1,&accelRMS128X, true, true, ACCEL_RMS_SCALING);
-SignalRMSComputer accel128ComputerY(2, &accelRMS128Y, true, true, ACCEL_RMS_SCALING);
-SignalRMSComputer accel128ComputerZ(3, &accelRMS128Z, true, true, ACCEL_RMS_SCALING);
-MultiSourceSumComputer accelRMS128TotalComputer(4, &accelRMS128Total,
-                                                false, true);
-
-
-// 512 sample long accel computers
-SectionSumComputer accel512ComputerX(5, 1, &accelRMS512X, NULL, NULL,
-                                     false, true);
-SectionSumComputer accel512ComputerY(6, 1, &accelRMS512Y, NULL, NULL,
-                                     false, true);
-SectionSumComputer accel512ComputerZ(7, 1, &accelRMS512Z, NULL, NULL,
-                                     false, true);
-SectionSumComputer accel512TotalComputer(8, 1, &accelRMS512Total, NULL, NULL,
-                                         false, true);
-
-
-// Computers for FFT feature from 512 sample long accel data
-Q15FFTComputer accelFFTComputerX(9,
-                                 &accelReducedFFTX,
-                                 &accelMainFreqX,
-                                 &velRMS512X,
-                                 &dispRMS512X,
-                                 allocatedFFTSpace,
-                                 DEFAULT_LOW_CUT_FREQUENCY,
-                                 DEFAULT_HIGH_CUT_FREQUENCY,
-                                 DEFAULT_MIN_AGITATION,
-                                 VELOCITY_RMS_SCALING,
-                                 DISPLACEMENT_RMS_SCALING);
-Q15FFTComputer accelFFTComputerY(10,
-                                 &accelReducedFFTY,
-                                 &accelMainFreqY,
-                                 &velRMS512Y,
-                                 &dispRMS512Y,
-                                 allocatedFFTSpace,
-                                 DEFAULT_LOW_CUT_FREQUENCY,
-                                 DEFAULT_HIGH_CUT_FREQUENCY,
-                                 DEFAULT_MIN_AGITATION,
-                                 VELOCITY_RMS_SCALING,
-                                 DISPLACEMENT_RMS_SCALING);
-Q15FFTComputer accelFFTComputerZ(11,
-                                 &accelReducedFFTZ,
-                                 &accelMainFreqZ,
-                                 &velRMS512Z,
-                                 &dispRMS512Z,
-                                 allocatedFFTSpace,
-                                 DEFAULT_LOW_CUT_FREQUENCY,
-                                 DEFAULT_HIGH_CUT_FREQUENCY,
-                                 DEFAULT_MIN_AGITATION,
-                                 VELOCITY_RMS_SCALING,
-                                 DISPLACEMENT_RMS_SCALING);
-
-
-/***** Audio Features *****/
-
-AudioDBComputer audioDB2048Computer(12, &audioDB2048);
-AudioDBComputer audioDB4096Computer(13, &audioDB4096);
-
-
-/***** Set up sources *****/
-
-/**
- * Add sources to computer instances (must be called during main setup)
- */
-void setUpComputerSources()
-{
-    // From acceleration sensor data
-    accel128ComputerX.addSource(&accelerationX, 1);
-    accel128ComputerY.addSource(&accelerationY, 1);
-    accel128ComputerZ.addSource(&accelerationZ, 1);
-    accelRMS128TotalComputer.addSource(&accelRMS128X, 1);
-    accelRMS128TotalComputer.addSource(&accelRMS128Y, 1);
-    accelRMS128TotalComputer.addSource(&accelRMS128Z, 1);
-    // Aggregate acceleration RMS
-    accel512ComputerX.addSource(&accelRMS128X, 1);
-    accel512ComputerY.addSource(&accelRMS128Y, 1);
-    accel512ComputerZ.addSource(&accelRMS128Z, 1);
-    accel512TotalComputer.addSource(&accelRMS128Total, 1);
-    // Acceleration FFTs
-    accelFFTComputerX.addSource(&accelerationX, 4);
-    accelFFTComputerY.addSource(&accelerationY, 4);
-    accelFFTComputerZ.addSource(&accelerationZ, 4);
-    // Audio DB
-    audioDB2048Computer.addSource(&audio, 1);
-    audioDB4096Computer.addSource(&audio, 2);
 }

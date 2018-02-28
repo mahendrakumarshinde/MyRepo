@@ -169,13 +169,3 @@ void IUCAMM8Q::exposeCalibration()
     // TODO Implement
     #endif
 }
-
-
-/* =============================================================================
-    Instantiation
-============================================================================= */
-
-#ifdef NO_GPS
-#else
-    IUCAMM8Q iuGNSS(&iuI2C, "GPS");
-#endif

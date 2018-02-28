@@ -2,12 +2,11 @@
 #define LOGGER_H
 
 #include <Arduino.h>
-#include <MemoryFree.h>
 
 /* ============================= Debugging ============================= */
 
 // Define DEBUGMODE to enable special notifications from the whole firmware
-#define DEBUGMODE
+//#define DEBUGMODE
 
 #ifdef DEBUGMODE
     const bool setupDebugMode = false;
@@ -51,23 +50,6 @@ inline void raiseException(T msg)
     #ifdef DEBUGMODE
     debugPrint(F("Error: "), false);
     debugPrint(msg);
-    #endif
-}
-
-inline void memoryLog()
-{
-    #ifdef DEBUGMODE
-    Serial.print(F("Available Memory: "));
-    Serial.println(freeMemory(), DEC);
-    #endif
-}
-
-inline void memoryLog(String msg)
-{
-    #ifdef DEBUGMODE
-    Serial.print(msg);
-    Serial.print(F(" - "));
-    memoryLog();
     #endif
 }
 

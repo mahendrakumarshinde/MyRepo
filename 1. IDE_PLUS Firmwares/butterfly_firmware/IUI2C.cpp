@@ -2,30 +2,23 @@
 
 
 /* =============================================================================
-    Constructor & desctructors
+    Core
 ============================================================================= */
 
 IUI2C::IUI2C() :
-    Component(),
     m_readFlag(true),
     m_errorFlag(false)
 {
 }
 
-
-/* =============================================================================
-    Hardware and power management
-============================================================================= */
-
 /**
  * Set up the component and finalize the object initialization
  */
-void IUI2C::setupHardware()
+void IUI2C::begin()
 {
     Wire.begin(TWI_PINS_20_21); // set master mode on pins 21/20
     Wire.setClock(CLOCK_RATE);
     delay(2000);
-    wakeUp();
 }
 
 

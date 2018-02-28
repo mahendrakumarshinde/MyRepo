@@ -5,10 +5,10 @@
 ============================================================================= */
 
 IUESP8285::IUESP8285(HardwareSerial *serialPort, char *charBuffer,
-                     uint16_t bufferSize,  uint32_t rate,
-                     uint16_t dataReceptionTimeout) :
-    IUSerial(StreamingMode::WIFI, serialPort, charBuffer, bufferSize, rate,
-             ';', dataReceptionTimeout)
+                     uint16_t bufferSize, PROTOCOL_OPTIONS protocol,
+                     uint32_t rate, uint16_t dataReceptionTimeout) :
+    IUSerial(serialPort, charBuffer, bufferSize, protocol, rate, ';',
+             dataReceptionTimeout)
 {
 }
 
@@ -34,8 +34,7 @@ void IUESP8285::setupHardware()
 //        IUSerial::suspend();
 //        return;
 //    }
-    IUSerial::setupHardware();
-    delay(10);
+    begin();
     port->print("WIFI-HARDRESET;");
 }
 
@@ -45,7 +44,7 @@ void IUESP8285::setupHardware()
 void IUESP8285::wakeUp()
 {
     // TODO Implement power mode change at EESP8285 level
-    IUSerial::wakeUp();
+    Component::wakeUp();
 }
 
 /**
@@ -54,7 +53,7 @@ void IUESP8285::wakeUp()
 void IUESP8285::sleep()
 {
     // TODO Implement power mode change at EESP8285 level
-    IUSerial::sleep();
+    Component::sleep();
     // Passing 0 makes the WiFi sleep indefinitly
     //WiFiSerial::Put_WiFi_To_Sleep(0.0f);
 }
@@ -65,7 +64,7 @@ void IUESP8285::sleep()
 void IUESP8285::suspend()
 {
     // TODO Implement power mode change at EESP8285 level
-    IUSerial::suspend();
+    Component::suspend();
     // Passing 0 makes the WiFi sleep indefinitly
     //WiFiSerial::Put_WiFi_To_Sleep(0.0f);
 }
@@ -84,11 +83,3 @@ void IUESP8285::sendBleMacAddress(char *macAddress)
     port->print(macAddress);
     port->print(";");
 }
-
-
-/* =============================================================================
-    Instanciation
-============================================================================= */
-
-char iuWiFiBuffer[500] = "";
-IUESP8285 iuWiFi(&Serial3, iuWiFiBuffer, 500, 115200, 2000);

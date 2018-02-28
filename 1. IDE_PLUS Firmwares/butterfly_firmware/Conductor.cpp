@@ -123,7 +123,8 @@ void Conductor::manageSleepCycles()
 /**
  * Read from USB and process the command, if one was received.
  */
-void Conductor::readFromSerial(IUSerial *iuSerial)
+void Conductor::readFromSerial(StreamingMode::option interfaceType,
+                               IUSerial *iuSerial)
 {
     while(true)
     {
@@ -138,7 +139,7 @@ void Conductor::readFromSerial(IUSerial *iuSerial)
         if (loopDebugMode)
         {
             debugPrint(F("Interface "), false);
-            debugPrint(iuSerial->interfaceType, false);
+            debugPrint(interfaceType, false);
             debugPrint(F(" input is: "), false);
             debugPrint(buffer);
         }
@@ -149,7 +150,7 @@ void Conductor::readFromSerial(IUSerial *iuSerial)
         else
         {
             // Also check for legacy commands
-            switch (iuSerial->interfaceType)
+            switch (interfaceType)
             {
                 case StreamingMode::WIRED:
                     processLegacyUSBCommands(buffer);
@@ -164,7 +165,7 @@ void Conductor::readFromSerial(IUSerial *iuSerial)
                     if (loopDebugMode)
                     {
                         debugPrint(F("Unhandled interface type: "), false);
-                        debugPrint(iuSerial->interfaceType);
+                        debugPrint(interfaceType);
                     }
             }
         }
@@ -346,6 +347,10 @@ void Conductor::processLegacyUSBCommands(char *buff)
         }
         iuWiFi.port->print(buff);
         iuWiFi.port->print(';');
+    }
+    else if (strncmp(buff, "MCUINFO", 7) == 0)
+    {
+        streamMCUUInfo(iuUSB.port);
     }
     else
     {
@@ -563,7 +568,7 @@ void Conductor::processLegacyBLECommands(char *buff)
                     buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
                 {
                     iuBluetooth.port->print("HB,");
-                    iuBluetooth.port->print(conductor.getMacAddress());
+                    iuBluetooth.port->print(m_macAddress);
                     iuBluetooth.port->print(",");
                     if (iuI2C.isError())
                     {
@@ -1045,6 +1050,19 @@ void Conductor::changeStreamingMode(StreamingMode::option mode)
     {
         return; // Nothing to do
     }
+    if (m_usageMode == UsageMode::CALIBRATION ||
+        m_usageMode == UsageMode::EXPERIMENT)
+    {
+        if (mode != StreamingMode::WIRED)
+        {
+            if (debugMode)
+            {
+                debugPrint(F("Streaming mode locked to WIRED during "
+                             "calibration and experiment"));
+            }
+            return;
+        }
+    }
     m_streamingMode = mode;
     if (loopDebugMode)
     {
@@ -1366,6 +1384,42 @@ void Conductor::streamFeatures()
 /* =============================================================================
     Debugging
 ============================================================================= */
+
+/**
+ * Write info from on the MCU state in destination.
+ */
+void Conductor::getMCUInfo(char *destination)
+{
+    float vdda = STM32.getVREF();
+    float temperature = STM32.getTemperature();
+    if (debugMode)
+    {
+        debugPrint("VDDA = ", false);
+        debugPrint(vdda);
+        debugPrint("MCU Temp = ", false);
+        debugPrint(temperature);
+    }
+    size_t len = strlen(destination);
+    for (size_t i = 0; i < len; i++)
+    {
+        destination[i] = '\0';
+    }
+    strcpy(destination, "{\"VDDA\":");
+    strcat(destination, String(vdda).c_str());
+    strcat(destination, ", \"temp\":");
+    strcat(destination, String(temperature).c_str());
+    strcat(destination, "}");
+}
+
+void  Conductor::streamMCUUInfo(HardwareSerial *port)
+{
+    char destination[50];
+    getMCUInfo(destination);
+    // TODO Change to "ST" ?
+    port->print("HB,");
+    port->print(destination);
+    port->print(';');
+}
 
 /**
  * Expose current configurations

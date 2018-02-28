@@ -8,10 +8,17 @@
     Library imports
 ============================================================================= */
 
-
 #include "Conductor.h"
-#include "IUSPIFlash.h"  // FIXME For some reason, if this is included in
-// conductor, it blocks the I2S callback
+
+#include <MemoryFree.h>
+
+#ifdef DRAGONFLY_V03
+#else
+    // FIXME For some reason, if this is included in conductor,
+    // it blocks the I2S callback
+    #include "IUFlash.h"
+    IUSPIFlash iuFlash(&SPI, A1, SPISettings(50000000, MSBFIRST, SPI_MODE0));
+#endif
 
 /* Comment / Uncomment the "define" lines to toggle / untoggle unit or quality
 test mode */
@@ -30,7 +37,7 @@ test mode */
 #ifdef INTEGRATEDTEST
     #include "IntegratedTest/IT_Conductor.h"
     #include "IntegratedTest/IT_IUBMX055.h"
-    #include "IntegratedTest/IT_IUSPIFlash.h"
+    #include "IntegratedTest/IT_IUFlash.h"
     #include "IntegratedTest/IT_Sensors.h"
 #endif
 
@@ -39,11 +46,7 @@ test mode */
     MAC Address
 ============================================================================= */
 
-const char MAC_ADDRESS[18] = "94:54:93:0F:7B:53";
-    // "94:54:93:0E:81:44";
-    // "94:54:93:0E:63:FC";
-    // "94:54:93:0E:81:A4";
-    // "94:54:93:0E:7B:2B";
+const char MAC_ADDRESS[18] = "94:54:93:0F:66:E4";
 
 
 /* =============================================================================
@@ -71,6 +74,11 @@ uint16_t DEFAULT_HIGH_CUT_FREQUENCY = 500;  // Hz
 float DEFAULT_MIN_AGITATION = 0.1;
 
 
+/***** Audio DB calibration parameters *****/
+
+float AUDIO_DB_SCALING = 1.1;
+
+
 /* =============================================================================
     Main
 ============================================================================= */
@@ -80,6 +88,17 @@ float DEFAULT_MIN_AGITATION = 0.1;
 bool doOnce = true;
 uint32_t interval = 30000;
 uint32_t lastDone = 0;
+
+#ifdef DRAGONFLY_V03
+    uint32_t initialDelay = 15000;
+#else
+    uint32_t initialDelay = 2000;
+#endif
+
+
+/***** Main operator *****/
+
+Conductor conductor(MAC_ADDRESS);
 
 
 /***** Driven sensors acquisition callback *****/
@@ -110,44 +129,60 @@ void callback()
 
 /***** Begin *****/
 
-Conductor conductor(MAC_ADDRESS);
-
 void setup()
 {
     #if defined(UNITTEST) || defined(INTEGRATEDTEST)
-        Serial.begin(115200);
-        delay(2000);
-        memoryLog("TESTING");
-        Serial.println(' ');
-        iuI2C.setupHardware();
-    #else
-        iuUSB.setupHardware();  // Start with USB for Serial communication
+        iuUSB.begin();
+        delay(initialDelay);
         if (debugMode)
         {
-          memoryLog("Start");
+            debugPrint(F("TESTING - Mem: "), false);
+            debugPrint(String(freeMemory(), DEC));
+            debugPrint(' ');
         }
+        iuRGBLed.setupHardware();
+        iuI2C.begin();
+    #else
+        iuUSB.begin();  // Start with USB for Serial communication
+        if (debugMode)
+        {
+          delay(initialDelay);
+          debugPrint(F("Start - Mem: "), false);
+          debugPrint(String(freeMemory(), DEC));
+        }
+        iuRGBLed.setupHardware();
+        iuI2C.begin();
         // Interfaces
         if (debugMode)
         {
             debugPrint(F("\nInitializing interfaces..."));
         }
-        iuI2C.setupHardware();
         if (setupDebugMode)
         {
             iuI2C.scanDevices();
             debugPrint("");
         }
-        iuBluetooth.setupHardware();
+        #ifdef DRAGONFLY_V03
+            iuBluetooth.begin();
+            iuBluetooth.softReset();
+        #else
+            iuBluetooth.setupHardware();
+            if (setupDebugMode)
+            {
+                iuBluetooth.exposeInfo();
+                debugPrint(' ');
+            }
+        #endif
         iuWiFi.setupHardware();
-        iuSPIFlash.setupHardware();
+        if (!USBDevice.configured())
+        {
+            iuFlash.begin();
+        }
         if(debugMode)
         {
-            memoryLog(F("=> Successfully initialized interfaces"));
-        }
-        if (setupDebugMode)
-        {
-            debugPrint(' ');
-            iuBluetooth.exposeInfo();
+            debugPrint(F("=> Successfully initialized interfaces - Mem: "),
+                       false);
+            debugPrint(String(freeMemory(), DEC));
         }
         // Default feature configuration
         if (debugMode)
@@ -159,7 +194,9 @@ void setup()
         populateFeatureGroups();
         if (debugMode)
         {
-            memoryLog(F("=> Succesfully configured default features"));
+            debugPrint(F("=> Succesfully configured default features - Mem: "),
+                        false);
+            debugPrint(String(freeMemory(), DEC));
         }
         // Sensors
         if (debugMode)
@@ -175,10 +212,14 @@ void setup()
                 Sensor::instances[i]->setCallbackRate(callbackRate);
             }
         }
-        iuGyroscope.suspend();
+        #ifdef BUTTERFLY_V04
+            iuGyroscope.suspend();
+        #endif
         if (debugMode)
         {
-          memoryLog(F("=> Successfully initialized sensors"));
+            debugPrint(F("=> Succesfully initialized sensors - Mem: "),
+                        false);
+            debugPrint(String(freeMemory(), DEC));
         }
         if (setupDebugMode)
         {
@@ -196,6 +237,7 @@ void setup()
             debugPrint(F("***\n"));
         }
         conductor.changeUsageMode(UsageMode::OPERATION);
+        iuWiFi.preventFromSleeping();
     #endif
 }
 
@@ -214,18 +256,13 @@ void loop()
             {
                 doOnce = false;
                 /* === Place your code to excute once here ===*/
-                if (setupDebugMode) { memoryLog(F("Loop")); }
+                if (setupDebugMode)
+                {
+                    debugPrint(F("Loop - Mem: "),
+                                false);
+                    debugPrint(String(freeMemory(), DEC));
+                }
                 debugPrint(' ');
-                /*======*/
-            }
-            uint32_t now = millis();
-            if(lastDone == 0 || lastDone + interval < now || now < lastDone)
-            {
-                lastDone = now;
-                /* === Place your code to excute at fixed interval here ===*/
-                debugPrint(now, false);
-                debugPrint(": ", false);
-                memoryLog("Loop");
                 /*======*/
             }
         }
@@ -233,11 +270,11 @@ void loop()
         conductor.manageSleepCycles();
         iuRGBLed.autoManage();
         // Configuration
-        conductor.readFromSerial(&iuUSB);
+        conductor.readFromSerial(StreamingMode::WIRED, &iuUSB);
         iuRGBLed.autoManage();
-        conductor.readFromSerial(&iuBluetooth);
+        conductor.readFromSerial(StreamingMode::BLE, &iuBluetooth);
         iuRGBLed.autoManage();
-        conductor.readFromSerial(&iuWiFi);
+        conductor.readFromSerial(StreamingMode::WIFI, &iuWiFi);
         iuRGBLed.autoManage();
         // Acquire data from sensors
         conductor.acquireData(false);
@@ -251,6 +288,14 @@ void loop()
         // Stream features
         conductor.streamFeatures();
         iuRGBLed.autoManage();
+        uint32_t now = millis();
+        if(lastDone == 0 || lastDone + interval < now || now < lastDone)
+        {
+            lastDone = now;
+            /* === Place your code to excute at fixed interval here ===*/
+            conductor.streamMCUUInfo(iuWiFi.port);
+            /*======*/
+        }
         uint32_t stopYield = millis() + 10;
         while (millis() < stopYield)
         {

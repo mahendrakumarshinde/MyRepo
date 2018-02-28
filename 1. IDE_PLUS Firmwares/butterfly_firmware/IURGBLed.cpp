@@ -17,18 +17,25 @@ IURGBLed::IURGBLed(bool blinking) :
     m_showingStatus(false),
     m_nextSwitchTime(0)
 {
-  pinMode(RED_PIN, OUTPUT);
-  pinMode(GREEN_PIN, OUTPUT);
-  pinMode(BLUE_PIN, OUTPUT);
-  unlock();
-  wakeUp();
-  changeColor(LEDColors::WHITE);
 }
 
 
 /* =============================================================================
     Hardware & power management
 ============================================================================= */
+
+/**
+ * 
+ */
+void IURGBLed::setupHardware()
+{
+    pinMode(RED_PIN, OUTPUT);
+    pinMode(GREEN_PIN, OUTPUT);
+    pinMode(BLUE_PIN, OUTPUT);
+    unlock();
+    wakeUp();
+    changeColor(LEDColors::WHITE);
+}
 
 /**
  * Switch to SLEEP power mode
@@ -85,7 +92,7 @@ void IURGBLed::autoTurnOff()
 }
 
 /**
- * 
+ *
  */
 void IURGBLed::autoManage()
 {
@@ -107,7 +114,7 @@ void IURGBLed::autoManage()
                 {
                     changeColor(m_color, true);
                     m_showingStatus = true;
-                    m_nextSwitchTime = current + 
+                    m_nextSwitchTime = current +
                             (1000 - statusShowTime[(uint8_t) m_status]);
                 }
             }
@@ -118,7 +125,7 @@ void IURGBLed::autoManage()
                     changeColor(statusColors[(uint8_t) m_status],
                                 true);
                     m_showingStatus = false;
-                    m_nextSwitchTime = current + 
+                    m_nextSwitchTime = current +
                             statusShowTime[(uint8_t) m_status];
                 }
             }
@@ -189,10 +196,3 @@ void IURGBLed::showOperationState(OperationState::option state)
         turnOff();
     }
 }
-
-
-/* =============================================================================
-    Instanciation
-============================================================================= */
-
-IURGBLed iuRGBLed = IURGBLed();

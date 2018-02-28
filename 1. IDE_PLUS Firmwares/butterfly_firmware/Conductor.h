@@ -4,27 +4,11 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 
-#include "FeatureClass.h"
-#include "FeatureComputer.h"
-#include "FeatureGroup.h"
-#include "IUI2C.h"
-#include "IUSerial.h"
-#include "IUBMD350.h"
-#include "IURGBLed.h"
-#include "IUBattery.h"
-#include "IUBMP280.h"
-#include "IUBMX055Acc.h"
-#include "IUBMX055Gyro.h"
-#include "IUBMX055Mag.h"
-#include "IUCAMM8Q.h"
-#include "IUI2S.h"
-
-#ifdef INTERNAL_ESP8285  // Wifi options
-    #include "IUESP8285.h"
-#endif
-
-#ifdef RTD_DAUGHTER_BOARD  // Optionnal hardware
-    #include "IURTDExtension.h"
+#include "Keywords.h"
+#ifdef DRAGONFLY_V03
+    #include "InstancesDragonfly.h"
+#else
+    #include "InstancesButterfly.h"
 #endif
 
 
@@ -77,7 +61,8 @@ class Conductor
         uint32_t getSleepDuration() { return m_sleepDuration; }
         uint32_t getCycleTime() { return m_cycleTime; }
         /***** Serial Reading & command processing*****/
-        void readFromSerial(IUSerial *iuSerial);
+        void readFromSerial(StreamingMode::option interfaceType,
+                            IUSerial *iuSerial);
         bool processConfiguration(char *json);
         bool configureMainOptions(JsonVariant &config);
         void configureAllSensors(JsonVariant &config);
@@ -85,7 +70,6 @@ class Conductor
         void processLegacyUSBCommands(char *buff);
         void processLegacyBLECommands(char *buff);
         void processWIFICommands(char *buff);
-
         /***** Features and groups Management *****/
         void activateFeature(Feature* feature);
         bool isFeatureDeactivatable(Feature* feature);
@@ -112,6 +96,8 @@ class Conductor
         void streamFeatures();
         void storeData() {}  // TODO => implement
         /***** Debugging *****/
+        void getMCUInfo(char *destination);
+        void  streamMCUUInfo(HardwareSerial *port);
         void exposeAllConfigurations();
 
     protected:
@@ -204,11 +190,4 @@ class Conductor
 //        }
 };
 
-
-/***** Instanciation *****/
-
-extern Conductor conductor;
-
-
 #endif // CONDUCTOR_H
-

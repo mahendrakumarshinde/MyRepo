@@ -17,14 +17,14 @@ class IUWiFiManager
 {
     public:
         static const uint8_t wifiCredentialLength = 64;
-        static const uint32_t newWiFiCredentialsTimeout = 2000;  // ms
-        static const uint32_t reconnectionInterval = 10000;  // ms
+        static const uint32_t newWiFiCredentialsTimeout = 1000;  // ms
+        static const uint32_t reconnectionInterval = 5000;  // ms
         static const uint32_t heartbeatInterval = 300000;  // ms
         /***** Core *****/
         IUWiFiManager(uint32_t connectTimeout, uint32_t timeout,
                       int minSignalQuality);
         virtual ~IUWiFiManager() {}
-        bool hasTimedOut(bool currentlyConnected);
+        bool hasTimedOut(bool resetTimer);
         /***** User set SSID and password *****/;
         void resetUserSSID();
         void resetUserPassword();

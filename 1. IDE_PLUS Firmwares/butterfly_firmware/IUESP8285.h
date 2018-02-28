@@ -4,6 +4,7 @@
 #include <Arduino.h>
 
 #include "IUSerial.h"
+#include "Component.h"
 
 /**
  * Wifi chip
@@ -14,15 +15,19 @@
  * Description:
  *
  */
-class IUESP8285 : public IUSerial
+class IUESP8285 : public IUSerial, public Component
 {
     public:
         /***** Preset values and default settings *****/
-//        static const uint8_t UART_TX_PIN = D9;
+        #ifdef DRAGONFLY_V04
+            static const uint8_t ENABLE_PIN = A2; // if Dragonfly
+        #else
+            //TODO Find the pin for the Butterfly
+        #endif // DRAGONFLY_V04
         /***** Constructors & desctructors *****/
         IUESP8285(HardwareSerial *serialPort, char *charBuffer,
-                  uint16_t bufferSize, uint32_t rate=115200,
-                  uint16_t dataReceptionTimeout=2000);
+                  uint16_t bufferSize, PROTOCOL_OPTIONS protocol,
+                  uint32_t rate=115200, uint16_t dataReceptionTimeout=2000);
         virtual ~IUESP8285() {}
         /***** Hardware and power management *****/
         virtual void setupHardware();
@@ -33,17 +38,6 @@ class IUESP8285 : public IUSerial
         void sendBleMacAddress(char *macAddress);
         void preventFromSleeping() { port->print("WIFI-NOSLEEP;"); }
         void authorizeSleeping() { port->print("WIFI-SLEEPOK;"); }
-
-    protected:
-        /***** Communication *****/
-        char m_buffer[500];
-
 };
-
-
-/***** Instanciation *****/
-
-extern char iuWiFiBuffer[500];
-extern IUESP8285 iuWiFi;
 
 #endif // IUESP8285_H
