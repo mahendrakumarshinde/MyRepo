@@ -17,7 +17,6 @@ class IUUSB : public IUSerial
               PROTOCOL_OPTIONS protocol, uint32_t rate=57600, char stopChar=';',
               uint16_t dataReceptionTimeout=2000);
         virtual ~IUUSB() {}
-        virtual void begin();
 
     protected:
         /***** Custom Protocol *****/

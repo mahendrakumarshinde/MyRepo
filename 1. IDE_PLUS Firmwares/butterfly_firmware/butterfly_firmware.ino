@@ -76,7 +76,7 @@ float DEFAULT_MIN_AGITATION = 0.1;
 
 /***** Audio DB calibration parameters *****/
 
-float AUDIO_DB_SCALING = 1.1;
+float AUDIO_DB_SCALING = 2.3;
 
 
 /* =============================================================================
@@ -88,12 +88,6 @@ float AUDIO_DB_SCALING = 1.1;
 bool doOnce = true;
 uint32_t interval = 30000;
 uint32_t lastDone = 0;
-
-#ifdef DRAGONFLY_V03
-    uint32_t initialDelay = 15000;
-#else
-    uint32_t initialDelay = 2000;
-#endif
 
 
 /***** Main operator *****/
@@ -133,7 +127,7 @@ void setup()
 {
     #if defined(UNITTEST) || defined(INTEGRATEDTEST)
         iuUSB.begin();
-        delay(initialDelay);
+        delay(2000);
         if (debugMode)
         {
             debugPrint(F("TESTING - Mem: "), false);
@@ -146,7 +140,7 @@ void setup()
         iuUSB.begin();  // Start with USB for Serial communication
         if (debugMode)
         {
-          delay(initialDelay);
+          delay(2000);
           debugPrint(F("Start - Mem: "), false);
           debugPrint(String(freeMemory(), DEC));
         }

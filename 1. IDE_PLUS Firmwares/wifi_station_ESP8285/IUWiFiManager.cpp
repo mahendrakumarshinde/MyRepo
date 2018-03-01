@@ -25,10 +25,10 @@ IUWiFiManager::IUWiFiManager(uint32_t connectTimeout, uint32_t timeout,
 /**
  * 
  */
-bool IUWiFiManager::hasTimedOut(bool resetTimer)
+bool IUWiFiManager::hasTimedOut(bool currentlyConnected)
 {
     uint32_t current = millis();
-    if (resetTimer)
+    if (currentlyConnected)
     {
          m_lastConnected = current;
          return false;
@@ -382,8 +382,6 @@ void IUWiFiManager::debugPrintWifiInfo()
     debugPrint((uint8_t) currMode);
     if (currMode == WIFI_STA)
     {
-        debugPrint("WiFi MAC: ", false);
-        debugPrint(WiFi.macAddress());
         debugPrint("WiFi SSID: ", false);
         debugPrint(WiFi.SSID());
         debugPrint("WiFi psk: ", false);
@@ -413,4 +411,4 @@ void IUWiFiManager::debugPrintWifiInfo()
     Instanciation
 ============================================================================= */
 
-IUWiFiManager iuWifiManager(1000, 20000, 8);
+IUWiFiManager iuWifiManager(1000, 180000, 8);

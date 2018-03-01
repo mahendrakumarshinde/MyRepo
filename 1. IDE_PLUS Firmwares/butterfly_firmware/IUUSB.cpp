@@ -9,12 +9,6 @@ IUUSB::IUUSB(HardwareSerial *serialPort, char *charBuffer, uint16_t bufferSize,
     //ctor
 }
 
-void IUUSB::begin()
-{
-    port->begin(baudRate);
-    port->flush();
-}
-
 /* =============================================================================
     Custom protocol
 ============================================================================= */
