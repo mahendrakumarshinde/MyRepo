@@ -25,7 +25,7 @@
   Module Configuration Variables
 ============================================================================= */
 
-String MAC_ADDRESS = "88:4A:EA:69:E4:53";
+String MAC_ADDRESS = "88:4A:EA:69:DF:FD";
 
 const float minAccelEnergyForVelocity = 102;
 
@@ -420,9 +420,12 @@ void getVelocityAndDisplacement(q15_t *values, uint16_t samplingRate,
   RFFT::computeRFFT(values, rfft_accel_buffer, sampleCount, false);
   RFFTAmplitudes::getAmplitudes(rfft_accel_buffer, sampleCount, amplitudes);
   // 2. Find the main frequency
+  uint16_t lowIdx = (uint16_t) max(((float) lowCutFrequency / df), 1);
+  uint16_t highIdx = (uint16_t) min((float) highCutFrequency / df,
+                                    amplitudeCount);
   q15_t maxVal;
   uint32_t maxIdx;
-  arm_max_q15(amplitudes, amplitudeCount, &maxVal, &maxIdx);
+  arm_max_q15(&amplitudes[lowIdx], highIdx - lowIdx, &maxVal, &maxIdx);
   mainFrequency = df * (float) maxIdx;
   if (featureDebugMode)
   {
