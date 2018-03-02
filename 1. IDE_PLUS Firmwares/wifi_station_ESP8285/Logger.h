@@ -12,12 +12,15 @@
 
 #ifdef DEBUGMODE
     const bool debugMode = true;
+    /***** Test connection *****/
+//    const char testSSID[14] = "The Port WiFi";
+//    const char testPSK[11] = "Th3P0rt317";
+    const char testSSID[19] = "AndroidHotspot6994";
+    const char testPSK[13] = "f1b94630f970";
 #else
     const bool debugMode = false;
 #endif
 
-const bool debugMode = (setupDebugMode || loopDebugMode ||
-    featureDebugMode || callbackDebugMode);
 
 template <typename T>
 inline void debugPrint(T msg, bool endline = true)

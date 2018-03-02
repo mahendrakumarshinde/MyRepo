@@ -39,12 +39,6 @@ class IUESP8285 : public IUSerial, public Component
         bool processMessage();
         /***** Outbound communication *****/
         void hardReset() { sendMSPCommand(MSPCommand::WIFI_HARD_RESET); }
-        void sendBleMacAddress(char *macAddress)
-            {
-                port->print("BLEMAC-");
-                port->print(macAddress);
-                port->print(';');
-            }
         void setBleMacAddress(char *macAddress)
             { sendMSPCommand(MSPCommand::RECEIVE_BLE_MAC, macAddress); }
         void setSSID(char *ssid);

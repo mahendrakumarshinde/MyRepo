@@ -47,13 +47,13 @@ void Conductor::readMessagesFromHost()
 {
     while(true)
     {
-        hostSerial->readToBuffer();
-        if (!hostSerial->hasNewMessage())
+        hostSerial.readToBuffer();
+        if (!hostSerial.hasNewMessage())
         {
             break;
         }
         processMessageFromHost();
-        hostSerial->resetBuffer();  // Clear buffer
+        hostSerial.resetBuffer();  // Clear buffer
     }
 }
 
@@ -62,8 +62,9 @@ void Conductor::readMessagesFromHost()
  */
 void Conductor::processMessageFromHost()
 {
-    MSPCommand::command cmd = hostSerial->getMspCommand();
-    char *buffer = hostSerial->getBuffer();
+    MSPCommand::command cmd = hostSerial.getMspCommand();
+    char *buffer = hostSerial.getBuffer();
+    uint16_t bufferLength = hostSerial.getCurrentBufferLength();
     if (debugMode)
     {
         debugPrint("Received command from host: ", false);
@@ -71,6 +72,8 @@ void Conductor::processMessageFromHost()
         debugPrint(", buffer is: ", false);
         debugPrint(buffer);
     }
+    uint8_t idx = 0;
+    IPAddress *ipPtr = NULL;
     switch(cmd)
     {
         case MSPCommand::RECEIVE_BLE_MAC:
@@ -97,7 +100,7 @@ void Conductor::processMessageFromHost()
             m_credentialValidator.receivedMessage(0);
             if (m_credentialValidator.completed())
             {
-                enableWifi();
+                reconnect(true);
             }
             break;
         case MSPCommand::WIFI_RECEIVE_PASSWORD:
@@ -109,59 +112,28 @@ void Conductor::processMessageFromHost()
             m_credentialValidator.receivedMessage(1);
             if (m_credentialValidator.completed())
             {
-                enableWifi();
+                reconnect(true);
             }
             break;
         case MSPCommand::WIFI_FORGET_CREDENTIALS:
             forgetWiFiCredentials();
-            disableWifi(true, false);
+            disconnectWifi();
             break;
         case MSPCommand::WIFI_RECEIVE_STATIC_IP:
-            if (m_staticConfigValidator.hasTimedOut())
-            {
-                forgetWiFiStaticConfig();
-            }
-            if (m_staticIp.fromString(buffer))
-            {
-                m_staticConfigValidator.receivedMessage(0);
-            }
-            else if (debugMode)
-            {
-                debugPrint("Couldn't parse IP address: ", false);
-                debugPrint(buffer);
-            }
-            if (m_staticConfigValidator.completed())
-            {
-                // TODO Implement
-            }
-            break;
         case MSPCommand::WIFI_RECEIVE_GATEWAY:
-            if (m_staticConfigValidator.hasTimedOut())
-            {
-                forgetWiFiStaticConfig();
-            }
-            if (m_staticIp.fromString(buffer))
-            {
-                m_staticConfigValidator.receivedMessage(0);
-            }
-            else if (debugMode)
-            {
-                debugPrint("Couldn't parse IP address: ", false);
-                debugPrint(buffer);
-            }
-            if (m_staticConfigValidator.completed())
-            {
-                // TODO Implement
-            }
-            break;
         case MSPCommand::WIFI_RECEIVE_SUBNET:
+            idx = (uint8_t) cmd - (uint8_t) MSPCommand::WIFI_RECEIVE_STATIC_IP;
+            if (idx == 0) { ipPtr = &m_staticIp; }
+            else if (idx == 1) { ipPtr = &m_staticGateway; }
+            else if (idx == 2) { ipPtr = &m_staticSubnet; }
+            else { break; }
             if (m_staticConfigValidator.hasTimedOut())
             {
                 forgetWiFiStaticConfig();
             }
-            if (m_staticIp.fromString(buffer))
+            if (ipPtr->fromString(buffer))
             {
-                m_staticConfigValidator.receivedMessage(0);
+                m_staticConfigValidator.receivedMessage(idx);
             }
             else if (debugMode)
             {
@@ -178,96 +150,48 @@ void Conductor::processMessageFromHost()
             break;
         case MSPCommand::WIFI_WAKE_UP:
             m_shouldWakeUp = true;
-            // TODO Implement
             break;
         case MSPCommand::WIFI_DEEP_SLEEP:
-            // TODO Implement
+            m_shouldWakeUp = false;
+            ESP.deepSleep(deepSleepDuration);
             break;
         case MSPCommand::WIFI_HARD_RESET:
             ESP.reset();
             break;
         case MSPCommand::WIFI_CONNECT:
-            if (debugMode)
+            if (m_credentialValidator.completed())
             {
-                debugPrint("Activating Wifi & using saved credentials...");
+                reconnect();
             }
-            if (!iuWifiManager.hasSavedCredentials())
+            else
             {
                 hostSerial.sendMSPCommand(
                     MSPCommand::WIFI_ALERT_NO_SAVED_CREDENTIALS);
             }
-            else
-            {
-                iuWifiManager.debugPrintWifiInfo();
-                enableWifi();
-            }
             break;
         case MSPCommand::WIFI_DISCONNECT:
-            disableWifi(true, true);
+            disconnectWifi();
             break;
         case MSPCommand::PUBLISH_RAW_DATA:
-
+            if (accelRawDataHelper.hasTimedOut())
+            {
+                accelRawDataHelper.resetPayload();
+            }
+            accelRawDataHelper.addKeyValuePair(buffer[0], &buffer[2],
+                                               strlen(buffer) - 2);
+            accelRawDataHelper.publishIfReady(m_bleMacAddress);
             break;
         case MSPCommand::PUBLISH_FEATURE:
-
+            mqttHelper.publishFeature(buffer, bufferLength);
             break;
         case MSPCommand::PUBLISH_DIAGNOSTIC:
-
+            mqttHelper.publishDiagnostic(buffer, bufferLength,
+                                         timeHelper.getCurrentTime());
             break;
         case MSPCommand::HOST_CONFIRM_RECEPTION:
-
+            // TODO Implement
             break;
-        default:
-
     }
-
-//    else if (strcmp("WIFI-NOSLEEP", buff) == 0)
-//    {
-//        AUTHORIZED_TO_SLEEP = false;
-//        stayAwakeOrderTime = millis();
-//        if (debugMode)
-//        {
-//            debugPrint("Not authorized to sleep");
-//        }
-//    }
-//    else if (strcmp("WIFI-SLEEPOK", buff) == 0)
-//    {
-//        AUTHORIZED_TO_SLEEP = true;
-//        stayAwakeOrderTime = 0;
-//        if (debugMode)
-//        {
-//            debugPrint("Authorized to sleep");
-//        }
-//    }
-//    else if (strncmp("WIFI-DEEPSLEEP-", buff, 15) == 0 && strlen(buff) == 20)
-//    {
-//        uint64_t durationSec = (uint64_t) atoi(&buff[11]);
-//        ESP.deepSleep(durationSec * 1000000, RF_DEFAULT);
-//    }
-//    // Check if RAW DATA, eg: REC,X,<data>
-//    else if (strncmp("REC,", buff, 4) == 0 && buff[5] == ',')
-//    {
-//        if (accelRawDataHelper.hasTimedOut())
-//        {
-//            accelRawDataHelper.resetPayload();
-//        }
-//        accelRawDataHelper.addKeyValuePair(buff[4], &buff[6], strlen(buff) - 6);
-//        publishAccelRawDataIfReady();
-//    }
-//    else if (buff[6] == ',')  // Feature
-//    {
-//        publishFeature(&buff[7], strlen(buff) - 7, buff, 6);
-//    }
-//    else if (strncmp(buff, "HB,", 3) == 0 ||
-//             strncmp(buff, "DT,", 3) == 0 ||
-//             strncmp(buff, "ST,", 3) == 0)  // Diagnsotic
-//    {
-//        publishDiagnostic(&buff[3], strlen(buff) - 3);
-//    }
-//    else if (debugMode)
-//    {
-//        debugPrint("Unknown message from host");
-//    }
 }
 
 
@@ -276,6 +200,14 @@ void Conductor::processMessageFromHost()
     WiFi credentials and config
 ============================================================================= */
 
+void Conductor::setCredentials(const char *userSSID, const char *userPSK)
+{
+    strncpy(m_userSSID, userSSID, wifiCredentialLength);
+    strncpy(m_userPassword, userPSK, wifiCredentialLength);
+    m_credentialValidator.receivedMessage(0);
+    m_credentialValidator.receivedMessage(1);
+}
+    
 /**
  *
  */
@@ -295,9 +227,40 @@ void Conductor::forgetWiFiCredentials()
 void Conductor::forgetWiFiStaticConfig()
 {
     m_staticConfigValidator.reset();
-    m_staticIp = IPAddress(0);
-    m_staticGateway = IPAddress(0);
-    m_staticSubnet = IPAddress(0);
+    m_staticIp = IPAddress();
+    m_staticGateway = IPAddress();
+    m_staticSubnet = IPAddress();
+}
+
+/**
+ * Request host to know if should sleep & get BLE MAC address.
+ *
+ * If the host has not answered after hostResponseTimeout, the ESP82 will deep-
+ * sleep for deepSleepDuration and then restart.
+ */
+bool Conductor::getConfigFromMainBoard()
+{
+    uint32_t startTime = millis();
+    uint32_t current = startTime;
+    uint16_t i = 0;
+    while (!m_shouldWakeUp || m_unknownBleMacAddress)
+    {
+        if (current - startTime > hostResponseTimeout)
+        {
+            if (debugMode)
+            {
+                debugPrint("Host didn't respond: going to sleep");
+                delay(500);
+            }
+            ESP.deepSleep(deepSleepDuration);  // in micro seconds
+        }
+        hostSerial.sendMSPCommand(MSPCommand::WIFI_REQUEST_ACTION);
+        hostSerial.sendMSPCommand(MSPCommand::ASK_BLE_MAC);
+        readMessagesFromHost();
+        delay(100);
+        current = millis();
+    }
+    return (m_shouldWakeUp && m_unknownBleMacAddress);
 }
 
 
@@ -353,7 +316,6 @@ void Conductor::disconnectWifi(bool wifiOff)
     /***** Turn off Wifi *****/
     if (WiFi.isConnected())
     {
-        m_lastConnected = current;
         WiFi.disconnect(wifiOff);
     }
 }
@@ -371,22 +333,20 @@ void Conductor::disconnectWifi(bool wifiOff)
  */
 bool Conductor::reconnect(bool forceNewCredentials)
 {
+    // Ensure that the WiFi is in AP mode
     if (WiFi.getMode() != WIFI_STA)
     {
         WiFi.mode(WIFI_STA);
     }
+    // Disconnect the WiFi if new credentials
     if (forceNewCredentials)
     {
         String currentSSID = WiFi.SSID();
         String currentPW = WiFi.psk();
-        if (currentSSID.length() > 0 &&
-            strcmp(currentSSID.c_str(), currentSSID) == 0 &&
-            currentPW.length() > 0 &&
-            strcmp(currentPW.c_str(), m_userPassword) == 0)
-        {
-            // User input SSID & Password are the same than current
-        }
-        else
+        if (currentSSID.length() == 0 ||
+            strcmp(currentSSID.c_str(), m_userSSID) > 0 ||
+            currentPW.length() == 0 ||
+            strcmp(currentPW.c_str(), m_userPassword) > 0)
         {
             // New and different user input for SSID and Password => disconnect
             // from current SSID then reconnect to new SSID
@@ -395,27 +355,50 @@ bool Conductor::reconnect(bool forceNewCredentials)
         }
     }
     uint32_t current = millis();
-    if (WiFi.isConnected())
+    // Connect the WiFi if not connected
+    bool wifiConnected = WiFi.isConnected();
+    if (!wifiConnected)
     {
-        // Already connected with the right credentials
-        return true;
-    }
-    else
-    {
+        if (current - m_lastConnectionAttempt < reconnectionInterval)
+        {
+            if (debugMode)
+            {
+                debugPrint("Not enough time since last connection attempt");
+            }
+            return false;
+        }
+        if (m_remainingConnectionAttempt <= 0)
+        {
+            if (debugMode)
+            {
+                debugPrint("No remaining connection attempt");
+            }
+            return false;
+        }
+        if (!m_credentialValidator.completed())
+        {
+            if (debugMode)
+            {
+                debugPrint("Can't connect without credentials");
+            }
+            return false;
+        }
         WiFi.begin(m_userSSID, m_userPassword);
         m_lastConnectionAttempt = current;
-        if (m_remainingConnectionAttempt > 0)
-        {
-            m_remainingConnectionAttempt--;
-        }
-        bool connectSuccess = (waitForConnectResult() == WL_CONNECTED);
-        if (connectSuccess && debugMode)
+        m_remainingConnectionAttempt--;
+        wifiConnected = (waitForConnectResult() == WL_CONNECTED);
+        if (debugMode && wifiConnected)
         {
             debugPrint("Connected to ", false);
             debugPrint(WiFi.SSID());
         }
-        return connectSuccess;
     }
+    // Set light sleep mode if not done
+    if (wifiConnected && WiFi.getSleepMode() != WIFI_LIGHT_SLEEP)
+    {
+        WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
+    }
+    return wifiConnected;
 }
 
 /**
@@ -445,7 +428,32 @@ uint8_t Conductor::waitForConnectResult()
             status = WiFi.status();
             current = millis();
         }
+        if (debugMode && current - startT > connectionTimeout)
+        {
+            debugPrint("WiFi connection time-out");
+        }
         return status;
+    }
+}
+
+/**
+ *
+ */
+void Conductor::checkWiFiDisconnectionTimeout()
+{
+    uint32_t now = millis();
+    if (WiFi.isConnected() && mqttHelper.client.connected())
+    {
+        m_lastConnected = now;
+    }
+    else if (now - m_lastConnected > disconnectionTimeout)
+    {
+        if (debugMode)
+        {
+            debugPrint("Exceeded disconnection time-out: goind to sleep");
+            delay(500);
+        }
+        ESP.deepSleep(deepSleepDuration);  // in micro seconds
     }
 }
 
@@ -516,50 +524,6 @@ void Conductor::processMessageFromMQTT(char* topic, byte* payload,
 
 
 /* =============================================================================
-    Main operations
-============================================================================= */
-
-
-void Conductor::setup()
-{
-    hostSerial.begin();
-    hostSerial.port->flush();
-    turnOffRadio();
-    /***** Request host to know if should sleep & get BLE MAC address *****/
-    uint32_t startTime = millis();
-    uint32_t current = startTime;
-    while (!m_shouldWakeUp || unknownBleMacAddress)
-    {
-        if (startTime - current < hostResponseTimeout)
-        {
-            ESP.deepSleep(deepSleepDuration);  // in micro seconds
-        }
-        hostSerial.sendMSPCommand(WIFI_REQUEST_ACTION);
-        hostSerial.sendMSPCommand(ASK_BLE_MAC);
-        readMessagesFromHost();
-        delay(100);
-        current = millis();
-    }
-    /***** Get device (=BLE) MAC address*****/
-    current = startTime = millis();
-    while (unknownBleMacAddress)
-    {
-        hostSerial.sendMSPCommand(ASK_BLE_MAC);
-        readMessagesFromHost();
-        delay(100);
-        current = millis();
-    }
-
-
-}
-
-void Conductor::loop()
-{
-
-}
-
-
-/* =============================================================================
     Debugging
 ============================================================================= */
 
@@ -614,19 +578,9 @@ void Conductor::debugPrintWifiInfo()
         debugPrint(WiFi.RSSI());
     }
     debugPrint("User SSID: ", false);
-    if (m_newSSID)
-    {
-        debugPrint(m_userSSID);
-    } else {
-        debugPrint("<none>");
-    }
+    debugPrint(m_userSSID);
     debugPrint("User psk: ", false);
-    if (m_userPassword)
-    {
-        debugPrint(m_userPassword);
-    } else {
-        debugPrint("<none>");
-    }
+    debugPrint(m_userPassword);
     #endif
 }
 

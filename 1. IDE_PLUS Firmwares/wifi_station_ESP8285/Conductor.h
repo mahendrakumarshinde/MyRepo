@@ -36,44 +36,50 @@ class Conductor
         // WiFi config (credentials or Static IP) MultiMessageValidator timeout
         static const uint32_t wifiConfigReceptionTimeout = 1000;  // ms
         // WiFi will deep-sleep if host doesn't respond before timeout
-        static const uint32_t hostResponseTimeout = 1000;  // ms
+        #ifdef DEBUGMODE
+            static const uint32_t hostResponseTimeout = 60000;  // ms
+        #else
+            static const uint32_t hostResponseTimeout = 1000;  // ms
+        #endif
         // Default duration of deep-sleep
-        static const uint32_t deepSleepDuration = 1000;  // ms
+        static const uint32_t deepSleepDuration = 1000000;  // microseconds !!
         /** Connection retry constants **/
         static const uint8_t connectionRetry = 3;
         // Single connection attempt timeout
-        static const uint32_t connectionTimeout = 5000;  // ms
+        static const uint32_t connectionTimeout = 8000;  // ms
         // Delay between 2 connection attemps
         static const uint32_t reconnectionInterval = 1000;  // ms
+        // ESP82 will deep-sleep after being disconnected for more than:
+        static const uint32_t disconnectionTimeout = 30000;  // ms
+        /***** Core *****/
         Conductor();
         virtual ~Conductor() {}
+        char* getBleMacAddress() { return m_bleMacAddress; }
         /***** Communication with host *****/
         void readMessagesFromHost();
         void processMessageFromHost();
         /***** WiFi credentials and config *****/
+        void setCredentials(const char *userSSID, const char *userPSK);
         void forgetWiFiCredentials();
         void forgetWiFiStaticConfig();
+        bool getConfigFromMainBoard();
         /***** Wifi connection and status *****/
-        void Conductor::turnOffRadio(uint32_t duration_us=0);
-        void Conductor::turnOnRadio();
-        void Conductor::disconnectWifi(bool wifiOff=true);
-        bool Conductor::reconnect(bool forceNewCredentials);
-
-        bool reconnectionTimedOut(bool resetTimer);
+        void turnOffRadio(uint32_t duration_us=0);
+        void turnOnRadio();
+        void disconnectWifi(bool wifiOff=true);
         bool reconnect(bool forceNewCredentials=false);
         uint8_t waitForConnectResult();
-        bool disableWifi(uint32_t duration_us);
+        void checkWiFiDisconnectionTimeout();
         /***** MQTT *****/
-        void processMessageFromMQTT();
-        /***** Main operations *****/
-        void setup();
-        void loop();
+        void processMessageFromMQTT(char* topic, byte* payload,
+                                    uint16_t length);
         /***** Debugging *****/
         void getWifiInfo(char *destination, bool mqttOn);
         void debugPrintWifiInfo();
 
     protected:
-        /***** MAC addresses *****/
+        /***** Config from Host *****/
+        bool m_shouldWakeUp;
         bool m_unknownBleMacAddress;
         char m_bleMacAddress[18];
         char m_wifiMacAddress[18];
@@ -90,8 +96,6 @@ class Conductor
         IPAddress m_staticIp;
         IPAddress m_staticGateway;
         IPAddress m_staticSubnet;
-        /***** Main operations *****/
-        bool m_shouldWakeUp;
 
 };
 

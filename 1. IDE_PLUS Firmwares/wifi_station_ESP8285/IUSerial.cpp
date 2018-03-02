@@ -205,6 +205,11 @@ bool IUSerial::readCharMsp()
  */
 bool IUSerial::sendMSPCommand(MSPCommand::command cmd)
 {
+    if (debugMode)
+    {
+        debugPrint("Sending MSP Command #", false);
+        debugPrint((uint8_t) cmd);
+    }
     sendMspCommandHeader(0, cmd);
     sendMspCommandTail();
 }
@@ -214,8 +219,18 @@ bool IUSerial::sendMSPCommand(MSPCommand::command cmd)
  */
 bool IUSerial::sendMSPCommand(MSPCommand::command cmd, char* cmdMsg)
 {
+    if (debugMode)
+    {
+        debugPrint("Sending MSP Command #", false);
+        debugPrint((uint8_t) cmd);
+    }
     if (cmdMsg != NULL)
     {
+        if (debugMode)
+        {
+            debugPrint("MSP message is: ", false);
+            debugPrint(cmdMsg);
+        }
         uint8_t cmdSize = (uint8_t) strlen(cmdMsg);
         sendMspCommandHeader(cmdSize, cmd);
         for (uint8_t i = 0; i < cmdSize; ++i)

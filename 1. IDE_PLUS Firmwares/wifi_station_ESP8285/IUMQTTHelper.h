@@ -27,6 +27,8 @@ class IUMQTTHelper
     public:
         /***** Preset values and default settings *****/
         static const uint8_t willMessageMaxLength = 50;
+        static const uint32_t connectionTimeout = 5000;  // ms
+        static const uint32_t connectionRetryDelay = 300;  // ms
         // MQTT server access
         static IPAddress SERVER_HOST;
         static const uint16_t SERVER_PORT = 1883;
@@ -45,10 +47,10 @@ class IUMQTTHelper
         IUMQTTHelper();
         virtual ~IUMQTTHelper() { }
         void setDeviceMacAddress(const char *deviceMacAddress);
-        void reconnect(const char *statusTopic, const char *willMsg,
-                       void (*onConnectionCallback)(), uint32_t timeout);
-        void loop(const char *statusTopic, const char *willMsg,
-                  void (*onConnectionCallback)(), uint32_t timeout);
+        void setOnConnectionCallback(void (*callback)())
+            { m_onConnectionCallback = callback; }
+        void reconnect();
+        void loop();
         bool publish(const char* topic, const char* payload);
         bool subscribe(const char* topic);
         /***** Infinite Uptime standard publications *****/
@@ -57,8 +59,8 @@ class IUMQTTHelper
                                const uint16_t extensionLength=0);
         bool publishFeature(const char *rawMsg, const uint16_t msgLength,
                             const char *topicExtension=NULL,
-                            const uint16_t extensionLength=0)
-        void onConnection();
+                            const uint16_t extensionLength=0);
+        void onConnection(time_t datetime);
         /***** Faster disconnection detection *****/
         void extendLifetime(uint16_t durationSec);
         bool keepAlive();
@@ -70,6 +72,7 @@ class IUMQTTHelper
         char m_deviceMacAddress[18];
         char m_willMessage[willMessageMaxLength];
         uint32_t m_enfOfLife;
+        void (*m_onConnectionCallback)() = NULL;
         /***** Utility functions *****/
         void getFullSubscriptionName(char *destination,
                                      const char *commandName);

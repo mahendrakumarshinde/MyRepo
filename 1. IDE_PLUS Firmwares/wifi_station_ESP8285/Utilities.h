@@ -2,10 +2,21 @@
 #define UTILITIES_H
 
 #include <Arduino.h>
+#include <time.h>
 
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include "Logger.h"
+
+
+/* =============================================================================
+    Device designation
+============================================================================= */
+
+// TODO Find a better place for this
+const uint8_t DEVICE_TYPE_LENGTH = 9;
+const char DEVICE_TYPE[DEVICE_TYPE_LENGTH] = "ide_plus";
+
 
 /* =============================================================================
     PubSub topic names
@@ -29,10 +40,6 @@
     const char DIAGNOSTIC_TOPIC[DIAGNOSTIC_TOPIC_LENGTH] = "iu_error";
 //    const char RAW_DATA_TOPIC[RAW_DATA_TOPIC_LENGTH] = "iu_raw_data";
 #endif  // TEST_TOPICS
-
-// TODO Find a better place for this
-const uint8_t DEVICE_TYPE_LENGTH = 9;
-const char DEVICE_TYPE[DEVICE_TYPE_LENGTH] = "ide_plus";
 
 // TODO Move this in IUMQTTHelper
 const uint8_t CUSTOMER_PLACEHOLDER_LENGTH = 9;
@@ -59,7 +66,7 @@ class MultiMessageValidator
                 m_messageReceived[i] = false;
             }
         }
-        virtual ~MultiMessageValidator();
+        virtual ~MultiMessageValidator() { }
         /***** *****/
         void setTimeout(uint32_t timeout) { m_timeout = timeout; }
         void reset();
@@ -76,7 +83,7 @@ class MultiMessageValidator
 };
 
 template<uint8_t N>
-MultiMessageValidator<N>::reset()
+void MultiMessageValidator<N>::reset()
 {
     for (uint8_t i = 0; i < N; ++i)
     {
@@ -85,7 +92,7 @@ MultiMessageValidator<N>::reset()
 }
 
 template<uint8_t N>
-MultiMessageValidator<N>::started()
+bool MultiMessageValidator<N>::started()
 {
     for (uint8_t i = 0; i < N; ++i)
     {
@@ -98,7 +105,7 @@ MultiMessageValidator<N>::started()
 }
 
 template<uint8_t N>
-MultiMessageValidator<N>::completed()
+bool MultiMessageValidator<N>::completed()
 {
     for (uint8_t i = 0; i < N; ++i)
     {
@@ -111,7 +118,7 @@ MultiMessageValidator<N>::completed()
 }
 
 template<uint8_t N>
-MultiMessageValidator<N>::receivedMessage(uint8_t index)
+void MultiMessageValidator<N>::receivedMessage(uint8_t index)
 {
     if (index >= N)
     {
@@ -132,7 +139,7 @@ MultiMessageValidator<N>::receivedMessage(uint8_t index)
 }
 
 template<uint8_t N>
-MultiMessageValidator<N>::hasTimedOut()
+bool MultiMessageValidator<N>::hasTimedOut()
 {
     uint32_t current = millis();
     return (m_timeout > 0 && current - m_startTime > m_timeout);

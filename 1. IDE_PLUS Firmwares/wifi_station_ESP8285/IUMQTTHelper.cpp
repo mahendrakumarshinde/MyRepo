@@ -62,36 +62,37 @@ void IUMQTTHelper::setDeviceMacAddress(const char *deviceMacAddress)
  * @param timeout  The duration after which the MQTT reconnection attempt is
  *  abandonned if not successful.
  */
-void IUMQTTHelper::reconnect(const char *willTopic, const char *willMsg,
-                             void (*onConnectionCallback)(), uint32_t timeout)
+void IUMQTTHelper::reconnect()
 {
-    uint32_t maxTime = millis() + timeout;
-    while (!client.connected() && millis() < maxTime)
+    uint32_t startTime = millis();
+    uint32_t currentTime = startTime;
+    while (!client.connected() && currentTime - startTime < connectionTimeout)
     {
         if (debugMode)
         {
-            debugPrint("Attempting MQTT connection...");
+            debugPrint("Attempting MQTT connection... ", false);
         }
         // Attempt to connect
         if (client.connect(m_deviceMacAddress, USER_NAME, PASSWORD,
-                           willTopic, WILL_QOS, WILL_RETAIN, willMsg))
+                           DIAGNOSTIC_TOPIC, WILL_QOS, WILL_RETAIN,
+                           m_willMessage))
         {
+            if (m_onConnectionCallback)
+            {
+                m_onConnectionCallback();
+            }
             if (debugMode)
             {
-                debugPrint("Connected as ", false);
-                debugPrint(m_deviceMacAddress);
+                debugPrint("Success");
             }
-            onConnectionCallback();
         }
         else
         {
             if (debugMode)
             {
-                debugPrint("failed, rc=", false);
-                debugPrint(client.state(), false);
-                debugPrint(", try again in 3 seconds");
+                debugPrint("Failed");
             }
-            delay(3000);
+            delay(connectionRetryDelay);
         }
     }
 }
@@ -110,12 +111,11 @@ void IUMQTTHelper::reconnect(const char *willTopic, const char *willMsg,
  * @param timeout  The duration after which the MQTT reconnection attempt is
  *  abandonned if not successful.
  */
-void IUMQTTHelper::loop(const char *willTopic, const char *willMsg,
-                        void (*onConnectionCallback)(), uint32_t timeout)
+void IUMQTTHelper::loop()
 {
     if (!client.connected())
     {
-        reconnect(willTopic, willMsg, onConnectionCallback, timeout);
+        reconnect();
     }
     client.loop();
 }
@@ -164,7 +164,7 @@ bool IUMQTTHelper::subscribe(const char* topic)
  */
 bool IUMQTTHelper::publishDiagnostic(
     const char *rawMsg, const uint16_t msgLength, time_t datetime,
-    const char *topicExtension=NULL, const uint16_t extensionLength=0)
+    const char *topicExtension, const uint16_t extensionLength)
 {
     char message[msgLength + CUSTOMER_PLACEHOLDER_LENGTH + 51];
     strcpy(message, CUSTOMER_PLACEHOLDER);
@@ -193,7 +193,7 @@ bool IUMQTTHelper::publishDiagnostic(
  */
 bool IUMQTTHelper::publishFeature(
     const char *rawMsg, const uint16_t msgLength,
-    const char *topicExtension=NULL, const uint16_t extensionLength=0)
+    const char *topicExtension, const uint16_t extensionLength)
 {
     char message[msgLength + CUSTOMER_PLACEHOLDER_LENGTH + 24];
     strcpy(message, CUSTOMER_PLACEHOLDER);
@@ -222,12 +222,12 @@ bool IUMQTTHelper::publishFeature(
 * This function should be edited when new subscriptions are required for the
 * device.
 */
-void IUMQTTHelper::onConnection()
+void IUMQTTHelper::onConnection(time_t datetime)
 {
     subscribe("config");  // Config subscription
     subscribe("time_sync");  // Time synchornisation subscription
     subscribe("legacy");  // Legacy command format subscription
-    publishDiagnostic("connected", 9);
+    publishDiagnostic("connected", 9, datetime);
 }
 
 /* =============================================================================
