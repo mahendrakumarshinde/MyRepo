@@ -34,29 +34,30 @@ namespace MSPCommand
         PUBLISH_DIAGNOSTIC,  // 17: Publish diagnostic
         // Cloud command reception and transmission
         HOST_CONFIRM_RECEPTION,  // 18: Confirm command reception
+        HOST_FORWARD_CMD,  // 19: Forward a command string received by the host
 
 
         /***** WiFi to Host commands *****/
         // MAC addresses
-        ASK_BLE_MAC,  // 19: Ask BLE MAC Address
-        RECEIVE_WIFI_MAC,  // 20: Send WiFi MAC Address
+        ASK_BLE_MAC,  // 20: Ask BLE MAC Address
+        RECEIVE_WIFI_MAC,  // 21: Send WiFi MAC Address
         // Wifi Config
-        WIFI_CONFIRM_NEW_CREDENTIALS,  // 21: Config msg reception confirmation
-        WIFI_CONFIRM_NEW_STATIC_CONFIG,  // 22: Config msg reception confirmation
+        WIFI_CONFIRM_NEW_CREDENTIALS,  // 22: Config msg reception confirmation
+        WIFI_CONFIRM_NEW_STATIC_CONFIG,  // 23: Config msg reception confirmation
         // Wifi commands
-        WIFI_REQUEST_ACTION,  // 23: Ask if WiFi should wake up
-        WIFI_CONFIRM_ACTION,  // 24: Confirm reception of command
+        WIFI_REQUEST_ACTION,  // 24: Ask if WiFi should wake up
+        WIFI_CONFIRM_ACTION,  // 25: Confirm reception of command
         // Wifi status alerting
-        WIFI_ALERT_NO_SAVED_CREDENTIALS,  // 25: Alert WiFi has no saved credential
-        WIFI_ALERT_CONNECTED,  // 26: Alert WiFi is connected
-        WIFI_ALERT_DISCONNECTED,  // 27: Alert WiFi is disconnected
-        WIFI_ALERT_SLEEPING,  // 28: Notify WiFi is sleeping
+        WIFI_ALERT_NO_SAVED_CREDENTIALS,  // 26: Alert WiFi has no saved credential
+        WIFI_ALERT_CONNECTED,  // 27: Alert WiFi is connected
+        WIFI_ALERT_DISCONNECTED,  // 28: Alert WiFi is disconnected
+        WIFI_ALERT_SLEEPING,  // 29: Notify WiFi is sleeping
         // Data publication
-        WIFI_CONFIRM_PUBLICATION,  // 29: Confirm publication of data
+        WIFI_CONFIRM_PUBLICATION,  // 30: Confirm publication of data
         // Cloud command reception and transmission
-        CONFIG_FORWARD_CMD,  // 30: Forward a command string received by WiFi
-        OTA_INITIATE_UPDATE,  // 31: Initiate OTA update
-        OTA_RECEIVE_DATA,  // 32: Receive a packet of OTA data
+        CONFIG_FORWARD_CMD,  // 31: Forward a command string received by WiFi
+        OTA_INITIATE_UPDATE,  // 32: Initiate OTA update
+        OTA_RECEIVE_DATA,  // 33: Receive a packet of OTA data
     };
 }
 

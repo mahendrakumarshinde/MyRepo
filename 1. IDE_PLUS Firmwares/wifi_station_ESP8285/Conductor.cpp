@@ -34,6 +34,23 @@ Conductor::Conductor() :
     m_staticConfigValidator.setTimeout(wifiConfigReceptionTimeout);
 }
 
+/**
+ *
+ *
+ * @param duration_ms The sleep duration in microseconds. If duration_ms=0, will
+ *  sleep for default Conductor::deepSleepDuration.
+ */
+void Conductor::deepsleep(uint32_t duration_ms)
+{
+    if (debugMode)
+    {
+        debugPrint("Going to deep-sleep");
+    }
+    hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_SLEEPING);
+    delay(100); // Wait to send serial messages
+    ESP.deepSleep(duration_ms * 1000);
+}
+
 
 /* =============================================================================
     Communication with host
@@ -153,7 +170,7 @@ void Conductor::processMessageFromHost()
             break;
         case MSPCommand::WIFI_DEEP_SLEEP:
             m_shouldWakeUp = false;
-            ESP.deepSleep(deepSleepDuration);
+            deepsleep();
             break;
         case MSPCommand::WIFI_HARD_RESET:
             ESP.reset();
@@ -207,7 +224,7 @@ void Conductor::setCredentials(const char *userSSID, const char *userPSK)
     m_credentialValidator.receivedMessage(0);
     m_credentialValidator.receivedMessage(1);
 }
-    
+
 /**
  *
  */
@@ -249,10 +266,9 @@ bool Conductor::getConfigFromMainBoard()
         {
             if (debugMode)
             {
-                debugPrint("Host didn't respond: going to sleep");
-                delay(500);
+                debugPrint("Host didn't respond");
             }
-            ESP.deepSleep(deepSleepDuration);  // in micro seconds
+            deepsleep();
         }
         hostSerial.sendMSPCommand(MSPCommand::WIFI_REQUEST_ACTION);
         hostSerial.sendMSPCommand(MSPCommand::ASK_BLE_MAC);
@@ -450,10 +466,9 @@ void Conductor::checkWiFiDisconnectionTimeout()
     {
         if (debugMode)
         {
-            debugPrint("Exceeded disconnection time-out: goind to sleep");
-            delay(500);
+            debugPrint("Exceeded disconnection time-out");
         }
-        ESP.deepSleep(deepSleepDuration);  // in micro seconds
+        deepsleep();
     }
 }
 

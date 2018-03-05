@@ -190,7 +190,16 @@ bool IUSerial::readCharMsp()
                 // Compare calculated and transferred checksum
                 if (m_mspChecksumIn == c)
                 {
-                    // We got a valid packet
+                    if (debugMode)
+                    {
+                        debugPrint(F("Received MSP Command #"), false);
+                        debugPrint(m_mspCommand);
+                        if (m_mspDataSize > 0)
+                        {
+                            debugPrint(F("Message is: "), false);
+                            debugPrint(m_buffer);
+                        }
+                    }
                     messageIsComplete = true;
                 }
                 m_mspState = MSP_IDLE;
@@ -205,6 +214,11 @@ bool IUSerial::readCharMsp()
  */
 bool IUSerial::sendMSPCommand(MSPCommand::command cmd)
 {
+    if (debugMode)
+    {
+        debugPrint("Sending MSP Command #", false);
+        debugPrint((uint8_t) cmd);
+    }
     sendMspCommandHeader(0, cmd);
     sendMspCommandTail();
 }
@@ -212,22 +226,38 @@ bool IUSerial::sendMSPCommand(MSPCommand::command cmd)
 /**
  *
  */
-bool IUSerial::sendMSPCommand(MSPCommand::command cmd, char* cmdMsg)
+bool IUSerial::sendMSPCommand(MSPCommand::command cmd, const char* cmdMsg,
+                              uint8_t cmdSize)
+{
+    if (debugMode)
+    {
+        debugPrint("Sending MSP Command #", false);
+        debugPrint((uint8_t) cmd);
+        debugPrint("MSP message is: ", false);
+        debugPrint(cmdMsg);
+    }
+    sendMspCommandHeader(cmdSize, cmd);
+    for (uint8_t i = 0; i < cmdSize; ++i)
+    {
+        mspChecksumAndSend(cmdMsg[i]);
+    }
+    sendMspCommandTail();
+}
+
+/**
+ *
+ */
+bool IUSerial::sendMSPCommand(MSPCommand::command cmd, const char* cmdMsg)
 {
     if (cmdMsg != NULL)
     {
         uint8_t cmdSize = (uint8_t) strlen(cmdMsg);
-        sendMspCommandHeader(cmdSize, cmd);
-        for (uint8_t i = 0; i < cmdSize; ++i)
-        {
-            mspChecksumAndSend(cmdMsg[i]);
-        }
+        sendMSPCommand(cmd, cmdMsg, cmdSize);
     }
     else
     {
-        sendMspCommandHeader(0, cmd);
+        sendMSPCommand(cmd);
     }
-    sendMspCommandTail();
 }
 
 /**

@@ -1,5 +1,20 @@
 #include "IUUSB.h"
 
+
+/* =============================================================================
+    Core
+============================================================================= */
+
+IUUSB::IUUSB(HardwareSerial *serialPort, char *charBuffer,
+             uint16_t bufferSize, IUSerial::PROTOCOL_OPTIONS protocol,
+             uint32_t rate, char stopChar, uint16_t dataReceptionTimeout) :
+    IUSerial(serialPort, charBuffer, bufferSize, protocol, rate,
+             stopChar, dataReceptionTimeout)
+{
+
+}
+
+
 /* =============================================================================
     Custom protocol
 ============================================================================= */

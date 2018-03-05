@@ -92,12 +92,15 @@ class Conductor
                                   AUTO     = 1,
                                   PERIODIC = 2,
                                   COUNT    = 3};
+        static const uint32_t defaultAutoSleepDelay = 60000;
+        static const uint32_t defaultSleepDuration = 10000;
+        static const uint32_t defaultCycleTime = 3600000;
         static char START_CONFIRM[11];
         static char END_CONFIRM[9];
         // Default start datetime
         static constexpr double defaultTimestamp = 1492144654.00;
         /***** Constructors and destructor *****/
-        Conductor(const char* macAddress);
+        Conductor(const char* macAddress) { strcpy(m_macAddress, macAddress); }
         virtual ~Conductor() {}
         char* getMacAddress() { return m_macAddress; }
         /***** Hardware & power management *****/
@@ -122,6 +125,7 @@ class Conductor
         void configureAllFeatures(JsonVariant &config);
         void processLegacyUSBCommands(char *buff);
         void processLegacyBLECommands(char *buff);
+        void processUserMessageForWiFi(char *buff);
         void processWIFICommands(char *buff);
         /***** Features and groups Management *****/
         void activateFeature(Feature* feature);
@@ -156,36 +160,38 @@ class Conductor
     protected:
         char m_macAddress[18];
         /***** Hardware & power management *****/
-        sleepMode m_sleepMode;
+        sleepMode m_sleepMode = sleepMode::NONE;
         // Timestamp at which idle phase (or cycle) started for AUTO (or
         // PERIODIC) sleep mode
-        uint32_t m_startTime;
+        uint32_t m_startTime = 0;
         // Duration in which the device must be "IDLE" before entering
         // auto_sleep => Used with "AUTO" sleep mode only
-        uint32_t m_autoSleepDelay;
+        uint32_t m_autoSleepDelay = defaultAutoSleepDelay;
         // Duration of sleep phase => Used both with "PERIODIC" and
         // "AUTO" sleep modes
-        uint32_t m_sleepDuration;
+        uint32_t m_sleepDuration = defaultSleepDuration;
         // Duration of total cycle (sleep + active) => Used with "PERIODIC"
         // sleep mode only
-        uint32_t m_cycleTime;
+        uint32_t m_cycleTime = defaultCycleTime;
         /***** Led colors *****/
         RGBColor m_colorSequence[2];  // Main color, secondary color
         uint32_t m_colorFadeIns[2];   // Main color, secondary color
         uint32_t m_colorDurations[2];   // Main color, secondary color
         /***** Time management *****/
-        uint32_t m_lastSynchroTime;
-        double m_refDatetime;  // last datetime received from bluetooth or wifi
+        uint32_t m_lastSynchroTime = 0;
+        // last datetime received from bluetooth or wifi
+        double m_refDatetime = defaultTimestamp;
         /***** Operations *****/
-        OperationState::option m_operationState;
-        void (*m_callback)();
-        bool m_inDataAcquistion;
+        OperationState::option m_operationState = OperationState::IDLE;
+        void (*m_callback)() = NULL;
+        bool m_inDataAcquistion = false;
         /***** WiFi *****/
-        bool m_wifiConnected;
+        bool m_wifiConnected = false;
+        char m_wifiMacAddress[18];
         /***** Configuration and Mode management *****/
-        UsageMode::option m_usageMode;
-        AcquisitionMode::option m_acquisitionMode;
-        StreamingMode::option m_streamingMode;
+        UsageMode::option m_usageMode = UsageMode::COUNT;
+        AcquisitionMode::option m_acquisitionMode = AcquisitionMode::NONE;
+        StreamingMode::option m_streamingMode = StreamingMode::COUNT;
         // Static JSON buffer to parse config
         StaticJsonBuffer<1600> jsonBuffer;
         // eg: can hold the following config (remove the space and line breaks)

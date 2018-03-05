@@ -198,6 +198,9 @@
 		<Unit filename="IntegratedTest/IT_Dragonfly.h" />
 		<Unit filename="Logger.h" />
 		<Unit filename="MSPCommands.h" />
+		<Unit filename="MacAddress.cpp" />
+		<Unit filename="MacAddress.h" />
+		<Unit filename="MultiMessageValidator.h" />
 		<Unit filename="RGBLed.cpp" />
 		<Unit filename="RGBLed.h" />
 		<Unit filename="Sensor.cpp" />

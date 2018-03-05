@@ -151,7 +151,7 @@ void setup()
     #else
         if (debugMode)
         {
-            delay(2000);
+            delay(5000);
             debugPrint(F("Start - Mem: "), false);
             debugPrint(String(freeMemory(), DEC));
         }

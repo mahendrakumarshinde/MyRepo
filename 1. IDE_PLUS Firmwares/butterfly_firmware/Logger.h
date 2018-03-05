@@ -12,7 +12,7 @@
 
 #ifdef DEBUGMODE
     const bool setupDebugMode = false;
-    const bool loopDebugMode = false;
+    const bool loopDebugMode = true;
     const bool featureDebugMode = false;
     const bool highVerbosity = false;
     const bool callbackDebugMode = false;
@@ -47,11 +47,11 @@ inline void debugPrint(float msg, bool endline)
 }
 
 template <typename T>
-inline void raiseException(T msg)
+inline void raiseException(T msg, bool endline = true)
 {
     #ifdef DEBUGMODE
     debugPrint(F("Error: "), false);
-    debugPrint(msg);
+    debugPrint(msg, endline);
     #endif
 }
 

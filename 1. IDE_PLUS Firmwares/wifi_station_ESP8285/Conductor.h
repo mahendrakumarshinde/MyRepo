@@ -6,6 +6,7 @@
 #include "IUMQTTHelper.h"
 #include "IURawDataHelper.h"
 #include "IUTimeHelper.h"
+#include "MultiMessageValidator.h"
 #include "Utilities.h"
 
 
@@ -42,7 +43,7 @@ class Conductor
             static const uint32_t hostResponseTimeout = 1000;  // ms
         #endif
         // Default duration of deep-sleep
-        static const uint32_t deepSleepDuration = 1000000;  // microseconds !!
+        static const uint32_t deepSleepDuration = 1000;  // ms
         /** Connection retry constants **/
         static const uint8_t connectionRetry = 3;
         // Single connection attempt timeout
@@ -55,6 +56,7 @@ class Conductor
         Conductor();
         virtual ~Conductor() {}
         char* getBleMacAddress() { return m_bleMacAddress; }
+        void deepsleep(uint32_t duration_ms=deepSleepDuration);
         /***** Communication with host *****/
         void readMessagesFromHost();
         void processMessageFromHost();

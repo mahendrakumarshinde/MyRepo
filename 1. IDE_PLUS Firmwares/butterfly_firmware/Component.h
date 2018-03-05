@@ -13,14 +13,14 @@
  */
 namespace PowerMode
 {
-    enum option : uint8_t {PERFORMANCE,
-                           ENHANCED,
-                           REGULAR,
-                           LOW_1,
-                           LOW_2,
-                           SLEEP,
+    enum option : uint8_t {SUSPEND,
                            DEEP_SLEEP,
-                           SUSPEND,
+                           SLEEP,
+                           LOW_2,
+                           LOW_1,
+                           REGULAR,
+                           ENHANCED,
+                           PERFORMANCE,
                            COUNT};
 }
 

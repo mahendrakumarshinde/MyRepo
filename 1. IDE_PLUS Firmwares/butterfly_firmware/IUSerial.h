@@ -48,7 +48,9 @@ class IUSerial
         /***** MSP commands *****/
         virtual MSPCommand::command getMspCommand() { return m_mspCommand; }
         virtual bool sendMSPCommand(MSPCommand::command cmd);
-        virtual bool sendMSPCommand(MSPCommand::command cmd, char* cmdMsg);
+        virtual bool sendMSPCommand(MSPCommand::command cmd, const char* cmdMsg,
+                                    uint8_t cmdSize);
+        virtual bool sendMSPCommand(MSPCommand::command cmd, const char* cmdMsg);
 
     protected:
         /***** Communication *****/

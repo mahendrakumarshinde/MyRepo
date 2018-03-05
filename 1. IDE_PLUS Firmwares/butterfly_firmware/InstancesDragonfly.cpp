@@ -18,11 +18,11 @@ IUBMD350 iuBluetooth(&Serial3, iuBluetoothBuffer, 500,
 
 char iuWiFiBuffer[500] = "";
 #ifdef USE_EXTERNAL_WIFI
-    IUSerial iuWiFi(&Serial1, iuWiFiBuffer, 500, IUSerial::LEGACY_PROTOCOL,
+    IUSerial iuWiFi(&Serial1, iuWiFiBuffer, 500, IUSerial::MS_PROTOCOL,
                     115200, ';', 250);
 #else
     // IUESP8285 has an Enable Pin on Dragonfly => use it to power off the WiFi?
-    IUESP8285 iuWiFi(&Serial1, iuWiFiBuffer, 500, IUSerial::LEGACY_PROTOCOL,
+    IUESP8285 iuWiFi(&Serial1, iuWiFiBuffer, 500, IUSerial::MS_PROTOCOL,
                      115200, ';', 250);
 #endif
 

@@ -37,7 +37,7 @@ const char FIRMWARE_VERSION[6] = "1.0.0";
     Comment / Uncomment the "define" lines to toggle / untoggle unit tests.
 ============================================================================= */
 
-#define UNITTEST  // Logical libraries unit test
+//#define UNITTEST  // Logical libraries unit test
 //#define COMPONENTTEST  // Components unit test
 //#define INTEGRATEDTEST  // Firmware integrated test
 

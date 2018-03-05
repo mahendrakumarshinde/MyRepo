@@ -5,29 +5,6 @@ char Conductor::START_CONFIRM[11] = "IUOK_START";
 char Conductor::END_CONFIRM[9] = "IUOK_END";
 
 /* =============================================================================
-    Constructors and destructors
-============================================================================= */
-
-Conductor::Conductor(const char* macAddress) :
-    m_sleepMode(sleepMode::NONE),
-    m_startTime(0),
-    m_autoSleepDelay(60000),
-    m_sleepDuration(10000),
-    m_cycleTime(3600000),
-    m_lastSynchroTime(0),
-    m_refDatetime(Conductor::defaultTimestamp),
-    m_operationState(OperationState::IDLE),
-    m_inDataAcquistion(false),
-    m_wifiConnected(false),
-    m_usageMode(UsageMode::COUNT),
-    m_acquisitionMode(AcquisitionMode::NONE),
-    m_streamingMode(StreamingMode::COUNT)
-{
-    strcpy(m_macAddress, macAddress);
-}
-
-
-/* =============================================================================
     Hardware & power management
 ============================================================================= */
 
@@ -393,13 +370,7 @@ void Conductor::processLegacyUSBCommands(char *buff)
 {
     if (strncmp(buff, "WIFI-", 5) == 0)
     {
-        if (loopDebugMode)
-        {
-            debugPrint("Forwarding message to WiFi chip: ", false);
-            debugPrint(buff);
-        }
-        iuWiFi.port->print(buff);
-        iuWiFi.port->print(';');
+        processUserMessageForWiFi(buff);
     }
     else if (strncmp(buff, "MCUINFO", 7) == 0)
     {
@@ -513,14 +484,7 @@ void Conductor::processLegacyBLECommands(char *buff)
     }
     else if (strncmp(buff, "WIFI-", 5) == 0)
     {
-        if (loopDebugMode)
-        {
-            debugPrint("Forwarding message to WiFi chip: ", false);
-            debugPrint(buff);
-        }
-        iuWiFi.port->print(buff);
-        iuWiFi.port->print(';');
-        showStatusOnLed(RGB_PURPLE);
+        processUserMessageForWiFi(buff);
     }
     else
     {
@@ -671,6 +635,67 @@ void Conductor::processLegacyBLECommands(char *buff)
 }
 
 /**
+ *
+ */
+void Conductor::processUserMessageForWiFi(char *buff)
+{
+    if (strcmp(buff, "WIFI-DISABLE") == 0)
+    {
+        iuWiFi.setPowerMode(PowerMode::DEEP_SLEEP);
+    }
+    else
+    {
+        // We want the WiFi to do something, so need to make sure it's available
+        if (iuWiFi.isSleeping())
+        {
+            iuWiFi.setPowerMode(PowerMode::REGULAR);
+            while (iuWiFi.isSleeping())
+            {
+                iuWiFi.manageAutoSleep(); // Let the WiFi wake up
+            }
+        }
+        if (strncmp(buff, "WIFI-HARDRESET", 15) == 0)
+        {
+            iuWiFi.hardReset();
+        }
+        else if (strncmp(buff, "WIFI-USE-SAVED", 15) == 0)
+        {
+            iuWiFi.connect();
+        }
+        else if (strncmp(buff, "WIFI-SSID-", 10) == 0)
+        {
+            uint16_t len = strlen(buff);
+            if (strcmp(&buff[len - 10], "-DISS-IFIW") != 0)
+            {
+                if (debugMode)
+                {
+                    debugPrint("Unparsable SSID");
+                }
+                return;
+            }
+            iuWiFi.setSSID(&buff[10], len - 20);
+        }
+        else if (strncmp(buff, "WIFI-PW-", 8) == 0)
+        {
+            uint16_t len = strlen(buff);
+            if (strcmp(&buff[len - 8], "-WP-IFIW") != 0)
+            {
+                if (debugMode)
+                {
+                    debugPrint("Unparsable password");
+                }
+                return;
+            }
+            iuWiFi.setPassword(&buff[8], len - 16);
+        }
+        if (iuWiFi.isWorking())
+        {
+            showStatusOnLed(RGB_PURPLE);
+        }
+    }
+}
+
+/**
  * Process the instructions from the WiFi chip
  */
 void Conductor::processWIFICommands(char *buff)
@@ -679,30 +704,42 @@ void Conductor::processWIFICommands(char *buff)
     {
         if (iuWiFi.isWorking())
         {
+            Serial.println("Led 1");
             showStatusOnLed(RGB_PURPLE);
         }
         else
         {
+            Serial.println("Led 2");
             resetLed();
         }
         if (iuWiFi.isConnected())
         {
+            Serial.println("Wifi is connected");
             changeStreamingMode(StreamingMode::WIFI_AND_BLE);
         }
         else
         {
+            Serial.println("Wifi is not connected");
             changeStreamingMode(StreamingMode::BLE);
         }
     }
     switch (iuWiFi.getMspCommand())
     {
         case MSPCommand::ASK_BLE_MAC:
-            iuWiFi.setBleMacAddress(m_macAddress);
+            Serial.println("ASK_BLE_MAC");
+            iuWiFi.sendBleMacAddress(m_macAddress);
+            break;
+        case MSPCommand::RECEIVE_WIFI_MAC:
+            Serial.println("RECEIVE_WIFI_MAC");
+            strncpy(m_wifiMacAddress, iuWiFi.getBuffer(), 18);
+            m_wifiMacAddress[17] = '\0';
             break;
         case MSPCommand::WIFI_ALERT_NO_SAVED_CREDENTIALS:
+            Serial.println("WIFI_ALERT_NO_SAVED_CREDENTIALS");
             iuBluetooth.port->print("WIFI-NOSAVEDCRED;");
             break;
         case MSPCommand::CONFIG_FORWARD_CMD:
+            Serial.println("CONFIG_FORWARD_CMD");
             switch(buff[0])
             {
                 case '0': // DEPRECATED Set Thresholds
