@@ -27,7 +27,8 @@
 
 String MAC_ADDRESS = "88:4A:EA:69:DF:FD";
 
-const float minAccelEnergyForVelocity = 102;
+const float minAccelEnergyForVelocity = 93;
+const float minAccelEnergyForVelocityNoMean = 0.1;
 
 
 const bool featureDebugMode = false;
@@ -547,7 +548,8 @@ void compute_features() {
 
   float accelEnergyFeature = feature_energy();
 
-  if (accelEnergyFeature >= minAccelEnergyForVelocity) {
+  if ((accelEnergyFeature >= minAccelEnergyForVelocity) ||
+       (currMode == CALIBRATION && accelEnergyFeature >= minAccelEnergyForVelocityNoMean)) {
       getVelocityAndDisplacement(accel_x_batch[buffer_compute_index], TARGET_ACCEL_SAMPLE,
                                  ACCEL_NFFT, 5, 600, featureMainFreqX, featureVelX,
                                  featureDispX);
