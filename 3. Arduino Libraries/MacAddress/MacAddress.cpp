@@ -26,7 +26,12 @@ MacAddress::MacAddress(uint64_t address)
 
 MacAddress::MacAddress(const uint8_t *address)
 {
-    memcpy(_address.bytes, address, sizeof(_address.bytes));
+    _address.bytes[0] = 0;
+    _address.bytes[1] = 0;
+    for (int i = 0; i < 6; i++)
+    {
+        _address.bytes[i + 2] = address[i];
+    }
 }
 
 bool MacAddress::fromString(const char *address)
@@ -45,9 +50,9 @@ bool MacAddress::fromString(const char *address)
                 return false;
             }
         }
-        if (c >= 'A' && c <= 'F')
+        else if (c >= 'A' && c <= 'F')
         {
-            acc = acc * 16 + (c - 'A');
+            acc = acc * 16 + 10 + (c - 'A');
             if (acc > 255) {
                 // Value out of [0..255] range
                 return false;
@@ -100,10 +105,36 @@ size_t MacAddress::printTo(Print& p) const
     size_t n = 0;
     for (int i = 2; i < 7; i++)
     {
-        n += p.print(_address.bytes[i], DEC);
+        if (_address.bytes[i] < 16)
+        {
+            n += p.print('0');
+        }
+        n += p.print(_address.bytes[i], HEX);
         n += p.print(':');
     }
-    n += p.print(_address.bytes[7], DEC);
+    if (_address.bytes[7] < 16)
+    {
+        n += p.print('0');
+    }
+    n += p.print(_address.bytes[7], HEX);
     return n;
 }
 
+String MacAddress::toString()
+{
+    uint8_t idx = 0;	
+    char temp[18] = "";
+    uint8_t d1 = 0;
+    uint8_t d2 = 0;
+    for (int i = 2; i < 8; i++)
+    {
+        d1 = _address.bytes[i] / 16;
+        d2 = _address.bytes[i] % 16;
+        if (d1 < 10) { temp[idx++] = '0' + d1; }
+        else { temp[idx++] = 'A' + d1 - 10; }
+        if (d2 < 10) { temp[idx++] = '0' + d2; }
+        else { temp[idx++] = 'A' + d2 - 10; }
+        if (i < 7) { temp[idx++] = ':'; }
+    }
+    return String(temp);
+}

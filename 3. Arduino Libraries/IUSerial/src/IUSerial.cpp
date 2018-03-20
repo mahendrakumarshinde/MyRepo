@@ -16,13 +16,7 @@ IUSerial::IUSerial(HardwareSerial *serialPort, char *charBuffer,
     m_lastReadTime(0),
     m_protocol(protocol),
     // Legacy Protocol specific variables
-    m_stopChar(stopChar),
-    // MSP specific variables
-    m_mspState(MSP_IDLE),
-    m_mspCommand(MSPCommand::NONE),
-    m_mspDataSize(0),
-    m_mspChecksumIn(0),
-    m_mspChecksumOut(0)
+    m_stopChar(stopChar)
 {
     m_buffer = charBuffer;
     resetBuffer();
@@ -168,13 +162,20 @@ bool IUSerial::readCharMsp()
             }
             else
             {
-                m_mspDataSize = c;
+                m_mspDataSizeByte0 = c;
                 m_bufferIndex = 0;
                 m_mspChecksumIn = 0 ^ c;
-                m_mspState = MSP_HEADER_SIZE;
+                m_mspState = MSP_HEADER_SIZE_1;
             }
             break;
-        case MSP_HEADER_SIZE:
+        case MSP_HEADER_SIZE_1:
+            m_mspDataSizeByte1 = c;
+            m_mspDataSize = (uint16_t) m_mspDataSizeByte0 << 8 |
+                            (uint16_t) m_mspDataSizeByte1;
+            m_mspChecksumIn ^= c;
+            m_mspState = MSP_HEADER_SIZE_2;
+            break;
+        case MSP_HEADER_SIZE_2:
             m_mspCommand = (MSPCommand::command) c;
             m_mspChecksumIn ^= c;
             m_mspState = MSP_HEADER_CMD;
@@ -212,7 +213,7 @@ bool IUSerial::readCharMsp()
 /**
  *
  */
-bool IUSerial::sendMSPCommand(MSPCommand::command cmd)
+void IUSerial::sendMSPCommand(MSPCommand::command cmd)
 {
     if (debugMode)
     {
@@ -226,8 +227,8 @@ bool IUSerial::sendMSPCommand(MSPCommand::command cmd)
 /**
  *
  */
-bool IUSerial::sendMSPCommand(MSPCommand::command cmd, const char* cmdMsg,
-                              uint8_t cmdSize)
+void IUSerial::sendMSPCommand(MSPCommand::command cmd, const char* cmdMsg,
+                              uint16_t cmdSize)
 {
     if (debugMode)
     {
@@ -247,11 +248,11 @@ bool IUSerial::sendMSPCommand(MSPCommand::command cmd, const char* cmdMsg,
 /**
  *
  */
-bool IUSerial::sendMSPCommand(MSPCommand::command cmd, const char* cmdMsg)
+void IUSerial::sendMSPCommand(MSPCommand::command cmd, const char* cmdMsg)
 {
     if (cmdMsg != NULL)
     {
-        uint8_t cmdSize = (uint8_t) strlen(cmdMsg);
+        uint16_t cmdSize = (uint16_t) strlen(cmdMsg);
         sendMSPCommand(cmd, cmdMsg, cmdSize);
     }
     else
@@ -263,14 +264,55 @@ bool IUSerial::sendMSPCommand(MSPCommand::command cmd, const char* cmdMsg)
 /**
  *
  */
-size_t IUSerial::sendMspCommandHeader(uint8_t cmdSize, MSPCommand::command cmd)
+void IUSerial::startLongMSPCommand(MSPCommand::command cmd, uint16_t cmdSize)
+{
+    m_expectedLongMspCmdSize = cmdSize;
+    sendMspCommandHeader(cmdSize, cmd);
+}
+
+/**
+ *
+ */
+void IUSerial::streamLongMSPMessage(char c)
+{
+    m_actualLongMspCmdSize += mspChecksumAndSend(c);;
+}
+
+/**
+ *
+ */
+void IUSerial::streamLongMSPMessage(const char* msg, size_t length)
+{
+    for (size_t i = 0; i < length; i++)
+    {
+        streamLongMSPMessage(msg[i]);
+    }
+}
+
+/**
+ *
+ */
+bool IUSerial::endLongMSPCommand()
+{
+    sendMspCommandTail();
+    bool success = (m_expectedLongMspCmdSize == m_actualLongMspCmdSize);
+    m_expectedLongMspCmdSize = 0;
+    m_actualLongMspCmdSize = 0;
+    return success;
+}
+
+/**
+ *
+ */
+size_t IUSerial::sendMspCommandHeader(uint16_t cmdSize, MSPCommand::command cmd)
 {
     m_mspChecksumOut = 0;
     size_t n = 0;
     n += port->write('$');
     n += port->write('M');
     n += port->write('<');
-    n += mspChecksumAndSend(cmdSize);
+    n += mspChecksumAndSend((uint8_t) (cmdSize >> 8));
+    n += mspChecksumAndSend((uint8_t) cmdSize);
     n += mspChecksumAndSend((uint8_t) cmd);
     return n;
 }
@@ -290,6 +332,54 @@ size_t IUSerial::mspChecksumAndSend(uint8_t b)
 {
     m_mspChecksumOut ^= b;
     return port->write(b);
+}
+
+
+/*==============================================================================
+    Convenience MSP functions
+============================================================================= */
+
+/**
+ *
+ */
+void IUSerial::mspSendMacAddress(MSPCommand::command cmd, MacAddress mac)
+{
+    sendMspCommandHeader(6, cmd);
+    for (uint8_t i = 0; i < 6; ++i)
+    {
+        mspChecksumAndSend(mac[i]);
+    }
+    sendMspCommandTail();
+}
+
+/**
+ *
+ */
+void IUSerial::mspSendIPAddress(MSPCommand::command cmd, IPAddress ip)
+{
+    sendMspCommandHeader(4, cmd);
+    for (uint8_t i = 0; i < 4; ++i)
+    {
+        mspChecksumAndSend(ip[i]);
+    }
+    sendMspCommandTail();
+}
+
+/**
+ *
+ */
+MacAddress IUSerial::mspReadMacAddress()
+{
+    return MacAddress(m_buffer[0], m_buffer[1], m_buffer[2],
+                      m_buffer[3], m_buffer[4], m_buffer[5]);
+}
+
+/**
+ *
+ */
+IPAddress IUSerial::mspReadIPAddress()
+{
+    return IPAddress(m_buffer[0], m_buffer[1], m_buffer[2], m_buffer[3]);
 }
 
 

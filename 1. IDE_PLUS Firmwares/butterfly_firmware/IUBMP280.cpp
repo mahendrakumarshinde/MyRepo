@@ -15,7 +15,7 @@ void temperatureReadCallback(uint8_t wireStatus)
     {
         newTemperatureData = true;
     }
-    else if (callbackDebugMode)
+    else if (asyncDebugMode)
     {
         debugPrint(micros(), false);
         debugPrint(F(" Temperature read error "), false);
@@ -30,7 +30,7 @@ void pressureReadCallback(uint8_t wireStatus)
     {
         newPressureData = true;
     }
-    else if (callbackDebugMode)
+    else if (asyncDebugMode)
     {
         debugPrint(micros(), false);
         debugPrint(F(" Pressure read error "), false);
@@ -253,7 +253,7 @@ void IUBMP280::readTemperature()
   if (!m_iuI2C->readBytes(ADDRESS, TEMP_MSB, 3, &m_rawTempBytes[0],
                           temperatureReadCallback))
   {
-    if (callbackDebugMode)
+    if (asyncDebugMode)
     {
         debugPrint("Skip temperature read");
     }
@@ -308,7 +308,7 @@ void IUBMP280::readPressure() // Index 4
     if (!m_iuI2C->readBytes(ADDRESS, PRESS_MSB, 3, &m_rawPressureBytes[0],
                             pressureReadCallback))
     {
-        if (callbackDebugMode)
+        if (asyncDebugMode)
         {
             debugPrint("Skip pressure read");
         }
@@ -414,7 +414,7 @@ void IUBMP280::sendData(HardwareSerial *port)
  */
 void IUBMP280::exposeCalibration()
 {
-    #ifdef DEBUGMODE
+    #ifdef IUDEBUG_ANY
     debugPrint(F("Calibration data: "));
     debugPrint(F("3 digital Temp vars: "));
     for (uint8_t i = 0; i < 3; ++i)

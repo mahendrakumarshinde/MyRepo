@@ -92,7 +92,6 @@ void FeatureComputer::addSource(Feature *source, uint8_t sectionCount)
 bool FeatureComputer::compute()
 {
     uint32_t startT = 0;
-    if (loopDebugMode && highVerbosity) { startT = millis(); }
     // Check if sources are ready
     for (uint8_t i = 0; i < m_sourceCount; ++i)
     {
@@ -119,13 +118,6 @@ bool FeatureComputer::compute()
     {
         m_sources[i]->acknowledge(m_indexesAsReceiver[i], m_sectionCount[i]);
     }
-    if (m_active && loopDebugMode && highVerbosity)
-    {
-        debugPrint(m_id, false);
-        debugPrint(F(" computed in "), false);
-        debugPrint(millis() - startT, false);
-        debugPrint(F("ms"));
-    }
     return true;
 }
 
@@ -145,7 +137,7 @@ void FeatureComputer::acknowledgeSectionToSources()
  */
 void FeatureComputer::exposeConfig()
 {
-    #ifdef DEBUGMODE
+    #ifdef IUDEBUG_ANY
     debugPrint(F("Computer #"), false);
     debugPrint(m_id);
     debugPrint(F("  active: "), false);

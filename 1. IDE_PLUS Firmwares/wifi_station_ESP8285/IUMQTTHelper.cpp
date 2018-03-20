@@ -14,6 +14,7 @@ IPAddress IUMQTTHelper::SERVER_HOST(35, 200, 183, 103);
 char IUMQTTHelper::USER_NAME[9] = "ide_plus";
 char IUMQTTHelper::PASSWORD[13] = "nW$Pg81o@EJD";
 
+
 /* =============================================================================
     Core
 ============================================================================= */

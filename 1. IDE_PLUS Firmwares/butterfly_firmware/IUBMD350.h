@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-#include "IUSerial.h"
+#include <IUSerial.h>
 #include "Component.h"
 
 

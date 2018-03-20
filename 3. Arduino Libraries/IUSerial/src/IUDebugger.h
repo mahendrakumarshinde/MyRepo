@@ -1,36 +1,51 @@
-#ifndef LOGGER_H
-#define LOGGER_H
+#ifndef IUDEBUGGER_H
+#define IUDEBUGGER_H
 
 #include <Arduino.h>
+
+/* =============================================================================
+    Flag reading
+============================================================================= */
+
+#ifdef IUDEBUG_SETUP
+    const bool setupDebugMode = (bool) IUDEBUG_SETUP;
+#else
+    const bool setupDebugMode = false;
+#endif
+
+#ifdef IUDEBUG_MAIN
+    const bool loopDebugMode = (bool) IUDEBUG_MAIN;
+#else
+    const bool loopDebugMode = false;
+#endif
+
+#ifdef IUDEBUG_ASYNC
+    const bool asyncDebugMode = (bool) IUDEBUG_ASYNC;
+#else
+    const bool asyncDebugMode = false;
+#endif
+
+#ifdef IUDEBUG_FEATURE
+    const bool featureDebugMode = (bool) IUDEBUG_FEATURE;
+#else
+    const bool featureDebugMode = false;
+#endif
+
+#ifdef IUDEBUG_ANY
+    const bool debugMode = (bool) IUDEBUG_ANY;
+#else
+    const bool debugMode = false;
+#endif
+
 
 /* =============================================================================
     Debugging
 ============================================================================= */
 
-// Define DEBUGMODE to enable debug level messages from the whole firmware
-#define DEBUGMODE
-
-#ifdef DEBUGMODE
-    const bool setupDebugMode = false;
-    const bool loopDebugMode = true;
-    const bool featureDebugMode = false;
-    const bool highVerbosity = false;
-    const bool callbackDebugMode = false;
-#else
-    const bool setupDebugMode = false;
-    const bool loopDebugMode = false;
-    const bool featureDebugMode = false;
-    const bool highVerbosity = false;
-    const bool callbackDebugMode = false;
-#endif
-
-const bool debugMode = (setupDebugMode || loopDebugMode ||
-    featureDebugMode || callbackDebugMode);
-
 template <typename T>
 inline void debugPrint(T msg, bool endline = true)
 {
-    #ifdef DEBUGMODE
+    #ifdef IUDEBUG_ANY
     if (endline) { Serial.println(msg); }
     else { Serial.print(msg); }
     #endif
@@ -40,7 +55,7 @@ inline void debugPrint(T msg, bool endline = true)
 template <>
 inline void debugPrint(float msg, bool endline)
 {
-    #ifdef DEBUGMODE
+    #ifdef IUDEBUG_ANY
     if (endline) { Serial.println(msg, 6); }
     else { Serial.print(msg, 6); }
     #endif
@@ -49,10 +64,10 @@ inline void debugPrint(float msg, bool endline)
 template <typename T>
 inline void raiseException(T msg, bool endline = true)
 {
-    #ifdef DEBUGMODE
+    #ifdef IUDEBUG_ANY
     debugPrint(F("Error: "), false);
     debugPrint(msg, endline);
     #endif
 }
 
-#endif // LOGGER_H
+#endif // IUDEBUGGER_H

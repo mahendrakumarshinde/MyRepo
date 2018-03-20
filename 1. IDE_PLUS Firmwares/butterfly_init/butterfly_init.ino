@@ -31,8 +31,6 @@ void setup()
     changeLedColor(1, 0, 0);
     delay(7000);
     changeLedColor(0, 1, 0);
-    delay(7000);
-    changeLedColor(0, 0, 1);
 }
 
 void loop()

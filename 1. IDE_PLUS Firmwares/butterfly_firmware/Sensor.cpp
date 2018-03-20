@@ -76,11 +76,11 @@ void Sensor::setResolution(float resolution)
 /***** Debugging *****/
 
 /**
- * Shows the sensor and its destination in DEBUGMODE
+ * Shows the sensor and its destination in IUDEBUG_ANY
  */
 void Sensor::expose()
 {
-    #ifdef DEBUGMODE
+    #ifdef IUDEBUG_ANY
     debugPrint(F("Sensor "), false);
     debugPrint(getName(), false);
     debugPrint(F(" has "), false);

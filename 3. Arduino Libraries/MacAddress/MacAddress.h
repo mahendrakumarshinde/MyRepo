@@ -2,8 +2,8 @@
 #define MacAddress_h
 
 #include <stdint.h>
-#include "Printable.h"
-#include "WString.h"
+#include <Printable.h>
+#include <WString.h>
 
 /**
  * A class to make it easier to handle and pass around MAC addresses
@@ -51,7 +51,7 @@ public:
     MacAddress& operator=(uint64_t address);
 
     virtual size_t printTo(Print& p) const;
-
+    String toString();
 };
 
 #endif // MacAddress_h

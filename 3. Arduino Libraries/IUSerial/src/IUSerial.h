@@ -2,9 +2,11 @@
 #define IUSERIAL_H
 
 #include <Arduino.h>
+#include <IPAddress.h>
+#include <MacAddress.h>
 
 #include "MSPCommands.h"
-#include "Logger.h"
+#include "IUDebugger.h"
 
 
 /**
@@ -29,7 +31,8 @@ class IUSerial
                                   MSP_HEADER_START,
                                   MSP_HEADER_M,
                                   MSP_HEADER_ARROW,
-                                  MSP_HEADER_SIZE,
+                                  MSP_HEADER_SIZE_1,
+                                  MSP_HEADER_SIZE_2,
                                   MSP_HEADER_CMD};
         /***** Core *****/
         IUSerial(HardwareSerial *serialPort, char *charBuffer,
@@ -47,10 +50,27 @@ class IUSerial
         virtual bool processMessage() { return false; }
         /***** MSP commands *****/
         virtual MSPCommand::command getMspCommand() { return m_mspCommand; }
-        virtual bool sendMSPCommand(MSPCommand::command cmd);
-        virtual bool sendMSPCommand(MSPCommand::command cmd, const char* cmdMsg,
-                                    uint8_t cmdSize);
-        virtual bool sendMSPCommand(MSPCommand::command cmd, const char* cmdMsg);
+        virtual void sendMSPCommand(MSPCommand::command cmd);
+        virtual void sendMSPCommand(MSPCommand::command cmd, const char* cmdMsg,
+                                    uint16_t cmdSize);
+        virtual void sendMSPCommand(MSPCommand::command cmd,
+                                    const char* cmdMsg);
+        // Send MSP command by chunks: note that you must already know the
+        // message length when starting the command.
+        virtual void startLongMSPCommand(MSPCommand::command cmd,
+                                         uint16_t cmdSize);
+        virtual void streamLongMSPMessage(char c);
+        virtual void streamLongMSPMessage(const char* msg, size_t length);
+        virtual void streamLongMSPMessage(const char* msg)
+            { streamLongMSPMessage(msg, strlen(msg)); }
+        virtual void streamLongMSPMessage(String msg)
+            { streamLongMSPMessage(msg.c_str()); }
+        virtual bool endLongMSPCommand();
+        /***** Convenience MSP functions *****/
+        virtual void mspSendMacAddress(MSPCommand::command cmd, MacAddress mac);
+        virtual void mspSendIPAddress(MSPCommand::command cmd, IPAddress ip);
+        virtual MacAddress mspReadMacAddress();
+        virtual IPAddress mspReadIPAddress();
 
     protected:
         /***** Communication *****/
@@ -69,15 +89,22 @@ class IUSerial
         char m_stopChar;
         /***** MSP (Multiwii Serial Protocol) *****/
         virtual bool readCharMsp();
-        virtual size_t sendMspCommandHeader(uint8_t cmdSize,
+        virtual size_t sendMspCommandHeader(uint16_t cmdSize,
                                             MSPCommand::command cmd);
         virtual size_t sendMspCommandTail();
         virtual size_t mspChecksumAndSend(uint8_t b);
-        MSP_STATE m_mspState;
-        MSPCommand::command m_mspCommand;
-        uint8_t m_mspDataSize;
-        uint8_t m_mspChecksumIn;
-        uint8_t m_mspChecksumOut;
+        MSP_STATE m_mspState = MSP_IDLE;
+        MSPCommand::command m_mspCommand = MSPCommand::NONE;
+        // 2 bytes command size: manually handled as MSB (no union because bit
+        // order is implementation specific)
+        uint16_t m_mspDataSize;
+        uint8_t m_mspDataSizeByte0;
+        uint8_t m_mspDataSizeByte1;
+        uint8_t m_mspChecksumIn = 0;
+        uint8_t m_mspChecksumOut = 0;
+        // Long MSP command
+        uint16_t m_expectedLongMspCmdSize = 0;
+        uint16_t m_actualLongMspCmdSize = 0;
         /***** Custom Protocol *****/
         virtual bool readCharCustomProtocol();
 };

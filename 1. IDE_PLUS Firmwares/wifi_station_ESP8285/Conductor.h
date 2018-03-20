@@ -2,7 +2,7 @@
 #define CONDUCTOR_H
 
 #include <Arduino.h>
-#include "IUSerial.h"
+#include <IUSerial.h>
 #include "IUMQTTHelper.h"
 #include "IURawDataHelper.h"
 #include "IUTimeHelper.h"
@@ -37,13 +37,13 @@ class Conductor
         // WiFi config (credentials or Static IP) MultiMessageValidator timeout
         static const uint32_t wifiConfigReceptionTimeout = 1000;  // ms
         // WiFi will deep-sleep if host doesn't respond before timeout
-        #ifdef DEBUGMODE
+        #ifdef IUDEBUG_ANY
             static const uint32_t hostResponseTimeout = 60000;  // ms
         #else
             static const uint32_t hostResponseTimeout = 1000;  // ms
         #endif
         // Default duration of deep-sleep
-        static const uint32_t deepSleepDuration = 1000;  // ms
+        static const uint32_t deepSleepDuration = 2000;  // ms
         /** Connection retry constants **/
         static const uint8_t connectionRetry = 3;
         // Single connection attempt timeout

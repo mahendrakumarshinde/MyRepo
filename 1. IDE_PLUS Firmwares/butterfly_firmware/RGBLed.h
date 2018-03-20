@@ -1,8 +1,8 @@
 #ifndef RGBLED_H
 #define RGBLED_H
 
+#include <IUDebugger.h>
 #include "Component.h"
-#include "Logger.h"
 
 
 /* =============================================================================

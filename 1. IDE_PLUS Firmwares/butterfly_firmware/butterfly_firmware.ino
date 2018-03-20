@@ -27,7 +27,7 @@
     MAC Address
 ============================================================================= */
 
-const char MAC_ADDRESS[18] = "94:54:93:0F:66:F0";
+const char MAC_ADDRESS[18] = "94:54:93:0F:67:02";
 
 
 /* =============================================================================
@@ -35,12 +35,12 @@ const char MAC_ADDRESS[18] = "94:54:93:0F:66:F0";
 ============================================================================= */
 
 #ifdef UNITTEST
+    #include <UnitTest/Test_IUSerial.h>
     #include "UnitTest/Test_Component.h"
     #include "UnitTest/Test_FeatureClass.h"
     #include "UnitTest/Test_FeatureComputer.h"
     #include "UnitTest/Test_FeatureGroup.h"
     #include "UnitTest/Test_Sensor.h"
-    #include "UnitTest/Test_IUSerial.h"
     #include "UnitTest/Test_Utilities.h"
 #endif
 
@@ -109,17 +109,17 @@ Conductor conductor(MAC_ADDRESS);
  * interrupt frequency then depends on the Microphone (here I2S) clock rate and
  * on the size of the buffer.
  * NB: Printing is time consuming and may cause issues in callback. Always
- * deactivate the callbackDebugMode in prod.
+ * deactivate the asyncDebugMode in prod.
  */
 void callback()
 {
     uint32_t startT = 0;
-    if (callbackDebugMode)
+    if (asyncDebugMode)
     {
         startT = micros();
     }
     conductor.acquireData(true);
-    if (callbackDebugMode)
+    if (asyncDebugMode)
     {
         debugPrint(micros() - startT);
     }

@@ -6,7 +6,7 @@
 /* CMSIS-DSP library for RFFT */
 #include <arm_math.h>
 
-#include "Logger.h"
+#include <IUDebugger.h>
 
 
 /* =============================================================================
@@ -102,9 +102,6 @@ class Feature
         virtual float getValueToCompareToThresholds()
             { return m_thresholds[0] - 1;}
         /***** Computers tracking *****/
-        virtual void setSensorName(const char* name)
-            { strcpy(m_sensorName, name); }
-        virtual char* getSensorName() { return m_sensorName; }
         virtual bool isComputedFeature() { return m_computerId != 0; }
         virtual void setComputerId(uint8_t id) { m_computerId = id; }
         virtual uint8_t getComputerId() { return m_computerId; }
@@ -152,7 +149,6 @@ class Feature
         // Normal, warning and danger thresholds
         float m_thresholds[OperationState::COUNT - 1];
         /***** Computers tracking *****/
-        char m_sensorName[4];
         uint8_t m_computerId;
         uint8_t m_receiverCount;
         uint8_t m_receiversId[maxReceiverCount];

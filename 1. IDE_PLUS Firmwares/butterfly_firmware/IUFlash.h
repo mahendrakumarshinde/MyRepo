@@ -5,7 +5,7 @@
 #include <FS.h>
 #include <SPI.h>
 
-#include "Logger.h"
+#include <IUDebugger.h>
 
 
 class IUFlash

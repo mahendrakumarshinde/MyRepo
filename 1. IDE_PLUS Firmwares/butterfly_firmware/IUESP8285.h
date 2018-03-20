@@ -2,11 +2,10 @@
 #define IUESP8285_H
 
 #include <Arduino.h>
-#include <IPAddress.h>
 
-#include "IUSerial.h"
+#include <IUSerial.h>
+#include <MultiMessageValidator.h>
 #include "Component.h"
-#include "MultiMessageValidator.h"
 
 /**
  * Wifi chip
@@ -28,7 +27,7 @@ class IUESP8285 : public IUSerial, public Component
         // Sleep management
         static const uint32_t defaultAutoSleepDelay = 45000;  // ms
         static const uint32_t defaultAutoSleepDuration = 60000;  // ms
-        /***** Constructors & desctructors *****/
+        /***** Core *****/
         IUESP8285(HardwareSerial *serialPort, char *charBuffer,
                   uint16_t bufferSize, PROTOCOL_OPTIONS protocol, uint32_t rate,
                   char stopChar, uint16_t dataReceptionTimeout);
@@ -37,6 +36,7 @@ class IUESP8285 : public IUSerial, public Component
         bool isAvailable() { return !m_sleeping; }
         bool isSleeping() { return m_sleeping; }
         bool isWorking() { return m_working; }
+        MacAddress getMacAddress() { return m_macAddress; }
         /***** Hardware and power management *****/
         virtual void setupHardware();
         virtual void setPowerMode(PowerMode::option pMode);
@@ -49,8 +49,8 @@ class IUESP8285 : public IUSerial, public Component
         bool processMessage();
         /***** Outbound communication *****/
         void hardReset() { sendMSPCommand(MSPCommand::WIFI_HARD_RESET); }
-        void sendBleMacAddress(char *macAddress)
-            { sendMSPCommand(MSPCommand::RECEIVE_BLE_MAC, macAddress); }
+        void sendBleMacAddress(MacAddress bleMac)
+            { mspSendMacAddress(MSPCommand::RECEIVE_BLE_MAC, bleMac); }
         void sendWiFiCredentials();
         void forgetCredentials();
         void sendStaticConfig();
@@ -80,11 +80,12 @@ class IUESP8285 : public IUSerial, public Component
         /***** Connection and auto-sleep *****/
         bool m_connected = false;
         bool m_sleeping = false;
-        uint32_t m_lastConnectedTime = 0;
-        uint32_t m_sleepStartTime = 0;
+        uint32_t m_awakeTimerStart = 0;
+        uint32_t m_sleepTimerStart = 0;
         uint32_t m_autoSleepDelay = defaultAutoSleepDelay;
         uint32_t m_autoSleepDuration = defaultAutoSleepDuration;
         /***** Informative variables *****/
+        MacAddress m_macAddress;
         bool m_working = false;
 };
 

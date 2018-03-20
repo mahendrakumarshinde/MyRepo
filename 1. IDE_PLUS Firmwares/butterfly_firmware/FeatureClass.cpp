@@ -30,7 +30,6 @@ Feature::Feature(const char* name, uint8_t sectionCount, uint16_t sectionSize,
     m_sliding(sliding)
 {
     strcpy(m_name, name);
-    strcpy(m_sensorName, "---");
     for (uint8_t i = 0; i < OperationState::COUNT - 1; ++i)
     {
         m_thresholds[i] = 0;
@@ -268,14 +267,6 @@ void Feature::incrementFillingIndex()
         {
             m_acknowledged[m_recordIndex][j] = false;
         }
-        if (loopDebugMode && highVerbosity)
-        {
-            debugPrint(getName(), false);
-            debugPrint(F(" publish section="), false);
-            debugPrint(m_recordIndex, false);
-            debugPrint(F(", idx="), false);
-            debugPrint(m_fillingIndex);
-        }
         m_recordIndex = (m_recordIndex + 1) % m_sectionCount;
         // Update the operation state to reflect the latest published section
         updateOperationState();
@@ -310,12 +301,6 @@ void Feature::acknowledge(uint8_t receiverIdx, uint8_t sectionCount)
         if (unpublish)
         {
             m_published[k] = false;
-            if (loopDebugMode && highVerbosity)
-            {
-                debugPrint(getName(), false);
-                debugPrint(F(" fully acknowledge section="), false);
-                debugPrint(k);
-            }
         }
     }
     m_computeIndex[receiverIdx] = (idx + sectionCount) % m_sectionCount;
@@ -358,7 +343,7 @@ void Feature::bufferStream(char *destination, uint16_t &destIndex,
  */
 void Feature::exposeConfig()
 {
-    #ifdef DEBUGMODE
+    #ifdef IUDEBUG_ANY
     debugPrint(m_name, false);
     debugPrint(F(" config:"));
     debugPrint(F("  active: "), false);
@@ -385,7 +370,7 @@ void Feature::exposeConfig()
  */
 void Feature::exposeCounters()
 {
-    #ifdef DEBUGMODE
+    #ifdef IUDEBUG_ANY
     debugPrint(m_name, false);
     debugPrint(F(" counters:"));
     debugPrint(F("  filling idx: "), false);

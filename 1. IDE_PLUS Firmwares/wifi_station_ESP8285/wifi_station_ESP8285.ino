@@ -7,6 +7,7 @@
 #include "Conductor.h"
 #include <Ticker.h>
 
+
 Conductor conductor;
 
 /* =============================================================================
@@ -74,11 +75,13 @@ void setup()
     // Turn off radio at wake up to save power
     conductor.turnOffRadio();
     // Get config: should the ESP sleep? What's the BLE MAC address?
-    #ifdef DEBUGMODE
+    #ifdef IUDEBUG_ANY
         conductor.setCredentials(testSSID, testPSK);
     #else
         conductor.getConfigFromMainBoard();
     #endif
+    // If this point is reached, tell host that WiFi is waking up
+    hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_AWAKE);
     // Prepare to receive MQTT messages
     mqttHelper.client.setCallback(mqttNewMessageCallback);
     mqttHelper.setOnConnectionCallback(onMQTTConnection);

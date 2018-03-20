@@ -579,7 +579,7 @@ void Conductor::getWifiInfo(char *destination, bool mqttOn)
  */
 void Conductor::debugPrintWifiInfo()
 {
-    #ifdef DEBUGMODE
+    #ifdef IUDEBUG_ANY
     WiFiMode_t currMode = WiFi.getMode();
     debugPrint("WiFi mode: ", false);
     debugPrint((uint8_t) currMode);

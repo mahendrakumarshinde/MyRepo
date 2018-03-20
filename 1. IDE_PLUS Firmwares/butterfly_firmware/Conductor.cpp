@@ -135,10 +135,10 @@ void Conductor::showOperationStateOnLed()
 
 void Conductor::showStatusOnLed(RGBColor color)
 {
-    m_colorSequence[0] = color;
+    m_colorSequence[0] = RGB_BLACK;
     m_colorFadeIns[0] = 25;
     m_colorDurations[0] = 50;
-    m_colorSequence[1] = RGB_BLACK;
+    m_colorSequence[1] = color;
     m_colorFadeIns[1] = 25;
     m_colorDurations[1] = 50;
     rgbLed.startNewColorQueue(2, m_colorSequence, m_colorFadeIns,
@@ -183,13 +183,13 @@ void Conductor::readFromSerial(StreamingMode::option interfaceType,
             switch (interfaceType)
             {
                 case StreamingMode::WIRED:
-                    processLegacyUSBCommands(buffer);
+                    processUSBMessages(buffer);
                     break;
                 case StreamingMode::BLE:
-                    processLegacyBLECommands(buffer);
+                    processBLEMessages(buffer);
                     break;
                 case StreamingMode::WIFI:
-                    processWIFICommands(buffer);
+                    processWIFIMessages(buffer);
                     break;
                 default:
                     if (loopDebugMode)
@@ -364,13 +364,189 @@ void Conductor::configureAllFeatures(JsonVariant &config)
 }
 
 /**
- * Process the USB commands (legacy)
+ * Process the commands (legacy protocol commands)
  */
-void Conductor::processLegacyUSBCommands(char *buff)
+void Conductor::processLegacyCommands(char *buff)
+{
+    HardwareSerial *port = NULL;
+    if (m_streamingMode == StreamingMode::BLE)
+    {
+        port = iuBluetooth.port;
+    }
+    else if (m_streamingMode == StreamingMode::WIFI ||
+             m_streamingMode == StreamingMode::WIFI_AND_BLE)
+    {
+        port = iuWiFi.port;
+    }
+    else
+    {
+        return;
+    }
+    Feature *accelEnergy = NULL;
+    char accelEnergyName[4] = "A00";
+    char axis[4] = "XYZ";
+    // TODO Command protocol redefinition required
+    switch(buff[0])
+    {
+        case 'A': // ping device
+            if (strcmp(buff, "ALIVE") == 0)
+            {
+                // Blink the device to let the user know that is is live
+                showStatusOnLed(RGB_WHITE);
+                uint32_t startT = millis();
+                uint32_t current = startT;
+                while (current - startT < 3000)
+                {
+                    rgbLed.manageColorTransitions();
+                    delay(10);
+                    current = millis();
+                }
+                resetLed();
+            }
+            break;
+        case '0': // Set Thresholds
+            if (buff[4] == '-' && buff[9] == '-' && buff[14] == '-')
+            {
+                int idx(0), th1(0), th2(0), th3(0);
+                sscanf(buff, "%d-%d-%d-%d", &idx, &th1, &th2, &th3);
+                Feature *feat = motorStandardGroup.getFeature(idx);
+                if (feat)
+                {
+                    if (idx == 1 || idx == 2 || idx == 3)
+                    {
+                        feat->setThresholds((float) th1 / 100.,
+                                            (float) th2 / 100.,
+                                            (float) th3 / 100.);
+                    }
+                    else
+                    {
+                        feat->setThresholds((float) th1, (float) th2,
+                                            (float) th3);
+                    }
+                    if (loopDebugMode)
+                    {
+                        debugPrint(feat->getName(), false);
+                        debugPrint(':', false);
+                        debugPrint(feat->getThreshold(0), false);
+                        debugPrint(" - ", false);
+                        debugPrint(feat->getThreshold(1), false);
+                        debugPrint(" - ", false);
+                        debugPrint(feat->getThreshold(2));
+                    }
+                }
+            }
+            break;
+        case '1':  // Receive the timestamp data from the bluetooth hub
+            if (buff[1] == ':' && buff[12] == '.')
+            {
+                int flag(0), ts(0), ms(0);
+                sscanf(buff, "%d:%d.%d", &flag, &ts, &ms);
+                setRefDatetime((double) ts + (double) ms / (double) 1000000);
+            }
+            break;
+        case '2':  // Bluetooth parameter setting
+            if (buff[1] == ':' && buff[7] == '-' && buff[13] == '-')
+            {
+                int dataRecTimeout(0), paramtag(0);
+                int startSleepTimer(0), dataSendPeriod(0);
+                sscanf(buff, "%d:%d-%d-%d", &paramtag, &dataSendPeriod,
+                       startSleepTimer, &dataRecTimeout);
+                // We currently only use the data send period option
+                motorStandardGroup.setDataSendPeriod((uint16_t) dataSendPeriod);
+            }
+            break;
+        case '3':  // Collect acceleration raw data
+            if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
+                buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
+            {
+                if (loopDebugMode)
+                {
+                    debugPrint("Record mode");
+                }
+                for (uint8_t i = 0; i < 3; i++)
+                {
+                    accelEnergyName[2] = axis[i];
+                    accelEnergy = Feature::getInstanceByName(accelEnergyName);
+                    if (accelEnergy)
+                    {
+                        port->print("REC,");
+                        if (m_streamingMode == StreamingMode::BLE)
+                        {
+                            port->print(m_macAddress);
+                            port->print(',');
+                        }
+                        port->print(axis[i]);
+                        accelEnergy->stream(port, 4);
+                        delay(10);
+                    }
+                }
+            }
+            break;
+        case '5':  // Get status
+            if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
+                buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
+            {
+                port->print("HB,");
+                if (m_streamingMode == StreamingMode::BLE)
+                {
+                    port->print(m_macAddress);
+                    port->print(',');
+                }
+                if (iuI2C.isError())
+                {
+                    port->print("I2CERR");
+                }
+                else
+                {
+                    port->print("ALL_OK");
+                }
+                port->print(";");
+            }
+            break;
+        case '6': // Set which feature are used for OperationState
+            if (buff[7] == ':' && buff[9] == '.' && buff[11] == '.' &&
+                buff[13] == '.' && buff[15] == '.' && buff[17] == '.')
+            {
+                int parametertag(0);
+                int fcheck[6] = {0, 0, 0, 0, 0, 0};
+                sscanf(buff, "%d:%d.%d.%d.%d.%d.%d", &parametertag, &fcheck[0],
+                       &fcheck[1], &fcheck[2], &fcheck[3], &fcheck[4],
+                       &fcheck[5]);
+                Feature *feat;
+                for (uint8_t i = 0; i < 6; i++)
+                {
+                    feat = motorStandardGroup.getFeature(i);
+                    if (feat)
+                    {
+                        if (fcheck[i] > 0)
+                        {
+                            feat->enableOperationState();
+                        }
+                        else
+                        {
+                            feat->disableOperationState();
+                        }
+                    }
+                }
+            }
+            break;
+        default:
+            if (debugMode)
+            {
+                debugPrint(F("Unknown command"));
+            }
+            break;
+    }
+}
+
+/**
+ * Process the USB commands
+ */
+void Conductor::processUSBMessages(char *buff)
 {
     if (strncmp(buff, "WIFI-", 5) == 0)
     {
-        processUserMessageForWiFi(buff);
+        processUserMessageForWiFi(buff, iuUSB.port);
     }
     else if (strncmp(buff, "MCUINFO", 7) == 0)
     {
@@ -470,7 +646,7 @@ void Conductor::processLegacyUSBCommands(char *buff)
 /**
  * Process the instructions sent over Bluetooth
  */
-void Conductor::processLegacyBLECommands(char *buff)
+void Conductor::processBLEMessages(char *buff)
 {
     if (m_streamingMode == StreamingMode::WIRED)
     {
@@ -484,177 +660,53 @@ void Conductor::processLegacyBLECommands(char *buff)
     }
     else if (strncmp(buff, "WIFI-", 5) == 0)
     {
-        processUserMessageForWiFi(buff);
+        processUserMessageForWiFi(buff, iuBluetooth.port);
     }
     else
     {
-        switch(buff[0])
-        {
-            case '0': // DEPRECATED Set Thresholds
-                if (buff[4] == '-' && buff[9] == '-' && buff[14] == '-')
-                {
-                    int idx(0), th1(0), th2(0), th3(0);
-                    sscanf(buff, "%d-%d-%d-%d", &idx, &th1, &th2, &th3);
-                    Feature *feat = motorStandardGroup.getFeature(idx);
-                    if (feat)
-                    {
-                        if (idx == 1 || idx == 2 || idx == 3)
-                        {
-                            feat->setThresholds((float) th1 / 100.,
-                                                (float) th2 / 100.,
-                                                (float) th3 / 100.);
-                        }
-                        else
-                        {
-                            feat->setThresholds((float) th1, (float) th2,
-                                                (float) th3);
-                        }
-                        if (loopDebugMode)
-                        {
-                            debugPrint(feat->getName(), false);
-                            debugPrint(':', false);
-                            debugPrint(feat->getThreshold(0), false);
-                            debugPrint(" - ", false);
-                            debugPrint(feat->getThreshold(1), false);
-                            debugPrint(" - ", false);
-                            debugPrint(feat->getThreshold(2));
-                        }
-                    }
-                }
-                break;
-            case '1':  // Receive the timestamp data from the bluetooth hub
-                if (buff[1] == ':' && buff[12] == '.')
-                {
-                    int flag(0), ts(0), ms(0);
-                    sscanf(buff, "%d:%d.%d", &flag, &ts, &ms);
-                    setRefDatetime((double) ts + (double) ms / (double) 1000000);
-                }
-                break;
-            case '2':  // DEPRECATED - Bluetooth parameter setting
-                if (buff[1] == ':' && buff[7] == '-' && buff[13] == '-')
-                {
-                    int dataRecTimeout(0), paramtag(0);
-                    int startSleepTimer(0), dataSendPeriod(0);
-                    sscanf(buff, "%d:%d-%d-%d", &paramtag, &dataSendPeriod,
-                           startSleepTimer, &dataRecTimeout);
-                    // We currently only use the data send period option
-                    motorStandardGroup.setDataSendPeriod((uint16_t) dataSendPeriod);
-                }
-                break;
-            case '3':  // DEPRECATED - Collect acceleration raw data
-                if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
-                    buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
-                {
-                    if (loopDebugMode)
-                    {
-                        debugPrint("Record mode");
-                    }
-                    Feature *accelX = Feature::getInstanceByName("A0X");
-                    Feature *accelY = Feature::getInstanceByName("A0Y");
-                    Feature *accelZ = Feature::getInstanceByName("A0Z");
-                    if (accelX)
-                    {
-                        iuBluetooth.port->print("REC,");
-                        iuBluetooth.port->print(m_macAddress);
-                        iuBluetooth.port->print(",X");
-                        accelX->stream(iuBluetooth.port);
-                        delay(10);
-                    }
-                    if (accelY)
-                    {
-                        iuBluetooth.port->print("REC,");
-                        iuBluetooth.port->print(m_macAddress);
-                        iuBluetooth.port->print(",Y");
-                        accelY->stream(iuBluetooth.port);
-                        delay(10);
-                    }
-                    if (accelZ)
-                    {
-                        iuBluetooth.port->print("REC,");
-                        iuBluetooth.port->print(m_macAddress);
-                        iuBluetooth.port->print(",Z");
-                        accelZ->stream(iuBluetooth.port);
-                        delay(10);
-                    }
-                }
-               break;
-            case '5':  // Get status
-                if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
-                    buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
-                {
-                    iuBluetooth.port->print("HB,");
-                    iuBluetooth.port->print(m_macAddress);
-                    iuBluetooth.port->print(",");
-                    if (iuI2C.isError())
-                    {
-                        iuBluetooth.port->print("I2CERR");
-                    }
-                    else
-                    {
-                        iuBluetooth.port->print("ALL_OK");
-                    }
-                    iuBluetooth.port->print(";");
-                }
-                break;
-            case '6': // DEPRECATED - Set which feature are used for OperationState
-                if (buff[7] == ':' && buff[9] == '.' && buff[11] == '.' &&
-                    buff[13] == '.' && buff[15] == '.' && buff[17] == '.')
-                {
-                    int parametertag(0);
-                    int fcheck[6] = {0, 0, 0, 0, 0, 0};
-                    sscanf(buff, "%d:%d.%d.%d.%d.%d.%d", &parametertag, &fcheck[0],
-                           &fcheck[1], &fcheck[2], &fcheck[3], &fcheck[4],
-                           &fcheck[5]);
-                    Feature *feat;
-                    for (uint8_t i = 0; i < 6; i++)
-                    {
-                        feat = motorStandardGroup.getFeature(i);
-                        if (feat)
-                        {
-                            if (fcheck[i] > 0)
-                            {
-                                feat->enableOperationState();
-                            }
-                            else
-                            {
-                                feat->disableOperationState();
-                            }
-                        }
-                    }
-                }
-                break;
-            case '4':  // DEPRECATED - Exit record mode
-            default:
-                if (debugMode)
-                {
-                    debugPrint(F("Unknown BLE command (may be DEPRECATED)"));
-                }
-                break;
-        }
+        processLegacyCommands(buff);
     }
 }
 
 /**
  *
  */
-void Conductor::processUserMessageForWiFi(char *buff)
+void Conductor::processUserMessageForWiFi(char *buff,
+                                          HardwareSerial *feedbackPort)
 {
     if (strcmp(buff, "WIFI-DISABLE") == 0)
     {
         iuWiFi.setPowerMode(PowerMode::DEEP_SLEEP);
+    }
+    else if (strncmp(buff, "WIFI-GET-MAC", 13) == 0)
+    {
+        if ((uint64_t) iuWiFi.getMacAddress() > 0)
+        {
+            feedbackPort->print("WIFI-MAC-");
+            feedbackPort->print(iuWiFi.getMacAddress());
+            feedbackPort->print(';');
+        }
     }
     else
     {
         // We want the WiFi to do something, so need to make sure it's available
         if (iuWiFi.isSleeping())
         {
+            showStatusOnLed(RGB_PURPLE); // Show to the user that we're doing something
             iuWiFi.setPowerMode(PowerMode::REGULAR);
-            while (iuWiFi.isSleeping())
+            uint32_t startT = millis();
+            uint32_t current = startT;
+            // Wait for up to 5sec the WiFi wake up
+            while (iuWiFi.isSleeping() && current - startT < 5000)
             {
-                iuWiFi.manageAutoSleep(); // Let the WiFi wake up
+                readFromSerial(StreamingMode::WIFI, &iuWiFi);
+                iuWiFi.manageAutoSleep();
+                rgbLed.manageColorTransitions();
+                delay(10);
+                current = millis();
             }
-        }
-        if (strncmp(buff, "WIFI-HARDRESET", 15) == 0)
+            resetLed();
+        }if (strncmp(buff, "WIFI-HARDRESET", 15) == 0)
         {
             iuWiFi.hardReset();
         }
@@ -674,6 +726,7 @@ void Conductor::processUserMessageForWiFi(char *buff)
                 return;
             }
             iuWiFi.setSSID(&buff[10], len - 20);
+            iuWiFi.sendWiFiCredentials();
         }
         else if (strncmp(buff, "WIFI-PW-", 8) == 0)
         {
@@ -687,6 +740,7 @@ void Conductor::processUserMessageForWiFi(char *buff)
                 return;
             }
             iuWiFi.setPassword(&buff[8], len - 16);
+            iuWiFi.sendWiFiCredentials();
         }
         if (iuWiFi.isWorking())
         {
@@ -698,28 +752,24 @@ void Conductor::processUserMessageForWiFi(char *buff)
 /**
  * Process the instructions from the WiFi chip
  */
-void Conductor::processWIFICommands(char *buff)
+void Conductor::processWIFIMessages(char *buff)
 {
     if (iuWiFi.processMessage())
     {
         if (iuWiFi.isWorking())
         {
-            Serial.println("Led 1");
             showStatusOnLed(RGB_PURPLE);
         }
         else
         {
-            Serial.println("Led 2");
             resetLed();
         }
         if (iuWiFi.isConnected())
         {
-            Serial.println("Wifi is connected");
             changeStreamingMode(StreamingMode::WIFI_AND_BLE);
         }
         else
         {
-            Serial.println("Wifi is not connected");
             changeStreamingMode(StreamingMode::BLE);
         }
     }
@@ -729,166 +779,15 @@ void Conductor::processWIFICommands(char *buff)
             Serial.println("ASK_BLE_MAC");
             iuWiFi.sendBleMacAddress(m_macAddress);
             break;
-        case MSPCommand::RECEIVE_WIFI_MAC:
-            Serial.println("RECEIVE_WIFI_MAC");
-            strncpy(m_wifiMacAddress, iuWiFi.getBuffer(), 18);
-            m_wifiMacAddress[17] = '\0';
-            break;
         case MSPCommand::WIFI_ALERT_NO_SAVED_CREDENTIALS:
             Serial.println("WIFI_ALERT_NO_SAVED_CREDENTIALS");
-            iuBluetooth.port->print("WIFI-NOSAVEDCRED;");
+            iuBluetooth.port->print("WIFI-NOSAVEDCRED");
+            iuBluetooth.port->print(';');
+            Serial.println("WIFI-NOSAVEDCRED;");
             break;
         case MSPCommand::CONFIG_FORWARD_CMD:
             Serial.println("CONFIG_FORWARD_CMD");
-            switch(buff[0])
-            {
-                case '0': // DEPRECATED Set Thresholds
-                    if (buff[4] == '-' && buff[9] == '-' && buff[14] == '-')
-                    {
-                        int idx(0), th1(0), th2(0), th3(0);
-                        sscanf(buff, "%d-%d-%d-%d", &idx, &th1, &th2, &th3);
-                        Feature *feat = motorStandardGroup.getFeature(idx);
-                        if (feat)
-                        {
-                            if (idx == 1 || idx == 2 || idx == 3)
-                            {
-                                feat->setThresholds((float) th1 / 100.,
-                                                    (float) th2 / 100.,
-                                                    (float) th3 / 100.);
-                            }
-                            else
-                            {
-                                feat->setThresholds((float) th1, (float) th2,
-                                                    (float) th3);
-                            }
-                            if (loopDebugMode)
-                            {
-                                debugPrint(feat->getName(), false);
-                                debugPrint(':', false);
-                                debugPrint(feat->getThreshold(0), false);
-                                debugPrint(" - ", false);
-                                debugPrint(feat->getThreshold(1), false);
-                                debugPrint(" - ", false);
-                                debugPrint(feat->getThreshold(2));
-                            }
-                        }
-                    }
-                    break;
-                case '1':  // Receive the timestamp data from the bluetooth hub
-                    if (buff[1] == ':' && buff[12] == '.')
-                    {
-                        int flag(0), ts(0), ms(0);
-                        sscanf(buff, "%d:%d.%d", &flag, &ts, &ms);
-                        setRefDatetime((double) ts + (double) ms / (double) 1000000);
-                        iuWiFi.port->print("DT,Sent Time=");
-                        iuWiFi.port->print(buff);
-                        iuWiFi.port->print(";");
-                    }
-                    break;
-                case '2':  // DEPRECATED - Bluetooth parameter setting
-                    if (buff[1] == ':' && buff[7] == '-' && buff[13] == '-')
-                    {
-                        int dataRecTimeout(0), paramtag(0);
-                        int startSleepTimer(0), dataSendPeriod(0);
-                        sscanf(buff, "%d:%d-%d-%d", &paramtag, &dataSendPeriod,
-                               startSleepTimer, &dataRecTimeout);
-                        // We currently only use the data send period option
-                        motorStandardGroup.setDataSendPeriod((uint16_t) dataSendPeriod);
-                        if (loopDebugMode)
-                        {
-                            debugPrint(F("Set data send period: "), false);
-                            debugPrint((uint16_t) dataSendPeriod);
-                        }
-                    }
-                    break;
-                case '3':  // DEPRECATED - Collect acceleration raw data
-                    if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
-                        buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
-                    {
-                        if (loopDebugMode)
-                        {
-                            debugPrint("Record mode");
-                        }
-                        Feature *accelX = Feature::getInstanceByName("A0X");
-                        Feature *accelY = Feature::getInstanceByName("A0Y");
-                        Feature *accelZ = Feature::getInstanceByName("A0Z");
-                        if (accelX)
-                        {
-                            iuWiFi.port->print("REC,X");
-                            accelX->stream(iuWiFi.port, 4);
-                            iuWiFi.port->print(';');
-                            delay(10);
-                        }
-                        if (accelY)
-                        {
-                            iuWiFi.port->print("REC,Y");
-                            accelY->stream(iuWiFi.port, 4);
-                            iuWiFi.port->print(';');
-                            delay(10);
-                        }
-                        if (accelZ)
-                        {
-                            iuWiFi.port->print("REC,Z");
-                            accelZ->stream(iuWiFi.port, 4);
-                            iuWiFi.port->print(';');
-                            delay(10);
-                        }
-                    }
-                   break;
-                case '5':  // Get status
-                    if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
-                        buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
-                    {
-                        iuWiFi.port->print("HB,");
-                        if (iuI2C.isError())
-                        {
-                            iuWiFi.port->print("I2CERR");
-                        }
-                        else
-                        {
-                            iuWiFi.port->print("ALL_OK");
-                        }
-                        iuWiFi.port->print(";");
-                    }
-                    break;
-                case '6': // DEPRECATED - Set which feature are used for OperationState
-                    if (buff[7] == ':' && buff[9] == '.' && buff[11] == '.' &&
-                        buff[13] == '.' && buff[15] == '.' && buff[17] == '.')
-                    {
-                        int parametertag(0);
-                        int fcheck[6] = {0, 0, 0, 0, 0, 0};
-                        sscanf(buff, "%d:%d.%d.%d.%d.%d.%d", &parametertag, &fcheck[0],
-                               &fcheck[1], &fcheck[2], &fcheck[3], &fcheck[4],
-                               &fcheck[5]);
-                        Feature *feat;
-                        for (uint8_t i = 0; i < 6; i++)
-                        {
-                            feat = motorStandardGroup.getFeature(i);
-                            if (feat)
-                            {
-                                if (fcheck[i] > 0)
-                                {
-                                    feat->enableOperationState();
-                                    if (loopDebugMode)
-                                    {
-                                        debugPrint(feat->getName(), false);
-                                        debugPrint(F(": op state is enabled"));
-                                    }
-                                }
-                                else
-                                {
-                                    feat->disableOperationState();
-                                    if (loopDebugMode)
-                                    {
-                                        debugPrint(feat->getName(), false);
-                                        debugPrint(F(": op state is disabled"));
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    break;
-            }
+            processLegacyCommands(buff);
             break;
         default:
             // pass
@@ -1209,7 +1108,7 @@ void Conductor::changeUsageMode(UsageMode::option usage)
                                            DEFAULT_ACCEL_ENERGY_WARNING_TH,
                                            DEFAULT_ACCEL_ENERGY_HIGH_TH);
             iuAccelerometer.resetScale();
-            if (m_wifiConnected)
+            if (iuWiFi.isConnected())
             {
                 streamMode = StreamingMode::WIFI;
             }
@@ -1497,7 +1396,7 @@ void  Conductor::streamMCUUInfo(HardwareSerial *port)
  */
 void Conductor::exposeAllConfigurations()
 {
-    #ifdef DEBUGMODE
+    #ifdef IUDEBUG_ANY
     for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
     {
         Sensor::instances[i]->expose();

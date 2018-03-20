@@ -1,0 +1,87 @@
+# Infinite Uptime options
+#
+# This should be added at the top or bottom of the boards.txt
+# file in core packages
+# esp8266/hardware/esp8266/<version>/boards.txt
+##############################################################
+
+menu.iudebug=IU Debug
+
+# generic (ESP8266)
+generic.menu.iudebug.none=None
+generic.menu.iudebug.none.build.iudebug_any=0
+generic.menu.iudebug.none.build.iudebug_setup=0
+generic.menu.iudebug.none.build.iudebug_main=0
+generic.menu.iudebug.none.build.iudebug_async=0
+generic.menu.iudebug.none.build.iudebug_features=0
+generic.menu.iudebug.setup=Setup
+generic.menu.iudebug.setup.build.iudebug_any=1
+generic.menu.iudebug.setup.build.iudebug_setup=1
+generic.menu.iudebug.setup.build.iudebug_main=0
+generic.menu.iudebug.setup.build.iudebug_async=0
+generic.menu.iudebug.setup.build.iudebug_features=0
+generic.menu.iudebug.main=Main loop
+generic.menu.iudebug.main.build.iudebug_any=1
+generic.menu.iudebug.main.build.iudebug_setup=0
+generic.menu.iudebug.main.build.iudebug_main=1
+generic.menu.iudebug.main.build.iudebug_async=0
+generic.menu.iudebug.main.build.iudebug_features=0
+generic.menu.iudebug.async=Async loop
+generic.menu.iudebug.async.build.iudebug_any=1
+generic.menu.iudebug.async.build.iudebug_setup=0
+generic.menu.iudebug.async.build.iudebug_main=0
+generic.menu.iudebug.async.build.iudebug_async=1
+generic.menu.iudebug.async.build.iudebug_features=0
+generic.menu.iudebug.setupmain=Setup + Main Loop
+generic.menu.iudebug.setupmain.build.iudebug_any=1
+generic.menu.iudebug.setupmain.build.iudebug_setup=1
+generic.menu.iudebug.setupmain.build.iudebug_main=1
+generic.menu.iudebug.setupmain.build.iudebug_async=0
+generic.menu.iudebug.setupmain.build.iudebug_features=0
+generic.menu.iudebug.all=All
+generic.menu.iudebug.all.build.iudebug_any=1
+generic.menu.iudebug.all.build.iudebug_setup=1
+generic.menu.iudebug.all.build.iudebug_main=1
+generic.menu.iudebug.all.build.iudebug_async=1
+generic.menu.iudebug.all.build.iudebug_features=1
+
+# esp8285
+esp8285.menu.iudebug.none=None
+esp8285.menu.iudebug.none.build.iudebug_any=0
+esp8285.menu.iudebug.none.build.iudebug_setup=0
+esp8285.menu.iudebug.none.build.iudebug_main=0
+esp8285.menu.iudebug.none.build.iudebug_async=0
+esp8285.menu.iudebug.none.build.iudebug_features=0
+esp8285.menu.iudebug.setup=Setup
+esp8285.menu.iudebug.setup.build.iudebug_any=1
+esp8285.menu.iudebug.setup.build.iudebug_setup=1
+esp8285.menu.iudebug.setup.build.iudebug_main=0
+esp8285.menu.iudebug.setup.build.iudebug_async=0
+esp8285.menu.iudebug.setup.build.iudebug_features=0
+esp8285.menu.iudebug.main=Main loop
+esp8285.menu.iudebug.main.build.iudebug_any=1
+esp8285.menu.iudebug.main.build.iudebug_setup=0
+esp8285.menu.iudebug.main.build.iudebug_main=1
+esp8285.menu.iudebug.main.build.iudebug_async=0
+esp8285.menu.iudebug.main.build.iudebug_features=0
+esp8285.menu.iudebug.async=Async loop
+esp8285.menu.iudebug.async.build.iudebug_any=1
+esp8285.menu.iudebug.async.build.iudebug_setup=0
+esp8285.menu.iudebug.async.build.iudebug_main=0
+esp8285.menu.iudebug.async.build.iudebug_async=1
+esp8285.menu.iudebug.async.build.iudebug_features=0
+esp8285.menu.iudebug.setupmain=Setup + Main Loop
+esp8285.menu.iudebug.setupmain.build.iudebug_any=1
+esp8285.menu.iudebug.setupmain.build.iudebug_setup=1
+esp8285.menu.iudebug.setupmain.build.iudebug_main=1
+esp8285.menu.iudebug.setupmain.build.iudebug_async=0
+esp8285.menu.iudebug.setupmain.build.iudebug_features=0
+esp8285.menu.iudebug.all=All
+esp8285.menu.iudebug.all.build.iudebug_any=1
+esp8285.menu.iudebug.all.build.iudebug_setup=1
+esp8285.menu.iudebug.all.build.iudebug_main=1
+esp8285.menu.iudebug.all.build.iudebug_async=1
+esp8285.menu.iudebug.all.build.iudebug_features=1
+
+# End of Infinite Uptime Options #############################
+

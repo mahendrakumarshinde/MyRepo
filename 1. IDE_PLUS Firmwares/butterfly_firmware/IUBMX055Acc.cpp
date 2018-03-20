@@ -14,7 +14,7 @@ void accelReadCallback(uint8_t wireStatus)
     {
         newAccelData = true;
     }
-    else if (callbackDebugMode)
+    else if (asyncDebugMode)
     {
         debugPrint(micros(), false);
         debugPrint(F(" Acceleration read error "), false);
@@ -297,7 +297,7 @@ void IUBMX055Acc::readData()
     if (!m_iuI2C->readBytes(ADDRESS, D_X_LSB, 6, &m_rawBytes[0],
                             accelReadCallback))
     {
-        if (callbackDebugMode)
+        if (asyncDebugMode)
         {
             debugPrint("Skip accel read");
         }
@@ -381,7 +381,7 @@ void IUBMX055Acc::sendData(HardwareSerial *port)
  */
 void IUBMX055Acc::exposeCalibration()
 {
-#ifdef DEBUGMODE
+#ifdef IUDEBUG_ANY
     debugPrint(F("Accelerometer calibration data: "));
     debugPrint(F("Resolution (m.s-2): "));
     debugPrint(m_resolution, 7);

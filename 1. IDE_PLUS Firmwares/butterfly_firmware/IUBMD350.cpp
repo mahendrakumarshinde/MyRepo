@@ -454,7 +454,7 @@ void IUBMD350::queryTxPowers()
  */
 void IUBMD350::printUARTConfiguration()
 {
-    #ifdef DEBUGMODE
+    #ifdef IUDEBUG_ANY
     // UART enabled / disabled
     char enabled[3];
     sendATCommand("uen?", enabled, 3);
@@ -488,7 +488,7 @@ void IUBMD350::printUARTConfiguration()
  */
 void IUBMD350::printBeaconConfiguration()
 {
-    #ifdef DEBUGMODE
+    #ifdef IUDEBUG_ANY
     // Beacon enabled / disabled
     char enabled[3];
     sendATCommand("ben?", enabled, 3);
@@ -523,7 +523,7 @@ void IUBMD350::printBeaconConfiguration()
 
 void IUBMD350::exposeInfo()
 {
-    #ifdef DEBUGMODE
+    #ifdef IUDEBUG_ANY
     debugPrint(F("BLE Config: "));
     debugPrint(F("  Device name: ")); debugPrint(m_deviceName);
     enterATCommandInterface();

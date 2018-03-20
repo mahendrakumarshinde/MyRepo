@@ -161,7 +161,7 @@ void IUCAMM8Q::sendData(HardwareSerial *port)
  */
 void IUCAMM8Q::exposeCalibration()
 {
-    #ifdef DEBUGMODE
+    #ifdef IUDEBUG_ANY
     // TODO Implement
     #endif
 }

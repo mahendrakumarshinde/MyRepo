@@ -149,11 +149,11 @@ void IUICS43432::sendData(HardwareSerial *port)
 ============================================================================= */
 
 /**
- * Shows the I2S + microphone config when in DEBUGMODE
+ * Shows the I2S + microphone config when in IUDEBUG_ANY
  */
 void IUICS43432::expose()
 {
-    #ifdef DEBUGMODE
+    #ifdef IUDEBUG_ANY
     Sensor::expose();
     debugPrint(F("Sampling config"));
     debugPrint(F("  clock rate: "), false);

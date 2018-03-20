@@ -100,9 +100,11 @@ class Conductor
         // Default start datetime
         static constexpr double defaultTimestamp = 1492144654.00;
         /***** Constructors and destructor *****/
-        Conductor(const char* macAddress) { strcpy(m_macAddress, macAddress); }
+        Conductor(MacAddress macAddress) : m_macAddress(macAddress) { }
+        Conductor(const char *macAddress)
+            { m_macAddress.fromString(macAddress); }
         virtual ~Conductor() {}
-        char* getMacAddress() { return m_macAddress; }
+        MacAddress getMacAddress() { return m_macAddress; }
         /***** Hardware & power management *****/
         void sleep(uint32_t duration);
         void suspend(uint32_t duration);
@@ -123,10 +125,12 @@ class Conductor
         bool configureMainOptions(JsonVariant &config);
         void configureAllSensors(JsonVariant &config);
         void configureAllFeatures(JsonVariant &config);
-        void processLegacyUSBCommands(char *buff);
-        void processLegacyBLECommands(char *buff);
-        void processUserMessageForWiFi(char *buff);
-        void processWIFICommands(char *buff);
+        void processLegacyCommands(char *buff);
+        void processUSBMessages(char *buff);
+        void processBLEMessages(char *buff);
+        void processUserMessageForWiFi(char *buff,
+                                       HardwareSerial *feedbackPort);
+        void processWIFIMessages(char *buff);
         /***** Features and groups Management *****/
         void activateFeature(Feature* feature);
         bool isFeatureDeactivatable(Feature* feature);
@@ -158,7 +162,7 @@ class Conductor
         void exposeAllConfigurations();
 
     protected:
-        char m_macAddress[18];
+        MacAddress m_macAddress;
         /***** Hardware & power management *****/
         sleepMode m_sleepMode = sleepMode::NONE;
         // Timestamp at which idle phase (or cycle) started for AUTO (or
@@ -185,9 +189,6 @@ class Conductor
         OperationState::option m_operationState = OperationState::IDLE;
         void (*m_callback)() = NULL;
         bool m_inDataAcquistion = false;
-        /***** WiFi *****/
-        bool m_wifiConnected = false;
-        char m_wifiMacAddress[18];
         /***** Configuration and Mode management *****/
         UsageMode::option m_usageMode = UsageMode::COUNT;
         AcquisitionMode::option m_acquisitionMode = AcquisitionMode::NONE;

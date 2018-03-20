@@ -6,47 +6,7 @@
 
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
-#include "Logger.h"
-
-
-/* =============================================================================
-    Device designation
-============================================================================= */
-
-// TODO Find a better place for this
-const uint8_t DEVICE_TYPE_LENGTH = 9;
-const char DEVICE_TYPE[DEVICE_TYPE_LENGTH] = "ide_plus";
-
-
-/* =============================================================================
-    PubSub topic names
-============================================================================= */
-
-// Define TEST_TOPICS to use the PubSub test topics (instead of prod ones)
-//#define TEST_TOPICS
-
-#ifdef TEST_TOPICS
-    const uint8_t FEATURE_TOPIC_LENGTH = 20;
-    const uint8_t DIAGNOSTIC_TOPIC_LENGTH = 14;
-//    const uint8_t RAW_DATA_TOPIC_LENGTH = 17;
-    const char FEATURE_TOPIC[FEATURE_TOPIC_LENGTH] = "iu_device_data_test";
-    const char DIAGNOSTIC_TOPIC[DIAGNOSTIC_TOPIC_LENGTH] = "iu_error_test";
-//    const char RAW_DATA_TOPIC[RAW_DATA_TOPIC_LENGTH] = "iu_raw_data_test";
-#else
-    const uint8_t FEATURE_TOPIC_LENGTH = 15;
-    const uint8_t DIAGNOSTIC_TOPIC_LENGTH = 9;
-//    const uint8_t RAW_DATA_TOPIC_LENGTH = 12;
-    const char FEATURE_TOPIC[FEATURE_TOPIC_LENGTH] = "iu_device_data";
-    const char DIAGNOSTIC_TOPIC[DIAGNOSTIC_TOPIC_LENGTH] = "iu_error";
-//    const char RAW_DATA_TOPIC[RAW_DATA_TOPIC_LENGTH] = "iu_raw_data";
-#endif  // TEST_TOPICS
-
-// TODO Move this in IUMQTTHelper
-const uint8_t CUSTOMER_PLACEHOLDER_LENGTH = 9;
-const char CUSTOMER_PLACEHOLDER[CUSTOMER_PLACEHOLDER_LENGTH] = "XXXAdmin";
-
-const char DEFAULT_WILL_MESSAGE[44] =
-    "XXXAdmin;;;00:00:00:00:00:00;;;disconnected";
+#include <IUDebugger.h>
 
 
 /* =============================================================================

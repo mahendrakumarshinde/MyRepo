@@ -129,7 +129,7 @@ bool FeatureGroup::isDataSendTime(uint8_t idx)
 /**
  * Sends the values of the group features through given serial.
  */
-void FeatureGroup::stream(HardwareSerial *port, const char *macAddress,
+void FeatureGroup::stream(HardwareSerial *port, MacAddress mac,
                           double timestamp, bool sendMACAddress)
 {
     if (!m_active)
@@ -144,7 +144,7 @@ void FeatureGroup::stream(HardwareSerial *port, const char *macAddress,
     if (sendMACAddress)
     {
         port->print(",");
-        port->print(macAddress);
+        port->print(mac);
     }
     for (uint8_t i = 0; i < m_featureCount; ++i)
     {
@@ -166,7 +166,7 @@ void FeatureGroup::stream(HardwareSerial *port, const char *macAddress,
 }
 
 
-void FeatureGroup::legacyStream(HardwareSerial *port, const char *macAddress,
+void FeatureGroup::legacyStream(HardwareSerial *port, MacAddress mac,
                                 OperationState::option opState,
                                 float batteryLoad, double timestamp,
                                 bool sendName, uint8_t portIdx)
@@ -184,7 +184,7 @@ void FeatureGroup::legacyStream(HardwareSerial *port, const char *macAddress,
         port->print(m_name);
         port->print(",");
     }
-    port->print(macAddress);
+    port->print(mac);
     port->print(",0");
     port->print((uint8_t) opState);
     port->print(",");
@@ -208,8 +208,7 @@ void FeatureGroup::legacyStream(HardwareSerial *port, const char *macAddress,
 }
 
 
-void FeatureGroup::legacyBufferStream(HardwareSerial *port,
-                                      const char *macAddress,
+void FeatureGroup::legacyBufferStream(HardwareSerial *port, MacAddress mac,
                                       OperationState::option opState,
                                       float batteryLoad, double timestamp,
                                       bool sendName)
@@ -228,7 +227,7 @@ void FeatureGroup::legacyBufferStream(HardwareSerial *port,
         maxBufferSize - m_bufferIndex < maxBufferMargin)
     {
         // Send current data
-        m_featureBuffer[m_bufferIndex] = '\0';
+        m_featureBuffer[m_bufferIndex] = 0;
         port->print(m_featureBuffer);
         if (loopDebugMode)
         {
@@ -239,7 +238,7 @@ void FeatureGroup::legacyBufferStream(HardwareSerial *port,
         m_bufferStartTime = now;
         for (uint16_t i = 0; i < maxBufferSize; ++i)
         {
-            m_featureBuffer[i] = '\0';
+            m_featureBuffer[i] = 0;
         }
     }
     if (sendName)
@@ -248,8 +247,8 @@ void FeatureGroup::legacyBufferStream(HardwareSerial *port,
         m_bufferIndex += strlen(m_name);
         m_featureBuffer[m_bufferIndex++] = ',';
     }
-    strcat(m_featureBuffer, macAddress);
-    m_bufferIndex += strlen(macAddress);
+    strcat(m_featureBuffer, mac.toString().c_str());
+    m_bufferIndex += 18;
     m_featureBuffer[m_bufferIndex++] = ',';
     m_featureBuffer[m_bufferIndex++] = '0';
     m_featureBuffer[m_bufferIndex++] = (uint8_t) opState + 48;

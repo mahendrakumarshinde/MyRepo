@@ -185,8 +185,6 @@
 		<Unit filename="IUMAX31865.h" />
 		<Unit filename="IURTDExtension.cpp" />
 		<Unit filename="IURTDExtension.h" />
-		<Unit filename="IUSerial.cpp" />
-		<Unit filename="IUSerial.h" />
 		<Unit filename="IUUSB.cpp" />
 		<Unit filename="IUUSB.h" />
 		<Unit filename="InstancesButterfly.cpp" />
@@ -196,11 +194,6 @@
 		<Unit filename="IntegratedTest/IT_All_Conductor.h" />
 		<Unit filename="IntegratedTest/IT_Butterfly.h" />
 		<Unit filename="IntegratedTest/IT_Dragonfly.h" />
-		<Unit filename="Logger.h" />
-		<Unit filename="MSPCommands.h" />
-		<Unit filename="MacAddress.cpp" />
-		<Unit filename="MacAddress.h" />
-		<Unit filename="MultiMessageValidator.h" />
 		<Unit filename="RGBLed.cpp" />
 		<Unit filename="RGBLed.h" />
 		<Unit filename="Sensor.cpp" />
@@ -209,11 +202,9 @@
 		<Unit filename="UnitTest/Test_FeatureClass.h" />
 		<Unit filename="UnitTest/Test_FeatureComputer.h" />
 		<Unit filename="UnitTest/Test_FeatureGroup.h" />
-		<Unit filename="UnitTest/Test_IUSerial.h" />
 		<Unit filename="UnitTest/Test_Sensor.h" />
 		<Unit filename="UnitTest/Test_Utilities.h" />
 		<Unit filename="UnitTest/UnitTestData.h" />
-		<Unit filename="UnitTest/UnitTestUtilities.h" />
 		<Unit filename="Utilities.cpp" />
 		<Unit filename="Utilities.h" />
 		<Extensions>

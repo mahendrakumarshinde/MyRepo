@@ -52,12 +52,13 @@ namespace MSPCommand
         WIFI_ALERT_CONNECTED,  // 27: Alert WiFi is connected
         WIFI_ALERT_DISCONNECTED,  // 28: Alert WiFi is disconnected
         WIFI_ALERT_SLEEPING,  // 29: Notify WiFi is sleeping
+        WIFI_ALERT_AWAKE,  // 30: Notify WiFi is waking up
         // Data publication
-        WIFI_CONFIRM_PUBLICATION,  // 30: Confirm publication of data
+        WIFI_CONFIRM_PUBLICATION,  // 31: Confirm publication of data
         // Cloud command reception and transmission
-        CONFIG_FORWARD_CMD,  // 31: Forward a command string received by WiFi
-        OTA_INITIATE_UPDATE,  // 32: Initiate OTA update
-        OTA_RECEIVE_DATA,  // 33: Receive a packet of OTA data
+        CONFIG_FORWARD_CMD,  // 32: Forward a command string received by WiFi
+        OTA_INITIATE_UPDATE,  // 33: Initiate OTA update
+        OTA_RECEIVE_DATA,  // 34: Receive a packet of OTA data
     };
 }
 

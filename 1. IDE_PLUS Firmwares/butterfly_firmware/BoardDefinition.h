@@ -5,6 +5,19 @@
 
 
 /* =============================================================================
+    Device definition
+============================================================================= */
+
+/***** Firmware version *****/
+const char FIRMWARE_VERSION[6] = "1.0.0";
+
+
+/***** Device Type *****/
+const uint8_t DEVICE_TYPE_LENGTH = 9;
+const char DEVICE_TYPE[DEVICE_TYPE_LENGTH] = "ide_plus";
+
+
+/* =============================================================================
     Optionnal hardware specification
 
     Comment / uncomment lines below to define the optionnal components currently
@@ -25,11 +38,6 @@
 /***** GPS Options *****/
 //#define NO_GPS
 
-/***** Firmware version *****/
-const char FIRMWARE_VERSION[6] = "1.0.0";
-
-#endif // BOARDDEFINITION_H
-
 
 /* =============================================================================
     Test mode
@@ -37,7 +45,7 @@ const char FIRMWARE_VERSION[6] = "1.0.0";
     Comment / Uncomment the "define" lines to toggle / untoggle unit tests.
 ============================================================================= */
 
-//#define UNITTEST  // Logical libraries unit test
+#define UNITTEST  // Logical libraries unit test
 //#define COMPONENTTEST  // Components unit test
 //#define INTEGRATEDTEST  // Firmware integrated test
 
@@ -45,3 +53,4 @@ const char FIRMWARE_VERSION[6] = "1.0.0";
     #include <ArduinoUnit.h>
 #endif
 
+#endif // BOARDDEFINITION_H

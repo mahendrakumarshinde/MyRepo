@@ -66,7 +66,6 @@ void IUESP8285::setPowerMode(PowerMode::option pMode)
 void IUESP8285::manageAutoSleep()
 {
     uint32_t now = millis();
-
     switch (m_powerMode)
     {
         case PowerMode::PERFORMANCE:
@@ -76,15 +75,18 @@ void IUESP8285::manageAutoSleep()
         case PowerMode::REGULAR:
         case PowerMode::LOW_1:
         case PowerMode::LOW_2:
+            Serial.println("here 1");
             if (m_connected)
             {
                 sendMSPCommand(MSPCommand::WIFI_WAKE_UP);
+                m_awakeTimerStart = now;
             }
             else if (m_sleeping)  // Not connected, already sleeping
             {
-                if (now - m_sleepStartTime > m_autoSleepDuration)
+                if (now - m_sleepTimerStart > m_autoSleepDuration)
                 {
                     sendMSPCommand(MSPCommand::WIFI_WAKE_UP);
+                    m_awakeTimerStart = now;  // Reset auto-sleep start timer
                 }
                 else
                 {
@@ -93,9 +95,10 @@ void IUESP8285::manageAutoSleep()
             }
             else  // Not connected and not sleeping
             {
-                if (now - m_lastConnectedTime > m_autoSleepDelay)
+                if (now - m_awakeTimerStart > m_autoSleepDelay)
                 {
                     sendMSPCommand(MSPCommand::WIFI_DEEP_SLEEP);
+                    m_sleepTimerStart = now;  // Reset auto-sleep start timer
                 }
                 else
                 {
@@ -117,9 +120,10 @@ void IUESP8285::manageAutoSleep()
             }
             sendMSPCommand(MSPCommand::WIFI_DEEP_SLEEP);
     }
-    if (m_powerMode > PowerMode::SLEEP && !m_sleeping)
+    if ((uint8_t) m_powerMode > (uint8_t) PowerMode::SLEEP && !m_sleeping)
     {
         sendWiFiCredentials();
+        sendMSPCommand(MSPCommand::ASK_WIFI_MAC);
     }
 }
 
@@ -130,8 +134,11 @@ void IUESP8285::manageAutoSleep()
 
 void IUESP8285::setSSID(char *ssid, uint8_t length)
 {
+    Serial.print("here 61: ");
+    Serial.println(ssid);
     if (m_credentialValidator.hasTimedOut())
     {
+        Serial.println("here 62");
         m_credentialValidator.reset();
     }
     uint8_t charCount = min(wifiCredentialLength, length);
@@ -140,13 +147,20 @@ void IUESP8285::setSSID(char *ssid, uint8_t length)
     {
         m_ssid[i] = 0;
     }
+    Serial.print("here 63");
+    Serial.println(m_ssid);
     m_credentialValidator.receivedMessage(0);
+    Serial.print("here 64: ");
+    Serial.println(m_credentialValidator.completed());
 }
 
 void IUESP8285::setPassword(char *psk, uint8_t length)
 {
+    Serial.print("here 71: ");
+    Serial.println(psk);
     if (m_credentialValidator.hasTimedOut())
     {
+        Serial.println("here 72: ");
         m_credentialValidator.reset();
     }
     uint8_t charCount = min(wifiCredentialLength, length);
@@ -155,7 +169,11 @@ void IUESP8285::setPassword(char *psk, uint8_t length)
     {
         m_psk[i] = 0;
     }
+    Serial.print("here 73: ");
+    Serial.println(m_psk);
     m_credentialValidator.receivedMessage(1);
+    Serial.print("here 74: ");
+    Serial.println(m_credentialValidator.completed());
 }
 
 /* =============================================================================
@@ -168,9 +186,12 @@ void IUESP8285::setPassword(char *psk, uint8_t length)
 bool IUESP8285::processMessage()
 {
     bool commandFound = true;
-    m_sleeping = false;
     switch (m_mspCommand)
     {
+        case MSPCommand::RECEIVE_WIFI_MAC:
+            Serial.println("RECEIVE_WIFI_MAC");
+            m_macAddress = mspReadMacAddress();
+            break;
         case MSPCommand::WIFI_CONFIRM_NEW_CREDENTIALS:
             Serial.println("WIFI_CONFIRM_NEW_CREDENTIALS");
             m_credentialReceptionConfirmed = true;
@@ -183,7 +204,7 @@ bool IUESP8285::processMessage()
             Serial.println("WIFI_ALERT_CONNECTED");
             m_connected = true;
             m_working = false;
-            m_lastConnectedTime = millis();
+            m_awakeTimerStart = millis();
             break;
         case MSPCommand::WIFI_ALERT_DISCONNECTED:
             Serial.println("WIFI_ALERT_DISCONNECTED");
@@ -197,7 +218,10 @@ bool IUESP8285::processMessage()
         case MSPCommand::WIFI_ALERT_SLEEPING:
             Serial.println("WIFI_ALERT_SLEEPING");
             m_sleeping = true;
-            m_sleepStartTime = millis();
+            break;
+        case MSPCommand::WIFI_ALERT_AWAKE:
+            Serial.println("WIFI_ALERT_AWAKE");
+            m_sleeping = false;
             break;
         case MSPCommand::WIFI_REQUEST_ACTION:
             Serial.println("WIFI_REQUEST_ACTION");
@@ -220,8 +244,10 @@ bool IUESP8285::processMessage()
  */
 void IUESP8285::sendWiFiCredentials()
 {
+    Serial.println("here 50");
     if (m_credentialValidator.completed())
     {
+        Serial.println("here 51");
         sendMSPCommand(MSPCommand::WIFI_RECEIVE_SSID, m_ssid);
         sendMSPCommand(MSPCommand::WIFI_RECEIVE_PASSWORD, m_psk);
         m_credentialSent = true;
@@ -246,12 +272,9 @@ void IUESP8285::sendStaticConfig()
 {
     if (m_staticConfigValidator.completed())
     {
-        sendMSPCommand(MSPCommand::WIFI_RECEIVE_STATIC_IP,
-                       String(m_staticIp).c_str());
-        sendMSPCommand(MSPCommand::WIFI_RECEIVE_GATEWAY,
-                       String(m_staticGateway).c_str());
-        sendMSPCommand(MSPCommand::WIFI_RECEIVE_SUBNET,
-                       String(m_staticSubnet).c_str());
+        mspSendIPAddress(MSPCommand::WIFI_RECEIVE_STATIC_IP, m_staticIp);
+        mspSendIPAddress(MSPCommand::WIFI_RECEIVE_GATEWAY, m_staticGateway);
+        mspSendIPAddress(MSPCommand::WIFI_RECEIVE_SUBNET, m_staticSubnet);
         m_staticConfigSent = true;
         m_staticConfigReceptionConfirmed = false;
         m_working = true;

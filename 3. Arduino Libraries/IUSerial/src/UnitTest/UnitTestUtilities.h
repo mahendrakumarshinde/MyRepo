@@ -53,7 +53,7 @@ class DummyHardwareSerial : public HardwareSerial
         String getTxBuffer() {
             return String(m_txBuffer);
         }
-        uint8_t setRxBuffer(char *inputBuffer, uint8_t len) {
+        uint8_t setRxBuffer(const char *inputBuffer, uint8_t len) {
             m_rxHead = 0;
             m_rxTail = min(len, length);
             strncpy(m_rxBuffer, inputBuffer, m_rxTail);

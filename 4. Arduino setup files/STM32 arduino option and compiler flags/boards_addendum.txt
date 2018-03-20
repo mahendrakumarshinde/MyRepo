@@ -1,0 +1,99 @@
+# Infinite Uptime options
+#
+# This should be added at the top or bottom of the boards.txt
+# file in core packages
+# grumpyoldpizza/hardware/stm32l4/<version>/boards.txt
+##############################################################
+
+menu.iudebug=IU Debug
+
+# Dragonfly-L496RG
+Dragonfly-L496RG.menu.iudebug.none=None
+Dragonfly-L496RG.menu.iudebug.none.build.iudebug_any=0
+Dragonfly-L496RG.menu.iudebug.none.build.iudebug_setup=0
+Dragonfly-L496RG.menu.iudebug.none.build.iudebug_main=0
+Dragonfly-L496RG.menu.iudebug.none.build.iudebug_async=0
+Dragonfly-L496RG.menu.iudebug.none.build.iudebug_features=0
+Dragonfly-L496RG.menu.iudebug.setup=Setup
+Dragonfly-L496RG.menu.iudebug.setup.build.iudebug_any=1
+Dragonfly-L496RG.menu.iudebug.setup.build.iudebug_setup=1
+Dragonfly-L496RG.menu.iudebug.setup.build.iudebug_main=0
+Dragonfly-L496RG.menu.iudebug.setup.build.iudebug_async=0
+Dragonfly-L496RG.menu.iudebug.setup.build.iudebug_features=0
+Dragonfly-L496RG.menu.iudebug.main=Main loop
+Dragonfly-L496RG.menu.iudebug.main.build.iudebug_any=1
+Dragonfly-L496RG.menu.iudebug.main.build.iudebug_setup=0
+Dragonfly-L496RG.menu.iudebug.main.build.iudebug_main=1
+Dragonfly-L496RG.menu.iudebug.main.build.iudebug_async=0
+Dragonfly-L496RG.menu.iudebug.main.build.iudebug_features=0
+Dragonfly-L496RG.menu.iudebug.async=Async loop
+Dragonfly-L496RG.menu.iudebug.async.build.iudebug_any=1
+Dragonfly-L496RG.menu.iudebug.async.build.iudebug_setup=0
+Dragonfly-L496RG.menu.iudebug.async.build.iudebug_main=0
+Dragonfly-L496RG.menu.iudebug.async.build.iudebug_async=1
+Dragonfly-L496RG.menu.iudebug.async.build.iudebug_features=0
+Dragonfly-L496RG.menu.iudebug.setupmain=Setup + Main Loop
+Dragonfly-L496RG.menu.iudebug.setupmain.build.iudebug_any=1
+Dragonfly-L496RG.menu.iudebug.setupmain.build.iudebug_setup=1
+Dragonfly-L496RG.menu.iudebug.setupmain.build.iudebug_main=1
+Dragonfly-L496RG.menu.iudebug.setupmain.build.iudebug_async=0
+Dragonfly-L496RG.menu.iudebug.setupmain.build.iudebug_features=0
+Dragonfly-L496RG.menu.iudebug.features=Features
+Dragonfly-L496RG.menu.iudebug.features.build.iudebug_any=1
+Dragonfly-L496RG.menu.iudebug.features.build.iudebug_setup=0
+Dragonfly-L496RG.menu.iudebug.features.build.iudebug_main=0
+Dragonfly-L496RG.menu.iudebug.features.build.iudebug_async=0
+Dragonfly-L496RG.menu.iudebug.features.build.iudebug_features=1
+Dragonfly-L496RG.menu.iudebug.all=All
+Dragonfly-L496RG.menu.iudebug.all.build.iudebug_any=1
+Dragonfly-L496RG.menu.iudebug.all.build.iudebug_setup=1
+Dragonfly-L496RG.menu.iudebug.all.build.iudebug_main=1
+Dragonfly-L496RG.menu.iudebug.all.build.iudebug_async=1
+Dragonfly-L496RG.menu.iudebug.all.build.iudebug_features=1
+
+# Butterfly-L433CC
+Butterfly-L433CC.menu.iudebug.none=None
+Butterfly-L433CC.menu.iudebug.none.build.iudebug_any=0
+Butterfly-L433CC.menu.iudebug.none.build.iudebug_setup=0
+Butterfly-L433CC.menu.iudebug.none.build.iudebug_main=0
+Butterfly-L433CC.menu.iudebug.none.build.iudebug_async=0
+Butterfly-L433CC.menu.iudebug.none.build.iudebug_features=0
+Butterfly-L433CC.menu.iudebug.setup=Setup
+Butterfly-L433CC.menu.iudebug.setup.build.iudebug_any=1
+Butterfly-L433CC.menu.iudebug.setup.build.iudebug_setup=1
+Butterfly-L433CC.menu.iudebug.setup.build.iudebug_main=0
+Butterfly-L433CC.menu.iudebug.setup.build.iudebug_async=0
+Butterfly-L433CC.menu.iudebug.setup.build.iudebug_features=0
+Butterfly-L433CC.menu.iudebug.main=Main loop
+Butterfly-L433CC.menu.iudebug.main.build.iudebug_any=1
+Butterfly-L433CC.menu.iudebug.main.build.iudebug_setup=0
+Butterfly-L433CC.menu.iudebug.main.build.iudebug_main=1
+Butterfly-L433CC.menu.iudebug.main.build.iudebug_async=0
+Butterfly-L433CC.menu.iudebug.main.build.iudebug_features=0
+Butterfly-L433CC.menu.iudebug.async=Async loop
+Butterfly-L433CC.menu.iudebug.async.build.iudebug_any=1
+Butterfly-L433CC.menu.iudebug.async.build.iudebug_setup=0
+Butterfly-L433CC.menu.iudebug.async.build.iudebug_main=0
+Butterfly-L433CC.menu.iudebug.async.build.iudebug_async=1
+Butterfly-L433CC.menu.iudebug.async.build.iudebug_features=0
+Butterfly-L433CC.menu.iudebug.setupmain=Setup + Main Loop
+Butterfly-L433CC.menu.iudebug.build.build.iudebug_any=1
+Butterfly-L433CC.menu.iudebug.build.iudebug_setup=1
+Butterfly-L433CC.menu.iudebug.build.iudebug_main=1
+Butterfly-L433CC.menu.iudebug.build.iudebug_async=0
+Butterfly-L433CC.menu.iudebug.build.iudebug_features=0
+Butterfly-L433CC.menu.iudebug.features=Features
+Butterfly-L433CC.menu.iudebug.features.build.iudebug_any=1
+Butterfly-L433CC.menu.iudebug.features.build.iudebug_setup=0
+Butterfly-L433CC.menu.iudebug.features.build.iudebug_main=0
+Butterfly-L433CC.menu.iudebug.features.build.iudebug_async=0
+Butterfly-L433CC.menu.iudebug.features.build.iudebug_features=1
+Butterfly-L433CC.menu.iudebug.all=All
+Butterfly-L433CC.menu.iudebug.all.build.iudebug_any=1
+Butterfly-L433CC.menu.iudebug.all.build.iudebug_setup=1
+Butterfly-L433CC.menu.iudebug.all.build.iudebug_main=1
+Butterfly-L433CC.menu.iudebug.all.build.iudebug_async=1
+Butterfly-L433CC.menu.iudebug.all.build.iudebug_features=1
+
+# End of Infinite Uptime Options #############################
+

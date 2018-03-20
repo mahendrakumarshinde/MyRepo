@@ -14,7 +14,7 @@ void LSM6DSMAccelReadCallback(uint8_t wireStatus)
     {
         newLSM6DSMAccelData = true;
     }
-    else if (callbackDebugMode)
+    else if (asyncDebugMode)
     {
         debugPrint(micros(), false);
         debugPrint(F(" Acceleration read error "), false);
@@ -310,7 +310,7 @@ void IULSM6DSM::readData()
     if (!m_iuI2C->readBytes(ADDRESS, OUT_TEMP_L, 14, &m_rawBytes[0],
                             LSM6DSMAccelReadCallback))
     {
-        if (callbackDebugMode)
+        if (asyncDebugMode)
         {
             debugPrint("Skip accel read");
         }
@@ -392,7 +392,7 @@ void IULSM6DSM::sendData(HardwareSerial *port)
  */
 void IULSM6DSM::exposeCalibration()
 {
-#ifdef DEBUGMODE
+#ifdef IUDEBUG_ANY
     debugPrint(F("Accelerometer calibration data: "));
     debugPrint(F("Resolution (m.s-2): "));
     debugPrint(m_resolution, 7);
