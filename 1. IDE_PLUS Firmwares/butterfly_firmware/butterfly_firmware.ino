@@ -60,9 +60,21 @@ const char MAC_ADDRESS[18] = "94:54:93:0F:67:02";
 
 /***** Accelerometer Calibration parameters *****/
 
-float ACCEL_RMS_SCALING = 1.04;
-float VELOCITY_RMS_SCALING = 1.;
-float DISPLACEMENT_RMS_SCALING = 1.;
+float ACCEL_RMS_SCALING[3] = {
+    1.00, // Axis X
+    1.00, // Axis Y
+    1.04, // Axis Z
+};
+float VELOCITY_RMS_SCALING[3] = {
+    1.00, // Axis X
+    1.00, // Axis Y
+    1.00, // Axis Z
+};
+float DISPLACEMENT_RMS_SCALING[3] = {
+    1.00, // Axis X
+    1.00, // Axis Y
+    1.00, // Axis Z
+};
 
 
 /***** Acceleration Energy 512 default thresholds *****/

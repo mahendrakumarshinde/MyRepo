@@ -224,9 +224,9 @@ extern q15_t allocatedFFTSpace[1024];
 
 /***** Accelerometer Calibration parameters *****/
 
-extern float ACCEL_RMS_SCALING;
-extern float VELOCITY_RMS_SCALING;
-extern float DISPLACEMENT_RMS_SCALING;
+extern float ACCEL_RMS_SCALING[3];
+extern float VELOCITY_RMS_SCALING[3];
+extern float DISPLACEMENT_RMS_SCALING[3];
 
 
 /***** Accelerometer Feature computation parameters *****/

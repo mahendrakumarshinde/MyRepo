@@ -210,11 +210,11 @@ q15_t allocatedFFTSpace[1024];
 
 // 128 sample long accel computers
 SignalRMSComputer accel128ComputerX(1,&accelRMS128X, true, true,
-                                    ACCEL_RMS_SCALING);
+                                    ACCEL_RMS_SCALING[0]);
 SignalRMSComputer accel128ComputerY(2, &accelRMS128Y, true, true,
-                                    ACCEL_RMS_SCALING);
+                                    ACCEL_RMS_SCALING[1]);
 SignalRMSComputer accel128ComputerZ(3, &accelRMS128Z, true, true,
-                                    ACCEL_RMS_SCALING);
+                                    ACCEL_RMS_SCALING[2]);
 MultiSourceSumComputer accelRMS128TotalComputer(4, &accelRMS128Total,
                                                 false, true);
 
@@ -240,8 +240,8 @@ Q15FFTComputer accelFFTComputerX(9,
                                  DEFAULT_LOW_CUT_FREQUENCY,
                                  DEFAULT_HIGH_CUT_FREQUENCY,
                                  DEFAULT_MIN_AGITATION,
-                                 VELOCITY_RMS_SCALING,
-                                 DISPLACEMENT_RMS_SCALING);
+                                 VELOCITY_RMS_SCALING[0],
+                                 DISPLACEMENT_RMS_SCALING[0]);
 Q15FFTComputer accelFFTComputerY(10,
                                  &accelReducedFFTY,
                                  &accelMainFreqY,
@@ -251,8 +251,8 @@ Q15FFTComputer accelFFTComputerY(10,
                                  DEFAULT_LOW_CUT_FREQUENCY,
                                  DEFAULT_HIGH_CUT_FREQUENCY,
                                  DEFAULT_MIN_AGITATION,
-                                 VELOCITY_RMS_SCALING,
-                                 DISPLACEMENT_RMS_SCALING);
+                                 VELOCITY_RMS_SCALING[1],
+                                 DISPLACEMENT_RMS_SCALING[1]);
 Q15FFTComputer accelFFTComputerZ(11,
                                  &accelReducedFFTZ,
                                  &accelMainFreqZ,
@@ -262,8 +262,8 @@ Q15FFTComputer accelFFTComputerZ(11,
                                  DEFAULT_LOW_CUT_FREQUENCY,
                                  DEFAULT_HIGH_CUT_FREQUENCY,
                                  DEFAULT_MIN_AGITATION,
-                                 VELOCITY_RMS_SCALING,
-                                 DISPLACEMENT_RMS_SCALING);
+                                 VELOCITY_RMS_SCALING[2],
+                                 DISPLACEMENT_RMS_SCALING[2]);
 
 
 /***** Audio Features *****/

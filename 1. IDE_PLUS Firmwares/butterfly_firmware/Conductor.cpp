@@ -404,6 +404,14 @@ void Conductor::processLegacyCommands(char *buff)
                 resetLed();
             }
             break;
+        case 'I': // ping device
+            if (strcmp(buff, "IDE-HARDRESET") == 0)
+            {
+                iuBluetooth.port->print("WIFI-DISCONNECTED;");
+                delay(10);
+                STM32.reset();
+            }
+            break;
         case '0': // Set Thresholds
             if (buff[4] == '-' && buff[9] == '-' && buff[14] == '-')
             {
@@ -652,13 +660,7 @@ void Conductor::processBLEMessages(char *buff)
     {
         return;  // Do not listen to BLE when wired
     }
-    if (strcmp(buff, "IDE-HARDRESET") == 0)
-    {
-        iuBluetooth.port->print("WIFI-DISCONNECTED;");
-        delay(10);
-        STM32.reset();
-    }
-    else if (strncmp(buff, "WIFI-", 5) == 0)
+    if (strncmp(buff, "WIFI-", 5) == 0)
     {
         processUserMessageForWiFi(buff, iuBluetooth.port);
     }
