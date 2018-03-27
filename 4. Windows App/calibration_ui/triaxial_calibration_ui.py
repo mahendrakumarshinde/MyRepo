@@ -311,27 +311,18 @@ class CalibrationInterface(tk.Frame):
 
     calibration_experiments = [
         # X Axis
-        VibrationCalibrationX([1000, 15.92, 10], [5, 5, 5]),
-        VibrationCalibrationX([2000, 15.92, 20], [5, 5, 5]),
         VibrationCalibrationX([1000, 40, 4], [5, 5, 5]),
         VibrationCalibrationX([2000, 40, 8], [5, 5, 5]),
-        VibrationCalibrationX([2000, 80, 4], [5, 5, 5]),
         VibrationCalibrationX([5000, 80, 10], [5, 5, 5]),
         VibrationCalibrationX([10000, 80, 20], [5, 5, 5]),
         # Y Axis
-        VibrationCalibrationY([1000, 15.92, 10], [5, 5, 5]),
-        VibrationCalibrationY([2000, 15.92, 20], [5, 5, 5]),
         VibrationCalibrationY([1000, 40, 4], [5, 5, 5]),
         VibrationCalibrationY([2000, 40, 8], [5, 5, 5]),
-        VibrationCalibrationY([2000, 80, 4], [5, 5, 5]),
         VibrationCalibrationY([5000, 80, 10], [5, 5, 5]),
         VibrationCalibrationY([10000, 80, 20], [5, 5, 5]),
         # Z Axis
-        VibrationCalibrationZ([1000, 15.92, 10], [5, 5, 5]),
-        VibrationCalibrationZ([2000, 15.92, 20], [5, 5, 5]),
         VibrationCalibrationZ([1000, 40, 4], [5, 5, 5]),
         VibrationCalibrationZ([2000, 40, 8], [5, 5, 5]),
-        VibrationCalibrationZ([2000, 80, 4], [5, 5, 5]),
         VibrationCalibrationZ([5000, 80, 10], [5, 5, 5]),
         VibrationCalibrationZ([10000, 80, 20], [5, 5, 5]),
         ]
