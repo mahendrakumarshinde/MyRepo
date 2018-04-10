@@ -9,9 +9,13 @@ char hostSerialBuffer[3072];
 IUSerial hostSerial(&Serial, hostSerialBuffer, 3072, IUSerial::MS_PROTOCOL,
                     115200, ';', 100);
 
-IURawDataHelper accelRawDataHelper(10000);  // 10s timeout
+IURawDataHelper accelRawDataHelper(10000,  // 10s timeout
+                                   DATA_DEFAULT_ENDPOINT_HOST,
+                                   RAW_DATA_DEFAULT_ENDPOINT_ROUTE,
+                                   DATA_DEFAULT_ENDPOINT_PORT);
 
-IUMQTTHelper mqttHelper;
+IUMQTTHelper mqttHelper(MQTT_DEFAULT_SERVER_IP, MQTT_DEFAULT_SERVER_PORT,
+                        MQTT_DEFAULT_USERNAME, MQTT_DEFAULT_ASSWORD);
 
 IUTimeHelper timeHelper(2390, "time.google.com");
 
@@ -20,18 +24,20 @@ IUTimeHelper timeHelper(2390, "time.google.com");
     Conductor
 ============================================================================= */
 
-Conductor::Conductor() :
-    m_unknownBleMacAddress(true),
-    m_shouldWakeUp(false),
-    m_radioOn(true),
-    m_lastConnectionAttempt(0),
-    m_lastConnected(0),
-    m_remainingConnectionAttempt(connectionRetry)
+Conductor::Conductor()
 {
-    strncpy(m_bleMacAddress, "00:00:00:00:00:00", 18);
-    strncpy(m_wifiMacAddress, "00:00:00:00:00:00", 18);
     m_credentialValidator.setTimeout(wifiConfigReceptionTimeout);
     m_staticConfigValidator.setTimeout(wifiConfigReceptionTimeout);
+    m_mqttServerValidator.setTimeout(wifiConfigReceptionTimeout);
+    m_mqttCredentialsValidator.setTimeout(wifiConfigReceptionTimeout);
+    m_wifiMAC.fromString(WiFi.macAddress().c_str());
+    // Default values for endpoints
+    strncpy(m_featurePostHost, DATA_DEFAULT_ENDPOINT_HOST, MAX_HOST_LENGTH);
+    strncpy(m_featurePostRoute, FEATURE_DEFAULT_ENDPOINT_ROUTE,
+            MAX_ROUTE_LENGTH);
+    strncpy(m_diagnosticPostHost, DATA_DEFAULT_ENDPOINT_HOST, MAX_HOST_LENGTH);
+    strncpy(m_diagnosticPostRoute, DIAGNOSTIC_DEFAULT_ENDPOINT_ROUTE,
+            MAX_ROUTE_LENGTH);
 }
 
 /**
@@ -46,6 +52,7 @@ void Conductor::deepsleep(uint32_t duration_ms)
     {
         debugPrint("Going to deep-sleep");
     }
+    hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_DISCONNECTED);
     hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_SLEEPING);
     delay(100); // Wait to send serial messages
     ESP.deepSleep(duration_ms * 1000);
@@ -90,24 +97,19 @@ void Conductor::processMessageFromHost()
         debugPrint(buffer);
     }
     uint8_t idx = 0;
-    IPAddress *ipPtr = NULL;
     switch(cmd)
     {
+        /***** MAC addresses *****/
         case MSPCommand::RECEIVE_BLE_MAC:
-            strncpy(m_bleMacAddress, buffer, 18);
-            m_bleMacAddress[17] = 0; // Make sure end of string is set.
-            if (debugMode)
-            {
-                debugPrint("Received BLE MAC from host: ", false);
-                debugPrint(m_bleMacAddress);
-            }
-            mqttHelper.setDeviceMacAddress(m_bleMacAddress);
-            m_unknownBleMacAddress = false;
+            m_bleMAC = hostSerial.mspReadMacAddress();
+            mqttHelper.setDeviceMAC(m_bleMAC);
             break;
         case MSPCommand::ASK_WIFI_MAC:
-            hostSerial.sendMSPCommand(MSPCommand::RECEIVE_WIFI_MAC,
-                                      m_wifiMacAddress);
+            hostSerial.mspSendMacAddress(MSPCommand::RECEIVE_WIFI_MAC,
+                                         m_wifiMAC);
             break;
+
+        /***** Wifi Config *****/
         case MSPCommand::WIFI_RECEIVE_SSID:
             if (m_credentialValidator.hasTimedOut())
             {
@@ -117,7 +119,7 @@ void Conductor::processMessageFromHost()
             m_credentialValidator.receivedMessage(0);
             if (m_credentialValidator.completed())
             {
-                reconnect(true);
+                onNewCredentialsReception();
             }
             break;
         case MSPCommand::WIFI_RECEIVE_PASSWORD:
@@ -129,7 +131,7 @@ void Conductor::processMessageFromHost()
             m_credentialValidator.receivedMessage(1);
             if (m_credentialValidator.completed())
             {
-                reconnect(true);
+                onNewCredentialsReception();
             }
             break;
         case MSPCommand::WIFI_FORGET_CREDENTIALS:
@@ -140,31 +142,29 @@ void Conductor::processMessageFromHost()
         case MSPCommand::WIFI_RECEIVE_GATEWAY:
         case MSPCommand::WIFI_RECEIVE_SUBNET:
             idx = (uint8_t) cmd - (uint8_t) MSPCommand::WIFI_RECEIVE_STATIC_IP;
-            if (idx == 0) { ipPtr = &m_staticIp; }
-            else if (idx == 1) { ipPtr = &m_staticGateway; }
-            else if (idx == 2) { ipPtr = &m_staticSubnet; }
-            else { break; }
             if (m_staticConfigValidator.hasTimedOut())
             {
                 forgetWiFiStaticConfig();
             }
-            if (ipPtr->fromString(buffer))
-            {
-                m_staticConfigValidator.receivedMessage(idx);
-            }
-            else if (debugMode)
-            {
-                debugPrint("Couldn't parse IP address: ", false);
-                debugPrint(buffer);
-            }
+            if (idx == 0){
+                m_staticIp = hostSerial.mspReadIPAddress();
+            } else if (idx == 1) {
+                m_staticGateway = hostSerial.mspReadIPAddress();
+            } else if (idx == 2) {
+                m_staticSubnet = hostSerial.mspReadIPAddress();
+            } else { break; }
             if (m_staticConfigValidator.completed())
             {
+                hostSerial.sendMSPCommand(
+                    MSPCommand::WIFI_CONFIRM_NEW_STATIC_CONFIG);
                 // TODO Implement
             }
             break;
         case MSPCommand::WIFI_FORGET_STATIC_CONFIG:
             forgetWiFiStaticConfig();
             break;
+
+        /***** Wifi commands *****/
         case MSPCommand::WIFI_WAKE_UP:
             m_shouldWakeUp = true;
             break;
@@ -178,6 +178,8 @@ void Conductor::processMessageFromHost()
         case MSPCommand::WIFI_CONNECT:
             if (m_credentialValidator.completed())
             {
+                // Reset disconnection timer
+                m_disconnectionTimerStart = millis();
                 reconnect();
             }
             else
@@ -189,6 +191,8 @@ void Conductor::processMessageFromHost()
         case MSPCommand::WIFI_DISCONNECT:
             disconnectWifi();
             break;
+
+        /***** Data publication *****/
         case MSPCommand::PUBLISH_RAW_DATA:
             if (accelRawDataHelper.hasTimedOut())
             {
@@ -196,17 +200,89 @@ void Conductor::processMessageFromHost()
             }
             accelRawDataHelper.addKeyValuePair(buffer[0], &buffer[2],
                                                strlen(buffer) - 2);
-            accelRawDataHelper.publishIfReady(m_bleMacAddress);
+            accelRawDataHelper.publishIfReady(m_bleMAC);
             break;
         case MSPCommand::PUBLISH_FEATURE:
-            mqttHelper.publishFeature(buffer, bufferLength);
+            publishFeature(&buffer[7], bufferLength, buffer, 6);
             break;
         case MSPCommand::PUBLISH_DIAGNOSTIC:
-            mqttHelper.publishDiagnostic(buffer, bufferLength,
-                                         timeHelper.getCurrentTime());
+            publishDiagnostic(buffer, bufferLength);
             break;
+
+        /***** Cloud command reception and transmission *****/
         case MSPCommand::HOST_CONFIRM_RECEPTION:
             // TODO Implement
+            break;
+        case MSPCommand::HOST_FORWARD_CMD:
+            // TODO Implement
+            break;
+
+        /***** Publication protocol selection *****/
+        case MSPCommand::PUBLICATION_USE_MQTT:
+            m_useMQTT = true;
+            break;
+        case MSPCommand::PUBLICATION_USE_HTTP:
+            m_useMQTT = false;
+            break;
+
+        /***** Settable parameters (addresses, credentials, etc) *****/
+        case MSPCommand::SET_RAW_DATA_ENDPOINT_HOST:
+            accelRawDataHelper.setEndpointHost(buffer);
+            break;
+        case MSPCommand::SET_RAW_DATA_ENDPOINT_ROUTE:
+            accelRawDataHelper.setEndpointRoute(buffer);
+            break;
+        case MSPCommand::SET_RAW_DATA_ENDPOINT_PORT:
+            accelRawDataHelper.setEndpointPort(
+                (uint16_t) strtol(buffer, NULL, 0));
+            break;
+        case MSPCommand::SET_MQTT_SERVER_IP:
+            if (m_mqttServerValidator.hasTimedOut())
+            {
+                m_mqttServerValidator.reset();
+            }
+            m_mqttServerIP = hostSerial.mspReadIPAddress();
+            m_mqttServerValidator.receivedMessage(0);
+            if (m_mqttServerValidator.completed())
+            {
+                mqttHelper.setServer(m_mqttServerIP, m_mqttServerPort);
+            }
+            break;
+        case MSPCommand::SET_MQTT_SERVER_PORT:
+            if (m_mqttServerValidator.hasTimedOut())
+            {
+                m_mqttServerValidator.reset();
+            }
+            m_mqttServerPort = (uint16_t) strtol(buffer, NULL, 0);
+            m_mqttServerValidator.receivedMessage(1);
+            if (m_mqttServerValidator.completed())
+            {
+                mqttHelper.setServer(m_mqttServerIP, m_mqttServerPort);
+            }
+            break;
+        case MSPCommand::SET_MQTT_USERNAME:
+            if (m_mqttCredentialsValidator.hasTimedOut())
+            {
+                m_mqttCredentialsValidator.reset();
+            }
+            strncpy(m_mqttUsername, buffer, MQTT_CREDENTIALS_MAX_LENGTH);
+            m_mqttCredentialsValidator.receivedMessage(0);
+            if (m_mqttCredentialsValidator.completed())
+            {
+                mqttHelper.setCredentials(m_mqttUsername, m_mqttPassword);
+            }
+            break;
+        case MSPCommand::SET_MQTT_PASSWORD:
+            if (m_mqttCredentialsValidator.hasTimedOut())
+            {
+                m_mqttCredentialsValidator.reset();
+            }
+            strncpy(m_mqttPassword, buffer, MQTT_CREDENTIALS_MAX_LENGTH);
+            m_mqttCredentialsValidator.receivedMessage(1);
+            if (m_mqttCredentialsValidator.completed())
+            {
+                mqttHelper.setCredentials(m_mqttUsername, m_mqttPassword);
+            }
             break;
     }
 }
@@ -219,10 +295,12 @@ void Conductor::processMessageFromHost()
 
 void Conductor::setCredentials(const char *userSSID, const char *userPSK)
 {
+    forgetWiFiCredentials();
     strncpy(m_userSSID, userSSID, wifiCredentialLength);
     strncpy(m_userPassword, userPSK, wifiCredentialLength);
     m_credentialValidator.receivedMessage(0);
     m_credentialValidator.receivedMessage(1);
+    m_disconnectionTimerStart = millis();  // Reset Disconnection timer
 }
 
 /**
@@ -236,6 +314,18 @@ void Conductor::forgetWiFiCredentials()
         m_userSSID[i] = 0;
         m_userPassword[i] = 0;
     }
+}
+
+/**
+ *
+ */
+void Conductor::onNewCredentialsReception()
+{
+    String info = String(m_userSSID) + "_" + String(m_userPassword);
+    hostSerial.sendMSPCommand(MSPCommand::WIFI_CONFIRM_NEW_CREDENTIALS,
+                              info.c_str());
+    m_disconnectionTimerStart = millis(); // Reset disconnection timer
+    reconnect(true);
 }
 
 /**
@@ -259,8 +349,7 @@ bool Conductor::getConfigFromMainBoard()
 {
     uint32_t startTime = millis();
     uint32_t current = startTime;
-    uint16_t i = 0;
-    while (!m_shouldWakeUp || m_unknownBleMacAddress)
+    while (!m_shouldWakeUp || uint64_t(m_bleMAC) == 0)
     {
         if (current - startTime > hostResponseTimeout)
         {
@@ -274,9 +363,21 @@ bool Conductor::getConfigFromMainBoard()
         hostSerial.sendMSPCommand(MSPCommand::ASK_BLE_MAC);
         readMessagesFromHost();
         delay(100);
+        readMessagesFromHost();
+        String test = m_bleMAC.toString();
+        if (m_shouldWakeUp)
+        {
+            test += String("+wakeup");
+        }
+        else
+        {
+            test += String("+sleep");
+        }
+        hostSerial.sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION,
+                                  test.c_str());
         current = millis();
     }
-    return (m_shouldWakeUp && m_unknownBleMacAddress);
+    return (m_shouldWakeUp && uint64_t(m_bleMAC) > 0);
 }
 
 
@@ -424,7 +525,8 @@ bool Conductor::reconnect(bool forceNewCredentials)
  * connection time-out. If the timeout=0, then it just calls the ESP library
  * function.
  *
- * @return The status reached or disconnect if STA is off
+ * @return The status WL_CONNECTED, WL_CONNECT_FAILED or disconnect if
+ *  STA is off.
  */
 uint8_t Conductor::waitForConnectResult()
 {
@@ -460,9 +562,9 @@ void Conductor::checkWiFiDisconnectionTimeout()
     uint32_t now = millis();
     if (WiFi.isConnected() && mqttHelper.client.connected())
     {
-        m_lastConnected = now;
+        m_disconnectionTimerStart = now;
     }
-    else if (now - m_lastConnected > disconnectionTimeout)
+    else if (now - m_disconnectionTimerStart > disconnectionTimeout)
     {
         if (debugMode)
         {
@@ -517,7 +619,9 @@ void Conductor::processMessageFromMQTT(char* topic, byte* payload,
     }
     if (strncmp(&subTopic[1], "config", 6) == 0)
     {
-        // TODO Implement
+        hostSerial.sendMSPCommand(MSPCommand::CONFIG_FORWARD_CMD,
+                                  (char*) payload, length);
+
     }
     else if (strncmp(&subTopic[1], "time_sync", 9) == 0)
     {
@@ -525,15 +629,101 @@ void Conductor::processMessageFromMQTT(char* topic, byte* payload,
     }
     else if (strncmp(&subTopic[1], "legacy", 6) == 0)
     {
-        for (int i = 0; i < length; i++)
-        {
-            hostSerial.port->print((char)payload[i]);
-        }
-        hostSerial.port->print(";");
+        hostSerial.sendMSPCommand(MSPCommand::CONFIG_FORWARD_LEGACY_CMD,
+                                  (char*) payload, length);
+
         if ((char)payload[0] == '1' && (char)payload[1] == ':')
         {
             timeHelper.updateTimeReferenceFromIU(payload, length);
         }
+    }
+}
+
+
+/* =============================================================================
+    Data posting / publication
+============================================================================= */
+
+/**
+ *
+ */
+bool Conductor::publishDiagnostic(const char *rawMsg, const uint16_t msgLength,
+                                  const char *diagnosticType,
+                                  const uint16_t diagnosticTypeLength)
+{
+    char stringDT[25];  // Remove the newline at the end of ctime
+    time_t datetime = timeHelper.getCurrentTime();
+    strncpy(stringDT, ctime(&datetime), 25);
+    stringDT[24] = 0;
+    if (m_useMQTT)
+    {
+        uint16_t totalMsgLength = msgLength + CUSTOMER_PLACEHOLDER_LENGTH + 50;
+        char message[totalMsgLength];
+        snprintf(message, totalMsgLength, "%s;;;%s;;;%s;;;%s",
+                 CUSTOMER_PLACEHOLDER, m_bleMAC.toString().c_str(),
+                 stringDT, rawMsg);
+        return mqttHelper.publishDiagnostic(message, diagnosticType,
+                                            diagnosticTypeLength);
+    }
+    else
+    {
+        uint16_t totalMsgLength = msgLength + CUSTOMER_PLACEHOLDER_LENGTH + 98;
+        char message[totalMsgLength];
+        snprintf(message, totalMsgLength,
+                 "{\"payload\":\"%s;;;%s;;;%s;;;%s\",\"time\":\"%s\"}",
+                 // payload value
+                 CUSTOMER_PLACEHOLDER, m_bleMAC.toString().c_str(), stringDT,
+                 rawMsg,
+                 // time value
+                 stringDT);
+        uint16_t routeLength = strlen(DIAGNOSTIC_DEFAULT_ENDPOINT_ROUTE) + 17;
+        char route[routeLength];
+        snprintf(route, routeLength, "%s%s", DIAGNOSTIC_DEFAULT_ENDPOINT_ROUTE,
+                 m_bleMAC.toString().c_str());
+        return httpPostBigJsonRequest(
+            m_diagnosticPostHost, route, m_diagnosticPostPort,
+            (uint8_t*) message, totalMsgLength);
+    }
+}
+
+/**
+ *
+ */
+bool Conductor::publishFeature(const char *rawMsg, const uint16_t msgLength,
+                               const char *featureType,
+                               const uint16_t featureTypeLength)
+{
+    char stringDT[25];  // Remove the newline at the end of ctime
+    time_t datetime = timeHelper.getCurrentTime();
+    strncpy(stringDT, ctime(&datetime), 25);
+    stringDT[24] = 0;
+    if (m_useMQTT)
+    {
+        uint16_t totalMsgLength = msgLength + CUSTOMER_PLACEHOLDER_LENGTH + 24;
+        char message[totalMsgLength];
+        snprintf(message, totalMsgLength, "%s;;;%s;;;%s", CUSTOMER_PLACEHOLDER,
+                 m_bleMAC.toString().c_str(), rawMsg);
+        return mqttHelper.publishFeature(message, featureType,
+                                         featureTypeLength);
+    }
+    else
+    {
+        uint16_t totalMsgLength = msgLength + CUSTOMER_PLACEHOLDER_LENGTH + 72;
+        char message[totalMsgLength];
+        snprintf(message, totalMsgLength,
+                 "{\"payload\":\"%s;;;%s;;;%s\",\"time\":\"%s\"}",
+                 // payload value
+                 CUSTOMER_PLACEHOLDER, m_bleMAC.toString().c_str(), rawMsg,
+                 // time value
+                 stringDT);
+        uint16_t routeLength = strlen(FEATURE_DEFAULT_ENDPOINT_ROUTE) + 17;
+        char route[routeLength];
+        snprintf(route, routeLength, "%s%s", FEATURE_DEFAULT_ENDPOINT_ROUTE,
+                 m_bleMAC.toString().c_str());
+        return httpPostBigJsonRequest(
+            m_featurePostHost, route, m_featurePostPort,
+            (uint8_t*) message, totalMsgLength);
+
     }
 }
 
@@ -548,8 +738,21 @@ void Conductor::processMessageFromMQTT(char* topic, byte* payload,
  * @param destination A char array to hold the function output. Must be at least
  *  250 char long.
  */
-void Conductor::getWifiInfo(char *destination, bool mqttOn)
+void Conductor::getWifiInfo(char *destination, uint16_t len, bool mqttOn)
 {
+    for (uint16_t i = 0; i < len; ++i)
+    {
+        destination[i] = 0;
+    }
+    if (len < 250)
+    {
+        if (debugMode)
+        {
+            debugPrint("destination char array is too short to "
+                       "get WiFi Info");
+        }
+        return;
+    }
     strcpy(destination, "{\"ssid\":\"");
     strcat(destination, WiFi.SSID().c_str());
     strcat(destination, "\",\"rssi\":");
@@ -563,7 +766,7 @@ void Conductor::getWifiInfo(char *destination, bool mqttOn)
     strcat(destination, "\",\"dns\":\"");
     strcat(destination, WiFi.dnsIP().toString().c_str());
     strcat(destination, "\",\"wifi_mac\":\"");
-    strcat(destination, WiFi.macAddress().c_str());
+    strcat(destination, m_wifiMAC.toString().c_str());
     strcat(destination, "\",\"MQTT\":\"");
     if (mqttOn)
     {
@@ -577,9 +780,22 @@ void Conductor::getWifiInfo(char *destination, bool mqttOn)
 /**
  *
  */
+void Conductor::publishWifiInfo()
+{
+    if (WiFi.isConnected() && mqttHelper.client.connected())
+    {
+        char message[256];
+        getWifiInfo(message, 256, true);
+        publishDiagnostic(message, strlen(message));
+    }
+}
+
+/**
+ *
+ */
 void Conductor::debugPrintWifiInfo()
 {
-    #ifdef IUDEBUG_ANY
+    #if IUDEBUG_ANY == 1
     WiFiMode_t currMode = WiFi.getMode();
     debugPrint("WiFi mode: ", false);
     debugPrint((uint8_t) currMode);

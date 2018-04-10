@@ -147,6 +147,100 @@ void Conductor::showStatusOnLed(RGBColor color)
 
 
 /* =============================================================================
+    Local storage (flash) management
+============================================================================= */
+
+/**
+ *
+ */
+bool Conductor::loadAllConfigsFromFlash()
+{
+    return (loadConfigFromFlash(IUFlash::CFG_DEVICE) &&
+            loadConfigFromFlash(IUFlash::CFG_COMPONENT) &&
+            loadConfigFromFlash(IUFlash::CFG_FEATURE));
+}
+
+/**
+ *
+ */
+bool Conductor::loadConfigFromFlash(IUFlash::storedConfig configType)
+{
+     if (!iuFlash.available())
+    {
+        return false;  // Flash is unavailable
+    }
+    // TODO this only works with IUFSFlash, not IUSPIFlash
+    // FIXME this only works with IUFSFlash, not IUSPIFlash
+    File file;
+    if (!iuFlash.getReadable(configType, &file))
+    {
+        return false;
+    }
+    JsonVariant config = m_jsonBuffer.parseObject(file);
+    if (!config.success())
+    {
+        return false;
+    }
+    bool success = true;
+    switch (configType)
+    {
+        case IUFlash::CFG_DEVICE:
+            configureMainOptions(config);
+            break;
+        case IUFlash::CFG_COMPONENT:
+            configureAllSensors(config);
+            break;
+        case IUFlash::CFG_FEATURE:
+            configureAllFeatures(config);
+            break;
+        default:
+            if (debugMode)
+            {
+                debugPrint("Unhandled config type: ", false);
+                debugPrint((uint8_t) configType);
+            }
+            success = false;
+            break;
+    }
+    if (debugMode && success)
+    {
+        debugPrint("Successfully loaded config type #", false);
+        debugPrint((uint8_t) configType);
+    }
+    return success;
+}
+
+/**
+ *
+ */
+bool Conductor::saveConfigToFlash(IUFlash::storedConfig configType,
+                                  JsonVariant &config)
+{
+    if (!iuFlash.available())
+    {
+        return false;  // Flash is unavailable
+    }
+    // TODO this only works with IUFSFlash, not IUSPIFlash
+    // FIXME this only works with IUFSFlash, not IUSPIFlash
+    File file;
+    if (!iuFlash.getWritable(configType, &file))
+    {
+        return false;
+    }
+    if (config.printTo(file) == 0)
+    {
+        return false;
+    }
+    if (debugMode)
+    {
+        debugPrint("Successfully saved config type #", false);
+        debugPrint((uint8_t) configType);
+    }
+    return true;
+}
+
+
+/* =============================================================================
     Serial Reading & command processing
 ============================================================================= */
 
@@ -166,7 +260,7 @@ void Conductor::readFromSerial(StreamingMode::option interfaceType,
         char *buffer = iuSerial->getBuffer();
         // Buffer Size, including NUL char '\0'
         uint16_t buffSize =  iuSerial->getCurrentBufferLength();
-        if (loopDebugMode)
+        if (loopDebugMode && iuSerial->getProtocol() != IUSerial::MS_PROTOCOL)
         {
             debugPrint(F("Interface "), false);
             debugPrint(interfaceType, false);
@@ -175,7 +269,7 @@ void Conductor::readFromSerial(StreamingMode::option interfaceType,
         }
         if (buffer[0] == '{' && buffer[buffSize - 1] == '}')
         {
-            processConfiguration(buffer);
+            processConfiguration(buffer, true);
         }
         else
         {
@@ -206,9 +300,9 @@ void Conductor::readFromSerial(StreamingMode::option interfaceType,
 /**
  * Parse the given config json and apply the configuration
  */
-bool Conductor::processConfiguration(char *json)
+bool Conductor::processConfiguration(char *json, bool saveToFlash)
 {
-    JsonObject& root = jsonBuffer.parseObject(json);
+    JsonObject& root = m_jsonBuffer.parseObject(json);
     if (!root.success())
     {
         if (debugMode)
@@ -218,27 +312,34 @@ bool Conductor::processConfiguration(char *json)
         return false;
     }
     // Device level configuration
-    bool valid = false;
-    JsonVariant sub_config = root["device"];
-    if (sub_config.success())
+    JsonVariant subConfig = root["device"];
+    if (subConfig.success())
     {
-        valid = configureMainOptions(sub_config);
-    }
-    if (!valid)
-    {
-        return false;
+        configureMainOptions(subConfig);
+        if (saveToFlash)
+        {
+            saveConfigToFlash(IUFlash::CFG_DEVICE, subConfig);
+        }
     }
     // Component configuration
-    sub_config = root["components"];
-    if (sub_config.success())
+    subConfig = root["components"];
+    if (subConfig.success())
     {
-        configureAllSensors(sub_config);
+        configureAllSensors(subConfig);
+        if (saveToFlash)
+        {
+            saveConfigToFlash(IUFlash::CFG_COMPONENT, subConfig);
+        }
     }
     // Feature configuration
-    sub_config = root["features"];
-    if (sub_config.success())
+    subConfig = root["features"];
+    if (subConfig.success())
     {
-        configureAllFeatures(sub_config);
+        configureAllFeatures(subConfig);
+        if (saveToFlash)
+        {
+            saveConfigToFlash(IUFlash::CFG_FEATURE, subConfig);
+        }
     }
     return true;
 }
@@ -248,27 +349,13 @@ bool Conductor::processConfiguration(char *json)
  *
  * @return True if the configuration is valid, else false.
  */
-bool Conductor::configureMainOptions(JsonVariant &my_config)
+void Conductor::configureMainOptions(JsonVariant &config)
 {
-    // Firmware and config version check
-    const char* vers = my_config["VERS"].as<char*>();
-    if (vers == NULL || strcmp(FIRMWARE_VERSION, vers) > 0)
-    {
-        if (debugMode)
-        {
-            debugPrint(F("Config error: received config version '"), false);
-            debugPrint(vers, false);
-            debugPrint(F("', expected '"), false);
-            debugPrint(FIRMWARE_VERSION, false);
-            debugPrint(F("'"));
-        }
-        return false;
-    }
-    JsonVariant value = my_config["GRP"];
+    JsonVariant value = config["GRP"];
     if (value.success())
     {
         deactivateAllGroups();
-        activateGroup(&healthCheckGroup);  // Health check is always active
+        // activateGroup(&healthCheckGroup);  // Health check is always active
         FeatureGroup *group;
         const char* groupName;
         for (uint8_t i = 0; i < FeatureGroup::instanceCount; ++i)
@@ -286,35 +373,34 @@ bool Conductor::configureMainOptions(JsonVariant &my_config)
     }
     // Sleep management
     bool resetCycleTime = false;
-    value = my_config["POW"];
+    value = config["POW"];
     if (value.success())
     {
         m_sleepMode = (sleepMode) (value.as<int>());
         resetCycleTime = true;
     }
-    value = my_config["TSL"];
+    value = config["TSL"];
     if (value.success())
     {
-        m_autoSleepDelay = (uint32_t) (value.as<int>());
+        m_autoSleepDelay = (uint32_t) (value.as<int>()) * 1000;
         resetCycleTime = true;
     }
-    value = my_config["TOFF"];
+    value = config["TOFF"];
     if (value.success())
     {
-        m_sleepDuration = (uint32_t) (value.as<int>());
+        m_sleepDuration = (uint32_t) (value.as<int>()) * 1000;
         resetCycleTime = true;
     }
-    value = my_config["TCY"];
+    value = config["TCY"];
     if (value.success())
     {
-        m_cycleTime = (uint32_t) (value.as<int>());
+        m_cycleTime = (uint32_t) (value.as<int>()) * 1000;
         resetCycleTime = true;
     }
     if (resetCycleTime)
     {
         m_startTime = millis();
     }
-    return true;
 }
 
 /**
@@ -322,13 +408,13 @@ bool Conductor::configureMainOptions(JsonVariant &my_config)
  */
 void Conductor::configureAllSensors(JsonVariant &config)
 {
-    JsonVariant my_config;
+    JsonVariant myConfig;
     for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
     {
-        my_config = config[Sensor::instances[i]->getName()];
-        if (my_config.success())
+        myConfig = config[Sensor::instances[i]->getName()];
+        if (myConfig.success())
         {
-            Sensor::instances[i]->configure(my_config);
+            Sensor::instances[i]->configure(myConfig);
         }
     }
 }
@@ -338,7 +424,7 @@ void Conductor::configureAllSensors(JsonVariant &config)
  */
 void Conductor::configureAllFeatures(JsonVariant &config)
 {
-    JsonVariant my_config;
+    JsonVariant myConfig;
     Feature *feature;
     FeatureComputer *computer;
     for (uint8_t i = 0; i < Feature::instanceCount; ++i)
@@ -347,13 +433,13 @@ void Conductor::configureAllFeatures(JsonVariant &config)
         /* Disable all operationStates by default, they will be reactivated in
         feature->configure if needed. */
         feature->disableOperationState();
-        my_config = config[feature->getName()];
-        if (my_config.success())
+        myConfig = config[feature->getName()];
+        if (myConfig.success())
         {
-            feature->configure(my_config);  // Configure the feature
+            feature->configure(myConfig);  // Configure the feature
             computer = FeatureComputer::getInstanceById(
                 feature->getComputerId());
-            computer->configure(my_config);  // Configure the computer
+            computer->configure(myConfig);  // Configure the computer
             if (debugMode)
             {
                 debugPrint(F("Configured feature "), false);
@@ -410,6 +496,12 @@ void Conductor::processLegacyCommands(char *buff)
                 iuBluetooth.port->print("WIFI-DISCONNECTED;");
                 delay(10);
                 STM32.reset();
+            }
+            else if (strcmp(buff, "IDE-GET-VERSION") == 0)
+            {
+                iuBluetooth.port->print("IDE-VERSION-");
+                iuBluetooth.port->print(FIRMWARE_VERSION);
+                iuBluetooth.port->print(';');
             }
             break;
         case '0': // Set Thresholds
@@ -694,7 +786,7 @@ void Conductor::processUserMessageForWiFi(char *buff,
         // We want the WiFi to do something, so need to make sure it's available
         if (iuWiFi.isSleeping())
         {
-            showStatusOnLed(RGB_PURPLE); // Show to the user that we're doing something
+            showStatusOnLed(RGB_PURPLE); // Show the status to the user
             iuWiFi.setPowerMode(PowerMode::REGULAR);
             uint32_t startT = millis();
             uint32_t current = startT;
@@ -708,43 +800,11 @@ void Conductor::processUserMessageForWiFi(char *buff,
                 current = millis();
             }
             resetLed();
-        }if (strncmp(buff, "WIFI-HARDRESET", 15) == 0)
-        {
-            iuWiFi.hardReset();
         }
-        else if (strncmp(buff, "WIFI-USE-SAVED", 15) == 0)
-        {
-            iuWiFi.connect();
-        }
-        else if (strncmp(buff, "WIFI-SSID-", 10) == 0)
-        {
-            uint16_t len = strlen(buff);
-            if (strcmp(&buff[len - 10], "-DISS-IFIW") != 0)
-            {
-                if (debugMode)
-                {
-                    debugPrint("Unparsable SSID");
-                }
-                return;
-            }
-            iuWiFi.setSSID(&buff[10], len - 20);
-            iuWiFi.sendWiFiCredentials();
-        }
-        else if (strncmp(buff, "WIFI-PW-", 8) == 0)
-        {
-            uint16_t len = strlen(buff);
-            if (strcmp(&buff[len - 8], "-WP-IFIW") != 0)
-            {
-                if (debugMode)
-                {
-                    debugPrint("Unparsable password");
-                }
-                return;
-            }
-            iuWiFi.setPassword(&buff[8], len - 16);
-            iuWiFi.sendWiFiCredentials();
-        }
-        if (iuWiFi.isWorking())
+        // Process message
+        iuWiFi.processUserMessage(buff, &iuFlash);
+        // Show status
+        if (!iuWiFi.isSleeping() && iuWiFi.isWorking())
         {
             showStatusOnLed(RGB_PURPLE);
         }
@@ -756,7 +816,7 @@ void Conductor::processUserMessageForWiFi(char *buff,
  */
 void Conductor::processWIFIMessages(char *buff)
 {
-    if (iuWiFi.processMessage())
+    if (iuWiFi.processChipMessage())
     {
         if (iuWiFi.isWorking())
         {
@@ -778,18 +838,36 @@ void Conductor::processWIFIMessages(char *buff)
     switch (iuWiFi.getMspCommand())
     {
         case MSPCommand::ASK_BLE_MAC:
-            Serial.println("ASK_BLE_MAC");
+            if (loopDebugMode) { debugPrint("ASK_BLE_MAC"); }
             iuWiFi.sendBleMacAddress(m_macAddress);
             break;
+        case MSPCommand::WIFI_ALERT_CONNECTED:
+            iuBluetooth.port->print("WIFI-CONNECTED;");
+            break;
+        case MSPCommand::WIFI_ALERT_DISCONNECTED:
+            iuBluetooth.port->print("WIFI-DISCONNECTED;");
+            break;
         case MSPCommand::WIFI_ALERT_NO_SAVED_CREDENTIALS:
-            Serial.println("WIFI_ALERT_NO_SAVED_CREDENTIALS");
-            iuBluetooth.port->print("WIFI-NOSAVEDCRED");
-            iuBluetooth.port->print(';');
-            Serial.println("WIFI-NOSAVEDCRED;");
+            if (loopDebugMode)
+            {
+                debugPrint("WIFI_ALERT_NO_SAVED_CREDENTIALS");
+            }
+            iuBluetooth.port->print("WIFI-NOSAVEDCRED;");
             break;
         case MSPCommand::CONFIG_FORWARD_CMD:
-            Serial.println("CONFIG_FORWARD_CMD");
+            if (loopDebugMode) { debugPrint("CONFIG_FORWARD_CMD"); }
+            processConfiguration(buff, true);
+            break;
+        case MSPCommand::CONFIG_FORWARD_LEGACY_CMD:
+            if (loopDebugMode) { debugPrint("CONFIG_FORWARD_LEGACY_CMD"); }
             processLegacyCommands(buff);
+            break;
+        case MSPCommand::WIFI_CONFIRM_ACTION:
+            if (loopDebugMode)
+            {
+                debugPrint("WIFI_CONFIRM_ACTION: ", false);
+                debugPrint(buff);
+            }
             break;
         default:
             // pass
@@ -1297,26 +1375,26 @@ void Conductor::streamFeatures()
     {
         return;
     }
-    HardwareSerial *port1 = NULL;
+    IUSerial *ser1 = NULL;
     bool sendFeatureGroupName1 = false;
-    HardwareSerial *port2 = NULL;
+    IUSerial *ser2 = NULL;
     bool sendFeatureGroupName2 = false;
     switch (m_streamingMode)
     {
         case StreamingMode::WIRED:
-            port1 = iuUSB.port;
+            ser1 = &iuUSB;
             break;
         case StreamingMode::BLE:
-            port1 = iuBluetooth.port;
+            ser1 = &iuBluetooth;
             break;
         case StreamingMode::WIFI:
-            port1 = iuWiFi.port;
+            ser1 = &iuWiFi;
             sendFeatureGroupName1 = true;
             break;
         case StreamingMode::WIFI_AND_BLE:
-            port1 = iuWiFi.port;
+            ser1 = &iuWiFi;
             sendFeatureGroupName1 = true;
-            port2 = iuBluetooth.port;
+            ser2 = &iuBluetooth;
             break;
         default:
             if (loopDebugMode)
@@ -1330,24 +1408,28 @@ void Conductor::streamFeatures()
     for (uint8_t i = 0; i < FeatureGroup::instanceCount; ++i)
     {
         // TODO Switch to new streaming format once the backend is ready
-        if (port1)
+        if (ser1)
         {
             if (m_streamingMode == StreamingMode::WIFI ||
                 m_streamingMode == StreamingMode::WIFI_AND_BLE)
             {
-                FeatureGroup::instances[i]->legacyBufferStream(port1, m_macAddress,
-                    m_operationState, batteryLoad, timestamp, sendFeatureGroupName1);
+                FeatureGroup::instances[i]->bufferAndStream(
+                    ser1, IUSerial::MS_PROTOCOL, m_macAddress,
+                    m_operationState, batteryLoad, timestamp,
+                    sendFeatureGroupName1);
             }
             else
             {
-                FeatureGroup::instances[i]->legacyStream(port1, m_macAddress,
-                    m_operationState, batteryLoad, timestamp, sendFeatureGroupName1);
+                FeatureGroup::instances[i]->legacyStream(ser1, m_macAddress,
+                    m_operationState, batteryLoad, timestamp,
+                    sendFeatureGroupName1);
             }
         }
-        if (port2)
+        if (ser2)
         {
-            FeatureGroup::instances[i]->legacyStream(port2, m_macAddress,
-                m_operationState, batteryLoad, timestamp, sendFeatureGroupName2, 1);
+            FeatureGroup::instances[i]->legacyStream(ser2, m_macAddress,
+                m_operationState, batteryLoad, timestamp,
+                sendFeatureGroupName2, 1);
         }
     }
 }

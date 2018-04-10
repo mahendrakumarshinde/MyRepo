@@ -8,16 +8,17 @@
 char IURawDataHelper::EXPECTED_KEYS[IURawDataHelper::EXPECTED_KEY_COUNT + 1] =
     "XYZ";
 
-char IURawDataHelper::ENDPOINT_HOST[45] =
-    "ideplus-dot-infinite-uptime-1232.appspot.com";
 
-char IURawDataHelper::ENDPOINT_URL[15] = "/raw_data?mac=";
-
-IURawDataHelper::IURawDataHelper(uint32_t timeout) :
+IURawDataHelper::IURawDataHelper(uint32_t timeout, const char *endpointHost,
+                                 const char *endpointRoute,
+                                 uint16_t enpointPort) :
+    m_endpointPort(enpointPort),
     m_payloadCounter(0),
     m_payloadStartTime(0),
     m_timeout(timeout)
 {
+    strncpy(m_endpointHost, endpointHost, MAX_HOST_LENGTH);
+    strncpy(m_endpointRoute, endpointRoute, MAX_ROUTE_LENGTH);
     strcpy(m_payload, "");
     for (uint8_t i = 0; i < EXPECTED_KEY_COUNT; ++i)
     {
@@ -79,7 +80,7 @@ bool IURawDataHelper::hasTimedOut()
  * @return true if the key, value pair was succesfully added, else false.
  */
 bool IURawDataHelper::addKeyValuePair(char key, const char *value,
-                                       uint16_t valueLength)
+                                      uint16_t valueLength)
 {
     char *foundKey = strchr(EXPECTED_KEYS, key);
     if (foundKey == NULL)
@@ -160,7 +161,7 @@ bool IURawDataHelper::areAllKeyPresent()
 /**
  * Post the payload if ready
  */
-int IURawDataHelper::publishIfReady(const char *macAddress)
+int IURawDataHelper::publishIfReady(MacAddress macAddress)
 {
     if (hasTimedOut())
     {
@@ -191,7 +192,7 @@ int IURawDataHelper::publishIfReady(const char *macAddress)
 /**
  * Post the payload
  */
-int IURawDataHelper::httpPostPayload(const char *macAddress)
+int IURawDataHelper::httpPostPayload(MacAddress macAddress)
 {
     // Close JSON first (last curled brace) if not closed yet
     char closingBrace = '}';
@@ -200,13 +201,9 @@ int IURawDataHelper::httpPostPayload(const char *macAddress)
         strncat(m_payload, &closingBrace, 1);
         m_payloadCounter++;
     }
-    char fullUrl[strlen(ENDPOINT_URL) + 18];
-    strcpy(fullUrl, ENDPOINT_URL);
-    strncat(fullUrl, macAddress, 18);
-    return httpPostBigJsonRequest(ENDPOINT_HOST, fullUrl, ENDPOINT_PORT,
+    char fullUrl[strlen(m_endpointRoute) + 18];
+    strcpy(fullUrl, m_endpointRoute);
+    strncat(fullUrl, macAddress.toString().c_str(), 18);
+    return httpPostBigJsonRequest(m_endpointHost, fullUrl, m_endpointPort,
                                   (uint8_t*) m_payload, m_payloadCounter);
-
-//    const char *endpointHost, const char *endpointURL,
-//    uint16_t endpointPort, uint8_t *payload, uint16_t payloadLength,
-//    size_t chunkSize, uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT)
 }

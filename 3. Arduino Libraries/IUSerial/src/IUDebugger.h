@@ -7,35 +7,11 @@
     Flag reading
 ============================================================================= */
 
-#ifdef IUDEBUG_SETUP
-    const bool setupDebugMode = (bool) IUDEBUG_SETUP;
-#else
-    const bool setupDebugMode = false;
-#endif
-
-#ifdef IUDEBUG_MAIN
-    const bool loopDebugMode = (bool) IUDEBUG_MAIN;
-#else
-    const bool loopDebugMode = false;
-#endif
-
-#ifdef IUDEBUG_ASYNC
-    const bool asyncDebugMode = (bool) IUDEBUG_ASYNC;
-#else
-    const bool asyncDebugMode = false;
-#endif
-
-#ifdef IUDEBUG_FEATURE
-    const bool featureDebugMode = (bool) IUDEBUG_FEATURE;
-#else
-    const bool featureDebugMode = false;
-#endif
-
-#ifdef IUDEBUG_ANY
-    const bool debugMode = (bool) IUDEBUG_ANY;
-#else
-    const bool debugMode = false;
-#endif
+const bool setupDebugMode = (bool) IUDEBUG_SETUP;
+const bool loopDebugMode = (bool) IUDEBUG_MAIN;
+const bool asyncDebugMode = (bool) IUDEBUG_ASYNC;
+const bool featureDebugMode = (bool) IUDEBUG_FEATURE;
+const bool debugMode = (bool) IUDEBUG_ANY;
 
 
 /* =============================================================================
@@ -45,7 +21,7 @@
 template <typename T>
 inline void debugPrint(T msg, bool endline = true)
 {
-    #ifdef IUDEBUG_ANY
+    #if IUDEBUG_ANY == 1
     if (endline) { Serial.println(msg); }
     else { Serial.print(msg); }
     #endif
@@ -55,7 +31,7 @@ inline void debugPrint(T msg, bool endline = true)
 template <>
 inline void debugPrint(float msg, bool endline)
 {
-    #ifdef IUDEBUG_ANY
+    #if IUDEBUG_ANY == 1
     if (endline) { Serial.println(msg, 6); }
     else { Serial.print(msg, 6); }
     #endif
@@ -64,7 +40,7 @@ inline void debugPrint(float msg, bool endline)
 template <typename T>
 inline void raiseException(T msg, bool endline = true)
 {
-    #ifdef IUDEBUG_ANY
+    #if IUDEBUG_ANY == 1
     debugPrint(F("Error: "), false);
     debugPrint(msg, endline);
     #endif

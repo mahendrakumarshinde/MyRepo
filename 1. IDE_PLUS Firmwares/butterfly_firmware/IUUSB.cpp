@@ -39,8 +39,7 @@ bool IUUSB::readCharCustomProtocol()
             (m_bufferIndex == 9 &&
              strncmp(m_buffer, "IUCMD_END", 9) == 0))
         {
-            m_buffer[m_bufferIndex] = '\0';
-            m_bufferIndex++;
+            m_buffer[m_bufferIndex++] = 0;
             messageIsComplete = true;
         }
     }

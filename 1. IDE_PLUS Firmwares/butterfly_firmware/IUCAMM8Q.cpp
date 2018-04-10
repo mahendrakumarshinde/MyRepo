@@ -56,6 +56,8 @@ void IUCAMM8Q::setPowerMode(PowerMode::option pMode)
         case PowerMode::SLEEP:
         case PowerMode::DEEP_SLEEP:
         case PowerMode::SUSPEND:
+            // TODO: Implement
+            break;
         default:
             if (debugMode)
             {

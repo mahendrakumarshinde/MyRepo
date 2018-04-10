@@ -122,19 +122,9 @@ size_t MacAddress::printTo(Print& p) const
 
 String MacAddress::toString()
 {
-    uint8_t idx = 0;	
     char temp[18] = "";
-    uint8_t d1 = 0;
-    uint8_t d2 = 0;
-    for (int i = 2; i < 8; i++)
-    {
-        d1 = _address.bytes[i] / 16;
-        d2 = _address.bytes[i] % 16;
-        if (d1 < 10) { temp[idx++] = '0' + d1; }
-        else { temp[idx++] = 'A' + d1 - 10; }
-        if (d2 < 10) { temp[idx++] = '0' + d2; }
-        else { temp[idx++] = 'A' + d2 - 10; }
-        if (i < 7) { temp[idx++] = ':'; }
-    }
+    sprintf(temp,"%02x:%02x:%02x:%02x:%02x:%02x",
+            _address.bytes[2], _address.bytes[3], _address.bytes[4],
+            _address.bytes[5], _address.bytes[6], _address.bytes[7]);
     return String(temp);
 }

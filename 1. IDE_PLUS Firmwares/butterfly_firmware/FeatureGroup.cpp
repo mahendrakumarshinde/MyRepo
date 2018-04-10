@@ -128,45 +128,55 @@ bool FeatureGroup::isDataSendTime(uint8_t idx)
 
 /**
  * Sends the values of the group features through given serial.
+ *
+ * Use the new feature data message specification and the MSP protocol.
  */
-void FeatureGroup::stream(HardwareSerial *port, MacAddress mac,
-                          double timestamp, bool sendMACAddress)
+void FeatureGroup::MSPstream(IUSerial *iuSerial, MacAddress mac,
+                             double timestamp, bool sendMACAddress)
 {
-    if (!m_active)
-    {
-        return;  // Only stream if group is active
-    }
-    if (m_featureCount == 0 || !isDataSendTime())
-    {
-        return;
-    }
-    port->print(m_name);
-    if (sendMACAddress)
-    {
-        port->print(",");
-        port->print(mac);
-    }
-    for (uint8_t i = 0; i < m_featureCount; ++i)
-    {
-        if (m_features[i] != NULL)
-        {
-            port->print(",");
-            port->print(m_features[i]->getName());
-            m_features[i]->stream(port);
-        }
-    }
-    port->print(",");
-    port->print(timestamp);
-    port->print(";");
-    if (loopDebugMode)
-    {
-        // Add a line break to ease readability in debug mode
-        port->println("");
-    }
+    // TODO: Reimplement to stream via MSP
+
+//    if (!m_active)
+//    {
+//        return;  // Only stream if group is active
+//    }
+//    if (m_featureCount == 0 || !isDataSendTime())
+//    {
+//        return;
+//    }
+//    strlen(m_name) + 1 + 17 + 1
+//
+//
+//
+//    iuSerial.port->print(m_name);  // char count = strlen(m_name)
+//    if (sendMACAddress)
+//    {
+//        iuSerial.port->print(",");  // char count = 1
+//        iuSerial.port->print(mac);  // char count = 17
+//    }
+//    for (uint8_t i = 0; i < m_featureCount; ++i)
+//    {
+//        if (m_features[i] != NULL)
+//        {
+//            iuSerial.port->print(",");  // char count = 1
+//            iuSerial.port->print(m_features[i]->getName());  // char count = nameLength
+//            m_features[i]->stream(port);
+//        }
+//    }
+//    iuSerial.port->print(",");
+//    iuSerial.port->print(timestamp);
+//    iuSerial.port->print(";");
+//    if (loopDebugMode)  // Add a line break to ease readability in debug mode
+//    {
+//        port->println("");
+//    }
 }
 
 
-void FeatureGroup::legacyStream(HardwareSerial *port, MacAddress mac,
+/**
+ * Sends the values of the group features through given serial.
+ */
+void FeatureGroup::legacyStream(IUSerial *iuSerial, MacAddress mac,
                                 OperationState::option opState,
                                 float batteryLoad, double timestamp,
                                 bool sendName, uint8_t portIdx)
@@ -181,37 +191,41 @@ void FeatureGroup::legacyStream(HardwareSerial *port, MacAddress mac,
     }
     if (sendName)
     {
-        port->print(m_name);
-        port->print(",");
+        iuSerial->port->print(m_name);
+        iuSerial->port->print(",");
     }
-    port->print(mac);
-    port->print(",0");
-    port->print((uint8_t) opState);
-    port->print(",");
-    port->print((int) round(batteryLoad));
+    iuSerial->port->print(mac);
+    iuSerial->port->print(",0");
+    iuSerial->port->print((uint8_t) opState);
+    iuSerial->port->print(",");
+    iuSerial->port->print((int) round(batteryLoad));
     for (uint8_t i = 0; i < m_featureCount; ++i)
     {
-        port->print(",000");
-        port->print(i + 1);
+        iuSerial->port->print(",000");
+        iuSerial->port->print(i + 1);
         if (m_features[i] != NULL)
         {
-            m_features[i]->stream(port);
+            m_features[i]->stream(iuSerial->port);
         }
     }
-    port->print(",");
-    port->print(timestamp);
-    port->print(";");
+    iuSerial->port->print(",");
+    iuSerial->port->print(timestamp);
+    iuSerial->port->print(";");
     if (loopDebugMode)
     {
-        port->println("");
+        iuSerial->port->println("");
     }
 }
 
-
-void FeatureGroup::legacyBufferStream(HardwareSerial *port, MacAddress mac,
-                                      OperationState::option opState,
-                                      float batteryLoad, double timestamp,
-                                      bool sendName)
+/**
+ * Buffers the feature then send them through iuSerial in one shot.
+ *
+ * Can use either the IUSerial MSP protocol or the IUSerial Legacy protocol.
+ */
+void FeatureGroup::bufferAndStream(
+    IUSerial *iuSerial, IUSerial::PROTOCOL_OPTIONS protocol, MacAddress mac,
+    OperationState::option opState, float batteryLoad, double timestamp,
+    bool sendName)
 {
     if (!m_active)
     {
@@ -228,10 +242,18 @@ void FeatureGroup::legacyBufferStream(HardwareSerial *port, MacAddress mac,
     {
         // Send current data
         m_featureBuffer[m_bufferIndex] = 0;
-        port->print(m_featureBuffer);
-        if (loopDebugMode)
+        if (protocol == IUSerial::LEGACY_PROTOCOL)
         {
-            port->println("");
+            iuSerial->port->print(m_featureBuffer);
+            if (loopDebugMode)
+            {
+                iuSerial->port->println("");
+            }
+        }
+        else if (protocol == IUSerial::MS_PROTOCOL)
+        {
+            iuSerial->sendMSPCommand(MSPCommand::PUBLISH_FEATURE,
+                                     m_featureBuffer);
         }
         // Reset buffer
         m_bufferIndex = 0;
@@ -243,18 +265,23 @@ void FeatureGroup::legacyBufferStream(HardwareSerial *port, MacAddress mac,
     }
     if (sendName)
     {
-        strcat(m_featureBuffer, m_name);
-        m_bufferIndex += strlen(m_name);
-        m_featureBuffer[m_bufferIndex++] = ',';
+        // Always send for Legacy protocol, send once for MSP
+        if (protocol == IUSerial::LEGACY_PROTOCOL || m_bufferIndex == 0)
+        {
+            strcat(m_featureBuffer, m_name);
+            m_bufferIndex += strlen(m_name);
+            m_featureBuffer[m_bufferIndex++] = ',';
+        }
     }
-    strcat(m_featureBuffer, mac.toString().c_str());
-    m_bufferIndex += 18;
+    strncat(m_featureBuffer, mac.toString().c_str(), 17);
+    m_bufferIndex += 17;
     m_featureBuffer[m_bufferIndex++] = ',';
     m_featureBuffer[m_bufferIndex++] = '0';
     m_featureBuffer[m_bufferIndex++] = (uint8_t) opState + 48;
     m_featureBuffer[m_bufferIndex++] = ',';
-    strcat(m_featureBuffer, String((int) round(batteryLoad)).c_str());
-    m_bufferIndex += 2;
+    String stringBattery((int) round(batteryLoad));
+    strcat(m_featureBuffer, stringBattery.c_str());
+    m_bufferIndex += stringBattery.length();
     for (uint8_t i = 0; i < m_featureCount; ++i)
     {
         m_featureBuffer[m_bufferIndex++] = ',';
@@ -264,8 +291,7 @@ void FeatureGroup::legacyBufferStream(HardwareSerial *port, MacAddress mac,
         m_featureBuffer[m_bufferIndex++] = i + 49;
         if (m_features[i] != NULL)
         {
-            m_features[i]->bufferStream(m_featureBuffer,
-                                        m_bufferIndex);
+            m_features[i]->sendToBuffer(m_featureBuffer, m_bufferIndex);
         }
     }
     m_featureBuffer[m_bufferIndex++] = ',';

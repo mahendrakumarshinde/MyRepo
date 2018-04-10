@@ -52,6 +52,7 @@ namespace OperationState
 class Feature
 {
     public:
+        static const uint8_t nameLength = 3;
         /* TODO - For now, only slideOption::FIXED is implemented => need to
         implement slideOption::ROLLING */
         enum slideOption : uint8_t {FIXED,
@@ -125,7 +126,7 @@ class Feature
         virtual void acknowledge(uint8_t receiverIdx, uint8_t sectionCount=1);
         /***** Communication *****/
         virtual void stream(HardwareSerial *port, uint8_t sectionCount=1);
-        virtual void bufferStream(char *destination, uint16_t &destIndex,
+        virtual void sendToBuffer(char *destination, uint16_t &destIndex,
                                   uint8_t sectionCount=1);
         /***** Debugging *****/
         virtual void exposeConfig();
@@ -136,7 +137,7 @@ class Feature
         /***** Instance registry *****/
         uint8_t m_instanceIdx;
         /***** Feature designation *****/
-        char m_name[4];
+        char m_name[nameLength + 1];
         /***** Physical metadata *****/
         uint16_t m_samplingRate;
         float m_resolution;

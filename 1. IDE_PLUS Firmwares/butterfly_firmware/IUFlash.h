@@ -12,23 +12,31 @@ class IUFlash
 {
     public:
         /***** Preset values and default settings *****/
-        enum storedConfig : uint8_t {WIFI_CONFIG_0,
-                                     WIFI_CONFIG_1,
-                                     WIFI_CONFIG_2,
-                                     WIFI_CONFIG_3,
-                                     WIFI_CONFIG_4,
-                                     FEATURE_CONFIG,
-                                     COMPONENT_CONFIG,
-                                     DEVICE_CONFIG,
-                                     CONFIG_COUNT};
+        enum storedConfig : uint8_t {CFG_WIFI0,
+                                     CFG_WIFI1,
+                                     CFG_WIFI2,
+                                     CFG_WIFI3,
+                                     CFG_WIFI4,
+                                     CFG_FEATURE,
+                                     CFG_COMPONENT,
+                                     CFG_DEVICE,
+                                     CFG_RAW_DATA_ENDPOINT,
+                                     CFG_MQTT_SERVER,
+                                     CFG_MQTT_CREDS,
+                                     CFG_COUNT};
         /***** Core *****/
         IUFlash() {}
         virtual ~IUFlash() {}
         virtual void begin() = 0;
+        virtual bool available() = 0;
         /***** Config read / write functions *****/
         virtual size_t readConfig(storedConfig configType, char *config,
                                   size_t maxLength) = 0;
         virtual size_t writeConfig(storedConfig configType, char *config) = 0;
+        virtual void deleteConfig(storedConfig configType) = 0;
+        virtual bool getWritable(storedConfig configType, Print* printPtr) = 0;
+        virtual bool getReadable(storedConfig configType,
+                                 Stream* streamPtr) = 0;
 };
 
 
@@ -36,22 +44,40 @@ class IUFSFlash : public IUFlash
 {
     public:
         /***** Preset values and default settings *****/
-        static char WIFI_CONFIG_0_FP[12];
-        static char WIFI_CONFIG_1_FP[12];
-        static char WIFI_CONFIG_2_FP[12];
-        static char WIFI_CONFIG_3_FP[12];
-        static char WIFI_CONFIG_4_FP[12];
-        static char FEATURE_CONFIG_FP[15];
-        static char COMPONENT_CONFIG_FP[17];
-        static char DEVICE_CONFIG_FP[13];
+        static const uint8_t CONFIG_SUBDIR_LEN = 10;
+        static char CONFIG_SUBDIR[CONFIG_SUBDIR_LEN];
+        static const uint8_t CONFIG_EXTENSION_LEN = 6;
+        static char CONFIG_EXTENSION[CONFIG_EXTENSION_LEN];
+        static char FNAME_WIFI0[6];
+        static char FNAME_WIFI1[6];
+        static char FNAME_WIFI2[6];
+        static char FNAME_WIFI3[6];
+        static char FNAME_WIFI4[6];
+        static char FNAME_FEATURE[9];
+        static char FNAME_COMPONENT[11];
+        static char FNAME_DEVICE[7];
+        static char FNAME_RAW_DATA_ENDPOINT[13];
+        static char FNAME_MQTT_SERVER[12];
+        static char FNAME_MQTT_CREDS[11];
+        static const uint8_t MAX_FULL_CONFIG_FPATH_LEN = 28;
         /***** Core *****/
         IUFSFlash() : IUFlash() {}
         virtual ~IUFSFlash() {}
-        void begin();
+        virtual void begin();
+        virtual bool available() { return m_begun; }
         /***** Config read / write functions *****/
         virtual size_t readConfig(storedConfig configType, char *config,
                                   size_t maxLength);
         virtual size_t writeConfig(storedConfig configType, char *config);
+        virtual void deleteConfig(storedConfig configType);
+        virtual bool getWritable(storedConfig configType, Print* printPtr);
+        virtual bool getReadable(storedConfig configType,
+                                 Stream* streamPtr);
+        /***** Utility *****/
+        virtual size_t getConfigFilename(storedConfig configType, char *dest);
+
+    protected:
+        bool m_begun = false;
 };
 
 
@@ -107,25 +133,33 @@ class IUSPIFlash : public IUFlash
         static const uint16_t BLOCK_32KB_PAGE_COUNT = 128;
         static const uint16_t BLOCK_64KB_PAGE_COUNT = 256;
 
-        uint16_t configPageDirectory[storedConfig::CONFIG_COUNT] = {
-            5,  // WIFI_CONFIG_0,
-            10,  // WIFI_CONFIG_1,
-            15,  // WIFI_CONFIG_2,
-            20,  // WIFI_CONFIG_3,
-            25,  // WIFI_CONFIG_4,
-            30,  // FEATURE_CONFIG,
-            35,  // COMPONENT_CONFIG,
-            40,  // DEVICE_CONFIG,
+        uint16_t configPageDirectory[storedConfig::CFG_COUNT] = {
+            5,  // WIFI0,
+            10,  // WIFI1,
+            15,  // WIFI2,
+            20,  // WIFI3,
+            25,  // WIFI4,
+            30,  // FEATURE,
+            35,  // COMPONENT,
+            40,  // DEVICE,
+            45,  // RAW DATA ENDPOINT,
+            50,  // MQTT SERVER,
+            55,  // MQTT CREDENTIALS,
         };
         /***** Core *****/
         IUSPIFlash(SPIClass *spiPtr, uint8_t csPin, SPISettings settings);
         virtual ~IUSPIFlash() {}
         void hardReset();
-        void begin();
+        virtual void begin();
+        virtual bool available() { return true; }
         /***** Config read / write functions *****/
         virtual size_t readConfig(storedConfig configType, char *config,
                                   size_t maxLength);
         virtual size_t writeConfig(storedConfig configType, char *config);
+        virtual void deleteConfig(storedConfig configType);
+        virtual bool getWritable(storedConfig configType, Print* printPtr);
+        virtual bool getReadable(storedConfig configType,
+                                 Stream* streamPtr);
 
     protected:
         SPIClass *m_SPI;

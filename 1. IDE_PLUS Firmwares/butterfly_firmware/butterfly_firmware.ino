@@ -190,10 +190,6 @@ void setup()
             }
         #endif
         iuWiFi.setupHardware();
-        if (!USBDevice.configured())
-        {
-            iuFlash.begin();
-        }
         if(debugMode)
         {
             debugPrint(F("=> Successfully initialized interfaces - Mem: "),
@@ -251,6 +247,13 @@ void setup()
             debugPrint(F("\n***Finished setup at (ms): "), false);
             debugPrint(millis(), false);
             debugPrint(F("***\n"));
+        }
+        // Start flash and load configuration files
+        if (!USBDevice.configured())
+        {
+            iuFlash.begin();
+            iuWiFi.loadConfigFromFlash(&iuFlash);
+            conductor.loadAllConfigsFromFlash();
         }
         conductor.changeUsageMode(UsageMode::OPERATION);
     #endif

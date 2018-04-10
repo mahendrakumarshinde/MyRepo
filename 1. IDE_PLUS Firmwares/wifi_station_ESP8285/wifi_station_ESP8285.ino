@@ -29,7 +29,8 @@ void mqttNewMessageCallback(char* topic, byte* payload, uint16_t length)
  */
 void onMQTTConnection()
 {
-    mqttHelper.onConnection(timeHelper.getCurrentTime());
+    mqttHelper.onConnection();
+    conductor.publishDiagnostic("connected", 10);
 }
 
 
@@ -39,15 +40,10 @@ void onMQTTConnection()
 
 Ticker cloudStatusUpdater;
 
-void sendWiFiInfoToCloud()
+bool publishWifiInfoNow = false;
+void timeTopublishWifiInfo()
 {
-    if (WiFi.isConnected() && mqttHelper.client.connected())
-    {
-        char message[256];
-        conductor.getWifiInfo(message, true);
-        mqttHelper.publishDiagnostic(message, strlen(message),
-                                     timeHelper.getCurrentTime());
-    }
+    publishWifiInfoNow = true;
 }
 
 Ticker hostConnectionStatusUpdater;
@@ -75,7 +71,7 @@ void setup()
     // Turn off radio at wake up to save power
     conductor.turnOffRadio();
     // Get config: should the ESP sleep? What's the BLE MAC address?
-    #ifdef IUDEBUG_ANY
+    #if IUDEBUG_ANY == 1
         conductor.setCredentials(testSSID, testPSK);
     #else
         conductor.getConfigFromMainBoard();
@@ -90,7 +86,7 @@ void setup()
     WiFi.setAutoReconnect(true);
     conductor.turnOnRadio();
     // Attach the timers
-    cloudStatusUpdater.attach(300, sendWiFiInfoToCloud);
+    cloudStatusUpdater.attach(300, timeTopublishWifiInfo);
     hostConnectionStatusUpdater.attach(5, sendConnectionStatusToHost);
     delay(100);
 }
@@ -109,13 +105,18 @@ void loop()
         timeHelper.updateTimeReferenceFromNTP();
         /***** MQTT Connection / message reception loop *****/
         mqttHelper.loop();
+        if (publishWifiInfoNow)
+        {
+            conductor.publishWifiInfo();
+            publishWifiInfoNow = false;
+        }
         // Publish raw data (HTTP POST request)
-        accelRawDataHelper.publishIfReady(conductor.getBleMacAddress());
+        accelRawDataHelper.publishIfReady(conductor.getBleMAC());
     }
     conductor.checkWiFiDisconnectionTimeout();
     // Light sleep (but keep listening to serial)
     uint32_t sleepEnd = millis() + 1000;
-    while (millis() < sleepEnd && Serial.available() == 0)
+    while (millis() < sleepEnd && hostSerial.port->available() == 0)
     {
         delay(10);
     }

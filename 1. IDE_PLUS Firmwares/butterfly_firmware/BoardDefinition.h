@@ -45,7 +45,7 @@ const char DEVICE_TYPE[DEVICE_TYPE_LENGTH] = "ide_plus";
     Comment / Uncomment the "define" lines to toggle / untoggle unit tests.
 ============================================================================= */
 
-#define UNITTEST  // Logical libraries unit test
+//#define UNITTEST  // Logical libraries unit test
 //#define COMPONENTTEST  // Components unit test
 //#define INTEGRATEDTEST  // Firmware integrated test
 

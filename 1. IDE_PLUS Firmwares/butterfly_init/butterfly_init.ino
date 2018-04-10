@@ -35,6 +35,5 @@ void setup()
 
 void loop()
 {
-    Serial.println("Hello");
     delay(2500);
 }

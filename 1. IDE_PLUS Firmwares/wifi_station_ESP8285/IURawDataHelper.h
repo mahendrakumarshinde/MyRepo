@@ -1,7 +1,9 @@
 #ifndef IURAWDATAHELPER_H
 #define IURAWDATAHELPER_H
 
+#include <MacAddress.h>
 #include "Utilities.h"
+#include "BoardDefinition.h"
 
 /**
  * A class to create and publish a raw data JSON via an HTTP POST request.
@@ -19,16 +21,19 @@ class IURawDataHelper
     public:
         /***** Public constants *****/
         static const uint16_t MAX_PAYLOAD_LENGTH = 10000;
-        static char ENDPOINT_HOST[45];
-        static char ENDPOINT_URL[15];
-        static const uint16_t ENDPOINT_PORT = 80;
-
         // Expected keys for the JSON creation of keys (at top level).
         static const uint8_t EXPECTED_KEY_COUNT = 3;
         static char EXPECTED_KEYS[EXPECTED_KEY_COUNT + 1];
         /***** Core *****/
-        IURawDataHelper(uint32_t timeout);
+        IURawDataHelper(uint32_t timeout, const char *endpointHost,
+                        const char *endpointRoute, uint16_t enpointPort);
         virtual ~IURawDataHelper() {}
+        /***** Endpoint *****/
+        void setEndpointHost(char *host)
+            { strncpy(m_endpointHost, host, MAX_HOST_LENGTH); }
+        void setEndpointRoute(char *route)
+            { strncpy(m_endpointRoute, route, MAX_ROUTE_LENGTH); }
+        void setEndpointPort(uint16_t port) { m_endpointPort = port; }
         /***** Payload construction *****/
         virtual void resetPayload();
         virtual bool hasTimedOut();
@@ -36,16 +41,21 @@ class IURawDataHelper
                                      uint16_t valueLength);
         virtual bool areAllKeyPresent();
         /***** HTTP Post request *****/
-        virtual int publishIfReady(const char *macAddress);
+        virtual int publishIfReady(MacAddress macAddress);
 
     protected:
+        /***** Endpoint *****/
+        char m_endpointHost[MAX_HOST_LENGTH];
+        char m_endpointRoute[MAX_ROUTE_LENGTH];
+        uint16_t m_endpointPort;
+        /***** Payload handling *****/
         char m_payload[MAX_PAYLOAD_LENGTH];
         uint16_t m_payloadCounter;
         uint32_t m_payloadStartTime;  // For timing out
         bool m_keyAdded[EXPECTED_KEY_COUNT];
         uint32_t m_timeout;
         /***** HTTP Post request *****/
-        virtual int httpPostPayload(const char *macAddress);
+        virtual int httpPostPayload(MacAddress macAddress);
 };
 
 #endif // IURAWDATAHELPER_H

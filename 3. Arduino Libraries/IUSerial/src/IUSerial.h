@@ -46,6 +46,7 @@ class IUSerial
         virtual bool readToBuffer();
         virtual bool hasNewMessage() { return m_newMessage; }
         virtual char* getBuffer() { return m_buffer; }
+        // The length of the buffer, including the null terminating char
         virtual uint16_t getCurrentBufferLength() { return m_bufferIndex; }
         virtual bool processMessage() { return false; }
         /***** MSP commands *****/

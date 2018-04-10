@@ -5,21 +5,43 @@
     IUFSFlash - Flash with file system
 ============================================================================= */
 
-char IUFSFlash::WIFI_CONFIG_0_FP[12] = "/wifi0.conf";
-char IUFSFlash::WIFI_CONFIG_1_FP[12] = "/wifi1.conf";
-char IUFSFlash::WIFI_CONFIG_2_FP[12] = "/wifi2.conf";
-char IUFSFlash::WIFI_CONFIG_3_FP[12] = "/wifi3.conf";
-char IUFSFlash::WIFI_CONFIG_4_FP[12] = "/wifi4.conf";
-char IUFSFlash::DEVICE_CONFIG_FP[13] = "/device.conf";
-char IUFSFlash::COMPONENT_CONFIG_FP[17] = "/components.conf";
-char IUFSFlash::FEATURE_CONFIG_FP[15] = "/features.conf";
+char IUFSFlash::CONFIG_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iuconfig";
+char IUFSFlash::CONFIG_EXTENSION[IUFSFlash::CONFIG_EXTENSION_LEN] = ".conf";
+
+char IUFSFlash::FNAME_WIFI0[6] = "wifi0";
+char IUFSFlash::FNAME_WIFI1[6] = "wifi1";
+char IUFSFlash::FNAME_WIFI2[6] = "wifi2";
+char IUFSFlash::FNAME_WIFI3[6] = "wifi3";
+char IUFSFlash::FNAME_WIFI4[6] = "wifi4";
+char IUFSFlash::FNAME_FEATURE[9] = "features";
+char IUFSFlash::FNAME_COMPONENT[11] = "components";
+char IUFSFlash::FNAME_DEVICE[7] = "device";
+char IUFSFlash::FNAME_RAW_DATA_ENDPOINT[13] = "fft_endpoint";
+char IUFSFlash::FNAME_MQTT_SERVER[12] = "mqtt_server";
+char IUFSFlash::FNAME_MQTT_CREDS[11] = "mqtt_creds";
 
 
 /***** Core *****/
 
 void IUFSFlash::begin()
 {
-    DOSFS.begin();
+    if (!DOSFS.begin())
+    {
+        if (setupDebugMode)
+        {
+            debugPrint("Failed to start DOSFS (DOSFS.begin returned false)");
+        }
+    }
+    m_begun = DOSFS.exists(CONFIG_SUBDIR);
+    if (!m_begun)
+    {
+        bool mkdir(const char* path);
+        m_begun = DOSFS.exists(CONFIG_SUBDIR);
+        if (!m_begun && setupDebugMode)
+        {
+            debugPrint("Unable to find or create the config directory");
+        }
+    }
 }
 
 
@@ -29,48 +51,19 @@ void IUFSFlash::begin()
  * Read the relevant file to retrieve the stored config.
  *
  * Return the number of read chars. Returns 0 if the stored config type is
- * unknown or if the filepath is not found.
+ * unknown or if the file is not found.
  */
 size_t IUFSFlash::readConfig(storedConfig configType, char *config,
                              size_t maxLength)
 {
-    char *filepath = NULL;
-    switch (configType)
+    if (!m_begun)
     {
-        case WIFI_CONFIG_0:
-            filepath = &WIFI_CONFIG_0_FP[0];
-            break;
-        case WIFI_CONFIG_1:
-            filepath = &WIFI_CONFIG_1_FP[0];
-            break;
-        case WIFI_CONFIG_2:
-            filepath = &WIFI_CONFIG_2_FP[0];
-            break;
-        case WIFI_CONFIG_3:
-            filepath = &WIFI_CONFIG_3_FP[0];
-            break;
-        case WIFI_CONFIG_4:
-            filepath = &WIFI_CONFIG_4_FP[0];
-            break;
-        case FEATURE_CONFIG:
-            filepath = &FEATURE_CONFIG_FP[0];
-            break;
-        case COMPONENT_CONFIG:
-            filepath = &COMPONENT_CONFIG_FP[0];
-            break;
-        case DEVICE_CONFIG:
-            filepath = &DEVICE_CONFIG_FP[0];
-            break;
-        default:
-            if (debugMode)
-            {
-                debugPrint(F("Unknown wifi config index "), false);
-                debugPrint(configType);
-            }
+        return 0;
     }
-    if (filepath == NULL || !DOSFS.exists(filepath))
+    char filepath[MAX_FULL_CONFIG_FPATH_LEN];
+    getConfigFilename(configType, filepath);
+    if (!DOSFS.exists(filepath))
     {
-        strcpy(config, "");
         return 0;
     }
     File file = DOSFS.open(filepath, "r");
@@ -80,56 +73,141 @@ size_t IUFSFlash::readConfig(storedConfig configType, char *config,
 }
 
 /**
- * Store the config in flash by write the config to the relevant file.
+ * Store the config in flash by writing the config to the relevant file.
  *
  * Return the number of written chars. Returns 0 if the stored config type is
  * unknown.
  */
 size_t IUFSFlash::writeConfig(storedConfig configType, char *config)
 {
-    char *filepath = NULL;
-    switch (configType)
-    {
-        case WIFI_CONFIG_0:
-            filepath = &WIFI_CONFIG_0_FP[0];
-            break;
-        case WIFI_CONFIG_1:
-            filepath = &WIFI_CONFIG_1_FP[0];
-            break;
-        case WIFI_CONFIG_2:
-            filepath = &WIFI_CONFIG_2_FP[0];
-            break;
-        case WIFI_CONFIG_3:
-            filepath = &WIFI_CONFIG_3_FP[0];
-            break;
-        case WIFI_CONFIG_4:
-            filepath = &WIFI_CONFIG_4_FP[0];
-            break;
-        case FEATURE_CONFIG:
-            filepath = &FEATURE_CONFIG_FP[0];
-            break;
-        case COMPONENT_CONFIG:
-            filepath = &COMPONENT_CONFIG_FP[0];
-            break;
-        case DEVICE_CONFIG:
-            filepath = &DEVICE_CONFIG_FP[0];
-            break;
-        default:
-            if (debugMode)
-            {
-                debugPrint(F("Unknown wifi config index "), false);
-                debugPrint(configType);
-            }
-    }
-    if (filepath == NULL)
+    if (!m_begun)
     {
         return 0;
     }
+    char filepath[MAX_FULL_CONFIG_FPATH_LEN];
+    getConfigFilename(configType, filepath);
     File file = DOSFS.open(filepath, "w");
     size_t configLength = strlen(config);
     size_t writtenCharCount = file.write((uint8_t*) config, configLength);
     file.close();
     return writtenCharCount;
+}
+
+/**
+ * Delete the config.
+ */
+void IUFSFlash::deleteConfig(storedConfig configType)
+{
+    if (!m_begun)
+    {
+        return;
+    }
+    char filepath[MAX_FULL_CONFIG_FPATH_LEN];
+    getConfigFilename(configType, filepath);
+    if (DOSFS.exists(filepath))
+    {
+        DOSFS.remove(filepath);
+    }
+}
+
+/**
+ * Update the pointer with a Print subclass instance (writable only).
+ */
+bool IUFSFlash::getWritable(storedConfig configType, Print* printPtr)
+{
+    if (!m_begun)
+    {
+        printPtr = NULL;
+        return false;
+    }
+    char filepath[MAX_FULL_CONFIG_FPATH_LEN];
+    getConfigFilename(configType, filepath);
+    *printPtr = DOSFS.open(filepath, "w");
+    return (printPtr != NULL);
+}
+
+
+/**
+ * Update the pointer with a Stream subclass instance (readable only).
+ */
+bool IUFSFlash::getReadable(storedConfig configType, Stream* streamPtr)
+{
+    if (!m_begun)
+    {
+        streamPtr = NULL;
+        return false;
+    }
+    char filepath[MAX_FULL_CONFIG_FPATH_LEN];
+    getConfigFilename(configType, filepath);
+    if (!DOSFS.exists(filepath))
+    {
+        streamPtr = NULL;
+        return false;
+    }
+    *streamPtr = DOSFS.open(filepath, "r");
+    return (streamPtr != NULL);
+}
+
+/**
+ * Find and return the file name of the requested config type.
+ *
+ * Dest char array pointer should at least be of length
+ * MAX_FULL_CONFIG_FPATH_LEN.
+ */
+size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest)
+{
+    // Reinitialize dest (required for strcat)
+    for (uint8_t i = 0; i < MAX_FULL_CONFIG_FPATH_LEN; ++i)
+    {
+        dest[i] = 0;
+    }
+    strcpy(dest, CONFIG_SUBDIR);
+    strcat(dest, "/");
+    switch (configType)
+    {
+        case CFG_WIFI0:
+            strcat(dest, FNAME_WIFI0);
+            break;
+        case CFG_WIFI1:
+            strcat(dest, FNAME_WIFI1);
+            break;
+        case CFG_WIFI2:
+            strcat(dest, FNAME_WIFI2);
+            break;
+        case CFG_WIFI3:
+            strcat(dest, FNAME_WIFI3);
+            break;
+        case CFG_WIFI4:
+            strcat(dest, FNAME_WIFI4);
+            break;
+        case CFG_FEATURE:
+            strcat(dest, FNAME_FEATURE);
+            break;
+        case CFG_COMPONENT:
+            strcat(dest, FNAME_COMPONENT);
+            break;
+        case CFG_DEVICE:
+            strcat(dest, FNAME_DEVICE);
+            break;
+        case CFG_RAW_DATA_ENDPOINT:
+            strcat(dest, FNAME_RAW_DATA_ENDPOINT);
+            break;
+        case CFG_MQTT_SERVER:
+            strcat(dest, FNAME_MQTT_SERVER);
+            break;
+        case CFG_MQTT_CREDS:
+            strcat(dest, FNAME_MQTT_CREDS);
+            break;
+        default:
+            if (debugMode)
+            {
+                debugPrint(F("Unknown config type "), false);
+                debugPrint(configType);
+            }
+            return 0;
+    }
+    strcat(dest, CONFIG_EXTENSION);
+    return strlen(dest);
 }
 
 
@@ -198,6 +276,34 @@ size_t IUSPIFlash::writeConfig(storedConfig configType, char *config)
 {
     // TODO Implement
     return 0;
+}
+
+/**
+ * Delete the config.
+ */
+void IUSPIFlash::deleteConfig(storedConfig configType)
+{
+    // TODO Implement
+}
+
+/**
+ * Update the pointer with a Print subclass instance (writable only).
+ */
+bool IUSPIFlash::getWritable(storedConfig configType, Print* printPtr)
+{
+    // TODO Implement
+    printPtr = NULL;
+    return false;
+}
+
+/**
+ * Update the pointer with a Stream subclass instance (writable and readable).
+ */
+bool IUSPIFlash::getReadable(storedConfig configType, Stream* streamPtr)
+{
+    // TODO Implement
+    streamPtr = NULL;
+    return false;
 }
 
 

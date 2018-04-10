@@ -114,11 +114,10 @@ bool IUSerial::readCharLegacyProtocol()
     char newChar = port->read();
     if (newChar == m_stopChar)
     {
+        newChar = 0;
         messageIsComplete = true;
-        newChar = '\0';
     }
-    m_buffer[m_bufferIndex] = newChar;
-    m_bufferIndex++;
+    m_buffer[m_bufferIndex++] = newChar;
     return messageIsComplete;
 }
 
@@ -150,23 +149,10 @@ bool IUSerial::readCharMsp()
             m_mspState = ( c=='<' ) ? MSP_HEADER_ARROW : MSP_IDLE;
             break;
         case MSP_HEADER_ARROW:
-            if (c > m_bufferSize)
-            {
-                m_mspState = MSP_IDLE;
-                if (debugMode)
-                {
-                    debugPrint(F("MSP command asks to receive too"
-                                 " long a msg: "), false);
-                    debugPrint(c);
-                }
-            }
-            else
-            {
-                m_mspDataSizeByte0 = c;
-                m_bufferIndex = 0;
-                m_mspChecksumIn = 0 ^ c;
-                m_mspState = MSP_HEADER_SIZE_1;
-            }
+            m_mspDataSizeByte0 = c;
+            m_bufferIndex = 0;
+            m_mspChecksumIn = 0 ^ c;
+            m_mspState = MSP_HEADER_SIZE_1;
             break;
         case MSP_HEADER_SIZE_1:
             m_mspDataSizeByte1 = c;
@@ -174,6 +160,16 @@ bool IUSerial::readCharMsp()
                             (uint16_t) m_mspDataSizeByte1;
             m_mspChecksumIn ^= c;
             m_mspState = MSP_HEADER_SIZE_2;
+            if (m_mspDataSize > m_bufferSize)
+            {
+                m_mspState = MSP_IDLE;
+                if (debugMode)
+                {
+                    debugPrint(F("MSP command asks to receive too"
+                                 " long a msg: "), false);
+                    debugPrint(m_mspDataSize);
+                }
+            }
             break;
         case MSP_HEADER_SIZE_2:
             m_mspCommand = (MSPCommand::command) c;
@@ -201,6 +197,7 @@ bool IUSerial::readCharMsp()
                             debugPrint(m_buffer);
                         }
                     }
+                    m_buffer[m_bufferIndex++] = 0; // Terminate string
                     messageIsComplete = true;
                 }
                 m_mspState = MSP_IDLE;
@@ -238,7 +235,7 @@ void IUSerial::sendMSPCommand(MSPCommand::command cmd, const char* cmdMsg,
         debugPrint(cmdMsg);
     }
     sendMspCommandHeader(cmdSize, cmd);
-    for (uint8_t i = 0; i < cmdSize; ++i)
+    for (uint16_t i = 0; i < cmdSize; ++i)
     {
         mspChecksumAndSend(cmdMsg[i]);
     }
@@ -344,6 +341,11 @@ size_t IUSerial::mspChecksumAndSend(uint8_t b)
  */
 void IUSerial::mspSendMacAddress(MSPCommand::command cmd, MacAddress mac)
 {
+    if (debugMode)
+    {
+        debugPrint("Sending MAC Address via MSP: ", false);
+        debugPrint(mac);
+    }
     sendMspCommandHeader(6, cmd);
     for (uint8_t i = 0; i < 6; ++i)
     {
@@ -357,6 +359,11 @@ void IUSerial::mspSendMacAddress(MSPCommand::command cmd, MacAddress mac)
  */
 void IUSerial::mspSendIPAddress(MSPCommand::command cmd, IPAddress ip)
 {
+    if (debugMode)
+    {
+        debugPrint("Sending IP Address via MSP: ", false);
+        debugPrint(ip);
+    }
     sendMspCommandHeader(4, cmd);
     for (uint8_t i = 0; i < 4; ++i)
     {

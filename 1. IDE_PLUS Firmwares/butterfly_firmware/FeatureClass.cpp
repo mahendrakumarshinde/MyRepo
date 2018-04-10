@@ -310,29 +310,44 @@ void Feature::acknowledge(uint8_t receiverIdx, uint8_t sectionCount)
 /***** Communication *****/
 
 /**
- * Send the data from latest recorded section to given Serial
+ * Send the data from latest recorded sections to given serial.
+ *
+ * Lock and print sectionCount sections, ending at last recorded section
+ * [recordIndex - sectionCount; recordIndex - 1].
  */
 void Feature::stream(HardwareSerial *port, uint8_t sectionCount)
 {
-    // Lock and print the last recorded section (= recordIndex - 1)
     uint8_t k = (m_sectionCount + m_recordIndex - sectionCount) % m_sectionCount;
-    m_locked[k] = true;
+    for (uint8_t i = k; i < k + sectionCount; ++i)
+    {
+        m_locked[i % m_sectionCount] = true;
+    }
     m_specializedStream(port, k, sectionCount);
-    m_locked[k] = false;
+    for (uint8_t i = k; i < k + sectionCount; ++i)
+    {
+        m_locked[i % m_sectionCount] = false;
+    }
 }
 
 /**
- * Send the data from latest recorded section to given Serial
+ * Add the data from latest recorded sections to given buffer.
+ *
+ * Lock and print sectionCount sections, ending at last recorded section
+ * [recordIndex - sectionCount; recordIndex - 1].
  */
-void Feature::bufferStream(char *destination, uint16_t &destIndex,
+void Feature::sendToBuffer(char *destination, uint16_t &destIndex,
                            uint8_t sectionCount)
 {
-    // Lock and print the last recorded section (= recordIndex - 1)
     uint8_t k = (m_sectionCount + m_recordIndex - sectionCount) % m_sectionCount;
-    m_locked[k] = true;
+    for (uint8_t i = k; i < k + sectionCount; ++i)
+    {
+        m_locked[i % m_sectionCount] = true;
+    }
     m_specializedBufferStream(k, destination, destIndex, sectionCount);
-
-    m_locked[k] = false;
+    for (uint8_t i = k; i < k + sectionCount; ++i)
+    {
+        m_locked[i % m_sectionCount] = false;
+    }
 }
 
 

@@ -94,7 +94,7 @@ class Conductor
                                   COUNT    = 3};
         static const uint32_t defaultAutoSleepDelay = 60000;
         static const uint32_t defaultSleepDuration = 10000;
-        static const uint32_t defaultCycleTime = 3600000;
+        static const uint32_t defaultCycleTime = 20000;
         static char START_CONFIRM[11];
         static char END_CONFIRM[9];
         // Default start datetime
@@ -118,11 +118,16 @@ class Conductor
         void overrideLedColor(RGBColor color);
         void showOperationStateOnLed();
         void showStatusOnLed(RGBColor color);
+        /***** Local storage (flash) management *****/
+        bool loadAllConfigsFromFlash();
+        bool loadConfigFromFlash(IUFlash::storedConfig configType);
+        bool saveConfigToFlash(IUFlash::storedConfig configType,
+                               JsonVariant &config);
         /***** Serial Reading & command processing*****/
         void readFromSerial(StreamingMode::option interfaceType,
                             IUSerial *iuSerial);
-        bool processConfiguration(char *json);
-        bool configureMainOptions(JsonVariant &config);
+        bool processConfiguration(char *json, bool saveToFlash);
+        void configureMainOptions(JsonVariant &config);
         void configureAllSensors(JsonVariant &config);
         void configureAllFeatures(JsonVariant &config);
         void processLegacyCommands(char *buff);
@@ -194,7 +199,7 @@ class Conductor
         AcquisitionMode::option m_acquisitionMode = AcquisitionMode::NONE;
         StreamingMode::option m_streamingMode = StreamingMode::COUNT;
         // Static JSON buffer to parse config
-        StaticJsonBuffer<1600> jsonBuffer;
+        StaticJsonBuffer<1600> m_jsonBuffer;
         // eg: can hold the following config (remove the space and line breaks)
 //        {
 //          "features": {
