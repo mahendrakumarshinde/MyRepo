@@ -241,28 +241,10 @@ bool IUMQTTHelper::publishFeature(const char *payload,
 void IUMQTTHelper::onConnection()
 {
     subscribe("config", true);  // Config subscription
-    subscribe("legacy", true);  // Legacy command format subscription
+    // In new version, do not subscribe to Legacy anymore
+    // subscribe("legacy", true);  // Legacy command format subscription
+    // In new version, subscribe to command topic (remote instruction)
+    subscribe("command", true);  // Remote instruction subscription
+    subscribe("post_url", false);
     subscribe("time_sync", false);  // Time synchornisation subscription
-}
-
-/* =============================================================================
-    Faster disconnection detection
-============================================================================= */
-
-/**
- *
- */
-void IUMQTTHelper::extendLifetime(uint16_t durationSec)
-{
-    m_enfOfLife = millis() + (durationSec * 1000);
-}
-
-/**
- *
- */
-bool IUMQTTHelper::keepAlive()
-{
-    uint32_t now = millis();
-    return (m_enfOfLife == 0 || now < m_enfOfLife);
-
 }

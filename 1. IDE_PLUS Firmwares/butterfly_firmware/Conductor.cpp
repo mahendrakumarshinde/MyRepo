@@ -4,6 +4,11 @@
 char Conductor::START_CONFIRM[11] = "IUOK_START";
 char Conductor::END_CONFIRM[9] = "IUOK_END";
 
+IUFlash::storedConfig Conductor::CONFIG_TYPES[Conductor::CONFIG_TYPE_COUNT] = {
+    IUFlash::CFG_DEVICE,
+    IUFlash::CFG_COMPONENT,
+    IUFlash::CFG_FEATURE};
+
 /* =============================================================================
     Hardware & power management
 ============================================================================= */
@@ -151,56 +156,50 @@ void Conductor::showStatusOnLed(RGBColor color)
 ============================================================================= */
 
 /**
+ * Update a config from flash storage.
  *
- */
-bool Conductor::loadAllConfigsFromFlash()
-{
-    return (loadConfigFromFlash(IUFlash::CFG_DEVICE) &&
-            loadConfigFromFlash(IUFlash::CFG_COMPONENT) &&
-            loadConfigFromFlash(IUFlash::CFG_FEATURE));
-}
-
-/**
- *
+ * Accepted config types are:
+ *  - IUFlash::CFG_DEVICE
+ *  - IUFlash::CFG_COMPONENT
+ *  - IUFlash::CFG_FEATURE
+ * @return bool success
  */
 bool Conductor::loadConfigFromFlash(IUFlash::storedConfig configType)
 {
-     if (!iuFlash.available())
-    {
-        return false;  // Flash is unavailable
-    }
     // TODO this only works with IUFSFlash, not IUSPIFlash
     // FIXME this only works with IUFSFlash, not IUSPIFlash
-    File file;
-    if (!iuFlash.getReadable(configType, &file))
+    JsonVariant config;
+    if (iuFlash.available())
     {
-        return false;
+        File file;
+        if (iuFlash.getReadable(configType, &file))
+        {
+            config = m_jsonBuffer.parseObject(file);
+        }
     }
-    JsonVariant config = m_jsonBuffer.parseObject(file);
-    if (!config.success())
+    bool success = config.success();
+    if (success)
     {
-        return false;
-    }
-    bool success = true;
-    switch (configType)
-    {
-        case IUFlash::CFG_DEVICE:
-            configureMainOptions(config);
-            break;
-        case IUFlash::CFG_COMPONENT:
-            configureAllSensors(config);
-            break;
-        case IUFlash::CFG_FEATURE:
-            configureAllFeatures(config);
-            break;
-        default:
-            if (debugMode)
-            {
-                debugPrint("Unhandled config type: ", false);
-                debugPrint((uint8_t) configType);
-            }
-            success = false;
-            break;
+        switch (configType)
+        {
+            case IUFlash::CFG_DEVICE:
+                configureMainOptions(config);
+                break;
+            case IUFlash::CFG_COMPONENT:
+                configureAllSensors(config);
+                break;
+            case IUFlash::CFG_FEATURE:
+                configureAllFeatures(config);
+                break;
+            default:
+                if (debugMode)
+                {
+                    debugPrint("Unhandled config type: ", false);
+                    debugPrint((uint8_t) configType);
+                }
+                success = false;
+                break;
+        }
     }
     if (debugMode && success)
     {
@@ -208,6 +207,86 @@ bool Conductor::loadConfigFromFlash(IUFlash::storedConfig configType)
         debugPrint((uint8_t) configType);
     }
     return success;
+}
+
+/**
+ *
+ */
+void Conductor::sendConfigChecksum(IUFlash::storedConfig configType)
+{
+    if (!(m_streamingMode == StreamingMode::WIFI ||
+          m_streamingMode == StreamingMode::WIFI_AND_BLE))
+    {
+        if (debugMode)
+        {
+            debugPrint("Config checksum can only be sent via WiFi.");
+        }
+        return;
+    }
+    size_t configMaxLen = 200;
+    char config[configMaxLen];
+    size_t charCount = 0;
+    if (iuFlash.available())
+    {
+        charCount = iuFlash.readConfig(configType, config, configMaxLen);
+    }
+    // Charcount = 0 if flash is unavailable or file not found => Checksum of
+    // empty string will be sent, and that will trigger a config refresh
+    unsigned char* md5hash = MD5::make_hash(config, charCount);
+    char *md5str = MD5::make_digest(md5hash, 16);
+    size_t md5Len = 33;
+    size_t fullStrLen = md5Len + 44;
+    char fullStr[fullStrLen];
+    switch (configType)
+    {
+        case IUFlash::CFG_DEVICE:
+            snprintf(fullStr, fullStrLen, "{\"mac\":\"%s\",\"main\":\"%s\"}",
+                     m_macAddress.toString().c_str(), md5str);
+            break;
+        case IUFlash::CFG_COMPONENT:
+            snprintf(fullStr, fullStrLen,
+                     "{\"mac\":\"%s\",\"components\":\"%s\"}",
+                     m_macAddress.toString().c_str(), md5str);
+            break;
+        case IUFlash::CFG_FEATURE:
+            snprintf(fullStr, fullStrLen,
+                     "{\"mac\":\"%s\",\"features\":\"%s\"}",
+                     m_macAddress.toString().c_str(), md5str);
+            break;
+        default:
+            if (debugMode)
+            {
+                debugPrint("Unhandled config type: ", false);
+                debugPrint((uint8_t) configType);
+            }
+            break;
+    }
+    // Send checksum
+    iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_CONFIG_CHECKSUM, fullStr,
+                          fullStrLen);
+    //free memory
+    free(md5hash);
+    free(md5str);
+}
+
+/**
+ *
+ */
+void Conductor::periodicSendConfigChecksum()
+{
+    if ((m_streamingMode == StreamingMode::WIFI ||
+         m_streamingMode == StreamingMode::WIFI_AND_BLE) &&
+        iuWiFi.isConnected())
+    {
+        uint32_t now = millis();
+        if (now - m_configTimerStart > SEND_CONFIG_CHECKSUM_TIMER)
+        {
+            sendConfigChecksum(conductor.CONFIG_TYPES[m_nextConfigToSend]);
+            m_nextConfigToSend++;
+            m_nextConfigToSend %= conductor.CONFIG_TYPE_COUNT;
+            m_configTimerStart = now;
+        }
+    }
 }
 
 /**
@@ -262,36 +341,29 @@ void Conductor::readFromSerial(StreamingMode::option interfaceType,
         uint16_t buffSize =  iuSerial->getCurrentBufferLength();
         if (loopDebugMode && iuSerial->getProtocol() != IUSerial::MS_PROTOCOL)
         {
-            debugPrint(F("Interface "), false);
+            debugPrint(millis(), false);
+            debugPrint(F(": Interface "), false);
             debugPrint(interfaceType, false);
             debugPrint(F(" input is: "), false);
             debugPrint(buffer);
         }
-        if (buffer[0] == '{' && buffer[buffSize - 1] == '}')
+        switch (interfaceType)
         {
-            processConfiguration(buffer, true);
-        }
-        else
-        {
-            // Also check for legacy commands
-            switch (interfaceType)
-            {
-                case StreamingMode::WIRED:
-                    processUSBMessages(buffer);
-                    break;
-                case StreamingMode::BLE:
-                    processBLEMessages(buffer);
-                    break;
-                case StreamingMode::WIFI:
-                    processWIFIMessages(buffer);
-                    break;
-                default:
-                    if (loopDebugMode)
-                    {
-                        debugPrint(F("Unhandled interface type: "), false);
-                        debugPrint(interfaceType);
-                    }
-            }
+            case StreamingMode::WIRED:
+                processUSBMessages(buffer);
+                break;
+            case StreamingMode::BLE:
+                processBLEMessages(buffer);
+                break;
+            case StreamingMode::WIFI:
+                processWIFIMessages(buffer);
+                break;
+            default:
+                if (loopDebugMode)
+                {
+                    debugPrint(F("Unhandled interface type: "), false);
+                    debugPrint(interfaceType);
+                }
         }
         iuSerial->resetBuffer();  // Clear buffer
     }
@@ -312,7 +384,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         return false;
     }
     // Device level configuration
-    JsonVariant subConfig = root["device"];
+    JsonVariant subConfig = root["main"];
     if (subConfig.success())
     {
         configureMainOptions(subConfig);
@@ -370,6 +442,12 @@ void Conductor::configureMainOptions(JsonVariant &config)
                 }
             }
         }
+    }
+    // Raw Data publication period
+    value = config["RAW"];
+    if (value.success())
+    {
+        m_rawDataPublicationTimer = (uint32_t) (value.as<int>()) * 1000;
     }
     // Sleep management
     bool resetCycleTime = false;
@@ -450,28 +528,10 @@ void Conductor::configureAllFeatures(JsonVariant &config)
 }
 
 /**
- * Process the commands (legacy protocol commands)
+ * Process the commands
  */
-void Conductor::processLegacyCommands(char *buff)
+void Conductor::processCommands(char *buff)
 {
-    HardwareSerial *port = NULL;
-    if (m_streamingMode == StreamingMode::BLE)
-    {
-        port = iuBluetooth.port;
-    }
-    else if (m_streamingMode == StreamingMode::WIFI ||
-             m_streamingMode == StreamingMode::WIFI_AND_BLE)
-    {
-        port = iuWiFi.port;
-    }
-    else
-    {
-        return;
-    }
-    Feature *accelEnergy = NULL;
-    char accelEnergyName[4] = "A00";
-    char axis[4] = "XYZ";
-    // TODO Command protocol redefinition required
     switch(buff[0])
     {
         case 'A': // ping device
@@ -504,6 +564,33 @@ void Conductor::processLegacyCommands(char *buff)
                 iuBluetooth.port->print(';');
             }
             break;
+        case '3':  // Collect acceleration raw data
+            if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
+                buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
+            {
+                if (loopDebugMode)
+                {
+                    debugPrint("Record mode");
+                }
+                sendAccelRawData(0);  // Axis X
+                sendAccelRawData(1);  // Axis Y
+                sendAccelRawData(2);  // Axis Z
+            }
+            break;
+        default:
+            break;
+    }
+}
+
+
+/**
+ * Process the legacy commands
+ */
+void Conductor::processLegacyCommands(char *buff)
+{
+    // TODO Command protocol redefinition required
+    switch(buff[0])
+    {
         case '0': // Set Thresholds
             if (buff[4] == '-' && buff[9] == '-' && buff[14] == '-')
             {
@@ -539,9 +626,7 @@ void Conductor::processLegacyCommands(char *buff)
         case '1':  // Receive the timestamp data from the bluetooth hub
             if (buff[1] == ':' && buff[12] == '.')
             {
-                int flag(0), ts(0), ms(0);
-                sscanf(buff, "%d:%d.%d", &flag, &ts, &ms);
-                setRefDatetime((double) ts + (double) ms / (double) 1000000);
+                setRefDatetime(&buff[2]);
             }
             break;
         case '2':  // Bluetooth parameter setting
@@ -553,54 +638,6 @@ void Conductor::processLegacyCommands(char *buff)
                        startSleepTimer, &dataRecTimeout);
                 // We currently only use the data send period option
                 motorStandardGroup.setDataSendPeriod((uint16_t) dataSendPeriod);
-            }
-            break;
-        case '3':  // Collect acceleration raw data
-            if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
-                buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
-            {
-                if (loopDebugMode)
-                {
-                    debugPrint("Record mode");
-                }
-                for (uint8_t i = 0; i < 3; i++)
-                {
-                    accelEnergyName[2] = axis[i];
-                    accelEnergy = Feature::getInstanceByName(accelEnergyName);
-                    if (accelEnergy)
-                    {
-                        port->print("REC,");
-                        if (m_streamingMode == StreamingMode::BLE)
-                        {
-                            port->print(m_macAddress);
-                            port->print(',');
-                        }
-                        port->print(axis[i]);
-                        accelEnergy->stream(port, 4);
-                        delay(10);
-                    }
-                }
-            }
-            break;
-        case '5':  // Get status
-            if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
-                buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
-            {
-                port->print("HB,");
-                if (m_streamingMode == StreamingMode::BLE)
-                {
-                    port->print(m_macAddress);
-                    port->print(',');
-                }
-                if (iuI2C.isError())
-                {
-                    port->print("I2CERR");
-                }
-                else
-                {
-                    port->print("ALL_OK");
-                }
-                port->print(";");
             }
             break;
         case '6': // Set which feature are used for OperationState
@@ -631,10 +668,6 @@ void Conductor::processLegacyCommands(char *buff)
             }
             break;
         default:
-            if (debugMode)
-            {
-                debugPrint(F("Unknown command"));
-            }
             break;
     }
 }
@@ -644,7 +677,11 @@ void Conductor::processLegacyCommands(char *buff)
  */
 void Conductor::processUSBMessages(char *buff)
 {
-    if (strncmp(buff, "WIFI-", 5) == 0)
+    if (buff[0] == '{')
+    {
+        processConfiguration(buff, true);
+    }
+    else if (strncmp(buff, "WIFI-", 5) == 0)
     {
         processUserMessageForWiFi(buff, iuUSB.port);
     }
@@ -752,12 +789,17 @@ void Conductor::processBLEMessages(char *buff)
     {
         return;  // Do not listen to BLE when wired
     }
-    if (strncmp(buff, "WIFI-", 5) == 0)
+    if (buff[0] == '{')
+    {
+        processConfiguration(buff, true);
+    }
+    else if (strncmp(buff, "WIFI-", 5) == 0)
     {
         processUserMessageForWiFi(buff, iuBluetooth.port);
     }
     else
     {
+        processCommands(buff);
         processLegacyCommands(buff);
     }
 }
@@ -787,11 +829,12 @@ void Conductor::processUserMessageForWiFi(char *buff,
         if (iuWiFi.isSleeping())
         {
             showStatusOnLed(RGB_PURPLE); // Show the status to the user
+            iuWiFi.wakeUpOnNextTick();
             iuWiFi.setPowerMode(PowerMode::REGULAR);
             uint32_t startT = millis();
             uint32_t current = startT;
             // Wait for up to 5sec the WiFi wake up
-            while (iuWiFi.isSleeping() && current - startT < 5000)
+            while (iuWiFi.isSleeping() && current - startT < 3000)
             {
                 readFromSerial(StreamingMode::WIFI, &iuWiFi);
                 iuWiFi.manageAutoSleep();
@@ -854,12 +897,21 @@ void Conductor::processWIFIMessages(char *buff)
             }
             iuBluetooth.port->print("WIFI-NOSAVEDCRED;");
             break;
+        case MSPCommand::SET_DATETIME:
+            if (loopDebugMode) { debugPrint("SET_DATETIME"); }
+            setRefDatetime(buff);
+            break;
+        case MSPCommand::CONFIG_FORWARD_CONFIG:
+            if (loopDebugMode) { debugPrint("CONFIG_FORWARD_CONFIG"); }
+            processConfiguration(buff, true);
+            break;
         case MSPCommand::CONFIG_FORWARD_CMD:
             if (loopDebugMode) { debugPrint("CONFIG_FORWARD_CMD"); }
-            processConfiguration(buff, true);
+            processCommands(buff);
             break;
         case MSPCommand::CONFIG_FORWARD_LEGACY_CMD:
             if (loopDebugMode) { debugPrint("CONFIG_FORWARD_LEGACY_CMD"); }
+            processCommands(buff);
             processLegacyCommands(buff);
             break;
         case MSPCommand::WIFI_CONFIRM_ACTION:
@@ -1038,13 +1090,21 @@ void Conductor::deactivateAllGroups()
  */
 void Conductor::setRefDatetime(double refDatetime)
 {
-    m_refDatetime = refDatetime;
-    m_lastSynchroTime = millis();
-    if (loopDebugMode)
+    if (refDatetime >  0)
     {
-        debugPrint("Time sync: ", false);
-        debugPrint(getDatetime());
+        m_refDatetime = refDatetime;
+        m_lastSynchroTime = millis();
+        if (loopDebugMode)
+        {
+            debugPrint("Time sync: ", false);
+            debugPrint(getDatetime());
+        }
     }
+}
+
+void Conductor::setRefDatetime(const char* timestamp)
+{
+    setRefDatetime(atof(timestamp));
 }
 
 /**
@@ -1182,15 +1242,10 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             deactivateAllGroups();
 //            activateGroup(&healthCheckGroup);
             activateGroup(&motorStandardGroup);
-            // TODO - Set up default feature thresholds - Remove?
-            accelRMS512Total.enableOperationState();
-            accelRMS512Total.setThresholds(DEFAULT_ACCEL_ENERGY_NORMAL_TH,
-                                           DEFAULT_ACCEL_ENERGY_WARNING_TH,
-                                           DEFAULT_ACCEL_ENERGY_HIGH_TH);
             iuAccelerometer.resetScale();
             if (iuWiFi.isConnected())
             {
-                streamMode = StreamingMode::WIFI;
+                streamMode = StreamingMode::WIFI_AND_BLE;
             }
             else
             {
@@ -1433,6 +1488,64 @@ void Conductor::streamFeatures()
         }
     }
 }
+
+/**
+ * Send the acceleration raw data.
+ *
+ * @param axis 0, 1 or 3, corresponding to axis X, Y or Z
+ */
+void Conductor::sendAccelRawData(uint8_t axisIdx)
+{
+    if (axisIdx > 2)
+    {
+        return;
+    }
+    char accelEnergyName[4] = "A00";
+    char axis[4] = "XYZ";
+    accelEnergyName[2] = axis[axisIdx];
+    Feature *accelEnergy = Feature::getInstanceByName(accelEnergyName);
+    if (accelEnergy == NULL)
+    {
+        return;
+    }
+    if (m_streamingMode == StreamingMode::BLE)
+    {
+        iuBluetooth.port->print("REC,");
+        iuBluetooth.port->print(m_macAddress);
+        iuBluetooth.port->print(',');
+        iuBluetooth.port->print(axis[axisIdx]);
+        accelEnergy->stream(iuBluetooth.port, 4);
+        delay(10);
+    }
+    else if (m_streamingMode == StreamingMode::WIFI ||
+             m_streamingMode == StreamingMode::WIFI_AND_BLE)
+    {
+        size_t maxLen = 3072;
+        char txBuffer[maxLen];
+        txBuffer[0] = axis[axisIdx];
+        uint16_t idx = 1;
+        accelEnergy->sendToBuffer(txBuffer, idx, 4);
+        txBuffer[idx] = 0; // Terminate string (idx incremented in sendToBuffer)
+        iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_RAW_DATA, txBuffer);
+        delay(10);
+    }
+}
+
+/**
+ * Handle periodical publication of accel raw data.
+ */
+void Conductor::periodicSendAccelRawData()
+{
+    uint32_t now = millis();
+    if (now - m_rawDataPublicationStart > m_rawDataPublicationTimer)
+    {
+        sendAccelRawData(0);
+        sendAccelRawData(1);
+        sendAccelRawData(2);
+        m_rawDataPublicationStart = now;
+    }
+}
+
 
 
 /* =============================================================================

@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <MD5.h>
 
 #include "BoardDefinition.h"
 #ifdef DRAGONFLY_V03
@@ -95,10 +96,16 @@ class Conductor
         static const uint32_t defaultAutoSleepDelay = 60000;
         static const uint32_t defaultSleepDuration = 10000;
         static const uint32_t defaultCycleTime = 20000;
+        // Raw data publication once per hour by default
+        static const uint32_t defaultRawDataPublicationTimer = 3600000;
         static char START_CONFIRM[11];
         static char END_CONFIRM[9];
+        // Config handler
+        static const uint8_t CONFIG_TYPE_COUNT = 3;
+        static IUFlash::storedConfig CONFIG_TYPES[CONFIG_TYPE_COUNT];
+        static const uint32_t SEND_CONFIG_CHECKSUM_TIMER = 30000;
         // Default start datetime
-        static constexpr double defaultTimestamp = 1492144654.00;
+        static constexpr double defaultTimestamp = 1524017173.00;
         /***** Constructors and destructor *****/
         Conductor(MacAddress macAddress) : m_macAddress(macAddress) { }
         Conductor(const char *macAddress)
@@ -119,10 +126,11 @@ class Conductor
         void showOperationStateOnLed();
         void showStatusOnLed(RGBColor color);
         /***** Local storage (flash) management *****/
-        bool loadAllConfigsFromFlash();
         bool loadConfigFromFlash(IUFlash::storedConfig configType);
         bool saveConfigToFlash(IUFlash::storedConfig configType,
                                JsonVariant &config);
+        void sendConfigChecksum(IUFlash::storedConfig configType);
+        void periodicSendConfigChecksum();
         /***** Serial Reading & command processing*****/
         void readFromSerial(StreamingMode::option interfaceType,
                             IUSerial *iuSerial);
@@ -130,6 +138,7 @@ class Conductor
         void configureMainOptions(JsonVariant &config);
         void configureAllSensors(JsonVariant &config);
         void configureAllFeatures(JsonVariant &config);
+        void processCommands(char *buff);
         void processLegacyCommands(char *buff);
         void processUSBMessages(char *buff);
         void processBLEMessages(char *buff);
@@ -146,6 +155,7 @@ class Conductor
         void deactivateAllGroups();
         /***** Time management *****/
         void setRefDatetime(double refDatetime);
+        void setRefDatetime(const char* timestamp);
         double getDatetime();
         /***** Mode management *****/
         void changeAcquisitionMode(AcquisitionMode::option mode);
@@ -160,6 +170,8 @@ class Conductor
         void computeFeatures();
         void updateOperationState();
         void streamFeatures();
+        void sendAccelRawData(uint8_t axisIdx);
+        void periodicSendAccelRawData();
         void storeData() {}  // TODO => implement
         /***** Debugging *****/
         void getMCUInfo(char *destination);
@@ -194,7 +206,11 @@ class Conductor
         OperationState::option m_operationState = OperationState::IDLE;
         void (*m_callback)() = NULL;
         bool m_inDataAcquistion = false;
+        uint32_t m_rawDataPublicationTimer = defaultRawDataPublicationTimer;
+        uint32_t m_rawDataPublicationStart = 0;
         /***** Configuration and Mode management *****/
+        uint32_t m_configTimerStart = 0;
+        uint8_t m_nextConfigToSend = 0;
         UsageMode::option m_usageMode = UsageMode::COUNT;
         AcquisitionMode::option m_acquisitionMode = AcquisitionMode::NONE;
         StreamingMode::option m_streamingMode = StreamingMode::COUNT;

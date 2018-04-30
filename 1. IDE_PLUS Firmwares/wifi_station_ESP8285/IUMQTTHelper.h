@@ -64,9 +64,6 @@ class IUMQTTHelper
                             const char *topicExtension=NULL,
                             const uint16_t extensionLength=0);
         void onConnection();
-        /***** Faster disconnection detection *****/
-        void extendLifetime(uint16_t durationSec);
-        bool keepAlive();
         /***** Public Client for convenience *****/
         PubSubClient client;
 

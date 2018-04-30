@@ -25,7 +25,7 @@ class IUESP8285 : public IUSerial, public Component
         // Max expected length of WiFi SSID or password
         static const uint8_t wifiCredentialLength = 64;
         // WiFi config (credentials or Static IP) MultiMessageValidator timeout
-        static const uint32_t wifiConfigReceptionTimeout = 1000;  // ms
+        static const uint32_t wifiConfigReceptionTimeout = 5000;  // ms
         // Sleep management
         static const uint32_t defaultAutoSleepDelay = 60000;  // ms
         static const uint32_t defaultAutoSleepDuration = 90000;  // ms
@@ -47,6 +47,7 @@ class IUESP8285 : public IUSerial, public Component
         virtual void setupHardware();
         virtual void setPowerMode(PowerMode::option pMode);
         void setAutoSleepDelay(uint32_t deltaT) { m_autoSleepDelay = deltaT; }
+        void wakeUpOnNextTick() { m_wakeUpNow = true; }
         void manageAutoSleep();
         /***** Local storage (flash) management *****/
         bool loadConfigFromFlash(IUFlash *iuFlashPtr,
@@ -99,6 +100,7 @@ class IUESP8285 : public IUSerial, public Component
         /***** Connection and auto-sleep *****/
         bool m_connected = false;
         bool m_sleeping = false;
+        bool m_wakeUpNow = false;
         uint32_t m_awakeTimerStart = 0;
         uint32_t m_sleepTimerStart = 0;
         uint32_t m_autoSleepDelay = defaultAutoSleepDelay;

@@ -21,8 +21,7 @@ class IUTimeHelper
         void end();
         bool active() { return m_active; }
         void updateTimeReferenceFromNTP();
-        void updateTimeReferenceFromIU(byte *payload,
-                                       uint16_t payloadLength);
+        void updateTimeReferenceFromIU(const char *payload);
         time_t getCurrentTime();
 
     protected:

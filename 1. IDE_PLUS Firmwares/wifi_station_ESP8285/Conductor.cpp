@@ -96,7 +96,6 @@ void Conductor::processMessageFromHost()
         debugPrint(", buffer is: ", false);
         debugPrint(buffer);
     }
-    uint8_t idx = 0;
     switch(cmd)
     {
         /***** MAC addresses *****/
@@ -111,28 +110,10 @@ void Conductor::processMessageFromHost()
 
         /***** Wifi Config *****/
         case MSPCommand::WIFI_RECEIVE_SSID:
-            if (m_credentialValidator.hasTimedOut())
-            {
-                forgetWiFiCredentials();
-            }
-            strncpy(m_userSSID, buffer, wifiCredentialLength);
-            m_credentialValidator.receivedMessage(0);
-            if (m_credentialValidator.completed())
-            {
-                onNewCredentialsReception();
-            }
+            receiveNewCredentials(buffer, NULL);
             break;
         case MSPCommand::WIFI_RECEIVE_PASSWORD:
-            if (m_credentialValidator.hasTimedOut())
-            {
-                forgetWiFiCredentials();
-            }
-            strncpy(m_userPassword, buffer, wifiCredentialLength);
-            m_credentialValidator.receivedMessage(1);
-            if (m_credentialValidator.completed())
-            {
-                onNewCredentialsReception();
-            }
+            receiveNewCredentials(NULL, buffer);
             break;
         case MSPCommand::WIFI_FORGET_CREDENTIALS:
             forgetWiFiCredentials();
@@ -141,24 +122,9 @@ void Conductor::processMessageFromHost()
         case MSPCommand::WIFI_RECEIVE_STATIC_IP:
         case MSPCommand::WIFI_RECEIVE_GATEWAY:
         case MSPCommand::WIFI_RECEIVE_SUBNET:
-            idx = (uint8_t) cmd - (uint8_t) MSPCommand::WIFI_RECEIVE_STATIC_IP;
-            if (m_staticConfigValidator.hasTimedOut())
-            {
-                forgetWiFiStaticConfig();
-            }
-            if (idx == 0){
-                m_staticIp = hostSerial.mspReadIPAddress();
-            } else if (idx == 1) {
-                m_staticGateway = hostSerial.mspReadIPAddress();
-            } else if (idx == 2) {
-                m_staticSubnet = hostSerial.mspReadIPAddress();
-            } else { break; }
-            if (m_staticConfigValidator.completed())
-            {
-                hostSerial.sendMSPCommand(
-                    MSPCommand::WIFI_CONFIRM_NEW_STATIC_CONFIG);
-                // TODO Implement
-            }
+            receiveNewStaticConfig(
+                hostSerial.mspReadIPAddress(),
+                (uint8_t) cmd - (uint8_t) MSPCommand::WIFI_RECEIVE_STATIC_IP);
             break;
         case MSPCommand::WIFI_FORGET_STATIC_CONFIG:
             forgetWiFiStaticConfig();
@@ -207,6 +173,9 @@ void Conductor::processMessageFromHost()
             break;
         case MSPCommand::PUBLISH_DIAGNOSTIC:
             publishDiagnostic(buffer, bufferLength);
+            break;
+        case MSPCommand::PUBLISH_CONFIG_CHECKSUM:
+            mqttHelper.publish(CHECKSUM_TOPIC, buffer);
             break;
 
         /***** Cloud command reception and transmission *****/
@@ -293,13 +262,24 @@ void Conductor::processMessageFromHost()
     WiFi credentials and config
 ============================================================================= */
 
-void Conductor::setCredentials(const char *userSSID, const char *userPSK)
+void Conductor::forceWiFiConfig(const char *userSSID, const char *userPSK,
+                                IPAddress staticIp, IPAddress gateway,
+                                IPAddress subnetMask)
 {
+    // Credentials
     forgetWiFiCredentials();
     strncpy(m_userSSID, userSSID, wifiCredentialLength);
     strncpy(m_userPassword, userPSK, wifiCredentialLength);
     m_credentialValidator.receivedMessage(0);
     m_credentialValidator.receivedMessage(1);
+    // Static IP
+    forgetWiFiStaticConfig();
+    m_staticIp = staticIp;
+    m_gateway = gateway;
+    m_subnetMask = subnetMask;
+    m_staticConfigValidator.receivedMessage(0);
+    m_staticConfigValidator.receivedMessage(1);
+    m_staticConfigValidator.receivedMessage(2);
     m_disconnectionTimerStart = millis();  // Reset Disconnection timer
 }
 
@@ -317,15 +297,33 @@ void Conductor::forgetWiFiCredentials()
 }
 
 /**
- *
+ * Receive new WiFi credentials (SSID and / or PSK)
  */
-void Conductor::onNewCredentialsReception()
+void Conductor::receiveNewCredentials(char *newSSID, char *newPSK)
 {
-    String info = String(m_userSSID) + "_" + String(m_userPassword);
-    hostSerial.sendMSPCommand(MSPCommand::WIFI_CONFIRM_NEW_CREDENTIALS,
-                              info.c_str());
-    m_disconnectionTimerStart = millis(); // Reset disconnection timer
-    reconnect(true);
+    if (m_credentialValidator.hasTimedOut())
+    {
+        forgetWiFiCredentials();
+    }
+    if (newSSID)
+    {
+        strncpy(m_userSSID, newSSID, wifiCredentialLength);
+        m_credentialValidator.receivedMessage(0);
+    }
+    if (newPSK)
+    {
+        strncpy(m_userPassword, newPSK, wifiCredentialLength);
+        m_credentialValidator.receivedMessage(1);
+    }
+    if (m_credentialValidator.completed())
+    {
+        String info = String(m_userSSID) + "_" + String(m_userPassword);
+        hostSerial.sendMSPCommand(MSPCommand::WIFI_CONFIRM_NEW_CREDENTIALS,
+                                  info.c_str());
+        // Reset disconnection timer before reconnection attempt
+        m_disconnectionTimerStart = millis();
+        reconnect(true);
+    }
 }
 
 /**
@@ -335,8 +333,35 @@ void Conductor::forgetWiFiStaticConfig()
 {
     m_staticConfigValidator.reset();
     m_staticIp = IPAddress();
-    m_staticGateway = IPAddress();
-    m_staticSubnet = IPAddress();
+    m_gateway = IPAddress();
+    m_subnetMask = IPAddress();
+}
+
+/**
+ * Receive new WiFi static config (static IP, gateway or subnet mask).
+ *
+ * @param ip: The IP address of either the static IP, gateway or subnet mask.
+ * @param idx: An index 0, 1 or 2 corresponding to the kind of IP (static IP,
+    gateway or subnet mask)
+ */
+void Conductor::receiveNewStaticConfig(IPAddress ip, uint8_t idx)
+{
+    if (m_staticConfigValidator.hasTimedOut())
+    {
+        forgetWiFiStaticConfig();
+    }
+    if (idx == 0) { m_staticIp = hostSerial.mspReadIPAddress(); }
+    else if (idx == 1) { m_gateway = hostSerial.mspReadIPAddress(); }
+    else if (idx == 2) { m_subnetMask = hostSerial.mspReadIPAddress(); }
+    else { return; }
+    m_staticConfigValidator.receivedMessage(idx);
+    if (m_staticConfigValidator.completed())
+    {
+        hostSerial.sendMSPCommand(MSPCommand::WIFI_CONFIRM_NEW_STATIC_CONFIG);
+        // Reset disconnection timer before reconnection attempt
+        m_disconnectionTimerStart = millis();
+        reconnect(true);
+    }
 }
 
 /**
@@ -450,7 +475,7 @@ void Conductor::disconnectWifi(bool wifiOff)
  */
 bool Conductor::reconnect(bool forceNewCredentials)
 {
-    // Ensure that the WiFi is in AP mode
+    // Ensure that the WiFi is in STA mode (STA only, no AP)
     if (WiFi.getMode() != WIFI_STA)
     {
         WiFi.mode(WIFI_STA);
@@ -463,7 +488,10 @@ bool Conductor::reconnect(bool forceNewCredentials)
         if (currentSSID.length() == 0 ||
             strcmp(currentSSID.c_str(), m_userSSID) > 0 ||
             currentPW.length() == 0 ||
-            strcmp(currentPW.c_str(), m_userPassword) > 0)
+            strcmp(currentPW.c_str(), m_userPassword) > 0 ||
+            !(WiFi.localIP() == m_staticIp) ||
+            !(WiFi.gatewayIP() == m_gateway) ||
+            !(WiFi.subnetMask() == m_subnetMask))
         {
             // New and different user input for SSID and Password => disconnect
             // from current SSID then reconnect to new SSID
@@ -500,6 +528,7 @@ bool Conductor::reconnect(bool forceNewCredentials)
             }
             return false;
         }
+        WiFi.config(m_staticIp, m_gateway, m_subnetMask);
         WiFi.begin(m_userSSID, m_userPassword);
         m_lastConnectionAttempt = current;
         m_remainingConnectionAttempt--;
@@ -588,7 +617,7 @@ void Conductor::checkWiFiDisconnectionTimeout()
  * @param payload The message it self, as an array of bytes
  * @param length The number of byte in payload
  */
-void Conductor::processMessageFromMQTT(char* topic, byte* payload,
+void Conductor::processMessageFromMQTT(const char* topic, const char* payload,
                                        uint16_t length)
 {
     if (debugMode)
@@ -598,7 +627,7 @@ void Conductor::processMessageFromMQTT(char* topic, byte* payload,
         debugPrint("] ", false);
         for (int i = 0; i < length; i++)
         {
-            debugPrint((char)payload[i], false);
+            debugPrint(payload[i], false);
         }
         debugPrint("");
     }
@@ -617,24 +646,43 @@ void Conductor::processMessageFromMQTT(char* topic, byte* payload,
         debugPrint("Command type is: ", false);
         debugPrint(&subTopic[1]);
     }
-    if (strncmp(&subTopic[1], "config", 6) == 0)
+    if (strncmp(&subTopic[1], "time_sync", 9) == 0)
     {
-        hostSerial.sendMSPCommand(MSPCommand::CONFIG_FORWARD_CMD,
-                                  (char*) payload, length);
+        timeHelper.updateTimeReferenceFromIU(payload);
+        hostSerial.sendMSPCommand(MSPCommand::SET_DATETIME, payload, length);
+    }
+    else if (strncmp(&subTopic[1], "config", 6) == 0)
+    {
+        hostSerial.sendMSPCommand(MSPCommand::CONFIG_FORWARD_CONFIG, payload,
+                                  length);
 
     }
-    else if (strncmp(&subTopic[1], "time_sync", 9) == 0)
+    else if (strncmp(&subTopic[1], "command", 7) == 0)
     {
-        // TODO Implement
+        hostSerial.sendMSPCommand(MSPCommand::CONFIG_FORWARD_CMD,
+                                  payload, length);
     }
     else if (strncmp(&subTopic[1], "legacy", 6) == 0)
     {
-        hostSerial.sendMSPCommand(MSPCommand::CONFIG_FORWARD_LEGACY_CMD,
-                                  (char*) payload, length);
-
-        if ((char)payload[0] == '1' && (char)payload[1] == ':')
+        if (payload[0] == '1' && payload[1] == ':')
         {
-            timeHelper.updateTimeReferenceFromIU(payload, length);
+            timeHelper.updateTimeReferenceFromIU(&payload[2]);
+            hostSerial.sendMSPCommand(MSPCommand::SET_DATETIME, &payload[2],
+                                      length);
+        }
+        else
+        {
+            hostSerial.sendMSPCommand(MSPCommand::CONFIG_FORWARD_LEGACY_CMD,
+                                      payload, length);
+        }
+    }
+    else if (strncmp(&subTopic[1], "post_url", 8) == 0)
+    {
+        //TODO Improve url management
+        if (length < MAX_HOST_LENGTH)
+        {
+            strncpy(m_featurePostHost, payload, length);
+            strncpy(m_diagnosticPostHost, payload, length);
         }
     }
 }

@@ -582,6 +582,7 @@ void Q15Feature::m_specializedBufferStream(uint8_t sectionIdx,
 {
     uint8_t sIdx = 0;
     String strVal = "";
+    uint8_t floatLen = 4;
     for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++)
     {
         sIdx = k % sectionCount;
@@ -612,8 +613,8 @@ void Q15Feature::m_specializedBufferStream(uint8_t sectionIdx,
             {
                 destination[destIndex++] = ',';
                 strVal = String(((float) m_values[i]) * m_resolution, 2);
-                strcat(destination, strVal.c_str());
-                destIndex += strVal.length();
+                strncat(destination, strVal.c_str(), floatLen);
+                destIndex += floatLen;
             }
         }
     }

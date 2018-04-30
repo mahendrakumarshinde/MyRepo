@@ -95,11 +95,9 @@ void IUTimeHelper::updateTimeReferenceFromNTP()
 /**
  *
  */
-void IUTimeHelper::updateTimeReferenceFromIU(byte *payload,
-                                            uint16_t payloadLength)
+void IUTimeHelper::updateTimeReferenceFromIU(const char *payload)
 {
-    const char *buff = reinterpret_cast<const char*>(payload);
-    int32_t ts = atol(&buff[2]);
+    int32_t ts = atol(payload);
     if (ts > 0)
     {
         m_timeReference = (time_t) ts;

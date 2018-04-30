@@ -36,14 +36,9 @@ class Conductor
         // Max expected length of WiFi SSID or password
         static const uint8_t wifiCredentialLength = 64;
         // WiFi config (credentials or Static IP) MultiMessageValidator timeout
-        static const uint32_t wifiConfigReceptionTimeout = 1000;  // ms
+        static const uint32_t wifiConfigReceptionTimeout = 5000;  // ms
         // WiFi will deep-sleep if host doesn't respond before timeout
         static const uint32_t hostResponseTimeout = 60000;  // ms
-//        #if IUDEBUG_ANY == 1
-//            static const uint32_t hostResponseTimeout = 60000;  // ms
-//        #else
-//            static const uint32_t hostResponseTimeout = 1000;  // ms
-//        #endif
         // Default duration of deep-sleep
         static const uint32_t deepSleepDuration = 2000;  // ms
         /** Connection retry constants **/
@@ -63,10 +58,13 @@ class Conductor
         void readMessagesFromHost();
         void processMessageFromHost();
         /***** WiFi credentials and config *****/
-        void setCredentials(const char *userSSID, const char *userPSK);
+        void forceWiFiConfig(const char *userSSID, const char *userPSK,
+                             IPAddress staticIp, IPAddress gateway,
+                             IPAddress subnetMask);
         void forgetWiFiCredentials();
-        void onNewCredentialsReception();
+        void receiveNewCredentials(char *newSSID, char *newPSK);
         void forgetWiFiStaticConfig();
+        void receiveNewStaticConfig(IPAddress ip, uint8_t idx);
         bool getConfigFromMainBoard();
         /***** Wifi connection and status *****/
         void turnOffRadio(uint32_t duration_us=0);
@@ -76,7 +74,7 @@ class Conductor
         uint8_t waitForConnectResult();
         void checkWiFiDisconnectionTimeout();
         /***** MQTT *****/
-        void processMessageFromMQTT(char* topic, byte* payload,
+        void processMessageFromMQTT(const char* topic, const char* payload,
                                     uint16_t length);
         /***** Data posting / publication *****/
         bool publishDiagnostic(const char *rawMsg, const uint16_t msgLength,
@@ -107,8 +105,8 @@ class Conductor
         char m_userPassword[wifiCredentialLength];
         MultiMessageValidator<3> m_staticConfigValidator;
         IPAddress m_staticIp;
-        IPAddress m_staticGateway;
-        IPAddress m_staticSubnet;
+        IPAddress m_gateway;
+        IPAddress m_subnetMask;
         /***** Settable parameters (addresses, credentials, etc) *****/
         MultiMessageValidator<2> m_mqttServerValidator;
         IPAddress m_mqttServerIP = MQTT_DEFAULT_SERVER_IP;

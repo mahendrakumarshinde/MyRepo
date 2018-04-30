@@ -35,7 +35,7 @@ void IUFSFlash::begin()
     m_begun = DOSFS.exists(CONFIG_SUBDIR);
     if (!m_begun)
     {
-        bool mkdir(const char* path);
+        DOSFS.mkdir(CONFIG_SUBDIR);
         m_begun = DOSFS.exists(CONFIG_SUBDIR);
         if (!m_begun && setupDebugMode)
         {

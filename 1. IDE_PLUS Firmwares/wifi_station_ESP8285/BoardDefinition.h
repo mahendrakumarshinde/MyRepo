@@ -25,6 +25,9 @@ const char DEVICE_TYPE[DEVICE_TYPE_LENGTH] = "ide_plus";
 #if IUDEBUG_ANY == 1
     const char testSSID[14] = "The Port WiFi";
     const char testPSK[11] = "Th3P0rt317";
+    IPAddress testStaticIP(0, 0, 0, 0);
+    IPAddress testGateway(0, 0, 0, 0);
+    IPAddress testSubnet(0, 0, 0, 0);
 //    const char testSSID[19] = "AndroidHotspot6994";
 //    const char testPSK[13] = "f1b94630f970";
 #endif  // IUDEBUG_ANY == 1
@@ -77,16 +80,20 @@ const char CUSTOMER_PLACEHOLDER[CUSTOMER_PLACEHOLDER_LENGTH] = "XXXAdmin";
 #ifdef TEST_TOPICS
     const uint8_t FEATURE_TOPIC_LENGTH = 20;
     const uint8_t DIAGNOSTIC_TOPIC_LENGTH = 14;
+    const uint8_t CHECKSUM_TOPIC_LENGTH = 20;
 //    const uint8_t RAW_DATA_TOPIC_LENGTH = 17;
     const char FEATURE_TOPIC[FEATURE_TOPIC_LENGTH] = "iu_device_data_test";
     const char DIAGNOSTIC_TOPIC[DIAGNOSTIC_TOPIC_LENGTH] = "iu_error_test";
+    const char CHECKSUM_TOPIC[CHECKSUM_TOPIC_LENGTH] = "config_confirm_test";
 //    const char RAW_DATA_TOPIC[RAW_DATA_TOPIC_LENGTH] = "iu_raw_data_test";
 #else
     const uint8_t FEATURE_TOPIC_LENGTH = 15;
     const uint8_t DIAGNOSTIC_TOPIC_LENGTH = 9;
+    const uint8_t CHECKSUM_TOPIC_LENGTH = 15;
 //    const uint8_t RAW_DATA_TOPIC_LENGTH = 12;
     const char FEATURE_TOPIC[FEATURE_TOPIC_LENGTH] = "iu_device_data";
     const char DIAGNOSTIC_TOPIC[DIAGNOSTIC_TOPIC_LENGTH] = "iu_error";
+    const char CHECKSUM_TOPIC[CHECKSUM_TOPIC_LENGTH] = "config_confirm";
 //    const char RAW_DATA_TOPIC[RAW_DATA_TOPIC_LENGTH] = "iu_raw_data";
 #endif  // TEST_TOPICS
 

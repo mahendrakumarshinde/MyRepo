@@ -21,7 +21,7 @@ Conductor conductor;
  */
 void mqttNewMessageCallback(char* topic, byte* payload, uint16_t length)
 {
-    conductor.processMessageFromMQTT(topic, payload, length);
+    conductor.processMessageFromMQTT(topic, (char*) payload, length);
 }
 
 /**
@@ -72,7 +72,8 @@ void setup()
     conductor.turnOffRadio();
     // Get config: should the ESP sleep? What's the BLE MAC address?
     #if IUDEBUG_ANY == 1
-        conductor.setCredentials(testSSID, testPSK);
+        conductor.forceWiFiConfig(testSSID, testPSK, testStaticIP,
+                                  testGateway, testSubnet);
     #else
         conductor.getConfigFromMainBoard();
     #endif

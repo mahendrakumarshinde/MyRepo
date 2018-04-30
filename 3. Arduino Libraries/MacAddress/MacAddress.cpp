@@ -126,5 +126,7 @@ String MacAddress::toString()
     sprintf(temp,"%02x:%02x:%02x:%02x:%02x:%02x",
             _address.bytes[2], _address.bytes[3], _address.bytes[4],
             _address.bytes[5], _address.bytes[6], _address.bytes[7]);
-    return String(temp);
+    String tmpStr = String(temp);
+    tmpStr.toUpperCase();
+    return tmpStr;
 }

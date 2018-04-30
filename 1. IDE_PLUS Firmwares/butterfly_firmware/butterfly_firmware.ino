@@ -13,6 +13,7 @@
 
 #include <MemoryFree.h>
 #include <Timer.h>
+#include <FS.h>
 
 #ifdef DRAGONFLY_V03
 #else
@@ -253,7 +254,29 @@ void setup()
         {
             iuFlash.begin();
             iuWiFi.loadConfigFromFlash(&iuFlash);
-            conductor.loadAllConfigsFromFlash();
+            for (uint8_t i = 0; i < conductor.CONFIG_TYPE_COUNT; ++i)
+            {
+                conductor.loadConfigFromFlash(conductor.CONFIG_TYPES[i]);
+            }
+            conductor.overrideLedColor(RGB_PURPLE);
+            uint32_t startT = millis();
+            while(millis() - startT < 5000)
+            {
+                rgbLed.manageColorTransitions();
+                delay(100);
+            }
+            conductor.resetLed();
+        }
+        else
+        {
+            conductor.overrideLedColor(RGB_ORANGE);
+            uint32_t startT = millis();
+            while(millis() - startT < 5000)
+            {
+                rgbLed.manageColorTransitions();
+                delay(100);
+            }
+            conductor.resetLed();
         }
         conductor.changeUsageMode(UsageMode::OPERATION);
     #endif
@@ -314,6 +337,12 @@ void loop()
         rgbLed.manageColorTransitions();
         // Stream features
         conductor.streamFeatures();
+        rgbLed.manageColorTransitions();
+        // Send accel raw data
+        conductor.periodicSendAccelRawData();
+        rgbLed.manageColorTransitions();
+        // Send config checksum
+        conductor.periodicSendConfigChecksum();
         rgbLed.manageColorTransitions();
         uint32_t now = millis();
         if(lastDone == 0 || lastDone + interval < now || now < lastDone)

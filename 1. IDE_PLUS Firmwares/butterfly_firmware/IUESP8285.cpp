@@ -77,8 +77,14 @@ void IUESP8285::manageAutoSleep()
         case PowerMode::LOW_2:
             if (m_connected)
             {
+                m_wakeUpNow = false;
                 sendMSPCommand(MSPCommand::WIFI_WAKE_UP);
                 m_awakeTimerStart = now;
+            }
+            else if (m_wakeUpNow) // Wake up now and stay awake
+            {
+                sendMSPCommand(MSPCommand::WIFI_WAKE_UP);
+                m_awakeTimerStart = now;  // Reset auto-sleep start timer
             }
             else if (m_sleeping)  // Not connected, already sleeping
             {
@@ -94,6 +100,7 @@ void IUESP8285::manageAutoSleep()
             }
             else  // Not connected and not sleeping
             {
+                m_wakeUpNow = false;
                 if (now - m_awakeTimerStart > m_autoSleepDelay)
                 {
                     sendMSPCommand(MSPCommand::WIFI_DEEP_SLEEP);

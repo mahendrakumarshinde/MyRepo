@@ -32,22 +32,22 @@ namespace MSPCommand
         PUBLISH_RAW_DATA,  // 15: Publish raw data
         PUBLISH_FEATURE,  // 16: Publish features
         PUBLISH_DIAGNOSTIC,  // 17: Publish diagnostic
+        PUBLISH_CONFIG_CHECKSUM,  // 18: Publish configuration checksum
         // Cloud command reception and transmission
-        HOST_CONFIRM_RECEPTION,  // 18: Confirm command reception
-        HOST_FORWARD_CMD,  // 19: Forward a command string received by the host
+        HOST_CONFIRM_RECEPTION,  // 19: Confirm command reception
+        HOST_FORWARD_CMD,  // 20: Forward a command string received by the host
         // Publication protocol
-        PUBLICATION_USE_MQTT,  // 20
-        PUBLICATION_USE_HTTP, // 21
+        PUBLICATION_USE_MQTT,  // 21
+        PUBLICATION_USE_HTTP, // 22
         // Settable parameters (addresses, credentials, etc)
-        SET_RAW_DATA_ENDPOINT_HOST,  // 22
-        SET_RAW_DATA_ENDPOINT_ROUTE,  // 23
-        SET_RAW_DATA_ENDPOINT_PORT,  // 24
-        SET_MQTT_SERVER_IP,  // 25
-        SET_MQTT_SERVER_PORT,  // 26
-        SET_MQTT_USERNAME,  // 27
-        SET_MQTT_PASSWORD,  // 28
+        SET_RAW_DATA_ENDPOINT_HOST,  // 23
+        SET_RAW_DATA_ENDPOINT_ROUTE,  // 24
+        SET_RAW_DATA_ENDPOINT_PORT,  // 25
+        SET_MQTT_SERVER_IP,  // 26
+        SET_MQTT_SERVER_PORT,  // 27
+        SET_MQTT_USERNAME,  // 28
+        SET_MQTT_PASSWORD,  // 29
 
-        PLACE_HOLDER_29,  // 29
         PLACE_HOLDER_30,  // 30
         PLACE_HOLDER_31,  // 31
         PLACE_HOLDER_32,  // 32
@@ -90,10 +90,12 @@ namespace MSPCommand
         // Data publication
         WIFI_CONFIRM_PUBLICATION,  // 62: Confirm publication of data
         // Cloud command reception and transmission
-        CONFIG_FORWARD_CMD,  // 63: Forward a command string received by WiFi
-        CONFIG_FORWARD_LEGACY_CMD,  // 64: Forward a command string received by WiFi (legacy)
-        OTA_INITIATE_UPDATE,  // 65: Initiate OTA update
-        OTA_RECEIVE_DATA,  // 66: Receive a packet of OTA data
+        SET_DATETIME,  // 63: Set the time
+        CONFIG_FORWARD_CONFIG,  // 64: Forward a config string received by WiFi
+        CONFIG_FORWARD_CMD,  // 65: Forward a command string received by WiFi
+        CONFIG_FORWARD_LEGACY_CMD,  // 66: Forward a command string received by WiFi (legacy)
+        OTA_INITIATE_UPDATE,  // 67: Initiate OTA update
+        OTA_RECEIVE_DATA,  // 68: Receive a packet of OTA data
     };
 }
 

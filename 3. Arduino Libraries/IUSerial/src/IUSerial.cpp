@@ -200,6 +200,14 @@ bool IUSerial::readCharMsp()
                     m_buffer[m_bufferIndex++] = 0; // Terminate string
                     messageIsComplete = true;
                 }
+                else
+                {
+                    if (debugMode)
+                    {
+                        debugPrint("Invalid MSP checksum");
+                    }
+                    resetBuffer();
+                }
                 m_mspState = MSP_IDLE;
             }
             break;
