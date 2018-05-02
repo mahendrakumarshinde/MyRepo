@@ -3,7 +3,6 @@
 
 #include <Arduino.h>
 #include "Sensor.h"
-#include "IUI2C.h"
 
 
 /**
@@ -26,24 +25,17 @@ class IUBattery : public LowFreqSensor
         // Full battery voltage (mV) => 1000 * (127.0f / 100.0f) * 3.30f = 4191
         static constexpr float maxVoltage = 4191.0f;
         /***** Constructors & desctructors *****/
-        IUBattery(IUI2C *iuI2C, const char* name, Feature *batteryLoad);
+        IUBattery(const char* name, Feature *batteryLoad);
         virtual ~IUBattery() {}
         /***** Hardware and power management *****/
         virtual void setupHardware();
-        /***** Configuration and calibration *****/
-        virtual void switchToLowUsage();
-        virtual void switchToRegularUsage();
-        virtual void switchToEnhancedUsage();
-        virtual void switchToHighUsage();
+        virtual void setPowerMode(PowerMode::option pMode);
         /***** Data acquisition *****/
         virtual void readData();
-        float getVDDA() { return m_VDDA; }
         float getVoltage() { return m_vBattery; }
         float getBatteryLoad() { return m_batteryLoad; }
 
     protected:
-        IUI2C *m_iuI2C;
-        float m_VDDA;
         float m_vBattery;
         float m_batteryLoad;
 };

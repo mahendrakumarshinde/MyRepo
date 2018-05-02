@@ -30,7 +30,6 @@ Feature::Feature(const char* name, uint8_t sectionCount, uint16_t sectionSize,
     m_sliding(sliding)
 {
     strcpy(m_name, name);
-    strcpy(m_sensorName, "---");
     for (uint8_t i = 0; i < OperationState::COUNT - 1; ++i)
     {
         m_thresholds[i] = 0;
@@ -268,14 +267,6 @@ void Feature::incrementFillingIndex()
         {
             m_acknowledged[m_recordIndex][j] = false;
         }
-        if (loopDebugMode && highVerbosity)
-        {
-            debugPrint(getName(), false);
-            debugPrint(F(" publish section="), false);
-            debugPrint(m_recordIndex, false);
-            debugPrint(F(", idx="), false);
-            debugPrint(m_fillingIndex);
-        }
         m_recordIndex = (m_recordIndex + 1) % m_sectionCount;
         // Update the operation state to reflect the latest published section
         updateOperationState();
@@ -310,12 +301,6 @@ void Feature::acknowledge(uint8_t receiverIdx, uint8_t sectionCount)
         if (unpublish)
         {
             m_published[k] = false;
-            if (loopDebugMode && highVerbosity)
-            {
-                debugPrint(getName(), false);
-                debugPrint(F(" fully acknowledge section="), false);
-                debugPrint(k);
-            }
         }
     }
     m_computeIndex[receiverIdx] = (idx + sectionCount) % m_sectionCount;
@@ -325,29 +310,51 @@ void Feature::acknowledge(uint8_t receiverIdx, uint8_t sectionCount)
 /***** Communication *****/
 
 /**
- * Send the data from latest recorded section to given Serial
+ * Send the data from latest recorded sections to given serial.
+ *
+ * Lock and print sectionCount sections, ending at last recorded section
+ * [recordIndex - sectionCount; recordIndex - 1].
  */
 void Feature::stream(HardwareSerial *port, uint8_t sectionCount)
 {
-    // Lock and print the last recorded section (= recordIndex - 1)
     uint8_t k = (m_sectionCount + m_recordIndex - sectionCount) % m_sectionCount;
-    m_locked[k] = true;
+    for (uint8_t i = k; i < k + sectionCount; ++i)
+    {
+        m_locked[i % m_sectionCount] = true;
+    }
     m_specializedStream(port, k, sectionCount);
-    m_locked[k] = false;
+    for (uint8_t i = k; i < k + sectionCount; ++i)
+    {
+        m_locked[i % m_sectionCount] = false;
+    }
 }
 
 /**
- * Send the data from latest recorded section to given Serial
+ * Add the data from latest recorded sections to given buffer.
+ *
+ * Lock and print sectionCount sections, ending at last recorded section
+ * [recordIndex - sectionCount; recordIndex - 1].
+ * @param destination The destination buffer.
+ * @param startIndex The index of the destination to start from buffer.
+ * @param sectionCount The number of sectiong to write into destination.
+ * @return the number of chars written.
  */
-void Feature::bufferStream(char *destination, uint16_t &destIndex,
-                           uint8_t sectionCount)
+uint16_t Feature::sendToBuffer(char *destination, uint16_t startIndex,
+                               uint8_t sectionCount)
 {
-    // Lock and print the last recorded section (= recordIndex - 1)
-    uint8_t k = (m_sectionCount + m_recordIndex - sectionCount) % m_sectionCount;
-    m_locked[k] = true;
-    m_specializedBufferStream(k, destination, destIndex, sectionCount);
-
-    m_locked[k] = false;
+    uint8_t k = (m_sectionCount + m_recordIndex - sectionCount) %
+        m_sectionCount;
+    for (uint8_t i = k; i < k + sectionCount; ++i)
+    {
+        m_locked[i % m_sectionCount] = true;
+    }
+    uint16_t charCount = m_specializedBufferStream(k, destination, startIndex,
+                                                   sectionCount);
+    for (uint8_t i = k; i < k + sectionCount; ++i)
+    {
+        m_locked[i % m_sectionCount] = false;
+    }
+    return charCount;
 }
 
 
@@ -358,7 +365,7 @@ void Feature::bufferStream(char *destination, uint16_t &destIndex,
  */
 void Feature::exposeConfig()
 {
-    #ifdef DEBUGMODE
+    #ifdef IUDEBUG_ANY
     debugPrint(m_name, false);
     debugPrint(F(" config:"));
     debugPrint(F("  active: "), false);
@@ -385,7 +392,7 @@ void Feature::exposeConfig()
  */
 void Feature::exposeCounters()
 {
-    #ifdef DEBUGMODE
+    #ifdef IUDEBUG_ANY
     debugPrint(m_name, false);
     debugPrint(F(" counters:"));
     debugPrint(F("  filling idx: "), false);
@@ -487,11 +494,12 @@ void FloatFeature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx,
 /**
  * Stream the content of the section at sectionIdx
  */
-void FloatFeature::m_specializedBufferStream(uint8_t sectionIdx,
-    char *destination, uint16_t &destIndex, uint8_t sectionCount)
+uint16_t FloatFeature::m_specializedBufferStream(uint8_t sectionIdx,
+    char *destination, uint16_t startIndex, uint8_t sectionCount)
 {
     uint8_t sIdx = 0;
     String strVal = "";
+    uint16_t destIndex = startIndex;
     for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++)
     {
         sIdx = k % sectionCount;
@@ -504,6 +512,7 @@ void FloatFeature::m_specializedBufferStream(uint8_t sectionIdx,
             destIndex += strVal.length();
         }
     }
+    return destIndex - startIndex;
 }
 
 /***** Q15 Buffer *****/
@@ -577,11 +586,13 @@ void Q15Feature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx,
 /**
  * Stream the content of the section at sectionIdx
  */
-void Q15Feature::m_specializedBufferStream(uint8_t sectionIdx,
-    char *destination, uint16_t &destIndex, uint8_t sectionCount)
+uint16_t Q15Feature::m_specializedBufferStream(uint8_t sectionIdx,
+    char *destination, uint16_t startIndex, uint8_t sectionCount)
 {
     uint8_t sIdx = 0;
     String strVal = "";
+    uint8_t floatLen = 5;
+    uint16_t destIndex = startIndex;
     for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++)
     {
         sIdx = k % sectionCount;
@@ -597,8 +608,8 @@ void Q15Feature::m_specializedBufferStream(uint8_t sectionIdx,
                 else { destIndex += 3; }
                 destination[destIndex++] = ',';
                 strVal = String(((float) m_values[3 * i + 1]) * m_resolution, 2);
-                strcat(destination, strVal.c_str());
-                destIndex += strVal.length();
+                strncat(destination, strVal.c_str(), floatLen);
+                destIndex += min((uint16_t) strVal.length(), floatLen);
                 destination[destIndex++] = ',';
                 strVal = String(((float) m_values[3 * i + 2]) * m_resolution, 2);
                 strcat(destination, strVal.c_str());
@@ -612,11 +623,12 @@ void Q15Feature::m_specializedBufferStream(uint8_t sectionIdx,
             {
                 destination[destIndex++] = ',';
                 strVal = String(((float) m_values[i]) * m_resolution, 2);
-                strcat(destination, strVal.c_str());
-                destIndex += strVal.length();
+                strncat(destination, strVal.c_str(), floatLen);
+                destIndex += min((uint16_t) strVal.length(), floatLen);
             }
         }
     }
+    return destIndex - startIndex;
 }
 
 
@@ -691,11 +703,12 @@ void Q31Feature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx,
 /**
  * Stream the content of the section at sectionIdx
  */
-void Q31Feature::m_specializedBufferStream(uint8_t sectionIdx,
-    char *destination, uint16_t &destIndex, uint8_t sectionCount)
+uint16_t Q31Feature::m_specializedBufferStream(uint8_t sectionIdx,
+    char *destination, uint16_t startIndex, uint8_t sectionCount)
 {
     uint8_t sIdx = 0;
     String strVal = "";
+    uint16_t destIndex = startIndex;
     for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++)
     {
         sIdx = k % sectionCount;
@@ -731,4 +744,5 @@ void Q31Feature::m_specializedBufferStream(uint8_t sectionIdx,
             }
         }
     }
+    return destIndex - startIndex;
 }

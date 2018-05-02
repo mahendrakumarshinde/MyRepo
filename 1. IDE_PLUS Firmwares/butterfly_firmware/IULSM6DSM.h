@@ -30,7 +30,7 @@ void LSM6DSMAccelReadCallback(uint8_t wireStatus);
  *      - accelerationY: a Q15Feature with section size = 128
  *      - accelerationZ: a Q15Feature with section size = 128
  */
-class IULSM6DSM : public DrivenSensor
+class IULSM6DSM : public HighFreqSensor
 {
     public:
         /***** Preset values and default settings *****/
@@ -95,9 +95,7 @@ class IULSM6DSM : public DrivenSensor
         /***** Hardware & power management *****/
         virtual void setupHardware();
         void softReset();
-        virtual void wakeUp();
-        virtual void sleep();
-        virtual void suspend();
+        virtual void setPowerMode(PowerMode::option pMode);
         virtual void setSamplingRate(uint16_t samplingRate);
         void configureInterrupts();
         void computeBias();

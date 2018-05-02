@@ -1,9 +1,33 @@
 #ifndef COMPONENT_H
 #define COMPONENT_H
 
-#include "Keywords.h"
-#include "Logger.h"
+#include <Arduino.h>
 
+
+/* =============================================================================
+    Component Power Modes
+============================================================================= */
+
+/**
+ * Define the power mode at component level
+ */
+namespace PowerMode
+{
+    enum option : uint8_t {SUSPEND,
+                           DEEP_SLEEP,
+                           SLEEP,
+                           LOW_2,
+                           LOW_1,
+                           REGULAR,
+                           ENHANCED,
+                           PERFORMANCE,
+                           COUNT};
+}
+
+
+/* =============================================================================
+    Component base class
+============================================================================= */
 
 /**
  * Base class for all Infinite Uptime board components
@@ -11,31 +35,13 @@
 class Component
 {
     public:
-        Component() {}
+        Component() : m_powerMode(PowerMode::REGULAR) {}
         virtual ~Component() {}
         /***** Hardware & power management methods *****/
         virtual void setupHardware() {}
-        virtual void wakeUp() { m_powerMode = PowerMode::ACTIVE; }
-        virtual void sleep() { m_powerMode = PowerMode::SLEEP; }
-        virtual void suspend() { m_powerMode = PowerMode::SUSPEND; }
         virtual PowerMode::option getPowerMode() { return m_powerMode; }
-        virtual void switchToPowerMode(PowerMode::option pMode)
-        {
-            switch (pMode)
-            {
-            case PowerMode::ACTIVE:
-                wakeUp();
-                break;
-            case PowerMode::SLEEP:
-                sleep();
-                break;
-            case PowerMode::SUSPEND:
-                suspend();
-                break;
-            default:
-                break;
-            }
-        }
+        virtual void setPowerMode(PowerMode::option pMode)
+            { m_powerMode = pMode; }
 
     protected:
         PowerMode::option m_powerMode;

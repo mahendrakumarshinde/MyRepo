@@ -3,8 +3,9 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <MD5.h>
 
-#include "Keywords.h"
+#include "BoardDefinition.h"
 #ifdef DRAGONFLY_V03
     #include "InstancesDragonfly.h"
 #else
@@ -12,9 +13,59 @@
 #endif
 
 
-extern float DEFAULT_ACCEL_ENERGY_NORMAL_TH;
-extern float DEFAULT_ACCEL_ENERGY_WARNING_TH;
-extern float DEFAULT_ACCEL_ENERGY_HIGH_TH;
+/* =============================================================================
+    Operation Mode
+============================================================================= */
+
+/**
+ * Define what type of data we want to acquire / compute
+ */
+namespace AcquisitionMode
+{
+    enum option : uint8_t {RAWDATA = 0,
+                           FEATURE = 1,
+                           NONE    = 2,
+                           COUNT   = 3};
+}
+
+/**
+ * Define the channel through which data will be sent
+ */
+namespace StreamingMode
+{
+    enum option : uint8_t {
+        WIRED        = 0,       // Send over Serial
+        BLE          = 1,       // Send over Bluetooth Low Energy
+        WIFI         = 2,       // Send over WiFi
+        WIFI_AND_BLE = 3,       // Send over both WiFi and BLE
+        STORE        = 4,       // Store in SPI Flash to stream later
+        COUNT        = 5};
+}
+
+
+/* =============================================================================
+    Operation Presets
+============================================================================= */
+
+/**
+ * Usage Mode are user controlled, they describe how the device is being used
+ */
+namespace UsageMode
+{
+    enum option : uint8_t {CALIBRATION     = 0,
+                           EXPERIMENT      = 1,
+                           OPERATION       = 2,
+                           OPERATION_BIS   = 3,
+                           COUNT           = 4};
+    // Related default config
+    const AcquisitionMode::option acquisitionModeDetails[COUNT] =
+    {
+        AcquisitionMode::FEATURE,
+        AcquisitionMode::RAWDATA,
+        AcquisitionMode::FEATURE,
+        AcquisitionMode::FEATURE,
+    };
+}
 
 
 /**
@@ -42,16 +93,25 @@ class Conductor
                                   AUTO     = 1,
                                   PERIODIC = 2,
                                   COUNT    = 3};
+        static const uint32_t defaultAutoSleepDelay = 60000;
+        static const uint32_t defaultSleepDuration = 10000;
+        static const uint32_t defaultCycleTime = 20000;
+        // Raw data publication once per hour by default
+        static const uint32_t defaultRawDataPublicationTimer = 3600000;
         static char START_CONFIRM[11];
         static char END_CONFIRM[9];
+        // Config handler
+        static const uint8_t CONFIG_TYPE_COUNT = 3;
+        static IUFlash::storedConfig CONFIG_TYPES[CONFIG_TYPE_COUNT];
+        static const uint32_t SEND_CONFIG_CHECKSUM_TIMER = 30000;
         // Default start datetime
-        static constexpr double defaultTimestamp = 1492144654.00;
-        // Operation state shown on LED every X ms
-        static const uint16_t showOpStateTimer = 500;
+        static constexpr double defaultTimestamp = 1524017173.00;
         /***** Constructors and destructor *****/
-        Conductor(const char* macAddress);
+        Conductor(MacAddress macAddress) : m_macAddress(macAddress) { }
+        Conductor(const char *macAddress)
+            { m_macAddress.fromString(macAddress); }
         virtual ~Conductor() {}
-        char* getMacAddress() { return m_macAddress; }
+        MacAddress getMacAddress() { return m_macAddress; }
         /***** Hardware & power management *****/
         void sleep(uint32_t duration);
         void suspend(uint32_t duration);
@@ -60,16 +120,31 @@ class Conductor
         uint32_t getAutoSleepDelay() { return m_autoSleepDelay; }
         uint32_t getSleepDuration() { return m_sleepDuration; }
         uint32_t getCycleTime() { return m_cycleTime; }
+        /***** Led colors *****/
+        void resetLed();
+        void overrideLedColor(RGBColor color);
+        void showOperationStateOnLed();
+        void showStatusOnLed(RGBColor color);
+        /***** Local storage (flash) management *****/
+        bool loadConfigFromFlash(IUFlash::storedConfig configType);
+        bool saveConfigToFlash(IUFlash::storedConfig configType,
+                               JsonVariant &config);
+        void sendConfigChecksum(IUFlash::storedConfig configType);
+        void periodicSendConfigChecksum();
         /***** Serial Reading & command processing*****/
         void readFromSerial(StreamingMode::option interfaceType,
                             IUSerial *iuSerial);
-        bool processConfiguration(char *json);
-        bool configureMainOptions(JsonVariant &config);
+        bool processConfiguration(char *json, bool saveToFlash);
+        void configureMainOptions(JsonVariant &config);
         void configureAllSensors(JsonVariant &config);
         void configureAllFeatures(JsonVariant &config);
-        void processLegacyUSBCommands(char *buff);
-        void processLegacyBLECommands(char *buff);
-        void processWIFICommands(char *buff);
+        void processCommands(char *buff);
+        void processLegacyCommands(char *buff);
+        void processUSBMessages(char *buff);
+        void processBLEMessages(char *buff);
+        void processUserMessageForWiFi(char *buff,
+                                       HardwareSerial *feedbackPort);
+        void processWIFIMessages(char *buff);
         /***** Features and groups Management *****/
         void activateFeature(Feature* feature);
         bool isFeatureDeactivatable(Feature* feature);
@@ -80,6 +155,7 @@ class Conductor
         void deactivateAllGroups();
         /***** Time management *****/
         void setRefDatetime(double refDatetime);
+        void setRefDatetime(const char* timestamp);
         double getDatetime();
         /***** Mode management *****/
         void changeAcquisitionMode(AcquisitionMode::option mode);
@@ -94,6 +170,8 @@ class Conductor
         void computeFeatures();
         void updateOperationState();
         void streamFeatures();
+        void sendAccelRawData(uint8_t axisIdx);
+        void periodicSendAccelRawData();
         void storeData() {}  // TODO => implement
         /***** Debugging *****/
         void getMCUInfo(char *destination);
@@ -101,38 +179,43 @@ class Conductor
         void exposeAllConfigurations();
 
     protected:
-        char m_macAddress[18];
+        MacAddress m_macAddress;
         /***** Hardware & power management *****/
-        sleepMode m_sleepMode;
+        sleepMode m_sleepMode = sleepMode::NONE;
         // Timestamp at which idle phase (or cycle) started for AUTO (or
         // PERIODIC) sleep mode
-        uint32_t m_startTime;
+        uint32_t m_startTime = 0;
         // Duration in which the device must be "IDLE" before entering
         // auto_sleep => Used with "AUTO" sleep mode only
-        uint32_t m_autoSleepDelay;
+        uint32_t m_autoSleepDelay = defaultAutoSleepDelay;
         // Duration of sleep phase => Used both with "PERIODIC" and
         // "AUTO" sleep modes
-        uint32_t m_sleepDuration;
+        uint32_t m_sleepDuration = defaultSleepDuration;
         // Duration of total cycle (sleep + active) => Used with "PERIODIC"
         // sleep mode only
-        uint32_t m_cycleTime;
+        uint32_t m_cycleTime = defaultCycleTime;
+        /***** Led colors *****/
+        RGBColor m_colorSequence[2];  // Main color, secondary color
+        uint32_t m_colorFadeIns[2];   // Main color, secondary color
+        uint32_t m_colorDurations[2];   // Main color, secondary color
         /***** Time management *****/
-        uint32_t m_lastSynchroTime;
-        double m_refDatetime;  // last datetime received from bluetooth or wifi
+        uint32_t m_lastSynchroTime = 0;
+        // last datetime received from bluetooth or wifi
+        double m_refDatetime = defaultTimestamp;
         /***** Operations *****/
-        OperationState::option m_operationState;
-        void (*m_callback)();
-        bool m_inDataAcquistion;
-        // The last time the LED was lit to reflect the OP state.
-        uint32_t m_lastLitLedTime;
-        /***** WiFi *****/
-        bool m_wifiConnected;
+        OperationState::option m_operationState = OperationState::IDLE;
+        void (*m_callback)() = NULL;
+        bool m_inDataAcquistion = false;
+        uint32_t m_rawDataPublicationTimer = defaultRawDataPublicationTimer;
+        uint32_t m_rawDataPublicationStart = 0;
         /***** Configuration and Mode management *****/
-        UsageMode::option m_usageMode;
-        AcquisitionMode::option m_acquisitionMode;
-        StreamingMode::option m_streamingMode;
+        uint32_t m_configTimerStart = 0;
+        uint8_t m_nextConfigToSend = 0;
+        UsageMode::option m_usageMode = UsageMode::COUNT;
+        AcquisitionMode::option m_acquisitionMode = AcquisitionMode::NONE;
+        StreamingMode::option m_streamingMode = StreamingMode::COUNT;
         // Static JSON buffer to parse config
-        StaticJsonBuffer<1600> jsonBuffer;
+        StaticJsonBuffer<1600> m_jsonBuffer;
         // eg: can hold the following config (remove the space and line breaks)
 //        {
 //          "features": {
@@ -189,5 +272,22 @@ class Conductor
 //          }
 //        }
 };
+
+
+/* =============================================================================
+    Default thresholds
+============================================================================= */
+
+// TODO: put those in flash storage
+extern float DEFAULT_ACCEL_ENERGY_NORMAL_TH;
+extern float DEFAULT_ACCEL_ENERGY_WARNING_TH;
+extern float DEFAULT_ACCEL_ENERGY_HIGH_TH;
+
+
+/* =============================================================================
+    Instanciation
+============================================================================= */
+
+extern Conductor conductor;
 
 #endif // CONDUCTOR_H

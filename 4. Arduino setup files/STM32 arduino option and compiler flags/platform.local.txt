@@ -1,0 +1,13 @@
+# Infinite Uptime flags
+#
+# This file should be added to the core packages folder:
+# grumpyoldpizza/hardware/stm32l4/<version>/
+##############################################################
+
+infiniteuptime.flags=-DIUDEBUG_ANY={build.iudebug_any} -DIUDEBUG_SETUP={build.iudebug_setup} -DIUDEBUG_MAIN={build.iudebug_main} -DIUDEBUG_ASYNC={build.iudebug_async} -DIUDEBUG_FEATURE={build.iudebug_features}
+
+
+# These can be overridden in platform.local.txt
+compiler.c.extra_flags={infiniteuptime.flags}
+compiler.cpp.extra_flags={infiniteuptime.flags}
+compiler.S.extra_flags={infiniteuptime.flags}

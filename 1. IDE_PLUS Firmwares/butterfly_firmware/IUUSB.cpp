@@ -1,19 +1,19 @@
 #include "IUUSB.h"
 
-IUUSB::IUUSB(HardwareSerial *serialPort, char *charBuffer, uint16_t bufferSize,
-             PROTOCOL_OPTIONS protocol, uint32_t rate,
-             char stopChar, uint16_t dataReceptionTimeout) :
-    IUSerial(serialPort, charBuffer, bufferSize, protocol, rate, stopChar,
-             dataReceptionTimeout)
+
+/* =============================================================================
+    Core
+============================================================================= */
+
+IUUSB::IUUSB(HardwareSerial *serialPort, char *charBuffer,
+             uint16_t bufferSize, IUSerial::PROTOCOL_OPTIONS protocol,
+             uint32_t rate, char stopChar, uint16_t dataReceptionTimeout) :
+    IUSerial(serialPort, charBuffer, bufferSize, protocol, rate,
+             stopChar, dataReceptionTimeout)
 {
-    //ctor
+
 }
 
-void IUUSB::begin()
-{
-    port->begin(baudRate);
-    port->flush();
-}
 
 /* =============================================================================
     Custom protocol
@@ -39,8 +39,7 @@ bool IUUSB::readCharCustomProtocol()
             (m_bufferIndex == 9 &&
              strncmp(m_buffer, "IUCMD_END", 9) == 0))
         {
-            m_buffer[m_bufferIndex] = '\0';
-            m_bufferIndex++;
+            m_buffer[m_bufferIndex++] = 0;
             messageIsComplete = true;
         }
     }

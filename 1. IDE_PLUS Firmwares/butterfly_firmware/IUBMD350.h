@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-#include "IUSerial.h"
+#include <IUSerial.h>
 #include "Component.h"
 
 
@@ -21,15 +21,7 @@ class IUBMD350 : public IUSerial, public Component
 {
     public:
         /***** Preset values and default settings *****/
-        #ifdef DRAGONFLY_V03
-            static const uint8_t resetPin = 39; //  BMD-350 reset pin active LOW
-            static const uint8_t ATCmdPin = 40; //  toggle pin for AT Command
-
-        #else
-            static const uint8_t resetPin = 38; //  BMD-350 reset pin active LOW
-            static const uint8_t ATCmdPin = 26; //  toggle pin for AT Command
-        #endif // DRAGONFLY_V04
-        // UART default configuration - Must match Serial1 configuration
+        // UART default configuration - Must match Serial configuration
         static const bool UART_ENABLED = true;
         static const bool UART_FLOW_CONTROL = false;
         static const bool UART_PARITY = false;
@@ -46,15 +38,14 @@ class IUBMD350 : public IUSerial, public Component
         static const txPowerOption defaultTxPower = txPowerOption::DBm4;
         /***** Constructors & destructor *****/
         IUBMD350(HardwareSerial *serialPort, char *charBuffer,
-                 uint16_t bufferSize, PROTOCOL_OPTIONS protocol,
-                 uint32_t rate=57600, uint16_t dataReceptionTimeout=2000);
+                 uint16_t bufferSize, PROTOCOL_OPTIONS protocol, uint32_t rate,
+                 char stopChar, uint16_t dataReceptionTimeout, uint8_t resetPin,
+                 uint8_t atCmdPin);
         virtual ~IUBMD350() {}
         /***** Hardware and power management *****/
         virtual void setupHardware();
         void softReset();
-        virtual void wakeUp();
-        virtual void sleep();
-        virtual void suspend();
+        virtual void setPowerMode(PowerMode::option pMode);
         /***** Bluetooth Configuration *****/
         // AT Command Interface
         void enterATCommandInterface();
@@ -85,6 +76,9 @@ class IUBMD350 : public IUSerial, public Component
                             uint8_t len3 = 3, uint8_t len4 = 13);
 
     protected:
+        /***** Pin definition *****/
+        uint8_t m_resetPin;  // BMD-350 reset pin active LOW
+        uint8_t m_atCmdPin;  // Toggle pin for AT Command
         /***** Bluetooth Configuration *****/
         bool m_ATCmdEnabled;  // AT Command Interface
         char m_deviceName[9];  // max 8 chars + 1 char end of string

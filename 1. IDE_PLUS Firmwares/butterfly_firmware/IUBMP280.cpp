@@ -10,12 +10,12 @@ bool newPressureData = false;
 
 void temperatureReadCallback(uint8_t wireStatus)
 {
-    iuI2C.endReadOperation();
+    iuI2C.releaseReadLock();
     if (wireStatus == 0)
     {
         newTemperatureData = true;
     }
-    else if (callbackDebugMode)
+    else if (asyncDebugMode)
     {
         debugPrint(micros(), false);
         debugPrint(F(" Temperature read error "), false);
@@ -25,12 +25,12 @@ void temperatureReadCallback(uint8_t wireStatus)
 
 void pressureReadCallback(uint8_t wireStatus)
 {
-    iuI2C.endReadOperation();
+    iuI2C.releaseReadLock();
     if (wireStatus == 0)
     {
         newPressureData = true;
     }
-    else if (callbackDebugMode)
+    else if (asyncDebugMode)
     {
         debugPrint(micros(), false);
         debugPrint(F(" Pressure read error "), false);
@@ -75,9 +75,7 @@ void IUBMP280::setupHardware()
         return;
     }
     softReset();
-    m_usagePreset = usagePreset::P_REGULAR;
-    wakeUp();
-    writeConfigRegister();
+    setPowerMode(PowerMode::REGULAR);
     calibrate();
 }
 
@@ -88,93 +86,75 @@ void IUBMP280::softReset()
 {
     m_iuI2C->writeByte(ADDRESS, RESET, 0xB6);
     delay(100);
+    m_powerMode = PowerMode::SLEEP;  // default after POR
 }
 
 /**
- * Switch to ACTIVE power mode
- *
- * IU 'ACTIVE' power mode correspond to the FORCED BMP280 power mode
+ * Manage component power modes
  */
-void IUBMP280::wakeUp()
+void IUBMP280::setPowerMode(PowerMode::option pMode)
 {
-    LowFreqSensor::wakeUp();
-    changeUsagePreset(m_usagePreset);
-}
-
-/**
- * Switch to SLEEP power mode
- */
-void IUBMP280::sleep()
-{
-    LowFreqSensor::sleep();
+    m_powerMode = pMode;
+    switch (m_powerMode)
+    {
+        case PowerMode::PERFORMANCE:
+            m_powerByte = (uint8_t) powerModeBytes::FORCED;
+            m_pressureOSR = overSamplingRates::SKIPPED;
+            m_temperatureOSR = overSamplingRates::OSR_01;
+            m_iirFilter = IIRFilterCoeffs::OFF;
+            m_standByDuration = StandByDurations::t_250ms;
+            setSamplingPeriod(1000);  // 1s
+            break;
+        case PowerMode::ENHANCED:
+            m_powerByte = (uint8_t) powerModeBytes::FORCED;
+            m_pressureOSR = overSamplingRates::SKIPPED;
+            m_temperatureOSR = overSamplingRates::OSR_01;
+            m_iirFilter = IIRFilterCoeffs::OFF;
+            m_standByDuration = StandByDurations::t_2000ms;
+            setSamplingPeriod(2000);  // 2s
+            break;
+        case PowerMode::REGULAR:
+            m_powerByte = (uint8_t) powerModeBytes::FORCED;
+            m_pressureOSR = overSamplingRates::SKIPPED;
+            m_temperatureOSR = overSamplingRates::OSR_01;
+            m_iirFilter = IIRFilterCoeffs::OFF;
+            m_standByDuration = StandByDurations::t_4000ms;
+            setSamplingPeriod(5000);  // 5s
+            break;
+        case PowerMode::LOW_1:
+        case PowerMode::LOW_2:
+            m_powerByte = (uint8_t) powerModeBytes::FORCED;
+            m_pressureOSR = overSamplingRates::SKIPPED;
+            m_temperatureOSR = overSamplingRates::OSR_01;
+            m_iirFilter = IIRFilterCoeffs::OFF;
+            m_standByDuration = StandByDurations::t_4000ms;
+            setSamplingPeriod(30000);  // 30s
+            break;
+        case PowerMode::SLEEP:
+        case PowerMode::DEEP_SLEEP:
+        case PowerMode::SUSPEND:
+            m_powerByte = (uint8_t) powerModeBytes::SLEEP;
+            break;
+        default:
+            if (debugMode)
+            {
+                debugPrint(F("Unhandled power Mode "), false);
+                debugPrint(m_powerMode);
+            }
+    }
     writeControlMeasureRegister();
-}
-
-/**
- * Switch to SUSPEND power mode
- */
-void IUBMP280::suspend()
-{
-    LowFreqSensor::suspend();
-    writeControlMeasureRegister();
+    if (!(m_powerMode == PowerMode::SLEEP ||
+          m_powerMode == PowerMode::DEEP_SLEEP ||
+          m_powerMode == PowerMode::SUSPEND))
+    {
+        writeConfigRegister();
+    }
 }
 
 
 /* =============================================================================
     Configuration and calibration
 ============================================================================= */
-
-void IUBMP280::switchToLowUsage()
-{
-    m_usagePreset = usagePreset::P_LOW;
-    m_powerByte = (uint8_t) powerModeBytes::FORCED;
-    m_pressureOSR = overSamplingRates::SKIPPED;
-    m_temperatureOSR = overSamplingRates::OSR_01;
-    writeControlMeasureRegister();
-    m_iirFilter = IIRFilterCoeffs::OFF;
-    m_standByDuration = StandByDurations::t_4000ms;
-    writeConfigRegister();
-    setSamplingPeriod(30000);  // 30s
-}
-
-void IUBMP280::switchToRegularUsage()
-{
-    m_usagePreset = usagePreset::P_REGULAR;
-    m_powerByte = (uint8_t) powerModeBytes::FORCED;
-    m_pressureOSR = overSamplingRates::SKIPPED;
-    m_temperatureOSR = overSamplingRates::OSR_01;
-    writeControlMeasureRegister();
-    m_iirFilter = IIRFilterCoeffs::OFF;
-    m_standByDuration = StandByDurations::t_4000ms;
-    writeConfigRegister();
-    setSamplingPeriod(5000);  // 5s
-}
-
-void IUBMP280::switchToEnhancedUsage()
-{
-    m_usagePreset = usagePreset::P_ENHANCED;
-    m_powerByte = (uint8_t) powerModeBytes::FORCED;
-    m_pressureOSR = overSamplingRates::SKIPPED;
-    m_temperatureOSR = overSamplingRates::OSR_01;
-    writeControlMeasureRegister();
-    m_iirFilter = IIRFilterCoeffs::OFF;
-    m_standByDuration = StandByDurations::t_2000ms;
-    writeConfigRegister();
-    setSamplingPeriod(2000);  // 2s
-}
-
-void IUBMP280::switchToHighUsage()
-{
-    m_usagePreset = usagePreset::P_HIGH;
-    m_powerByte = (uint8_t) powerModeBytes::FORCED;
-    m_pressureOSR = overSamplingRates::SKIPPED;
-    m_temperatureOSR = overSamplingRates::OSR_01;
-    writeControlMeasureRegister();
-    m_iirFilter = IIRFilterCoeffs::OFF;
-    m_standByDuration = StandByDurations::t_250ms;
-    writeConfigRegister();
-    setSamplingPeriod(1000);  // 1s
-}
 
 /**
  * Set the oversampling rates for pressure and temperature.
@@ -273,7 +253,7 @@ void IUBMP280::readTemperature()
   if (!m_iuI2C->readBytes(ADDRESS, TEMP_MSB, 3, &m_rawTempBytes[0],
                           temperatureReadCallback))
   {
-    if (callbackDebugMode)
+    if (asyncDebugMode)
     {
         debugPrint("Skip temperature read");
     }
@@ -328,7 +308,7 @@ void IUBMP280::readPressure() // Index 4
     if (!m_iuI2C->readBytes(ADDRESS, PRESS_MSB, 3, &m_rawPressureBytes[0],
                             pressureReadCallback))
     {
-        if (callbackDebugMode)
+        if (asyncDebugMode)
         {
             debugPrint("Skip pressure read");
         }
@@ -434,7 +414,7 @@ void IUBMP280::sendData(HardwareSerial *port)
  */
 void IUBMP280::exposeCalibration()
 {
-    #ifdef DEBUGMODE
+    #ifdef IUDEBUG_ANY
     debugPrint(F("Calibration data: "));
     debugPrint(F("3 digital Temp vars: "));
     for (uint8_t i = 0; i < 3; ++i)

@@ -17,17 +17,12 @@
 class Sensor : public Component
 {
     public:
-        /***** Preset values and default settings *****/
-        enum usagePreset : uint8_t {P_LOW      = 0,
-                                    P_REGULAR  = 1,
-                                    P_ENHANCED = 2,
-                                    P_HIGH     = 3,
-                                    COUNT    = 4};
-        static const uint8_t maxDestinationCount = 6;
         /***** Instance registry *****/
         static const uint8_t MAX_INSTANCE_COUNT = 10;
         static uint8_t instanceCount;
         static Sensor *instances[MAX_INSTANCE_COUNT];
+        /***** Preset values and default settings *****/
+        static const uint8_t maxDestinationCount = 6;
         /***** Core *****/
         Sensor(const char* name, uint8_t destinationCount=0,
                Feature *destination0=NULL, Feature *destination1=NULL,
@@ -43,8 +38,8 @@ class Sensor : public Component
         /***** Configuration *****/
         virtual void configure(JsonVariant &config) { }
         /***** Sampling and resolution *****/
-        virtual bool isDriven() { return false; }
-        virtual void setCallbackRate(uint16_t callbackRate) {} // For driven sensors
+        virtual bool isHighFrequency() { return false; }
+        virtual void setCallbackRate(uint16_t callbackRate) {}
         virtual void setResolution(float resolution);
         virtual float getResolution() { return m_resolution; }
         /***** Data acquisition *****/
@@ -80,22 +75,22 @@ class Sensor : public Component
  * that is fairly long, so these sensors would typically be declared "ready for
  * acquisition" in the I2S callback, but read in the main loop.
  */
-class DrivenSensor : public Sensor
+class HighFreqSensor : public Sensor
 {
     public:
         /***** Preset values and default settings *****/
         static const uint16_t defaultSamplingRate = 2; // Hz
         static const uint16_t defaultCallbackRate = 1000; // Hz
         /***** Constructors and destructors *****/
-        DrivenSensor(const char* name, uint8_t destinationCount=0,
-                     Feature *destination0=NULL, Feature *destination1=NULL,
-                     Feature *destination2=NULL, Feature *destination3=NULL,
-                     Feature *destination4=NULL, Feature *destination5=NULL);
-        virtual ~DrivenSensor() {}
+        HighFreqSensor(const char* name, uint8_t destinationCount=0,
+                       Feature *destination0=NULL, Feature *destination1=NULL,
+                       Feature *destination2=NULL, Feature *destination3=NULL,
+                       Feature *destination4=NULL, Feature *destination5=NULL);
+        virtual ~HighFreqSensor() {}
         /***** Configuration *****/
         virtual void configure(JsonVariant &config);
         /***** Sampling and resolution *****/
-        virtual bool isDriven() { return true; }
+        virtual bool isHighFrequency() { return true; }
         virtual void setCallbackRate(uint16_t callbackRate);
         virtual uint16_t getCallbackRate() { return m_callbackRate; }
         virtual void setSamplingRate(uint16_t samplingRate);
@@ -127,7 +122,6 @@ class LowFreqSensor : public Sensor
 {
     public:
         /***** Preset values and default settings *****/
-        static const usagePreset defaultUsagePreset = P_REGULAR;
         static const uint32_t defaultSamplingPeriod = 1000; // ms
         /***** Constructors and destructors *****/
         LowFreqSensor(const char* name, uint8_t destinationCount=0,
@@ -137,16 +131,8 @@ class LowFreqSensor : public Sensor
         virtual ~LowFreqSensor() {}
         /***** Configuration *****/
         virtual void configure(JsonVariant &config);
-        virtual void changeUsagePreset(Sensor::usagePreset usage);
-        virtual Sensor::usagePreset getUsagePreset() { return m_usagePreset; }
-        virtual void switchToLowUsage() { m_usagePreset = Sensor::P_LOW; }
-        virtual void switchToRegularUsage()
-            { m_usagePreset = Sensor::P_REGULAR; }
-        virtual void switchToEnhancedUsage()
-            { m_usagePreset = Sensor::P_ENHANCED; }
-        virtual void switchToHighUsage() { m_usagePreset = Sensor::P_HIGH; }
         /***** Sampling and resolution *****/
-        virtual bool isDriven() { return false; }
+        virtual bool isHighFrequency() { return false; }
         virtual void setSamplingPeriod(uint32_t samplingPeriod);
         virtual uint32_t getSamplingPeriod() { return m_samplingPeriod; }
         virtual float getSamplingRate()
@@ -156,8 +142,6 @@ class LowFreqSensor : public Sensor
                                  bool force=false);
 
     protected:
-        /***** Configuration *****/
-        usagePreset m_usagePreset;
         /***** Sampling and resolution *****/
         uint32_t m_samplingPeriod;
         uint32_t m_lastAcquisitionTime;

@@ -2,82 +2,11 @@
 #define UTILITIES_H
 
 #include <Arduino.h>
+#include <time.h>
 
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
-#include <time.h>
-
-
-/* =============================================================================
-    Debugging and testing definitions
-============================================================================= */
-
-// Define TEST_TOPICS to use the PubSub test topics (instead of prod ones)
-//#define TEST_TOPICS
-
-// Define DEBUGMODE to enable debug level messages from the whole firmware
-//#define DEBUGMODE
-
-#ifdef DEBUGMODE
-    const bool debugMode = true;
-#else
-    const bool debugMode = false;
-#endif
-
-
-/* =============================================================================
-    PubSub topic names
-============================================================================= */
-
-#ifdef TEST_TOPICS
-    const uint8_t FEATURE_TOPIC_LENGTH = 20;
-    const uint8_t DIAGNOSTIC_TOPIC_LENGTH = 14;
-//    const uint8_t RAW_DATA_TOPIC_LENGTH = 17;
-    const char FEATURE_TOPIC[FEATURE_TOPIC_LENGTH] = "iu_device_data_test";
-    const char DIAGNOSTIC_TOPIC[DIAGNOSTIC_TOPIC_LENGTH] = "iu_error_test";
-//    const char RAW_DATA_TOPIC[RAW_DATA_TOPIC_LENGTH] = "iu_raw_data_test";
-#else
-    const uint8_t FEATURE_TOPIC_LENGTH = 15;
-    const uint8_t DIAGNOSTIC_TOPIC_LENGTH = 9;
-//    const uint8_t RAW_DATA_TOPIC_LENGTH = 12;
-    const char FEATURE_TOPIC[FEATURE_TOPIC_LENGTH] = "iu_device_data";
-    const char DIAGNOSTIC_TOPIC[DIAGNOSTIC_TOPIC_LENGTH] = "iu_error";
-//    const char RAW_DATA_TOPIC[RAW_DATA_TOPIC_LENGTH] = "iu_raw_data";
-#endif  // TEST_TOPICS
-
-
-/* =============================================================================
-    Debugging utilities
-============================================================================= */
-
-
-template <typename T>
-inline void debugPrint(T msg, bool endline = true)
-{
-    #ifdef DEBUGMODE
-    if (endline) { Serial.println(msg); }
-    else { Serial.print(msg); }
-    #endif
-}
-
-//Specialization for float printing with fixed decimal count
-template <>
-inline void debugPrint(float msg, bool endline)
-{
-    #ifdef DEBUGMODE
-    if (endline) { Serial.println(msg, 6); }
-    else { Serial.print(msg, 6); }
-    #endif
-}
-
-template <typename T>
-inline void raiseException(T msg)
-{
-    #ifdef DEBUGMODE
-    debugPrint(F("Error: "), false);
-    debugPrint(msg);
-    #endif
-}
+#include <IUDebugger.h>
 
 
 /* =============================================================================
@@ -86,7 +15,7 @@ inline void raiseException(T msg)
 
 /**
  * Sends an HTTP GET request - HTTPS is used if fingerprint is given.
- * 
+ *
  * @param url
  * @param responseBody
  * @param maxResponseLength
@@ -128,7 +57,7 @@ inline int httpGetRequest(const char *url, char* responseBody,
 
 /**
  * Sends an HTTP POST request - HTTPS is used if fingerprint is given.
- * 
+ *
  * @param url
  * @param payload
  * @param payloadLength
@@ -232,7 +161,8 @@ inline int httpPostBigJsonRequest(
     // now we need to chunk the payload into 1000 byte chunks
     size_t cIndex;
     size_t retSize;
-    for (cIndex = 0; cIndex < payloadLength - chunkSize; cIndex = cIndex + chunkSize)
+    for (cIndex = 0; cIndex < payloadLength - chunkSize;
+         cIndex = cIndex + chunkSize)
     {
         retSize = client.write(&payload[cIndex], chunkSize);
         if(retSize != chunkSize)
@@ -266,7 +196,8 @@ inline int httpPostBigJsonRequest(
             lastDataTime = millis();
 
             if(headerLine.startsWith("HTTP/1.")) {
-                returnCode = headerLine.substring(9, headerLine.indexOf(' ', 9)).toInt();
+                returnCode = headerLine.substring(
+                    9, headerLine.indexOf(' ', 9)).toInt();
             }
             if(headerLine == "")
             {
@@ -290,12 +221,6 @@ inline int httpPostBigJsonRequest(
     }
     return HTTPC_ERROR_CONNECTION_LOST;  // -5
 }
-
-
-/* =============================================================================
-    OTA functions
-============================================================================= */
-
 
 
 #endif // UTILITIES_H

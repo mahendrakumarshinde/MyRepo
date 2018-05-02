@@ -3,6 +3,8 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <MacAddress.h>
+#include <IUSerial.h>
 
 #include "FeatureClass.h"
 
@@ -43,15 +45,16 @@ class FeatureGroup
         void setDataSendPeriod(uint16_t dataSendPeriod);
         bool isDataSendTime(uint8_t idx=0);
         /***** Communication *****/
-        void stream(HardwareSerial *port, const char *macAddress,
-                    double timestamp, bool sendMACAddress=false);
-        void legacyStream(HardwareSerial *port, const char *macAddress,
-                          OperationState::option opState, float batteryLoad,
-                          double timestamp, bool sendName=false,
-                          uint8_t portIdx=0);
-        void legacyBufferStream(HardwareSerial *port, const char *macAddress,
-                                OperationState::option opState, float batteryLoad,
-                                double timestamp, bool sendName=false);
+        void MSPstream(IUSerial *iuSerial, MacAddress mac,
+                       double timestamp, bool sendMACAddress=false);
+        void legacyStream(
+            IUSerial *iuSerial, MacAddress mac,
+            OperationState::option opState, float batteryLoad, double timestamp,
+            bool sendName=false, uint8_t portIdx=0);
+        void bufferAndStream(
+            IUSerial *iuSerial, IUSerial::PROTOCOL_OPTIONS protocol,
+            MacAddress mac, OperationState::option opState, float batteryLoad,
+            double timestamp, bool sendName=false);
 
     protected:
         /***** Instance registry *****/

@@ -64,14 +64,8 @@ class IUMAX31865 : public LowFreqSensor
         virtual ~IUMAX31865() { }
         /***** Hardware and power management *****/
         virtual void setupHardware();
-        virtual void wakeUp();
-        virtual void sleep();
-        virtual void suspend();
+        virtual void setPowerMode(PowerMode::option pMode);
         /***** Configuration and calibration *****/
-        virtual void switchToLowUsage();
-        virtual void switchToRegularUsage();
-        virtual void switchToEnhancedUsage();
-        virtual void switchToHighUsage();
         void writeConfiguration();
         void setBiasCorrection(bool enable);
         void setAutoConversion(bool enable);
@@ -95,8 +89,6 @@ class IUMAX31865 : public LowFreqSensor
         SPIClass *m_SPI;
         uint8_t m_csPin;
         SPISettings m_spiSettings;
-        /***** Hardware and power management *****/
-
         /***** Configuration and calibration *****/
         bool m_biasCorrectionEnabled;
         bool m_autoConversionEnabled;

@@ -38,35 +38,41 @@ void IUMAX31865::setupHardware()
     m_SPI->begin();
     delayMicroseconds(10);
     writeConfiguration();
-    wakeUp();
-    switchToRegularUsage();
-    delay(1000);
+    setPowerMode(PowerMode::REGULAR);
 }
 
 /**
- *
+ * Manage component power modes
  */
-void IUMAX31865::wakeUp()
+void IUMAX31865::setPowerMode(PowerMode::option pMode)
 {
-    LowFreqSensor::wakeUp();
-}
-
-/**
- *
- */
-void IUMAX31865::sleep()
-{
-    LowFreqSensor::sleep();
-    // TODO Implement
-}
-
-/**
- *
- */
-void IUMAX31865::suspend()
-{
-    LowFreqSensor::suspend();
-    // TODO Implement
+    m_powerMode = pMode;
+    // TODO Improve power management
+    switch (m_powerMode)
+    {
+        case PowerMode::PERFORMANCE:
+        case PowerMode::ENHANCED:
+            setSamplingPeriod(1000);  // 1s
+            break;
+        case PowerMode::REGULAR:
+            setSamplingPeriod(5000);  // 5s
+            break;
+        case PowerMode::LOW_1:
+        case PowerMode::LOW_2:
+            setSamplingPeriod(30000);  // 30s
+            break;
+        case PowerMode::SLEEP:
+        case PowerMode::DEEP_SLEEP:
+        case PowerMode::SUSPEND:
+            setSamplingPeriod(3600000);  // 1h
+            break;
+        default:
+            if (debugMode)
+            {
+                debugPrint(F("Unhandled power Mode "), false);
+                debugPrint(m_powerMode);
+            }
+    }
 }
 
 
@@ -74,56 +80,36 @@ void IUMAX31865::suspend()
     Configuration and calibration
 ============================================================================= */
 
-
-void IUMAX31865::switchToLowUsage()
-{
-    setSamplingPeriod(30000);
-    LowFreqSensor::switchToLowUsage();
-}
-
-void IUMAX31865::switchToRegularUsage()
-{
-    setSamplingPeriod(5000);
-    LowFreqSensor::switchToRegularUsage();
-}
-
-void IUMAX31865::switchToEnhancedUsage()
-{
-    setSamplingPeriod(2000);
-    LowFreqSensor::switchToEnhancedUsage();
-}
-
-void IUMAX31865::switchToHighUsage()
-{
-    setSamplingPeriod(1000);
-    LowFreqSensor::switchToHighUsage();
-}
-
+/**
+ *
+ */
 void IUMAX31865::writeConfiguration()
 {
-    uint8_t c = readRegister(CONFIG_RW);
+    uint8_t c = 0x00;
     // V Bias
-    if (m_biasCorrectionEnabled) { c |= CFG_BIAS_BIT; }
-    else { c &= ~CFG_BIAS_BIT; }
+    if (m_biasCorrectionEnabled)
+    {
+        c |= CFG_BIAS_BIT;
+    }
     // Conversion Mode (turn off to use 1 shot mode)
-    if (m_autoConversionEnabled) { c |= CFG_CONVERSION_BIT; }
-    else { c &= ~CFG_CONVERSION_BIT; }
+    if (m_autoConversionEnabled)
+    {
+        c |= CFG_CONVERSION_BIT;
+    }
     // Number of wires on PT-100
-    if (m_wireCount == wireCount::WIRE3) { c |= CFG_3WIRE_BIT; }
-    else { c &= ~CFG_3WIRE_BIT; }
+    if (m_wireCount == wireCount::WIRE3)
+    {
+        c |= CFG_3WIRE_BIT;
+    }
     switch (m_faultMode)
     {
         case NO_DETECTION:
-            c &= ~CFG_FAULT_BIT_1;
-            c &= ~CFG_FAULT_BIT_2;
             break;
         case AUTOMATIC:
-            c &= ~CFG_FAULT_BIT_1;
             c |= CFG_FAULT_BIT_2;
             break;
         case MANUAL1:
             c |= CFG_FAULT_BIT_1;
-            c &= ~CFG_FAULT_BIT_2;
             break;
         case MANUAL2:
             c |= CFG_FAULT_BIT_1;
@@ -131,11 +117,12 @@ void IUMAX31865::writeConfiguration()
             break;
     }
     // Noise filtering - Select input voltage frequency
-    if (m_filterFrequency == HZ50) { c |= CFG_FILTER_BIT; }
-    else { c &= ~CFG_FILTER_BIT; }
+    if (m_filterFrequency == HZ50)
+    {
+        c |= CFG_FILTER_BIT;
+    }
     writeRegister(CONFIG_RW, c);
-    delay(2000);
-    c = readRegister(CONFIG_RW);
+    delay(500);
 }
 
 /**

@@ -8,9 +8,12 @@
     Library imports
 ============================================================================= */
 
+#include "BoardDefinition.h"
 #include "Conductor.h"
 
 #include <MemoryFree.h>
+#include <Timer.h>
+#include <FS.h>
 
 #ifdef DRAGONFLY_V03
 #else
@@ -20,11 +23,20 @@
     IUSPIFlash iuFlash(&SPI, A1, SPISettings(50000000, MSBFIRST, SPI_MODE0));
 #endif
 
-/* Comment / Uncomment the "define" lines to toggle / untoggle unit or quality
-test mode */
 
-//#define UNITTEST
+/* =============================================================================
+    MAC Address
+============================================================================= */
+
+const char MAC_ADDRESS[18] = "94:54:93:0F:67:02";
+
+
+/* =============================================================================
+    Unit test includes
+============================================================================= */
+
 #ifdef UNITTEST
+    #include <UnitTest/Test_IUSerial.h>
     #include "UnitTest/Test_Component.h"
     #include "UnitTest/Test_FeatureClass.h"
     #include "UnitTest/Test_FeatureComputer.h"
@@ -33,20 +45,14 @@ test mode */
     #include "UnitTest/Test_Utilities.h"
 #endif
 
-//#define INTEGRATEDTEST
 #ifdef INTEGRATEDTEST
-    #include "IntegratedTest/IT_Conductor.h"
-    #include "IntegratedTest/IT_IUBMX055.h"
-    #include "IntegratedTest/IT_IUFlash.h"
-    #include "IntegratedTest/IT_Sensors.h"
+    #include "IntegratedTest/IT_All_Conductor.h"
+    #if defined(BUTTERFLY_V03) || defined(BUTTERFLY_V04)
+        #include "IntegratedTest/IT_Butterfly.h"
+    #elif defined(DRAGONFLY_V03)
+        #include "IntegratedTest/IT_Dragonfly.h"
+    #endif
 #endif
-
-
-/* =============================================================================
-    MAC Address
-============================================================================= */
-
-const char MAC_ADDRESS[18] = "94:54:93:0F:66:E4";
 
 
 /* =============================================================================
@@ -55,9 +61,21 @@ const char MAC_ADDRESS[18] = "94:54:93:0F:66:E4";
 
 /***** Accelerometer Calibration parameters *****/
 
-float ACCEL_RMS_SCALING = 1.04;
-float VELOCITY_RMS_SCALING = 1.;
-float DISPLACEMENT_RMS_SCALING = 1.;
+float ACCEL_RMS_SCALING[3] = {
+    1.00, // Axis X
+    1.00, // Axis Y
+    1.04, // Axis Z
+};
+float VELOCITY_RMS_SCALING[3] = {
+    1.00, // Axis X
+    1.00, // Axis Y
+    1.00, // Axis Z
+};
+float DISPLACEMENT_RMS_SCALING[3] = {
+    1.00, // Axis X
+    1.00, // Axis Y
+    1.00, // Axis Z
+};
 
 
 /***** Acceleration Energy 512 default thresholds *****/
@@ -89,12 +107,6 @@ bool doOnce = true;
 uint32_t interval = 30000;
 uint32_t lastDone = 0;
 
-#ifdef DRAGONFLY_V03
-    uint32_t initialDelay = 15000;
-#else
-    uint32_t initialDelay = 2000;
-#endif
-
 
 /***** Main operator *****/
 
@@ -110,20 +122,30 @@ Conductor conductor(MAC_ADDRESS);
  * interrupt frequency then depends on the Microphone (here I2S) clock rate and
  * on the size of the buffer.
  * NB: Printing is time consuming and may cause issues in callback. Always
- * deactivate the callbackDebugMode in prod.
+ * deactivate the asyncDebugMode in prod.
  */
 void callback()
 {
     uint32_t startT = 0;
-    if (callbackDebugMode)
+    if (asyncDebugMode)
     {
         startT = micros();
     }
     conductor.acquireData(true);
-    if (callbackDebugMode)
+    if (asyncDebugMode)
     {
         debugPrint(micros() - startT);
     }
+}
+
+
+/***** Led callback *****/
+
+static armv7m_timer_t led_timer;
+
+static void led_callback(void) {
+    rgbLed.updateColors();
+    armv7m_timer_start(&led_timer, 1);
 }
 
 
@@ -131,26 +153,21 @@ void callback()
 
 void setup()
 {
-    #if defined(UNITTEST) || defined(INTEGRATEDTEST)
-        iuUSB.begin();
-        delay(initialDelay);
-        if (debugMode)
-        {
-            debugPrint(F("TESTING - Mem: "), false);
-            debugPrint(String(freeMemory(), DEC));
-            debugPrint(' ');
-        }
-        iuRGBLed.setupHardware();
+    iuUSB.begin();
+    rgbLed.setupHardware();
+    armv7m_timer_create(&led_timer, (armv7m_timer_callback_t)led_callback);
+    armv7m_timer_start(&led_timer, 1);
+    conductor.showStatusOnLed(RGB_CYAN);
+    #if defined(UNITTEST) || defined(COMPONENTTEST) || defined(INTEGRATEDTEST)
+        delay(2000);
         iuI2C.begin();
     #else
-        iuUSB.begin();  // Start with USB for Serial communication
         if (debugMode)
         {
-          delay(initialDelay);
-          debugPrint(F("Start - Mem: "), false);
-          debugPrint(String(freeMemory(), DEC));
+            delay(5000);
+            debugPrint(F("Start - Mem: "), false);
+            debugPrint(String(freeMemory(), DEC));
         }
-        iuRGBLed.setupHardware();
         iuI2C.begin();
         // Interfaces
         if (debugMode)
@@ -174,10 +191,6 @@ void setup()
             }
         #endif
         iuWiFi.setupHardware();
-        if (!USBDevice.configured())
-        {
-            iuFlash.begin();
-        }
         if(debugMode)
         {
             debugPrint(F("=> Successfully initialized interfaces - Mem: "),
@@ -207,13 +220,13 @@ void setup()
         for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
         {
             Sensor::instances[i]->setupHardware();
-            if (Sensor::instances[i]->isDriven())
+            if (Sensor::instances[i]->isHighFrequency())
             {
                 Sensor::instances[i]->setCallbackRate(callbackRate);
             }
         }
         #ifdef BUTTERFLY_V04
-            iuGyroscope.suspend();
+            iuGyroscope.setPowerMode(PowerMode::SUSPEND);
         #endif
         if (debugMode)
         {
@@ -236,19 +249,59 @@ void setup()
             debugPrint(millis(), false);
             debugPrint(F("***\n"));
         }
+        // Start flash and load configuration files
+        if (!USBDevice.configured())
+        {
+            iuFlash.begin();
+            iuWiFi.loadConfigFromFlash(&iuFlash);
+            for (uint8_t i = 0; i < conductor.CONFIG_TYPE_COUNT; ++i)
+            {
+                conductor.loadConfigFromFlash(conductor.CONFIG_TYPES[i]);
+            }
+            if (setupDebugMode)
+            {
+                conductor.overrideLedColor(RGB_PURPLE);
+                uint32_t startT = millis();
+                while(millis() - startT < 5000)
+                {
+                    rgbLed.manageColorTransitions();
+                    delay(100);
+                }
+                conductor.resetLed();
+            }
+        }
+        else if (setupDebugMode)
+        {
+            conductor.overrideLedColor(RGB_ORANGE);
+            uint32_t startT = millis();
+            while(millis() - startT < 5000)
+            {
+                rgbLed.manageColorTransitions();
+                delay(100);
+            }
+            conductor.resetLed();
+        }
         conductor.changeUsageMode(UsageMode::OPERATION);
-        iuWiFi.preventFromSleeping();
     #endif
 }
 
 /**
  *
- * The regular calls to iuRGBLed.autoManage() manage any required LED blinking.
+ * Note the regular calls to rgbLed.manageColorTransitions().
  */
 void loop()
 {
-    #if defined(UNITTEST) || defined(INTEGRATEDTEST)
+    #if defined(UNITTEST) || defined(COMPONENTTEST) || defined(INTEGRATEDTEST)
         Test::run();
+        rgbLed.manageColorTransitions();
+        if (Test::getCurrentFailed() > 0)
+        {
+            conductor.showStatusOnLed(RGB_RED);
+        }
+        else
+        {
+            conductor.showStatusOnLed(RGB_GREEN);
+        }
     #else
         if (loopDebugMode)
         {
@@ -268,26 +321,32 @@ void loop()
         }
         // Power saving
         conductor.manageSleepCycles();
-        iuRGBLed.autoManage();
+        rgbLed.manageColorTransitions();
         // Configuration
         conductor.readFromSerial(StreamingMode::WIRED, &iuUSB);
-        iuRGBLed.autoManage();
+        rgbLed.manageColorTransitions();
         conductor.readFromSerial(StreamingMode::BLE, &iuBluetooth);
-        iuRGBLed.autoManage();
+        rgbLed.manageColorTransitions();
         conductor.readFromSerial(StreamingMode::WIFI, &iuWiFi);
-        iuRGBLed.autoManage();
+        rgbLed.manageColorTransitions();
         // Acquire data from sensors
         conductor.acquireData(false);
-        iuRGBLed.autoManage();
+        rgbLed.manageColorTransitions();
         // Feature computation depending on operation mode
         conductor.computeFeatures();
-        iuRGBLed.autoManage();
+        rgbLed.manageColorTransitions();
         // Update the OperationState
         conductor.updateOperationState();
-        iuRGBLed.autoManage();
+        rgbLed.manageColorTransitions();
         // Stream features
         conductor.streamFeatures();
-        iuRGBLed.autoManage();
+        rgbLed.manageColorTransitions();
+        // Send accel raw data
+        conductor.periodicSendAccelRawData();
+        rgbLed.manageColorTransitions();
+        // Send config checksum
+        conductor.periodicSendConfigChecksum();
+        rgbLed.manageColorTransitions();
         uint32_t now = millis();
         if(lastDone == 0 || lastDone + interval < now || now < lastDone)
         {
@@ -301,6 +360,7 @@ void loop()
         {
             yield();
         }
+        rgbLed.manageColorTransitions();
     #endif
 }
 

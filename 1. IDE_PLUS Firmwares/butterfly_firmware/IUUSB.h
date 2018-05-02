@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-#include "IUSerial.h"
+#include <IUSerial.h>
 
 
 /**
@@ -13,12 +13,9 @@ class IUUSB : public IUSerial
 {
     public:
         /***** Core *****/
-        IUUSB(HardwareSerial *serialPort, char *charBuffer, uint16_t bufferSize,
-              PROTOCOL_OPTIONS protocol, uint32_t rate=57600, char stopChar=';',
-              uint16_t dataReceptionTimeout=2000);
-        virtual ~IUUSB() {}
-        virtual void begin();
-
+        IUUSB(HardwareSerial *serialPort, char *charBuffer,
+              uint16_t bufferSize, PROTOCOL_OPTIONS protocol, uint32_t rate,
+              char stopChar, uint16_t dataReceptionTimeout);
     protected:
         /***** Custom Protocol *****/
         virtual bool readCharCustomProtocol();

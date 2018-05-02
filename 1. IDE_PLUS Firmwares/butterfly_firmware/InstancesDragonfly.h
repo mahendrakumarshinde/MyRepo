@@ -1,15 +1,16 @@
 #ifndef INSTANCESDRAGONFLY_H
 #define INSTANCESDRAGONFLY_H
 
-#include "Keywords.h"
+#include "BoardDefinition.h"
 
 #ifdef DRAGONFLY_V03
 
 /***** Interfaces *****/
-#include "IURGBLed.h"
+#include "RGBLed.h"
 #include "IUUSB.h"
 #include "IUBMD350.h"
-#ifdef INTERNAL_ESP8285  // Wifi options
+#ifdef USE_EXTERNAL_WIFI
+#else
     #include "IUESP8285.h"
 #endif
 
@@ -24,16 +25,29 @@
 /***** Sensors *****/
 #include "IUBattery.h"
 #include "IUCAMM8Q.h"
-#include "IUI2S.h"
+#include "IUICS43432.h"
 #include "IULSM6DSM.h"
 #include "IUMAX31865.h"
+
+#ifdef COMPONENTTEST
+    // Interfaces
+    #include "ComponentTest/CMP_RGBLed.h"
+    #include "ComponentTest/CMP_IUBMD350.h"
+    #include "ComponentTest/CMP_IUESP8285.h"
+    // Sensors
+    #include "ComponentTest/CMP_IUBattery.h"
+    #include "ComponentTest/CMP_IUCAMM8Q.h"
+    #include "ComponentTest/CMP_IUICS43432.h"
+    #include "ComponentTest/CMP_IULSM6DSM.h"
+    #include "ComponentTest/CMP_IUMAX31865.h"
+#endif
 
 
 /* =============================================================================
     Interfaces
 ============================================================================= */
 
-extern IURGBLed iuRGBLed;
+extern RGBLed rgbLed;
 
 extern char iuUSBBuffer[20];
 extern IUUSB iuUSB;
@@ -42,7 +56,7 @@ extern char iuBluetoothBuffer[500];
 extern IUBMD350 iuBluetooth;
 
 extern char iuWiFiBuffer[500];
-#ifdef EXTERNAL_WIFI
+#ifdef USE_EXTERNAL_WIFI
     extern IUSerial iuWiFi;
 #else
     extern IUESP8285 iuWiFi;
@@ -54,6 +68,7 @@ extern char iuWiFiBuffer[500];
 ============================================================================= */
 
 extern IUFSFlash iuFlash;
+
 
 /* =============================================================================
     Features
@@ -191,7 +206,7 @@ extern IULSM6DSM iuAccelerometer;
     extern IUCAMM8Q iuGNSS;
 #endif
 
-extern IUI2S iuI2S;
+extern IUICS43432 iuI2S;
 
 
 /* =============================================================================
@@ -204,9 +219,9 @@ extern q15_t allocatedFFTSpace[1024];
 
 /***** Accelerometer Calibration parameters *****/
 
-extern float ACCEL_RMS_SCALING;
-extern float VELOCITY_RMS_SCALING;
-extern float DISPLACEMENT_RMS_SCALING;
+extern float ACCEL_RMS_SCALING[3];
+extern float VELOCITY_RMS_SCALING[3];
+extern float DISPLACEMENT_RMS_SCALING[3];
 
 
 /***** Accelerometer Feature computation parameters *****/

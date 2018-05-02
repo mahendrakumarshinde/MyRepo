@@ -6,23 +6,24 @@
     Interfaces
 ============================================================================= */
 
-IURGBLed iuRGBLed = IURGBLed();
+RGBLed rgbLed(25, 26, 38);
 
 char iuUSBBuffer[20] = "";
 IUUSB iuUSB(&Serial, iuUSBBuffer, 20, IUSerial::CUSTOM_PROTOCOL, 115200, '\n',
-            2000);
+            1000);
 
 char iuBluetoothBuffer[500] = "";
 IUBMD350 iuBluetooth(&Serial3, iuBluetoothBuffer, 500,
-                     IUSerial::LEGACY_PROTOCOL, 57600, 2000);
+                     IUSerial::LEGACY_PROTOCOL, 57600, ';', 2000, 39, 40);
 
 char iuWiFiBuffer[500] = "";
-#ifdef EXTERNAL_WIFI
-    IUSerial iuWiFi(StreamingMode::WIFI, &Serial1, iuWiFiBuffer, 500,
-                    115200, ';', 500);
+#ifdef USE_EXTERNAL_WIFI
+    IUSerial iuWiFi(&Serial1, iuWiFiBuffer, 500, IUSerial::MS_PROTOCOL,
+                    115200, ';', 250);
 #else
-    IUESP8285 iuWiFi(&Serial1, iuWiFiBuffer, 500, IUSerial::LEGACY_PROTOCOL,
-                     115200, 2000);
+    // IUESP8285 has an Enable Pin on Dragonfly => use it to power off the WiFi?
+    IUESP8285 iuWiFi(&Serial1, iuWiFiBuffer, 500, IUSerial::MS_PROTOCOL,
+                     115200, ';', 250);
 #endif
 
 
@@ -34,7 +35,7 @@ IUFSFlash iuFlash = IUFSFlash();
 
 
 /* =============================================================================
-    Instanciations
+    Features
 ============================================================================= */
 
 /***** Battery load *****/
@@ -175,20 +176,22 @@ FloatFeature rtdTemp("RTD", 2, 4, rtdTempValues);
     Sensors
 ============================================================================= */
 
-IUBattery iuBattery(&iuI2C, "BAT", &batteryLoad);
+IUBattery iuBattery("BAT", &batteryLoad);
 
-IUMAX31865 iuRTDSensorA(&SPI1, 42, SPISettings(500000, MSBFIRST, SPI_MODE1), "THA", &temperatureA);
-IUMAX31865 iuRTDSensorB(&SPI1, 43, SPISettings(500000, MSBFIRST, SPI_MODE1), "THB", &temperatureB);
+IUMAX31865 iuRTDSensorA(&SPI1, 42, SPISettings(500000, MSBFIRST, SPI_MODE1),
+                        "THA", &temperatureA);
+IUMAX31865 iuRTDSensorB(&SPI1, 43, SPISettings(500000, MSBFIRST, SPI_MODE1),
+                        "THB", &temperatureB);
 
 IULSM6DSM iuAccelerometer(&iuI2C, "ACC", &accelerationX, &accelerationY,
                           &accelerationZ, &tiltX, &tiltY, &tiltZ);
 
 #ifdef NO_GPS
 #else
-    IUCAMM8Q iuGNSS(&iuI2C, "GPS");
+    IUCAMM8Q iuGNSS(&Serial2, "GPS");
 #endif
 
-IUI2S iuI2S(&iuI2C, "MIC", &audio);
+IUICS43432 iuI2S(&I2S, "MIC", &audio);
 
 
 
@@ -207,11 +210,11 @@ q15_t allocatedFFTSpace[1024];
 
 // 128 sample long accel computers
 SignalRMSComputer accel128ComputerX(1,&accelRMS128X, true, true,
-                                    ACCEL_RMS_SCALING);
+                                    ACCEL_RMS_SCALING[0]);
 SignalRMSComputer accel128ComputerY(2, &accelRMS128Y, true, true,
-                                    ACCEL_RMS_SCALING);
+                                    ACCEL_RMS_SCALING[1]);
 SignalRMSComputer accel128ComputerZ(3, &accelRMS128Z, true, true,
-                                    ACCEL_RMS_SCALING);
+                                    ACCEL_RMS_SCALING[2]);
 MultiSourceSumComputer accelRMS128TotalComputer(4, &accelRMS128Total,
                                                 false, true);
 
@@ -237,8 +240,8 @@ Q15FFTComputer accelFFTComputerX(9,
                                  DEFAULT_LOW_CUT_FREQUENCY,
                                  DEFAULT_HIGH_CUT_FREQUENCY,
                                  DEFAULT_MIN_AGITATION,
-                                 VELOCITY_RMS_SCALING,
-                                 DISPLACEMENT_RMS_SCALING);
+                                 VELOCITY_RMS_SCALING[0],
+                                 DISPLACEMENT_RMS_SCALING[0]);
 Q15FFTComputer accelFFTComputerY(10,
                                  &accelReducedFFTY,
                                  &accelMainFreqY,
@@ -248,8 +251,8 @@ Q15FFTComputer accelFFTComputerY(10,
                                  DEFAULT_LOW_CUT_FREQUENCY,
                                  DEFAULT_HIGH_CUT_FREQUENCY,
                                  DEFAULT_MIN_AGITATION,
-                                 VELOCITY_RMS_SCALING,
-                                 DISPLACEMENT_RMS_SCALING);
+                                 VELOCITY_RMS_SCALING[1],
+                                 DISPLACEMENT_RMS_SCALING[1]);
 Q15FFTComputer accelFFTComputerZ(11,
                                  &accelReducedFFTZ,
                                  &accelMainFreqZ,
@@ -259,8 +262,8 @@ Q15FFTComputer accelFFTComputerZ(11,
                                  DEFAULT_LOW_CUT_FREQUENCY,
                                  DEFAULT_HIGH_CUT_FREQUENCY,
                                  DEFAULT_MIN_AGITATION,
-                                 VELOCITY_RMS_SCALING,
-                                 DISPLACEMENT_RMS_SCALING);
+                                 VELOCITY_RMS_SCALING[2],
+                                 DISPLACEMENT_RMS_SCALING[2]);
 
 
 /***** Audio Features *****/
@@ -311,7 +314,7 @@ FeatureGroup rawAccelGroup("RAWACC", 512);
 // Standard Press Monitoring
 FeatureGroup pressStandardGroup("PRSSTD", 512);
 // Standard Motor Monitoring
-FeatureGroup motorStandardGroup("MOTSTD", 1500);
+FeatureGroup motorStandardGroup("MOTSTD", 512);
 
 
 /***** Populate groups *****/

@@ -6,8 +6,26 @@
 /* CMSIS-DSP library for RFFT */
 #include <arm_math.h>
 
-#include "Keywords.h"
-#include "Logger.h"
+#include <IUDebugger.h>
+
+
+/* =============================================================================
+    Feature Operation States
+============================================================================= */
+
+/**
+ * Operation states describe the production status
+ *
+ * The state is determined by features values and user-defined thresholds.
+ */
+namespace OperationState
+{
+    enum option : uint8_t {IDLE    = 0,
+                           NORMAL  = 1,
+                           WARNING = 2,
+                           DANGER  = 3,
+                           COUNT   = 4};
+}
 
 
 /* =============================================================================
@@ -34,6 +52,7 @@
 class Feature
 {
     public:
+        static const uint8_t nameLength = 3;
         /* TODO - For now, only slideOption::FIXED is implemented => need to
         implement slideOption::ROLLING */
         enum slideOption : uint8_t {FIXED,
@@ -84,9 +103,6 @@ class Feature
         virtual float getValueToCompareToThresholds()
             { return m_thresholds[0] - 1;}
         /***** Computers tracking *****/
-        virtual void setSensorName(const char* name)
-            { strcpy(m_sensorName, name); }
-        virtual char* getSensorName() { return m_sensorName; }
         virtual bool isComputedFeature() { return m_computerId != 0; }
         virtual void setComputerId(uint8_t id) { m_computerId = id; }
         virtual uint8_t getComputerId() { return m_computerId; }
@@ -110,8 +126,8 @@ class Feature
         virtual void acknowledge(uint8_t receiverIdx, uint8_t sectionCount=1);
         /***** Communication *****/
         virtual void stream(HardwareSerial *port, uint8_t sectionCount=1);
-        virtual void bufferStream(char *destination, uint16_t &destIndex,
-                                  uint8_t sectionCount=1);
+        virtual uint16_t sendToBuffer(char *destination, uint16_t startIndex,
+                                      uint8_t sectionCount=1);
         /***** Debugging *****/
         virtual void exposeConfig();
         virtual void exposeCounters();
@@ -121,7 +137,7 @@ class Feature
         /***** Instance registry *****/
         uint8_t m_instanceIdx;
         /***** Feature designation *****/
-        char m_name[4];
+        char m_name[nameLength + 1];
         /***** Physical metadata *****/
         uint16_t m_samplingRate;
         float m_resolution;
@@ -134,7 +150,6 @@ class Feature
         // Normal, warning and danger thresholds
         float m_thresholds[OperationState::COUNT - 1];
         /***** Computers tracking *****/
-        char m_sensorName[4];
         uint8_t m_computerId;
         uint8_t m_receiverCount;
         uint8_t m_receiversId[maxReceiverCount];
@@ -156,8 +171,8 @@ class Feature
         virtual void m_specializedStream(HardwareSerial *port,
                                          uint8_t sectionIdx,
                                          uint8_t sectionCount=1) {}
-        virtual void m_specializedBufferStream(uint8_t sectionIdx,
-            char *destination, uint16_t &destIndex, uint8_t sectionCount=1) {}
+        virtual uint16_t m_specializedBufferStream(uint8_t sectionIdx,
+            char *destination, uint16_t startIndex, uint8_t sectionCount=1) {}
 };
 
 
@@ -187,8 +202,8 @@ class FloatFeature : public Feature
         virtual void m_specializedStream(HardwareSerial *port,
                                          uint8_t sectionIdx,
                                          uint8_t sectionCount=1);
-        virtual void m_specializedBufferStream(uint8_t sectionIdx,
-            char *destination, uint16_t &destIndex, uint8_t sectionCount=1);
+        virtual uint16_t m_specializedBufferStream(uint8_t sectionIdx,
+            char *destination, uint16_t startIndex, uint8_t sectionCount=1);
 };
 
 
@@ -224,8 +239,8 @@ class Q15Feature : public Feature
         virtual void m_specializedStream(HardwareSerial *port,
                                          uint8_t sectionIdx,
                                          uint8_t sectionCount=1);
-        virtual void m_specializedBufferStream(uint8_t sectionIdx,
-            char *destination, uint16_t &destIndex, uint8_t sectionCount=1);
+        virtual uint16_t m_specializedBufferStream(uint8_t sectionIdx,
+            char *destination, uint16_t startIndex, uint8_t sectionCount=1);
 };
 
 
@@ -261,8 +276,8 @@ class Q31Feature : public Feature
         virtual void m_specializedStream(HardwareSerial *port,
                                          uint8_t sectionIdx,
                                          uint8_t sectionCount=1);
-        virtual void m_specializedBufferStream(uint8_t sectionIdx,
-            char *destination, uint16_t &destIndex, uint8_t sectionCount=1);
+        virtual uint16_t m_specializedBufferStream(uint8_t sectionIdx,
+            char *destination, uint16_t startIndex, uint8_t sectionCount=1);
 };
 
 

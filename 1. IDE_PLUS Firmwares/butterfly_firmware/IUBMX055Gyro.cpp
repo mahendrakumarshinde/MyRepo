@@ -7,7 +7,7 @@
 
 IUBMX055Gyro::IUBMX055Gyro(IUI2C *iuI2C, const char* name, Feature *tiltX,
                            Feature *tiltY, Feature *tiltZ) :
-    DrivenSensor(name, 3, tiltX, tiltY, tiltZ)
+    HighFreqSensor(name, 3, tiltX, tiltY, tiltZ)
 {
     m_iuI2C = iuI2C;
     // Fast Power Up is disabled at POR (Power-On Reset)
@@ -45,47 +45,46 @@ void IUBMX055Gyro::softReset()
 {
     m_iuI2C->writeByte(ADDRESS,  BGW_SOFTRESET, 0xB6);
     delay(15);
+    m_powerMode = PowerMode::REGULAR;  // default after POR
 }
 
 /**
- * Set the power mode to ACTIVE (5mA)
+ * Manage component power modes
  *
- * This is the default mode after POR (Power-On Reset)
+ * Note that, in DEEP_SLEEP and SUSPEND mode, configuration values are lost,
+ * they need to be re-set when exiting these modes.
  */
-void IUBMX055Gyro::wakeUp()
+void IUBMX055Gyro::setPowerMode(PowerMode::option pMode)
 {
-    DrivenSensor::wakeUp();
-    // Write {0, 0} to {suspend (bit7), deep-suspend (bit5)}
-    m_iuI2C->writeByte(ADDRESS,  LPM1, 0x00);
-}
-
-/**
- * Set the power mode to SLEEP (25μA)
- *
- * This implementation SLEEP mode corresponds to the gyroscope 'suspend' mode.
- */
-void IUBMX055Gyro::sleep()
-{
-    DrivenSensor::sleep();
-    m_fastPowerUpEnabled = true;
-    // Write {1, 0} to {suspend (bit7), deep-suspend (bit5)}
-    m_iuI2C->writeByte(ADDRESS,  LPM1, 0x80);
-}
-
-/**
- * Set the power mode to SUSPEND (<5μA)
- *
- * This implementation SUSPEND mode corresponds to the gyroscope 'deep-suspend'
- * mode.
- * Note that, in SUSPEND mode, configuration values are lost, they need to be
- * re-set when exiting the SUSPEND mode.
- */
-void IUBMX055Gyro::suspend()
-{
-    DrivenSensor::suspend();
-    m_fastPowerUpEnabled = false;
-    // Write {0, 1} to {suspend (bit7), deep-suspend (bit5)}
-    m_iuI2C->writeByte(ADDRESS,  LPM1, 0x20);
+    m_powerMode = pMode;
+    switch (m_powerMode)
+    {
+        case PowerMode::PERFORMANCE:
+        case PowerMode::ENHANCED:
+        case PowerMode::REGULAR:
+        case PowerMode::LOW_1:
+        case PowerMode::LOW_2:
+            // Write {0, 0} to {suspend (bit7), deep-suspend (bit5)}
+            m_iuI2C->writeByte(ADDRESS,  LPM1, 0x00);
+            break;
+        case PowerMode::SLEEP:
+            m_fastPowerUpEnabled = true;
+            // Write {1, 0} to {suspend (bit7), deep-suspend (bit5)}
+            m_iuI2C->writeByte(ADDRESS,  LPM1, 0x80);
+            break;
+        case PowerMode::DEEP_SLEEP:
+        case PowerMode::SUSPEND:
+            m_fastPowerUpEnabled = false;
+            // Write {0, 1} to {suspend (bit7), deep-suspend (bit5)}
+            m_iuI2C->writeByte(ADDRESS,  LPM1, 0x20);
+            break;
+        default:
+            if (debugMode)
+            {
+                debugPrint(F("Unhandled power Mode "), false);
+                debugPrint(m_powerMode);
+            }
+    }
 }
 
 

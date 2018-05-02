@@ -1,39 +1,64 @@
 #include "IUMQTTHelper.h"
 
-
 /* =============================================================================
     Preset values and default settings
-====================================c========================================= */
+============================================================================= */
 
-/** US-WEST1-A server **/
-//IPAddress IUMQTTHelper::SERVER_HOST(35, 197, 32, 136);
+char IUMQTTHelper::DEFAULT_WILL_MESSAGE[44] =
+    "XXXAdmin;;;00:00:00:00:00:00;;;disconnected";
 
-/** ASIA-SOUTH1-A (Mumbai) server **/
-IPAddress IUMQTTHelper::SERVER_HOST(35, 200, 183, 103);
-
-char IUMQTTHelper::USER_NAME[9] = "ide_plus";
-char IUMQTTHelper::PASSWORD[13] = "nW$Pg81o@EJD";
 
 /* =============================================================================
     Core
 ============================================================================= */
 
-IUMQTTHelper::IUMQTTHelper(uint8_t placeholder) :
+IUMQTTHelper::IUMQTTHelper(IPAddress serverIP, uint16_t serverPort,
+                           const char *username, const char *password) :
     m_wifiClient(),
-    client(SERVER_HOST, SERVER_PORT, m_wifiClient),
+    client(m_wifiClient),
     m_enfOfLife(0)
 {
-    strcpy(m_deviceMacAddress, "00:00:00:00:00:00");
+    setServer(serverIP, serverPort);
+    setCredentials(username, password);
+    strncpy(m_willMessage, DEFAULT_WILL_MESSAGE, willMessageMaxLength);
 }
 
 /**
- * 
+ *
  */
-void IUMQTTHelper::setDeviceInfo(const char *deviceType,
-                                 const char *deviceMacAddress)
+void IUMQTTHelper::setServer(IPAddress serverIP, uint16_t serverPort)
 {
-    strcpy(m_deviceType, deviceType);
-    strcpy(m_deviceMacAddress, deviceMacAddress);
+    client.setServer(serverIP, serverPort);
+}
+
+/**
+ *
+ */
+void IUMQTTHelper::setCredentials(const char *username, const char *password)
+{
+    strncpy(m_username, username, MQTT_CREDENTIALS_MAX_LENGTH);
+    strncpy(m_password, password, MQTT_CREDENTIALS_MAX_LENGTH);
+}
+
+/**
+ *
+ */
+void IUMQTTHelper::setDeviceMAC(MacAddress deviceMAC)
+{
+    // New MAC address
+    m_deviceMAC = deviceMAC;
+    // Replace MAC address in MQTT last will message
+    char *pch;
+    pch = strstr(m_willMessage, m_deviceMAC.toString().c_str()); // Find current
+    if (pch)
+    {
+        strncpy(pch, m_deviceMAC.toString().c_str(), 17);  // Replace by new
+    }
+    if (debugMode)
+    {
+        debugPrint("MQTT last will updated: ", false);
+        debugPrint(m_willMessage);
+    }
 }
 
 /**
@@ -42,7 +67,7 @@ void IUMQTTHelper::setDeviceInfo(const char *deviceType,
  * Should be called repeatedly.
  * Note that this function is blocking, but if needed the library doc mentions
  * non-blocking ways to do the same.
- * 
+ *
  * @param willTopic MQTT topic name to publish message upon succesful connection,
  *  and to be used as will topic.
  * @param willMsg  MQTT message to publish upon disconnection from server.
@@ -50,36 +75,37 @@ void IUMQTTHelper::setDeviceInfo(const char *deviceType,
  * @param timeout  The duration after which the MQTT reconnection attempt is
  *  abandonned if not successful.
  */
-void IUMQTTHelper::reconnect(const char *willTopic, const char *willMsg,
-                             void (*onConnectionCallback)(), uint32_t timeout)
+void IUMQTTHelper::reconnect()
 {
-    uint32_t maxTime = millis() + timeout;
-    while (!client.connected() && millis() < maxTime)
+    uint32_t startTime = millis();
+    uint32_t currentTime = startTime;
+    while (!client.connected() && currentTime - startTime < connectionTimeout)
     {
         if (debugMode)
         {
-            debugPrint("Attempting MQTT connection...");
+            debugPrint("Attempting MQTT connection... ", false);
         }
         // Attempt to connect
-        if (client.connect(m_deviceMacAddress, USER_NAME, PASSWORD,
-                           willTopic, WILL_QOS, WILL_RETAIN, willMsg))
+        if (client.connect(m_deviceMAC.toString().c_str(), m_username,
+                           m_password, DIAGNOSTIC_TOPIC, WILL_QOS, WILL_RETAIN,
+                           m_willMessage))
         {
+            if (m_onConnectionCallback)
+            {
+                m_onConnectionCallback();
+            }
             if (debugMode)
             {
-                debugPrint("Connected as ", false);
-                debugPrint(m_deviceMacAddress);
+                debugPrint("Success");
             }
-            onConnectionCallback();
         }
         else
         {
             if (debugMode)
             {
-                debugPrint("failed, rc=", false);
-                debugPrint(client.state(), false);
-                debugPrint(", try again in 3 seconds");
+                debugPrint("Failed");
             }
-            delay(3000);
+            delay(connectionRetryDelay);
         }
     }
 }
@@ -90,7 +116,7 @@ void IUMQTTHelper::reconnect(const char *willTopic, const char *willMsg,
  *
  * Handles the reconnection to he MQTT server if needed and the publications.
  * NB: Makes use of IUMQTT::reconnect function, which may block the execution.
- * 
+ *
  * @param willTopic MQTT topic name to publish message upon succesful connection,
  *  and to be used as will topic.
  * @param willMsg  MQTT message to publish upon disconnection from server.
@@ -98,19 +124,18 @@ void IUMQTTHelper::reconnect(const char *willTopic, const char *willMsg,
  * @param timeout  The duration after which the MQTT reconnection attempt is
  *  abandonned if not successful.
  */
-void IUMQTTHelper::loop(const char *willTopic, const char *willMsg,
-                        void (*onConnectionCallback)(), uint32_t timeout)
+void IUMQTTHelper::loop()
 {
     if (!client.connected())
     {
-        reconnect(willTopic, willMsg, onConnectionCallback, timeout);
+        reconnect();
     }
     client.loop();
 }
 
 /**
- * 
- * 
+ *
+ *
  * @param topic
  * @param payload
  */
@@ -127,14 +152,33 @@ bool IUMQTTHelper::publish(const char* topic, const char* payload)
 }
 
 /**
- * 
+ * Format the topic name to IU standard and subscribe to the topic.
+ *
+ * NB: The topic name is modified as follow:
+ * - if device specific, the full topic name is:
+ *      cmd/<deviceType>/<deviceMacAddress>/<raw topic>
+ *      eg: if raw topic = "config", the topic could be
+ *          ide_plus/94:54:93:0F:67:01/config
+ * - if not device specific, the full topic name is:
+ *      cmd/<deviceType>/<raw topic>
+ *      eg: if raw topic = "time_sync", the topic could be
+ *          ide_plus/time_sync
  */
-bool IUMQTTHelper::subscribe(const char* topic)
+bool IUMQTTHelper::subscribe(const char* topic, bool deviceSpecific)
 {
-    char subscription[50];
-    getFullSubscriptionName(subscription, topic);
+    uint16_t subsLength = strlen(topic) + DEVICE_TYPE_LENGTH + 19;
+    char subscription[subsLength];
+    if (deviceSpecific)
+    {
+        snprintf(subscription, subsLength, "%s/%s/%s", DEVICE_TYPE,
+                 m_deviceMAC.toString().c_str(), topic);
+    }
+    else
+    {
+        snprintf(subscription, subsLength, "%s/%s", DEVICE_TYPE, topic);
+    }
     bool result = client.subscribe(subscription);
-    if (result)
+    if (result && debugMode)
     {
         debugPrint("Subscribed to ", false);
         debugPrint(subscription);
@@ -144,57 +188,63 @@ bool IUMQTTHelper::subscribe(const char* topic)
 
 
 /* =============================================================================
-    Faster disconnection detection
+    Infinite Uptime standard publications
 ============================================================================= */
 
 /**
- * 
- */
-void IUMQTTHelper::extendLifetime(uint16_t durationSec)
-{
-    m_enfOfLife = millis() + (durationSec * 1000);
-}
-
-/**
- * 
- */
-bool IUMQTTHelper::keepAlive()
-{
-    uint32_t now = millis();
-    return (m_enfOfLife == 0 || now < m_enfOfLife);
-    
-}
-
-
-/* =============================================================================
-    Utility functions
-============================================================================= */
-
-/**
- * Get the full path of the topic to subscribe to, for the given command.
  *
- * The full topic name is:
- * cmd/<deviceType>/<deviceMacAddress>/<messageType>
- * eg: if messageType = "config", the topic could be
- * ide_plus/94:54:93:0F:67:01/config
- *
- * @param destination a char array buffer to hold the full topic name.
- * @param commandName The name of the command expected to be received from this
- *  subscription.
  */
-void IUMQTTHelper::getFullSubscriptionName(char *destination,
-                                           const char *commandName)
+bool IUMQTTHelper::publishDiagnostic(const char *payload,
+                                     const char *topicExtension,
+                                     const uint16_t extensionLength)
 {
-    strcpy(destination, m_deviceType);
-    strcat(destination, "/");
-    strcat(destination, m_deviceMacAddress);
-    strcat(destination, "/");
-    strcat(destination, commandName);
+    if (topicExtension && extensionLength > 0)
+    {
+        uint16_t topicLength = DIAGNOSTIC_TOPIC_LENGTH + extensionLength + 1;
+        char topic[topicLength];
+        snprintf(topic, topicLength, "%s/%s", DIAGNOSTIC_TOPIC, topicExtension);
+        return publish(topic, payload);
+    }
+    else
+    {
+        return publish(DIAGNOSTIC_TOPIC, payload);
+    }
 }
 
+/**
+ *
+ */
+bool IUMQTTHelper::publishFeature(const char *payload,
+                                  const char *topicExtension,
+                                  const uint16_t extensionLength)
+{
+    if (topicExtension && extensionLength > 0)
+    {
+        uint16_t topicLength = FEATURE_TOPIC_LENGTH + extensionLength + 1;
+        char topic[topicLength];
+        snprintf(topic, topicLength, "%s/%s", FEATURE_TOPIC, topicExtension);
+        return publish(topic, payload);
+    }
+    else
+    {
+        return publish(FEATURE_TOPIC, payload);
+    }
+}
 
-/* =============================================================================
-    Instanciation
-============================================================================= */
-
-IUMQTTHelper iuMQTTHelper(0);
+/**
+* Subscribe to all the required device subscriptions
+*
+* Should be called after each reconnection.
+* This function should be edited when new subscriptions are required for the
+* device.
+*/
+void IUMQTTHelper::onConnection()
+{
+    subscribe("config", true);  // Config subscription
+    // In new version, do not subscribe to Legacy anymore
+    // subscribe("legacy", true);  // Legacy command format subscription
+    // In new version, subscribe to command topic (remote instruction)
+    subscribe("command", true);  // Remote instruction subscription
+    subscribe("post_url", false);
+    subscribe("time_sync", false);  // Time synchornisation subscription
+}

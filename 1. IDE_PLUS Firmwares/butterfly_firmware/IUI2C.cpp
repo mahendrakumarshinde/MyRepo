@@ -64,7 +64,7 @@ bool IUI2C::writeByte(uint8_t address, uint8_t subAddress, uint8_t data,
     bool success = Wire.transfer(address, &temp[0], 2, NULL, 0, true, callback);
     if (!success)
     {
-        if (callbackDebugMode)
+        if (asyncDebugMode)
         {
             debugPrint(F("I2C error"));
         }
@@ -107,7 +107,7 @@ uint8_t IUI2C::readByte(uint8_t address, uint8_t subAddress,
     uint8_t temp[1];
     if (!Wire.transfer(address, &subAddress, 1, &temp[0], 1, true, callback))
     {
-        if (callbackDebugMode)
+        if (asyncDebugMode)
         {
             debugPrint(F("I2C error"));
         }
@@ -150,7 +150,7 @@ bool IUI2C::readBytes(uint8_t address, uint8_t subAddress, uint8_t count,
 /**
  * Read several bytes and store them in destination array
  *
- * Note that the callback function MUST call endReadOperation to free the I2C.
+ * Note that the callback function MUST call releaseReadLock to free the I2C.
  *
  * @param address Where to read the byte from
  * @param subAddress Where to read the byte from
@@ -169,7 +169,7 @@ bool IUI2C::readBytes(uint8_t address, uint8_t subAddress, uint8_t count,
                                  true, callback);
     if (!success)
     {
-        if (callbackDebugMode)
+        if (asyncDebugMode)
         {
             debugPrint(F("I2C error"));
         }

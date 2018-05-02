@@ -30,7 +30,7 @@ void accelReadCallback(uint8_t wireStatus);
  *      - accelerationY: a Q15Feature with section size = 128
  *      - accelerationZ: a Q15Feature with section size = 128
  */
-class IUBMX055Acc : public DrivenSensor
+class IUBMX055Acc : public HighFreqSensor
 {
     public:
         /***** Preset values and default settings *****/
@@ -80,9 +80,7 @@ class IUBMX055Acc : public DrivenSensor
         /***** Hardware & power management *****/
         virtual void setupHardware();
         void softReset();
-        virtual void wakeUp();
-        virtual void sleep();
-        virtual void suspend();
+        virtual void setPowerMode(PowerMode::option pMode);
         /***** Configuration and calibration *****/
         virtual void configure(JsonVariant &config);
         void setScale(scaleOption scale);
