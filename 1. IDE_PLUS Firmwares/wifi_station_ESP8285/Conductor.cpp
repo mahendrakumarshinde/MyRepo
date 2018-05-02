@@ -5,8 +5,8 @@
     Instanciation
 ============================================================================= */
 
-char hostSerialBuffer[3072];
-IUSerial hostSerial(&Serial, hostSerialBuffer, 3072, IUSerial::MS_PROTOCOL,
+char hostSerialBuffer[4096];
+IUSerial hostSerial(&Serial, hostSerialBuffer, 4096, IUSerial::MS_PROTOCOL,
                     115200, ';', 100);
 
 IURawDataHelper accelRawDataHelper(10000,  // 10s timeout
@@ -89,6 +89,8 @@ void Conductor::processMessageFromHost()
     MSPCommand::command cmd = hostSerial.getMspCommand();
     char *buffer = hostSerial.getBuffer();
     uint16_t bufferLength = hostSerial.getCurrentBufferLength();
+    char resp[2] = "";
+    resp[1] = 0;
     if (debugMode)
     {
         debugPrint("Received command from host: ", false);
@@ -166,6 +168,13 @@ void Conductor::processMessageFromHost()
             }
             accelRawDataHelper.addKeyValuePair(buffer[0], &buffer[2],
                                                strlen(buffer) - 2);
+            hostSerial.sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION, buffer,
+                                      1);
+            if (!accelRawDataHelper.hasTimedOut() &&
+                accelRawDataHelper.areAllKeyPresent())
+            {
+                hostSerial.sendMSPCommand(MSPCommand::WIFI_CONFIRM_PUBLICATION);
+            }
             accelRawDataHelper.publishIfReady(m_bleMAC);
             break;
         case MSPCommand::PUBLISH_FEATURE:

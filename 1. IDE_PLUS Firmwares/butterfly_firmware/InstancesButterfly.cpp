@@ -311,7 +311,7 @@ FeatureGroup rawAccelGroup("RAWACC", 512);
 // Standard Press Monitoring
 FeatureGroup pressStandardGroup("PRSSTD", 512);
 // Standard Motor Monitoring
-FeatureGroup motorStandardGroup("MOTSTD", 1500);
+FeatureGroup motorStandardGroup("MOTSTD", 512);
 
 
 /***** Populate groups *****/

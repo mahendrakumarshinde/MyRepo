@@ -258,16 +258,19 @@ void setup()
             {
                 conductor.loadConfigFromFlash(conductor.CONFIG_TYPES[i]);
             }
-            conductor.overrideLedColor(RGB_PURPLE);
-            uint32_t startT = millis();
-            while(millis() - startT < 5000)
+            if (setupDebugMode)
             {
-                rgbLed.manageColorTransitions();
-                delay(100);
+                conductor.overrideLedColor(RGB_PURPLE);
+                uint32_t startT = millis();
+                while(millis() - startT < 5000)
+                {
+                    rgbLed.manageColorTransitions();
+                    delay(100);
+                }
+                conductor.resetLed();
             }
-            conductor.resetLed();
         }
-        else
+        else if (setupDebugMode)
         {
             conductor.overrideLedColor(RGB_ORANGE);
             uint32_t startT = millis();

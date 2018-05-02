@@ -19,11 +19,7 @@ IURawDataHelper::IURawDataHelper(uint32_t timeout, const char *endpointHost,
 {
     strncpy(m_endpointHost, endpointHost, MAX_HOST_LENGTH);
     strncpy(m_endpointRoute, endpointRoute, MAX_ROUTE_LENGTH);
-    strcpy(m_payload, "");
-    for (uint8_t i = 0; i < EXPECTED_KEY_COUNT; ++i)
-    {
-        m_keyAdded[i] = false;
-    }
+    resetPayload();
 }
 
 
@@ -36,7 +32,10 @@ IURawDataHelper::IURawDataHelper(uint32_t timeout, const char *endpointHost,
  */
 void IURawDataHelper::resetPayload()
 {
-    strcpy(m_payload, "");
+    for (uint16_t i = 0; i < MAX_PAYLOAD_LENGTH; i++)
+    {
+        m_payload[i] = 0;
+    }
     m_payloadCounter = 0;
     m_payloadStartTime = 0;
     for (uint8_t i = 0; i < EXPECTED_KEY_COUNT; ++i)

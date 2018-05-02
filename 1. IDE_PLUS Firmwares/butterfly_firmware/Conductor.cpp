@@ -228,7 +228,9 @@ void Conductor::sendConfigChecksum(IUFlash::storedConfig configType)
     size_t charCount = 0;
     if (iuFlash.available())
     {
-        charCount = iuFlash.readConfig(configType, config, configMaxLen);
+//        Serial3.println("here 1");
+//        charCount = iuFlash.readConfig(configType, config, configMaxLen);
+//        Serial3.println("here 2");
     }
     // Charcount = 0 if flash is unavailable or file not found => Checksum of
     // empty string will be sent, and that will trigger a config refresh
@@ -274,16 +276,15 @@ void Conductor::sendConfigChecksum(IUFlash::storedConfig configType)
  */
 void Conductor::periodicSendConfigChecksum()
 {
-    if ((m_streamingMode == StreamingMode::WIFI ||
-         m_streamingMode == StreamingMode::WIFI_AND_BLE) &&
-        iuWiFi.isConnected())
+    if (m_streamingMode == StreamingMode::WIFI ||
+         m_streamingMode == StreamingMode::WIFI_AND_BLE)
     {
         uint32_t now = millis();
         if (now - m_configTimerStart > SEND_CONFIG_CHECKSUM_TIMER)
         {
-            sendConfigChecksum(conductor.CONFIG_TYPES[m_nextConfigToSend]);
+            sendConfigChecksum(CONFIG_TYPES[m_nextConfigToSend]);
             m_nextConfigToSend++;
-            m_nextConfigToSend %= conductor.CONFIG_TYPE_COUNT;
+            m_nextConfigToSend %= CONFIG_TYPE_COUNT;
             m_configTimerStart = now;
         }
     }
@@ -1520,11 +1521,15 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
     else if (m_streamingMode == StreamingMode::WIFI ||
              m_streamingMode == StreamingMode::WIFI_AND_BLE)
     {
-        size_t maxLen = 3072;
+        uint16_t maxLen = 3500;
         char txBuffer[maxLen];
+        for (uint16_t i =0; i < maxLen; i++)
+        {
+            txBuffer[i] = 0;
+        }
         txBuffer[0] = axis[axisIdx];
         uint16_t idx = 1;
-        accelEnergy->sendToBuffer(txBuffer, idx, 4);
+        idx += accelEnergy->sendToBuffer(txBuffer, idx, 4);
         txBuffer[idx] = 0; // Terminate string (idx incremented in sendToBuffer)
         iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_RAW_DATA, txBuffer);
         delay(10);

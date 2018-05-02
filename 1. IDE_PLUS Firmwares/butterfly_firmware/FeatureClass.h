@@ -126,8 +126,8 @@ class Feature
         virtual void acknowledge(uint8_t receiverIdx, uint8_t sectionCount=1);
         /***** Communication *****/
         virtual void stream(HardwareSerial *port, uint8_t sectionCount=1);
-        virtual void sendToBuffer(char *destination, uint16_t &destIndex,
-                                  uint8_t sectionCount=1);
+        virtual uint16_t sendToBuffer(char *destination, uint16_t startIndex,
+                                      uint8_t sectionCount=1);
         /***** Debugging *****/
         virtual void exposeConfig();
         virtual void exposeCounters();
@@ -171,8 +171,8 @@ class Feature
         virtual void m_specializedStream(HardwareSerial *port,
                                          uint8_t sectionIdx,
                                          uint8_t sectionCount=1) {}
-        virtual void m_specializedBufferStream(uint8_t sectionIdx,
-            char *destination, uint16_t &destIndex, uint8_t sectionCount=1) {}
+        virtual uint16_t m_specializedBufferStream(uint8_t sectionIdx,
+            char *destination, uint16_t startIndex, uint8_t sectionCount=1) {}
 };
 
 
@@ -202,8 +202,8 @@ class FloatFeature : public Feature
         virtual void m_specializedStream(HardwareSerial *port,
                                          uint8_t sectionIdx,
                                          uint8_t sectionCount=1);
-        virtual void m_specializedBufferStream(uint8_t sectionIdx,
-            char *destination, uint16_t &destIndex, uint8_t sectionCount=1);
+        virtual uint16_t m_specializedBufferStream(uint8_t sectionIdx,
+            char *destination, uint16_t startIndex, uint8_t sectionCount=1);
 };
 
 
@@ -239,8 +239,8 @@ class Q15Feature : public Feature
         virtual void m_specializedStream(HardwareSerial *port,
                                          uint8_t sectionIdx,
                                          uint8_t sectionCount=1);
-        virtual void m_specializedBufferStream(uint8_t sectionIdx,
-            char *destination, uint16_t &destIndex, uint8_t sectionCount=1);
+        virtual uint16_t m_specializedBufferStream(uint8_t sectionIdx,
+            char *destination, uint16_t startIndex, uint8_t sectionCount=1);
 };
 
 
@@ -276,8 +276,8 @@ class Q31Feature : public Feature
         virtual void m_specializedStream(HardwareSerial *port,
                                          uint8_t sectionIdx,
                                          uint8_t sectionCount=1);
-        virtual void m_specializedBufferStream(uint8_t sectionIdx,
-            char *destination, uint16_t &destIndex, uint8_t sectionCount=1);
+        virtual uint16_t m_specializedBufferStream(uint8_t sectionIdx,
+            char *destination, uint16_t startIndex, uint8_t sectionCount=1);
 };
 
 

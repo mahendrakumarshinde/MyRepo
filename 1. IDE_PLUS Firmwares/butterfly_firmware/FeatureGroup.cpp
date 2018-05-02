@@ -291,7 +291,8 @@ void FeatureGroup::bufferAndStream(
         m_featureBuffer[m_bufferIndex++] = i + 49;
         if (m_features[i] != NULL)
         {
-            m_features[i]->sendToBuffer(m_featureBuffer, m_bufferIndex);
+            m_bufferIndex += m_features[i]->sendToBuffer(m_featureBuffer,
+                                                         m_bufferIndex);
         }
     }
     m_featureBuffer[m_bufferIndex++] = ',';

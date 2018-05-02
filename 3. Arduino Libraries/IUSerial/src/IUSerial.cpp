@@ -187,6 +187,8 @@ bool IUSerial::readCharMsp()
                 // Compare calculated and transferred checksum
                 if (m_mspChecksumIn == c)
                 {
+                    m_buffer[m_bufferIndex++] = 0; // Terminate string
+                    messageIsComplete = true;
                     if (debugMode)
                     {
                         debugPrint(F("Received MSP Command #"), false);
@@ -197,8 +199,6 @@ bool IUSerial::readCharMsp()
                             debugPrint(m_buffer);
                         }
                     }
-                    m_buffer[m_bufferIndex++] = 0; // Terminate string
-                    messageIsComplete = true;
                 }
                 else
                 {

@@ -15,7 +15,7 @@
     Instanciation
 ============================================================================= */
 
-extern char hostSerialBuffer[3072];
+extern char hostSerialBuffer[4096];
 extern IUSerial hostSerial;
 
 extern IURawDataHelper accelRawDataHelper;
