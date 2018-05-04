@@ -174,10 +174,12 @@ void FeatureComputer::exposeConfig()
 /***** Signal Energy, Power and RMS *****/
 
 SignalRMSComputer::SignalRMSComputer(uint8_t id, Feature *rms, bool removeMean,
-                                     bool normalize, float calibrationScaling) :
+                                     bool normalize, bool squared,
+                                     float calibrationScaling) :
     FeatureComputer(id, 1, rms),
     m_removeMean(removeMean),
     m_normalize(normalize),
+    m_squared(squared),
     m_calibrationScaling(calibrationScaling)
 {
     // Constructor
@@ -198,6 +200,11 @@ void SignalRMSComputer::configure(JsonVariant &config)
     if (my_config.success())
     {
         setNormalize(my_config.as<int>() > 0);
+    }
+    my_config = config["SQR"];
+    if (my_config.success())
+    {
+        setSquaredOutput(my_config.as<int>() > 0);
     }
 }
 
@@ -232,9 +239,16 @@ void SignalRMSComputer::m_specializedCompute()
     {
         total = total / (float) totalSize;
     }
-    total = sqrt(total);
+    if (!m_squared)
+    {
+        total = sqrt(total);
+    }
     m_destinations[0]->setSamplingRate(m_sources[0]->getSamplingRate());
-    m_destinations[0]->setResolution(resolution);
+    if (m_squared) {
+        m_destinations[0]->setResolution(sq(resolution));
+    } else {
+        m_destinations[0]->setResolution(resolution);
+    }
     m_destinations[0]->addFloatValue(total * m_calibrationScaling);
     if (featureDebugMode)
     {
@@ -251,11 +265,11 @@ SectionSumComputer::SectionSumComputer(uint8_t id, uint8_t destinationCount,
                                        Feature *destination0,
                                        Feature *destination1,
                                        Feature *destination2,
-                                       bool normalize, bool rmsLike) :
+                                       bool normalize, bool rmsInput) :
     FeatureComputer(id, destinationCount, destination0, destination1,
                     destination2),
     m_normalize(normalize),
-    m_rmsLike(rmsLike)
+    m_rmsInput(rmsInput)
 {
     // Constructor
 }
@@ -274,7 +288,7 @@ void SectionSumComputer::configure(JsonVariant &config)
     my_config = config["RMS"];
     if (my_config.success())
     {
-        setRMSLike(my_config.as<int>() > 0);
+        setRMSInput(my_config.as<int>() > 0);
     }
 }
 
@@ -293,7 +307,7 @@ void SectionSumComputer::m_specializedCompute()
         length = m_sources[i]->getSectionSize() * m_sectionCount[i];
         values = m_sources[i]->getNextFloatValues(m_indexesAsReceiver[i]);
         total = 0;
-        if (m_rmsLike)
+        if (m_rmsInput)
         {
             for (uint16_t j = 0; j < length; ++j)
             {
@@ -307,11 +321,11 @@ void SectionSumComputer::m_specializedCompute()
                 total += values[j];
             }
         }
-        if (m_normalize || m_rmsLike)
+        if (m_normalize || m_rmsInput)
         {
             total = total / (float) length;
         }
-        if (m_rmsLike)
+        if (m_rmsInput)
         {
             total = sqrt(total);
         }
@@ -328,10 +342,10 @@ void SectionSumComputer::m_specializedCompute()
 
 MultiSourceSumComputer::MultiSourceSumComputer(uint8_t id,
                                                Feature *destination0,
-                                               bool normalize, bool rmsLike) :
+                                               bool normalize, bool rmsInput) :
     FeatureComputer(id, 1, destination0),
     m_normalize(normalize),
-    m_rmsLike(rmsLike)
+    m_rmsInput(rmsInput)
 {
     // Constructor
 }
@@ -350,7 +364,7 @@ void MultiSourceSumComputer::configure(JsonVariant &config)
     my_config = config["RMS"];
     if (my_config.success())
     {
-        setRMSLike(my_config.as<int>() > 0);
+        setRMSInput(my_config.as<int>() > 0);
     }
 }
 
@@ -369,7 +383,7 @@ void MultiSourceSumComputer::m_specializedCompute()
     for (uint16_t k = 0; k < length; ++k)
     {
         total = 0;
-        if (m_rmsLike)
+        if (m_rmsInput)
         {
             for (uint8_t i = 0; i < m_sourceCount; ++i)
             {
@@ -385,11 +399,11 @@ void MultiSourceSumComputer::m_specializedCompute()
                     m_indexesAsReceiver[i])[k];
             }
         }
-        if (m_normalize || m_rmsLike)
+        if (m_normalize || m_rmsInput)
         {
             total = total / (float) m_sourceCount;
         }
-        if (m_rmsLike)
+        if (m_rmsInput)
         {
             total = sqrt(total);
         }

@@ -36,7 +36,7 @@ const char DEVICE_TYPE[DEVICE_TYPE_LENGTH] = "ide_plus";
 //#define RTD_DAUGHTER_BOARD
 
 /***** GPS Options *****/
-//#define NO_GPS
+#define NO_GPS
 
 
 /* =============================================================================

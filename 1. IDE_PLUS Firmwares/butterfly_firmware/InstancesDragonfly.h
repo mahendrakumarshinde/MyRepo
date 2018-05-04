@@ -272,6 +272,9 @@ extern void setUpComputerSources();
     Feature Groups
 ============================================================================= */
 
+/***** Default feature group *****/
+extern FeatureGroup *DEFAULT_FEATURE_GROUP;
+
 /***** Instantiation *****/
 extern FeatureGroup healthCheckGroup;
 extern FeatureGroup calibrationGroup;

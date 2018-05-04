@@ -28,7 +28,8 @@
     MAC Address
 ============================================================================= */
 
-const char MAC_ADDRESS[18] = "94:54:93:0F:67:02";
+//const char MAC_ADDRESS[18] = "94:54:93:10:7C:0B";
+const char MAC_ADDRESS[18] = "94:54:93:10:63:DE";
 
 
 /* =============================================================================
@@ -80,9 +81,9 @@ float DISPLACEMENT_RMS_SCALING[3] = {
 
 /***** Acceleration Energy 512 default thresholds *****/
 
-float DEFAULT_ACCEL_ENERGY_NORMAL_TH = 2;  // 110;
-float DEFAULT_ACCEL_ENERGY_WARNING_TH = 5;  // 130;
-float DEFAULT_ACCEL_ENERGY_HIGH_TH = 8;  // 150;
+float DEFAULT_ACCEL_ENERGY_NORMAL_TH = 110;
+float DEFAULT_ACCEL_ENERGY_WARNING_TH = 130;
+float DEFAULT_ACCEL_ENERGY_HIGH_TH = 150;
 
 
 /***** Accelerometer Feature computation parameters *****/

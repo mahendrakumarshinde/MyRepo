@@ -153,6 +153,8 @@ class Conductor
         void activateGroup(FeatureGroup *group);
         void deactivateGroup(FeatureGroup *group);
         void deactivateAllGroups();
+        void configureGroupsForOperation();
+        void configureGroupsForCalibration();
         /***** Time management *****/
         void setRefDatetime(double refDatetime);
         void setRefDatetime(const char* timestamp);
@@ -194,6 +196,8 @@ class Conductor
         // Duration of total cycle (sleep + active) => Used with "PERIODIC"
         // sleep mode only
         uint32_t m_cycleTime = defaultCycleTime;
+        /***** Feature management *****/
+        FeatureGroup *m_mainFeatureGroup = DEFAULT_FEATURE_GROUP;
         /***** Led colors *****/
         RGBColor m_colorSequence[2];  // Main color, secondary color
         uint32_t m_colorFadeIns[2];   // Main color, secondary color
@@ -275,10 +279,9 @@ class Conductor
 
 
 /* =============================================================================
-    Default thresholds
+    Default Thresholds for Accel Energy
 ============================================================================= */
 
-// TODO: put those in flash storage
 extern float DEFAULT_ACCEL_ENERGY_NORMAL_TH;
 extern float DEFAULT_ACCEL_ENERGY_WARNING_TH;
 extern float DEFAULT_ACCEL_ENERGY_HIGH_TH;

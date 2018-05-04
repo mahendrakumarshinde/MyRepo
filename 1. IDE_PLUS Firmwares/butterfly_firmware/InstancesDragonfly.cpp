@@ -209,25 +209,25 @@ q15_t allocatedFFTSpace[1024];
 /***** Accelerometer Features *****/
 
 // 128 sample long accel computers
-SignalRMSComputer accel128ComputerX(1,&accelRMS128X, true, true,
+SignalRMSComputer accel128ComputerX(1,&accelRMS128X, false, true, true,
                                     ACCEL_RMS_SCALING[0]);
-SignalRMSComputer accel128ComputerY(2, &accelRMS128Y, true, true,
+SignalRMSComputer accel128ComputerY(2, &accelRMS128Y, false, true, true,
                                     ACCEL_RMS_SCALING[1]);
-SignalRMSComputer accel128ComputerZ(3, &accelRMS128Z, true, true,
+SignalRMSComputer accel128ComputerZ(3, &accelRMS128Z, false, true, true,
                                     ACCEL_RMS_SCALING[2]);
 MultiSourceSumComputer accelRMS128TotalComputer(4, &accelRMS128Total,
-                                                false, true);
+                                                false, false);
 
 
 // 512 sample long accel computers
 SectionSumComputer accel512ComputerX(5, 1, &accelRMS512X, NULL, NULL,
-                                     false, true);
+                                     true, false);
 SectionSumComputer accel512ComputerY(6, 1, &accelRMS512Y, NULL, NULL,
-                                     false, true);
+                                     true, false);
 SectionSumComputer accel512ComputerZ(7, 1, &accelRMS512Z, NULL, NULL,
-                                     false, true);
+                                     true, false);
 SectionSumComputer accel512TotalComputer(8, 1, &accelRMS512Total, NULL, NULL,
-                                         false, true);
+                                         true, false);
 
 
 // Computers for FFT feature from 512 sample long accel data
@@ -302,9 +302,13 @@ void setUpComputerSources()
 
 
 /* =============================================================================
-    Instantiation
+    Feature Groups
 ============================================================================= */
 
+/***** Default feature group *****/
+FeatureGroup *DEFAULT_FEATURE_GROUP = &motorStandardGroup;
+
+/***** Instantiation *****/
 // Health Check
 FeatureGroup healthCheckGroup("HEALTH", 45000);
 // Calibration

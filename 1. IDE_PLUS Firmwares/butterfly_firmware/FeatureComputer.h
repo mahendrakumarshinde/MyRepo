@@ -81,17 +81,19 @@ class SignalRMSComputer: public FeatureComputer
     public:
         SignalRMSComputer(uint8_t id, Feature *rms=NULL,
                           bool removeMean=false, bool normalize=false,
-                          float calibrationScaling=1.);
+                          bool squared=false, float calibrationScaling=1.);
         /***** Configuration *****/
         virtual void configure(JsonVariant &config);
         void setRemoveMean(bool value) { m_removeMean = value; }
         void setNormalize(bool value) { m_normalize = value; }
+        void setSquaredOutput(bool value) { m_squared = value; }
         void setCalibrationScaling(float val) { m_calibrationScaling = val; }
 
     protected:
         virtual void m_specializedCompute();
         bool m_removeMean;  // Remove mean before computing Signal Energy ?
         bool m_normalize;  // Divide by source sectionSize ?
+        bool m_squared;  // Output is (RMS)^2 (or just RMS)
         float m_calibrationScaling;  // Scaling factor
 };
 
@@ -113,16 +115,16 @@ class SectionSumComputer: public FeatureComputer
                            Feature *destination0=NULL,
                            Feature *destination1=NULL,
                            Feature *destination2=NULL,
-                           bool normalize=false, bool rmsLike=false);
+                           bool normalize=false, bool rmsInput=false);
         /***** Configuration *****/
         virtual void configure(JsonVariant &config);
         void setNormalize(bool value) { m_normalize = value; }
-        void setRMSLike(bool value) { m_rmsLike = value; }
+        void setRMSInput(bool value) { m_rmsInput = value; }
 
     protected:
         virtual void m_specializedCompute();
         bool m_normalize;  // Return the average instead of the sum
-        bool m_rmsLike;  // Return the average instead of the sum
+        bool m_rmsInput;  // Return the average instead of the sum
 };
 
 
@@ -140,16 +142,16 @@ class MultiSourceSumComputer: public FeatureComputer
 {
     public:
         MultiSourceSumComputer(uint8_t id, Feature *destination0=NULL,
-                               bool normalize=false, bool rmsLike=false);
+                               bool normalize=false, bool rmsInput=false);
         /***** Configuration *****/
         virtual void configure(JsonVariant &config);
         void setNormalize(bool value) { m_normalize = value; }
-        void setRMSLike(bool value) { m_rmsLike = value; }
+        void setRMSInput(bool value) { m_rmsInput = value; }
 
     protected:
         virtual void m_specializedCompute();
         bool m_normalize;  // Return the average instead of the sum
-        bool m_rmsLike;  // Return the average instead of the sum
+        bool m_rmsInput;  // Return the average instead of the sum
 };
 
 

@@ -309,13 +309,13 @@ test(FeatureComputer__section_sum)
     assertEqual(round(dest1Values[0] * 100), 200);
     assertEqual(round(dest2Values[0] * 100), 300);
 
-    // With rmsLike = True
+    // With rmsInput = True
     source1.reset();
     source2.reset();
     dest1.reset();
     dest2.reset();
     sumComputer.setNormalize(false);
-    sumComputer.setRMSLike(true);
+    sumComputer.setRMSInput(true);
     for (uint16_t i = 0; i < 2; ++i)  // Need to fill 1 section
     {
         source1.addFloatValue(i + 1.5);
@@ -392,15 +392,15 @@ test(FeatureComputer__multi_source_sum)
     assertEqual(round(dest2Values[2] * 100), 375);
     assertEqual(round(dest2Values[3] * 100), 525);
 
-    // With rmsLike = True
+    // With rmsInput = True
     source1.reset();
     source2.reset();
     dest1.reset();
     dest2.reset();
     sumComputer.setNormalize(false);
     sumComputer2.setNormalize(false);
-    sumComputer.setRMSLike(true);
-    sumComputer2.setRMSLike(true);
+    sumComputer.setRMSInput(true);
+    sumComputer2.setRMSInput(true);
     for (uint16_t i = 0; i < 4; ++i)  // Need to fill 1 section
     {
         source1.addFloatValue(i + 1.5);

@@ -228,9 +228,9 @@ void Conductor::sendConfigChecksum(IUFlash::storedConfig configType)
     size_t charCount = 0;
     if (iuFlash.available())
     {
-//        Serial3.println("here 1");
+//        Serial.println("here 1");
 //        charCount = iuFlash.readConfig(configType, config, configMaxLen);
-//        Serial3.println("here 2");
+//        Serial.println("here 2");
     }
     // Charcount = 0 if flash is unavailable or file not found => Checksum of
     // empty string will be sent, and that will trigger a config refresh
@@ -428,6 +428,7 @@ void Conductor::configureMainOptions(JsonVariant &config)
     if (value.success())
     {
         deactivateAllGroups();
+        bool mainGroupFound = false;
         // activateGroup(&healthCheckGroup);  // Health check is always active
         FeatureGroup *group;
         const char* groupName;
@@ -440,6 +441,11 @@ void Conductor::configureMainOptions(JsonVariant &config)
                 if (group)
                 {
                     activateGroup(group);
+                    if (!mainGroupFound)
+                    {
+                        m_mainFeatureGroup = group;
+                        mainGroupFound = true;
+                    }
                 }
             }
         }
@@ -597,7 +603,7 @@ void Conductor::processLegacyCommands(char *buff)
             {
                 int idx(0), th1(0), th2(0), th3(0);
                 sscanf(buff, "%d-%d-%d-%d", &idx, &th1, &th2, &th3);
-                Feature *feat = motorStandardGroup.getFeature(idx);
+                Feature *feat = m_mainFeatureGroup->getFeature(idx);
                 if (feat)
                 {
                     if (idx == 1 || idx == 2 || idx == 3)
@@ -638,7 +644,8 @@ void Conductor::processLegacyCommands(char *buff)
                 sscanf(buff, "%d:%d-%d-%d", &paramtag, &dataSendPeriod,
                        startSleepTimer, &dataRecTimeout);
                 // We currently only use the data send period option
-                motorStandardGroup.setDataSendPeriod((uint16_t) dataSendPeriod);
+                m_mainFeatureGroup->setDataSendPeriod(
+                    (uint16_t) dataSendPeriod);
             }
             break;
         case '6': // Set which feature are used for OperationState
@@ -653,7 +660,7 @@ void Conductor::processLegacyCommands(char *buff)
                 Feature *feat;
                 for (uint8_t i = 0; i < 6; i++)
                 {
-                    feat = motorStandardGroup.getFeature(i);
+                    feat = m_mainFeatureGroup->getFeature(i);
                     if (feat)
                     {
                         if (fcheck[i] > 0)
@@ -1081,6 +1088,88 @@ void Conductor::deactivateAllGroups()
     deactivateAllFeatures();
 }
 
+/**
+ *
+ */
+void Conductor::configureGroupsForOperation()
+{
+    if (!loadConfigFromFlash(IUFlash::CFG_DEVICE))
+    {
+        // Config not found, default to mainFeatureGroup
+        deactivateAllGroups();
+        activateGroup(m_mainFeatureGroup);
+
+    }
+    if (!loadConfigFromFlash(IUFlash::CFG_FEATURE))
+    {
+        // Config not found, default to DEFAULT_ACCEL_ENERGY_THRESHOLDS
+        accelRMS512Total.setThresholds(DEFAULT_ACCEL_ENERGY_NORMAL_TH,
+                                       DEFAULT_ACCEL_ENERGY_WARNING_TH,
+                                       DEFAULT_ACCEL_ENERGY_HIGH_TH);
+        accelRMS512Total.enableOperationState();
+    }
+    // TODO: The following should be written in flash or sent from cloud
+    // RMS computer: keep mean
+    accel128ComputerX.setRemoveMean(false);
+    accel128ComputerY.setRemoveMean(false);
+    accel128ComputerZ.setRemoveMean(false);
+    // RMS computer: normalize
+    accel128ComputerX.setNormalize(true);
+    accel128ComputerY.setNormalize(true);
+    accel128ComputerZ.setNormalize(true);
+    // RMS computer: output is squared
+    accel128ComputerX.setSquaredOutput(true);
+    accel128ComputerY.setSquaredOutput(true);
+    accel128ComputerZ.setSquaredOutput(true);
+    // MultiSourceSumComputer: sum 3 axis and don't divide
+    accelRMS128TotalComputer.setNormalize(false);
+    accelRMS128TotalComputer.setRMSInput(false);
+    // SectionSumComputer: normalize
+    accel512ComputerX.setNormalize(true);
+    accel512ComputerY.setNormalize(true);
+    accel512ComputerZ.setNormalize(true);
+    accel512TotalComputer.setNormalize(true);
+    // SectionSumComputer: output of 128ms feature is squared, not RMS
+    accel512ComputerY.setRMSInput(false);
+    accel512ComputerX.setRMSInput(false);
+    accel512ComputerZ.setRMSInput(false);
+    accel512TotalComputer.setRMSInput(false);
+}
+
+/**
+ *
+ */
+void Conductor::configureGroupsForCalibration()
+{
+    deactivateAllGroups();
+    activateGroup(&calibrationGroup);
+    // RMS computer: remove mean
+    accel128ComputerX.setRemoveMean(true);
+    accel128ComputerY.setRemoveMean(true);
+    accel128ComputerZ.setRemoveMean(true);
+    // RMS computer: normalize
+    accel128ComputerX.setNormalize(true);
+    accel128ComputerY.setNormalize(true);
+    accel128ComputerZ.setNormalize(true);
+    // RMS computer: output is RMS (not squared)
+    accel128ComputerX.setSquaredOutput(false);
+    accel128ComputerY.setSquaredOutput(false);
+    accel128ComputerZ.setSquaredOutput(false);
+    // MultiSourceSumComputer: RMS of 3 axis
+    accelRMS128TotalComputer.setNormalize(false);
+    accelRMS128TotalComputer.setRMSInput(true);
+    // SectionSumComputer: don't normalize (RMS will be used)
+    accel512ComputerX.setNormalize(true);
+    accel512ComputerY.setNormalize(true);
+    accel512ComputerZ.setNormalize(true);
+    accel512TotalComputer.setNormalize(true);
+    // SectionSumComputer: RMS of 4 128ms features
+    accel512ComputerY.setRMSInput(true);
+    accel512ComputerX.setRMSInput(true);
+    accel512ComputerZ.setRMSInput(true);
+    accel512TotalComputer.setRMSInput(true);
+}
+
 
 /* =============================================================================
     Time management
@@ -1226,8 +1315,7 @@ void Conductor::changeUsageMode(UsageMode::option usage)
     switch (m_usageMode)
     {
         case UsageMode::CALIBRATION:
-            deactivateAllGroups();
-            activateGroup(&calibrationGroup);
+            configureGroupsForCalibration();
             overrideLedColor(RGB_CYAN);
             streamMode = StreamingMode::WIRED;
             msg = "calibration";
@@ -1240,9 +1328,7 @@ void Conductor::changeUsageMode(UsageMode::option usage)
         case UsageMode::OPERATION:
         case UsageMode::OPERATION_BIS:
             resetLed();
-            deactivateAllGroups();
-//            activateGroup(&healthCheckGroup);
-            activateGroup(&motorStandardGroup);
+            configureGroupsForOperation();
             iuAccelerometer.resetScale();
             if (iuWiFi.isConnected())
             {

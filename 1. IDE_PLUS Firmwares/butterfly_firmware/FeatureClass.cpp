@@ -129,17 +129,17 @@ void Feature::configure(JsonVariant &config)
 {
     // Thresholds setting for OperationState
     float threshold;
-    bool thresholdUpdated = false;
     for (uint8_t i = 0; i < 3; ++i)
     {
         threshold = config["TRH"][i];
         if (threshold)
         {
             setThreshold(i, threshold);
-            thresholdUpdated = true;
         }
     }
-    if (thresholdUpdated)
+    disableOperationState(); // Operation state computation disabled by default
+    JsonVariant value = config["OPS"];
+    if (value.success() && value.as<int>() == 1)
     {
         enableOperationState();
     }
