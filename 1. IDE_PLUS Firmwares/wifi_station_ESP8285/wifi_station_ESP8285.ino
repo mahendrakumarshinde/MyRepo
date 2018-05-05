@@ -68,8 +68,6 @@ void sendConnectionStatusToHost()
 void setup()
 {
     hostSerial.begin();
-    // Turn off radio at wake up to save power
-    conductor.turnOffRadio();
     // Get config: should the ESP sleep? What's the BLE MAC address?
     #if IUDEBUG_ANY == 1
         conductor.forceWiFiConfig(testSSID, testPSK, testStaticIP,
@@ -82,10 +80,6 @@ void setup()
     // Prepare to receive MQTT messages
     mqttHelper.client.setCallback(mqttNewMessageCallback);
     mqttHelper.setOnConnectionCallback(onMQTTConnection);
-    // Configure WiFi and turn radio back on
-    WiFi.setAutoConnect(true);
-    WiFi.setAutoReconnect(true);
-    conductor.turnOnRadio();
     // Attach the timers
     cloudStatusUpdater.attach(300, timeTopublishWifiInfo);
     hostConnectionStatusUpdater.attach(5, sendConnectionStatusToHost);

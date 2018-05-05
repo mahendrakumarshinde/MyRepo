@@ -23,11 +23,11 @@ const char DEVICE_TYPE[DEVICE_TYPE_LENGTH] = "ide_plus";
 
 /***** Test connection *****/
 #if IUDEBUG_ANY == 1
-    const char testSSID[14] = "The Port WiFi";
-    const char testPSK[11] = "Th3P0rt317";
-    IPAddress testStaticIP(0, 0, 0, 0);
-    IPAddress testGateway(0, 0, 0, 0);
-    IPAddress testSubnet(0, 0, 0, 0);
+    const char testSSID[14] = "TP-LINK_3A67";
+    const char testPSK[13] = "tqN7*EnTsrP0";
+    const IPAddress testStaticIP(0, 0, 0, 0);
+    const IPAddress testGateway(0, 0, 0, 0);
+    const IPAddress testSubnet(0, 0, 0, 0);
 //    const char testSSID[19] = "AndroidHotspot6994";
 //    const char testPSK[13] = "f1b94630f970";
 #endif  // IUDEBUG_ANY == 1

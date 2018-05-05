@@ -319,6 +319,12 @@ FeatureGroup rawAccelGroup("RAWACC", 512);
 FeatureGroup pressStandardGroup("PRSSTD", 512);
 // Standard Motor Monitoring
 FeatureGroup motorStandardGroup("MOTSTD", 512);
+// Bearing monitoring
+FeatureGroup bearingGroup("BEAR_Z", 512);
+// Motor monitoring with focus on acceleration for each axis
+FeatureGroup motorAccelGroup("MOTACC", 512);
+// Forging Monitoring with focus on displacements on each axis
+FeatureGroup ForgingDispGroup("PRSDIS", 512);
 
 
 /***** Populate groups *****/
@@ -361,6 +367,30 @@ void populateFeatureGroups()
     motorStandardGroup.addFeature(&velRMS512Z);
     motorStandardGroup.addFeature(&temperatureA);
     motorStandardGroup.addFeature(&audioDB4096);
+
+    /** Bearing monitoring **/
+    bearingGroup.addFeature(&accelRMS512Total);
+    bearingGroup.addFeature(&velRMS512X);
+    bearingGroup.addFeature(&velRMS512Y);
+    bearingGroup.addFeature(&velRMS512Z);
+    bearingGroup.addFeature(&dispRMS512Z);
+    bearingGroup.addFeature(&audioDB4096);
+
+    /** Motor monitoring with focus on acceleration for each axis **/
+    motorAccelGroup.addFeature(&accelRMS512Total);
+    motorAccelGroup.addFeature(&accelRMS512X);
+    motorAccelGroup.addFeature(&accelRMS512Y);
+    motorAccelGroup.addFeature(&accelRMS512Z);
+    motorAccelGroup.addFeature(&temperatureA);
+    motorAccelGroup.addFeature(&audioDB4096);
+
+    /** Forging Monitoring with focus on displacements on each axis **/
+    ForgingDispGroup.addFeature(&accelRMS512Total);
+    ForgingDispGroup.addFeature(&dispRMS512X);
+    ForgingDispGroup.addFeature(&dispRMS512Y);
+    ForgingDispGroup.addFeature(&dispRMS512Z);
+    ForgingDispGroup.addFeature(&velRMS512Z);
+    ForgingDispGroup.addFeature(&audioDB4096);
 }
 
 #endif // DRAGONFLY

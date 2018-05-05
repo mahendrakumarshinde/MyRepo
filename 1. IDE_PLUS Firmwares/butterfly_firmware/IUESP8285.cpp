@@ -84,6 +84,7 @@ void IUESP8285::manageAutoSleep()
             else if (m_wakeUpNow) // Wake up now and stay awake
             {
                 sendMSPCommand(MSPCommand::WIFI_WAKE_UP);
+                sendWiFiCredentials();
                 m_awakeTimerStart = now;  // Reset auto-sleep start timer
             }
             else if (m_sleeping)  // Not connected, already sleeping
@@ -91,6 +92,7 @@ void IUESP8285::manageAutoSleep()
                 if (now - m_sleepTimerStart > m_autoSleepDuration)
                 {
                     sendMSPCommand(MSPCommand::WIFI_WAKE_UP);
+                    sendWiFiCredentials();
                     m_awakeTimerStart = now;  // Reset auto-sleep start timer
                 }
                 else

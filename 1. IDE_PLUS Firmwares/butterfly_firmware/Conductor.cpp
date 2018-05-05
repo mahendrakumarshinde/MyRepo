@@ -95,11 +95,20 @@ void Conductor::resetLed()
 {
     rgbLed.unlockColors();
     m_colorSequence[0] = RGB_BLACK;
-    m_colorSequence[1] = RGB_BLACK;
     m_colorFadeIns[0] = 0;
-    m_colorFadeIns[1] = 0;
-    m_colorDurations[0] = 1000;
-    m_colorDurations[1] = 0;
+    m_colorDurations[0] = 3000;
+    if (iuWiFi.isConnected())
+    {
+        m_colorSequence[1] = RGB_WHITE;
+        m_colorFadeIns[1] = 0;
+        m_colorDurations[1] = 100;
+    }
+    else
+    {
+        m_colorSequence[1] = RGB_BLACK;
+        m_colorFadeIns[1] = 0;
+        m_colorDurations[1] = 0;
+    }
     rgbLed.startNewColorQueue(2, m_colorSequence, m_colorFadeIns,
                               m_colorDurations);
     showOperationStateOnLed();

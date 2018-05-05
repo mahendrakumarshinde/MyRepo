@@ -281,6 +281,9 @@ extern FeatureGroup calibrationGroup;
 extern FeatureGroup rawAccelGroup;
 extern FeatureGroup pressStandardGroup;
 extern FeatureGroup motorStandardGroup;
+extern FeatureGroup bearingGroup;
+extern FeatureGroup motorAccelGroup;
+extern FeatureGroup ForgingDispGroup;
 
 /***** Populate groups *****/
 extern void populateFeatureGroups();

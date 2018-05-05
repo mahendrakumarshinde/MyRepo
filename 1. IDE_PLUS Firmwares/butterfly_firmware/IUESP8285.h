@@ -27,7 +27,7 @@ class IUESP8285 : public IUSerial, public Component
         // WiFi config (credentials or Static IP) MultiMessageValidator timeout
         static const uint32_t wifiConfigReceptionTimeout = 5000;  // ms
         // Sleep management
-        static const uint32_t defaultAutoSleepDelay = 60000;  // ms
+        static const uint32_t defaultAutoSleepDelay = 130000;  // ms
         static const uint32_t defaultAutoSleepDuration = 90000;  // ms
         // Timeout for "Trying to connect" LED blinking
         static const uint32_t displayConnectAttemptTimeout = 20000;  // ms

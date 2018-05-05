@@ -44,11 +44,11 @@ class Conductor
         /** Connection retry constants **/
         static const uint8_t connectionRetry = 3;
         // Single connection attempt timeout
-        static const uint32_t connectionTimeout = 15000;  // ms
+        static const uint32_t connectionTimeout = 30000;  // ms
         // Delay between 2 connection attemps
         static const uint32_t reconnectionInterval = 1000;  // ms
         // ESP82 will deep-sleep after being disconnected for more than:
-        static const uint32_t disconnectionTimeout = 60000;  // ms
+        static const uint32_t disconnectionTimeout = 130000;  // ms
         /***** Core *****/
         Conductor();
         virtual ~Conductor() {}
