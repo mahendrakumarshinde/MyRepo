@@ -320,7 +320,7 @@ FeatureGroup pressStandardGroup("PRSSTD", 512);
 // Standard Motor Monitoring
 FeatureGroup motorStandardGroup("MOTSTD", 512);
 // Bearing monitoring
-FeatureGroup bearingGroup("BEAR_Z", 512);
+FeatureGroup bearingZGroup("BEAR_Z", 512);
 // Motor monitoring with focus on acceleration for each axis
 FeatureGroup motorAccelGroup("MOTACC", 512);
 // Forging Monitoring with focus on displacements on each axis
@@ -369,12 +369,12 @@ void populateFeatureGroups()
     motorStandardGroup.addFeature(&audioDB4096);
 
     /** Bearing monitoring **/
-    bearingGroup.addFeature(&accelRMS512Total);
-    bearingGroup.addFeature(&velRMS512X);
-    bearingGroup.addFeature(&velRMS512Y);
-    bearingGroup.addFeature(&velRMS512Z);
-    bearingGroup.addFeature(&dispRMS512Z);
-    bearingGroup.addFeature(&audioDB4096);
+    bearingZGroup.addFeature(&accelRMS512Total);
+    bearingZGroup.addFeature(&velRMS512X);
+    bearingZGroup.addFeature(&velRMS512Y);
+    bearingZGroup.addFeature(&velRMS512Z);
+    bearingZGroup.addFeature(&dispRMS512Z);
+    bearingZGroup.addFeature(&audioDB4096);
 
     /** Motor monitoring with focus on acceleration for each axis **/
     motorAccelGroup.addFeature(&accelRMS512Total);

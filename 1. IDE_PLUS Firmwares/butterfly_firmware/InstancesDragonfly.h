@@ -281,7 +281,7 @@ extern FeatureGroup calibrationGroup;
 extern FeatureGroup rawAccelGroup;
 extern FeatureGroup pressStandardGroup;
 extern FeatureGroup motorStandardGroup;
-extern FeatureGroup bearingGroup;
+extern FeatureGroup bearingZGroup;
 extern FeatureGroup motorAccelGroup;
 extern FeatureGroup ForgingDispGroup;
 

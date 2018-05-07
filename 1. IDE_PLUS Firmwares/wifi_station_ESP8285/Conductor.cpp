@@ -504,6 +504,7 @@ bool Conductor::reconnect(bool forceNewCredentials)
         {
             // New and different user input for SSID and Password => disconnect
             // from current SSID then reconnect to new SSID
+            ESP.eraseConfig();
             disconnectWifi();
             delay(1000);  // Wait for effective disconnection
         }
@@ -537,7 +538,12 @@ bool Conductor::reconnect(bool forceNewCredentials)
             }
             return false;
         }
-        WiFi.config(m_staticIp, m_gateway, m_subnetMask);
+        if (!((uint32_t) m_staticIp == 0 ||
+              (uint32_t) m_gateway == 0 ||
+              (uint32_t) m_subnetMask == 0))
+        {
+            WiFi.config(m_staticIp, m_gateway, m_subnetMask);
+        }
         WiFi.begin(m_userSSID, m_userPassword);
         m_lastConnectionAttempt = current;
         m_remainingConnectionAttempt--;
