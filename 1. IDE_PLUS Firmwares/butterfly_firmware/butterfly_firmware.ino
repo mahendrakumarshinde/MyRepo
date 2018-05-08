@@ -150,6 +150,21 @@ static void led_callback(void) {
 }
 
 
+/***** Watch Dog *****/
+
+static armv7m_timer_t watchdog_timer;
+uint32_t lastActive = 0;
+uint32_t loopTimeout = 60000;  // 1min timeout
+
+static void watchdog_callback(void) {
+    if (lastActive > 0 && millis() - lastActive > loopTimeout)
+    {
+        STM32.reset();
+    }
+    armv7m_timer_start(&watchdog_timer, 5);
+}
+
+
 /***** Begin *****/
 
 void setup()
@@ -158,6 +173,8 @@ void setup()
     rgbLed.setupHardware();
     armv7m_timer_create(&led_timer, (armv7m_timer_callback_t)led_callback);
     armv7m_timer_start(&led_timer, 1);
+    armv7m_timer_create(&watchdog_timer, (armv7m_timer_callback_t)watchdog_callback);
+    armv7m_timer_start(&watchdog_timer, 5);
     conductor.showStatusOnLed(RGB_CYAN);
     #if defined(UNITTEST) || defined(COMPONENTTEST) || defined(INTEGRATEDTEST)
         delay(2000);
@@ -292,6 +309,7 @@ void setup()
  */
 void loop()
 {
+    lastActive = millis();
     #if defined(UNITTEST) || defined(COMPONENTTEST) || defined(INTEGRATEDTEST)
         Test::run();
         rgbLed.manageColorTransitions();

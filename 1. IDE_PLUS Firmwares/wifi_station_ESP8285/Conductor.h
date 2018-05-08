@@ -53,6 +53,8 @@ class Conductor
         Conductor();
         virtual ~Conductor() {}
         MacAddress getBleMAC() { return m_bleMAC; }
+        void setBleMAC(MacAddress hostBLEMac);
+        void setBleMAC(const char *hostBLEMac);
         void deepsleep(uint32_t duration_ms=deepSleepDuration);
         /***** Communication with host *****/
         void readMessagesFromHost();

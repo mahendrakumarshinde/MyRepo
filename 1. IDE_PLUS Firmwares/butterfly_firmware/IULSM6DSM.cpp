@@ -128,16 +128,16 @@ void IULSM6DSM::setPowerMode(PowerMode::option pMode)
 void IULSM6DSM::setSamplingRate(uint16_t samplingRate)
 {
     HighFreqSensor::setSamplingRate(samplingRate);
-    m_odr = ODR_12_5Hz;
-    if (samplingRate > 12) { m_odr = ODR_26Hz; }
-    else if (samplingRate > 26) { m_odr = ODR_52Hz; }
-    else if (samplingRate > 52) { m_odr = ODR_104Hz; }
-    else if (samplingRate > 104) { m_odr = ODR_208Hz; }
-    else if (samplingRate > 208) { m_odr = ODR_416Hz; }
-    else if (samplingRate > 416) { m_odr = ODR_833Hz; }
-    else if (samplingRate > 833) { m_odr = ODR_1660Hz; }
+    if (samplingRate > 3330) { m_odr = ODR_6660Hz; }
     else if (samplingRate > 1660) { m_odr = ODR_3330Hz; }
-    else if (samplingRate > 3330) { m_odr = ODR_6660Hz; }
+    else if (samplingRate > 833) { m_odr = ODR_1660Hz; }
+    else if (samplingRate > 416) { m_odr = ODR_833Hz; }
+    else if (samplingRate > 208) { m_odr = ODR_416Hz; }
+    else if (samplingRate > 104) { m_odr = ODR_208Hz; }
+    else if (samplingRate > 52) { m_odr = ODR_104Hz; }
+    else if (samplingRate > 26) { m_odr = ODR_52Hz; }
+    else if (samplingRate > 12) { m_odr = ODR_26Hz; }
+    else { m_odr = ODR_12_5Hz; }
     // Now call setScale to set the ODR at the same time
     setScale(m_scale);
 }
@@ -363,6 +363,7 @@ void IULSM6DSM::sendData(HardwareSerial *port)
 {
     if (loopDebugMode)  // Human readable in the console
     {
+        port->println(millis());
         port->print("AX: ");
         port->println((float) m_data[0] * m_resolution / 9.80665, 4);
         port->print("AY: ");

@@ -9,7 +9,8 @@ char hostSerialBuffer[4096];
 IUSerial hostSerial(&Serial, hostSerialBuffer, 4096, IUSerial::MS_PROTOCOL,
                     115200, ';', 100);
 
-IURawDataHelper accelRawDataHelper(10000,  // 10s timeout
+IURawDataHelper accelRawDataHelper(10000,  // 10s timeout to input all keys
+                                   300000,  // 5min timeout to succefully post data
                                    DATA_DEFAULT_ENDPOINT_HOST,
                                    RAW_DATA_DEFAULT_ENDPOINT_ROUTE,
                                    DATA_DEFAULT_ENDPOINT_PORT);
@@ -38,6 +39,18 @@ Conductor::Conductor()
     strncpy(m_diagnosticPostHost, DATA_DEFAULT_ENDPOINT_HOST, MAX_HOST_LENGTH);
     strncpy(m_diagnosticPostRoute, DIAGNOSTIC_DEFAULT_ENDPOINT_ROUTE,
             MAX_ROUTE_LENGTH);
+}
+
+void Conductor::setBleMAC(MacAddress hostBLEMac)
+{
+    m_bleMAC = hostBLEMac;
+    mqttHelper.setDeviceMAC(m_bleMAC);
+}
+
+void Conductor::setBleMAC(const char *hostBLEMac)
+{
+    m_bleMAC.fromString(hostBLEMac);
+    mqttHelper.setDeviceMAC(m_bleMAC);
 }
 
 /**
@@ -102,8 +115,7 @@ void Conductor::processMessageFromHost()
     {
         /***** MAC addresses *****/
         case MSPCommand::RECEIVE_BLE_MAC:
-            m_bleMAC = hostSerial.mspReadMacAddress();
-            mqttHelper.setDeviceMAC(m_bleMAC);
+            setBleMAC(hostSerial.mspReadMacAddress());
             break;
         case MSPCommand::ASK_WIFI_MAC:
             hostSerial.mspSendMacAddress(MSPCommand::RECEIVE_WIFI_MAC,
@@ -162,7 +174,7 @@ void Conductor::processMessageFromHost()
 
         /***** Data publication *****/
         case MSPCommand::PUBLISH_RAW_DATA:
-            if (accelRawDataHelper.hasTimedOut())
+            if (accelRawDataHelper.inputHasTimedOut())
             {
                 accelRawDataHelper.resetPayload();
             }
@@ -170,7 +182,7 @@ void Conductor::processMessageFromHost()
                                                strlen(buffer) - 2);
             hostSerial.sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION, buffer,
                                       1);
-            if (!accelRawDataHelper.hasTimedOut() &&
+            if (!accelRawDataHelper.inputHasTimedOut() &&
                 accelRawDataHelper.areAllKeyPresent())
             {
                 hostSerial.sendMSPCommand(MSPCommand::WIFI_CONFIRM_PUBLICATION);
@@ -178,7 +190,7 @@ void Conductor::processMessageFromHost()
             accelRawDataHelper.publishIfReady(m_bleMAC);
             break;
         case MSPCommand::PUBLISH_FEATURE:
-            publishFeature(&buffer[7], bufferLength, buffer, 6);
+            publishFeature(&buffer[7], bufferLength - 7, buffer, 6);
             break;
         case MSPCommand::PUBLISH_DIAGNOSTIC:
             publishDiagnostic(buffer, bufferLength);

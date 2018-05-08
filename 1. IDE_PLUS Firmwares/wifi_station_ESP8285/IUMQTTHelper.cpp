@@ -45,15 +45,15 @@ void IUMQTTHelper::setCredentials(const char *username, const char *password)
  */
 void IUMQTTHelper::setDeviceMAC(MacAddress deviceMAC)
 {
-    // New MAC address
-    m_deviceMAC = deviceMAC;
     // Replace MAC address in MQTT last will message
     char *pch;
     pch = strstr(m_willMessage, m_deviceMAC.toString().c_str()); // Find current
     if (pch)
     {
-        strncpy(pch, m_deviceMAC.toString().c_str(), 17);  // Replace by new
+        strncpy(pch, deviceMAC.toString().c_str(), 17);  // Replace by new
     }
+    // New MAC address
+    m_deviceMAC = deviceMAC;
     if (debugMode)
     {
         debugPrint("MQTT last will updated: ", false);

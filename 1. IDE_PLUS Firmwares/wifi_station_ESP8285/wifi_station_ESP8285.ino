@@ -68,10 +68,15 @@ void sendConnectionStatusToHost()
 void setup()
 {
     hostSerial.begin();
+    if (debugMode)
+    {
+        delay(5000);
+    }
     // Get config: should the ESP sleep? What's the BLE MAC address?
     #if IUDEBUG_ANY == 1
         conductor.forceWiFiConfig(testSSID, testPSK, testStaticIP,
                                   testGateway, testSubnet);
+        conductor.setBleMAC(hostMacAddress);
     #else
         conductor.getConfigFromMainBoard();
     #endif
@@ -84,6 +89,9 @@ void setup()
     cloudStatusUpdater.attach(300, timeTopublishWifiInfo);
     hostConnectionStatusUpdater.attach(5, sendConnectionStatusToHost);
     delay(100);
+    #if IUDEBUG_ANY == 1
+        conductor.reconnect(true);
+    #endif
 }
 
 void loop()

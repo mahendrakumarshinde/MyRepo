@@ -25,8 +25,9 @@ class IURawDataHelper
         static const uint8_t EXPECTED_KEY_COUNT = 3;
         static char EXPECTED_KEYS[EXPECTED_KEY_COUNT + 1];
         /***** Core *****/
-        IURawDataHelper(uint32_t timeout, const char *endpointHost,
-                        const char *endpointRoute, uint16_t enpointPort);
+        IURawDataHelper(uint32_t inputTimeout, uint32_t postTimeout,
+                        const char *endpointHost, const char *endpointRoute,
+                        uint16_t enpointPort);
         virtual ~IURawDataHelper() {}
         /***** Endpoint *****/
         void setEndpointHost(char *host)
@@ -36,7 +37,8 @@ class IURawDataHelper
         void setEndpointPort(uint16_t port) { m_endpointPort = port; }
         /***** Payload construction *****/
         virtual void resetPayload();
-        virtual bool hasTimedOut();
+        virtual bool inputHasTimedOut();
+        virtual bool postPayloadHasTimedOut();
         virtual bool addKeyValuePair(char key, const char *value,
                                      uint16_t valueLength);
         virtual bool areAllKeyPresent();
@@ -53,7 +55,9 @@ class IURawDataHelper
         uint16_t m_payloadCounter;
         uint32_t m_payloadStartTime;  // For timing out
         bool m_keyAdded[EXPECTED_KEY_COUNT];
-        uint32_t m_timeout;
+        uint32_t m_inputTimeout;
+        uint32_t m_firstPostTime;
+        uint32_t m_postTimeout;
         /***** HTTP Post request *****/
         virtual int httpPostPayload(MacAddress macAddress);
 };

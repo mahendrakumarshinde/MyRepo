@@ -9,13 +9,15 @@ char IURawDataHelper::EXPECTED_KEYS[IURawDataHelper::EXPECTED_KEY_COUNT + 1] =
     "XYZ";
 
 
-IURawDataHelper::IURawDataHelper(uint32_t timeout, const char *endpointHost,
-                                 const char *endpointRoute,
-                                 uint16_t enpointPort) :
+IURawDataHelper::IURawDataHelper(
+    uint32_t inputTimeout, uint32_t postTimeout, const char *endpointHost,
+    const char *endpointRoute, uint16_t enpointPort) :
     m_endpointPort(enpointPort),
     m_payloadCounter(0),
     m_payloadStartTime(0),
-    m_timeout(timeout)
+    m_inputTimeout(inputTimeout),
+    m_firstPostTime(0),
+    m_postTimeout(postTimeout)
 {
     strncpy(m_endpointHost, endpointHost, MAX_HOST_LENGTH);
     strncpy(m_endpointRoute, endpointRoute, MAX_ROUTE_LENGTH);
@@ -38,6 +40,7 @@ void IURawDataHelper::resetPayload()
     }
     m_payloadCounter = 0;
     m_payloadStartTime = 0;
+    m_firstPostTime = 0;
     for (uint8_t i = 0; i < EXPECTED_KEY_COUNT; ++i)
     {
         m_keyAdded[i] = false;
@@ -45,23 +48,46 @@ void IURawDataHelper::resetPayload()
 }
 
 /**
- * Reset the payload if too much time passed since starting it.
+ * Tells whether too much time passed since starting it receiving inputs.
  *
- * @return true if a timeout happened and that the payload has been reset,
- * else false.
+ * @return true if a timeout happened and that the payload needs to be
+ * reset, else false.
  */
-bool IURawDataHelper::hasTimedOut()
+bool IURawDataHelper::inputHasTimedOut()
 {
     if (m_payloadStartTime == 0)
     {
         return false;
     }
     if (m_payloadCounter > 0 && (millis() -
-            m_payloadStartTime > m_timeout))
+            m_payloadStartTime > m_inputTimeout))
     {
         if (debugMode)
         {
             debugPrint("Raw data payload has timed out.");
+        }
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Tells whether too much time passed since starting it receiving inputs.
+ *
+ * @return true if a timeout happened and that the payload needs to be
+ * reset, else false.
+ */
+bool IURawDataHelper::postPayloadHasTimedOut()
+{
+    if (m_firstPostTime == 0)
+    {
+        return false;
+    }
+    if (millis() - m_firstPostTime > m_postTimeout)
+    {
+        if (debugMode)
+        {
+            debugPrint("Raw data post payload has expired.");
         }
         return true;
     }
@@ -122,12 +148,19 @@ bool IURawDataHelper::addKeyValuePair(char key, const char *value,
     {
         strncat(m_payload, ",\"", 2);
     }
-    strncat(m_payload, &key, 1);
-    strncat(m_payload, "\":\"", 3);
+    m_payloadCounter += 2;
+    m_payload[m_payloadCounter++] = key;
+    m_payload[m_payloadCounter++] = '"';
+    m_payload[m_payloadCounter++] = ':';
+    m_payload[m_payloadCounter++] = '"';
+//    strncat(m_payload, &key, 1);
+//    strncat(m_payload, "\":\"", 3);
     strncat(m_payload, value, valueLength);
-    char quote = '\"';
-    strncat(m_payload, &quote, 1);
-    m_payloadCounter += valueLength + 7;
+    m_payloadCounter += valueLength;
+    m_payload[m_payloadCounter++] = '"';
+//    char quote = '\"';
+//    strncat(m_payload, &quote, 1);
+//    m_payloadCounter += valueLength + 7;
     // Handle key duplication and timeout
     if (m_payloadStartTime == 0)
     {
@@ -162,7 +195,7 @@ bool IURawDataHelper::areAllKeyPresent()
  */
 int IURawDataHelper::publishIfReady(MacAddress macAddress)
 {
-    if (hasTimedOut())
+    if (inputHasTimedOut() || postPayloadHasTimedOut())
     {
         resetPayload();
         return false;
@@ -171,6 +204,7 @@ int IURawDataHelper::publishIfReady(MacAddress macAddress)
     {
         return false;
     }
+    m_firstPostTime = millis();
     int httpCode = httpPostPayload(macAddress);
     if (debugMode)
     {
@@ -194,15 +228,27 @@ int IURawDataHelper::publishIfReady(MacAddress macAddress)
 int IURawDataHelper::httpPostPayload(MacAddress macAddress)
 {
     // Close JSON first (last curled brace) if not closed yet
-    char closingBrace = '}';
-    if (m_payload[m_payloadCounter - 1] != closingBrace)
+    if (m_payload[m_payloadCounter - 1] != '}')
     {
-        strncat(m_payload, &closingBrace, 1);
-        m_payloadCounter++;
+        m_payload[m_payloadCounter++] = '}';
+    }
+    if (debugMode)
+    {
+        debugPrint("Post payload: ", false);
+        debugPrint(m_payload);
     }
     char fullUrl[strlen(m_endpointRoute) + 18];
     strcpy(fullUrl, m_endpointRoute);
     strncat(fullUrl, macAddress.toString().c_str(), 18);
+    if (debugMode)
+    {
+        debugPrint("Host: ", false);
+        debugPrint(m_endpointHost);
+        debugPrint("Port: ", false);
+        debugPrint(m_endpointPort);
+        debugPrint("URL: ", false);
+        debugPrint(fullUrl);
+    }
     return httpPostBigJsonRequest(m_endpointHost, fullUrl, m_endpointPort,
                                   (uint8_t*) m_payload, m_payloadCounter);
 }
