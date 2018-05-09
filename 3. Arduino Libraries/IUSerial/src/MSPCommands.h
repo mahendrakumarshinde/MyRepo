@@ -25,7 +25,7 @@ namespace MSPCommand
         // Wifi commands
         WIFI_WAKE_UP,  // 10: Notify WiFi to wake up
         WIFI_DEEP_SLEEP,  // 11: Deep-sleep WiFi  - optional duration (uint16_t in seconds)
-        WIFI_HARD_RESET,  // 12: WiFi Hard Reset
+        WIFI_SOFT_RESET,  // 12: WiFi Soft Reset
         WIFI_CONNECT,  // 13: Connect WiFi using saved credentials
         WIFI_DISCONNECT,  // 14: Disconnect WiFi and turn off WiFi STA mode
         // Data publication

@@ -152,7 +152,7 @@ void Conductor::processMessageFromHost()
             m_shouldWakeUp = false;
             deepsleep();
             break;
-        case MSPCommand::WIFI_HARD_RESET:
+        case MSPCommand::WIFI_SOFT_RESET:
             ESP.reset();
             break;
         case MSPCommand::WIFI_CONNECT:

@@ -240,7 +240,11 @@ void IUSerial::sendMSPCommand(MSPCommand::command cmd, const char* cmdMsg,
         debugPrint("Sending MSP Command #", false);
         debugPrint((uint8_t) cmd);
         debugPrint("MSP message is: ", false);
-        debugPrint(cmdMsg);
+        for (uint16_t i = 0; i < cmdSize; i++)
+        {
+            debugPrint(cmdMsg[i], false);
+        }
+        debugPrint("");
     }
     sendMspCommandHeader(cmdSize, cmd);
     for (uint16_t i = 0; i < cmdSize; ++i)

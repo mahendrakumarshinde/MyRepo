@@ -25,6 +25,7 @@ void changeLedColor(bool R, bool G, bool B)
 void setup()
 {
     Serial.begin(115200);
+    Serial1.begin(115200);
     pinMode(RED_PIN, OUTPUT);
     pinMode(GREEN_PIN, OUTPUT);
     pinMode(BLUE_PIN, OUTPUT);

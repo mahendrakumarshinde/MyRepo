@@ -37,9 +37,44 @@ void IUESP8285::setupHardware()
 //        IUSerial::suspend();
 //        return;
 //    }
-    begin();
+    pinMode(ESP8285_ENABLE_PIN, OUTPUT);
     hardReset();
+    begin();
     setPowerMode(PowerMode::REGULAR);
+}
+
+/**
+ * Disable the ESP8285
+ */
+void IUESP8285::turnOff()
+{
+    if (m_on)
+    {
+        digitalWrite(ESP8285_ENABLE_PIN, LOW);
+        m_on = false;
+    }
+}
+
+/**
+ * Disable the ESP8285
+ */
+void IUESP8285::turnOn()
+{
+    if (!m_on)
+    {
+        digitalWrite(ESP8285_ENABLE_PIN, HIGH);
+        m_on = true;
+    }
+}
+
+/**
+ * Hardware reset by disabling then re-enabling the ESP8285
+ */
+void IUESP8285::hardReset()
+{
+    turnOff();
+    delay(100);
+    turnOn();
 }
 
 /**
@@ -70,11 +105,13 @@ void IUESP8285::manageAutoSleep()
     {
         case PowerMode::PERFORMANCE:
         case PowerMode::ENHANCED:
+            turnOn();
             sendMSPCommand(MSPCommand::WIFI_WAKE_UP);
             break;
         case PowerMode::REGULAR:
         case PowerMode::LOW_1:
         case PowerMode::LOW_2:
+            turnOn();
             if (m_connected)
             {
                 m_wakeUpNow = false;
@@ -117,8 +154,8 @@ void IUESP8285::manageAutoSleep()
         case PowerMode::SLEEP:
         case PowerMode::DEEP_SLEEP:
         case PowerMode::SUSPEND:
-            // TODO Implement sleep duration
-            sendMSPCommand(MSPCommand::WIFI_DEEP_SLEEP);
+            m_connected = false;
+            turnOff();
             break;
         default:
             if (debugMode)
@@ -126,7 +163,8 @@ void IUESP8285::manageAutoSleep()
                 debugPrint(F("Unhandled power Mode "), false);
                 debugPrint(m_powerMode);
             }
-            sendMSPCommand(MSPCommand::WIFI_DEEP_SLEEP);
+            m_connected = false;
+            turnOff();
     }
     if ((uint8_t) m_powerMode > (uint8_t) PowerMode::SLEEP && !m_sleeping)
     {

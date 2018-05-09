@@ -21,7 +21,7 @@ class IUBattery : public LowFreqSensor
     public:
         /***** Preset values and default settings *****/
         // CHG pin to detect charging status
-        static const uint8_t voltagePin  = A2;
+        static const uint8_t voltagePin  = A1;
         // Full battery voltage (mV) => 1000 * (127.0f / 100.0f) * 3.30f = 4191
         static constexpr float maxVoltage = 4191.0f;
         /***** Constructors & desctructors *****/

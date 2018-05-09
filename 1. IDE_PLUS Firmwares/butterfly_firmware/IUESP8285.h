@@ -9,6 +9,7 @@
 #include "Component.h"
 #include "IUFlash.h"
 
+
 /**
  * Wifi chip
  *
@@ -22,6 +23,7 @@ class IUESP8285 : public IUSerial, public Component
 {
     public:
         /***** Preset values and default settings *****/
+        static const uint8_t ESP8285_ENABLE_PIN = A2;
         // Max expected length of WiFi SSID or password
         static const uint8_t wifiCredentialLength = 64;
         // WiFi config (credentials or Static IP) MultiMessageValidator timeout
@@ -31,6 +33,8 @@ class IUESP8285 : public IUSerial, public Component
         static const uint32_t defaultAutoSleepDuration = 90000;  // ms
         // Timeout for "Trying to connect" LED blinking
         static const uint32_t displayConnectAttemptTimeout = 20000;  // ms
+        // Timeout for connection status message
+        static const uint32_t connectedStatusTimeout = 30000;  // ms
         // Default Config type for flash storing
         static const IUFlash::storedConfig STORED_CFG_TYPE = IUFlash::CFG_WIFI0;
         /***** Core *****/
@@ -45,6 +49,9 @@ class IUESP8285 : public IUSerial, public Component
         MacAddress getMacAddress() { return m_macAddress; }
         /***** Hardware and power management *****/
         virtual void setupHardware();
+        void turnOff();
+        void turnOn();
+        void hardReset();
         virtual void setPowerMode(PowerMode::option pMode);
         void setAutoSleepDelay(uint32_t deltaT) { m_autoSleepDelay = deltaT; }
         void wakeUpOnNextTick() { m_wakeUpNow = true; }
@@ -68,7 +75,7 @@ class IUESP8285 : public IUSerial, public Component
         /***** Guest Inbound communication *****/
         bool processChipMessage();
         /***** Guest Outbound communication *****/
-        void hardReset() { sendMSPCommand(MSPCommand::WIFI_HARD_RESET); }
+        void softReset() { sendMSPCommand(MSPCommand::WIFI_SOFT_RESET); }
         void sendBleMacAddress(MacAddress bleMac)
             { mspSendMacAddress(MSPCommand::RECEIVE_BLE_MAC, bleMac); }
         void sendWiFiCredentials();
@@ -98,6 +105,7 @@ class IUESP8285 : public IUSerial, public Component
         bool m_staticConfigReceptionConfirmed = false;
         MultiMessageValidator<3> m_staticConfigValidator;
         /***** Connection and auto-sleep *****/
+        bool m_on = true;
         bool m_connected = false;
         bool m_sleeping = false;
         bool m_wakeUpNow = false;

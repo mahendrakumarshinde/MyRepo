@@ -827,11 +827,7 @@ void Conductor::processBLEMessages(char *buff)
 void Conductor::processUserMessageForWiFi(char *buff,
                                           HardwareSerial *feedbackPort)
 {
-    if (strcmp(buff, "WIFI-DISABLE") == 0)
-    {
-        iuWiFi.setPowerMode(PowerMode::DEEP_SLEEP);
-    }
-    else if (strncmp(buff, "WIFI-GET-MAC", 13) == 0)
+    if (strncmp(buff, "WIFI-GET-MAC", 13) == 0)
     {
         if ((uint64_t) iuWiFi.getMacAddress() > 0)
         {
@@ -840,8 +836,15 @@ void Conductor::processUserMessageForWiFi(char *buff,
             feedbackPort->print(';');
         }
     }
+    else 
+    if (strcmp(buff, "WIFI-DISABLE") == 0)
+    {
+        iuWiFi.setPowerMode(PowerMode::DEEP_SLEEP);
+        changeStreamingMode(StreamingMode::BLE);
+    }
     else
     {
+        iuWiFi.setPowerMode(PowerMode::REGULAR);
         // We want the WiFi to do something, so need to make sure it's available
         if (iuWiFi.isSleeping())
         {
@@ -902,6 +905,7 @@ void Conductor::processWIFIMessages(char *buff)
             iuWiFi.sendBleMacAddress(m_macAddress);
             break;
         case MSPCommand::WIFI_ALERT_CONNECTED:
+            if (loopDebugMode) { debugPrint("WIFI-CONNECTED;"); }
             iuBluetooth.port->print("WIFI-CONNECTED;");
             break;
         case MSPCommand::WIFI_ALERT_DISCONNECTED:
