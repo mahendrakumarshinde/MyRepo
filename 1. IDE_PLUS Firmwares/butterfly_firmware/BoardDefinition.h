@@ -38,6 +38,27 @@ const char DEVICE_TYPE[DEVICE_TYPE_LENGTH] = "ide_plus";
 /***** GPS Options *****/
 #define NO_GPS
 
+/* =============================================================================
+    Library versionning
+============================================================================= */
+
+namespace IU_VERSION {
+    namespace required {
+        const uint8_t pubsubclient_major = 1;
+        const uint8_t pubsubclient_minor = 1;
+    };
+
+    inline bool checkLibraryVersions()
+    {
+//        if (required.pubsubclient_major == installed.pubsubclient_major
+//            )
+//        {
+//            return true;
+//        }
+        return false;
+    }
+};
+
 
 /* =============================================================================
     Test mode
