@@ -95,7 +95,7 @@ float DEFAULT_MIN_AGITATION = 0.1;
 
 /***** Audio DB calibration parameters *****/
 
-float AUDIO_DB_SCALING = 1.1;
+float AUDIO_DB_SCALING = 1.0;
 
 
 /* =============================================================================
@@ -175,7 +175,6 @@ void setup()
     armv7m_timer_start(&led_timer, 1);
     armv7m_timer_create(&watchdog_timer, (armv7m_timer_callback_t)watchdog_callback);
     armv7m_timer_start(&watchdog_timer, 5);
-    conductor.showStatusOnLed(RGB_CYAN);
     #if defined(UNITTEST) || defined(COMPONENTTEST) || defined(INTEGRATEDTEST)
         delay(2000);
         iuI2C.begin();
@@ -192,23 +191,13 @@ void setup()
         {
             debugPrint(F("\nInitializing interfaces..."));
         }
+        iuBluetooth.setupHardware();
+        iuWiFi.setupHardware();
         if (setupDebugMode)
         {
             iuI2C.scanDevices();
             debugPrint("");
         }
-        #ifdef DRAGONFLY_V03
-            iuBluetooth.begin();
-            iuBluetooth.softReset();
-        #else
-            iuBluetooth.setupHardware();
-            if (setupDebugMode)
-            {
-                iuBluetooth.exposeInfo();
-                debugPrint(' ');
-            }
-        #endif
-        iuWiFi.setupHardware();
         if(debugMode)
         {
             debugPrint(F("=> Successfully initialized interfaces - Mem: "),

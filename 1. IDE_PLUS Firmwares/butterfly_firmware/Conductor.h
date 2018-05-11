@@ -106,6 +106,8 @@ class Conductor
         static const uint32_t SEND_CONFIG_CHECKSUM_TIMER = 30000;
         // Default start datetime
         static constexpr double defaultTimestamp = 1524017173.00;
+        // Size of Jsn buffr (to parse json)
+        static const uint16_t JSON_BUFFER_SIZE = 1600;
         /***** Constructors and destructor *****/
         Conductor(MacAddress macAddress) : m_macAddress(macAddress) { }
         Conductor(const char *macAddress)
@@ -218,63 +220,6 @@ class Conductor
         UsageMode::option m_usageMode = UsageMode::COUNT;
         AcquisitionMode::option m_acquisitionMode = AcquisitionMode::NONE;
         StreamingMode::option m_streamingMode = StreamingMode::COUNT;
-        // Static JSON buffer to parse config
-        StaticJsonBuffer<1600> m_jsonBuffer;
-        // eg: can hold the following config (remove the space and line breaks)
-//        {
-//          "features": {
-//            "A93": {
-//              "STREAM": 1,
-//              "OPS": 1,
-//              "TRH": [100, 110, 120]
-//            },
-//            "VAX": {
-//              "STREAM": 1,
-//              "OPS": 0,
-//              "TRH": [0.5, 1.2, 1.5]
-//            },
-//            "VAY": {
-//              "STREAM": 1,
-//              "OPS": 0,
-//              "TRH": [0.5, 1.2, 1.5]
-//            },
-//            "VAZ": {
-//              "STREAM": 1,
-//              "OPS": 0,
-//              "TRH": [0.5, 1.2, 1.5]
-//            },
-//           "TMP": {
-//              "STREAM": 1,
-//              "OPS": 0,
-//              "TRH": [40, 80, 120]
-//            },
-//            "S12": {
-//              "STREAM": 1,
-//              "OPS": 0,
-//              "TRH": [500, 100, 1500]
-//            },
-//            "XXX": {
-//              "STREAM": 1,
-//              "OPS": 0,
-//              "TRH": [500, 100, 1500]
-//            },
-//            "XXX": {
-//              "STREAM": 1,
-//              "OPS": 0,
-//              "TRH": [500, 100, 1500]
-//            },
-//            "XXX": {
-//              "STREAM": 1,
-//              "OPS": 0,
-//              "TRH": [500, 100, 1500]
-//            },
-//            "XXX": {
-//              "STREAM": 1,
-//              "OPS": 0,
-//              "TRH": [500, 100, 1500]
-//            }
-//          }
-//        }
 };
 
 

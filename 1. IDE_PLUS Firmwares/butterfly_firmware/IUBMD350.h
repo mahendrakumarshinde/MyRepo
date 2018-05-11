@@ -48,7 +48,7 @@ class IUBMD350 : public IUSerial, public Component
         virtual void setPowerMode(PowerMode::option pMode);
         /***** Bluetooth Configuration *****/
         // AT Command Interface
-        void enterATCommandInterface();
+        bool enterATCommandInterface(uint8_t retry=1);
         void exitATCommandInterface();
         int sendATCommand(String cmd, char *response, uint8_t responseLength);
         // Device name

@@ -481,7 +481,7 @@ void FloatFeature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx,
     uint8_t sIdx = 0;
     for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++)
     {
-        sIdx = k % sectionCount;
+        sIdx = k % m_sectionCount;
         for (uint16_t i = sIdx * m_sectionSize;
              i < (sIdx + 1) * m_sectionSize; ++i)
         {
@@ -502,7 +502,7 @@ uint16_t FloatFeature::m_specializedBufferStream(uint8_t sectionIdx,
     uint16_t destIndex = startIndex;
     for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++)
     {
-        sIdx = k % sectionCount;
+        sIdx = k % m_sectionCount;
         for (uint16_t i = sIdx * m_sectionSize;
              i < (sIdx + 1) * m_sectionSize; ++i)
         {
@@ -557,7 +557,7 @@ void Q15Feature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx,
     uint8_t sIdx = 0;
     for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++)
     {
-        sIdx = k % sectionCount;
+        sIdx = k % m_sectionCount;
         if (m_isFFT)
         {
             for (uint16_t i = sIdx * m_sectionSize / 3;
@@ -595,7 +595,7 @@ uint16_t Q15Feature::m_specializedBufferStream(uint8_t sectionIdx,
     uint16_t destIndex = startIndex;
     for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++)
     {
-        sIdx = k % sectionCount;
+        sIdx = k % m_sectionCount;
         if (m_isFFT)
         {
             for (uint16_t i = sIdx * m_sectionSize / 3;
@@ -674,7 +674,7 @@ void Q31Feature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx,
     uint8_t sIdx = 0;
     for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++)
     {
-        sIdx = k % sectionCount;
+        sIdx = k % m_sectionCount;
         if (m_isFFT)
         {
             for (uint16_t i = sIdx * m_sectionSize / 3;
@@ -711,7 +711,7 @@ uint16_t Q31Feature::m_specializedBufferStream(uint8_t sectionIdx,
     uint16_t destIndex = startIndex;
     for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++)
     {
-        sIdx = k % sectionCount;
+        sIdx = k % m_sectionCount;
         if (m_isFFT)
         {
             for (uint16_t i = sIdx * m_sectionSize / 3;

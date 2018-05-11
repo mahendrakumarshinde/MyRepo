@@ -211,10 +211,22 @@ void FeatureGroup::legacyStream(IUSerial *iuSerial, MacAddress mac,
     iuSerial->port->print(",");
     iuSerial->port->print(timestamp);
     iuSerial->port->print(";");
-    if (loopDebugMode)
+    if (featureDebugMode)
     {
-        iuSerial->port->println("");
+        debugPrint(millis(), false);
+        debugPrint(" -> ", false);
+        for (uint8_t i = 0; i < m_featureCount; ++i)
+        {
+            debugPrint(",000", false);
+            debugPrint(i + 1, false);
+            if (m_features[i] != NULL)
+            {
+                m_features[i]->stream(&Serial);
+            }
+        }
+        debugPrint("");
     }
+    
 }
 
 /**

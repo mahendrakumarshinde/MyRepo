@@ -34,14 +34,25 @@ void IUBMD350::setupHardware()
     // Configure pins and port
     pinMode(m_atCmdPin, OUTPUT);
     pinMode(m_resetPin, OUTPUT);
+    // Make sure PassThrough mode is active
+    digitalWrite(m_atCmdPin, HIGH);
     delay(100);
-    // Beacon and UART configuration
-    enterATCommandInterface();
-    queryDeviceName();
-    configureBeacon(m_beaconEnabled, m_beaconAdInterval);
-    configureUARTPassthrough();
-    setPowerMode(PowerMode::REGULAR);
-    exitATCommandInterface();
+    softReset();
+//    delay(100);
+//    // Beacon and UART configuration
+//    if (enterATCommandInterface())
+//    {
+//        queryDeviceName();
+//        configureBeacon(m_beaconEnabled, m_beaconAdInterval);
+//        configureUARTPassthrough();
+//        setPowerMode(PowerMode::REGULAR);
+//    }
+//    exitATCommandInterface();
+//    if (setupDebugMode)
+//    {
+//        exposeInfo();
+//        debugPrint(' ');
+//    }
 }
 
 /**
@@ -69,15 +80,19 @@ void IUBMD350::setPowerMode(PowerMode::option pMode)
         case PowerMode::REGULAR:
         case PowerMode::LOW_1:
         case PowerMode::LOW_2:
-            enterATCommandInterface();
-            setTxPowers(defaultTxPower);
+            if (enterATCommandInterface())
+            {
+                setTxPowers(defaultTxPower);
+            }
             exitATCommandInterface();
             break;
         case PowerMode::SLEEP:
         case PowerMode::DEEP_SLEEP:
         case PowerMode::SUSPEND:
-            enterATCommandInterface();
-            setTxPowers(txPowerOption::DBm30);
+            if (enterATCommandInterface())
+            {
+                setTxPowers(txPowerOption::DBm30);
+            }
             exitATCommandInterface();
             break;
         default:
@@ -105,23 +120,40 @@ void IUBMD350::setPowerMode(PowerMode::option pMode)
  * UART Pass-Through needs to be configured when in AT Command Interface Mode,
  * but AT Mode needs to be exited to use UART Pass-Through.
  */
-void IUBMD350::enterATCommandInterface()
+bool IUBMD350::enterATCommandInterface(uint8_t retry)
 {
     if (m_ATCmdEnabled)
     {
-        return; // Already in AT Command mode
+        return true; // Already in AT Command mode
     }
     digitalWrite(m_atCmdPin, LOW);
     delay(100);
     softReset();
     // hold ATMD pin LOW for at least 2.5s. If not, AT Mode will not work
-    delay(2500);
-    m_ATCmdEnabled = true;
+    delay(2600);
     if (setupDebugMode)
     {
         debugPrint(F("Entered AT Command Interface mode"));
     }
-    delay(10);
+    char resp[10];
+    if (sendATCommand("at\r", resp, 10) > -1) {
+        m_ATCmdEnabled = true;
+    } else {
+        if (setupDebugMode) {
+            debugPrint("Failed to enter AT command mode");
+            debugPrint("Remaining retries: ", false);
+            debugPrint(retry);
+        }
+        if (retry > 0) {
+            return enterATCommandInterface(retry - 1);
+        } else {
+            digitalWrite(m_atCmdPin, HIGH);
+            delay(100);
+            softReset();
+            m_ATCmdEnabled = false;
+        }
+    }
+    return m_ATCmdEnabled;
 }
 
 /**
@@ -526,9 +558,11 @@ void IUBMD350::exposeInfo()
     #ifdef IUDEBUG_ANY
     debugPrint(F("BLE Config: "));
     debugPrint(F("  Device name: ")); debugPrint(m_deviceName);
-    enterATCommandInterface();
-    printUARTConfiguration();
-    printBeaconConfiguration();
+    if (enterATCommandInterface())
+    {
+        printUARTConfiguration();
+        printBeaconConfiguration();
+    }
     exitATCommandInterface();
     #endif
 }

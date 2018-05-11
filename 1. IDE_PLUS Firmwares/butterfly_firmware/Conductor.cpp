@@ -177,13 +177,14 @@ bool Conductor::loadConfigFromFlash(IUFlash::storedConfig configType)
 {
     // TODO this only works with IUFSFlash, not IUSPIFlash
     // FIXME this only works with IUFSFlash, not IUSPIFlash
+    StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
     JsonVariant config;
     if (iuFlash.available())
     {
         File file;
         if (iuFlash.getReadable(configType, &file))
         {
-            config = m_jsonBuffer.parseObject(file);
+            config = jsonBuffer.parseObject(file);
         }
     }
     bool success = config.success();
@@ -305,19 +306,29 @@ void Conductor::periodicSendConfigChecksum()
 bool Conductor::saveConfigToFlash(IUFlash::storedConfig configType,
                                   JsonVariant &config)
 {
+    overrideLedColor(RGB_CYAN);
+    rgbLed.manageColorTransitions();
     if (!iuFlash.available())
     {
+        overrideLedColor(RGB_RED);
+        rgbLed.manageColorTransitions();
         return false;  // Flash is unavailable
     }
     // TODO this only works with IUFSFlash, not IUSPIFlash
     // FIXME this only works with IUFSFlash, not IUSPIFlash
-    File file;
-    if (!iuFlash.getWritable(configType, &file))
-    {
-        return false;
-    }
+    char filepath[IUFSFlash::MAX_FULL_CONFIG_FPATH_LEN];
+    iuFlash.getConfigFilename(configType, filepath);
+    File file = DOSFS.open(filepath, "w");
+//    if (!iuFlash.getWritable(configType, &file))
+//    {
+//        overrideLedColor(RGB_PURPLE);
+//        rgbLed.manageColorTransitions();
+//        return false;
+//    }
     if (config.printTo(file) == 0)
     {
+        overrideLedColor(RGB_ORANGE);
+        rgbLed.manageColorTransitions();
         return false;
     }
     if (debugMode)
@@ -325,6 +336,8 @@ bool Conductor::saveConfigToFlash(IUFlash::storedConfig configType,
         debugPrint("Successfully saved config type #", false);
         debugPrint((uint8_t) configType);
     }
+    overrideLedColor(RGB_GREEN);
+    rgbLed.manageColorTransitions();
     return true;
 }
 
@@ -384,7 +397,8 @@ void Conductor::readFromSerial(StreamingMode::option interfaceType,
  */
 bool Conductor::processConfiguration(char *json, bool saveToFlash)
 {
-    JsonObject& root = m_jsonBuffer.parseObject(json);
+    StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
+    JsonObject& root = jsonBuffer.parseObject(json);
     if (!root.success())
     {
         if (debugMode)

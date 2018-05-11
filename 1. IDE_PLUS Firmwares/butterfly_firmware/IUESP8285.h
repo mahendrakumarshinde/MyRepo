@@ -37,6 +37,8 @@ class IUESP8285 : public IUSerial, public Component
         static const uint32_t connectedStatusTimeout = 30000;  // ms
         // Default Config type for flash storing
         static const IUFlash::storedConfig STORED_CFG_TYPE = IUFlash::CFG_WIFI0;
+        // Size of Jsn buffr (to parse json)
+        static const uint16_t JSON_BUFFER_SIZE = 256;
         /***** Core *****/
         IUESP8285(HardwareSerial *serialPort, char *charBuffer,
                   uint16_t bufferSize, PROTOCOL_OPTIONS protocol, uint32_t rate,
@@ -117,11 +119,6 @@ class IUESP8285 : public IUSerial, public Component
         MacAddress m_macAddress;
         bool m_working = false;
         uint32_t m_displayConnectAttemptStart = 0;
-        // Static JSON buffer to parse config
-        StaticJsonBuffer<256> m_jsonBuffer;
-        // TODO => We could use the m_jsonBuffer to store directly the SSID,
-        // PSK, etc, OR use the conductor jsonBuffer to avoid having a 2nd one
-        // here.
 };
 
 #endif // IUESP8285_H

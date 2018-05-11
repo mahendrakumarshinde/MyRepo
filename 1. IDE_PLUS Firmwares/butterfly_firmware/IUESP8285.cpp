@@ -194,7 +194,8 @@ bool IUESP8285::loadConfigFromFlash(IUFlash *iuFlashPtr,
         }
         return false;
     }
-    JsonObject& config = m_jsonBuffer.parseObject(strConfig);
+    StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
+    JsonObject& config = jsonBuffer.parseObject(strConfig);
     if (!config.success())
     {
         if (debugMode)

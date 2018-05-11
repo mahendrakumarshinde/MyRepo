@@ -252,9 +252,16 @@ void SignalRMSComputer::m_specializedCompute()
     m_destinations[0]->addFloatValue(total * m_calibrationScaling);
     if (featureDebugMode)
     {
+        debugPrint(millis(), false);
+        debugPrint(" -> ", false);
         debugPrint(m_destinations[0]->getName(), false);
         debugPrint(": ", false);
         debugPrint(total * resolution);
+        if (m_squared) {
+            debugPrint(total * sq(resolution));
+        } else {
+            debugPrint(total * resolution);
+        }
     }
 }
 
@@ -332,6 +339,8 @@ void SectionSumComputer::m_specializedCompute()
         m_destinations[i]->addFloatValue(total);
         if (featureDebugMode)
         {
+            debugPrint(millis(), false);
+            debugPrint(" -> ", false);
             debugPrint(m_destinations[i]->getName(), false);
             debugPrint(": ", false);
             debugPrint(total * m_sources[i]->getResolution());
@@ -410,6 +419,8 @@ void MultiSourceSumComputer::m_specializedCompute()
         m_destinations[0]->addFloatValue(total);
         if (featureDebugMode)
         {
+            debugPrint(millis(), false);
+            debugPrint(" -> ", false);
             debugPrint(m_destinations[0]->getName(), false);
             debugPrint(": ", false);
             debugPrint(total * m_sources[0]->getResolution());
@@ -526,6 +537,8 @@ void Q15FFTComputer::m_specializedCompute()
     }
     if (featureDebugMode)
     {
+        debugPrint(millis(), false);
+        debugPrint(" -> ", false);
         debugPrint(m_destinations[0]->getName(), false);
         debugPrint(": was computed");
         debugPrint(m_destinations[1]->getName(), false);
@@ -545,6 +558,8 @@ void Q15FFTComputer::m_specializedCompute()
         m_destinations[2]->addFloatValue(integratedRMS1);
         if (featureDebugMode)
         {
+            debugPrint(millis(), false);
+            debugPrint(" -> ", false);
             debugPrint(m_destinations[2]->getName(), false);
             debugPrint(": ", false);
             debugPrint(integratedRMS1 * resolution);
@@ -561,6 +576,8 @@ void Q15FFTComputer::m_specializedCompute()
         m_destinations[3]->addFloatValue(integratedRMS2);
         if (featureDebugMode)
         {
+            debugPrint(millis(), false);
+            debugPrint(" -> ", false);
             debugPrint(m_destinations[3]->getName(), false);
             debugPrint(": ", false);
             debugPrint(integratedRMS2 * resolution);
@@ -572,6 +589,8 @@ void Q15FFTComputer::m_specializedCompute()
         m_destinations[3]->addFloatValue(0);
         if (featureDebugMode)
         {
+            debugPrint(millis(), false);
+            debugPrint(" -> ", false);
             debugPrint(m_destinations[2]->getName(), false);
             debugPrint(": 0");
             debugPrint(m_destinations[3]->getName(), false);
@@ -631,10 +650,13 @@ void AudioDBComputer::m_specializedCompute()
     }
     audioDB += log10(accu);
     float result = 20.0 * audioDB / (float) length;
+    result = 2.8 * result - 10;  // Empirical formula
     result *= m_calibrationScaling;
     m_destinations[0]->addFloatValue(result);
     if (featureDebugMode)
     {
+        debugPrint(millis(), false);
+        debugPrint(" -> ", false);
         debugPrint(m_destinations[0]->getName(), false);
         debugPrint(": ", false);
         debugPrint(result * m_sources[0]->getResolution());
