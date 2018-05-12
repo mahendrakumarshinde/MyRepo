@@ -1,7 +1,7 @@
 /*
-  Infinite Uptime BLE Module Firmware
+Infinite Uptime BLE Module Firmware
 
-  Update 2017-10-10
+Update 2017-10-10
 */
 
 /* =============================================================================
@@ -140,28 +140,36 @@ void callback()
 }
 
 
-/***** Led callback *****/
+/***** Led callbacks *****/
 
-static armv7m_timer_t led_timer;
+static armv7m_timer_t ledShowTimer;
 
-static void led_callback(void) {
+static void ledUShowCallback(void) {
     rgbLed.updateColors();
-    armv7m_timer_start(&led_timer, 1);
+    armv7m_timer_start(&ledShowTimer, 1);
+}
+
+
+static armv7m_timer_t ledTransitionTimer;
+
+static void ledTransitionCallback(void) {
+    rgbLed.manageColorTransitions();
+    armv7m_timer_start(&ledTransitionTimer, 10);
 }
 
 
 /***** Watch Dog *****/
 
-static armv7m_timer_t watchdog_timer;
+static armv7m_timer_t watchdogTimer;
 uint32_t lastActive = 0;
 uint32_t loopTimeout = 60000;  // 1min timeout
 
-static void watchdog_callback(void) {
+static void watchdogCallback(void) {
     if (lastActive > 0 && millis() - lastActive > loopTimeout)
     {
         STM32.reset();
     }
-    armv7m_timer_start(&watchdog_timer, 5);
+    armv7m_timer_start(&watchdogTimer, 1000);
 }
 
 
@@ -171,14 +179,16 @@ void setup()
 {
     iuUSB.begin();
     rgbLed.setupHardware();
-    armv7m_timer_create(&led_timer, (armv7m_timer_callback_t)led_callback);
-    armv7m_timer_start(&led_timer, 1);
-    armv7m_timer_create(&watchdog_timer, (armv7m_timer_callback_t)watchdog_callback);
-    armv7m_timer_start(&watchdog_timer, 5);
+    armv7m_timer_create(&ledShowTimer, (armv7m_timer_callback_t)ledUShowCallback);
+    armv7m_timer_start(&ledShowTimer, 1);
+    armv7m_timer_create(&ledTransitionTimer, (armv7m_timer_callback_t)ledTransitionCallback);
+    armv7m_timer_start(&ledTransitionTimer, 10);
     #if defined(UNITTEST) || defined(COMPONENTTEST) || defined(INTEGRATEDTEST)
         delay(2000);
         iuI2C.begin();
     #else
+        armv7m_timer_create(&watchdogTimer, (armv7m_timer_callback_t)watchdogCallback);
+        armv7m_timer_start(&watchdogTimer, 1000);
         if (debugMode)
         {
             delay(5000);
@@ -198,7 +208,7 @@ void setup()
             iuI2C.scanDevices();
             debugPrint("");
         }
-        if(debugMode)
+        if (debugMode)
         {
             debugPrint(F("=> Successfully initialized interfaces - Mem: "),
                        false);
@@ -215,7 +225,7 @@ void setup()
         if (debugMode)
         {
             debugPrint(F("=> Succesfully configured default features - Mem: "),
-                        false);
+                       false);
             debugPrint(String(freeMemory(), DEC));
         }
         // Sensors
@@ -238,7 +248,7 @@ void setup()
         if (debugMode)
         {
             debugPrint(F("=> Succesfully initialized sensors - Mem: "),
-                        false);
+                       false);
             debugPrint(String(freeMemory(), DEC));
         }
         if (setupDebugMode)
@@ -268,24 +278,14 @@ void setup()
             if (setupDebugMode)
             {
                 conductor.overrideLedColor(RGB_PURPLE);
-                uint32_t startT = millis();
-                while(millis() - startT < 5000)
-                {
-                    rgbLed.manageColorTransitions();
-                    delay(100);
-                }
+                delay(5000);
                 conductor.resetLed();
             }
         }
         else if (setupDebugMode)
         {
             conductor.overrideLedColor(RGB_ORANGE);
-            uint32_t startT = millis();
-            while(millis() - startT < 5000)
-            {
-                rgbLed.manageColorTransitions();
-                delay(100);
-            }
+            delay(5000);
             conductor.resetLed();
         }
         conductor.changeUsageMode(UsageMode::OPERATION);
@@ -293,15 +293,13 @@ void setup()
 }
 
 /**
- *
- * Note the regular calls to rgbLed.manageColorTransitions().
+ * 
  */
 void loop()
 {
     lastActive = millis();
     #if defined(UNITTEST) || defined(COMPONENTTEST) || defined(INTEGRATEDTEST)
         Test::run();
-        rgbLed.manageColorTransitions();
         if (Test::getCurrentFailed() > 0)
         {
             conductor.showStatusOnLed(RGB_RED);
@@ -320,7 +318,7 @@ void loop()
                 if (setupDebugMode)
                 {
                     debugPrint(F("Loop - Mem: "),
-                                false);
+                               false);
                     debugPrint(String(freeMemory(), DEC));
                 }
                 debugPrint(' ');
@@ -329,34 +327,24 @@ void loop()
         }
         // Power saving
         conductor.manageSleepCycles();
-        rgbLed.manageColorTransitions();
         // Configuration
         conductor.readFromSerial(StreamingMode::WIRED, &iuUSB);
-        rgbLed.manageColorTransitions();
         conductor.readFromSerial(StreamingMode::BLE, &iuBluetooth);
-        rgbLed.manageColorTransitions();
         conductor.readFromSerial(StreamingMode::WIFI, &iuWiFi);
-        rgbLed.manageColorTransitions();
         // Acquire data from sensors
         conductor.acquireData(false);
-        rgbLed.manageColorTransitions();
         // Feature computation depending on operation mode
         conductor.computeFeatures();
-        rgbLed.manageColorTransitions();
         // Update the OperationState
         conductor.updateOperationState();
-        rgbLed.manageColorTransitions();
         // Stream features
         conductor.streamFeatures();
-        rgbLed.manageColorTransitions();
         // Send accel raw data
         conductor.periodicSendAccelRawData();
-        rgbLed.manageColorTransitions();
         // Send config checksum
         conductor.periodicSendConfigChecksum();
-        rgbLed.manageColorTransitions();
         uint32_t now = millis();
-        if(lastDone == 0 || lastDone + interval < now || now < lastDone)
+        if (lastDone == 0 || lastDone + interval < now || now < lastDone)
         {
             lastDone = now;
             /* === Place your code to excute at fixed interval here ===*/
@@ -368,7 +356,6 @@ void loop()
         {
             yield();
         }
-        rgbLed.manageColorTransitions();
     #endif
 }
 

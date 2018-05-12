@@ -46,24 +46,40 @@ void IUESP8285::setupHardware()
 /**
  * Disable the ESP8285
  */
-void IUESP8285::turnOff()
+void IUESP8285::turnOn(bool forceTimerReset)
 {
-    if (m_on)
+    if (!m_on)
     {
-        digitalWrite(ESP8285_ENABLE_PIN, LOW);
-        m_on = false;
+        digitalWrite(ESP8285_ENABLE_PIN, HIGH);
+        m_on = true;
+        m_awakeTimerStart = millis();
+        sendWiFiCredentials();
+        if (loopDebugMode)
+        {
+            debugPrint("Wifi turned on");
+        }
+    }
+    else if (forceTimerReset)
+    {
+        m_awakeTimerStart = millis();
     }
 }
 
 /**
  * Disable the ESP8285
  */
-void IUESP8285::turnOn()
+void IUESP8285::turnOff()
 {
-    if (!m_on)
+    m_connected = false;
+    if (m_on)
     {
-        digitalWrite(ESP8285_ENABLE_PIN, HIGH);
-        m_on = true;
+        digitalWrite(ESP8285_ENABLE_PIN, LOW);
+        m_on = false;
+        m_sleepTimerStart = millis();  // Reset auto-sleep start timer
+        if (loopDebugMode)
+        {
+            debugPrint("Wifi turned off");
+        }
     }
 }
 
@@ -83,7 +99,8 @@ void IUESP8285::hardReset()
 void IUESP8285::setPowerMode(PowerMode::option pMode)
 {
     m_powerMode = pMode;
-    manageAutoSleep();
+    // When we change the power mode, we expect the WiFi to wake up instantly.
+    manageAutoSleep(m_powerMode > PowerMode::SLEEP);
 }
 
 
@@ -98,63 +115,45 @@ void IUESP8285::setPowerMode(PowerMode::option pMode)
  * When connected, WiFi use light-sleep mode to maintain connection to AP at a
  * lower energy cost.
  */
-void IUESP8285::manageAutoSleep()
+void IUESP8285::manageAutoSleep(bool wakeUpNow)
 {
     uint32_t now = millis();
     switch (m_powerMode)
     {
         case PowerMode::PERFORMANCE:
         case PowerMode::ENHANCED:
-            turnOn();
-            sendMSPCommand(MSPCommand::WIFI_WAKE_UP);
+            turnOn(true);
             break;
         case PowerMode::REGULAR:
         case PowerMode::LOW_1:
         case PowerMode::LOW_2:
-            turnOn();
-            if (m_connected)
+            if (m_connected || wakeUpNow)
             {
-                m_wakeUpNow = false;
-                sendMSPCommand(MSPCommand::WIFI_WAKE_UP);
-                m_awakeTimerStart = now;
+                turnOn(true);
             }
-            else if (m_wakeUpNow) // Wake up now and stay awake
+            // Not connected, sleeping but need to wake up
+            else if (!m_on && now - m_sleepTimerStart > m_autoSleepDuration)
             {
-                sendMSPCommand(MSPCommand::WIFI_WAKE_UP);
-                sendWiFiCredentials();
-                m_awakeTimerStart = now;  // Reset auto-sleep start timer
+                turnOn();
+                debugPrint("Slept for ", false);
+                debugPrint(now - m_sleepTimerStart, false);
+                debugPrint("ms");
             }
-            else if (m_sleeping)  // Not connected, already sleeping
+            // Not connected, not sleeping yet, but need to go to sleep
+            else if (now - m_awakeTimerStart > m_autoSleepDelay)
             {
-                if (now - m_sleepTimerStart > m_autoSleepDuration)
+                turnOff();
+                if (loopDebugMode)
                 {
-                    sendMSPCommand(MSPCommand::WIFI_WAKE_UP);
-                    sendWiFiCredentials();
-                    m_awakeTimerStart = now;  // Reset auto-sleep start timer
-                }
-                else
-                {
-                    sendMSPCommand(MSPCommand::WIFI_DEEP_SLEEP);
-                }
-            }
-            else  // Not connected and not sleeping
-            {
-                m_wakeUpNow = false;
-                if (now - m_awakeTimerStart > m_autoSleepDelay)
-                {
-                    sendMSPCommand(MSPCommand::WIFI_DEEP_SLEEP);
-                    m_sleepTimerStart = now;  // Reset auto-sleep start timer
-                }
-                else
-                {
-                    sendMSPCommand(MSPCommand::WIFI_WAKE_UP);
+                    debugPrint("Reason: exceeded disconnection timeout (", false);
+                    debugPrint(m_autoSleepDelay, false);
+                    debugPrint("ms)");
                 }
             }
             break;
         case PowerMode::SLEEP:
         case PowerMode::DEEP_SLEEP:
         case PowerMode::SUSPEND:
-            m_connected = false;
             turnOff();
             break;
         default:
@@ -163,10 +162,9 @@ void IUESP8285::manageAutoSleep()
                 debugPrint(F("Unhandled power Mode "), false);
                 debugPrint(m_powerMode);
             }
-            m_connected = false;
             turnOff();
     }
-    if ((uint8_t) m_powerMode > (uint8_t) PowerMode::SLEEP && !m_sleeping)
+    if ((uint8_t) m_powerMode > (uint8_t) PowerMode::SLEEP && m_on && !m_sleeping)
     {
         sendWiFiCredentials();
         if ((uint64_t) m_macAddress == 0)
@@ -174,6 +172,27 @@ void IUESP8285::manageAutoSleep()
             sendMSPCommand(MSPCommand::ASK_WIFI_MAC);
         }
     }
+}
+
+bool IUESP8285::readToBuffer()
+{
+    bool newMessage = IUSerial::readToBuffer();
+    uint32_t now = millis();
+    if (newMessage)
+    {
+        m_lastResponseTime = now;
+    }
+    else if (m_on && m_lastResponseTime > 0 &&
+             now - m_lastResponseTime > noResponseTimeout)
+    {
+        hardReset();
+        m_lastResponseTime = now;
+    }
+    if (now - m_lastConnectedStatusTime > connectedStatusTimeout)
+    {
+        m_connected = false;
+    }
+    return newMessage;
 }
 
 
@@ -527,6 +546,7 @@ bool IUESP8285::processChipMessage()
             m_connected = true;
             m_working = false;
             m_awakeTimerStart = millis();
+            m_lastConnectedStatusTime = m_awakeTimerStart;
             break;
         case MSPCommand::WIFI_ALERT_DISCONNECTED:
             if (loopDebugMode) { debugPrint("WIFI_ALERT_DISCONNECTED"); }
@@ -547,23 +567,11 @@ bool IUESP8285::processChipMessage()
             break;
         case MSPCommand::WIFI_ALERT_SLEEPING:
             if (loopDebugMode) { debugPrint("WIFI_ALERT_SLEEPING"); }
-            if (!m_sleeping)
-            {
-                m_sleepTimerStart = millis();
-            }
             m_sleeping = true;
             break;
         case MSPCommand::WIFI_ALERT_AWAKE:
             if (loopDebugMode) { debugPrint("WIFI_ALERT_AWAKE"); }
-            if (m_sleeping)
-            {
-                m_awakeTimerStart = millis();
-            }
             m_sleeping = false;
-            break;
-        case MSPCommand::WIFI_REQUEST_ACTION:
-            if (loopDebugMode) { debugPrint("WIFI_REQUEST_ACTION"); }
-            manageAutoSleep();
             break;
         default:
             commandFound = false;

@@ -35,9 +35,11 @@ class IUESP8285 : public IUSerial, public Component
         static const uint32_t displayConnectAttemptTimeout = 20000;  // ms
         // Timeout for connection status message
         static const uint32_t connectedStatusTimeout = 30000;  // ms
+        // Timeout for no response (only when WiFi is awake)
+        static const uint32_t noResponseTimeout = 30000; // ms
         // Default Config type for flash storing
         static const IUFlash::storedConfig STORED_CFG_TYPE = IUFlash::CFG_WIFI0;
-        // Size of Jsn buffr (to parse json)
+        // Size of Json buffer (to parse config json)
         static const uint16_t JSON_BUFFER_SIZE = 256;
         /***** Core *****/
         IUESP8285(HardwareSerial *serialPort, char *charBuffer,
@@ -45,19 +47,18 @@ class IUESP8285 : public IUSerial, public Component
                   char stopChar, uint16_t dataReceptionTimeout);
         virtual ~IUESP8285() {}
         bool isConnected() { return m_connected; }
-        bool isAvailable() { return !m_sleeping; }
-        bool isSleeping() { return m_sleeping; }
+        bool isAvailable() { return (m_on && !m_sleeping); }
         bool isWorking() { return m_working; }
         MacAddress getMacAddress() { return m_macAddress; }
         /***** Hardware and power management *****/
         virtual void setupHardware();
+        void turnOn(bool forceTimerReset=false);
         void turnOff();
-        void turnOn();
         void hardReset();
         virtual void setPowerMode(PowerMode::option pMode);
         void setAutoSleepDelay(uint32_t deltaT) { m_autoSleepDelay = deltaT; }
-        void wakeUpOnNextTick() { m_wakeUpNow = true; }
-        void manageAutoSleep();
+        void manageAutoSleep(bool wakeUpNow=false);
+        virtual bool readToBuffer();
         /***** Local storage (flash) management *****/
         bool loadConfigFromFlash(IUFlash *iuFlashPtr,
                 IUFlash::storedConfig configType=STORED_CFG_TYPE);
@@ -110,11 +111,12 @@ class IUESP8285 : public IUSerial, public Component
         bool m_on = true;
         bool m_connected = false;
         bool m_sleeping = false;
-        bool m_wakeUpNow = false;
         uint32_t m_awakeTimerStart = 0;
         uint32_t m_sleepTimerStart = 0;
         uint32_t m_autoSleepDelay = defaultAutoSleepDelay;
         uint32_t m_autoSleepDuration = defaultAutoSleepDuration;
+        uint32_t m_lastResponseTime = 0;
+        uint32_t m_lastConnectedStatusTime = 0;
         /***** Informative variables *****/
         MacAddress m_macAddress;
         bool m_working = false;

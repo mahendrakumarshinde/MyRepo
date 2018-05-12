@@ -249,21 +249,27 @@ void Conductor::sendConfigChecksum(IUFlash::storedConfig configType)
     size_t md5Len = 33;
     size_t fullStrLen = md5Len + 44;
     char fullStr[fullStrLen];
+    for (size_t i = 0; i < fullStrLen; i++)
+    {
+        fullStr[i] = 0;
+    }
+    int written = -1;
     switch (configType)
     {
         case IUFlash::CFG_DEVICE:
-            snprintf(fullStr, fullStrLen, "{\"mac\":\"%s\",\"main\":\"%s\"}",
-                     m_macAddress.toString().c_str(), md5str);
+            written = snprintf(
+                fullStr, fullStrLen, "{\"mac\":\"%s\",\"main\":\"%s\"}",
+                m_macAddress.toString().c_str(), md5str);
             break;
         case IUFlash::CFG_COMPONENT:
-            snprintf(fullStr, fullStrLen,
-                     "{\"mac\":\"%s\",\"components\":\"%s\"}",
-                     m_macAddress.toString().c_str(), md5str);
+            written = snprintf(
+                fullStr, fullStrLen, "{\"mac\":\"%s\",\"components\":\"%s\"}",
+                m_macAddress.toString().c_str(), md5str);
             break;
         case IUFlash::CFG_FEATURE:
-            snprintf(fullStr, fullStrLen,
-                     "{\"mac\":\"%s\",\"features\":\"%s\"}",
-                     m_macAddress.toString().c_str(), md5str);
+            written = snprintf(
+                fullStr, fullStrLen, "{\"mac\":\"%s\",\"features\":\"%s\"}",
+                m_macAddress.toString().c_str(), md5str);
             break;
         default:
             if (debugMode)
@@ -273,9 +279,17 @@ void Conductor::sendConfigChecksum(IUFlash::storedConfig configType)
             }
             break;
     }
-    // Send checksum
-    iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_CONFIG_CHECKSUM, fullStr,
-                          fullStrLen);
+    if (written > 0 && written < fullStrLen)
+    {
+        // Send checksum
+        iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_CONFIG_CHECKSUM, fullStr,
+                              written);
+    }
+    else if (loopDebugMode)
+    {
+        debugPrint("Failed to format config checksum: ", false);
+        debugPrint(fullStr);
+    }
     //free memory
     free(md5hash);
     free(md5str);
@@ -311,7 +325,6 @@ bool Conductor::saveConfigToFlash(IUFlash::storedConfig configType,
     if (!iuFlash.available())
     {
         overrideLedColor(RGB_RED);
-        rgbLed.manageColorTransitions();
         return false;  // Flash is unavailable
     }
     // TODO this only works with IUFSFlash, not IUSPIFlash
@@ -322,13 +335,11 @@ bool Conductor::saveConfigToFlash(IUFlash::storedConfig configType,
 //    if (!iuFlash.getWritable(configType, &file))
 //    {
 //        overrideLedColor(RGB_PURPLE);
-//        rgbLed.manageColorTransitions();
 //        return false;
 //    }
     if (config.printTo(file) == 0)
     {
         overrideLedColor(RGB_ORANGE);
-        rgbLed.manageColorTransitions();
         return false;
     }
     if (debugMode)
@@ -337,7 +348,6 @@ bool Conductor::saveConfigToFlash(IUFlash::storedConfig configType,
         debugPrint((uint8_t) configType);
     }
     overrideLedColor(RGB_GREEN);
-    rgbLed.manageColorTransitions();
     return true;
 }
 
@@ -578,6 +588,23 @@ void Conductor::processCommands(char *buff)
                     current = millis();
                 }
                 resetLed();
+            }
+            break;
+        case 'G': // set feature group
+            if (strncmp(buff, "GROUP-", 6) == 0)
+            {
+                FeatureGroup *group = FeatureGroup::getInstanceByName(&buff[6]);
+                if (group)
+                {
+                    deactivateAllGroups();
+                    m_mainFeatureGroup = group;
+                    activateGroup(m_mainFeatureGroup);
+                    if (loopDebugMode)
+                    {
+                        debugPrint("New feature group activated: ", false);
+                        debugPrint(m_mainFeatureGroup->getName());
+                    }
+                }
             }
             break;
         case 'I': // ping device
@@ -860,18 +887,15 @@ void Conductor::processUserMessageForWiFi(char *buff,
     {
         iuWiFi.setPowerMode(PowerMode::REGULAR);
         // We want the WiFi to do something, so need to make sure it's available
-        if (iuWiFi.isSleeping())
+        if (!iuWiFi.isAvailable())
         {
             showStatusOnLed(RGB_PURPLE); // Show the status to the user
-            iuWiFi.wakeUpOnNextTick();
-            iuWiFi.setPowerMode(PowerMode::REGULAR);
             uint32_t startT = millis();
             uint32_t current = startT;
-            // Wait for up to 5sec the WiFi wake up
-            while (iuWiFi.isSleeping() && current - startT < 3000)
+            // Wait for up to 3sec the WiFi wake up
+            while (!iuWiFi.isAvailable() && current - startT < 3000)
             {
                 readFromSerial(StreamingMode::WIFI, &iuWiFi);
-                iuWiFi.manageAutoSleep();
                 rgbLed.manageColorTransitions();
                 delay(10);
                 current = millis();
@@ -881,7 +905,7 @@ void Conductor::processUserMessageForWiFi(char *buff,
         // Process message
         iuWiFi.processUserMessage(buff, &iuFlash);
         // Show status
-        if (!iuWiFi.isSleeping() && iuWiFi.isWorking())
+        if (iuWiFi.isAvailable() && iuWiFi.isWorking())
         {
             showStatusOnLed(RGB_PURPLE);
         }

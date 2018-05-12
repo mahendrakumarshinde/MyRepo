@@ -23,31 +23,31 @@ namespace MSPCommand
         WIFI_RECEIVE_SUBNET,  // 8: Send Subnet (for Static IP)
         WIFI_FORGET_STATIC_CONFIG,  // 9: Forget static IP, gateway & subnet
         // Wifi commands
-        WIFI_WAKE_UP,  // 10: Notify WiFi to wake up
-        WIFI_DEEP_SLEEP,  // 11: Deep-sleep WiFi  - optional duration (uint16_t in seconds)
-        WIFI_SOFT_RESET,  // 12: WiFi Soft Reset
-        WIFI_CONNECT,  // 13: Connect WiFi using saved credentials
-        WIFI_DISCONNECT,  // 14: Disconnect WiFi and turn off WiFi STA mode
+        WIFI_SOFT_RESET,  // 10: WiFi Soft Reset
+        WIFI_CONNECT,  // 11: Connect WiFi using saved credentials
+        WIFI_DISCONNECT,  // 12: Disconnect WiFi and turn off WiFi STA mode
         // Data publication
-        PUBLISH_RAW_DATA,  // 15: Publish raw data
-        PUBLISH_FEATURE,  // 16: Publish features
-        PUBLISH_DIAGNOSTIC,  // 17: Publish diagnostic
-        PUBLISH_CONFIG_CHECKSUM,  // 18: Publish configuration checksum
+        PUBLISH_RAW_DATA,  // 13: Publish raw data
+        PUBLISH_FEATURE,  // 14: Publish features
+        PUBLISH_DIAGNOSTIC,  // 15: Publish diagnostic
+        PUBLISH_CONFIG_CHECKSUM,  // 16: Publish configuration checksum
         // Cloud command reception and transmission
-        HOST_CONFIRM_RECEPTION,  // 19: Confirm command reception
-        HOST_FORWARD_CMD,  // 20: Forward a command string received by the host
+        HOST_CONFIRM_RECEPTION,  // 17: Confirm command reception
+        HOST_FORWARD_CMD,  // 18: Forward a command string received by the host
         // Publication protocol
-        PUBLICATION_USE_MQTT,  // 21
-        PUBLICATION_USE_HTTP, // 22
+        PUBLICATION_USE_MQTT,  // 19
+        PUBLICATION_USE_HTTP, // 20
         // Settable parameters (addresses, credentials, etc)
-        SET_RAW_DATA_ENDPOINT_HOST,  // 23
-        SET_RAW_DATA_ENDPOINT_ROUTE,  // 24
-        SET_RAW_DATA_ENDPOINT_PORT,  // 25
-        SET_MQTT_SERVER_IP,  // 26
-        SET_MQTT_SERVER_PORT,  // 27
-        SET_MQTT_USERNAME,  // 28
-        SET_MQTT_PASSWORD,  // 29
+        SET_RAW_DATA_ENDPOINT_HOST,  // 21
+        SET_RAW_DATA_ENDPOINT_ROUTE,  // 22
+        SET_RAW_DATA_ENDPOINT_PORT,  // 23
+        SET_MQTT_SERVER_IP,  // 24
+        SET_MQTT_SERVER_PORT,  // 25
+        SET_MQTT_USERNAME,  // 26
+        SET_MQTT_PASSWORD,  // 27
 
+        PLACE_HOLDER_28,
+        PLACE_HOLDER_29,
         PLACE_HOLDER_30,  // 30
         PLACE_HOLDER_31,  // 31
         PLACE_HOLDER_32,  // 32
@@ -79,23 +79,22 @@ namespace MSPCommand
         WIFI_CONFIRM_NEW_CREDENTIALS,  // 53: Config msg reception confirmation
         WIFI_CONFIRM_NEW_STATIC_CONFIG,  // 54: Config msg reception confirmation
         // Wifi commands
-        WIFI_REQUEST_ACTION,  // 55: Ask if WiFi should wake up
-        WIFI_CONFIRM_ACTION,  // 56: Confirm reception of command
+        WIFI_CONFIRM_ACTION,  // 55: Confirm reception of command
         // Wifi status alerting
-        WIFI_ALERT_NO_SAVED_CREDENTIALS,  // 57: Alert WiFi has no saved credential
-        WIFI_ALERT_CONNECTED,  // 58: Alert WiFi is connected
-        WIFI_ALERT_DISCONNECTED,  // 59: Alert WiFi is disconnected
-        WIFI_ALERT_SLEEPING,  // 60: Notify WiFi is sleeping
-        WIFI_ALERT_AWAKE,  // 61: Notify WiFi is waking up
+        WIFI_ALERT_NO_SAVED_CREDENTIALS,  // 56: Alert WiFi has no saved credential
+        WIFI_ALERT_CONNECTED,  // 57: Alert WiFi is connected
+        WIFI_ALERT_DISCONNECTED,  // 58: Alert WiFi is disconnected
+        WIFI_ALERT_SLEEPING,  // 59: Notify WiFi is sleeping
+        WIFI_ALERT_AWAKE,  // 60: Notify WiFi is waking up
         // Data publication
-        WIFI_CONFIRM_PUBLICATION,  // 62: Confirm publication of data
+        WIFI_CONFIRM_PUBLICATION,  // 61: Confirm publication of data
         // Cloud command reception and transmission
-        SET_DATETIME,  // 63: Set the time
-        CONFIG_FORWARD_CONFIG,  // 64: Forward a config string received by WiFi
-        CONFIG_FORWARD_CMD,  // 65: Forward a command string received by WiFi
-        CONFIG_FORWARD_LEGACY_CMD,  // 66: Forward a command string received by WiFi (legacy)
-        OTA_INITIATE_UPDATE,  // 67: Initiate OTA update
-        OTA_RECEIVE_DATA,  // 68: Receive a packet of OTA data
+        SET_DATETIME,  // 62: Set the time
+        CONFIG_FORWARD_CONFIG,  // 63: Forward a config string received by WiFi
+        CONFIG_FORWARD_CMD,  // 64: Forward a command string received by WiFi
+        CONFIG_FORWARD_LEGACY_CMD,  // 65: Forward a command string received by WiFi (legacy)
+        OTA_INITIATE_UPDATE,  // 66: Initiate OTA update
+        OTA_RECEIVE_DATA,  // 67: Receive a packet of OTA data
     };
 }
 

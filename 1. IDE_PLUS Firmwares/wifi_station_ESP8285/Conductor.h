@@ -92,7 +92,6 @@ class Conductor
 
     protected:
         /***** Config from Host *****/
-        bool m_shouldWakeUp = false;
         MacAddress m_bleMAC;
         MacAddress m_wifiMAC;
         bool m_useMQTT = true;

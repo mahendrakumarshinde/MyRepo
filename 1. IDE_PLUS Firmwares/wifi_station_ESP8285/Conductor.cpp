@@ -145,13 +145,6 @@ void Conductor::processMessageFromHost()
             break;
 
         /***** Wifi commands *****/
-        case MSPCommand::WIFI_WAKE_UP:
-            m_shouldWakeUp = true;
-            break;
-        case MSPCommand::WIFI_DEEP_SLEEP:
-            m_shouldWakeUp = false;
-            deepsleep();
-            break;
         case MSPCommand::WIFI_SOFT_RESET:
             ESP.reset();
             break;
@@ -395,7 +388,7 @@ bool Conductor::getConfigFromMainBoard()
 {
     uint32_t startTime = millis();
     uint32_t current = startTime;
-    while (!m_shouldWakeUp || uint64_t(m_bleMAC) == 0)
+    while (uint64_t(m_bleMAC) == 0)
     {
         if (current - startTime > hostResponseTimeout)
         {
@@ -405,25 +398,12 @@ bool Conductor::getConfigFromMainBoard()
             }
             deepsleep();
         }
-        hostSerial.sendMSPCommand(MSPCommand::WIFI_REQUEST_ACTION);
         hostSerial.sendMSPCommand(MSPCommand::ASK_BLE_MAC);
-        readMessagesFromHost();
         delay(100);
         readMessagesFromHost();
-        String test = m_bleMAC.toString();
-        if (m_shouldWakeUp)
-        {
-            test += String("+wakeup");
-        }
-        else
-        {
-            test += String("+sleep");
-        }
-        hostSerial.sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION,
-                                  test.c_str());
         current = millis();
     }
-    return (m_shouldWakeUp && uint64_t(m_bleMAC) > 0);
+    return (uint64_t(m_bleMAC) > 0);
 }
 
 
@@ -626,7 +606,7 @@ void Conductor::checkWiFiDisconnectionTimeout()
         {
             debugPrint("Exceeded disconnection time-out");
         }
-        deepsleep();
+        ESP.reset();
     }
 }
 
