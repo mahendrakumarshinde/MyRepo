@@ -173,20 +173,11 @@ void Conductor::showStatusOnLed(RGBColor color)
  *  - IUFlash::CFG_FEATURE
  * @return bool success
  */
-bool Conductor::loadConfigFromFlash(IUFlash::storedConfig configType)
+bool Conductor::configureFromFlash(IUFlash::storedConfig configType)
 {
-    // TODO this only works with IUFSFlash, not IUSPIFlash
-    // FIXME this only works with IUFSFlash, not IUSPIFlash
     StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
-    JsonVariant config;
-    if (iuFlash.available())
-    {
-        File file;
-        if (iuFlash.getReadable(configType, &file))
-        {
-            config = jsonBuffer.parseObject(file);
-        }
-    }
+    JsonVariant config = JsonVariant(
+            iuFlash.loadConfigJson(configType, jsonBuffer));
     bool success = config.success();
     if (success)
     {
@@ -200,6 +191,13 @@ bool Conductor::loadConfigFromFlash(IUFlash::storedConfig configType)
                 break;
             case IUFlash::CFG_FEATURE:
                 configureAllFeatures(config);
+                break;
+            case IUFlash::CFG_WIFI0:
+            case IUFlash::CFG_WIFI1:
+            case IUFlash::CFG_WIFI2:
+            case IUFlash::CFG_WIFI3:
+            case IUFlash::CFG_WIFI4:
+                iuWiFi.configure(config);
                 break;
             default:
                 if (debugMode)
@@ -235,12 +233,11 @@ void Conductor::sendConfigChecksum(IUFlash::storedConfig configType)
     }
     size_t configMaxLen = 200;
     char config[configMaxLen];
+    strcpy(config, "");
     size_t charCount = 0;
     if (iuFlash.available())
     {
-//        Serial.println("here 1");
-//        charCount = iuFlash.readConfig(configType, config, configMaxLen);
-//        Serial.println("here 2");
+        charCount = iuFlash.readConfig(configType, config, configMaxLen);
     }
     // Charcount = 0 if flash is unavailable or file not found => Checksum of
     // empty string will be sent, and that will trigger a config refresh
@@ -312,43 +309,6 @@ void Conductor::periodicSendConfigChecksum()
             m_configTimerStart = now;
         }
     }
-}
-
-/**
- *
- */
-bool Conductor::saveConfigToFlash(IUFlash::storedConfig configType,
-                                  JsonVariant &config)
-{
-    overrideLedColor(RGB_CYAN);
-    rgbLed.manageColorTransitions();
-    if (!iuFlash.available())
-    {
-        overrideLedColor(RGB_RED);
-        return false;  // Flash is unavailable
-    }
-    // TODO this only works with IUFSFlash, not IUSPIFlash
-    // FIXME this only works with IUFSFlash, not IUSPIFlash
-    char filepath[IUFSFlash::MAX_FULL_CONFIG_FPATH_LEN];
-    iuFlash.getConfigFilename(configType, filepath);
-    File file = DOSFS.open(filepath, "w");
-//    if (!iuFlash.getWritable(configType, &file))
-//    {
-//        overrideLedColor(RGB_PURPLE);
-//        return false;
-//    }
-    if (config.printTo(file) == 0)
-    {
-        overrideLedColor(RGB_ORANGE);
-        return false;
-    }
-    if (debugMode)
-    {
-        debugPrint("Successfully saved config type #", false);
-        debugPrint((uint8_t) configType);
-    }
-    overrideLedColor(RGB_GREEN);
-    return true;
 }
 
 
@@ -424,7 +384,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         configureMainOptions(subConfig);
         if (saveToFlash)
         {
-            saveConfigToFlash(IUFlash::CFG_DEVICE, subConfig);
+            iuFlash.saveConfigJson(IUFlash::CFG_DEVICE, subConfig);
         }
     }
     // Component configuration
@@ -434,7 +394,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         configureAllSensors(subConfig);
         if (saveToFlash)
         {
-            saveConfigToFlash(IUFlash::CFG_COMPONENT, subConfig);
+            iuFlash.saveConfigJson(IUFlash::CFG_COMPONENT, subConfig);
         }
     }
     // Feature configuration
@@ -444,7 +404,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         configureAllFeatures(subConfig);
         if (saveToFlash)
         {
-            saveConfigToFlash(IUFlash::CFG_FEATURE, subConfig);
+            iuFlash.saveConfigJson(IUFlash::CFG_FEATURE, subConfig);
         }
     }
     return true;
@@ -557,7 +517,10 @@ void Conductor::configureAllFeatures(JsonVariant &config)
             feature->configure(myConfig);  // Configure the feature
             computer = FeatureComputer::getInstanceById(
                 feature->getComputerId());
-            computer->configure(myConfig);  // Configure the computer
+            if (computer)
+            {
+                computer->configure(myConfig);  // Configure the computer
+            }
             if (debugMode)
             {
                 debugPrint(F("Configured feature "), false);
@@ -877,7 +840,7 @@ void Conductor::processUserMessageForWiFi(char *buff,
             feedbackPort->print(';');
         }
     }
-    else 
+    else
     if (strcmp(buff, "WIFI-DISABLE") == 0)
     {
         iuWiFi.setPowerMode(PowerMode::DEEP_SLEEP);
@@ -1144,14 +1107,14 @@ void Conductor::deactivateAllGroups()
  */
 void Conductor::configureGroupsForOperation()
 {
-    if (!loadConfigFromFlash(IUFlash::CFG_DEVICE))
+    if (!configureFromFlash(IUFlash::CFG_DEVICE))
     {
         // Config not found, default to mainFeatureGroup
         deactivateAllGroups();
         activateGroup(m_mainFeatureGroup);
 
     }
-    if (!loadConfigFromFlash(IUFlash::CFG_FEATURE))
+    if (!configureFromFlash(IUFlash::CFG_FEATURE))
     {
         // Config not found, default to DEFAULT_ACCEL_ENERGY_THRESHOLDS
         accelRMS512Total.setThresholds(DEFAULT_ACCEL_ENERGY_NORMAL_TH,

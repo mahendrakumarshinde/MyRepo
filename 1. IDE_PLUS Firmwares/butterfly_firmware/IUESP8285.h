@@ -60,11 +60,10 @@ class IUESP8285 : public IUSerial, public Component
         void manageAutoSleep(bool wakeUpNow=false);
         virtual bool readToBuffer();
         /***** Local storage (flash) management *****/
-        bool loadConfigFromFlash(IUFlash *iuFlashPtr,
-                IUFlash::storedConfig configType=STORED_CFG_TYPE);
         void saveConfigToFlash(IUFlash *iuFlashPtr,
                 IUFlash::storedConfig configType=STORED_CFG_TYPE);
         /***** Network Configuration *****/
+        bool configure(JsonVariant &config);
         void setSSID(const char *ssid, uint8_t length);
         void setPassword(const char *psk, uint8_t length);
         void setStaticIP(IPAddress staticIP);

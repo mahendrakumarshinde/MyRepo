@@ -270,10 +270,12 @@ void setup()
         if (!USBDevice.configured())
         {
             iuFlash.begin();
-            iuWiFi.loadConfigFromFlash(&iuFlash);
+            // WiFi configuration
+            conductor.configureFromFlash(IUFlash::CFG_WIFI0);
+            // Feature, FeatureGroup and sensors coonfigurations
             for (uint8_t i = 0; i < conductor.CONFIG_TYPE_COUNT; ++i)
             {
-                conductor.loadConfigFromFlash(conductor.CONFIG_TYPES[i]);
+                conductor.configureFromFlash(conductor.CONFIG_TYPES[i]);
             }
             if (setupDebugMode)
             {

@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <FS.h>
 #include <SPI.h>
+#include <ArduinoJson.h>
 
 #include <IUDebugger.h>
 
@@ -28,15 +29,21 @@ class IUFlash
         IUFlash() {}
         virtual ~IUFlash() {}
         virtual void begin() = 0;
-        virtual bool available() = 0;
+        virtual bool available() { return m_begun; }
         /***** Config read / write functions *****/
         virtual size_t readConfig(storedConfig configType, char *config,
                                   size_t maxLength) = 0;
-        virtual size_t writeConfig(storedConfig configType, char *config) = 0;
-        virtual void deleteConfig(storedConfig configType) = 0;
-        virtual bool getWritable(storedConfig configType, Print* printPtr) = 0;
-        virtual bool getReadable(storedConfig configType,
-                                 Stream* streamPtr) = 0;
+        virtual size_t writeConfig(storedConfig configType, char *config,
+                                   size_t len) = 0;
+        virtual size_t writeConfig(storedConfig configType, char *config)
+            { writeConfig(configType, config, strlen(config)); }
+        virtual bool deleteConfig(storedConfig configType) = 0;
+        /***** JSON Config load / save functions *****/
+        virtual bool saveConfigJson(storedConfig configType,
+                                    JsonVariant &config) = 0;
+
+    protected:
+        bool m_begun = false;
 };
 
 
@@ -62,23 +69,34 @@ class IUFSFlash : public IUFlash
         static const uint8_t MAX_FULL_CONFIG_FPATH_LEN = 28;
         /***** Core *****/
         IUFSFlash() : IUFlash() {}
-        virtual ~IUFSFlash() {}
-        virtual void begin();
-        virtual bool available() { return m_begun; }
+        ~IUFSFlash() {}
+        void begin();
         /***** Config read / write functions *****/
-        virtual size_t readConfig(storedConfig configType, char *config,
-                                  size_t maxLength);
-        virtual size_t writeConfig(storedConfig configType, char *config);
-        virtual void deleteConfig(storedConfig configType);
-        virtual bool getWritable(storedConfig configType, Print* printPtr);
-        virtual bool getReadable(storedConfig configType,
-                                 Stream* streamPtr);
+        size_t readConfig(storedConfig configType, char *config,
+                          size_t maxLength);
+        size_t writeConfig(storedConfig configType, char *config, size_t len);
+        virtual bool deleteConfig(storedConfig configType);
+        /***** JSON Config load / save functions *****/
+        template <size_t capacity>
+        JsonObject& loadConfigJson(
+            storedConfig configType, StaticJsonBuffer<capacity> &jsonBuffer);
+        bool saveConfigJson(storedConfig configType, JsonVariant &config);
         /***** Utility *****/
-        virtual size_t getConfigFilename(storedConfig configType, char *dest);
-
-    protected:
-        bool m_begun = false;
+        size_t getConfigFilename(storedConfig configType, char *dest,
+                                 size_t len);
+        File openConfigFile(storedConfig configType, const char* mode);
 };
+
+template <size_t capacity>
+JsonObject& IUFSFlash::loadConfigJson(
+    storedConfig configType, StaticJsonBuffer<capacity> &jsonBuffer)
+{
+    File file = openConfigFile(configType, "r");
+    JsonObject &root = jsonBuffer.parseObject(file);
+    file.close();
+    return root;
+}
+
 
 
 /**
@@ -148,18 +166,19 @@ class IUSPIFlash : public IUFlash
         };
         /***** Core *****/
         IUSPIFlash(SPIClass *spiPtr, uint8_t csPin, SPISettings settings);
-        virtual ~IUSPIFlash() {}
+        ~IUSPIFlash() {}
         void hardReset();
-        virtual void begin();
-        virtual bool available() { return true; }
+        void begin();
         /***** Config read / write functions *****/
-        virtual size_t readConfig(storedConfig configType, char *config,
-                                  size_t maxLength);
-        virtual size_t writeConfig(storedConfig configType, char *config);
-        virtual void deleteConfig(storedConfig configType);
-        virtual bool getWritable(storedConfig configType, Print* printPtr);
-        virtual bool getReadable(storedConfig configType,
-                                 Stream* streamPtr);
+        size_t readConfig(storedConfig configType, char *config,
+                          size_t maxLength);
+        size_t writeConfig(storedConfig configType, char *config, size_t len);
+        bool deleteConfig(storedConfig configType);
+        /***** JSON Config load / save functions *****/
+        template <size_t capacity>
+        JsonObject& loadConfigJson(
+            storedConfig configType, StaticJsonBuffer<capacity> &jsonBuffer);
+        bool saveConfigJson(storedConfig configType, JsonVariant &config);
 
     protected:
         SPIClass *m_SPI;
@@ -185,5 +204,14 @@ class IUSPIFlash : public IUFlash
         void readPages(uint8_t *content, uint16_t pageIndex,
                        const uint16_t pageCount, bool highSpeed);
 };
+
+template <size_t capacity>
+JsonObject& IUSPIFlash::loadConfigJson(
+    storedConfig configType, StaticJsonBuffer<capacity> &jsonBuffer)
+{
+    //TODO Implement
+    return jsonBuffer.parseObject("");
+}
+
 
 #endif // IUFLASH_H

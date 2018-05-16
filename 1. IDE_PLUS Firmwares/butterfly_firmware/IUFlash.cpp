@@ -56,18 +56,14 @@ void IUFSFlash::begin()
 size_t IUFSFlash::readConfig(storedConfig configType, char *config,
                              size_t maxLength)
 {
-    if (!m_begun)
-    {
-        return 0;
+    File file = openConfigFile(configType, "r");
+    size_t readCharCount = 0;
+    if (!file) {
+        strcpy(config, "");
     }
-    char filepath[MAX_FULL_CONFIG_FPATH_LEN];
-    getConfigFilename(configType, filepath);
-    if (!DOSFS.exists(filepath))
-    {
-        return 0;
+    else {
+        readCharCount = file.readBytes(config, maxLength);
     }
-    File file = DOSFS.open(filepath, "r");
-    size_t readCharCount = file.readBytes(config, maxLength);
     file.close();
     return readCharCount;
 }
@@ -78,17 +74,14 @@ size_t IUFSFlash::readConfig(storedConfig configType, char *config,
  * Return the number of written chars. Returns 0 if the stored config type is
  * unknown.
  */
-size_t IUFSFlash::writeConfig(storedConfig configType, char *config)
+size_t IUFSFlash::writeConfig(storedConfig configType, char *config, size_t len)
 {
-    if (!m_begun)
+    File file = openConfigFile(configType, "w");
+    size_t writtenCharCount = 0;
+    if (file)
     {
-        return 0;
+        writtenCharCount = file.write((uint8_t*) config, len);
     }
-    char filepath[MAX_FULL_CONFIG_FPATH_LEN];
-    getConfigFilename(configType, filepath);
-    File file = DOSFS.open(filepath, "w");
-    size_t configLength = strlen(config);
-    size_t writtenCharCount = file.write((uint8_t*) config, configLength);
     file.close();
     return writtenCharCount;
 }
@@ -96,57 +89,43 @@ size_t IUFSFlash::writeConfig(storedConfig configType, char *config)
 /**
  * Delete the config.
  */
-void IUFSFlash::deleteConfig(storedConfig configType)
+bool IUFSFlash::deleteConfig(storedConfig configType)
 {
-    if (!m_begun)
-    {
-        return;
-    }
-    char filepath[MAX_FULL_CONFIG_FPATH_LEN];
-    getConfigFilename(configType, filepath);
-    if (DOSFS.exists(filepath))
-    {
-        DOSFS.remove(filepath);
-    }
-}
-
-/**
- * Update the pointer with a Print subclass instance (writable only).
- */
-bool IUFSFlash::getWritable(storedConfig configType, Print* printPtr)
-{
-    if (!m_begun)
-    {
-        printPtr = NULL;
+    if (!available()) {
         return false;
     }
     char filepath[MAX_FULL_CONFIG_FPATH_LEN];
-    getConfigFilename(configType, filepath);
-    *printPtr = DOSFS.open(filepath, "w");
-    return (printPtr != NULL);
+    getConfigFilename(configType, filepath, MAX_FULL_CONFIG_FPATH_LEN);
+    if (DOSFS.exists(filepath)) {
+        return DOSFS.remove(filepath);
+    } else {
+        return true;
+    }
 }
 
+/***** JSON Config load / save functions *****/
 
-/**
- * Update the pointer with a Stream subclass instance (readable only).
- */
-bool IUFSFlash::getReadable(storedConfig configType, Stream* streamPtr)
+bool IUFSFlash::saveConfigJson(storedConfig configType, JsonVariant &config)
 {
-    if (!m_begun)
-    {
-        streamPtr = NULL;
+    if (!available()) {
         return false;
     }
-    char filepath[MAX_FULL_CONFIG_FPATH_LEN];
-    getConfigFilename(configType, filepath);
-    if (!DOSFS.exists(filepath))
+    File file = openConfigFile(configType, "w");
+    if (config.printTo(file) == 0)
     {
-        streamPtr = NULL;
         return false;
     }
-    *streamPtr = DOSFS.open(filepath, "r");
-    return (streamPtr != NULL);
+    file.close();
+    if (debugMode)
+    {
+        debugPrint("Successfully saved config type #", false);
+        debugPrint((uint8_t) configType);
+    }
+    return true;
 }
+
+
+/***** Utility *****/
 
 /**
  * Find and return the file name of the requested config type.
@@ -154,49 +133,44 @@ bool IUFSFlash::getReadable(storedConfig configType, Stream* streamPtr)
  * Dest char array pointer should at least be of length
  * MAX_FULL_CONFIG_FPATH_LEN.
  */
-size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest)
+size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
+                                    size_t len)
 {
-    // Reinitialize dest (required for strcat)
-    for (uint8_t i = 0; i < MAX_FULL_CONFIG_FPATH_LEN; ++i)
-    {
-        dest[i] = 0;
-    }
-    strcpy(dest, CONFIG_SUBDIR);
-    strcat(dest, "/");
+    char *fname = NULL;
     switch (configType)
     {
         case CFG_WIFI0:
-            strcat(dest, FNAME_WIFI0);
+            fname = FNAME_WIFI0;
             break;
         case CFG_WIFI1:
-            strcat(dest, FNAME_WIFI1);
+            fname = FNAME_WIFI1;
             break;
         case CFG_WIFI2:
-            strcat(dest, FNAME_WIFI2);
+            fname = FNAME_WIFI2;
             break;
         case CFG_WIFI3:
-            strcat(dest, FNAME_WIFI3);
+            fname = FNAME_WIFI3;
             break;
         case CFG_WIFI4:
-            strcat(dest, FNAME_WIFI4);
+            fname = FNAME_WIFI4;
             break;
         case CFG_FEATURE:
-            strcat(dest, FNAME_FEATURE);
+            fname = FNAME_FEATURE;
             break;
         case CFG_COMPONENT:
-            strcat(dest, FNAME_COMPONENT);
+            fname = FNAME_COMPONENT;
             break;
         case CFG_DEVICE:
-            strcat(dest, FNAME_DEVICE);
+            fname = FNAME_DEVICE;
             break;
         case CFG_RAW_DATA_ENDPOINT:
-            strcat(dest, FNAME_RAW_DATA_ENDPOINT);
+            fname = FNAME_RAW_DATA_ENDPOINT;
             break;
         case CFG_MQTT_SERVER:
-            strcat(dest, FNAME_MQTT_SERVER);
+            fname = FNAME_MQTT_SERVER;
             break;
         case CFG_MQTT_CREDS:
-            strcat(dest, FNAME_MQTT_CREDS);
+            fname = FNAME_MQTT_CREDS;
             break;
         default:
             if (debugMode)
@@ -206,8 +180,34 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest)
             }
             return 0;
     }
-    strcat(dest, CONFIG_EXTENSION);
-    return strlen(dest);
+    if (fname == NULL)
+    {
+        return 0;
+    }
+    return snprintf(dest, len, "%s/%s%s", CONFIG_SUBDIR, fname,
+                    CONFIG_EXTENSION);
+}
+
+File IUFSFlash::openConfigFile(storedConfig configType,
+                                       const char* mode)
+{
+    if (!available())
+    {
+        return File();
+    }
+    char filepath[MAX_FULL_CONFIG_FPATH_LEN];
+    size_t fpathLen = getConfigFilename(configType, filepath,
+                                        MAX_FULL_CONFIG_FPATH_LEN);
+    if (fpathLen == 0 || filepath == NULL)
+    {
+        if (debugMode)
+        {
+            debugPrint("Couldn't find the file name for config ", false);
+            debugPrint(configType);
+        }
+        return File();
+    }
+    return DOSFS.open(filepath, mode);
 }
 
 
@@ -254,6 +254,7 @@ void IUSPIFlash::begin()
     pinMode(m_csPin, OUTPUT);
     digitalWrite(m_csPin, HIGH);
     m_SPI->begin();
+    m_begun = true;
 }
 
 
@@ -272,7 +273,8 @@ size_t IUSPIFlash::readConfig(storedConfig configType, char *config,
 /**
  *
  */
-size_t IUSPIFlash::writeConfig(storedConfig configType, char *config)
+size_t IUSPIFlash::writeConfig(storedConfig configType, char *config,
+                               size_t len)
 {
     // TODO Implement
     return 0;
@@ -281,28 +283,18 @@ size_t IUSPIFlash::writeConfig(storedConfig configType, char *config)
 /**
  * Delete the config.
  */
-void IUSPIFlash::deleteConfig(storedConfig configType)
+bool IUSPIFlash::deleteConfig(storedConfig configType)
 {
     // TODO Implement
-}
-
-/**
- * Update the pointer with a Print subclass instance (writable only).
- */
-bool IUSPIFlash::getWritable(storedConfig configType, Print* printPtr)
-{
-    // TODO Implement
-    printPtr = NULL;
     return false;
 }
 
-/**
- * Update the pointer with a Stream subclass instance (writable and readable).
- */
-bool IUSPIFlash::getReadable(storedConfig configType, Stream* streamPtr)
+
+/***** JSON Config load / save functions *****/
+
+bool IUSPIFlash::saveConfigJson(storedConfig configType, JsonVariant &config)
 {
     // TODO Implement
-    streamPtr = NULL;
     return false;
 }
 

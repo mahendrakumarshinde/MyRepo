@@ -128,9 +128,7 @@ class Conductor
         void showOperationStateOnLed();
         void showStatusOnLed(RGBColor color);
         /***** Local storage (flash) management *****/
-        bool loadConfigFromFlash(IUFlash::storedConfig configType);
-        bool saveConfigToFlash(IUFlash::storedConfig configType,
-                               JsonVariant &config);
+        bool configureFromFlash(IUFlash::storedConfig configType);
         void sendConfigChecksum(IUFlash::storedConfig configType);
         void periodicSendConfigChecksum();
         /***** Serial Reading & command processing*****/

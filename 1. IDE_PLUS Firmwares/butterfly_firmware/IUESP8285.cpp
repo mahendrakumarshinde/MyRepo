@@ -103,11 +103,6 @@ void IUESP8285::setPowerMode(PowerMode::option pMode)
     manageAutoSleep(m_powerMode > PowerMode::SLEEP);
 }
 
-
-/* =============================================================================
-    WiFi Maintenance functions
-============================================================================= */
-
 /**
  * Send commands to WiFi chip to manage its sleeping cycle.
  *
@@ -200,52 +195,6 @@ bool IUESP8285::readToBuffer()
     Local storage (flash) management
 ============================================================================= */
 
-bool IUESP8285::loadConfigFromFlash(IUFlash *iuFlashPtr,
-                                    IUFlash::storedConfig configType)
-{
-    char strConfig[256];
-    size_t charCount =  iuFlashPtr->readConfig(configType, strConfig, 256);
-    if (charCount == 0)
-    {
-        if (debugMode)
-        {
-            debugPrint("No WiFi config found in Flash");
-        }
-        return false;
-    }
-    StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
-    JsonObject& config = jsonBuffer.parseObject(strConfig);
-    if (!config.success())
-    {
-        if (debugMode)
-        {
-            debugPrint("Couln't parse WiFi config found in flash");
-        }
-        return false;
-    }
-    bool success = true;  // success if at least "ssid" and "psk" found
-    const char *value;
-    value = config.get<const char*>("ssid");
-    if (value) { setSSID(value, strlen(value)); }
-    else { success = false; }
-    value = config.get<const char*>("psk");
-    if (value) { setPassword(value, strlen(value)); }
-    else { success = false; }
-    value = config.get<const char*>("static");
-    if (value) { setStaticIP(value, strlen(value)); }
-    value = config.get<const char*>("gateway");
-    if (value) { setGateway(value, strlen(value)); }
-    value = config.get<const char*>("subnet");
-    if (value) { setSubnetMask(value, strlen(value)); }
-    // Send to WiFi module (consistency check is done inside send functions)
-    sendWiFiCredentials();
-    sendStaticConfig();
-    return success;
-}
-
-/**
- *
- */
 void IUESP8285::saveConfigToFlash(IUFlash *iuFlashPtr,
                                   IUFlash::storedConfig configType)
 {
@@ -287,6 +236,33 @@ void IUESP8285::saveConfigToFlash(IUFlash *iuFlashPtr,
 /* =============================================================================
     Network Configuration
 ============================================================================= */
+
+bool IUESP8285::configure(JsonVariant &config)
+{
+    bool success = true;  // success if at least "ssid" and "psk" found
+    const char *value;
+//    value = config.get<const char*>("ssid");
+    value = config["ssid"];
+    if (value) { setSSID(value, strlen(value)); }
+    else { success = false; }
+//    value = config.get<const char*>("psk");
+    value = config["psk"];
+    if (value) { setPassword(value, strlen(value)); }
+    else { success = false; }
+//    value = config.get<const char*>("static");
+    value = config["static"];
+    if (value) { setStaticIP(value, strlen(value)); }
+//    value = config.get<const char*>("gateway");
+    value = config["gateway"];
+    if (value) { setGateway(value, strlen(value)); }
+//    value = config.get<const char*>("subnet");
+    value = config["subnet"];
+    if (value) { setSubnetMask(value, strlen(value)); }
+    // Send to WiFi module (consistency check is done inside send functions)
+    sendWiFiCredentials();
+    sendStaticConfig();
+    return success;
+};
 
 void IUESP8285::setSSID(const char *ssid, uint8_t length)
 {
