@@ -32,10 +32,10 @@ void LSM6DSMAccelReadCallback(uint8_t wireStatus)
  */
 IULSM6DSM::IULSM6DSM(IUI2C *iuI2C, const char* name, Feature *accelerationX,
                      Feature *accelerationY, Feature *accelerationZ,
-                     Feature *tiltX, Feature *tiltY,
-                     Feature *tiltZ) :
+                     Feature *tiltX, Feature *tiltY, Feature *tiltZ,
+                     Feature *temperature) :
     HighFreqSensor(name, 6, accelerationX, accelerationY, accelerationZ, tiltX,
-                 tiltY, tiltZ),
+                 tiltY, tiltZ, temperature),
     m_scale(defaultScale),
     m_gyroScale(defaultGyroScale),
     m_odr(defaultODR)
@@ -330,7 +330,7 @@ void IULSM6DSM::processData()
     {
         return;
     }
-    m_temperature = ((int16_t)m_rawBytes[1] << 8) | m_rawBytes[0];
+    m_temperature = float(((int16_t)m_rawBytes[1] << 8) | m_rawBytes[0]) / 256.0 + 25.0;
     m_rawGyroData[0] = ((int16_t)m_rawBytes[3] << 8) | m_rawBytes[2];
     m_rawGyroData[1] = ((int16_t)m_rawBytes[5] << 8) | m_rawBytes[4];
     m_rawGyroData[2] = ((int16_t)m_rawBytes[7] << 8) | m_rawBytes[6];
@@ -346,6 +346,7 @@ void IULSM6DSM::processData()
         m_gyroData[i] = m_rawGyroData[i] + m_gyroBias[i];
         m_destinations[i + 3]->addQ15Value(m_gyroData[i]);
     }
+    m_destinations[6]->addFloatValue(m_temperature);
     newLSM6DSMAccelData = false;
 }
 

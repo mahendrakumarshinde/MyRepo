@@ -660,8 +660,18 @@ void Conductor::processMessageFromMQTT(const char* topic, const char* payload,
     }
     else if (strncmp(&subTopic[1], "config", 6) == 0)
     {
-        hostSerial.sendMSPCommand(MSPCommand::CONFIG_FORWARD_CONFIG, payload,
-                                  length);
+        if (length > UART_TX_FIFO_SIZE)
+        {
+            // Command is longer than TX buffer, send it while taking care to not
+            // overflow the buffer. Timeout parameter is in microseconds.
+            hostSerial.sendLongMSPCommand(
+                MSPCommand::CONFIG_FORWARD_CONFIG, 100000, payload, length);
+        }
+        else
+        {
+            hostSerial.sendMSPCommand(MSPCommand::CONFIG_FORWARD_CONFIG, payload,
+                                      length);
+        }
 
     }
     else if (strncmp(&subTopic[1], "command", 7) == 0)
@@ -784,7 +794,7 @@ bool Conductor::publishFeature(const char *rawMsg, const uint16_t msgLength,
 
 
 /* =============================================================================
-    Debugging
+    Cyclic Update
 ============================================================================= */
 
 /**
@@ -833,7 +843,7 @@ void Conductor::getWifiInfo(char *destination, uint16_t len, bool mqttOn)
 }
 
 /**
- *
+ * Publish a diagnostic message to the cloud about the WiFi connection.
  */
 void Conductor::publishWifiInfo()
 {
@@ -844,6 +854,55 @@ void Conductor::publishWifiInfo()
         publishDiagnostic(message, strlen(message));
     }
 }
+
+/**
+ * Periodically publish the WiFi info (see publishWifiInfo).
+ */
+void Conductor::publishWifiInfoCycle()
+{
+    if (WiFi.isConnected() && mqttHelper.client.connected())
+    {
+        uint32_t now = millis();
+        if (now - m_lastWifiInfoPublication > wifiInfoPublicationDelay)
+        {
+            publishWifiInfo();
+            m_lastWifiInfoPublication = now;
+        }
+    }
+}
+
+/**
+ * Send a message to the host MCU to inform about the WiFi status.
+ */
+void Conductor::updateWiFiStatus()
+{
+    if (WiFi.isConnected() && mqttHelper.client.connected())
+    {
+        hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_CONNECTED);
+    }
+    else
+    {
+        hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_DISCONNECTED);
+    }
+}
+
+/**
+ * Periodically update the host MCU about the WiFi status (see updateWiFiStatus).
+ */
+void Conductor::updateWiFiStatusCycle()
+{
+    uint32_t now = millis();
+    if (now - m_lastWifiStatusUpdate > wifiStatusUpdateDelay)
+    {
+        updateWiFiStatus();
+        m_lastWifiStatusUpdate = now;
+    }
+}
+
+
+/* =============================================================================
+    Debugging
+============================================================================= */
 
 /**
  *

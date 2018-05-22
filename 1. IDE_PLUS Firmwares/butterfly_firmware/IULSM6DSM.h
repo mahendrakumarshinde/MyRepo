@@ -90,7 +90,8 @@ class IULSM6DSM : public HighFreqSensor
         /***** Constructors and destructors *****/
         IULSM6DSM(IUI2C *iuI2C, const char* name, Feature *accelerationX,
                     Feature *accelerationY, Feature *accelerationZ,
-                    Feature *tiltX, Feature *tiltY, Feature *tiltZ);
+                    Feature *tiltX, Feature *tiltY, Feature *tiltZ,
+                    Feature *temperature);
         virtual ~IULSM6DSM() {}
         /***** Hardware & power management *****/
         virtual void setupHardware();
@@ -129,7 +130,7 @@ class IULSM6DSM : public HighFreqSensor
         /***** Data acquisition *****/
         // 14bits = 2 bytes per value (Temp, accel X, Y, Z and gyro X, Y, Z)
         uint8_t m_rawBytes[14];
-        q15_t m_temperature;
+        float m_temperature;
         q15_t m_rawData[3];     // Q15 accelerometer raw output
         q15_t m_data[3];        // Q15 data (with bias) in G
         q15_t m_bias[3];        // Bias corrections

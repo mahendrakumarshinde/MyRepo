@@ -90,13 +90,13 @@ void IUMQTTHelper::reconnect()
                            m_password, DIAGNOSTIC_TOPIC, WILL_QOS, WILL_RETAIN,
                            m_willMessage))
         {
-            if (m_onConnectionCallback)
-            {
-                m_onConnectionCallback();
-            }
             if (debugMode)
             {
                 debugPrint("Success");
+            }
+            if (m_onConnectionCallback)
+            {
+                m_onConnectionCallback();
             }
         }
         else

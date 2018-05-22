@@ -42,22 +42,52 @@ const char DEVICE_TYPE[DEVICE_TYPE_LENGTH] = "ide_plus";
     Library versionning
 ============================================================================= */
 
+/* Because IU sometimes needs to modify libraries, we implement our own
+ * versionning.
+ */
 namespace IU_VERSION {
     namespace required {
-        const uint8_t pubsubclient_major = 1;
-        const uint8_t pubsubclient_minor = 1;
-    };
+        const uint8_t arduinojson[3] = {1, 0, 0};
+        const uint8_t arduinomd5[3] = {1, 0, 0};
+        const uint8_t arduinounit[3] = {1, 0, 0};
+        const uint8_t iubutterflyi2s[3] = {1, 0, 0};
+        const uint8_t iugnss[3] = {1, 0, 0};
+        const uint8_t iuserial[3] = {1, 0, 0};
+        const uint8_t iuwifiota[3] = {1, 0, 0};
+        const uint8_t macaddress[3] = {1, 0, 0};
+        const uint8_t memoryfree[3] = {1, 0, 0};
+        const uint8_t timer[3] = {1, 0, 0};
+    };  // required
 
-    inline bool checkLibraryVersions()
+    inline bool checkVersion(const uint8_t *requiredVersion,
+                             const uint8_t *installedVersion)
     {
-//        if (required.pubsubclient_major == installed.pubsubclient_major
-//            )
-//        {
-//            return true;
-//        }
-        return false;
+        for (uint8_t i = 0; i < 3; i++)
+        {
+            if (requiredVersion[0] != installedVersion[0])
+            {
+                return false;
+            }
+        }
+        return true;
     }
-};
+
+    inline bool checkAllLibraryVersions()
+    {
+        return (
+//            checkVersion(required::arduinojson, installed::arduinojson) &&
+//            checkVersion(required::arduinomd5, installed::arduinomd5) &&
+//            checkVersion(required::arduinounit, installed::arduinounit) &&
+//            checkVersion(required::iubutterflyi2s, installed::iubutterflyi2s) &&
+//            checkVersion(required::iugnss, installed::iugnss) &&
+//            checkVersion(required::iuserial, installed::iuserial) &&
+//            checkVersion(required::iuwifiota, installed::iuwifiota) &&
+//            checkVersion(required::macaddress, installed::macaddress) &&
+//            checkVersion(required::memoryfree, installed::memoryfree) &&
+//            checkVersion(required::timer, installed::timer) &&
+            true);
+    }
+};  // IU_VERSION
 
 
 /* =============================================================================

@@ -22,12 +22,13 @@ class Sensor : public Component
         static uint8_t instanceCount;
         static Sensor *instances[MAX_INSTANCE_COUNT];
         /***** Preset values and default settings *****/
-        static const uint8_t maxDestinationCount = 6;
+        static const uint8_t maxDestinationCount = 7;
         /***** Core *****/
         Sensor(const char* name, uint8_t destinationCount=0,
                Feature *destination0=NULL, Feature *destination1=NULL,
                Feature *destination2=NULL, Feature *destination3=NULL,
-               Feature *destination4=NULL, Feature *destination5=NULL);
+               Feature *destination4=NULL, Feature *destination5=NULL,
+               Feature *destination6=NULL);
         virtual ~Sensor();
         virtual char* getName() { return m_name; }
         virtual bool isNamed(const char* name)
@@ -85,7 +86,8 @@ class HighFreqSensor : public Sensor
         HighFreqSensor(const char* name, uint8_t destinationCount=0,
                        Feature *destination0=NULL, Feature *destination1=NULL,
                        Feature *destination2=NULL, Feature *destination3=NULL,
-                       Feature *destination4=NULL, Feature *destination5=NULL);
+                       Feature *destination4=NULL, Feature *destination5=NULL,
+                       Feature *destination6=NULL);
         virtual ~HighFreqSensor() {}
         /***** Configuration *****/
         virtual void configure(JsonVariant &config);
@@ -127,7 +129,8 @@ class LowFreqSensor : public Sensor
         LowFreqSensor(const char* name, uint8_t destinationCount=0,
                       Feature *destination0=NULL, Feature *destination1=NULL,
                       Feature *destination2=NULL, Feature *destination3=NULL,
-                      Feature *destination4=NULL, Feature *destination5=NULL);
+                      Feature *destination4=NULL, Feature *destination5=NULL,
+                      Feature *destination6=NULL);
         virtual ~LowFreqSensor() {}
         /***** Configuration *****/
         virtual void configure(JsonVariant &config);

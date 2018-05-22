@@ -90,6 +90,7 @@ void IUESP8285::hardReset()
 {
     turnOff();
     delay(100);
+    resetBuffer();
     turnOn();
 }
 
@@ -180,6 +181,10 @@ bool IUESP8285::readToBuffer()
     else if (m_on && m_lastResponseTime > 0 &&
              now - m_lastResponseTime > noResponseTimeout)
     {
+        if (debugMode)
+        {
+            debugPrint("WiFi irresponsive: hard resetting now");
+        }
         hardReset();
         m_lastResponseTime = now;
     }

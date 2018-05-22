@@ -2,7 +2,7 @@
 
 
 /* =============================================================================
-    Constructor & desctructors
+    Core
 ============================================================================= */
 
 IUSerial::IUSerial(HardwareSerial *serialPort, char *charBuffer,
@@ -254,6 +254,7 @@ void IUSerial::sendMSPCommand(MSPCommand::command cmd, const char* cmdMsg,
     sendMspCommandTail();
 }
 
+
 /**
  *
  */
@@ -268,6 +269,64 @@ void IUSerial::sendMSPCommand(MSPCommand::command cmd, const char* cmdMsg)
     {
         sendMSPCommand(cmd);
     }
+}
+
+/**
+ * Send long MSP command while making sure that the TX buffer doesn't overflow.
+ *
+ * The timeout parameter (in microseconds) allows to specify a max allowed
+ * duration to send the whole command.
+ */
+void IUSerial::sendLongMSPCommand(MSPCommand::command cmd,
+                                  uint32_t microTimeout, const char* cmdMsg,
+                                  uint16_t cmdSize)
+{
+    if (debugMode)
+    {
+        debugPrint("Sending Long MSP Command #", false);
+        debugPrint((uint8_t) cmd);
+        debugPrint("MSP message is: ", false);
+        for (uint16_t i = 0; i < cmdSize; i++)
+        {
+            debugPrint(cmdMsg[i], false);
+        }
+        debugPrint("");
+    }
+    uint32_t startT = micros();
+    while (port->availableForWrite() < 6)
+    {
+        delayMicroseconds(5);
+        if (micros() - startT > microTimeout)
+        {
+            if (debugMode) { debugPrint("Timeout exceeded"); }
+            return;
+        }
+    }
+    sendMspCommandHeader(cmdSize, cmd);
+    uint16_t i = 0;
+    for (uint16_t i = 0; i < cmdSize; ++i)
+    {
+        while (port->availableForWrite() < 1)
+        {
+            delayMicroseconds(1);
+            if (micros() - startT > microTimeout)
+            {
+                if (debugMode) { debugPrint("Timeout exceeded"); }
+                return;
+            }
+        }
+        mspChecksumAndSend(cmdMsg[i]);
+    }
+    while (port->availableForWrite() < 1)
+    {
+        delayMicroseconds(1);
+        if (micros() - startT > microTimeout)
+        {
+            if (debugMode) { debugPrint("Timeout exceeded"); }
+            return;
+        }
+    }
+    sendMspCommandTail();
 }
 
 /**

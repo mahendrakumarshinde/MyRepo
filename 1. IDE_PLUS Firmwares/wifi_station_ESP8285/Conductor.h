@@ -48,7 +48,10 @@ class Conductor
         // Delay between 2 connection attemps
         static const uint32_t reconnectionInterval = 1000;  // ms
         // ESP82 will deep-sleep after being disconnected for more than:
-        static const uint32_t disconnectionTimeout = 130000;  // ms
+        static const uint32_t disconnectionTimeout = 100000;  // ms
+        // Cyclic publication
+        static const uint32_t wifiStatusUpdateDelay = 5000;  // ms
+        static const uint32_t wifiInfoPublicationDelay = 300000;  // ms
         /***** Core *****/
         Conductor();
         virtual ~Conductor() {}
@@ -85,9 +88,13 @@ class Conductor
         bool publishFeature(const char *rawMsg, const uint16_t msgLength,
                             const char *featureType=NULL,
                             const uint16_t featureTypeLength=0);
-        /***** Debugging *****/
+        /***** Cyclic Update *****/
         void getWifiInfo(char *destination, uint16_t len, bool mqttOn);
         void publishWifiInfo();
+        void publishWifiInfoCycle();
+        void updateWiFiStatus();
+        void updateWiFiStatusCycle();
+        /***** Debugging *****/
         void debugPrintWifiInfo();
 
     protected:
@@ -108,6 +115,9 @@ class Conductor
         IPAddress m_staticIp;
         IPAddress m_gateway;
         IPAddress m_subnetMask;
+        /***** Cyclic Update *****/
+        uint32_t m_lastWifiStatusUpdate = 0;
+        uint32_t m_lastWifiInfoPublication = 0;
         /***** Settable parameters (addresses, credentials, etc) *****/
         MultiMessageValidator<2> m_mqttServerValidator;
         IPAddress m_mqttServerIP = MQTT_DEFAULT_SERVER_IP;

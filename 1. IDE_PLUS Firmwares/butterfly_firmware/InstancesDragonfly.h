@@ -162,6 +162,9 @@ extern __attribute__((section(".noinit2"))) float temperatureAValues[2];
 extern FloatFeature temperatureA;
 extern __attribute__((section(".noinit2"))) float temperatureBValues[2];
 extern FloatFeature temperatureB;
+// Temperaute measured on the LSM6DSM
+extern __attribute__((section(".noinit2"))) float temperatureValues[2];
+extern FloatFeature temperature;
 
 
 /***** Audio Features *****/

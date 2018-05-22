@@ -56,6 +56,9 @@ class IUSerial
                                     uint16_t cmdSize);
         virtual void sendMSPCommand(MSPCommand::command cmd,
                                     const char* cmdMsg);
+        virtual void sendLongMSPCommand(MSPCommand::command cmd,
+                                        uint32_t microTimeout,
+                                        const char* cmdMsg, uint16_t cmdSize);
         // Send MSP command by chunks: note that you must already know the
         // message length when starting the command.
         virtual void startLongMSPCommand(MSPCommand::command cmd,

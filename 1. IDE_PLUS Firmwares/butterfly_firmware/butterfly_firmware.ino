@@ -28,7 +28,6 @@ Update 2017-10-10
     MAC Address
 ============================================================================= */
 
-//const char MAC_ADDRESS[18] = "94:54:93:10:7C:0B";
 const char MAC_ADDRESS[18] = "94:54:93:10:63:DE";
 
 
@@ -353,11 +352,7 @@ void loop()
             conductor.streamMCUUInfo(iuWiFi.port);
             /*======*/
         }
-        uint32_t stopYield = millis() + 10;
-        while (millis() < stopYield)
-        {
-            yield();
-        }
+        yield();
     #endif
 }
 

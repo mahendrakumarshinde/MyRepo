@@ -13,8 +13,8 @@
 #endif
 
 char iuUSBBuffer[20] = "";
-IUUSB iuUSB(&Serial, iuUSBBuffer, 20, IUSerial::CUSTOM_PROTOCOL, 115200, '\n',
-            1000);
+IUUSB iuUSB(&Serial, iuUSBBuffer, 20, IUSerial::CUSTOM_PROTOCOL, 115200,
+            '\n', 1000);
 
 char iuBluetoothBuffer[500] = "";
 IUBMD350 iuBluetooth(&Serial1, iuBluetoothBuffer, 500,
@@ -25,8 +25,8 @@ char iuWiFiBuffer[500] = "";
     IUSerial iuWiFi(&Serial3, iuWiFiBuffer, 500, IUSerial::LEGACY_PROTOCOL,
                     115200, ';', 250);
 #else
-    IUESP8285 iuWiFi(&Serial3, iuWiFiBuffer, 500, IUSerial::LEGACY_PROTOCOL,
-                     115200, ';', 250);
+    IUESP8285 iuWiFi(&Serial3, iuWiFiBuffer, 500,
+                     IUSerial::LEGACY_PROTOCOL, 115200, ';', 250);
 #endif
 
 

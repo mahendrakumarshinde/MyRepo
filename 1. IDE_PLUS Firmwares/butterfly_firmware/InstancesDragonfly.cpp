@@ -9,8 +9,8 @@
 RGBLed rgbLed(25, 26, 38);
 
 char iuUSBBuffer[20] = "";
-IUUSB iuUSB(&Serial, iuUSBBuffer, 20, IUSerial::CUSTOM_PROTOCOL, 115200, '\n',
-            1000);
+IUUSB iuUSB(&Serial, iuUSBBuffer, 20, IUSerial::CUSTOM_PROTOCOL, 115200,
+            '\n', 1000);
 
 char iuBluetoothBuffer[500] = "";
 IUBMD350 iuBluetooth(&Serial3, iuBluetoothBuffer, 500,
@@ -18,8 +18,8 @@ IUBMD350 iuBluetooth(&Serial3, iuBluetoothBuffer, 500,
 
 char iuWiFiBuffer[500] = "";
 #ifdef USE_EXTERNAL_WIFI
-    IUSerial iuWiFi(&Serial1, iuWiFiBuffer, 500, IUSerial::MS_PROTOCOL,
-                    115200, ';', 250);
+    IUSerial iuWiFi(&Serial1, iuWiFiBuffer, 500, IUSerial::MS_PROTOCOL, 115200,
+                    ';', 250);
 #else
     // IUESP8285 has an Enable Pin on Dragonfly => use it to power off the WiFi?
     IUESP8285 iuWiFi(&Serial1, iuWiFiBuffer, 500, IUSerial::MS_PROTOCOL,
@@ -145,6 +145,9 @@ FloatFeature temperatureA("TMA", 2, 1, temperatureAValues);
 __attribute__((section(".noinit2"))) float temperatureBValues[2];
 FloatFeature temperatureB("TMB", 2, 1, temperatureBValues);
 
+// Temperaute measured on the LSM6DSM
+__attribute__((section(".noinit2"))) float temperatureValues[2];
+FloatFeature temperature("TMP", 2, 1, temperatureValues);
 
 /***** Audio Features *****/
 
@@ -184,7 +187,8 @@ IUMAX31865 iuRTDSensorB(&SPI1, 43, SPISettings(500000, MSBFIRST, SPI_MODE1),
                         "THB", &temperatureB);
 
 IULSM6DSM iuAccelerometer(&iuI2C, "ACC", &accelerationX, &accelerationY,
-                          &accelerationZ, &tiltX, &tiltY, &tiltZ);
+                          &accelerationZ, &tiltX, &tiltY, &tiltZ,
+                          &temperature);
 
 #ifdef NO_GPS
 #else
@@ -339,7 +343,7 @@ void populateFeatureGroups()
     calibrationGroup.addFeature(&velRMS512X);
     calibrationGroup.addFeature(&velRMS512Y);
     calibrationGroup.addFeature(&velRMS512Z);
-    calibrationGroup.addFeature(&temperatureA);
+    calibrationGroup.addFeature(&temperature);
     calibrationGroup.addFeature(&accelMainFreqX);
     calibrationGroup.addFeature(&accelMainFreqY);
     calibrationGroup.addFeature(&accelMainFreqZ);
@@ -357,7 +361,7 @@ void populateFeatureGroups()
     pressStandardGroup.addFeature(&accelRMS512X);
     pressStandardGroup.addFeature(&accelRMS512Y);
     pressStandardGroup.addFeature(&accelRMS512Z);
-    pressStandardGroup.addFeature(&temperatureA);
+    pressStandardGroup.addFeature(&temperature);
     pressStandardGroup.addFeature(&audioDB4096);
 
     /** Standard Motor Monitoring **/
@@ -365,7 +369,7 @@ void populateFeatureGroups()
     motorStandardGroup.addFeature(&velRMS512X);
     motorStandardGroup.addFeature(&velRMS512Y);
     motorStandardGroup.addFeature(&velRMS512Z);
-    motorStandardGroup.addFeature(&temperatureA);
+    motorStandardGroup.addFeature(&temperature);
     motorStandardGroup.addFeature(&audioDB4096);
 
     /** Bearing monitoring **/
@@ -381,7 +385,7 @@ void populateFeatureGroups()
     motorAccelGroup.addFeature(&accelRMS512X);
     motorAccelGroup.addFeature(&accelRMS512Y);
     motorAccelGroup.addFeature(&accelRMS512Z);
-    motorAccelGroup.addFeature(&temperatureA);
+    motorAccelGroup.addFeature(&temperature);
     motorAccelGroup.addFeature(&audioDB4096);
 
     /** Forging Monitoring with focus on displacements on each axis **/

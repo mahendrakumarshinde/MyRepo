@@ -15,7 +15,8 @@ Sensor *Sensor::instances[Sensor::MAX_INSTANCE_COUNT] = {
 Sensor::Sensor(const char* name, uint8_t destinationCount,
                Feature *destination0, Feature *destination1,
                Feature *destination2, Feature *destination3,
-               Feature *destination4, Feature *destination5) :
+               Feature *destination4, Feature *destination5,
+               Feature *destination6) :
     Component(),
     m_destinationCount(destinationCount)
 {
@@ -26,6 +27,7 @@ Sensor::Sensor(const char* name, uint8_t destinationCount,
     m_destinations[3] = destination3;
     m_destinations[4] = destination4;
     m_destinations[5] = destination5;
+    m_destinations[6] = destination6;
     setResolution(1); // Default resolution
     // Instance registration
     m_instanceIdx = instanceCount;
@@ -102,9 +104,10 @@ void Sensor::expose()
 HighFreqSensor::HighFreqSensor(const char* name, uint8_t destinationCount,
                                Feature *destination0, Feature *destination1,
                                Feature *destination2, Feature *destination3,
-                               Feature *destination4, Feature *destination5) :
+                               Feature *destination4, Feature *destination5,
+                               Feature *destination6) :
     Sensor(name, destinationCount, destination0, destination1, destination2,
-           destination3, destination4, destination5)
+           destination3, destination4, destination5, destination6)
 {
     m_callbackRate = defaultCallbackRate;
     setSamplingRate(defaultSamplingRate);
@@ -203,9 +206,10 @@ void HighFreqSensor::acquireData(bool inCallback, bool force)
 LowFreqSensor::LowFreqSensor(const char* name, uint8_t destinationCount,
                              Feature *destination0, Feature *destination1,
                              Feature *destination2, Feature *destination3,
-                             Feature *destination4, Feature *destination5) :
+                             Feature *destination4, Feature *destination5,
+                             Feature *destination6) :
     Sensor(name, destinationCount, destination0, destination1, destination2,
-           destination3, destination4, destination5),
+           destination3, destination4, destination5, destination6),
     m_lastAcquisitionTime(0)
 {
     setSamplingPeriod(defaultSamplingPeriod);

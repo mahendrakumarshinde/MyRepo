@@ -35,33 +35,6 @@ void onMQTTConnection()
 
 
 /* =============================================================================
-    Status Updater
-============================================================================= */
-
-Ticker cloudStatusUpdater;
-
-bool publishWifiInfoNow = false;
-void timeTopublishWifiInfo()
-{
-    publishWifiInfoNow = true;
-}
-
-Ticker hostConnectionStatusUpdater;
-
-void sendConnectionStatusToHost()
-{
-    if (WiFi.isConnected() && mqttHelper.client.connected())
-    {
-        hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_CONNECTED);
-    }
-    else
-    {
-        hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_DISCONNECTED);
-    }
-}
-
-
-/* =============================================================================
     Main setup and loop
 ============================================================================= */
 
@@ -85,15 +58,17 @@ void setup()
     // Prepare to receive MQTT messages
     mqttHelper.client.setCallback(mqttNewMessageCallback);
     mqttHelper.setOnConnectionCallback(onMQTTConnection);
-    // Attach the timers
-    cloudStatusUpdater.attach(300, timeTopublishWifiInfo);
-    hostConnectionStatusUpdater.attach(5, sendConnectionStatusToHost);
     delay(100);
     #if IUDEBUG_ANY == 1
         conductor.reconnect(true);
     #endif
 }
 
+/**
+ * Unless there is a connection attempt going on, the loop typically takes
+ * ~ 1ms to complete, without accounting for the delay at the end.
+ * The delay is there to allow the WiFi to light-sleep.
+ */
 void loop()
 {
     conductor.readMessagesFromHost();  // Read and process messages from host
@@ -108,21 +83,13 @@ void loop()
         timeHelper.updateTimeReferenceFromNTP();
         /***** MQTT Connection / message reception loop *****/
         mqttHelper.loop();
-        if (publishWifiInfoNow)
-        {
-            conductor.publishWifiInfo();
-            publishWifiInfoNow = false;
-        }
+        conductor.publishWifiInfoCycle();
         // Publish raw data (HTTP POST request)
         accelRawDataHelper.publishIfReady(conductor.getBleMAC());
     }
+    conductor.updateWiFiStatusCycle();
     conductor.checkWiFiDisconnectionTimeout();
-    // Light sleep (but keep listening to serial)
-    uint32_t sleepEnd = millis() + 1000;
-    while (millis() < sleepEnd && hostSerial.port->available() == 0)
-    {
-        delay(10);
-    }
+    delay(5);  // Allow light sleep (but keep listening to serial)
 }
 
 
