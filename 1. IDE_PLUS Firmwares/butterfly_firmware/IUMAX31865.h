@@ -14,7 +14,7 @@
  *  Name:
  *    MAX31865 + 2, 3 or 4 wires PT100
  *  Description:
- *      - temperature: a FloatFeature with section size = 1
+ *      - temperature: a float feature
  */
 class IUMAX31865 : public LowFreqSensor
 {
@@ -60,7 +60,7 @@ class IUMAX31865 : public LowFreqSensor
         static const uint32_t PREPARE_1SHOT_DELAY = 70;  // ms
         /***** Constructors & desctructors *****/
         IUMAX31865(SPIClass *spiPtr, uint8_t csPin, SPISettings settings,
-                   const char* name, Feature *temperature);
+                   const char* name, FeatureTemplate<float> *temperature);
         virtual ~IUMAX31865() { }
         /***** Hardware and power management *****/
         virtual void setupHardware();

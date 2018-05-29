@@ -6,8 +6,9 @@
 ============================================================================= */
 
 IUMAX31865::IUMAX31865(SPIClass *spiPtr, uint8_t csPin, SPISettings settings,
-                       const char* name, Feature *temperature) :
+                       const char* name, FeatureTemplate<float> *temperature) :
     LowFreqSensor(name, 1, temperature),
+    m_SPI(spiPtr),
     m_csPin(csPin),
     m_spiSettings(settings),
     m_biasCorrectionEnabled(defaultBiasCorrectionEnabled),
@@ -20,7 +21,6 @@ IUMAX31865::IUMAX31865(SPIClass *spiPtr, uint8_t csPin, SPISettings settings,
     m_onGoing1Shot(false),
     m_1ShotStartTime(0)
 {
-    m_SPI = spiPtr;
 }
 
 
@@ -240,7 +240,7 @@ void IUMAX31865::readTemperature()
     uint16_t rtd = ((uint16_t) rtdMSB << 8) | rtdLSB;
     rtd >>= 1;
     m_temperature = ((float) rtd / 32.0) - 256.0;
-    m_destinations[0]->addFloatValue(m_temperature);
+    m_destinations[0]->addValue(m_temperature);
     m_onGoing1Shot = false;
 }
 

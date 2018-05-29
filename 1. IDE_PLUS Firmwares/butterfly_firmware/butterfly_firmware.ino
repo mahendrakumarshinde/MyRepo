@@ -124,7 +124,7 @@ Conductor conductor(MAC_ADDRESS);
  * NB: Printing is time consuming and may cause issues in callback. Always
  * deactivate the asyncDebugMode in prod.
  */
-void callback()
+void dataAcquisitionCallback()
 {
     uint32_t startT = 0;
     if (asyncDebugMode)
@@ -139,11 +139,11 @@ void callback()
 }
 
 
-/***** Led callbacks *****/
+/***** Led timers and callbacks *****/
 
 static armv7m_timer_t ledShowTimer;
 
-static void ledUShowCallback(void) {
+static void ledShowCallback(void) {
     rgbLed.updateColors();
     armv7m_timer_start(&ledShowTimer, 1);
 }
@@ -154,6 +154,29 @@ static armv7m_timer_t ledTransitionTimer;
 static void ledTransitionCallback(void) {
     rgbLed.manageColorTransitions();
     armv7m_timer_start(&ledTransitionTimer, 10);
+}
+
+void onWiFiConnect() {
+    ledManager.setBaselineStatus(STATUS_WIFI_CONNECTED);
+}
+
+void onWiFiDisconnect() {
+    ledManager.setBaselineStatus(STATUS_NO_STATUS);
+}
+
+void onBLEConnect() {
+    //TODO Show that BLE is connected on the LED
+}
+
+void onBLEDisconnect() {
+    //TODO Show that BLE is disconnected on the LED
+}
+
+void operationStateCallback(Feature *feature) {
+    q15_t value = feature->getLastRecordedQ15Values()[0];
+    if (value < OperationState::COUNT) {
+        ledManager.showOperationState((uint8_t) value);
+    }
 }
 
 
@@ -177,8 +200,8 @@ static void watchdogCallback(void) {
 void setup()
 {
     iuUSB.begin();
-    rgbLed.setupHardware();
-    armv7m_timer_create(&ledShowTimer, (armv7m_timer_callback_t)ledUShowCallback);
+    rgbLed.setup();
+    armv7m_timer_create(&ledShowTimer, (armv7m_timer_callback_t)ledShowCallback);
     armv7m_timer_start(&ledShowTimer, 1);
     armv7m_timer_create(&ledTransitionTimer, (armv7m_timer_callback_t)ledTransitionCallback);
     armv7m_timer_start(&ledTransitionTimer, 10);
@@ -202,6 +225,8 @@ void setup()
         }
         iuBluetooth.setupHardware();
         iuWiFi.setupHardware();
+        iuWiFi.setOnConnect(onWiFiConnect);
+        iuWiFi.setOnDisconnect(onWiFiDisconnect);
         if (setupDebugMode)
         {
             iuI2C.scanDevices();
@@ -218,7 +243,7 @@ void setup()
         {
             debugPrint(F("\nSetting up default feature configuration..."));
         }
-        conductor.setCallback(callback);
+        conductor.setCallback(dataAcquisitionCallback);
         setUpComputerSources();
         populateFeatureGroups();
         if (debugMode)
@@ -278,17 +303,18 @@ void setup()
             }
             if (setupDebugMode)
             {
-                conductor.overrideLedColor(RGB_PURPLE);
+                ledManager.overrideColor(RGB_PURPLE);
                 delay(5000);
-                conductor.resetLed();
+                ledManager.resetStatus();
             }
         }
         else if (setupDebugMode)
         {
-            conductor.overrideLedColor(RGB_ORANGE);
+            ledManager.overrideColor(RGB_ORANGE);
             delay(5000);
-            conductor.resetLed();
+            ledManager.resetStatus();
         }
+        opStateFeature.setOnNewValueCallback(operationStateCallback);
         conductor.changeUsageMode(UsageMode::OPERATION);
     #endif
 }
@@ -336,8 +362,6 @@ void loop()
         conductor.acquireData(false);
         // Feature computation depending on operation mode
         conductor.computeFeatures();
-        // Update the OperationState
-        conductor.updateOperationState();
         // Stream features
         conductor.streamFeatures();
         // Send accel raw data

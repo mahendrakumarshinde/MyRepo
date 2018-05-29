@@ -2,7 +2,7 @@
 #define FEATURECOMPUTER_H
 
 #include "FeatureClass.h"
-#include "Utilities.h"
+#include "FeatureUtilities.h"
 
 
 /* =============================================================================
@@ -12,7 +12,7 @@
 class FeatureComputer
 {
     public:
-        static const uint8_t maxSourceCount = 5;
+        static const uint8_t maxSourceCount = 10;
         static const uint8_t maxDestinationCount = 5;
         /***** Instance registry *****/
         static const uint8_t MAX_INSTANCE_COUNT = 20;
@@ -32,7 +32,8 @@ class FeatureComputer
         virtual void deactivate() { m_active = false; }
         virtual bool isActive() { return m_active; }
         /***** Sources and destinations *****/
-        virtual void addSource(Feature *source, uint8_t sectionCount);
+        virtual bool addSource(Feature *source, uint8_t sectionCount);
+        virtual void deleteAllSources();
         virtual uint8_t getSourceCount() { return m_sourceCount; }
         virtual Feature* getSource(uint8_t idx) { return m_sources[idx]; }
         virtual uint8_t getDestinationCount() { return m_destinationCount; }
@@ -40,7 +41,6 @@ class FeatureComputer
             { return m_destinations[idx]; }
         /***** Computation *****/
         virtual bool compute();
-        virtual void acknowledgeSectionToSources();
         /***** Debugging *****/
         virtual void exposeConfig();
 
@@ -54,7 +54,6 @@ class FeatureComputer
         // Source buffers
         uint8_t m_sourceCount;
         Feature *m_sources[maxSourceCount];
-        uint8_t m_indexesAsReceiver[maxSourceCount];
         uint8_t m_sectionCount[maxSourceCount];
         // Destination buffers
         uint8_t m_destinationCount;
@@ -63,6 +62,49 @@ class FeatureComputer
         virtual void m_specializedCompute() {}
 };
 
+
+/* =============================================================================
+    Feature State Computer
+============================================================================= */
+
+/**
+ * Feature State (Operation State)
+ *
+ * Sources:
+ *      - Any features: The last section average value (x resolution) of each
+ *          will be compared to the computer thresholds to get the feature
+ *          state. The global state is the max of each feature state.
+ * Destinations:
+ *      - Feature state: an int in [0, 3]
+ */
+class FeatureStateComputer: public FeatureComputer
+{
+    public:
+
+        FeatureStateComputer(uint8_t id, FeatureTemplate<q15_t> *featureState) :
+            FeatureComputer(id, 1, featureState) { }
+        /***** Sources and destinations *****/
+        virtual bool addSource(Feature *source, uint8_t sectionCount,
+                               bool active=true);
+        /***** Configuration *****/
+        bool addOpStateFeature(Feature *feature, float lowThreshold,
+                               float medThreshold, float highThreshold,
+                               uint8_t sectionCount=1, bool active=true);
+        void setThresholds(uint8_t idx, float low, float med, float high);
+        virtual void configure(JsonVariant &config);
+
+
+
+    protected:
+        /***** Configuration *****/
+        bool m_activeOpStateFeatures[maxSourceCount];
+        float m_lowThresholds[maxSourceCount];
+        float m_medThresholds[maxSourceCount];
+        float m_highThresholds[maxSourceCount];
+        /***** Computation *****/
+        virtual void m_specializedCompute();
+        float m_getSectionAverage(Feature *feature);
+};
 
 /* =============================================================================
     Feature Computers
@@ -79,7 +121,7 @@ class FeatureComputer
 class SignalRMSComputer: public FeatureComputer
 {
     public:
-        SignalRMSComputer(uint8_t id, Feature *rms=NULL,
+        SignalRMSComputer(uint8_t id, FeatureTemplate<float> *rms,
                           bool removeMean=false, bool normalize=false,
                           bool squared=false, float calibrationScaling=1.);
         /***** Configuration *****/
@@ -112,9 +154,9 @@ class SectionSumComputer: public FeatureComputer
 {
     public:
         SectionSumComputer(uint8_t id, uint8_t destinationCount=0,
-                           Feature *destination0=NULL,
-                           Feature *destination1=NULL,
-                           Feature *destination2=NULL,
+                           FeatureTemplate<float> *destination0=NULL,
+                           FeatureTemplate<float> *destination1=NULL,
+                           FeatureTemplate<float> *destination2=NULL,
                            bool normalize=false, bool rmsInput=false);
         /***** Configuration *****/
         virtual void configure(JsonVariant &config);
@@ -141,7 +183,8 @@ class SectionSumComputer: public FeatureComputer
 class MultiSourceSumComputer: public FeatureComputer
 {
     public:
-        MultiSourceSumComputer(uint8_t id, Feature *destination0=NULL,
+        MultiSourceSumComputer(uint8_t id,
+                               FeatureTemplate<float> *destination0,
                                bool normalize=false, bool rmsInput=false);
         /***** Configuration *****/
         virtual void configure(JsonVariant &config);
@@ -161,19 +204,20 @@ class MultiSourceSumComputer: public FeatureComputer
  * Sources:
  *      - A Q15 buffer
  * Destinations:
- *      - Reduced FFT values: A FFTFeature
- *      - Integrated RMS: A Q15 buffer
- *      - Double-integrated RMS: A Q15 buffer
+ *      - Reduced FFT values: A FFT q15 feature
+ *      - Main frequency: A float feature
+ *      - Integrated RMS: A float feature
+ *      - Double-integrated RMS: A float feature
  */
 class Q15FFTComputer: public FeatureComputer
 {
     public:
         Q15FFTComputer(uint8_t id,
-                       Feature *reducedFFT=NULL,
-                       Feature *mainFrequency=NULL,
-                       Feature *integralRMS=NULL,
-                       Feature *doubleIntegralRMS=NULL,
-                       q15_t *allocatedFFTSpace=NULL,
+                       FeatureTemplate<q15_t> *reducedFFT,
+                       FeatureTemplate<float> *mainFrequency,
+                       FeatureTemplate<float> *integralRMS,
+                       FeatureTemplate<float> *doubleIntegralRMS,
+                       q15_t *allocatedFFTSpace,
                        uint16_t lowCutFrequency=5,
                        uint16_t highCutFrequency=500,
                        float minAgitationRMS=0.1,
@@ -209,7 +253,7 @@ class Q15FFTComputer: public FeatureComputer
 class AudioDBComputer: public FeatureComputer
 {
     public:
-        AudioDBComputer(uint8_t id, Feature *audioDB=NULL,
+        AudioDBComputer(uint8_t id, FeatureTemplate<float> *audioDB,
                         float calibrationScaling=1.);
         void setCalibrationScaling(float val) { m_calibrationScaling = val; }
 

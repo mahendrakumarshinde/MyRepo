@@ -1,5 +1,5 @@
-#ifndef UTILITIES_H
-#define UTILITIES_H
+#ifndef FEATUREUTILITIES_H
+#define FEATUREUTILITIES_H
 
 #include <Arduino.h>
 #include <arm_math.h>  // CMSIS-DSP library for RFFT
@@ -146,4 +146,4 @@ namespace RFFTAmplitudes
 
 q15_t findMaxAscent(q15_t *batch, uint16_t batchSize, uint16_t maxCount);
 
-#endif // UTILITIES_H
+#endif // FEATUREUTILITIES_H

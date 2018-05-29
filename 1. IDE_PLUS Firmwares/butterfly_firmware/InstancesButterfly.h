@@ -28,9 +28,11 @@
 #include "IUCAMM8Q.h"
 #include "IUICS43432.h"
 
+/***** Managers and helpers *****/
+#include "LedManager.h"
+
 #ifdef COMPONENTTEST
     // Interfaces
-    #include "ComponentTest/CMP_RGBLed.h"
     #include "ComponentTest/CMP_IUBMD350.h"
     #include "ComponentTest/CMP_IUESP8285.h"
     // Sensors
@@ -46,7 +48,9 @@
     Interfaces
 ============================================================================= */
 
-extern RGBLed rgbLed;
+extern GPIORGBLed rgbLed;
+
+extern LedManager ledManager;
 
 extern char iuUSBBuffer[20];
 extern IUUSB iuUSB;
@@ -66,10 +70,15 @@ extern char iuWiFiBuffer[500];
     Features
 ============================================================================= */
 
+/***** Operation State Monitoring feature *****/
+
+extern q15_t opStateFeatureValues[2];
+extern FeatureTemplate<q15_t> opStateFeature;
+
 /***** Battery load *****/
 
 extern float batteryLoadValues[2];
-extern FloatFeature batteryLoad;
+extern FeatureTemplate<float> batteryLoad;
 
 
 /***** Accelerometer Features *****/
@@ -78,9 +87,9 @@ extern FloatFeature batteryLoad;
 extern __attribute__((section(".noinit2"))) q15_t accelerationXValues[1024];
 extern __attribute__((section(".noinit2"))) q15_t accelerationYValues[1024];
 extern __attribute__((section(".noinit2"))) q15_t accelerationZValues[1024];
-extern Q15Feature accelerationX;
-extern Q15Feature accelerationY;
-extern Q15Feature accelerationZ;
+extern FeatureTemplate<q15_t> accelerationX;
+extern FeatureTemplate<q15_t> accelerationY;
+extern FeatureTemplate<q15_t> accelerationZ;
 
 
 // 128 sample long accel features
@@ -88,52 +97,52 @@ extern __attribute__((section(".noinit2"))) float accelRMS128XValues[8];
 extern __attribute__((section(".noinit2"))) float accelRMS128YValues[8];
 extern __attribute__((section(".noinit2"))) float accelRMS128ZValues[8];
 extern __attribute__((section(".noinit2"))) float accelRMS128TotalValues[8];
-extern FloatFeature accelRMS128X;
-extern FloatFeature accelRMS128Y;
-extern FloatFeature accelRMS128Z;
-extern FloatFeature accelRMS128Total;
+extern FeatureTemplate<float> accelRMS128X;
+extern FeatureTemplate<float> accelRMS128Y;
+extern FeatureTemplate<float> accelRMS128Z;
+extern FeatureTemplate<float> accelRMS128Total;
 
 // 512 sample long accel features
 extern __attribute__((section(".noinit2"))) float accelRMS512XValues[2];
 extern __attribute__((section(".noinit2"))) float accelRMS512YValues[2];
 extern __attribute__((section(".noinit2"))) float accelRMS512ZValues[2];
 extern __attribute__((section(".noinit2"))) float accelRMS512TotalValues[2];
-extern FloatFeature accelRMS512X;
-extern FloatFeature accelRMS512Y;
-extern FloatFeature accelRMS512Z;
-extern FloatFeature accelRMS512Total;
+extern FeatureTemplate<float> accelRMS512X;
+extern FeatureTemplate<float> accelRMS512Y;
+extern FeatureTemplate<float> accelRMS512Z;
+extern FeatureTemplate<float> accelRMS512Total;
 
 // FFT feature from 512 sample long accel data
 extern __attribute__((section(".noinit2"))) q15_t accelReducedFFTXValues[300];
 extern __attribute__((section(".noinit2"))) q15_t accelReducedFFTYValues[300];
 extern __attribute__((section(".noinit2"))) q15_t accelReducedFFTZValues[300];
-extern Q15Feature accelReducedFFTX;
-extern Q15Feature accelReducedFFTY;
-extern Q15Feature accelReducedFFTZ;
+extern FeatureTemplate<q15_t> accelReducedFFTX;
+extern FeatureTemplate<q15_t> accelReducedFFTY;
+extern FeatureTemplate<q15_t> accelReducedFFTZ;
 
 // Acceleration main Frequency features from 512 sample long accel data
 extern __attribute__((section(".noinit2"))) float accelMainFreqXValues[2];
 extern __attribute__((section(".noinit2"))) float accelMainFreqYValues[2];
 extern __attribute__((section(".noinit2"))) float accelMainFreqZValues[2];
-extern FloatFeature accelMainFreqX;
-extern FloatFeature accelMainFreqY;
-extern FloatFeature accelMainFreqZ;
+extern FeatureTemplate<float> accelMainFreqX;
+extern FeatureTemplate<float> accelMainFreqY;
+extern FeatureTemplate<float> accelMainFreqZ;
 
 // Velocity features from 512 sample long accel data
 extern __attribute__((section(".noinit2"))) float velRMS512XValues[2];
 extern __attribute__((section(".noinit2"))) float velRMS512YValues[2];
 extern __attribute__((section(".noinit2"))) float velRMS512ZValues[2];
-extern FloatFeature velRMS512X;
-extern FloatFeature velRMS512Y;
-extern FloatFeature velRMS512Z;
+extern FeatureTemplate<float> velRMS512X;
+extern FeatureTemplate<float> velRMS512Y;
+extern FeatureTemplate<float> velRMS512Z;
 
 // Displacements features from 512 sample long accel data
 extern __attribute__((section(".noinit2"))) float dispRMS512XValues[2];
 extern __attribute__((section(".noinit2"))) float dispRMS512YValues[2];
 extern __attribute__((section(".noinit2"))) float dispRMS512ZValues[2];
-extern FloatFeature dispRMS512X;
-extern FloatFeature dispRMS512Y;
-extern FloatFeature dispRMS512Z;
+extern FeatureTemplate<float> dispRMS512X;
+extern FeatureTemplate<float> dispRMS512Y;
+extern FeatureTemplate<float> dispRMS512Z;
 
 
 /***** Gyroscope Features *****/
@@ -142,9 +151,9 @@ extern FloatFeature dispRMS512Z;
 extern __attribute__((section(".noinit2"))) q15_t tiltXValues[2];
 extern __attribute__((section(".noinit2"))) q15_t tiltYValues[2];
 extern __attribute__((section(".noinit2"))) q15_t tiltZValues[2];
-extern Q15Feature tiltX;
-extern Q15Feature tiltY;
-extern Q15Feature tiltZ;
+extern FeatureTemplate<q15_t> tiltX;
+extern FeatureTemplate<q15_t> tiltY;
+extern FeatureTemplate<q15_t> tiltZ;
 
 
 /***** Magnetometer Features *****/
@@ -153,34 +162,34 @@ extern Q15Feature tiltZ;
 extern __attribute__((section(".noinit2"))) q15_t magneticXValues[2];
 extern __attribute__((section(".noinit2"))) q15_t magneticYValues[2];
 extern __attribute__((section(".noinit2"))) q15_t magneticZValues[2];
-extern Q15Feature magneticX;
-extern Q15Feature magneticY;
-extern Q15Feature magneticZ;
+extern FeatureTemplate<q15_t> magneticX;
+extern FeatureTemplate<q15_t> magneticY;
+extern FeatureTemplate<q15_t> magneticZ;
 
 
 /***** Barometer Features *****/
 
 // Sensor data
 extern __attribute__((section(".noinit2"))) float temperatureValues[2];
-extern FloatFeature temperature;
+extern FeatureTemplate<float> temperature;
 
 extern __attribute__((section(".noinit2"))) float pressureValues[2];
-extern FloatFeature pressure;
+extern FeatureTemplate<float> pressure;
 
 
 /***** Audio Features *****/
 
 // Sensor data
 extern q15_t audioValues[8192];
-extern Q15Feature audio;
+extern FeatureTemplate<q15_t> audio;
 
 // 2048 sample long features
 extern __attribute__((section(".noinit2"))) float audioDB2048Values[4];
-extern FloatFeature audioDB2048;
+extern FeatureTemplate<float> audioDB2048;
 
 // 4096 sample long features
 extern __attribute__((section(".noinit2"))) float audioDB4096Values[2];
-extern FloatFeature audioDB4096;
+extern FeatureTemplate<float> audioDB4096;
 
 
 /***** GNSS Feature *****/
@@ -190,7 +199,7 @@ extern FloatFeature audioDB4096;
 
 #ifdef RTD_DAUGHTER_BOARD // Optionnal hardware
 extern __attribute__((section(".noinit2"))) float rtdTempValues[8];
-extern FloatFeature rtdTemp;
+extern FeatureTemplate<float> rtdTemp;
 #endif // RTD_DAUGHTER_BOARD
 
 
@@ -217,6 +226,11 @@ extern IUICS43432 iuI2S;
 /* =============================================================================
     Feature Computers
 ============================================================================= */
+
+/***** Operation State Computer *****/
+
+extern FeatureStateComputer opStateComputer;
+
 
 // Shared computation space
 extern q15_t allocatedFFTSpace[1024];

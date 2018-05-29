@@ -16,7 +16,7 @@
  *  Description:
  *    Precision temperature sensors extension board
  * Destinations:
- *      - temperatures: a FloatFeature with section size = rtdCount
+ *      - temperatures: a float feature
  */
 class IURTDExtension : public LowFreqSensor
 {
@@ -32,7 +32,8 @@ class IURTDExtension : public LowFreqSensor
                                          PCA9435_POLARITY_INVERSION = 2,
                                          PCA9435_CONFIGURATION      = 3};
         /***** Constructors & desctructors *****/
-        IURTDExtension(IUI2C *iuI2C, const char* name, Feature *temperatures,
+        IURTDExtension(IUI2C *iuI2C, const char* name,
+                       FeatureTemplate<float> *temperatures,
                        uint8_t rtdCount=4);
         virtual ~IURTDExtension() { }
         /***** Hardware and power management *****/

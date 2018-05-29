@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include "Sensor.h"
 #include "IUI2C.h"
-#include "Utilities.h"
+#include "FeatureUtilities.h"
 
 
 /***** Data Acquisition callbacks *****/
@@ -26,9 +26,9 @@ void accelReadCallback(uint8_t wireStatus);
  *    acquisition configuration, so each sensor has its own class.
  *    Data sheet => http://ae-bst.resource.bosch.com/media/products/dokumente/bmx055/BST-BMX055-DS000-01v2.pdf
  * Destinations:
- *      - accelerationX: a Q15Feature with section size = 128
- *      - accelerationY: a Q15Feature with section size = 128
- *      - accelerationZ: a Q15Feature with section size = 128
+ *      - accelerationX: a Q15 feature
+ *      - accelerationY: a Q15 feature
+ *      - accelerationZ: a Q15 feature
  */
 class IUBMX055Acc : public HighFreqSensor
 {
@@ -74,8 +74,10 @@ class IUBMX055Acc : public HighFreqSensor
         static const bandwidthOption defaultBandwidth = ABW_16Hz;
         static const uint16_t defaultSamplingRate = 1000; // Hz
         /***** Constructors and destructors *****/
-        IUBMX055Acc(IUI2C *iuI2C, const char* name, Feature *accelerationX,
-                    Feature *accelerationY, Feature *accelerationZ);
+        IUBMX055Acc(IUI2C *iuI2C, const char* name,
+                    FeatureTemplate<q15_t> *accelerationX,
+                    FeatureTemplate<q15_t> *accelerationY,
+                    FeatureTemplate<q15_t> *accelerationZ);
         virtual ~IUBMX055Acc() {}
         /***** Hardware & power management *****/
         virtual void setupHardware();

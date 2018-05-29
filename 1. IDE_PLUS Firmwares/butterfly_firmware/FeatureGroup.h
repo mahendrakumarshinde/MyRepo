@@ -48,12 +48,12 @@ class FeatureGroup
         void MSPstream(IUSerial *iuSerial, MacAddress mac,
                        double timestamp, bool sendMACAddress=false);
         void legacyStream(
-            IUSerial *iuSerial, MacAddress mac,
-            OperationState::option opState, float batteryLoad, double timestamp,
-            bool sendName=false, uint8_t portIdx=0);
+            IUSerial *iuSerial, MacAddress mac, uint8_t opState,
+            float batteryLoad, double timestamp, bool sendName=false,
+            uint8_t portIdx=0);
         void bufferAndStream(
             IUSerial *iuSerial, IUSerial::PROTOCOL_OPTIONS protocol,
-            MacAddress mac, OperationState::option opState, float batteryLoad,
+            MacAddress mac, uint8_t opState, float batteryLoad,
             double timestamp, bool sendName=false);
 
     protected:

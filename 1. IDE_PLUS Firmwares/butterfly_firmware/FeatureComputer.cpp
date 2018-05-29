@@ -26,9 +26,8 @@ FeatureComputer::FeatureComputer(uint8_t id, uint8_t destinationCount,
     m_destinations[2] = destination2;
     m_destinations[3] = destination3;
     m_destinations[4] = destination4;
-    for (uint8_t i = 0; i < m_destinationCount; ++i)
-    {
-        m_destinations[i]->setComputerId(m_id);
+    for (uint8_t i = 0; i < m_destinationCount; ++i) {
+        m_destinations[i]->setComputer(this);
     }
     // Instance registration
     m_instanceIdx = instanceCount;
@@ -38,9 +37,14 @@ FeatureComputer::FeatureComputer(uint8_t id, uint8_t destinationCount,
 
 FeatureComputer::~FeatureComputer()
 {
+    // Remove pointer to this in sources and destinations
+    deleteAllSources();
+    for (uint8_t i = 0; i < m_destinationCount; ++i) {
+        m_destinations[i]->removeComputer();
+    }
+    // Remove from class registry
     instances[m_instanceIdx] = NULL;
-    for (uint8_t i = m_instanceIdx + 1; i < instanceCount; ++i)
-    {
+    for (uint8_t i = m_instanceIdx + 1; i < instanceCount; ++i) {
         instances[i]->m_instanceIdx--;
         instances[i -1] = instances[i];
     }
@@ -50,12 +54,9 @@ FeatureComputer::~FeatureComputer()
 
 FeatureComputer *FeatureComputer::getInstanceById(const uint8_t id)
 {
-    for (uint8_t i = 0; i < instanceCount; ++i)
-    {
-        if (instances[i] != NULL)
-        {
-            if(instances[i]->getId() == id)
-            {
+    for (uint8_t i = 0; i < instanceCount; ++i) {
+        if (instances[i] != NULL) {
+            if(instances[i]->getId() == id) {
                 return instances[i];
             }
         }
@@ -72,13 +73,32 @@ FeatureComputer *FeatureComputer::getInstanceById(const uint8_t id)
  * Note that a feature can have no more than maxSourceCount sources.
  * @param source        The source to add
  * @param sectionCount  The number of sections of the source computed together
+ * @return True if the source was added, else false (eg: if the source buffer
+ *  is full).
  */
-void FeatureComputer::addSource(Feature *source, uint8_t sectionCount)
+bool FeatureComputer::addSource(Feature *source, uint8_t sectionCount)
 {
+    if (m_sourceCount >= maxSourceCount) {
+        if (debugMode) {
+            debugPrint(F("Computer can't add new source (source array overflow)"));
+        }
+        return false;
+    }
     m_sources[m_sourceCount] = source;
-    m_indexesAsReceiver[m_sourceCount] = source->addReceiver(m_id);
+    source->addReceiver(this);
     m_sectionCount[m_sourceCount] = sectionCount;
     m_sourceCount++;
+    return true;
+}
+
+void FeatureComputer::deleteAllSources()
+{
+    for (uint8_t i = 0; i < m_sourceCount; i++)
+    {
+        m_sources[i]->removeReceiver(this);
+        m_sources[i] = NULL;
+    }
+    m_sourceCount = 0;
 }
 
 
@@ -95,8 +115,7 @@ bool FeatureComputer::compute()
     // Check if sources are ready
     for (uint8_t i = 0; i < m_sourceCount; ++i)
     {
-        if(!m_sources[i]->isReadyToCompute(m_indexesAsReceiver[i],
-                                           m_sectionCount[i]))
+        if(!m_sources[i]->isReadyToCompute(this, m_sectionCount[i]))
         {
             return false;
         }
@@ -116,19 +135,11 @@ bool FeatureComputer::compute()
     // Acknowledge the computed sections for each source
     for (uint8_t i = 0; i < m_sourceCount; ++i )
     {
-        m_sources[i]->acknowledge(m_indexesAsReceiver[i], m_sectionCount[i]);
+        m_sources[i]->acknowledge(this, m_sectionCount[i]);
     }
     return true;
 }
 
-/**
- * Acknowledge the sections for each source
- *
- * Function should be called either after computation
- */
-void FeatureComputer::acknowledgeSectionToSources()
-{
-}
 
 /***** Debugging *****/
 
@@ -150,7 +161,7 @@ void FeatureComputer::exposeConfig()
         debugPrint(F("    "), false);
         debugPrint(m_sources[i]->getName(), false);
         debugPrint(F(", index as receiver "), false);
-        debugPrint(m_indexesAsReceiver[i], false);
+        debugPrint(m_sources[i]->getReceiverIndex(this), false);
         debugPrint(F(", section count "), false);
         debugPrint(m_sectionCount[i]);
     }
@@ -168,14 +179,167 @@ void FeatureComputer::exposeConfig()
 
 
 /* =============================================================================
-    Feature Computers
+    Feature State Computer
 ============================================================================= */
 
-/***** Signal Energy, Power and RMS *****/
+bool FeatureStateComputer::addSource(Feature *source, uint8_t sectionCount,
+                                     bool active)
+{
+    if (FeatureComputer::addSource(source, sectionCount)) {
+        m_activeOpStateFeatures[m_sourceCount - 1] = active;
+        return true;
+    } else {
+        return false;
+    }
+}
 
-SignalRMSComputer::SignalRMSComputer(uint8_t id, Feature *rms, bool removeMean,
-                                     bool normalize, bool squared,
-                                     float calibrationScaling) :
+/**
+ * 
+ */
+bool FeatureStateComputer::addOpStateFeature(
+    Feature *feature, float lowThreshold, float medThreshold,
+    float highThreshold, uint8_t sectionCount, bool active)
+{
+    if (addSource(feature, sectionCount, active)) {
+        m_activeOpStateFeatures[m_sourceCount - 1] = active;
+        setThresholds(m_sourceCount - 1, lowThreshold, medThreshold,
+                      highThreshold);
+        if (debugMode)
+        {
+            debugPrint(F("OP State Feature "), false);
+            debugPrint(feature->getName(), false);
+            debugPrint(F("active="), false);
+            debugPrint(active, false);
+            debugPrint(F("th=("), false);
+            debugPrint(lowThreshold, false);
+            debugPrint(F(","), false);
+            debugPrint(medThreshold, false);
+            debugPrint(F(","), false);
+            debugPrint(highThreshold, false);
+            debugPrint(F(")"));
+        }
+        return true;
+    } else {
+        return false;
+    }
+}
+
+void FeatureStateComputer::setThresholds(uint8_t idx, float low, float med,
+                                         float high)
+{
+    if (idx >= m_sourceCount) {
+        if (debugMode) { debugPrint(F("Index out of range")); }
+        return;
+    }
+    m_lowThresholds[idx] = low;
+    m_medThresholds[idx] = med;
+    m_highThresholds[idx] = high;
+    if (loopDebugMode)
+    {
+        debugPrint(m_sources[m_sourceCount]->getName(), false);
+        debugPrint(':', false);
+        debugPrint(m_lowThresholds[idx], false);
+        debugPrint(" - ", false);
+        debugPrint(m_medThresholds[idx], false);
+        debugPrint(" - ", false);
+        debugPrint(m_highThresholds[idx]);
+    }
+}
+
+
+
+/**
+ * Read the given JSON to select the features to use for the Operation State.
+ */
+void FeatureStateComputer::configure(JsonVariant &config)
+{
+    deleteAllSources();
+    JsonVariant myConfig;
+    Feature *feature;
+    float th0, th1, th2;
+    for (uint8_t i = 0; i < Feature::instanceCount; ++i) {
+        feature = Feature::instances[i];
+        myConfig = config[feature->getName()];
+        if (myConfig.success()) {
+            JsonVariant active = config["OPS"];
+            th0 = config["TRH"][0];
+            th1 = config["TRH"][1];
+            th2 = config["TRH"][2];
+            addOpStateFeature(feature, th0, th1, th2, 1,
+                              !(active.success() && active.as<int>() == 0));
+        }
+    }
+}
+
+/**
+ *
+ */
+void FeatureStateComputer::m_specializedCompute()
+{
+    q15_t newState = 0;
+    q15_t featureState;
+    float avg;
+    for (uint8_t i = 0; i < m_sourceCount; i++)
+    {
+        if (!m_activeOpStateFeatures[i])
+        {
+            continue;  // Skip features not used for OP State
+        }
+        // Feature is active: we can compute the OP state
+        avg = m_getSectionAverage(m_sources[i]);
+        if (avg > m_highThresholds[i]) {
+            featureState = 3;
+        } else if (avg > m_medThresholds[i]) {
+            featureState = 2;
+        } else if (avg > m_lowThresholds[i]) {
+            featureState = 1;
+        } else {
+            featureState = 0;
+        }
+        if (newState < featureState) {
+            newState = featureState;
+        }
+    }
+    m_destinations[0]->addValue(newState);
+}
+
+
+/**
+ * Returns the average of the last recorded section values * resolution.
+ */
+float FeatureStateComputer::m_getSectionAverage(Feature *feature)
+{
+    float *floatValues = feature->getNextFloatValuesToCompute(this);
+    q15_t *q15Values = feature->getNextQ15ValuesToCompute(this);
+    q31_t *q31Values = feature->getNextQ31ValuesToCompute(this);
+    float total = 0;
+    uint16_t sectionSize = feature->getSectionSize();
+    float resolution = feature->getResolution();
+    if (floatValues != NULL) {
+        for (uint16_t i = 0; i < sectionSize; ++i) {
+            total += floatValues[i];
+        }
+    } else if (q15Values != NULL) {
+        for (uint16_t i = 0; i < sectionSize; ++i) {
+            total += float(q15Values[i]);
+        }
+    } else if (q31Values != NULL) {
+        for (uint16_t i = 0; i < sectionSize; ++i) {
+            total += float(q31Values[i]);
+        }
+    }
+    return total * resolution / float(sectionSize);
+}
+
+
+
+/* =============================================================================
+    Signal Energy, Power and RMS
+============================================================================= */
+
+SignalRMSComputer::SignalRMSComputer(uint8_t id, FeatureTemplate<float> *rms,
+                                     bool removeMean, bool normalize,
+                                     bool squared, float calibrationScaling) :
     FeatureComputer(id, 1, rms),
     m_removeMean(removeMean),
     m_normalize(normalize),
@@ -222,25 +386,21 @@ void SignalRMSComputer::configure(JsonVariant &config)
 void SignalRMSComputer::m_specializedCompute()
 {
     float resolution = m_sources[0]->getResolution();
-    q15_t *values = m_sources[0]->getNextQ15Values(m_indexesAsReceiver[0]);
+    q15_t *values = m_sources[0]->getNextQ15ValuesToCompute(this);
     uint16_t sectionSize = m_sources[0]->getSectionSize();
     uint16_t totalSize = m_sectionCount[0] * sectionSize;
     float total = 0;
     q15_t avg = 0;
-    if (m_removeMean)
-    {
+    if (m_removeMean) {
         arm_mean_q15(values, sectionSize, &avg);
     }
-    for (int i = 0; i < totalSize; ++i)
-    {
+    for (int i = 0; i < totalSize; ++i) {
         total += sq((values[i] - avg));
     }
-    if (m_normalize)
-    {
+    if (m_normalize) {
         total = total / (float) totalSize;
     }
-    if (!m_squared)
-    {
+    if (!m_squared) {
         total = sqrt(total);
     }
     m_destinations[0]->setSamplingRate(m_sources[0]->getSamplingRate());
@@ -249,7 +409,7 @@ void SignalRMSComputer::m_specializedCompute()
     } else {
         m_destinations[0]->setResolution(resolution);
     }
-    m_destinations[0]->addFloatValue(total * m_calibrationScaling);
+    m_destinations[0]->addValue(total * m_calibrationScaling);
     if (featureDebugMode)
     {
         debugPrint(millis(), false);
@@ -266,12 +426,14 @@ void SignalRMSComputer::m_specializedCompute()
 }
 
 
-/***** Sums *****/
+/* =============================================================================
+    Sum of several sections of the same source
+============================================================================= */
 
 SectionSumComputer::SectionSumComputer(uint8_t id, uint8_t destinationCount,
-                                       Feature *destination0,
-                                       Feature *destination1,
-                                       Feature *destination2,
+                                       FeatureTemplate<float> *destination0,
+                                       FeatureTemplate<float> *destination1,
+                                       FeatureTemplate<float> *destination2,
                                        bool normalize, bool rmsInput) :
     FeatureComputer(id, destinationCount, destination0, destination1,
                     destination2),
@@ -312,7 +474,7 @@ void SectionSumComputer::m_specializedCompute()
         m_destinations[i]->setSamplingRate(m_sources[i]->getSamplingRate());
         m_destinations[i]->setResolution(m_sources[i]->getResolution());
         length = m_sources[i]->getSectionSize() * m_sectionCount[i];
-        values = m_sources[i]->getNextFloatValues(m_indexesAsReceiver[i]);
+        values = m_sources[i]->getNextFloatValuesToCompute(this);
         total = 0;
         if (m_rmsInput)
         {
@@ -336,7 +498,7 @@ void SectionSumComputer::m_specializedCompute()
         {
             total = sqrt(total);
         }
-        m_destinations[i]->addFloatValue(total);
+        m_destinations[i]->addValue(total);
         if (featureDebugMode)
         {
             debugPrint(millis(), false);
@@ -349,9 +511,13 @@ void SectionSumComputer::m_specializedCompute()
 }
 
 
-MultiSourceSumComputer::MultiSourceSumComputer(uint8_t id,
-                                               Feature *destination0,
-                                               bool normalize, bool rmsInput) :
+/* =============================================================================
+    Sum of the same section on different source
+============================================================================= */
+
+MultiSourceSumComputer::MultiSourceSumComputer(
+        uint8_t id, FeatureTemplate<float> *destination0, bool normalize,
+        bool rmsInput) :
     FeatureComputer(id, 1, destination0),
     m_normalize(normalize),
     m_rmsInput(rmsInput)
@@ -389,36 +555,29 @@ void MultiSourceSumComputer::m_specializedCompute()
     m_destinations[0]->setResolution(m_sources[0]->getResolution());
     uint16_t length = m_sources[0]->getSectionSize() * m_sectionCount[0];
     float total;
-    for (uint16_t k = 0; k < length; ++k)
-    {
+    float *valuePointers[m_sourceCount];
+    for (uint8_t i = 0; i < m_sourceCount; ++i) {
+        valuePointers[i] = m_sources[i]->getNextFloatValuesToCompute(this);
+    }
+    for (uint16_t k = 0; k < length; ++k) {
         total = 0;
-        if (m_rmsInput)
-        {
-            for (uint8_t i = 0; i < m_sourceCount; ++i)
-            {
-                total += sq(m_sources[i]->getNextFloatValues(
-                    m_indexesAsReceiver[i])[k]);
+        if (m_rmsInput) {
+            for (uint8_t i = 0; i < m_sourceCount; ++i) {
+                total += sq(valuePointers[i][k]);
+            }
+        } else {
+            for (uint8_t i = 0; i < m_sourceCount; ++i) {
+                total += valuePointers[i][k];
             }
         }
-        else
-        {
-            for (uint8_t i = 0; i < m_sourceCount; ++i)
-            {
-                total += m_sources[i]->getNextFloatValues(
-                    m_indexesAsReceiver[i])[k];
-            }
-        }
-        if (m_normalize || m_rmsInput)
-        {
+        if (m_normalize || m_rmsInput) {
             total = total / (float) m_sourceCount;
         }
-        if (m_rmsInput)
-        {
+        if (m_rmsInput) {
             total = sqrt(total);
         }
-        m_destinations[0]->addFloatValue(total);
-        if (featureDebugMode)
-        {
+        m_destinations[0]->addValue(total);
+        if (featureDebugMode) {
             debugPrint(millis(), false);
             debugPrint(" -> ", false);
             debugPrint(m_destinations[0]->getName(), false);
@@ -429,13 +588,15 @@ void MultiSourceSumComputer::m_specializedCompute()
 }
 
 
-/***** FFTs *****/
+/* =============================================================================
+    FFT computations
+============================================================================= */
 
 Q15FFTComputer::Q15FFTComputer(uint8_t id,
-                               Feature *reducedFFT,
-                               Feature *mainFrequency,
-                               Feature *integralRMS,
-                               Feature *doubleIntegralRMS,
+                               FeatureTemplate<q15_t> *reducedFFT,
+                               FeatureTemplate<float> *mainFrequency,
+                               FeatureTemplate<float> *integralRMS,
+                               FeatureTemplate<float> *doubleIntegralRMS,
                                q15_t *allocatedFFTSpace,
                                uint16_t lowCutFrequency,
                                uint16_t highCutFrequency,
@@ -484,7 +645,7 @@ void Q15FFTComputer::m_specializedCompute()
     float resolution = m_sources[0]->getResolution();
     uint16_t sampleCount = m_sources[0]->getSectionSize() * m_sectionCount[0];
     float df = (float) samplingRate / (float) sampleCount;
-    q15_t *values = m_sources[0]->getNextQ15Values(m_indexesAsReceiver[0]);
+    q15_t *values = m_sources[0]->getNextQ15ValuesToCompute(this);
     for (uint8_t i = 0; i < m_destinationCount; ++i)
     {
         m_destinations[i]->setSamplingRate(samplingRate);
@@ -513,7 +674,7 @@ void Q15FFTComputer::m_specializedCompute()
     float freq(0);
     if (!isInMotion)
     {
-        m_destinations[1]->addFloatValue(freq);
+        m_destinations[1]->addValue(freq);
         mainFreqSaved = true;
     }
     q15_t amplitudesCopy[amplitudeCount];
@@ -522,15 +683,15 @@ void Q15FFTComputer::m_specializedCompute()
     {
         arm_max_q15(amplitudesCopy, amplitudeCount, &maxVal, &maxIdx);
         amplitudesCopy[maxIdx] = 0;
-        m_destinations[0]->addQ15Value((q15_t) maxIdx);
-        m_destinations[0]->addQ15Value(m_allocatedFFTSpace[2 * maxIdx]);
-        m_destinations[0]->addQ15Value(m_allocatedFFTSpace[2 * maxIdx + 1]);
+        m_destinations[0]->addValue((q15_t) maxIdx);
+        m_destinations[0]->addValue(m_allocatedFFTSpace[2 * maxIdx]);
+        m_destinations[0]->addValue(m_allocatedFFTSpace[2 * maxIdx + 1]);
         if (!mainFreqSaved)
         {
             freq = df * (float) maxIdx;
             if (freq > m_lowCutFrequency && freq < m_highCutFrequency)
             {
-                m_destinations[1]->addFloatValue(freq);
+                m_destinations[1]->addValue(freq);
                 mainFreqSaved = true;
             }
         }
@@ -555,7 +716,7 @@ void Q15FFTComputer::m_specializedCompute()
             m_highCutFrequency, scaling1, false);
         float integratedRMS1 = RFFTAmplitudes::getRMS(amplitudes, sampleCount);
         integratedRMS1 *= 1000 / ((float) scaling1) * m_calibrationScaling1;
-        m_destinations[2]->addFloatValue(integratedRMS1);
+        m_destinations[2]->addValue(integratedRMS1);
         if (featureDebugMode)
         {
             debugPrint(millis(), false);
@@ -573,7 +734,7 @@ void Q15FFTComputer::m_specializedCompute()
         float integratedRMS2 = RFFTAmplitudes::getRMS(amplitudes, sampleCount);
         integratedRMS2 *= 1000 / ((float) scaling1 * (float) scaling2) *
             m_calibrationScaling2;
-        m_destinations[3]->addFloatValue(integratedRMS2);
+        m_destinations[3]->addValue(integratedRMS2);
         if (featureDebugMode)
         {
             debugPrint(millis(), false);
@@ -585,8 +746,8 @@ void Q15FFTComputer::m_specializedCompute()
     }
     else
     {
-        m_destinations[2]->addFloatValue(0);
-        m_destinations[3]->addFloatValue(0);
+        m_destinations[2]->addValue(0.0);
+        m_destinations[3]->addValue(0.0);
         if (featureDebugMode)
         {
             debugPrint(millis(), false);
@@ -600,9 +761,11 @@ void Q15FFTComputer::m_specializedCompute()
 }
 
 
-/***** Audio DB *****/
+/* =============================================================================
+    Audio DB
+============================================================================= */
 
-AudioDBComputer::AudioDBComputer(uint8_t id, Feature *audioDB,
+AudioDBComputer::AudioDBComputer(uint8_t id, FeatureTemplate<float> *audioDB,
                                  float calibrationScaling) :
     FeatureComputer(id, 1, audioDB),
     m_calibrationScaling(calibrationScaling)
@@ -621,7 +784,7 @@ void AudioDBComputer::m_specializedCompute()
     m_destinations[0]->setSamplingRate(m_sources[0]->getSamplingRate());
     m_destinations[0]->setResolution(m_sources[0]->getResolution());
     uint16_t length = m_sources[0]->getSectionSize() * m_sectionCount[0];
-    q15_t* values = m_sources[0]->getNextQ15Values(m_indexesAsReceiver[0]);
+    q15_t* values = m_sources[0]->getNextQ15ValuesToCompute(this);
     /* Oddly, log10 is very slow. It's better to use it the least possible,
     so we multiply data points as much as possible and then log10 the results
     when we have to. We can multiply data points until we reach uint64_t limit
@@ -652,7 +815,7 @@ void AudioDBComputer::m_specializedCompute()
     float result = 20.0 * audioDB / (float) length;
     result = 2.8 * result - 10;  // Empirical formula
     result *= m_calibrationScaling;
-    m_destinations[0]->addFloatValue(result);
+    m_destinations[0]->addValue(result);
     if (featureDebugMode)
     {
         debugPrint(millis(), false);

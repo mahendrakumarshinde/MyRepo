@@ -177,56 +177,48 @@ void FeatureGroup::MSPstream(IUSerial *iuSerial, MacAddress mac,
  * Sends the values of the group features through given serial.
  */
 void FeatureGroup::legacyStream(IUSerial *iuSerial, MacAddress mac,
-                                OperationState::option opState,
-                                float batteryLoad, double timestamp,
-                                bool sendName, uint8_t portIdx)
+                                uint8_t opState, float batteryLoad,
+                                double timestamp, bool sendName,
+                                uint8_t portIdx)
 {
-    if (m_featureCount == 0 || !m_active)
-    {
+    if (m_featureCount == 0 || !m_active) {
         return;  // Only stream if group is active
     }
-     if (!isDataSendTime(portIdx))
-    {
+    if (!isDataSendTime(portIdx)) {
         return;
     }
-    if (sendName)
-    {
+    if (sendName) {
         iuSerial->port->print(m_name);
         iuSerial->port->print(",");
     }
     iuSerial->port->print(mac);
     iuSerial->port->print(",0");
-    iuSerial->port->print((uint8_t) opState);
+    iuSerial->port->print(opState);
     iuSerial->port->print(",");
     iuSerial->port->print((int) round(batteryLoad));
-    for (uint8_t i = 0; i < m_featureCount; ++i)
-    {
+    for (uint8_t i = 0; i < m_featureCount; ++i) {
         iuSerial->port->print(",000");
         iuSerial->port->print(i + 1);
-        if (m_features[i] != NULL)
-        {
+        if (m_features[i] != NULL) {
             m_features[i]->stream(iuSerial->port);
         }
     }
     iuSerial->port->print(",");
     iuSerial->port->print(timestamp);
     iuSerial->port->print(";");
-    if (featureDebugMode)
-    {
+    if (featureDebugMode) {
         debugPrint(millis(), false);
         debugPrint(" -> ", false);
-        for (uint8_t i = 0; i < m_featureCount; ++i)
-        {
+        for (uint8_t i = 0; i < m_featureCount; ++i) {
             debugPrint(",000", false);
             debugPrint(i + 1, false);
-            if (m_features[i] != NULL)
-            {
+            if (m_features[i] != NULL) {
                 m_features[i]->stream(&Serial);
             }
         }
         debugPrint("");
     }
-    
+
 }
 
 /**
@@ -236,50 +228,41 @@ void FeatureGroup::legacyStream(IUSerial *iuSerial, MacAddress mac,
  */
 void FeatureGroup::bufferAndStream(
     IUSerial *iuSerial, IUSerial::PROTOCOL_OPTIONS protocol, MacAddress mac,
-    OperationState::option opState, float batteryLoad, double timestamp,
+    uint8_t opState, float batteryLoad, double timestamp,
     bool sendName)
 {
-    if (!m_active)
-    {
+    if (!m_active) {
         return;  // Only stream if group is active
     }
-    if (m_featureCount == 0 || !isDataSendTime())
-    {
+    if (m_featureCount == 0 || !isDataSendTime()) {
         return;
     }
     uint32_t now = millis();
     if (m_bufferStartTime == 0 ||
         now - m_bufferStartTime > maxBufferDelay ||
-        maxBufferSize - m_bufferIndex < maxBufferMargin)
-    {
+        maxBufferSize - m_bufferIndex < maxBufferMargin) {
         // Send current data
         m_featureBuffer[m_bufferIndex] = 0;
-        if (protocol == IUSerial::LEGACY_PROTOCOL)
-        {
+        if (protocol == IUSerial::LEGACY_PROTOCOL) {
             iuSerial->port->print(m_featureBuffer);
             if (loopDebugMode)
             {
                 iuSerial->port->println("");
             }
-        }
-        else if (protocol == IUSerial::MS_PROTOCOL)
-        {
+        } else if (protocol == IUSerial::MS_PROTOCOL) {
             iuSerial->sendMSPCommand(MSPCommand::PUBLISH_FEATURE,
                                      m_featureBuffer);
         }
         // Reset buffer
         m_bufferIndex = 0;
         m_bufferStartTime = now;
-        for (uint16_t i = 0; i < maxBufferSize; ++i)
-        {
+        for (uint16_t i = 0; i < maxBufferSize; ++i) {
             m_featureBuffer[i] = 0;
         }
     }
-    if (sendName)
-    {
+    if (sendName) {
         // Always send for Legacy protocol, send once for MSP
-        if (protocol == IUSerial::LEGACY_PROTOCOL || m_bufferIndex == 0)
-        {
+        if (protocol == IUSerial::LEGACY_PROTOCOL || m_bufferIndex == 0) {
             strcat(m_featureBuffer, m_name);
             m_bufferIndex += strlen(m_name);
             m_featureBuffer[m_bufferIndex++] = ',';
@@ -289,20 +272,18 @@ void FeatureGroup::bufferAndStream(
     m_bufferIndex += 17;
     m_featureBuffer[m_bufferIndex++] = ',';
     m_featureBuffer[m_bufferIndex++] = '0';
-    m_featureBuffer[m_bufferIndex++] = (uint8_t) opState + 48;
+    m_featureBuffer[m_bufferIndex++] = opState + 48;
     m_featureBuffer[m_bufferIndex++] = ',';
     String stringBattery((int) round(batteryLoad));
     strcat(m_featureBuffer, stringBattery.c_str());
     m_bufferIndex += stringBattery.length();
-    for (uint8_t i = 0; i < m_featureCount; ++i)
-    {
+    for (uint8_t i = 0; i < m_featureCount; ++i) {
         m_featureBuffer[m_bufferIndex++] = ',';
         m_featureBuffer[m_bufferIndex++] = '0';
         m_featureBuffer[m_bufferIndex++] = '0';
         m_featureBuffer[m_bufferIndex++] = '0';
         m_featureBuffer[m_bufferIndex++] = i + 49;
-        if (m_features[i] != NULL)
-        {
+        if (m_features[i] != NULL) {
             m_bufferIndex += m_features[i]->sendToBuffer(m_featureBuffer,
                                                          m_bufferIndex);
         }

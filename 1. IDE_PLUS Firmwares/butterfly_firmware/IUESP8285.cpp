@@ -15,6 +15,18 @@ IUESP8285::IUESP8285(HardwareSerial *serialPort, char *charBuffer,
     m_staticConfigValidator.setTimeout(wifiConfigReceptionTimeout);
 }
 
+void IUESP8285::m_setConnectedStatus(bool status)
+{
+    bool useCallbacks = (m_connected != status);
+    m_connected = status;
+    if (useCallbacks) {
+        if (m_connected) {
+            m_onDisconnect();
+        } else {
+            m_onConnect();
+        }
+    }
+}
 
 /* =============================================================================
     Hardware & power management
@@ -70,7 +82,7 @@ void IUESP8285::turnOn(bool forceTimerReset)
  */
 void IUESP8285::turnOff()
 {
-    m_connected = false;
+    m_setConnectedStatus(false);
     if (m_on)
     {
         digitalWrite(ESP8285_ENABLE_PIN, LOW);
@@ -174,23 +186,19 @@ bool IUESP8285::readToBuffer()
 {
     bool newMessage = IUSerial::readToBuffer();
     uint32_t now = millis();
-    if (newMessage)
-    {
+    if (newMessage) {
         m_lastResponseTime = now;
     }
     else if (m_on && m_lastResponseTime > 0 &&
-             now - m_lastResponseTime > noResponseTimeout)
-    {
-        if (debugMode)
-        {
+             now - m_lastResponseTime > noResponseTimeout) {
+        if (debugMode) {
             debugPrint("WiFi irresponsive: hard resetting now");
         }
         hardReset();
         m_lastResponseTime = now;
     }
-    if (now - m_lastConnectedStatusTime > connectedStatusTimeout)
-    {
-        m_connected = false;
+    if (now - m_lastConnectedStatusTime > connectedStatusTimeout) {
+        m_setConnectedStatus(false);
     }
     return newMessage;
 }
@@ -524,14 +532,14 @@ bool IUESP8285::processChipMessage()
             break;
         case MSPCommand::WIFI_ALERT_CONNECTED:
             if (loopDebugMode) { debugPrint("WIFI_ALERT_CONNECTED"); }
-            m_connected = true;
+            m_setConnectedStatus(true);
             m_working = false;
             m_awakeTimerStart = millis();
             m_lastConnectedStatusTime = m_awakeTimerStart;
             break;
         case MSPCommand::WIFI_ALERT_DISCONNECTED:
             if (loopDebugMode) { debugPrint("WIFI_ALERT_DISCONNECTED"); }
-            m_connected = false;
+            m_setConnectedStatus(false);
             if (millis() - m_displayConnectAttemptStart >
                 displayConnectAttemptTimeout)
             {

@@ -18,9 +18,9 @@
  *    acquisition configuration, so each sensor has its own class.
  *    Data sheet => http://ae-bst.resource.bosch.com/media/products/dokumente/bmx055/BST-BMX055-DS000-01v2.pdf
  * Destinations:
- *      - magneticX: a Q15Feature with section size = 128
- *      - magneticY: a Q15Feature with section size = 128
- *      - magneticZ: a Q15Feature with section size = 128
+ *      - magneticX: a Q15 feature
+ *      - magneticY: a Q15 feature
+ *      - magneticZ: a Q15 feature
  */
 class IUBMX055Mag : public HighFreqSensor
 {

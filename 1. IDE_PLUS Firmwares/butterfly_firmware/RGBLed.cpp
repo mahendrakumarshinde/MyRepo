@@ -5,112 +5,35 @@
     RGBColors
 ============================================================================= */
 
-RGBColor RGB_BLACK(0,   0,   0);
-RGBColor RGB_BLUE(0,   0,   255);
-RGBColor RGB_GREEN(0,   255, 0);
-RGBColor RGB_CYAN(0,   255, 255);
-RGBColor RGB_RED(255, 0,   0);
-RGBColor RGB_PURPLE(255, 0,   255);
+RGBColor RGB_BLACK(0, 0, 0);
+RGBColor RGB_BLUE(0, 0, 255);
+RGBColor RGB_GREEN(0, 255, 0);
+RGBColor RGB_CYAN(0, 255, 255);
+RGBColor RGB_RED(255, 0, 0);
+RGBColor RGB_PURPLE(255, 0, 255);
 RGBColor RGB_ORANGE(255, 255, 0);
 RGBColor RGB_WHITE(255, 255, 255);
 
 
 /* =============================================================================
-    Constructor & desctructors
+    RGB Led
 ============================================================================= */
 
-/**
-* LED is activated at construction
-*/
-RGBLed::RGBLed(uint8_t redPin, uint8_t greenPin, uint8_t bluePin) :
-    Component(),
-    m_lockedColors(false),
-    m_colorCount(0),
-    m_intensityPercent(100),
-    m_currentIndex(0),
-    m_fadingIn(true),
-    m_previousTime(0)
-{
-    m_rgbPins[0] = redPin;
-    m_rgbPins[1] = greenPin;
-    m_rgbPins[2] = bluePin;
-    for (uint8_t i = 0; i < 3; ++i)
-    {
-        m_rgbAccumulator[i] = 0;
-        m_rgbValues[i] = 0;
-    }
-}
-
-
-/* =============================================================================
-    Hardware & power management
-============================================================================= */
+/***** Color queue *****/
 
 /**
- * Set up the LED pins, unlock and wake up the LED.
+ * Start a new color queue (all blacks by default).
  */
-void RGBLed::setupHardware()
+void RGBLed::startNewColorQueue(uint8_t colorCount)
 {
-    pinMode(m_rgbPins[0], OUTPUT);
-    pinMode(m_rgbPins[1], OUTPUT);
-    pinMode(m_rgbPins[2], OUTPUT);
-    setPowerMode(PowerMode::REGULAR);
-}
-
-/**
- * Manage component power modes
- */
-void RGBLed::setPowerMode(PowerMode::option pMode)
-{
-    m_powerMode = pMode;
-    switch (m_powerMode)
+    for (uint8_t i = 0; i < maxColorCount; i++)
     {
-        case PowerMode::PERFORMANCE:
-            m_intensityPercent = 100;
-            break;
-        case PowerMode::ENHANCED:
-            m_intensityPercent = 90;
-            break;
-        case PowerMode::REGULAR:
-            m_intensityPercent = 80;
-            break;
-        case PowerMode::LOW_1:
-            m_intensityPercent = 40;
-            break;
-        case PowerMode::LOW_2:
-            m_intensityPercent = 30;
-            break;
-        case PowerMode::SLEEP:
-            m_intensityPercent = 20;
-            break;
-        case PowerMode::DEEP_SLEEP:
-            m_intensityPercent = 0;
-            break;
-        case PowerMode::SUSPEND:
-            m_intensityPercent = 0;
-            break;
-        default:
-            if (debugMode)
-            {
-                debugPrint(F("Unhandled power Mode "), false);
-                debugPrint(m_powerMode);
-            }
+        m_colors[i] = RGB_BLACK;
+        m_fadeInTimers[i] = 0;
+        m_onTimers[i] = 0;
     }
+    startNewColorQueue(colorCount, m_colors, m_fadeInTimers, m_onTimers);
 }
-
-void RGBLed::setIntensity(uint8_t intensityPercent)
-{
-    if (intensityPercent > 100)
-    {
-        m_intensityPercent = 100;
-    }
-    m_intensityPercent = intensityPercent;
-}
-
-
-/* =============================================================================
-    Color queue
-============================================================================= */
 
 /**
  * Replace the color sequence displayed by the LED.
@@ -175,24 +98,36 @@ void RGBLed::queueColor(RGBColor color, uint32_t fadeInTimer,
  *
  * Colors cannot be changed when locked.
  */
+void RGBLed::replaceColor(uint8_t index, RGBColor color)
+{
+    if (!m_lockedColors) {
+        return;
+    }
+    if (index < m_colorCount) {
+        m_colors[index] = color;
+    } else if (debugMode) {
+        debugPrint(F("Index out of bound"));
+    }
+}
+
+/**
+ * Replace a color in the existing sequence.
+ *
+ * Colors cannot be changed when locked.
+ */
 void RGBLed::replaceColor(uint8_t index, RGBColor color, uint32_t fadeInTimer,
                           uint32_t onTimer)
 {
-    if (m_lockedColors)
-    {
+    if (!m_lockedColors) {
         return;
     }
-    if (index >= m_colorCount)
-    {
-        if (debugMode)
-        {
-            debugPrint(F("Index out of bound"));
-        }
-        return;
+    if (index < m_colorCount) {
+        m_colors[index] = color;
+        m_fadeInTimers[index] = fadeInTimer;
+        m_onTimers[index] = onTimer;
+    } else if (debugMode) {
+        debugPrint(F("Index out of bound"));
     }
-    m_colors[index] = color;
-    m_fadeInTimers[index] = fadeInTimer;
-    m_onTimers[index] = onTimer;
 }
 
 /**
@@ -227,29 +162,7 @@ void RGBLed::insertColor(uint8_t index, RGBColor color, uint32_t fadeInTimer,
 }
 
 
-/* =============================================================================
-    Color transition
-============================================================================= */
-
-/**
- * Increment RGB values and show them on the LED.
- */
-void RGBLed::updateColors()
-{
-    for (uint8_t i = 0; i < 3; ++i)
-    {
-        m_rgbAccumulator[i] += (uint16_t) m_rgbValues[i] * m_intensityPercent;
-        if (m_rgbAccumulator[i] >= 25500)
-        {
-            m_rgbAccumulator[i] -= 25500;
-            digitalWrite(m_rgbPins[i], LOW);
-        }
-        else
-        {
-            digitalWrite(m_rgbPins[i], HIGH);
-        }
-    }
-}
+/***** Color transition *****/
 
 /**
  * Manage the color display, with timers and transitions (fade-in / fade-out).
@@ -315,4 +228,92 @@ void RGBLed::manageColorTransitions()
             m_rgbValues[i] = m_colors[m_currentIndex].rgb[i];
         }
     }
+}
+
+
+/* =============================================================================
+    GPIO RGB Led
+============================================================================= */
+
+/***** Constructors & desctructors *****/
+
+GPIORGBLed::GPIORGBLed(uint8_t redPin, uint8_t greenPin, uint8_t bluePin) :
+    RGBLed()
+{
+    m_rgbPins[0] = redPin;
+    m_rgbPins[1] = greenPin;
+    m_rgbPins[2] = bluePin;
+}
+
+
+/***** Hardware & power management *****/
+
+/**
+ * Set up the LED pins.
+ */
+void GPIORGBLed::setup()
+{
+    pinMode(m_rgbPins[0], OUTPUT);
+    pinMode(m_rgbPins[1], OUTPUT);
+    pinMode(m_rgbPins[2], OUTPUT);
+}
+
+
+/***** Show colors *****/
+
+/**
+ * Increment RGB values and show them on the LED.
+ */
+void GPIORGBLed::updateColors()
+{
+    for (uint8_t i = 0; i < 3; ++i)
+    {
+        m_rgbAccumulator[i] += (uint16_t) m_rgbValues[i] * m_intensityPercent;
+        if (m_rgbAccumulator[i] >= 25500)
+        {
+            m_rgbAccumulator[i] -= 25500;
+            digitalWrite(m_rgbPins[i], LOW);
+        }
+        else
+        {
+            digitalWrite(m_rgbPins[i], HIGH);
+        }
+    }
+}
+
+
+/* =============================================================================
+    SPI RGB Led
+============================================================================= */
+
+/***** Constructors & desctructors *****/
+
+SPIRGBLed::SPIRGBLed(SPIClass *spiPtr, uint8_t csPin, SPISettings settings) :
+    RGBLed(),
+    m_SPI(spiPtr),
+    m_csPin(csPin),
+    m_spiSettings(settings)
+{
+}
+
+
+/***** Hardware & power management *****/
+
+/**
+ * Set up the LED pins.
+ */
+void SPIRGBLed::setup()
+{
+    //TODO Implement
+}
+
+
+/***** Show colors *****/
+
+/**
+ * Send intensity and RGB value to LED
+ */
+void SPIRGBLed::updateColors()
+{
+    //TODO Implement
 }

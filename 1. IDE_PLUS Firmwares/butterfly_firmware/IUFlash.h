@@ -21,6 +21,7 @@ class IUFlash
                                      CFG_FEATURE,
                                      CFG_COMPONENT,
                                      CFG_DEVICE,
+                                     CFG_OP_STATE,
                                      CFG_RAW_DATA_ENDPOINT,
                                      CFG_MQTT_SERVER,
                                      CFG_MQTT_CREDS,
@@ -63,6 +64,7 @@ class IUFSFlash : public IUFlash
         static char FNAME_FEATURE[9];
         static char FNAME_COMPONENT[11];
         static char FNAME_DEVICE[7];
+        static char FNAME_OP_STATE[8];
         static char FNAME_RAW_DATA_ENDPOINT[13];
         static char FNAME_MQTT_SERVER[12];
         static char FNAME_MQTT_CREDS[11];

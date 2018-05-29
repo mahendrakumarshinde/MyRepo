@@ -26,7 +26,7 @@
  *    I2S use a buffer to collect data and when it's full it calls an
  *    onReceive callback function.
  * Destinations:
- *      - audio: a Q15Feature
+ *      - audio: a Q15 feature
  */
 class IUICS43432 : public HighFreqSensor
 {
@@ -41,7 +41,8 @@ class IUICS43432 : public HighFreqSensor
             / (bitsPerAudioSample); // stereo recording
 
         /***** Constructors and destructors *****/
-        IUICS43432(I2SClass *I2SInstance, const char* name, Feature *audio);
+        IUICS43432(I2SClass *I2SInstance, const char* name,
+                   FeatureTemplate<q15_t> *audio);
         virtual ~IUICS43432() {}
         /***** Hardware and power management *****/
 

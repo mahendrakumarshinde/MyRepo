@@ -2,7 +2,7 @@
 
 
 /* =============================================================================
-    Generic features
+    Core
 ============================================================================= */
 
 uint8_t Feature::instanceCount = 0;
@@ -16,25 +16,17 @@ Feature *Feature::instances[Feature::MAX_INSTANCE_COUNT] = {
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
 Feature::Feature(const char* name, uint8_t sectionCount, uint16_t sectionSize,
-                 Feature::slideOption sliding) :
-    m_samplingRate(0),
-    m_resolution(1),
-    m_active(false),
-    m_opStateEnabled(false),
-    m_streamingEnabled(false),
-    m_operationState(OperationState::IDLE),
-    m_computerId(0),
-    m_receiverCount(0),
+                 Feature::slideOption sliding, bool isFFT) :
+    m_isFFT(isFFT),
     m_sectionCount(sectionCount),
     m_sectionSize(sectionSize),
     m_sliding(sliding)
 {
     strcpy(m_name, name);
-    for (uint8_t i = 0; i < OperationState::COUNT - 1; ++i)
-    {
-        m_thresholds[i] = 0;
-    }
     m_totalSize = m_sectionCount * m_sectionSize;
+    for (uint8_t i = 0; i < maxReceiverCount; i++) {
+        m_receivers[i] = NULL;
+    }
     reset();
     // Instance registration
     m_instanceIdx = instanceCount;
@@ -42,17 +34,99 @@ Feature::Feature(const char* name, uint8_t sectionCount, uint16_t sectionSize,
     instanceCount++;
 }
 
+/**
+ * Delete from class registry + remove pointers to receivers / computers
+ */
 Feature::~Feature()
 {
     instances[m_instanceIdx] = NULL;
-    for (uint8_t i = m_instanceIdx + 1; i < instanceCount; ++i)
-    {
+    for (uint8_t i = m_instanceIdx + 1; i < instanceCount; ++i) {
         instances[i]->m_instanceIdx--;
         instances[i -1] = instances[i];
     }
     instances[instanceCount] = NULL;
     instanceCount--;
+    for (uint8_t i = 0; i < maxReceiverCount; i++) {
+        m_receivers[i] = NULL;
+    }
+    m_computer = NULL;
 }
+
+Feature *Feature::getInstanceByName(const char *name)
+{
+    for (uint8_t i = 0; i < instanceCount; ++i) {
+        if (instances[i] != NULL && instances[i]->isNamed(name)) {
+            return instances[i];
+        }
+    }
+    return NULL;
+}
+
+
+/* =============================================================================
+    Receivers tracking
+============================================================================= */
+
+/**
+ * Add the receiver to the Feature receivers list.
+ */
+void Feature::addReceiver(FeatureComputer *receiver)
+{
+    if (m_receiverCount < maxReceiverCount) {
+        m_receivers[m_receiverCount++] = receiver;
+    } else if (debugMode) {
+        debugPrint(F("Feature can't add receiver (buffer overflow)"));
+    }
+}
+
+/**
+ * Delete the receiver with the corresponding receiverId.
+ *
+ * @return True if the receiver was found and removed, else false.
+ */
+bool Feature::removeReceiver(FeatureComputer *receiver)
+{
+    int idx = getReceiverIndex(receiver);
+    if (idx < 0) {
+        return false;
+    } else {
+        for (uint8_t i = uint8_t(idx); i < m_receiverCount - 1; ++i) {
+            m_receivers[i] = m_receivers[i + 1];
+            m_computeIndex[i] = m_computeIndex[i + 1];
+            for (uint8_t j = 0; j < maxSectionCount; ++j) {
+                m_acknowledged[j][i] = m_acknowledged[j][i + 1];
+            }
+        }
+        m_receiverCount--;
+        m_receivers[m_receiverCount] = NULL;
+        m_computeIndex[m_receiverCount] = 0;
+        for (uint8_t j = 0; j < maxSectionCount; ++j) {
+            m_acknowledged[j][m_receiverCount] = false;
+        }
+        return true;
+    }
+}
+
+/**
+ * Return the current index of the receiver for the feature.
+ *
+ * @return The index of the receiver or -1 if the receiver was not found.
+ */
+int Feature::getReceiverIndex(FeatureComputer *receiver)
+{
+    for (uint8_t i = 0; i < m_receiverCount; i++) {
+        if (m_receivers[i] == receiver) {
+            return int(i);
+        }
+    }
+    if (debugMode) { debugPrint(F("Receiver not found")); }
+    return -1;
+}
+
+
+/* =============================================================================
+    Buffer core
+============================================================================= */
 
 /**
  * Reset the buffer to an "empty" state, as if just created
@@ -61,126 +135,53 @@ void Feature::reset()
 {
     m_fillingIndex = 0;
     m_recordIndex = 0;
-    for (uint8_t i = 0; i < maxReceiverCount; ++i)
-    {
+    for (uint8_t i = 0; i < maxReceiverCount; ++i) {
         m_computeIndex[i] = 0;
     }
     // All sections are set as ready to record: not locked, not published and
     // acknowledged by all receivers.
-    for (uint8_t j = 0; j < maxSectionCount; ++j)
-    {
+    for (uint8_t j = 0; j < maxSectionCount; ++j) {
         m_locked[j] = false;
         m_published[j] = false;
-        for (uint8_t k = 0; k < maxReceiverCount; ++k)
-        {
+        for (uint8_t k = 0; k < maxReceiverCount; ++k) {
             m_acknowledged[j][k] = true;
         }
     }
 }
 
-/**
- * Return the receiver index and increment the buffer receiver count by 1
- */
-uint8_t Feature::addReceiver(uint8_t receiverId)
-{
-    m_receiversId[m_receiverCount] = receiverId;
-    m_receiverCount++;
-    return m_receiverCount - 1;
-}
 
-
-/***** Feature designation *****/
-
-Feature *Feature::getInstanceByName(const char *name)
-{
-    for (uint8_t i = 0; i < instanceCount; ++i)
-    {
-        if (instances[i] != NULL)
-        {
-            if(instances[i]->isNamed(name))
-            {
-                return instances[i];
-            }
-        }
-    }
-    return NULL;
-}
-
-
-/***** Configuration *****/
+/***** Filling the buffer *****/
 
 /**
- * Deactivate the feature computation
+ * Increment the index used to record data in the buffer
  *
- * Also deactivate the streaming and the OperationState computation.
+ * Also publish the sections if it has been entirely recorded.
+ * Publishing a section set its "published" boolean to true, and the
+ * "acknowledged" booleans of all the receivers to false.
+ * recordIndex (index of current recording section) is also moved forward.
  */
-void Feature::deactivate()
+void Feature::incrementFillingIndex()
 {
-    m_active = false;
-    m_opStateEnabled = false;
-    m_streamingEnabled = false;
-}
-
-
-/**
- * Apply the given config to the feature.
- */
-void Feature::configure(JsonVariant &config)
-{
-    // Thresholds setting for OperationState
-    float threshold;
-    for (uint8_t i = 0; i < 3; ++i)
-    {
-        threshold = config["TRH"][i];
-        if (threshold)
-        {
-            setThreshold(i, threshold);
+    m_fillingIndex++;
+    bool newFullSection = false;
+    // Publish the current section if has been entirely recorded
+    if (m_fillingIndex >= (m_recordIndex + 1) * m_sectionSize) {
+        m_published[m_recordIndex] = true;
+        for (uint8_t j = 0; j < m_receiverCount; ++j) {
+            m_acknowledged[m_recordIndex][j] = false;
         }
+        m_recordIndex = (m_recordIndex + 1) % m_sectionCount;
+        newFullSection = true;
     }
-    disableOperationState(); // Operation state computation disabled by default
-    JsonVariant value = config["OPS"];
-    if (value.success() && value.as<int>() == 1)
-    {
-        enableOperationState();
+    // Filling Index restart from 0 if needed
+    m_fillingIndex %= m_totalSize;
+    // Run the callbacks
+    if (m_onNewValue != NULL) {
+        m_onNewValue(this);
     }
-}
-
-
-/***** OperationState and Thresholds *****/
-
-/**
- * Determine the state using getValueToCompareToThresholds and the thresholds
- */
-void Feature::updateOperationState()
-{
-    if (m_opStateEnabled)
-    {
-        float value = getValueToCompareToThresholds();
-        if (value > m_thresholds[2])
-        {
-            m_operationState = OperationState::DANGER;
-            return;
-        }
-        else if (value > m_thresholds[1])
-        {
-            m_operationState = OperationState::WARNING;
-            return;
-        }
-        else if (value > m_thresholds[0])
-        {
-            m_operationState = OperationState::NORMAL;
-            return;
-        }
+    if (newFullSection && m_onNewRecordedSection != NULL) {
+        m_onNewRecordedSection(this);
     }
-    m_operationState = OperationState::IDLE;
-}
-
-
-void Feature::setThresholds(float normalVal, float warningVal, float dangerVal)
-{
-    m_thresholds[0] = normalVal;
-    m_thresholds[1] = warningVal;
-    m_thresholds[2] = dangerVal;
 }
 
 
@@ -195,30 +196,21 @@ void Feature::setThresholds(float normalVal, float warningVal, float dangerVal)
 bool Feature::isReadyToRecord(uint8_t sectionCount)
 {
     uint8_t k;
-    if (m_receiverCount == 0)
-    {
-        for (uint8_t i = m_recordIndex; i < m_recordIndex + sectionCount; ++i)
-        {
-            if (m_locked[k])
-            {
+    if (m_receiverCount == 0) {
+        for (uint8_t i = m_recordIndex; i < m_recordIndex + sectionCount; ++i) {
+            if (m_locked[k]) {
                 return false;
             }
             m_published[k] = false;
         }
-    }
-    else
-    {
-        for (uint8_t i = m_recordIndex; i < m_recordIndex + sectionCount; ++i)
-        {
+    } else {
+        for (uint8_t i = m_recordIndex; i < m_recordIndex + sectionCount; ++i) {
             k = i % m_sectionCount;
-            if (m_locked[k] || m_published[k])
-            {
+            if (m_locked[k] || m_published[k]) {
                 return false;
             }
-            for (uint8_t j = 0; j < m_receiverCount; ++j)
-            {
-                if (!m_acknowledged[k][j])
-                {
+            for (uint8_t j = 0; j < m_receiverCount; ++j) {
+                if (!m_acknowledged[k][j]) {
                     return false;
                 }
             }
@@ -237,11 +229,9 @@ bool Feature::isReadyToCompute(uint8_t receiverIdx, uint8_t sectionCount)
 {
     uint8_t k;
     uint8_t idx = m_computeIndex[receiverIdx];
-    for (uint8_t i = idx; i < idx + sectionCount; ++i)
-    {
+    for (uint8_t i = idx; i < idx + sectionCount; ++i) {
         k = i % m_sectionCount;
-        if (m_locked[k] || !m_published[k] || m_acknowledged[k][receiverIdx])
-        {
+        if (m_locked[k] || !m_published[k] || m_acknowledged[k][receiverIdx]) {
             return false;
         }
     }
@@ -249,34 +239,22 @@ bool Feature::isReadyToCompute(uint8_t receiverIdx, uint8_t sectionCount)
 }
 
 /**
- * Increment the index used to record data in the buffer
+ * Check if the next section(s) of the buffer are ready for computation
  *
- * Also publish the sections if it has been entirely recorded.
- * Publishing a section set its "published" boolean to true, and the
- * "acknowledged" booleans of all the receivers to false.
- * recordIndex (index of current recording section) is also moved forward.
+ * See Feature::isReadyToCompute(uint8_t receiverIdx, uint8_t sectionCount)
  */
-void Feature::incrementFillingIndex()
+bool Feature::isReadyToCompute(FeatureComputer *receiver, uint8_t sectionCount)
 {
-    m_fillingIndex++;
-    // Publish the current section if has been entirely recorded
-    if (m_fillingIndex >= (m_recordIndex + 1) * m_sectionSize)
-    {
-        m_published[m_recordIndex] = true;
-        for (uint8_t j = 0; j < m_receiverCount; ++j)
-        {
-            m_acknowledged[m_recordIndex][j] = false;
-        }
-        m_recordIndex = (m_recordIndex + 1) % m_sectionCount;
-        // Update the operation state to reflect the latest published section
-        updateOperationState();
+    int idx = getReceiverIndex(receiver);
+    if (idx < 0) {
+        return false;
+    } else {
+        return isReadyToCompute(uint8_t(idx), sectionCount);
     }
-    // Filling Index restart from 0 if needed
-    m_fillingIndex %= m_totalSize;
 }
 
 /**
- * Acknowledge one or several sections of the buffer for a given receiver Idx
+ * Acknowledge one or several sections of the buffer for a given receiver Idx.
  *
  * Acknowledging a section set its "acknowledged"  bolean to true. If all
  * receivers have acknowledged the section, the "published" boolean of the
@@ -304,6 +282,19 @@ void Feature::acknowledge(uint8_t receiverIdx, uint8_t sectionCount)
         }
     }
     m_computeIndex[receiverIdx] = (idx + sectionCount) % m_sectionCount;
+}
+
+/**
+ * Acknowledge one or several sections of the buffer for a given receiver.
+ *
+ * See Feature::acknowledge(uint8_t receiverIdx, uint8_t sectionCount)
+ */
+void Feature::acknowledge(FeatureComputer *receiver, uint8_t sectionCount)
+{
+    int idx = getReceiverIndex(receiver);
+    if (idx >= 0) {
+        acknowledge(uint8_t(idx), sectionCount);
+    }
 }
 
 
@@ -368,22 +359,13 @@ void Feature::exposeConfig()
     #ifdef IUDEBUG_ANY
     debugPrint(m_name, false);
     debugPrint(F(" config:"));
-    debugPrint(F("  active: "), false);
-    debugPrint(m_active);
-    debugPrint(F("  streaming: "), false);
-    debugPrint(m_streamingEnabled);
-    debugPrint(F("  Computer id: "), false);
-    debugPrint(m_computerId);
-
-    debugPrint(F("  "), false);
+    debugPrint(F("  reguired: "), false);
+    debugPrint(m_required);
+    debugPrint(F("  is computed: "), false);
+    debugPrint(isComputedFeature());
+    debugPrint(F("  has "), false);
     debugPrint(m_receiverCount, false);
-    debugPrint(F(" receivers: "), false);
-    for (uint8_t i = 0; i < m_receiverCount; ++i)
-    {
-        debugPrint(m_receiversId[i], false);
-        debugPrint(F(", "), false);
-    }
-    debugPrint("");
+    debugPrint(F(" receivers"));
     #endif
 }
 
@@ -423,326 +405,4 @@ void Feature::exposeCounters()
         debugPrint("");
     }
     #endif
-}
-
-
-/* =============================================================================
-    Format specific features
-============================================================================= */
-
-/***** Float Buffer *****/
-
-FloatFeature::FloatFeature(const char* name, uint8_t sectionCount,
-                           uint16_t sectionSize, float *values,
-                           Feature::slideOption sliding) :
-    Feature(name, sectionCount, sectionSize, sliding)
-{
-    m_values = values;
-}
-
-/**
- * Return a pointer to the start of the section
- */
-float* FloatFeature::getNextFloatValues(uint8_t receiverIdx)
-{
-    uint16_t startIdx = (uint16_t) m_computeIndex[receiverIdx] * m_sectionSize;
-    return &m_values[startIdx];
-}
-
-/**
- * Add a value to the buffer and increment the filling index
- */
-void FloatFeature::addFloatValue(float value)
-{
-    m_values[m_fillingIndex] = value;
-    incrementFillingIndex();
-}
-
-/**
- * By default, return the mean value of the latest recorded section
- */
-float FloatFeature::getValueToCompareToThresholds()
-{
-    uint8_t k = (m_sectionCount + m_recordIndex - 1) % m_sectionCount;
-    float total = 0;
-    for (uint16_t i = k * m_sectionSize; i < (k + 1) * m_sectionSize; ++i)
-    {
-        total += m_values[i];
-    }
-    return m_resolution * total / (float) m_sectionSize;
-}
-
-/**
- * Stream the content of the section at sectionIdx
- */
-void FloatFeature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx,
-                                       uint8_t sectionCount)
-{
-    uint8_t sIdx = 0;
-    for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++)
-    {
-        sIdx = k % m_sectionCount;
-        for (uint16_t i = sIdx * m_sectionSize;
-             i < (sIdx + 1) * m_sectionSize; ++i)
-        {
-            port->print(",");
-            port->print(m_values[i] * m_resolution);
-        }
-    }
-}
-
-/**
- * Stream the content of the section at sectionIdx
- */
-uint16_t FloatFeature::m_specializedBufferStream(uint8_t sectionIdx,
-    char *destination, uint16_t startIndex, uint8_t sectionCount)
-{
-    uint8_t sIdx = 0;
-    String strVal = "";
-    uint16_t destIndex = startIndex;
-    for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++)
-    {
-        sIdx = k % m_sectionCount;
-        for (uint16_t i = sIdx * m_sectionSize;
-             i < (sIdx + 1) * m_sectionSize; ++i)
-        {
-            destination[destIndex++] = ',';
-            strVal = String(m_values[i] * m_resolution, 2);
-            strcat(destination, strVal.c_str());
-            destIndex += strVal.length();
-        }
-    }
-    return destIndex - startIndex;
-}
-
-/***** Q15 Buffer *****/
-
-Q15Feature::Q15Feature(const char* name, uint8_t sectionCount,
-                       uint16_t sectionSize, q15_t *values,
-                       Feature::slideOption sliding, bool isFFT) :
-    Feature(name, sectionCount, sectionSize, sliding),
-    m_isFFT(isFFT)
-{
-    m_values = values;
-    if (setupDebugMode && isFFT && sectionSize % 3 > 0)
-    {
-        raiseException(F("FFT Feature section size must be divisible by 3"));
-    }
-}
-
-/**
- * Return a pointer to the start of the section
- */
-q15_t* Q15Feature::getNextQ15Values(uint8_t receiverIdx)
-{
-    uint16_t startIdx = (uint16_t) m_computeIndex[receiverIdx] * m_sectionSize;
-    return &m_values[startIdx];
-}
-
-/**
- * Add a value to the buffer and increment the filling index
- */
-void Q15Feature::addQ15Value(q15_t value)
-{
-    m_values[m_fillingIndex] = value;
-    incrementFillingIndex();
-}
-
-/**
- * Stream the content of the section at sectionIdx
- */
-void Q15Feature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx,
-                                     uint8_t sectionCount)
-{
-    uint8_t sIdx = 0;
-    for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++)
-    {
-        sIdx = k % m_sectionCount;
-        if (m_isFFT)
-        {
-            for (uint16_t i = sIdx * m_sectionSize / 3;
-                 i < (sIdx + 1) * m_sectionSize / 3; ++i)
-            {
-                port->print(",");
-                port->print(m_values[3 * i]);
-                port->print(",");
-                port->print(((float) m_values[3 * i + 1]) * m_resolution);
-                port->print(",");
-                port->print(((float) m_values[3 * i + 2]) * m_resolution);
-            }
-        }
-        else
-        {
-            for (uint16_t i = sIdx * m_sectionSize;
-                 i < (sIdx + 1) * m_sectionSize; ++i)
-            {
-                port->print(",");
-                port->print(((float) m_values[i]) * m_resolution);
-            }
-        }
-    }
-}
-
-/**
- * Stream the content of the section at sectionIdx
- */
-uint16_t Q15Feature::m_specializedBufferStream(uint8_t sectionIdx,
-    char *destination, uint16_t startIndex, uint8_t sectionCount)
-{
-    uint8_t sIdx = 0;
-    String strVal = "";
-    uint8_t floatLen = 5;
-    uint16_t destIndex = startIndex;
-    for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++)
-    {
-        sIdx = k % m_sectionCount;
-        if (m_isFFT)
-        {
-            for (uint16_t i = sIdx * m_sectionSize / 3;
-                 i < (sIdx + 1) * m_sectionSize / 3; ++i)
-            {
-                destination[destIndex++] = ',';
-                strcat(destination, String(m_values[3 * i]).c_str());
-                if (m_values[3 * i] < 10) { destIndex++; }
-                else if (m_values[3 * i] < 100) { destIndex += 2; }
-                else { destIndex += 3; }
-                destination[destIndex++] = ',';
-                strVal = String(((float) m_values[3 * i + 1]) * m_resolution, 2);
-                strncat(destination, strVal.c_str(), floatLen);
-                destIndex += min((uint16_t) strVal.length(), floatLen);
-                destination[destIndex++] = ',';
-                strVal = String(((float) m_values[3 * i + 2]) * m_resolution, 2);
-                strcat(destination, strVal.c_str());
-                destIndex += strVal.length();
-            }
-        }
-        else
-        {
-            for (uint16_t i = sIdx * m_sectionSize;
-                 i < (sIdx + 1) * m_sectionSize; ++i)
-            {
-                destination[destIndex++] = ',';
-                strVal = String(((float) m_values[i]) * m_resolution, 2);
-                strncat(destination, strVal.c_str(), floatLen);
-                destIndex += min((uint16_t) strVal.length(), floatLen);
-            }
-        }
-    }
-    return destIndex - startIndex;
-}
-
-
-/***** Q31 Buffer *****/
-
-Q31Feature::Q31Feature(const char* name, uint8_t sectionCount,
-                       uint16_t sectionSize, q31_t *values,
-                       Feature::slideOption sliding, bool isFFT) :
-    Feature(name, sectionCount, sectionSize, sliding),
-    m_isFFT(isFFT)
-{
-    m_values = values;
-    if (setupDebugMode && isFFT && sectionSize % 3 > 0)
-    {
-        raiseException(F("FFT Feature section size must be divisible by 3"));
-    }
-}
-
-/**
- * Return a pointer to the start of the section
- */
-q31_t* Q31Feature::getNextQ31Values(uint8_t receiverIdx)
-{
-    uint16_t startIdx = (uint16_t) m_computeIndex[receiverIdx] * m_sectionSize;
-    return &m_values[startIdx];
-}
-
-/**
- * Add a value to the buffer and increment the filling index
- */
-void Q31Feature::addQ31Value(q31_t value)
-{
-    m_values[m_fillingIndex] = value;
-    incrementFillingIndex();
-}
-
-/**
- * Stream the content of the section at sectionIdx
- */
-void Q31Feature::m_specializedStream(HardwareSerial *port, uint8_t sectionIdx,
-                                     uint8_t sectionCount)
-{
-    uint8_t sIdx = 0;
-    for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++)
-    {
-        sIdx = k % m_sectionCount;
-        if (m_isFFT)
-        {
-            for (uint16_t i = sIdx * m_sectionSize / 3;
-                 i < (sIdx + 1) * m_sectionSize / 3; ++i)
-            {
-                port->print(",");
-                port->print(m_values[3 * i]);
-                port->print(",");
-                port->print(((float) m_values[3 * i + 1]) * m_resolution);
-                port->print(",");
-                port->print(((float) m_values[3 * i + 2]) * m_resolution);
-            }
-        }
-        else
-        {
-            for (uint16_t i = sIdx * m_sectionSize;
-                 i < (sIdx + 1) * m_sectionSize; ++i)
-            {
-                port->print(",");
-                port->print(((float) m_values[i]) * m_resolution);
-            }
-        }
-    }
-}
-
-/**
- * Stream the content of the section at sectionIdx
- */
-uint16_t Q31Feature::m_specializedBufferStream(uint8_t sectionIdx,
-    char *destination, uint16_t startIndex, uint8_t sectionCount)
-{
-    uint8_t sIdx = 0;
-    String strVal = "";
-    uint16_t destIndex = startIndex;
-    for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++)
-    {
-        sIdx = k % m_sectionCount;
-        if (m_isFFT)
-        {
-            for (uint16_t i = sIdx * m_sectionSize / 3;
-                 i < (sIdx + 1) * m_sectionSize / 3; ++i)
-            {
-                destination[destIndex++] = ',';
-                strcat(destination, String(m_values[3 * i]).c_str());
-                if (m_values[3 * i] < 10) { destIndex++; }
-                else if (m_values[3 * i] < 100) { destIndex += 2; }
-                else { destIndex += 3; }
-                destination[destIndex++] = ',';
-                strVal = String(((float) m_values[3 * i + 1]) * m_resolution, 2);
-                strcat(destination, strVal.c_str());
-                destIndex += strVal.length();
-                destination[destIndex++] = ',';
-                strVal = String(((float) m_values[3 * i + 2]) * m_resolution, 2);
-                strcat(destination, strVal.c_str());
-                destIndex += strVal.length();
-            }
-        }
-        else
-        {
-            for (uint16_t i = sIdx * m_sectionSize;
-                 i < (sIdx + 1) * m_sectionSize; ++i)
-            {
-                destination[destIndex++] = ',';
-                strVal = String(((float) m_values[i]) * m_resolution, 2);
-                strcat(destination, strVal.c_str());
-                destIndex += strVal.length();
-            }
-        }
-    }
-    return destIndex - startIndex;
 }

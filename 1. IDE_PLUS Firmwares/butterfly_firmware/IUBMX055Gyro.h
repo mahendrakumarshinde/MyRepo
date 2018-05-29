@@ -18,9 +18,9 @@
  *    acquisition configuration, so each sensor has its own class.
  *    Data sheet => http://ae-bst.resource.bosch.com/media/products/dokumente/bmx055/BST-BMX055-DS000-01v2.pdf
  * Destinations:
- *      - tiltX: a Q15Feature with section size = 128
- *      - tiltY: a Q15Feature with section size = 128
- *      - tiltZ: a Q15Feature with section size = 128
+ *      - tiltX: a Q15 feature
+ *      - tiltY: a Q15 feature
+ *      - tiltZ: a Q15 feature
  */
 class IUBMX055Gyro : public HighFreqSensor
 {
