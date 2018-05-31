@@ -294,6 +294,9 @@ AudioDBComputer audioDB4096Computer(41, &audioDB4096, AUDIO_DB_SCALING);
  */
 void setUpComputerSources()
 {
+    // Operation State feature and computer always active
+    opStateFeature.setAlwaysRequired(true);
+    opStateComputer.activate();
     // From acceleration sensor data
     accel128ComputerX.addSource(&accelerationX, 1);
     accel128ComputerY.addSource(&accelerationY, 1);

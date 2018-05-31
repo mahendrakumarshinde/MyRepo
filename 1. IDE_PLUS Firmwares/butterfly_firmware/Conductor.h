@@ -144,7 +144,6 @@ class Conductor
         void activateFeature(Feature* feature);
         bool isFeatureDeactivatable(Feature* feature);
         void deactivateFeature(Feature* feature);
-        void deactivateAllFeatures();
         void activateGroup(FeatureGroup *group);
         void deactivateGroup(FeatureGroup *group);
         void deactivateAllGroups();

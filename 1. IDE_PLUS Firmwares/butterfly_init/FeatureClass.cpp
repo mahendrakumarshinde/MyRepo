@@ -73,12 +73,7 @@ Feature *Feature::getInstanceByName(const char *name)
 void Feature::addReceiver(FeatureComputer *receiver)
 {
     if (m_receiverCount < maxReceiverCount) {
-        m_receivers[m_receiverCount] = receiver;
-        m_computeIndex[m_receiverCount] = m_recordIndex;
-        for (uint8_t j = 0; j < maxSectionCount; ++j) {
-            m_acknowledged[j][m_receiverCount] = true;
-        }
-        m_receiverCount++;
+        m_receivers[m_receiverCount++] = receiver;
     } else if (debugMode) {
         debugPrint(F("Feature can't add receiver (buffer overflow)"));
     }
@@ -365,7 +360,7 @@ void Feature::exposeConfig()
     debugPrint(m_name, false);
     debugPrint(F(" config:"));
     debugPrint(F("  reguired: "), false);
-    debugPrint(isRequired());
+    debugPrint(m_required);
     debugPrint(F("  is computed: "), false);
     debugPrint(isComputedFeature());
     debugPrint(F("  has "), false);

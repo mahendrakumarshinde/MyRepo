@@ -127,13 +127,11 @@ Conductor conductor(MAC_ADDRESS);
 void dataAcquisitionCallback()
 {
     uint32_t startT = 0;
-    if (asyncDebugMode)
-    {
+    if (asyncDebugMode) {
         startT = micros();
     }
     conductor.acquireData(true);
-    if (asyncDebugMode)
-    {
+    if (asyncDebugMode) {
         debugPrint(micros() - startT);
     }
 }
@@ -187,8 +185,7 @@ uint32_t lastActive = 0;
 uint32_t loopTimeout = 60000;  // 1min timeout
 
 static void watchdogCallback(void) {
-    if (lastActive > 0 && millis() - lastActive > loopTimeout)
-    {
+    if (lastActive > 0 && millis() - lastActive > loopTimeout) {
         STM32.reset();
     }
     armv7m_timer_start(&watchdogTimer, 1000);
@@ -201,6 +198,7 @@ void setup()
 {
     iuUSB.begin();
     rgbLed.setup();
+    ledManager.setBaselineStatus(STATUS_NO_STATUS);
     armv7m_timer_create(&ledShowTimer, (armv7m_timer_callback_t)ledShowCallback);
     armv7m_timer_start(&ledShowTimer, 1);
     armv7m_timer_create(&ledTransitionTimer, (armv7m_timer_callback_t)ledTransitionCallback);
@@ -211,79 +209,65 @@ void setup()
     #else
         armv7m_timer_create(&watchdogTimer, (armv7m_timer_callback_t)watchdogCallback);
         armv7m_timer_start(&watchdogTimer, 1000);
-        if (debugMode)
-        {
+        if (debugMode) {
             delay(5000);
             debugPrint(F("Start - Mem: "), false);
             debugPrint(String(freeMemory(), DEC));
         }
         iuI2C.begin();
         // Interfaces
-        if (debugMode)
-        {
+        if (debugMode) {
             debugPrint(F("\nInitializing interfaces..."));
         }
         iuBluetooth.setupHardware();
         iuWiFi.setupHardware();
         iuWiFi.setOnConnect(onWiFiConnect);
         iuWiFi.setOnDisconnect(onWiFiDisconnect);
-        if (setupDebugMode)
-        {
+        if (setupDebugMode) {
             iuI2C.scanDevices();
             debugPrint("");
         }
-        if (debugMode)
-        {
+        if (debugMode) {
             debugPrint(F("=> Successfully initialized interfaces - Mem: "),
                        false);
             debugPrint(String(freeMemory(), DEC));
         }
         // Default feature configuration
-        if (debugMode)
-        {
+        if (debugMode) {
             debugPrint(F("\nSetting up default feature configuration..."));
         }
         conductor.setCallback(dataAcquisitionCallback);
         setUpComputerSources();
         populateFeatureGroups();
-        if (debugMode)
-        {
+        if (debugMode) {
             debugPrint(F("=> Succesfully configured default features - Mem: "),
                        false);
             debugPrint(String(freeMemory(), DEC));
         }
         // Sensors
-        if (debugMode)
-        {
+        if (debugMode) {
             debugPrint(F("\nInitializing sensors..."));
         }
         uint16_t callbackRate = iuI2S.getCallbackRate();
-        for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
-        {
+        for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
             Sensor::instances[i]->setupHardware();
-            if (Sensor::instances[i]->isHighFrequency())
-            {
+            if (Sensor::instances[i]->isHighFrequency()) {
                 Sensor::instances[i]->setCallbackRate(callbackRate);
             }
         }
         #ifdef BUTTERFLY_V04
             iuGyroscope.setPowerMode(PowerMode::SUSPEND);
         #endif
-        if (debugMode)
-        {
+        if (debugMode) {
             debugPrint(F("=> Succesfully initialized sensors - Mem: "),
                        false);
             debugPrint(String(freeMemory(), DEC));
         }
-        if (setupDebugMode)
-        {
+        if (setupDebugMode) {
             conductor.exposeAllConfigurations();
-            if (iuI2C.isError())
-            {
+            if (iuI2C.isError()) {
                 debugPrint(F("\nI2C Satus: Error"));
-            }
-            else
-            {
+            } else {
                 debugPrint(F("\nI2C Satus: OK"));
             }
             debugPrint(F("\n***Finished setup at (ms): "), false);
@@ -297,19 +281,15 @@ void setup()
             // WiFi configuration
             conductor.configureFromFlash(IUFlash::CFG_WIFI0);
             // Feature, FeatureGroup and sensors coonfigurations
-            for (uint8_t i = 0; i < conductor.CONFIG_TYPE_COUNT; ++i)
-            {
+            for (uint8_t i = 0; i < conductor.CONFIG_TYPE_COUNT; ++i) {
                 conductor.configureFromFlash(conductor.CONFIG_TYPES[i]);
             }
-            if (setupDebugMode)
-            {
+            if (setupDebugMode) {
                 ledManager.overrideColor(RGB_PURPLE);
                 delay(5000);
                 ledManager.resetStatus();
             }
-        }
-        else if (setupDebugMode)
-        {
+        } else if (setupDebugMode) {
             ledManager.overrideColor(RGB_ORANGE);
             delay(5000);
             ledManager.resetStatus();
@@ -327,28 +307,17 @@ void loop()
     lastActive = millis();
     #if defined(UNITTEST) || defined(COMPONENTTEST) || defined(INTEGRATEDTEST)
         Test::run();
-        if (Test::getCurrentFailed() > 0)
-        {
+        if (Test::getCurrentFailed() > 0) {
             conductor.showStatusOnLed(RGB_RED);
-        }
-        else
-        {
+        } else {
             conductor.showStatusOnLed(RGB_GREEN);
         }
     #else
-        if (loopDebugMode)
-        {
-            if (doOnce)
-            {
+        if (loopDebugMode) {
+            if (doOnce) {
                 doOnce = false;
                 /* === Place your code to excute once here ===*/
-                if (setupDebugMode)
-                {
-                    debugPrint(F("Loop - Mem: "),
-                               false);
-                    debugPrint(String(freeMemory(), DEC));
-                }
-                debugPrint(' ');
+                
                 /*======*/
             }
         }
@@ -369,8 +338,7 @@ void loop()
         // Send config checksum
         conductor.periodicSendConfigChecksum();
         uint32_t now = millis();
-        if (lastDone == 0 || lastDone + interval < now || now < lastDone)
-        {
+        if (lastDone == 0 || lastDone + interval < now || now < lastDone) {
             lastDone = now;
             /* === Place your code to excute at fixed interval here ===*/
             conductor.streamMCUUInfo(iuWiFi.port);

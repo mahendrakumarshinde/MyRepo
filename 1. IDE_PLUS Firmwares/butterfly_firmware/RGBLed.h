@@ -24,6 +24,11 @@ struct RGBColor
         rgb[1] = G;
         rgb[2] = B;
         }
+    RGBColor& operator=(const RGBColor& other) {
+        rgb[0] = other.rgb[0];
+        rgb[1] = other.rgb[1];
+        rgb[2] = other.rgb[2];
+    }
 };
 
 extern RGBColor RGB_BLACK;
@@ -74,8 +79,8 @@ class RGBLed
         virtual void insertColor(uint8_t index, RGBColor color,
                                  uint32_t fadeInTimer,
                                  uint32_t onTimer);
-        virtual void lockColors() { m_lockedColors = true; };
-        virtual void unlockColors() { m_lockedColors = false; };
+        virtual void lockColors() { m_lockedColors = true; }
+        virtual void unlockColors() { m_lockedColors = false; }
         virtual bool lockedColors() { return m_lockedColors; };
         /***** Color transition *****/
         virtual void manageColorTransitions();

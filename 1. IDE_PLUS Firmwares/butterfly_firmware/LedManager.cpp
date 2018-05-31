@@ -1,6 +1,5 @@
 #include "LedManager.h"
 
-
 /* =============================================================================
     Visual representation (color blinking or breathing) of a status
 ============================================================================= */
@@ -9,6 +8,7 @@ StatusVisual STATUS_NO_STATUS(RGB_BLACK, 0, 0, 1000);
 StatusVisual STATUS_WIFI_WORKING(RGB_WHITE, 0, 100, 3000);
 StatusVisual STATUS_WIFI_CONNECTED(RGB_PURPLE, 25, 50, 50);
 StatusVisual STATUS_IS_ALIVE(RGB_CYAN, 25, 50, 50);
+
 
 /* =============================================================================
     Led Manager - Core
@@ -30,7 +30,27 @@ LedManager::LedManager(RGBLed *led) :
 void LedManager::showOperationState(uint8_t state)
 {
     m_operationState = state;
-    m_led->replaceColor(0, OperationState::colors[(uint8_t) m_operationState]);
+    m_led->replaceColor(0, m_getOpStateColor());
+}
+
+RGBColor LedManager::m_getOpStateColor()
+{
+    RGBColor col;
+    switch(m_operationState) {
+        case OperationState::IDLE:
+            col = RGB_BLUE;
+            break;
+        case OperationState::NORMAL:
+            col = RGB_GREEN;
+            break;
+        case OperationState::WARNING:
+            col = RGB_ORANGE;
+            break;
+        case OperationState::DANGER:
+            col = RGB_RED;
+            break;
+    }
+    return col;
 }
 
 
@@ -46,7 +66,7 @@ void LedManager::showOperationState(uint8_t state)
  */
 void LedManager::showStatus(const StatusVisual &status)
 {
-    m_led->replaceColor(0, OperationState::colors[(uint8_t) m_operationState],
+    m_led->replaceColor(0, m_getOpStateColor(),
                         status.transition, status.offDuration);
     m_led->replaceColor(1, status.color, status.transition, status.onDuration);
 }
@@ -68,7 +88,7 @@ void LedManager::setBaselineStatus(StatusVisual status)
  */
 void LedManager::overrideColor(RGBColor color)
 {
-    StatusVisual forceVisual(color, 0, 4294967295, 0);
+    StatusVisual forceVisual(color, 0, 1000, 0);
     m_led->unlockColors();
     showStatus(forceVisual);
     m_led->lockColors();

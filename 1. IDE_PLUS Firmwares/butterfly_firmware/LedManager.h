@@ -24,8 +24,6 @@ namespace OperationState
     const uint8_t WARNING = 2;
     const uint8_t DANGER  = 3;
     const uint8_t COUNT   = 4;
-
-    const RGBColor colors[COUNT] = {RGB_BLUE, RGB_GREEN, RGB_ORANGE, RGB_RED};
 }
 
 /* =============================================================================
@@ -89,6 +87,7 @@ class LedManager
         RGBLed *m_led;
         /***** Operation state management *****/
         uint8_t m_operationState = OperationState::IDLE;
+        RGBColor m_getOpStateColor();
         /***** Status management *****/
         StatusVisual m_baselineStatus = STATUS_NO_STATUS;
 };

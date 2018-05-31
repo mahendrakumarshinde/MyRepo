@@ -79,10 +79,8 @@ class Feature
         }
         static Feature *getInstanceByName(const char *name);
         /***** Configuration *****/
-        virtual bool isRequired() { return (m_alwaysRequired || m_required); }
+        virtual bool isRequired() { return m_required; }
         virtual void setRequired(bool required) { m_required = required; }
-        virtual void setAlwaysRequired(bool required)
-            { m_alwaysRequired = required; }
         virtual void configure(JsonVariant &config) { }
         virtual void setOnNewValueCallback(onNewValueSignature onNewValue)
             { m_onNewValue = onNewValue; }
@@ -158,7 +156,6 @@ class Feature
         char m_name[nameLength + 1];
         /***** Configuration variables *****/
         bool m_required = false;
-        bool m_alwaysRequired = false;
         onNewValueSignature m_onNewValue = NULL;
         onNewRecordedSectionSignature m_onNewRecordedSection = NULL;
         /***** Physical metadata *****/

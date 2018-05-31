@@ -32,6 +32,7 @@ void RGBLed::startNewColorQueue(uint8_t colorCount)
         m_fadeInTimers[i] = 0;
         m_onTimers[i] = 0;
     }
+    m_onTimers[0] = 1000;
     startNewColorQueue(colorCount, m_colors, m_fadeInTimers, m_onTimers);
 }
 
@@ -43,24 +44,18 @@ void RGBLed::startNewColorQueue(uint8_t colorCount)
 void RGBLed::startNewColorQueue(uint8_t colorCount, RGBColor colors[],
                                 uint32_t fadeInTimers[], uint32_t onTimers[])
 {
-    if (m_lockedColors)
-    {
+    if (lockedColors()) {
         return;
     }
-    if (colorCount > maxColorCount)
-    {
-        if (debugMode)
-        {
+    if (colorCount > maxColorCount) {
+        if (debugMode) {
             debugPrint(F("Max color count exceeded"));
         }
         m_colorCount = maxColorCount;
-    }
-    else
-    {
+    } else {
         m_colorCount = colorCount;
     }
-    for (uint8_t i = 0; i < m_colorCount; i++)
-    {
+    for (uint8_t i = 0; i < m_colorCount; i++) {
         m_colors[i] = colors[i];
         m_fadeInTimers[i] = fadeInTimers[i];
         m_onTimers[i] = onTimers[i];
@@ -75,14 +70,11 @@ void RGBLed::startNewColorQueue(uint8_t colorCount, RGBColor colors[],
 void RGBLed::queueColor(RGBColor color, uint32_t fadeInTimer,
                         uint32_t onTimer)
 {
-    if (m_lockedColors)
-    {
+    if (lockedColors()) {
         return;
     }
-    if (m_colorCount >= maxColorCount)
-    {
-        if (debugMode)
-        {
+    if (m_colorCount >= maxColorCount) {
+        if (debugMode) {
             debugPrint(F("Max color count exceeded"));
         }
         return;
@@ -100,7 +92,8 @@ void RGBLed::queueColor(RGBColor color, uint32_t fadeInTimer,
  */
 void RGBLed::replaceColor(uint8_t index, RGBColor color)
 {
-    if (!m_lockedColors) {
+    if (lockedColors())
+    {
         return;
     }
     if (index < m_colorCount) {
@@ -118,7 +111,7 @@ void RGBLed::replaceColor(uint8_t index, RGBColor color)
 void RGBLed::replaceColor(uint8_t index, RGBColor color, uint32_t fadeInTimer,
                           uint32_t onTimer)
 {
-    if (!m_lockedColors) {
+    if (lockedColors()) {
         return;
     }
     if (index < m_colorCount) {
@@ -138,20 +131,14 @@ void RGBLed::replaceColor(uint8_t index, RGBColor color, uint32_t fadeInTimer,
 void RGBLed::insertColor(uint8_t index, RGBColor color, uint32_t fadeInTimer,
                          uint32_t onTimer)
 {
-    if (m_lockedColors)
-    {
+    if (lockedColors()) {
         return;
     }
-    if (m_colorCount >= maxColorCount)
-    {
-        if (debugMode)
-        {
-            debugPrint(F("Max color count exceeded"));
-        }
+    if (m_colorCount >= maxColorCount) {
+        if (debugMode) { debugPrint(F("Max color count exceeded")); }
         return;
     }
-    for (uint8_t i = m_colorCount; i > index; i--)
-    {
+    for (uint8_t i = m_colorCount; i > index; i--) {
         m_colors[i] = m_colors[i - 1];
         m_fadeInTimers[i] = m_fadeInTimers[i - 1];
         m_onTimers[i] = m_onTimers[i - 1];
@@ -169,62 +156,45 @@ void RGBLed::insertColor(uint8_t index, RGBColor color, uint32_t fadeInTimer,
  */
 void RGBLed::manageColorTransitions()
 {
-    if (m_colorCount == 0)
-    {
+    if (m_colorCount == 0) {
         return;
     }
     uint32_t currentTime = millis();
-    while (true)
-    {
-        if (m_fadingIn)
-        {
-            if(currentTime - m_previousTime > m_fadeInTimers[m_currentIndex])
-            {
+    while (true) {
+        if (m_fadingIn) {
+            if(currentTime - m_previousTime > m_fadeInTimers[m_currentIndex]) {
                 // Going into on-time
                 m_previousTime += m_fadeInTimers[m_currentIndex];
                 m_fadingIn = false;
-            }
-            else
-            {
+            } else {
                 break;
             }
-        }
-        else
-        {
-            if (currentTime - m_previousTime > m_onTimers[m_currentIndex])
-            {
+        } else {
+            if (currentTime - m_previousTime > m_onTimers[m_currentIndex]) {
                 // Starting fade-in of next color
                 m_previousTime += m_onTimers[m_currentIndex];
                 m_currentIndex = (m_currentIndex + 1) % m_colorCount;
                 m_fadingIn = true;
-            }
-            else
-            {
+            } else {
                 break;
             }
         }
     }
-    if (m_fadingIn)
-    {
+    if (m_fadingIn) {
         int previousIdx = (int) m_currentIndex - 1;
-        if (previousIdx < 0)
-        {
+        if (previousIdx < 0) {
             previousIdx += m_colorCount;
         }
         float fadeInRatio = (float) (currentTime - m_previousTime) /
                              (float) m_fadeInTimers[m_currentIndex];
-        for (uint8_t i = 0; i < 3; ++i)
-        {
+        for (uint8_t i = 0; i < 3; ++i) {
             m_rgbValues[i] = (uint8_t) (
                 (float) m_colors[m_currentIndex].rgb[i] * fadeInRatio +
                 (float) m_colors[previousIdx].rgb[i] * (1. - fadeInRatio)
                 );
         }
-    }
-    else
-    {
-        for (uint8_t i = 0; i < 3; ++i)
-        {
+    } else {
+        for (uint8_t i = 0; i < 3; ++i) {
             m_rgbValues[i] = m_colors[m_currentIndex].rgb[i];
         }
     }

@@ -73,8 +73,10 @@ void FeatureGroup::reset()
  */
 void FeatureGroup::addFeature(Feature *feature)
 {
-    if (m_featureCount >= maxFeatureCount) {
-        if (debugMode) {
+    if (m_featureCount >= maxFeatureCount)
+    {
+        if (debugMode)
+        {
             debugPrint(F("FeatureGroup: too many features"));
         }
     }
@@ -93,7 +95,8 @@ void FeatureGroup::addFeature(Feature *feature)
 void FeatureGroup::setDataSendPeriod(uint16_t dataSendPeriod)
 {
     m_dataSendPeriod = dataSendPeriod;
-    if (debugMode) {
+    if (debugMode)
+    {
         debugPrint(F("Group "), false);
         debugPrint(m_name, false);
         debugPrint(F(": data send period set to "), false);
@@ -205,9 +208,7 @@ void FeatureGroup::legacyStream(IUSerial *iuSerial, MacAddress mac,
     iuSerial->port->print(";");
     if (featureDebugMode) {
         debugPrint(millis(), false);
-        debugPrint(F(" -> "), false);
-        debugPrint(m_name, false);
-        debugPrint(F(": "), false);
+        debugPrint(" -> ", false);
         for (uint8_t i = 0; i < m_featureCount; ++i) {
             debugPrint(",000", false);
             debugPrint(i + 1, false);

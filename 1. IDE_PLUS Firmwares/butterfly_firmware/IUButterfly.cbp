@@ -157,6 +157,8 @@
 		<Unit filename="FeatureComputer.h" />
 		<Unit filename="FeatureGroup.cpp" />
 		<Unit filename="FeatureGroup.h" />
+		<Unit filename="FeatureUtilities.cpp" />
+		<Unit filename="FeatureUtilities.h" />
 		<Unit filename="IUBMD350.cpp" />
 		<Unit filename="IUBMD350.h" />
 		<Unit filename="IUBMP280.cpp" />
@@ -194,6 +196,8 @@
 		<Unit filename="IntegratedTest/IT_All_Conductor.h" />
 		<Unit filename="IntegratedTest/IT_Butterfly.h" />
 		<Unit filename="IntegratedTest/IT_Dragonfly.h" />
+		<Unit filename="LedManager.cpp" />
+		<Unit filename="LedManager.h" />
 		<Unit filename="RGBLed.cpp" />
 		<Unit filename="RGBLed.h" />
 		<Unit filename="Sensor.cpp" />
@@ -205,8 +209,6 @@
 		<Unit filename="UnitTest/Test_Sensor.h" />
 		<Unit filename="UnitTest/Test_Utilities.h" />
 		<Unit filename="UnitTest/UnitTestData.h" />
-		<Unit filename="Utilities.cpp" />
-		<Unit filename="Utilities.h" />
 		<Extensions>
 			<envvars />
 			<code_completion />
