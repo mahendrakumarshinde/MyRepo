@@ -93,12 +93,13 @@ bool FeatureComputer::addSource(Feature *source, uint8_t sectionCount)
 
 void FeatureComputer::deleteAllSources()
 {
-    for (uint8_t i = 0; i < m_sourceCount; i++)
+    uint8_t srcCount = m_sourceCount;
+    m_sourceCount = 0;
+    for (uint8_t i = 0; i < srcCount; i++)
     {
         m_sources[i]->removeReceiver(this);
         m_sources[i] = NULL;
     }
-    m_sourceCount = 0;
 }
 
 

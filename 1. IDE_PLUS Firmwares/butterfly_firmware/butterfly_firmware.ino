@@ -178,19 +178,33 @@ void operationStateCallback(Feature *feature) {
 }
 
 
-/***** Watch Dog *****/
+/***** Watch Dogs *****/
 
 static armv7m_timer_t watchdogTimer;
 uint32_t lastActive = 0;
 uint32_t loopTimeout = 60000;  // 1min timeout
+uint32_t oneDayTimeout = 86400000;
 
 static void watchdogCallback(void) {
-    if (lastActive > 0 && millis() - lastActive > loopTimeout) {
+    uint32_t now = millis();
+    if (now > oneDayTimeout ||
+        (lastActive > 0 && now - lastActive > loopTimeout) ||
+        iuWiFi.arePublicationsFailing())
+    {
         STM32.reset();
     }
     armv7m_timer_start(&watchdogTimer, 1000);
 }
 
+
+/***** BLE transmission with throughput control *****/
+
+static armv7m_timer_t bleTransmitTimer;
+
+static void bleTransmitCallback(void) {
+    iuBluetooth.bleTransmit();
+    armv7m_timer_start(&bleTransmitTimer, 5);
+}
 
 /***** Begin *****/
 
@@ -199,6 +213,7 @@ void setup()
     iuUSB.begin();
     rgbLed.setup();
     ledManager.setBaselineStatus(STATUS_NO_STATUS);
+    ledManager.overrideColor(RGB_WHITE);
     armv7m_timer_create(&ledShowTimer, (armv7m_timer_callback_t)ledShowCallback);
     armv7m_timer_start(&ledShowTimer, 1);
     armv7m_timer_create(&ledTransitionTimer, (armv7m_timer_callback_t)ledTransitionCallback);
@@ -206,6 +221,7 @@ void setup()
     #if defined(UNITTEST) || defined(COMPONENTTEST) || defined(INTEGRATEDTEST)
         delay(2000);
         iuI2C.begin();
+        ledManager.resetStatus();
     #else
         armv7m_timer_create(&watchdogTimer, (armv7m_timer_callback_t)watchdogCallback);
         armv7m_timer_start(&watchdogTimer, 1000);
@@ -220,6 +236,8 @@ void setup()
             debugPrint(F("\nInitializing interfaces..."));
         }
         iuBluetooth.setupHardware();
+        armv7m_timer_create(&bleTransmitTimer, (armv7m_timer_callback_t)bleTransmitCallback);
+        armv7m_timer_start(&bleTransmitTimer, 5);
         iuWiFi.setupHardware();
         iuWiFi.setOnConnect(onWiFiConnect);
         iuWiFi.setOnDisconnect(onWiFiDisconnect);
@@ -295,6 +313,7 @@ void setup()
             ledManager.resetStatus();
         }
         opStateFeature.setOnNewValueCallback(operationStateCallback);
+        ledManager.resetStatus();
         conductor.changeUsageMode(UsageMode::OPERATION);
     #endif
 }

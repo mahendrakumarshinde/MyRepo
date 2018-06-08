@@ -37,6 +37,8 @@ class IUESP8285 : public IUSerial, public Component
         static const uint32_t connectedStatusTimeout = 30000;  // ms
         // Timeout for no response (only when WiFi is awake)
         static const uint32_t noResponseTimeout = 30000; // ms
+        // Timeout for failing to confim feature publication
+        static const uint32_t confirmPublicationTimeout = 30000; // ms
         // Default Config type for flash storing
         static const IUFlash::storedConfig STORED_CFG_TYPE = IUFlash::CFG_WIFI0;
         // Size of Json buffer (to parse config json)
@@ -49,6 +51,7 @@ class IUESP8285 : public IUSerial, public Component
         bool isConnected() { return m_connected; }
         bool isAvailable() { return (m_on && !m_sleeping); }
         bool isWorking() { return m_working; }
+        bool arePublicationsFailing();
         MacAddress getMacAddress() { return m_macAddress; }
         void setOnConnect(void (*callback)()) { m_onConnect = callback; }
         void setOnDisconnect(void (*callback)()) { m_onDisconnect = callback; }
@@ -119,6 +122,7 @@ class IUESP8285 : public IUSerial, public Component
         uint32_t m_autoSleepDuration = defaultAutoSleepDuration;
         uint32_t m_lastResponseTime = 0;
         uint32_t m_lastConnectedStatusTime = 0;
+        uint32_t m_lastConfirmedPublication = 0;
         /***** Informative variables *****/
         MacAddress m_macAddress;
         bool m_working = false;

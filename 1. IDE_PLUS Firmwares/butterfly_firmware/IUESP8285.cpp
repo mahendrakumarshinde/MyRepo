@@ -21,11 +21,23 @@ void IUESP8285::m_setConnectedStatus(bool status)
     m_connected = status;
     if (useCallbacks) {
         if (m_connected) {
-            m_onDisconnect();
+            if (m_onConnect) {
+                m_onConnect();
+            }
         } else {
-            m_onConnect();
+            if (m_onDisconnect) {
+                m_onDisconnect();
+            }
         }
     }
+}
+
+bool IUESP8285::arePublicationsFailing()
+{
+    if (!m_connected) {
+        return false;  // No connection, so no publication
+    }
+    return (millis() - m_lastConfirmedPublication > confirmPublicationTimeout);
 }
 
 /* =============================================================================
@@ -532,10 +544,14 @@ bool IUESP8285::processChipMessage()
             break;
         case MSPCommand::WIFI_ALERT_CONNECTED:
             if (loopDebugMode) { debugPrint("WIFI_ALERT_CONNECTED"); }
-            m_setConnectedStatus(true);
-            m_working = false;
             m_awakeTimerStart = millis();
             m_lastConnectedStatusTime = m_awakeTimerStart;
+            if (!m_connected) {
+                // Reset last publication confirmation timer
+                m_lastConfirmedPublication = m_awakeTimerStart;
+            }
+            m_setConnectedStatus(true);
+            m_working = false;
             break;
         case MSPCommand::WIFI_ALERT_DISCONNECTED:
             if (loopDebugMode) { debugPrint("WIFI_ALERT_DISCONNECTED"); }
@@ -561,6 +577,10 @@ bool IUESP8285::processChipMessage()
         case MSPCommand::WIFI_ALERT_AWAKE:
             if (loopDebugMode) { debugPrint("WIFI_ALERT_AWAKE"); }
             m_sleeping = false;
+            break;
+        case MSPCommand::WIFI_CONFIRM_PUBLICATION:
+            if (loopDebugMode) { debugPrint("WIFI_CONFIRM_PUBLICATION: "); }
+            m_lastConfirmedPublication = millis();
             break;
         default:
             commandFound = false;

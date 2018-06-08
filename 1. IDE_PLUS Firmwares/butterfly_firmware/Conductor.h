@@ -34,12 +34,13 @@ namespace AcquisitionMode
 namespace StreamingMode
 {
     enum option : uint8_t {
-        WIRED        = 0,       // Send over Serial
-        BLE          = 1,       // Send over Bluetooth Low Energy
-        WIFI         = 2,       // Send over WiFi
-        WIFI_AND_BLE = 3,       // Send over both WiFi and BLE
-        STORE        = 4,       // Store in SPI Flash to stream later
-        COUNT        = 5};
+        NONE         = 0,
+        WIRED        = 1,       // Send over Serial
+        BLE          = 2,       // Send over Bluetooth Low Energy
+        WIFI         = 3,       // Send over WiFi
+        WIFI_AND_BLE = 4,       // Send over both WiFi and BLE
+        STORE        = 5,       // Store in SPI Flash to stream later
+        COUNT        = 6};
 }
 
 
@@ -108,6 +109,7 @@ class Conductor
         static constexpr double defaultTimestamp = 1524017173.00;
         // Size of Jsn buffr (to parse json)
         static const uint16_t JSON_BUFFER_SIZE = 1600;
+        static const uint32_t BLEconnectionTimeout = 30000;
         /***** Core *****/
         Conductor(MacAddress macAddress) : m_macAddress(macAddress) { }
         Conductor(const char *macAddress)
@@ -138,7 +140,7 @@ class Conductor
         void processUSBMessages(char *buff);
         void processBLEMessages(char *buff);
         void processUserMessageForWiFi(char *buff,
-                                       HardwareSerial *feedbackPort);
+                                       IUSerial *feedbackSerial);
         void processWIFIMessages(char *buff);
         /***** Features and groups Management *****/
         void activateFeature(Feature* feature);
@@ -149,13 +151,15 @@ class Conductor
         void deactivateAllGroups();
         void configureGroupsForOperation();
         void configureGroupsForCalibration();
+        void changeMainFeatureGroup(FeatureGroup *group);
         /***** Time management *****/
         void setRefDatetime(double refDatetime);
         void setRefDatetime(const char* timestamp);
         double getDatetime();
         /***** Mode management *****/
+        bool isBLEConnected();
         void changeAcquisitionMode(AcquisitionMode::option mode);
-        void changeStreamingMode(StreamingMode::option mode);
+        void updateStreamingMode();
         void changeUsageMode(UsageMode::option usage);
         /***** Operations *****/
         void setCallback(void (*callback)()) { m_callback = callback; };
@@ -195,6 +199,7 @@ class Conductor
         uint32_t m_lastSynchroTime = 0;
         // last datetime received from bluetooth or wifi
         double m_refDatetime = defaultTimestamp;
+        uint32_t m_lastBLEmessage = 0;
         /***** Operations *****/
         void (*m_callback)() = NULL;
         bool m_inDataAcquistion = false;
@@ -205,7 +210,7 @@ class Conductor
         uint8_t m_nextConfigToSend = 0;
         UsageMode::option m_usageMode = UsageMode::COUNT;
         AcquisitionMode::option m_acquisitionMode = AcquisitionMode::NONE;
-        StreamingMode::option m_streamingMode = StreamingMode::COUNT;
+        StreamingMode::option m_streamingMode = StreamingMode::NONE;
 };
 
 

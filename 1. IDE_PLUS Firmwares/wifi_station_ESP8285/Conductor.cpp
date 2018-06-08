@@ -175,15 +175,12 @@ void Conductor::processMessageFromHost()
                                                strlen(buffer) - 2);
             hostSerial.sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION, buffer,
                                       1);
-            if (!accelRawDataHelper.inputHasTimedOut() &&
-                accelRawDataHelper.areAllKeyPresent())
-            {
-                hostSerial.sendMSPCommand(MSPCommand::WIFI_CONFIRM_PUBLICATION);
-            }
             accelRawDataHelper.publishIfReady(m_bleMAC);
             break;
         case MSPCommand::PUBLISH_FEATURE:
-            publishFeature(&buffer[7], bufferLength - 7, buffer, 6);
+            if (publishFeature(&buffer[7], bufferLength - 7, buffer, 6)) {
+                hostSerial.sendMSPCommand(MSPCommand::WIFI_CONFIRM_PUBLICATION);
+            }
             break;
         case MSPCommand::PUBLISH_DIAGNOSTIC:
             publishDiagnostic(buffer, bufferLength);

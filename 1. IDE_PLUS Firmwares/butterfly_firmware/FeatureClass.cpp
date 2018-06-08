@@ -311,14 +311,14 @@ void Feature::acknowledge(FeatureComputer *receiver, uint8_t sectionCount)
  * Lock and print sectionCount sections, ending at last recorded section
  * [recordIndex - sectionCount; recordIndex - 1].
  */
-void Feature::stream(HardwareSerial *port, uint8_t sectionCount)
+void Feature::stream(IUSerial *ser, uint8_t sectionCount)
 {
     uint8_t k = (m_sectionCount + m_recordIndex - sectionCount) % m_sectionCount;
     for (uint8_t i = k; i < k + sectionCount; ++i)
     {
         m_locked[i % m_sectionCount] = true;
     }
-    m_specializedStream(port, k, sectionCount);
+    m_specializedStream(ser, k, sectionCount);
     for (uint8_t i = k; i < k + sectionCount; ++i)
     {
         m_locked[i % m_sectionCount] = false;

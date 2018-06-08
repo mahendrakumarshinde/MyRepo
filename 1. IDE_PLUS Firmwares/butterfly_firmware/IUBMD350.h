@@ -36,6 +36,11 @@ class IUBMD350 : public IUSerial, public Component
                                       DBm16 = 240,  // -4 DB
                                       DBm30 = 226}; // -30 DB
         static const txPowerOption defaultTxPower = txPowerOption::DBm4;
+        /***** Bluetooth throughput control *****/
+        static const uint16_t TX_BUFFER_LENGTH = 12000;
+        static const uint16_t SERIAL_TX_MAX_AVAILABLE = 64;
+        static const uint16_t BLE_MTU_LEN = 20;
+        static const uint32_t BLE_TX_DELAY = 25;
         /***** Constructors & destructor *****/
         IUBMD350(HardwareSerial *serialPort, char *charBuffer,
                  uint16_t bufferSize, PROTOCOL_OPTIONS protocol, uint32_t rate,
@@ -46,11 +51,17 @@ class IUBMD350 : public IUSerial, public Component
         virtual void setupHardware();
         void softReset();
         virtual void setPowerMode(PowerMode::option pMode);
-        /***** Bluetooth Configuration *****/
-        // AT Command Interface
-        bool enterATCommandInterface(uint8_t retry=1);
+        /***** Bluetooth throughput control *****/
+        void resetTxBuffer();
+        virtual size_t write(const char c);
+        virtual size_t write(const char *msg);
+        void bleTransmit();
+        /***** AT Command Interface *****/
+        void enterATCommandInterface(uint8_t retry=1);
         void exitATCommandInterface();
         int sendATCommand(String cmd, char *response, uint8_t responseLength);
+        /***** Bluetooth Configuration *****/
+        virtual void doFullConfig();
         // Device name
         void setDeviceName(char *deviceName);
         void queryDeviceName();
@@ -79,6 +90,12 @@ class IUBMD350 : public IUSerial, public Component
         /***** Pin definition *****/
         uint8_t m_resetPin;  // BMD-350 reset pin active LOW
         uint8_t m_atCmdPin;  // Toggle pin for AT Command
+        /***** Bluetooth throughput control *****/
+        char m_txBuffer[TX_BUFFER_LENGTH];
+        uint16_t m_txHead;
+        uint16_t m_txTail;
+        bool m_serialTxEmpty;
+        uint32_t m_lastSerialTxEmptied;
         /***** Bluetooth Configuration *****/
         bool m_ATCmdEnabled;  // AT Command Interface
         char m_deviceName[9];  // max 8 chars + 1 char end of string
