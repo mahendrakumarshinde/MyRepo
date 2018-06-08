@@ -155,11 +155,11 @@ static void ledTransitionCallback(void) {
 }
 
 void onWiFiConnect() {
-    ledManager.setBaselineStatus(STATUS_WIFI_CONNECTED);
+    ledManager.setBaselineStatus(&STATUS_WIFI_CONNECTED);
 }
 
 void onWiFiDisconnect() {
-    ledManager.setBaselineStatus(STATUS_NO_STATUS);
+    ledManager.setBaselineStatus(&STATUS_NO_STATUS);
 }
 
 void onBLEConnect() {
@@ -212,7 +212,7 @@ void setup()
 {
     iuUSB.begin();
     rgbLed.setup();
-    ledManager.setBaselineStatus(STATUS_NO_STATUS);
+    ledManager.setBaselineStatus(&STATUS_NO_STATUS);
     ledManager.overrideColor(RGB_WHITE);
     armv7m_timer_create(&ledShowTimer, (armv7m_timer_callback_t)ledShowCallback);
     armv7m_timer_start(&ledShowTimer, 1);

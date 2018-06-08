@@ -32,7 +32,7 @@ namespace OperationState
 
 struct StatusVisual
 {
-    RGBColor color = RGB_BLACK;
+    RGBColor color = RGB_RED;
     uint32_t transition = 0;
     uint32_t onDuration = 0;
     uint32_t offDuration = 1000;
@@ -77,8 +77,8 @@ class LedManager
         void showOperationState(uint8_t state);
         uint8_t getOperationState() { return m_operationState; }
         /***** Status management *****/
-        void showStatus(const StatusVisual &status);
-        void setBaselineStatus(StatusVisual status);
+        void showStatus(StatusVisual *status);
+        void setBaselineStatus(StatusVisual *status);
         void overrideColor(RGBColor color);
         void resetStatus();
 
@@ -89,7 +89,8 @@ class LedManager
         uint8_t m_operationState = OperationState::IDLE;
         RGBColor m_getOpStateColor();
         /***** Status management *****/
-        StatusVisual m_baselineStatus = STATUS_NO_STATUS;
+        StatusVisual *m_baselineStatus;
+        StatusVisual m_forceVisual;
 };
 
 #endif // LEDMANAGER_H

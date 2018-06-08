@@ -28,17 +28,18 @@ struct RGBColor
         rgb[0] = other.rgb[0];
         rgb[1] = other.rgb[1];
         rgb[2] = other.rgb[2];
+        return *this;
     }
 };
 
-extern RGBColor RGB_BLACK;
-extern RGBColor RGB_BLUE;
-extern RGBColor RGB_GREEN;
-extern RGBColor RGB_CYAN;
-extern RGBColor RGB_RED;
-extern RGBColor RGB_PURPLE;
-extern RGBColor RGB_ORANGE;
-extern RGBColor RGB_WHITE;
+const RGBColor RGB_BLACK(0, 0, 0);
+const RGBColor RGB_BLUE(0, 0, 255);
+const RGBColor RGB_GREEN(0, 255, 0);
+const RGBColor RGB_CYAN(0, 255, 255);
+const RGBColor RGB_RED(255, 0, 0);
+const RGBColor RGB_PURPLE(255, 0, 255);
+const RGBColor RGB_ORANGE(255, 255, 0);
+const RGBColor RGB_WHITE(255, 255, 255);
 
 
 /* =============================================================================

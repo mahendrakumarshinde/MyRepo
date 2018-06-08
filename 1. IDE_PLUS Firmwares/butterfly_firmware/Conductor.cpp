@@ -428,7 +428,7 @@ void Conductor::processCommands(char *buff)
         case 'A': // ping device
             if (strcmp(buff, "ALIVE") == 0) {
                 // Blink the device to let the user know that is is live
-                ledManager.showStatus(STATUS_IS_ALIVE);
+                ledManager.showStatus(&STATUS_IS_ALIVE);
                 uint32_t startT = millis();
                 uint32_t current = startT;
                 while (current - startT < 3000) {
@@ -679,7 +679,7 @@ void Conductor::processUserMessageForWiFi(char *buff,
         // We want the WiFi to do something, so need to make sure it's available
         if (!iuWiFi.isAvailable()) {
             // Show the status to the user
-            ledManager.showStatus(STATUS_WIFI_WORKING);
+            ledManager.showStatus(&STATUS_WIFI_WORKING);
             uint32_t startT = millis();
             uint32_t current = startT;
             // Wait for up to 3sec the WiFi wake up
@@ -694,7 +694,7 @@ void Conductor::processUserMessageForWiFi(char *buff,
         iuWiFi.processUserMessage(buff, &iuFlash);
         // Show status
         if (iuWiFi.isAvailable() && iuWiFi.isWorking()) {
-            ledManager.showStatus(STATUS_WIFI_WORKING);
+            ledManager.showStatus(&STATUS_WIFI_WORKING);
         }
     }
 }
@@ -706,7 +706,7 @@ void Conductor::processWIFIMessages(char *buff)
 {
     if (iuWiFi.processChipMessage()) {
         if (iuWiFi.isWorking()) {
-            ledManager.showStatus(STATUS_WIFI_WORKING);
+            ledManager.showStatus(&STATUS_WIFI_WORKING);
         } else {
             ledManager.resetStatus();
         }

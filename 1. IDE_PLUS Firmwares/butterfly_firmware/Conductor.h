@@ -109,7 +109,7 @@ class Conductor
         static constexpr double defaultTimestamp = 1524017173.00;
         // Size of Jsn buffr (to parse json)
         static const uint16_t JSON_BUFFER_SIZE = 1600;
-        static const uint32_t BLEconnectionTimeout = 30000;
+        static const uint32_t BLEconnectionTimeout = 60000;
         /***** Core *****/
         Conductor(MacAddress macAddress) : m_macAddress(macAddress) { }
         Conductor(const char *macAddress)
