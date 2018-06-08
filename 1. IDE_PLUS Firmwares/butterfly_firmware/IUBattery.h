@@ -25,7 +25,7 @@ class IUBattery : public LowFreqSensor
         // Full battery voltage (mV) => 1000 * (127.0f / 100.0f) * 3.30f = 4191
         static constexpr float maxVoltage = 4191.0f;
         /***** Constructors & desctructors *****/
-        IUBattery(const char* name, Feature *batteryLoad);
+        IUBattery(const char* name, FeatureTemplate<float> *batteryLoad);
         virtual ~IUBattery() {}
         /***** Hardware and power management *****/
         virtual void setupHardware();

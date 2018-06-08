@@ -30,8 +30,10 @@ void accelReadCallback(uint8_t wireStatus)
 /**
  * Initialize and configure the BMX055 for the accelerometer
  */
-IUBMX055Acc::IUBMX055Acc(IUI2C *iuI2C, const char* name, Feature *accelerationX,
-                         Feature *accelerationY, Feature *accelerationZ) :
+IUBMX055Acc::IUBMX055Acc(IUI2C *iuI2C, const char* name,
+                         FeatureTemplate<q15_t> *accelerationX,
+                         FeatureTemplate<q15_t> *accelerationY,
+                         FeatureTemplate<q15_t> *accelerationZ) :
     HighFreqSensor(name, 3, accelerationX, accelerationY, accelerationZ),
     m_scale(defaultScale),
     m_bandwidth(defaultBandwidth),
@@ -331,7 +333,7 @@ void IUBMX055Acc::processData()
         m_rawData[i] = (int16_t) (((int16_t)m_rawBytes[2 * i + 1] << 8) | \
                                   (m_rawBytes[2 * i] & 0xF0));
         m_data[i] = m_rawData[i] + m_bias[i];
-        m_destinations[i]->addQ15Value(m_data[i]);
+        m_destinations[i]->addValue(m_data[i]);
     }
     newAccelData = false;
 }

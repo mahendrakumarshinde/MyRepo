@@ -5,7 +5,7 @@
     Constructors and destructors
 ============================================================================= */
 
-IUBattery::IUBattery(const char* name, Feature *batteryLoad) :
+IUBattery::IUBattery(const char* name, FeatureTemplate<float> *batteryLoad) :
   LowFreqSensor(name, 1, batteryLoad),
   m_vBattery(0)
 {
@@ -69,5 +69,5 @@ void IUBattery::readData()
 {
     m_batteryLoad = (float) (analogRead(voltagePin)) / 40.95f;
     m_vBattery = m_batteryLoad * maxVoltage / 100.0f;
-    m_destinations[0]->addFloatValue(m_batteryLoad);
+    m_destinations[0]->addValue(m_batteryLoad);
 }

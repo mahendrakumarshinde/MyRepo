@@ -16,6 +16,7 @@ char IUFSFlash::FNAME_WIFI4[6] = "wifi4";
 char IUFSFlash::FNAME_FEATURE[9] = "features";
 char IUFSFlash::FNAME_COMPONENT[11] = "components";
 char IUFSFlash::FNAME_DEVICE[7] = "device";
+char IUFSFlash::FNAME_OP_STATE[8] = "opState";
 char IUFSFlash::FNAME_RAW_DATA_ENDPOINT[13] = "fft_endpoint";
 char IUFSFlash::FNAME_MQTT_SERVER[12] = "mqtt_server";
 char IUFSFlash::FNAME_MQTT_CREDS[11] = "mqtt_creds";
@@ -162,6 +163,9 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
             break;
         case CFG_DEVICE:
             fname = FNAME_DEVICE;
+            break;
+        case CFG_OP_STATE:
+            fname = FNAME_OP_STATE;
             break;
         case CFG_RAW_DATA_ENDPOINT:
             fname = FNAME_RAW_DATA_ENDPOINT;

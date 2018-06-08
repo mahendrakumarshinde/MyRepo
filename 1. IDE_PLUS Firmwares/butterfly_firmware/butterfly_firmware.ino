@@ -124,26 +124,24 @@ Conductor conductor(MAC_ADDRESS);
  * NB: Printing is time consuming and may cause issues in callback. Always
  * deactivate the asyncDebugMode in prod.
  */
-void callback()
+void dataAcquisitionCallback()
 {
     uint32_t startT = 0;
-    if (asyncDebugMode)
-    {
+    if (asyncDebugMode) {
         startT = micros();
     }
     conductor.acquireData(true);
-    if (asyncDebugMode)
-    {
+    if (asyncDebugMode) {
         debugPrint(micros() - startT);
     }
 }
 
 
-/***** Led callbacks *****/
+/***** Led timers and callbacks *****/
 
 static armv7m_timer_t ledShowTimer;
 
-static void ledUShowCallback(void) {
+static void ledShowCallback(void) {
     rgbLed.updateColors();
     armv7m_timer_start(&ledShowTimer, 1);
 }
@@ -154,6 +152,29 @@ static armv7m_timer_t ledTransitionTimer;
 static void ledTransitionCallback(void) {
     rgbLed.manageColorTransitions();
     armv7m_timer_start(&ledTransitionTimer, 10);
+}
+
+void onWiFiConnect() {
+    ledManager.setBaselineStatus(&STATUS_WIFI_CONNECTED);
+}
+
+void onWiFiDisconnect() {
+    ledManager.setBaselineStatus(&STATUS_NO_STATUS);
+}
+
+void onBLEConnect() {
+    //TODO Show that BLE is connected on the LED
+}
+
+void onBLEDisconnect() {
+    //TODO Show that BLE is disconnected on the LED
+}
+
+void operationStateCallback(Feature *feature) {
+    q15_t value = feature->getLastRecordedQ15Values()[0];
+    if (value < OperationState::COUNT) {
+        ledManager.showOperationState((uint8_t) value);
+    }
 }
 
 
@@ -190,90 +211,81 @@ static void bleTransmitCallback(void) {
 void setup()
 {
     iuUSB.begin();
-    rgbLed.setupHardware();
-    armv7m_timer_create(&ledShowTimer, (armv7m_timer_callback_t)ledUShowCallback);
+    rgbLed.setup();
+    ledManager.setBaselineStatus(&STATUS_NO_STATUS);
+    ledManager.overrideColor(RGB_WHITE);
+    armv7m_timer_create(&ledShowTimer, (armv7m_timer_callback_t)ledShowCallback);
     armv7m_timer_start(&ledShowTimer, 1);
     armv7m_timer_create(&ledTransitionTimer, (armv7m_timer_callback_t)ledTransitionCallback);
     armv7m_timer_start(&ledTransitionTimer, 10);
     #if defined(UNITTEST) || defined(COMPONENTTEST) || defined(INTEGRATEDTEST)
         delay(2000);
         iuI2C.begin();
+        ledManager.resetStatus();
     #else
         armv7m_timer_create(&watchdogTimer, (armv7m_timer_callback_t)watchdogCallback);
         armv7m_timer_start(&watchdogTimer, 1000);
-        if (debugMode)
-        {
+        if (debugMode) {
             delay(5000);
             debugPrint(F("Start - Mem: "), false);
             debugPrint(String(freeMemory(), DEC));
         }
         iuI2C.begin();
         // Interfaces
-        if (debugMode)
-        {
+        if (debugMode) {
             debugPrint(F("\nInitializing interfaces..."));
         }
         iuBluetooth.setupHardware();
         armv7m_timer_create(&bleTransmitTimer, (armv7m_timer_callback_t)bleTransmitCallback);
         armv7m_timer_start(&bleTransmitTimer, 5);
         iuWiFi.setupHardware();
-        if (setupDebugMode)
-        {
+        iuWiFi.setOnConnect(onWiFiConnect);
+        iuWiFi.setOnDisconnect(onWiFiDisconnect);
+        if (setupDebugMode) {
             iuI2C.scanDevices();
             debugPrint("");
         }
-        if (debugMode)
-        {
+        if (debugMode) {
             debugPrint(F("=> Successfully initialized interfaces - Mem: "),
                        false);
             debugPrint(String(freeMemory(), DEC));
         }
         // Default feature configuration
-        if (debugMode)
-        {
+        if (debugMode) {
             debugPrint(F("\nSetting up default feature configuration..."));
         }
-        conductor.setCallback(callback);
+        conductor.setCallback(dataAcquisitionCallback);
         setUpComputerSources();
         populateFeatureGroups();
-        if (debugMode)
-        {
+        if (debugMode) {
             debugPrint(F("=> Succesfully configured default features - Mem: "),
                        false);
             debugPrint(String(freeMemory(), DEC));
         }
         // Sensors
-        if (debugMode)
-        {
+        if (debugMode) {
             debugPrint(F("\nInitializing sensors..."));
         }
         uint16_t callbackRate = iuI2S.getCallbackRate();
-        for (uint8_t i = 0; i < Sensor::instanceCount; ++i)
-        {
+        for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
             Sensor::instances[i]->setupHardware();
-            if (Sensor::instances[i]->isHighFrequency())
-            {
+            if (Sensor::instances[i]->isHighFrequency()) {
                 Sensor::instances[i]->setCallbackRate(callbackRate);
             }
         }
         #ifdef BUTTERFLY_V04
             iuGyroscope.setPowerMode(PowerMode::SUSPEND);
         #endif
-        if (debugMode)
-        {
+        if (debugMode) {
             debugPrint(F("=> Succesfully initialized sensors - Mem: "),
                        false);
             debugPrint(String(freeMemory(), DEC));
         }
-        if (setupDebugMode)
-        {
+        if (setupDebugMode) {
             conductor.exposeAllConfigurations();
-            if (iuI2C.isError())
-            {
+            if (iuI2C.isError()) {
                 debugPrint(F("\nI2C Satus: Error"));
-            }
-            else
-            {
+            } else {
                 debugPrint(F("\nI2C Satus: OK"));
             }
             debugPrint(F("\n***Finished setup at (ms): "), false);
@@ -287,23 +299,21 @@ void setup()
             // WiFi configuration
             conductor.configureFromFlash(IUFlash::CFG_WIFI0);
             // Feature, FeatureGroup and sensors coonfigurations
-            for (uint8_t i = 0; i < conductor.CONFIG_TYPE_COUNT; ++i)
-            {
+            for (uint8_t i = 0; i < conductor.CONFIG_TYPE_COUNT; ++i) {
                 conductor.configureFromFlash(conductor.CONFIG_TYPES[i]);
             }
-            if (setupDebugMode)
-            {
-                conductor.overrideLedColor(RGB_PURPLE);
+            if (setupDebugMode) {
+                ledManager.overrideColor(RGB_PURPLE);
                 delay(5000);
-                conductor.resetLed();
+                ledManager.resetStatus();
             }
-        }
-        else if (setupDebugMode)
-        {
-            conductor.overrideLedColor(RGB_ORANGE);
+        } else if (setupDebugMode) {
+            ledManager.overrideColor(RGB_ORANGE);
             delay(5000);
-            conductor.resetLed();
+            ledManager.resetStatus();
         }
+        opStateFeature.setOnNewValueCallback(operationStateCallback);
+        ledManager.resetStatus();
         conductor.changeUsageMode(UsageMode::OPERATION);
     #endif
 }
@@ -316,28 +326,17 @@ void loop()
     lastActive = millis();
     #if defined(UNITTEST) || defined(COMPONENTTEST) || defined(INTEGRATEDTEST)
         Test::run();
-        if (Test::getCurrentFailed() > 0)
-        {
+        if (Test::getCurrentFailed() > 0) {
             conductor.showStatusOnLed(RGB_RED);
-        }
-        else
-        {
+        } else {
             conductor.showStatusOnLed(RGB_GREEN);
         }
     #else
-        if (loopDebugMode)
-        {
-            if (doOnce)
-            {
+        if (loopDebugMode) {
+            if (doOnce) {
                 doOnce = false;
                 /* === Place your code to excute once here ===*/
-                if (setupDebugMode)
-                {
-                    debugPrint(F("Loop - Mem: "),
-                               false);
-                    debugPrint(String(freeMemory(), DEC));
-                }
-                debugPrint(' ');
+                
                 /*======*/
             }
         }
@@ -351,8 +350,6 @@ void loop()
         conductor.acquireData(false);
         // Feature computation depending on operation mode
         conductor.computeFeatures();
-        // Update the OperationState
-        conductor.updateOperationState();
         // Stream features
         conductor.streamFeatures();
         // Send accel raw data
@@ -360,8 +357,7 @@ void loop()
         // Send config checksum
         conductor.periodicSendConfigChecksum();
         uint32_t now = millis();
-        if (lastDone == 0 || lastDone + interval < now || now < lastDone)
-        {
+        if (lastDone == 0 || lastDone + interval < now || now < lastDone) {
             lastDone = now;
             /* === Place your code to excute at fixed interval here ===*/
             conductor.streamMCUUInfo(iuWiFi.port);

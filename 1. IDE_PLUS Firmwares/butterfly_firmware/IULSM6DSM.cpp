@@ -30,10 +30,14 @@ void LSM6DSMAccelReadCallback(uint8_t wireStatus)
 /**
  * Initialize and configure the BMX055 for the accelerometer
  */
-IULSM6DSM::IULSM6DSM(IUI2C *iuI2C, const char* name, Feature *accelerationX,
-                     Feature *accelerationY, Feature *accelerationZ,
-                     Feature *tiltX, Feature *tiltY, Feature *tiltZ,
-                     Feature *temperature) :
+IULSM6DSM::IULSM6DSM(IUI2C *iuI2C, const char* name,
+                     FeatureTemplate<q15_t> *accelerationX,
+                     FeatureTemplate<q15_t> *accelerationY,
+                     FeatureTemplate<q15_t> *accelerationZ,
+                     FeatureTemplate<q15_t> *tiltX,
+                     FeatureTemplate<q15_t> *tiltY,
+                     FeatureTemplate<q15_t> *tiltZ,
+                     FeatureTemplate<float> *temperature) :
     HighFreqSensor(name, 6, accelerationX, accelerationY, accelerationZ, tiltX,
                  tiltY, tiltZ, temperature),
     m_scale(defaultScale),
@@ -341,12 +345,12 @@ void IULSM6DSM::processData()
     {
         // Accelaration data
         m_data[i] = m_rawData[i] + m_bias[i];
-        m_destinations[i]->addQ15Value(m_data[i]);
+        m_destinations[i]->addValue(m_data[i]);
         // Gyroscope data
         m_gyroData[i] = m_rawGyroData[i] + m_gyroBias[i];
-        m_destinations[i + 3]->addQ15Value(m_gyroData[i]);
+        m_destinations[i + 3]->addValue(m_gyroData[i]);
     }
-    m_destinations[6]->addFloatValue(m_temperature);
+    m_destinations[6]->addValue(m_temperature);
     newLSM6DSMAccelData = false;
 }
 

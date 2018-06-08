@@ -24,8 +24,8 @@ void pressureReadCallback(uint8_t wireStatus);
  *  Description:
  *    Temperature and Pressure sensor for Butterfly board
  * Destinations:
- *      - temperature: a FloatFeature with section size = 1
- *      - pressure: a FloatFeature with section size = 1
+ *      - temperature: a float feature
+ *      - pressure: a float feature
  */
 class IUBMP280 : public LowFreqSensor
 {
@@ -69,8 +69,9 @@ class IUBMP280 : public LowFreqSensor
                                          t_2000ms,
                                          t_4000ms};
         /***** Constructors & desctructors *****/
-        IUBMP280(IUI2C *iuI2C, const char* name, Feature *temperature,
-                 Feature *pressure);
+        IUBMP280(IUI2C *iuI2C, const char* name,
+                 FeatureTemplate<float> *temperature,
+                 FeatureTemplate<float> *pressure);
         virtual ~IUBMP280() {}
         /***** Hardware and power management *****/
         virtual void setupHardware();

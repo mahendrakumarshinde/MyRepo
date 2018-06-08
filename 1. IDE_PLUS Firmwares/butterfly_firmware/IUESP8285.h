@@ -53,6 +53,8 @@ class IUESP8285 : public IUSerial, public Component
         bool isWorking() { return m_working; }
         bool arePublicationsFailing();
         MacAddress getMacAddress() { return m_macAddress; }
+        void setOnConnect(void (*callback)()) { m_onConnect = callback; }
+        void setOnDisconnect(void (*callback)()) { m_onDisconnect = callback; }
         /***** Hardware and power management *****/
         virtual void setupHardware();
         void turnOn(bool forceTimerReset=false);
@@ -112,6 +114,7 @@ class IUESP8285 : public IUSerial, public Component
         /***** Connection and auto-sleep *****/
         bool m_on = true;
         bool m_connected = false;
+        void m_setConnectedStatus(bool status);
         bool m_sleeping = false;
         uint32_t m_awakeTimerStart = 0;
         uint32_t m_sleepTimerStart = 0;
@@ -124,6 +127,9 @@ class IUESP8285 : public IUSerial, public Component
         MacAddress m_macAddress;
         bool m_working = false;
         uint32_t m_displayConnectAttemptStart = 0;
+        /***** Callbacks *****/
+        void (*m_onConnect)() = NULL;
+        void (*m_onDisconnect)() = NULL;
 };
 
 #endif // IUESP8285_H

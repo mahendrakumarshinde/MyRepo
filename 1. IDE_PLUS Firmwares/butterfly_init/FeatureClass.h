@@ -7,7 +7,6 @@
 #include <arm_math.h>
 
 #include <IUDebugger.h>
-#include <IUSerial.h>
 
 
 /* =============================================================================
@@ -80,10 +79,8 @@ class Feature
         }
         static Feature *getInstanceByName(const char *name);
         /***** Configuration *****/
-        virtual bool isRequired() { return (m_alwaysRequired || m_required); }
+        virtual bool isRequired() { return m_required; }
         virtual void setRequired(bool required) { m_required = required; }
-        virtual void setAlwaysRequired(bool required)
-            { m_alwaysRequired = required; }
         virtual void configure(JsonVariant &config) { }
         virtual void setOnNewValueCallback(onNewValueSignature onNewValue)
             { m_onNewValue = onNewValue; }
@@ -144,7 +141,7 @@ class Feature
         virtual void acknowledge(FeatureComputer *receiver,
                                  uint8_t sectionCount=1);
         /***** Communication *****/
-        virtual void stream(IUSerial *ser, uint8_t sectionCount=1);
+        virtual void stream(HardwareSerial *port, uint8_t sectionCount=1);
         virtual uint16_t sendToBuffer(char *destination, uint16_t startIndex,
                                       uint8_t sectionCount=1);
         /***** Debugging *****/
@@ -159,7 +156,6 @@ class Feature
         char m_name[nameLength + 1];
         /***** Configuration variables *****/
         bool m_required = false;
-        bool m_alwaysRequired = false;
         onNewValueSignature m_onNewValue = NULL;
         onNewRecordedSectionSignature m_onNewRecordedSection = NULL;
         /***** Physical metadata *****/
@@ -185,7 +181,7 @@ class Feature
         // streaming the section content for example, to garantee data
         // consistency at section level
         bool m_locked[maxSectionCount];
-        virtual void m_specializedStream(IUSerial *ser,
+        virtual void m_specializedStream(HardwareSerial *port,
                                          uint8_t sectionIdx,
                                          uint8_t sectionCount=1) {}
         virtual uint16_t m_specializedBufferStream(uint8_t sectionIdx,
@@ -212,6 +208,7 @@ class FeatureTemplate : public Feature
                         bool isFFT=false) :
             Feature(name, sectionCount, sectionSize, sliding, isFFT),
             m_values(values) { }
+
         virtual ~FeatureTemplate() {}
 
         /**
@@ -261,7 +258,7 @@ class FeatureTemplate : public Feature
     protected:
         T *m_values;
 
-        virtual void m_specializedStream(IUSerial *ser,
+        virtual void m_specializedStream(HardwareSerial *port,
                                          uint8_t sectionIdx,
                                          uint8_t sectionCount=1) {
             uint8_t sIdx = 0;
@@ -270,20 +267,20 @@ class FeatureTemplate : public Feature
                 if (m_isFFT) {
                     for (uint16_t i = sIdx * m_sectionSize / 3;
                          i < (sIdx + 1) * m_sectionSize / 3; ++i) {
-                        ser->write(',');
-                        ser->write(String((uint16_t) m_values[3 * i], DEC).c_str());
-                        ser->write(',');
-                        ser->write(String(((float) m_values[3 * i + 1]) *
-                                    m_resolution, 2).c_str());
-                        ser->write(',');
-                        ser->write(String(((float) m_values[3 * i + 2]) *
-                                    m_resolution, 2).c_str());
+                        port->print(",");
+                        port->print((uint16_t) m_values[3 * i]);
+                        port->print(",");
+                        port->print(((float) m_values[3 * i + 1]) *
+                                    m_resolution);
+                        port->print(",");
+                        port->print(((float) m_values[3 * i + 2]) *
+                                    m_resolution);
                     }
                 } else {
                     for (uint16_t i = sIdx * m_sectionSize;
                          i < (sIdx + 1) * m_sectionSize; ++i) {
-                        ser->write(',');
-                        ser->write(String(((float) m_values[i]) * m_resolution, 2).c_str());
+                        port->print(",");
+                        port->print(((float) m_values[i]) * m_resolution);
                     }
                 }
             }

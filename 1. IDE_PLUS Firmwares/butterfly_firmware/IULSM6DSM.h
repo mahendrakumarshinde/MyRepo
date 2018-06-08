@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include "Sensor.h"
 #include "IUI2C.h"
-#include "Utilities.h"
+#include "FeatureUtilities.h"
 
 
 /***** Data Acquisition callbacks *****/
@@ -26,9 +26,9 @@ void LSM6DSMAccelReadCallback(uint8_t wireStatus);
  *  Description:
  *    Accelerometer
  * Destinations:
- *      - accelerationX: a Q15Feature with section size = 128
- *      - accelerationY: a Q15Feature with section size = 128
- *      - accelerationZ: a Q15Feature with section size = 128
+ *      - accelerationX: a Q15 feature
+ *      - accelerationY: a Q15 feature
+ *      - accelerationZ: a Q15 feature
  */
 class IULSM6DSM : public HighFreqSensor
 {
@@ -88,10 +88,14 @@ class IULSM6DSM : public HighFreqSensor
         static const ODROption defaultODR = ODR_1660Hz;
         static const uint16_t defaultSamplingRate = 1000; // Hz
         /***** Constructors and destructors *****/
-        IULSM6DSM(IUI2C *iuI2C, const char* name, Feature *accelerationX,
-                    Feature *accelerationY, Feature *accelerationZ,
-                    Feature *tiltX, Feature *tiltY, Feature *tiltZ,
-                    Feature *temperature);
+        IULSM6DSM(IUI2C *iuI2C, const char* name,
+                  FeatureTemplate<q15_t> *accelerationX,
+                  FeatureTemplate<q15_t> *accelerationY,
+                  FeatureTemplate<q15_t> *accelerationZ,
+                  FeatureTemplate<q15_t> *tiltX,
+                  FeatureTemplate<q15_t> *tiltY,
+                  FeatureTemplate<q15_t> *tiltZ,
+                  FeatureTemplate<float> *temperature);
         virtual ~IULSM6DSM() {}
         /***** Hardware & power management *****/
         virtual void setupHardware();

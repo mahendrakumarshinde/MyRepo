@@ -173,12 +173,12 @@ test(FeatureComputer__signal_rms)
     // This test works only if testSampleCount >= 512
     assertMoreOrEqual(testSampleCount, 512);
 
-    Q15Feature source("SRC", 8, 128, sharedTestArray);
+    FeatureTemplate<q15_t> source("SRC", 8, 128, sharedTestArray);
 
     float rms128Values[8];
-    FloatFeature rms128("SR7", 8, 1, rms128Values);
+    FeatureTemplate<float> rms128("SR7", 8, 1, rms128Values);
     float rms512Values[2];
-    FloatFeature rms512("SR9", 2, 1, rms512Values);
+    FeatureTemplate<float> rms512("SR9", 2, 1, rms512Values);
 
     SignalRMSComputer rms128Computer(1, &rms128, false, false);
     SignalRMSComputer rms512Computer(1, &rms512, false, false);
@@ -190,7 +190,7 @@ test(FeatureComputer__signal_rms)
     /***** Conditions: removeMean = false, normalize = false *****/
     for (uint16_t i = 0; i < 512; ++i)
     {
-        source.addQ15Value(q15TestData[i]);
+        source.addValue(q15TestData[i]);
     }
     assertTrue(rms128Computer.compute());
     assertTrue(rms512Computer.compute());
@@ -208,7 +208,7 @@ test(FeatureComputer__signal_rms)
 
     for (uint16_t i = 0; i < 512; ++i)
     {
-        source.addQ15Value(q15TestData[i]);
+        source.addValue(q15TestData[i]);
     }
     assertTrue(rms128Computer.compute());
     assertTrue(rms512Computer.compute());
@@ -228,7 +228,7 @@ test(FeatureComputer__signal_rms)
 
     for (uint16_t i = 0; i < 512; ++i)
     {
-        source.addQ15Value(q15TestData[i]);
+        source.addValue(q15TestData[i]);
     }
     assertTrue(rms128Computer.compute());
     assertTrue(rms512Computer.compute());
@@ -246,7 +246,7 @@ test(FeatureComputer__signal_rms)
 
     for (uint16_t i = 0; i < 512; ++i)
     {
-        source.addQ15Value(q15TestData[i]);
+        source.addValue(q15TestData[i]);
     }
     assertTrue(rms128Computer.compute());
     assertTrue(rms512Computer.compute());
@@ -262,14 +262,14 @@ test(FeatureComputer__signal_rms)
 test(FeatureComputer__section_sum)
 {
     float source1Values[8];
-    FloatFeature source1("S01", 4, 2, source1Values);
+    FeatureTemplate<float> source1("S01", 4, 2, source1Values);
     float source2Values[8];
-    FloatFeature source2("S02", 4, 2, source2Values);
+    FeatureTemplate<float> source2("S02", 4, 2, source2Values);
 
     float dest1Values[4];
-    FloatFeature dest1("D01", 4, 1, dest1Values);
+    FeatureTemplate<float> dest1("D01", 4, 1, dest1Values);
     float dest2Values[2];
-    FloatFeature dest2("D02", 2, 1, dest2Values);
+    FeatureTemplate<float> dest2("D02", 2, 1, dest2Values);
 
     // Sum over 1 section and over multiple sections
     SectionSumComputer sumComputer(1, 2, &dest1, &dest2);
@@ -281,11 +281,11 @@ test(FeatureComputer__section_sum)
     sumComputer.setNormalize(false);
     for (uint16_t i = 0; i < 2; ++i)  // Need to fill 1 section
     {
-        source1.addFloatValue(i + 1.5);
+        source1.addValue((float) i + 1.5);
     }
     for (uint16_t i = 0; i < 4; ++i)  // Need to fill 2 sections
     {
-        source2.addFloatValue(2 * i);
+        source2.addValue((float) (2 * i));
     }
     assertTrue(sumComputer.compute());
     assertEqual(round(dest1Values[0] * 100), 400);
@@ -299,11 +299,11 @@ test(FeatureComputer__section_sum)
     sumComputer.setNormalize(true);
     for (uint16_t i = 0; i < 2; ++i)  // Need to fill 1 section
     {
-        source1.addFloatValue(i + 1.5);
+        source1.addValue((float) i + 1.5);
     }
     for (uint16_t i = 0; i < 4; ++i)  // Need to fill 2 sections
     {
-        source2.addFloatValue(2 * i);
+        source2.addValue((float) (2 * i));
     }
     assertTrue(sumComputer.compute());
     assertEqual(round(dest1Values[0] * 100), 200);
@@ -318,12 +318,12 @@ test(FeatureComputer__section_sum)
     sumComputer.setRMSInput(true);
     for (uint16_t i = 0; i < 2; ++i)  // Need to fill 1 section
     {
-        source1.addFloatValue(i + 1.5);
+        source1.addValue((float) i + 1.5);
     }
-    source2.addFloatValue(8099.0565);
-    source2.addFloatValue(8070.6166);
-    source2.addFloatValue(8032.1981);
-    source2.addFloatValue(8036.6844);
+    source2.addValue(8099.0565);
+    source2.addValue(8070.6166);
+    source2.addValue(8032.1981);
+    source2.addValue(8036.6844);
     assertTrue(sumComputer.compute());
     assertEqual(round(dest1Values[0] * 100), 206);
     assertEqual(round(dest2Values[0] * 100), 805969);
@@ -336,14 +336,14 @@ test(FeatureComputer__section_sum)
 test(FeatureComputer__multi_source_sum)
 {
     float source1Values[8];
-    FloatFeature source1("S01", 4, 2, source1Values);
+    FeatureTemplate<float> source1("S01", 4, 2, source1Values);
     float source2Values[8];
-    FloatFeature source2("S02", 4, 2, source2Values);
+    FeatureTemplate<float> source2("S02", 4, 2, source2Values);
 
     float dest1Values[8];
-    FloatFeature dest1("D01", 4, 2, dest1Values);
+    FeatureTemplate<float> dest1("D01", 4, 2, dest1Values);
     float dest2Values[8];
-    FloatFeature dest2("D02", 4, 2, dest2Values);
+    FeatureTemplate<float> dest2("D02", 4, 2, dest2Values);
 
     MultiSourceSumComputer sumComputer(1, &dest1);  // Test over single section
     sumComputer.addSource(&source1, 1);  // Sum over 1 section
@@ -359,8 +359,8 @@ test(FeatureComputer__multi_source_sum)
     sumComputer2.setNormalize(false);
     for (uint16_t i = 0; i < 4; ++i)
     {
-        source1.addFloatValue(i + 1.5);
-        source2.addFloatValue(2 * i);
+        source1.addValue((float) i + 1.5);
+        source2.addValue((float) (2 * i));
     }
     assertTrue(sumComputer.compute());
     assertTrue(sumComputer2.compute());
@@ -380,8 +380,8 @@ test(FeatureComputer__multi_source_sum)
     sumComputer2.setNormalize(true);
     for (uint16_t i = 0; i < 4; ++i)  // Need to fill 1 section
     {
-        source1.addFloatValue(i + 1.5);
-        source2.addFloatValue(2 * i);
+        source1.addValue((float) i + 1.5);
+        source2.addValue((float) (2 * i));
     }
     assertTrue(sumComputer.compute());
     assertTrue(sumComputer2.compute());
@@ -403,8 +403,8 @@ test(FeatureComputer__multi_source_sum)
     sumComputer2.setRMSInput(true);
     for (uint16_t i = 0; i < 4; ++i)  // Need to fill 1 section
     {
-        source1.addFloatValue(i + 1.5);
-        source2.addFloatValue(2 * i);
+        source1.addValue((float) i + 1.5);
+        source2.addValue((float) (2 * i));
     }
     assertTrue(sumComputer.compute());
     assertTrue(sumComputer2.compute());
@@ -424,17 +424,17 @@ test(FeatureComputer__q15_fft)
 {
     // Creating sources
     q15_t sourceValues[1024];
-    Q15Feature source("SRC", 2, 512, sourceValues);
+    FeatureTemplate<q15_t> source("SRC", 2, 512, sourceValues);
     source.setSamplingRate(testSamplingRate);
     // Creating destinations
     q15_t reducedFFTValues[300];
-    Q15Feature reducedFFT("FFT", 2, 150, reducedFFTValues);
+    FeatureTemplate<q15_t> reducedFFT("FFT", 2, 150, reducedFFTValues);
     float mainFreqValues[2];
-    FloatFeature mainFreq("FRQ", 2, 1, mainFreqValues);
+    FeatureTemplate<float> mainFreq("FRQ", 2, 1, mainFreqValues);
     float integralRMSValues[2];
-    FloatFeature integralRMS("RM1", 2, 1, integralRMSValues);
+    FeatureTemplate<float> integralRMS("RM1", 2, 1, integralRMSValues);
     float doubleIntegralRMSValues[2];
-    FloatFeature doubleIntegralRMS("RM2", 2, 1, doubleIntegralRMSValues);
+    FeatureTemplate<float> doubleIntegralRMS("RM2", 2, 1, doubleIntegralRMSValues);
 
     Q15FFTComputer fftComputer = Q15FFTComputer(
         1, &reducedFFT, &mainFreq, &integralRMS, &doubleIntegralRMS,
@@ -444,7 +444,7 @@ test(FeatureComputer__q15_fft)
     // Fill source and compute
     for (uint16_t i = 0; i < testSampleCount; ++i)
     {
-        source.addQ15Value(q15TestData[i]);
+        source.addValue(q15TestData[i]);
     }
     assertTrue(fftComputer.compute());
     // Reduced FFT validation
@@ -479,11 +479,11 @@ test(FeatureComputer__audio_db)
 {
     // Creating sources
     q15_t sourceValues[1024];
-    Q15Feature source("SRC", 2, 512, sourceValues);
+    FeatureTemplate<q15_t> source("SRC", 2, 512, sourceValues);
     source.setSamplingRate(testSamplingRate);
     // Creating destination
     float audioDBValues[2];
-    FloatFeature audioDB("DBA", 2, 1, audioDBValues);
+    FeatureTemplate<float> audioDB("DBA", 2, 1, audioDBValues);
     // Creating computer
     AudioDBComputer audioDBComputer = AudioDBComputer(1, &audioDB);
     audioDBComputer.addSource(&source, 1);
@@ -491,7 +491,7 @@ test(FeatureComputer__audio_db)
     // Fill source and compute
     for (uint16_t i = 0; i < testSampleCount; ++i)
     {
-        source.addQ15Value(q15TestData[i]);
+        source.addValue(q15TestData[i]);
     }
     assertTrue(audioDBComputer.compute());
     assertEqual(round(audioDBValues[0] * 100), 7776);

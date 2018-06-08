@@ -93,13 +93,12 @@ bool FeatureComputer::addSource(Feature *source, uint8_t sectionCount)
 
 void FeatureComputer::deleteAllSources()
 {
-    uint8_t srcCount = m_sourceCount;
-    m_sourceCount = 0;
-    for (uint8_t i = 0; i < srcCount; i++)
+    for (uint8_t i = 0; i < m_sourceCount; i++)
     {
         m_sources[i]->removeReceiver(this);
         m_sources[i] = NULL;
     }
+    m_sourceCount = 0;
 }
 
 
@@ -156,7 +155,7 @@ void FeatureComputer::exposeConfig()
     debugPrint(m_active);
     debugPrint(F("  "), false);
     debugPrint(m_sourceCount, false);
-    debugPrint(F(" source(s): "));
+    debugPrint(F(" sources: "));
     for (uint8_t i = 0; i < m_sourceCount; ++i)
     {
         debugPrint(F("    "), false);
@@ -205,16 +204,17 @@ bool FeatureStateComputer::addOpStateFeature(
         m_activeOpStateFeatures[m_sourceCount - 1] = active;
         setThresholds(m_sourceCount - 1, lowThreshold, medThreshold,
                       highThreshold);
-        if (debugMode) {
-            debugPrint(F("Added OP State source: "), false);
+        if (debugMode)
+        {
+            debugPrint(F("OP State Feature "), false);
             debugPrint(feature->getName(), false);
-            debugPrint(F(", active="), false);
+            debugPrint(F("active="), false);
             debugPrint(active, false);
-            debugPrint(F(", th=("), false);
+            debugPrint(F("th=("), false);
             debugPrint(lowThreshold, false);
-            debugPrint(F(", "), false);
+            debugPrint(F(","), false);
             debugPrint(medThreshold, false);
-            debugPrint(F(", "), false);
+            debugPrint(F(","), false);
             debugPrint(highThreshold, false);
             debugPrint(F(")"));
         }
@@ -234,13 +234,14 @@ void FeatureStateComputer::setThresholds(uint8_t idx, float low, float med,
     m_lowThresholds[idx] = low;
     m_medThresholds[idx] = med;
     m_highThresholds[idx] = high;
-    if (loopDebugMode) {
-        debugPrint(m_sources[idx]->getName(), false);
-        debugPrint(F(": "), false);
+    if (loopDebugMode)
+    {
+        debugPrint(m_sources[m_sourceCount]->getName(), false);
+        debugPrint(':', false);
         debugPrint(m_lowThresholds[idx], false);
-        debugPrint(F(" - "), false);
+        debugPrint(" - ", false);
         debugPrint(m_medThresholds[idx], false);
-        debugPrint(F(" - "), false);
+        debugPrint(" - ", false);
         debugPrint(m_highThresholds[idx]);
     }
 }
@@ -278,25 +279,10 @@ void FeatureStateComputer::m_specializedCompute()
     q15_t newState = 0;
     q15_t featureState;
     float avg;
-    if (featureDebugMode) {
-        debugPrint(F("OP state from "), false);
-        debugPrint(m_sourceCount, false);
-        debugPrint(F(" source(s): "), false);
-        for (uint8_t i = 0; i < m_sourceCount; i++) {
-            if (i > 0) {
-                debugPrint(F(", "), false);
-            }
-            debugPrint(m_sources[i]->getName(), false);
-            if (m_activeOpStateFeatures[i]) {
-                debugPrint(F(" (active)"), false);
-            } else {
-                debugPrint(F(" (inactive)"), false);
-            }
-        }
-        debugPrint(F(""));
-    }
-    for (uint8_t i = 0; i < m_sourceCount; i++) {
-        if (!m_activeOpStateFeatures[i]) {
+    for (uint8_t i = 0; i < m_sourceCount; i++)
+    {
+        if (!m_activeOpStateFeatures[i])
+        {
             continue;  // Skip features not used for OP State
         }
         // Feature is active: we can compute the OP state
@@ -313,13 +299,6 @@ void FeatureStateComputer::m_specializedCompute()
         if (newState < featureState) {
             newState = featureState;
         }
-    }
-    if (featureDebugMode) {
-        debugPrint(millis(), false);
-        debugPrint(" -> ", false);
-        debugPrint(m_destinations[0]->getName(), false);
-        debugPrint(": ", false);
-        debugPrint(newState);
     }
     m_destinations[0]->addValue(newState);
 }
@@ -377,15 +356,18 @@ void SignalRMSComputer::configure(JsonVariant &config)
 {
     FeatureComputer::configure(config);
     JsonVariant my_config = config["NODC"];
-    if (my_config.success()) {
+    if (my_config.success())
+    {
         setRemoveMean(my_config.as<int>() > 0);
     }
     my_config = config["NORM"];
-    if (my_config.success()) {
+    if (my_config.success())
+    {
         setNormalize(my_config.as<int>() > 0);
     }
     my_config = config["SQR"];
-    if (my_config.success()) {
+    if (my_config.success())
+    {
         setSquaredOutput(my_config.as<int>() > 0);
     }
 }
@@ -434,6 +416,7 @@ void SignalRMSComputer::m_specializedCompute()
         debugPrint(" -> ", false);
         debugPrint(m_destinations[0]->getName(), false);
         debugPrint(": ", false);
+        debugPrint(total * resolution);
         if (m_squared) {
             debugPrint(total * sq(resolution));
         } else {
@@ -467,11 +450,13 @@ void SectionSumComputer::configure(JsonVariant &config)
 {
     FeatureComputer::configure(config);
     JsonVariant my_config = config["NORM"];
-    if (my_config.success()) {
+    if (my_config.success())
+    {
         setNormalize(my_config.as<int>() > 0);
     }
     my_config = config["RMS"];
-    if (my_config.success()) {
+    if (my_config.success())
+    {
         setRMSInput(my_config.as<int>() > 0);
     }
 }
@@ -484,29 +469,38 @@ void SectionSumComputer::m_specializedCompute()
     uint16_t length = 0;
     float *values;
     float total;
-    for (uint8_t i = 0; i < m_sourceCount; ++i) {
+    for (uint8_t i = 0; i < m_sourceCount; ++i)
+    {
         m_destinations[i]->setSamplingRate(m_sources[i]->getSamplingRate());
         m_destinations[i]->setResolution(m_sources[i]->getResolution());
         length = m_sources[i]->getSectionSize() * m_sectionCount[i];
         values = m_sources[i]->getNextFloatValuesToCompute(this);
         total = 0;
-        if (m_rmsInput) {
-            for (uint16_t j = 0; j < length; ++j) {
+        if (m_rmsInput)
+        {
+            for (uint16_t j = 0; j < length; ++j)
+            {
                 total += sq(values[j]);
             }
-        } else {
-            for (uint16_t j = 0; j < length; ++j) {
+        }
+        else
+        {
+            for (uint16_t j = 0; j < length; ++j)
+            {
                 total += values[j];
             }
         }
-        if (m_normalize || m_rmsInput) {
+        if (m_normalize || m_rmsInput)
+        {
             total = total / (float) length;
         }
-        if (m_rmsInput) {
+        if (m_rmsInput)
+        {
             total = sqrt(total);
         }
         m_destinations[i]->addValue(total);
-        if (featureDebugMode) {
+        if (featureDebugMode)
+        {
             debugPrint(millis(), false);
             debugPrint(" -> ", false);
             debugPrint(m_destinations[i]->getName(), false);
@@ -538,11 +532,13 @@ void MultiSourceSumComputer::configure(JsonVariant &config)
 {
     FeatureComputer::configure(config);
     JsonVariant my_config = config["NORM"];
-    if (my_config.success()) {
+    if (my_config.success())
+    {
         setNormalize(my_config.as<int>() > 0);
     }
     my_config = config["RMS"];
-    if (my_config.success()) {
+    if (my_config.success())
+    {
         setRMSInput(my_config.as<int>() > 0);
     }
 }
@@ -625,11 +621,13 @@ void Q15FFTComputer::configure(JsonVariant &config)
 {
     FeatureComputer::configure(config);
     JsonVariant freq = config["FREQ"][0];
-    if (freq.success()) {
+    if (freq.success())
+    {
         setLowCutFrequency((uint16_t) (freq.as<int>()));
     }
     freq = config["FREQ"][1];
-    if (freq.success()) {
+    if (freq.success())
+    {
         setHighCutFrequency((uint16_t) (freq.as<int>()));
     }
 }
@@ -648,7 +646,8 @@ void Q15FFTComputer::m_specializedCompute()
     uint16_t sampleCount = m_sources[0]->getSectionSize() * m_sectionCount[0];
     float df = (float) samplingRate / (float) sampleCount;
     q15_t *values = m_sources[0]->getNextQ15ValuesToCompute(this);
-    for (uint8_t i = 0; i < m_destinationCount; ++i) {
+    for (uint8_t i = 0; i < m_destinationCount; ++i)
+    {
         m_destinations[i]->setSamplingRate(samplingRate);
     }
     m_destinations[0]->setResolution(resolution);
@@ -662,7 +661,8 @@ void Q15FFTComputer::m_specializedCompute()
     RFFTAmplitudes::getAmplitudes(m_allocatedFFTSpace, sampleCount, amplitudes);
     float agitation = RFFTAmplitudes::getRMS(amplitudes, sampleCount, true);
     bool isInMotion = (agitation * resolution) > m_minAgitationRMS ;
-    if (!isInMotion && featureDebugMode) {
+    if (!isInMotion && featureDebugMode)
+    {
         debugPrint(F("Device is still - Freq, vel & disp defaulted to 0."));
     }
     // 2. Keep the K max coefficients (K = reducedLength)
@@ -672,38 +672,42 @@ void Q15FFTComputer::m_specializedCompute()
     // If board is still, freq is defaulted to 0.
     bool mainFreqSaved = false;
     float freq(0);
-    if (!isInMotion) {
+    if (!isInMotion)
+    {
         m_destinations[1]->addValue(freq);
         mainFreqSaved = true;
     }
     q15_t amplitudesCopy[amplitudeCount];
     copyArray(amplitudes, amplitudesCopy, amplitudeCount);
-    for (uint16_t i = 0; i < reducedLength; ++i) {
+    for (uint16_t i = 0; i < reducedLength; ++i)
+    {
         arm_max_q15(amplitudesCopy, amplitudeCount, &maxVal, &maxIdx);
         amplitudesCopy[maxIdx] = 0;
         m_destinations[0]->addValue((q15_t) maxIdx);
         m_destinations[0]->addValue(m_allocatedFFTSpace[2 * maxIdx]);
         m_destinations[0]->addValue(m_allocatedFFTSpace[2 * maxIdx + 1]);
-        if (!mainFreqSaved) {
+        if (!mainFreqSaved)
+        {
             freq = df * (float) maxIdx;
-            if (freq > m_lowCutFrequency && freq < m_highCutFrequency) {
+            if (freq > m_lowCutFrequency && freq < m_highCutFrequency)
+            {
                 m_destinations[1]->addValue(freq);
                 mainFreqSaved = true;
             }
         }
     }
-    if (featureDebugMode) {
+    if (featureDebugMode)
+    {
         debugPrint(millis(), false);
-        debugPrint(F(" -> "), false);
+        debugPrint(" -> ", false);
         debugPrint(m_destinations[0]->getName(), false);
-        debugPrint(F(": computed"));
-        debugPrint(millis(), false);
-        debugPrint(F(" -> "), false);
+        debugPrint(": was computed");
         debugPrint(m_destinations[1]->getName(), false);
-        debugPrint(F(": "), false);
+        debugPrint(": ", false);
         debugPrint(freq);
     }
-    if (isInMotion) {
+    if (isInMotion)
+    {
         // 3. 1st integration in frequency domain
         q15_t scaling1 = RFFTAmplitudes::getRescalingFactorForIntegral(
             amplitudes, sampleCount, samplingRate);
@@ -713,9 +717,10 @@ void Q15FFTComputer::m_specializedCompute()
         float integratedRMS1 = RFFTAmplitudes::getRMS(amplitudes, sampleCount);
         integratedRMS1 *= 1000 / ((float) scaling1) * m_calibrationScaling1;
         m_destinations[2]->addValue(integratedRMS1);
-        if (featureDebugMode) {
+        if (featureDebugMode)
+        {
             debugPrint(millis(), false);
-            debugPrint(F(" -> "), false);
+            debugPrint(" -> ", false);
             debugPrint(m_destinations[2]->getName(), false);
             debugPrint(": ", false);
             debugPrint(integratedRMS1 * resolution);
@@ -730,25 +735,27 @@ void Q15FFTComputer::m_specializedCompute()
         integratedRMS2 *= 1000 / ((float) scaling1 * (float) scaling2) *
             m_calibrationScaling2;
         m_destinations[3]->addValue(integratedRMS2);
-        if (featureDebugMode) {
+        if (featureDebugMode)
+        {
             debugPrint(millis(), false);
-            debugPrint(F(" -> "), false);
+            debugPrint(" -> ", false);
             debugPrint(m_destinations[3]->getName(), false);
             debugPrint(": ", false);
             debugPrint(integratedRMS2 * resolution);
         }
-    } else {
+    }
+    else
+    {
         m_destinations[2]->addValue(0.0);
         m_destinations[3]->addValue(0.0);
-        if (featureDebugMode) {
+        if (featureDebugMode)
+        {
             debugPrint(millis(), false);
-            debugPrint(F(" -> "), false);
+            debugPrint(" -> ", false);
             debugPrint(m_destinations[2]->getName(), false);
-            debugPrint(F(": 0"));
-            debugPrint(millis(), false);
-            debugPrint(F(" -> "), false);
+            debugPrint(": 0");
             debugPrint(m_destinations[3]->getName(), false);
-            debugPrint(F(": 0"));
+            debugPrint(": 0");
         }
     }
 }
@@ -791,12 +798,15 @@ void AudioDBComputer::m_specializedCompute()
     int data = 0;
     uint64_t accu = 1;
     float audioDB = 0.;
-    for (uint16_t j = 0; j < length; ++j) {
+    for (uint16_t j = 0; j < length; ++j)
+    {
         data = abs(values[j]);
-        if (data > 0) {
+        if (data > 0)
+        {
             accu *= data;
         }
-        if (accu >= limit) {
+        if (accu >= limit)
+        {
             audioDB += log10(accu);
             accu = 1;
         }
@@ -806,7 +816,8 @@ void AudioDBComputer::m_specializedCompute()
     result = 2.8 * result - 10;  // Empirical formula
     result *= m_calibrationScaling;
     m_destinations[0]->addValue(result);
-    if (featureDebugMode) {
+    if (featureDebugMode)
+    {
         debugPrint(millis(), false);
         debugPrint(" -> ", false);
         debugPrint(m_destinations[0]->getName(), false);

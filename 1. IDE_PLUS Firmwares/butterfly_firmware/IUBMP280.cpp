@@ -43,8 +43,9 @@ void pressureReadCallback(uint8_t wireStatus)
     Constructors and destructors
 ============================================================================= */
 
-IUBMP280::IUBMP280(IUI2C *iuI2C, const char* name, Feature *temperature,
-                   Feature *pressure) :
+IUBMP280::IUBMP280(IUI2C *iuI2C, const char* name,
+                   FeatureTemplate<float> *temperature,
+                   FeatureTemplate<float> *pressure) :
     LowFreqSensor(name, 2, temperature, pressure),
     m_temperature(28),
     m_fineTemperature(0),
@@ -272,7 +273,7 @@ void IUBMP280::processTemperatureData()
     int32_t rawTemp = (int32_t) (((int32_t) m_rawTempBytes[0] << 16 | \
         (int32_t) m_rawTempBytes[1] << 8 | m_rawTempBytes[2]) >> 4);
     m_temperature = compensateTemperature(rawTemp);
-    m_destinations[0]->addFloatValue(m_temperature);
+    m_destinations[0]->addValue(m_temperature);
     newTemperatureData = false;
 }
 
@@ -327,7 +328,7 @@ void IUBMP280::processPressureData()
     int32_t rawP = (int32_t) (((int32_t) m_rawPressureBytes[0] << 16 | \
         (int32_t) m_rawPressureBytes[1] << 8 | m_rawPressureBytes[2]) >> 4);
     m_pressure = compensatePressure(rawP);
-    m_destinations[1]->addFloatValue(m_pressure);
+    m_destinations[1]->addValue(m_pressure);
     newPressureData = false;
 }
 

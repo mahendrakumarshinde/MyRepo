@@ -6,7 +6,7 @@
 ============================================================================= */
 
 IUICS43432::IUICS43432(I2SClass *I2SInstance, const char* name,
-                       Feature *audio) :
+                       FeatureTemplate<q15_t> *audio) :
   HighFreqSensor(name, 1, audio),
   m_I2S(I2SInstance),
   m_firstI2STrigger(true)
@@ -92,7 +92,7 @@ void IUICS43432::processAudioData(q31_t *data)
         use only 1 canal. */
         // Send most significant 16bits
         m_audioData[i] = (q15_t) (data[i * 2] >> 16);
-        m_destinations[0]->addQ15Value(m_audioData[i]);
+        m_destinations[0]->addValue(m_audioData[i]);
     }
 }
 

@@ -102,15 +102,15 @@ class Conductor
         static char START_CONFIRM[11];
         static char END_CONFIRM[9];
         // Config handler
-        static const uint8_t CONFIG_TYPE_COUNT = 3;
+        static const uint8_t CONFIG_TYPE_COUNT = 4;
         static IUFlash::storedConfig CONFIG_TYPES[CONFIG_TYPE_COUNT];
         static const uint32_t SEND_CONFIG_CHECKSUM_TIMER = 30000;
         // Default start datetime
         static constexpr double defaultTimestamp = 1524017173.00;
         // Size of Jsn buffr (to parse json)
         static const uint16_t JSON_BUFFER_SIZE = 1600;
-        static const uint32_t BLEconnectionTimeout = 30000;
-        /***** Constructors and destructor *****/
+        static const uint32_t BLEconnectionTimeout = 60000;
+        /***** Core *****/
         Conductor(MacAddress macAddress) : m_macAddress(macAddress) { }
         Conductor(const char *macAddress)
             { m_macAddress.fromString(macAddress); }
@@ -124,11 +124,6 @@ class Conductor
         uint32_t getAutoSleepDelay() { return m_autoSleepDelay; }
         uint32_t getSleepDuration() { return m_sleepDuration; }
         uint32_t getCycleTime() { return m_cycleTime; }
-        /***** Led colors *****/
-        void resetLed();
-        void overrideLedColor(RGBColor color);
-        void showOperationStateOnLed();
-        void showStatusOnLed(RGBColor color);
         /***** Local storage (flash) management *****/
         bool configureFromFlash(IUFlash::storedConfig configType);
         void sendConfigChecksum(IUFlash::storedConfig configType);
@@ -151,12 +146,12 @@ class Conductor
         void activateFeature(Feature* feature);
         bool isFeatureDeactivatable(Feature* feature);
         void deactivateFeature(Feature* feature);
-        void deactivateAllFeatures();
         void activateGroup(FeatureGroup *group);
         void deactivateGroup(FeatureGroup *group);
         void deactivateAllGroups();
         void configureGroupsForOperation();
         void configureGroupsForCalibration();
+        void changeMainFeatureGroup(FeatureGroup *group);
         /***** Time management *****/
         void setRefDatetime(double refDatetime);
         void setRefDatetime(const char* timestamp);
@@ -173,7 +168,6 @@ class Conductor
         bool resetDataAcquisition();
         void acquireData(bool inCallback);
         void computeFeatures();
-        void updateOperationState();
         void streamFeatures();
         void sendAccelRawData(uint8_t axisIdx);
         void periodicSendAccelRawData();
@@ -201,17 +195,12 @@ class Conductor
         uint32_t m_cycleTime = defaultCycleTime;
         /***** Feature management *****/
         FeatureGroup *m_mainFeatureGroup = DEFAULT_FEATURE_GROUP;
-        /***** Led colors *****/
-        RGBColor m_colorSequence[2];  // Main color, secondary color
-        uint32_t m_colorFadeIns[2];   // Main color, secondary color
-        uint32_t m_colorDurations[2];   // Main color, secondary color
         /***** Time management *****/
         uint32_t m_lastSynchroTime = 0;
         // last datetime received from bluetooth or wifi
         double m_refDatetime = defaultTimestamp;
         uint32_t m_lastBLEmessage = 0;
         /***** Operations *****/
-        OperationState::option m_operationState = OperationState::IDLE;
         void (*m_callback)() = NULL;
         bool m_inDataAcquistion = false;
         uint32_t m_rawDataPublicationTimer = defaultRawDataPublicationTimer;

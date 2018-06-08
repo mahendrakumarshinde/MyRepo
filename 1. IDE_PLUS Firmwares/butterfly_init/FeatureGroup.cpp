@@ -73,8 +73,10 @@ void FeatureGroup::reset()
  */
 void FeatureGroup::addFeature(Feature *feature)
 {
-    if (m_featureCount >= maxFeatureCount) {
-        if (debugMode) {
+    if (m_featureCount >= maxFeatureCount)
+    {
+        if (debugMode)
+        {
             debugPrint(F("FeatureGroup: too many features"));
         }
     }
@@ -93,7 +95,8 @@ void FeatureGroup::addFeature(Feature *feature)
 void FeatureGroup::setDataSendPeriod(uint16_t dataSendPeriod)
 {
     m_dataSendPeriod = dataSendPeriod;
-    if (debugMode) {
+    if (debugMode)
+    {
         debugPrint(F("Group "), false);
         debugPrint(m_name, false);
         debugPrint(F(": data send period set to "), false);
@@ -185,34 +188,32 @@ void FeatureGroup::legacyStream(IUSerial *iuSerial, MacAddress mac,
         return;
     }
     if (sendName) {
-        iuSerial->write(m_name);
-        iuSerial->write(',');
+        iuSerial->port->print(m_name);
+        iuSerial->port->print(",");
     }
-    iuSerial->write(mac.toString().c_str());
-    iuSerial->write(",0");
-    iuSerial->write(String((uint8_t) opState, DEC).c_str());
-    iuSerial->write(',');
-    iuSerial->write(String((int) round(batteryLoad), DEC).c_str());
+    iuSerial->port->print(mac);
+    iuSerial->port->print(",0");
+    iuSerial->port->print(opState);
+    iuSerial->port->print(",");
+    iuSerial->port->print((int) round(batteryLoad));
     for (uint8_t i = 0; i < m_featureCount; ++i) {
-        iuSerial->write(",000");
-        iuSerial->write(String(i + 1, DEC).c_str());
+        iuSerial->port->print(",000");
+        iuSerial->port->print(i + 1);
         if (m_features[i] != NULL) {
-            m_features[i]->stream(iuSerial);
+            m_features[i]->stream(iuSerial->port);
         }
     }
-    iuSerial->write(',');
-    iuSerial->write(String(timestamp, 2).c_str());
-    iuSerial->write(';');
+    iuSerial->port->print(",");
+    iuSerial->port->print(timestamp);
+    iuSerial->port->print(";");
     if (featureDebugMode) {
         debugPrint(millis(), false);
-        debugPrint(F(" -> "), false);
-        debugPrint(m_name, false);
-        debugPrint(F(": "), false);
+        debugPrint(" -> ", false);
         for (uint8_t i = 0; i < m_featureCount; ++i) {
             debugPrint(",000", false);
             debugPrint(i + 1, false);
             if (m_features[i] != NULL) {
-                debugPrint("val", false);
+                m_features[i]->stream(&Serial);
             }
         }
         debugPrint("");

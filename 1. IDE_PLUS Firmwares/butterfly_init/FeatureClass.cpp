@@ -73,12 +73,7 @@ Feature *Feature::getInstanceByName(const char *name)
 void Feature::addReceiver(FeatureComputer *receiver)
 {
     if (m_receiverCount < maxReceiverCount) {
-        m_receivers[m_receiverCount] = receiver;
-        m_computeIndex[m_receiverCount] = m_recordIndex;
-        for (uint8_t j = 0; j < maxSectionCount; ++j) {
-            m_acknowledged[j][m_receiverCount] = true;
-        }
-        m_receiverCount++;
+        m_receivers[m_receiverCount++] = receiver;
     } else if (debugMode) {
         debugPrint(F("Feature can't add receiver (buffer overflow)"));
     }
@@ -311,14 +306,14 @@ void Feature::acknowledge(FeatureComputer *receiver, uint8_t sectionCount)
  * Lock and print sectionCount sections, ending at last recorded section
  * [recordIndex - sectionCount; recordIndex - 1].
  */
-void Feature::stream(IUSerial *ser, uint8_t sectionCount)
+void Feature::stream(HardwareSerial *port, uint8_t sectionCount)
 {
     uint8_t k = (m_sectionCount + m_recordIndex - sectionCount) % m_sectionCount;
     for (uint8_t i = k; i < k + sectionCount; ++i)
     {
         m_locked[i % m_sectionCount] = true;
     }
-    m_specializedStream(ser, k, sectionCount);
+    m_specializedStream(port, k, sectionCount);
     for (uint8_t i = k; i < k + sectionCount; ++i)
     {
         m_locked[i % m_sectionCount] = false;
@@ -365,7 +360,7 @@ void Feature::exposeConfig()
     debugPrint(m_name, false);
     debugPrint(F(" config:"));
     debugPrint(F("  reguired: "), false);
-    debugPrint(isRequired());
+    debugPrint(m_required);
     debugPrint(F("  is computed: "), false);
     debugPrint(isComputedFeature());
     debugPrint(F("  has "), false);
