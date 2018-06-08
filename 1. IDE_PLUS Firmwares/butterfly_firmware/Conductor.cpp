@@ -347,6 +347,8 @@ void Conductor::readFromSerial(StreamingMode::option interfaceType,
                 break;
             case StreamingMode::BLE:
                 processBLEMessages(buffer);
+                m_lastBLEmessage = millis();
+                updateStreamingMode();
                 break;
             case StreamingMode::WIFI:
                 processWIFIMessages(buffer);
@@ -573,15 +575,15 @@ void Conductor::processCommands(char *buff)
         case 'I': // ping device
             if (strcmp(buff, "IDE-HARDRESET") == 0)
             {
-                iuBluetooth.port->print("WIFI-DISCONNECTED;");
+                iuBluetooth.write("WIFI-DISCONNECTED;");
                 delay(10);
                 STM32.reset();
             }
             else if (strcmp(buff, "IDE-GET-VERSION") == 0)
             {
-                iuBluetooth.port->print("IDE-VERSION-");
-                iuBluetooth.port->print(FIRMWARE_VERSION);
-                iuBluetooth.port->print(';');
+                iuBluetooth.write("IDE-VERSION-");
+                iuBluetooth.write(FIRMWARE_VERSION);
+                iuBluetooth.write(';');
             }
             break;
         case '3':  // Collect acceleration raw data
@@ -704,7 +706,7 @@ void Conductor::processUSBMessages(char *buff)
     }
     else if (strncmp(buff, "WIFI-", 5) == 0)
     {
-        processUserMessageForWiFi(buff, iuUSB.port);
+        processUserMessageForWiFi(buff, &iuUSB);
     }
     else if (strncmp(buff, "MCUINFO", 7) == 0)
     {
@@ -816,7 +818,7 @@ void Conductor::processBLEMessages(char *buff)
     }
     else if (strncmp(buff, "WIFI-", 5) == 0)
     {
-        processUserMessageForWiFi(buff, iuBluetooth.port);
+        processUserMessageForWiFi(buff, &iuBluetooth);
     }
     else
     {
@@ -829,22 +831,22 @@ void Conductor::processBLEMessages(char *buff)
  *
  */
 void Conductor::processUserMessageForWiFi(char *buff,
-                                          HardwareSerial *feedbackPort)
+                                          IUSerial *feedbackSerial)
 {
     if (strncmp(buff, "WIFI-GET-MAC", 13) == 0)
     {
         if ((uint64_t) iuWiFi.getMacAddress() > 0)
         {
-            feedbackPort->print("WIFI-MAC-");
-            feedbackPort->print(iuWiFi.getMacAddress());
-            feedbackPort->print(';');
+            feedbackSerial->write("WIFI-MAC-");
+            feedbackSerial->write(iuWiFi.getMacAddress().toString().c_str());
+            feedbackSerial->write(';');
         }
     }
     else
     if (strcmp(buff, "WIFI-DISABLE") == 0)
     {
         iuWiFi.setPowerMode(PowerMode::DEEP_SLEEP);
-        changeStreamingMode(StreamingMode::BLE);
+        updateStreamingMode();
     }
     else
     {
@@ -882,22 +884,12 @@ void Conductor::processWIFIMessages(char *buff)
 {
     if (iuWiFi.processChipMessage())
     {
-        if (iuWiFi.isWorking())
-        {
+        if (iuWiFi.isWorking()) {
             showStatusOnLed(RGB_PURPLE);
-        }
-        else
-        {
+        } else {
             resetLed();
         }
-        if (iuWiFi.isConnected())
-        {
-            changeStreamingMode(StreamingMode::WIFI_AND_BLE);
-        }
-        else
-        {
-            changeStreamingMode(StreamingMode::BLE);
-        }
+        updateStreamingMode();
     }
     switch (iuWiFi.getMspCommand())
     {
@@ -907,17 +899,17 @@ void Conductor::processWIFIMessages(char *buff)
             break;
         case MSPCommand::WIFI_ALERT_CONNECTED:
             if (loopDebugMode) { debugPrint("WIFI-CONNECTED;"); }
-            iuBluetooth.port->print("WIFI-CONNECTED;");
+            iuBluetooth.write("WIFI-CONNECTED;");
             break;
         case MSPCommand::WIFI_ALERT_DISCONNECTED:
-            iuBluetooth.port->print("WIFI-DISCONNECTED;");
+            iuBluetooth.write("WIFI-DISCONNECTED;");
             break;
         case MSPCommand::WIFI_ALERT_NO_SAVED_CREDENTIALS:
             if (loopDebugMode)
             {
                 debugPrint("WIFI_ALERT_NO_SAVED_CREDENTIALS");
             }
-            iuBluetooth.port->print("WIFI-NOSAVEDCRED;");
+            iuBluetooth.write("WIFI-NOSAVEDCRED;");
             break;
         case MSPCommand::SET_DATETIME:
             if (loopDebugMode) { debugPrint("SET_DATETIME"); }
@@ -1226,6 +1218,73 @@ double Conductor::getDatetime()
     Mode management
 ============================================================================= */
 
+bool Conductor::isBLEConnected()
+{
+    return (m_lastBLEmessage > 0 &&
+            millis() - m_lastBLEmessage < BLEconnectionTimeout);
+}
+
+
+/**
+ * Switch to a StreamingMode
+ */
+void Conductor::updateStreamingMode()
+{
+    StreamingMode::option newMode = StreamingMode::NONE;
+    switch (m_usageMode)
+    {
+        case UsageMode::CALIBRATION:
+        case UsageMode::EXPERIMENT:
+            newMode = StreamingMode::WIRED;
+            break;
+        case UsageMode::OPERATION:
+        case UsageMode::OPERATION_BIS:
+            if (isBLEConnected()) {
+                if (iuWiFi.isConnected()) {
+                    newMode = StreamingMode::WIFI_AND_BLE;
+                } else {
+                    newMode = StreamingMode::BLE;
+                }
+            } else if (iuWiFi.isConnected()) {
+                newMode = StreamingMode::WIFI;
+            }
+            break;
+    }
+    if (m_streamingMode == newMode)
+    {
+        return; // Nothing to do
+    }
+    m_streamingMode = newMode;
+    if (loopDebugMode)
+    {
+        debugPrint(F("\nStreaming mode is: "), false);
+        switch (m_streamingMode)
+        {
+        case StreamingMode::NONE:
+            debugPrint(F("None"));
+            break;
+        case StreamingMode::WIRED:
+            debugPrint(F("USB"));
+            break;
+        case StreamingMode::BLE:
+            debugPrint(F("BLE"));
+            break;
+        case StreamingMode::WIFI:
+            debugPrint(F("WIFI"));
+            break;
+        case StreamingMode::WIFI_AND_BLE:
+            debugPrint(F("WIFI & BLE"));
+            break;
+        case StreamingMode::STORE:
+            debugPrint(F("Flash storage"));
+            break;
+        default:
+            debugPrint(F("Unhandled streaming Mode"));
+            break;
+        }
+    }
+}
+
 /**
  * Switch to a new operation mode
  *
@@ -1265,56 +1324,6 @@ void Conductor::changeAcquisitionMode(AcquisitionMode::option mode)
 }
 
 /**
- * Switch to a StreamingMode
- */
-void Conductor::changeStreamingMode(StreamingMode::option mode)
-{
-    if (m_streamingMode == mode)
-    {
-        return; // Nothing to do
-    }
-    if (m_usageMode == UsageMode::CALIBRATION ||
-        m_usageMode == UsageMode::EXPERIMENT)
-    {
-        if (mode != StreamingMode::WIRED)
-        {
-            if (debugMode)
-            {
-                debugPrint(F("Streaming mode locked to WIRED during "
-                             "calibration and experiment"));
-            }
-            return;
-        }
-    }
-    m_streamingMode = mode;
-    if (loopDebugMode)
-    {
-        debugPrint(F("\nStreaming mode is: "), false);
-        switch (m_streamingMode)
-        {
-        case StreamingMode::WIRED:
-            debugPrint(F("USB"));
-            break;
-        case StreamingMode::BLE:
-            debugPrint(F("BLE"));
-            break;
-        case StreamingMode::WIFI:
-            debugPrint(F("WIFI"));
-            break;
-        case StreamingMode::WIFI_AND_BLE:
-            debugPrint(F("WIFI & BLE"));
-            break;
-        case StreamingMode::STORE:
-            debugPrint(F("Flash storage"));
-            break;
-        default:
-            debugPrint(F("Unhandled streaming Mode"));
-            break;
-        }
-    }
-}
-
-/**
  * Switch to a new Usage Mode
  */
 void Conductor::changeUsageMode(UsageMode::option usage)
@@ -1325,33 +1334,22 @@ void Conductor::changeUsageMode(UsageMode::option usage)
     }
     m_usageMode = usage;
     String msg;
-    StreamingMode::option streamMode;
     switch (m_usageMode)
     {
         case UsageMode::CALIBRATION:
             configureGroupsForCalibration();
             overrideLedColor(RGB_CYAN);
-            streamMode = StreamingMode::WIRED;
             msg = "calibration";
             break;
         case UsageMode::EXPERIMENT:
             msg = "experiment";
             overrideLedColor(RGB_PURPLE);
-            streamMode = StreamingMode::WIRED;
             break;
         case UsageMode::OPERATION:
         case UsageMode::OPERATION_BIS:
             resetLed();
             configureGroupsForOperation();
             iuAccelerometer.resetScale();
-            if (iuWiFi.isConnected())
-            {
-                streamMode = StreamingMode::WIFI_AND_BLE;
-            }
-            else
-            {
-                streamMode = StreamingMode::BLE;
-            }
             msg = "operation";
             break;
         default:
@@ -1362,7 +1360,7 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             return;
     }
     changeAcquisitionMode(UsageMode::acquisitionModeDetails[m_usageMode]);
-    changeStreamingMode(streamMode);
+    updateStreamingMode();
     if (loopDebugMode)
     {
         debugPrint("\nSet up for " + msg + "\n");
@@ -1537,6 +1535,8 @@ void Conductor::streamFeatures()
     bool sendFeatureGroupName2 = false;
     switch (m_streamingMode)
     {
+        case StreamingMode::NONE:
+            break;
         case StreamingMode::WIRED:
             ser1 = &iuUSB;
             break;
@@ -1611,11 +1611,11 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
     }
     if (m_streamingMode == StreamingMode::BLE)
     {
-        iuBluetooth.port->print("REC,");
-        iuBluetooth.port->print(m_macAddress);
-        iuBluetooth.port->print(',');
-        iuBluetooth.port->print(axis[axisIdx]);
-        accelEnergy->stream(iuBluetooth.port, 4);
+        iuBluetooth.write("REC,");
+        iuBluetooth.write(m_macAddress.toString().c_str());
+        iuBluetooth.write(',');
+        iuBluetooth.write(axis[axisIdx]);
+        accelEnergy->stream(&iuBluetooth, 4);
         delay(10);
     }
     else if (m_streamingMode == StreamingMode::WIFI ||

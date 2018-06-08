@@ -46,6 +46,8 @@ class IUSerial
         virtual bool readToBuffer();
         virtual bool hasNewMessage() { return m_newMessage; }
         virtual char* getBuffer() { return m_buffer; }
+        virtual size_t write(const char c) { return port->write(c); }
+        virtual size_t write(const char *msg) { return port->write(msg); }
         // The length of the buffer, including the null terminating char
         virtual uint16_t getCurrentBufferLength() { return m_bufferIndex; }
         virtual bool processMessage() { return false; }

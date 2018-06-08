@@ -157,20 +157,33 @@ static void ledTransitionCallback(void) {
 }
 
 
-/***** Watch Dog *****/
+/***** Watch Dogs *****/
 
 static armv7m_timer_t watchdogTimer;
 uint32_t lastActive = 0;
 uint32_t loopTimeout = 60000;  // 1min timeout
+uint32_t oneDayTimeout = 86400000;
 
 static void watchdogCallback(void) {
-    if (lastActive > 0 && millis() - lastActive > loopTimeout)
+    uint32_t now = millis();
+    if (now > oneDayTimeout ||
+        (lastActive > 0 && now - lastActive > loopTimeout) ||
+        iuWiFi.arePublicationsFailing())
     {
         STM32.reset();
     }
     armv7m_timer_start(&watchdogTimer, 1000);
 }
 
+
+/***** BLE transmission with throughput control *****/
+
+static armv7m_timer_t bleTransmitTimer;
+
+static void bleTransmitCallback(void) {
+    iuBluetooth.bleTransmit();
+    armv7m_timer_start(&bleTransmitTimer, 5);
+}
 
 /***** Begin *****/
 
@@ -201,6 +214,8 @@ void setup()
             debugPrint(F("\nInitializing interfaces..."));
         }
         iuBluetooth.setupHardware();
+        armv7m_timer_create(&bleTransmitTimer, (armv7m_timer_callback_t)bleTransmitCallback);
+        armv7m_timer_start(&bleTransmitTimer, 5);
         iuWiFi.setupHardware();
         if (setupDebugMode)
         {

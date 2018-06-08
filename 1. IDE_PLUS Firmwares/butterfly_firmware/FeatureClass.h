@@ -7,6 +7,7 @@
 #include <arm_math.h>
 
 #include <IUDebugger.h>
+#include <IUSerial.h>
 
 
 /* =============================================================================
@@ -125,7 +126,7 @@ class Feature
         virtual void incrementFillingIndex();
         virtual void acknowledge(uint8_t receiverIdx, uint8_t sectionCount=1);
         /***** Communication *****/
-        virtual void stream(HardwareSerial *port, uint8_t sectionCount=1);
+        virtual void stream(IUSerial *ser, uint8_t sectionCount=1);
         virtual uint16_t sendToBuffer(char *destination, uint16_t startIndex,
                                       uint8_t sectionCount=1);
         /***** Debugging *****/
@@ -168,7 +169,7 @@ class Feature
         // streaming the section content for example, to garantee data
         // consistency at section level
         bool m_locked[maxSectionCount];
-        virtual void m_specializedStream(HardwareSerial *port,
+        virtual void m_specializedStream(IUSerial *ser,
                                          uint8_t sectionIdx,
                                          uint8_t sectionCount=1) {}
         virtual uint16_t m_specializedBufferStream(uint8_t sectionIdx,
@@ -199,7 +200,7 @@ class FloatFeature : public Feature
 
     protected:
         float *m_values;
-        virtual void m_specializedStream(HardwareSerial *port,
+        virtual void m_specializedStream(IUSerial *ser,
                                          uint8_t sectionIdx,
                                          uint8_t sectionCount=1);
         virtual uint16_t m_specializedBufferStream(uint8_t sectionIdx,
@@ -236,7 +237,7 @@ class Q15Feature : public Feature
     protected:
         q15_t *m_values;
         bool m_isFFT;
-        virtual void m_specializedStream(HardwareSerial *port,
+        virtual void m_specializedStream(IUSerial *ser,
                                          uint8_t sectionIdx,
                                          uint8_t sectionCount=1);
         virtual uint16_t m_specializedBufferStream(uint8_t sectionIdx,
@@ -273,7 +274,7 @@ class Q31Feature : public Feature
     protected:
         q31_t *m_values;
         bool m_isFFT;
-        virtual void m_specializedStream(HardwareSerial *port,
+        virtual void m_specializedStream(IUSerial *ser,
                                          uint8_t sectionIdx,
                                          uint8_t sectionCount=1);
         virtual uint16_t m_specializedBufferStream(uint8_t sectionIdx,

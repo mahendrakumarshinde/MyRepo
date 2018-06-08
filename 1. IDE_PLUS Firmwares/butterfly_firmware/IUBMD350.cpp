@@ -18,6 +18,88 @@ IUBMD350::IUBMD350(HardwareSerial *serialPort, char *charBuffer,
     m_beaconEnabled(IUBMD350::defaultBeaconEnabled),
     m_beaconAdInterval(IUBMD350::defaultbeaconAdInterval)
 {
+    resetTxBuffer();
+    m_serialTxEmpty = true;
+    m_lastSerialTxEmptied = 0;
+}
+
+
+/* =============================================================================
+    Bluetooth throughput control
+============================================================================= */
+
+void IUBMD350::resetTxBuffer()
+{
+    for (uint16_t i = 0; i < TX_BUFFER_LENGTH; i++) {
+        m_txBuffer[i] = 0;
+    }
+    m_txHead = 0;
+    m_txTail = 0;
+}
+
+size_t IUBMD350::write(const char c)
+{
+    if (c == 0) {
+        return 0;
+    }
+    if (((m_txTail + 1) % TX_BUFFER_LENGTH) != m_txHead) {
+        m_txBuffer[m_txTail] = c;
+        m_txTail = (m_txTail + 1) % TX_BUFFER_LENGTH;
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+size_t IUBMD350::write(const char *msg)
+{
+    size_t len = strlen(msg);
+    size_t counter = 0;
+    for (size_t i = 0; i < len; i++) {
+        counter += write(msg[i]);
+    }
+    return counter;
+}
+
+void IUBMD350::bleTransmit()
+{
+    uint32_t now = millis();
+    if (!m_serialTxEmpty && port->availableForWrite() == SERIAL_TX_MAX_AVAILABLE) {
+        m_serialTxEmpty = true;
+        m_lastSerialTxEmptied = now;
+    }
+    if (m_txHead == m_txTail) {
+        return;
+    }
+    size_t counter = 0;
+    if (m_serialTxEmpty && now - m_lastSerialTxEmptied > BLE_TX_DELAY) {
+        uint16_t i0;
+        uint16_t i1;
+        if (m_txTail > m_txHead) {
+            i0 = min(m_txHead + BLE_MTU_LEN, m_txTail);
+            i1 = i0;
+        } else {
+            i0 = m_txHead + BLE_MTU_LEN;
+            if (i0 < TX_BUFFER_LENGTH) {
+                i1 = i0;
+            } else {
+                i1 = min(i0 % TX_BUFFER_LENGTH, m_txTail);
+                i0 = TX_BUFFER_LENGTH;
+            }
+        }
+        for (size_t i = m_txHead; i < i0; i++) {
+            counter += port->write(m_txBuffer[i]);
+        }
+        if (i0 != i1) {
+            for (size_t i = 0; i < i1; i++) {
+                counter += port->write(m_txBuffer[i]);
+            }
+        }
+        m_txHead = i1;
+        if (counter > 0) {
+            m_serialTxEmpty = false;
+        }
+    }
 }
 
 
@@ -34,25 +116,7 @@ void IUBMD350::setupHardware()
     // Configure pins and port
     pinMode(m_atCmdPin, OUTPUT);
     pinMode(m_resetPin, OUTPUT);
-    // Make sure PassThrough mode is active
-    digitalWrite(m_atCmdPin, HIGH);
-    delay(100);
-    softReset();
-//    delay(100);
-//    // Beacon and UART configuration
-//    if (enterATCommandInterface())
-//    {
-//        queryDeviceName();
-//        configureBeacon(m_beaconEnabled, m_beaconAdInterval);
-//        configureUARTPassthrough();
-//        setPowerMode(PowerMode::REGULAR);
-//    }
-//    exitATCommandInterface();
-//    if (setupDebugMode)
-//    {
-//        exposeInfo();
-//        debugPrint(' ');
-//    }
+    doFullConfig();
 }
 
 /**
@@ -63,7 +127,7 @@ void IUBMD350::setupHardware()
 void IUBMD350::softReset()
 {
     digitalWrite(m_resetPin, LOW); // reset BMD-350
-    delay(100); // wait a while
+    delay(1000); // wait a while
     digitalWrite(m_resetPin, HIGH); // restart BMD-350
 }
 
@@ -80,24 +144,19 @@ void IUBMD350::setPowerMode(PowerMode::option pMode)
         case PowerMode::REGULAR:
         case PowerMode::LOW_1:
         case PowerMode::LOW_2:
-            if (enterATCommandInterface())
-            {
-                setTxPowers(defaultTxPower);
-            }
+            enterATCommandInterface();
+            setTxPowers(defaultTxPower);
             exitATCommandInterface();
             break;
         case PowerMode::SLEEP:
         case PowerMode::DEEP_SLEEP:
         case PowerMode::SUSPEND:
-            if (enterATCommandInterface())
-            {
-                setTxPowers(txPowerOption::DBm30);
-            }
+            enterATCommandInterface();
+            setTxPowers(txPowerOption::DBm30);
             exitATCommandInterface();
             break;
         default:
-            if (debugMode)
-            {
+            if (debugMode) {
                 debugPrint(F("Unhandled power Mode "), false);
                 debugPrint(m_powerMode);
             }
@@ -106,10 +165,8 @@ void IUBMD350::setPowerMode(PowerMode::option pMode)
 
 
 /* =============================================================================
-    Bluetooth Configuration
+    AT Command Interface
 ============================================================================= */
-
-/***** AT Command Interface *****/
 
 /**
  * Go into AT Command Interface Mode
@@ -120,40 +177,19 @@ void IUBMD350::setPowerMode(PowerMode::option pMode)
  * UART Pass-Through needs to be configured when in AT Command Interface Mode,
  * but AT Mode needs to be exited to use UART Pass-Through.
  */
-bool IUBMD350::enterATCommandInterface(uint8_t retry)
+void IUBMD350::enterATCommandInterface(uint8_t retry)
 {
-    if (m_ATCmdEnabled)
-    {
-        return true; // Already in AT Command mode
+    if (m_ATCmdEnabled) {
+        return; // Already in AT Command mode
     }
     digitalWrite(m_atCmdPin, LOW);
-    delay(100);
+    delay(10);
     softReset();
-    // hold ATMD pin LOW for at least 2.5s. If not, AT Mode will not work
-    delay(2600);
-    if (setupDebugMode)
-    {
+    delay(3000); // Wait for power cycle to complete
+    m_ATCmdEnabled = true;
+    if (setupDebugMode) {
         debugPrint(F("Entered AT Command Interface mode"));
     }
-    char resp[10];
-    if (sendATCommand("at\r", resp, 10) > -1) {
-        m_ATCmdEnabled = true;
-    } else {
-        if (setupDebugMode) {
-            debugPrint("Failed to enter AT command mode");
-            debugPrint("Remaining retries: ", false);
-            debugPrint(retry);
-        }
-        if (retry > 0) {
-            return enterATCommandInterface(retry - 1);
-        } else {
-            digitalWrite(m_atCmdPin, HIGH);
-            delay(100);
-            softReset();
-            m_ATCmdEnabled = false;
-        }
-    }
-    return m_ATCmdEnabled;
 }
 
 /**
@@ -161,16 +197,15 @@ bool IUBMD350::enterATCommandInterface(uint8_t retry)
  */
 void IUBMD350::exitATCommandInterface()
 {
-    if (!m_ATCmdEnabled)
-    {
+    if (!m_ATCmdEnabled) {
         return; // Already out of AT Command mode
     }
     digitalWrite(m_atCmdPin, HIGH);
-    delay(100);
+    delay(10);
     softReset();
+    delay(3000); // Wait for power cycle to complete
     m_ATCmdEnabled = false;
-    if (setupDebugMode)
-    {
+    if (setupDebugMode) {
         debugPrint(F("Exited AT Command Interface mode"));
     }
 }
@@ -190,60 +225,67 @@ void IUBMD350::exitATCommandInterface()
  */
 int IUBMD350::sendATCommand(String cmd, char *response, uint8_t responseLength)
 {
-    if (!m_ATCmdEnabled)
-    {
-        if (setupDebugMode)
-        {
+    if (!m_ATCmdEnabled) {
+        if (setupDebugMode) {
             debugPrint("BLE: Cannot send AT commands when not in AT mode");
         }
         return -1;
     }
     port->write("at$");
     int charCount = cmd.length();
-    for (int i = 0; i < charCount; ++i)
-    {
+    for (int i = 0; i < charCount; ++i) {
         port->write(cmd[i]);
     }
     port->write('\r');
     port->flush();
+    uint8_t maxI = 20;
     uint8_t i = 0;
-    while (!port->available() && i <= 20)
-    {
+    while (!port->available() && i < maxI) {
         delay(100);
         i++;
     }
-    if (i == 50)
-    {
-        if (setupDebugMode)
-        {
+    if (i == maxI) {
+        if (setupDebugMode) {
             debugPrint("AT Command '" + cmd + "' failed");
         }
         return -1;
     }
     int respCount = 0;
-    for (uint8_t j = 0; j < responseLength; ++j)
-    {
-        if (!port->available())
-        {
+    for (uint8_t j = 0; j < responseLength; ++j) {
+        if (!port->available()) {
             break;
         }
         response[j] = port->read();
         respCount++;
         // end of response is carriage or line return
-        if (response[j] == '\r' || response[j] == '\n')
-        {
+        if (response[j] == '\r' || response[j] == '\n') {
             response[j] = 0; // Replace with end of string
             break;
         }
     }
     // Check that port buffer is empty
-    while (port->available())
-    {
+    while (port->available()) {
         port->read();
     }
     return respCount;
 }
 
+
+/* =============================================================================
+    Bluetooth Configuration
+============================================================================= */
+
+void IUBMD350::doFullConfig()
+{
+    port->flush();
+    delay(1000);
+    enterATCommandInterface();
+    queryDeviceName();
+    configureBeacon(m_beaconEnabled, m_beaconAdInterval);
+    configureUARTPassthrough();
+    setPowerMode(PowerMode::REGULAR);
+    exitATCommandInterface();
+}
 
 /***** Device Name *****/
 
@@ -276,12 +318,9 @@ void IUBMD350::queryDeviceName()
 {
     char response[9];
     int respLen = sendATCommand("name?", response, 9);
-    if (respLen > 0)
-    {
+    if (respLen > 0) {
         strcpy(m_deviceName, response);
-    }
-    else if (setupDebugMode)
-    {
+    } else if (setupDebugMode) {
         debugPrint(F("Failed to query device name: no response"));
     }
 }
@@ -558,11 +597,9 @@ void IUBMD350::exposeInfo()
     #ifdef IUDEBUG_ANY
     debugPrint(F("BLE Config: "));
     debugPrint(F("  Device name: ")); debugPrint(m_deviceName);
-    if (enterATCommandInterface())
-    {
-        printUARTConfiguration();
-        printBeaconConfiguration();
-    }
+    enterATCommandInterface();
+    printUARTConfiguration();
+    printBeaconConfiguration();
     exitATCommandInterface();
     #endif
 }
