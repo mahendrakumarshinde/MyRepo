@@ -184,25 +184,22 @@ void IUESP8285::manageAutoSleep(bool wakeUpNow)
             }
             turnOff();
     }
-    if ((uint8_t) m_powerMode > (uint8_t) PowerMode::SLEEP && m_on && !m_sleeping)
-    {
+    if (m_on && !m_sleeping) {
         sendWiFiCredentials();
-        if ((uint64_t) m_macAddress == 0)
-        {
-            sendMSPCommand(MSPCommand::ASK_WIFI_MAC);
-        }
     }
 }
 
-bool IUESP8285::readToBuffer()
+bool IUESP8285::readMessages()
 {
-    bool newMessage = IUSerial::readToBuffer();
+    bool atLeastOneNewMessage = IUSerial::readMessages();
     uint32_t now = millis();
-    if (newMessage) {
+    if (atLeastOneNewMessage) {
         m_lastResponseTime = now;
-    }
-    else if (m_on && m_lastResponseTime > 0 &&
-             now - m_lastResponseTime > noResponseTimeout) {
+        if (!m_macAddress) {
+            sendMSPCommand(MSPCommand::ASK_WIFI_MAC);
+        }
+    } else if (m_on && m_lastResponseTime > 0 &&
+               now - m_lastResponseTime > noResponseTimeout) {
         if (debugMode) {
             debugPrint("WiFi irresponsive: hard resetting now");
         }
@@ -212,7 +209,7 @@ bool IUESP8285::readToBuffer()
     if (now - m_lastConnectedStatusTime > connectedStatusTimeout) {
         m_setConnectedStatus(false);
     }
-    return newMessage;
+    return atLeastOneNewMessage;
 }
 
 

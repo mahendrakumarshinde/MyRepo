@@ -63,6 +63,9 @@ class IUMQTTHelper
         bool publishFeature(const char *payload,
                             const char *topicExtension=NULL,
                             const uint16_t extensionLength=0);
+        bool publishLog(const char *payload,
+                        const char *topicExtension=NULL,
+                        const uint16_t extensionLength=0);
         void onConnection();
         /***** Public Client for convenience *****/
         PubSubClient client;

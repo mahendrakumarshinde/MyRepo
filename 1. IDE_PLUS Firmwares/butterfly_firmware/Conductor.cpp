@@ -227,49 +227,6 @@ void Conductor::periodicSendConfigChecksum()
 ============================================================================= */
 
 /**
- * Read from serial and process the command, if one was received.
- */
-void Conductor::readFromSerial(StreamingMode::option interfaceType,
-                               IUSerial *iuSerial)
-{
-    while(true) {
-        iuSerial->readToBuffer();
-        if (!iuSerial->hasNewMessage()) {
-            break;
-        }
-        char *buffer = iuSerial->getBuffer();
-        // Buffer Size, including NUL char '\0'
-        uint16_t buffSize =  iuSerial->getCurrentBufferLength();
-        if (loopDebugMode && iuSerial->getProtocol() != IUSerial::MS_PROTOCOL) {
-            debugPrint(millis(), false);
-            debugPrint(F(": Interface "), false);
-            debugPrint(interfaceType, false);
-            debugPrint(F(" input is: "), false);
-            debugPrint(buffer);
-        }
-        switch (interfaceType) {
-            case StreamingMode::WIRED:
-                processUSBMessages(buffer);
-                break;
-            case StreamingMode::BLE:
-                processBLEMessages(buffer);
-                m_lastBLEmessage = millis();
-                updateStreamingMode();
-                break;
-            case StreamingMode::WIFI:
-                processWIFIMessages(buffer);
-                break;
-            default:
-                if (loopDebugMode) {
-                    debugPrint(F("Unhandled interface type: "), false);
-                    debugPrint(interfaceType);
-                }
-        }
-        iuSerial->resetBuffer();  // Clear buffer
-    }
-}
-
-/**
  * Parse the given config json and apply the configuration
  */
 bool Conductor::processConfiguration(char *json, bool saveToFlash)
@@ -422,7 +379,7 @@ void Conductor::configureAllFeatures(JsonVariant &config)
 /**
  * Process the commands
  */
-void Conductor::processCommands(char *buff)
+void Conductor::processCommand(char *buff)
 {
     switch(buff[0]) {
         case 'A': // ping device
@@ -487,11 +444,51 @@ void Conductor::processCommands(char *buff)
     }
 }
 
+/**
+ *
+ */
+void Conductor::processUserCommandForWiFi(char *buff,
+                                          IUSerial *feedbackSerial)
+{
+    if (strcmp(buff, "WIFI-GET-MAC") == 0) {
+        if (iuWiFi.getMacAddress()) {
+            feedbackSerial->write("WIFI-MAC-");
+            feedbackSerial->write(iuWiFi.getMacAddress().toString().c_str());
+            feedbackSerial->write(';');
+        }
+    } else if (strcmp(buff, "WIFI-DISABLE") == 0) {
+        iuWiFi.setPowerMode(PowerMode::DEEP_SLEEP);
+        updateStreamingMode();
+    } else {
+        iuWiFi.setPowerMode(PowerMode::REGULAR);
+        // We want the WiFi to do something, so need to make sure it's available
+        if (!iuWiFi.isAvailable()) {
+            // Show the status to the user
+            ledManager.showStatus(&STATUS_WIFI_WORKING);
+            uint32_t startT = millis();
+            uint32_t current = startT;
+            // Wait for up to 3sec the WiFi wake up
+            while (!iuWiFi.isAvailable() && current - startT < 3000) {
+                iuWiFi.readMessages();
+                delay(10);
+                current = millis();
+            }
+            ledManager.resetStatus();
+        }
+        // Process message
+        iuWiFi.processUserMessage(buff, &iuFlash);
+        // Show status
+        if (iuWiFi.isAvailable() && iuWiFi.isWorking()) {
+            ledManager.showStatus(&STATUS_WIFI_WORKING);
+        }
+    }
+}
+
 
 /**
  * Process the legacy commands
  */
-void Conductor::processLegacyCommands(char *buff)
+void Conductor::processLegacyCommand(char *buff)
 {
     // TODO Command protocol redefinition required
     switch (buff[0]) {
@@ -554,12 +551,13 @@ void Conductor::processLegacyCommands(char *buff)
 /**
  * Process the USB commands
  */
-void Conductor::processUSBMessages(char *buff)
+void Conductor::processUSBMessage(IUSerial *iuSerial)
 {
+    char *buff = iuSerial->getBuffer();
     if (buff[0] == '{') {
         processConfiguration(buff, true);
     } else if (strncmp(buff, "WIFI-", 5) == 0) {
-        processUserMessageForWiFi(buff, &iuUSB);
+        processUserCommandForWiFi(buff, &iuUSB);
     } else if (strncmp(buff, "MCUINFO", 7) == 0) {
         streamMCUUInfo(iuUSB.port);
     } else {
@@ -644,66 +642,30 @@ void Conductor::processUSBMessages(char *buff)
 /**
  * Process the instructions sent over Bluetooth
  */
-void Conductor::processBLEMessages(char *buff)
+void Conductor::processBLEMessage(IUSerial *iuSerial)
 {
+    char *buff = iuSerial->getBuffer();
+    m_lastBLEmessage = millis();
     if (m_streamingMode == StreamingMode::WIRED) {
         return;  // Do not listen to BLE when wired
     }
     if (buff[0] == '{') {
         processConfiguration(buff, true);
     } else if (strncmp(buff, "WIFI-", 5) == 0) {
-        processUserMessageForWiFi(buff, &iuBluetooth);
+        processUserCommandForWiFi(buff, &iuBluetooth);
     } else {
-        processCommands(buff);
-        processLegacyCommands(buff);
+        processCommand(buff);
+        processLegacyCommand(buff);
     }
-}
-
-/**
- *
- */
-void Conductor::processUserMessageForWiFi(char *buff,
-                                          IUSerial *feedbackSerial)
-{
-    if (strncmp(buff, "WIFI-GET-MAC", 13) == 0) {
-        if ((uint64_t) iuWiFi.getMacAddress() > 0) {
-            feedbackSerial->write("WIFI-MAC-");
-            feedbackSerial->write(iuWiFi.getMacAddress().toString().c_str());
-            feedbackSerial->write(';');
-        }
-    } else if (strcmp(buff, "WIFI-DISABLE") == 0) {
-        iuWiFi.setPowerMode(PowerMode::DEEP_SLEEP);
-        updateStreamingMode();
-    } else {
-        iuWiFi.setPowerMode(PowerMode::REGULAR);
-        // We want the WiFi to do something, so need to make sure it's available
-        if (!iuWiFi.isAvailable()) {
-            // Show the status to the user
-            ledManager.showStatus(&STATUS_WIFI_WORKING);
-            uint32_t startT = millis();
-            uint32_t current = startT;
-            // Wait for up to 3sec the WiFi wake up
-            while (!iuWiFi.isAvailable() && current - startT < 3000) {
-                readFromSerial(StreamingMode::WIFI, &iuWiFi);
-                delay(10);
-                current = millis();
-            }
-            ledManager.resetStatus();
-        }
-        // Process message
-        iuWiFi.processUserMessage(buff, &iuFlash);
-        // Show status
-        if (iuWiFi.isAvailable() && iuWiFi.isWorking()) {
-            ledManager.showStatus(&STATUS_WIFI_WORKING);
-        }
-    }
+    updateStreamingMode();
 }
 
 /**
  * Process the instructions from the WiFi chip
  */
-void Conductor::processWIFIMessages(char *buff)
+void Conductor::processWiFiMessage(IUSerial *iuSerial)
 {
+    char *buff = iuSerial->getBuffer();
     if (iuWiFi.processChipMessage()) {
         if (iuWiFi.isWorking()) {
             ledManager.showStatus(&STATUS_WIFI_WORKING);
@@ -746,12 +708,12 @@ void Conductor::processWIFIMessages(char *buff)
             break;
         case MSPCommand::CONFIG_FORWARD_CMD:
             if (loopDebugMode) { debugPrint("CONFIG_FORWARD_CMD"); }
-            processCommands(buff);
+            processCommand(buff);
             break;
         case MSPCommand::CONFIG_FORWARD_LEGACY_CMD:
             if (loopDebugMode) { debugPrint("CONFIG_FORWARD_LEGACY_CMD"); }
-            processCommands(buff);
-            processLegacyCommands(buff);
+            processCommand(buff);
+            processLegacyCommand(buff);
             break;
         case MSPCommand::WIFI_CONFIRM_ACTION:
             if (loopDebugMode) {

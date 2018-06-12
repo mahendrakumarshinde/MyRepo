@@ -52,7 +52,7 @@ void IUSerial::resetBuffer()
  * Also, a data reception timeout check is performed before reading.
  * @return True if a full message has been received, else false
  */
-bool IUSerial::readToBuffer()
+bool IUSerial::readUptoOneMessage()
 {
     if (m_newMessage)
     {
@@ -94,6 +94,60 @@ bool IUSerial::readToBuffer()
     }
     m_lastReadTime = millis();
     return false;
+}
+
+/**
+ * Read all the messages in RX buffer, and call onNewMessageCB for each of them.
+ *
+ * @return true if at least 1 new complete message was read, else false.
+ */
+bool IUSerial::readMessages()
+{
+    bool atLeastOneNewMsg = false;
+    while(true)
+    {
+        if (!readUptoOneMessage())
+        {
+            break;
+        }
+        atLeastOneNewMsg = true;
+        if (debugMode && m_protocol == PROTOCOL_OPTIONS::LEGACY_PROTOCOL)
+        {
+            debugPrint(millis(), false);
+            debugPrint(F("=> Serial input is: "), false);
+            debugPrint(m_buffer);
+        }
+        if (m_newMessageCB != NULL)
+        {
+            m_newMessageCB(this);
+        }
+        resetBuffer();  // Clear buffer
+    }
+    return atLeastOneNewMsg;
+}
+
+
+
+/* =============================================================================
+    Logging functionnality
+============================================================================= */
+
+void IUSerial::log(const char* msg) {
+    if (debugMode) {
+        debugPrint(F("LOGGING: "), false);
+        debugPrint(msg);
+    }
+    if (m_protocol == IUSerial::LEGACY_PROTOCOL) {
+        write("LOG-");
+        write(msg);
+        write(';');
+    } else if (m_protocol == IUSerial::MS_PROTOCOL) {
+        sendMSPCommand(MSPCommand::SEND_LOG_MSG, msg);
+    } else if (m_protocol == IUSerial::CUSTOM_PROTOCOL) {
+        m_customProtocolLog(msg);
+    } else if (debugMode) {
+        debugPrint(F("Logger: unknown protocol"));
+    }
 }
 
 

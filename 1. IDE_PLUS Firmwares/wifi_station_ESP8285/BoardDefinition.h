@@ -82,19 +82,23 @@ const char CUSTOMER_PLACEHOLDER[CUSTOMER_PLACEHOLDER_LENGTH] = "XXXAdmin";
     const uint8_t FEATURE_TOPIC_LENGTH = 20;
     const uint8_t DIAGNOSTIC_TOPIC_LENGTH = 14;
     const uint8_t CHECKSUM_TOPIC_LENGTH = 20;
+    const uint8_t LOG_TOPIC_LENGTH = 16;
 //    const uint8_t RAW_DATA_TOPIC_LENGTH = 17;
     const char FEATURE_TOPIC[FEATURE_TOPIC_LENGTH] = "iu_device_data_test";
     const char DIAGNOSTIC_TOPIC[DIAGNOSTIC_TOPIC_LENGTH] = "iu_error_test";
     const char CHECKSUM_TOPIC[CHECKSUM_TOPIC_LENGTH] = "config_confirm_test";
+    const char LOG_TOPIC[LOG_TOPIC_LENGTH] = "device_log_test";
 //    const char RAW_DATA_TOPIC[RAW_DATA_TOPIC_LENGTH] = "iu_raw_data_test";
 #else
     const uint8_t FEATURE_TOPIC_LENGTH = 15;
     const uint8_t DIAGNOSTIC_TOPIC_LENGTH = 9;
     const uint8_t CHECKSUM_TOPIC_LENGTH = 15;
+    const uint8_t LOG_TOPIC_LENGTH = 11;
 //    const uint8_t RAW_DATA_TOPIC_LENGTH = 12;
     const char FEATURE_TOPIC[FEATURE_TOPIC_LENGTH] = "iu_device_data";
     const char DIAGNOSTIC_TOPIC[DIAGNOSTIC_TOPIC_LENGTH] = "iu_error";
     const char CHECKSUM_TOPIC[CHECKSUM_TOPIC_LENGTH] = "config_confirm";
+    const char LOG_TOPIC[LOG_TOPIC_LENGTH] = "device_log";
 //    const char RAW_DATA_TOPIC[RAW_DATA_TOPIC_LENGTH] = "iu_raw_data";
 #endif  // TEST_TOPICS
 

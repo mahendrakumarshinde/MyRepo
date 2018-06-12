@@ -63,7 +63,7 @@ class IUESP8285 : public IUSerial, public Component
         virtual void setPowerMode(PowerMode::option pMode);
         void setAutoSleepDelay(uint32_t deltaT) { m_autoSleepDelay = deltaT; }
         void manageAutoSleep(bool wakeUpNow=false);
-        virtual bool readToBuffer();
+        virtual bool readMessages();
         /***** Local storage (flash) management *****/
         void saveConfigToFlash(IUFlash *iuFlashPtr,
                 IUFlash::storedConfig configType=STORED_CFG_TYPE);

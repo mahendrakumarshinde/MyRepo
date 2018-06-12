@@ -39,6 +39,7 @@ public:
     // Overloaded cast operator to allow MACAddress objects to be used where a pointer
     // to a 8-byte uint8_t array is expected
     operator uint64_t() const { return _address.dword; };
+    operator bool() const { return _address.dword > 0; };
     bool operator==(const MacAddress& addr) const { return _address.dword == addr._address.dword; };
     bool operator==(const uint8_t* addr) const;
 

@@ -33,6 +33,13 @@ void onMQTTConnection()
     conductor.publishDiagnostic("connected", 10);
 }
 
+/* =============================================================================
+    Host message callback
+============================================================================= */
+
+void onNewHostMessageFromHost(IUSerial *iuSerial) {
+    conductor.processHostMessage(iuSerial);
+}
 
 /* =============================================================================
     Main setup and loop
@@ -41,11 +48,10 @@ void onMQTTConnection()
 void setup()
 {
     hostSerial.begin();
-    if (debugMode)
-    {
+    hostSerial.setOnNewMessageCallback(onNewHostMessageFromHost);
+    if (debugMode) {
         delay(5000);
     }
-    // Get config: should the ESP sleep? What's the BLE MAC address?
     #if IUDEBUG_ANY == 1
         conductor.forceWiFiConfig(testSSID, testPSK, testStaticIP,
                                   testGateway, testSubnet);
@@ -71,11 +77,9 @@ void setup()
  */
 void loop()
 {
-    conductor.readMessagesFromHost();  // Read and process messages from host
-    if (conductor.reconnect())  // If Wifi is connected
-    {
-        if (!timeHelper.active())
-        {
+    hostSerial.readMessages();  // Read and process messages from host
+    if (conductor.reconnect()) {  // If Wifi is connected
+        if (!timeHelper.active()) {
             timeHelper.begin();
         }
         // Update time reference from NTP server if not yet received

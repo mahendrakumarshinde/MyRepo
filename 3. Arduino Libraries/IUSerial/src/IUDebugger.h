@@ -22,8 +22,13 @@ template <typename T>
 inline void debugPrint(T msg, bool endline = true)
 {
     #if IUDEBUG_ANY == 1
-    if (endline) { Serial.println(msg); }
-    else { Serial.print(msg); }
+    if (Serial.availableForWrite()) {
+        if (endline) {
+            Serial.println(msg);
+        } else {
+            Serial.print(msg);
+        }
+    }
     #endif
 }
 
@@ -32,17 +37,13 @@ template <>
 inline void debugPrint(float msg, bool endline)
 {
     #if IUDEBUG_ANY == 1
-    if (endline) { Serial.println(msg, 6); }
-    else { Serial.print(msg, 6); }
-    #endif
-}
-
-template <typename T>
-inline void raiseException(T msg, bool endline = true)
-{
-    #if IUDEBUG_ANY == 1
-    debugPrint(F("Error: "), false);
-    debugPrint(msg, endline);
+    if (Serial.availableForWrite()) {
+        if (endline) {
+            Serial.println(msg, 6);
+        } else {
+            Serial.print(msg, 6);
+        }
+    }
     #endif
 }
 

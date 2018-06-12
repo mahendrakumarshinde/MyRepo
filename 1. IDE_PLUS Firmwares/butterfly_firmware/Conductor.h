@@ -129,19 +129,17 @@ class Conductor
         void sendConfigChecksum(IUFlash::storedConfig configType);
         void periodicSendConfigChecksum();
         /***** Serial Reading & command processing*****/
-        void readFromSerial(StreamingMode::option interfaceType,
-                            IUSerial *iuSerial);
         bool processConfiguration(char *json, bool saveToFlash);
         void configureMainOptions(JsonVariant &config);
         void configureAllSensors(JsonVariant &config);
         void configureAllFeatures(JsonVariant &config);
-        void processCommands(char *buff);
-        void processLegacyCommands(char *buff);
-        void processUSBMessages(char *buff);
-        void processBLEMessages(char *buff);
-        void processUserMessageForWiFi(char *buff,
+        void processCommand(char *buff);
+        void processUserCommandForWiFi(char *buff,
                                        IUSerial *feedbackSerial);
-        void processWIFIMessages(char *buff);
+        void processLegacyCommand(char *buff);
+        void processUSBMessage(IUSerial *iuSerial);
+        void processBLEMessage(IUSerial *iuSerial);
+        void processWiFiMessage(IUSerial *iuSerial);
         /***** Features and groups Management *****/
         void activateFeature(Feature* feature);
         bool isFeatureDeactivatable(Feature* feature);

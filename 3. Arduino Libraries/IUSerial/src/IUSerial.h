@@ -34,6 +34,10 @@ class IUSerial
                                   MSP_HEADER_SIZE_1,
                                   MSP_HEADER_SIZE_2,
                                   MSP_HEADER_CMD};
+
+        /***** Message processing callback *****/
+        typedef void (*newMsgCBSignature)(IUSerial *iuSerial);
+
         /***** Core *****/
         IUSerial(HardwareSerial *serialPort, char *charBuffer,
                  uint16_t bufferSize, PROTOCOL_OPTIONS protocol, uint32_t rate,
@@ -41,17 +45,21 @@ class IUSerial
         virtual ~IUSerial() {}
         virtual void begin();
         PROTOCOL_OPTIONS getProtocol() { return m_protocol; }
+        void setOnNewMessageCallback(newMsgCBSignature cb)
+            { m_newMessageCB = cb; }
         /***** Communication *****/
         virtual void resetBuffer();
-        virtual bool readToBuffer();
+        virtual bool readUptoOneMessage();
+        virtual bool readMessages();
         virtual bool hasNewMessage() { return m_newMessage; }
         virtual char* getBuffer() { return m_buffer; }
         virtual size_t write(const char c) { return port->write(c); }
         virtual size_t write(const char *msg) { return port->write(msg); }
-        virtual size_t write(String msg) { return port->write(msg.c_str()); }
         // The length of the buffer, including the null terminating char
         virtual uint16_t getCurrentBufferLength() { return m_bufferIndex; }
         virtual bool processMessage() { return false; }
+        /***** Logging functionnality *****/
+        virtual void log(const char* msg);
         /***** MSP commands *****/
         virtual MSPCommand::command getMspCommand() { return m_mspCommand; }
         virtual void sendMSPCommand(MSPCommand::command cmd);
@@ -85,6 +93,14 @@ class IUSerial
         uint16_t m_bufferSize;
         bool m_newMessage;
         uint16_t m_bufferIndex;
+        /***** Message processing callback *****/
+        newMsgCBSignature m_newMessageCB = NULL;
+        /***** Logging functionnality *****/
+        virtual void m_customProtocolLog(const char *msg) {
+            if (debugMode) {
+                debugPrint(F("Custom protocol log not implemented"));
+            }
+        }
         /***** Data reception robustness variables *****/
         // Buffer is emptied if now - lastReadTime > dataReceptionTimeout
         uint16_t m_dataReceptionTimeout;  // in ms

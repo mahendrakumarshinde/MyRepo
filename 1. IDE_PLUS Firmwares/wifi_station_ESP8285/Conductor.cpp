@@ -76,50 +76,29 @@ void Conductor::deepsleep(uint32_t duration_ms)
     Communication with host
 ============================================================================= */
 
-
-/**
- * Read from host serial and process the command, if one was received.
- */
-void Conductor::readMessagesFromHost()
-{
-    while(true)
-    {
-        hostSerial.readToBuffer();
-        if (!hostSerial.hasNewMessage())
-        {
-            break;
-        }
-        processMessageFromHost();
-        hostSerial.resetBuffer();  // Clear buffer
-    }
-}
-
 /**
  *
  */
-void Conductor::processMessageFromHost()
+void Conductor::processHostMessage(IUSerial *iuSerial)
 {
-    MSPCommand::command cmd = hostSerial.getMspCommand();
-    char *buffer = hostSerial.getBuffer();
-    uint16_t bufferLength = hostSerial.getCurrentBufferLength();
+    MSPCommand::command cmd = iuSerial->getMspCommand();
+    char *buffer = iuSerial->getBuffer();
+    uint16_t bufferLength = iuSerial->getCurrentBufferLength();
     char resp[2] = "";
     resp[1] = 0;
-    if (debugMode)
-    {
-        debugPrint("Received command from host: ", false);
-        debugPrint((uint8_t) cmd, false);
-        debugPrint(", buffer is: ", false);
-        debugPrint(buffer);
-    }
-    switch(cmd)
-    {
+    switch(cmd) {
         /***** MAC addresses *****/
         case MSPCommand::RECEIVE_BLE_MAC:
-            setBleMAC(hostSerial.mspReadMacAddress());
+            setBleMAC(iuSerial->mspReadMacAddress());
             break;
         case MSPCommand::ASK_WIFI_MAC:
-            hostSerial.mspSendMacAddress(MSPCommand::RECEIVE_WIFI_MAC,
-                                         m_wifiMAC);
+            iuSerial->mspSendMacAddress(MSPCommand::RECEIVE_WIFI_MAC,
+                                        m_wifiMAC);
+            break;
+
+        /***** Logging *****/
+        case MSPCommand::SEND_LOG_MSG:
+            mqttHelper.publishLog(buffer);
             break;
 
         /***** Wifi Config *****/
@@ -137,7 +116,7 @@ void Conductor::processMessageFromHost()
         case MSPCommand::WIFI_RECEIVE_GATEWAY:
         case MSPCommand::WIFI_RECEIVE_SUBNET:
             receiveNewStaticConfig(
-                hostSerial.mspReadIPAddress(),
+                iuSerial->mspReadIPAddress(),
                 (uint8_t) cmd - (uint8_t) MSPCommand::WIFI_RECEIVE_STATIC_IP);
             break;
         case MSPCommand::WIFI_FORGET_STATIC_CONFIG:
@@ -149,15 +128,12 @@ void Conductor::processMessageFromHost()
             ESP.reset();
             break;
         case MSPCommand::WIFI_CONNECT:
-            if (m_credentialValidator.completed())
-            {
+            if (m_credentialValidator.completed()) {
                 // Reset disconnection timer
                 m_disconnectionTimerStart = millis();
                 reconnect();
-            }
-            else
-            {
-                hostSerial.sendMSPCommand(
+            } else {
+                iuSerial->sendMSPCommand(
                     MSPCommand::WIFI_ALERT_NO_SAVED_CREDENTIALS);
             }
             break;
@@ -173,13 +149,13 @@ void Conductor::processMessageFromHost()
             }
             accelRawDataHelper.addKeyValuePair(buffer[0], &buffer[2],
                                                strlen(buffer) - 2);
-            hostSerial.sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION, buffer,
+            iuSerial->sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION, buffer,
                                       1);
             accelRawDataHelper.publishIfReady(m_bleMAC);
             break;
         case MSPCommand::PUBLISH_FEATURE:
             if (publishFeature(&buffer[7], bufferLength - 7, buffer, 6)) {
-                hostSerial.sendMSPCommand(MSPCommand::WIFI_CONFIRM_PUBLICATION);
+                iuSerial->sendMSPCommand(MSPCommand::WIFI_CONFIRM_PUBLICATION);
             }
             break;
         case MSPCommand::PUBLISH_DIAGNOSTIC:
@@ -221,7 +197,7 @@ void Conductor::processMessageFromHost()
             {
                 m_mqttServerValidator.reset();
             }
-            m_mqttServerIP = hostSerial.mspReadIPAddress();
+            m_mqttServerIP = iuSerial->mspReadIPAddress();
             m_mqttServerValidator.receivedMessage(0);
             if (m_mqttServerValidator.completed())
             {
@@ -397,7 +373,7 @@ bool Conductor::getConfigFromMainBoard()
         }
         hostSerial.sendMSPCommand(MSPCommand::ASK_BLE_MAC);
         delay(100);
-        readMessagesFromHost();
+        hostSerial.readMessages();
         current = millis();
     }
     return (uint64_t(m_bleMAC) > 0);
@@ -726,9 +702,7 @@ bool Conductor::publishDiagnostic(const char *rawMsg, const uint16_t msgLength,
                  stringDT, rawMsg);
         return mqttHelper.publishDiagnostic(message, diagnosticType,
                                             diagnosticTypeLength);
-    }
-    else
-    {
+    } else {
         uint16_t totalMsgLength = msgLength + CUSTOMER_PLACEHOLDER_LENGTH + 98;
         char message[totalMsgLength];
         snprintf(message, totalMsgLength,

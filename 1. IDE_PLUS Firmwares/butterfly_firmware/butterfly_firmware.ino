@@ -28,7 +28,7 @@ Update 2017-10-10
     MAC Address
 ============================================================================= */
 
-const char MAC_ADDRESS[18] = "94:54:93:10:63:DE";
+const char MAC_ADDRESS[18] = "94:54:93:10:7C:0B";  // 63:DE";
 
 
 /* =============================================================================
@@ -98,7 +98,7 @@ float AUDIO_DB_SCALING = 1.0;
 
 
 /* =============================================================================
-    Main
+    Main global variables
 ============================================================================= */
 
 /***** Debbugging variables *****/
@@ -113,31 +113,9 @@ uint32_t lastDone = 0;
 Conductor conductor(MAC_ADDRESS);
 
 
-/***** Driven sensors acquisition callback *****/
-
-/**
- * This function will be called every time the Microphone sends an interrupt.
- *
- * The interrupt is raised every time the raw sound data buffer is full. The
- * interrupt frequency then depends on the Microphone (here I2S) clock rate and
- * on the size of the buffer.
- * NB: Printing is time consuming and may cause issues in callback. Always
- * deactivate the asyncDebugMode in prod.
- */
-void dataAcquisitionCallback()
-{
-    uint32_t startT = 0;
-    if (asyncDebugMode) {
-        startT = micros();
-    }
-    conductor.acquireData(true);
-    if (asyncDebugMode) {
-        debugPrint(micros() - startT);
-    }
-}
-
-
-/***** Led timers and callbacks *****/
+/* =============================================================================
+    Led timers and callbacks
+============================================================================= */
 
 static armv7m_timer_t ledShowTimer;
 
@@ -178,7 +156,9 @@ void operationStateCallback(Feature *feature) {
 }
 
 
-/***** Watch Dogs *****/
+/* =============================================================================
+    Watch Dogs
+============================================================================= */
 
 static armv7m_timer_t watchdogTimer;
 uint32_t lastActive = 0;
@@ -197,7 +177,9 @@ static void watchdogCallback(void) {
 }
 
 
-/***** BLE transmission with throughput control *****/
+/* =============================================================================
+    BLE transmission with throughput control
+============================================================================= */
 
 static armv7m_timer_t bleTransmitTimer;
 
@@ -206,11 +188,58 @@ static void bleTransmitCallback(void) {
     armv7m_timer_start(&bleTransmitTimer, 5);
 }
 
-/***** Begin *****/
+
+/* =============================================================================
+    Driven sensors acquisition callback
+============================================================================= */
+
+/**
+ * This function will be called every time the Microphone sends an interrupt.
+ *
+ * The interrupt is raised every time the raw sound data buffer is full. The
+ * interrupt frequency then depends on the Microphone (here I2S) clock rate and
+ * on the size of the buffer.
+ * NB: Printing is time consuming and may cause issues in callback. Always
+ * deactivate the asyncDebugMode in prod.
+ */
+void dataAcquisitionCallback()
+{
+    uint32_t startT = 0;
+    if (asyncDebugMode) {
+        startT = micros();
+    }
+    conductor.acquireData(true);
+    if (asyncDebugMode) {
+        debugPrint(micros() - startT);
+    }
+}
+
+
+/* =============================================================================
+    Interface message processing callbacks
+============================================================================= */
+
+void onNewUSBMessage(IUSerial *iuSerial) {
+    conductor.processUSBMessage(iuSerial);
+}
+
+void onNewBLEMessage(IUSerial *iuSerial) {
+    conductor.processBLEMessage(iuSerial);
+}
+
+void onNewWiFiMessage(IUSerial *iuSerial) {
+    conductor.processWiFiMessage(iuSerial);
+}
+
+
+/* =============================================================================
+    Main execution
+============================================================================= */
 
 void setup()
 {
     iuUSB.begin();
+    iuUSB.setOnNewMessageCallback(onNewUSBMessage);
     rgbLed.setup();
     ledManager.setBaselineStatus(&STATUS_NO_STATUS);
     ledManager.overrideColor(RGB_WHITE);
@@ -236,9 +265,11 @@ void setup()
             debugPrint(F("\nInitializing interfaces..."));
         }
         iuBluetooth.setupHardware();
+        iuBluetooth.setOnNewMessageCallback(onNewBLEMessage);
         armv7m_timer_create(&bleTransmitTimer, (armv7m_timer_callback_t)bleTransmitCallback);
         armv7m_timer_start(&bleTransmitTimer, 5);
         iuWiFi.setupHardware();
+        iuWiFi.setOnNewMessageCallback(onNewWiFiMessage);
         iuWiFi.setOnConnect(onWiFiConnect);
         iuWiFi.setOnDisconnect(onWiFiDisconnect);
         if (setupDebugMode) {
@@ -340,15 +371,15 @@ void loop()
                 /*======*/
             }
         }
-        // Power saving
+        // Manage power saving
         conductor.manageSleepCycles();
-        // Configuration
-        conductor.readFromSerial(StreamingMode::WIRED, &iuUSB);
-        conductor.readFromSerial(StreamingMode::BLE, &iuBluetooth);
-        conductor.readFromSerial(StreamingMode::WIFI, &iuWiFi);
+        // Receive messages & configurations
+        iuUSB.readMessages();
+        iuBluetooth.readMessages();
+        iuWiFi.readMessages();
         // Acquire data from sensors
         conductor.acquireData(false);
-        // Feature computation depending on operation mode
+        // Compute features depending on operation mode
         conductor.computeFeatures();
         // Stream features
         conductor.streamFeatures();

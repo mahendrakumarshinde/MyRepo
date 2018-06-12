@@ -81,7 +81,7 @@ void MultiMessageValidator<N>::receivedMessage(uint8_t index)
     {
         if (debugMode)
         {
-            raiseException("Index out of bound: N=", false);
+            debugPrint("Index Error N=", false);
             debugPrint(N, false);
             debugPrint(", k=", false);
             debugPrint(index);

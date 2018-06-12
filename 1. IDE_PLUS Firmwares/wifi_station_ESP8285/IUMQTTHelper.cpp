@@ -232,6 +232,26 @@ bool IUMQTTHelper::publishFeature(const char *payload,
 }
 
 /**
+ *
+ */
+bool IUMQTTHelper::publishLog(const char *payload,
+                              const char *topicExtension,
+                              const uint16_t extensionLength)
+{
+    if (topicExtension && extensionLength > 0)
+    {
+        uint16_t topicLength = LOG_TOPIC_LENGTH + extensionLength + 1;
+        char topic[topicLength];
+        snprintf(topic, topicLength, "%s/%s", LOG_TOPIC, topicExtension);
+        return publish(topic, payload);
+    }
+    else
+    {
+        return publish(LOG_TOPIC, payload);
+    }
+}
+
+/**
 * Subscribe to all the required device subscriptions
 *
 * Should be called after each reconnection.

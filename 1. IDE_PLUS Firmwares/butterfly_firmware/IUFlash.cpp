@@ -353,10 +353,8 @@ uint8_t IUSPIFlash::readStatus()
  */
 void IUSPIFlash::waitForAvailability()
 {
-    if(m_busy)
-    {
-        while(readStatus() & STATUS_WIP)
-        {
+    if(m_busy) {
+        while(readStatus() & STATUS_WIP) {
             // wait
         }
         m_busy = false;
@@ -381,9 +379,8 @@ uint16_t IUSPIFlash::getBlockIndex(pageBlockTypes blockType,
         case BLOCK_64KB:
             return pageIndex / BLOCK_64KB_PAGE_COUNT;
         default:
-            if (debugMode)
-            {
-                raiseException(F("Unknown sector / block type"));
+            if (debugMode) {
+                debugPrint(F("Unknown sector / block type"));
             }
             return -1;
     }
@@ -401,9 +398,8 @@ uint16_t IUSPIFlash::getBlockFirstPage(pageBlockTypes blockType,
         case BLOCK_64KB:
             return blockIndex * BLOCK_64KB_PAGE_COUNT;
         default:
-            if (debugMode)
-            {
-                raiseException(F("Unknown sector / block type"));
+            if (debugMode) {
+                debugPrint(F("Unknown sector / block type"));
             }
             return -1;
     }
@@ -483,8 +479,7 @@ void IUSPIFlash::erasePages(IUSPIFlash::pageBlockTypes blockType,
                             uint16_t pageIndex)
 {
     uint8_t eraseCommand;
-    switch (blockType)
-    {
+    switch (blockType) {
         case SECTOR:
             eraseCommand = CMD_SECTOR_ERASE;
             break;
@@ -495,9 +490,8 @@ void IUSPIFlash::erasePages(IUSPIFlash::pageBlockTypes blockType,
             eraseCommand = CMD_BLOCK64K_ERASE;
             break;
         default:
-            if (debugMode)
-            {
-                raiseException(F("Unknown sector / block type"));
+            if (debugMode) {
+                debugPrint(F("Unknown sector / block type"));
             }
             return;
     }

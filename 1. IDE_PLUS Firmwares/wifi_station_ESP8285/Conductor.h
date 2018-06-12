@@ -60,8 +60,7 @@ class Conductor
         void setBleMAC(const char *hostBLEMac);
         void deepsleep(uint32_t duration_ms=deepSleepDuration);
         /***** Communication with host *****/
-        void readMessagesFromHost();
-        void processMessageFromHost();
+        void processHostMessage(IUSerial *iuSerial);
         /***** WiFi credentials and config *****/
         void forceWiFiConfig(const char *userSSID, const char *userPSK,
                              IPAddress staticIp, IPAddress gateway,
