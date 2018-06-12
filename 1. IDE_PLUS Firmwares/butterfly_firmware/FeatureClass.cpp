@@ -106,7 +106,7 @@ bool Feature::removeReceiver(FeatureComputer *receiver)
         m_receivers[m_receiverCount] = NULL;
         m_computeIndex[m_receiverCount] = 0;
         for (uint8_t j = 0; j < maxSectionCount; ++j) {
-            m_acknowledged[j][m_receiverCount] = false;
+            m_acknowledged[j][m_receiverCount] = true;
         }
         return true;
     }

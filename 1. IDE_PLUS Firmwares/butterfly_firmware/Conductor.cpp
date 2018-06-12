@@ -541,6 +541,7 @@ void Conductor::processLegacyCommand(char *buff)
                         opStateComputer.addSource(feat, 1, fcheck[i] > 0);
                     }
                 }
+                activateFeature(&opStateFeature);
             }
             break;
         default:

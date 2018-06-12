@@ -85,9 +85,9 @@ bool FeatureComputer::addSource(Feature *source, uint8_t sectionCount)
         return false;
     }
     m_sources[m_sourceCount] = source;
-    source->addReceiver(this);
     m_sectionCount[m_sourceCount] = sectionCount;
     m_sourceCount++;
+    source->addReceiver(this);
     return true;
 }
 
@@ -188,6 +188,7 @@ bool FeatureStateComputer::addSource(Feature *source, uint8_t sectionCount,
 {
     if (FeatureComputer::addSource(source, sectionCount)) {
         m_activeOpStateFeatures[m_sourceCount - 1] = active;
+        source->reset();  // WHY?
         return true;
     } else {
         return false;
@@ -195,7 +196,7 @@ bool FeatureStateComputer::addSource(Feature *source, uint8_t sectionCount,
 }
 
 /**
- * 
+ *
  */
 bool FeatureStateComputer::addOpStateFeature(
     Feature *feature, float lowThreshold, float medThreshold,
