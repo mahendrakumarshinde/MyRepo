@@ -1337,6 +1337,7 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
         iuBluetooth.write(',');
         iuBluetooth.write(axis[axisIdx]);
         accelEnergy->stream(&iuBluetooth, 4);
+        iuBluetooth.write(';');
         delay(10);
     }
     else if (m_streamingMode == StreamingMode::WIFI ||
