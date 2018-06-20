@@ -27,7 +27,7 @@ class IUESP8285 : public IUSerial, public Component
         static const uint8_t ESP8285_ENABLE_PIN = A2;
         // Max expected length of WiFi SSID or password
         static const uint8_t wifiCredentialLength = 64;
-        // WiFi config (credentials or Static IP) MultiMessageValidator timeout
+        // WiFi config (credentials or Static IP)
         static const uint32_t wifiConfigReceptionTimeout = 5000;  // ms
         // Sleep management
         static const uint32_t defaultAutoSleepDelay = 130000;  // ms
@@ -37,9 +37,9 @@ class IUESP8285 : public IUSerial, public Component
         // Timeout for connection status message
         static const uint32_t connectedStatusTimeout = 30000;  // ms
         // Timeout for no response (only when WiFi is awake)
-        static const uint32_t noResponseTimeout = 45000; // ms
+        static const uint32_t noResponseTimeout = 90000; // ms
         // Timeout for failing to confim feature publication
-        static const uint32_t confirmPublicationTimeout = 30000; // ms
+        static const uint32_t confirmPublicationTimeout = 120000; // ms
         // Default Config type for flash storing
         static const IUFlash::storedConfig STORED_CFG_TYPE = IUFlash::CFG_WIFI0;
         // Size of Json buffer (to parse config json)

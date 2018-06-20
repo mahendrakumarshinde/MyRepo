@@ -89,11 +89,13 @@ void loop()
         conductor.loopMQTT();
         conductor.publishWifiInfoCycle();
         // Publish raw data (HTTP POST request)
-        accelRawDataHelper.publishIfReady(conductor.getBleMAC());
+        int returnCode = accelRawDataHelper.publishIfReady(conductor.getBleMAC());
+        if (returnCode != -11) {
+            hostSerial.sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION, String(returnCode, DEC).c_str());
+        }
     }
     conductor.updateWiFiStatusCycle();
-    conductor.checkWiFiDisconnectionTimeout();
-    delay(5);  // Allow light sleep (but keep listening to serial)
+    //delay(5);  // Allow light sleep (but keep listening to serial)
 }
 
 
