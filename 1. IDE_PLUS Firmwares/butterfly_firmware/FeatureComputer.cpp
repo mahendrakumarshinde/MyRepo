@@ -804,7 +804,8 @@ void AudioDBComputer::m_specializedCompute()
     }
     audioDB += log10(accu);
     float result = 20.0 * audioDB / (float) length;
-    result = 2.8 * result - 10;  // Empirical formula
+    //result = 2.8 * result - 10;  // Empirical formula
+    result = 1.3076 * result + 21.41;  // Empirical formula
     result *= m_calibrationScaling;
     m_destinations[0]->addValue(result);
     if (featureDebugMode) {

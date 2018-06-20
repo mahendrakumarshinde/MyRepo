@@ -98,7 +98,7 @@ class Conductor
         static const uint32_t defaultSleepDuration = 10000;
         static const uint32_t defaultCycleTime = 20000;
         // Raw data publication once per hour by default
-        static const uint32_t defaultRawDataPublicationTimer = 3600000;
+        static const uint32_t defaultRawDataPublicationTimer = 1800000;
         static char START_CONFIRM[11];
         static char END_CONFIRM[9];
         // Config handler

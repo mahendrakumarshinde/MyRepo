@@ -36,6 +36,7 @@ class IUMQTTHelper
 {
     public:
         /***** Preset values and default settings *****/
+        static const uint8_t credentialMaxLength = 45;
         static const uint8_t willMessageMaxLength = 50;
         static const uint32_t connectionTimeout = 5000;  // ms
         static const uint32_t connectionRetryDelay = 300;  // ms
@@ -46,14 +47,15 @@ class IUMQTTHelper
         /***** Core *****/
         IUMQTTHelper(IPAddress serverIP, uint16_t serverPort,
                      const char *username, const char *password);
+        IUMQTTHelper() : IUMQTTHelper(IPAddress(), 1883, NULL, NULL) {}
         virtual ~IUMQTTHelper() { }
         void setServer(IPAddress serverIP, uint16_t serverPort);
         void setCredentials(const char *username, const char *password);
         void setDeviceMAC(MacAddress deviceMAC);
         void setOnConnectionCallback(void (*callback)())
             { m_onConnectionCallback = callback; }
+        bool hasConnectionInformations();
         void reconnect();
-        void loop();
         bool publish(const char* topic, const char* payload);
         bool subscribe(const char* topic, bool deviceSpecific);
         /***** Infinite Uptime standard publications *****/
@@ -75,11 +77,13 @@ class IUMQTTHelper
         WiFiClient m_wifiClient;
         MacAddress m_deviceMAC;
         /***** MQTT server address and credentials *****/
-        char m_username[MQTT_CREDENTIALS_MAX_LENGTH];
-        char m_password[MQTT_CREDENTIALS_MAX_LENGTH];
+        /***** Settable parameters (addresses, credentials, etc) *****/
+        IPAddress m_serverIP;
+        uint16_t m_serverPort;
+        char m_username[credentialMaxLength];
+        char m_password[credentialMaxLength];
         /***** Disconnection handling *****/
         char m_willMessage[willMessageMaxLength];
-        uint32_t m_enfOfLife;
         void (*m_onConnectionCallback)() = NULL;
 };
 

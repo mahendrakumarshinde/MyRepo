@@ -160,7 +160,7 @@ void IUESP8285::manageAutoSleep(bool wakeUpNow)
                 debugPrint("ms");
             }
             // Not connected, not sleeping yet, but need to go to sleep
-            else if (now - m_awakeTimerStart > m_autoSleepDelay)
+            else if (m_on && now - m_awakeTimerStart > m_autoSleepDelay)
             {
                 turnOff();
                 if (loopDebugMode)
@@ -294,11 +294,11 @@ void IUESP8285::setSSID(const char *ssid, uint8_t length)
     }
     uint8_t charCount = min(wifiCredentialLength, length);
     strncpy(m_ssid, ssid, charCount);
-    for (uint8_t i = charCount; i < wifiCredentialLength; ++i)
-    {
+    for (uint8_t i = charCount; i < wifiCredentialLength; ++i) {
         m_ssid[i] = 0;
     }
     m_credentialValidator.receivedMessage(0);
+    m_credentialSent = false;
 }
 
 void IUESP8285::setPassword(const char *psk, uint8_t length)
@@ -309,36 +309,34 @@ void IUESP8285::setPassword(const char *psk, uint8_t length)
     }
     uint8_t charCount = min(wifiCredentialLength, length);
     strncpy(m_psk, psk, charCount);
-    for (uint8_t i = charCount; i < wifiCredentialLength; ++i)
-    {
+    for (uint8_t i = charCount; i < wifiCredentialLength; ++i) {
         m_psk[i] = 0;
     }
     m_credentialValidator.receivedMessage(1);
+    m_credentialSent = false;
 }
 
 void IUESP8285::setStaticIP(IPAddress staticIP)
 {
-    if (m_staticConfigValidator.hasTimedOut())
-    {
+    if (m_staticConfigValidator.hasTimedOut()) {
         m_staticConfigValidator.reset();
     }
     m_staticIP = staticIP;
     m_staticConfigValidator.receivedMessage(0);
+    m_staticConfigSent = false;
 }
 
 bool IUESP8285::setStaticIP(const char *staticIP, uint8_t len)
 {
     IPAddress tempAddress;
     char tempArr[len];
-    for (uint8_t i = 0; i < len; ++i)
-    {
+    for (uint8_t i = 0; i < len; ++i) {
         tempArr[i] = staticIP[i];
     }
     // Make sure the sub string is null terminated.
     tempArr[len - 1] = 0;
     bool success = tempAddress.fromString(tempArr);
-    if (success)
-    {
+    if (success) {
         setStaticIP(tempAddress);
     }
     return success;
@@ -346,27 +344,25 @@ bool IUESP8285::setStaticIP(const char *staticIP, uint8_t len)
 
 void IUESP8285::setGateway(IPAddress gatewayIP)
 {
-    if (m_staticConfigValidator.hasTimedOut())
-    {
+    if (m_staticConfigValidator.hasTimedOut()) {
         m_staticConfigValidator.reset();
     }
     m_staticGateway = gatewayIP;
     m_staticConfigValidator.receivedMessage(1);
+    m_staticConfigSent = false;
 }
 
 bool IUESP8285::setGateway(const char *gatewayIP, uint8_t len)
 {
     IPAddress tempAddress;
     char tempArr[len];
-    for (uint8_t i = 0; i < len; ++i)
-    {
+    for (uint8_t i = 0; i < len; ++i) {
         tempArr[i] = gatewayIP[i];
     }
     // Make sure the sub string is null terminated.
     tempArr[len - 1] = 0;
     bool success = tempAddress.fromString(tempArr);
-    if (success)
-    {
+    if (success) {
         setGateway(tempAddress);
     }
     return success;
@@ -374,27 +370,25 @@ bool IUESP8285::setGateway(const char *gatewayIP, uint8_t len)
 
 void IUESP8285::setSubnetMask(IPAddress subnetIP)
 {
-    if (m_staticConfigValidator.hasTimedOut())
-    {
+    if (m_staticConfigValidator.hasTimedOut()) {
         m_staticConfigValidator.reset();
     }
     m_staticSubnet = subnetIP;
     m_staticConfigValidator.receivedMessage(2);
+    m_staticConfigSent = false;
 }
 
 bool IUESP8285::setSubnetMask(const char *subnetIP, uint8_t len)
 {
     IPAddress tempAddress;
     char tempArr[len];
-    for (uint8_t i = 0; i < len; ++i)
-    {
+    for (uint8_t i = 0; i < len; ++i) {
         tempArr[i] = subnetIP[i];
     }
     // Make sure the sub string is null terminated.
     tempArr[len - 1] = 0;
     bool success = tempAddress.fromString(tempArr);
-    if (success)
-    {
+    if (success) {
         setSubnetMask(tempAddress);
     }
     return success;
@@ -595,7 +589,7 @@ bool IUESP8285::processChipMessage()
  */
 void IUESP8285::sendWiFiCredentials()
 {
-    if (m_credentialValidator.completed())
+    if (m_credentialValidator.completed() && !m_credentialSent)
     {
         sendMSPCommand(MSPCommand::WIFI_RECEIVE_SSID, m_ssid);
         sendMSPCommand(MSPCommand::WIFI_RECEIVE_PASSWORD, m_psk);
@@ -613,6 +607,7 @@ void IUESP8285::forgetCredentials()
 {
     sendMSPCommand(MSPCommand::WIFI_FORGET_CREDENTIALS);
     m_working = true;
+    m_credentialSent = false;
 }
 
 /**
@@ -620,7 +615,7 @@ void IUESP8285::forgetCredentials()
  */
 void IUESP8285::sendStaticConfig()
 {
-    if (m_staticConfigValidator.completed())
+    if (m_staticConfigValidator.completed() && !m_staticConfigSent)
     {
         mspSendIPAddress(MSPCommand::WIFI_RECEIVE_STATIC_IP, m_staticIP);
         mspSendIPAddress(MSPCommand::WIFI_RECEIVE_GATEWAY, m_staticGateway);
@@ -639,6 +634,7 @@ void IUESP8285::forgetStaticConfig()
 {
     sendMSPCommand(MSPCommand::WIFI_FORGET_STATIC_CONFIG);
     m_working = true;
+    m_staticConfigSent = false;
 }
 
 /**

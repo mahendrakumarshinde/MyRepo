@@ -73,6 +73,9 @@ namespace MSPCommand
         CONFIG_FORWARD_LEGACY_CMD,  // Forward a command string received by WiFi (legacy)
         OTA_INITIATE_UPDATE,  // Initiate OTA update
         OTA_RECEIVE_DATA,  // Receive a packet of OTA data
+        // Settable parameters (addresses, credentials, etc)
+        GET_RAW_DATA_ENDPOINT_INFO,
+        GET_MQTT_CONNECTION_INFO,
     };
 }
 

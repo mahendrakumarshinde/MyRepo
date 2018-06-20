@@ -89,7 +89,7 @@ float DEFAULT_ACCEL_ENERGY_HIGH_TH = 150;
 
 uint16_t DEFAULT_LOW_CUT_FREQUENCY = 5;  // Hz
 uint16_t DEFAULT_HIGH_CUT_FREQUENCY = 500;  // Hz
-float DEFAULT_MIN_AGITATION = 0.1;
+float DEFAULT_MIN_AGITATION = 0.03;
 
 
 /***** Audio DB calibration parameters *****/
@@ -168,13 +168,17 @@ uint32_t oneDayTimeout = 86400000;
 static void watchdogCallback(void) {
     uint32_t now = millis();
     if (now > oneDayTimeout ||
-        (lastActive > 0 && now - lastActive > loopTimeout) ||
-        iuWiFi.arePublicationsFailing())
+        (lastActive > 0 && now - lastActive > loopTimeout))
     {
         STM32.reset();
     }
+    if (iuWiFi.arePublicationsFailing()) {
+        iuWiFi.hardReset();
+    }
     armv7m_timer_start(&watchdogTimer, 1000);
 }
+
+
 
 
 /* =============================================================================
@@ -336,12 +340,12 @@ void setup()
             if (setupDebugMode) {
                 ledManager.overrideColor(RGB_PURPLE);
                 delay(5000);
-                ledManager.resetStatus();
+                ledManager.stopColorOverride();
             }
         } else if (setupDebugMode) {
             ledManager.overrideColor(RGB_ORANGE);
             delay(5000);
-            ledManager.resetStatus();
+            ledManager.stopColorOverride();
         }
         opStateFeature.setOnNewValueCallback(operationStateCallback);
         ledManager.resetStatus();
@@ -373,10 +377,13 @@ void loop()
         }
         // Manage power saving
         conductor.manageSleepCycles();
+        iuWiFi.manageAutoSleep();
         // Receive messages & configurations
         iuUSB.readMessages();
         iuBluetooth.readMessages();
         iuWiFi.readMessages();
+        // Manage WiFi autosleep
+        iuWiFi.manageAutoSleep();
         // Acquire data from sensors
         conductor.acquireData(false);
         // Compute features depending on operation mode

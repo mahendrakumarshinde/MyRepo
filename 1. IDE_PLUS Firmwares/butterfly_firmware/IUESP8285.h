@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 
+#include <IPAddress.h>
 #include <IUSerial.h>
 #include <MultiMessageValidator.h>
 #include "Component.h"
@@ -30,13 +31,13 @@ class IUESP8285 : public IUSerial, public Component
         static const uint32_t wifiConfigReceptionTimeout = 5000;  // ms
         // Sleep management
         static const uint32_t defaultAutoSleepDelay = 130000;  // ms
-        static const uint32_t defaultAutoSleepDuration = 90000;  // ms
+        static const uint32_t defaultAutoSleepDuration = 5000;  // ms
         // Timeout for "Trying to connect" LED blinking
         static const uint32_t displayConnectAttemptTimeout = 20000;  // ms
         // Timeout for connection status message
         static const uint32_t connectedStatusTimeout = 30000;  // ms
         // Timeout for no response (only when WiFi is awake)
-        static const uint32_t noResponseTimeout = 30000; // ms
+        static const uint32_t noResponseTimeout = 45000; // ms
         // Timeout for failing to confim feature publication
         static const uint32_t confirmPublicationTimeout = 30000; // ms
         // Default Config type for flash storing

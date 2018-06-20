@@ -16,7 +16,8 @@ StatusVisual STATUS_IS_ALIVE(RGB_CYAN, 25, 50, 50);
 
 LedManager::LedManager(RGBLed *led) :
     m_led(led),
-    m_forceVisual(RGB_BLACK, 0, 1000, 0)
+    m_forceVisual(RGB_BLACK, 0, 1000, 0),
+    m_overriden(false)
 {
     m_led->startNewColorQueue(2);
     m_led->unlockColors();
@@ -67,9 +68,11 @@ RGBColor LedManager::m_getOpStateColor()
  */
 void LedManager::showStatus(StatusVisual *status)
 {
-    m_led->replaceColor(0, m_getOpStateColor(),
-                        status->transition, status->offDuration);
-    m_led->replaceColor(1, status->color, status->transition, status->onDuration);
+    if (!m_overriden) {
+        m_led->replaceColor(0, m_getOpStateColor(),
+                            status->transition, status->offDuration);
+        m_led->replaceColor(1, status->color, status->transition, status->onDuration);
+    }
 }
 
 /**
@@ -82,6 +85,22 @@ void LedManager::setBaselineStatus(StatusVisual *status)
 }
 
 /**
+ * Reset the LED management to OP state + baseline status.
+ */
+void LedManager::resetStatus()
+{
+    if (!m_overriden) {
+        m_led->unlockColors();
+        showStatus(m_baselineStatus);
+    }
+}
+
+
+/* =============================================================================
+    Color override
+============================================================================= */
+
+/**
  * Override the normal LED management to show a single color.
  *
  * This function locks the LED: the LED color cannot be changed until the LED is
@@ -91,16 +110,15 @@ void LedManager::overrideColor(RGBColor color)
 {
     m_led->unlockColors();
     m_forceVisual.color = color;
+    m_overriden = false;
     showStatus(&m_forceVisual);
+    m_overriden = true;
     m_led->lockColors();
 }
 
-/**
- * Reset the LED management to OP state + baseline status.
- */
-void LedManager::resetStatus()
+void LedManager::stopColorOverride()
 {
-    m_led->unlockColors();
-    showStatus(m_baselineStatus);
+    m_overriden = false;
+    resetStatus();
 }
 

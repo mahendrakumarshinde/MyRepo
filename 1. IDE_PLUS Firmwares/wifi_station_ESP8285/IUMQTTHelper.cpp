@@ -15,11 +15,12 @@ char IUMQTTHelper::DEFAULT_WILL_MESSAGE[44] =
 IUMQTTHelper::IUMQTTHelper(IPAddress serverIP, uint16_t serverPort,
                            const char *username, const char *password) :
     m_wifiClient(),
-    client(m_wifiClient),
-    m_enfOfLife(0)
+    client(m_wifiClient)
 {
     setServer(serverIP, serverPort);
-    setCredentials(username, password);
+    if (username != NULL && password != NULL) {
+        setCredentials(username, password);
+    }
     strncpy(m_willMessage, DEFAULT_WILL_MESSAGE, willMessageMaxLength);
 }
 
@@ -28,7 +29,11 @@ IUMQTTHelper::IUMQTTHelper(IPAddress serverIP, uint16_t serverPort,
  */
 void IUMQTTHelper::setServer(IPAddress serverIP, uint16_t serverPort)
 {
-    client.setServer(serverIP, serverPort);
+    m_serverIP = serverIP;
+    m_serverPort = serverPort;
+    if (uint32_t(m_serverIP) > 0) {
+        client.setServer(m_serverIP, m_serverPort);
+    }
 }
 
 /**
@@ -36,8 +41,8 @@ void IUMQTTHelper::setServer(IPAddress serverIP, uint16_t serverPort)
  */
 void IUMQTTHelper::setCredentials(const char *username, const char *password)
 {
-    strncpy(m_username, username, MQTT_CREDENTIALS_MAX_LENGTH);
-    strncpy(m_password, password, MQTT_CREDENTIALS_MAX_LENGTH);
+    strncpy(m_username, username, credentialMaxLength);
+    strncpy(m_password, password, credentialMaxLength);
 }
 
 /**
@@ -62,6 +67,16 @@ void IUMQTTHelper::setDeviceMAC(MacAddress deviceMAC)
 }
 
 /**
+ * Return true if all connection info are available.
+ *
+ * Required connection informations are: host, port, username and password.
+ */
+bool IUMQTTHelper::hasConnectionInformations()
+{
+    return (uint32_t(m_serverIP) > 0 && m_username != NULL && m_password != NULL);
+}
+
+/**
  * Connect or reconnect to the MQTT server and (re)set subscriptions.
  *
  * Should be called repeatedly.
@@ -77,60 +92,32 @@ void IUMQTTHelper::setDeviceMAC(MacAddress deviceMAC)
  */
 void IUMQTTHelper::reconnect()
 {
+    if (!hasConnectionInformations()) {
+        return;
+    }
     uint32_t startTime = millis();
     uint32_t currentTime = startTime;
-    while (!client.connected() && currentTime - startTime < connectionTimeout)
-    {
-        if (debugMode)
-        {
+    while (!client.connected() && currentTime - startTime < connectionTimeout) {
+        if (debugMode) {
             debugPrint("Attempting MQTT connection... ", false);
         }
         // Attempt to connect
         if (client.connect(m_deviceMAC.toString().c_str(), m_username,
                            m_password, DIAGNOSTIC_TOPIC, WILL_QOS, WILL_RETAIN,
-                           m_willMessage))
-        {
-            if (debugMode)
-            {
+                           m_willMessage)) {
+            if (debugMode) {
                 debugPrint("Success");
             }
-            if (m_onConnectionCallback)
-            {
+            if (m_onConnectionCallback) {
                 m_onConnectionCallback();
             }
-        }
-        else
-        {
-            if (debugMode)
-            {
+        } else {
+            if (debugMode) {
                 debugPrint("Failed");
             }
             delay(connectionRetryDelay);
         }
     }
-}
-
-
-/**
- * Main MQTT processing function - should called in main loop.
- *
- * Handles the reconnection to he MQTT server if needed and the publications.
- * NB: Makes use of IUMQTT::reconnect function, which may block the execution.
- *
- * @param willTopic MQTT topic name to publish message upon succesful connection,
- *  and to be used as will topic.
- * @param willMsg  MQTT message to publish upon disconnection from server.
- * @param onConnectionCallback  callback to be run upon connecting to MQTT server.
- * @param timeout  The duration after which the MQTT reconnection attempt is
- *  abandonned if not successful.
- */
-void IUMQTTHelper::loop()
-{
-    if (!client.connected())
-    {
-        reconnect();
-    }
-    client.loop();
 }
 
 /**

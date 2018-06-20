@@ -86,7 +86,7 @@ void loop()
         // from IU server
         timeHelper.updateTimeReferenceFromNTP();
         /***** MQTT Connection / message reception loop *****/
-        mqttHelper.loop();
+        conductor.loopMQTT();
         conductor.publishWifiInfoCycle();
         // Publish raw data (HTTP POST request)
         accelRawDataHelper.publishIfReady(conductor.getBleMAC());

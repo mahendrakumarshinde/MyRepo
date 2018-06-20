@@ -23,14 +23,12 @@ const char DEVICE_TYPE[DEVICE_TYPE_LENGTH] = "ide_plus";
 
 /***** Test connection *****/
 #if IUDEBUG_ANY == 1
-    const char testSSID[20] = "The Port WiFi";  // "AndroidHotspot6994";  // "TP-LINK_3A67";
-    const char testPSK[13] = "Th3P0rt317";  // "f1b94630f970";  // "tqN7*EnTsrP0";
+    const char testSSID[20] = "The Port WiFi";  // "AndroidHotspot6994";
+    const char testPSK[13] = "Th3P0rt317";  // "f1b94630f970";
     const IPAddress testStaticIP(0, 0, 0, 0);
     const IPAddress testGateway(0, 0, 0, 0);
     const IPAddress testSubnet(0, 0, 0, 0);
     const char hostMacAddress[18] = "94:54:93:10:63:DE";
-//    const char testSSID[19] = "AndroidHotspot6994";
-//    const char testPSK[13] = "f1b94630f970";
 #endif  // IUDEBUG_ANY == 1
 
 
@@ -53,18 +51,6 @@ const char FEATURE_DEFAULT_ENDPOINT_ROUTE[19] = "/mailbox/data?mac=";
 const char DIAGNOSTIC_DEFAULT_ENDPOINT_ROUTE[26] = "/mailbox/diagnostics?mac=";
 
 
-/***** MQTT server and credentials *****/
-// US-WEST1-A server
-//IPAddress MQTT_DEFAULT_SERVER_IP(35, 197, 32, 136);
-// ASIA-SOUTH1-A (Mumbai) server
-const IPAddress MQTT_DEFAULT_SERVER_IP(35, 200, 183, 103);
-const uint16_t MQTT_DEFAULT_SERVER_PORT = 1883;
-
-const uint8_t MQTT_CREDENTIALS_MAX_LENGTH = 25;
-const char MQTT_DEFAULT_USERNAME[9] = "ide_plus";
-const char MQTT_DEFAULT_ASSWORD[13] = "nW$Pg81o@EJD";
-
-
 // IU format compliance for message publication
 const uint8_t CUSTOMER_PLACEHOLDER_LENGTH = 9;
 const char CUSTOMER_PLACEHOLDER[CUSTOMER_PLACEHOLDER_LENGTH] = "XXXAdmin";
@@ -82,23 +68,23 @@ const char CUSTOMER_PLACEHOLDER[CUSTOMER_PLACEHOLDER_LENGTH] = "XXXAdmin";
     const uint8_t FEATURE_TOPIC_LENGTH = 20;
     const uint8_t DIAGNOSTIC_TOPIC_LENGTH = 14;
     const uint8_t CHECKSUM_TOPIC_LENGTH = 20;
-    const uint8_t LOG_TOPIC_LENGTH = 16;
+    const uint8_t LOG_TOPIC_LENGTH = 14;
 //    const uint8_t RAW_DATA_TOPIC_LENGTH = 17;
     const char FEATURE_TOPIC[FEATURE_TOPIC_LENGTH] = "iu_device_data_test";
     const char DIAGNOSTIC_TOPIC[DIAGNOSTIC_TOPIC_LENGTH] = "iu_error_test";
     const char CHECKSUM_TOPIC[CHECKSUM_TOPIC_LENGTH] = "config_confirm_test";
-    const char LOG_TOPIC[LOG_TOPIC_LENGTH] = "device_log_test";
+    const char LOG_TOPIC[LOG_TOPIC_LENGTH] = "ide_logs_test";
 //    const char RAW_DATA_TOPIC[RAW_DATA_TOPIC_LENGTH] = "iu_raw_data_test";
 #else
     const uint8_t FEATURE_TOPIC_LENGTH = 15;
     const uint8_t DIAGNOSTIC_TOPIC_LENGTH = 9;
     const uint8_t CHECKSUM_TOPIC_LENGTH = 15;
-    const uint8_t LOG_TOPIC_LENGTH = 11;
+    const uint8_t LOG_TOPIC_LENGTH = 9;
 //    const uint8_t RAW_DATA_TOPIC_LENGTH = 12;
     const char FEATURE_TOPIC[FEATURE_TOPIC_LENGTH] = "iu_device_data";
     const char DIAGNOSTIC_TOPIC[DIAGNOSTIC_TOPIC_LENGTH] = "iu_error";
     const char CHECKSUM_TOPIC[CHECKSUM_TOPIC_LENGTH] = "config_confirm";
-    const char LOG_TOPIC[LOG_TOPIC_LENGTH] = "device_log";
+    const char LOG_TOPIC[LOG_TOPIC_LENGTH] = "ide_logs";
 //    const char RAW_DATA_TOPIC[RAW_DATA_TOPIC_LENGTH] = "iu_raw_data";
 #endif  // TEST_TOPICS
 

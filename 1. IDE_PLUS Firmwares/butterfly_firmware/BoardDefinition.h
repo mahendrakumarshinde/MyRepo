@@ -2,6 +2,7 @@
 #define BOARDDEFINITION_H
 
 #include <Arduino.h>
+#include <IPAddress.h>
 
 
 /* =============================================================================
@@ -88,6 +89,22 @@ namespace IU_VERSION {
             true);
     }
 };  // IU_VERSION
+
+
+/* =============================================================================
+    Default configuration values
+============================================================================= */
+
+/***** MQTT server and credentials *****/
+// US-WEST1-A server
+//IPAddress MQTT_DEFAULT_SERVER_IP(35, 197, 32, 136);
+// ASIA-SOUTH1-A (Mumbai) server
+const IPAddress MQTT_DEFAULT_SERVER_IP(35, 200, 183, 103);
+const uint16_t MQTT_DEFAULT_SERVER_PORT = 1883;
+
+const uint8_t MQTT_CREDENTIALS_MAX_LENGTH = 25;
+const char MQTT_DEFAULT_USERNAME[9] = "ide_plus";
+const char MQTT_DEFAULT_ASSWORD[13] = "nW$Pg81o@EJD";
 
 
 /* =============================================================================

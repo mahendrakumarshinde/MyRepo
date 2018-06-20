@@ -98,7 +98,7 @@ class IUSerial
         /***** Logging functionnality *****/
         virtual void m_customProtocolLog(const char *msg) {
             if (debugMode) {
-                debugPrint(F("Custom protocol log not implemented"));
+                debugPrint("Custom protocol log not implemented");
             }
         }
         /***** Data reception robustness variables *****/

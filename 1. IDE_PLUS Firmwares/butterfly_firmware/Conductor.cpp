@@ -29,7 +29,7 @@ void Conductor::sleep(uint32_t duration)
     }
     ledManager.overrideColor(RGB_BLACK);
     STM32.stop(duration);
-    ledManager.resetStatus();
+    ledManager.stopColorOverride();
     for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
         Sensor::instances[i]->setPowerMode(PowerMode::REGULAR);
     }
@@ -50,7 +50,7 @@ void Conductor::suspend(uint32_t duration)
     }
     ledManager.overrideColor(RGB_BLACK);
     STM32.stop(duration * 1000);
-    ledManager.resetStatus();
+    ledManager.stopColorOverride();
     iuBluetooth.setPowerMode(PowerMode::REGULAR);
     iuWiFi.setPowerMode(PowerMode::REGULAR);
     for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
@@ -677,11 +677,11 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
     }
     switch (iuWiFi.getMspCommand()) {
         case MSPCommand::ASK_BLE_MAC:
-            if (loopDebugMode) { debugPrint("ASK_BLE_MAC"); }
+            if (loopDebugMode) { debugPrint(F("ASK_BLE_MAC")); }
             iuWiFi.sendBleMacAddress(m_macAddress);
             break;
         case MSPCommand::WIFI_ALERT_CONNECTED:
-            if (loopDebugMode) { debugPrint("WIFI-CONNECTED;"); }
+            if (loopDebugMode) { debugPrint(F("WIFI-CONNECTED;")); }
             if (isBLEConnected()) {
                 iuBluetooth.write("WIFI-CONNECTED;");
             }
@@ -693,34 +693,48 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             break;
         case MSPCommand::WIFI_ALERT_NO_SAVED_CREDENTIALS:
             if (loopDebugMode) {
-                debugPrint("WIFI_ALERT_NO_SAVED_CREDENTIALS");
+                debugPrint(F("WIFI_ALERT_NO_SAVED_CREDENTIALS"));
             }
             if (isBLEConnected()) {
                 iuBluetooth.write("WIFI-NOSAVEDCRED;");
             }
             break;
         case MSPCommand::SET_DATETIME:
-            if (loopDebugMode) { debugPrint("SET_DATETIME"); }
+            if (loopDebugMode) { debugPrint(F("SET_DATETIME")); }
             setRefDatetime(buff);
             break;
         case MSPCommand::CONFIG_FORWARD_CONFIG:
-            if (loopDebugMode) { debugPrint("CONFIG_FORWARD_CONFIG"); }
+            if (loopDebugMode) { debugPrint(F("CONFIG_FORWARD_CONFIG")); }
             processConfiguration(buff, true);
             break;
         case MSPCommand::CONFIG_FORWARD_CMD:
-            if (loopDebugMode) { debugPrint("CONFIG_FORWARD_CMD"); }
+            if (loopDebugMode) { debugPrint(F("CONFIG_FORWARD_CMD")); }
             processCommand(buff);
             break;
         case MSPCommand::CONFIG_FORWARD_LEGACY_CMD:
-            if (loopDebugMode) { debugPrint("CONFIG_FORWARD_LEGACY_CMD"); }
+            if (loopDebugMode) { debugPrint(F("CONFIG_FORWARD_LEGACY_CMD")); }
             processCommand(buff);
             processLegacyCommand(buff);
             break;
         case MSPCommand::WIFI_CONFIRM_ACTION:
             if (loopDebugMode) {
-                debugPrint("WIFI_CONFIRM_ACTION: ", false);
+                debugPrint(F("WIFI_CONFIRM_ACTION: "), false);
                 debugPrint(buff);
             }
+            break;
+        case MSPCommand::GET_RAW_DATA_ENDPOINT_INFO:
+            // TODO: Implement
+            break;
+        case MSPCommand::GET_MQTT_CONNECTION_INFO:
+            if (loopDebugMode) { debugPrint(F("GET_MQTT_CONNECTION_INFO")); }
+            iuWiFi.mspSendIPAddress(MSPCommand::SET_MQTT_SERVER_IP,
+                                    MQTT_DEFAULT_SERVER_IP);
+            iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_SERVER_PORT,
+                                  String(MQTT_DEFAULT_SERVER_PORT).c_str());
+            iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_USERNAME,
+                                  MQTT_DEFAULT_USERNAME);
+            iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_PASSWORD,
+                                  MQTT_DEFAULT_ASSWORD);
             break;
         default:
             // pass
@@ -820,6 +834,7 @@ void Conductor::activateGroup(FeatureGroup *group)
         feature = group->getFeature(i);
         activateFeature(feature);
     }
+    activateFeature(&opStateFeature);
 }
 
 /**
@@ -1062,16 +1077,13 @@ void Conductor::changeAcquisitionMode(AcquisitionMode::option mode)
     m_acquisitionMode = mode;
     switch (m_acquisitionMode) {
         case AcquisitionMode::RAWDATA:
-            ledManager.overrideColor(RGB_CYAN);
             resetDataAcquisition();
             break;
         case AcquisitionMode::FEATURE:
-            ledManager.resetStatus();
             resetDataAcquisition();
             break;
         case AcquisitionMode::NONE:
             endDataAcquisition();
-            ledManager.overrideColor(RGB_BLACK);
             break;
         default:
             if (loopDebugMode) { debugPrint(F("Invalid acquisition Mode")); }
@@ -1101,7 +1113,7 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             break;
         case UsageMode::OPERATION:
         case UsageMode::OPERATION_BIS:
-            ledManager.resetStatus();
+            ledManager.stopColorOverride();
             configureGroupsForOperation();
             iuAccelerometer.resetScale();
             msg = "operation";

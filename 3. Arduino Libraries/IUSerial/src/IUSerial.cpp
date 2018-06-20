@@ -69,7 +69,7 @@ bool IUSerial::readUptoOneMessage()
         {
             if (debugMode)
             {
-                debugPrint(F("Reception buffer is overflowing: "), false);
+                debugPrint("Reception buffer is overflowing: ", false);
                 debugPrint(m_buffer);
             }
             resetBuffer();
@@ -114,7 +114,7 @@ bool IUSerial::readMessages()
         if (debugMode && m_protocol == PROTOCOL_OPTIONS::LEGACY_PROTOCOL)
         {
             debugPrint(millis(), false);
-            debugPrint(F("=> Serial input is: "), false);
+            debugPrint("=> Serial input is: ", false);
             debugPrint(m_buffer);
         }
         if (m_newMessageCB != NULL)
@@ -134,7 +134,7 @@ bool IUSerial::readMessages()
 
 void IUSerial::log(const char* msg) {
     if (debugMode) {
-        debugPrint(F("LOGGING: "), false);
+        debugPrint("LOGGING: ", false);
         debugPrint(msg);
     }
     if (m_protocol == IUSerial::LEGACY_PROTOCOL) {
@@ -146,7 +146,7 @@ void IUSerial::log(const char* msg) {
     } else if (m_protocol == IUSerial::CUSTOM_PROTOCOL) {
         m_customProtocolLog(msg);
     } else if (debugMode) {
-        debugPrint(F("Logger: unknown protocol"));
+        debugPrint("Logger: unknown protocol");
     }
 }
 
@@ -219,8 +219,8 @@ bool IUSerial::readCharMsp()
                 m_mspState = MSP_IDLE;
                 if (debugMode)
                 {
-                    debugPrint(F("MSP command asks to receive too"
-                                 " long a msg: "), false);
+                    debugPrint("MSP command asks to receive too"
+                                 " long a msg: ", false);
                     debugPrint(m_mspDataSize);
                 }
             }
@@ -245,11 +245,11 @@ bool IUSerial::readCharMsp()
                     messageIsComplete = true;
                     if (debugMode)
                     {
-                        debugPrint(F("Received MSP Command #"), false);
+                        debugPrint("Received MSP Command #", false);
                         debugPrint(m_mspCommand);
                         if (m_mspDataSize > 0)
                         {
-                            debugPrint(F("Message is: "), false);
+                            debugPrint("Message is: ", false);
                             debugPrint(m_buffer);
                         }
                     }
@@ -531,7 +531,7 @@ bool IUSerial::readCharCustomProtocol()
     char c = port->read();
     if (debugMode)
     {
-        debugPrint(F("Custom protocol is not implemented: "), false);
+        debugPrint("Custom protocol is not implemented: ", false);
         debugPrint(c);
     }
     return false;

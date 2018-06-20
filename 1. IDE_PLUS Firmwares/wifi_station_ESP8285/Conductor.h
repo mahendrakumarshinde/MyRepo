@@ -41,8 +41,9 @@ class Conductor
         static const uint32_t hostResponseTimeout = 60000;  // ms
         // Default duration of deep-sleep
         static const uint32_t deepSleepDuration = 2000;  // ms
+        // MQTT connection info request to host delay
+        static const uint32_t mqttInfoRequestDelay = 1000;  // ms
         /** Connection retry constants **/
-        static const uint8_t connectionRetry = 3;
         // Single connection attempt timeout
         static const uint32_t connectionTimeout = 30000;  // ms
         // Delay between 2 connection attemps
@@ -71,13 +72,12 @@ class Conductor
         void receiveNewStaticConfig(IPAddress ip, uint8_t idx);
         bool getConfigFromMainBoard();
         /***** Wifi connection and status *****/
-        void turnOffRadio(uint32_t duration_us=0);
-        void turnOnRadio();
         void disconnectWifi(bool wifiOff=true);
         bool reconnect(bool forceNewCredentials=false);
         uint8_t waitForConnectResult();
         void checkWiFiDisconnectionTimeout();
         /***** MQTT *****/
+        void loopMQTT();
         void processMessageFromMQTT(const char* topic, const char* payload,
                                     uint16_t length);
         /***** Data posting / publication *****/
@@ -100,12 +100,11 @@ class Conductor
         /***** Config from Host *****/
         MacAddress m_bleMAC;
         MacAddress m_wifiMAC;
-        bool m_useMQTT = true;
-        /***** Wifi connection and status *****/
-        bool m_radioOn = true;
-        uint32_t m_lastConnectionAttempt = 0;
-        uint32_t m_disconnectionTimerStart = 0;
-        uint8_t m_remainingConnectionAttempt = connectionRetry;
+        bool m_useMQTT;
+        uint32_t m_lastMQTTInfoRequest;
+        /***** Wifi connection *****/
+        uint32_t m_lastConnectionAttempt;
+        uint32_t m_disconnectionTimerStart;
         /***** WiFi credentials and config *****/
         MultiMessageValidator<2> m_credentialValidator;
         char m_userSSID[wifiCredentialLength];
@@ -115,22 +114,22 @@ class Conductor
         IPAddress m_gateway;
         IPAddress m_subnetMask;
         /***** Cyclic Update *****/
-        uint32_t m_lastWifiStatusUpdate = 0;
-        uint32_t m_lastWifiInfoPublication = 0;
+        uint32_t m_lastWifiStatusUpdate;
+        uint32_t m_lastWifiInfoPublication;
         /***** Settable parameters (addresses, credentials, etc) *****/
         MultiMessageValidator<2> m_mqttServerValidator;
-        IPAddress m_mqttServerIP = MQTT_DEFAULT_SERVER_IP;
-        uint16_t m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
+        IPAddress m_mqttServerIP;
+        uint16_t m_mqttServerPort;
         MultiMessageValidator<2> m_mqttCredentialsValidator;
-        char m_mqttUsername[MQTT_CREDENTIALS_MAX_LENGTH];
-        char m_mqttPassword[MQTT_CREDENTIALS_MAX_LENGTH];
+        char m_mqttUsername[IUMQTTHelper::credentialMaxLength];
+        char m_mqttPassword[IUMQTTHelper::credentialMaxLength];
         // HTTP Post endpoints
         char m_featurePostHost[MAX_HOST_LENGTH];
         char m_featurePostRoute[MAX_ROUTE_LENGTH];
-        uint16_t m_featurePostPort = DATA_DEFAULT_ENDPOINT_PORT;
+        uint16_t m_featurePostPort;
         char m_diagnosticPostHost[MAX_HOST_LENGTH];
         char m_diagnosticPostRoute[MAX_ROUTE_LENGTH];
-        uint16_t m_diagnosticPostPort = DATA_DEFAULT_ENDPOINT_PORT;
+        uint16_t m_diagnosticPostPort;
 
 };
 

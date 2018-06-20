@@ -15,8 +15,7 @@ IURawDataHelper accelRawDataHelper(10000,  // 10s timeout to input all keys
                                    RAW_DATA_DEFAULT_ENDPOINT_ROUTE,
                                    DATA_DEFAULT_ENDPOINT_PORT);
 
-IUMQTTHelper mqttHelper(MQTT_DEFAULT_SERVER_IP, MQTT_DEFAULT_SERVER_PORT,
-                        MQTT_DEFAULT_USERNAME, MQTT_DEFAULT_ASSWORD);
+IUMQTTHelper mqttHelper = IUMQTTHelper();
 
 IUTimeHelper timeHelper(2390, "time.google.com");
 
@@ -25,7 +24,17 @@ IUTimeHelper timeHelper(2390, "time.google.com");
     Conductor
 ============================================================================= */
 
-Conductor::Conductor()
+Conductor::Conductor() :
+    m_useMQTT(true),
+    m_lastMQTTInfoRequest(0),
+    m_lastConnectionAttempt(0),
+    m_disconnectionTimerStart(0),
+    m_lastWifiStatusUpdate(0),
+    m_lastWifiInfoPublication(0),
+    m_mqttServerIP(IPAddress()),
+    m_mqttServerPort(IPAddress()),
+    m_featurePostPort(DATA_DEFAULT_ENDPOINT_PORT),
+    m_diagnosticPostPort(DATA_DEFAULT_ENDPOINT_PORT)
 {
     m_credentialValidator.setTimeout(wifiConfigReceptionTimeout);
     m_staticConfigValidator.setTimeout(wifiConfigReceptionTimeout);
@@ -67,7 +76,7 @@ void Conductor::deepsleep(uint32_t duration_ms)
     }
     hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_DISCONNECTED);
     hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_SLEEPING);
-    delay(100); // Wait to send serial messages
+    delay(100); // Wait for serial messages to be sent
     ESP.deepSleep(duration_ms * 1000);
 }
 
@@ -128,14 +137,9 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             ESP.reset();
             break;
         case MSPCommand::WIFI_CONNECT:
-            if (m_credentialValidator.completed()) {
-                // Reset disconnection timer
-                m_disconnectionTimerStart = millis();
-                reconnect();
-            } else {
-                iuSerial->sendMSPCommand(
-                    MSPCommand::WIFI_ALERT_NO_SAVED_CREDENTIALS);
-            }
+            // Reset disconnection timer
+            m_disconnectionTimerStart = millis();
+            reconnect();
             break;
         case MSPCommand::WIFI_DISCONNECT:
             disconnectWifi();
@@ -143,8 +147,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
 
         /***** Data publication *****/
         case MSPCommand::PUBLISH_RAW_DATA:
-            if (accelRawDataHelper.inputHasTimedOut())
-            {
+            if (accelRawDataHelper.inputHasTimedOut()) {
                 accelRawDataHelper.resetPayload();
             }
             accelRawDataHelper.addKeyValuePair(buffer[0], &buffer[2],
@@ -190,53 +193,45 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             break;
         case MSPCommand::SET_RAW_DATA_ENDPOINT_PORT:
             accelRawDataHelper.setEndpointPort(
-                (uint16_t) strtol(buffer, NULL, 0));
+                uint16_t(strtol(buffer, NULL, 0)));
             break;
         case MSPCommand::SET_MQTT_SERVER_IP:
-            if (m_mqttServerValidator.hasTimedOut())
-            {
+            if (m_mqttServerValidator.hasTimedOut()) {
                 m_mqttServerValidator.reset();
             }
             m_mqttServerIP = iuSerial->mspReadIPAddress();
             m_mqttServerValidator.receivedMessage(0);
-            if (m_mqttServerValidator.completed())
-            {
+            if (m_mqttServerValidator.completed()) {
                 mqttHelper.setServer(m_mqttServerIP, m_mqttServerPort);
             }
             break;
         case MSPCommand::SET_MQTT_SERVER_PORT:
-            if (m_mqttServerValidator.hasTimedOut())
-            {
+            if (m_mqttServerValidator.hasTimedOut()) {
                 m_mqttServerValidator.reset();
             }
-            m_mqttServerPort = (uint16_t) strtol(buffer, NULL, 0);
+            m_mqttServerPort = uint16_t(strtol(buffer, NULL, 0));
             m_mqttServerValidator.receivedMessage(1);
-            if (m_mqttServerValidator.completed())
-            {
+            if (m_mqttServerValidator.completed()) {
                 mqttHelper.setServer(m_mqttServerIP, m_mqttServerPort);
             }
             break;
         case MSPCommand::SET_MQTT_USERNAME:
-            if (m_mqttCredentialsValidator.hasTimedOut())
-            {
+            if (m_mqttCredentialsValidator.hasTimedOut()) {
                 m_mqttCredentialsValidator.reset();
             }
-            strncpy(m_mqttUsername, buffer, MQTT_CREDENTIALS_MAX_LENGTH);
+            strncpy(m_mqttUsername, buffer, IUMQTTHelper::credentialMaxLength);
             m_mqttCredentialsValidator.receivedMessage(0);
-            if (m_mqttCredentialsValidator.completed())
-            {
+            if (m_mqttCredentialsValidator.completed()) {
                 mqttHelper.setCredentials(m_mqttUsername, m_mqttPassword);
             }
             break;
         case MSPCommand::SET_MQTT_PASSWORD:
-            if (m_mqttCredentialsValidator.hasTimedOut())
-            {
+            if (m_mqttCredentialsValidator.hasTimedOut()) {
                 m_mqttCredentialsValidator.reset();
             }
-            strncpy(m_mqttPassword, buffer, MQTT_CREDENTIALS_MAX_LENGTH);
+            strncpy(m_mqttPassword, buffer, IUMQTTHelper::credentialMaxLength);
             m_mqttCredentialsValidator.receivedMessage(1);
-            if (m_mqttCredentialsValidator.completed())
-            {
+            if (m_mqttCredentialsValidator.completed()) {
                 mqttHelper.setCredentials(m_mqttUsername, m_mqttPassword);
             }
             break;
@@ -372,6 +367,8 @@ bool Conductor::getConfigFromMainBoard()
             deepsleep();
         }
         hostSerial.sendMSPCommand(MSPCommand::ASK_BLE_MAC);
+        hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);
+        m_lastMQTTInfoRequest = current;
         delay(100);
         hostSerial.readMessages();
         current = millis();
@@ -383,37 +380,6 @@ bool Conductor::getConfigFromMainBoard()
 /* =============================================================================
     Wifi connection and status
 ============================================================================= */
-
-/**
- * Turn off the WiFi radio for the given duration (in micro-seconds)
- *
- * @param duration_us The duration for which the WiFi radio should be turned
- *  off. If duration_us = 0, WiFi radio will be turned off indefinitely.
- */
-void Conductor::turnOffRadio(uint32_t duration_us)
-{
-    if (m_radioOn)
-    {
-        m_radioOn = false;
-        disconnectWifi();  // Make sure WiFi is disconnected
-        WiFi.mode(WIFI_OFF);
-        WiFi.forceSleepBegin(duration_us);
-        yield();  // better than delay(1); ?
-    }
-}
-
-/**
- * Turn off the WiFi radio for the given duration (in micro-seconds)
- */
-void Conductor::turnOnRadio()
-{
-    if (!m_radioOn)
-    {
-        m_radioOn = true;
-        WiFi.forceSleepWake();
-        yield();  // better than delay(1); ?
-    }
-}
 
 /**
  * Disconnect the clients and the WiFi
@@ -477,51 +443,34 @@ bool Conductor::reconnect(bool forceNewCredentials)
     uint32_t current = millis();
     // Connect the WiFi if not connected
     bool wifiConnected = WiFi.isConnected();
-    if (!wifiConnected)
-    {
-        if (current - m_lastConnectionAttempt < reconnectionInterval)
-        {
-            if (debugMode)
-            {
+    if (!wifiConnected) {
+        if (current - m_lastConnectionAttempt < reconnectionInterval) {
+            if (debugMode) {
                 debugPrint("Not enough time since last connection attempt");
             }
             return false;
         }
-        if (m_remainingConnectionAttempt <= 0)
-        {
-            if (debugMode)
-            {
-                debugPrint("No remaining connection attempt");
-            }
-            return false;
-        }
-        if (!m_credentialValidator.completed())
-        {
-            if (debugMode)
-            {
+        if (!m_credentialValidator.completed()) {
+            if (debugMode) {
                 debugPrint("Can't connect without credentials");
             }
             return false;
         }
-        if (!((uint32_t) m_staticIp == 0 ||
-              (uint32_t) m_gateway == 0 ||
-              (uint32_t) m_subnetMask == 0))
+        if (uint32_t(m_staticIp) > 0 && uint32_t(m_gateway) > 0 &&
+            uint32_t(m_subnetMask) > 0)
         {
             WiFi.config(m_staticIp, m_gateway, m_subnetMask);
         }
         WiFi.begin(m_userSSID, m_userPassword);
         m_lastConnectionAttempt = current;
-        m_remainingConnectionAttempt--;
         wifiConnected = (waitForConnectResult() == WL_CONNECTED);
-        if (debugMode && wifiConnected)
-        {
+        if (debugMode && wifiConnected) {
             debugPrint("Connected to ", false);
             debugPrint(WiFi.SSID());
         }
     }
     // Set light sleep mode if not done
-    if (wifiConnected && WiFi.getSleepMode() != WIFI_LIGHT_SLEEP)
-    {
+    if (wifiConnected && WiFi.getSleepMode() != WIFI_LIGHT_SLEEP) {
         WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
     }
     return wifiConnected;
@@ -587,6 +536,29 @@ void Conductor::checkWiFiDisconnectionTimeout()
 /* =============================================================================
     MQTT
 ============================================================================= */
+
+/**
+ * Main MQTT processing function - should called in main loop.
+ *
+ * Handles the reconnection to he MQTT server if needed and the publications.
+ * NB: Makes use of IUMQTT::reconnect function, which may block the execution.
+ */
+void Conductor::loopMQTT()
+{
+    if (mqttHelper.hasConnectionInformations()) {
+        if (!mqttHelper.client.connected())
+        {
+            mqttHelper.reconnect();
+        }
+        mqttHelper.client.loop();
+    } else {
+        uint32_t now = millis();
+        if (now - m_lastMQTTInfoRequest > mqttInfoRequestDelay) {
+            hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);
+            m_lastMQTTInfoRequest = now;
+        }
+    }
+}
 
 /**
  * Callback called when a new MQTT message is received from MQTT server.

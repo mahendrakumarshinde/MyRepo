@@ -79,8 +79,10 @@ class LedManager
         /***** Status management *****/
         void showStatus(StatusVisual *status);
         void setBaselineStatus(StatusVisual *status);
-        void overrideColor(RGBColor color);
         void resetStatus();
+        /***** Color override *****/
+        void overrideColor(RGBColor color);
+        void stopColorOverride();
 
     protected:
         /***** Core *****/
@@ -90,6 +92,8 @@ class LedManager
         RGBColor m_getOpStateColor();
         /***** Status management *****/
         StatusVisual *m_baselineStatus;
+        /***** Color override *****/
+        bool m_overriden = false;
         StatusVisual m_forceVisual;
 };
 
