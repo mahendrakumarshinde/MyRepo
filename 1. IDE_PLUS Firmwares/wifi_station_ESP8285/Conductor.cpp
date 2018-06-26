@@ -10,7 +10,7 @@ IUSerial hostSerial(&Serial, hostSerialBuffer, 4096, IUSerial::MS_PROTOCOL,
                     115200, ';', 100);
 
 IURawDataHelper accelRawDataHelper(10000,  // 10s timeout to input all keys
-                                   300000,  // 5min timeout to succefully post data
+                                   120000,  // 2min timeout to succefully post data
                                    DATA_DEFAULT_ENDPOINT_HOST,
                                    RAW_DATA_DEFAULT_ENDPOINT_ROUTE,
                                    DATA_DEFAULT_ENDPOINT_PORT);
@@ -389,13 +389,11 @@ void Conductor::disconnectWifi(bool wifiOff)
     /***** End NTP server connection *****/
     timeHelper.end();
     /***** Disconnect MQTT client *****/
-    if (mqttHelper.client.connected())
-    {
+    if (mqttHelper.client.connected()) {
         mqttHelper.client.disconnect();
     }
     /***** Turn off Wifi *****/
-    if (WiFi.isConnected())
-    {
+    if (WiFi.isConnected()) {
         WiFi.disconnect(wifiOff);
     }
 }
@@ -414,13 +412,11 @@ void Conductor::disconnectWifi(bool wifiOff)
 bool Conductor::reconnect(bool forceNewCredentials)
 {
     // Ensure that the WiFi is in STA mode (STA only, no AP)
-    if (WiFi.getMode() != WIFI_STA)
-    {
+    if (WiFi.getMode() != WIFI_STA) {
         WiFi.mode(WIFI_STA);
     }
     // Disconnect the WiFi if new credentials
-    if (forceNewCredentials)
-    {
+    if (forceNewCredentials) {
         String currentSSID = WiFi.SSID();
         String currentPW = WiFi.psk();
         if (currentSSID.length() == 0 ||
@@ -448,18 +444,16 @@ bool Conductor::reconnect(bool forceNewCredentials)
             }
             return false;
         }
-        if (!m_credentialValidator.completed()) {
-            if (debugMode) {
-                debugPrint("Can't connect without credentials");
-            }
-            return false;
-        }
         if (uint32_t(m_staticIp) > 0 && uint32_t(m_gateway) > 0 &&
             uint32_t(m_subnetMask) > 0)
         {
             WiFi.config(m_staticIp, m_gateway, m_subnetMask);
         }
-        WiFi.begin(m_userSSID, m_userPassword);
+        if (m_credentialValidator.completed()) {
+            WiFi.begin(m_userSSID, m_userPassword);
+        } else {
+            WiFi.begin();
+        }
         m_lastConnectionAttempt = current;
         wifiConnected = (waitForConnectResult() == WL_CONNECTED);
         if (debugMode && wifiConnected) {
