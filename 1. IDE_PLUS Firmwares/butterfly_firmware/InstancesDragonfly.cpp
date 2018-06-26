@@ -324,7 +324,7 @@ void setUpComputerSources()
 ============================================================================= */
 
 /***** Default feature group *****/
-FeatureGroup *DEFAULT_FEATURE_GROUP = &bearingZGroup; // &motorStandardGroup;
+FeatureGroup *DEFAULT_FEATURE_GROUP = &motorStandardGroup;
 
 /***** Instantiation *****/
 // Health Check
