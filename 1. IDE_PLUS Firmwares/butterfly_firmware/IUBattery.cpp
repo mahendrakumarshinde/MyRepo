@@ -67,8 +67,8 @@ void IUBattery::setPowerMode(PowerMode::option pMode)
  */
 void IUBattery::readData()
 {
-    m_batteryLoad = (float) (analogRead(voltagePin)) / 40.95f;
+    // m_batteryLoad = (float) (analogRead(voltagePin)) / 40.95f;
+    m_batteryLoad = 100.0;
     m_vBattery = m_batteryLoad * maxVoltage / 100.0f;
-//    m_destinations[0]->addValue(m_batteryLoad);
-    m_destinations[0]->addValue(100.0);
+    m_destinations[0]->addValue(m_batteryLoad);
 }

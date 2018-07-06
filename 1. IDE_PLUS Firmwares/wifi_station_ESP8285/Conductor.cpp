@@ -152,8 +152,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             }
             accelRawDataHelper.addKeyValuePair(buffer[0], &buffer[2],
                                                strlen(buffer) - 2);
-            iuSerial->sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION, buffer,
-                                      1);
+            iuSerial->sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION, buffer, 1);
             accelRawDataHelper.publishIfReady(m_bleMAC);
             break;
         case MSPCommand::PUBLISH_FEATURE:

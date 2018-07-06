@@ -407,7 +407,7 @@ void populateFeatureGroups()
     ForgingDispGroup.addFeature(&dispRMS512X);
     ForgingDispGroup.addFeature(&dispRMS512Y);
     ForgingDispGroup.addFeature(&dispRMS512Z);
-    ForgingDispGroup.addFeature(&velRMS512Z);
+    ForgingDispGroup.addFeature(&temperature);
     ForgingDispGroup.addFeature(&audioDB4096);
 }
 

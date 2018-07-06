@@ -93,7 +93,7 @@ void loop()
     }
     conductor.updateWiFiStatusCycle();
     conductor.checkWiFiDisconnectionTimeout();
-    delay(5);  // Allow light sleep (but keep listening to serial)
+    delay(1);
 }
 
 

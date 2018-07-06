@@ -28,7 +28,7 @@ const char DEVICE_TYPE[DEVICE_TYPE_LENGTH] = "ide_plus";
     const IPAddress testStaticIP(0, 0, 0, 0);
     const IPAddress testGateway(0, 0, 0, 0);
     const IPAddress testSubnet(0, 0, 0, 0);
-    const char hostMacAddress[18] = "94:54:93:10:63:DE";
+    const char hostMacAddress[18] = "94:54:93:10:7C:0B";
 #endif  // IUDEBUG_ANY == 1
 
 

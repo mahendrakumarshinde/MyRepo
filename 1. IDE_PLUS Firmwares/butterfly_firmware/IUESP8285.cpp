@@ -17,6 +17,10 @@ IUESP8285::IUESP8285(HardwareSerial *serialPort, char *charBuffer,
 
 void IUESP8285::m_setConnectedStatus(bool status)
 {
+    if (!m_connected && status) {
+        // Reset last publication confirmation timer on establishing connection.
+        m_lastConfirmedPublication = millis();
+    }
     bool useCallbacks = (m_connected != status);
     m_connected = status;
     if (useCallbacks) {
@@ -537,10 +541,6 @@ bool IUESP8285::processChipMessage()
             if (loopDebugMode) { debugPrint("WIFI_ALERT_CONNECTED"); }
             m_awakeTimerStart = millis();
             m_lastConnectedStatusTime = m_awakeTimerStart;
-            if (!m_connected) {
-                // Reset last publication confirmation timer
-                m_lastConfirmedPublication = m_awakeTimerStart;
-            }
             m_setConnectedStatus(true);
             m_working = false;
             break;
