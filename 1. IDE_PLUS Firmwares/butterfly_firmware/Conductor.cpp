@@ -437,7 +437,6 @@ void Conductor::processCommand(char *buff)
                 sendAccelRawData(0);  // Axis X
                 sendAccelRawData(1);  // Axis Y
                 sendAccelRawData(2);  // Axis Z
-                resetDataAcquisition();
             }
             break;
         default:
@@ -680,14 +679,6 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
         updateStreamingMode();
     }
     switch (iuWiFi.getMspCommand()) {
-        // MSP Status messages
-        case MSPCommand::MSP_INVALID_CHECKSUM:
-            if (loopDebugMode) { debugPrint(F("MSP_INVALID_CHECKSUM")); }
-            break;
-        case MSPCommand::MSP_TOO_LONG:
-            if (loopDebugMode) { debugPrint(F("MSP_TOO_LONG")); }
-            break;
-
         case MSPCommand::ASK_BLE_MAC:
             if (loopDebugMode) { debugPrint(F("ASK_BLE_MAC")); }
             iuWiFi.sendBleMacAddress(m_macAddress);
@@ -878,7 +869,6 @@ void Conductor::configureGroupsForOperation()
     if (!configureFromFlash(IUFlash::CFG_DEVICE)) {
         // Config not found, default to mainFeatureGroup
         deactivateAllGroups();
-        resetDataAcquisition();
         activateGroup(m_mainFeatureGroup);
     }
     changeMainFeatureGroup(m_mainFeatureGroup);
@@ -916,7 +906,6 @@ void Conductor::configureGroupsForOperation()
 void Conductor::configureGroupsForCalibration()
 {
     deactivateAllGroups();
-    resetDataAcquisition();
     activateGroup(&calibrationGroup);
     // TODO: The following should be written in flash or sent from cloud
     // RMS computer: remove mean
@@ -1334,7 +1323,8 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
     if (accelEnergy == NULL) {
         return;
     }
-    if (m_streamingMode == StreamingMode::BLE) {
+    if (m_streamingMode == StreamingMode::BLE)
+    {
         iuBluetooth.write("REC,");
         iuBluetooth.write(m_macAddress.toString().c_str());
         iuBluetooth.write(',');
@@ -1354,7 +1344,7 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
         uint16_t idx = 1;
         idx += accelEnergy->sendToBuffer(txBuffer, idx, 4);
         txBuffer[idx] = 0; // Terminate string (idx incremented in sendToBuffer)
-        iuWiFi.sendLongMSPCommand(MSPCommand::PUBLISH_RAW_DATA, 100000000, txBuffer, strlen(txBuffer));
+        iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_RAW_DATA, txBuffer);
         delay(10);
     }
 }

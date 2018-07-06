@@ -75,6 +75,7 @@ class Conductor
         void disconnectWifi(bool wifiOff=true);
         bool reconnect(bool forceNewCredentials=false);
         uint8_t waitForConnectResult();
+        void checkWiFiDisconnectionTimeout();
         /***** MQTT *****/
         void loopMQTT();
         void processMessageFromMQTT(const char* topic, const char* payload,

@@ -152,7 +152,9 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             }
             accelRawDataHelper.addKeyValuePair(buffer[0], &buffer[2],
                                                strlen(buffer) - 2);
-            iuSerial->sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION, buffer, 1);
+            iuSerial->sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION, buffer,
+                                      1);
+            accelRawDataHelper.publishIfReady(m_bleMAC);
             break;
         case MSPCommand::PUBLISH_FEATURE:
             if (publishFeature(&buffer[7], bufferLength - 7, buffer, 6)) {
@@ -501,6 +503,26 @@ uint8_t Conductor::waitForConnectResult()
             debugPrint("WiFi connection time-out");
         }
         return status;
+    }
+}
+
+/**
+ *
+ */
+void Conductor::checkWiFiDisconnectionTimeout()
+{
+    uint32_t now = millis();
+    if (WiFi.isConnected() && mqttHelper.client.connected())
+    {
+        m_disconnectionTimerStart = now;
+    }
+    else if (now - m_disconnectionTimerStart > disconnectionTimeout)
+    {
+        if (debugMode)
+        {
+            debugPrint("Exceeded disconnection time-out");
+        }
+        ESP.reset();
     }
 }
 

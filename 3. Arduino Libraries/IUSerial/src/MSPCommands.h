@@ -8,8 +8,6 @@ namespace MSPCommand
     {
         /***** Generic codes *****/
         NONE,  // 0: No command
-        MSP_INVALID_CHECKSUM, // 1: Invalid checksum
-        MSP_TOO_LONG, // 2: Received message is too long (doesn't fit in RX buffer)
 
         /***** Logging commands *****/
         SEND_LOG_MSG,

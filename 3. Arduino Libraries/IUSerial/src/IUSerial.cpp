@@ -217,11 +217,10 @@ bool IUSerial::readCharMsp()
             if (m_mspDataSize > m_bufferSize)
             {
                 m_mspState = MSP_IDLE;
-                sendMSPCommand(MSPCommand::MSP_TOO_LONG);
                 if (debugMode)
                 {
-                    debugPrint("MSP command asks to receive too long a msg: ",
-                               false);
+                    debugPrint("MSP command asks to receive too"
+                                 " long a msg: ", false);
                     debugPrint(m_mspDataSize);
                 }
             }
@@ -261,7 +260,6 @@ bool IUSerial::readCharMsp()
                     {
                         debugPrint("Invalid MSP checksum");
                     }
-                    sendMSPCommand(MSPCommand::MSP_INVALID_CHECKSUM);
                     resetBuffer();
                 }
                 m_mspState = MSP_IDLE;
