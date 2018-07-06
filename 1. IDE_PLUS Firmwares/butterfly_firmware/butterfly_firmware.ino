@@ -377,6 +377,7 @@ void loop()
         }
         // Manage power saving
         conductor.manageSleepCycles();
+        iuWiFi.manageAutoSleep();
         // Receive messages & configurations
         iuUSB.readMessages();
         iuBluetooth.readMessages();

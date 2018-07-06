@@ -17,10 +17,6 @@ IUESP8285::IUESP8285(HardwareSerial *serialPort, char *charBuffer,
 
 void IUESP8285::m_setConnectedStatus(bool status)
 {
-    if (!m_connected && status) {
-        // Reset last publication confirmation timer on establishing connection.
-        m_lastConfirmedPublication = m_awakeTimerStart;
-    }
     bool useCallbacks = (m_connected != status);
     m_connected = status;
     if (useCallbacks) {
@@ -82,10 +78,13 @@ void IUESP8285::turnOn(bool forceTimerReset)
         m_on = true;
         m_awakeTimerStart = millis();
         sendWiFiCredentials();
-        if (loopDebugMode) {
+        if (loopDebugMode)
+        {
             debugPrint("Wifi turned on");
         }
-    } else if (forceTimerReset) {
+    }
+    else if (forceTimerReset)
+    {
         m_awakeTimerStart = millis();
     }
 }
@@ -101,7 +100,8 @@ void IUESP8285::turnOff()
         digitalWrite(ESP8285_ENABLE_PIN, LOW);
         m_on = false;
         m_sleepTimerStart = millis();  // Reset auto-sleep start timer
-        if (loopDebugMode) {
+        if (loopDebugMode)
+        {
             debugPrint("Wifi turned off");
         }
     }
@@ -147,18 +147,24 @@ void IUESP8285::manageAutoSleep(bool wakeUpNow)
         case PowerMode::REGULAR:
         case PowerMode::LOW_1:
         case PowerMode::LOW_2:
-            if (m_connected || wakeUpNow) {
+            if (m_connected || wakeUpNow)
+            {
                 turnOn(true);
-            } else if (!m_on && now - m_sleepTimerStart > m_autoSleepDuration) {
-                // Not connected, sleeping but need to wake up
+            }
+            // Not connected, sleeping but need to wake up
+            else if (!m_on && now - m_sleepTimerStart > m_autoSleepDuration)
+            {
                 turnOn();
                 debugPrint("Slept for ", false);
                 debugPrint(now - m_sleepTimerStart, false);
                 debugPrint("ms");
-            } else if (m_on && now - m_awakeTimerStart > m_autoSleepDelay) {
-                // Not connected, not sleeping yet, but need to go to sleep
+            }
+            // Not connected, not sleeping yet, but need to go to sleep
+            else if (m_on && now - m_awakeTimerStart > m_autoSleepDelay)
+            {
                 turnOff();
-                if (loopDebugMode) {
+                if (loopDebugMode)
+                {
                     debugPrint("Reason: exceeded disconnection timeout (", false);
                     debugPrint(m_autoSleepDelay, false);
                     debugPrint("ms)");
@@ -171,7 +177,8 @@ void IUESP8285::manageAutoSleep(bool wakeUpNow)
             turnOff();
             break;
         default:
-            if (debugMode) {
+            if (debugMode)
+            {
                 debugPrint(F("Unhandled power Mode "), false);
                 debugPrint(m_powerMode);
             }
@@ -530,6 +537,10 @@ bool IUESP8285::processChipMessage()
             if (loopDebugMode) { debugPrint("WIFI_ALERT_CONNECTED"); }
             m_awakeTimerStart = millis();
             m_lastConnectedStatusTime = m_awakeTimerStart;
+            if (!m_connected) {
+                // Reset last publication confirmation timer
+                m_lastConfirmedPublication = m_awakeTimerStart;
+            }
             m_setConnectedStatus(true);
             m_working = false;
             break;
@@ -578,7 +589,8 @@ bool IUESP8285::processChipMessage()
  */
 void IUESP8285::sendWiFiCredentials()
 {
-    if (m_credentialValidator.completed() && !m_credentialSent) {
+    if (m_credentialValidator.completed() && !m_credentialSent)
+    {
         sendMSPCommand(MSPCommand::WIFI_RECEIVE_SSID, m_ssid);
         sendMSPCommand(MSPCommand::WIFI_RECEIVE_PASSWORD, m_psk);
         m_credentialSent = true;
@@ -603,7 +615,8 @@ void IUESP8285::forgetCredentials()
  */
 void IUESP8285::sendStaticConfig()
 {
-    if (m_staticConfigValidator.completed() && !m_staticConfigSent) {
+    if (m_staticConfigValidator.completed() && !m_staticConfigSent)
+    {
         mspSendIPAddress(MSPCommand::WIFI_RECEIVE_STATIC_IP, m_staticIP);
         mspSendIPAddress(MSPCommand::WIFI_RECEIVE_GATEWAY, m_staticGateway);
         mspSendIPAddress(MSPCommand::WIFI_RECEIVE_SUBNET, m_staticSubnet);

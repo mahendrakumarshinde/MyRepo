@@ -459,9 +459,6 @@ void Conductor::processUserCommandForWiFi(char *buff,
     } else if (strcmp(buff, "WIFI-DISABLE") == 0) {
         iuWiFi.setPowerMode(PowerMode::DEEP_SLEEP);
         updateStreamingMode();
-        if (isBLEConnected()) {
-            iuBluetooth.write("WIFI-DISCONNECTED;");
-        }
     } else {
         iuWiFi.setPowerMode(PowerMode::REGULAR);
         // We want the WiFi to do something, so need to make sure it's available
@@ -1354,14 +1351,12 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
  */
 void Conductor::periodicSendAccelRawData()
 {
-    if (m_mainFeatureGroup == &motorStandardGroup) {
-        uint32_t now = millis();
-        if (now - m_rawDataPublicationStart > m_rawDataPublicationTimer) {
-            sendAccelRawData(0);
-            sendAccelRawData(1);
-            sendAccelRawData(2);
-            m_rawDataPublicationStart = now;
-        }
+    uint32_t now = millis();
+    if (now - m_rawDataPublicationStart > m_rawDataPublicationTimer) {
+        sendAccelRawData(0);
+        sendAccelRawData(1);
+        sendAccelRawData(2);
+        m_rawDataPublicationStart = now;
     }
 }
 
