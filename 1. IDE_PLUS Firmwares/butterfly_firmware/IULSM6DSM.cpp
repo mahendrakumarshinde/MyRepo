@@ -330,11 +330,12 @@ void IULSM6DSM::readData()
 */
 void IULSM6DSM::processData()
 {
-    if (!newLSM6DSMAccelData)
-    {
+    if (!newLSM6DSMAccelData) {
         return;
     }
-    m_temperature = float(((int16_t)m_rawBytes[1] << 8) | m_rawBytes[0]) / 256.0 + 25.0;
+    if (m_rawBytes[1] < 256) {  // Catch temperature sensor saturation that sometimes happen
+        m_temperature = float(((int16_t)m_rawBytes[1] << 8) | m_rawBytes[0]) / 256.0 + 25.0;
+    }
     m_rawGyroData[0] = ((int16_t)m_rawBytes[3] << 8) | m_rawBytes[2];
     m_rawGyroData[1] = ((int16_t)m_rawBytes[5] << 8) | m_rawBytes[4];
     m_rawGyroData[2] = ((int16_t)m_rawBytes[7] << 8) | m_rawBytes[6];
