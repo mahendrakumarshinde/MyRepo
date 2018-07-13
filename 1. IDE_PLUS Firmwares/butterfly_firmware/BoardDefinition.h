@@ -37,7 +37,8 @@ const char DEVICE_TYPE[DEVICE_TYPE_LENGTH] = "ide_plus";
 //#define RTD_DAUGHTER_BOARD
 
 /***** GPS Options *****/
-#define NO_GPS
+//#define WITH_CAM_M8Q
+//#define WITH_MAX_M8Q
 
 /* =============================================================================
     Library versionning

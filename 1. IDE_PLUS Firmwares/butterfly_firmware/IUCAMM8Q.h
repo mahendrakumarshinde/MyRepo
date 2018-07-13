@@ -24,7 +24,7 @@ class IUCAMM8Q : public LowFreqSensor
         static const uint32_t defaultPeriod = 1000;
         static const bool defaultForcedMode = true;
         /***** Constructor and destructor *****/
-        IUCAMM8Q(Uart *serial, const char* name);
+        IUCAMM8Q(Uart *serial, const char* name, int enablePin=-1);
         virtual ~IUCAMM8Q() {}
         /***** Hardware & power management *****/
         virtual void setupHardware();
@@ -46,6 +46,7 @@ class IUCAMM8Q : public LowFreqSensor
         /***** Core *****/
         Uart *m_serial;
         /***** Configuration and calibration *****/
+        int m_enablePin;
         uint32_t m_onTime;
         uint32_t m_period;
         bool m_forcedMode;

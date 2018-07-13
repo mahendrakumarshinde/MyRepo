@@ -188,9 +188,10 @@ IUBMX055Acc iuAccelerometer(&iuI2C, "ACC", &accelerationX, &accelerationY,
 IUBMX055Gyro iuGyroscope(&iuI2C, "GYR", &tiltX, &tiltY, &tiltZ);
 IUBMX055Mag iuMagnetometer(&iuI2C, "MAG", &magneticX, &magneticY, &magneticZ);
 
-#ifdef NO_GPS
-#else
-    IUCAMM8Q iuGNSS(&Serial2, "GPS");
+#ifdef WITH_CAM_M8Q
+    IUCAMM8Q iuGNSS(&Serial2, "GPS", -1);
+#elif defined(WITH_MAX_M8Q)
+    IUCAMM8Q iuGNSS(&Serial2, "GPS", 10);
 #endif
 
 #ifdef BUTTERFLY_V04

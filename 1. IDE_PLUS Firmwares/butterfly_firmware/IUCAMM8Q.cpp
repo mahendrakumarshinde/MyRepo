@@ -5,9 +5,10 @@
     Constructors and destructors
 ============================================================================= */
 
-IUCAMM8Q::IUCAMM8Q(Uart *serial, const char* name) :
+IUCAMM8Q::IUCAMM8Q(Uart *serial, const char* name, int enablePin) :
     LowFreqSensor(name, 0),
     m_serial(serial),
+    m_enablePin(enablePin),
     m_onTime(defaultOnTime),
     m_period(defaultPeriod),
     m_forcedMode(defaultForcedMode)
@@ -24,6 +25,11 @@ IUCAMM8Q::IUCAMM8Q(Uart *serial, const char* name) :
  */
 void IUCAMM8Q::setupHardware()
 {
+    if (m_enablePin >= 0) {
+        pinMode(m_enablePin, OUTPUT);
+        digitalWrite(m_enablePin, HIGH);
+        delay(1000);
+    }
     // Start GNSS
     GNSS.begin(*m_serial, GNSS.MODE_UBLOX, GNSS.RATE_1HZ);
     while (!GNSS.done()) { }

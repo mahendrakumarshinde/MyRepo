@@ -214,8 +214,7 @@ extern IUMAX31865 iuRTDSensorB;
 
 extern IULSM6DSM iuAccelerometer;
 
-#ifdef NO_GPS
-#else
+#if defined(WITH_CAM_M8Q) || defined(WITH_MAX_M8Q)
     extern IUCAMM8Q iuGNSS;
 #endif
 

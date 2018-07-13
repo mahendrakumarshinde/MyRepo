@@ -215,8 +215,7 @@ extern IUBMX055Acc iuAccelerometer;
 extern IUBMX055Gyro iuGyroscope;
 extern IUBMX055Mag iuMagnetometer;
 
-#ifdef NO_GPS
-#else
+#if defined(WITH_CAM_M8Q) || defined(WITH_MAX_M8Q)
     extern IUCAMM8Q iuGNSS;
 #endif
 

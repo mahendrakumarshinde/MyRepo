@@ -197,9 +197,10 @@ IULSM6DSM iuAccelerometer(&iuI2C, "ACC", &accelerationX, &accelerationY,
                           &accelerationZ, &tiltX, &tiltY, &tiltZ,
                           &temperature);
 
-#ifdef NO_GPS
-#else
-    IUCAMM8Q iuGNSS(&Serial2, "GPS");
+#ifdef WITH_CAM_M8Q
+    IUCAMM8Q iuGNSS(&Serial2, "GPS", -1);
+#elif defined(WITH_MAX_M8Q)
+    IUCAMM8Q iuGNSS(&Serial2, "GPS", 10);
 #endif
 
 IUICS43432 iuI2S(&I2S, "MIC", &audio);
