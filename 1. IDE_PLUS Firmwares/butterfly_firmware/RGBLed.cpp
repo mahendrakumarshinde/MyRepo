@@ -134,7 +134,7 @@ void RGBLed::insertColor(uint8_t index, RGBColor color, uint32_t fadeInTimer,
 }
 
 
-/***** Color transition *****/
+/***** Show colors *****/
 
 /**
  * Manage the color display, with timers and transitions (fade-in / fade-out).
@@ -243,24 +243,13 @@ void GPIORGBLed::updateColors()
 
 /***** Constructors & desctructors *****/
 
-SPIRGBLed::SPIRGBLed(SPIClass *spiPtr, uint8_t csPin, SPISettings settings) :
+APA102RGBLedStrip::APA102RGBLedStrip(uint8_t ledCount) :
     RGBLed(),
-    m_SPI(spiPtr),
-    m_csPin(csPin),
-    m_spiSettings(settings)
+    m_ledStrip(),
+    m_ledCount(ledCount)
 {
 }
 
-
-/***** Hardware & power management *****/
-
-/**
- * Set up the LED pins.
- */
-void SPIRGBLed::setup()
-{
-    //TODO Implement
-}
 
 
 /***** Show colors *****/
@@ -268,7 +257,16 @@ void SPIRGBLed::setup()
 /**
  * Send intensity and RGB value to LED
  */
-void SPIRGBLed::updateColors()
+void APA102RGBLedStrip::manageColorTransitions()
 {
-    //TODO Implement
+    RGBLed::manageColorTransitions();
+    uint8_t brightness5Bit = (float(m_intensityPercent) / 100.0 * 32);
+    m_ledStrip.startFrame();
+    for (uint8_t i = 0; i < m_ledCount; i++) {
+        m_ledStrip.sendColor(m_rgbValues[0], m_rgbValues[1], m_rgbValues[2],
+                             brightness5Bit);
+    }
+    m_ledStrip.endFrame(m_ledCount);
 }
+
+

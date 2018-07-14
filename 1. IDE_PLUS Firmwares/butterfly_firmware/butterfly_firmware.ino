@@ -129,6 +129,9 @@ static armv7m_timer_t ledTransitionTimer;
 
 static void ledTransitionCallback(void) {
     rgbLed.manageColorTransitions();
+    #ifdef USE_LED_STRIP
+        rgbLedStrip.manageColorTransitions();
+    #endif
     armv7m_timer_start(&ledTransitionTimer, 10);
 }
 
@@ -248,9 +251,9 @@ void setup()
     ledManager.setBaselineStatus(&STATUS_NO_STATUS);
     ledManager.overrideColor(RGB_WHITE);
     armv7m_timer_create(&ledShowTimer, (armv7m_timer_callback_t)ledShowCallback);
-    armv7m_timer_start(&ledShowTimer, 1);
+    armv7m_timer_start(&ledShowTimer, 20);
     armv7m_timer_create(&ledTransitionTimer, (armv7m_timer_callback_t)ledTransitionCallback);
-    armv7m_timer_start(&ledTransitionTimer, 10);
+    armv7m_timer_start(&ledTransitionTimer, 100);
     #if defined(UNITTEST) || defined(COMPONENTTEST) || defined(INTEGRATEDTEST)
         delay(2000);
         iuI2C.begin();

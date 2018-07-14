@@ -51,6 +51,10 @@
 
 extern GPIORGBLed rgbLed;
 
+#ifdef USE_LED_STRIP
+    extern APA102RGBLedStrip rgbLedStrip;
+#endif
+
 extern LedManager ledManager;
 
 extern char iuUSBBuffer[20];

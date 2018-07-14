@@ -30,6 +30,8 @@ const char DEVICE_TYPE[DEVICE_TYPE_LENGTH] = "ide_plus";
 //#define BUTTERFLY_V04
 #define DRAGONFLY_V03
 
+#define USE_LED_STRIP
+
 /***** WiFi Options *****/
 //#define USE_EXTERNAL_WIFI
 

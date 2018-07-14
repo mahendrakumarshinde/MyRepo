@@ -70,8 +70,10 @@ class LedManager
     public:
         /***** Preset values and default settings *****/
         static const uint8_t maxFeatureCount = 6;
+        static const uint8_t LED_STRIP_DATA_PIN = 11;
+        static const uint8_t LED_STRIP_CLOCK_PIN = 12;
         /***** Core *****/
-        LedManager(RGBLed *led);
+        LedManager(RGBLed *led, RGBLed *ledStrip=NULL);
         virtual ~LedManager() {}
         /***** Operation state *****/
         void showOperationState(uint8_t state);
@@ -87,6 +89,7 @@ class LedManager
     protected:
         /***** Core *****/
         RGBLed *m_led;
+        RGBLed *m_ledStrip;
         /***** Operation state management *****/
         uint8_t m_operationState = OperationState::IDLE;
         RGBColor m_getOpStateColor();

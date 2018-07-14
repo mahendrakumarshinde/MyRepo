@@ -2,7 +2,7 @@
 #define RGBLED_H
 
 #include <Arduino.h>
-#include <SPI.h>
+#include <APA102.h>
 
 #include <IUDebugger.h>
 
@@ -83,7 +83,7 @@ class RGBLed
         virtual void lockColors() { m_lockedColors = true; }
         virtual void unlockColors() { m_lockedColors = false; }
         virtual bool lockedColors() { return m_lockedColors; };
-        /***** Color transition *****/
+        /***** Show colors *****/
         virtual void manageColorTransitions();
 
     protected:
@@ -128,24 +128,26 @@ class GPIORGBLed : public RGBLed
 
 
 /**
- * SPI RGB Led
+ * APA102 RGB Led strip
  */
-class SPIRGBLed : public RGBLed
+class APA102RGBLedStrip : public RGBLed
 {
     public:
+        /***** Preset values and default settings *****/
+        static const uint8_t DATA_PIN = 11;
+        static const uint8_t CLOCK_PIN = 12;
         /***** Constructors & desctructors *****/
-        SPIRGBLed(SPIClass *spiPtr, uint8_t csPin, SPISettings settings);
-        virtual ~SPIRGBLed() {}
+        APA102RGBLedStrip(uint8_t ledCount);
+        virtual ~APA102RGBLedStrip() {}
         /***** Hardware and power management *****/
-        virtual void setup();
+        virtual void setup() {}
         /***** Show colors *****/
-        void updateColors();
+        virtual void manageColorTransitions();
 
     private:
         /***** SPI settings *****/
-        SPIClass *m_SPI;
-        uint8_t m_csPin;
-        SPISettings m_spiSettings;
+        uint8_t m_ledCount;
+        APA102<DATA_PIN, CLOCK_PIN> m_ledStrip;
 };
 
 #endif // RGBLED_H

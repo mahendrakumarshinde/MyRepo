@@ -8,7 +8,12 @@
 
 GPIORGBLed rgbLed(25, 26, 38);
 
-LedManager ledManager(&rgbLed);
+#ifdef USE_LED_STRIP
+    APA102RGBLedStrip rgbLedStrip(16);
+    LedManager ledManager(&rgbLed, &rgbLedStrip);
+#else
+    LedManager ledManager(&rgbLed);
+#endif
 
 char iuUSBBuffer[20] = "";
 IUUSB iuUSB(&Serial, iuUSBBuffer, 20, IUSerial::CUSTOM_PROTOCOL, 115200,
