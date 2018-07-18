@@ -19,7 +19,8 @@ FeatureComputer::FeatureComputer(uint8_t id, uint8_t destinationCount,
     m_id(id),
     m_active(false),
     m_sourceCount(0),
-    m_destinationCount(destinationCount)
+    m_destinationCount(destinationCount),
+    m_computeLast(false)
 {
     m_destinations[0] = destination0;
     m_destinations[1] = destination1;
@@ -116,7 +117,8 @@ bool FeatureComputer::compute()
     // Check if sources are ready
     for (uint8_t i = 0; i < m_sourceCount; ++i)
     {
-        if(!m_sources[i]->isReadyToCompute(this, m_sectionCount[i]))
+        if(!m_sources[i]->isReadyToCompute(this, m_sectionCount[i],
+                                           m_computeLast))
         {
             return false;
         }
@@ -617,6 +619,7 @@ Q15FFTComputer::Q15FFTComputer(uint8_t id,
     m_calibrationScaling2(calibrationScaling2)
 {
     m_allocatedFFTSpace = allocatedFFTSpace;
+    m_computeLast = true;
 }
 
 /**

@@ -136,9 +136,11 @@ class Feature
         // Tracking the buffer state
         virtual bool isReadyToRecord(uint8_t sectionCount=1);
         virtual bool isReadyToCompute(uint8_t receiverIdx,
-                                      uint8_t sectionCount);
+                                      uint8_t sectionCount,
+                                       bool computeLast=false);
         virtual bool isReadyToCompute(FeatureComputer *receiver,
-                                      uint8_t sectionCount=1);
+                                      uint8_t sectionCount=1,
+                                      bool computeLast=false);
         virtual void acknowledge(uint8_t receiverIdx,
                                  uint8_t sectionCount=1);
         virtual void acknowledge(FeatureComputer *receiver,

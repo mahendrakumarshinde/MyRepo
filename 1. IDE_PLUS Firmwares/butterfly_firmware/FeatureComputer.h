@@ -59,6 +59,7 @@ class FeatureComputer
         uint8_t m_destinationCount;
         Feature *m_destinations[maxDestinationCount];
         /***** Computation *****/
+        bool m_computeLast;
         virtual void m_specializedCompute() {}
 };
 

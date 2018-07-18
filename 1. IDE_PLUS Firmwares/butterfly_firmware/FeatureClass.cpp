@@ -230,7 +230,8 @@ bool Feature::isReadyToRecord(uint8_t sectionCount)
  * Ready for computation means the sections must be not locked, fully recorded,
  * not yet received by this receiver.
  */
-bool Feature::isReadyToCompute(uint8_t receiverIdx, uint8_t sectionCount)
+bool Feature::isReadyToCompute(uint8_t receiverIdx, uint8_t sectionCount,
+                               bool computeLast)
 {
     uint8_t k;
     uint8_t idx = m_computeIndex[receiverIdx];
@@ -238,6 +239,13 @@ bool Feature::isReadyToCompute(uint8_t receiverIdx, uint8_t sectionCount)
         k = i % m_sectionCount;
         if (m_locked[k] || !m_published[k] || m_acknowledged[k][receiverIdx]) {
             return false;
+        }
+        if (computeLast) {
+            for (uint8_t j = 0; j < m_receiverCount; j++) {
+                if (j != receiverIdx && !m_acknowledged[k][j]) {
+                    return false;
+                }
+            }
         }
     }
     return true;
@@ -248,13 +256,14 @@ bool Feature::isReadyToCompute(uint8_t receiverIdx, uint8_t sectionCount)
  *
  * See Feature::isReadyToCompute(uint8_t receiverIdx, uint8_t sectionCount)
  */
-bool Feature::isReadyToCompute(FeatureComputer *receiver, uint8_t sectionCount)
+bool Feature::isReadyToCompute(FeatureComputer *receiver, uint8_t sectionCount,
+                               bool computeLast)
 {
     int idx = getReceiverIndex(receiver);
     if (idx < 0) {
         return false;
     } else {
-        return isReadyToCompute(uint8_t(idx), sectionCount);
+        return isReadyToCompute(uint8_t(idx), sectionCount, computeLast);
     }
 }
 
