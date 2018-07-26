@@ -679,6 +679,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
         }
         updateStreamingMode();
     }
+    uint8_t idx = 0;
     switch (iuWiFi.getMspCommand()) {
         // MSP Status messages
         case MSPCommand::MSP_INVALID_CHECKSUM:
@@ -732,6 +733,16 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             if (loopDebugMode) {
                 debugPrint(F("WIFI_CONFIRM_ACTION: "), false);
                 debugPrint(buff);
+            }
+            break;
+        case MSPCommand::WIFI_CONFIRM_PUBLICATION:
+            idx = (uint8_t) buff[0];
+            if (loopDebugMode) {
+                debugPrint("WIFI_CONFIRM_PUBLICATION: ", false);
+                debugPrint(idx);
+            }
+            if (strlen(buff) > 0 && idx < sendingQueue.maxCount) {
+                sendingQueue.confirmSuccessfullSend(idx);
             }
             break;
         case MSPCommand::GET_RAW_DATA_ENDPOINT_INFO:
@@ -1160,6 +1171,7 @@ bool Conductor::beginDataAcquisition()
     // m_inDataAcquistion should be set to true BEFORE triggering the data
     // acquisition, otherwise I2S buffer won't be emptied in time
     m_inDataAcquistion = true;
+    m_dataAcquisitionStartTime = millis();
     if (!iuI2S.triggerDataAcquisition(m_callback)) {
         m_inDataAcquistion = false;
     }
@@ -1181,7 +1193,7 @@ void Conductor::endDataAcquisition()
         Feature::instances[i]->reset();
     }
     // Delay to make sure that the I2S callback function is called one more time
-    delay(500);
+    delay(50);
 }
 
 /**
@@ -1259,7 +1271,9 @@ void Conductor::computeFeatures()
  */
 void Conductor::streamFeatures()
 {
-    if (m_acquisitionMode != AcquisitionMode::FEATURE) {
+    if (m_acquisitionMode != AcquisitionMode::FEATURE ||
+        millis() - m_dataAcquisitionStartTime < streamingStartDelay)
+    {
         return;
     }
     IUSerial *ser1 = NULL;
@@ -1299,8 +1313,12 @@ void Conductor::streamFeatures()
             if (m_streamingMode == StreamingMode::WIFI ||
                 m_streamingMode == StreamingMode::WIFI_AND_BLE)
             {
-                FeatureGroup::instances[i]->bufferAndStream(
-                    ser1, IUSerial::MS_PROTOCOL, m_macAddress,
+//                FeatureGroup::instances[i]->bufferAndStream(
+//                    ser1, IUSerial::MS_PROTOCOL, m_macAddress,
+//                    ledManager.getOperationState(), batteryLoad, timestamp,
+//                    sendFeatureGroupName1);
+                FeatureGroup::instances[i]->bufferAndQueue(
+                    &sendingQueue, IUSerial::MS_PROTOCOL, m_macAddress,
                     ledManager.getOperationState(), batteryLoad, timestamp,
                     sendFeatureGroupName1);
             } else {
@@ -1314,7 +1332,22 @@ void Conductor::streamFeatures()
                 ledManager.getOperationState(), batteryLoad, timestamp,
                 sendFeatureGroupName2, 1);
         }
+//        FeatureGroup::instances[i]->bufferAndQueue(
+//            &sendingQueue, IUSerial::MS_PROTOCOL, m_macAddress,
+//            ledManager.getOperationState(), batteryLoad, timestamp,
+//            true);
     }
+    CharBufferNode *nodeToSend = sendingQueue.getNextBufferToSend();
+    if (nodeToSend) {
+        uint16_t msgLen = strlen(nodeToSend->buffer);
+        iuWiFi.startLiveMSPCommand(MSPCommand::PUBLISH_FEATURE_WITH_CONFIRMATION, msgLen + 2);
+        iuWiFi.streamLiveMSPMessage((char) nodeToSend->idx);
+        iuWiFi.streamLiveMSPMessage(':');
+        iuWiFi.streamLiveMSPMessage(nodeToSend->buffer, msgLen);
+        iuWiFi.endLiveMSPCommand();
+        sendingQueue.attemptingToSend(nodeToSend->idx);
+    }
+    sendingQueue.maintain();
 }
 
 /**

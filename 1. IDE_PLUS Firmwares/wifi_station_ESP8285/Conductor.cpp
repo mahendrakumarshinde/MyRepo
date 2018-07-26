@@ -160,6 +160,14 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 iuSerial->sendMSPCommand(MSPCommand::WIFI_CONFIRM_PUBLICATION);
             }
             break;
+        case MSPCommand::PUBLISH_FEATURE_WITH_CONFIRMATION:
+            // Buffer structure:
+            // "[confirmation_id (1 char)]:[feature_group (6 chars)],[feature msg]"
+            if (publishFeature(&buffer[9], bufferLength - 9, &buffer[2], 6)) {
+                iuSerial->sendMSPCommand(MSPCommand::WIFI_CONFIRM_PUBLICATION,
+                                         &buffer[0], 1);
+            }
+            break;
         case MSPCommand::PUBLISH_DIAGNOSTIC:
             publishDiagnostic(buffer, bufferLength);
             break;

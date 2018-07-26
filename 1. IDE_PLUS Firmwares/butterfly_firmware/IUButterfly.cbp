@@ -137,6 +137,8 @@
 			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Lib" />
 		</Linker>
 		<Unit filename="BoardDefinition.h" />
+		<Unit filename="CharBufferSendingQueue.cpp" />
+		<Unit filename="CharBufferSendingQueue.h" />
 		<Unit filename="Component.h" />
 		<Unit filename="ComponentTest/CMP_IUBMD350.h" />
 		<Unit filename="ComponentTest/CMP_IUBMP280.h" />

@@ -72,15 +72,15 @@ class IUSerial
                                         const char* cmdMsg, uint16_t cmdSize);
         // Send MSP command by chunks: note that you must already know the
         // message length when starting the command.
-        virtual void startLongMSPCommand(MSPCommand::command cmd,
+        virtual void startLiveMSPCommand(MSPCommand::command cmd,
                                          uint16_t cmdSize);
-        virtual void streamLongMSPMessage(char c);
-        virtual void streamLongMSPMessage(const char* msg, size_t length);
-        virtual void streamLongMSPMessage(const char* msg)
-            { streamLongMSPMessage(msg, strlen(msg)); }
-        virtual void streamLongMSPMessage(String msg)
-            { streamLongMSPMessage(msg.c_str()); }
-        virtual bool endLongMSPCommand();
+        virtual void streamLiveMSPMessage(char c);
+        virtual void streamLiveMSPMessage(const char* msg, size_t length);
+        virtual void streamLiveMSPMessage(const char* msg)
+            { streamLiveMSPMessage(msg, strlen(msg)); }
+        virtual void streamLiveMSPMessage(String msg)
+            { streamLiveMSPMessage(msg.c_str()); }
+        virtual bool endLiveMSPCommand();
         /***** Convenience MSP functions *****/
         virtual void mspSendMacAddress(MSPCommand::command cmd, MacAddress mac);
         virtual void mspSendIPAddress(MSPCommand::command cmd, IPAddress ip);
@@ -125,9 +125,9 @@ class IUSerial
         uint8_t m_mspDataSizeByte1;
         uint8_t m_mspChecksumIn = 0;
         uint8_t m_mspChecksumOut = 0;
-        // Long MSP command
-        uint16_t m_expectedLongMspCmdSize = 0;
-        uint16_t m_actualLongMspCmdSize = 0;
+        // Live MSP command
+        uint16_t m_expectedLiveMspCmdSize = 0;
+        uint16_t m_actualLiveMspCmdSize = 0;
         /***** Custom Protocol *****/
         virtual bool readCharCustomProtocol();
 };

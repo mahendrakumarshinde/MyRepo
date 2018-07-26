@@ -318,7 +318,7 @@ class CalibrationInterface(tk.Frame):
         self.buttons = dict()
         self.alerts = dict()
         # Calibration variables
-        self._data_collecter = None
+        self._data_collector = None
         self.current_temperature = 0
         # Create fonts
         default_font = font.nametofont("TkDefaultFont")
@@ -340,24 +340,24 @@ class CalibrationInterface(tk.Frame):
     # ===== Calibration methods =====
 
     @property
-    def data_collecter(self):
+    def data_collector(self):
         if not self.check_serial_port():
             return None
         port = self.get_user_input('port')
-        if self._data_collecter is None or self._data_collecter.port != port:
-            self._data_collecter = SerialDataCollector(
+        if self._data_collector is None or self._data_collector.port != port:
+            self._data_collector = SerialDataCollector(
                                     port,
                                     self.start_calibration_cmd,
                                     self.end_calibration_cmd,
                                     self.start_calibration_confirm,
                                     self.end_calibration_confirm)
-        return self._data_collecter
+        return self._data_collector
 
     def run_calibration(self, calibration_experiment, timeout=6):
         """
         Run a calibration experiment
         """
-        data_gen = self.data_collecter.collect_data(
+        data_gen = self.data_collector.collect_data(
                                 termination_byte=self.data_termination_byte,
                                 timeout=timeout)
         calibration_experiment.calibrate(data_gen)
@@ -568,7 +568,7 @@ class CalibrationInterface(tk.Frame):
 
         Get the device temperature at the same time
         """
-        data_gen = self.data_collecter.collect_data(
+        data_gen = self.data_collector.collect_data(
                                 termination_byte=self.data_termination_byte,
                                 timeout=1.5)
         for data in data_gen:

@@ -18,6 +18,7 @@
 #include "FeatureClass.h"
 #include "FeatureComputer.h"
 #include "FeatureGroup.h"
+#include "CharBufferSendingQueue.h"
 
 /***** Sensors *****/
 #include "IUBattery.h"
@@ -289,6 +290,9 @@ extern void setUpComputerSources();
 /* =============================================================================
     Feature Groups
 ============================================================================= */
+
+/***** Sending Queue (for WiFi data publication) *****/
+extern CharBufferSendingQueue sendingQueue;
 
 /***** Default feature group *****/
 extern FeatureGroup *DEFAULT_FEATURE_GROUP;

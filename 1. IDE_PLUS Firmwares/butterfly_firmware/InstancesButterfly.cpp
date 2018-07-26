@@ -315,8 +315,11 @@ void setUpComputerSources()
 
 
 /* =============================================================================
-    Instantiation
+    Feature Groups
 ============================================================================= */
+
+/***** Sending Queue (for WiFi data publication) *****/
+CharBufferSendingQueue sendingQueue = CharBufferSendingQueue();
 
 /***** Default feature group *****/
 FeatureGroup *DEFAULT_FEATURE_GROUP = &motorStandardGroup;

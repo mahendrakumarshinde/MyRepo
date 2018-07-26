@@ -33,6 +33,7 @@ namespace MSPCommand
         // Data publication
         PUBLISH_RAW_DATA,  // Publish raw data
         PUBLISH_FEATURE,  // Publish features
+        PUBLISH_FEATURE_WITH_CONFIRMATION,  // Publish features and confirm
         PUBLISH_DIAGNOSTIC,  // Publish diagnostic
         PUBLISH_CONFIG_CHECKSUM,  // Publish configuration checksum
         // Cloud command reception and transmission

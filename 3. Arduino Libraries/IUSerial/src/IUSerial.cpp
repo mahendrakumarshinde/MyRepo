@@ -388,40 +388,57 @@ void IUSerial::sendLongMSPCommand(MSPCommand::command cmd,
 /**
  *
  */
-void IUSerial::startLongMSPCommand(MSPCommand::command cmd, uint16_t cmdSize)
+void IUSerial::startLiveMSPCommand(MSPCommand::command cmd, uint16_t cmdSize)
 {
-    m_expectedLongMspCmdSize = cmdSize;
+    if (debugMode)
+    {
+        debugPrint("Starting Live MSP Command #", false);
+        debugPrint((uint8_t) cmd);
+        debugPrint("Expected size: ", false);
+        debugPrint(cmdSize);
+    }
+    m_expectedLiveMspCmdSize = cmdSize;
     sendMspCommandHeader(cmdSize, cmd);
 }
 
 /**
  *
  */
-void IUSerial::streamLongMSPMessage(char c)
+void IUSerial::streamLiveMSPMessage(char c)
 {
-    m_actualLongMspCmdSize += mspChecksumAndSend(c);;
+    if (debugMode)
+    {
+        debugPrint(c, false);
+    }
+    m_actualLiveMspCmdSize += mspChecksumAndSend(c);;
 }
 
 /**
  *
  */
-void IUSerial::streamLongMSPMessage(const char* msg, size_t length)
+void IUSerial::streamLiveMSPMessage(const char* msg, size_t length)
 {
     for (size_t i = 0; i < length; i++)
     {
-        streamLongMSPMessage(msg[i]);
+        streamLiveMSPMessage(msg[i]);
     }
 }
 
 /**
  *
  */
-bool IUSerial::endLongMSPCommand()
+bool IUSerial::endLiveMSPCommand()
 {
     sendMspCommandTail();
-    bool success = (m_expectedLongMspCmdSize == m_actualLongMspCmdSize);
-    m_expectedLongMspCmdSize = 0;
-    m_actualLongMspCmdSize = 0;
+    if (debugMode)
+    {
+        debugPrint("Ending Live MSP Command");
+        debugPrint("Actual size: ", false);
+        debugPrint(m_actualLiveMspCmdSize);
+    }
+    bool success = (m_expectedLiveMspCmdSize == m_actualLiveMspCmdSize);
+    m_expectedLiveMspCmdSize = 0;
+    m_actualLiveMspCmdSize = 0;
     return success;
 }
 

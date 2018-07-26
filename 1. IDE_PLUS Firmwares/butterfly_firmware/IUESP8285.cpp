@@ -570,7 +570,7 @@ bool IUESP8285::processChipMessage()
             m_sleeping = false;
             break;
         case MSPCommand::WIFI_CONFIRM_PUBLICATION:
-            if (loopDebugMode) { debugPrint("WIFI_CONFIRM_PUBLICATION: "); }
+            if (loopDebugMode) { debugPrint("WIFI_CONFIRM_PUBLICATION"); }
             m_lastConfirmedPublication = millis();
             break;
         default:

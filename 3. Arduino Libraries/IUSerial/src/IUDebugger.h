@@ -7,12 +7,31 @@
     Flag reading
 ============================================================================= */
 
-const bool setupDebugMode = (bool) IUDEBUG_SETUP;
-const bool loopDebugMode = (bool) IUDEBUG_MAIN;
-const bool asyncDebugMode = (bool) IUDEBUG_ASYNC;
-const bool featureDebugMode = (bool) IUDEBUG_FEATURE;
-const bool debugMode = (bool) IUDEBUG_ANY;
-
+#ifdef IUDEBUG_SETUP
+    const bool setupDebugMode = (bool) IUDEBUG_SETUP;
+#else
+    const bool setupDebugMode = false;
+#endif
+#ifdef IUDEBUG_MAIN
+    const bool loopDebugMode = (bool) IUDEBUG_MAIN;
+#else
+    const bool loopDebugMode = false;
+#endif
+#ifdef IUDEBUG_ASYNC
+    const bool asyncDebugMode = (bool) IUDEBUG_ASYNC;
+#else
+    const bool asyncDebugMode = false;
+#endif
+#ifdef IUDEBUG_FEATURE
+    const bool featureDebugMode = (bool) IUDEBUG_FEATURE;
+#else
+    const bool featureDebugMode = false;
+#endif
+#ifdef IUDEBUG_ANY
+    const bool debugMode = (bool) IUDEBUG_ANY;
+#else
+    const bool debugMode = false;
+#endif
 
 /* =============================================================================
     Debugging

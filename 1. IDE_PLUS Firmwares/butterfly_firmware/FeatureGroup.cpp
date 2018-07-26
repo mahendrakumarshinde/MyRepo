@@ -17,6 +17,7 @@ FeatureGroup::FeatureGroup(const char *name, uint16_t dataSendPeriod) :
     m_bufferStartTime(0)
 {
     strcpy(m_name, name);
+    m_charBufferNode = NULL;
     reset();
     m_lastSentTime[0] = 0;
     m_lastSentTime[1] = 0;
@@ -220,14 +221,86 @@ void FeatureGroup::legacyStream(IUSerial *iuSerial, MacAddress mac,
 
 }
 
+///**
+// * Buffers the feature then send them through iuSerial in one shot.
+// *
+// * Can use either the IUSerial MSP protocol or the IUSerial Legacy protocol.
+// */
+//void FeatureGroup::bufferAndStream(
+//    IUSerial *iuSerial, IUSerial::PROTOCOL_OPTIONS protocol, MacAddress mac,
+//    uint8_t opState, float batteryLoad, double timestamp,
+//    bool sendName)
+//{
+//    if (!m_active) {
+//        return;  // Only stream if group is active
+//    }
+//    if (m_featureCount == 0 || !isDataSendTime()) {
+//        return;
+//    }
+//    uint32_t now = millis();
+//    if (m_bufferStartTime == 0 ||
+//        now - m_bufferStartTime > maxBufferDelay ||
+//        maxBufferSize - m_bufferIndex < maxBufferMargin) {
+//        // Send current data
+//        m_featureBuffer[m_bufferIndex] = 0;
+//        if (protocol == IUSerial::LEGACY_PROTOCOL) {
+//            iuSerial->port->print(m_featureBuffer);
+//            if (loopDebugMode)
+//            {
+//                iuSerial->port->println("");
+//            }
+//        } else if (protocol == IUSerial::MS_PROTOCOL) {
+//            iuSerial->sendMSPCommand(MSPCommand::PUBLISH_FEATURE,
+//                                     m_featureBuffer);
+//        }
+//        // Reset buffer
+//        m_bufferIndex = 0;
+//        m_bufferStartTime = now;
+//        for (uint16_t i = 0; i < maxBufferSize; ++i) {
+//            m_featureBuffer[i] = 0;
+//        }
+//    }
+//    if (sendName) {
+//        // Always send for Legacy protocol, send once for MSP
+//        if (protocol == IUSerial::LEGACY_PROTOCOL || m_bufferIndex == 0) {
+//            strcat(m_featureBuffer, m_name);
+//            m_bufferIndex += strlen(m_name);
+//            m_featureBuffer[m_bufferIndex++] = ',';
+//        }
+//    }
+//    strncat(m_featureBuffer, mac.toString().c_str(), 17);
+//    m_bufferIndex += 17;
+//    m_featureBuffer[m_bufferIndex++] = ',';
+//    m_featureBuffer[m_bufferIndex++] = '0';
+//    m_featureBuffer[m_bufferIndex++] = opState + 48;
+//    m_featureBuffer[m_bufferIndex++] = ',';
+//    String stringBattery((int) round(batteryLoad));
+//    strcat(m_featureBuffer, stringBattery.c_str());
+//    m_bufferIndex += stringBattery.length();
+//    for (uint8_t i = 0; i < m_featureCount; ++i) {
+//        m_featureBuffer[m_bufferIndex++] = ',';
+//        m_featureBuffer[m_bufferIndex++] = '0';
+//        m_featureBuffer[m_bufferIndex++] = '0';
+//        m_featureBuffer[m_bufferIndex++] = '0';
+//        m_featureBuffer[m_bufferIndex++] = i + 49;
+//        if (m_features[i] != NULL) {
+//            m_bufferIndex += m_features[i]->sendToBuffer(m_featureBuffer,
+//                                                         m_bufferIndex);
+//        }
+//    }
+//    m_featureBuffer[m_bufferIndex++] = ',';
+//    String stringTS = String(timestamp, 2);
+//    strcat(m_featureBuffer, stringTS.c_str());
+//    m_bufferIndex += stringTS.length();
+//    m_featureBuffer[m_bufferIndex++] = ';';
+//}
+
 /**
- * Buffers the feature then send them through iuSerial in one shot.
  *
- * Can use either the IUSerial MSP protocol or the IUSerial Legacy protocol.
  */
-void FeatureGroup::bufferAndStream(
-    IUSerial *iuSerial, IUSerial::PROTOCOL_OPTIONS protocol, MacAddress mac,
-    uint8_t opState, float batteryLoad, double timestamp,
+void FeatureGroup::bufferAndQueue(
+    CharBufferSendingQueue *sendingQueue, IUSerial::PROTOCOL_OPTIONS protocol,
+    MacAddress mac, uint8_t opState, float batteryLoad, double timestamp,
     bool sendName)
 {
     if (!m_active) {
@@ -239,57 +312,50 @@ void FeatureGroup::bufferAndStream(
     uint32_t now = millis();
     if (m_bufferStartTime == 0 ||
         now - m_bufferStartTime > maxBufferDelay ||
-        maxBufferSize - m_bufferIndex < maxBufferMargin) {
+        CharBufferNode::bufferSize - m_bufferIndex < maxBufferMargin) {
+        if (m_charBufferNode) {
         // Send current data
-        m_featureBuffer[m_bufferIndex] = 0;
-        if (protocol == IUSerial::LEGACY_PROTOCOL) {
-            iuSerial->port->print(m_featureBuffer);
-            if (loopDebugMode)
-            {
-                iuSerial->port->println("");
-            }
-        } else if (protocol == IUSerial::MS_PROTOCOL) {
-            iuSerial->sendMSPCommand(MSPCommand::PUBLISH_FEATURE,
-                                     m_featureBuffer);
+            m_charBufferNode->buffer[m_bufferIndex] = 0;
+            sendingQueue->finishedWriting(m_charBufferNode->idx);
         }
-        // Reset buffer
+        // Get new buffer and reset counter
+        m_charBufferNode = sendingQueue->getNextBufferToWrite();
+        sendingQueue->startedWriting(m_charBufferNode->idx);
         m_bufferIndex = 0;
         m_bufferStartTime = now;
-        for (uint16_t i = 0; i < maxBufferSize; ++i) {
-            m_featureBuffer[i] = 0;
-        }
     }
     if (sendName) {
         // Always send for Legacy protocol, send once for MSP
         if (protocol == IUSerial::LEGACY_PROTOCOL || m_bufferIndex == 0) {
-            strcat(m_featureBuffer, m_name);
+            strcat(m_charBufferNode->buffer, m_name);
             m_bufferIndex += strlen(m_name);
-            m_featureBuffer[m_bufferIndex++] = ',';
+            m_charBufferNode->buffer[m_bufferIndex++] = ',';
         }
     }
-    strncat(m_featureBuffer, mac.toString().c_str(), 17);
+    strncat(m_charBufferNode->buffer, mac.toString().c_str(), 17);
     m_bufferIndex += 17;
-    m_featureBuffer[m_bufferIndex++] = ',';
-    m_featureBuffer[m_bufferIndex++] = '0';
-    m_featureBuffer[m_bufferIndex++] = opState + 48;
-    m_featureBuffer[m_bufferIndex++] = ',';
+    m_charBufferNode->buffer[m_bufferIndex++] = ',';
+    m_charBufferNode->buffer[m_bufferIndex++] = '0';
+    m_charBufferNode->buffer[m_bufferIndex++] = opState + 48;
+    m_charBufferNode->buffer[m_bufferIndex++] = ',';
     String stringBattery((int) round(batteryLoad));
-    strcat(m_featureBuffer, stringBattery.c_str());
+    strcat(m_charBufferNode->buffer, stringBattery.c_str());
     m_bufferIndex += stringBattery.length();
     for (uint8_t i = 0; i < m_featureCount; ++i) {
-        m_featureBuffer[m_bufferIndex++] = ',';
-        m_featureBuffer[m_bufferIndex++] = '0';
-        m_featureBuffer[m_bufferIndex++] = '0';
-        m_featureBuffer[m_bufferIndex++] = '0';
-        m_featureBuffer[m_bufferIndex++] = i + 49;
+        m_charBufferNode->buffer[m_bufferIndex++] = ',';
+        m_charBufferNode->buffer[m_bufferIndex++] = '0';
+        m_charBufferNode->buffer[m_bufferIndex++] = '0';
+        m_charBufferNode->buffer[m_bufferIndex++] = '0';
+        m_charBufferNode->buffer[m_bufferIndex++] = i + 49;
         if (m_features[i] != NULL) {
-            m_bufferIndex += m_features[i]->sendToBuffer(m_featureBuffer,
-                                                         m_bufferIndex);
+            m_bufferIndex += m_features[i]->sendToBuffer(
+                m_charBufferNode->buffer, m_bufferIndex);
         }
     }
-    m_featureBuffer[m_bufferIndex++] = ',';
+    m_charBufferNode->buffer[m_bufferIndex++] = ',';
     String stringTS = String(timestamp, 2);
-    strcat(m_featureBuffer, stringTS.c_str());
+    strcat(m_charBufferNode->buffer, stringTS.c_str());
     m_bufferIndex += stringTS.length();
-    m_featureBuffer[m_bufferIndex++] = ';';
+    m_charBufferNode->buffer[m_bufferIndex++] = ';';
 }
+
