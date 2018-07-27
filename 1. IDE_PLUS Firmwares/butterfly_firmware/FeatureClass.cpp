@@ -138,6 +138,7 @@ int Feature::getReceiverIndex(FeatureComputer *receiver)
  */
 void Feature::reset()
 {
+    m_filledOnce = false;
     m_fillingIndex = 0;
     m_recordIndex = 0;
     for (uint8_t i = 0; i < maxReceiverCount; ++i) {
@@ -179,7 +180,10 @@ void Feature::incrementFillingIndex()
         newFullSection = true;
     }
     // Filling Index restart from 0 if needed
-    m_fillingIndex %= m_totalSize;
+    if (m_fillingIndex >= m_totalSize) {
+        m_filledOnce = true;
+        m_fillingIndex %= m_totalSize;
+    }
     // Run the callbacks
     if (m_onNewValue != NULL) {
         m_onNewValue(this);

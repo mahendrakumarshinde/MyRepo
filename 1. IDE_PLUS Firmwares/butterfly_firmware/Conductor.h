@@ -102,10 +102,6 @@ class Conductor
         // Usage Modes
         static char START_CONFIRM[11];
         static char END_CONFIRM[9];
-        // The delay (in ms) to wait after beginning the data acquisition to
-        // start streaming the features. This is to give the feature buffer time
-        // to fill.
-        static const uint32_t streamingStartDelay = 1250;  // ms
         // Config handler
         static const uint8_t CONFIG_TYPE_COUNT = 4;
         static IUFlash::storedConfig CONFIG_TYPES[CONFIG_TYPE_COUNT];
@@ -206,7 +202,6 @@ class Conductor
         /***** Operations *****/
         void (*m_callback)() = NULL;
         bool m_inDataAcquistion = false;
-        uint32_t m_dataAcquisitionStartTime = 0;
         uint32_t m_rawDataPublicationTimer = defaultRawDataPublicationTimer;
         uint32_t m_rawDataPublicationStart = 0;
         /***** Configuration and Mode management *****/

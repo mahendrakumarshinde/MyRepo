@@ -134,6 +134,7 @@ class Feature
         virtual q31_t* getLastRecordedQ31Values(uint8_t sectionCount=1)
             { return NULL; }
         // Tracking the buffer state
+        virtual bool hasBeenFilledOnce() { return m_filledOnce; }
         virtual bool isReadyToRecord(uint8_t sectionCount=1);
         virtual bool isReadyToCompute(uint8_t receiverIdx,
                                       uint8_t sectionCount,
@@ -178,6 +179,7 @@ class Feature
         slideOption m_sliding;
         uint16_t m_totalSize;
         // Tracking the buffer state
+        bool m_filledOnce = false;
         uint16_t m_fillingIndex = 0;
         uint8_t m_recordIndex = 0;
         uint8_t m_computeIndex[maxReceiverCount];

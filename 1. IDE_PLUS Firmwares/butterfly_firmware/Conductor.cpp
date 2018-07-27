@@ -1171,7 +1171,6 @@ bool Conductor::beginDataAcquisition()
     // m_inDataAcquistion should be set to true BEFORE triggering the data
     // acquisition, otherwise I2S buffer won't be emptied in time
     m_inDataAcquistion = true;
-    m_dataAcquisitionStartTime = millis();
     if (!iuI2S.triggerDataAcquisition(m_callback)) {
         m_inDataAcquistion = false;
     }
@@ -1271,9 +1270,7 @@ void Conductor::computeFeatures()
  */
 void Conductor::streamFeatures()
 {
-    if (m_acquisitionMode != AcquisitionMode::FEATURE ||
-        millis() - m_dataAcquisitionStartTime < streamingStartDelay)
-    {
+    if (m_acquisitionMode != AcquisitionMode::FEATURE) {
         return;
     }
     IUSerial *ser1 = NULL;

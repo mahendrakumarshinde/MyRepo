@@ -182,6 +182,11 @@ void FeatureGroup::legacyStream(IUSerial *iuSerial, MacAddress mac,
     if (m_featureCount == 0 || !m_active) {
         return;  // Only stream if group is active
     }
+    for (uint8_t i = 0; i < m_featureCount; i++) {
+        if (!m_features[i]->hasBeenFilledOnce()) {
+            return; // All features have not been computed yet
+        }
+    }
     if (!isDataSendTime(portIdx)) {
         return;
     }
