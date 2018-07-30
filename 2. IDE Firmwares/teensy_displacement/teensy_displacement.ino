@@ -25,9 +25,10 @@
   Module Configuration Variables
 ============================================================================= */
 
-String MAC_ADDRESS = "88:4A:EA:69:DE:D3";
+String MAC_ADDRESS = "88:4A:EA:69:DF:FD";
 
-const float minAccelEnergyForVelocity = 102;
+const float minAccelEnergyForVelocity = 93;
+const float minAccelEnergyForVelocityNoMean = 0.1;
 
 
 const bool featureDebugMode = false;
@@ -399,7 +400,7 @@ float press_energy(uint16_t startInd, uint32_t buffSize, bool removeMean=false)
 
 
 float feature_energy () {
-  float ene = press_energy(0, MAX_INTERVAL_ACCEL);
+  float ene = press_energy(0, MAX_INTERVAL_ACCEL, (currMode == CALIBRATION));
   //Serial.println(timestamp[buffer_compute_index]);
   //Serial.println(ene, DEC);
   return ene;
@@ -420,9 +421,12 @@ void getVelocityAndDisplacement(q15_t *values, uint16_t samplingRate,
   RFFT::computeRFFT(values, rfft_accel_buffer, sampleCount, false);
   RFFTAmplitudes::getAmplitudes(rfft_accel_buffer, sampleCount, amplitudes);
   // 2. Find the main frequency
+  uint16_t lowIdx = (uint16_t) max(((float) lowCutFrequency / df), 1);
+  uint16_t highIdx = (uint16_t) min((float) highCutFrequency / df,
+                                    amplitudeCount);
   q15_t maxVal;
   uint32_t maxIdx;
-  arm_max_q15(amplitudes, amplitudeCount, &maxVal, &maxIdx);
+  arm_max_q15(&amplitudes[lowIdx], highIdx - lowIdx, &maxVal, &maxIdx);
   mainFrequency = df * (float) maxIdx;
   if (featureDebugMode)
   {
@@ -544,7 +548,8 @@ void compute_features() {
 
   float accelEnergyFeature = feature_energy();
 
-  if (accelEnergyFeature >= minAccelEnergyForVelocity) {
+  if ((accelEnergyFeature >= minAccelEnergyForVelocity) ||
+       (currMode == CALIBRATION && accelEnergyFeature >= minAccelEnergyForVelocityNoMean)) {
       getVelocityAndDisplacement(accel_x_batch[buffer_compute_index], TARGET_ACCEL_SAMPLE,
                                  ACCEL_NFFT, 5, 600, featureMainFreqX, featureVelX,
                                  featureDispX);
@@ -568,37 +573,37 @@ void compute_features() {
     featureDispZ = 0;
   }
 
-  feature_value[0] = featureVelX;
+  feature_value[0] = accelEnergyFeature; //featureVelX;
   if (feature0check == 1) {
     current_danger_level = threshold_feature(0, feature_value[0]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
 
-  feature_value[1] = featureVelY;
+  feature_value[1] = featureVelX;  // featureVelY;
   if (feature1check == 1) {
     current_danger_level = threshold_feature(1, feature_value[1]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
 
-  feature_value[2] = featureVelZ;
+  feature_value[2] = featureVelY;  // featureVelZ;
   if (feature2check == 1) {
     current_danger_level = threshold_feature(2, feature_value[2]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
 
-  feature_value[3] = featureDispX;
+  feature_value[3] = featureVelZ;  // featureDispX;
   if (feature3check == 1) {
     current_danger_level = threshold_feature(3, feature_value[3]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
 
-  feature_value[4] = featureDispY;
+  feature_value[4] = currentTemperature();  // featureDispY;
   if (feature4check == 1) {
     current_danger_level = threshold_feature(4, feature_value[4]);
     highest_danger_level = max(highest_danger_level, current_danger_level);
   }
 
-  feature_value[5] = featureDispZ;
+  feature_value[5] = audioDB();  // featureDispZ;
   if (feature5check == 1) {
     current_danger_level = threshold_feature(5, feature_value[5]);
     highest_danger_level = max(highest_danger_level, current_danger_level);

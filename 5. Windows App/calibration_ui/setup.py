@@ -27,5 +27,5 @@ setup(
     version = "0.1",
     description = "IDE+ calibration helper",
     options = {'build_exe': {'includes': addtional_mods}},
-    executables = [Executable("calibration_ui.py")],
+    executables = [Executable("triaxial_calibration_ui.py")],
 )
