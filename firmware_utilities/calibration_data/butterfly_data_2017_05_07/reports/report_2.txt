@@ -1,0 +1,81 @@
+Conditions: Mean removed - Filtering frequencies 5Hz - 1000Hz
+Sample length / N =: 512
+Sample start at (ms): 1024
+test at: 15.9Hz, 1000mm.s-2, and 10mm.s-1:
+Axis X:
+	Acceleration RMS:
+	Reference value (mm/s2): 0
+	Experiment value (mm/s2): 74.9754
+		Error (%): nan
+
+	Velocity RMS
+	Reference (mm/s): 0
+	Theoretical (mm/s): 0.7505
+		Error (%): nan
+	Experimental (mm/s): 0.4924
+		Error (%): nan
+Axis Y:
+	Acceleration RMS:
+	Reference value (mm/s2): 0
+	Experiment value (mm/s2): 123.5844
+		Error (%): nan
+
+	Velocity RMS
+	Reference (mm/s): 0
+	Theoretical (mm/s): 1.237
+		Error (%): nan
+	Experimental (mm/s): 0.7189
+		Error (%): nan
+Axis Z:
+	Acceleration RMS:
+	Reference value (mm/s2): 1000
+	Experiment value (mm/s2): 970.3267
+		Error (%): -2.97
+
+	Velocity RMS
+	Reference (mm/s): 10
+	Theoretical (mm/s): 9.7127
+		Error (%): -2.87
+	Experimental (mm/s): 9.9434
+		Error (%): -0.57
+------
+
+test at: 80Hz, 2000mm.s-2, and 4mm.s-1:
+Axis X:
+	Acceleration RMS:
+	Reference value (mm/s2): 0
+	Experiment value (mm/s2): 244.9172
+		Error (%): nan
+
+	Velocity RMS
+	Reference (mm/s): 0
+	Theoretical (mm/s): 0.4872
+		Error (%): nan
+	Experimental (mm/s): 0.5071
+		Error (%): nan
+Axis Y:
+	Acceleration RMS:
+	Reference value (mm/s2): 0
+	Experiment value (mm/s2): 165.529
+		Error (%): nan
+
+	Velocity RMS
+	Reference (mm/s): 0
+	Theoretical (mm/s): 0.3293
+		Error (%): nan
+	Experimental (mm/s): 0.3414
+		Error (%): nan
+Axis Z:
+	Acceleration RMS:
+	Reference value (mm/s2): 2000
+	Experiment value (mm/s2): 1918.1039
+		Error (%): -4.09
+
+	Velocity RMS
+	Reference (mm/s): 4
+	Theoretical (mm/s): 3.8159
+		Error (%): -4.6
+	Experimental (mm/s): 4.0052
+		Error (%): 0.13
+------
+
