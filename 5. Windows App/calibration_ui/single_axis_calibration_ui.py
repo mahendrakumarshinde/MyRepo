@@ -281,7 +281,7 @@ class CalibrationInterface(tk.Frame):
         VibrationCalibration([2000, 15.92, 20], [5, 5, 5]),
         VibrationCalibration([1000, 40, 4], [5, 5, 5]),
         VibrationCalibration([2000, 40, 8], [5, 5, 5]),
-#        VibrationCalibration([5000, 40, 20], [5, 5, 5]),
+        # VibrationCalibration([5000, 40, 20], [5, 5, 5]),
         VibrationCalibration([2000, 80, 4], [5, 5, 5]),
         VibrationCalibration([5000, 80, 10], [5, 5, 5]),
         VibrationCalibration([10000, 80, 20], [5, 5, 5]),
@@ -566,13 +566,14 @@ class CalibrationInterface(tk.Frame):
         data_gen = self.data_collecter.collect_data(
                                 termination_byte=self.data_termination_byte,
                                 timeout=1.5)
-        for data in data_gen:
+        data = bytes()
+        for d in data_gen:
             # wait for data_gen to empty so that we close properly \
             # connection to serial
-            pass
+            data = d
         try:
             data = CalibrationData(data)
-        except KeyError as e: #(ValueError, UnboundLocalError) as e:
+        except KeyError as e:
             invalid_data_msg = 'Invalid data'
             if isinstance(e, ValueError) and \
                     e.args[0][:len(invalid_data_msg)] != invalid_data_msg:

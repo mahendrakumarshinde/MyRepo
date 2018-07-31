@@ -46,8 +46,10 @@ class FeatureGroup
         void setDataSendPeriod(uint16_t dataSendPeriod);
         bool isDataSendTime(uint8_t idx=0);
         /***** Communication *****/
+        bool isReadyToStream(uint8_t portIdx=0);
         void MSPstream(IUSerial *iuSerial, MacAddress mac,
-                       double timestamp, bool sendMACAddress=false);
+                       double timestamp, bool sendMACAddress=false,
+                       uint8_t portIdx=0);
         void legacyStream(
             IUSerial *iuSerial, MacAddress mac, uint8_t opState,
             float batteryLoad, double timestamp, bool sendName=false,
@@ -55,12 +57,12 @@ class FeatureGroup
 //        void bufferAndStream(
 //            IUSerial *iuSerial, IUSerial::PROTOCOL_OPTIONS protocol,
 //            MacAddress mac, uint8_t opState, float batteryLoad,
-//            double timestamp, bool sendName=false);
+//            double timestamp, bool sendName=false, uint8_t portIdx=0);
         void bufferAndQueue(
             CharBufferSendingQueue *sendingQueue,
             IUSerial::PROTOCOL_OPTIONS protocol, MacAddress mac,
             uint8_t opState, float batteryLoad, double timestamp,
-            bool sendName=false);
+            bool sendName=false, uint8_t portIdx=0);
 
 
     protected:

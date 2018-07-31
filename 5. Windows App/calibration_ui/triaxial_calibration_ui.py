@@ -611,10 +611,11 @@ class CalibrationInterface(tk.Frame):
         data_gen = self.data_collector.collect_data(
                                 termination_byte=self.data_termination_byte,
                                 timeout=1.5)
-        for data in data_gen:
+        data = bytes()
+        for d in data_gen:
             # wait for data_gen to empty so that we close properly \
             # connection to serial
-            pass
+            data = d
         try:
             data = CalibrationData(data)
         except KeyError as e:

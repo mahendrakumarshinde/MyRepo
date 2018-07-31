@@ -16,12 +16,13 @@ IULSM6DSM::IULSM6DSM(IUI2C *iuI2C, const char* name,
                      FeatureTemplate<q15_t> *tiltY,
                      FeatureTemplate<q15_t> *tiltZ,
                      FeatureTemplate<float> *temperature) :
-    HighFreqSensor(name, 6, accelerationX, accelerationY, accelerationZ, tiltX,
-                 tiltY, tiltZ, temperature),
+    HighFreqSensor(name, 7, accelerationX, accelerationY, accelerationZ, tiltX,
+                   tiltY, tiltZ, temperature),
     m_scale(defaultScale),
     m_gyroScale(defaultGyroScale),
     m_odr(defaultODR),
-    m_readCallback(i2cReadCallback)
+    m_readCallback(i2cReadCallback),
+    m_readingData(false)
 {
     m_iuI2C = iuI2C;
     for (uint8_t i = 0; i < 3; ++i)
@@ -281,11 +282,21 @@ void IULSM6DSM::setGyroScale(IULSM6DSM::gyroScaleOption gyroScale)
  */
 void IULSM6DSM::readData()
 {
-    if (!m_iuI2C->readBytes(ADDRESS, OUT_TEMP_L, 14, &m_rawBytes[0],
-                            m_readCallback))
-    {
+    if (m_readingData) {
+        // previous data reading is not done: flag errors in destinations and
+        // skip reading
+        for (uint8_t i = 0; i < m_destinationCount; ++i) {
+            m_destinations[i]->flagDataError();
+        }
         if (asyncDebugMode) {
             debugPrint("Skip accel read");
+        }
+    } else if (m_iuI2C->readBytes(ADDRESS, OUT_TEMP_L, 14, &m_rawBytes[0],
+               m_readCallback)) {
+        m_readingData = true;
+    } else {
+        if (asyncDebugMode) {
+            debugPrint("Accel read failure");
         }
     }
 }
@@ -315,8 +326,7 @@ void IULSM6DSM::processData(uint8_t wireStatus)
     m_rawData[0] = ((int16_t)m_rawBytes[9] << 8) | m_rawBytes[8];
     m_rawData[1] = ((int16_t)m_rawBytes[11] << 8) | m_rawBytes[10];
     m_rawData[2] = ((int16_t)m_rawBytes[13] << 8) | m_rawBytes[12];
-    for (uint8_t i = 0; i < 3; ++i)
-    {
+    for (uint8_t i = 0; i < 3; ++i) {
         // Accelaration data
         m_data[i] = m_rawData[i] + m_bias[i];
         m_destinations[i]->addValue(m_data[i]);
@@ -325,6 +335,7 @@ void IULSM6DSM::processData(uint8_t wireStatus)
         m_destinations[i + 3]->addValue(m_gyroData[i]);
     }
     m_destinations[6]->addValue(m_temperature);
+    m_readingData = false;
 }
 
 
@@ -339,8 +350,8 @@ void IULSM6DSM::processData(uint8_t wireStatus)
  */
 void IULSM6DSM::sendData(HardwareSerial *port)
 {
-    if (loopDebugMode)  // Human readable in the console
-    {
+    if (loopDebugMode) {
+        // Human readable in the console
         port->println(millis());
         port->print("AX: ");
         port->println((float) m_data[0] * m_resolution / 9.80665, 4);
@@ -348,13 +359,11 @@ void IULSM6DSM::sendData(HardwareSerial *port)
         port->println((float) m_data[1] * m_resolution / 9.80665, 4);
         port->print("AZ: ");
         port->println((float) m_data[2] * m_resolution / 9.80665, 4);
-    }
-    else  // Send bytes
-    {
+    } else {
+        // Send bytes
         float accel;
         byte* data;
-        for (uint8_t i = 0; i < 3; ++i)
-        {
+        for (uint8_t i = 0; i < 3; ++i) {
             // Stream float value as 4 bytes
             accel = (float) m_data[i] * m_resolution / 9.80665;
             data = (byte*) &accel;
@@ -378,8 +387,7 @@ void IULSM6DSM::exposeCalibration()
     debugPrint(F("Resolution (m.s-2): "));
     debugPrint(m_resolution, 7);
     debugPrint(F("Bias (q15_t): "));
-    for (uint8_t i = 0; i < 3; ++i)
-    {
+    for (uint8_t i = 0; i < 3; ++i) {
         debugPrint(m_bias[i], false);
         debugPrint(", ", false);
     }

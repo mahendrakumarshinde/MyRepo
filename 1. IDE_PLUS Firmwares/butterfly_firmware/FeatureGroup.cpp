@@ -125,22 +125,55 @@ bool FeatureGroup::isDataSendTime(uint8_t idx)
 ============================================================================= */
 
 /**
+ * Tell whether the feature group and its features fulfill the conditions to
+ * stream the next message.
+ *
+ * FeatureGroups only stream when the following conditions are fullfilled:
+ *  - The feature group has some features and is active.
+ *  - All features have been fully computed (feature.hasBeenFilledOnce returns
+ *    true for each feature).
+ *  - There is no data error in any of the features
+ *    (feature.latestSectionsHaveDataError returns false for each feature).
+ *  - If all the previous conditions are met, the last one is that enough time
+ *    must have passed since the last message sent for the given port index
+ *    (FeatureGroup.isDataSendTime(portIdx) returns true).
+ *
+ */
+bool FeatureGroup::isReadyToStream(uint8_t portIdx)
+{
+    // Only stream if group is active and has some features
+    if (m_featureCount == 0 || !m_active) {
+        return false;
+    }
+    // Only stream if all the features have been fully computed and have no data
+    // error.
+    for (uint8_t i = 0; i < m_featureCount; i++) {
+        if (!m_features[i]->hasBeenFilledOnce() ||
+            m_features[i]->latestSectionsHaveDataError(1))
+        {
+            return false;
+        }
+    }
+    if (!isDataSendTime(portIdx)) {
+        return false;
+    }
+    return true;
+
+}
+
+/**
  * Sends the values of the group features through given serial.
  *
  * Use the new feature data message specification and the MSP protocol.
  */
 void FeatureGroup::MSPstream(IUSerial *iuSerial, MacAddress mac,
-                             double timestamp, bool sendMACAddress)
+                             double timestamp, bool sendMACAddress,
+                             uint8_t portIdx)
 {
     // TODO: Reimplement to stream via MSP
 
-//    if (!m_active)
-//    {
-//        return;  // Only stream if group is active
-//    }
-//    if (m_featureCount == 0 || !isDataSendTime())
-//    {
-//        return;
+//    if (!isReadyToStream(portIdx)) {
+//        return;  // Not ready to stream
 //    }
 //    strlen(m_name) + 1 + 17 + 1
 //
@@ -179,16 +212,8 @@ void FeatureGroup::legacyStream(IUSerial *iuSerial, MacAddress mac,
                                 double timestamp, bool sendName,
                                 uint8_t portIdx)
 {
-    if (m_featureCount == 0 || !m_active) {
-        return;  // Only stream if group is active
-    }
-    for (uint8_t i = 0; i < m_featureCount; i++) {
-        if (!m_features[i]->hasBeenFilledOnce()) {
-            return; // All features have not been computed yet
-        }
-    }
-    if (!isDataSendTime(portIdx)) {
-        return;
+    if (!isReadyToStream(portIdx)) {
+        return;  // Not ready to stream
     }
     if (sendName) {
         iuSerial->write(m_name);
@@ -234,13 +259,10 @@ void FeatureGroup::legacyStream(IUSerial *iuSerial, MacAddress mac,
 //void FeatureGroup::bufferAndStream(
 //    IUSerial *iuSerial, IUSerial::PROTOCOL_OPTIONS protocol, MacAddress mac,
 //    uint8_t opState, float batteryLoad, double timestamp,
-//    bool sendName)
+//    bool sendName, uint8_t portIdx)
 //{
-//    if (!m_active) {
-//        return;  // Only stream if group is active
-//    }
-//    if (m_featureCount == 0 || !isDataSendTime()) {
-//        return;
+//    if (!isReadyToStream(portIdx)) {
+//        return;  // Not ready to stream
 //    }
 //    uint32_t now = millis();
 //    if (m_bufferStartTime == 0 ||
@@ -306,13 +328,10 @@ void FeatureGroup::legacyStream(IUSerial *iuSerial, MacAddress mac,
 void FeatureGroup::bufferAndQueue(
     CharBufferSendingQueue *sendingQueue, IUSerial::PROTOCOL_OPTIONS protocol,
     MacAddress mac, uint8_t opState, float batteryLoad, double timestamp,
-    bool sendName)
+    bool sendName, uint8_t portIdx)
 {
-    if (!m_active) {
-        return;  // Only stream if group is active
-    }
-    if (m_featureCount == 0 || !isDataSendTime()) {
-        return;
+    if (!isReadyToStream(portIdx)) {
+        return;  // Not ready to stream
     }
     uint32_t now = millis();
     if (m_bufferStartTime == 0 ||

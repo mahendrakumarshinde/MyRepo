@@ -47,6 +47,10 @@ class FeatureComputer;
  * sectionSize should be 150.
  * If the feature contains FFT coef, the resolution will naturally only apply
  * to the real and imaginary parts of the coefficients, not to the indexes.
+ * 
+ * An feature is over-writtable when new values can be recorded irregardless
+ * of whether or not its currently published values have been acknowledged
+ * by all the receivers.
  */
 class Feature
 {
@@ -72,7 +76,7 @@ class Feature
         /***** Core *****/
         Feature(const char* name, uint8_t sectionCount,
                 uint16_t sectionSize, slideOption sliding=FIXED,
-                bool isFFT=false);
+                bool isFFT=false, bool isOverWrittable=false);
         virtual ~Feature();
         virtual char* getName() { return m_name; }
         virtual bool isNamed(const char* name) {
@@ -146,6 +150,10 @@ class Feature
                                  uint8_t sectionCount=1);
         virtual void acknowledge(FeatureComputer *receiver,
                                  uint8_t sectionCount=1);
+        virtual void flagDataError();
+        virtual bool sectionsToComputeHaveDataError(FeatureComputer *receiver,
+                                                    uint8_t sectionCount);
+        virtual bool latestSectionsHaveDataError(uint8_t sectionCount=1);
         /***** Communication *****/
         virtual void stream(IUSerial *ser, uint8_t sectionCount=1);
         virtual uint16_t sendToBuffer(char *destination, uint16_t startIndex,
@@ -165,6 +173,7 @@ class Feature
         bool m_alwaysRequired = false;
         onNewValueSignature m_onNewValue = NULL;
         onNewRecordedSectionSignature m_onNewRecordedSection = NULL;
+        bool m_overWrittable;
         /***** Physical metadata *****/
         uint16_t m_samplingRate = 0;
         float m_resolution = 1;
@@ -185,6 +194,7 @@ class Feature
         uint8_t m_computeIndex[maxReceiverCount];
         bool m_published[maxSectionCount];
         bool m_acknowledged[maxSectionCount][maxReceiverCount];
+        bool m_dataError[maxSectionCount];
         // Lock a section to prevent both recording and computation, useful when
         // streaming the section content for example, to garantee data
         // consistency at section level
@@ -213,8 +223,9 @@ class FeatureTemplate : public Feature
         FeatureTemplate(const char* name, uint8_t sectionCount,
                         uint16_t sectionSize, T *values,
                         Feature::slideOption sliding=Feature::FIXED,
-                        bool isFFT=false) :
-            Feature(name, sectionCount, sectionSize, sliding, isFFT),
+                        bool isFFT=false, bool isOverWrittable=false) :
+            Feature(name, sectionCount, sectionSize, sliding, isFFT,
+                    isOverWrittable),
             m_values(values) { }
         virtual ~FeatureTemplate() {}
 

@@ -16,11 +16,13 @@ Feature *Feature::instances[Feature::MAX_INSTANCE_COUNT] = {
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
 Feature::Feature(const char* name, uint8_t sectionCount, uint16_t sectionSize,
-                 Feature::slideOption sliding, bool isFFT) :
+                 Feature::slideOption sliding, bool isFFT,
+                 bool isOverWrittable) :
     m_isFFT(isFFT),
     m_sectionCount(sectionCount),
     m_sectionSize(sectionSize),
-    m_sliding(sliding)
+    m_sliding(sliding),
+    m_overWrittable(isOverWrittable)
 {
     strcpy(m_name, name);
     m_totalSize = m_sectionCount * m_sectionSize;
@@ -149,6 +151,7 @@ void Feature::reset()
     for (uint8_t j = 0; j < maxSectionCount; ++j) {
         m_locked[j] = false;
         m_published[j] = false;
+        m_dataError[j] = false;
         for (uint8_t k = 0; k < maxReceiverCount; ++k) {
             m_acknowledged[j][k] = true;
         }
@@ -178,6 +181,8 @@ void Feature::incrementFillingIndex()
         }
         m_recordIndex = (m_recordIndex + 1) % m_sectionCount;
         newFullSection = true;
+        // Clear the data error flag for the next section
+        m_dataError[m_recordIndex] = false;
     }
     // Filling Index restart from 0 if needed
     if (m_fillingIndex >= m_totalSize) {
@@ -201,11 +206,13 @@ void Feature::incrementFillingIndex()
  *
  * Ready for recording means not locked, not already published and acknowledged
  * by all receivers.
+ * Features that are overWrittable or that have no receivers are
+ * "ready to record" provided that the current recording section is not locked.
  */
 bool Feature::isReadyToRecord(uint8_t sectionCount)
 {
     uint8_t k;
-    if (m_receiverCount == 0) {
+    if (m_overWrittable || m_receiverCount == 0) {
         for (uint8_t i = m_recordIndex; i < m_recordIndex + sectionCount; ++i) {
             if (m_locked[k]) {
                 return false;
@@ -283,19 +290,16 @@ void Feature::acknowledge(uint8_t receiverIdx, uint8_t sectionCount)
     uint8_t idx = m_computeIndex[receiverIdx];
     bool unpublish;
     uint8_t k;
-    for (uint8_t i = idx; i < idx + sectionCount; ++i)
-    {
+    for (uint8_t i = idx; i < idx + sectionCount; ++i) {
         k = i % m_sectionCount;
         // Acknowledge for current receiver
         m_acknowledged[k][receiverIdx] = true;
         // Check other receiver acknowledgement to maybe unpublish the section
         unpublish = true;
-        for (uint8_t j = 0; j < m_receiverCount; ++j)
-        {
+        for (uint8_t j = 0; j < m_receiverCount; ++j) {
             unpublish &= m_acknowledged[k][j];
         }
-        if (unpublish)
-        {
+        if (unpublish) {
             m_published[k] = false;
         }
     }
@@ -315,6 +319,51 @@ void Feature::acknowledge(FeatureComputer *receiver, uint8_t sectionCount)
     }
 }
 
+/**
+ * Flag the section currentl being recorded as containing a data error.
+ *
+ * Note that this function should be called the feature source BEFORE sending
+ * new values to the feature (Feature.addValue), because this function flag the
+ * current recording section as wrong and sending values to the feature may
+ * change the current recording section.
+ */
+void Feature::flagDataError()
+{
+    m_dataError[m_recordIndex] = true;
+}
+
+/**
+ * Tell whether one of the next sections to compute for the receiver contains a
+ * data error.
+ */
+bool Feature::sectionsToComputeHaveDataError(FeatureComputer *receiver,
+                                             uint8_t sectionCount)
+{
+    int idx = getReceiverIndex(receiver);
+    if (idx >= 0) {
+        uint8_t sIdx = m_computeIndex[uint8_t(idx)];
+        for (uint8_t i = sIdx; i < sIdx + sectionCount; i++) {
+            if (m_dataError[i % m_sectionCount]) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/**
+ * Tell whether one of the N latest recorded sections contains a data error.
+ */
+bool Feature::latestSectionsHaveDataError(uint8_t sectionCount)
+{
+    uint8_t sIdx = (m_sectionCount + m_recordIndex - sectionCount);
+    for (uint8_t i = sIdx; i < sIdx + sectionCount; i++) {
+        if (m_dataError[i % m_sectionCount]) {
+            return true;
+        }
+    }
+    return false;
+}
 
 /***** Communication *****/
 

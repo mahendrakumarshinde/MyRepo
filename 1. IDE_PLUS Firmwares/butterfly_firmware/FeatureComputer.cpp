@@ -114,30 +114,38 @@ void FeatureComputer::deleteAllSources()
 bool FeatureComputer::compute()
 {
     uint32_t startT = 0;
-    // Check if sources are ready
-    for (uint8_t i = 0; i < m_sourceCount; ++i)
-    {
+    // Check if sources are ready (and check if there was an error in the
+    // source for the data sections that this computer uses).
+    bool sourceError = false;
+    for (uint8_t i = 0; i < m_sourceCount; ++i) {
         if(!m_sources[i]->isReadyToCompute(this, m_sectionCount[i],
                                            m_computeLast))
         {
             return false;
         }
+        sourceError |= m_sources[i]->sectionsToComputeHaveDataError(
+            this, m_sectionCount[i]);
     }
     // Check if destinations are ready
-    for (uint8_t i = 0; i < m_destinationCount; ++i)
-    {
-        if(!m_destinations[i]->isReadyToRecord())
-        {
+    for (uint8_t i = 0; i < m_destinationCount; ++i) {
+        if(!m_destinations[i]->isReadyToRecord()) {
             return false;
         }
     }
     if (m_active)
     {
+        // If there was an error in the source,  transmit it to the destinations
+        // BEFORE sending them new values (see Feature.flagDataError).
+        if (sourceError) {
+            for (uint8_t i = 0; i < m_destinationCount; ++i) {
+                m_destinations[i]->flagDataError();
+            }
+        }
+        // Compute and send new values to the destinations.
         m_specializedCompute();
     }
     // Acknowledge the computed sections for each source
-    for (uint8_t i = 0; i < m_sourceCount; ++i )
-    {
+    for (uint8_t i = 0; i < m_sourceCount; ++i ) {
         m_sources[i]->acknowledge(this, m_sectionCount[i]);
     }
     return true;

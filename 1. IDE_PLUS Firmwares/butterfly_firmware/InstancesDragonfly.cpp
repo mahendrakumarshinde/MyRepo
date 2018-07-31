@@ -159,7 +159,10 @@ FeatureTemplate<float> temperatureB("TMB", 2, 1, temperatureBValues);
 
 // Temperaute measured on the LSM6DSM
 __attribute__((section(".noinit2"))) float temperatureValues[2];
-FeatureTemplate<float> temperature("TMP", 2, 1, temperatureValues);
+FeatureTemplate<float> temperature("TMP", 2, 1, temperatureValues,
+                                   Feature::FIXED,  // Feature::slideOption sliding=Feature::FIXED
+                                   false,  // isFFT=false
+                                   true);  // isOverWrittable=true
 
 /***** Audio Features *****/
 

@@ -126,6 +126,7 @@ class IULSM6DSM : public HighFreqSensor
         ODROption m_odr;
         /***** Data acquisition *****/
         void (*m_readCallback)(uint8_t wireStatus);
+        volatile bool m_readingData;
         // 14bits = 2 bytes per value (Temp, accel X, Y, Z and gyro X, Y, Z)
         uint8_t m_rawBytes[14];
         float m_temperature;
