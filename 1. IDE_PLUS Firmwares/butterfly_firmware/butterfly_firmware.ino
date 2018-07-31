@@ -64,7 +64,7 @@ const char MAC_ADDRESS[18] = "94:54:93:10:7C:0B";  // 63:DE";
 float ACCEL_RMS_SCALING[3] = {
     1.00, // Axis X
     1.00, // Axis Y
-    1.04, // Axis Z
+    1.00, // Axis Z
 };
 float VELOCITY_RMS_SCALING[3] = {
     1.00, // Axis X

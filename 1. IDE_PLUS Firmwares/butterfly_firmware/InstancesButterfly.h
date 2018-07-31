@@ -210,8 +210,12 @@ extern FeatureTemplate<float> rtdTemp;
 
 extern IUBattery iuBattery;
 
+
+void temperatureReadCallback(uint8_t wireStatus);
+void pressureReadCallback(uint8_t wireStatus);
 extern IUBMP280 iuAltimeter;
 
+void BMX055AccelReadCallback(uint8_t wireStatus);
 extern IUBMX055Acc iuAccelerometer;
 extern IUBMX055Gyro iuGyroscope;
 extern IUBMX055Mag iuMagnetometer;

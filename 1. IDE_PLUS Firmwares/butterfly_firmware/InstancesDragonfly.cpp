@@ -198,9 +198,13 @@ IUMAX31865 iuRTDSensorA(&SPI1, 42, SPISettings(500000, MSBFIRST, SPI_MODE1),
 IUMAX31865 iuRTDSensorB(&SPI1, 43, SPISettings(500000, MSBFIRST, SPI_MODE1),
                         "THB", &temperatureB);
 
-IULSM6DSM iuAccelerometer(&iuI2C, "ACC", &accelerationX, &accelerationY,
-                          &accelerationZ, &tiltX, &tiltY, &tiltZ,
-                          &temperature);
+void LSM6DSMAccelReadCallback(uint8_t wireStatus)
+{
+    iuAccelerometer.processData(wireStatus);
+}
+IULSM6DSM iuAccelerometer(&iuI2C, "ACC", LSM6DSMAccelReadCallback,
+                          &accelerationX, &accelerationY, &accelerationZ,
+                          &tiltX, &tiltY, &tiltZ, &temperature);
 
 #ifdef WITH_CAM_M8Q
     IUCAMM8Q iuGNSS(&Serial2, "GPS", -1);

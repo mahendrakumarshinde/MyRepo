@@ -7,15 +7,8 @@
 #include "FeatureUtilities.h"
 
 
-/***** Data Acquisition callbacks *****/
-
-extern bool newLSM6DSMAccelData;
-
-void LSM6DSMAccelReadCallback(uint8_t wireStatus);
-
 // TODO => Separate Accelerometer and Gyroscope, as it doesn't fit in the model
 // For example, a sensor can have only 1 resolution.
-
 
 /**
  * Accelerometer
@@ -89,6 +82,7 @@ class IULSM6DSM : public HighFreqSensor
         static const uint16_t defaultSamplingRate = 1000; // Hz
         /***** Constructors and destructors *****/
         IULSM6DSM(IUI2C *iuI2C, const char* name,
+                  void (*i2cReadCallback)(uint8_t wireStatus),
                   FeatureTemplate<q15_t> *accelerationX,
                   FeatureTemplate<q15_t> *accelerationY,
                   FeatureTemplate<q15_t> *accelerationZ,
@@ -114,9 +108,8 @@ class IULSM6DSM : public HighFreqSensor
         void resetGyroScale() { setGyroScale(defaultGyroScale); }
         ODROption getODR() { return m_odr; }
         /***** Data acquisition *****/
-        virtual void acquireData(bool inCallback=false,
-                                 bool force=false);
         virtual void readData();
+        void processData(uint8_t wireStatus);
         q15_t getData(uint8_t index) { return m_data[index]; }
         /***** Communication *****/
         void sendData(HardwareSerial *port);
@@ -132,6 +125,7 @@ class IULSM6DSM : public HighFreqSensor
         gyroScaleOption m_gyroScale;
         ODROption m_odr;
         /***** Data acquisition *****/
+        void (*m_readCallback)(uint8_t wireStatus);
         // 14bits = 2 bytes per value (Temp, accel X, Y, Z and gyro X, Y, Z)
         uint8_t m_rawBytes[14];
         float m_temperature;
@@ -141,7 +135,6 @@ class IULSM6DSM : public HighFreqSensor
         q15_t m_rawGyroData[3];     // Q15 accelerometer raw output
         q15_t m_gyroData[3];        // Q15 data (with bias) in G
         q15_t m_gyroBias[3];        // Bias corrections
-        void processData();
 };
 
 #endif // IULSM6DSM_H

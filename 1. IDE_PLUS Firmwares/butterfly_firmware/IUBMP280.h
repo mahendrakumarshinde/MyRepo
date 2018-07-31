@@ -6,15 +6,6 @@
 #include "IUI2C.h"
 
 
-/***** Data Acquisition callbacks *****/
-
-extern bool newTemperatureData;
-extern bool newPressureData;
-
-void temperatureReadCallback(uint8_t wireStatus);
-void pressureReadCallback(uint8_t wireStatus);
-
-
 /**
  * Barometer / Altimeter
  *
@@ -70,6 +61,8 @@ class IUBMP280 : public LowFreqSensor
                                          t_4000ms};
         /***** Constructors & desctructors *****/
         IUBMP280(IUI2C *iuI2C, const char* name,
+                 void (*i2cTemperatureReadCallback)(uint8_t wireStatus),
+                 void (*i2cPressureReadCallback)(uint8_t wireStatus),
                  FeatureTemplate<float> *temperature,
                  FeatureTemplate<float> *pressure);
         virtual ~IUBMP280() {}
@@ -86,13 +79,14 @@ class IUBMP280 : public LowFreqSensor
         /***** Data acquisition *****/
         // Temperature reading
         void readTemperature();
+        void processTemperatureData(uint8_t wireStatus);
         int32_t getFineTemperature() { return m_fineTemperature; }
         int16_t getTemperature() { return m_temperature; }
         //Pressure reading
         void readPressure();
+        void processPressureData(uint8_t wireStatus);
         int16_t getPressure() { return m_pressure; }
         // Acquisition
-        virtual void acquireData(bool inCallback=false, bool force=false);
         virtual void readData();
         /***** Communication *****/
         void sendData(HardwareSerial *port);
@@ -115,15 +109,15 @@ class IUBMP280 : public LowFreqSensor
         int16_t m_digPressure[9];
         /***** Data acquisition *****/
         // Temperature reading
+        void (*m_temperatureReadCallback)(uint8_t wireStatus);
         float m_temperature;  // Temperature in degree Celsius
         uint8_t m_rawTempBytes[3];  // 20-bit temperature data from register
         int32_t m_fineTemperature;
-        void processTemperatureData();
         float compensateTemperature(int32_t rawT);
         //Pressure reading
+        void (*m_pressureReadCallback)(uint8_t wireStatus);
         float m_pressure;  // Pressure in hPa
         uint8_t m_rawPressureBytes[3];
-        void processPressureData();
         float compensatePressure(int32_t rawP);
 };
 

@@ -217,6 +217,7 @@ extern IUBattery iuBattery;
 extern IUMAX31865 iuRTDSensorA;
 extern IUMAX31865 iuRTDSensorB;
 
+void LSM6DSMAccelReadCallback(uint8_t wireStatus);
 extern IULSM6DSM iuAccelerometer;
 
 #if defined(WITH_CAM_M8Q) || defined(WITH_MAX_M8Q)

@@ -1,28 +1,5 @@
 #include "IULSM6DSM.h"
 
-
-/* =============================================================================
-    Data Acquisition callbacks
-============================================================================= */
-
-bool newLSM6DSMAccelData = false;
-
-void LSM6DSMAccelReadCallback(uint8_t wireStatus)
-{
-    iuI2C.releaseReadLock();
-    if (wireStatus == 0)
-    {
-        newLSM6DSMAccelData = true;
-    }
-    else if (asyncDebugMode)
-    {
-        debugPrint(micros(), false);
-        debugPrint(F(" Acceleration read error "), false);
-        debugPrint(wireStatus);
-    }
-}
-
-
 /* =============================================================================
     Constructors and destructors
 ============================================================================= */
@@ -31,6 +8,7 @@ void LSM6DSMAccelReadCallback(uint8_t wireStatus)
  * Initialize and configure the BMX055 for the accelerometer
  */
 IULSM6DSM::IULSM6DSM(IUI2C *iuI2C, const char* name,
+                     void (*i2cReadCallback)(uint8_t wireStatus),
                      FeatureTemplate<q15_t> *accelerationX,
                      FeatureTemplate<q15_t> *accelerationY,
                      FeatureTemplate<q15_t> *accelerationZ,
@@ -42,7 +20,8 @@ IULSM6DSM::IULSM6DSM(IUI2C *iuI2C, const char* name,
                  tiltY, tiltZ, temperature),
     m_scale(defaultScale),
     m_gyroScale(defaultGyroScale),
-    m_odr(defaultODR)
+    m_odr(defaultODR),
+    m_readCallback(i2cReadCallback)
 {
     m_iuI2C = iuI2C;
     for (uint8_t i = 0; i < 3; ++i)
@@ -296,17 +275,6 @@ void IULSM6DSM::setGyroScale(IULSM6DSM::gyroScaleOption gyroScale)
 ============================================================================= */
 
 /**
- * Acquire new data, while handling down-clocking
- */
-void IULSM6DSM::acquireData(bool inCallback, bool force)
-{
-    // Process data from last acquisition if needed
-    processData();
-    // Acquire new data
-    HighFreqSensor::acquireData(inCallback, force);
-}
-
-/**
  * Read acceleration data
  *
  * Each data point is read from device as 2 bytes, LSB first.
@@ -314,10 +282,9 @@ void IULSM6DSM::acquireData(bool inCallback, bool force)
 void IULSM6DSM::readData()
 {
     if (!m_iuI2C->readBytes(ADDRESS, OUT_TEMP_L, 14, &m_rawBytes[0],
-                            LSM6DSMAccelReadCallback))
+                            m_readCallback))
     {
-        if (asyncDebugMode)
-        {
+        if (asyncDebugMode) {
             debugPrint("Skip accel read");
         }
     }
@@ -328,9 +295,15 @@ void IULSM6DSM::readData()
  *
  * Each data point is read from device as 2 bytes, LSB first.
 */
-void IULSM6DSM::processData()
+void IULSM6DSM::processData(uint8_t wireStatus)
 {
-    if (!newLSM6DSMAccelData) {
+    iuI2C.releaseReadLock();
+    if (wireStatus != 0) {
+        if (asyncDebugMode) {
+            debugPrint(micros(), false);
+            debugPrint(F(" Acceleration read error "), false);
+            debugPrint(wireStatus);
+        }
         return;
     }
     if (m_rawBytes[1] < 256) {  // Catch temperature sensor saturation that sometimes happen
@@ -352,7 +325,6 @@ void IULSM6DSM::processData()
         m_destinations[i + 3]->addValue(m_gyroData[i]);
     }
     m_destinations[6]->addValue(m_temperature);
-    newLSM6DSMAccelData = false;
 }
 
 

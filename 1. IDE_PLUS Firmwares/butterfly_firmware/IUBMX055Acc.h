@@ -7,13 +7,6 @@
 #include "FeatureUtilities.h"
 
 
-/***** Data Acquisition callbacks *****/
-
-extern bool newAccelData;
-
-void accelReadCallback(uint8_t wireStatus);
-
-
 /**
  * Accelerometer
  *
@@ -75,6 +68,7 @@ class IUBMX055Acc : public HighFreqSensor
         static const uint16_t defaultSamplingRate = 1000; // Hz
         /***** Constructors and destructors *****/
         IUBMX055Acc(IUI2C *iuI2C, const char* name,
+                    void (*i2cReadCallback)(uint8_t wireStatus),
                     FeatureTemplate<q15_t> *accelerationX,
                     FeatureTemplate<q15_t> *accelerationY,
                     FeatureTemplate<q15_t> *accelerationZ);
@@ -94,9 +88,8 @@ class IUBMX055Acc : public HighFreqSensor
         void configureInterrupts();
         void doFastCompensation(float *destination);
         /***** Data acquisition *****/
-        virtual void acquireData(bool inCallback=false,
-                                 bool force=false);
         virtual void readData();
+        void processData(uint8_t wireStatus);
         q15_t getData(uint8_t index) { return m_data[index]; }
         /***** Communication *****/
         void sendData(HardwareSerial *port);
@@ -111,12 +104,12 @@ class IUBMX055Acc : public HighFreqSensor
         bandwidthOption m_bandwidth;
         bool m_filteredData;    // Use filter?
         /***** Data acquisition *****/
+        void (*m_readCallback)(uint8_t wireStatus);
         uint8_t m_rawBytes[6];  /* 12bits / 2 bytes per axis: LSB, MSB =>
             last 4 bits of LSB are not data, they are flags */
         q15_t m_rawData[3];     // Q15 accelerometer raw output
         q15_t m_data[3];        // Q15 data (with bias) in G
         q15_t m_bias[3];        // Bias corrections
-        void processData();
 };
 
 #endif // IUBMX055ACC_H

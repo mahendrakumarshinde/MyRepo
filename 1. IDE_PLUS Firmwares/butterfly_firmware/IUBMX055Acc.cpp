@@ -2,28 +2,6 @@
 
 
 /* =============================================================================
-    Data Acquisition callbacks
-============================================================================= */
-
-bool newAccelData = false;
-
-void accelReadCallback(uint8_t wireStatus)
-{
-    iuI2C.releaseReadLock();
-    if (wireStatus == 0)
-    {
-        newAccelData = true;
-    }
-    else if (asyncDebugMode)
-    {
-        debugPrint(micros(), false);
-        debugPrint(F(" Acceleration read error "), false);
-        debugPrint(wireStatus);
-    }
-}
-
-
-/* =============================================================================
     Constructors and destructors
 ============================================================================= */
 
@@ -31,13 +9,15 @@ void accelReadCallback(uint8_t wireStatus)
  * Initialize and configure the BMX055 for the accelerometer
  */
 IUBMX055Acc::IUBMX055Acc(IUI2C *iuI2C, const char* name,
+                         void (*i2cReadCallback)(uint8_t wireStatus),
                          FeatureTemplate<q15_t> *accelerationX,
                          FeatureTemplate<q15_t> *accelerationY,
                          FeatureTemplate<q15_t> *accelerationZ) :
     HighFreqSensor(name, 3, accelerationX, accelerationY, accelerationZ),
     m_scale(defaultScale),
     m_bandwidth(defaultBandwidth),
-    m_filteredData(false)
+    m_filteredData(false),
+    m_readCallback(i2cReadCallback)
 {
     m_iuI2C = iuI2C;
 }
@@ -280,27 +260,15 @@ void IUBMX055Acc::doFastCompensation(float * dest1)
 ============================================================================= */
 
 /**
- * Acquire new data, while handling down-clocking
- */
-void IUBMX055Acc::acquireData(bool inCallback, bool force)
-{
-    // Process data from last acquisition if needed
-    processData();
-    // Acquire new data
-    HighFreqSensor::acquireData(inCallback, force);
-}
-
-/**
  * Read acceleration data
  */
 void IUBMX055Acc::readData()
 {
     // Read the six raw data registers into data array
     if (!m_iuI2C->readBytes(ADDRESS, D_X_LSB, 6, &m_rawBytes[0],
-                            accelReadCallback))
+                            m_readCallback))
     {
-        if (asyncDebugMode)
-        {
+        if (asyncDebugMode) {
             debugPrint("Skip accel read");
         }
     }
@@ -312,10 +280,15 @@ void IUBMX055Acc::readData()
  * Data is read from device as 2 bytes: LSB first (4 bits to use) then MSB
  * (8 bits to use) 4 last bits of LSB byte are used as flags (new data, etc).
  */
-void IUBMX055Acc::processData()
+void IUBMX055Acc::processData(uint8_t wireStatus)
 {
-    if (!newAccelData)
-    {
+    iuI2C.releaseReadLock();
+    if (wireStatus != 0) {
+        if (asyncDebugMode) {
+            debugPrint(micros(), false);
+            debugPrint(F(" Acceleration read error "), false);
+            debugPrint(wireStatus);
+        }
         return;
     }
     // Check that all 3 axes have new data, if not return
@@ -335,7 +308,6 @@ void IUBMX055Acc::processData()
         m_data[i] = m_rawData[i] + m_bias[i];
         m_destinations[i]->addValue(m_data[i]);
     }
-    newAccelData = false;
 }
 
 

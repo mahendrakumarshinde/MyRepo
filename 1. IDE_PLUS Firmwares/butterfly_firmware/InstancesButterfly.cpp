@@ -181,10 +181,23 @@ FeatureTemplate<float> rtdTemp("RTD", 2, 4, rtdTempValues);
 
 IUBattery iuBattery("BAT", &batteryLoad);
 
-IUBMP280 iuAltimeter(&iuI2C, "ALT", &temperature, &pressure);
+void temperatureReadCallback(uint8_t wireStatus)
+{
+    iuAltimeter.processTemperatureData(wireStatus);
+}
+void pressureReadCallback(uint8_t wireStatus)
+{
+    iuAltimeter.processPressureData(wireStatus);
+}
+IUBMP280 iuAltimeter(&iuI2C, "ALT", temperatureReadCallback,
+                     pressureReadCallback, &temperature, &pressure);
 
-IUBMX055Acc iuAccelerometer(&iuI2C, "ACC", &accelerationX, &accelerationY,
-                            &accelerationZ);
+void BMX055AccelReadCallback(uint8_t wireStatus)
+{
+    iuAccelerometer.processData(wireStatus);
+}
+IUBMX055Acc iuAccelerometer(&iuI2C, "ACC", BMX055AccelReadCallback,
+                            &accelerationX, &accelerationY, &accelerationZ);
 IUBMX055Gyro iuGyroscope(&iuI2C, "GYR", &tiltX, &tiltY, &tiltZ);
 IUBMX055Mag iuMagnetometer(&iuI2C, "MAG", &magneticX, &magneticY, &magneticZ);
 
