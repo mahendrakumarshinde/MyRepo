@@ -610,7 +610,7 @@ class CalibrationInterface(tk.Frame):
         """
         data_gen = self.data_collector.collect_data(
                                 termination_byte=self.data_termination_byte,
-                                timeout=2.5)
+                                timeout=5)
         data = bytes()
         for d in data_gen:
             # wait for data_gen to empty so that we close properly \
