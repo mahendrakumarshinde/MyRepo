@@ -216,6 +216,18 @@ void IULSM6DSM::configure(JsonVariant &config)
 }
 
 /**
+ * For now, only set the accelerometer resolution.
+ */
+void IULSM6DSM::setResolution(float resolution)
+{
+    m_resolution = resolution;
+    for (uint8_t i = 0; i < 3; ++i)
+    {
+        m_destinations[i]->setResolution(m_resolution);
+    }
+}
+
+/**
  * Set the scale then recompute resolution
  *
  * Resolution is m/s2 per LSB.

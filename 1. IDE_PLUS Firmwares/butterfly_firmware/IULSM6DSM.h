@@ -100,6 +100,7 @@ class IULSM6DSM : public HighFreqSensor
         void computeBias();
         /***** Configuration and calibration *****/
         virtual void configure(JsonVariant &config);
+        virtual void setResolution(float resolution);
         void setScale(scaleOption scale);
         scaleOption getScale() { return m_scale; }
         void resetScale() { setScale(defaultScale); }
