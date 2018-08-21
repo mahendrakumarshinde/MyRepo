@@ -430,8 +430,8 @@ void Conductor::processCommand(char *buff)
             }
             break;
         case 'S':
-            if (strncmp(buff, "SET-MQTT-IP-", 8) == 0) {
-                if (tempAddress.fromString(&buff[8])) {
+            if (strncmp(buff, "SET-MQTT-IP-", 12) == 0) {
+                if (tempAddress.fromString(&buff[12])) {
                     m_mqttServerIp = tempAddress;
                     iuWiFi.hardReset();
                     if (m_streamingMode == StreamingMode::BLE ||
