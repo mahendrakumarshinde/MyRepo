@@ -381,6 +381,8 @@ void Conductor::configureAllFeatures(JsonVariant &config)
  */
 void Conductor::processCommand(char *buff)
 {
+    IPAddress tempAddress;
+    size_t buffLen = strlen(buff);
     switch(buff[0]) {
         case 'A': // ping device
             if (strcmp(buff, "ALIVE") == 0) {
@@ -427,6 +429,18 @@ void Conductor::processCommand(char *buff)
                 }
             }
             break;
+        case 'S':
+            if (strncmp(buff, "SET-MQTT-IP-", 8) == 0) {
+                if (tempAddress.fromString(&buff[8])) {
+                    m_mqttServerIp = tempAddress;
+                    iuWiFi.hardReset();
+                    if (m_streamingMode == StreamingMode::BLE ||
+                        m_streamingMode == StreamingMode::WIFI_AND_BLE)
+                    {
+                        iuBluetooth.write("SET-MQTT-OK;");
+                    }
+                }
+            }
         case '3':  // Collect acceleration raw data
             if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
                 buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
@@ -751,9 +765,9 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
         case MSPCommand::GET_MQTT_CONNECTION_INFO:
             if (loopDebugMode) { debugPrint(F("GET_MQTT_CONNECTION_INFO")); }
             iuWiFi.mspSendIPAddress(MSPCommand::SET_MQTT_SERVER_IP,
-                                    MQTT_DEFAULT_SERVER_IP);
+                                    m_mqttServerIp);
             iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_SERVER_PORT,
-                                  String(MQTT_DEFAULT_SERVER_PORT).c_str());
+                                  String(m_mqttServerPort).c_str());
             iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_USERNAME,
                                   MQTT_DEFAULT_USERNAME);
             iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_PASSWORD,

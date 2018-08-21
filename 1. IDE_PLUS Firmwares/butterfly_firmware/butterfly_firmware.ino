@@ -365,9 +365,9 @@ void loop()
     #if defined(UNITTEST) || defined(COMPONENTTEST) || defined(INTEGRATEDTEST)
         Test::run();
         if (Test::getCurrentFailed() > 0) {
-            conductor.showStatusOnLed(RGB_RED);
+            m_ledStrip.overrideColor(RGB_RED);
         } else {
-            conductor.showStatusOnLed(RGB_GREEN);
+            m_ledStrip.overrideColor(RGB_GREEN);
         }
     #else
         if (loopDebugMode) {
