@@ -84,7 +84,7 @@ class RGBLed
         virtual void unlockColors() { m_lockedColors = false; }
         virtual bool lockedColors() { return m_lockedColors; };
         /***** Show colors *****/
-        virtual void manageColorTransitions();
+        virtual void updateColors();
 
     protected:
         /***** Hardware and power management *****/
@@ -106,7 +106,7 @@ class RGBLed
 /**
  * GPIO RGB Led
  *
- * Color display must be explicitly managed via regular calls to updateColors.
+ * Color display must be explicitly managed via regular calls to manageHighFreqBlinking.
  */
 class GPIORGBLed : public RGBLed
 {
@@ -117,7 +117,7 @@ class GPIORGBLed : public RGBLed
         /***** Hardware and power management *****/
         virtual void setup();
         /***** Show colors *****/
-        void updateColors();
+        void manageHighFreqBlinking();
 
     private:
         /***** Pin definitions *****/
@@ -142,7 +142,7 @@ class APA102RGBLedStrip : public RGBLed
         /***** Hardware and power management *****/
         virtual void setup() {}
         /***** Show colors *****/
-        virtual void manageColorTransitions();
+        virtual void updateColors();
 
     private:
         /***** SPI settings *****/

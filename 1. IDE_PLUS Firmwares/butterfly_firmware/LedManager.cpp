@@ -29,6 +29,14 @@ LedManager::LedManager(RGBLed *led, RGBLed *ledStrip) :
     setBaselineStatus(&STATUS_NO_STATUS);
 }
 
+void LedManager::updateColors()
+{
+    m_led->updateColors();
+    if (m_ledStrip) {
+        m_ledStrip->updateColors();
+    }
+}
+
 
 /* =============================================================================
     Operation state
@@ -139,11 +147,13 @@ void LedManager::overrideColor(RGBColor color)
     if (m_ledStrip) {
         m_ledStrip->lockColors();
     }
+    updateColors();
 }
 
 void LedManager::stopColorOverride()
 {
     m_overriden = false;
     resetStatus();
+    updateColors();
 }
 

@@ -320,7 +320,7 @@ void Feature::acknowledge(FeatureComputer *receiver, uint8_t sectionCount)
 }
 
 /**
- * Flag the section currentl being recorded as containing a data error.
+ * Flag the section currently being recorded as containing a data error.
  *
  * Note that this function should be called the feature source BEFORE sending
  * new values to the feature (Feature.addValue), because this function flag the

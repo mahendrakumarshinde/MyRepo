@@ -22,7 +22,8 @@ IULSM6DSM::IULSM6DSM(IUI2C *iuI2C, const char* name,
     m_gyroScale(defaultGyroScale),
     m_odr(defaultODR),
     m_readCallback(i2cReadCallback),
-    m_readingData(false)
+    m_readingData(false),
+    m_temperature(30.0)
 {
     m_iuI2C = iuI2C;
     for (uint8_t i = 0; i < 3; ++i)
@@ -327,6 +328,7 @@ void IULSM6DSM::processData(uint8_t wireStatus)
             debugPrint(F(" Acceleration read error "), false);
             debugPrint(wireStatus);
         }
+        m_readingData = false;
         return;
     }
     if (m_rawBytes[1] < 256) {  // Catch temperature sensor saturation that sometimes happen

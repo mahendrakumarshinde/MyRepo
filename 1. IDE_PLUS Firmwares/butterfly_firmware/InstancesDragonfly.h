@@ -178,6 +178,8 @@ extern FeatureTemplate<float> temperatureA;
 extern __attribute__((section(".noinit2"))) float temperatureBValues[2];
 extern FeatureTemplate<float> temperatureB;
 // Temperaute measured on the LSM6DSM
+extern __attribute__((section(".noinit2"))) float allTemperatureValues[1024];
+extern FeatureTemplate<float> allTemperatures;
 extern __attribute__((section(".noinit2"))) float temperatureValues[2];
 extern FeatureTemplate<float> temperature;
 
@@ -272,6 +274,10 @@ extern SectionSumComputer accel512TotalComputer;
 extern Q15FFTComputer accelFFTComputerX;
 extern Q15FFTComputer accelFFTComputerY;
 extern Q15FFTComputer accelFFTComputerZ;
+
+
+// 512 sample long temperature computer
+extern AverageComputer temperatureAverager;
 
 
 /***** Accelerometer Calibration parameters *****/

@@ -139,7 +139,7 @@ void RGBLed::insertColor(uint8_t index, RGBColor color, uint32_t fadeInTimer,
 /**
  * Manage the color display, with timers and transitions (fade-in / fade-out).
  */
-void RGBLed::manageColorTransitions()
+void RGBLed::updateColors()
 {
     if (m_colorCount == 0) {
         return;
@@ -219,7 +219,7 @@ void GPIORGBLed::setup()
 /**
  * Increment RGB values and show them on the LED.
  */
-void GPIORGBLed::updateColors()
+void GPIORGBLed::manageHighFreqBlinking()
 {
     for (uint8_t i = 0; i < 3; ++i)
     {
@@ -257,9 +257,9 @@ APA102RGBLedStrip::APA102RGBLedStrip(uint16_t ledCount) :
 /**
  * Send intensity and RGB value to LED
  */
-void APA102RGBLedStrip::manageColorTransitions()
+void APA102RGBLedStrip::updateColors()
 {
-    RGBLed::manageColorTransitions();    
+    RGBLed::updateColors();
     uint8_t brightness5Bit = (float(m_intensityPercent) / 100.0 * 31);
     m_ledStrip.startFrame();
     for (uint16_t i = 0; i < m_ledCount; i++) {

@@ -112,6 +112,25 @@ class FeatureStateComputer: public FeatureComputer
 ============================================================================= */
 
 /**
+ * Mean / Average
+ *
+ * Sources:
+ *      - Input data: Float data buffer
+ * Destinations:
+ *      - Output RMS: Float data buffer
+ */
+class AverageComputer: public FeatureComputer
+{
+    public:
+        AverageComputer(uint8_t id, FeatureTemplate<float> *input);
+        /***** Configuration *****/
+
+    protected:
+        virtual void m_specializedCompute();
+};
+
+
+/**
  * Signal RMS
  *
  * Sources:

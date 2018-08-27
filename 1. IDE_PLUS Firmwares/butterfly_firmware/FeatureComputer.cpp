@@ -364,10 +364,39 @@ float FeatureStateComputer::m_getSectionAverage(Feature *feature)
 }
 
 
+/* =============================================================================
+    Averaging
+============================================================================= */
+
+AverageComputer::AverageComputer(uint8_t id, FeatureTemplate<float> *input) :
+    FeatureComputer(id, 1, input)
+{
+    // Constructor
+}
+
+void AverageComputer::m_specializedCompute()
+{
+    float resolution = m_sources[0]->getResolution();
+    float *values = m_sources[0]->getNextFloatValuesToCompute(this);
+    uint16_t totalSize = m_sectionCount[0] * m_sources[0]->getSectionSize();
+    float avg = 0;
+    arm_mean_f32(values, totalSize, &avg);
+    m_destinations[0]->setResolution(resolution);
+    m_destinations[0]->addValue(avg);
+    if (featureDebugMode) {
+        debugPrint(millis(), false);
+        debugPrint(" -> ", false);
+        debugPrint(m_destinations[0]->getName(), false);
+        debugPrint(": ", false);
+        debugPrint(avg * resolution);
+    }
+}
+
 
 /* =============================================================================
     Signal Energy, Power and RMS
 ============================================================================= */
+
 
 SignalRMSComputer::SignalRMSComputer(uint8_t id, FeatureTemplate<float> *rms,
                                      bool removeMean, bool normalize,
@@ -421,7 +450,7 @@ void SignalRMSComputer::m_specializedCompute()
     float total = 0;
     q15_t avg = 0;
     if (m_removeMean) {
-        arm_mean_q15(values, sectionSize, &avg);
+        arm_mean_q15(values, totalSize, &avg);
     }
     for (int i = 0; i < totalSize; ++i) {
         total += sq((values[i] - avg));

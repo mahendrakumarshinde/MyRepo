@@ -117,22 +117,11 @@ Conductor conductor(MAC_ADDRESS);
     Led timers and callbacks
 ============================================================================= */
 
-static armv7m_timer_t ledShowTimer;
+static armv7m_timer_t RGBHighFreqBlinker;
 
-static void ledShowCallback(void) {
-    rgbLed.updateColors();
-    armv7m_timer_start(&ledShowTimer, 1);
-}
-
-
-static armv7m_timer_t ledTransitionTimer;
-
-static void ledTransitionCallback(void) {
-    rgbLed.manageColorTransitions();
-    #ifdef USE_LED_STRIP
-        rgbLedStrip.manageColorTransitions();
-    #endif
-    armv7m_timer_start(&ledTransitionTimer, 10);
+static void blinkRGBAtHighFreq(void) {
+    rgbLed.manageHighFreqBlinking();
+    armv7m_timer_start(&RGBHighFreqBlinker, 1);
 }
 
 void onWiFiConnect() {
@@ -250,10 +239,8 @@ void setup()
     rgbLed.setup();
     ledManager.setBaselineStatus(&STATUS_NO_STATUS);
     ledManager.overrideColor(RGB_WHITE);
-    armv7m_timer_create(&ledShowTimer, (armv7m_timer_callback_t)ledShowCallback);
-    armv7m_timer_start(&ledShowTimer, 20);
-    armv7m_timer_create(&ledTransitionTimer, (armv7m_timer_callback_t)ledTransitionCallback);
-    armv7m_timer_start(&ledTransitionTimer, 100);
+    armv7m_timer_create(&RGBHighFreqBlinker, (armv7m_timer_callback_t)blinkRGBAtHighFreq);
+    armv7m_timer_start(&RGBHighFreqBlinker, 20);
     #if defined(UNITTEST) || defined(COMPONENTTEST) || defined(INTEGRATEDTEST)
         delay(2000);
         iuI2C.begin();
@@ -396,6 +383,7 @@ void loop()
         conductor.periodicSendAccelRawData();
         // Send config checksum
         conductor.periodicSendConfigChecksum();
+        ledManager.updateColors();
         uint32_t now = millis();
         if (lastDone == 0 || lastDone + interval < now || now < lastDone) {
             lastDone = now;

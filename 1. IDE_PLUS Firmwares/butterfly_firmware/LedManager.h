@@ -74,7 +74,7 @@ class LedManager
         static const uint8_t LED_STRIP_CLOCK_PIN = 12;
         /***** Core *****/
         LedManager(RGBLed *led, RGBLed *ledStrip=NULL);
-        virtual ~LedManager() {}
+        void updateColors();
         /***** Operation state *****/
         void showOperationState(uint8_t state);
         uint8_t getOperationState() { return m_operationState; }

@@ -391,7 +391,7 @@ void Conductor::processCommand(char *buff)
                 uint32_t startT = millis();
                 uint32_t current = startT;
                 while (current - startT < 3000) {
-                    delay(10);
+                    ledManager.updateColors();
                     current = millis();
                 }
                 ledManager.resetStatus();
@@ -437,6 +437,10 @@ void Conductor::processCommand(char *buff)
                     if (m_streamingMode == StreamingMode::BLE ||
                         m_streamingMode == StreamingMode::WIFI_AND_BLE)
                     {
+                        if (loopDebugMode) {
+                            debugPrint("Set MQTT server IP: ", false);
+                            debugPrint(m_mqttServerIp);
+                        }
                         iuBluetooth.write("SET-MQTT-OK;");
                     }
                 }
@@ -488,7 +492,7 @@ void Conductor::processUserCommandForWiFi(char *buff,
             // Wait for up to 3sec the WiFi wake up
             while (!iuWiFi.isAvailable() && current - startT < 3000) {
                 iuWiFi.readMessages();
-                delay(10);
+                ledManager.updateColors();
                 current = millis();
             }
             ledManager.resetStatus();
