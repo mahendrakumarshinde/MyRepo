@@ -101,7 +101,7 @@ uint16_t RFFT::getRescalingFactorForIntegral(q15_t *values, uint16_t sampleCount
         comp = (float) abs(values[2 * i + 1]) / ((float) i * omega);
         maxVal = max(maxVal, max(real, comp));
     }
-    uint8_t rescaleBit = 15 - ceil(log(maxVal) / log(2));
+    uint8_t rescaleBit = max(13 - ceil(log(maxVal) / log(2)), 0);
     return (uint16_t) pow(2, rescaleBit);
 
 }
@@ -247,7 +247,7 @@ uint16_t RFFTAmplitudes::getRescalingFactorForIntegral(
         val = (float) amplitudes[i] / ((float) i * omega);
         maxVal = max(maxVal, val);
     }
-    uint8_t rescaleBit = 15 - ceil(log(maxVal) / log(2));
+    uint8_t rescaleBit = max(13 - ceil(log(maxVal) / log(2)), 0);
     return (uint16_t) pow(2, rescaleBit);
 }
 
