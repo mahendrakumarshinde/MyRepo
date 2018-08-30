@@ -42,7 +42,7 @@ q15_t floatToq15(float value)
  *  coefficients, to apply to the time domain samples
  */
 void RFFT::computeRFFT(q15_t *source, q15_t *destination,
-                      const uint16_t FFTLength, bool inverse, q15_t *window)
+                       const uint16_t FFTLength, bool inverse, q15_t *window)
 {
     if (window != NULL && !inverse) // Apply window
     {
@@ -76,6 +76,25 @@ void RFFT::computeRFFT(q15_t *source, q15_t *destination,
     }
 }
 
+void RFFT::computeRFFT(q31_t *source, q31_t *destination,
+                       const uint32_t FFTLength, bool inverse)
+{
+    arm_rfft_instance_q31 rfftInstance;
+    arm_status armStatus = arm_rfft_init_q31(
+        &rfftInstance,  // RFFT instance
+        FFTLength,      // FFT length
+        (uint32_t) inverse,  // 0: forward RFFT, 1: inverse RFFT
+        1);             // 1: enable bit reversal output
+    if (armStatus != ARM_MATH_SUCCESS)
+    {
+        if (loopDebugMode)
+        {
+            debugPrint("RFFT / Inverse RFFT computation failed");
+        }
+    }
+    arm_rfft_q31(&rfftInstance, source, destination);
+}
+
 /**
  * Get max rescaling factor usable (without overflowing) for given RFFT values
  *
@@ -88,8 +107,8 @@ void RFFT::computeRFFT(q15_t *source, q15_t *destination,
  * @param sampleCount The time domain sample count (values size = 2 * FFTLength)
  * @param samplingRate The sampling rate of the time domain data
  */
-uint16_t RFFT::getRescalingFactorForIntegral(q15_t *values, uint16_t sampleCount,
-                                            uint16_t samplingRate)
+uint16_t RFFT::getRescalingFactorForIntegral(
+        q15_t *values, uint16_t sampleCount, uint16_t samplingRate)
 {
     float real(0), comp(0), maxVal(2);
     float df = (float) samplingRate / (float) sampleCount;
@@ -103,6 +122,23 @@ uint16_t RFFT::getRescalingFactorForIntegral(q15_t *values, uint16_t sampleCount
     }
     uint8_t rescaleBit = max(13 - ceil(log(maxVal) / log(2)), 0);
     return (uint16_t) pow(2, rescaleBit);
+}
+
+uint32_t RFFT::getRescalingFactorForIntegral(
+        q31_t *values, uint16_t sampleCount, uint16_t samplingRate)
+{
+    float real(0), comp(0), maxVal(2);
+    float df = (float) samplingRate / (float) sampleCount;
+    float omega = 2. * PI * df;
+    // skip i=0 (DC component)
+    for (uint16_t i = 1; i < sampleCount / 2; ++i)  // Up to Nyquist Frequency
+    {
+        real = (float) abs(values[2 * i]) / ((float) i * omega);
+        comp = (float) abs(values[2 * i + 1]) / ((float) i * omega);
+        maxVal = max(maxVal, max(real, comp));
+    }
+    uint8_t rescaleBit = max(13 - ceil(log(maxVal) / log(2)), 0);
+    return (uint32_t) pow(2, rescaleBit);
 
 }
 
@@ -121,9 +157,9 @@ uint16_t RFFT::getRescalingFactorForIntegral(q15_t *values, uint16_t sampleCount
  * @param twice False (default) to integrate once, true to integrate twice
  */
 void RFFT::filterAndIntegrate(q15_t *values, uint16_t sampleCount,
-                             uint16_t samplingRate, uint16_t FreqLowerBound,
-                             uint16_t FreqHigherBound, uint16_t scalingFactor,
-                             bool twice)
+                              uint16_t samplingRate, uint16_t FreqLowerBound,
+                              uint16_t FreqHigherBound, uint16_t scalingFactor,
+                              bool twice)
 {
     float df = (float) samplingRate / (float) sampleCount;
     uint16_t nyquistIdx = sampleCount / 2;
@@ -176,6 +212,60 @@ void RFFT::filterAndIntegrate(q15_t *values, uint16_t sampleCount,
     }
 }
 
+void RFFT::filterAndIntegrate(q31_t *values, uint16_t sampleCount,
+                              uint16_t samplingRate, uint16_t FreqLowerBound,
+                              uint16_t FreqHigherBound, uint32_t scalingFactor,
+                              bool twice)
+{
+    float df = (float) samplingRate / (float) sampleCount;
+    uint16_t nyquistIdx = sampleCount / 2;
+    uint16_t lowIdx = (uint16_t) max(((float) FreqLowerBound / df), 1);
+    uint16_t highIdx = (uint16_t) min((float) FreqHigherBound / df,
+                                      nyquistIdx + 1);
+    float omega = 2. * PI * df / (float) scalingFactor;
+    // Apply filtering
+    for (uint16_t i = 0; i < lowIdx; ++i)  // Low cut
+    {
+        values[2 * i] = 0;
+        values[2 * i + 1] = 0;
+    }
+    for (uint16_t i = highIdx; i < nyquistIdx + 1; ++i)  // High cut
+    {
+        values[2 * i] = 0;
+        values[2 * i + 1] = 0;
+    }
+    // Integrate RFFT (divide by j * idx * omega)
+    if (twice)
+    {
+        float factor = - 1. / sq(omega);
+        for (uint16_t i = lowIdx; i < highIdx; ++i)
+        {
+            values[2 * i] = (q31_t) ((float) values[2 * i] * factor /
+                                     (float) sq(i));
+            values[2 * i + 1] = (q31_t) ((float) values[2 * i + 1] * factor /
+                                         (float) sq(i));
+        }
+    }
+    else
+    {
+        q31_t real(0), comp(0);
+        for (uint16_t i = lowIdx; i < highIdx; ++i)
+        {
+            real = values[2 * i];
+            comp = values[2 * i + 1];
+            values[2 * i] = (q31_t) ((float) comp / ((float) i * omega));
+            values[2 * i + 1] = (q31_t) (- (float) real / ((float) i * omega));
+        }
+    }
+    /* Negative frequencies (in 2nd half of array) are complex conjugate of
+    positive frequencies (in 1st half of array) */
+    for (uint16_t i = 1; i < nyquistIdx; ++i)
+    {
+        values[2 * (nyquistIdx + i)] = values[2 * (nyquistIdx - i)];
+        values[2 * (nyquistIdx + i) + 1] = - values[2 * (nyquistIdx - i) + 1];
+    }
+}
+
 
 /*==============================================================================
     RFFT Amplitudes
@@ -202,6 +292,17 @@ void RFFTAmplitudes::getAmplitudes(q15_t *rfftValues, uint16_t sampleCount,
     }
 }
 
+void RFFTAmplitudes::getAmplitudes(q31_t *rfftValues, uint16_t sampleCount,
+                                   q31_t *destination)
+{
+    for (uint16_t i = 0; i < sampleCount / 2 + 1; ++i)
+    {
+        destination[i] = sqrt(sq(rfftValues[2 * i]) +
+                              sq(rfftValues[2 * i + 1]));
+    }
+}
+
+
 
 /**
  * Return the RMS from RFFT amplitudes
@@ -219,6 +320,21 @@ float RFFTAmplitudes::getRMS(q15_t *amplitudes, uint16_t sampleCount,
         /* factor 2 because RFFT and we use only half (positive part) of freq
         spectrum */
         rms += 2 * (uint32_t) sq((int32_t) (amplitudes[i]));
+    }
+    return (float) sqrt(rms);
+}
+
+float RFFTAmplitudes::getRMS(q31_t *amplitudes, uint16_t sampleCount,
+                             bool removeDC)
+{
+    uint32_t rms = 0;
+    if (!removeDC) {
+        rms += (uint32_t) sq((amplitudes[0]));
+    }
+    for (uint16_t i = 1; i < sampleCount / 2 + 1; ++i) {
+        /* factor 2 because RFFT and we use only half (positive part) of freq
+        spectrum */
+        rms += 2 * (uint32_t) sq((amplitudes[i]));
     }
     return (float) sqrt(rms);
 }
@@ -249,6 +365,22 @@ uint16_t RFFTAmplitudes::getRescalingFactorForIntegral(
     }
     uint8_t rescaleBit = max(13 - ceil(log(maxVal) / log(2)), 0);
     return (uint16_t) pow(2, rescaleBit);
+}
+
+uint32_t RFFTAmplitudes::getRescalingFactorForIntegral(
+    q31_t *amplitudes, uint16_t sampleCount, uint16_t samplingRate)
+{
+    float val(0), maxVal(2);
+    float df = (float) samplingRate / (float) sampleCount;
+    float omega = 2. * PI * df;
+    // skip i=0 (DC component)
+    for (uint16_t i = 1; i < sampleCount / 2 + 1; ++i)
+    {
+        val = (float) amplitudes[i] / ((float) i * omega);
+        maxVal = max(maxVal, val);
+    }
+    uint8_t rescaleBit = max(13 - ceil(log(maxVal) / log(2)), 0);
+    return (uint32_t) pow(2, rescaleBit);
 }
 
 /**
@@ -305,6 +437,46 @@ void RFFTAmplitudes::filterAndIntegrate(
     }
 }
 
+void RFFTAmplitudes::filterAndIntegrate(
+    q31_t *amplitudes, uint16_t sampleCount, uint16_t samplingRate,
+    uint16_t FreqLowerBound, uint16_t FreqHigherBound, uint16_t scalingFactor,
+    bool twice)
+{
+    float df = (float) samplingRate / (float) sampleCount;
+    uint16_t nyquistIdx = sampleCount / 2;
+    uint16_t lowIdx = (uint16_t) max(((float) FreqLowerBound / df), 1);
+    uint16_t highIdx = (uint16_t) min((float) FreqHigherBound / df,
+                                      nyquistIdx + 1);
+    float omega = 2. * PI * df / (float) scalingFactor;
+    // Apply filtering
+    for (uint16_t i = 0; i < lowIdx; ++i)  // low cut
+    {
+        amplitudes[i] = 0;
+    }
+    for (uint16_t i = highIdx; i < nyquistIdx + 1; ++i)
+    {
+        amplitudes[i] = 0;
+    }
+    // Integrate RFFT (divide by j * idx * omega)
+    if (twice)
+    {
+        float factor = 1. / sq(omega);
+        for (uint16_t i = lowIdx; i < highIdx; ++i)
+        {
+            amplitudes[i] =
+                (q31_t) ((float) amplitudes[i] * factor / (float) sq(i));
+        }
+    }
+    else
+    {
+        for (uint16_t i = lowIdx; i < highIdx; ++i)
+        {
+            amplitudes[i] =
+                (q31_t) ((float) amplitudes[i] / ((float) i * omega));
+        }
+    }
+}
+
 
 /**
  * Return the main frequency, ie the frequency of the highest peak
@@ -318,18 +490,22 @@ float RFFTAmplitudes::getMainFrequency(q15_t *amplitudes, uint16_t sampleCount,
                                        uint16_t samplingRate)
 {
     float df = (float) samplingRate / (float) sampleCount;
-    uint16_t maxIdx = 0;
+    uint32_t maxIdx = 0;
     q15_t maxVal = 0;
     // Ignore 1 first coeff (0Hz = DC component)
-    for (uint16_t i = 1; i < sampleCount / 2 + 1; ++i)
-    {
-        if (amplitudes[i] > maxVal)
-        {
-            maxVal = amplitudes[i];
-            maxIdx = i;
-        }
-    }
-    return (float) maxIdx * df;
+    getMax(&amplitudes[1], (uint32_t) sampleCount, &maxVal, &maxIdx);
+    return (float) (maxIdx + 1) * df;
+}
+
+float RFFTAmplitudes::getMainFrequency(q31_t *amplitudes, uint16_t sampleCount,
+                                       uint16_t samplingRate)
+{
+    float df = (float) samplingRate / (float) sampleCount;
+    uint32_t maxIdx = 0;
+    q31_t maxVal = 0;
+    // Ignore 1 first coeff (0Hz = DC component)
+    getMax(&amplitudes[1], (uint32_t) sampleCount, &maxVal, &maxIdx);
+    return (float) (maxIdx + 1) * df;
 }
 
 

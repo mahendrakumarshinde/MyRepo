@@ -418,7 +418,7 @@ test(FeatureComputer__multi_source_sum)
 
 
 /**
- * Test Q15FFTComputer computation results
+ * Test Q15 FFTComputer computation results
  */
 test(FeatureComputer__q15_fft)
 {
@@ -436,7 +436,7 @@ test(FeatureComputer__q15_fft)
     float doubleIntegralRMSValues[2];
     FeatureTemplate<float> doubleIntegralRMS("RM2", 2, 1, doubleIntegralRMSValues);
 
-    Q15FFTComputer fftComputer = Q15FFTComputer(
+    FFTComputer<q15_t> fftComputer = FFTComputer<q15_t>(
         1, &reducedFFT, &mainFreq, &integralRMS, &doubleIntegralRMS,
         sharedTestArray, 5, 550);
     fftComputer.addSource(&source, 1);

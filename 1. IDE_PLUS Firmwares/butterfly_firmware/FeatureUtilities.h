@@ -25,21 +25,37 @@ q15_t floatToq15(float value);
  * Return the max value of the array (using operator <)
  */
 template <typename T>
-T getMax(T *values, uint16_t length)
+inline void getMax(T *values, uint32_t length, T *maxVal, uint32_t *maxIdx)
 {
-    if (length == 0)
-    {
-        return 0;
+    if (length == 0) {
+        return;
     }
-    T maxVal = values[0];
-    for (uint16_t i = 0; i < length; ++i)
-    {
-        if (maxVal < values[i])
-        {
+    maxVal = values[0];
+    maxIdx = 0;
+    for (uint32_t i = 0; i < length; ++i) {
+        if (maxVal < values[i]) {
             maxVal = values[i];
+            maxIdx = i;
         }
     }
-    return maxVal;
+}
+
+template <>
+inline void getMax(q15_t *values, uint32_t length, q15_t *maxVal, uint32_t *maxIdx)
+{
+    arm_max_q15(values, length, maxVal, maxIdx);
+}
+
+template <>
+inline void getMax(q31_t *values, uint32_t length, q31_t *maxVal, uint32_t *maxIdx)
+{
+    arm_max_q31(values, length, maxVal, maxIdx);
+}
+
+template <>
+inline void getMax(float *values, uint32_t length, float *maxVal, uint32_t *maxIdx)
+{
+    arm_max_f32(values, length, maxVal, maxIdx);
 }
 
 /**
@@ -100,12 +116,23 @@ namespace RFFT
                      const uint16_t FFTlength, bool inverse,
                      q15_t *window=NULL);
 
+    void computeRFFT(q31_t *source, q31_t *destination,
+                     const uint32_t FFTlength, bool inverse);
+
     uint16_t getRescalingFactorForIntegral(q15_t *values, uint16_t sampleCount,
+                                           uint16_t samplingRate);
+
+    uint32_t getRescalingFactorForIntegral(q31_t *values, uint16_t sampleCount,
                                            uint16_t samplingRate);
 
     void filterAndIntegrate(q15_t *values, uint16_t sampleCount,
                             uint16_t samplingRate, uint16_t FreqLowerBound,
                             uint16_t FreqHigherBound, uint16_t scalingFactor,
+                            bool twice = false);
+
+    void filterAndIntegrate(q31_t *values, uint16_t sampleCount,
+                            uint16_t samplingRate, uint16_t FreqLowerBound,
+                            uint16_t FreqHigherBound, uint32_t scalingFactor,
                             bool twice = false);
 }
 
@@ -124,9 +151,18 @@ namespace RFFTAmplitudes
     void getAmplitudes(q15_t *rfftValues, uint16_t sampleCount,
                        q15_t *destination);
 
+    void getAmplitudes(q31_t *rfftValues, uint16_t sampleCount,
+                       q31_t *destination);
+
     float getRMS(q15_t *amplitudes, uint16_t sampleCount, bool removeDC=true);
 
+    float getRMS(q31_t *amplitudes, uint16_t sampleCount, bool removeDC=true);
+
     uint16_t getRescalingFactorForIntegral(q15_t *amplitudes,
+                                           uint16_t sampleCount,
+                                           uint16_t samplingRate);
+
+    uint32_t getRescalingFactorForIntegral(q31_t *amplitudes,
                                            uint16_t sampleCount,
                                            uint16_t samplingRate);
 
@@ -135,7 +171,15 @@ namespace RFFTAmplitudes
                             uint16_t FreqHigherBound, uint16_t scalingFactor,
                             bool twice);
 
+    void filterAndIntegrate(q31_t *amplitudes, uint16_t sampleCount,
+                            uint16_t samplingRate, uint16_t FreqLowerBound,
+                            uint16_t FreqHigherBound, uint16_t scalingFactor,
+                            bool twice);
+
     float getMainFrequency(q15_t *amplitudes, uint16_t sampleCount,
+                           uint16_t samplingRate);
+
+    float getMainFrequency(q31_t *amplitudes, uint16_t sampleCount,
                            uint16_t samplingRate);
 }
 

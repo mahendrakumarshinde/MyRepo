@@ -217,34 +217,45 @@ class MultiSourceSumComputer: public FeatureComputer
         bool m_rmsInput;  // Return the average instead of the sum
 };
 
-
-/**
- * FFT for Q15 values
- *
- * Sources:
- *      - A Q15 buffer
- * Destinations:
- *      - Reduced FFT values: A FFT q15 feature
- *      - Main frequency: A float feature
- *      - Integrated RMS: A float feature
- *      - Double-integrated RMS: A float feature
- */
-class Q15FFTComputer: public FeatureComputer
+template<typename T>
+class FFTComputer: public FeatureComputer
 {
     public:
-        Q15FFTComputer(uint8_t id,
-                       FeatureTemplate<q15_t> *reducedFFT,
-                       FeatureTemplate<float> *mainFrequency,
-                       FeatureTemplate<float> *integralRMS,
-                       FeatureTemplate<float> *doubleIntegralRMS,
-                       q15_t *allocatedFFTSpace,
-                       uint16_t lowCutFrequency=5,
-                       uint16_t highCutFrequency=500,
-                       float minAgitationRMS=0.1,
-                       float calibrationScaling1=1.,
-                       float calibrationScaling2=1.);
+        FFTComputer(uint8_t id,
+                    FeatureTemplate<T> *reducedFFT,
+                    FeatureTemplate<float> *mainFrequency,
+                    FeatureTemplate<float> *integralRMS,
+                    FeatureTemplate<float> *doubleIntegralRMS,
+                    T *allocatedFFTSpace,
+                    uint16_t lowCutFrequency=5,
+                    uint16_t highCutFrequency=500,
+                    float minAgitationRMS=0.1,
+                    float calibrationScaling1=1.,
+                    float calibrationScaling2=1.) :
+            FeatureComputer(id, 4, reducedFFT, mainFrequency, integralRMS,
+                            doubleIntegralRMS),
+            m_lowCutFrequency(lowCutFrequency),
+            m_highCutFrequency(highCutFrequency),
+            m_minAgitationRMS(minAgitationRMS),
+            m_calibrationScaling1(calibrationScaling1),
+            m_calibrationScaling2(calibrationScaling2)
+        {
+            m_allocatedFFTSpace = allocatedFFTSpace;
+            m_computeLast = true;
+        }
         /***** Configuration *****/
-        virtual void configure(JsonVariant &config);
+        virtual void configure(JsonVariant &config)
+        {
+            FeatureComputer::configure(config);
+            JsonVariant freq = config["FREQ"][0];
+            if (freq.success()) {
+                setLowCutFrequency((uint16_t) (freq.as<int>()));
+            }
+            freq = config["FREQ"][1];
+            if (freq.success()) {
+                setHighCutFrequency((uint16_t) (freq.as<int>()));
+            }
+        }
         void setLowCutFrequency(uint16_t value) { m_lowCutFrequency = value; }
         void setHighCutFrequency(uint16_t value) { m_highCutFrequency = value; }
         void setMinAgitationRMS(float value) { m_minAgitationRMS = value; }
@@ -252,13 +263,128 @@ class Q15FFTComputer: public FeatureComputer
         void setCalibrationScaling2(float val) { m_calibrationScaling2 = val; }
 
     protected:
-        virtual void m_specializedCompute();
-        q15_t *m_allocatedFFTSpace;
+        T *m_allocatedFFTSpace;
         uint16_t m_lowCutFrequency;
         uint16_t m_highCutFrequency;
         float m_minAgitationRMS;
         bool m_calibrationScaling1;  // Scaling factor for 1st derivative RMS
         bool m_calibrationScaling2;  // Scaling factor for 2nd derivative RMS
+        virtual void m_specializedCompute()
+    {
+        // 0. Preparation
+        uint16_t samplingRate = m_sources[0]->getSamplingRate();
+        float resolution = m_sources[0]->getResolution();
+        uint16_t sampleCount =
+            m_sources[0]->getSectionSize() * m_sectionCount[0];
+        float df = (float) samplingRate / (float) sampleCount;
+        T *values = (T*) m_sources[0]->getNextValuesToCompute(this);
+        for (uint8_t i = 0; i < m_destinationCount; ++i) {
+            m_destinations[i]->setSamplingRate(samplingRate);
+        }
+        m_destinations[0]->setResolution(resolution);
+        m_destinations[1]->setResolution(1);
+        m_destinations[2]->setResolution(resolution);
+        m_destinations[3]->setResolution(resolution);
+        // 1. Compute FFT and get amplitudes
+        uint32_t amplitudeCount = sampleCount / 2 + 1;
+        T amplitudes[amplitudeCount];
+        RFFT::computeRFFT(values, m_allocatedFFTSpace, sampleCount, false);
+        RFFTAmplitudes::getAmplitudes(m_allocatedFFTSpace, sampleCount,
+                                      amplitudes);
+        float agitation = RFFTAmplitudes::getRMS(amplitudes, sampleCount, true);
+        bool isInMotion = (agitation * resolution) > m_minAgitationRMS ;
+        if (!isInMotion && featureDebugMode) {
+            debugPrint(F("Device is still - Freq, vel & disp defaulted to 0."));
+        }
+        // 2. Keep the K max coefficients (K = reducedLength)
+        uint16_t reducedLength = m_destinations[0]->getSectionSize() / 3;
+        T maxVal;
+        uint32_t maxIdx;
+        // If board is still, freq is defaulted to 0.
+        bool mainFreqSaved = false;
+        float freq(0);
+        if (!isInMotion) {
+            m_destinations[1]->addValue(freq);
+            mainFreqSaved = true;
+        }
+        T amplitudesCopy[amplitudeCount];
+        copyArray(amplitudes, amplitudesCopy, amplitudeCount);
+        for (uint16_t i = 0; i < reducedLength; ++i) {
+            getMax(amplitudesCopy, amplitudeCount, &maxVal, &maxIdx);
+            amplitudesCopy[maxIdx] = 0;
+            m_destinations[0]->addValue((q31_t) maxIdx);
+            m_destinations[0]->addValue(m_allocatedFFTSpace[2 * maxIdx]);
+            m_destinations[0]->addValue(m_allocatedFFTSpace[2 * maxIdx + 1]);
+            if (!mainFreqSaved) {
+                freq = df * (float) maxIdx;
+                if (freq > m_lowCutFrequency && freq < m_highCutFrequency) {
+                    m_destinations[1]->addValue(freq);
+                    mainFreqSaved = true;
+                }
+            }
+        }
+        if (featureDebugMode) {
+            debugPrint(millis(), false);
+            debugPrint(F(" -> "), false);
+            debugPrint(m_destinations[0]->getName(), false);
+            debugPrint(F(": computed"));
+            debugPrint(millis(), false);
+            debugPrint(F(" -> "), false);
+            debugPrint(m_destinations[1]->getName(), false);
+            debugPrint(F(": "), false);
+            debugPrint(freq);
+        }
+        if (isInMotion) {
+            // 3. 1st integration in frequency domain
+            T scaling1 = (T) RFFTAmplitudes::getRescalingFactorForIntegral(
+                amplitudes, sampleCount, samplingRate);
+            RFFTAmplitudes::filterAndIntegrate(
+                amplitudes, sampleCount, samplingRate, m_lowCutFrequency,
+                m_highCutFrequency, scaling1, false);
+            float integratedRMS1 = RFFTAmplitudes::getRMS(amplitudes,
+                                                          sampleCount);
+            integratedRMS1 *= 1000 / ((float) scaling1) * m_calibrationScaling1;
+            m_destinations[2]->addValue(integratedRMS1);
+            if (featureDebugMode) {
+                debugPrint(millis(), false);
+                debugPrint(F(" -> "), false);
+                debugPrint(m_destinations[2]->getName(), false);
+                debugPrint(": ", false);
+                debugPrint(integratedRMS1 * resolution);
+            }
+            // 4. 2nd integration in frequency domain
+            T scaling2 = (T) RFFTAmplitudes::getRescalingFactorForIntegral(
+                amplitudes, sampleCount, samplingRate);
+            RFFTAmplitudes::filterAndIntegrate(
+                amplitudes, sampleCount, samplingRate, m_lowCutFrequency,
+                m_highCutFrequency, scaling2, false);
+            float integratedRMS2 = RFFTAmplitudes::getRMS(amplitudes,
+                                                          sampleCount);
+            integratedRMS2 *= 1000 / ((float) scaling1 * (float) scaling2) *
+                m_calibrationScaling2;
+            m_destinations[3]->addValue(integratedRMS2);
+            if (featureDebugMode) {
+                debugPrint(millis(), false);
+                debugPrint(F(" -> "), false);
+                debugPrint(m_destinations[3]->getName(), false);
+                debugPrint(": ", false);
+                debugPrint(integratedRMS2 * resolution);
+            }
+        } else {
+            m_destinations[2]->addValue(0.0);
+            m_destinations[3]->addValue(0.0);
+            if (featureDebugMode) {
+                debugPrint(millis(), false);
+                debugPrint(F(" -> "), false);
+                debugPrint(m_destinations[2]->getName(), false);
+                debugPrint(F(": 0"));
+                debugPrint(millis(), false);
+                debugPrint(F(" -> "), false);
+                debugPrint(m_destinations[3]->getName(), false);
+                debugPrint(F(": 0"));
+            }
+        }
+    }
 };
 
 

@@ -270,9 +270,9 @@ extern SectionSumComputer accel512TotalComputer;
 
 
 // computers for FFT feature from 512 sample long accel data
-extern Q15FFTComputer accelFFTComputerX;
-extern Q15FFTComputer accelFFTComputerY;
-extern Q15FFTComputer accelFFTComputerZ;
+extern FFTComputer<q15_t> accelFFTComputerX;
+extern FFTComputer<q15_t> accelFFTComputerY;
+extern FFTComputer<q15_t> accelFFTComputerZ;
 
 
 /***** Accelerometer Calibration parameters *****/
