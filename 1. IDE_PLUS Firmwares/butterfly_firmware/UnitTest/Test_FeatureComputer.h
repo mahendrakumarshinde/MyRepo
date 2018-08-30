@@ -180,8 +180,8 @@ test(FeatureComputer__signal_rms)
     float rms512Values[2];
     FeatureTemplate<float> rms512("SR9", 2, 1, rms512Values);
 
-    SignalRMSComputer rms128Computer(1, &rms128, false, false);
-    SignalRMSComputer rms512Computer(1, &rms512, false, false);
+    SignalRMSComputer<q15_t> rms128Computer(1, &rms128, false, false);
+    SignalRMSComputer<q15_t> rms512Computer(1, &rms512, false, false);
     rms128Computer.addSource(&source, 1);
     rms512Computer.addSource(&source, 4);
     rms128Computer.activate();

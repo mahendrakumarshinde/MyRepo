@@ -131,32 +131,108 @@ class AverageComputer: public FeatureComputer
 
 
 /**
- * Signal RMS
+ * Signal RMS for Q15 or Q31 values
  *
  * Sources:
- *      - Signal data: Q15 data buffer (with sampling rate and resolution)
+ *      - Signal data: Q15 or Q31 feature
  * Destinations:
- *      - Signal RMS: Float data buffer
+ *      - Signal RMS: Float feature
  */
+template<typename T>
 class SignalRMSComputer: public FeatureComputer
 {
     public:
         SignalRMSComputer(uint8_t id, FeatureTemplate<float> *rms,
                           bool removeMean=false, bool normalize=false,
-                          bool squared=false, float calibrationScaling=1.);
+                          bool squared=false, float calibrationScaling=1.) :
+            FeatureComputer(id, 1, rms),
+            m_removeMean(removeMean),
+            m_normalize(normalize),
+            m_squared(squared),
+            m_calibrationScaling(calibrationScaling)
+        {
+            // Constructor
+        }
         /***** Configuration *****/
-        virtual void configure(JsonVariant &config);
+        virtual void configure(JsonVariant &config)
+        {
+            FeatureComputer::configure(config);
+            JsonVariant my_config = config["NODC"];
+            if (my_config.success()) {
+                setRemoveMean(my_config.as<int>() > 0);
+            }
+            my_config = config["NORM"];
+            if (my_config.success()) {
+                setNormalize(my_config.as<int>() > 0);
+            }
+            my_config = config["SQR"];
+            if (my_config.success()) {
+                setSquaredOutput(my_config.as<int>() > 0);
+            }
+        }
         void setRemoveMean(bool value) { m_removeMean = value; }
         void setNormalize(bool value) { m_normalize = value; }
         void setSquaredOutput(bool value) { m_squared = value; }
         void setCalibrationScaling(float val) { m_calibrationScaling = val; }
 
     protected:
-        virtual void m_specializedCompute();
         bool m_removeMean;  // Remove mean before computing Signal Energy ?
         bool m_normalize;  // Divide by source sectionSize ?
         bool m_squared;  // Output is (RMS)^2 (or just RMS)
         float m_calibrationScaling;  // Scaling factor
+
+
+        /**
+         * Compute the total energy, power and RMS of a signal
+         *
+         * NB: Since the signal energy is squared, the resulting scaling factor
+         * will be squared as well.
+         * - Signal energy: sum((x(t)- x_mean)^2 * dt) for t in [0, dt, 2 *dt,
+         * ..., T] where x_mean = Mean(x) if removeMean is true else 0,
+         * dt = 1 / samplingFreq and T = sampleCount / samplingFreq.
+         * Signal power: signal energy divided by Period
+         * Signal RMS: square root of signal power
+         */
+        virtual void m_specializedCompute()
+    {
+        float resolution = m_sources[0]->getResolution();
+        T *values = (T*) m_sources[0]->getNextValuesToCompute(this);
+        uint16_t sectionSize = m_sources[0]->getSectionSize();
+        uint16_t totalSize = m_sectionCount[0] * sectionSize;
+        float total = 0;
+        T avg = 0;
+        if (m_removeMean) {
+            getMean(values, (uint32_t) totalSize, &avg);
+        }
+        for (int i = 0; i < totalSize; ++i) {
+            total += sq((values[i] - avg));
+        }
+        if (m_normalize) {
+            total = total / (float) totalSize;
+        }
+        if (!m_squared) {
+            total = sqrt(total);
+        }
+        m_destinations[0]->setSamplingRate(m_sources[0]->getSamplingRate());
+        if (m_squared) {
+            m_destinations[0]->setResolution(sq(resolution));
+        } else {
+            m_destinations[0]->setResolution(resolution);
+        }
+        m_destinations[0]->addValue(total * m_calibrationScaling);
+        if (featureDebugMode)
+        {
+            debugPrint(millis(), false);
+            debugPrint(" -> ", false);
+            debugPrint(m_destinations[0]->getName(), false);
+            debugPrint(": ", false);
+            if (m_squared) {
+                debugPrint(total * sq(resolution));
+            } else {
+                debugPrint(total * resolution);
+            }
+        }
+    }
 };
 
 
@@ -217,6 +293,18 @@ class MultiSourceSumComputer: public FeatureComputer
         bool m_rmsInput;  // Return the average instead of the sum
 };
 
+
+/**
+ * FFT Computers
+ *
+ * Sources:
+ *      - A Q15 or Q31 buffer
+ * Destinations:
+ *      - Reduced FFT values: A FFT q15 or q31 feature
+ *      - Main frequency: A float feature
+ *      - Integrated RMS: A float feature
+ *      - Double-integrated RMS: A float feature
+ */
 template<typename T>
 class FFTComputer: public FeatureComputer
 {

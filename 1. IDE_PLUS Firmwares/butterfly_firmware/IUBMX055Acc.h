@@ -90,7 +90,6 @@ class IUBMX055Acc : public HighFreqSensor
         /***** Data acquisition *****/
         virtual void readData();
         void processData(uint8_t wireStatus);
-        q15_t getData(uint8_t index) { return m_data[index]; }
         /***** Communication *****/
         void sendData(HardwareSerial *port);
         /***** Debugging *****/

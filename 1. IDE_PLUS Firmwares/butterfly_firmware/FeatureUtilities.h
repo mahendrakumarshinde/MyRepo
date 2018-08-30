@@ -59,6 +59,33 @@ inline void getMax(float *values, uint32_t length, float *maxVal, uint32_t *maxI
 }
 
 /**
+ * Return the mean value of the array (using operator <)
+ */
+template <typename T>
+inline void getMean(T *values, uint32_t length, T *result)
+{
+    // Not defined
+}
+
+template <>
+inline void getMean(q15_t *values, uint32_t length, q15_t *result)
+{
+    arm_mean_q15(values, length, result);
+}
+
+template <>
+inline void getMean(q31_t *values, uint32_t length, q31_t *result)
+{
+    arm_mean_q31(values, length, result);
+}
+
+template <>
+inline void getMean(float *values, uint32_t length, float *result)
+{
+    arm_mean_f32(values, length, result);
+}
+
+/**
  * Return the max value of the array (using operator <)
  */
 template <typename T>

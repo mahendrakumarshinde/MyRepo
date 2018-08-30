@@ -257,9 +257,9 @@ extern float DEFAULT_MIN_AGITATION;
 /***** Accelerometer Features *****/
 
 // 128 sample long accel computers
-extern SignalRMSComputer accel128ComputerX;
-extern SignalRMSComputer accel128ComputerY;
-extern SignalRMSComputer accel128ComputerZ;
+extern SignalRMSComputer<q15_t> accel128ComputerX;
+extern SignalRMSComputer<q15_t> accel128ComputerY;
+extern SignalRMSComputer<q15_t> accel128ComputerZ;
 extern MultiSourceSumComputer accelRMS128TotalComputer;
 
 // 512 sample long accel computers
