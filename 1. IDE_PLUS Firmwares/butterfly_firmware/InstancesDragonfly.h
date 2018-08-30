@@ -283,6 +283,7 @@ extern AverageComputer temperatureAverager;
 /***** Accelerometer Calibration parameters *****/
 
 extern float AUDIO_DB_SCALING;
+extern float AUDIO_DB_OFFSET;
 
 
 /***** Audio Features *****/

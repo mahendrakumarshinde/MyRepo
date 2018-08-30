@@ -113,16 +113,21 @@ void IULSM6DSM::setPowerMode(PowerMode::option pMode)
 void IULSM6DSM::setSamplingRate(uint16_t samplingRate)
 {
     HighFreqSensor::setSamplingRate(samplingRate);
-    if (samplingRate > 3330) { m_odr = ODR_6660Hz; }
-    else if (samplingRate > 1660) { m_odr = ODR_3330Hz; }
-    else if (samplingRate > 833) { m_odr = ODR_1660Hz; }
-    else if (samplingRate > 416) { m_odr = ODR_833Hz; }
-    else if (samplingRate > 208) { m_odr = ODR_416Hz; }
-    else if (samplingRate > 104) { m_odr = ODR_208Hz; }
-    else if (samplingRate > 52) { m_odr = ODR_104Hz; }
-    else if (samplingRate > 26) { m_odr = ODR_52Hz; }
-    else if (samplingRate > 12) { m_odr = ODR_26Hz; }
-    else { m_odr = ODR_12_5Hz; }
+    // We could use the smallest ODR possible, like so:
+//    if (samplingRate > 3330) { m_odr = ODR_6660Hz; }
+//    else if (samplingRate > 1660) { m_odr = ODR_3330Hz; }
+//    else if (samplingRate > 833) { m_odr = ODR_1660Hz; }
+//    else if (samplingRate > 416) { m_odr = ODR_833Hz; }
+//    else if (samplingRate > 208) { m_odr = ODR_416Hz; }
+//    else if (samplingRate > 104) { m_odr = ODR_208Hz; }
+//    else if (samplingRate > 52) { m_odr = ODR_104Hz; }
+//    else if (samplingRate > 26) { m_odr = ODR_52Hz; }
+//    else if (samplingRate > 12) { m_odr = ODR_26Hz; }
+//    else { m_odr = ODR_12_5Hz; }
+    // But, while the battery life is not an issue, it looks best to use
+    // the highest ODR available, to avoid interference between the ODR
+    // and the sampling rate.
+    m_odr = ODR_6660Hz;
     // Now call setScale to set the ODR at the same time
     setScale(m_scale);
 }

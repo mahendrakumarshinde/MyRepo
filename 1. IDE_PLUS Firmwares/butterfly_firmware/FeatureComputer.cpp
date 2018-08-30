@@ -800,7 +800,8 @@ void Q15FFTComputer::m_specializedCompute()
 ============================================================================= */
 
 AudioDBComputer::AudioDBComputer(uint8_t id, FeatureTemplate<float> *audioDB,
-                                 float calibrationScaling) :
+                                 float calibrationScaling,
+                                 float calibrationOffset) :
     FeatureComputer(id, 1, audioDB),
     m_calibrationScaling(calibrationScaling)
 {
@@ -846,7 +847,7 @@ void AudioDBComputer::m_specializedCompute()
     float result = 20.0 * audioDB / (float) length;
     //result = 2.8 * result - 10;  // Empirical formula
     result = 1.3076 * result + 21.41;  // Empirical formula
-    result *= m_calibrationScaling;
+    result = result * m_calibrationScaling + m_calibrationOffset;
     m_destinations[0]->addValue(result);
     if (featureDebugMode) {
         debugPrint(millis(), false);

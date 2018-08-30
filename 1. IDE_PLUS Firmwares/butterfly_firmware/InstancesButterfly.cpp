@@ -291,8 +291,8 @@ Q15FFTComputer accelFFTComputerZ(32,
 
 /***** Audio Features *****/
 
-AudioDBComputer audioDB2048Computer(40, &audioDB2048, AUDIO_DB_SCALING);
-AudioDBComputer audioDB4096Computer(41, &audioDB4096, AUDIO_DB_SCALING);
+AudioDBComputer audioDB2048Computer(40, &audioDB2048, AUDIO_DB_SCALING, AUDIO_DB_OFFSET);
+AudioDBComputer audioDB4096Computer(41, &audioDB4096, AUDIO_DB_SCALING, AUDIO_DB_OFFSET);
 
 
 /***** Set up sources *****/

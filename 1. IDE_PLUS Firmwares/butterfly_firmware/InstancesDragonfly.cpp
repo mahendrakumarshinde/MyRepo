@@ -162,10 +162,7 @@ __attribute__((section(".noinit2"))) float allTemperatureValues[1024];
 FeatureTemplate<float> allTemperatures("T09", 2, 512, allTemperatureValues);
 
 __attribute__((section(".noinit2"))) float temperatureValues[2];
-FeatureTemplate<float> temperature("TMP", 2, 1, temperatureValues,
-                                   Feature::FIXED,  // Feature::slideOption sliding=Feature::FIXED
-                                   false,  // isFFT=false
-                                   true);  // isOverWrittable=true
+FeatureTemplate<float> temperature("TMP", 2, 1, temperatureValues);
 
 /***** Audio Features *****/
 
@@ -303,8 +300,10 @@ AverageComputer temperatureAverager(35, &temperature);
 
 /***** Audio Features *****/
 
-AudioDBComputer audioDB2048Computer(40, &audioDB2048, AUDIO_DB_SCALING);
-AudioDBComputer audioDB4096Computer(41, &audioDB4096, AUDIO_DB_SCALING);
+AudioDBComputer audioDB2048Computer(40, &audioDB2048, AUDIO_DB_SCALING,
+                                    AUDIO_DB_OFFSET);
+AudioDBComputer audioDB4096Computer(41, &audioDB4096, AUDIO_DB_SCALING,
+                                    AUDIO_DB_OFFSET);
 
 
 /***** Set up sources *****/

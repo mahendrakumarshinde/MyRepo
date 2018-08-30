@@ -32,8 +32,9 @@ void setup()
     pinMode(BLUE_PIN, OUTPUT);
     pinMode(ESP8285_ENABLE_PIN, OUTPUT);
     changeLedColor(1, 0, 0);
-    digitalWrite(ESP8285_ENABLE_PIN, HIGH);
+    digitalWrite(ESP8285_ENABLE_PIN, LOW);
     delay(100);
+    digitalWrite(ESP8285_ENABLE_PIN, HIGH);
     changeLedColor(0, 1, 0);
 }
 

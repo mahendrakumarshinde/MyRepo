@@ -94,7 +94,12 @@ float DEFAULT_MIN_AGITATION = 0.03;
 
 /***** Audio DB calibration parameters *****/
 
+// The output Audio level in dB  can be adjusted to account for sound dampening
+// when the device enclosure is sealed.
+// The raw audio level in dB is multiplied by AUDIO_DB_SCALING, and then
+// is added AUDIO_DB_OFFSET, to produce the final output Audio dB.
 float AUDIO_DB_SCALING = 1.0;
+float AUDIO_DB_OFFSET = 0.0;
 
 
 /* =============================================================================
@@ -385,7 +390,7 @@ void loop()
         conductor.periodicSendConfigChecksum();
         ledManager.updateColors();
         uint32_t now = millis();
-        if (lastDone == 0 || lastDone + interval < now || now < lastDone) {
+        if (now - lastDone > interval) {
             lastDone = now;
             /* === Place your code to excute at fixed interval here ===*/
             conductor.streamMCUUInfo(iuWiFi.port);

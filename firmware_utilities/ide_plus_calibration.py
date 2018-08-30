@@ -127,8 +127,9 @@ if __name__ == "__main__":
     accel3 = read_accel_data(os.path.join(WD_NEW_Z_80HZ_10RMS, 'accel_parsed'),
                              delimiter=' ')
     all_accels = [accel0, accel1, accel2, accel3]
-    for idx in range(1, 11):
+    print("20 samples of 512 data points.")
+    for idx in range(1, 21):
         start = idx * 512
         print("From {} to {}:".format(start, start + 512))
         for res in analyze_all(all_accels, start_idx=start):
-            print("\t" + str(res))
+            print("\tAccel RMS: " + str(res[0]) + ", Velocity: " + str(res[1]))

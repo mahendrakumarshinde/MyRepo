@@ -274,12 +274,14 @@ class AudioDBComputer: public FeatureComputer
 {
     public:
         AudioDBComputer(uint8_t id, FeatureTemplate<float> *audioDB,
-                        float calibrationScaling=1.);
+                        float calibrationScaling=1., float calibrationOffset=0.);
         void setCalibrationScaling(float val) { m_calibrationScaling = val; }
+        void setCalibrationOffset(float val) { m_calibrationOffset = val; }
 
     protected:
         virtual void m_specializedCompute();
         float m_calibrationScaling;  // Scaling factor
+        float m_calibrationOffset;  // Offset
 };
 
 
