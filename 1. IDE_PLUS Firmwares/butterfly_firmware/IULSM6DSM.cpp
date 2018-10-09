@@ -337,8 +337,19 @@ void IULSM6DSM::processData(uint8_t wireStatus)
         return;
     }
     if (m_rawBytes[1] < 256) {  // Catch temperature sensor saturation that sometimes happen
-        m_temperature = float(((int16_t)m_rawBytes[1] << 8) | m_rawBytes[0]) / 256.0 + 25.0;
+        m_temperature = float(((int16_t)m_rawBytes[1] << 8) | m_rawBytes[0])/ 256.0 + 25.0;
+        //Serial.print("RAW TEMP Byte:");Serial.print("\t\t"); Serial.print("H BYTE:"); Serial.print(m_rawBytes[1],HEX);Serial.print("\t\t");Serial.print("L BYTE:");Serial.print( m_rawBytes[0],HEX);Serial.print("\t\t");Serial.print("DATA:");Serial.println(( m_rawBytes[1] << 8) | m_rawBytes[0],HEX);
     }
+    else if ( m_rawBytes[1] >= 256  ){  //((int16_t)(m_rawBytes[1] << 8) | m_rawBytes[0]) >= 65535 ||
+      if (loopDebugMode) {
+            debugPrint("LSM6DSM Temperatur buffer overflow");
+            debugPrint(((m_rawBytes[1] << 8) | m_rawBytes[0]),HEX);
+            
+        }
+        m_temperature = ambientTemperature;     // set to ambient temperature
+        
+    }
+
     m_rawGyroData[0] = ((int16_t)m_rawBytes[3] << 8) | m_rawBytes[2];
     m_rawGyroData[1] = ((int16_t)m_rawBytes[5] << 8) | m_rawBytes[4];
     m_rawGyroData[2] = ((int16_t)m_rawBytes[7] << 8) | m_rawBytes[6];
