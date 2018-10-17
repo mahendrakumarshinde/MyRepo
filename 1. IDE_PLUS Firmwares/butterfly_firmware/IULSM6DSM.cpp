@@ -340,7 +340,7 @@ void IULSM6DSM::processData(uint8_t wireStatus)
         m_temperature = float(((int16_t)m_rawBytes[1] << 8) | m_rawBytes[0])/ 256.0 + 25.0;
         //Serial.print("RAW TEMP Byte:");Serial.print("\t\t"); Serial.print("H BYTE:"); Serial.print(m_rawBytes[1],HEX);Serial.print("\t\t");Serial.print("L BYTE:");Serial.print( m_rawBytes[0],HEX);Serial.print("\t\t");Serial.print("DATA:");Serial.println(( m_rawBytes[1] << 8) | m_rawBytes[0],HEX);
     }
-    else if ( m_rawBytes[1] >= 256  ){  //((int16_t)(m_rawBytes[1] << 8) | m_rawBytes[0]) >= 65535 ||
+    else if ( (m_rawBytes[1] << 8 | m_rawBytes[0]) == 0xFFFF  ){  
       if (loopDebugMode) {
             debugPrint("LSM6DSM Temperatur buffer overflow");
             debugPrint(((m_rawBytes[1] << 8) | m_rawBytes[0]),HEX);
