@@ -1,5 +1,11 @@
 #include "FeatureComputer.h"
 
+/* =============================================================================
+    Audio Scaling Global Variable
+===============================================================================*/
+
+extern float audioHigherCutoff;
+
 
 /* =============================================================================
     Feature Computer Base Class
@@ -594,7 +600,10 @@ void AudioDBComputer::m_specializedCompute()
     float result = 20.0 * audioDB / (float) length;
     //result = 2.8 * result - 10;  // Empirical formula
     result = 1.3076 * result + 21.41;  // Empirical formula
-    result = result * m_calibrationScaling + m_calibrationOffset;
+    result = result * m_calibrationScaling + m_calibrationOffset + 30.0;
+    if(result >= audioHigherCutoff){
+      result = audioHigherCutoff;
+    }
     m_destinations[0]->addValue(result);
     if (featureDebugMode) {
         debugPrint(millis(), false);
