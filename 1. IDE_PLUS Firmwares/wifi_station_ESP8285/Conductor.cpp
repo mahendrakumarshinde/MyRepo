@@ -95,6 +95,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
     uint16_t bufferLength = iuSerial->getCurrentBufferLength();
     char resp[2] = "";
     resp[1] = 0;
+    char message[256];
     switch(cmd) {
         /***** MAC addresses *****/
         case MSPCommand::RECEIVE_BLE_MAC:
@@ -104,7 +105,11 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             iuSerial->mspSendMacAddress(MSPCommand::RECEIVE_WIFI_MAC,
                                         m_wifiMAC);
             break;
-
+        case MSPCommand::RECEIVE_HOST_FIRMWARE_VERSION: 
+            //iuSerial->print(buffer);
+            getDeviceFirmwareVersion(message,buffer,FIRMWARE_VERSION);
+            mqttHelper.publishDiagnostic(message);
+            break;
         /***** Logging *****/
         case MSPCommand::SEND_LOG_MSG:
             mqttHelper.publishLog(buffer);
@@ -375,6 +380,8 @@ bool Conductor::getConfigFromMainBoard()
         }
         hostSerial.sendMSPCommand(MSPCommand::ASK_BLE_MAC);
         hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);
+        // get the IDE Firmware Version from Host
+        //hostSerial.sendMSPCommand(MSPCommand::ASK_HOST_FIRMWARE_VERSION);
         m_lastMQTTInfoRequest = current;
         delay(100);
         hostSerial.readMessages();
@@ -793,7 +800,7 @@ void Conductor::getWifiInfo(char *destination, uint16_t len, bool mqttOn)
 }
 
 /**
- * Publish a diagnostic message to the cloud about the WiFi connection.
+ * Publish a diagnostic message to the cloud about the WiFi connection & IDE & Wifi Firmware Version.
  */
 void Conductor::publishWifiInfo()
 {
@@ -879,4 +886,51 @@ void Conductor::debugPrintWifiInfo()
     #endif
 }
 
+/* =================================================================================
+ *  get Device latest Firmware versions
+ *  Function Name: sendDeviceFirmwareVersion 
+ *  return : buffer with IDE and Wifi Firmware
+ *  Output Format : JSON
+ *  {"IDE-FIRMWARE-VR": "x.x.x", "WIFI-FIRMWARE-VR": "x.x.x"} 
+ *==================================================================================*/
 
+ void Conductor:: getDeviceFirmwareVersion(char* destination,char* HOST_VERSION, const char* WIFI_VERSION){
+      //Ask Host firmware version
+      //hostSerial.sendMSPCommand(MSPCommand::ASK_HOST_FIRMWARE_VERSION);
+     
+     uint8_t len = 255; //sizeof(destination)/sizeof(destination[0]); 
+      
+    for (uint16_t i = 0; i < len; ++i)
+    {
+        destination[i] = 0;
+    }
+    /*if (len < 250)  
+    { 
+      if (debugMode)
+      {
+          debugPrint("destination char array is too short to "
+                         "get Version Info");
+       }
+          return;
+    }
+     */
+    strcpy(destination, "{\"ide-firmware-version\":\"");
+    strcat(destination, HOST_VERSION);
+    strcat(destination, "\",\"wifi-firmware-version\":");
+    strcat(destination, WIFI_VERSION);
+    strcat(destination, "\",\"wifi_mac\":\"");
+    strcat(destination, m_wifiMAC.toString().c_str());
+    strcat(destination, "\",\"ble_mac\":\"");
+    strcat(destination, m_bleMAC.toString().c_str());
+    strcat(destination, "\",\"mqtt\":\"");
+    strcat(destination, "on");
+    /*if (mqttOn)
+    {
+        strcat(destination, "on");
+    } else {
+        strcat(destination, "off");
+    }*/
+    strcat(destination, "\"}");
+    
+    
+ }
