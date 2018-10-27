@@ -1,7 +1,7 @@
 /*
 Infinite Uptime BLE Module Firmware
 
-Update 2017-10-10
+Update 2018-10-17
 */
 
 /* =============================================================================
@@ -30,6 +30,11 @@ Update 2017-10-10
 
 const char MAC_ADDRESS[18] = "94:54:93:26:93:2B";
 
+/* Motor Scaling Factor 
+ *  
+ */
+ 
+float motorScalingFactor = 1.0;
 
 /* =============================================================================
     Unit test includes
@@ -100,7 +105,7 @@ float DEFAULT_MIN_AGITATION = 0.03;
 // is added AUDIO_DB_OFFSET, to produce the final output Audio dB.
 float AUDIO_DB_SCALING = 1.0;
 float AUDIO_DB_OFFSET = 0.0;
-
+float audioHigherCutoff = 120.0;
 
 /* =============================================================================
     Main global variables
