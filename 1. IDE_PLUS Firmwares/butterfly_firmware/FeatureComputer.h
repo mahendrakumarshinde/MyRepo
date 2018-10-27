@@ -412,7 +412,7 @@ class FFTComputer: public FeatureComputer
         */
         
         float newAccelMean = RFFTAmplitudes::getAccelerationMean(values,sampleCount);
-        Serial.print("New Mean:");Serial.println(newAccelMean);  
+        //Serial.print("New Mean:");Serial.println(newAccelMean);  
         // rmove mean from new AccclAmplitudes
         RFFTAmplitudes::removeNewAccelMean(values,sampleCount,newAccelMean,newAccelAmplitudes);
         
@@ -437,7 +437,7 @@ class FFTComputer: public FeatureComputer
                  }
              }
 
-        Serial.print("Max Freq Index :");Serial.println(maxFreqIndex );
+        //Serial.print("Max Freq Index :");Serial.println(maxFreqIndex );
         //Serial.print("Max Value :");Serial.println(maxValue);    
         
         float agitation = RFFTAmplitudes::getRMS(amplitudes, sampleCount, true);
@@ -496,18 +496,18 @@ class FFTComputer: public FeatureComputer
             
             integratedRMS1 = RFFTAmplitudes::getNewAccelRMS(newAccelAmplitudes,sampleCount);
             
-            Serial.print("integratedRMS1 before Curve Fit :");Serial.println(integratedRMS1);
+            //Serial.print("integratedRMS1 before Curve Fit :");Serial.println(integratedRMS1);
             
             integratedRMS1 = abs((integratedRMS1))*(65.4/(maxFreqIndex) + 8.70 - 0.0139 *(maxFreqIndex))* motorScalingFactor ;
 
             
-            Serial.print("integratedRMS1 After Curve Fit :");Serial.println(integratedRMS1*resolution);
+            //Serial.print("integratedRMS1 After Curve Fit :");Serial.println(integratedRMS1*resolution);
             }else {
               
             
               integratedRMS1 = RFFTAmplitudes::getRMS(amplitudes,sampleCount);
               integratedRMS1 *= 1000 / ((float) scaling1) * m_calibrationScaling1;  // remove base noise 0.2
-              Serial.print("integratedRMS1 Original :");Serial.println(integratedRMS1*resolution);
+              //Serial.print("integratedRMS1 Original :");Serial.println(integratedRMS1*resolution);
             }
             
             m_destinations[2]->addValue(integratedRMS1);
