@@ -339,6 +339,62 @@ float RFFTAmplitudes::getRMS(q31_t *amplitudes, uint16_t sampleCount,
     return (float) sqrt(rms);
 }
 
+/* getAccelerationMean from raw acceleration values
+
+*/
+
+float RFFTAmplitudes::getAccelerationMean(q15_t *values,uint16_t sampleCount)
+
+{
+        // get the New RFFT acceleration Amplitudes from Raw values
+        float newAccelAmplitudes[sampleCount];
+        float accelAmplitudesSum=0;    
+        //Serial.print("[");
+        for(uint16_t i = 2 ; i < sampleCount; i++){
+               
+           newAccelAmplitudes[i] = values[i];//*resolution;     // q15
+           accelAmplitudesSum += newAccelAmplitudes[i];
+           //Serial.print(values[i]);Serial.print(","); 
+         }
+         //Serial.println("]");
+        float accelAmplitudesMean = accelAmplitudesSum/(sampleCount -2) ;
+
+        return (accelAmplitudesMean);    
+}
+
+/* Remove newAcceleration Mean from newAccelAmplitudes
+ *  
+ */
+void RFFTAmplitudes::removeNewAccelMean(q15_t *values, uint16_t sampleCount,float newAccelMean,q15_t *newAccelAmplitudes)
+
+{   
+    for(uint16_t i= 2; i < sampleCount; i++){
+                newAccelAmplitudes[i] = values[i] - (q15_t) newAccelMean;
+           }
+
+}
+
+/* get the new accelerationRMS values from newAccelerationAmplitudes 
+ *  
+ */
+float RFFTAmplitudes::getNewAccelRMS(q15_t *newAccelAmplitudes,uint16_t sampleCount)
+
+{
+    uint32_t rms = 0;
+//    if (!removeDC) {
+//        rms += (uint32_t) sq((newAccelAmplitudes[0]));
+//    }
+    for (uint16_t i = 2; i < sampleCount ; ++i) {
+        /* factor 2 because RFFT and we use only half (positive part) of freq
+        spectrum */
+        //rms += 2 * (uint32_t) sq((newAccelAmplitudes[i]));
+        rms +=  (uint32_t) sq((newAccelAmplitudes[i]));
+    }
+    return (float) abs(sqrt(rms/sampleCount));
+}
+
+ 
+
 /**
  * Get max rescaling factor usable (without overflowing) for given amplitudes
  *
@@ -556,4 +612,3 @@ q15_t findMaxAscent(q15_t *batch, uint16_t batchSize, uint16_t maxCount)
   }
   return max_ascent;
 }
-
