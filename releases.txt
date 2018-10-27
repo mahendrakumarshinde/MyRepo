@@ -1,0 +1,49 @@
+# This file contins the details on firmware releases and issues resolved in the firmware
+
+
+########################################################################################
+Date : 15 October 2018
+Submited By : Vikas Gaikwad
+Firmware Versions : 
+		1. IDE+ Version : 1.0.1
+		2. Wifi Version : 1.0.0
+#######################################################################################
+
+Issues/Implementations:
+
+1. Vrms issue
+
+Fixed : 
+
+1. Fixed the Vrms issues in the firmware by applying the curve fitting formula 
+
+ 
+
+
+#########################################################################################
+
+Date: 27 October 2018
+Submitted By : Vikas Gaikwad
+Firmware Versions : 
+		1. IDE+ Version : 1.0.2
+ 	        2. Wifi Version : 1.0.1
+########################################################################################
+
+Issues/Implementations : 
+
+1. Temperature overflow
+2. Audio (Noise) level overflow in the field (> 120 db)
+3. Vrms issues.
+4. Device Firmware versions managment over cloud 
+
+Fixed : 
+  
+1. Handled the temperature buffer overflow condition to avoid temperature overflow in LSM6DSM (note temperature range is -40 to + 85 degC only and resolution is 16 bit)
+2. Handled the Audio overflow condition by applying the upper cutoff threshold to 120 db in the  AudioDBComputer::m_specializedCompute() method.
+3. Vrms mismatch issues handle by implementing Curve fitting formula on raw acceleration values by calculating newAcceleration amplitudes, and removing the mean from amplitudes (note : did this considering FAG meter as a reference of measurment)
+4. Imlplementated new MSPCommand to get the latest IDE+ firmware version and send it to Wifi.
+5. Modified the wifi firmware to read MSPCommand response and send the new firmware version data to the diagnostic topic on every onConnenct & reConnect to mqtt broker
+   Publishing below data to diagnostic topic
+  {"IDE-FIRMWARE-VERSION":"1.0.2","WIFI-FIRMWARE-VERSION":1.0.1","wifi_mac":"60:01:94:9C:21:12","MQTT":"on"}
+
+
