@@ -4,6 +4,12 @@
 #include "FeatureClass.h"
 #include "FeatureUtilities.h"
 
+/* =============================================================================
+ *  Motor Scaling Global Variable
+ *  
+ *==============================================================================*/
+
+ extern float motorScalingFactor ;
 
 /* =============================================================================
     Feature Computer Base Class
@@ -269,7 +275,7 @@ class SectionSumComputer: public FeatureComputer
 /**
  * Sum several sources, section by section
  *
- * Sources:
+ * Sources:UndestandingUndestanding
  *      - Several Float buffers, with the same section size and number of
  *      sections to compute at once (the computer will use these parameters from
  *      only the 1st source only and assume they are the same for all)
@@ -319,14 +325,16 @@ class FFTComputer: public FeatureComputer
                     uint16_t highCutFrequency=500,
                     float minAgitationRMS=0.1,
                     float calibrationScaling1=1.,
-                    float calibrationScaling2=1.) :
+                    float calibrationScaling2=1.,
+                    bool useCalibrationMethod=false) :
             FeatureComputer(id, 4, reducedFFT, mainFrequency, integralRMS,
                             doubleIntegralRMS),
             m_lowCutFrequency(lowCutFrequency),
             m_highCutFrequency(highCutFrequency),
             m_minAgitationRMS(minAgitationRMS),
             m_calibrationScaling1(calibrationScaling1),
-            m_calibrationScaling2(calibrationScaling2)
+            m_calibrationScaling2(calibrationScaling2),
+            m_useCalibrationMethod(useCalibrationMethod)
         {
             m_allocatedFFTSpace = allocatedFFTSpace;
             m_computeLast = true;
@@ -352,6 +360,7 @@ class FFTComputer: public FeatureComputer
 
     protected:
         T *m_allocatedFFTSpace;
+        bool m_useCalibrationMethod;
         uint16_t m_lowCutFrequency;
         uint16_t m_highCutFrequency;
         float m_minAgitationRMS;
@@ -376,9 +385,61 @@ class FFTComputer: public FeatureComputer
         // 1. Compute FFT and get amplitudes
         uint32_t amplitudeCount = sampleCount / 2 + 1;
         T amplitudes[amplitudeCount];
+        T newAccelAmplitudes[sampleCount];
         RFFT::computeRFFT(values, m_allocatedFFTSpace, sampleCount, false);
         RFFTAmplitudes::getAmplitudes(m_allocatedFFTSpace, sampleCount,
                                       amplitudes);
+
+        // -----------------------Start -------------------------------------------
+        //Raw Data
+       /* Serial.print("RAW DATA :");Serial.print("[");
+        for(uint16_t i = 2; i < sampleCount ;i++){
+          Serial.print(*values + i);Serial.print(",");  
+        }
+        Serial.println("]");
+        
+        float accelAmplitudesSum = 0;float newAccelAmplitudes[sampleCount];
+        for(uint16_t i = 2 ; i < sampleCount; i++){
+               
+           newAccelAmplitudes[i] = values[i]; //*resolution;     
+           accelAmplitudesSum = accelAmplitudesSum + newAccelAmplitudes[i];
+            
+         }
+                
+        float accelAmplitudesMean = accelAmplitudesSum/(sampleCount -2) ;  
+
+        Serial.print(" Mean 1:"); Serial.println(accelAmplitudesMean);
+        */
+        
+        float newAccelMean = RFFTAmplitudes::getAccelerationMean(values,sampleCount);
+        Serial.print("New Mean:");Serial.println(newAccelMean);  
+        // rmove mean from new AccclAmplitudes
+        RFFTAmplitudes::removeNewAccelMean(values,sampleCount,newAccelMean,newAccelAmplitudes);
+        
+        // new Acceleration Amplitudes
+       /* Serial.print("newAccelAmplitudes :  ");
+        Serial.print("[");
+        for(uint16_t i =2; i< sampleCount;i++){
+          
+           Serial.print(newAccelAmplitudes[i]);Serial.print(",");
+        }
+        Serial.println("]");
+        Serial.print("Sizeof newAccelAmplitudes:");Serial.println(sizeof(newAccelAmplitudes)/sizeof(newAccelAmplitudes[0]));
+        */
+        // Get the max frequency Index 
+        float maxFreqValue = 0,maxFreqIndex = 5 ;  // Start from 5 Hz
+        maxFreqValue = amplitudes[5];
+        for (uint16_t i = 5; i < amplitudeCount; i++){    // skip 0 - 4 Hz 
+                  if(amplitudes[i]> maxFreqValue)
+                  {
+                       maxFreqValue  = amplitudes[i];
+                       maxFreqIndex = i;
+                 }
+             }
+
+        Serial.print("Max Freq Index :");Serial.println(maxFreqIndex );
+        //Serial.print("Max Value :");Serial.println(maxValue);    
+        
         float agitation = RFFTAmplitudes::getRMS(amplitudes, sampleCount, true);
         bool isInMotion = (agitation * resolution) > m_minAgitationRMS ;
         if (!isInMotion && featureDebugMode) {
@@ -422,6 +483,7 @@ class FFTComputer: public FeatureComputer
             debugPrint(F(": "), false);
             debugPrint(freq);
         }
+        float integratedRMS1;
         if (isInMotion) {
             // 3. 1st integration in frequency domain
             T scaling1 = (T) RFFTAmplitudes::getRescalingFactorForIntegral(
@@ -429,9 +491,25 @@ class FFTComputer: public FeatureComputer
             RFFTAmplitudes::filterAndIntegrate(
                 amplitudes, sampleCount, samplingRate, m_lowCutFrequency,
                 m_highCutFrequency, scaling1, false);
-            float integratedRMS1 = RFFTAmplitudes::getRMS(amplitudes,
-                                                          sampleCount);
-            integratedRMS1 *= 1000 / ((float) scaling1) * m_calibrationScaling1;
+
+            if(m_useCalibrationMethod == true) {
+            
+            integratedRMS1 = RFFTAmplitudes::getNewAccelRMS(newAccelAmplitudes,sampleCount);
+            
+            Serial.print("integratedRMS1 before Curve Fit :");Serial.println(integratedRMS1);
+            
+            integratedRMS1 = abs((integratedRMS1))*(65.4/(maxFreqIndex) + 8.70 - 0.0139 *(maxFreqIndex))* motorScalingFactor ;
+
+            
+            Serial.print("integratedRMS1 After Curve Fit :");Serial.println(integratedRMS1*resolution);
+            }else {
+              
+            
+              integratedRMS1 = RFFTAmplitudes::getRMS(amplitudes,sampleCount);
+              integratedRMS1 *= 1000 / ((float) scaling1) * m_calibrationScaling1;  // remove base noise 0.2
+              Serial.print("integratedRMS1 Original :");Serial.println(integratedRMS1*resolution);
+            }
+            
             m_destinations[2]->addValue(integratedRMS1);
             if (featureDebugMode) {
                 debugPrint(millis(), false);
