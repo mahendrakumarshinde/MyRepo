@@ -95,6 +95,10 @@ class Conductor
         void updateWiFiStatusCycle();
         /***** Debugging *****/
         void debugPrintWifiInfo();
+        /***** get Device Firmware Versions ******/
+        void getDeviceFirmwareVersion(char* destination,char* HOST_VERSION, const char* WIFI_VERSION);
+          
+        
 
     protected:
         /***** Config from Host *****/
