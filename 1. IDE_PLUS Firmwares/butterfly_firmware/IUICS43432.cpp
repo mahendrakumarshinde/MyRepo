@@ -1,6 +1,6 @@
 #include "IUICS43432.h"
 
-
+static q15_t m_rawAudio;
 /* =============================================================================
     Constructors and destructors
 ============================================================================= */
@@ -93,6 +93,11 @@ void IUICS43432::processAudioData(q31_t *data)
         // Send most significant 16bits
         m_audioData[i] = (q15_t) (data[i * 2] >> 16);
         m_destinations[0]->addValue(m_audioData[i]);
+
+        if(i == 7) {
+          m_rawAudio = m_audioData[i];
+          //Serial.print("Audio 8th sample:");Serial.println(m_rawAudio );
+        }
     }
 }
 
@@ -143,6 +148,26 @@ void IUICS43432::sendData(HardwareSerial *port)
     }
 }
 
+/**
+ * get audio data to serial via I2C
+ *
+ * This should be done in DATA COLLECTION mode.
+ */
+float IUICS43432::getData()
+{
+    if (loopDebugMode)
+    {
+        // does nothing
+    }
+    else{
+
+        // return 8th sample of audio
+
+        return m_rawAudio;
+      
+        }
+    
+}
 
 /* =============================================================================
     Debugging
