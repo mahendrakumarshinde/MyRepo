@@ -15,20 +15,20 @@ GPIORGBLed rgbLed(25, 26, 38);
     LedManager ledManager(&rgbLed);
 #endif
 
-char iuUSBBuffer[20] = "";
-IUUSB iuUSB(&Serial, iuUSBBuffer, 20, IUSerial::CUSTOM_PROTOCOL, 115200,
+char iuUSBBuffer[200] = "";
+IUUSB iuUSB(&Serial, iuUSBBuffer, 200, IUSerial::CUSTOM_PROTOCOL, 115200,
             '\n', 1000);
 
 char iuBluetoothBuffer[500] = "";
 IUBMD350 iuBluetooth(&Serial3, iuBluetoothBuffer, 500,
                      IUSerial::LEGACY_PROTOCOL, 57600, ';', 2000, 39, 40);
 
-char iuWiFiBuffer[500] = "";
+char iuWiFiBuffer[1500] = "";
 #ifdef USE_EXTERNAL_WIFI
-    IUSerial iuWiFi(&Serial1, iuWiFiBuffer, 500, IUSerial::MS_PROTOCOL, 115200,
+    IUSerial iuWiFi(&Serial1, iuWiFiBuffer, 1500, IUSerial::MS_PROTOCOL, 115200,
                     ';', 250);
 #else
-    IUESP8285 iuWiFi(&Serial1, iuWiFiBuffer, 500, IUSerial::MS_PROTOCOL,
+    IUESP8285 iuWiFi(&Serial1, iuWiFiBuffer, 1500, IUSerial::MS_PROTOCOL,
                      115200, ';', 250);
 #endif
 
@@ -59,23 +59,23 @@ FeatureTemplate<float> batteryLoad("BAT", 2, 1, batteryLoadValues);
 /***** Accelerometer Features *****/
 
 // Sensor data
-__attribute__((section(".noinit2"))) q15_t accelerationXValues[1024];
+__attribute__((section(".noinit2"))) q15_t accelerationXValues[1024];     // 1024
 __attribute__((section(".noinit2"))) q15_t accelerationYValues[1024];
 __attribute__((section(".noinit2"))) q15_t accelerationZValues[1024];
-FeatureTemplate<q15_t> accelerationX("A0X", 8, 128, accelerationXValues);
+FeatureTemplate<q15_t> accelerationX("A0X", 8, 128, accelerationXValues); // 8, 128
 FeatureTemplate<q15_t> accelerationY("A0Y", 8, 128, accelerationYValues);
 FeatureTemplate<q15_t> accelerationZ("A0Z", 8, 128, accelerationZValues);
 
 
 // 128 sample long accel features
-__attribute__((section(".noinit2"))) float accelRMS128XValues[8];
+__attribute__((section(".noinit2"))) float accelRMS128XValues[8];  //8
 __attribute__((section(".noinit2"))) float accelRMS128YValues[8];
 __attribute__((section(".noinit2"))) float accelRMS128ZValues[8];
 __attribute__((section(".noinit2"))) float accelRMS128TotalValues[8];
-FeatureTemplate<float> accelRMS128X("A7X", 2, 4, accelRMS128XValues);
+FeatureTemplate<float> accelRMS128X("A7X", 2, 4, accelRMS128XValues);     //2,4
 FeatureTemplate<float> accelRMS128Y("A7Y", 2, 4, accelRMS128YValues);
 FeatureTemplate<float> accelRMS128Z("A7Z", 2, 4, accelRMS128ZValues);
-FeatureTemplate<float> accelRMS128Total("A73", 2, 4, accelRMS128TotalValues);
+FeatureTemplate<float> accelRMS128Total("A323", 2, 4, accelRMS128TotalValues);
 
 
 // 512 sample long accel features
@@ -83,17 +83,17 @@ __attribute__((section(".noinit2"))) float accelRMS512XValues[2];
 __attribute__((section(".noinit2"))) float accelRMS512YValues[2];
 __attribute__((section(".noinit2"))) float accelRMS512ZValues[2];
 __attribute__((section(".noinit2"))) float accelRMS512TotalValues[2];
-FeatureTemplate<float> accelRMS512X("A9X", 2, 1, accelRMS512XValues);
+FeatureTemplate<float> accelRMS512X("A9X", 2, 1, accelRMS512XValues);   //2,1
 FeatureTemplate<float> accelRMS512Y("A9Y", 2, 1, accelRMS512YValues);
 FeatureTemplate<float> accelRMS512Z("A9Z", 2, 1, accelRMS512ZValues);
 FeatureTemplate<float> accelRMS512Total("A93", 2, 1, accelRMS512TotalValues);
 
 
 // FFT feature from 512 sample long accel data
-__attribute__((section(".noinit2"))) q15_t accelReducedFFTXValues[300];
+__attribute__((section(".noinit2"))) q15_t accelReducedFFTXValues[300];   //300
 __attribute__((section(".noinit2"))) q15_t accelReducedFFTYValues[300];
 __attribute__((section(".noinit2"))) q15_t accelReducedFFTZValues[300];
-FeatureTemplate<q15_t> accelReducedFFTX("FAX", 2, 150, accelReducedFFTXValues,
+FeatureTemplate<q15_t> accelReducedFFTX("FAX", 2, 150, accelReducedFFTXValues,    //2, 150
                                         Feature::FIXED, true);
 FeatureTemplate<q15_t> accelReducedFFTY("FAY", 2, 150, accelReducedFFTYValues,
                                         Feature::FIXED, true);
@@ -102,26 +102,26 @@ FeatureTemplate<q15_t> accelReducedFFTZ("FAZ", 2, 150, accelReducedFFTZValues,
 
 
 // Acceleration main Frequency features from 512 sample long accel data
-__attribute__((section(".noinit2"))) float accelMainFreqXValues[2];
+__attribute__((section(".noinit2"))) float accelMainFreqXValues[2];   //2
 __attribute__((section(".noinit2"))) float accelMainFreqYValues[2];
 __attribute__((section(".noinit2"))) float accelMainFreqZValues[2];
-FeatureTemplate<float> accelMainFreqX("FRX", 2, 1, accelMainFreqXValues);
+FeatureTemplate<float> accelMainFreqX("FRX", 2, 1, accelMainFreqXValues);   //2,1
 FeatureTemplate<float> accelMainFreqY("FRY", 2, 1, accelMainFreqYValues);
 FeatureTemplate<float> accelMainFreqZ("FRZ", 2, 1, accelMainFreqZValues);
 
 // Velocity features from 512 sample long accel data
-__attribute__((section(".noinit2"))) float velRMS512XValues[2];
+__attribute__((section(".noinit2"))) float velRMS512XValues[2];   //2
 __attribute__((section(".noinit2"))) float velRMS512YValues[2];
 __attribute__((section(".noinit2"))) float velRMS512ZValues[2];
-FeatureTemplate<float> velRMS512X("VAX", 2, 1, velRMS512XValues);
+FeatureTemplate<float> velRMS512X("VAX", 2, 1, velRMS512XValues); //2,1
 FeatureTemplate<float> velRMS512Y("VAY", 2, 1, velRMS512YValues);
 FeatureTemplate<float> velRMS512Z("VAZ", 2, 1, velRMS512ZValues);
 
 // Displacements features from 512 sample long accel data
-__attribute__((section(".noinit2"))) float dispRMS512XValues[2];
+__attribute__((section(".noinit2"))) float dispRMS512XValues[2];    //2
 __attribute__((section(".noinit2"))) float dispRMS512YValues[2];
 __attribute__((section(".noinit2"))) float dispRMS512ZValues[2];
-FeatureTemplate<float> dispRMS512X("DAX", 2, 1, dispRMS512XValues);
+FeatureTemplate<float> dispRMS512X("DAX", 2, 1, dispRMS512XValues);   //2,1
 FeatureTemplate<float> dispRMS512Y("DAX", 2, 1, dispRMS512YValues);
 FeatureTemplate<float> dispRMS512Z("DAZ", 2, 1, dispRMS512ZValues);
 
@@ -229,7 +229,7 @@ FeatureStateComputer opStateComputer(1, &opStateFeature);
 
 
 // Shared computation space
-q15_t allocatedFFTSpace[1024];
+q15_t allocatedFFTSpace[2048];    // 1024
 
 
 // Note that computer_id 0 is reserved to designate an absence of computer.
@@ -269,7 +269,7 @@ FFTComputer<q15_t> accelFFTComputerX(30,
                                      DEFAULT_HIGH_CUT_FREQUENCY,
                                      DEFAULT_MIN_AGITATION,
                                      VELOCITY_RMS_SCALING[0],
-                                     DISPLACEMENT_RMS_SCALING[0]);
+                                     DISPLACEMENT_RMS_SCALING[0],true);
 FFTComputer<q15_t> accelFFTComputerY(31,
                                      &accelReducedFFTY,
                                      &accelMainFreqY,
@@ -280,7 +280,7 @@ FFTComputer<q15_t> accelFFTComputerY(31,
                                      DEFAULT_HIGH_CUT_FREQUENCY,
                                      DEFAULT_MIN_AGITATION,
                                      VELOCITY_RMS_SCALING[1],
-                                     DISPLACEMENT_RMS_SCALING[1]);
+                                     DISPLACEMENT_RMS_SCALING[1],true);
 FFTComputer<q15_t> accelFFTComputerZ(32,
                                      &accelReducedFFTZ,
                                      &accelMainFreqZ,
@@ -291,7 +291,7 @@ FFTComputer<q15_t> accelFFTComputerZ(32,
                                      DEFAULT_HIGH_CUT_FREQUENCY,
                                      DEFAULT_MIN_AGITATION,
                                      VELOCITY_RMS_SCALING[2],
-                                     DISPLACEMENT_RMS_SCALING[2]);
+                                     DISPLACEMENT_RMS_SCALING[2],true);
 
 
 // 512 sample long temperature computer
@@ -360,7 +360,7 @@ FeatureGroup rawAccelGroup("RAWACC", 512);
 // Standard Press Monitoring
 FeatureGroup pressStandardGroup("PRSSTD", 512);
 // Standard Motor Monitoring
-FeatureGroup motorStandardGroup("MOTSTD", 512);
+FeatureGroup motorStandardGroup("MOTSTD", 512);  //512
 // Bearing monitoring
 FeatureGroup bearingZGroup("BEAR_Z", 512);
 // Motor monitoring with focus on acceleration for each axis
