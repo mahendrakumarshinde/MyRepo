@@ -1,7 +1,8 @@
 /*
-Infinite Uptime BLE Module Firmware
-
-Update 2018-10-17
+Infinite Uptime IDE+ Firmware
+Vr. 1.0.5
+Update 28-01-2019
+Type - Standard Firmware Release
 */
 
 /* =============================================================================
@@ -105,7 +106,7 @@ float DEFAULT_MIN_AGITATION = 0.03;
 // is added AUDIO_DB_OFFSET, to produce the final output Audio dB.
 float AUDIO_DB_SCALING = 1.0;
 float AUDIO_DB_OFFSET = 0.0;
-float audioHigherCutoff = 120.0;
+float audioHigherCutoff = 160.0;
 
 /* =============================================================================
     Main global variables
@@ -220,6 +221,36 @@ void dataAcquisitionCallback()
     }
 }
 
+/* =============================================================================
+    Accelerometer Interrupt Service Routine for Data acquisition on callback
+============================================================================= */
+
+/**
+ * This function will be called every time the Accelerometer(LSM6DSM) sends an Data 
+ * Ready interrupt on STM32 GPIO.
+ *
+ * The interrupt is raised every time the raw sound data is ready. The
+ * interrupt frequency then depends on the sensor ODR (Output Data Rate) sampling frequency. 
+ * 
+ * NB: Printing is time consuming and may cause issues in ISRs/callback. Always
+ * deactivate the asyncDebugMode in prod.
+ */
+void dataAcquisitionISR()
+{
+    uint32_t startT = 0;
+    static int isrCnt;
+    
+    isrCnt++;
+    //digitalWrite(7,HIGH);
+    if(isrCnt >= 1){      // 150 us X 7
+      
+     conductor.acquireData(true);
+      isrCnt = 0; 
+      //digitalWrite(7,LOW);
+    }
+
+}
+
 
 /* =============================================================================
     Interface message processing callbacks
@@ -237,13 +268,102 @@ void onNewWiFiMessage(IUSerial *iuSerial) {
     conductor.processWiFiMessage(iuSerial);
 }
 
+/* =============================================================================
+    Microsecond Timer ISR
+============================================================================= */
+
+
+#include "stm32l4xx.h"
+#include "stm32l4_timer.h"
+
+/* TIM_Interrupt_definition TIM Interrupt Definition */
+#define TIM_IT_UPDATE           (TIM_DIER_UIE)
+#define TIM_IT_CC1              (TIM_DIER_CC1IE)
+#define TIM_IT_CC2              (TIM_DIER_CC2IE)
+#define TIM_IT_CC3              (TIM_DIER_CC3IE)
+#define TIM_IT_CC4              (TIM_DIER_CC4IE)
+#define TIM_IT_COM              (TIM_DIER_COMIE)
+#define TIM_IT_TRIGGER          (TIM_DIER_TIE)
+#define TIM_IT_BREAK            (TIM_DIER_BIE)
+
+
+
+#define BIT(type, n)                 ( (type)1 << n )
+#define BIT_SET(type, reg, mask)     ( reg |= (type)mask )
+#define BIT_CLEAR(type, reg, mask)   ( reg &= ~((type)mask) )
+#define REG_READ(REG)                ((REG))   
+#define REG_WRITE(REG, VAL)          ((REG) = (VAL))
+#define REG_MODIFY(REG, CLEARMASK, SETMASK)  REG_WRITE((REG), \
+                               (((REG_READ(REG)) & (~(CLEARMASK))) | (SETMASK)))
+#define IS_BIT_CLEAR(type, reg, n)   ( (reg & BIT(type, n)) == 0 )
+#define IS_BIT_SET(type, reg, n)     ( (reg & BIT(type, n)) != 0 ) 
+
+stm32l4_timer_t timerIns;
+
+int isrPeriod = 420;            // in microseconds (10 us resolution) 450(2.2K), 420(2.38KHz)
+
+void xyz(void *context, uint32_t events)
+{
+  static uint8_t temp = 0;
+
+  //digitalWrite(6,HIGH);
+  if(((TIM5->SR & TIM_SR_UIF) == TIM_SR_UIF) != 0)
+  {
+    if(IS_BIT_SET(uint32_t, TIM5->DIER, TIM_DIER_UIE_Pos))
+    {
+      TIM5->SR = ~TIM_IT_UPDATE;
+    }
+  }
+  //User Code Here
+  //dataAcquisitionCallback();
+  //digitalWrite(6,LOW);
+  
+#if 1
+if(temp == 0)
+  {
+    digitalWrite(6, HIGH);
+    dataAcquisitionCallback();      // data acquisition callback 
+    temp = 1;
+  }
+  else if(temp == 1)
+  {
+    digitalWrite(6, LOW);
+    temp = 0;
+  }      
+#endif
+
+}
+
+void timerInit(void)
+{
+  if (timerIns.state == TIMER_STATE_NONE) {
+  stm32l4_timer_create(&timerIns, TIMER_INSTANCE_TIM5, 3, 0);
+  }
+  if (timerIns.state == TIMER_STATE_INIT) {
+    /* clock is running on 10Mhz, you need to change period according to the requirement, i.e. 
+     *  10000000 for 1 second, 
+     *  10000    for 1 ms 
+     *  10       for 1 micro second
+     */ 
+    stm32l4_timer_enable(&timerIns, (stm32l4_timer_clock(&timerIns) / 10000000) -1, 5*isrPeriod /* change this */, TIMER_OPTION_COUNT_UP, (stm32l4_timer_callback_t)xyz, NULL, TIMER_EVENT_PERIOD);
+  }
+  stm32l4_timer_start(&timerIns, 0);
+}
+
+
 
 /* =============================================================================
     Main execution
 ============================================================================= */
 
 void setup()
-{
+{   
+  pinMode(7,OUTPUT);
+  pinMode(6,OUTPUT);
+  DOSFS.begin();
+  #if 1
+    
+    //digitalWrite(7,HIGH);
     iuUSB.begin();
     iuUSB.setOnNewMessageCallback(onNewUSBMessage);
     rgbLed.setup();
@@ -270,8 +390,14 @@ void setup()
         }
         iuBluetooth.setupHardware();
         iuBluetooth.setOnNewMessageCallback(onNewBLEMessage);
+        
         armv7m_timer_create(&bleTransmitTimer, (armv7m_timer_callback_t)bleTransmitCallback);
         armv7m_timer_start(&bleTransmitTimer, 5);
+
+        // disable the ISR
+       // armv7m_timer_create(&Lsm6dsmTimer, (armv7m_timer_callback_t)dataAcquisitionISRCallback);
+       // armv7m_timer_start(&Lsm6dsmTimer, 1);   // 1 ms Timer
+        
         iuWiFi.setupHardware();
         iuWiFi.setOnNewMessageCallback(onNewWiFiMessage);
         iuWiFi.setOnConnect(onWiFiConnect);
@@ -289,7 +415,7 @@ void setup()
         if (debugMode) {
             debugPrint(F("\nSetting up default feature configuration..."));
         }
-        conductor.setCallback(dataAcquisitionCallback);
+        //conductor.setCallback(dataAcquisitionCallback);
         setUpComputerSources();
         populateFeatureGroups();
         if (debugMode) {
@@ -347,17 +473,29 @@ void setup()
             delay(5000);
             ledManager.stopColorOverride();
         }
+        delay(5000);
+        //configure mqttServer
+        conductor.configureMQTTServer("MQTT.conf");
         opStateFeature.setOnNewValueCallback(operationStateCallback);
         ledManager.resetStatus();
         conductor.changeUsageMode(UsageMode::OPERATION);
+        pinMode(IULSM6DSM::INT1_PIN, INPUT);
+        attachInterrupt(IULSM6DSM::INT1_PIN, dataAcquisitionISR, RISING);
+        Serial.print("ISR PIN:");Serial.println(IULSM6DSM::INT1_PIN);
+
+        // Timer Init
+        //timerInit();
+        
     #endif
+ #endif   
 }
 
 /**
  * 
  */
 void loop()
-{
+{   
+    #if 1
     lastActive = millis();
     #if defined(UNITTEST) || defined(COMPONENTTEST) || defined(INTEGRATEDTEST)
         Test::run();
@@ -402,5 +540,7 @@ void loop()
             /*======*/
         }
         yield();
+        //digitalWrite(7,LOW);
     #endif
+  #endif  
 }
