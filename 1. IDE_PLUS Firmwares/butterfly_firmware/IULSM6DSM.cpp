@@ -65,6 +65,7 @@ void IULSM6DSM::setupHardware()
     setScale(m_scale);
     setGyroScale(m_gyroScale);
     setSamplingRate(defaultSamplingRate);
+    configureInterrupts();
 }
 
 /**
@@ -127,7 +128,8 @@ void IULSM6DSM::setSamplingRate(uint16_t samplingRate)
     // But, while the battery life is not an issue, it looks best to use
     // the highest ODR available, to avoid interference between the ODR
     // and the sampling rate.
-    m_odr = ODR_6660Hz;
+    m_odr = ODR_1660Hz;
+    
     // Now call setScale to set the ODR at the same time
     setScale(m_scale);
 }
@@ -138,11 +140,11 @@ void IULSM6DSM::setSamplingRate(uint16_t samplingRate)
 void IULSM6DSM::configureInterrupts()
 {
     // latch interrupt until data read
-    m_iuI2C->writeByte(ADDRESS, DRDY_PULSE_CFG, 0x80);
+    m_iuI2C->writeByte(ADDRESS, DRDY_PULSE_CFG, 0x80);  // 80
     // enable significant motion interrupts on INT1
-    m_iuI2C->writeByte(ADDRESS, INT1_CTRL, 0x40);
+    m_iuI2C->writeByte(ADDRESS, INT1_CTRL, 0x03);     // 0x40 
     // enable accel/gyro data ready interrupts on INT2
-    m_iuI2C->writeByte(ADDRESS, INT2_CTRL, 0x03);
+    //m_iuI2C->writeByte(ADDRESS, INT2_CTRL, 0x03);
 }
 
 /**
@@ -249,7 +251,7 @@ void IULSM6DSM::setScale(IULSM6DSM::scaleOption scale)
             setResolution(2.0 * 9.80665 / 32768.0);
             break;
         case AFS_4G:
-            setResolution(4.0 * 9.80665 / 32768.0);
+            setResolution(4.0 * 9.80665 / 32768.0); // 65535
             break;
         case AFS_8G:
             setResolution(8.0 * 9.80665 / 32768.0);
@@ -337,19 +339,13 @@ void IULSM6DSM::processData(uint8_t wireStatus)
         return;
     }
     if (m_rawBytes[1] < 256) {  // Catch temperature sensor saturation that sometimes happen
-        m_temperature = float(((int16_t)m_rawBytes[1] << 8) | m_rawBytes[0])/ 256.0 + 25.0;
-        //Serial.print("RAW TEMP Byte:");Serial.print("\t\t"); Serial.print("H BYTE:"); Serial.print(m_rawBytes[1],HEX);Serial.print("\t\t");Serial.print("L BYTE:");Serial.print( m_rawBytes[0],HEX);Serial.print("\t\t");Serial.print("DATA:");Serial.println(( m_rawBytes[1] << 8) | m_rawBytes[0],HEX);
-    }
-    else if ( (m_rawBytes[1] << 8 | m_rawBytes[0]) == 0xFFFF  ){  
-      if (loopDebugMode) {
-            debugPrint("LSM6DSM Temperatur buffer overflow");
-            debugPrint(((m_rawBytes[1] << 8) | m_rawBytes[0]),HEX);
-            
-        }
-        m_temperature = ambientTemperature;     // set to ambient temperature
+        //m_temperature = float(((int16_t)m_rawBytes[1] << 8) | m_rawBytes[0])/ 256.0 + 25.0;  //improper integer conversion
         
+        //Serial.print("RAW TEMP Byte:");Serial.print("\t\t"); Serial.print("H BYTE:"); Serial.print(m_rawBytes[1],HEX);Serial.print("\t\t");Serial.print("L BYTE:");Serial.print( m_rawBytes[0],HEX);Serial.print("\t\t");Serial.print("DATA:");Serial.println(( m_rawBytes[1] << 8) | m_rawBytes[0],HEX);
+         m_temperature = float( (int16_t) ( (uint16_t) (m_rawBytes[1] << 8) ) | m_rawBytes[0]) / 256.0f +25.0f;    // working formula
     }
-
+    
+    //Serial.print("Temperature 2 :");Serial.println(m_temperature);
     m_rawGyroData[0] = ((int16_t)m_rawBytes[3] << 8) | m_rawBytes[2];
     m_rawGyroData[1] = ((int16_t)m_rawBytes[5] << 8) | m_rawBytes[4];
     m_rawGyroData[2] = ((int16_t)m_rawBytes[7] << 8) | m_rawBytes[6];
@@ -400,6 +396,45 @@ void IULSM6DSM::sendData(HardwareSerial *port)
             port->write(data, 4);
         }
     }
+}
+
+/**
+ * Dump acceleration data to serial - unit is G, in float format
+ *
+ * NB: We want to do this in * CUSTOM DATA COLLECTION* mode
+ * return the x,y,z acceleration
+ */
+float* IULSM6DSM::getData(HardwareSerial *port)
+{
+    static float destinations[3];
+    if (loopDebugMode) {
+        // Human readable in the console
+        port->println(millis());
+        port->print("AX: ");
+        port->println((float) m_data[0] * m_resolution / 9.80665, 4);
+        port->print("AY: ");
+        port->println((float) m_data[1] * m_resolution / 9.80665, 4);
+        port->print("AZ: ");
+        port->println((float) m_data[2] * m_resolution / 9.80665, 4);
+    } else {
+        // Send bytes
+        //float rawAccelbuff[3];
+        float accel;
+        byte* data;
+        for (uint8_t i = 0; i < 3; ++i) {
+            // Stream float value as 4 bytes
+            accel = (float) m_data[i] * m_resolution / 9.80665;
+            
+            data = (byte*) &accel;
+            
+            destinations[i] = accel;
+            //port->write(data, 4); //data
+                         
+        }
+        //snprintf(rawAccel,30,"%4.3f,%4.3f,%4.3f",rawAccelbuff[0],rawAccelbuff[1],rawAccelbuff[2]);
+         
+    }
+  return destinations;
 }
 
 
