@@ -59,6 +59,7 @@ class IUICS43432 : public HighFreqSensor
                                  bool force=false);
         /***** Communication *****/
         void sendData(HardwareSerial *port);
+        float getData();
         /***** Debugging *****/
         virtual void expose();
 
