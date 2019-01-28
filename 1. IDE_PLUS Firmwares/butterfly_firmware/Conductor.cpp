@@ -1,5 +1,5 @@
 #include "Conductor.h"
-
+#include<FS.h>
 
 char Conductor::START_CONFIRM[11] = "IUOK_START";
 char Conductor::END_CONFIRM[9] = "IUOK_END";
@@ -233,6 +233,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 {
     StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
     JsonObject& root = jsonBuffer.parseObject(json);
+    String jsonChar;
+    root.printTo(jsonChar);
     if (!root.success()) {
         if (debugMode) {
             debugPrint("parseObject() failed");
@@ -272,8 +274,113 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             iuFlash.saveConfigJson(IUFlash::CFG_OP_STATE, subConfig);
         }
     }
+     // MQTT Server configuration
+    subConfig = root["mqtt"];
+    if (subConfig.success()) {
+        //configureAllFeatures(subConfig);
+        bool dataWritten = false;
+        
+        if (saveToFlash) {
+            //DOSFS.begin();
+            File mqttFile = DOSFS.open("MQTT.conf", "w");
+            if (mqttFile)
+            {
+                //Serial.println("Writing to MQTT.conf ...");
+                mqttFile.print(jsonChar);
+                mqttFile.close();
+                dataWritten = true;
+            }
+            else if (loopDebugMode) {
+                 debugPrint(F("Failed to write into file: "), false);
+                 //Serial.println("Error Writting to MQTT.conf");
+            }  
+        
+        }
+        if(dataWritten == true){
+          configureMQTTServer("MQTT.conf");
+          
+        }
+        
+    } 
     return true;
 }
+
+/*
+ * Read the MQTT Configutation details
+ * 
+ */
+
+ void Conductor::configureMQTTServer(String filename){
+
+  // Open the configuration file
+  IPAddress tempAddress;
+  File myFile = DOSFS.open(filename,"r");
+  
+  StaticJsonBuffer<512> jsonBuffer;
+
+  // Parse the root object
+  JsonObject &root = jsonBuffer.parseObject(myFile);
+
+  if (!root.success()){
+    Serial.println(F("Failed to read MQTT.conf file, using default configuration"));
+    m_mqttServerIp = MQTT_DEFAULT_SERVER_IP;
+    m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
+    MQTT_DEFAULT_USERNAME;
+    MQTT_DEFAULT_ASSWORD;
+  }
+ else {
+  
+  
+  int mqttport = root["mqtt"]["port"];
+  String mqttServerIP = root["mqtt"]["mqttServerIP"];
+  
+ // const char* mqttusername = root["mqtt"]["username"];//.as<char*>();
+ // const char* mqttpassword = root["mqtt"]["password"];//.as<char*>();
+  
+  m_mqttServerIp.fromString(mqttServerIP);//mqttServerIP;
+  m_mqttServerPort = mqttport;
+
+// TODO - UserName, Password configuration
+/*  const char* userName = MQTT_DEFAULT_USERNAME;
+  const char* password = MQTT_DEFAULT_ASSWORD;
+
+  //userName = mqttusername ;
+  //password = mqttpassword; 
+  
+  //mqttusername = MQTT_DEFAULT_USERNAME;
+
+  Serial.println("Before Swap :");
+  Serial.print("UserName :");Serial.println( userName);
+  Serial.print("Password :");Serial.println( password);
+  
+  fastSwap (&mqttusername, &userName); 
+  fastSwap (&mqttpassword, &password);
+  
+  Serial.println("After Swap :");
+  Serial.print("UserName :");Serial.println( userName);
+  Serial.print("Password :");Serial.println( password);
+
+  m_mqttUserName = userName;
+  m_mqttPassword = password;
+*/  
+  iuWiFi.hardReset();
+  if (debugMode) {
+        debugPrint("MQTT ServerIP = ");
+        debugPrint(m_mqttServerIp);
+        debugPrint("Mqtt Port =");
+        debugPrint(m_mqttServerPort);
+  }   
+  //Serial.print("MqttServerIP:");Serial.println(m_mqttServerIp);
+  //Serial.print("MqttPort:");Serial.println(m_mqttServerPort);
+  //Serial.print("UserName:");Serial.println(MQTT_DEFAULT_USERNAME);
+  //Serial.print("Password:");Serial.println(MQTT_DEFAULT_ASSWORD);
+  //Serial.println();
+ }
+  myFile.close();
+  
+  
+  
+ }
 
 /**
  * Device level configuration
@@ -432,7 +539,8 @@ void Conductor::processCommand(char *buff)
         case 'S':
             if (strncmp(buff, "SET-MQTT-IP-", 12) == 0) {
                 if (tempAddress.fromString(&buff[12])) {
-                    m_mqttServerIp = tempAddress;
+                    m_mqttServerIp = tempAddress;     // temp adress ?
+                    //Serial.print("mqtt ip :");Serial.println(m_mqttServerIp);
                     iuWiFi.hardReset();
                     if (m_streamingMode == StreamingMode::BLE ||
                         m_streamingMode == StreamingMode::WIFI_AND_BLE)
@@ -452,6 +560,7 @@ void Conductor::processCommand(char *buff)
                 if (loopDebugMode) {
                     debugPrint("Record mode");
                 }
+                delay(500);
                 sendAccelRawData(0);  // Axis X
                 sendAccelRawData(1);  // Axis Y
                 sendAccelRawData(2);  // Axis Z
@@ -577,6 +686,9 @@ void Conductor::processLegacyCommand(char *buff)
 void Conductor::processUSBMessage(IUSerial *iuSerial)
 {
     char *buff = iuSerial->getBuffer();
+    // send to processCommands
+    processCommand(buff);
+    
     if (buff[0] == '{') {
         processConfiguration(buff, true);
     } else if (strncmp(buff, "WIFI-", 5) == 0) {
@@ -652,6 +764,63 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuUSB.port->println(START_CONFIRM);
                     changeUsageMode(UsageMode::EXPERIMENT);
                 }
+                if (strcmp(buff, "IUGET_DATA") == 0) {
+                  iuUSB.port->write(START_CONFIRM);
+                  //Serial.println("START CUSTOM.....1");
+                  changeUsageMode(UsageMode::CUSTOM);   // switch to CUSTOM usage mode
+                  //Serial.println("START CUSTOM.....2");
+                }
+                break;
+            case UsageMode::CUSTOM:
+                if (strcmp(buff, "IUEND_DATA") == 0) {
+                    iuUSB.port->println(END_CONFIRM);
+                    //Serial.println("End CUSTOM ....");
+                    changeUsageMode(UsageMode::OPERATION);    //back to Operation Mode
+                   return; 
+                }  
+                result = strstr(buff, "Arange");
+                if (result != NULL) {
+                    switch (result[7] - '0') {
+                        case 0:
+                            iuAccelerometer.setScale(iuAccelerometer.AFS_2G);
+                            break;
+                        case 1:
+                            iuAccelerometer.setScale(iuAccelerometer.AFS_4G);
+                            break;
+                        case 2:
+                            iuAccelerometer.setScale(iuAccelerometer.AFS_8G);
+                            break;
+                        case 3:
+                            iuAccelerometer.setScale(iuAccelerometer.AFS_16G);
+                            break;
+                    }
+                    return;
+                }
+                result = strstr(buff, "rgb");
+                if (result != NULL) {
+                    ledManager.overrideColor(RGBColor(255 * (result[7] - '0'),
+                                                      255 * (result[8] - '0'),
+                                                      255 * (result[9] - '0')));
+                    return;
+                }
+                result = strstr(buff, "acosr");
+                if (result != NULL) {
+                    // Change audio sampling rate
+                    int A = result[6] - '0';
+                    int B = result[7] - '0';
+                    uint16_t samplingRate = (uint16_t) ((A * 10 + B) * 1000);
+                    iuI2S.setSamplingRate(samplingRate);
+                    return;
+                }
+                result = strstr(buff, "accsr");
+                if (result != NULL) {
+                    int A = result[6] - '0';
+                    int B = result[7] - '0';
+                    int C = result[8] - '0';
+                    int D = result[9] - '0';
+                    int samplingRate = (A * 1000 + B * 100 + C * 10 + D);
+                    iuAccelerometer.setSamplingRate(samplingRate);
+                }
                 break;
             default:
                 if (loopDebugMode) {
@@ -711,7 +880,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             if (loopDebugMode) { debugPrint(F("ASK_BLE_MAC")); }
             iuWiFi.sendBleMacAddress(m_macAddress);
             break;
-	case MSPCommand::ASK_HOST_FIRMWARE_VERSION:
+	      case MSPCommand::ASK_HOST_FIRMWARE_VERSION:
             if(loopDebugMode){ debugPrint(F("ASK_HOST_FIRMWARE_VERSION")); }
             iuWiFi.sendHostFirmwareVersion(FIRMWARE_VERSION);               
             break;
@@ -1063,6 +1232,9 @@ void Conductor::updateStreamingMode()
         case UsageMode::EXPERIMENT:
             newMode = StreamingMode::WIRED;
             break;
+        case UsageMode::CUSTOM:                   // CUSTOM Mode
+            newMode = StreamingMode::WIRED;
+            break;
         case UsageMode::OPERATION:
         case UsageMode::OPERATION_BIS:
             if (isBLEConnected()) {
@@ -1165,6 +1337,12 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             iuAccelerometer.resetScale();
             msg = "operation";
             break;
+        case UsageMode::CUSTOM:
+            ledManager.overrideColor(RGB_CYAN);
+            //configureGroupsForOperation();
+            //iuAccelerometer.resetScale();
+            msg = "custom";
+            break;        
         default:
             if (loopDebugMode) {
                 debugPrint(F("Invalid usage mode preset"));
@@ -1257,10 +1435,46 @@ void Conductor::acquireData(bool inCallback)
                               m_streamingMode != StreamingMode::WIRED)) {
             debugPrint(F("EXPERIMENT should be RAW DATA + USB mode."));
         }
-        if (inCallback) {
-            iuI2S.sendData(iuUSB.port);
-            iuAccelerometer.sendData(iuUSB.port);
+    if (inCallback) {
+            iuI2S.sendData(iuUSB.port);             // raw audio data 
+            iuAccelerometer.sendData(iuUSB.port);   // raw accel data
+       }
+            
+        force = true;
+    }
+
+    // CUSTOM Mode
+
+  if (m_usageMode == UsageMode::CUSTOM ) {
+        if (loopDebugMode && (m_acquisitionMode != AcquisitionMode::RAWDATA ||
+                              m_streamingMode != StreamingMode::WIRED)) {
+            debugPrint(F("CUSTOM Mode should be RAW DATA + USB mode."));
         }
+    if (inCallback) {
+
+          float *acceleration;
+          float aucostic;
+          char rawData[50]; 
+          aucostic = iuI2S.getData();                               // raw audio data 
+          acceleration = iuAccelerometer.getData(iuUSB.port);       // raw accel data
+
+          //Serial.print("Audio :");Serial.println(aucostic);
+          snprintf(rawData,50,"%04.3f,%04.3f,%04.3f,%.3f",acceleration[0],acceleration[1],acceleration[2],aucostic);
+          
+          String payload = "";
+          payload = "$";
+          payload += m_macAddress.toString().c_str();
+          payload += ",";
+          payload += rawData;
+          payload += "#";
+          
+          //Serial.println(payload);
+          iuUSB.port->write(payload.c_str());
+          
+          //Serial.print(features[0],4);Serial.print(",");Serial.print(features[1],4);Serial.print(",");Serial.println(features[2],4);
+          //Serial.print("Data:");Serial.println(rawAccel);
+       }
+            
         force = true;
     }
     // Collect the new data
@@ -1398,14 +1612,14 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
     }
     else if (m_streamingMode == StreamingMode::WIFI ||
              m_streamingMode == StreamingMode::WIFI_AND_BLE) {
-        uint16_t maxLen = 3500;
+        uint16_t maxLen = 15000;   //3500
         char txBuffer[maxLen];
         for (uint16_t i =0; i < maxLen; i++) {
             txBuffer[i] = 0;
         }
         txBuffer[0] = axis[axisIdx];
         uint16_t idx = 1;
-        idx += accelEnergy->sendToBuffer(txBuffer, idx, 4);
+        idx += accelEnergy->sendToBuffer(txBuffer, idx, 8);   //4
         txBuffer[idx] = 0; // Terminate string (idx incremented in sendToBuffer)
         //iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_RAW_DATA, txBuffer);
         iuWiFi.sendLongMSPCommand(MSPCommand::PUBLISH_RAW_DATA, 1000000,
@@ -1421,6 +1635,7 @@ void Conductor::periodicSendAccelRawData()
 {
     uint32_t now = millis();
     if (now - m_rawDataPublicationStart > m_rawDataPublicationTimer) {
+        delay(500);
         sendAccelRawData(0);
         sendAccelRawData(1);
         sendAccelRawData(2);
