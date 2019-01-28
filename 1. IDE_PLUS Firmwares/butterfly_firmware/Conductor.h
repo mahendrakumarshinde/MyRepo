@@ -53,18 +53,20 @@ namespace StreamingMode
  */
 namespace UsageMode
 {
-    enum option : uint8_t {CALIBRATION     = 0,
+   enum option :  uint8_t  {CALIBRATION    = 0,
                            EXPERIMENT      = 1,
                            OPERATION       = 2,
                            OPERATION_BIS   = 3,
-                           COUNT           = 4};
+                           CUSTOM          = 4,
+                           COUNT           = 5};
     // Related default config
     const AcquisitionMode::option acquisitionModeDetails[COUNT] =
     {
         AcquisitionMode::FEATURE,
-        AcquisitionMode::RAWDATA,
+        AcquisitionMode::RAWDATA,   // for Experiment
         AcquisitionMode::FEATURE,
         AcquisitionMode::FEATURE,
+        AcquisitionMode::RAWDATA     // for CUSTOM 
     };
 }
 
@@ -175,6 +177,7 @@ class Conductor
         void getMCUInfo(char *destination);
         void  streamMCUUInfo(HardwareSerial *port);
         void exposeAllConfigurations();
+        void configureMQTTServer(String filename);
 
     protected:
         MacAddress m_macAddress;
