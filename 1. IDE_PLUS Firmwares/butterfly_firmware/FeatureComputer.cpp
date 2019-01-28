@@ -600,10 +600,17 @@ void AudioDBComputer::m_specializedCompute()
     float result = 20.0 * audioDB / (float) length;
     //result = 2.8 * result - 10;  // Empirical formula
     result = 1.3076 * result + 21.41;  // Empirical formula
-    result = result * m_calibrationScaling + m_calibrationOffset + 30.0;
-    if(result >= audioHigherCutoff){
-      result = audioHigherCutoff;
-    }
+    result = result * m_calibrationScaling + m_calibrationOffset;// + 30.0;
+    //Serial.print("Audio Before :");Serial.println(result);
+    result = map(result, 30, 120, 60, 120);   // mapped audio between 60 - 120 dB
+    //Serial.print("Audio dB :");Serial.println(result);
+    
+   // if(result <= 58.0){     // Lower Cutoff
+   //   result = 58.0 ;
+   // }
+   // if(result >= audioHigherCutoff){    //Higher Cutoff
+   //   result = audioHigherCutoff;
+   // }
     m_destinations[0]->addValue(result);
     if (featureDebugMode) {
         debugPrint(millis(), false);
