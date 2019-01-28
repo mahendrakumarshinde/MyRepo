@@ -4,6 +4,7 @@
 #include "FeatureClass.h"
 #include "FeatureUtilities.h"
 
+
 /* =============================================================================
  *  Motor Scaling Global Variable
  *  
@@ -275,7 +276,7 @@ class SectionSumComputer: public FeatureComputer
 /**
  * Sum several sources, section by section
  *
- * Sources:UndestandingUndestanding
+ * Sources:
  *      - Several Float buffers, with the same section size and number of
  *      sections to compute at once (the computer will use these parameters from
  *      only the 1st source only and assume they are the same for all)
@@ -371,8 +372,7 @@ class FFTComputer: public FeatureComputer
         // 0. Preparation
         uint16_t samplingRate = m_sources[0]->getSamplingRate();
         float resolution = m_sources[0]->getResolution();
-        uint16_t sampleCount =
-            m_sources[0]->getSectionSize() * m_sectionCount[0];
+        uint16_t sampleCount = m_sources[0]->getSectionSize() * m_sectionCount[0];
         float df = (float) samplingRate / (float) sampleCount;
         T *values = (T*) m_sources[0]->getNextValuesToCompute(this);
         for (uint8_t i = 0; i < m_destinationCount; ++i) {
@@ -398,38 +398,23 @@ class FFTComputer: public FeatureComputer
         }
         Serial.println("]");
         
-        float accelAmplitudesSum = 0;float newAccelAmplitudes[sampleCount];
-        for(uint16_t i = 2 ; i < sampleCount; i++){
-               
-           newAccelAmplitudes[i] = values[i]; //*resolution;     
-           accelAmplitudesSum = accelAmplitudesSum + newAccelAmplitudes[i];
-            
-         }
-                
-        float accelAmplitudesMean = accelAmplitudesSum/(sampleCount -2) ;  
-
-        Serial.print(" Mean 1:"); Serial.println(accelAmplitudesMean);
-        */
-        
-        float newAccelMean = RFFTAmplitudes::getAccelerationMean(values,sampleCount);
+      //++  float newAccelMean = RFFTAmplitudes::getAccelerationMean(values,sampleCount);
         //Serial.print("New Mean:");Serial.println(newAccelMean);  
         // rmove mean from new AccclAmplitudes
-        RFFTAmplitudes::removeNewAccelMean(values,sampleCount,newAccelMean,newAccelAmplitudes);
-        
-        // new Acceleration Amplitudes
-       /* Serial.print("newAccelAmplitudes :  ");
-        Serial.print("[");
-        for(uint16_t i =2; i< sampleCount;i++){
-          
-           Serial.print(newAccelAmplitudes[i]);Serial.print(",");
+      //++  RFFTAmplitudes::removeNewAccelMean(values,sampleCount,newAccelMean,newAccelAmplitudes);   // returns the newAccerationAmplitudes by removing mean form raw accel amplitudes
+      
+      /*  Serial.print("[");
+        for(int i=0;i<amplitudeCount;i++){
+
+          Serial.print(amplitudes[i]);Serial.print(",");
         }
         Serial.println("]");
-        Serial.print("Sizeof newAccelAmplitudes:");Serial.println(sizeof(newAccelAmplitudes)/sizeof(newAccelAmplitudes[0]));
-        */
+       */ 
+       
         // Get the max frequency Index 
-        float maxFreqValue = 0,maxFreqIndex = 5 ;  // Start from 5 Hz
-        maxFreqValue = amplitudes[5];
-        for (uint16_t i = 5; i < amplitudeCount; i++){    // skip 0 - 4 Hz 
+        float maxFreqValue = 0,maxFreqIndex = 3 ;  // Start from 5 Hz consider 2Hz resolution
+        maxFreqValue = amplitudes[3];
+        for (uint16_t i = 3; i < amplitudeCount; i++){    // skip 0 - 4 Hz 
                   if(amplitudes[i]> maxFreqValue)
                   {
                        maxFreqValue  = amplitudes[i];
@@ -491,23 +476,24 @@ class FFTComputer: public FeatureComputer
             RFFTAmplitudes::filterAndIntegrate(
                 amplitudes, sampleCount, samplingRate, m_lowCutFrequency,
                 m_highCutFrequency, scaling1, false);
+                
+             
+            if( m_useCalibrationMethod == false ) {// || UsageMode::CALIBRATION == 0) {
 
-            if(m_useCalibrationMethod == true) {
-            
-            integratedRMS1 = RFFTAmplitudes::getNewAccelRMS(newAccelAmplitudes,sampleCount);
-            
-            //Serial.print("integratedRMS1 before Curve Fit :");Serial.println(integratedRMS1);
-            
-            integratedRMS1 = abs((integratedRMS1))*(65.4/(maxFreqIndex) + 8.70 - 0.0139 *(maxFreqIndex))* motorScalingFactor ;
-
-            
-            //Serial.print("integratedRMS1 After Curve Fit :");Serial.println(integratedRMS1*resolution);
-            }else {
+              //++integratedRMS1 = RFFTAmplitudes::getNewAccelRMS(newAccelAmplitudes,sampleCount);
+              //Serial.print("integratedRMS1 before Curve Fit :");Serial.println(integratedRMS1);
               
-            
+             //++ integratedRMS1 = abs((integratedRMS1))*(65.4/(maxFreqIndex) + 8.70 - 0.0139 *(maxFreqIndex))* motorScalingFactor ;
+             //Serial.print("integratedRMS1 After Curve Fit :");Serial.println(integratedRMS1*resolution);
+                          
+            }else {
+
               integratedRMS1 = RFFTAmplitudes::getRMS(amplitudes,sampleCount);
               integratedRMS1 *= 1000 / ((float) scaling1) * m_calibrationScaling1;  // remove base noise 0.2
+              integratedRMS1 *= motorScalingFactor;
+              
               //Serial.print("integratedRMS1 Original :");Serial.println(integratedRMS1*resolution);
+              //Serial.print("Integrated RMS :");Serial.println(integratedRMS1);
             }
             
             m_destinations[2]->addValue(integratedRMS1);
@@ -526,9 +512,8 @@ class FFTComputer: public FeatureComputer
                 m_highCutFrequency, scaling2, false);
             float integratedRMS2 = RFFTAmplitudes::getRMS(amplitudes,
                                                           sampleCount);
-            integratedRMS2 *= 1000 / ((float) scaling1 * (float) scaling2) *
-                m_calibrationScaling2;
-            m_destinations[3]->addValue(integratedRMS2);
+            integratedRMS2 *= 1000 / ((float) scaling1 * (float) scaling2) * m_calibrationScaling2;
+            m_destinations[3]->addValue(integratedRMS2); 
             if (featureDebugMode) {
                 debugPrint(millis(), false);
                 debugPrint(F(" -> "), false);
