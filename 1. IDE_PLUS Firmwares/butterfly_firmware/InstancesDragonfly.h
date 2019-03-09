@@ -17,6 +17,12 @@
 /***** Flash storage *****/
 #include "IUFlash.h"
 
+//#include<FS>h>
+
+/****** Diagnostic Engine ****/
+#include "DiagnosticFingerPrint.h"
+
+
 /***** Features *****/
 #include "FeatureClass.h"
 #include "FeatureComputer.h"
@@ -58,13 +64,14 @@ extern GPIORGBLed rgbLed;
 
 extern LedManager ledManager;
 
-extern char iuUSBBuffer[200];
+extern char iuUSBBuffer[4096];    // increase buffer size to 4K
 extern IUUSB iuUSB;
 
-extern char iuBluetoothBuffer[500];
+extern char iuBluetoothBuffer[500]; //1024
 extern IUBMD350 iuBluetooth;
 
-extern char iuWiFiBuffer[1500];   //500
+extern char iuWiFiBuffer[2048];   //500
+
 #ifdef USE_EXTERNAL_WIFI
     extern IUSerial iuWiFi;
 #else
@@ -77,6 +84,13 @@ extern char iuWiFiBuffer[1500];   //500
 ============================================================================= */
 
 extern IUFSFlash iuFlash;
+
+//extern DOSFS iuDOSFS;
+/* ==============================================================================
+ *  Diagnostic Engine 
+ *==============================================================================*/
+
+extern DiagnosticEngine iuDiagnosticEngine;      //object
 
 
 /* =============================================================================
