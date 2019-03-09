@@ -194,6 +194,7 @@ void HighFreqSensor::acquireData(bool inCallback, bool force)
                 return;
             }
         }
+        //digitalWrite(7,LOW);
         readData();
     }
 }
