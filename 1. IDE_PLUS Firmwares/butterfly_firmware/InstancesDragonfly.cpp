@@ -15,20 +15,20 @@ GPIORGBLed rgbLed(25, 26, 38);
     LedManager ledManager(&rgbLed);
 #endif
 
-char iuUSBBuffer[200] = "";
-IUUSB iuUSB(&Serial, iuUSBBuffer, 200, IUSerial::CUSTOM_PROTOCOL, 115200,
+char iuUSBBuffer[4096] = "";
+IUUSB iuUSB(&Serial, iuUSBBuffer, 4096, IUSerial::CUSTOM_PROTOCOL, 115200,
             '\n', 1000);
 
 char iuBluetoothBuffer[500] = "";
 IUBMD350 iuBluetooth(&Serial3, iuBluetoothBuffer, 500,
                      IUSerial::LEGACY_PROTOCOL, 57600, ';', 2000, 39, 40);
 
-char iuWiFiBuffer[1500] = "";
+char iuWiFiBuffer[2048] = "";
 #ifdef USE_EXTERNAL_WIFI
-    IUSerial iuWiFi(&Serial1, iuWiFiBuffer, 1500, IUSerial::MS_PROTOCOL, 115200,
+    IUSerial iuWiFi(&Serial1, iuWiFiBuffer, 2048, IUSerial::MS_PROTOCOL, 115200,
                     ';', 250);
 #else
-    IUESP8285 iuWiFi(&Serial1, iuWiFiBuffer, 1500, IUSerial::MS_PROTOCOL,
+    IUESP8285 iuWiFi(&Serial1, iuWiFiBuffer, 2048, IUSerial::MS_PROTOCOL,
                      115200, ';', 250);
 #endif
 
@@ -39,6 +39,12 @@ char iuWiFiBuffer[1500] = "";
 
 IUFSFlash iuFlash = IUFSFlash();
 
+//DOSFS iuDOSFS = DOSFS();
+/* =============================================================================
+    Diagnostic Engine
+============================================================================= */
+
+DiagnosticEngine iuDiagnosticEngine = DiagnosticEngine();
 
 /* =============================================================================
     Features
