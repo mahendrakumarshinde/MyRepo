@@ -1,7 +1,7 @@
 /*
 Infinite Uptime IDE+ Firmware
-Vr. 1.0.5
-Update 28-01-2019
+Vr. 1.0.7
+Update 09-03-2019
 Type - Standard Firmware Release
 */
 
@@ -15,6 +15,10 @@ Type - Standard Firmware Release
 #include <MemoryFree.h>
 #include <Timer.h>
 #include <FS.h>
+//#include"IUTimer.h"
+
+const uint8_t ESP8285_IO0  =  7;
+
 
 #ifdef DRAGONFLY_V03
 #else
@@ -29,7 +33,7 @@ Type - Standard Firmware Release
     MAC Address
 ============================================================================= */
 
-const char MAC_ADDRESS[18] = "94:54:93:26:93:2B";
+const char MAC_ADDRESS[18] = "94:54:93:3B:89:D5";
 
 /* Motor Scaling Factor 
  *  
@@ -153,6 +157,7 @@ void onBLEDisconnect() {
 
 void operationStateCallback(Feature *feature) {
     q15_t value = feature->getLastRecordedQ15Values()[0];
+    //Serial.print("Ops State Call Back:");Serial.println(value);
     if (value < OperationState::COUNT) {
         ledManager.showOperationState((uint8_t) value);
     }
@@ -197,6 +202,19 @@ static void bleTransmitCallback(void) {
 
 
 /* =============================================================================
+ *  Read HTTP pending config messages using timer
+ * ============================================================================*/
+
+static armv7m_timer_t httpConfigTimer;
+
+static void httpConfigCallback(void) {
+    //iuBluetooth.bleTransmit();
+    Serial.println("HIT HTTP CONFIG....................................................");
+    iuWiFi.sendMSPCommand(MSPCommand::GET_PENDING_HTTP_CONFIG);
+    armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min 
+}
+
+/* =============================================================================
     Driven sensors acquisition callback
 ============================================================================= */
 
@@ -215,7 +233,9 @@ void dataAcquisitionCallback()
     if (asyncDebugMode) {
         startT = micros();
     }
+    
     conductor.acquireData(true);
+    
     if (asyncDebugMode) {
         debugPrint(micros() - startT);
     }
@@ -241,12 +261,12 @@ void dataAcquisitionISR()
     static int isrCnt;
     
     isrCnt++;
-    //digitalWrite(7,HIGH);
+   // digitalWrite(6,HIGH);
     if(isrCnt >= 1){      // 150 us X 7
       
      conductor.acquireData(true);
       isrCnt = 0; 
-      //digitalWrite(7,LOW);
+   //   digitalWrite(6,LOW);
     }
 
 }
@@ -321,13 +341,13 @@ void xyz(void *context, uint32_t events)
 #if 1
 if(temp == 0)
   {
-    digitalWrite(6, HIGH);
+    //digitalWrite(6, HIGH);
     dataAcquisitionCallback();      // data acquisition callback 
     temp = 1;
   }
   else if(temp == 1)
   {
-    digitalWrite(6, LOW);
+    //digitalWrite(6, LOW);
     temp = 0;
   }      
 #endif
@@ -358,12 +378,14 @@ void timerInit(void)
 
 void setup()
 {   
-  pinMode(7,OUTPUT);
+  
+  pinMode(ESP8285_IO0,OUTPUT);
   pinMode(6,OUTPUT);
+  digitalWrite(ESP8285_IO0,HIGH);
   DOSFS.begin();
   #if 1
     
-    //digitalWrite(7,HIGH);
+    
     iuUSB.begin();
     iuUSB.setOnNewMessageCallback(onNewUSBMessage);
     rgbLed.setup();
@@ -394,9 +416,9 @@ void setup()
         armv7m_timer_create(&bleTransmitTimer, (armv7m_timer_callback_t)bleTransmitCallback);
         armv7m_timer_start(&bleTransmitTimer, 5);
 
-        // disable the ISR
-       // armv7m_timer_create(&Lsm6dsmTimer, (armv7m_timer_callback_t)dataAcquisitionISRCallback);
-       // armv7m_timer_start(&Lsm6dsmTimer, 1);   // 1 ms Timer
+        // httpConfig message read timerCallback
+        armv7m_timer_create(&httpConfigTimer, (armv7m_timer_callback_t)httpConfigCallback);
+        armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min Timer
         
         iuWiFi.setupHardware();
         iuWiFi.setOnNewMessageCallback(onNewWiFiMessage);
@@ -476,12 +498,14 @@ void setup()
         delay(5000);
         //configure mqttServer
         conductor.configureMQTTServer("MQTT.conf");
+        //http configuration
+        conductor.configureBoardFromFlash("httpConfig.conf",1);
         opStateFeature.setOnNewValueCallback(operationStateCallback);
         ledManager.resetStatus();
         conductor.changeUsageMode(UsageMode::OPERATION);
         pinMode(IULSM6DSM::INT1_PIN, INPUT);
         attachInterrupt(IULSM6DSM::INT1_PIN, dataAcquisitionISR, RISING);
-        Serial.print("ISR PIN:");Serial.println(IULSM6DSM::INT1_PIN);
+        debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
 
         // Timer Init
         //timerInit();
@@ -539,8 +563,14 @@ void loop()
             conductor.streamMCUUInfo(iuWiFi.port);
             /*======*/
         }
+        if(now - lastDone > 512){
+          lastDone = now;                           // send diagnostic data every 512 ms
+          // Send Diagnostic Fingerprint data
+          conductor.sendDiagnosticFingerPrints();
+        }
+       
         yield();
-        //digitalWrite(7,LOW);
+       
     #endif
   #endif  
 }
