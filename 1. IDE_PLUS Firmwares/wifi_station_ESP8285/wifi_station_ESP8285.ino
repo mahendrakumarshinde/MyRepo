@@ -91,6 +91,7 @@ void loop()
         conductor.publishWifiInfoCycle();
         // Publish raw data (HTTP POST request)
         accelRawDataHelper.publishIfReady(conductor.getBleMAC());
+        
     }
     conductor.updateWiFiStatusCycle();
     conductor.checkWiFiDisconnectionTimeout();
