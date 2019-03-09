@@ -128,7 +128,7 @@ void IULSM6DSM::setSamplingRate(uint16_t samplingRate)
     // But, while the battery life is not an issue, it looks best to use
     // the highest ODR available, to avoid interference between the ODR
     // and the sampling rate.
-    m_odr = ODR_1660Hz;
+    m_odr = ODR_3330Hz;
     
     // Now call setScale to set the ODR at the same time
     setScale(m_scale);
@@ -301,7 +301,8 @@ void IULSM6DSM::setGyroScale(IULSM6DSM::gyroScaleOption gyroScale)
  * Each data point is read from device as 2 bytes, LSB first.
  */
 void IULSM6DSM::readData()
-{
+{   
+    //digitalWrite(7,HIGH);
     if (m_readingData) {
         // previous data reading is not done: flag errors in destinations and
         // skip reading
@@ -319,6 +320,7 @@ void IULSM6DSM::readData()
             debugPrint("Accel read failure");
         }
     }
+    //digitalWrite(7,LOW);
 }
 
 /**
