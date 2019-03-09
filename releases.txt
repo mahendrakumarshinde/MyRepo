@@ -1,33 +1,164 @@
-# This file contins the details on firmware releases and issues resolved in the firmware
+# This file tell about all the Firmware Release of IDE+
+#################################################################################################################################################################################
 
-
-########################################################################################
-Date : 15 October 2018
-Submited By : Vikas Gaikwad
+Date: 09 March 2019
+Submitted By : Vikas Gaikwad
 Firmware Versions : 
-		1. IDE+ Version : 1.0.1
-		2. Wifi Version : 1.0.0
-#######################################################################################
+		1. IDE+ Version : 1.0.7
+ 	        2. Wifi Version : 1.0.3
+################################################################################################################################################################################
 
-Issues/Implementations:
+Features : 
 
-1. Vrms issue
+1. Included diagnostic fingerprints configurations from App and from Indicus dashboard.
+2. Dynamically configurable http and mqtt server configuration.
+3. Implemented the acknowledge on every new mqtt and existing command on command_response topic.
+4. Sending the acknowledge to android app.
+5. Handled the pending device configuration message over http rest api provided by Indicus.
+ 
+ 
+Fixed :
+1. Improved the sampling frequency from 1.6KHz to 3.3KHz
+2. Improved the data accuracy and Fmax to 1.6kHz.
+3. Improved the getFFT request reliability over mqtt server.
 
-Fixed : 
+Tested : 
+1. Fingerprints configurations from Indicus dashboard.
+2. Fingerprint data sending and its accuracy compared with SKF micrologs
+3. FFT validation on FAN and Rotor kit at SKF Chennai.
 
-1. Fixed the Vrms issues in the firmware by applying the curve fitting formula 
+Improvement required: 
+1. Improve the wifi connectivity and memory optimization on edge.
+2. JSON optimization at edge to handle multiple fingerprints parameters and http configurations.
+3. Need to change current device configuration from BLE to Wifi.
 
+
+#################################################################################################################################################################################
+
+Date: 13 February 2019
+Submitted By : Vikas Gaikwad
+Firmware Versions : 
+		1. IDE+ Version : 1.0.6
+ 	        2. Wifi Version : 1.0.2
+################################################################################################################################################################################
+
+Features : 
+
+1. Increased the sensor samoling frequency from 1600 Hz to 3330 Hz to impvrove vibration measurment accuracy.
+2. Added Provision to configure mqtt server configurations from cloud/BLE/USB
+3. Added Provision to configure http credentils to the device for FFT raw data collection
+4. Wifi flashing can be done without connecting external wire from IO0 to GND.
+   Note: Please short the IO0 terminal with PIN 7 (label) on IDE+ board to enable this feature.
+
+5. Tested IDE+ with Indicus and Infinite Uptime patforms for http nd MQTT messages.
+
+Fixed :
+1. improved the sucess rate of sending the raw acceleration data to http endpoint. Increased the UART_TX Timeout from 1ms to 3ms
+
+
+
+
+#################################################################################################################################################################################
+
+Date: 28 January 2019
+Submitted By : Vikas Gaikwad
+Firmware Versions : 
+		1. IDE+ Version : 1.0.5
+ 	        2. Wifi Version : 1.0.1
+################################################################################################################################################################################
+
+Feature : 
+1. Increased the sensor sampling frequency from 1000Hz to 1600Hz to acheive accurate Arms,Vrms & FFT of signal.
+2. LSM6DSM sensor data acquisition system is driven using sensors DATA READY INTERRUPT i.e. at 1600Hz
+3. Audio rescaling is done from 30 DB to 120 DB between 60 to 120 DB.
+4. Included provision to configure MQTT Server IP and MQTT PORT over Wifi/BLE and USB. On powerup it will configure mqtt from MQTT.conf file from flash.
+
+Required JSON message format:
+{"mqtt": {"mqttServerIP":"115.112.92.146","port":1883}}
+
+
+TODO:
+
+1. Including provision to configure MQTT username & Password as per requirment as shown below..
+
+Under Development :
+{"mqtt": {"mqttServerIP":"115.112.92.146","port":1883,"username":"infinite-uptime","password":"8!Nku^6O!2lj2Ge!j9!KrP4gMv"}}
+
+2. Increasing the sensor sampling frequency to max 6.6KHz.
+
+
+
+
+
+#################################################################################################################################################################################
+
+Date: 17 December 2018
+Submitted By : Vikas Gaikwad
+Firmware Versions : 
+		1. IDE+ Version : 1.0.4
+ 	        2. Wifi Version : 1.0.1
+################################################################################################################################################################################
+
+Feature : 
+
+1. Device Firmware versions managment over cloud.
+2. Included the new CUSTOM mode to collect the Raw acceleration data over USB in the custom format as shown below.
+
+Commands :
+Start Acquisition : IUGET_DATA
+Stop Acquisition  : IUEND_DATA
+
+Start Character   : '$'
+Stop Character    : '#'
+Data Type         : String
+Delimiter         : ',' 
+
+ $<macID>,<accelX>,<accelY>,<accelZ>,<audio>#
+
+example :
+$94:54:93:26:90:36,-0.022,-0.013,1.008,-12.000#
+
+Descriptions:
+
+Modified the wifi firmware to read response of MSPCommand and send the running firmware version data to the diagnostic topic on every onConnenct & reConnect to mqtt broker.
+   
+sampled data received on diagnostic topic as shown below.
+
+{"ide-firmware-version":"1.0.4","wifi-firmware-version":1.0.1","wifi_mac":"60:01:94:B1:21:BA","ble_mac":"94:54:93:26:93:2B","mqtt":"on"}
+
+
+#################################################################################################################################################################################
+
+Date: 11 December 2018
+Submitted By : Vikas Gaikwad
+Firmware Versions : 
+		1. IDE+ Version : 1.0.3
+ 	        2. Wifi Version : 1.0.0
+################################################################################################################################################################################
+
+Issues : 
+
+1. Temperature rise issue.
+2. Audio cutoff to 120 dB.
+3. Zero Raw Data in Acceleration X. 
+
+
+Fixed :
+
+1. Completely resolved the temperature rise issue.  
+2. Increased audio cutoff from 120 dB to 160 dB.
+3. Resolved the zero raw data issue in acceleration X axis.
  
 
 
-#########################################################################################
+#################################################################################################################################################################################
 
 Date: 27 October 2018
 Submitted By : Vikas Gaikwad
 Firmware Versions : 
 		1. IDE+ Version : 1.0.2
  	        2. Wifi Version : 1.0.1
-########################################################################################
+################################################################################################################################################################################
 
 Issues/Implementations : 
 
@@ -45,5 +176,23 @@ Fixed :
 5. Modified the wifi firmware to read MSPCommand response and send the new firmware version data to the diagnostic topic on every onConnenct & reConnect to mqtt broker
    Publishing below data to diagnostic topic
   {"IDE-FIRMWARE-VERSION":"1.0.2","WIFI-FIRMWARE-VERSION":1.0.1","wifi_mac":"60:01:94:9C:21:12","MQTT":"on"}
+
+
+
+################################################################################################################################################################################
+Date : 15 October 2018
+Submited By : Vikas Gaikwad
+Firmware Versions : 
+		1. IDE+ Version : 1.0.1
+		2. Wifi Version : 1.0.0
+###############################################################################################################################################################################
+
+Issues/Implementations:
+
+1. Vrms issue
+
+Fixed : 
+
+1. Fixed the Vrms issues in the firmware by applying the curve fitting formula 
 
 
