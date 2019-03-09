@@ -67,6 +67,9 @@ class IUMQTTHelper
         bool publishLog(const char *payload,
                         const char *topicExtension=NULL,
                         const uint16_t extensionLength=0);
+        bool publishToFingerprints(const char *payload,
+                              const char *topicExtension,
+                              const uint16_t extensionLength);
         void onConnection();
         /***** Public Client for convenience *****/
         PubSubClient client;
