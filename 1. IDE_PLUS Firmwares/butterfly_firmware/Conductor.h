@@ -177,7 +177,12 @@ class Conductor
         void getMCUInfo(char *destination);
         void  streamMCUUInfo(HardwareSerial *port);
         void exposeAllConfigurations();
+        // mqtt / http configuration
+        void fastSwap (const char **i, const char **d);
         void configureMQTTServer(String filename);
+        bool configureBoardFromFlash(String filename,bool isSet);
+        JsonObject& configureJsonFromFlash(String filename,bool isSet);
+        bool sendDiagnosticFingerPrints();
 
     protected:
         MacAddress m_macAddress;
@@ -215,6 +220,16 @@ class Conductor
         StreamingMode::option m_streamingMode = StreamingMode::NONE;
         IPAddress m_mqttServerIp = MQTT_DEFAULT_SERVER_IP;
         uint16_t m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
+        const char* m_mqttUserName = MQTT_DEFAULT_USERNAME;
+        const char* m_mqttPassword = MQTT_DEFAULT_ASSWORD;
+        //httpendpoint configuration
+        const char* m_httpHost  = "http://13.232.122.10";
+        uint16_t  m_httpPort  = 8080;
+        const char* m_httpPath = "/iu-web/iu-infiniteuptime-api/postdatadump?mac=";
+        const char* m_httpUsername = "infinite_uptime";
+        const char* m_httpPassword ;
+        const char* m_httpOauth ;
+        const char* m_accountId;
 };
 
 
