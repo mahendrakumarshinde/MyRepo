@@ -2,6 +2,7 @@
 #define CONDUCTOR_H
 
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include <IUSerial.h>
 #include <MacAddress.h>
 #include "IUMQTTHelper.h"
