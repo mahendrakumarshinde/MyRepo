@@ -44,6 +44,7 @@ q15_t floatToq15(float value)
 void RFFT::computeRFFT(q15_t *source, q15_t *destination,
                        const uint16_t FFTLength, bool inverse, q15_t *window)
 {
+    
     if (window != NULL && !inverse) // Apply window
     {
         for (uint16_t i = 0; i < FFTLength; ++i)
@@ -74,6 +75,7 @@ void RFFT::computeRFFT(q15_t *source, q15_t *destination,
             (float) destination[i] * 32768. / (float) window[i]);
         }
     }
+    
 }
 
 void RFFT::computeRFFT(q31_t *source, q31_t *destination,
@@ -210,6 +212,7 @@ void RFFT::filterAndIntegrate(q15_t *values, uint16_t sampleCount,
         values[2 * (nyquistIdx + i)] = values[2 * (nyquistIdx - i)];
         values[2 * (nyquistIdx + i) + 1] = - values[2 * (nyquistIdx - i) + 1];
     }
+    
 }
 
 void RFFT::filterAndIntegrate(q31_t *values, uint16_t sampleCount,
