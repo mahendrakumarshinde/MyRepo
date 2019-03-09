@@ -16,7 +16,7 @@ class IUI2C
 {
     public:
         /***** Default settings *****/
-        static const uint32_t CLOCK_RATE = 400000; // 400 kHz
+        static const uint32_t CLOCK_RATE = 1000000; // 400 kHz
         /***** Core *****/
         IUI2C();
         virtual ~IUI2C() {}
