@@ -3,15 +3,16 @@
 
 #include "FeatureClass.h"
 #include "FeatureUtilities.h"
-
+#include "DiagnosticFingerPrint.h"
 
 /* =============================================================================
  *  Motor Scaling Global Variable
  *  
  *==============================================================================*/
 
- extern float motorScalingFactor ;
+extern float motorScalingFactor ;
 
+//extern char FingerprintMessage[500];
 /* =============================================================================
     Feature Computer Base Class
 ============================================================================= */
@@ -313,7 +314,7 @@ class MultiSourceSumComputer: public FeatureComputer
  *      - Double-integrated RMS: A float feature
  */
 template<typename T>
-class FFTComputer: public FeatureComputer
+class FFTComputer: public FeatureComputer,public DiagnosticEngine
 {
     public:
         FFTComputer(uint8_t id,
@@ -323,7 +324,7 @@ class FFTComputer: public FeatureComputer
                     FeatureTemplate<float> *doubleIntegralRMS,
                     T *allocatedFFTSpace,
                     uint16_t lowCutFrequency=5,
-                    uint16_t highCutFrequency=500,
+                    uint16_t highCutFrequency=1660,   // 500
                     float minAgitationRMS=0.1,
                     float calibrationScaling1=1.,
                     float calibrationScaling2=1.,
@@ -361,6 +362,7 @@ class FFTComputer: public FeatureComputer
 
     protected:
         T *m_allocatedFFTSpace;
+        T *velocityFFT;
         bool m_useCalibrationMethod;
         uint16_t m_lowCutFrequency;
         uint16_t m_highCutFrequency;
@@ -371,13 +373,14 @@ class FFTComputer: public FeatureComputer
     {
         // 0. Preparation
         uint16_t samplingRate = m_sources[0]->getSamplingRate();
-        float resolution = m_sources[0]->getResolution();
+        float resolution = m_sources[0]->getResolution();         // using resolution of 2^16 
         uint16_t sampleCount = m_sources[0]->getSectionSize() * m_sectionCount[0];
         float df = (float) samplingRate / (float) sampleCount;
         T *values = (T*) m_sources[0]->getNextValuesToCompute(this);
         for (uint8_t i = 0; i < m_destinationCount; ++i) {
             m_destinations[i]->setSamplingRate(samplingRate);
         }
+
         m_destinations[0]->setResolution(resolution);
         m_destinations[1]->setResolution(1);
         m_destinations[2]->setResolution(resolution);
@@ -385,7 +388,12 @@ class FFTComputer: public FeatureComputer
         // 1. Compute FFT and get amplitudes
         uint32_t amplitudeCount = sampleCount / 2 + 1;
         T amplitudes[amplitudeCount];
+        //T amplitudesCopy[amplitudeCount];
         T newAccelAmplitudes[sampleCount];
+        static const char* fingerprintResult_X;
+        static const char* fingerprintResult_Y;
+        static const char* fingerprintResult_Z;
+        //q15_t fingerprintResult;
         RFFT::computeRFFT(values, m_allocatedFFTSpace, sampleCount, false);
         RFFTAmplitudes::getAmplitudes(m_allocatedFFTSpace, sampleCount,
                                       amplitudes);
@@ -399,34 +407,99 @@ class FFTComputer: public FeatureComputer
         Serial.println("]");
         
       //++  float newAccelMean = RFFTAmplitudes::getAccelerationMean(values,sampleCount);
-        //Serial.print("New Mean:");Serial.println(newAccelMean);  
-        // rmove mean from new AccclAmplitudes
+      //Serial.print("New Mean:");Serial.println(newAccelMean);  
+      //rmove mean from new AccclAmplitudes
       //++  RFFTAmplitudes::removeNewAccelMean(values,sampleCount,newAccelMean,newAccelAmplitudes);   // returns the newAccerationAmplitudes by removing mean form raw accel amplitudes
-      
-      /*  Serial.print("[");
+        
+    /*   Serial.println("Accel FFT Amplitudes :");
+        Serial.print("[");
         for(int i=0;i<amplitudeCount;i++){
 
           Serial.print(amplitudes[i]);Serial.print(",");
+          
         }
         Serial.println("]");
-       */ 
-       
-        // Get the max frequency Index 
-        float maxFreqValue = 0,maxFreqIndex = 3 ;  // Start from 5 Hz consider 2Hz resolution
-        maxFreqValue = amplitudes[3];
-        for (uint16_t i = 3; i < amplitudeCount; i++){    // skip 0 - 4 Hz 
-                  if(amplitudes[i]> maxFreqValue)
-                  {
-                       maxFreqValue  = amplitudes[i];
-                       maxFreqIndex = i;
-                 }
-             }
+    */
+     //  float arms = RFFTAmplitudes::getRMS(amplitudes, sampleCount, true);
 
-        //Serial.print("Max Freq Index :");Serial.println(maxFreqIndex );
-        //Serial.print("Max Value :");Serial.println(maxValue);    
+      // Serial.print("ARMS :");Serial.println(arms*resolution);
+      // Serial.print("Resolution Value :");Serial.println(resolution,6); 
+       static int direction = 0;
+       static bool fingerprintSet = false; 
+        
+       if(direction >2){
+        direction = 0;
+          
+       }
+      // Serial.print("Axis ID :");Serial.println(direction);
+    
+       //Serial.println("********************** Dingerprint On Acceleration Amplitude ***************************************");     
+    /*    
+       if(direction == 0) {
+          fingerprintResult_X =  DiagnosticEngine::m_specializedCompute (direction,amplitudes,resolution);
+         // fingerprintResult = DiagnosticEngine:: m_specializedCompute(direction, speedMultiplierX*multiplierX, bandValueX,amplitudes);
+         //FingerprintMessage = fingerprintResult;
+       }
+       if(direction ==1){
+           fingerprintResult_Y = DiagnosticEngine::m_specializedCompute (direction, amplitudes,resolution);
+          //fingerprintResult = DiagnosticEngine:: m_specializedCompute(direction, speedMultiplierY*multiplierY, bandValueX,amplitudes);
+        //FingerprintMessage += fingerprintResult;
+       }
+       if(direction == 2){
+          fingerprintResult_Z = DiagnosticEngine::m_specializedCompute (direction, amplitudes,resolution);
+          //fingerprintResult = DiagnosticEngine:: m_specializedCompute(direction,speedMultiplierZ*multiplierZ, bandValueZ,amplitudes);
+          //FingerprintMessage += fingerprintResult;
+         //size_t messageSize = malloc(strlen(fingerprintResult_X)+strlen(fingerprintResult_Y)+ strlen(fingerprintResult_Z) + 1);
+    
+       }
+     */
+      // Serial.print(fingerprintResult_X);Serial.print("\t");Serial.print(fingerprintResult_Y);Serial.print("\t");
+      // Serial.println(fingerprintResult_Z);
+      // direction++;
+        T newamplitudesCopy[amplitudeCount];
+        float newFloatAmplitudesCopy[amplitudeCount];
+        float new_df = (float) samplingRate / (float) sampleCount;        
+        copyArray(amplitudes, newamplitudesCopy, amplitudeCount);
+
+      /*  Serial.println("Accel FFT Amplitudes Copy :");
+        Serial.print("[");
+        for(int i=0;i<amplitudeCount;i++){
+
+          Serial.print(newamplitudesCopy[i]);Serial.print(",");
+            
+          //newamplitudesCopy[i] = float(newamplitudesCopy[i]/32768.0);
+          //newFloatAmplitudesCopy[i] = newamplitudesCopy[i];
+                   
+        }
+        Serial.println("]");
+      */
+       // Serial.print("Resolution :");Serial.println(new_df);
+       // Serial.println("New Amplitude after processing ...");  
+       // Serial.print("[");
+       
+       /* Get the Velocity Amplitudes 
+        * converting all the q15_t values to float 
+        * applying the diagnostic fingerprints on float amplitudes
+        * ScalingFactor/ Formula : float(accel amplitudes)/(2*pi*i*frequencyResolution)*sensorResolution/sqrt(2);  
+        * @newFloatAmplitudesCopy  return the velocity fft amplitudes. 
+        */
+        
+        float q15_amplitudes;
+        
+        for(int i=1;i<amplitudeCount;i++){
+          q15_amplitudes =  (((float)newamplitudesCopy[i])/128.0*1000); 
+          //Serial.print(q15_amplitudes);Serial.print(",");
+           
+          newFloatAmplitudesCopy[i] =  q15_amplitudes/(2*3.14*i*new_df)*0.001197*256/1.414 ;       // ((float(newamplitudesCopy[i])/32768.0)/(2*3.14*i*new_df))* 1000;
+          
+          //Serial.print(newFloatAmplitudesCopy[i],4);Serial.print(",");
+          
+        }
+          //Serial.println("]");
         
         float agitation = RFFTAmplitudes::getRMS(amplitudes, sampleCount, true);
         bool isInMotion = (agitation * resolution) > m_minAgitationRMS ;
+
         if (!isInMotion && featureDebugMode) {
             debugPrint(F("Device is still - Freq, vel & disp defaulted to 0."));
         }
@@ -457,6 +530,7 @@ class FFTComputer: public FeatureComputer
                 }
             }
         }
+              
         if (featureDebugMode) {
             debugPrint(millis(), false);
             debugPrint(F(" -> "), false);
@@ -476,8 +550,36 @@ class FFTComputer: public FeatureComputer
             RFFTAmplitudes::filterAndIntegrate(
                 amplitudes, sampleCount, samplingRate, m_lowCutFrequency,
                 m_highCutFrequency, scaling1, false);
+
+          
+            /***************************** Applying Diagnostic fingerprints on computated velocity fft amplitude *************************/ 
+            //  Serial.print("Axis ID :");Serial.println(direction);
+           /* Serial.println("Velocity FFT Amplitudes :");
+              Serial.print("[");
+                for(int i=0;i<amplitudeCount;i++){
+          
+                  Serial.print(amplitudes[i]);Serial.print(",");
+                    
+               }
+              Serial.println("]"); 
+           */           
+          
+             if(direction == 0) {
+                fingerprintResult_X =  DiagnosticEngine::m_specializedCompute (direction,newFloatAmplitudesCopy,float(scaling1)/32768.0);  // resolution
+               
+             }
+             if(direction ==1){
+                 fingerprintResult_Y = DiagnosticEngine::m_specializedCompute (direction, newFloatAmplitudesCopy,float(scaling1)/32768.0);
+               
+             }
+             if(direction == 2){
+                fingerprintResult_Z = DiagnosticEngine::m_specializedCompute (direction, newFloatAmplitudesCopy,float(scaling1)/32768.0);
+               
+             }
+            
+            direction++; 
                 
-             
+      
             if( m_useCalibrationMethod == false ) {// || UsageMode::CALIBRATION == 0) {
 
               //++integratedRMS1 = RFFTAmplitudes::getNewAccelRMS(newAccelAmplitudes,sampleCount);
@@ -493,7 +595,7 @@ class FFTComputer: public FeatureComputer
               integratedRMS1 *= motorScalingFactor;
               
               //Serial.print("integratedRMS1 Original :");Serial.println(integratedRMS1*resolution);
-              //Serial.print("Integrated RMS :");Serial.println(integratedRMS1);
+              //Serial.print("Integrated RMS calibration Scaling:");Serial.println(m_calibrationScaling1);
             }
             
             m_destinations[2]->addValue(integratedRMS1);
@@ -504,6 +606,9 @@ class FFTComputer: public FeatureComputer
                 debugPrint(": ", false);
                 debugPrint(integratedRMS1 * resolution);
             }
+          
+            //Serial.print(m_destinations[2]->getName());Serial.print("\t");Serial.println(integratedRMS1*resolution);
+            
             // 4. 2nd integration in frequency domain
             T scaling2 = (T) RFFTAmplitudes::getRescalingFactorForIntegral(
                 amplitudes, sampleCount, samplingRate);
@@ -512,6 +617,7 @@ class FFTComputer: public FeatureComputer
                 m_highCutFrequency, scaling2, false);
             float integratedRMS2 = RFFTAmplitudes::getRMS(amplitudes,
                                                           sampleCount);
+            
             integratedRMS2 *= 1000 / ((float) scaling1 * (float) scaling2) * m_calibrationScaling2;
             m_destinations[3]->addValue(integratedRMS2); 
             if (featureDebugMode) {
