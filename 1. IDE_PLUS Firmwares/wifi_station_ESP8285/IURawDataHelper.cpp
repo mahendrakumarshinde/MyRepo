@@ -198,12 +198,14 @@ int IURawDataHelper::publishIfReady(MacAddress macAddress)
     if (inputHasTimedOut() || postPayloadHasTimedOut())
     {
         resetPayload();
-        return false;
+        return 111;   //false
     }
     if (!areAllKeyPresent()) // Raw Data payload is not ready
-    {
-        return false;
+    {   
+        
+        return 222; //false
     }
+    
     m_firstPostTime = millis();
     int httpCode = httpPostPayload(macAddress);
     if (debugMode)
@@ -214,11 +216,11 @@ int IURawDataHelper::publishIfReady(MacAddress macAddress)
     if (httpCode == 200)
     {
         resetPayload();
-        return true;
+        return httpCode;  //200
     }
     else
     {
-        return false;
+        return httpCode; //false
     }
 }
 
@@ -228,6 +230,7 @@ int IURawDataHelper::publishIfReady(MacAddress macAddress)
 int IURawDataHelper::httpPostPayload(MacAddress macAddress)
 {
     // Close JSON first (last curled brace) if not closed yet
+    char *result = NULL;
     if (m_payload[m_payloadCounter - 1] != '}')
     {
         m_payload[m_payloadCounter++] = '}';
@@ -249,6 +252,132 @@ int IURawDataHelper::httpPostPayload(MacAddress macAddress)
         debugPrint("URL: ", false);
         debugPrint(fullUrl);
     }
-    return httpPostBigJsonRequest(m_endpointHost, fullUrl, m_endpointPort,
-                                  (uint8_t*) m_payload, m_payloadCounter);
+    result = strstr(fullUrl,"/raw_data?mac=");
+    if(result != NULL){
+      // infinite uptime http
+      return httpPostBigJsonRequest(m_endpointHost, fullUrl, m_endpointPort,
+                                    (uint8_t*) m_payload, m_payloadCounter);
+      
+    }
+    else {
+    // others like indicus software
+    return publishBigJSON(m_endpointHost, fullUrl, m_endpointPort,
+                                 (uint8_t*) m_payload, m_payloadCounter);   
+    }
 }
+
+/*
+ * Post the JSON forfully
+ * 
+ */
+int IURawDataHelper:: publishJSON(MacAddress macAddress,char* value, uint16_t valueLength){
+
+  if(WiFi.status()== WL_CONNECTED){   //Check WiFi connection status
+ 
+   HTTPClient http;    //Declare object of class HTTPClient
+ 
+   http.begin("http://115.112.92.146:58888/contineonx-web-admin/imiot-infiniteuptime-api/postdatadump");      //Specify request destination
+   http.addHeader("Content-Type", "text/plain");  //Specify content-type header
+ 
+   int httpCode = http.POST(value); //+ macAddress.toString().c_str() );   //Send the request
+   String payload = http.getString();                  //Get the response payload
+ 
+   //Serial.println(httpCode);   //Print HTTP return code
+   //Serial.println(payload);    //Print request response payload
+ 
+   http.end();  //Close connection
+   return 111;
+ }else{
+
+    return 222;
+    debugPrint("Error in WiFi connection");   
+ 
+ }
+ 
+}
+
+/* =============================================================================
+    HTTP GET request
+============================================================================= */
+
+/**
+ * Post the payload if ready
+ */
+String IURawDataHelper::publishConfigMessage(MacAddress macAddress)
+{
+   
+    String httpResponseMessage = httpGetPayload(macAddress);
+    if (debugMode)
+    {
+        debugPrint("Get the Pending http messages: ", false);
+        debugPrint(httpResponseMessage);
+    }
+
+    return httpResponseMessage;
+}
+
+/**
+ * GET the payload
+ */
+String IURawDataHelper::httpGetPayload(MacAddress macAddress)
+{
+    if (debugMode)
+    {
+        debugPrint("Get payload: ", false);
+        debugPrint(m_payload);
+    }
+    char fullUrl[200];//strlen(m_endpointRoute) + 18];
+    strcpy(fullUrl, "http://13.232.122.10:8080/iu-web/iu-infiniteuptime-api/getpendingdeviceconfig?mac=");
+    //char* fullUrl = "http://13.232.122.10:8080/iu-web/iu-infiniteuptime-api/getpendingdeviceconfig?mac=94:54:93:43:25:1C";
+    strncat(fullUrl, macAddress.toString().c_str(), 18);
+    if (debugMode)
+    {
+        debugPrint("Host: ", false);
+        debugPrint(m_endpointHost);
+        debugPrint("Port: ", false);
+        debugPrint(m_endpointPort);
+        debugPrint("URL: ", false);
+        //debugPrint(fullUrl);
+    }
+    return httpGET(fullUrl,0,NULL); // 0 -response length
+    
+}
+
+
+
+/*
+ * Publish big JSON
+ * 
+ */
+/*void IURawDataHelper:: publishBigJSON(char* values){
+
+
+  int contentLength = values.length();
+
+  // create the request and headers
+  String request = "POST " + String(endpointURL) + " HTTP/1.1\r\n" +
+  "Host: " + String(endpointHost) + "\r\n" + 
+  "Accept: application/json" + "\r\n" + 
+  "Content-Type: application/json\r\n" +
+  "Content-Length: " + String(contentLength) + "\r\n\r\n";
+
+  // Use WiFiClient class to create TCP connections
+  WiFiClient client;
+
+  connectResult = client.connect(endpointHost, atoi(endpointPort));
+
+  // This will send the request and headers to the server
+  client.print(request);
+
+  // now we need to chunk the payload into 1000 byte chunks
+  int cIndex;
+  for (cIndex = 0; cIndex < contentLength; cIndex = cIndex + 1000) {
+    client.print(jsonPayload.substring(cIndex, cIndex+1000));
+    //Serial.print(jsonPayload.substring(cIndex, cIndex+1000));
+  }
+  client.print(jsonPayload.substring(cIndex));
+  //Serial.println(jsonPayload.substring(cIndex));
+
+
+}
+*/
