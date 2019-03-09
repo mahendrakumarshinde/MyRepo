@@ -249,6 +249,7 @@ bool Feature::isReadyToCompute(uint8_t receiverIdx, uint8_t sectionCount,
     for (uint8_t i = idx; i < idx + sectionCount; ++i) {
         k = i % m_sectionCount;
         if (m_locked[k] || !m_published[k] || m_acknowledged[k][receiverIdx]) {
+            //digitalWrite(7,HIGH);
             return false;
         }
         if (computeLast) {
