@@ -150,6 +150,10 @@ bool IUMQTTHelper::publish(const char* topic, const char* payload)
  *      cmd/<deviceType>/<raw topic>
  *      eg: if raw topic = "time_sync", the topic could be
  *          ide_plus/time_sync
+ *   Device Diagnostic fingerprints Topics       
+ *   getting all the configuration messages 
+ *   ide_plus/<ble_macID>/iu_fingerprints/config 
+ *   
  */
 bool IUMQTTHelper::subscribe(const char* topic, bool deviceSpecific)
 {
@@ -239,6 +243,27 @@ bool IUMQTTHelper::publishLog(const char *payload,
 }
 
 /**
+ * Diagnostic finggerprints
+ */
+bool IUMQTTHelper::publishToFingerprints(const char *payload,
+                              const char *topicExtension,
+                              const uint16_t extensionLength)
+{
+    if (topicExtension && extensionLength > 0)
+    {
+        uint16_t topicLength = FINGERPRINT_TOPIC_LENGTH + extensionLength + 1;
+        char topic[topicLength];
+        snprintf(topic, topicLength, "%s/%s", FINGERPRINT_DATA_PUBLISH_TOPIC, topicExtension);
+        return publish(topic, payload);
+    }
+    else
+    {
+        return publish(FINGERPRINT_DATA_PUBLISH_TOPIC, payload);
+    }
+}
+
+
+/**
 * Subscribe to all the required device subscriptions
 *
 * Should be called after each reconnection.
@@ -254,4 +279,5 @@ void IUMQTTHelper::onConnection()
     subscribe("command", true);  // Remote instruction subscription
     subscribe("post_url", false);
     subscribe("time_sync", false);  // Time synchornisation subscription
+    subscribe("iu_fingerprints/config",true);  // Diagnostic Configuration subscription
 }
