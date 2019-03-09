@@ -55,6 +55,59 @@ inline int httpGetRequest(const char *url, char* responseBody,
     return httpCode;
 }
 
+// Get the configuration messages 
+
+
+/**
+ * Sends an HTTP GET request - HTTPS is used if fingerprint is given.
+ *
+ * @param url
+ * @param maxResponseLength
+ * @param httpsFingerprint
+ * 
+ * return - responseBody 
+ */
+inline String httpGET(const char *url,uint16_t maxResponseLength,
+                          const char *httpsFingerprint=NULL)
+{
+   String responseBody;
+   
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        if (debugMode)
+        {
+            debugPrint("WiFi disconnected: GET request failed");
+        }
+        return "WIFI-DISCONNECTED";
+    }
+    HTTPClient http;
+    if (httpsFingerprint)
+    {
+        http.begin(String(url), String(httpsFingerprint));
+    }
+    else
+    {
+        http.begin(String(url));
+    }
+    int httpCode = http.GET();
+    if (httpCode > 0)
+    {
+        responseBody = http.getString();//.toCharArray(responseBody, maxResponseLength);
+        if (debugMode)
+        {
+            debugPrint(responseBody);
+        }
+    }
+    http.end();
+    if(httpCode > 0){
+      return responseBody;
+    }
+   else {
+    return String(httpCode);
+   }
+}
+
+
 /**
  * Sends an HTTP POST request - HTTPS is used if fingerprint is given.
  *
@@ -131,8 +184,9 @@ inline int httpPostBigJsonRequest(
         {
             debugPrint("WiFi disconnected: POST request failed");
         }
-        return 0;
+        return 404; // 0
     }
+    
     // create the request and headers
     String request = "POST " + String(endpointURL) + " HTTP/1.1\r\n" +
         "Host: " + String(endpointHost) + "\r\n" +
@@ -153,7 +207,8 @@ inline int httpPostBigJsonRequest(
             debugPrint("\nHEADERS:");
             debugPrint(request);
         }
-        return connectResult;  // 0 means no connection
+      
+       return 505; //connectResult;  // 0 means no connection
     }
 
     // This will send the request and headers to the server
@@ -222,5 +277,62 @@ inline int httpPostBigJsonRequest(
     return HTTPC_ERROR_CONNECTION_LOST;  // -5
 }
 
+
+/*
+ * 
+ * post big json with httpclient
+ */
+
+inline int publishBigJSON(const char *endpointHost, const char *endpointURL,
+    uint16_t endpointPort, uint8_t *payload, uint16_t payloadLength,
+    size_t chunkSize=WIFICLIENT_MAX_PACKET_SIZE,
+    uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT){
+
+if(WiFi.status()== WL_CONNECTED){   //Check WiFi connection status
+ 
+   HTTPClient http;    //Declare object of class HTTPClient
+ 
+  
+   //http.begin("http://115.112.92.146:58888/contineonx-web-admin/imiot-infiniteuptime-api/postdatadump");      //Specify request destination
+  
+   String url = String(endpointHost) + String(":")+ String(endpointPort) + String(endpointURL);   
+   http.begin(url);      //Specify request destination
+
+  // http.addHeader("POST",String(endpointURL) + " HTTP/1.1\r\n" );  //Specify content-type header
+  // http.addHeader("Host",String(endpointHost) + "\r\n" );         //Specify content-type header
+  // http.addHeader("Accept","application/json\r\n");         //Specify content-type header
+  // http.addHeader("Content-Type", "application/json\r\n");    //Specify content-type header
+  // http.addHeader("Content-Length", String(payloadLength) + "\r\n\r\n");  //Specify content-type header
+  http.addHeader("Content-Type", "text/plain"); 
+     
+  // create the request and headers
+  //String request =
+ /* http.addHeader("POST " + String(end     pointURL) + " HTTP/1.1\r\n" +
+                  "Host: " + String(endpointHost) + "\r\n" + 
+                  "Accept: application/json" + "\r\n" + 
+                  "Content-Type: application/json\r\n" +
+                  "Content-Length: " + String(payloadLength) + "\r\n\r\n");
+  */                
+   
+   //http.addHeader(request);
+   
+   //int httpCode = http.POST(url); //+ macAddress.toString().c_str() );   //Send the request
+   int httpCode = http.POST((const char*)payload); //+ macAddress.toString().c_str() );   //Send the request
+   
+   String payload = http.getString();                  //Get the response payload
+ 
+   //Serial.println(httpCode);   //Print HTTP return code
+   //Serial.println(payload);    //Print request response payload
+ 
+   http.end();  //Close connectionm_lastSentHeartbeat
+   return httpCode;
+ }else{
+
+    return 222;
+    debugPrint("Error in WiFi connection");   
+ 
+ }
+
+}
 
 #endif // UTILITIES_H
