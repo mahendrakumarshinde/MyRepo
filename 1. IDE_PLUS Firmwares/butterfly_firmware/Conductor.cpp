@@ -1,5 +1,11 @@
 #include "Conductor.h"
-#include<FS.h>
+//#include<FS.h>
+
+
+const char* fingerprintData;
+const char* fingerprints_X;
+const char* fingerprints_Y;
+const char* fingerprints_Z;
 
 char Conductor::START_CONFIRM[11] = "IUOK_START";
 char Conductor::END_CONFIRM[9] = "IUOK_END";
@@ -231,10 +237,20 @@ void Conductor::periodicSendConfigChecksum()
  */
 bool Conductor::processConfiguration(char *json, bool saveToFlash)
 {
-    StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
+    //StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;            // make it dynamic
+    //const size_t bufferSize = JSON_ARRAY_SIZE(2) + JSON_OBJECT_SIZE(3) + 60;        // dynamically allociated memory
+    const size_t bufferSize = JSON_OBJECT_SIZE(1) + 41*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(41) + 2430;
+    DynamicJsonBuffer jsonBuffer(bufferSize);
+    
+    //Serial.print("JSON 1 SIZE :");Serial.println(bufferSize);
+    
     JsonObject& root = jsonBuffer.parseObject(json);
     String jsonChar;
     root.printTo(jsonChar);
+    
+    JsonVariant variant = root;
+    variant.prettyPrintTo(Serial);
+    
     if (!root.success()) {
         if (debugMode) {
             debugPrint("parseObject() failed");
@@ -243,6 +259,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     }
     // Device level configuration
     JsonVariant subConfig = root["main"];
+    subConfig.printTo(jsonChar);
+    
     if (subConfig.success()) {
         configureMainOptions(subConfig);
         if (saveToFlash) {
@@ -263,6 +281,14 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         configureAllFeatures(subConfig);
         if (saveToFlash) {
             iuFlash.saveConfigJson(IUFlash::CFG_FEATURE, subConfig);
+            //send ACK on ide_pluse/command_response/
+            const char* messageId;
+            messageId = root["messageId"]  ;
+            char ack_config[150];
+            snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+            
+            //Serial.println(ack_config);
+            iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config);
         }
     }
     // Feature configuration
@@ -272,6 +298,22 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         activateFeature(&opStateFeature);
         if (saveToFlash) {
             iuFlash.saveConfigJson(IUFlash::CFG_OP_STATE, subConfig);
+        }
+    }
+    // Diagnostic Thresholds configuration
+    subConfig = root["thresholds"];
+    if (subConfig.success()) {
+        configureAllFeatures(subConfig);
+        if (saveToFlash) {
+            //iuFlash.saveConfigJson(IUFlash::CFG_FEATURE, subConfig);
+            //send ACK on ide_pluse/command_response/
+            const char* messageId;
+            messageId = root["messageId"]  ;
+            char ack_config[150];
+            snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+            
+            //Serial.println(ack_config);
+            iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config);
         }
     }
      // MQTT Server configuration
@@ -285,19 +327,122 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             File mqttFile = DOSFS.open("MQTT.conf", "w");
             if (mqttFile)
             {
-                //Serial.println("Writing to MQTT.conf ...");
+                
+                if (loopDebugMode) {
+                 debugPrint(F("Writting into file: "), true);
+                }
                 mqttFile.print(jsonChar);
                 mqttFile.close();
                 dataWritten = true;
             }
             else if (loopDebugMode) {
-                 debugPrint(F("Failed to write into file: "), false);
-                 //Serial.println("Error Writting to MQTT.conf");
+                 debugPrint("Failed to write into file: MQTT.conf ");
+                
             }  
         
         }
         if(dataWritten == true){
           configureMQTTServer("MQTT.conf");
+          //send Ack to BLE
+          iuBluetooth.write("MQTT-RECEVIED");
+          // get the latest account id and send to wifi
+         /* JsonObject& config = configureJsonFromFlash("MQTT.conf",1);      // get the accountID
+          m_accountId = config["accountid"];
+          iuWiFi.sendMSPCommand(MSPCommand::SEND_ACCOUNTID, m_accountId); 
+
+          Serial.print("READING ACCOUNTID :");Serial.println(  m_accountId );
+         */ 
+        }
+        
+    }
+    //Diagostic Fingerprint configurations
+    subConfig = root["fingerprints"];
+    if (subConfig.success()) {
+        //opStateComputer.configure(subConfig);
+        //activateFeature(&opStateFeature);
+        bool dataWritten = false;
+        if (saveToFlash) {
+          
+          Serial.println("INSIDE SAVE TO FNGERPRINTS....");
+          File fingerprints = DOSFS.open("finterprints.conf","w");
+          if (fingerprints)
+            {
+                debugPrint("Writing to fingerptins.conf ...");
+                fingerprints.print(jsonChar);
+                fingerprints.close();
+                dataWritten = true;
+            }
+            else if (loopDebugMode) {
+                 debugPrint(F("Failed to write into file: "), false);
+                 Serial.println("Error Writting to fingerprints.conf");
+            }  
+        
+        }
+        if(dataWritten == true){
+          debugPrint("Reading from fingerprints.conf file ...........");
+          JsonObject& config = iuDiagnosticEngine.configureFingerPrintsFromFlash("finterprints.conf",dataWritten);   //iuDiagnosticEngine
+
+           
+            if (loopDebugMode) { debugPrint(F("Send Diagnostic configuration Acknowledge to wifi")); }
+            const char* messageId;
+            messageId = config["messageId"]  ;
+            
+          
+            char ack_config[150];
+            snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+            
+            //Serial.println(ack_config);
+            iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config);  
+        }
+        
+      }
+    // http endpoint configuration
+    subConfig = root["httpConfig"];
+    if (subConfig.success()) {
+        //configureAllFeatures(subConfig);
+        bool dataWritten = false;
+        
+        if (saveToFlash) {
+            //DOSFS.begin();
+            File httpFile = DOSFS.open("httpConfig.conf", "w");
+            if (httpFile)
+            {
+                
+                if (loopDebugMode) {
+                 debugPrint(F("Writting into file: "), true);
+                }
+                httpFile.print(jsonChar);
+                httpFile.close();
+                dataWritten = true;
+            }
+            else if (loopDebugMode) {
+                 debugPrint("Failed to write into file: httpConfig.conf ");
+                
+            }  
+        
+        }
+        if(dataWritten == true){
+          //configureBoardFromFlash("httpConfig.conf",dataWritten);
+          JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
+
+           const char* messageId = config["messageId"];
+          //Serial.print("File Content :");Serial.println(jsonChar);
+          //Serial.print("http details :");Serial.print(m_httpHost);Serial.print(",");Serial.print(m_httpPort);Serial.print(",");Serial.print(m_httpPath);Serial.println("/***********/");
+          //iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_HOST,m_httpHost); 
+          //iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_PORT,String(m_httpPort).c_str()); 
+          //iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_ROUTE,m_httpPath); 
+
+          char httpConfig_ack[150];
+          snprintf(httpConfig_ack, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+            
+          debugPrint(F("httpConfig ACK :"));debugPrint(httpConfig_ack);
+          iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HTTP_CONFIG_ACK, httpConfig_ack);
+          
+          //stm reset
+          delay(10);
+          if(subConfig = root["httpConfig"]["host"] != m_httpHost ){
+                STM32.reset();
+          }
           
         }
         
@@ -314,7 +459,9 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 
   // Open the configuration file
   IPAddress tempAddress;
+  
   File myFile = DOSFS.open(filename,"r");
+  
   
   StaticJsonBuffer<512> jsonBuffer;
 
@@ -322,33 +469,29 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
   JsonObject &root = jsonBuffer.parseObject(myFile);
 
   if (!root.success()){
-    Serial.println(F("Failed to read MQTT.conf file, using default configuration"));
+    debugPrint(F("Failed to read MQTT.conf file, using default configuration"));
     m_mqttServerIp = MQTT_DEFAULT_SERVER_IP;
     m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
-    MQTT_DEFAULT_USERNAME;
-    MQTT_DEFAULT_ASSWORD;
+    m_mqttUserName = MQTT_DEFAULT_USERNAME;
+    m_mqttPassword = MQTT_DEFAULT_ASSWORD;
+    //m_accountid = "XXXAdmin";
   }
  else {
   
   
-  int mqttport = root["mqtt"]["port"];
+  
   String mqttServerIP = root["mqtt"]["mqttServerIP"];
+  int mqttport = root["mqtt"]["port"];
   
- // const char* mqttusername = root["mqtt"]["username"];//.as<char*>();
- // const char* mqttpassword = root["mqtt"]["password"];//.as<char*>();
-  
+  debugPrint("INside MQTT.conf .......");
   m_mqttServerIp.fromString(mqttServerIP);//mqttServerIP;
   m_mqttServerPort = mqttport;
-
-// TODO - UserName, Password configuration
-/*  const char* userName = MQTT_DEFAULT_USERNAME;
-  const char* password = MQTT_DEFAULT_ASSWORD;
-
-  //userName = mqttusername ;
-  //password = mqttpassword; 
+  m_mqttUserName = root["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
+  m_mqttPassword = root["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
+  m_accountId = root["accountid"];
   
   //mqttusername = MQTT_DEFAULT_USERNAME;
-
+/*
   Serial.println("Before Swap :");
   Serial.print("UserName :");Serial.println( userName);
   Serial.print("Password :");Serial.println( password);
@@ -365,22 +508,143 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 */  
   iuWiFi.hardReset();
   if (debugMode) {
-        debugPrint("MQTT ServerIP = ");
+        debugPrint(F("MQTT ServerIP :"),false);
         debugPrint(m_mqttServerIp);
-        debugPrint("Mqtt Port =");
+        debugPrint(F("Mqtt Port :"),false);
         debugPrint(m_mqttServerPort);
+        debugPrint(F("Mqtt UserName :"),false);
+        debugPrint(m_mqttUserName);
+        debugPrint(F("Mqtt Password :"),false);
+        debugPrint(m_mqttPassword);
+        debugPrint(F("Account ID :"));
+        debugPrint(m_accountId);
   }   
-  //Serial.print("MqttServerIP:");Serial.println(m_mqttServerIp);
-  //Serial.print("MqttPort:");Serial.println(m_mqttServerPort);
-  //Serial.print("UserName:");Serial.println(MQTT_DEFAULT_USERNAME);
-  //Serial.print("Password:");Serial.println(MQTT_DEFAULT_ASSWORD);
-  //Serial.println();
+ 
  }
   myFile.close();
   
+}
+/*
+ * swap credentails
+ */
+void Conductor::fastSwap (const char **i, const char **d)
+{
+    const char *t = *d;
+    *d = *i;
+    *i = t;
+}
+
+/*
+ * get the Board Configuration data
+ * 
+ * Used to configure http endpoint configurations
+ */
+
+
+bool Conductor::configureBoardFromFlash(String filename,bool isSet){
   
+  if(isSet != true){
+
+    return false;
+  }
   
+  // Open the configuration file
+ 
+  File myFile = DOSFS.open(filename,"r");
+  
+  StaticJsonBuffer<1024> jsonBuffer;
+
+  // Parse the root object
+  JsonObject &root = jsonBuffer.parseObject(myFile);
+  
+  JsonObject& root2 = root["httpConfig"];
+  if (!root.success()){
+    debugPrint(F("Failed to read httpConf.conf file, using default configuration"));
+    m_httpHost = "http://13.232.122.10";
+    m_httpPort = 8080;
+    m_httpPath = "/iu-web/iu-infiniteuptime-api/postdatadump?mac=";
+   
+  }
+ else {
+
+  // Read configuration from the file
+
+static const char* host = root2["host"];
+static uint16_t    port = root2["port"];
+static const char* path = root2["path"];
+static const char* username = root2["username"];
+static const char* password = root2["password"];
+static const char* oauth = root2["oauth"];
+
+m_httpHost  = host;
+m_httpPort = port;
+m_httpPath = path;
+m_httpUsername = username;
+m_httpPassword = password;
+m_httpOauth = oauth;
+
+if(debugMode){
+  debugPrint("FROM configureBoardFromFlash :");
+
+  debugPrint(F("Http Host :"),false);
+  debugPrint(m_httpHost);
+  //debugPrint(":");
+  debugPrint(F("Port:"),false);
+  debugPrint(m_httpPort);
+  debugPrint(F("Path :"),false);
+  debugPrint(m_httpPath);
+  debugPrint(F("UserName :"),false);
+  debugPrint(m_httpUsername);
+  debugPrint(F("Password :"),false);
+  debugPrint(m_httpPassword);
+  debugPrint(F("Oauth :"),false);
+  debugPrint(m_httpOauth);
+  }
+}
+ myFile.close();
+ 
+ return true;
+}
+
+/*
+ * configureJsonFromFlash(char* filename,bool isSet)
+ * 
+ * 
+ */
+JsonObject& Conductor:: configureJsonFromFlash(String filename,bool isSet){
+
+  if(isSet != true){
+
+    //return false;
+  }
+  
+ // Open the configuration file
+ 
+  File myFile = DOSFS.open(filename,"r");
+  
+  //StaticJsonBuffer<1024> jsonBuffer;
+  //const size_t bufferSize = JSON_ARRAY_SIZE(8) + JSON_OBJECT_SIZE(300) + 60;        // dynamically allociated memory
+  const size_t bufferSize = JSON_OBJECT_SIZE(1) + 45*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(45) + 2430;
+  
+  DynamicJsonBuffer jsonBuffer(bufferSize);
+ // Serial.print("JSON 2 SIZE :");Serial.println(bufferSize);
+ // Parse the root object
+  JsonObject &root = jsonBuffer.parseObject(myFile);
+  //JsonObject& root2 = root["fingerprints"];
+  
+  if (!root.success()){
+    debugPrint(F("Failed to read file, using default configuration"));
+   
+  }
+ else {
+  // close file
+ // Serial.println("Closing the fingerprints.conf file.....");
+  myFile.close();
+
  }
+    
+ return root;     // JSON Object
+}
 
 /**
  * Device level configuration
@@ -490,6 +754,8 @@ void Conductor::processCommand(char *buff)
 {
     IPAddress tempAddress;
     size_t buffLen = strlen(buff);
+   // Serial.println(buff);
+    
     switch(buff[0]) {
         case 'A': // ping device
             if (strcmp(buff, "ALIVE") == 0) {
@@ -548,9 +814,11 @@ void Conductor::processCommand(char *buff)
                         if (loopDebugMode) {
                             debugPrint("Set MQTT server IP: ", false);
                             debugPrint(m_mqttServerIp);
+                            
                         }
                         iuBluetooth.write("SET-MQTT-OK;");
                     }
+                     //Serial.print("MQTT IP Address :");Serial.println(m_mqttServerIp);
                 }
             }
         case '3':  // Collect acceleration raw data
@@ -622,6 +890,7 @@ void Conductor::processUserCommandForWiFi(char *buff,
 void Conductor::processLegacyCommand(char *buff)
 {
     // TODO Command protocol redefinition required
+    //Serial.print("Leagacy CMD Input :");Serial.println(buff);
     switch (buff[0]) {
         case '0': // Set Thresholds
             if (buff[4] == '-' && buff[9] == '-' && buff[14] == '-') {
@@ -637,7 +906,9 @@ void Conductor::processLegacyCommand(char *buff)
                     opStateComputer.setThresholds(idx, (float) th1, (float) th2,
                                                   (float) th3);
                 }
+               
             }
+            
             break;
         case '1':  // Receive the timestamp data from the bluetooth hub
             if (buff[1] == ':' && buff[12] == '.') {
@@ -938,18 +1209,112 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             break;
         case MSPCommand::GET_RAW_DATA_ENDPOINT_INFO:
             // TODO: Implement
+            {
+            JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
+
+            m_httpHost = config["httpConfig"]["host"];
+            m_httpPort = config["httpConfig"]["port"];
+            m_httpPath = config["httpConfig"]["path"];
+            //Serial.print("File Content :");Serial.println(jsonChar);
+            //Serial.print("http details :");Serial.print(m_httpHost);Serial.print(",");Serial.print(m_httpPort);Serial.print(",");Serial.print(m_httpPath);Serial.println("/****** SWITCH****/");
+            if(m_httpHost == NULL && m_httpPort == 0 && m_httpPath == NULL ){
+              //load default configurations
+              m_httpHost = "http://13.232.122.10";                                       //"ideplus-dot-infinite-uptime-1232.appspot.com";
+              m_httpPort =  8080;                                                        //80;
+              m_httpPath = "/iu-web/iu-infiniteuptime-api/postdatadump?mac=";           //"/raw_data?mac="; 
+            }
+            iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_HOST,m_httpHost); 
+            iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_PORT,String(m_httpPort).c_str()); 
+            iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_ROUTE,m_httpPath);
+                        
             break;
+           }
+            
         case MSPCommand::GET_MQTT_CONNECTION_INFO:
             if (loopDebugMode) { debugPrint(F("GET_MQTT_CONNECTION_INFO")); }
+            {
+            JsonObject& config = configureJsonFromFlash("MQTT.conf",1);
+
+            //m_mqttServerIp = config["mqtt"]["mqttServerIP"];
+            //m_mqttServerPort = config["mqtt"]["port"];
+            m_mqttUserName = config["mqtt"]["username"];
+            m_mqttPassword = config["mqtt"]["password"];
+            m_accountId = config["accountid"];
+            Serial.print("Account ID. 1... :");Serial.println(m_accountId);
+            //Serial.println("MQTT DEtails :"); Serial.print("IP:");Serial.println(m_mqttServerIp);Serial.print("PORT:");Serial.println(m_mqttServerPort);
+            //Serial.print("USERNAME :");Serial.println(m_mqttUserName); Serial.print("PASSWORD:");Serial.println(m_mqttPassword);
+            if(m_mqttUserName == NULL || m_mqttPassword == NULL || m_mqttServerPort == NULL){
+              // load default configurations
+              //m_mqttServerIp = MQTT_DEFAULT_SERVER_IP;
+              m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
+              m_mqttUserName = MQTT_DEFAULT_USERNAME;
+              m_mqttPassword = MQTT_DEFAULT_ASSWORD;
+            }
+
+            //Serial.print("UserName :");Serial.println(m_mqttUserName);
+            //Serial.print("Password 1 :");Serial.println(m_mqttPassword);
+            
             iuWiFi.mspSendIPAddress(MSPCommand::SET_MQTT_SERVER_IP,
                                     m_mqttServerIp);
             iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_SERVER_PORT,
                                   String(m_mqttServerPort).c_str());
             iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_USERNAME,
-                                  MQTT_DEFAULT_USERNAME);
+                                  m_mqttUserName);// MQTT_DEFAULT_USERNAME);
             iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_PASSWORD,
-                                  MQTT_DEFAULT_ASSWORD);
+                                  m_mqttPassword); //MQTT_DEFAULT_ASSWORD);
+            
+           break;
+          }
+         //case MSPCommand::SEND_FINGERPRINT_ACK:
+         //     if (loopDebugMode) { debugPrint(F("Send Diagnostic message Acknowledge to wifi")); }
+         //     iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_ACK,
+         //                           diagnosticACK);
+        case MSPCommand::PUBLISH_RAW_DATA:
+            //Serial.println("RECEIVED ACK FROM PUBLISH_RAW_DATA COMMAND...");
+            //Serial.print("Buffer:");Serial.println(buff);
             break;
+       // case MSPCommand::RECEIVE_RAW_DATA_ACK:
+       //     Serial.println("RECEIVED ACK FROM SEND_RAW_DATA COMMAND...");
+       //     Serial.print("Buffer:");Serial.println(buff);
+            
+            break;
+        case MSPCommand::SET_PENDING_HTTP_CONFIG:
+            {
+             Serial.print("HTTP Pending Response ..............................................:");
+             Serial.println(buff);
+             // create the JSON objects 
+             DynamicJsonBuffer jsonBuffer;
+             JsonObject& pendingConfigObject = jsonBuffer.parseObject(buff); 
+             size_t msgLen = strlen(buff);
+
+             //Serial.print("Size of buff : ");Serial.println(msgLen);
+             char fingerprintAlarm[1500];
+             char featuresThreshold[1500]; 
+             char fingerprintFeatures[1500];
+             char httpConfig[1500];
+             
+             JsonVariant fingerprintAlarmConfig  = pendingConfigObject["result"]["fingerprintAlarm"];
+             JsonVariant featuresThresholdConfig = pendingConfigObject["result"]["alarm"];
+             JsonVariant fingerprintFeaturesConfig = pendingConfigObject["result"]["fingerprint"];
+             JsonVariant httpServerConfig = pendingConfigObject["result"]["httpConfig"];
+             
+             //Serial.println(fingerprintFeaturesConfig.size());
+             
+             fingerprintAlarmConfig.prettyPrintTo(fingerprintAlarm);
+             featuresThresholdConfig.prettyPrintTo(featuresThreshold);
+             fingerprintFeaturesConfig.prettyPrintTo(fingerprintFeatures);
+             httpServerConfig.prettyPrintTo(httpConfig);
+
+             
+
+             processConfiguration(fingerprintAlarm,true);        // apply fingerprints thresholds 
+             processConfiguration(featuresThreshold ,true);       // apply features thresholds 
+             processConfiguration(fingerprintFeatures ,true);     // apply fingerprintsFeatures configurations 
+             processConfiguration(httpConfig ,true);              // apply httpServer configurations 
+              
+             
+             break;
+            }      
         default:
             // pass
             break;
@@ -1364,7 +1729,8 @@ void Conductor::changeUsageMode(UsageMode::option usage)
  * NB: Driven sensor data acquisition depends on I2S drumbeat
  */
 bool Conductor::beginDataAcquisition()
-{
+{   
+    //Serial.println("BBBBBBBBBBBBBB");
     if (m_inDataAcquistion) {
         return true; // Already in data acquisition
     }
@@ -1545,7 +1911,8 @@ void Conductor::streamFeatures()
         if (ser1) {
             if (m_streamingMode == StreamingMode::WIFI ||
                 m_streamingMode == StreamingMode::WIFI_AND_BLE)
-            {
+            { 
+                  //Serial.print("@@@@@");
 //                FeatureGroup::instances[i]->bufferAndStream(
 //                    ser1, IUSerial::MS_PROTOCOL, m_macAddress,
 //                    ledManager.getOperationState(), batteryLoad, timestamp,
@@ -1555,12 +1922,15 @@ void Conductor::streamFeatures()
                     ledManager.getOperationState(), batteryLoad, timestamp,
                     sendFeatureGroupName1);
             } else {
+                
+                //Serial.print("1234454667674534");
                 FeatureGroup::instances[i]->legacyStream(ser1, m_macAddress,
                     ledManager.getOperationState(), batteryLoad, timestamp,
                     sendFeatureGroupName1);
             }
         }
         if (ser2) {
+            //Serial.print("SER222222222222222222222222222222222222222");
             FeatureGroup::instances[i]->legacyStream(ser2, m_macAddress,
                 ledManager.getOperationState(), batteryLoad, timestamp,
                 sendFeatureGroupName2, 1);
@@ -1572,6 +1942,7 @@ void Conductor::streamFeatures()
     }
     CharBufferNode *nodeToSend = sendingQueue.getNextBufferToSend();
     if (nodeToSend) {
+        //Serial.println("QQQQQQQQQQQQQQQQQQQQQ");
         uint16_t msgLen = strlen(nodeToSend->buffer);
         iuWiFi.startLiveMSPCommand(MSPCommand::PUBLISH_FEATURE_WITH_CONFIRMATION, msgLen + 2);
         iuWiFi.streamLiveMSPMessage((char) nodeToSend->idx);
@@ -1579,7 +1950,8 @@ void Conductor::streamFeatures()
         iuWiFi.streamLiveMSPMessage(nodeToSend->buffer, msgLen);
         iuWiFi.endLiveMSPCommand();
         sendingQueue.attemptingToSend(nodeToSend->idx);
-    }
+
+     }
     sendingQueue.maintain();
 }
 
@@ -1612,6 +1984,7 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
     }
     else if (m_streamingMode == StreamingMode::WIFI ||
              m_streamingMode == StreamingMode::WIFI_AND_BLE) {
+       
         uint16_t maxLen = 15000;   //3500
         char txBuffer[maxLen];
         for (uint16_t i =0; i < maxLen; i++) {
@@ -1619,13 +1992,15 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
         }
         txBuffer[0] = axis[axisIdx];
         uint16_t idx = 1;
-        idx += accelEnergy->sendToBuffer(txBuffer, idx, 8);   //4
+        idx += accelEnergy->sendToBuffer(txBuffer, idx, 4);   //4
         txBuffer[idx] = 0; // Terminate string (idx incremented in sendToBuffer)
         //iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_RAW_DATA, txBuffer);
-        iuWiFi.sendLongMSPCommand(MSPCommand::PUBLISH_RAW_DATA, 1000000,
+        iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 1000000,
                                   txBuffer, strlen(txBuffer));
+
+       
         delay(10);
-    }
+     }
 }
 
 /**
@@ -1645,7 +2020,32 @@ void Conductor::periodicSendAccelRawData()
 }
 
 
+/* =============================================================================
+    Send Diagnostic Fingerprint data
+============================================================================= */
 
+bool Conductor::sendDiagnosticFingerPrints(){
+  //static int count = 0;
+  //debugPrint("SENDING ...........");
+
+  int messageLength = strlen(fingerprintData);
+ 
+  char FingerPrintResult[150 + messageLength];
+  snprintf(FingerPrintResult, 150 + messageLength, "{\"macID\":\"%s\",\"timestamp\": %lf,\"state\":\"%d\",\"accountId\":\"%s\",\"fingerprints\": %s }", m_macAddress.toString().c_str(),getDatetime(),ledManager.getOperationState(),"XXXAdmin",fingerprintData);
+
+ 
+if(fingerprintData != NULL && messageLength > 5 ){
+ //if( isFingerprintConfigured == NULL) {
+  debugPrint("Published Fingerprints"); 
+  //Serial.print("Message Length :");Serial.println(messageLength);
+  iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );  
+ }
+ else {
+  Serial.println("FingerprintConfigured is not configured !!!!");
+ }
+ 
+ 
+}
 /* =============================================================================
     Debugging
 ============================================================================= */
