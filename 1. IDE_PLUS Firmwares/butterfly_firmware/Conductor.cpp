@@ -1240,7 +1240,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             m_mqttUserName = config["mqtt"]["username"];
             m_mqttPassword = config["mqtt"]["password"];
             m_accountId = config["accountid"];
-            Serial.print("Account ID. 1... :");Serial.println(m_accountId);
+            //Serial.print("Account ID. 1... :");Serial.println(m_accountId);
             //Serial.println("MQTT DEtails :"); Serial.print("IP:");Serial.println(m_mqttServerIp);Serial.print("PORT:");Serial.println(m_mqttServerPort);
             //Serial.print("USERNAME :");Serial.println(m_mqttUserName); Serial.print("PASSWORD:");Serial.println(m_mqttPassword);
             if(m_mqttUserName == NULL || m_mqttPassword == NULL || m_mqttServerPort == NULL){
@@ -1273,9 +1273,9 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             //Serial.println("RECEIVED ACK FROM PUBLISH_RAW_DATA COMMAND...");
             //Serial.print("Buffer:");Serial.println(buff);
             break;
-       // case MSPCommand::RECEIVE_RAW_DATA_ACK:
-       //     Serial.println("RECEIVED ACK FROM SEND_RAW_DATA COMMAND...");
-       //     Serial.print("Buffer:");Serial.println(buff);
+        //case MSPCommand::RECEIVE_RAW_DATA_ACK:
+        //    Serial.println("RECEIVED ACK FROM SEND_RAW_DATA COMMAND...");
+        //    Serial.print("Buffer:");Serial.println(buff);
             
             break;
         case MSPCommand::SET_PENDING_HTTP_CONFIG:
@@ -2041,7 +2041,7 @@ if(fingerprintData != NULL && messageLength > 5 ){
   iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );  
  }
  else {
-  Serial.println("FingerprintConfigured is not configured !!!!");
+  debugPrint("FingerprintConfigured is not configured !!!!");
  }
  
  
