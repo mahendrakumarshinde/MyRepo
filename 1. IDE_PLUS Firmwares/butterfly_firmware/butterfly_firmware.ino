@@ -33,7 +33,7 @@ const uint8_t ESP8285_IO0  =  7;
     MAC Address
 ============================================================================= */
 
-const char MAC_ADDRESS[18] = "94:54:93:43:42:0B";
+const char MAC_ADDRESS[18] = "94:54:93:43:3C:D2";
 
 /* Motor Scaling Factor 
  *  
@@ -211,7 +211,7 @@ static void httpConfigCallback(void) {
     //iuBluetooth.bleTransmit();
     //Serial.println("HIT HTTP CONFIG....................................................");
     iuWiFi.sendMSPCommand(MSPCommand::GET_PENDING_HTTP_CONFIG);
-    armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min 
+    armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min  180000
 }
 
 /* =============================================================================
@@ -418,7 +418,7 @@ void setup()
 
         // httpConfig message read timerCallback
         armv7m_timer_create(&httpConfigTimer, (armv7m_timer_callback_t)httpConfigCallback);
-        armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min Timer
+        armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min Timer 180000
         
         iuWiFi.setupHardware();
         iuWiFi.setOnNewMessageCallback(onNewWiFiMessage);
