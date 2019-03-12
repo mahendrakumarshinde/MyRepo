@@ -327,9 +327,17 @@ String IURawDataHelper::httpGetPayload(MacAddress macAddress)
         debugPrint(m_payload);
     }
     char fullUrl[200];//strlen(m_endpointRoute) + 18];
-    strcpy(fullUrl, "http://13.232.122.10:8080/iu-web/iu-infiniteuptime-api/getpendingdeviceconfig?mac=");
+    String url;
+    url = String(m_endpointHost) + String(":")+ String(m_endpointPort) + "/iu-web/iu-infiniteuptime-api/getpendingdeviceconfig?mac=";
+ 
+    //strcpy(fullUrl,m_endpointHost);
+    //strcat(fullUrl,":");
+    //strcat(fullUrl,String(m_endpointPort.c_str()) );
+    //strcat(fullUrl,"/iu-web/iu-infiniteuptime-api/getpendingdeviceconfig?mac=");
+    
+    strcpy(fullUrl,url.c_str() );//"http://13.232.122.10:8080/iu-web/iu-infiniteuptime-api/getpendingdeviceconfig?mac=");
     //char* fullUrl = "http://13.232.122.10:8080/iu-web/iu-infiniteuptime-api/getpendingdeviceconfig?mac=94:54:93:43:25:1C";
-    strncat(fullUrl, macAddress.toString().c_str(), 18);
+    strncat(fullUrl,macAddress.toString().c_str(), 18);
     if (debugMode)
     {
         debugPrint("Host: ", false);
