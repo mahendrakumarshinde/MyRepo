@@ -1,6 +1,25 @@
 # This file tell about all the Firmware Release of IDE+
 #################################################################################################################################################################################
 
+Date: 12 March 2019
+Submitted By : Vikas Gaikwad
+Firmware Versions : 
+		1. IDE+ Version : 1.0.7
+ 	        2. Wifi Version : 1.0.4
+################################################################################################################################################################################
+
+ 
+Fixed :
+1. Setting the http endpoint dynamically to read the pending config messages.
+
+Improvement required: 
+1. Improve the wifi connectivity and memory optimization on edge.
+2. JSON optimization at edge to handle multiple fingerprints parameters and http configurations.
+3. Need to change current device configuration from BLE to Wifi.
+
+
+#################################################################################################################################################################################
+
 Date: 09 March 2019
 Submitted By : Vikas Gaikwad
 Firmware Versions : 
