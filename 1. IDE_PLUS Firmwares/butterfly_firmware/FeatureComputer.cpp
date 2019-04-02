@@ -6,6 +6,7 @@
 
 extern float audioHigherCutoff;
 
+bool fingerprint_sync_lock = false;
 
 /* =============================================================================
     Feature Computer Base Class
@@ -148,6 +149,7 @@ bool FeatureComputer::compute()
             }
         }
         // Compute and send new values to the destinations.
+        Serial.println("Starting m_specializedCompute");
         m_specializedCompute();
     }
     // Acknowledge the computed sections for each source

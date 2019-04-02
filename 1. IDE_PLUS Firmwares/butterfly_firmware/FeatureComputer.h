@@ -12,6 +12,9 @@
 
 extern float motorScalingFactor ;
 
+/* Testing with sync lock */
+extern bool fingerprint_sync_lock;
+
 //extern char FingerprintMessage[500];
 /* =============================================================================
     Feature Computer Base Class
@@ -563,7 +566,10 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
                }
               Serial.println("]"); 
            */           
-          
+            Serial.println("Direction in m_specializedCompute: ");
+            char direction_string[10];
+            itoa(direction, direction_string, 10);
+            Serial.println(direction_string);
              if(direction == 0) {
                 fingerprintResult_X =  DiagnosticEngine::m_specializedCompute (direction,newFloatAmplitudesCopy,float(scaling1)/32768.0);  // resolution
                

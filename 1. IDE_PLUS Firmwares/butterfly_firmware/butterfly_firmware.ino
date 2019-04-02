@@ -20,6 +20,8 @@ Type - Standard Firmware Release
 const uint8_t ESP8285_IO0  =  7;
 
 
+extern bool fingerprint_sync_lock;
+
 #ifdef DRAGONFLY_V03
 #else
     // FIXME For some reason, if this is included in conductor,
@@ -33,7 +35,7 @@ const uint8_t ESP8285_IO0  =  7;
     MAC Address
 ============================================================================= */
 
-const char MAC_ADDRESS[18] = "94:54:93:43:3C:D2";
+const char MAC_ADDRESS[18] = "94:54:93:3B:81:75";
 
 /* Motor Scaling Factor 
  *  
@@ -564,6 +566,15 @@ void loop()
             /*======*/
         }
         if(now - lastDone > 512){
+            
+            char snum[10];
+            // convert 123 to string [buf]
+            itoa((now-lastDone), snum, 10);
+
+            // print our string
+            Serial.println("DELAY");
+            Serial.println(snum);
+
           lastDone = now;                           // send diagnostic data every 512 ms
           // Send Diagnostic Fingerprint data
           conductor.sendDiagnosticFingerPrints();

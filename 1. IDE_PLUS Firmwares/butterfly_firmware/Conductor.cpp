@@ -1860,9 +1860,18 @@ void Conductor::computeFeatures()
         return;
     }
     // Run feature computers
+    Serial.println("Computing all features...");
+    Serial.println("Feature count: ");
+    char instance_count[10];
+    itoa(FeatureComputer::instanceCount, instance_count, 10);
+    Serial.println(instance_count);
     for (uint8_t i = 0; i < FeatureComputer::instanceCount; ++i) {
+        // char* index;
+        // itoa(i, index, 10);
+        // Serial.println(FeatureComputer::instances[i]->getDestination(i)->getName());
         FeatureComputer::instances[i]->compute();
     }
+
 }
 
 /**

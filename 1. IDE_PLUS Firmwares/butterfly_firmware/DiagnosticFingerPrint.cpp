@@ -5,7 +5,6 @@
 
 extern const char* fingerprintData ;
 const char* iuFingerprintOutput;//[500];
-     
 
 /*
  * Checks weather diagnostic configuration data present in file/memory 
@@ -132,7 +131,7 @@ JsonObject& DiagnosticEngine::configureFingerPrintsFromFlash(String filename,boo
   //JsonObject& root2 = root["fingerprints"];
   
   if (!root.success()){
-    debugPrint(F("Failed to read fingerprints.conf file, using default configuration"));
+    // debugPrint(F("Failed to read fingerprints.conf file, using default configuration"));
    
   }
  else {
@@ -271,6 +270,7 @@ const char* DiagnosticEngine::m_specializedCompute (int m_direction, float *m_am
          
      if(m_direction == 0 && root3["dir"] =="VX" || root3["dir"] == "AX"){                             // seperate all the directions 
           // VX
+          Serial.println("CondX");
          float  speedX = root3["speed"]; 
          float multiplierX = root3["mult"];
          float bandX = root3["band"];
@@ -301,7 +301,7 @@ const char* DiagnosticEngine::m_specializedCompute (int m_direction, float *m_am
        }
        if(m_direction == 1 && root3["dir"] =="VY" || root3["dir"] == "AY"){                             // seperate all the directions 
           // VY
-          
+          Serial.println("CondY");
          float  speedY = root3["speed"]; 
          float multiplierY = root3["mult"];
          float bandY = root3["band"];
@@ -316,7 +316,6 @@ const char* DiagnosticEngine::m_specializedCompute (int m_direction, float *m_am
         
         if(root3.containsKey("freq") && root3["freq"] != 0) {
                                               // use frequency and band for computation , do not use speed X multiplier
-        
          sxm =  frequencyY ;
          bandValue = bandY;
         }
@@ -333,7 +332,7 @@ const char* DiagnosticEngine::m_specializedCompute (int m_direction, float *m_am
        }
        if(m_direction == 2 && root3["dir"] =="VZ"  || root3["dir"] == "AZ"){                             // seperate all the directions 
           // VZ
-          
+            Serial.println("CondZ");
          float  speedZ     =  root3["speed"]; 
          float multiplierZ =  root3["mult"];
          float bandZ       =  root3["band"];
@@ -423,21 +422,24 @@ const char* DiagnosticEngine::m_specializedCompute (int m_direction, float *m_am
    static char tempY[messageSize];
    static char tempZ[messageSize];  // need to set dynamically
   
-   //Serial.print("direction :");Serial.println(m_direction);
+  //  Serial.print("direction :");Serial.println(m_direction);
      
    if(m_direction == 0){
     value_X = tempData;//fingerprintData;
+    Serial.print("value_X: "); Serial.println(tempData);
     
     memmove(tempX,tempData,strlen(tempData));
    }
    if(m_direction == 1){
     value_Y = tempData ;//fingerprintDm_directionata;
+    Serial.print("value_Y: "); Serial.println(tempData);
   
     memmove(tempY,tempData,strlen(tempData));
    }
    if(m_direction == 2){  
     value_Z = tempData; //fingerprintData;
-      
+    Serial.print("value_Z: "); Serial.println(tempData);
+
     memmove(tempZ,tempData,strlen(tempData));
 
     // merg the 3 json strings to json objects
@@ -447,9 +449,8 @@ const char* DiagnosticEngine::m_specializedCompute (int m_direction, float *m_am
    JsonObject& object3 =jBuffer.parseObject(tempZ);
 
    mergeJOSN( object1,object2);
-   iuFingerprintOutput = mergeJOSN( object1,object3);
-   
-   //Serial.print("Output JSON :");Serial.println(iuFingerprintOutput);
+   iuFingerprintOutput = mergeJOSN( object1,object3);   
+   Serial.print("Output JSON :");Serial.println(iuFingerprintOutput);
   
    memset(tempX, 0, sizeof(tempX)); // flush the buffers
    memset(tempY, 0, sizeof(tempY));
@@ -459,7 +460,7 @@ const char* DiagnosticEngine::m_specializedCompute (int m_direction, float *m_am
 
      
    fingerprintData = iuFingerprintOutput;     // fingerprints result
-
+  Serial.print("fingerprintData"); Serial.println(iuFingerprintOutput);
    
    //Serial.print("Temp X Flush :");Serial.println(tempX);
   
@@ -544,7 +545,7 @@ const char* DiagnosticEngine::mergeJOSN(JsonObject& dest, JsonObject& src) {
      dest[kvp.key] = kvp.value;
      
    }
-static char json[200];
+static char json[512];
 dest.printTo(json);
   
    return json;
