@@ -7,6 +7,8 @@ const char* fingerprints_X;
 const char* fingerprints_Y;
 const char* fingerprints_Z;
 
+int sensorSamplingRate;
+
 char Conductor::START_CONFIRM[11] = "IUOK_START";
 char Conductor::END_CONFIRM[9] = "IUOK_END";
 
@@ -1280,8 +1282,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             break;
         case MSPCommand::SET_PENDING_HTTP_CONFIG:
             {
-             Serial.print("HTTP Pending Response ..............................................:");
-             Serial.println(buff);
+             //Serial.print("HTTP Pending Response ..............................................:");
+             //Serial.println(buff);
              // create the JSON objects 
              DynamicJsonBuffer jsonBuffer;
              JsonObject& pendingConfigObject = jsonBuffer.parseObject(buff); 
@@ -1594,6 +1596,8 @@ void Conductor::updateStreamingMode()
     switch (m_usageMode)
     {
         case UsageMode::CALIBRATION:
+            newMode = StreamingMode::WIRED;   //+++
+            break;
         case UsageMode::EXPERIMENT:
             newMode = StreamingMode::WIRED;
             break;
@@ -1690,6 +1694,9 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             configureGroupsForCalibration();
             ledManager.overrideColor(RGB_CYAN);
             msg = "calibration";
+            timerISRPeriod = 600;  // 1.6KHz
+            sensorSamplingRate = 1660;
+            //Serial.println("STEP - 2");
             break;
         case UsageMode::EXPERIMENT:
             ledManager.overrideColor(RGB_PURPLE);
@@ -1701,6 +1708,7 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             configureGroupsForOperation();
             iuAccelerometer.resetScale();
             msg = "operation";
+            timerISRPeriod = 300;
             break;
         case UsageMode::CUSTOM:
             ledManager.overrideColor(RGB_CYAN);
@@ -2050,7 +2058,7 @@ if(fingerprintData != NULL && messageLength > 5 ){
   iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );  
  }
  else {
-  debugPrint("FingerprintConfigured is not configured !!!!");
+  //debugPrint("FingerprintConfigured is not configured !!!!");
  }
  
  
