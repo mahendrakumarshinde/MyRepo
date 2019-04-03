@@ -11,14 +11,11 @@
  *==============================================================================*/
 
 extern float motorScalingFactor ;
-<<<<<<< HEAD
 
 /* Testing with sync lock */
 extern bool fingerprint_sync_lock;
 
-=======
 extern int sensorSamplingRate;
->>>>>>> 1ff02f4b2528b86e55ebdf82c4056c68829af463
 //extern char FingerprintMessage[500];
 /* =============================================================================
     Feature Computer Base Class
