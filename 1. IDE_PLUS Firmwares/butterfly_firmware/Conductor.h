@@ -12,7 +12,6 @@
     #include "InstancesButterfly.h"
 #endif
 
-
 /* =============================================================================
     Operation Mode
 ============================================================================= */
@@ -185,6 +184,7 @@ class Conductor
         bool configureBoardFromFlash(String filename,bool isSet);
         JsonObject& configureJsonFromFlash(String filename,bool isSet);
         bool sendDiagnosticFingerPrints();
+        void send_diagnostic_fingerprints();
 
     protected:
         MacAddress m_macAddress;
@@ -232,6 +232,9 @@ class Conductor
         const char* m_httpPassword ;
         const char* m_httpOauth ;
         const char* m_accountId;
+        double last_fingerprint_timestamp = 0;
+        bool computed_first_fingerprint_timestamp = false;
+
 };
 
 

@@ -19,9 +19,6 @@ Type - Standard Firmware Release
 
 const uint8_t ESP8285_IO0  =  7;
 
-
-extern bool fingerprint_sync_lock;
-
 #ifdef DRAGONFLY_V03
 #else
     // FIXME For some reason, if this is included in conductor,
@@ -572,20 +569,19 @@ void loop()
             conductor.streamMCUUInfo(iuWiFi.port);
             /*======*/
         }
-        if(now - lastDone > 512){
-            
-            char snum[10];
-            // convert 123 to string [buf]
-            itoa((now-lastDone), snum, 10);
+        // if(now - lastDone > 512){
+        //     char snum[10];
+        //     // convert 123 to string [buf]
+        //     itoa((now-lastDone), snum, 10);
 
-            // print our string
-            Serial.println("DELAY");
-            Serial.println(snum);
+        //     // print our string
+        //     Serial.println("DELAY");
+        //     Serial.println(snum);
+        //     lastDone = now;                           // send diagnostic data every 512 ms
 
-          lastDone = now;                           // send diagnostic data every 512 ms
-          // Send Diagnostic Fingerprint data
-          conductor.sendDiagnosticFingerPrints();
-        }
+        //   // Send Diagnostic Fingerprint data
+        //   conductor.sendDiagnosticFingerPrints();
+        // }
        
         yield();
        

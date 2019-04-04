@@ -2,7 +2,7 @@
 #include "IUESP8285.h"
 
 
-
+extern bool sync_fingerprint_lock;
 extern const char* fingerprintData ;
 const char* iuFingerprintOutput;//[500];
 
@@ -224,9 +224,15 @@ q15_t DiagnosticEngine::m_specializedCompute(int m_parameterId, float m_speedMul
    return sum;
 }
 
+#include "Conductor.h"
+extern Conductor conductor;
 
+bool sync_fingerprint_lock = false; // global variable for locking the fingerprintData buffer
 const char* DiagnosticEngine::m_specializedCompute (int m_direction, float *m_amplitudes,float m_resolution)
 {
+    // acquire the sync_fingerprint_lock
+    sync_fingerprint_lock = false;
+    Serial.println("Acquired the lock for computing fingerprints");
 
     // read all the available keys and there values
      const char* fingerprintsIdBuffer_X[13]; 
@@ -452,22 +458,27 @@ const char* DiagnosticEngine::m_specializedCompute (int m_direction, float *m_am
    iuFingerprintOutput = mergeJOSN( object1,object3);   
    Serial.print("Output JSON :");Serial.println(iuFingerprintOutput);
   
+   sync_fingerprint_lock = true; 
+   Serial.println("Released lock after computing fingerprints");
+
    memset(tempX, 0, sizeof(tempX)); // flush the buffers
    memset(tempY, 0, sizeof(tempY));
    memset(tempZ, 0, sizeof(tempZ));
 
    }
 
-     
-   fingerprintData = iuFingerprintOutput;     // fingerprints result
+     // TODO : put this inside the if condition for direction == 2 ?
+  fingerprintData = iuFingerprintOutput;     // fingerprints result
   Serial.print("fingerprintData"); Serial.println(iuFingerprintOutput);
-   
+  conductor.send_diagnostic_fingerprints(); // function checks if all computation is done with the sync_fingerprint_lock, and sends only if time diff is > 512
+
+
    //Serial.print("Temp X Flush :");Serial.println(tempX);
   
    //Serial.print("DATA :");
    //Serial.println(fingerprintData);
    // Serial.println("****************************DONE ****************");
-   
+
    return fingerprintData;  //TempFingerprintData 
   
 }

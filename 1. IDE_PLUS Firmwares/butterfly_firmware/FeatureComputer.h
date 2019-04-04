@@ -13,7 +13,6 @@
 extern float motorScalingFactor ;
 
 /* Testing with sync lock */
-extern bool fingerprint_sync_lock;
 
 extern int sensorSamplingRate;
 //extern char FingerprintMessage[500];
