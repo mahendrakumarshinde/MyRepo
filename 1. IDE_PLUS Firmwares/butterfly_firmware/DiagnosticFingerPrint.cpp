@@ -153,7 +153,7 @@ float DiagnosticEngine::lowerCutoff(float m_speedMultiplier,int m_bandValue,floa
   
    m_speedMultiplier = m_speedMultiplier/m_freqResolution;                         // divid by frequency resolution
     
-  return  m_speedMultiplier - m_speedMultiplier*m_bandValue/100.0;
+  return  round(m_speedMultiplier - m_speedMultiplier*m_bandValue/100.0);
   
  }
 
@@ -165,7 +165,7 @@ float DiagnosticEngine::higherCutoff(float m_speedMultiplier,int m_bandValue,flo
   
   m_speedMultiplier = m_speedMultiplier/m_freqResolution;                         // divid by frequency resolution
     
-  return  m_speedMultiplier + m_speedMultiplier*m_bandValue/100.0;
+  return  round(m_speedMultiplier + m_speedMultiplier*m_bandValue/100.0);
   
  }
 /*
@@ -386,15 +386,15 @@ const char* DiagnosticEngine::m_specializedCompute (int m_direction, float *m_am
             ( (root3["dir"] == "VZ" || root3["dir"] == "AZ") && dirFlag_Z == true) ){
       //   Serial.println("Inside Computation Loop ......");
          
-       //  Serial.print("[");
+        // Serial.print("[");
      
          for(int i= lth; i<= hth; i++){     // sum all the amplitudes between lower to higher thresholds
          
           addition = m_amplitudes[i];
           sum += addition;  
-       //   Serial.print(m_amplitudes[i]);Serial.print(","); 
+        //  Serial.print(m_amplitudes[i],4);Serial.print(","); 
         }
-       // Serial.println("]");
+      //  Serial.println("]");
         
       }
 
@@ -429,17 +429,21 @@ const char* DiagnosticEngine::m_specializedCompute (int m_direction, float *m_am
     value_X = tempData;//fingerprintData;
     
     memmove(tempX,tempData,strlen(tempData));
+   // Serial.print("X Fingerprints :");Serial.println(tempX);
    }
    if(m_direction == 1){
     value_Y = tempData ;//fingerprintDm_directionata;
   
     memmove(tempY,tempData,strlen(tempData));
+
+   // Serial.print("Y Fingerprints :");Serial.println(tempY);
    }
    if(m_direction == 2){  
     value_Z = tempData; //fingerprintData;
       
     memmove(tempZ,tempData,strlen(tempData));
-
+    
+   // Serial.print("Z Fingerprints :");Serial.println(tempZ);
     // merg the 3 json strings to json objects
    DynamicJsonBuffer jBuffer;
    JsonObject& object1 =jBuffer.parseObject(tempX);
@@ -461,7 +465,7 @@ const char* DiagnosticEngine::m_specializedCompute (int m_direction, float *m_am
    fingerprintData = iuFingerprintOutput;     // fingerprints result
 
    
-   //Serial.print("Temp X Flush :");Serial.println(tempX);
+   //Serial.print("Final JSON :");Serial.println(fingerprintData);
   
    //Serial.print("DATA :");
    //Serial.println(fingerprintData);
@@ -544,7 +548,7 @@ const char* DiagnosticEngine::mergeJOSN(JsonObject& dest, JsonObject& src) {
      dest[kvp.key] = kvp.value;
      
    }
-static char json[200];
+static char json[500];
 dest.printTo(json);
   
    return json;
