@@ -1,6 +1,25 @@
 # This file tell about all the Firmware Release of IDE+
 #################################################################################################################################################################################
 
+Date: 26 March 2019
+Submitted By : Vikas Gaikwad
+Firmware Versions : 
+		1. IDE+ Version : 1.0.8
+ 	        2. Wifi Version : 1.0.4
+################################################################################################################################################################################
+
+ 
+Fixed :
+1. Calibration issue reloved(not receving data from device during the calibration mode)
+2. Chanding the sensor data acquition frequency from 3.3KHz to 1.6 KHz during calibration mode and once device is reset it uses 3.3KHz as a default sampling frequency.
+
+Improvement required: 
+1. Change the sensor data acquisition from sensor interrupt to Timer interrupt.
+
+
+
+#################################################################################################################################################################################
+
 Date: 12 March 2019
 Submitted By : Vikas Gaikwad
 Firmware Versions : 

@@ -11,7 +11,7 @@
  *==============================================================================*/
 
 extern float motorScalingFactor ;
-
+extern int sensorSamplingRate;
 //extern char FingerprintMessage[500];
 /* =============================================================================
     Feature Computer Base Class
@@ -372,7 +372,15 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         virtual void m_specializedCompute()
     {
         // 0. Preparation
-        uint16_t samplingRate = m_sources[0]->getSamplingRate();
+        uint16_t samplingRate;
+        if(sensorSamplingRate != 0){
+          samplingRate = sensorSamplingRate;
+          //Serial.print("Sampling Rate :");Serial.println(samplingRate);
+        }else{
+
+          samplingRate = m_sources[0]->getSamplingRate();
+        }
+        
         float resolution = m_sources[0]->getResolution();         // using resolution of 2^16 
         uint16_t sampleCount = m_sources[0]->getSectionSize() * m_sectionCount[0];
         float df = (float) samplingRate / (float) sampleCount;

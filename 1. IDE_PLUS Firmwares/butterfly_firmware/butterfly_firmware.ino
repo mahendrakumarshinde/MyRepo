@@ -1,14 +1,14 @@
 /*
 Infinite Uptime IDE+ Firmware
-Vr. 1.0.7
-Update 09-03-2019
+Vr. 1.0.8
+Update 26-03-2019
 Type - Standard Firmware Release
 */
 
 /* =============================================================================
     Library imports
 ============================================================================= */
-
+// Uart driver update at /home/vikas/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.28/cores/stm32l4/Uart.h RX buffer from 64 Bytes to 512 Bytes
 #include "BoardDefinition.h"
 #include "Conductor.h"
 
@@ -33,7 +33,7 @@ const uint8_t ESP8285_IO0  =  7;
     MAC Address
 ============================================================================= */
 
-const char MAC_ADDRESS[18] = "94:54:93:43:3C:D2";
+const char MAC_ADDRESS[18] = "94:54:93:43:25:1C";
 
 /* Motor Scaling Factor 
  *  
@@ -97,8 +97,8 @@ float DEFAULT_ACCEL_ENERGY_HIGH_TH = 150;
 
 /***** Accelerometer Feature computation parameters *****/
 
-uint16_t DEFAULT_LOW_CUT_FREQUENCY = 5;  // Hz
-uint16_t DEFAULT_HIGH_CUT_FREQUENCY = 500;  // Hz
+uint16_t DEFAULT_LOW_CUT_FREQUENCY = 10;  // Hz
+uint16_t DEFAULT_HIGH_CUT_FREQUENCY = 1660;  // Hz
 float DEFAULT_MIN_AGITATION = 0.03;
 
 
@@ -320,12 +320,17 @@ void onNewWiFiMessage(IUSerial *iuSerial) {
 
 stm32l4_timer_t timerIns;
 
-int isrPeriod = 420;            // in microseconds (10 us resolution) 450(2.2K), 420(2.38KHz)
+static int isrPeriod = 300;  //conductor.timerISRPeriod          // in microseconds (10 us resolution) 450(2.2K), 420(2.38KHz)
 
-void xyz(void *context, uint32_t events)
+void timerISR(void *context, uint32_t events)
 {
   static uint8_t temp = 0;
-
+  if(isrPeriod != 300){
+    timerIns.state = TIMER_STATE_INIT;  
+    timerInit();
+    //Serial.print("isrPeriod :");Serial.println(isrPeriod);
+  
+  }
   //digitalWrite(6,HIGH);
   if(((TIM5->SR & TIM_SR_UIF) == TIM_SR_UIF) != 0)
   {
@@ -337,7 +342,8 @@ void xyz(void *context, uint32_t events)
   //User Code Here
   //dataAcquisitionCallback();
   //digitalWrite(6,LOW);
-  
+
+// ISR Handler 1 - ON, 0 -OFF  
 #if 1
 if(temp == 0)
   {
@@ -357,7 +363,7 @@ if(temp == 0)
 void timerInit(void)
 {
   if (timerIns.state == TIMER_STATE_NONE) {
-  stm32l4_timer_create(&timerIns, TIMER_INSTANCE_TIM5, 3, 0);
+  stm32l4_timer_create(&timerIns, TIMER_INSTANCE_TIM5, 3, 0);  // 3 - Priority , 0 -  Mode
   }
   if (timerIns.state == TIMER_STATE_INIT) {
     /* clock is running on 10Mhz, you need to change period according to the requirement, i.e. 
@@ -365,7 +371,7 @@ void timerInit(void)
      *  10000    for 1 ms 
      *  10       for 1 micro second
      */ 
-    stm32l4_timer_enable(&timerIns, (stm32l4_timer_clock(&timerIns) / 10000000) -1, 5*isrPeriod /* change this */, TIMER_OPTION_COUNT_UP, (stm32l4_timer_callback_t)xyz, NULL, TIMER_EVENT_PERIOD);
+    stm32l4_timer_enable(&timerIns, (stm32l4_timer_clock(&timerIns) / 10000000) -1, 5*isrPeriod /* change this */, TIMER_OPTION_COUNT_UP, (stm32l4_timer_callback_t)timerISR, NULL, TIMER_EVENT_PERIOD); // xyz ISR function callback
   }
   stm32l4_timer_start(&timerIns, 0);
 }
@@ -503,12 +509,12 @@ void setup()
         opStateFeature.setOnNewValueCallback(operationStateCallback);
         ledManager.resetStatus();
         conductor.changeUsageMode(UsageMode::OPERATION);
-        pinMode(IULSM6DSM::INT1_PIN, INPUT);
-        attachInterrupt(IULSM6DSM::INT1_PIN, dataAcquisitionISR, RISING);
-        debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
+        //pinMode(IULSM6DSM::INT1_PIN, INPUT);
+        //attachInterrupt(IULSM6DSM::INT1_PIN, dataAcquisitionISR, RISING);
+        //debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
 
         // Timer Init
-        //timerInit();
+        timerInit();
         
     #endif
  #endif   
@@ -520,6 +526,7 @@ void setup()
 void loop()
 {   
     #if 1
+    isrPeriod = conductor.timerISRPeriod;
     lastActive = millis();
     #if defined(UNITTEST) || defined(COMPONENTTEST) || defined(INTEGRATEDTEST)
         Test::run();
