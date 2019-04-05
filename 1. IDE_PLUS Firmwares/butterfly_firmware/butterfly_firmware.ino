@@ -8,7 +8,7 @@ Type - Standard Firmware Release
 /* =============================================================================
     Library imports
 ============================================================================= */
-
+// Uart driver update at /home/vikas/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.28/cores/stm32l4/Uart.h RX buffer from 64 Bytes to 512 Bytes
 #include "BoardDefinition.h"
 #include "Conductor.h"
 
