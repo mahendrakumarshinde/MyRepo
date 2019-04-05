@@ -5,7 +5,6 @@ const char* fingerprintData;
 const char* fingerprints_X;
 const char* fingerprints_Y;
 const char* fingerprints_Z;
-extern bool sync_fingerprint_lock;
 
 int sensorSamplingRate;
 
@@ -2031,49 +2030,46 @@ void Conductor::periodicSendAccelRawData()
 /* =============================================================================
     Send Diagnostic Fingerprint data
 ============================================================================= */
-bool first_compute = false; // TODO: add descriptive comment here
 
-bool Conductor::sendDiagnosticFingerPrints(){
-  //static int count = 0;
-  //debugPrint("SENDING ...........");
+// bool Conductor::sendDiagnosticFingerPrints(){
+//   //static int count = 0;
+//   //debugPrint("SENDING ...........");
 
-  int messageLength = strlen(fingerprintData);
+//   int messageLength = strlen(fingerprintData);
  
-  char FingerPrintResult[150 + messageLength];
-  snprintf(FingerPrintResult, 150 + messageLength, "{\"macID\":\"%s\",\"timestamp\": %lf,\"state\":\"%d\",\"accountId\":\"%s\",\"fingerprints\": %s }", m_macAddress.toString().c_str(),getDatetime(),ledManager.getOperationState(),"XXXAdmin",fingerprintData);
+//   char FingerPrintResult[150 + messageLength];
+//   snprintf(FingerPrintResult, 150 + messageLength, "{\"macID\":\"%s\",\"timestamp\": %lf,\"state\":\"%d\",\"accountId\":\"%s\",\"fingerprints\": %s }", m_macAddress.toString().c_str(),getDatetime(),ledManager.getOperationState(),"XXXAdmin",fingerprintData);
 
-    uint32_t lock_delay_start = millis();
-    while(sync_fingerprint_lock == false && first_compute == true)
-    {
-    //   Serial.println("Waiting for lock to be released before publishing fingerprints");
-      // wait till the lock is released
-    }
-    uint32_t lock_delay_end = millis();
-    char lock_delay[10];
-    itoa((lock_delay_end - lock_delay_start), lock_delay, 10);
-    Serial.print("LOCK DELAY: ");
-    Serial.println(lock_delay);
+//     uint32_t lock_delay_start = millis();
+//     while(sync_fingerprint_lock == false && first_compute == true)
+//     {
+//     //   Serial.println("Waiting for lock to be released before publishing fingerprints");
+//       // wait till the lock is released
+//     }
+//     uint32_t lock_delay_end = millis();
+//     char lock_delay[10];
+//     itoa((lock_delay_end - lock_delay_start), lock_delay, 10);
+//     Serial.print("LOCK DELAY: ");
+//     Serial.println(lock_delay);
     
-if(sync_fingerprint_lock == true){
-    first_compute = true;
+// if(sync_fingerprint_lock == true){
+//     first_compute = true;
 
- //if( isFingerprintConfigured == NULL) {
-  debugPrint("Published Fingerprints"); 
-  //Serial.print("Message Length :");Serial.println(messageLength);
-  iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );  
- }
- else {
-  //debugPrint("FingerprintConfigured is not configured !!!!");
- } 
-}
+//  //if( isFingerprintConfigured == NULL) {
+//   debugPrint("Published Fingerprints"); 
+//   //Serial.print("Message Length :");Serial.println(messageLength);
+//   iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );  
+//  }
+//  else {
+//   //debugPrint("FingerprintConfigured is not configured !!!!");
+//  } 
+// }
 
-void Conductor::send_diagnostic_fingerprints() {  
+void Conductor::sendDiagnosticFingerPrints() {  
 
     double fingerprint_timestamp = getDatetime();
 
     if (strlen(fingerprintData) > 5) {//handle empty fingerprint configuration (fingerprintData will be "{}" with escape characters)
-        if(sync_fingerprint_lock == true)
-        {
             bool ready_to_publish = false;
 
             if (computed_first_fingerprint_timestamp == false) {
@@ -2092,35 +2088,33 @@ void Conductor::send_diagnostic_fingerprints() {
                 char FingerPrintResult[150 + messageLength];
             
                 snprintf(FingerPrintResult, 150 + messageLength, "{\"macID\":\"%s\",\"timestamp\": %lf,\"state\":\"%d\",\"accountId\":\"%s\",\"fingerprints\": %s }", m_macAddress.toString().c_str(),fingerprint_timestamp,ledManager.getOperationState(),"XXXAdmin",fingerprintData);
-                debugPrint("Published Fingerprints"); 
-                char published_time_diff[50];
-                sprintf(published_time_diff, "%lf", fingerprint_timestamp - last_fingerprint_timestamp);
-                Serial.print("Published time diff : "); Serial.println(published_time_diff);
+                
+                // if(loopDebugMode) {
+                //     debugPrint("Published Fingerprints"); 
+                //     char published_time_diff[50];
+                //     sprintf(published_time_diff, "%lf", fingerprint_timestamp - last_fingerprint_timestamp);
+                //     debugPrint(F("Published time diff : "), false); debugPrint(F(published_time_diff), true);
+                // }               
             
                 last_fingerprint_timestamp = fingerprint_timestamp; // update timestamp for next iterations
-                //Serial.print("Message Length :");Serial.println(messageLength);
                 iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );    
             }
             else { // not published as time_diff < 500 ms
-                char last_fingerprint_timestamp_string[50];
-                char fingerprint_timestamp_string[50];
-                char discarded_time_diff[50];
-
-                sprintf(last_fingerprint_timestamp_string, "%lf", last_fingerprint_timestamp);
-                sprintf(fingerprint_timestamp_string, "%lf", fingerprint_timestamp);
-                sprintf(discarded_time_diff, "%lf", fingerprint_timestamp - last_fingerprint_timestamp);
-
-                Serial.print("Fingerprint discarded as time diff < 500, time diff: "); Serial.println(discarded_time_diff);
-                // Serial.print("Last fingerprint timestamp: "); Serial.println(last_fingerprint_timestamp_string);
-                // Serial.print("Fingerprint timestamp: "); Serial.println(fingerprint_timestamp_string);
+                // if(loopDebugMode) {
+                //     char last_fingerprint_timestamp_string[50];
+                //     char fingerprint_timestamp_string[50];
+                //     char discarded_time_diff[50];
+                //     sprintf(last_fingerprint_timestamp_string, "%lf", last_fingerprint_timestamp);
+                //     sprintf(fingerprint_timestamp_string, "%lf", fingerprint_timestamp);
+                //     sprintf(discarded_time_diff, "%lf", fingerprint_timestamp - last_fingerprint_timestamp);
+                //     debugPrint(F("Fingerprint discarded as time diff < 500, time diff: "),false); debugPrint(F(discarded_time_diff), true);
+                //     debugPrint(F("Last fingerprint timestamp: "), false); debugPrint(F(last_fingerprint_timestamp_string), true);
+                //     debugPrint(F("Fingerprint timestamp: "), false); debugPrint(F(fingerprint_timestamp_string), true);
+                // }                
             }   
-        }   
-        else {
-            Serial.println("Fingerprint sync lock not avaliable for publishing, locked by computation.");
-        } 
     }
-    else {
-        Serial.println("Fingerprints have not been configured.");
+    else {        
+        debugPrint(F("Fingerprints have not been configured."), true);
     }   
 }
 

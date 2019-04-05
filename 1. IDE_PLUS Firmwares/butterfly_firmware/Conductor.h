@@ -183,8 +183,7 @@ class Conductor
         void configureMQTTServer(String filename);
         bool configureBoardFromFlash(String filename,bool isSet);
         JsonObject& configureJsonFromFlash(String filename,bool isSet);
-        bool sendDiagnosticFingerPrints();
-        void send_diagnostic_fingerprints();
+        void sendDiagnosticFingerPrints();
 
     protected:
         MacAddress m_macAddress;
