@@ -12,8 +12,6 @@
 
 extern float motorScalingFactor ;
 
-/* Testing with sync lock */
-
 extern int sensorSamplingRate;
 //extern char FingerprintMessage[500];
 /* =============================================================================
