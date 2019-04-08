@@ -1,11 +1,10 @@
 #include "DiagnosticFingerPrint.h"
 #include "IUESP8285.h"
+#include "Conductor.h"
 
-
-
+extern Conductor conductor;
 extern const char* fingerprintData ;
 const char* iuFingerprintOutput;//[500];
-     
 
 /*
  * Checks weather diagnostic configuration data present in file/memory 
@@ -132,7 +131,7 @@ JsonObject& DiagnosticEngine::configureFingerPrintsFromFlash(String filename,boo
   //JsonObject& root2 = root["fingerprints"];
   
   if (!root.success()){
-    debugPrint(F("Failed to read fingerprints.conf file, using default configuration"));
+    // debugPrint(F("Failed to read fingerprints.conf file, using default configuration"));
    
   }
  else {
@@ -226,9 +225,9 @@ q15_t DiagnosticEngine::m_specializedCompute(int m_parameterId, float m_speedMul
 }
 
 
-const char* DiagnosticEngine::m_specializedCompute (int m_direction, float *m_amplitudes,float m_resolution)
-{
 
+char* DiagnosticEngine::m_specializedCompute (int m_direction, float *m_amplitudes,float m_resolution)
+{
     // read all the available keys and there values
      const char* fingerprintsIdBuffer_X[13]; 
      const char* fingerprintsIdBuffer_Y[13]; 
@@ -301,7 +300,6 @@ const char* DiagnosticEngine::m_specializedCompute (int m_direction, float *m_am
        }
        if(m_direction == 1 && root3["dir"] =="VY" || root3["dir"] == "AY"){                             // seperate all the directions 
           // VY
-          
          float  speedY = root3["speed"]; 
          float multiplierY = root3["mult"];
          float bandY = root3["band"];
@@ -316,7 +314,6 @@ const char* DiagnosticEngine::m_specializedCompute (int m_direction, float *m_am
         
         if(root3.containsKey("freq") && root3["freq"] != 0) {
                                               // use frequency and band for computation , do not use speed X multiplier
-        
          sxm =  frequencyY ;
          bandValue = bandY;
         }
@@ -333,7 +330,6 @@ const char* DiagnosticEngine::m_specializedCompute (int m_direction, float *m_am
        }
        if(m_direction == 2 && root3["dir"] =="VZ"  || root3["dir"] == "AZ"){                             // seperate all the directions 
           // VZ
-          
          float  speedZ     =  root3["speed"]; 
          float multiplierZ =  root3["mult"];
          float bandZ       =  root3["band"];
@@ -413,34 +409,39 @@ const char* DiagnosticEngine::m_specializedCompute (int m_direction, float *m_am
       sum = 0;   
     }
   
-   static const char* tempData;
+   const char* tempData;
    
    //Serial.print("m_resolution :");Serial.println(m_resolution);
    tempData = generateJSONPayload(root2,finngerPrint_result);
    const int messageSize = sizeof(tempData) + 1024;
    
+  char return_fingerprints[messageSize];
+  memmove(return_fingerprints, tempData, strlen(tempData));
+  DynamicJsonBuffer tempjBuffer;
+  JsonObject& json = tempjBuffer.parseObject(return_fingerprints);
+  char fingerprints_json[512];
+  json.printTo(fingerprints_json);
+   
    static char tempX[messageSize];
    static char tempY[messageSize];
    static char tempZ[messageSize];  // need to set dynamically
   
-   //Serial.print("direction :");Serial.println(m_direction);
      
    if(m_direction == 0){
     value_X = tempData;//fingerprintData;
-    
     memmove(tempX,tempData,strlen(tempData));
    // Serial.print("X Fingerprints :");Serial.println(tempX);
    }
+
    if(m_direction == 1){
-    value_Y = tempData ;//fingerprintDm_directionata;
-  
+    value_Y = tempData ;//fingerprintData;
     memmove(tempY,tempData,strlen(tempData));
 
    // Serial.print("Y Fingerprints :");Serial.println(tempY);
    }
+
    if(m_direction == 2){  
     value_Z = tempData; //fingerprintData;
-      
     memmove(tempZ,tempData,strlen(tempData));
     
    // Serial.print("Z Fingerprints :");Serial.println(tempZ);
@@ -451,18 +452,17 @@ const char* DiagnosticEngine::m_specializedCompute (int m_direction, float *m_am
    JsonObject& object3 =jBuffer.parseObject(tempZ);
 
    mergeJOSN( object1,object2);
-   iuFingerprintOutput = mergeJOSN( object1,object3);
-   
-   //Serial.print("Output JSON :");Serial.println(iuFingerprintOutput);
-  
+   iuFingerprintOutput = mergeJOSN( object1,object3);  
+ 
    memset(tempX, 0, sizeof(tempX)); // flush the buffers
    memset(tempY, 0, sizeof(tempY));
    memset(tempZ, 0, sizeof(tempZ));
 
-   }
+    fingerprintData = iuFingerprintOutput;     // fingerprints result
+    // debugPrint(F("fingerprintData"), false); debugPrint(F(iuFingerprintOutput), true); 
 
-     
-   fingerprintData = iuFingerprintOutput;     // fingerprints result
+    conductor.sendDiagnosticFingerPrints(); // function sends only if time diff is > 512
+   }  
 
    
    //Serial.print("Final JSON :");Serial.println(fingerprintData);
@@ -470,9 +470,9 @@ const char* DiagnosticEngine::m_specializedCompute (int m_direction, float *m_am
    //Serial.print("DATA :");
    //Serial.println(fingerprintData);
    // Serial.println("****************************DONE ****************");
-   
-   return fingerprintData;  //TempFingerprintData 
-  
+
+  // fingerprints_json holds the json string for all the fingerprints in X, Y or Z direction corresponding to direction passed : 0,1 or 2
+  return fingerprints_json;
 }
 
 

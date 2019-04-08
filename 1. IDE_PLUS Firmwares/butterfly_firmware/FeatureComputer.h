@@ -11,6 +11,7 @@
  *==============================================================================*/
 
 extern float motorScalingFactor ;
+
 extern int sensorSamplingRate;
 //extern char FingerprintMessage[500];
 /* =============================================================================
@@ -398,9 +399,9 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         T amplitudes[amplitudeCount];
         //T amplitudesCopy[amplitudeCount];
         T newAccelAmplitudes[sampleCount];
-        static const char* fingerprintResult_X;
-        static const char* fingerprintResult_Y;
-        static const char* fingerprintResult_Z;
+        char* fingerprintResult_X;
+        char* fingerprintResult_Y;
+        char* fingerprintResult_Z;
         //q15_t fingerprintResult;
         RFFT::computeRFFT(values, m_allocatedFFTSpace, sampleCount, false);
         RFFTAmplitudes::getAmplitudes(m_allocatedFFTSpace, sampleCount,
@@ -571,18 +572,18 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
                }
               Serial.println("]"); 
            */           
-          
              if(direction == 0) {
                 fingerprintResult_X =  DiagnosticEngine::m_specializedCompute (direction,newFloatAmplitudesCopy,float(scaling1)/32768.0);  // resolution
-               
+                // debugPrint("X", false);debugPrint(fingerprintResult_X, true);
              }
              if(direction ==1){
-                 fingerprintResult_Y = DiagnosticEngine::m_specializedCompute (direction, newFloatAmplitudesCopy,float(scaling1)/32768.0);
-               
+                fingerprintResult_Y = DiagnosticEngine::m_specializedCompute (direction, newFloatAmplitudesCopy,float(scaling1)/32768.0);
+                // debugPrint("Y", false);debugPrint(fingerprintResult_Y, true);
+
              }
              if(direction == 2){
                 fingerprintResult_Z = DiagnosticEngine::m_specializedCompute (direction, newFloatAmplitudesCopy,float(scaling1)/32768.0);
-               
+                // debugPrint("Z", false);debugPrint(fingerprintResult_Z, true);
              }
             
             direction++; 
