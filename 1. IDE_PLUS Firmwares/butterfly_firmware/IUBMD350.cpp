@@ -417,6 +417,14 @@ void IUBMD350::configureBeacon(bool enabled, uint16_t adInterval)
         debugPrint(F("Failed to set Ad Interval, response was: "), false);
         debugPrint(response);
     }
+    // advertisement interval
+    cmd = "cadint " + String(20, HEX);
+    sendATCommand(cmd, response, 3);
+    if (setupDebugMode && strcmp(response, "OK") != 0)
+    {
+        debugPrint(F("Failed to set Connectable Ad Interval, response was: "), false);
+        debugPrint(response);
+    }
 }
 
 

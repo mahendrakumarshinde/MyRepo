@@ -111,7 +111,8 @@ class Conductor
         static constexpr double defaultTimestamp = 1524017173.00;
         // Size of Jsn buffr (to parse json)
         static const uint16_t JSON_BUFFER_SIZE = 1600;
-        static const uint32_t BLEconnectionTimeout = 60000;
+        // static const uint32_t BLEconnectionTimeout = 60000;
+        static const uint32_t BLEconnectionTimeout = 15000;
         //timer ISR period
         uint16_t timerISRPeriod = 300; // default 3.3KHz
         /***** Core *****/
