@@ -32,7 +32,7 @@ const uint8_t ESP8285_IO0  =  7;
     MAC Address
 ============================================================================= */
 
-const char MAC_ADDRESS[18] = "94:54:93:3B:81:57";
+const char MAC_ADDRESS[18] = "94:54:93:43:5C:10";
 
 /* Motor Scaling Factor 
  *  

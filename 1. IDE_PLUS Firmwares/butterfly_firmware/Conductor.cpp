@@ -1117,7 +1117,7 @@ void Conductor::processBLEMessage(IUSerial *iuSerial)
 {
     m_lastBLEmessage = millis();
     char *buff = iuSerial->getBuffer();
-    debugPrint("BLE BUFFER: ", false); debugPrint(buff, true);
+    // debugPrint("BLE BUFFER: ", false); debugPrint(buff, true);
     if (m_streamingMode == StreamingMode::WIRED) {
         return;  // Do not listen to BLE when wired
     }
@@ -1130,7 +1130,7 @@ void Conductor::processBLEMessage(IUSerial *iuSerial)
         //  this is the first condition that will be tested to check if bluetooth is connected in updateStreamingMode() -> isBLEConnected(); 
         // we make this 0 here to indicate that bluetooth is disconnected
         m_lastBLEmessage = 0;
-        debugPrint("BLE RESET");
+        // debugPrint("BLE RESET");
         iuBluetooth.softReset();     
     } else {
         processCommand(buff);
@@ -1613,7 +1613,7 @@ void Conductor::resetBLEonTimeout() {
     uint32_t now = millis();
     if (m_lastBLEmessage > 0 && now - m_lastBLEmessage > BLEconnectionTimeout) { 
         m_lastBLEmessage = 0; 
-        debugPrint("BLE RESET");
+        // debugPrint("BLE RESET");
         iuBluetooth.softReset(); 
     } 
 }
@@ -1650,8 +1650,8 @@ void Conductor::updateStreamingMode()
             break;
     }
     if (m_streamingMode == newMode) {
-        char streaming_mode_string[10];
-        debugPrint("Streaming mode not updated, streaming mode is : ", false); debugPrint(itoa(m_streamingMode, streaming_mode_string, 10), true);
+        // char streaming_mode_string[10];
+        // debugPrint("Streaming mode not updated, streaming mode is : ", false); debugPrint(itoa(m_streamingMode, streaming_mode_string, 10), true);
         return; // Nothing to do
     }
     m_streamingMode = newMode;
