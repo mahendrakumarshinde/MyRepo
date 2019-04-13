@@ -961,10 +961,13 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
     // send to processCommands
     processCommand(buff);
     
-    if (strcmp(buff, "BLE-RESET-USB")) {
-        iuBluetooth.softReset();
-        debugPrint("Resetting BLE on USB trigger");
-    }
+    // // resetting BLE from USB, while testing
+    // if (strcmp(buff, "BLE-RESET-USB")) {
+    //     debugPrint("ON BOOT, BLE BUFFER : ", false); debugPrint(buff);
+    //     iuBluetooth.softReset();
+    //     debugPrint("Resetting BLE on USB trigger");
+    // }
+
     if (buff[0] == '{') {
         processConfiguration(buff, true);
     } else if (strncmp(buff, "WIFI-", 5) == 0) {
@@ -1597,17 +1600,23 @@ bool Conductor::isBLEConnected()
     char temp[50];
     debugPrint("CHECKING BLE CONNECTION STATUS: ", false); debugPrint(itoa(m_lastBLEmessage, temp, 10), true);
     debugPrint("TIME DIFF: ", false); debugPrint(itoa(now-m_lastBLEmessage, temp, 10), true);
+
+    // m_lastBLEmessage == 0 indicates that BLE has started (either on boot or after reset) after disconnection
+    return m_lastBLEmessage > 0 && now - m_lastBLEmessage < BLEconnectionTimeout;
+}
+// TODO: update the ble status in a separate method, updating ble here gives isBLEConnected() a side effect
+
+void Conductor::resetBLEonTimeout() {
     // reset m_lastBLEmessage to zero if bluetooth connection is lost i.e. time difference between now and last message is greater than BLEconnectionTimeout
     // since m_lastBLEmessage > 0 is the first condition to check if bluetooth is connected, 
     // this will ensure isBLEConnected will return false and the mode will be switched
+    uint32_t now = millis();
     if (m_lastBLEmessage > 0 && now - m_lastBLEmessage > BLEconnectionTimeout) { 
         m_lastBLEmessage = 0; 
         debugPrint("BLE RESET");
         iuBluetooth.softReset(); 
     } 
-    return m_lastBLEmessage > 0 && now - m_lastBLEmessage < BLEconnectionTimeout;
 }
-// TODO: update the ble status in a separate method, updating ble here gives isBLEConnected() a side effect
 
 /**
  * Switch to a StreamingMode
@@ -1628,6 +1637,7 @@ void Conductor::updateStreamingMode()
             break;
         case UsageMode::OPERATION:
         case UsageMode::OPERATION_BIS:
+            resetBLEonTimeout(); // reset BLE if it BLE has timed out
             if (isBLEConnected()) {
                 if (iuWiFi.isConnected()) {
                     newMode = StreamingMode::WIFI_AND_BLE;

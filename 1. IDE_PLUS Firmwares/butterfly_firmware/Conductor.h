@@ -185,6 +185,7 @@ class Conductor
         bool configureBoardFromFlash(String filename,bool isSet);
         JsonObject& configureJsonFromFlash(String filename,bool isSet);
         void sendDiagnosticFingerPrints();
+        void resetBLEonTimeout();
 
     protected:
         MacAddress m_macAddress;

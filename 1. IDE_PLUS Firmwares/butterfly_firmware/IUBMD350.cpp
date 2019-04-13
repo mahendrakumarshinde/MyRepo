@@ -317,12 +317,23 @@ void IUBMD350::setDeviceName(char *deviceName)
 void IUBMD350::queryDeviceName()
 {
     char response[9];
-    int respLen = sendATCommand("name?", response, 9);
-    if (respLen > 0) {
-        strcpy(m_deviceName, response);
-    } else if (setupDebugMode) {
-        debugPrint(F("Failed to query device name: no response"));
-    }
+    
+    int retries = 3;
+    char current_attempt[5];
+    int respLen;
+    for(int i=0; i<retries; i++) {
+        respLen = sendATCommand("name?", response, 9);
+        if (respLen > 0) {
+            strcpy(m_deviceName, response);
+            debugPrint("Device name", false); debugPrint(m_deviceName, true);
+            break;
+        } else {
+            if (setupDebugMode)  {
+                debugPrint("Attempt ", false); debugPrint(itoa(i, current_attempt, 10));
+                debugPrint(F(" - Failed to query device name: no response"));
+            }
+        }           
+    }    
 }
 
 
@@ -335,53 +346,90 @@ void IUBMD350::queryDeviceName()
  */
 void IUBMD350::configureUARTPassthrough()
 {
+    int retries = 3;
+    char current_attempt[5];
+
     char response[3];
     // Baud Rate
     String cmd = String("ubr ") + String(baudRate);
-    sendATCommand(cmd, response, 3);
-    if (setupDebugMode && strcmp(response, "OK") != 0)
-    {
-        debugPrint(F("Failed to set UART baud rate:\n  Command was: "),
-                   false);
-        debugPrint(cmd);
-        debugPrint(F("  Response was: "), false);
-        debugPrint(response);
+
+    for (int i = 0; i < retries; i++) {
+        sendATCommand(cmd, response, 3);
+        if (setupDebugMode && strcmp(response, "OK") != 0)
+        {
+            debugPrint("Attempt ", false); debugPrint(itoa(i, current_attempt, 10), true);
+            debugPrint(F("Failed to set UART baud rate:\n  Command was: "),false);
+            debugPrint(cmd);
+            debugPrint(F("  Response was: "), false);
+            debugPrint(response);
+        }
+        else 
+        {
+            debugPrint("Set UART baud rate");
+            break;
+        }
     }
+    
     // Flow Control
     if (UART_FLOW_CONTROL) { cmd += "ufc 01"; }
     else { cmd = "ufc 00"; }
-    sendATCommand(cmd, response, 3);
-    if (setupDebugMode && strcmp(response, "OK") != 0)
-    {
-        debugPrint(F("Failed to configure UART flow control:\n  Command was: "),
-                   false);
-        debugPrint(cmd);
-        debugPrint(F("  Response was: "), false);
-        debugPrint(response);
+    for (int i = 0; i < retries; i++) {
+        sendATCommand(cmd, response, 3);
+        if (setupDebugMode && strcmp(response, "OK") != 0)
+        {
+            debugPrint("Attempt ", false); debugPrint(itoa(i, current_attempt, 10), true);
+            debugPrint(F("Failed to configure UART flow control:\n  Command was: "),false);
+            debugPrint(cmd);
+            debugPrint(F("  Response was: "), false);
+            debugPrint(response);
+        }
+        else 
+        {
+            debugPrint("Configured UART flow control");
+            break;
+        }
     }
+    
     // Parity
     if (UART_PARITY) { cmd += "upar 01"; }
     else { cmd = "upar 00"; }
-    sendATCommand(cmd, response, 3);
-    if (setupDebugMode && strcmp(response, "OK") != 0)
-    {
-        debugPrint(F("Failed to configure UART parity:\n  Command was: "),
-                   false);
-        debugPrint(cmd);
-        debugPrint(F("  Response was: "), false);
-        debugPrint(response);
+    for (int i = 0; i < retries; i++) {
+        sendATCommand(cmd, response, 3);
+        if (setupDebugMode && strcmp(response, "OK") != 0)
+        {
+            debugPrint("Attempt ", false); debugPrint(itoa(i, current_attempt, 10), true);
+            debugPrint(F("Failed to configure UART parity:\n  Command was: "),false);
+            debugPrint(cmd);
+            debugPrint(F("  Response was: "), false);
+            debugPrint(response);
+        }
+        else 
+        {
+            debugPrint("Configured UART parity", true);
+            break;
+        }
     }
+    
     // enable / disable UART PassThrough
     if (UART_ENABLED) { cmd = "uen 01"; }
     else { cmd = "uen 00"; }
-    sendATCommand(cmd, response, 3);
-    if (setupDebugMode && strcmp(response, "OK") != 0)
-    {
-        debugPrint(F("Failed to enable UART:\n  Command was: "), false);
-        debugPrint(cmd);
-        debugPrint(F("  Response was: "), false);
-        debugPrint(response);
+    for (int i = 0; i < retries; i++) {
+        sendATCommand(cmd, response, 3);
+        if (setupDebugMode && strcmp(response, "OK") != 0)
+        {
+            debugPrint("Attempt ", false); debugPrint(itoa(i, current_attempt, 10), true);
+            debugPrint(F("Failed to enable UART:\n  Command was: "), false);
+            debugPrint(cmd);
+            debugPrint(F("  Response was: "), false);
+            debugPrint(response);
+        }
+        else 
+        {
+            debugPrint("Enabled UART");
+            break;
+        }
     }
+   
 }
 
 
@@ -403,28 +451,54 @@ void IUBMD350::configureBeacon(bool enabled, uint16_t adInterval)
     // enable / disable Beacon
     if (enabled) { cmd = "ben 01"; }
     else { cmd = "ben 00"; }
-    sendATCommand(cmd, response, 3);
-    if (setupDebugMode && strcmp(response, "OK") != 0)
-    {
-        debugPrint(F("Failed to enable / disable Beacon, response was: "), false);
-        debugPrint(response);
+    
+    int retries = 3;
+    char current_attempt[5];
+    for (int i=0; i<retries; i++) {
+        sendATCommand(cmd, response, 3);
+        if (setupDebugMode && strcmp(response, "OK") != 0)
+        {
+            debugPrint("Attempt ", false); debugPrint(itoa(i, current_attempt, 10), false);
+            debugPrint(F(" - Failed to enable / disable Beacon, response was: "), false);
+            debugPrint(response);
+        } else {
+            debugPrint("Beacon configured", true);
+            break;
+        }
     }
+
+
     // Set Ad Interval
     cmd = "badint " + String(adInterval, HEX);
-    sendATCommand(cmd, response, 3);
-    if (setupDebugMode && strcmp(response, "OK") != 0)
-    {
-        debugPrint(F("Failed to set Ad Interval, response was: "), false);
-        debugPrint(response);
+    for(int i=0; i<retries; i++) {
+        sendATCommand(cmd, response, 3);
+        if (setupDebugMode && strcmp(response, "OK") != 0)
+        {
+            debugPrint("Attempt ", false); debugPrint(itoa(i, current_attempt, 10), false);
+            debugPrint(F(" - Failed to set Ad Interval, response was: "), false);
+            debugPrint(response);
+        } else {
+            debugPrint("Beacon interval configured");
+            break;
+        }
     }
-    // advertisement interval
+    
+
+    // connectable advertisement interval
     cmd = "cadint " + String(20, HEX);
-    sendATCommand(cmd, response, 3);
-    if (setupDebugMode && strcmp(response, "OK") != 0)
-    {
-        debugPrint(F("Failed to set Connectable Ad Interval, response was: "), false);
-        debugPrint(response);
+    for(int i=0; i<retries; i++) {
+        sendATCommand(cmd, response, 3);
+        if (setupDebugMode && strcmp(response, "OK") != 0)
+        {
+            debugPrint("Attempt ", false); debugPrint(itoa(i, current_attempt, 10), false);
+            debugPrint(F(" - Failed to set Connectable Ad Interval, response was: "), false);
+            debugPrint(response);
+        } else {
+            debugPrint("Connectable advertising interval configured");
+            break;
+        }
     }
+
 }
 
 
@@ -473,26 +547,47 @@ void IUBMD350::setTxPowers(txPowerOption txPower)
     m_connectedTxPower = txPower;
     m_beaconTxPower = txPower;
     char response[3];
+
+    int retries = 3;
+    char current_attempt[5];
+
     // Connected Power
     String cmd = String("ctxpwr ") + String(txPower, HEX);
-    sendATCommand(cmd, response, 3);
-    if (setupDebugMode && strcmp(response, "OK") != 0)
-    {
-        debugPrint(F("Failed to set Connected Tx Power:\n  Command was: "), false);
-        debugPrint(cmd);
-        debugPrint(F("  Response was: "), false);
-        debugPrint(response);
+    for (int i = 0; i < retries; i++) {
+        sendATCommand(cmd, response, 3);
+        if (setupDebugMode && strcmp(response, "OK") != 0)
+        {   
+            debugPrint("Attempt ", false); debugPrint(itoa(i, current_attempt, 10));
+            debugPrint(F("Failed to set Connected Tx Power:\n  Command was: "), false);
+            debugPrint(cmd);
+            debugPrint(F("  Response was: "), false);
+            debugPrint(response);
+        }
+        else 
+        {
+            debugPrint("Connected Tx Power configured");
+            break;
+        }
     }
+    
     // Beacon Power
-    cmd = String("btxpwr ") + String(txPower, HEX);
-    sendATCommand(cmd, response, 3);
-    if (setupDebugMode && strcmp(response, "OK") != 0)
-    {
-        debugPrint(F("Failed to set Beacon Tx Power:\n  Command was: "), false);
-        debugPrint(cmd);
-        debugPrint(F("  Response was: "), false);
-        debugPrint(response);
-    }
+    cmd = String("btxpwr ") + String(txPower, HEX); 
+    for (int i = 0; i < retries; i++) {
+        sendATCommand(cmd, response, 3);
+        if (setupDebugMode && strcmp(response, "OK") != 0)
+        {
+            debugPrint("Attempt ", false); debugPrint(itoa(i, current_attempt, 10));
+            debugPrint(F("Failed to set Beacon Tx Power:\n  Command was: "), false);
+            debugPrint(cmd);
+            debugPrint(F("  Response was: "), false);
+            debugPrint(response);
+        }
+        else 
+        {
+            debugPrint("Beacon power configured");
+            break;
+        }
+    }    
 }
 
 /**
