@@ -1598,8 +1598,8 @@ bool Conductor::isBLEConnected()
 {
     uint32_t now = millis();
     char temp[50];
-    debugPrint("CHECKING BLE CONNECTION STATUS: ", false); debugPrint(itoa(m_lastBLEmessage, temp, 10), true);
-    debugPrint("TIME DIFF: ", false); debugPrint(itoa(now-m_lastBLEmessage, temp, 10), true);
+    // debugPrint("CHECKING BLE CONNECTION STATUS: ", false); debugPrint(itoa(m_lastBLEmessage, temp, 10), true);
+    // debugPrint("TIME DIFF: ", false); debugPrint(itoa(now-m_lastBLEmessage, temp, 10), true);
 
     // m_lastBLEmessage == 0 indicates that BLE has started (either on boot or after reset) after disconnection
     return m_lastBLEmessage > 0 && now - m_lastBLEmessage < BLEconnectionTimeout;
