@@ -318,7 +318,7 @@ void IUBMD350::queryDeviceName()
 {
     char response[9];
     
-    int retries = 3;
+    int retries = 5;
     char current_attempt[5];
     int respLen;
     for(int i=0; i<retries; i++) {
@@ -346,7 +346,7 @@ void IUBMD350::queryDeviceName()
  */
 void IUBMD350::configureUARTPassthrough()
 {
-    int retries = 3;
+    int retries = 5;
     char current_attempt[5];
 
     char response[3];
@@ -452,7 +452,7 @@ void IUBMD350::configureBeacon(bool enabled, uint16_t adInterval)
     if (enabled) { cmd = "ben 01"; }
     else { cmd = "ben 00"; }
     
-    int retries = 3;
+    int retries = 5;
     char current_attempt[5];
     for (int i=0; i<retries; i++) {
         sendATCommand(cmd, response, 3);
@@ -548,7 +548,7 @@ void IUBMD350::setTxPowers(txPowerOption txPower)
     m_beaconTxPower = txPower;
     char response[3];
 
-    int retries = 3;
+    int retries = 5;
     char current_attempt[5];
 
     // Connected Power
