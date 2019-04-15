@@ -1604,7 +1604,6 @@ bool Conductor::isBLEConnected()
     // m_lastBLEmessage == 0 indicates that BLE has started (either on boot or after reset) after disconnection
     return m_lastBLEmessage > 0 && now - m_lastBLEmessage < BLEconnectionTimeout;
 }
-// TODO: update the ble status in a separate method, updating ble here gives isBLEConnected() a side effect
 
 void Conductor::resetBLEonTimeout() {
     // reset m_lastBLEmessage to zero if bluetooth connection is lost i.e. time difference between now and last message is greater than BLEconnectionTimeout
