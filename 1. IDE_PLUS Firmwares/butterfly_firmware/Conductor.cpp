@@ -961,6 +961,13 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
     // send to processCommands
     processCommand(buff);
     
+    // // resetting BLE from USB, while testing
+    // if (strcmp(buff, "BLE-RESET-USB")) {
+    //     debugPrint("ON BOOT, BLE BUFFER : ", false); debugPrint(buff);
+    //     iuBluetooth.softReset();
+    //     debugPrint("Resetting BLE on USB trigger");
+    // }
+
     if (buff[0] == '{') {
         processConfiguration(buff, true);
     } else if (strncmp(buff, "WIFI-", 5) == 0) {
@@ -1108,8 +1115,9 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
  */
 void Conductor::processBLEMessage(IUSerial *iuSerial)
 {
-    char *buff = iuSerial->getBuffer();
     m_lastBLEmessage = millis();
+    char *buff = iuSerial->getBuffer();
+    // debugPrint("BLE BUFFER: ", false); debugPrint(buff, true);
     if (m_streamingMode == StreamingMode::WIRED) {
         return;  // Do not listen to BLE when wired
     }
@@ -1117,6 +1125,13 @@ void Conductor::processBLEMessage(IUSerial *iuSerial)
         processConfiguration(buff, true);
     } else if (strncmp(buff, "WIFI-", 5) == 0) {
         processUserCommandForWiFi(buff, &iuBluetooth);
+    } else if (strncmp(buff, "BLE-RESET", 9) == 0) {
+        debugPrint("RECEIVED BLE-RESET");
+        //  this is the first condition that will be tested to check if bluetooth is connected in updateStreamingMode() -> isBLEConnected(); 
+        // we make this 0 here to indicate that bluetooth is disconnected
+        m_lastBLEmessage = 0;
+        // debugPrint("BLE RESET");
+        iuBluetooth.softReset();     
     } else {
         processCommand(buff);
         processLegacyCommand(buff);
@@ -1581,10 +1596,26 @@ double Conductor::getDatetime()
 
 bool Conductor::isBLEConnected()
 {
-    return (m_lastBLEmessage > 0 &&
-            millis() - m_lastBLEmessage < BLEconnectionTimeout);
+    uint32_t now = millis();
+    char temp[50];
+    // debugPrint("CHECKING BLE CONNECTION STATUS: ", false); debugPrint(itoa(m_lastBLEmessage, temp, 10), true);
+    // debugPrint("TIME DIFF: ", false); debugPrint(itoa(now-m_lastBLEmessage, temp, 10), true);
+
+    // m_lastBLEmessage == 0 indicates that BLE has started (either on boot or after reset) after disconnection
+    return m_lastBLEmessage > 0 && now - m_lastBLEmessage < BLEconnectionTimeout;
 }
 
+void Conductor::resetBLEonTimeout() {
+    // reset m_lastBLEmessage to zero if bluetooth connection is lost i.e. time difference between now and last message is greater than BLEconnectionTimeout
+    // since m_lastBLEmessage > 0 is the first condition to check if bluetooth is connected, 
+    // this will ensure isBLEConnected will return false and the mode will be switched
+    uint32_t now = millis();
+    if (m_lastBLEmessage > 0 && now - m_lastBLEmessage > BLEconnectionTimeout) { 
+        m_lastBLEmessage = 0; 
+        // debugPrint("BLE RESET");
+        iuBluetooth.softReset(); 
+    } 
+}
 
 /**
  * Switch to a StreamingMode
@@ -1605,6 +1636,7 @@ void Conductor::updateStreamingMode()
             break;
         case UsageMode::OPERATION:
         case UsageMode::OPERATION_BIS:
+            resetBLEonTimeout(); // reset BLE if it BLE has timed out
             if (isBLEConnected()) {
                 if (iuWiFi.isConnected()) {
                     newMode = StreamingMode::WIFI_AND_BLE;
@@ -1617,6 +1649,8 @@ void Conductor::updateStreamingMode()
             break;
     }
     if (m_streamingMode == newMode) {
+        // char streaming_mode_string[10];
+        // debugPrint("Streaming mode not updated, streaming mode is : ", false); debugPrint(itoa(m_streamingMode, streaming_mode_string, 10), true);
         return; // Nothing to do
     }
     m_streamingMode = newMode;
