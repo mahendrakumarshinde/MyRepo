@@ -20,3 +20,8 @@
 # Untracked directories
 **/__pycache__/**
 
+# vscode
+**/.vscode/**
+
+# dolphin file manager files
+**/.directory

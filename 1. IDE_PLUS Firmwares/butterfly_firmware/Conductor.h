@@ -12,7 +12,6 @@
     #include "InstancesButterfly.h"
 #endif
 
-
 /* =============================================================================
     Operation Mode
 ============================================================================= */
@@ -112,7 +111,8 @@ class Conductor
         static constexpr double defaultTimestamp = 1524017173.00;
         // Size of Jsn buffr (to parse json)
         static const uint16_t JSON_BUFFER_SIZE = 1600;
-        static const uint32_t BLEconnectionTimeout = 60000;
+        // static const uint32_t BLEconnectionTimeout = 60000;
+        static const uint32_t BLEconnectionTimeout = 15000;
         //timer ISR period
         uint16_t timerISRPeriod = 300; // default 3.3KHz
         /***** Core *****/
@@ -184,7 +184,8 @@ class Conductor
         void configureMQTTServer(String filename);
         bool configureBoardFromFlash(String filename,bool isSet);
         JsonObject& configureJsonFromFlash(String filename,bool isSet);
-        bool sendDiagnosticFingerPrints();
+        void sendDiagnosticFingerPrints();
+        void resetBLEonTimeout();
 
     protected:
         MacAddress m_macAddress;
@@ -232,6 +233,9 @@ class Conductor
         const char* m_httpPassword ;
         const char* m_httpOauth ;
         const char* m_accountId;
+        double last_fingerprint_timestamp = 0;
+        bool computed_first_fingerprint_timestamp = false;
+
 };
 
 
