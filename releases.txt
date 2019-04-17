@@ -2,7 +2,7 @@
 #################################################################################################################################################################################
 
 Date: 17 April 2019
-Submitted By : Vikas Gaikwad
+Submitted By : Vikas Gaikwad & Shubham Punekar
 Firmware Versions : 
 		1. IDE+ Version : 1.0.9
 			2. Wifi Version : 1.0.4
@@ -10,7 +10,8 @@ Firmware Versions :
 
 
 Fixed :
-1. IDE switches to BLE advertising mode after 15 seconds after disconnecting from the application and is discoverable.
+1. IDE switches to BLE advertising mode if android application disconnects from IDE. 
+2. IDE switches to BLE advertising mode after 15 seconds if android application is terminated or goes out of range.
 2. IDE can reconnect with the android application via BLE again after disconnecting for the first time.
 
 Improvement required: 
