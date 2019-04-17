@@ -2,7 +2,7 @@
 #################################################################################################################################################################################
 
 Date: 17 April 2019
-Submitted By : Vikas Gaikwad & Shubham Punekar
+Submitted By : Shubham Punekar & Vikas Gaikwad 
 Firmware Versions : 
 		1. IDE+ Version : 1.0.9
 			2. Wifi Version : 1.0.4
@@ -12,10 +12,15 @@ Firmware Versions :
 Fixed :
 1. IDE switches to BLE advertising mode if android application disconnects from IDE. 
 2. IDE switches to BLE advertising mode after 15 seconds if android application is terminated or goes out of range.
-2. IDE can reconnect with the android application via BLE again after disconnecting for the first time.
+3. IDE can reconnect with the android application via BLE again after disconnecting for the first time.
+4. Resolved MQTT subcriber issue by increasing the STM32 Uart RX buffer size from 64 Bytes to 512 Bytes.
+5. Resolved the issue with missing fingerprints in the published JOSN messages.
 
 Improvement required: 
-
+1. BLE is not responsive after connecting to app.Note this happens very rarely.
+2. Workinprogress on WIFI Disconnect.
+Note : 
+1. In case sum of amplitudes from frequency domain are zero within the configured band value for respective fingerprints, the JSON will not have the respective keys and values in the output JSON.
 
 #################################################################################################################################################################################
 
