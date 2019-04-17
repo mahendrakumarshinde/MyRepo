@@ -1,6 +1,23 @@
 # This file tell about all the Firmware Release of IDE+
 #################################################################################################################################################################################
 
+Date: 17 April 2019
+Submitted By : Vikas Gaikwad
+Firmware Versions : 
+		1. IDE+ Version : 1.0.9
+			2. Wifi Version : 1.0.4
+################################################################################################################################################################################
+
+
+Fixed :
+1. IDE switches to BLE advertising mode after 15 seconds after disconnecting from the application and is discoverable.
+2. IDE can reconnect with the android application via BLE again after disconnecting for the first time.
+
+Improvement required: 
+
+
+#################################################################################################################################################################################
+
 Date: 26 March 2019
 Submitted By : Vikas Gaikwad
 Firmware Versions : 
