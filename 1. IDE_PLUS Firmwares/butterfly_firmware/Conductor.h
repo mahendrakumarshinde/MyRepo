@@ -116,6 +116,7 @@ class Conductor
         //timer ISR period
         uint16_t timerISRPeriod = 300; // default 3.3KHz
         /***** Core *****/
+        Conductor() {};
         Conductor(MacAddress macAddress) : m_macAddress(macAddress) { }
         Conductor(const char *macAddress)
             { m_macAddress.fromString(macAddress); }
@@ -186,7 +187,8 @@ class Conductor
         JsonObject& configureJsonFromFlash(String filename,bool isSet);
         void sendDiagnosticFingerPrints();
         void resetBLEonTimeout();
-
+        void setConductorBLEMacAddress();
+        void printConductorMac();
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
