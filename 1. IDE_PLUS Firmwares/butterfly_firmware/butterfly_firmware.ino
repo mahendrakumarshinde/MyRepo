@@ -1,7 +1,7 @@
 /*
 Infinite Uptime IDE+ Firmware
-Vr. 1.0.8
-Update 26-03-2019
+Vr. 1.1.0
+Update 25-04-2019
 Type - Standard Firmware Release
 */
 
@@ -32,7 +32,7 @@ const uint8_t ESP8285_IO0  =  7;
     MAC Address
 ============================================================================= */
 
-const char MAC_ADDRESS[18] = "94:54:93:43:5C:10";
+// const char MAC_ADDRESS[18] = "94:54:93:3B:81:57";
 
 /* Motor Scaling Factor 
  *  
@@ -124,7 +124,7 @@ uint32_t lastDone = 0;
 
 /***** Main operator *****/
 
-Conductor conductor(MAC_ADDRESS);
+Conductor conductor;
 
 
 /* =============================================================================
@@ -421,6 +421,9 @@ void setup()
         armv7m_timer_create(&bleTransmitTimer, (armv7m_timer_callback_t)bleTransmitCallback);
         armv7m_timer_start(&bleTransmitTimer, 5);
 
+        // set the BLE address for conductor
+        conductor.setConductorBLEMacAddress();
+
         // httpConfig message read timerCallback
         armv7m_timer_create(&httpConfigTimer, (armv7m_timer_callback_t)httpConfigCallback);
         armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min Timer 180000
@@ -543,6 +546,8 @@ void loop()
                 /*======*/
             }
         }
+        //TESTING
+        // conductor.printConductorMac(); // to check if the correct mac address is set up
         // Manage power saving
         conductor.manageSleepCycles();
         // Receive messages & configurations
