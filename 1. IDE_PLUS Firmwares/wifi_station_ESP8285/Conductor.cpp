@@ -32,11 +32,10 @@ Conductor::Conductor() :
     m_disconnectionTimerStart(0),
     m_lastWifiStatusUpdate(0),
     m_lastWifiInfoPublication(0),
-    m_mqttServerIP(IPAddress()),
-    m_mqttServerPort(IPAddress()),
-    m_featurePostPort(DATA_DEFAULT_ENDPOINT_PORT),
-    m_diagnosticPostPort(DATA_DEFAULT_ENDPOINT_PORT)
+    m_mqttServerIP(IPAddress())
 {
+    m_featurePostPort = DATA_DEFAULT_ENDPOINT_PORT;
+    m_diagnosticPostPort = DATA_DEFAULT_ENDPOINT_PORT;
     m_credentialValidator.setTimeout(wifiConfigReceptionTimeout);
     m_staticConfigValidator.setTimeout(wifiConfigReceptionTimeout);
     m_mqttServerValidator.setTimeout(wifiConfigReceptionTimeout);
