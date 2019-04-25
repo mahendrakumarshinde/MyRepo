@@ -1,7 +1,7 @@
 /*
 Infinite Uptime IDE+ Firmware
-Vr. 1.0.8
-Update 26-03-2019
+Vr. 1.1.0
+Update 25-04-2019
 Type - Standard Firmware Release
 */
 
