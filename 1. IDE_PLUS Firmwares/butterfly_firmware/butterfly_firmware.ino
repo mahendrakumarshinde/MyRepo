@@ -180,6 +180,7 @@ static void watchdogCallback(void) {
         STM32.reset();
     }
     if (iuWiFi.arePublicationsFailing()) {
+        debugPrint("Publications are failing: hard resetting now.");
         iuWiFi.hardReset();
     }
     armv7m_timer_start(&watchdogTimer, 1000);
