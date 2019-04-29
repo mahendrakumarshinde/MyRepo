@@ -952,12 +952,36 @@ void Conductor::processLegacyCommand(char *buff)
     }
 }
 
+void processJSONmessage(char * buff) 
+{
+    if (buff[0] == 'm') 
+    {
+        debugPrint("JSON type: ", false); debugPrint(buff[0]);
+        int message_id = int(buff[1]);
+        debugPrint("JSON message ID: ", false); debugPrint(message_id);
+        int segment_index = int(buff[2]);
+        debugPrint("JSON segment index: ", false); debugPrint(segment_index);
+        debugPrint("JSON message segment: ", false); 
+        bool done = false;
+        int i = 3;
+        while (true) {
+            if (done) { break;  }
+            debugPrint(char(buff[i]), false);
+            if(char(buff[i]) == ';') { done = true; }
+            i++;
+        }
+        debugPrint("", true);
+    }
+}
+
 /**
  * Process the USB commands
  */
 void Conductor::processUSBMessage(IUSerial *iuSerial)
 {
     char *buff = iuSerial->getBuffer();
+    debugPrint("USB BUFFER: ", false); debugPrint(buff);
+    processJSONmessage(buff);
     // send to processCommands
     processCommand(buff);
     
