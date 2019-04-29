@@ -2219,7 +2219,7 @@ void Conductor::printConductorMac() {
 
 void Conductor::setConductorBLEMacAddress() {
     iuBluetooth.enterATCommandInterface();
-    char BLE_MAC_Address[100];
+    char BLE_MAC_Address[20];
     iuBluetooth.sendATCommand("mac?", BLE_MAC_Address, 100);
     iuBluetooth.exitATCommandInterface();
     m_macAddress.fromString(BLE_MAC_Address);

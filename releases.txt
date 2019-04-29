@@ -1,6 +1,27 @@
 # This file tell about all the Firmware Release of IDE+
 #################################################################################################################################################################################
 
+Date: 25 April 2019
+Submitted By : Shubham Punekar
+Firmware Versions : 
+		1. IDE+ Version : 1.1.0
+		2. Wifi Version : 1.0.4
+################################################################################################################################################################################
+
+
+Fixed :
+1. IDE fetches BLE MAC address automatically. 
+
+Improvement required: 
+1. Workinprogress on WIFI Disconnect.
+
+Notes:
+1. If application tries to connect to IDE right after flashing, then BLE might be irresponsive. (Note this happens very rarely.)
+   However if the IDE is connected to a power adapter after flashing, it connects to application successfully and this issue does not occur.
+2. In case sum of amplitudes from frequency domain are zero within the configured band value for respective fingerprints, the JSON will not have the respective keys and values in the output JSON.
+
+#################################################################################################################################################################################
+
 Date: 17 April 2019
 Submitted By : Shubham Punekar & Vikas Gaikwad 
 Firmware Versions : 
