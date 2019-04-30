@@ -87,7 +87,7 @@ namespace UsageMode
  * a collection of features). Activating a FeatureGroup is equivalent to
  * activating the corresponding part of the graph + the required dependencies.
  */
-class Conductor
+class Conductor  : public DiagnosticEngine
 {
     public:
         /***** Preset values and default settings *****/
@@ -189,6 +189,7 @@ class Conductor
         void resetBLEonTimeout();
         void setConductorBLEMacAddress();
         void printConductorMac();
+        bool setSensorConfig(char* filename);
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
