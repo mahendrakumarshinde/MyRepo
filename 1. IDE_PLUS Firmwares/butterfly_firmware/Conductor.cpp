@@ -483,12 +483,13 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
           m_temperatureOffset = config["sensorConfig"]["TMP_OFFSET"];
           m_audioOffset = config["sensorConfig"]["SND_OFFSET"];
         
-          Serial.print("Temperature SET : ");Serial.println(m_temperatureOffset);
-          Serial.print("Audio SET :"); Serial.println(m_audioOffset);
+          if(loopDebugMode){
 
-          variant.prettyPrintTo(Serial);
-          Serial.println("READ COMPLETE...");
-          
+            debugPrint("Temperature Offset is: ",false);debugPrint(m_temperatureOffset);
+            debugPrint("Audio Offset is:",false); debugPrint(m_audioOffset);
+            //debugPrint("File content");  
+           // variant.prettyPrintTo(Serial);
+          }
           
         }
         
@@ -883,29 +884,24 @@ void Conductor::processCommand(char *buff)
             }
             break;
         case '4':              // Set temperature Offset value  [4000-12 < command-value>]
-            if (buff[0] == '4' && buff[3] == '0' && buff[4]=='-') {
+            if (buff[0] == '4' && buff[3] == '0' && buff[4]==':') {
                 
-                int id; //m_m_temperatureOffset;
-                char temperatureJSON[80];
-                sscanf(buff,"%d-%d",&id,&m_temperatureOffset);
-                Serial.print("Tempearature OFFSET : ");Serial.println(m_temperatureOffset);
-                //temperatureJSON = "{\"TMP_OFFSET\":\"%s\"}" ;
-                snprintf(temperatureJSON, 80, "{\"sensorConfig\":{\"TMP_OFFSET\":%d,\"SND_OFFSET\":%d } }",m_temperatureOffset,m_audioOffset);
-                Serial.print("TEMPERATURE JSON : ");Serial.println(temperatureJSON);
-                    
+                int id; 
+                char temperatureJSON[60];
+                sscanf(buff,"%d:%d",&id,&m_temperatureOffset);
+                snprintf(temperatureJSON, 60, "{\"sensorConfig\":{\"TMP_OFFSET\":%d,\"SND_OFFSET\":%d } }",m_temperatureOffset,m_audioOffset);
+                 
                 processConfiguration(temperatureJSON,true);    
                 
                 }
             break;
         case '5':              // Set Audio Offset value  [5000-12 < command-value>]
-            if (buff[0] == '5' && buff[3] == '0' && buff[4]=='-') {
+            if (buff[0] == '5' && buff[3] == '0' && buff[4]==':') {
                 
-                int id; //m_audioOffset;
-                char audioOffsetJSON[80];
-                sscanf(buff,"%d-%d",&id,&m_audioOffset);
-                Serial.print("Audio OFFSET : ");Serial.println(m_audioOffset);
-                snprintf(audioOffsetJSON,80,"{\"sensorConfig\":{\"SND_OFFSET\":%d,\"TMP_OFFSET\":%d }} ",m_audioOffset,m_temperatureOffset);
-                Serial.print("Audio OFFSET JSON : ");Serial.println(audioOffsetJSON);
+                int id; 
+                char audioOffsetJSON[60];
+                sscanf(buff,"%d:%d",&id,&m_audioOffset);
+                snprintf(audioOffsetJSON,60,"{\"sensorConfig\":{\"SND_OFFSET\":%d,\"TMP_OFFSET\":%d }} ",m_audioOffset,m_temperatureOffset);
                 processConfiguration(audioOffsetJSON,true); 
                 
                 }
@@ -2304,7 +2300,7 @@ void Conductor::setConductorBLEMacAddress() {
 
 bool Conductor::setSensorConfig(char* filename){
     
-    JsonObject& config = configureJsonFromFlash(filename,1);      // get the accountID
+    JsonObject& config = configureJsonFromFlash(filename,1);      
     JsonVariant variant = config;
 
     if (!config.success()) {
@@ -2317,12 +2313,14 @@ bool Conductor::setSensorConfig(char* filename){
 
         m_temperatureOffset = config["sensorConfig"]["TMP_OFFSET"];
         m_audioOffset = config["sensorConfig"]["SND_OFFSET"];
-            
-        Serial.print("STARTUP Temperature SET : ");Serial.println(m_temperatureOffset);
-        Serial.print("STARTUP Audio SET :"); Serial.println(m_audioOffset);
-
-        variant.prettyPrintTo(Serial);
-        Serial.println("READING FROM STARTUP COMPLETE...");   
+        if(loopDebugMode){
+            debugPrint("Tempearature Offset: ",false);
+            debugPrint(m_temperatureOffset);
+            debugPrint("Audio Offset:",false);
+            debugPrint(m_audioOffset);
+        }    
+        //variant.prettyPrintTo(Serial);
+        //Serial.println("READING FROM STARTUP COMPLETE...");   
 
         return true;
     }
