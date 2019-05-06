@@ -12,6 +12,9 @@
     #include "InstancesButterfly.h"
 #endif
 
+#include "SegmentedMessage.h"
+#define MAX_SEGMENTED_MESSAGES 3
+
 /* =============================================================================
     Operation Mode
 ============================================================================= */
@@ -189,6 +192,10 @@ class Conductor
         void resetBLEonTimeout();
         void setConductorBLEMacAddress();
         void printConductorMac();
+        void extractPayloadFromSegmentedMessage(const char* segment, char* payload);
+        bool checkSegmentedMessageTimedOut(int messageID);
+        void processSegmentedMessage(const char* buff);
+        void compileSegmentedMessage(int messageID);
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
@@ -237,7 +244,8 @@ class Conductor
         const char* m_accountId;
         double last_fingerprint_timestamp = 0;
         bool computed_first_fingerprint_timestamp = false;
-
+        SegmentedMessage segmentedMessages[MAX_SEGMENTED_MESSAGES]; // atmost MAX_SEGMENTED_MESSAGES can be captured in interleaved manner
+        int segmentedMessagesTimeout = 10;  // seconds
 };
 
 

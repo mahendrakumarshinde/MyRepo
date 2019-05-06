@@ -1,3 +1,4 @@
+#include<string.h>
 #include "Conductor.h"
 //#include<FS.h>
 
@@ -952,27 +953,6 @@ void Conductor::processLegacyCommand(char *buff)
     }
 }
 
-void processJSONmessage(char * buff) 
-{
-    if (buff[0] == 'm') 
-    {
-        debugPrint("JSON type: ", false); debugPrint(buff[0]);
-        int message_id = int(buff[1]);
-        debugPrint("JSON message ID: ", false); debugPrint(message_id);
-        int segment_index = int(buff[2]);
-        debugPrint("JSON segment index: ", false); debugPrint(segment_index);
-        debugPrint("JSON message segment: ", false); 
-        bool done = false;
-        int i = 3;
-        while (true) {
-            if (done) { break;  }
-            debugPrint(char(buff[i]), false);
-            if(char(buff[i]) == ';') { done = true; }
-            i++;
-        }
-        debugPrint("", true);
-    }
-}
 
 /**
  * Process the USB commands
@@ -980,9 +960,13 @@ void processJSONmessage(char * buff)
 void Conductor::processUSBMessage(IUSerial *iuSerial)
 {
     char *buff = iuSerial->getBuffer();
-    debugPrint("USB BUFFER: ", false); debugPrint(buff);
-    processJSONmessage(buff);
     // send to processCommands
+    if (buff[0] == 'm' || buff[0] == 'M') {
+            debugPrint("DEBUG: Conductor::processUSBMessage() calling processSegmentedMessage()");
+            processSegmentedMessage(buff);
+            debugPrint("DEBUG: Back in Conductor::processUSBMessage() after processSegmentedMessage()");
+        }
+
     processCommand(buff);
     
     // // resetting BLE from USB, while testing
@@ -1134,6 +1118,28 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
     }
 }
 
+void processJSONmessage(const char * buff) 
+{
+    if (buff[0] == 'm' || buff[0] == 'M') 
+    {
+        debugPrint("JSON type: ", false); debugPrint(buff[0]);
+        int message_id = int(buff[1]);
+        debugPrint("JSON message ID: ", false); debugPrint(message_id);
+        int segment_index = int(buff[2]);
+        debugPrint("JSON segment index / segment count: ", false); debugPrint(segment_index);
+        debugPrint("JSON segment data/control : ", false); 
+        bool done = false;
+        int i = 3;
+        while (true) {
+            if (done) { break;  }
+            debugPrint(char(buff[i]), false);
+            if(char(buff[i]) == ';') { done = true; }
+            i++;
+        }
+        debugPrint("", true);
+    }
+}
+
 /**
  * Process the instructions sent over Bluetooth
  */
@@ -1142,6 +1148,21 @@ void Conductor::processBLEMessage(IUSerial *iuSerial)
     m_lastBLEmessage = millis();
     char *buff = iuSerial->getBuffer();
     // debugPrint("BLE BUFFER: ", false); debugPrint(buff, true);
+
+    if (buff[0] == 'm' || buff[0] == 'M')  { // && (int(buff[1]) < MAX_SEGMENTED_MESSAGES)) {
+        // int(buff[1]) -> messageID
+        char segmentedMessageBuffer[20];
+        for (int i=0; i<20; i++) { segmentedMessageBuffer[i] = buff[i]; }
+        // debugPrint("WARNING: buff: messageID: ", false); debugPrint(int(buff[1]));
+        // debugPrint("WARNING: segmentedMessageBuffer: messageID: ", false); debugPrint(int(segmentedMessageBuffer[1]));
+        // debugPrint("WARNING: segmentedMessageBuffer: ", false), Serial.println(segmentedMessageBuffer);  // check if all the segmented messages are received properly from the application
+        debugPrint("DEBUG: Conductor::processBLEMessage() calling processSegmentedMessage()");
+        processSegmentedMessage(segmentedMessageBuffer);
+        iuBluetooth.resetBuffer();  // consider the BLE received buffer to be flushed
+        debugPrint("DEBUG: Back in Conductor::processBLEMessage() after processSegmentedMessage()");
+}
+    // debugPrint("DEBUG: Conductor::processBLEMessage()");
+
     if (m_streamingMode == StreamingMode::WIRED) {
         return;  // Do not listen to BLE when wired
     }
@@ -2247,4 +2268,244 @@ void Conductor::setConductorBLEMacAddress() {
     iuBluetooth.sendATCommand("mac?", BLE_MAC_Address, 100);
     iuBluetooth.exitATCommandInterface();
     m_macAddress.fromString(BLE_MAC_Address);
+}
+
+void Conductor::extractPayloadFromSegmentedMessage(const char* segment, char* payload) {
+    // payload has to be a c string with  maximum length of 16 characters
+
+    // TODO: refactor this block with cleaner code
+    // For segmentIndex = 0, segment will be "M/m | <messageID> |0| <payload>" 
+    // This '0' at segment[2] will be treated as null byte by strlen() Method
+    // Workaround - first 2 bytes are messageID and segmentCount, 
+    // Length = str(payload) + 2 for messageID, segmentCount
+    
+    int index = 0;
+    int segmentLength = strlen(&segment[3]) + 2;
+    // debugPrint("DEBUG: Extracting payload: length: ", false); debugPrint(segmentLength);
+    while ((index+3) <= segmentLength) {    // here, segment does not have ";" as the last char, copy all the bytes
+        payload[index] = segment[index+3];
+        index++;
+    }
+    payload[index] = '\0';  // make it c_string to allow string functions and debugPrint
+
+    // debugPrint("DEBUG: Extracting payload: ", false); debugPrint(payload);
+    // debugPrint("DEBUG: Extracting payload: BUFFER: ", false);
+    // debugPrint(int(segment[1]), false);
+    // debugPrint(int(segment[2]), false);
+    // debugPrint(&segment[3]);
+}
+
+bool Conductor::checkSegmentedMessageTimedOut(int message) {
+    // TODO: 
+    return false;
+}
+
+void Conductor::processSegmentedMessage(const char* buff) {
+    // buff will contain maximum 20 bytes, message terminated with ';'
+
+    // processSegmentedMessage() will be called when buff[0] == 'm' or 'M'
+    // 'M' -> control message
+    // 'm' -> data message
+
+    if (buff[0] == 'M') {
+
+        // Control messages - M | <messageID> | <segmentCount> | INIT / FINISHED / <HASH> | ;
+        // M - 1 byte
+        // <messageID> - 1 byte, value ranges from 0 to 127, both inclusive
+        // <segmentCount> - 1 byte, value ranges from 0 to 127, both inclusive
+        // INIT / FINISHED/ <HASH> - messageType, note that <HASH> is actually first 16 bytes of the md5 hexdigest
+        // ; - sentinel character, 1 byte
+        // NOTE: For control messages, responses are sent back
+        // debugPrint("DEBUG: M: in control message");
+
+        char messageType[16];
+        extractPayloadFromSegmentedMessage(buff, messageType);
+        
+        // debugPrint("DEBUG: M: messageType: ", false); debugPrint(messageType);
+        
+        if (strncmp(messageType, "INIT", 4) == 0) {
+            
+            if (int(buff[1]) >= MAX_SEGMENTED_MESSAGES) {  // validation check against garbage from BLE
+                debugPrint("ERROR: M: messageID: ", false); debugPrint(int(buff[1]));
+                debugPrint("ERROR: M: messageID exceeded MAX_SEGMENTED_MESSAGES");
+                return;
+            }
+
+            debugPrint("DEBUG: M: processing INIT message");
+
+            int messageID = int(buff[1]);
+            int segmentCount = int(buff[2]);
+            int timestamp = millis();
+
+            // 2: tried by pushing data into array
+            segmentedMessages[messageID].messageID = messageID;
+            segmentedMessages[messageID].segmentCount = segmentCount;
+            segmentedMessages[messageID].lastTimestamp = millis();
+
+            debugPrint("DEBUG: M: INIT messageID: ", false); debugPrint(segmentedMessages[messageID].messageID);
+            debugPrint("DEBUG: M: INIT segmentCount: ", false); debugPrint(segmentedMessages[messageID].segmentCount);
+            debugPrint("DEBUG: M: INIT lastTimestamp: ", false); debugPrint(segmentedMessages[messageID].lastTimestamp);
+
+            // char initResponse[20];
+            // char initACK[] = "INIT-ACK;";
+            // for (int i=0; i<3; i++) { initResponse[i] = buff[i]; }
+            // for (int i=0; i<strlen(initACK); i++) { initResponse[i+3] = initACK[i]; }
+
+            // debugPrint("DEBUG: M: INIT CONTROL MESSAGE RESPONSE");
+            // if (isBLEConnected()) {
+            //     iuBluetooth.write(initResponse);
+            //     debugPrint("DEBUG: M: INIT RESPONSE sent via BLE");
+            // }            
+        }   
+        // else if (strncmp(messageType, "FINISHED", 8) == 0) {
+        //     debugPrint("DEBUG: M: processing FINISHED message");
+
+        //     int messageID = int(buff[1]);
+        //     if (!checkSegmentedMessageTimedOut(messageID)) {  // TODO: implement checkSegmentedMessageTimedOut()
+                
+        //         // update timestamp
+        //         segmentedMessages[messageID].lastTimestamp = millis();
+                
+        //         // check if all segments have been received
+        //         bool allSegmentsReceived = true;
+        //         debugPrint("DEBUG: M: segmentCount: ", false); debugPrint(segmentedMessages[messageID].segmentCount);
+        //         for (int i=0; i<segmentedMessages[messageID].segmentCount; i++) {
+        //             if (segmentedMessages[messageID].receivedSegments[i] != true) {
+        //                 debugPrint("DEBUG: M: missing segmentIndex: ", false); debugPrint(i, false);
+        //                 // debugPrint(" -> RECEVIED: ", false); debugPrint(segmentedMessages[messageID].receivedSegments[i]);
+        //                 allSegmentsReceived = false;
+        //                 break;
+        //             }   
+        //         }
+        //         debugPrint("DEBUG: M: all segments recevied: ", false); debugPrint(allSegmentsReceived);
+        //         if (allSegmentsReceived == true) {
+
+        //             // compile message from the segments
+        //             for (int segmentIndex=0; segmentIndex < segmentedMessages[messageID].segmentCount; segmentIndex++) {
+        //                 // TODO: Compile message properly
+        //                 // strcat(segmentedMessages[messageID].message, segmentedMessages[messageID].dataSegments[i]);()
+        //                 bool messageSegmentCopied = false;
+        //                 int messageIndexOffset = 0;
+        //                 while (!messageSegmentCopied) {
+        //                     if (segmentedMessages[messageID].dataSegments[messageIndexOffset] == '\0') {
+        //                         // all data segments have been stored as c strings, ending with '\0' null byte
+        //                         messageSegmentCopied = true;
+        //                     }
+        //                     segmentedMessages[messageID].message[segmentIndex*16+messageIndexOffset] = segmentedMessages[messageID].dataSegments[messageID][messageIndexOffset];
+        //                     messageIndexOffset += 1;
+        //                 }
+        //                 debugPrint("DEBUG: M: segmentIndex: ", false); debugPrint(segmentIndex, false);
+        //                 debugPrint(" segmentData: ", false); debugPrint(segmentedMessages[messageID].dataSegments[segmentIndex]);
+        //             }
+        //             debugPrint("DEBUG: M: message compiled: ", false); debugPrint(segmentedMessages[messageID].message);
+
+        //             // send FINISHED-ACK
+        //             char finishedResponse[20];
+        //             char finishedACK[] = "FINISHED-ACK;"; // TODO: try with char finishedACK[] = "FINISHED-ACK";
+        //             for (int i=0; i<3; i++) { finishedResponse[i] = buff[i]; }
+        //             for (int i=0; i<strlen(finishedACK); i++) { finishedResponse[i+3] = finishedACK[i]; }
+
+        //             debugPrint("DEBUG: M: FINISHED CONTROL MESSAGE RESPONSE");
+        //             // if (isBLEConnected()) {
+        //             //     iuBluetooth.write(finishedResponse);
+        //             //     debugPrint("DEBUG: M: FINISHED RESPONSE sent via BLE");
+        //             // } 
+        //             // TEMP: CLEAR THE SegmentedMessage here
+        //             segmentedMessages[messageID] = SegmentedMessage();
+        //         }
+        //         else {
+        //             // else, send a list of all the missing segments - TODO
+        //         }
+        //     }
+        // }
+        else {
+            // TODO: <HASH> here
+        }
+    }
+    else {
+        // buff[0] == 'm'
+        // Data message - m | <messageID> | <segmentIndex> | __<dataPayload>__ | ;
+        // m - 1 byte
+        // <messageID> - 1 byte, ranges from 0 to 127
+        // <segmentIndex> - 1 byte, ranges from 0 to 126 (maximum segmentCount is 127, segmentIndex will be [0, segmentCount-1])
+        // __<dataPayload>__ - upto 16 bytes of message segment
+        // ; - 1 byte sentinel character
+
+        int messageID = int(buff[1]);
+        debugPrint("DEBUG: m: messageID: ", false); debugPrint(messageID);
+
+        int segmentIndex = int(buff[2]);
+        if (segmentIndex >= MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE) {  // validation check against garbage from BLE
+            debugPrint("ERROR: m: segmentIndex: ", false);  debugPrint(segmentIndex);
+            debugPrint("ERROR: m: segmentIndex exceeded MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE");
+            return;
+        }
+
+        if (!checkSegmentedMessageTimedOut(messageID)) {  // TODO: implement checkSegmentedMessageTimedOut()
+            // add the data segment
+            debugPrint("DEBUG: m: segmentIndex: ", false); debugPrint(segmentIndex);
+
+            char payload[16];
+            extractPayloadFromSegmentedMessage(buff, payload);
+            debugPrint("DEBUG: m: payload: ", false); debugPrint(payload);
+            strcpy(segmentedMessages[messageID].dataSegments[segmentIndex], payload);
+            segmentedMessages[messageID].dataSegments[segmentIndex][strlen(payload)] = '\0';
+            debugPrint("DEBUG: m: added payload to segmentedMessage: ", false); debugPrint(segmentedMessages[messageID].dataSegments[segmentIndex]);
+
+            // update the bit vector tracking received segmentedMessage
+            segmentedMessages[messageID].receivedSegments[segmentIndex] = true;
+           
+            // update the timestamp
+            segmentedMessages[messageID].lastTimestamp = millis();
+            debugPrint("DEBUG: m: processed segment");
+
+            if (segmentIndex == (segmentedMessages[messageID].segmentCount - 1)) {
+                compileSegmentedMessage(messageID);
+            }
+        }
+    }
+    debugPrint("DEBUG: processSegmentedMessage returning");
+    // TODO: figure out why device freezes at this point sometimes ???
+}
+
+void Conductor::compileSegmentedMessage(int messageID) {
+    
+    // check if all segments have been received 
+    bool allSegmentsReceived = true;
+    debugPrint("DEBUG: in compileSegmentedMessages(): segmentCount: ", false); debugPrint(segmentedMessages[messageID].segmentCount);
+    for (int segmentIndex=0; segmentIndex<segmentedMessages[messageID].segmentCount; segmentIndex++) {
+        if (segmentedMessages[messageID].receivedSegments[segmentIndex] != true) {
+            debugPrint("DEBUG: M: missing segmentIndex: ", false); debugPrint(segmentIndex, false);
+            // debugPrint(" -> RECEVIED: ", false); debugPrint(segmentedMessages[messageID].receivedSegments[i]);
+            allSegmentsReceived = false;
+            break;
+        }   
+    }
+    debugPrint("DEBUG: in compileSegmentedMessages(): all segments recevied: ", false); debugPrint(allSegmentsReceived);
+    
+    if (allSegmentsReceived == true) {
+        // compile message from the segments
+        for (int segmentIndex=0; segmentIndex < segmentedMessages[messageID].segmentCount; segmentIndex++) {
+            debugPrint("DEBUG: in compileSegmentedMessages(): segmentIndex: ", false); debugPrint(segmentIndex, false);
+            debugPrint(" segmentData: ", false); debugPrint(segmentedMessages[messageID].dataSegments[segmentIndex]);
+            strcat(segmentedMessages[messageID].message, segmentedMessages[messageID].dataSegments[segmentIndex]);
+            // bool messageSegmentCopied = false;
+            // int messageIndexOffset = 0;
+            // while (!messageSegmentCopied) {
+            //     if (segmentedMessages[messageID].dataSegments[segmentIndex][messageIndexOffset] == '\0') {
+            //         // all data segments have been stored as c strings, ending with '\0' null byte
+            //         messageSegmentCopied = true;
+            //     }
+            //     segmentedMessages[messageID].message[segmentIndex*16+messageIndexOffset] = segmentedMessages[messageID].dataSegments[messageID][messageIndexOffset];
+            //     messageIndexOffset += 1;
+            // }
+        }
+        debugPrint("DEBUG: in compileSegmentedMessages(): message compiled: ", false); debugPrint(segmentedMessages[messageID].message);
+
+        // TODO: refactor into Method
+        segmentedMessages[messageID] = SegmentedMessage();
+    }
+    else {
+        debugPrint("ERROR: in compileSegmentedMessages(): SEGMENTS MISSING");
+    }
 }
