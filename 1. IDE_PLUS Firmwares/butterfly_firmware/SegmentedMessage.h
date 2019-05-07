@@ -14,6 +14,8 @@ struct SegmentedMessage
     char dataSegments[MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE][PAYLOAD_LENGTH+1]; // PAYLOAD_LENGTH + 1, to hold the null byte indicating c string
     int lastTimestamp;
     char message[MESSAGE_LENGTH] = "";  // max is 2032, message length = 16 * segmentCount
+    char receivedHash[PAYLOAD_LENGTH] = "";
+    char computedHash[PAYLOAD_LENGTH] = "";
 };
 
 

@@ -961,6 +961,7 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
 {
     char *buff = iuSerial->getBuffer();
     // send to processCommands
+    // TODO: used for debugging, clean up
     if (buff[0] == 'm' || buff[0] == 'M') {
             debugPrint("DEBUG: Conductor::processUSBMessage() calling processSegmentedMessage()");
             processSegmentedMessage(buff);
@@ -2370,14 +2371,26 @@ void Conductor::processSegmentedMessage(const char* buff) {
                 // update timestamp
                 segmentedMessages[messageID].lastTimestamp = millis();
                 
+                
+
+                // check if all segments have been received and hashes match
+                bool messageReceievedAndVerified = false;
+                if(checkAllSegmentsReceived(messageID)) {
+                    compileSegmentedMessage(messageID);
+                    computeSegmentedMessageHash(messageID);
+                    if(strncmp(segmentedMessages[messageID].computedHash, segmentedMessages[messageID].receivedHash, PAYLOAD_LENGTH) == 0) {
+                        messageReceievedAndVerified = true;
+                        debugPrint("DEBUG: M: process FINISHED message: messageReceievedAndVerified: ", false); debugPrint(messageReceievedAndVerified);
+                        /*******************************
+                          SEGMENTED MESSAGE READY HERE
+                        ********************************/
+                    }
+                }
+
                 // set up a response
                 char finishedResponse[20];
 
-                // if all segments have been received, compile message and return SUCCESS, else return FAILURE
-                if (checkAllSegmentsReceived(messageID)) {
-
-                    compileSegmentedMessage(messageID);  // TODO: method has a side effect, clears the message struct right now
-                    
+                if (messageReceievedAndVerified) {
                     // send FINISHED-SUCCESS
                     char finishedSuccess[] = "SUCCESS;"; 
                     for (int i=0; i<3; i++) { finishedResponse[i] = buff[i]; }
@@ -2385,7 +2398,7 @@ void Conductor::processSegmentedMessage(const char* buff) {
                     debugPrint("DEBUG: M: SENDING SUCCESS RESPONSE:");                    
                 }
                 else {
-                    // all segments were not received, respond with FAILURE
+                    // either all segments were not received or hashes did not match, respond with FAILURE
                     char finishedFailure[] = "FAILURE;"; 
                     for (int i=0; i<3; i++) { finishedResponse[i] = buff[i]; }
                     for (int i=0; i<strlen(finishedFailure); i++) { finishedResponse[i+3] = finishedFailure[i]; }
@@ -2396,6 +2409,10 @@ void Conductor::processSegmentedMessage(const char* buff) {
                         iuBluetooth.write(finishedResponse);
                         debugPrint("DEBUG: M: FINISHED RESPONSE sent via BLE");
                 }
+
+                // TODO: temporarily cleaning messages here, move to separate method
+                segmentedMessages[messageID] = SegmentedMessage();
+
             }
         }
     }
@@ -2416,9 +2433,10 @@ void Conductor::processSegmentedMessage(const char* buff) {
         }
         debugPrint("DEBUG: m: messageID: ", false); debugPrint(messageID);
 
-
         int segmentIndex = int(buff[2]);
-        if (segmentIndex >= MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE) {  // validation check against garbage from BLE
+        if (segmentIndex >= MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE && segmentIndex != 127) {  // validation check against garbage from BLE
+            // segmentIndex can never be 127 ->  0 < segmentIndex <MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE, as upper bound for MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE = 127
+            // 127 is reserved for HASH message
             debugPrint("ERROR: m: segmentIndex: ", false);  debugPrint(segmentIndex);
             debugPrint("ERROR: m: segmentIndex exceeded MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE");
             return;
@@ -2426,20 +2444,29 @@ void Conductor::processSegmentedMessage(const char* buff) {
         debugPrint("DEBUG: m: segmentIndex: ", false); debugPrint(segmentIndex);
 
         if (!checkSegmentedMessageTimedOut(messageID)) {  // TODO: implement checkSegmentedMessageTimedOut()
-            // add the data segment
-            char payload[16];
-            extractPayloadFromSegmentedMessage(buff, payload);
-            debugPrint("DEBUG: m: payload: ", false); debugPrint(payload);
-            strcpy(segmentedMessages[messageID].dataSegments[segmentIndex], payload);
-            segmentedMessages[messageID].dataSegments[segmentIndex][strlen(payload)] = '\0'; // TODO: might not be needed as strcpy is used
-            debugPrint("DEBUG: m: added payload to segmentedMessage: ", false); debugPrint(segmentedMessages[messageID].dataSegments[segmentIndex]);
+            if(segmentIndex != 127) {
+                // add the data segment
+                char payload[PAYLOAD_LENGTH];
+                extractPayloadFromSegmentedMessage(buff, payload);
+                debugPrint("DEBUG: m: payload: ", false); debugPrint(payload);
+                strcpy(segmentedMessages[messageID].dataSegments[segmentIndex], payload);
+                segmentedMessages[messageID].dataSegments[segmentIndex][strlen(payload)] = '\0'; // TODO: might not be needed as strcpy is used
+                debugPrint("DEBUG: m: added payload to segmentedMessage: ", false); debugPrint(segmentedMessages[messageID].dataSegments[segmentIndex]);
 
-            // update the bool vector tracking received segmentedMessage
-            segmentedMessages[messageID].receivedSegments[segmentIndex] = true;
-           
-            // update the timestamp
-            segmentedMessages[messageID].lastTimestamp = millis();
-            debugPrint("DEBUG: m: processed segmentIndex: ", false); debugPrint(segmentIndex);
+                // update the bool vector tracking received segmentedMessage
+                segmentedMessages[messageID].receivedSegments[segmentIndex] = true;
+            
+                // update the timestamp
+                segmentedMessages[messageID].lastTimestamp = millis();
+                debugPrint("DEBUG: m: processed segmentIndex: ", false); debugPrint(segmentIndex);
+            }
+            else { // segmentIndex value is 127, indicating it's HASH message
+                // save the received hash 
+                char receivedHash[PAYLOAD_LENGTH];
+                extractPayloadFromSegmentedMessage(buff, receivedHash);
+                strcpy(segmentedMessages[messageID].receivedHash, receivedHash);
+                debugPrint("DEBUG: m: processed HASH message, receivedHash: ", false); debugPrint(segmentedMessages[messageID].receivedHash);
+            }            
         }
     }
     debugPrint("DEBUG: processSegmentedMessage returning");
@@ -2469,7 +2496,13 @@ void Conductor::compileSegmentedMessage(int messageID) {
         strcat(segmentedMessages[messageID].message, segmentedMessages[messageID].dataSegments[segmentIndex]);
     }
     debugPrint("DEBUG: in compileSegmentedMessages(): message compiled: ", false); debugPrint(segmentedMessages[messageID].message);
+}
 
-    // TODO: IMP !!!!! refactor into Method
-    segmentedMessages[messageID] = SegmentedMessage();
+void Conductor::computeSegmentedMessageHash(int messageID) {
+    // message has to be successfully compiled before calling this method
+    unsigned char* md5hash = MD5::make_hash(segmentedMessages[messageID].message, strlen(segmentedMessages[messageID].message));
+    memcpy(segmentedMessages[messageID].computedHash, MD5::make_digest(md5hash, 16), PAYLOAD_LENGTH);
+    segmentedMessages[messageID].computedHash[PAYLOAD_LENGTH] = '\0';
+    debugPrint("DEBUG: in computeSegmentedMessageHash(): message: ", false); debugPrint(segmentedMessages[messageID].message);
+    debugPrint("DEBUG: in computeSegmentedMessageHash(): computedHash: ", false); debugPrint(segmentedMessages[messageID].computedHash);
 }

@@ -197,6 +197,7 @@ class Conductor
         void processSegmentedMessage(const char* buff);
         bool checkAllSegmentsReceived(int messageID);
         void compileSegmentedMessage(int messageID);
+        void computeSegmentedMessageHash(int messageID);
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
