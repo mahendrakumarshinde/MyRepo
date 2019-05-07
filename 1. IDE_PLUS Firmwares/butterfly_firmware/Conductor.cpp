@@ -2299,9 +2299,12 @@ void Conductor::extractPayloadFromSegmentedMessage(const char* segment, char* pa
     // debugPrint("DEBUG: Extracting payload: ", false); debugPrint(payload);
 }
 
-bool Conductor::checkSegmentedMessageTimedOut(int message) {
-    // TODO: 
-    return false;
+bool Conductor::checkMessageActive(int messageID) {
+    bool messageActive = false;
+    if ((segmentedMessages[messageID].messageID != -1) && (segmentedMessages[messageID].messageID < MAX_SEGMENTED_MESSAGES)) 
+        { messageActive = true; }
+    // debugPrint("DEBUG: in checkMessageActive(): messageActive: ", false); debugPrint(messageActive);
+    return messageActive;
 }
 
 void Conductor::processSegmentedMessage(const char* buff) {
@@ -2313,14 +2316,12 @@ void Conductor::processSegmentedMessage(const char* buff) {
 
     if (buff[0] == 'M') {
 
-        // Control messages - M | <messageID> | <segmentCount> | INIT / FINISHED / <HASH> | ;
+        // Control messages - M | <messageID> | <segmentCount> | INIT / FINISHED | ;
         // M - 1 byte
         // <messageID> - 1 byte, value ranges from 0 to 127, both inclusive
         // <segmentCount> - 1 byte, value ranges from 0 to 127, both inclusive
-        // INIT / FINISHED/ <HASH> - messageType, note that <HASH> is actually first 16 bytes of the md5 hexdigest
+        // INIT / FINISHED/ - messageType
         // ; - sentinel character, 1 byte
-        // NOTE: For control messages, responses are sent back
-        // debugPrint("DEBUG: M: in control message");
 
         char messageType[16];
         extractPayloadFromSegmentedMessage(buff, messageType);
@@ -2337,42 +2338,27 @@ void Conductor::processSegmentedMessage(const char* buff) {
             
             debugPrint("DEBUG: M: processing INIT message");
 
-            int messageID = int(buff[1]);
+            int messageID = int(buff[1]);  // setting messageID indicates message is now active i.e. data segment transmission is on-going
             int segmentCount = int(buff[2]);
-            int timestamp = millis();
+            int startTimestamp = millis();
+            int timeout = (segmentCount + 2) * 500 + TIMEOUT_OFFSET; // 2 added for hash message and FINISHED message
 
-            // 2: tried by pushing data into array
             segmentedMessages[messageID].messageID = messageID;
             segmentedMessages[messageID].segmentCount = segmentCount;
-            segmentedMessages[messageID].lastTimestamp = millis();
+            segmentedMessages[messageID].startTimestamp = startTimestamp;
+            segmentedMessages[messageID].timeout = timeout;
 
             debugPrint("DEBUG: M: INIT messageID: ", false); debugPrint(segmentedMessages[messageID].messageID);
             debugPrint("DEBUG: M: INIT segmentCount: ", false); debugPrint(segmentedMessages[messageID].segmentCount);
-            debugPrint("DEBUG: M: INIT lastTimestamp: ", false); debugPrint(segmentedMessages[messageID].lastTimestamp);
-
-            // char initResponse[20];
-            // char initACK[] = "INIT-ACK;";
-            // for (int i=0; i<3; i++) { initResponse[i] = buff[i]; }
-            // for (int i=0; i<strlen(initACK); i++) { initResponse[i+3] = initACK[i]; }
-
-            // debugPrint("DEBUG: M: INIT CONTROL MESSAGE RESPONSE");
-            // if (isBLEConnected()) {
-            //     iuBluetooth.write(initResponse);
-            //     debugPrint("DEBUG: M: INIT RESPONSE sent via BLE");
-            // }            
+            debugPrint("DEBUG: M: INIT startTimestamp: ", false); debugPrint(segmentedMessages[messageID].startTimestamp);      
         }   
         
         else if (strncmp(messageType, "FINISHED", 8) == 0) {
             debugPrint("DEBUG: M: processing FINISHED message");
 
-            int messageID = int(buff[1]);
-            if (!checkSegmentedMessageTimedOut(messageID)) {  // TODO: implement checkSegmentedMessageTimedOut()
-                
-                // update timestamp
-                segmentedMessages[messageID].lastTimestamp = millis();
-                
-                
-
+            int messageID = int(buff[1]);    
+            
+            if (checkMessageActive(messageID)) {            
                 // check if all segments have been received and hashes match
                 bool messageReceievedAndVerified = false;
                 if(checkAllSegmentsReceived(messageID)) {
@@ -2380,10 +2366,7 @@ void Conductor::processSegmentedMessage(const char* buff) {
                     computeSegmentedMessageHash(messageID);
                     if(strncmp(segmentedMessages[messageID].computedHash, segmentedMessages[messageID].receivedHash, PAYLOAD_LENGTH) == 0) {
                         messageReceievedAndVerified = true;
-                        debugPrint("DEBUG: M: process FINISHED message: messageReceievedAndVerified: ", false); debugPrint(messageReceievedAndVerified);
-                        /*******************************
-                          SEGMENTED MESSAGE READY HERE
-                        ********************************/
+                        debugPrint("DEBUG: M: process FINISHED message: messageReceievedAndVerified: ", false); debugPrint(messageReceievedAndVerified);                        
                     }
                 }
 
@@ -2410,9 +2393,16 @@ void Conductor::processSegmentedMessage(const char* buff) {
                         debugPrint("DEBUG: M: FINISHED RESPONSE sent via BLE");
                 }
 
-                // TODO: temporarily cleaning messages here, move to separate method
-                segmentedMessages[messageID] = SegmentedMessage();
+                /*********************************************
+                    SEGMENTED MESSAGE READY, CONSUME HERE
+                **********************************************/
 
+                // once the message has been consumed, clean it here
+                cleanSegmentedMessage(messageID);
+            }
+            else {
+                debugPrint("ERROR: m: INIT not received, retry transmission");
+                // TODO: send a message to application via BLE?
             }
         }
     }
@@ -2442,8 +2432,8 @@ void Conductor::processSegmentedMessage(const char* buff) {
             return;
         }
         debugPrint("DEBUG: m: segmentIndex: ", false); debugPrint(segmentIndex);
-
-        if (!checkSegmentedMessageTimedOut(messageID)) {  // TODO: implement checkSegmentedMessageTimedOut()
+ 
+        if(checkMessageActive(messageID)) {
             if(segmentIndex != 127) {
                 // add the data segment
                 char payload[PAYLOAD_LENGTH];
@@ -2455,19 +2445,21 @@ void Conductor::processSegmentedMessage(const char* buff) {
 
                 // update the bool vector tracking received segmentedMessage
                 segmentedMessages[messageID].receivedSegments[segmentIndex] = true;
-            
-                // update the timestamp
-                segmentedMessages[messageID].lastTimestamp = millis();
-                debugPrint("DEBUG: m: processed segmentIndex: ", false); debugPrint(segmentIndex);
             }
-            else { // segmentIndex value is 127, indicating it's HASH message
+            else { // segmentIndex value is 127, indicating it's the HASH message
                 // save the received hash 
                 char receivedHash[PAYLOAD_LENGTH];
                 extractPayloadFromSegmentedMessage(buff, receivedHash);
                 strcpy(segmentedMessages[messageID].receivedHash, receivedHash);
                 debugPrint("DEBUG: m: processed HASH message, receivedHash: ", false); debugPrint(segmentedMessages[messageID].receivedHash);
             }            
+            debugPrint("DEBUG: m: processed segmentIndex: ", false); debugPrint(segmentIndex);        
         }
+        else {
+            debugPrint("ERROR: m: INIT not received, retry transmission");
+            // TODO: send a message to application via BLE?
+        }
+            
     }
     debugPrint("DEBUG: processSegmentedMessage returning");
 }
@@ -2505,4 +2497,33 @@ void Conductor::computeSegmentedMessageHash(int messageID) {
     segmentedMessages[messageID].computedHash[PAYLOAD_LENGTH] = '\0';
     debugPrint("DEBUG: in computeSegmentedMessageHash(): message: ", false); debugPrint(segmentedMessages[messageID].message);
     debugPrint("DEBUG: in computeSegmentedMessageHash(): computedHash: ", false); debugPrint(segmentedMessages[messageID].computedHash);
+}
+
+void Conductor::cleanSegmentedMessage(int messageID) {
+    // resets all data members, message reverts to inactive state
+    segmentedMessages[messageID].messageID = -1;
+    segmentedMessages[messageID].segmentCount = 0;
+    for (int i=0; i<MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE; i++) {  }
+    for (int i=0; i<MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE; i++) {
+        segmentedMessages[messageID].receivedSegments[i] = false;
+        strcpy(segmentedMessages[messageID].dataSegments[i], "");
+    }
+    segmentedMessages[messageID].startTimestamp = 0;   
+    strcpy(segmentedMessages[messageID].message, ""); 
+    strcpy(segmentedMessages[messageID].receivedHash, "");
+    strcpy(segmentedMessages[messageID].computedHash, "");
+}
+
+void Conductor::cleanTimedoutSegmentedMessages() {
+    for (int messageID=0; messageID<MAX_SEGMENTED_MESSAGES; messageID++) {
+        if (checkMessageActive(messageID)) {
+            int timeDiff = millis() - segmentedMessages[messageID].startTimestamp;;
+            if  (timeDiff > segmentedMessages[messageID].timeout) {
+                debugPrint("DEBUG: Conductor::cleanTimedoutSegmentedMessages(): timeDiff: ", false); debugPrint(timeDiff, false);
+                debugPrint(" for messageID: ", false);  debugPrint(messageID, false);
+                debugPrint(" exceeded timeout: ", false); debugPrint(segmentedMessages[messageID].timeout);
+                cleanSegmentedMessage(messageID);
+            }
+        }        
+    }
 }

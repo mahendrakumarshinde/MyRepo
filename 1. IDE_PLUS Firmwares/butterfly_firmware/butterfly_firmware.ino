@@ -587,6 +587,11 @@ void loop()
         //   // Send Diagnostic Fingerprint data
         //   conductor.sendDiagnosticFingerPrints();
         // }
+
+        // TODO: process compiled segmented messages here?
+
+        // Clean timed out segmented messages
+        conductor.cleanTimedoutSegmentedMessages();
        
         yield();
        

@@ -193,11 +193,14 @@ class Conductor
         void setConductorBLEMacAddress();
         void printConductorMac();
         void extractPayloadFromSegmentedMessage(const char* segment, char* payload);
-        bool checkSegmentedMessageTimedOut(int messageID);
+        bool checkMessageActive(int messageID);
         void processSegmentedMessage(const char* buff);
         bool checkAllSegmentsReceived(int messageID);
         void compileSegmentedMessage(int messageID);
         void computeSegmentedMessageHash(int messageID);
+        void cleanSegmentedMessage(int messageID);
+        void cleanTimedoutSegmentedMessages();
+
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
