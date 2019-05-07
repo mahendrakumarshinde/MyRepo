@@ -90,6 +90,7 @@ namespace UsageMode
 class Conductor
 {
     public:
+        void setMotorThresholdsFromFile();
         /***** Preset values and default settings *****/
         enum sleepMode : uint8_t {NONE     = 0,
                                   AUTO     = 1,
