@@ -486,7 +486,8 @@ void setup()
             debugPrint(F("***\n"));
         }
         // Start flash and load configuration files
-        if (!USBDevice.configured())
+        // if (!USBDevice.configured())
+        if(true)
         {
             iuFlash.begin();
             // WiFi configuration
@@ -517,6 +518,9 @@ void setup()
         //attachInterrupt(IULSM6DSM::INT1_PIN, dataAcquisitionISR, RISING);
         //debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
 
+        //Resume previous operational state of device
+        conductor.setMotorThresholdsFromFile();
+                
         // Timer Init
         timerInit();
         
