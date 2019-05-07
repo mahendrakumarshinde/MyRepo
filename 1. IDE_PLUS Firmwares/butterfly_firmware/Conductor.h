@@ -195,6 +195,7 @@ class Conductor
         void extractPayloadFromSegmentedMessage(const char* segment, char* payload);
         bool checkSegmentedMessageTimedOut(int messageID);
         void processSegmentedMessage(const char* buff);
+        bool checkAllSegmentsReceived(int messageID);
         void compileSegmentedMessage(int messageID);
     protected:
         MacAddress m_macAddress;
