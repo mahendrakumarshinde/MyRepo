@@ -180,6 +180,8 @@ static void watchdogCallback(void) {
         STM32.reset();
     }
     if (iuWiFi.arePublicationsFailing()) {
+        //Ensure your PubSubClient Arduino library version is 2.7
+        debugPrint("Publications are failing: hard resetting now.");
         iuWiFi.hardReset();
     }
     armv7m_timer_start(&watchdogTimer, 1000);
