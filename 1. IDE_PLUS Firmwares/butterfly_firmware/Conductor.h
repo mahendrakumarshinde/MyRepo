@@ -198,8 +198,10 @@ class Conductor
         bool checkAllSegmentsReceived(int messageID);
         void compileSegmentedMessage(int messageID);
         void computeSegmentedMessageHash(int messageID);
+        bool consumeReadySegmentedMessage(char* returnMessage);
         void cleanSegmentedMessage(int messageID);
         void cleanTimedoutSegmentedMessages();
+        void cleanConsumedSegmentedMessages();
 
     protected:
         MacAddress m_macAddress;

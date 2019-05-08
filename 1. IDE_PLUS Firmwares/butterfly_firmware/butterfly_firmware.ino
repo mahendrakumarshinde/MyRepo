@@ -588,7 +588,14 @@ void loop()
         //   conductor.sendDiagnosticFingerPrints();
         // }
 
-        // TODO: process compiled segmented messages here?
+        // Consume ready segmented message
+        char configMessageFromBLE[500];
+        if (conductor.consumeReadySegmentedMessage(configMessageFromBLE)) {
+            debugPrint("DEBUG: LOOP: configMessageFromBLE: ", false); debugPrint(configMessageFromBLE);
+        }        
+
+        // Clean consumed segmented messages
+        conductor.cleanConsumedSegmentedMessages();
 
         // Clean timed out segmented messages
         conductor.cleanTimedoutSegmentedMessages();

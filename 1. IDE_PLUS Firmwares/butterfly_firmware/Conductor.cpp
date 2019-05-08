@@ -2370,6 +2370,9 @@ void Conductor::processSegmentedMessage(const char* buff) {
                     if(strncmp(segmentedMessages[messageID].computedHash, segmentedMessages[messageID].receivedHash, PAYLOAD_LENGTH) == 0) {
                         messageReceievedAndVerified = true;
                         debugPrint("DEBUG: M: process FINISHED message: messageReceievedAndVerified: ", false); debugPrint(messageReceievedAndVerified);                        
+
+                        // set messageReady to indicate message can be consumed
+                        segmentedMessages[messageID].messageReady = true;   
                     }
                 }
 
@@ -2379,8 +2382,7 @@ void Conductor::processSegmentedMessage(const char* buff) {
                     for (int i=0; i<3; i++) { finishedResponse[i] = buff[i]; }
                     for (int i=0; i<strlen(finishedSuccess); i++) { finishedResponse[i+3] = finishedSuccess[i]; }
                     debugPrint("DEBUG: M: SENDING SUCCESS RESPONSE:");                    
-                }
-                else {
+                } else {
                     // either all segments were not received or hashes did not match, respond with FAILURE
                     char finishedFailure[] = "FAILURE;"; 
                     for (int i=0; i<3; i++) { finishedResponse[i] = buff[i]; }
@@ -2393,12 +2395,6 @@ void Conductor::processSegmentedMessage(const char* buff) {
                         debugPrint("DEBUG: M: FINISHED RESPONSE sent via BLE");
                 }
 
-                /*********************************************
-                    SEGMENTED MESSAGE READY, CONSUME HERE
-                **********************************************/
-
-                // once the message has been consumed, clean it here
-                cleanSegmentedMessage(messageID);
             }
             else {
                 debugPrint("ERROR: m: INIT not received, retry transmission");
@@ -2512,10 +2508,13 @@ void Conductor::cleanSegmentedMessage(int messageID) {
         segmentedMessages[messageID].receivedSegments[i] = false;
         strcpy(segmentedMessages[messageID].dataSegments[i], "");
     }
-    segmentedMessages[messageID].startTimestamp = 0;   
+    segmentedMessages[messageID].startTimestamp = 0;
+    segmentedMessages[messageID].timeout = 0;   
     strcpy(segmentedMessages[messageID].message, ""); 
     strcpy(segmentedMessages[messageID].receivedHash, "");
     strcpy(segmentedMessages[messageID].computedHash, "");
+    segmentedMessages[messageID].messageReady = false;
+    segmentedMessages[messageID].messageConsumed = false;
 }
 
 void Conductor::cleanTimedoutSegmentedMessages() {
@@ -2530,4 +2529,31 @@ void Conductor::cleanTimedoutSegmentedMessages() {
             }
         }        
     }
+}
+
+void Conductor::cleanConsumedSegmentedMessages() {
+    // this method will be called in main loop(), right after consuming the ready message
+    for (int messageID=0; messageID<MAX_SEGMENTED_MESSAGES; messageID++) {
+        if (checkMessageActive(messageID) && segmentedMessages[messageID].messageConsumed) {
+            debugPrint("DEBUG: Conductor::cleanConsumedSegmentedMessages(): messageID: ", false); debugPrint(messageID);
+            cleanSegmentedMessage(messageID);
+        }
+    }
+}
+
+bool Conductor::consumeReadySegmentedMessage(char* returnMessage) {
+    // if message is ready, set messageConsumed to true and return the message
+    // if multiple messages are ready, it will return the first ready message, and next ones will be returned in subsequent iterations
+
+    bool readyMessageConsumed = false;
+    for (int messageID=0; messageID<MAX_SEGMENTED_MESSAGES; messageID++) {
+        if (checkMessageActive(messageID) && segmentedMessages[messageID].messageReady) {
+            strcpy(returnMessage, segmentedMessages[messageID].message);
+            segmentedMessages[messageID].messageConsumed = true;
+            readyMessageConsumed = true;
+            break;
+        }
+    } 
+    return readyMessageConsumed;
+
 }
