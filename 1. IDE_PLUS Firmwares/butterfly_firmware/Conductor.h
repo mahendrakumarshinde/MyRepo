@@ -203,6 +203,7 @@ class Conductor
         void cleanTimedoutSegmentedMessages();
         void cleanConsumedSegmentedMessages();
 
+        bool setSensorConfig(char* filename);
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/

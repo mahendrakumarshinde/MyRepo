@@ -180,6 +180,8 @@ static void watchdogCallback(void) {
         STM32.reset();
     }
     if (iuWiFi.arePublicationsFailing()) {
+        //Ensure your PubSubClient Arduino library version is 2.7
+        debugPrint("Publications are failing: hard resetting now.");
         iuWiFi.hardReset();
     }
     armv7m_timer_start(&watchdogTimer, 1000);
@@ -508,6 +510,8 @@ void setup()
         conductor.configureMQTTServer("MQTT.conf");
         //http configuration
         conductor.configureBoardFromFlash("httpConfig.conf",1);
+        // get the previous offset values 
+        conductor.setSensorConfig("sensorConfig.conf");        
         opStateFeature.setOnNewValueCallback(operationStateCallback);
         ledManager.resetStatus();
         conductor.changeUsageMode(UsageMode::OPERATION);

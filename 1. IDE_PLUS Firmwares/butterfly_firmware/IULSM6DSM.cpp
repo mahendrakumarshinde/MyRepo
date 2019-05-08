@@ -1,5 +1,6 @@
 #include "IULSM6DSM.h"
 
+extern int m_temperatureOffset;
 /* =============================================================================
     Constructors and destructors
 ============================================================================= */
@@ -362,7 +363,7 @@ void IULSM6DSM::processData(uint8_t wireStatus)
         m_gyroData[i] = m_rawGyroData[i] + m_gyroBias[i];
         m_destinations[i + 3]->addValue(m_gyroData[i]);
     }
-    m_destinations[6]->addValue(m_temperature);
+    m_destinations[6]->addValue(m_temperature + m_temperatureOffset);
     m_readingData = false;
 }
 
