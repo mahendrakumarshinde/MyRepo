@@ -334,6 +334,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     subConfig = root["features"];
     if (subConfig.success()) {
         configureAllFeatures(subConfig);
+        setMotorThresholdsFromFile();
         if (saveToFlash) {
             iuFlash.saveConfigJson(IUFlash::CFG_FEATURE, subConfig);
             //send ACK on ide_pluse/command_response/
