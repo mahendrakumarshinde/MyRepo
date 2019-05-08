@@ -7,6 +7,8 @@ const char* fingerprints_Y;
 const char* fingerprints_Z;
 
 int sensorSamplingRate;
+int m_temperatureOffset;
+int m_audioOffset;
 
 char Conductor::START_CONFIRM[11] = "IUOK_START";
 char Conductor::END_CONFIRM[9] = "IUOK_END";
@@ -448,6 +450,50 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
         
     } 
+    // SET Sensor Configuration and its OFFSET value
+    subConfig = root["sensorConfig"];
+    if (subConfig.success()) {
+        //configureAllFeatures(subConfig);
+        bool dataWritten = false;
+        
+        if (saveToFlash) {
+            //DOSFS.begin();
+            File sensorConfigFile = DOSFS.open("sensorConfig.conf", "w");
+            if (sensorConfigFile)
+            {
+                
+                if (loopDebugMode) {
+                 debugPrint(F("Writting into file: "), true);
+                }
+                sensorConfigFile.print(jsonChar);
+                sensorConfigFile.close();
+                dataWritten = true;
+            }
+            else if (loopDebugMode) {
+                 debugPrint("Failed to write into file: sensorConfig.conf ");
+                
+            }  
+        
+        }
+        if(dataWritten == true){
+          
+          JsonObject& config = configureJsonFromFlash("sensorConfig.conf",1);      // get the accountID
+          JsonVariant variant = config;
+          
+          m_temperatureOffset = config["sensorConfig"]["TMP_OFFSET"];
+          m_audioOffset = config["sensorConfig"]["SND_OFFSET"];
+        
+          if(loopDebugMode){
+
+            debugPrint("Temperature Offset is: ",false);debugPrint(m_temperatureOffset);
+            debugPrint("Audio Offset is:",false); debugPrint(m_audioOffset);
+            //debugPrint("File content");  
+           // variant.prettyPrintTo(Serial);
+          }
+          
+        }
+        
+    }
     return true;
 }
 
@@ -754,6 +800,7 @@ void Conductor::configureAllFeatures(JsonVariant &config)
 void Conductor::processCommand(char *buff)
 {
     IPAddress tempAddress;
+    
     size_t buffLen = strlen(buff);
    // Serial.println(buff);
     
@@ -836,6 +883,30 @@ void Conductor::processCommand(char *buff)
                 resetDataAcquisition();
             }
             break;
+        case '4':              // Set temperature Offset value  [4000:12 < command-value>]
+            if (buff[0] == '4' && buff[3] == '0' && buff[4]==':') {
+                
+                int id; 
+                char temperatureJSON[60];
+                sscanf(buff,"%d:%d",&id,&m_temperatureOffset);
+                snprintf(temperatureJSON, 60, "{\"sensorConfig\":{\"TMP_OFFSET\":%d,\"SND_OFFSET\":%d } }",m_temperatureOffset,m_audioOffset);
+                 
+                processConfiguration(temperatureJSON,true);    
+                
+                }
+            break;
+        case '5':              // Set Audio Offset value  [5000:12 < command-value>]
+            if (buff[0] == '5' && buff[3] == '0' && buff[4]==':') {
+                
+                int id; 
+                char audioOffsetJSON[60];
+                sscanf(buff,"%d:%d",&id,&m_audioOffset);
+                snprintf(audioOffsetJSON,60,"{\"sensorConfig\":{\"SND_OFFSET\":%d,\"TMP_OFFSET\":%d }} ",m_audioOffset,m_temperatureOffset);
+                processConfiguration(audioOffsetJSON,true); 
+                
+                }
+            break;    
+            
         default:
             break;
     }
@@ -2223,4 +2294,34 @@ void Conductor::setConductorBLEMacAddress() {
     iuBluetooth.sendATCommand("mac?", BLE_MAC_Address, 100);
     iuBluetooth.exitATCommandInterface();
     m_macAddress.fromString(BLE_MAC_Address);
+}
+
+//set the sensor Configuration
+
+bool Conductor::setSensorConfig(char* filename){
+    
+    JsonObject& config = configureJsonFromFlash(filename,1);      
+    JsonVariant variant = config;
+
+    if (!config.success()) {
+        if (debugMode) {
+            debugPrint("parseObject() failed");
+        }
+        return false;
+    }
+    else{
+
+        m_temperatureOffset = config["sensorConfig"]["TMP_OFFSET"];
+        m_audioOffset = config["sensorConfig"]["SND_OFFSET"];
+        if(loopDebugMode){
+            debugPrint("Tempearature Offset: ",false);
+            debugPrint(m_temperatureOffset);
+            debugPrint("Audio Offset:",false);
+            debugPrint(m_audioOffset);
+        }    
+        //variant.prettyPrintTo(Serial);
+        //Serial.println("READING FROM STARTUP COMPLETE...");   
+
+        return true;
+    }
 }
