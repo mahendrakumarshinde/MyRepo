@@ -87,7 +87,7 @@ namespace UsageMode
  * a collection of features). Activating a FeatureGroup is equivalent to
  * activating the corresponding part of the graph + the required dependencies.
  */
-class Conductor  : public DiagnosticEngine
+class Conductor
 {
     public:
         /***** Preset values and default settings *****/
