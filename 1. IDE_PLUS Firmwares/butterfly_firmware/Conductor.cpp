@@ -2350,7 +2350,7 @@ void Conductor::processSegmentedMessage(const char* buff) {
 
             debugPrint("DEBUG: M: INIT messageID: ", false); debugPrint(segmentedMessages[messageID].messageID);
             debugPrint("DEBUG: M: INIT segmentCount: ", false); debugPrint(segmentedMessages[messageID].segmentCount);
-            debugPrint("DEBUG: M: INIT startTimestamp: ", false); debugPrint(segmentedMessages[messageID].startTimestamp);      
+            debugPrint("DEBUG: M: INIT startTimestamp: ", false); debugPrint(segmentedMessages[messageID].startTimestamp);   
         }   
         
         else if (strncmp(messageType, "FINISHED", 8) == 0) {
@@ -2358,6 +2358,9 @@ void Conductor::processSegmentedMessage(const char* buff) {
 
             int messageID = int(buff[1]);    
             
+            // set up a response
+            char finishedResponse[20];
+
             if (checkMessageActive(messageID)) {            
                 // check if all segments have been received and hashes match
                 bool messageReceievedAndVerified = false;
@@ -2369,9 +2372,6 @@ void Conductor::processSegmentedMessage(const char* buff) {
                         debugPrint("DEBUG: M: process FINISHED message: messageReceievedAndVerified: ", false); debugPrint(messageReceievedAndVerified);                        
                     }
                 }
-
-                // set up a response
-                char finishedResponse[20];
 
                 if (messageReceievedAndVerified) {
                     // send FINISHED-SUCCESS
@@ -2402,7 +2402,11 @@ void Conductor::processSegmentedMessage(const char* buff) {
             }
             else {
                 debugPrint("ERROR: m: INIT not received, retry transmission");
-                // TODO: send a message to application via BLE?
+                // INIT was not received, so no message in segmentedMessages was made active to store incoming segments, respond with failure
+                char finishedFailure[] = "FAILURE;"; 
+                for (int i=0; i<3; i++) { finishedResponse[i] = buff[i]; }
+                for (int i=0; i<strlen(finishedFailure); i++) { finishedResponse[i+3] = finishedFailure[i]; }
+                debugPrint("ERROR: M: SENDING FAILURE RESPONSE:");
             }
         }
     }
@@ -2453,11 +2457,11 @@ void Conductor::processSegmentedMessage(const char* buff) {
                 strcpy(segmentedMessages[messageID].receivedHash, receivedHash);
                 debugPrint("DEBUG: m: processed HASH message, receivedHash: ", false); debugPrint(segmentedMessages[messageID].receivedHash);
             }            
-            debugPrint("DEBUG: m: processed segmentIndex: ", false); debugPrint(segmentIndex);        
+            debugPrint("DEBUG: m: processed segmentIndex: ", false); debugPrint(segmentIndex);                    
         }
         else {
             debugPrint("ERROR: m: INIT not received, retry transmission");
-            // TODO: send a message to application via BLE?
+            // In case INIT is not received, a FAILURE resopnse will be sent for the FINISHED message after all 'm' messages 
         }
             
     }
