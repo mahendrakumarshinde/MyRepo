@@ -90,7 +90,6 @@ namespace UsageMode
 class Conductor
 {
     public:
-        void setMotorThresholdsFromFile();
         /***** Preset values and default settings *****/
         enum sleepMode : uint8_t {NONE     = 0,
                                   AUTO     = 1,
@@ -135,6 +134,7 @@ class Conductor
         bool configureFromFlash(IUFlash::storedConfig configType);
         void sendConfigChecksum(IUFlash::storedConfig configType);
         void periodicSendConfigChecksum();
+        void setMotorThresholdsFromFile();
         /***** Serial Reading & command processing*****/
         bool processConfiguration(char *json, bool saveToFlash);
         void configureMainOptions(JsonVariant &config);

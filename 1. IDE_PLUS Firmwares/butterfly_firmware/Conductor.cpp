@@ -25,12 +25,6 @@ void Conductor::setMotorThresholdsFromFile()
             iuFlash.loadConfigJson(IUFlash::CFG_FEATURE, jsonBuffer));
     bool success = config.success();
     if (success) {
-        char tmpConfig[1024];
-        config.prettyPrintTo(tmpConfig);
-        debugPrint("DEBUG read configuration from my method : ");
-        debugPrint(tmpConfig);
-        debugPrint("DEBUG setting thresholds...");
-        
         const char* signalEnergy = "A93";
         const char* velocityX = "VAX";
         const char* velocityY = "VAY";
@@ -70,10 +64,8 @@ void Conductor::setMotorThresholdsFromFile()
         high = config[noise][threshold][2];      
         opStateComputer.setThresholds(5, low, mid, high);
         
-        //ensure these features are activated
-        processLegacyCommand("6000000:1.1.1.1.1.1");
-        //compute state with these thresholds
-        computeFeatures();
+        processLegacyCommand("6000000:1.1.1.1.1.1");            //ensure these features are activated
+        computeFeatures();                                      //compute current state with these thresholds
     }
     else {
         debugPrint("Threshold file read was not successful.");
