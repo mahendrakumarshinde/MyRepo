@@ -883,7 +883,7 @@ void Conductor::processCommand(char *buff)
                 resetDataAcquisition();
             }
             break;
-        case '4':              // Set temperature Offset value  [4000-12 < command-value>]
+        case '4':              // Set temperature Offset value  [4000:12 < command-value>]
             if (buff[0] == '4' && buff[3] == '0' && buff[4]==':') {
                 
                 int id; 
@@ -895,7 +895,7 @@ void Conductor::processCommand(char *buff)
                 
                 }
             break;
-        case '5':              // Set Audio Offset value  [5000-12 < command-value>]
+        case '5':              // Set Audio Offset value  [5000:12 < command-value>]
             if (buff[0] == '5' && buff[3] == '0' && buff[4]==':') {
                 
                 int id; 
