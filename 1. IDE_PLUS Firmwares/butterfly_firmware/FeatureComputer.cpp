@@ -612,7 +612,7 @@ void AudioDBComputer::m_specializedCompute()
       result = 58.0 + random(1,4);
     }
     if(result >= audioHigherCutoff){    //Higher Cutoff
-      result = audioHigherCutoff  + random(1,2) ;
+      result = audioHigherCutoff  + random(1,4) ;
     }
    
     m_destinations[0]->addValue(result );
