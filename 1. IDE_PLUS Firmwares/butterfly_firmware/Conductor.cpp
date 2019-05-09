@@ -23,8 +23,7 @@ void Conductor::setMotorThresholdsFromFile()
     StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
     JsonVariant config = JsonVariant(
             iuFlash.loadConfigJson(IUFlash::CFG_FEATURE, jsonBuffer));
-    bool success = config.success();
-    if (success) {
+    if (config.success()) {
         const char* signalEnergy = "A93";
         const char* velocityX = "VAX";
         const char* velocityY = "VAY";
@@ -334,9 +333,9 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     subConfig = root["features"];
     if (subConfig.success()) {
         configureAllFeatures(subConfig);
-        setMotorThresholdsFromFile();
         if (saveToFlash) {
             iuFlash.saveConfigJson(IUFlash::CFG_FEATURE, subConfig);
+            setMotorThresholdsFromFile();
             //send ACK on ide_pluse/command_response/
             const char* messageId;
             messageId = root["messageId"]  ;
