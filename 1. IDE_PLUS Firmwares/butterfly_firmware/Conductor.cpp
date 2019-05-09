@@ -2394,7 +2394,7 @@ void Conductor::processSegmentedMessage(const char* buff) {
         // INIT / FINISHED/ - messageType
         // ; - sentinel character, 1 byte
 
-        char messageType[16];
+        char messageType[PAYLOAD_LENGTH+1];
         extractPayloadFromSegmentedMessage(buff, messageType);
         
         debugPrint("DEBUG: M: messageType: ", false); debugPrint(messageType);
@@ -2507,7 +2507,7 @@ void Conductor::processSegmentedMessage(const char* buff) {
         if(checkMessageActive(messageID)) {
             if(segmentIndex != 127) {
                 // add the data segment
-                char payload[PAYLOAD_LENGTH];
+                char payload[PAYLOAD_LENGTH+1];
                 extractPayloadFromSegmentedMessage(buff, payload);
                 debugPrint("DEBUG: m: payload: ", false); debugPrint(payload);
                 strcpy(segmentedMessages[messageID].dataSegments[segmentIndex], payload);
@@ -2519,7 +2519,7 @@ void Conductor::processSegmentedMessage(const char* buff) {
             }
             else { // segmentIndex value is 127, indicating it's the HASH message
                 // save the received hash 
-                char receivedHash[PAYLOAD_LENGTH];
+                char receivedHash[PAYLOAD_LENGTH+1];
                 extractPayloadFromSegmentedMessage(buff, receivedHash);
                 strcpy(segmentedMessages[messageID].receivedHash, receivedHash);
                 debugPrint("DEBUG: m: processed HASH message, receivedHash: ", false); debugPrint(segmentedMessages[messageID].receivedHash);

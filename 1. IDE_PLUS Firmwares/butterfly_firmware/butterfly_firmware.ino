@@ -593,7 +593,7 @@ void loop()
         // }
 
         // Consume ready segmented message
-        char configMessageFromBLE[500];
+        char configMessageFromBLE[MESSAGE_LENGTH+1];
         if (conductor.consumeReadySegmentedMessage(configMessageFromBLE)) {
             debugPrint("DEBUG: LOOP: configMessageFromBLE: ", false); debugPrint(configMessageFromBLE);
         }        
