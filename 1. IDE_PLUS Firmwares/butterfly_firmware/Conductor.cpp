@@ -2346,6 +2346,8 @@ void Conductor::setMotorThresholdsFromFile()
     }
     else {
         debugPrint("Threshold file read was not successful.");
+    }
+}
 //set the sensor Configuration
 
 bool Conductor::setSensorConfig(char* filename){
