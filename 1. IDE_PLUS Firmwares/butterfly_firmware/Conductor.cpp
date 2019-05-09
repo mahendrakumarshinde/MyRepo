@@ -18,59 +18,6 @@ IUFlash::storedConfig Conductor::CONFIG_TYPES[Conductor::CONFIG_TYPE_COUNT] = {
     IUFlash::CFG_OP_STATE};
 
 
-void Conductor::setMotorThresholdsFromFile() 
-{
-    StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
-    JsonVariant config = JsonVariant(
-            iuFlash.loadConfigJson(IUFlash::CFG_FEATURE, jsonBuffer));
-    if (config.success()) {
-        const char* signalEnergy = "A93";
-        const char* velocityX = "VAX";
-        const char* velocityY = "VAY";
-        const char* velocityZ = "VAZ";
-        const char* temperature = "TMA";
-        const char* noise = "S12";
-        const char* threshold = "TRH";
-        float low, mid, high;
-
-        low = config[signalEnergy][threshold][0];
-        mid = config[signalEnergy][threshold][1];
-        high = config[signalEnergy][threshold][2];      
-        opStateComputer.setThresholds(0, low, mid, high);
-
-        low = config[velocityX][threshold][0];
-        mid = config[velocityX][threshold][1];
-        high = config[velocityX][threshold][2];      
-        opStateComputer.setThresholds(1, low, mid, high);
-        
-        low = config[velocityY][threshold][0];
-        mid = config[velocityY][threshold][1];
-        high = config[velocityY][threshold][2];      
-        opStateComputer.setThresholds(2, low, mid, high);
-        
-        low = config[velocityZ][threshold][0];
-        mid = config[velocityZ][threshold][1];
-        high = config[velocityZ][threshold][2];      
-        opStateComputer.setThresholds(3, low, mid, high);
-        
-        low = config[temperature][threshold][0];
-        mid = config[temperature][threshold][1];
-        high = config[temperature][threshold][2];      
-        opStateComputer.setThresholds(4, low, mid, high);
-        
-        low = config[noise][threshold][0];
-        mid = config[noise][threshold][1];
-        high = config[noise][threshold][2];      
-        opStateComputer.setThresholds(5, low, mid, high);
-        
-        processLegacyCommand("6000000:1.1.1.1.1.1");            //ensure these features are activated
-        computeFeatures();                                      //compute current state with these thresholds
-    }
-    else {
-        debugPrint("Threshold file read was not successful.");
-    }
-}
-
 /* =============================================================================
     Hardware & power management
 ============================================================================= */
@@ -163,7 +110,7 @@ bool Conductor::configureFromFlash(IUFlash::storedConfig configType)
             case IUFlash::CFG_COMPONENT:
                 configureAllSensors(config);
                 break;
-            case IUFlash::CFG_FEATURE: 
+            case IUFlash::CFG_FEATURE:
                 configureAllFeatures(config);
                 break;
             case IUFlash::CFG_OP_STATE:
@@ -295,7 +242,6 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     //const size_t bufferSize = JSON_ARRAY_SIZE(2) + JSON_OBJECT_SIZE(3) + 60;        // dynamically allociated memory
     const size_t bufferSize = JSON_OBJECT_SIZE(1) + 41*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(41) + 2430;
     DynamicJsonBuffer jsonBuffer(bufferSize);
-
     //Serial.print("JSON 1 SIZE :");Serial.println(bufferSize);
     
     JsonObject& root = jsonBuffer.parseObject(json);
@@ -2277,4 +2223,57 @@ void Conductor::setConductorBLEMacAddress() {
     iuBluetooth.sendATCommand("mac?", BLE_MAC_Address, 100);
     iuBluetooth.exitATCommandInterface();
     m_macAddress.fromString(BLE_MAC_Address);
+}
+
+void Conductor::setMotorThresholdsFromFile() 
+{
+    StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
+    JsonVariant config = JsonVariant(
+            iuFlash.loadConfigJson(IUFlash::CFG_FEATURE, jsonBuffer));
+    if (config.success()) {
+        const char* signalEnergy = "A93";
+        const char* velocityX = "VAX";
+        const char* velocityY = "VAY";
+        const char* velocityZ = "VAZ";
+        const char* temperature = "TMA";
+        const char* noise = "S12";
+        const char* threshold = "TRH";
+        float low, mid, high;
+
+        low = config[signalEnergy][threshold][0];
+        mid = config[signalEnergy][threshold][1];
+        high = config[signalEnergy][threshold][2];      
+        opStateComputer.setThresholds(0, low, mid, high);
+
+        low = config[velocityX][threshold][0];
+        mid = config[velocityX][threshold][1];
+        high = config[velocityX][threshold][2];      
+        opStateComputer.setThresholds(1, low, mid, high);
+        
+        low = config[velocityY][threshold][0];
+        mid = config[velocityY][threshold][1];
+        high = config[velocityY][threshold][2];      
+        opStateComputer.setThresholds(2, low, mid, high);
+        
+        low = config[velocityZ][threshold][0];
+        mid = config[velocityZ][threshold][1];
+        high = config[velocityZ][threshold][2];      
+        opStateComputer.setThresholds(3, low, mid, high);
+        
+        low = config[temperature][threshold][0];
+        mid = config[temperature][threshold][1];
+        high = config[temperature][threshold][2];      
+        opStateComputer.setThresholds(4, low, mid, high);
+        
+        low = config[noise][threshold][0];
+        mid = config[noise][threshold][1];
+        high = config[noise][threshold][2];      
+        opStateComputer.setThresholds(5, low, mid, high);
+        
+        processLegacyCommand("6000000:1.1.1.1.1.1");            //ensure these features are activated
+        computeFeatures();                                      //compute current state with these thresholds
+    }
+    else {
+        debugPrint("Threshold file read was not successful.");
+    }
 }
