@@ -13,7 +13,7 @@
 #endif
 
 #include "SegmentedMessage.h"
-#define MAX_SEGMENTED_MESSAGES 3
+#define MAX_SEGMENTED_MESSAGES 5
 
 /* =============================================================================
     Operation Mode

@@ -2399,7 +2399,7 @@ void Conductor::processSegmentedMessage(const char* buff) {
         
         debugPrint("DEBUG: M: messageType: ", false); debugPrint(messageType);
         
-        if (int(buff[1]) >= MAX_SEGMENTED_MESSAGES) {  // validation check against garbage from BLE
+        if (int(buff[1]) >= MAX_SEGMENTED_MESSAGES) {  
             debugPrint("ERROR: M: messageID: ", false); debugPrint(int(buff[1]));
             debugPrint("ERROR: M: messageID exceeded MAX_SEGMENTED_MESSAGES");
             return;
@@ -2487,7 +2487,7 @@ void Conductor::processSegmentedMessage(const char* buff) {
         // ; - 1 byte sentinel character
 
         int messageID = int(buff[1]);
-        if (int(buff[1]) >= MAX_SEGMENTED_MESSAGES) {  // validation check against garbage from BLE
+        if (int(buff[1]) >= MAX_SEGMENTED_MESSAGES) { 
             debugPrint("ERROR: m: messageID: ", false); debugPrint(int(buff[1]));
             debugPrint("ERROR: m: messageID exceeded MAX_SEGMENTED_MESSAGES");
             return;
@@ -2495,7 +2495,7 @@ void Conductor::processSegmentedMessage(const char* buff) {
         debugPrint("DEBUG: m: messageID: ", false); debugPrint(messageID);
 
         int segmentIndex = int(buff[2]);
-        if (segmentIndex >= MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE && segmentIndex != 127) {  // validation check against garbage from BLE
+        if (segmentIndex >= MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE && segmentIndex != 127) { 
             // segmentIndex can never be 127 ->  0 < segmentIndex <MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE, as upper bound for MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE = 127
             // 127 is reserved for HASH message
             debugPrint("ERROR: m: segmentIndex: ", false);  debugPrint(segmentIndex);
@@ -2627,6 +2627,7 @@ bool Conductor::consumeReadySegmentedMessage(char* returnMessage) {
     } 
     return readyMessageConsumed;
 }
+
 //set the sensor Configuration
 
 bool Conductor::setSensorConfig(char* filename){
