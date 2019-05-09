@@ -487,25 +487,24 @@ void setup()
         }
         // Start flash and load configuration files
         // if (!USBDevice.configured())
-        if(true)
-        {
-            iuFlash.begin();
-            // WiFi configuration
-            conductor.configureFromFlash(IUFlash::CFG_WIFI0);
-            // Feature, FeatureGroup and sensors coonfigurations
-            for (uint8_t i = 0; i < conductor.CONFIG_TYPE_COUNT; ++i) {
-                conductor.configureFromFlash(conductor.CONFIG_TYPES[i]);
-            }
-            if (setupDebugMode) {
-                ledManager.overrideColor(RGB_PURPLE);
-                delay(5000);
-                ledManager.stopColorOverride();
-            }
-        } else if (setupDebugMode) {
-            ledManager.overrideColor(RGB_ORANGE);
+        // {
+        iuFlash.begin();
+        // WiFi configuration
+        conductor.configureFromFlash(IUFlash::CFG_WIFI0);
+        // Feature, FeatureGroup and sensors coonfigurations
+        for (uint8_t i = 0; i < conductor.CONFIG_TYPE_COUNT; ++i) {
+            conductor.configureFromFlash(conductor.CONFIG_TYPES[i]);
+        }
+        if (setupDebugMode) {
+            ledManager.overrideColor(RGB_PURPLE);
             delay(5000);
             ledManager.stopColorOverride();
         }
+        // } else if (setupDebugMode) {
+        //     ledManager.overrideColor(RGB_ORANGE);
+        //     delay(5000);
+        //     ledManager.stopColorOverride();
+        // }
         delay(5000);
         //configure mqttServer
         conductor.configureMQTTServer("MQTT.conf");
