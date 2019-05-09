@@ -510,6 +510,8 @@ void setup()
         conductor.configureMQTTServer("MQTT.conf");
         //http configuration
         conductor.configureBoardFromFlash("httpConfig.conf",1);
+        // get the previous offset values 
+        conductor.setSensorConfig("sensorConfig.conf");        
         opStateFeature.setOnNewValueCallback(operationStateCallback);
         ledManager.resetStatus();
         conductor.changeUsageMode(UsageMode::OPERATION);

@@ -190,6 +190,7 @@ class Conductor
         void resetBLEonTimeout();
         void setConductorBLEMacAddress();
         void printConductorMac();
+        bool setSensorConfig(char* filename);
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
