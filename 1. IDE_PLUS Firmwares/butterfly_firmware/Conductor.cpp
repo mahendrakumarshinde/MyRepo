@@ -2395,19 +2395,28 @@ void Conductor::processSegmentedMessage(const char* buff) {
         // ; - sentinel character, 1 byte
 
         char messageType[PAYLOAD_LENGTH+1];
-        extractPayloadFromSegmentedMessage(buff, messageType);
-        
+        extractPayloadFromSegmentedMessage(buff, messageType);        
         debugPrint("DEBUG: M: messageType: ", false); debugPrint(messageType);
-        
-        if (int(buff[1]) >= MAX_SEGMENTED_MESSAGES) {  
-            debugPrint("ERROR: M: messageID: ", false); debugPrint(int(buff[1]));
-            debugPrint("ERROR: M: messageID exceeded MAX_SEGMENTED_MESSAGES");
-            return;
-        }
 
         if (strncmp(messageType, "INIT", 4) == 0) {
             
             debugPrint("DEBUG: M: processing INIT message");
+
+            if (int(buff[1]) >= MAX_SEGMENTED_MESSAGES) {  
+                debugPrint("ERROR: M: INIT: messageID: ", false); debugPrint(int(buff[1]));
+                debugPrint("ERROR: M: INIT: messageID exceeded MAX_SEGMENTED_MESSAGES");
+                // While processing INIT, if messageID exceeds MAX_SEGMENTED_MESSAGES, then let the rest of the transmission
+                // continue with ERRORS in the logs, a response will be sent when a FINISHED message is received
+                return;
+            }
+
+            if (int(buff[2]) > MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE) {  
+                debugPrint("ERROR: M: INIT: segmentCount: ", false); debugPrint(int(buff[2]));
+                debugPrint("ERROR: M: INIT: segmentCount exceeded MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE");
+                // While processing INIT, if segmentCount exceeds MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE, then let the rest of the transmission
+                // continue with ERRORS in the logs, a response will be sent when a FINISHED message is received
+                return;
+            }
 
             int messageID = int(buff[1]);  // setting messageID indicates message is now active i.e. data segment transmission is on-going
             int segmentCount = int(buff[2]);
@@ -2419,61 +2428,93 @@ void Conductor::processSegmentedMessage(const char* buff) {
             segmentedMessages[messageID].startTimestamp = startTimestamp;
             segmentedMessages[messageID].timeout = timeout;
 
-            debugPrint("DEBUG: M: INIT messageID: ", false); debugPrint(segmentedMessages[messageID].messageID);
-            debugPrint("DEBUG: M: INIT segmentCount: ", false); debugPrint(segmentedMessages[messageID].segmentCount);
-            debugPrint("DEBUG: M: INIT startTimestamp: ", false); debugPrint(segmentedMessages[messageID].startTimestamp);   
+            debugPrint("DEBUG: M: INIT: messageID: ", false); debugPrint(segmentedMessages[messageID].messageID);
+            debugPrint("DEBUG: M: INIT: segmentCount: ", false); debugPrint(segmentedMessages[messageID].segmentCount);
+            debugPrint("DEBUG: M: INIT: startTimestamp: ", false); debugPrint(segmentedMessages[messageID].startTimestamp);   
         }   
         
         else if (strncmp(messageType, "FINISHED", 8) == 0) {
-            debugPrint("DEBUG: M: processing FINISHED message");
+            debugPrint("DEBUG: M: FINISHED: processing FINISHED message");
 
             int messageID = int(buff[1]);    
-            
-            // set up a response
+            int segmentCount = int(buff[2]);
+
+            // Send BLE failure response for messageID >= MAX_SEGMENTED_MESSAGES and return
+            if (messageID >= MAX_SEGMENTED_MESSAGES) {  
+                debugPrint("ERROR: M: FINISHED: messageID: ", false); debugPrint(messageID);
+                debugPrint("ERROR: M: FINISHED: messageID exceeded MAX_SEGMENTED_MESSAGES");                
+                char finishedResponse[20];
+                char finishedFailure[] = "FAILURE-MSGID;"; 
+                for (int i=0; i<3; i++) { finishedResponse[i] = buff[i]; }
+                for (int i=0; i<strlen(finishedFailure); i++) { finishedResponse[i+3] = finishedFailure[i]; }
+                debugPrint("DEBUG: M: FINSIHED: SENDING FAILURE-MSGID RESPONSE");
+                if (isBLEConnected()) {
+                    iuBluetooth.write(finishedResponse);
+                    debugPrint("DEBUG: M: FINISHED: RESPONSE sent via BLE");
+                }                
+                return;
+            }
+
+            // Send a BLE failure response if segmentCount >= MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE and return
+            if (segmentCount > MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE) {
+                debugPrint("ERROR: M: FINISHED: segmentCount: ", false); debugPrint(int(buff[1]));
+                debugPrint("ERROR: M: FINISHED: segmentCount exceeded MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE");
+                char finishedResponse[20];
+                char finishedFailure[] = "FAILURE-SEGCNT;"; 
+                for (int i=0; i<3; i++) { finishedResponse[i] = buff[i]; }
+                for (int i=0; i<strlen(finishedFailure); i++) { finishedResponse[i+3] = finishedFailure[i]; }
+                debugPrint("DEBUG: M: FINSIHED: SENDING FAILURE-SEGCNT RESPONSE");
+                if (isBLEConnected()) {
+                        iuBluetooth.write(finishedResponse);
+                        debugPrint("DEBUG: M: FINISHED: RESPONSE sent via BLE");
+                }
+                return;
+            }
+
             char finishedResponse[20];
+            // messageID >= MAX_SEGMENTED_MESSAGES, respond with FAILURE
+            char finishedFailure[] = "FAILURE-MSGID;"; 
+            for (int i=0; i<3; i++) { finishedResponse[i] = buff[i]; }
+            for (int i=0; i<strlen(finishedFailure); i++) { finishedResponse[i+3] = finishedFailure[i]; }
+            debugPrint("DEBUG: M: FINSIHED: SENDING FAILURE-MSGID RESPONSE:");
+            if (isBLEConnected()) {
+                    iuBluetooth.write(finishedResponse);
+                    debugPrint("DEBUG: M: FINISHED: RESPONSE sent via BLE");
+            }
 
             if (checkMessageActive(messageID)) {            
                 // check if all segments have been received and hashes match
-                bool messageReceievedAndVerified = false;
                 if(checkAllSegmentsReceived(messageID)) {
                     compileSegmentedMessage(messageID);
                     computeSegmentedMessageHash(messageID);
                     if(strncmp(segmentedMessages[messageID].computedHash, segmentedMessages[messageID].receivedHash, PAYLOAD_LENGTH) == 0) {
-                        messageReceievedAndVerified = true;
-                        debugPrint("DEBUG: M: process FINISHED message: messageReceievedAndVerified: ", false); debugPrint(messageReceievedAndVerified);                        
-
+                        debugPrint("DEBUG: M: FINISHED: message compiled and hashes verified");                       
                         // set messageReady to indicate message can be consumed
-                        segmentedMessages[messageID].messageReady = true;   
+                        segmentedMessages[messageID].messageReady = true;
+                        // set messageState for response that message is received successfully
+                        segmentedMessages[messageID].messageState = SEGMENTED_MESSAGE_STATE::MESSAGE_SUCCESSFUL;                         
+                    } else {
+                        // set messageState for response that hash verification failed
+                        segmentedMessages[messageID].messageState = SEGMENTED_MESSAGE_STATE::MESSAGE_HASH_VERIFICATION_FAILED;
                     }
-                }
-
-                if (messageReceievedAndVerified) {
-                    // send FINISHED-SUCCESS
-                    char finishedSuccess[] = "SUCCESS;"; 
-                    for (int i=0; i<3; i++) { finishedResponse[i] = buff[i]; }
-                    for (int i=0; i<strlen(finishedSuccess); i++) { finishedResponse[i+3] = finishedSuccess[i]; }
-                    debugPrint("DEBUG: M: SENDING SUCCESS RESPONSE:");                    
                 } else {
-                    // either all segments were not received or hashes did not match, respond with FAILURE
-                    char finishedFailure[] = "FAILURE;"; 
-                    for (int i=0; i<3; i++) { finishedResponse[i] = buff[i]; }
-                    for (int i=0; i<strlen(finishedFailure); i++) { finishedResponse[i+3] = finishedFailure[i]; }
-                    debugPrint("DEBUG: M: SENDING FAILURE RESPONSE:");
+                    // set messageState for response that some segments have not been received
+                    segmentedMessages[messageID].messageState = SEGMENTED_MESSAGE_STATE::MESSAGE_SEGMENTS_MISSING;
                 }
 
-                if (isBLEConnected()) {
-                        iuBluetooth.write(finishedResponse);
-                        debugPrint("DEBUG: M: FINISHED RESPONSE sent via BLE");
-                }
+                // send a response over BLE
+                sendSegmentedMessageResponse(messageID);
 
             }
             else {
-                debugPrint("ERROR: m: INIT not received, retry transmission");
-                // INIT was not received, so no message in segmentedMessages was made active to store incoming segments, respond with failure
-                char finishedFailure[] = "FAILURE;"; 
-                for (int i=0; i<3; i++) { finishedResponse[i] = buff[i]; }
-                for (int i=0; i<strlen(finishedFailure); i++) { finishedResponse[i+3] = finishedFailure[i]; }
-                debugPrint("ERROR: M: SENDING FAILURE RESPONSE:");
+                debugPrint("ERROR: M: Last transmission attempt timed out or INIT not received, retry transmission");
+                // Last transmission attempt timed out, after which the message container was reset and made inactive
+                // or INIT was not received, so no message in segmentedMessages was made active to store incoming segments                
+                
+                // set messageState for response that last transmission timed out
+                segmentedMessages[messageID].messageState = SEGMENTED_MESSAGE_STATE::MESSAGE_TIMED_OUT;
+                // send a response over BLE
+                sendSegmentedMessageResponse(messageID);
             }
         }
     }
@@ -2586,6 +2627,7 @@ void Conductor::cleanSegmentedMessage(int messageID) {
     strcpy(segmentedMessages[messageID].computedHash, "");
     segmentedMessages[messageID].messageReady = false;
     segmentedMessages[messageID].messageConsumed = false;
+    segmentedMessages[messageID].messageState = -1;
 }
 
 void Conductor::cleanTimedoutSegmentedMessages() {
@@ -2626,6 +2668,38 @@ bool Conductor::consumeReadySegmentedMessage(char* returnMessage) {
         }
     } 
     return readyMessageConsumed;
+}
+
+void Conductor::sendSegmentedMessageResponse(int messageID) {
+
+    char messageState[18];
+    switch (segmentedMessages[messageID].messageState)
+    {
+    case SEGMENTED_MESSAGE_STATE::MESSAGE_SUCCESSFUL :
+        strcpy(messageState, "SUCCESS;");
+        break;
+    case SEGMENTED_MESSAGE_STATE::MESSAGE_SEGMENTS_MISSING :
+        strcpy(messageState, "FAILURE-MISSSGMT;");
+        break;
+    case SEGMENTED_MESSAGE_STATE::MESSAGE_HASH_VERIFICATION_FAILED :
+        strcpy(messageState, "FAILURE-HASH;");
+        break;
+    case SEGMENTED_MESSAGE_STATE::MESSAGE_TIMED_OUT :
+        strcpy(messageState, "FAILURE-TIMEDOUT;");
+        break;
+    }
+    debugPrint("DEBUG: sendSegmentedMessageResponse: messageState: ", false);  debugPrint(messageState);
+
+    char finishedResponse[20];
+    finishedResponse[0] = 'M';
+    finishedResponse[1] = segmentedMessages[messageID].messageID;
+    finishedResponse[2] = segmentedMessages[messageID].segmentCount;
+    for (int i=0; i<strlen(messageState); i++) { finishedResponse[i+3] = messageState[i]; } 
+    
+    if (isBLEConnected()) {
+            iuBluetooth.write(finishedResponse);
+            debugPrint("DEBUG: M: sendSegmentedMessageResponse: response sent via BLE");
+    }
 }
 
 //set the sensor Configuration

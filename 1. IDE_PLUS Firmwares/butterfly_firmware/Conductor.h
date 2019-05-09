@@ -202,6 +202,7 @@ class Conductor
         void cleanSegmentedMessage(int messageID);
         void cleanTimedoutSegmentedMessages();
         void cleanConsumedSegmentedMessages();
+        void sendSegmentedMessageResponse(int messageID);
 
         bool setSensorConfig(char* filename);
     protected:
@@ -253,7 +254,6 @@ class Conductor
         double last_fingerprint_timestamp = 0;
         bool computed_first_fingerprint_timestamp = false;
         SegmentedMessage segmentedMessages[MAX_SEGMENTED_MESSAGES]; // atmost MAX_SEGMENTED_MESSAGES can be captured in interleaved manner
-        int segmentedMessagesTimeout = 10;  // seconds
 };
 
 
