@@ -2543,8 +2543,15 @@ void Conductor::processSegmentedMessage(const char* buff) {
             debugPrint("ERROR: m: segmentIndex exceeded MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE");
             return;
         }
+        if (segmentIndex >= segmentedMessages[messageID].segmentCount && segmentIndex != 127) { 
+            // 0 <= segmentIndex < segmentCount
+            debugPrint("ERROR: m: segmentIndex: ", false);  debugPrint(segmentIndex);
+            debugPrint("ERROR: m: segmentIndex exceeded segmentCount");
+            return;
+        }
         debugPrint("DEBUG: m: segmentIndex: ", false); debugPrint(segmentIndex);
- 
+
+
         if(checkMessageActive(messageID)) {
             if(segmentIndex != 127) {
                 // add the data segment

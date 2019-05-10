@@ -596,6 +596,7 @@ void loop()
         char configMessageFromBLE[MESSAGE_LENGTH+1];
         if (conductor.consumeReadySegmentedMessage(configMessageFromBLE)) {
             debugPrint("DEBUG: LOOP: configMessageFromBLE: ", false); debugPrint(configMessageFromBLE);
+            conductor.processConfiguration(configMessageFromBLE, true);
         }        
 
         // Clean consumed segmented messages
