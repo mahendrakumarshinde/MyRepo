@@ -501,9 +501,9 @@ void setup()
             ledManager.stopColorOverride();
         }
         // } else if (setupDebugMode) {
-        //     ledManager.overrideColor(RGB_ORANGE);
-        //     delay(5000);
-        //     ledManager.stopColorOverride();
+        ledManager.overrideColor(RGB_ORANGE);
+        delay(5000);
+        ledManager.stopColorOverride();
         // }
         delay(5000);
         //configure mqttServer
