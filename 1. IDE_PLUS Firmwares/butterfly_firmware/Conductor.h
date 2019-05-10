@@ -134,7 +134,7 @@ class Conductor
         bool configureFromFlash(IUFlash::storedConfig configType);
         void sendConfigChecksum(IUFlash::storedConfig configType);
         void periodicSendConfigChecksum();
-        void setMotorThresholdsFromFile();
+        void setThresholdsFromFile();
         /***** Serial Reading & command processing*****/
         bool processConfiguration(char *json, bool saveToFlash);
         void configureMainOptions(JsonVariant &config);

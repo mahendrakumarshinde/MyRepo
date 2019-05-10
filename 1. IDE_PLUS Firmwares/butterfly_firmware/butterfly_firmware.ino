@@ -520,7 +520,7 @@ void setup()
         //debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
 
         //Resume previous operational state of device
-        conductor.setMotorThresholdsFromFile();
+        conductor.setThresholdsFromFile();
                 
         // Timer Init
         timerInit();

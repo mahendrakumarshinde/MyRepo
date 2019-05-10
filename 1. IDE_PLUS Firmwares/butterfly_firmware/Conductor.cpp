@@ -283,7 +283,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         configureAllFeatures(subConfig);
         if (saveToFlash) {
             iuFlash.saveConfigJson(IUFlash::CFG_FEATURE, subConfig);
-            setMotorThresholdsFromFile();
+            setThresholdsFromFile();
             //send ACK on ide_pluse/command_response/
             const char* messageId;
             messageId = root["messageId"]  ;
@@ -2296,7 +2296,7 @@ void Conductor::setConductorBLEMacAddress() {
     m_macAddress.fromString(BLE_MAC_Address);
 }
 
-void Conductor::setMotorThresholdsFromFile() 
+void Conductor::setThresholdsFromFile() 
 {
     StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
     JsonVariant config = JsonVariant(
@@ -2312,7 +2312,9 @@ void Conductor::setMotorThresholdsFromFile()
             strncpy(featureName, m_mainFeatureGroup->getFeature(i)->getName(), Feature::nameLength);
             featureName[Feature::nameLength]='\0';
             
-            //To handle discrepency between TMP, TMA, TMB
+            //To handle discrepency between TMP, TMA, TMB. The google MQTT broker sends "TMA" as 
+            //the temperature key, but locally the temperature feature's name is "TMP"
+            // see https://infinite-uptime.atlassian.net/browse/IF-18 
             if (strncmp(featureName, "TM", 2) == 0) {
                 if (!config[featureName].success()) {   //local temperature name and JSON temperature name do not match
                     char* tempNames[3] = {"TMA", "TMB", "TMP"};
