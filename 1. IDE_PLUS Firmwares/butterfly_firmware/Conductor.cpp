@@ -2301,46 +2301,41 @@ void Conductor::setMotorThresholdsFromFile()
     StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
     JsonVariant config = JsonVariant(
             iuFlash.loadConfigJson(IUFlash::CFG_FEATURE, jsonBuffer));
+    config.prettyPrintTo(Serial);
     if (config.success()) {
-        const char* signalEnergy = "A93";
-        const char* velocityX = "VAX";
-        const char* velocityY = "VAY";
-        const char* velocityZ = "VAZ";
-        const char* temperature = "TMA";
-        const char* noise = "S12";
         const char* threshold = "TRH";
         float low, mid, high;
+        
+        debugPrint("Current active group name is :",false);debugPrint(m_mainFeatureGroup->getName());
+        for(uint8_t i=0;i<m_mainFeatureGroup->getFeatureCount();i++) {
+            char featureName[Feature::nameLength + 1];
+            strncpy(featureName, m_mainFeatureGroup->getFeature(i)->getName(), Feature::nameLength);
+            featureName[Feature::nameLength]='\0';
+            
+            //To handle discrepency between TMP, TMA, TMB
+            if (strncmp(featureName, "TM", 2) == 0) {
+                if (!config[featureName].success()) {   //local temperature name and JSON temperature name do not match
+                    char* tempNames[3] = {"TMA", "TMB", "TMP"};
+                    int tempCounter;
+                    for (tempCounter = 0; tempCounter < 3; tempCounter++) {
+                        if (config[tempNames[tempCounter]].success()) 
+                            break;
+                    }
+                strcpy(featureName, tempNames[tempCounter]);    //use correct JSON key to set new thresholds     
+                } 
+            }
+            low = config[featureName][threshold][0];
+            mid = config[featureName][threshold][1];
+            high = config[featureName][threshold][2];
 
-        low = config[signalEnergy][threshold][0];
-        mid = config[signalEnergy][threshold][1];
-        high = config[signalEnergy][threshold][2];      
-        opStateComputer.setThresholds(0, low, mid, high);
+            debugPrint("Setting thresholds for feature name: ",false);debugPrint(featureName,false);
+            debugPrint(" low : ",false);debugPrint(low,false);
+            debugPrint(" mid : ",false);debugPrint(mid,false);
+            debugPrint(" high : ",false);debugPrint(high);
 
-        low = config[velocityX][threshold][0];
-        mid = config[velocityX][threshold][1];
-        high = config[velocityX][threshold][2];      
-        opStateComputer.setThresholds(1, low, mid, high);
-        
-        low = config[velocityY][threshold][0];
-        mid = config[velocityY][threshold][1];
-        high = config[velocityY][threshold][2];      
-        opStateComputer.setThresholds(2, low, mid, high);
-        
-        low = config[velocityZ][threshold][0];
-        mid = config[velocityZ][threshold][1];
-        high = config[velocityZ][threshold][2];      
-        opStateComputer.setThresholds(3, low, mid, high);
-        
-        low = config[temperature][threshold][0];
-        mid = config[temperature][threshold][1];
-        high = config[temperature][threshold][2];      
-        opStateComputer.setThresholds(4, low, mid, high);
-        
-        low = config[noise][threshold][0];
-        mid = config[noise][threshold][1];
-        high = config[noise][threshold][2];      
-        opStateComputer.setThresholds(5, low, mid, high);
-        
+            opStateComputer.setThresholds(i, low, mid, high);
+
+        }
         processLegacyCommand("6000000:1.1.1.1.1.1");            //ensure these features are activated
         computeFeatures();                                      //compute current state with these thresholds
     }
