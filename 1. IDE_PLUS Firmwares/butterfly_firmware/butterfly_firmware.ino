@@ -486,25 +486,25 @@ void setup()
             debugPrint(F("***\n"));
         }
         // Start flash and load configuration files
-        if (!USBDevice.configured())
-        {
-            iuFlash.begin();
-            // WiFi configuration
-            conductor.configureFromFlash(IUFlash::CFG_WIFI0);
-            // Feature, FeatureGroup and sensors coonfigurations
-            for (uint8_t i = 0; i < conductor.CONFIG_TYPE_COUNT; ++i) {
-                conductor.configureFromFlash(conductor.CONFIG_TYPES[i]);
-            }
-            if (setupDebugMode) {
-                ledManager.overrideColor(RGB_PURPLE);
-                delay(5000);
-                ledManager.stopColorOverride();
-            }
-        } else if (setupDebugMode) {
-            ledManager.overrideColor(RGB_ORANGE);
+        // if (!USBDevice.configured())
+        // {
+        iuFlash.begin();
+        // WiFi configuration
+        conductor.configureFromFlash(IUFlash::CFG_WIFI0);
+        // Feature, FeatureGroup and sensors coonfigurations
+        for (uint8_t i = 0; i < conductor.CONFIG_TYPE_COUNT; ++i) {
+            conductor.configureFromFlash(conductor.CONFIG_TYPES[i]);
+        }
+        if (setupDebugMode) {
+            ledManager.overrideColor(RGB_PURPLE);
             delay(5000);
             ledManager.stopColorOverride();
         }
+        // } else if (setupDebugMode) {
+        ledManager.overrideColor(RGB_ORANGE);
+        delay(5000);
+        ledManager.stopColorOverride();
+        // }
         delay(5000);
         //configure mqttServer
         conductor.configureMQTTServer("MQTT.conf");
@@ -519,6 +519,9 @@ void setup()
         //attachInterrupt(IULSM6DSM::INT1_PIN, dataAcquisitionISR, RISING);
         //debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
 
+        //Resume previous operational state of device
+        conductor.setThresholdsFromFile();
+                
         // Timer Init
         timerInit();
         
