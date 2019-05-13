@@ -2739,6 +2739,7 @@ void Conductor::sendSegmentedMessageResponse(int messageID) {
     
     if (isBLEConnected()) {
             iuBluetooth.write(finishedResponse);
+            delay(1000);  // ensure response has been sent
             #ifdef IU_DEBUG_SEGMENTED_MESSAGES
             debugPrint("DEBUG: M: sendSegmentedMessageResponse: response sent via BLE");
             #endif
