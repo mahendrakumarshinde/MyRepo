@@ -2474,22 +2474,7 @@ void Conductor::processSegmentedMessage(const char* buff) {
                 return;
             }
 
-            char finishedResponse[20];
-            // messageID >= MAX_SEGMENTED_MESSAGES, respond with FAILURE
-            char finishedFailure[] = "FAILURE-MSGID;"; 
-            for (int i=0; i<3; i++) { finishedResponse[i] = buff[i]; }
-            for (int i=0; i<strlen(finishedFailure); i++) { finishedResponse[i+3] = finishedFailure[i]; }
-            #ifdef IU_DEBUG_SEGMENTED_MESSAGES
-            debugPrint("DEBUG: M: FINSIHED: SENDING FAILURE-MSGID RESPONSE:");
-            #endif
-            if (isBLEConnected()) {
-                    iuBluetooth.write(finishedResponse);
-                    #ifdef IU_DEBUG_SEGMENTED_MESSAGES
-                    debugPrint("DEBUG: M: FINISHED: RESPONSE sent via BLE");
-                    #endif
-            }
-
-            if (checkMessageActive(messageID)) {            
+            if (checkMessageActive(messageID)) {   // check if message is still active, it hasn't timed out 
                 // check if all segments have been received and hashes match
                 if(checkAllSegmentsReceived(messageID)) {
                     compileSegmentedMessage(messageID);
