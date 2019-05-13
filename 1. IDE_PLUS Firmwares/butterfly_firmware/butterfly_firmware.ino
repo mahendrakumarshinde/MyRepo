@@ -595,7 +595,9 @@ void loop()
         // Consume ready segmented message
         char configMessageFromBLE[MESSAGE_LENGTH+1];
         if (conductor.consumeReadySegmentedMessage(configMessageFromBLE)) {
+            #ifdef IU_DEBUG_SEGMENTED_MESSAGES
             debugPrint("DEBUG: LOOP: configMessageFromBLE: ", false); debugPrint(configMessageFromBLE);
+            #endif
             conductor.processConfiguration(configMessageFromBLE, true);
         }        
 

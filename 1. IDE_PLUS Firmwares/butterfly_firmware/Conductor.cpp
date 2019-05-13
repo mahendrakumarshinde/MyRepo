@@ -1211,26 +1211,21 @@ void Conductor::processBLEMessage(IUSerial *iuSerial)
 {
     m_lastBLEmessage = millis();
     char *buff = iuSerial->getBuffer();
-    debugPrint("DEBUG: BLE BUFFER: ", false); debugPrint(buff, true);
+    // debugPrint("DEBUG: BLE BUFFER: ", false); debugPrint(buff, true);
 
     if (buff[0] == 'm' || buff[0] == 'M')  { // && (int(buff[1]) < MAX_SEGMENTED_MESSAGES)) {
         // int(buff[1]) -> messageID
         char segmentedMessageBuffer[20];
         for (int i=0; i<20; i++) { segmentedMessageBuffer[i] = buff[i]; }
-        /*
-        debugPrint("DEBUG: BLE SEGMENTED MESSAGE BUFFER: ", false); 
-        debugPrint(segmentedMessageBuffer[0], false);
-        debugPrint(int(segmentedMessageBuffer[1]), false);
-        debugPrint(int(segmentedMessageBuffer[2]), false);
-        debugPrint(&segmentedMessageBuffer[3]);
-        */
+        #ifdef IU_DEBUG_SEGMENTED_MESSAGES
         debugPrint("DEBUG: Conductor::processBLEMessage() calling processSegmentedMessage()");
+        #endif
         processSegmentedMessage(segmentedMessageBuffer);
         iuBluetooth.resetBuffer();  // consider the BLE received buffer to be flushed
+        #ifdef IU_DEBUG_SEGMENTED_MESSAGES
         debugPrint("DEBUG: Back in Conductor::processBLEMessage() after processSegmentedMessage()");
+        #endif
     }
-    // debugPrint("DEBUG: Conductor::processBLEMessage()");
-
     if (m_streamingMode == StreamingMode::WIRED) {
         return;  // Do not listen to BLE when wired
     }
@@ -2348,25 +2343,17 @@ void Conductor::extractPayloadFromSegmentedMessage(const char* segment, char* pa
     
     int index = 0;
     int segmentLength = strlen(&segment[3]) + 2;
-    // debugPrint("DEBUG: Extracting payload: length: ", false); debugPrint(segmentLength);
     while ((index+3) <= segmentLength) {    // here, segment does not have ";" as the last char, copy all the bytes
         payload[index] = segment[index+3];
         index++;
     }
     payload[index] = '\0';  // make it c_string to allow string functions and debugPrint
-
-    // debugPrint("DEBUG: Extracting payload: BUFFER: ", false);
-    // debugPrint(int(segment[1]), false);
-    // debugPrint(int(segment[2]), false);
-    // debugPrint(&segment[3]);
-    // debugPrint("DEBUG: Extracting payload: ", false); debugPrint(payload);
 }
 
 bool Conductor::checkMessageActive(int messageID) {
     bool messageActive = false;
     if ((segmentedMessages[messageID].messageID != -1) && (segmentedMessages[messageID].messageID < MAX_SEGMENTED_MESSAGES)) 
         { messageActive = true; }
-    // debugPrint("DEBUG: in checkMessageActive(): messageActive: ", false); debugPrint(messageActive);
     return messageActive;
 }
 
@@ -2387,24 +2374,32 @@ void Conductor::processSegmentedMessage(const char* buff) {
         // ; - sentinel character, 1 byte
 
         char messageType[PAYLOAD_LENGTH+1];
-        extractPayloadFromSegmentedMessage(buff, messageType);        
+        extractPayloadFromSegmentedMessage(buff, messageType);       
+        #ifdef IU_DEBUG_SEGMENTED_MESSAGES 
         debugPrint("DEBUG: M: messageType: ", false); debugPrint(messageType);
+        #endif
 
         if (strncmp(messageType, "INIT", 4) == 0) {
             
+            #ifdef IU_DEBUG_SEGMENTED_MESSAGES
             debugPrint("DEBUG: M: processing INIT message");
+            #endif
 
-            if (int(buff[1]) >= MAX_SEGMENTED_MESSAGES) {  
+            if (int(buff[1]) >= MAX_SEGMENTED_MESSAGES) { 
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES 
                 debugPrint("ERROR: M: INIT: messageID: ", false); debugPrint(int(buff[1]));
                 debugPrint("ERROR: M: INIT: messageID exceeded MAX_SEGMENTED_MESSAGES");
+                #endif
                 // While processing INIT, if messageID exceeds MAX_SEGMENTED_MESSAGES, then let the rest of the transmission
                 // continue with ERRORS in the logs, a response will be sent when a FINISHED message is received
                 return;
             }
 
             if (int(buff[2]) > MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE) {  
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES
                 debugPrint("ERROR: M: INIT: segmentCount: ", false); debugPrint(int(buff[2]));
                 debugPrint("ERROR: M: INIT: segmentCount exceeded MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE");
+                #endif
                 // While processing INIT, if segmentCount exceeds MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE, then let the rest of the transmission
                 // continue with ERRORS in the logs, a response will be sent when a FINISHED message is received
                 return;
@@ -2420,45 +2415,61 @@ void Conductor::processSegmentedMessage(const char* buff) {
             segmentedMessages[messageID].startTimestamp = startTimestamp;
             segmentedMessages[messageID].timeout = timeout;
 
+            #ifdef IU_DEBUG_SEGMENTED_MESSAGES
             debugPrint("DEBUG: M: INIT: messageID: ", false); debugPrint(segmentedMessages[messageID].messageID);
             debugPrint("DEBUG: M: INIT: segmentCount: ", false); debugPrint(segmentedMessages[messageID].segmentCount);
             debugPrint("DEBUG: M: INIT: startTimestamp: ", false); debugPrint(segmentedMessages[messageID].startTimestamp);   
+            #endif
         }   
         
         else if (strncmp(messageType, "FINISHED", 8) == 0) {
+            #ifdef IU_DEBUG_SEGMENTED_MESSAGES
             debugPrint("DEBUG: M: FINISHED: processing FINISHED message");
+            #endif IU_DEBUG_SEGMENTED_MESSAGES
 
             int messageID = int(buff[1]);    
             int segmentCount = int(buff[2]);
 
             // Send BLE failure response for messageID >= MAX_SEGMENTED_MESSAGES and return
-            if (messageID >= MAX_SEGMENTED_MESSAGES) {  
+            if (messageID >= MAX_SEGMENTED_MESSAGES) { 
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES 
                 debugPrint("ERROR: M: FINISHED: messageID: ", false); debugPrint(messageID);
-                debugPrint("ERROR: M: FINISHED: messageID exceeded MAX_SEGMENTED_MESSAGES");                
+                debugPrint("ERROR: M: FINISHED: messageID exceeded MAX_SEGMENTED_MESSAGES");   
+                #endif             
                 char finishedResponse[20];
                 char finishedFailure[] = "FAILURE-MSGID;"; 
                 for (int i=0; i<3; i++) { finishedResponse[i] = buff[i]; }
                 for (int i=0; i<strlen(finishedFailure); i++) { finishedResponse[i+3] = finishedFailure[i]; }
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES
                 debugPrint("DEBUG: M: FINSIHED: SENDING FAILURE-MSGID RESPONSE");
+                #endif
                 if (isBLEConnected()) {
                     iuBluetooth.write(finishedResponse);
+                    #ifdef IU_DEBUG_SEGMENTED_MESSAGES
                     debugPrint("DEBUG: M: FINISHED: RESPONSE sent via BLE");
+                    #endif IU_DEBUG_SEGMENTED_MESSAGES
                 }                
                 return;
             }
 
             // Send a BLE failure response if segmentCount >= MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE and return
             if (segmentCount > MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE) {
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES
                 debugPrint("ERROR: M: FINISHED: segmentCount: ", false); debugPrint(int(buff[1]));
                 debugPrint("ERROR: M: FINISHED: segmentCount exceeded MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE");
+                #endif
                 char finishedResponse[20];
                 char finishedFailure[] = "FAILURE-SEGCNT;"; 
                 for (int i=0; i<3; i++) { finishedResponse[i] = buff[i]; }
                 for (int i=0; i<strlen(finishedFailure); i++) { finishedResponse[i+3] = finishedFailure[i]; }
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES
                 debugPrint("DEBUG: M: FINSIHED: SENDING FAILURE-SEGCNT RESPONSE");
+                #endif
                 if (isBLEConnected()) {
                         iuBluetooth.write(finishedResponse);
+                        #ifdef IU_DEBUG_SEGMENTED_MESSAGES
                         debugPrint("DEBUG: M: FINISHED: RESPONSE sent via BLE");
+                        #endif
                 }
                 return;
             }
@@ -2468,10 +2479,14 @@ void Conductor::processSegmentedMessage(const char* buff) {
             char finishedFailure[] = "FAILURE-MSGID;"; 
             for (int i=0; i<3; i++) { finishedResponse[i] = buff[i]; }
             for (int i=0; i<strlen(finishedFailure); i++) { finishedResponse[i+3] = finishedFailure[i]; }
+            #ifdef IU_DEBUG_SEGMENTED_MESSAGES
             debugPrint("DEBUG: M: FINSIHED: SENDING FAILURE-MSGID RESPONSE:");
+            #endif
             if (isBLEConnected()) {
                     iuBluetooth.write(finishedResponse);
+                    #ifdef IU_DEBUG_SEGMENTED_MESSAGES
                     debugPrint("DEBUG: M: FINISHED: RESPONSE sent via BLE");
+                    #endif
             }
 
             if (checkMessageActive(messageID)) {            
@@ -2480,7 +2495,9 @@ void Conductor::processSegmentedMessage(const char* buff) {
                     compileSegmentedMessage(messageID);
                     computeSegmentedMessageHash(messageID);
                     if(strncmp(segmentedMessages[messageID].computedHash, segmentedMessages[messageID].receivedHash, PAYLOAD_LENGTH) == 0) {
-                        debugPrint("DEBUG: M: FINISHED: message compiled and hashes verified");                       
+                        #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+                        debugPrint("DEBUG: M: FINISHED: message compiled and hashes verified");
+                        #endif                       
                         // set messageReady to indicate message can be consumed
                         segmentedMessages[messageID].messageReady = true;
                         // set messageState for response that message is received successfully
@@ -2499,7 +2516,9 @@ void Conductor::processSegmentedMessage(const char* buff) {
 
             }
             else {
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES
                 debugPrint("ERROR: M: Last transmission attempt timed out or INIT not received, retry transmission");
+                #endif
                 // Last transmission attempt timed out, after which the message container was reset and made inactive
                 // or INIT was not received, so no message in segmentedMessages was made active to store incoming segments                
                 
@@ -2520,39 +2539,52 @@ void Conductor::processSegmentedMessage(const char* buff) {
         // ; - 1 byte sentinel character
 
         int messageID = int(buff[1]);
-        if (int(buff[1]) >= MAX_SEGMENTED_MESSAGES) { 
+        if (int(buff[1]) >= MAX_SEGMENTED_MESSAGES) {
+            #ifdef IU_DEBUG_SEGMENTED_MESSAGES 
             debugPrint("ERROR: m: messageID: ", false); debugPrint(int(buff[1]));
             debugPrint("ERROR: m: messageID exceeded MAX_SEGMENTED_MESSAGES");
+            #endif
             return;
         }
+        #ifdef IU_DEBUG_SEGMENTED_MESSAGES
         debugPrint("DEBUG: m: messageID: ", false); debugPrint(messageID);
+        #endif
 
         int segmentIndex = int(buff[2]);
         if (segmentIndex >= MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE && segmentIndex != 127) { 
             // segmentIndex can never be 127 ->  0 < segmentIndex <MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE, as upper bound for MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE = 127
             // 127 is reserved for HASH message
+            #ifdef IU_DEBUG_SEGMENTED_MESSAGES
             debugPrint("ERROR: m: segmentIndex: ", false);  debugPrint(segmentIndex);
             debugPrint("ERROR: m: segmentIndex exceeded MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE");
+            #endif
             return;
         }
         if (segmentIndex >= segmentedMessages[messageID].segmentCount && segmentIndex != 127) { 
             // 0 <= segmentIndex < segmentCount
+            #ifdef IU_DEBUG_SEGMENTED_MESSAGES
             debugPrint("ERROR: m: segmentIndex: ", false);  debugPrint(segmentIndex);
             debugPrint("ERROR: m: segmentIndex exceeded segmentCount");
+            #endif
             return;
         }
+        #ifdef IU_DEBUG_SEGMENTED_MESSAGES
         debugPrint("DEBUG: m: segmentIndex: ", false); debugPrint(segmentIndex);
-
+        #endif
 
         if(checkMessageActive(messageID)) {
             if(segmentIndex != 127) {
                 // add the data segment
                 char payload[PAYLOAD_LENGTH+1];
                 extractPayloadFromSegmentedMessage(buff, payload);
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES
                 debugPrint("DEBUG: m: payload: ", false); debugPrint(payload);
+                #endif
                 strcpy(segmentedMessages[messageID].dataSegments[segmentIndex], payload);
                 segmentedMessages[messageID].dataSegments[segmentIndex][strlen(payload)] = '\0'; // TODO: might not be needed as strcpy is used
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES
                 debugPrint("DEBUG: m: added payload to segmentedMessage: ", false); debugPrint(segmentedMessages[messageID].dataSegments[segmentIndex]);
+                #endif
 
                 // update the bool vector tracking received segmentedMessage
                 segmentedMessages[messageID].receivedSegments[segmentIndex] = true;
@@ -2562,43 +2594,60 @@ void Conductor::processSegmentedMessage(const char* buff) {
                 char receivedHash[PAYLOAD_LENGTH+1];
                 extractPayloadFromSegmentedMessage(buff, receivedHash);
                 strcpy(segmentedMessages[messageID].receivedHash, receivedHash);
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES
                 debugPrint("DEBUG: m: processed HASH message, receivedHash: ", false); debugPrint(segmentedMessages[messageID].receivedHash);
-            }            
-            debugPrint("DEBUG: m: processed segmentIndex: ", false); debugPrint(segmentIndex);                    
+                #endif IU_DEBUG_SEGMENTED_MESSAGES
+            }
+            #ifdef IU_DEBUG_SEGMENTED_MESSAGES            
+            debugPrint("DEBUG: m: processed segmentIndex: ", false); debugPrint(segmentIndex);      
+            #endif              
         }
         else {
+            #ifdef IU_DEBUG_SEGMENTED_MESSAGES
             debugPrint("ERROR: m: INIT not received, retry transmission");
+            #endif
             // In case INIT is not received, a FAILURE resopnse will be sent for the FINISHED message after all 'm' messages 
         }
             
     }
+    #ifdef IU_DEBUG_SEGMENTED_MESSAGES
     debugPrint("DEBUG: processSegmentedMessage returning");
+    #endif
 }
 
 bool Conductor::checkAllSegmentsReceived(int messageID) {
     // check if all segments have been received 
     bool allSegmentsReceived = true;
+    #ifdef IU_DEBUG_SEGMENTED_MESSAGES
     debugPrint("DEBUG: in checkAllSegmentsReceived(): segmentCount: ", false); debugPrint(segmentedMessages[messageID].segmentCount);
+    #endif
     for (int segmentIndex=0; segmentIndex<segmentedMessages[messageID].segmentCount; segmentIndex++) {
         if (segmentedMessages[messageID].receivedSegments[segmentIndex] != true) {
+            #ifdef IU_DEBUG_SEGMENTED_MESSAGES
             debugPrint("DEBUG: in checkAllSegmentsReceived(): missing segmentIndex: ", false); debugPrint(segmentIndex);
-            // debugPrint(" -> RECEVIED: ", false); debugPrint(segmentedMessages[messageID].receivedSegments[i]);
+            #endif
             allSegmentsReceived = false;
             break;
         }   
     }
+    #ifdef IU_DEBUG_SEGMENTED_MESSAGES
     debugPrint("DEBUG: in checkAllSegmentsReceived(): all segments recevied: ", false); debugPrint(allSegmentsReceived);
+    #endif
     return allSegmentsReceived;
 }
 
 void Conductor::compileSegmentedMessage(int messageID) {
     // compile message from the segments
     for (int segmentIndex=0; segmentIndex < segmentedMessages[messageID].segmentCount; segmentIndex++) {
+        #ifdef IU_DEBUG_SEGMENTED_MESSAGES
         debugPrint("DEBUG: in compileSegmentedMessages(): segmentIndex: ", false); debugPrint(segmentIndex, false);
         debugPrint(" segmentData: ", false); debugPrint(segmentedMessages[messageID].dataSegments[segmentIndex]);
+        #endif
         strcat(segmentedMessages[messageID].message, segmentedMessages[messageID].dataSegments[segmentIndex]);
     }
+    #ifdef IU_DEBUG_SEGMENTED_MESSAGES
     debugPrint("DEBUG: in compileSegmentedMessages(): message compiled: ", false); debugPrint(segmentedMessages[messageID].message);
+    #endif
 }
 
 void Conductor::computeSegmentedMessageHash(int messageID) {
@@ -2606,8 +2655,10 @@ void Conductor::computeSegmentedMessageHash(int messageID) {
     unsigned char* md5hash = MD5::make_hash(segmentedMessages[messageID].message, strlen(segmentedMessages[messageID].message));
     memcpy(segmentedMessages[messageID].computedHash, MD5::make_digest(md5hash, 16), PAYLOAD_LENGTH);
     segmentedMessages[messageID].computedHash[PAYLOAD_LENGTH] = '\0';
+    #ifdef IU_DEBUG_SEGMENTED_MESSAGES
     debugPrint("DEBUG: in computeSegmentedMessageHash(): message: ", false); debugPrint(segmentedMessages[messageID].message);
     debugPrint("DEBUG: in computeSegmentedMessageHash(): computedHash: ", false); debugPrint(segmentedMessages[messageID].computedHash);
+    #endif
 }
 
 void Conductor::cleanSegmentedMessage(int messageID) {
@@ -2634,9 +2685,11 @@ void Conductor::cleanTimedoutSegmentedMessages() {
         if (checkMessageActive(messageID)) {
             int timeDiff = millis() - segmentedMessages[messageID].startTimestamp;;
             if  (timeDiff > segmentedMessages[messageID].timeout) {
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES 
                 debugPrint("DEBUG: Conductor::cleanTimedoutSegmentedMessages(): timeDiff: ", false); debugPrint(timeDiff, false);
                 debugPrint(" for messageID: ", false);  debugPrint(messageID, false);
                 debugPrint(" exceeded timeout: ", false); debugPrint(segmentedMessages[messageID].timeout);
+                #endif
                 cleanSegmentedMessage(messageID);
             }
         }        
@@ -2647,7 +2700,9 @@ void Conductor::cleanConsumedSegmentedMessages() {
     // this method will be called in main loop(), right after consuming the ready message
     for (int messageID=0; messageID<MAX_SEGMENTED_MESSAGES; messageID++) {
         if (checkMessageActive(messageID) && segmentedMessages[messageID].messageConsumed) {
+            #ifdef IU_DEBUG_SEGMENTED_MESSAGES
             debugPrint("DEBUG: Conductor::cleanConsumedSegmentedMessages(): messageID: ", false); debugPrint(messageID);
+            #endif
             cleanSegmentedMessage(messageID);
         }
     }
