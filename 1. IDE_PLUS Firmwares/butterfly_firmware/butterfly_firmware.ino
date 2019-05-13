@@ -598,6 +598,9 @@ void loop()
         // Consume ready segmented message
         char configMessageFromBLE[MESSAGE_LENGTH+1];
         if (conductor.consumeReadySegmentedMessage(configMessageFromBLE)) {
+            // TODO: if all messages [0->MAX_SEGMENTED_MESSAGES-1] are ready, the later messages
+            // might time out which the first few messages are being consumed. Add logic to 
+            // extend timeout for later messages if former messages are being consumed.
             #ifdef IU_DEBUG_SEGMENTED_MESSAGES
             debugPrint("DEBUG: LOOP: configMessageFromBLE: ", false); debugPrint(configMessageFromBLE);
             #endif

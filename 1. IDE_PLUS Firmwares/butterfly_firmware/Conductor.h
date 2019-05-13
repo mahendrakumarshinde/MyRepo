@@ -193,6 +193,7 @@ class Conductor
         void resetBLEonTimeout();
         void setConductorBLEMacAddress();
         void printConductorMac();
+        /***** Segmented Messages *****/
         void extractPayloadFromSegmentedMessage(const char* segment, char* payload);
         bool checkMessageActive(int messageID);
         void processSegmentedMessage(const char* buff);

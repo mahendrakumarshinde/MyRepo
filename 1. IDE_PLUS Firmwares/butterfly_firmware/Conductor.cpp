@@ -2333,6 +2333,10 @@ void Conductor::setConductorBLEMacAddress() {
     m_macAddress.fromString(BLE_MAC_Address);
 }
 
+/* =============================================================================
+    Segmented Message
+============================================================================= */
+
 void Conductor::extractPayloadFromSegmentedMessage(const char* segment, char* payload) {
     // payload has to be a c string with  maximum length of 16 characters
 
