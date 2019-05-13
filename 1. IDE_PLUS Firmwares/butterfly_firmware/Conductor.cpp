@@ -245,7 +245,6 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     //const size_t bufferSize = JSON_ARRAY_SIZE(2) + JSON_OBJECT_SIZE(3) + 60;        // dynamically allociated memory
     const size_t bufferSize = JSON_OBJECT_SIZE(1) + 41*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(41) + 2430;
     DynamicJsonBuffer jsonBuffer(bufferSize);
-    
     //Serial.print("JSON 1 SIZE :");Serial.println(bufferSize);
     
     JsonObject& root = jsonBuffer.parseObject(json);
@@ -285,6 +284,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         configureAllFeatures(subConfig);
         if (saveToFlash) {
             iuFlash.saveConfigJson(IUFlash::CFG_FEATURE, subConfig);
+            setThresholdsFromFile();
             //send ACK on ide_pluse/command_response/
             const char* messageId;
             messageId = root["messageId"]  ;
@@ -2760,6 +2760,55 @@ void Conductor::sendSegmentedMessageResponse(int messageID) {
     }
 }
 
+void Conductor::setThresholdsFromFile() 
+{
+    StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
+    JsonVariant config = JsonVariant(
+            iuFlash.loadConfigJson(IUFlash::CFG_FEATURE, jsonBuffer));
+    config.prettyPrintTo(Serial);
+    if (config.success()) {
+        const char* threshold = "TRH";
+        float low, mid, high;
+        
+        debugPrint("Current active group name is :",false);debugPrint(m_mainFeatureGroup->getName());
+        for(uint8_t i=0;i<m_mainFeatureGroup->getFeatureCount();i++) {
+            char featureName[Feature::nameLength + 1];
+            strncpy(featureName, m_mainFeatureGroup->getFeature(i)->getName(), Feature::nameLength);
+            featureName[Feature::nameLength]='\0';
+            
+            //To handle discrepency between TMP, TMA, TMB. The google MQTT broker sends "TMA" as 
+            //the temperature key, but locally the temperature feature's name is "TMP"
+            // see https://infinite-uptime.atlassian.net/browse/IF-18 
+            if (strncmp(featureName, "TM", 2) == 0) {
+                if (!config[featureName].success()) {   //local temperature name and JSON temperature name do not match
+                    char* tempNames[3] = {"TMA", "TMB", "TMP"};
+                    int tempCounter;
+                    for (tempCounter = 0; tempCounter < 3; tempCounter++) {
+                        if (config[tempNames[tempCounter]].success()) 
+                            break;
+                    }
+                strcpy(featureName, tempNames[tempCounter]);    //use correct JSON key to set new thresholds     
+                } 
+            }
+            low = config[featureName][threshold][0];
+            mid = config[featureName][threshold][1];
+            high = config[featureName][threshold][2];
+
+            debugPrint("Setting thresholds for feature name: ",false);debugPrint(featureName,false);
+            debugPrint(" low : ",false);debugPrint(low,false);
+            debugPrint(" mid : ",false);debugPrint(mid,false);
+            debugPrint(" high : ",false);debugPrint(high);
+
+            opStateComputer.setThresholds(i, low, mid, high);
+
+        }
+        processLegacyCommand("6000000:1.1.1.1.1.1");            //ensure these features are activated
+        computeFeatures();                                      //compute current state with these thresholds
+    }
+    else {
+        debugPrint("Threshold file read was not successful.");
+    }
+}
 //set the sensor Configuration
 
 bool Conductor::setSensorConfig(char* filename){
