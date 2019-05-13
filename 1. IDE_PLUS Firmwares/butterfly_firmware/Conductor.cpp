@@ -1031,14 +1031,6 @@ void Conductor::processLegacyCommand(char *buff)
 void Conductor::processUSBMessage(IUSerial *iuSerial)
 {
     char *buff = iuSerial->getBuffer();
-    // send to processCommands
-    // TODO: used for debugging, clean up
-    if (buff[0] == 'm' || buff[0] == 'M') {
-            debugPrint("DEBUG: Conductor::processUSBMessage() calling processSegmentedMessage()");
-            processSegmentedMessage(buff);
-            debugPrint("DEBUG: Back in Conductor::processUSBMessage() after processSegmentedMessage()");
-        }
-
     processCommand(buff);
     
     // // resetting BLE from USB, while testing
@@ -2695,7 +2687,9 @@ void Conductor::sendSegmentedMessageResponse(int messageID) {
         strcpy(messageState, "FAILURE-TIMEDOUT;");
         break;
     }
+    #ifdef IU_DEBUG_SEGMENTED_MESSAGES
     debugPrint("DEBUG: sendSegmentedMessageResponse: messageState: ", false);  debugPrint(messageState);
+    #endif
 
     char finishedResponse[20];
     finishedResponse[0] = 'M';
@@ -2705,7 +2699,9 @@ void Conductor::sendSegmentedMessageResponse(int messageID) {
     
     if (isBLEConnected()) {
             iuBluetooth.write(finishedResponse);
+            #ifdef IU_DEBUG_SEGMENTED_MESSAGES
             debugPrint("DEBUG: M: sendSegmentedMessageResponse: response sent via BLE");
+            #endif
     }
 }
 
