@@ -204,6 +204,7 @@ class Conductor
         void cleanSegmentedMessage(int messageID);
         void cleanTimedoutSegmentedMessages();
         void cleanConsumedSegmentedMessages();
+        void cleanFailedSegmentedMessage(int messageID);
         void sendSegmentedMessageResponse(int messageID);
 
         bool setSensorConfig(char* filename);

@@ -2503,6 +2503,9 @@ void Conductor::processSegmentedMessage(const char* buff) {
                 // send a response over BLE
                 sendSegmentedMessageResponse(messageID);
 
+                // if the message failed, then clean the failed message
+                cleanFailedSegmentedMessage(messageID);
+
             }
             else {
                 #ifdef IU_DEBUG_SEGMENTED_MESSAGES
@@ -2693,6 +2696,20 @@ void Conductor::cleanConsumedSegmentedMessages() {
             debugPrint("DEBUG: Conductor::cleanConsumedSegmentedMessages(): messageID: ", false); debugPrint(messageID);
             #endif
             cleanSegmentedMessage(messageID);
+        }
+    }
+}
+
+void Conductor::cleanFailedSegmentedMessage(int messageID) {
+    if(checkMessageActive(messageID)) {
+        if (segmentedMessages[messageID].messageState == SEGMENTED_MESSAGE_STATE::MESSAGE_HASH_VERIFICATION_FAILED || 
+            segmentedMessages[messageID].messageState == SEGMENTED_MESSAGE_STATE::MESSAGE_SEGMENTS_MISSING || 
+            segmentedMessages[messageID].messageState == SEGMENTED_MESSAGE_STATE::MESSAGE_TIMED_OUT) {
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+                debugPrint("DEBUG: in cleanFailedSegmentedMessage: messageID: ", false); debugPrint(messageID, false);
+                debugPrint(" messageState: ", false); debugPrint(segmentedMessages[messageID].messageState);
+                #endif
+                cleanSegmentedMessage(messageID);
         }
     }
 }
