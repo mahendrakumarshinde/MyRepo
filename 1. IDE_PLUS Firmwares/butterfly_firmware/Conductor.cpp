@@ -1215,7 +1215,7 @@ void Conductor::processBLEMessage(IUSerial *iuSerial)
 
     if (buff[0] == 'm' || buff[0] == 'M')  { // && (int(buff[1]) < MAX_SEGMENTED_MESSAGES)) {
         // int(buff[1]) -> messageID
-        char segmentedMessageBuffer[20];
+        char segmentedMessageBuffer[21];
         for (int i=0; i<20; i++) { segmentedMessageBuffer[i] = buff[i]; }
         #ifdef IU_DEBUG_SEGMENTED_MESSAGES
         debugPrint("DEBUG: Conductor::processBLEMessage() calling processSegmentedMessage()");
@@ -2440,7 +2440,7 @@ void Conductor::processSegmentedMessage(const char* buff) {
                 debugPrint("ERROR: M: FINISHED: messageID: ", false); debugPrint(messageID);
                 debugPrint("ERROR: M: FINISHED: messageID exceeded MAX_SEGMENTED_MESSAGES");   
                 #endif             
-                char finishedResponse[20];
+                char finishedResponse[21];
                 char finishedFailure[] = "FAILURE-MSGID;"; 
                 for (int i=0; i<3; i++) { finishedResponse[i] = buff[i]; }
                 for (int i=0; i<strlen(finishedFailure); i++) { finishedResponse[i+3] = finishedFailure[i]; }
@@ -2462,7 +2462,7 @@ void Conductor::processSegmentedMessage(const char* buff) {
                 debugPrint("ERROR: M: FINISHED: segmentCount: ", false); debugPrint(int(buff[1]));
                 debugPrint("ERROR: M: FINISHED: segmentCount exceeded MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE");
                 #endif
-                char finishedResponse[20];
+                char finishedResponse[21];
                 char finishedFailure[] = "FAILURE-SEGCNT;"; 
                 for (int i=0; i<3; i++) { finishedResponse[i] = buff[i]; }
                 for (int i=0; i<strlen(finishedFailure); i++) { finishedResponse[i+3] = finishedFailure[i]; }
@@ -2735,7 +2735,7 @@ void Conductor::sendSegmentedMessageResponse(int messageID) {
     debugPrint("DEBUG: sendSegmentedMessageResponse: messageState: ", false);  debugPrint(messageState);
     #endif
 
-    char finishedResponse[20];
+    char finishedResponse[21];
     finishedResponse[0] = 'M';
     finishedResponse[1] = segmentedMessages[messageID].messageID;
     finishedResponse[2] = segmentedMessages[messageID].segmentCount;
