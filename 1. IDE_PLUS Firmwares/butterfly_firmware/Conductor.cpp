@@ -2444,6 +2444,7 @@ void Conductor::processSegmentedMessage(const char* buff) {
                 char finishedFailure[] = "FAILURE-MSGID;"; 
                 for (int i=0; i<3; i++) { finishedResponse[i] = buff[i]; }
                 for (int i=0; i<strlen(finishedFailure); i++) { finishedResponse[i+3] = finishedFailure[i]; }
+                finishedResponse[strlen(finishedFailure)+3] = '\0';
                 #ifdef IU_DEBUG_SEGMENTED_MESSAGES
                 debugPrint("DEBUG: M: FINSIHED: SENDING FAILURE-MSGID RESPONSE");
                 #endif
@@ -2466,6 +2467,7 @@ void Conductor::processSegmentedMessage(const char* buff) {
                 char finishedFailure[] = "FAILURE-SEGCNT;"; 
                 for (int i=0; i<3; i++) { finishedResponse[i] = buff[i]; }
                 for (int i=0; i<strlen(finishedFailure); i++) { finishedResponse[i+3] = finishedFailure[i]; }
+                finishedResponse[strlen(finishedFailure)+3] = '\0';
                 #ifdef IU_DEBUG_SEGMENTED_MESSAGES
                 debugPrint("DEBUG: M: FINSIHED: SENDING FAILURE-SEGCNT RESPONSE");
                 #endif
@@ -2516,6 +2518,12 @@ void Conductor::processSegmentedMessage(const char* buff) {
                 
                 // set messageState for response that last transmission timed out
                 segmentedMessages[messageID].messageState = SEGMENTED_MESSAGE_STATE::MESSAGE_TIMED_OUT;
+                
+                // here, segmentCount will be 0 by default, which, in the response message will be  M|<messageID>|0|FINISHED-TIMEDOUT|;
+                // this segmentCount will be considered as null byte by strelen() in iuBluetooth.write(), becausbe of which BLE message won't sent
+                // to avoid this, we set segmentCount to '-', since this segmentCount will not be used anyway.
+                segmentedMessages[messageID].segmentCount = '-';
+
                 // send a response over BLE
                 sendSegmentedMessageResponse(messageID);
             }
@@ -2757,6 +2765,7 @@ void Conductor::sendSegmentedMessageResponse(int messageID) {
     finishedResponse[1] = segmentedMessages[messageID].messageID;
     finishedResponse[2] = segmentedMessages[messageID].segmentCount;
     for (int i=0; i<strlen(messageState); i++) { finishedResponse[i+3] = messageState[i]; } 
+    finishedResponse[strlen(messageState)+3] = '\0';
     
     if (isBLEConnected()) {
             iuBluetooth.write(finishedResponse);
