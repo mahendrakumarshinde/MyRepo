@@ -1,6 +1,24 @@
 # This file tell about all the Firmware Release of IDE+
 #################################################################################################################################################################################
 
+Date: 16 May 2019
+Contributed By : Shubham Punekar,Manas Kale, Vikas Gaikwad
+Firmware Versions : 
+		1. IDE+ Version : 1.1.1
+		2. Wifi Version : 1.0.5
+################################################################################################################################################################################
+Features:
+
+  1. Ability to send large data packets (upto 800 byte) from Android to IDE over BLE. This infrastructure will immediately be useful for configuring http/MQTT end points over bluetooth.
+  2. Configuring calibration offsets for Audio and temperature over bluetooth.
+
+Bug fixes
+
+  1.Feature thresholds will now persist across reboots 
+  2.Intermittent Wifi resets will reduce significantly. (our stress tests indicate something like once in a day or two)
+
+#################################################################################################################################################################################
+
 Date: 25 April 2019
 Submitted By : Shubham Punekar
 Firmware Versions : 
