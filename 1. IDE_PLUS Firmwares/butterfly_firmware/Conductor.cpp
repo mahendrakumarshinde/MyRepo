@@ -11,6 +11,7 @@ int sensorSamplingRate;
 int m_temperatureOffset;
 int m_audioOffset;
 
+        
 char Conductor::START_CONFIRM[11] = "IUOK_START";
 char Conductor::END_CONFIRM[9] = "IUOK_END";
 
@@ -2031,6 +2032,7 @@ void Conductor::streamFeatures()
 
     switch (m_streamingMode) {
         case StreamingMode::NONE:
+            ser1 = &iuWiFi;    
             break;
         case StreamingMode::WIRED:
             ser1 = &iuUSB;
@@ -2059,7 +2061,7 @@ void Conductor::streamFeatures()
         // TODO Switch to new streaming format once the backend is ready
         if (ser1) {
             if (m_streamingMode == StreamingMode::WIFI ||
-                m_streamingMode == StreamingMode::WIFI_AND_BLE)
+                m_streamingMode == StreamingMode::WIFI_AND_BLE || m_streamingMode == StreamingMode::NONE)
             { 
                   //Serial.print("@@@@@");
 //                FeatureGroup::instances[i]->bufferAndStream(
@@ -2093,11 +2095,13 @@ void Conductor::streamFeatures()
     if (nodeToSend) {
         //Serial.println("QQQQQQQQQQQQQQQQQQQQQ");
         uint16_t msgLen = strlen(nodeToSend->buffer);
-        iuWiFi.startLiveMSPCommand(MSPCommand::PUBLISH_FEATURE_WITH_CONFIRMATION, msgLen + 2);
-        iuWiFi.streamLiveMSPMessage((char) nodeToSend->idx);
-        iuWiFi.streamLiveMSPMessage(':');
+        //iuWiFi.startLiveMSPCommand(MSPCommand::PUBLISH_FEATURE_WITH_CONFIRMATION, msgLen + 2);
+        //iuWiFi.streamLiveMSPMessage((char) nodeToSend->idx);
+        //iuWiFi.streamLiveMSPMessage(':');
+        //iuWiFi.write("XXXAdmin;;;");
         iuWiFi.streamLiveMSPMessage(nodeToSend->buffer, msgLen);
-        iuWiFi.endLiveMSPCommand();
+        iuWiFi.write("\n");
+        //iuWiFi.endLiveMSPCommand();
         sendingQueue.attemptingToSend(nodeToSend->idx);
 
      }
@@ -2111,6 +2115,10 @@ void Conductor::streamFeatures()
  */
 void Conductor::sendAccelRawData(uint8_t axisIdx)
 {
+    static char rawAccelerationX[15000];
+    static char rawAccelerationY[15000];
+    static char rawAccelerationZ[15000];
+    
     if (axisIdx > 2) {
         return;
     }
@@ -2132,7 +2140,7 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
         delay(10);
     }
     else if (m_streamingMode == StreamingMode::WIFI ||
-             m_streamingMode == StreamingMode::WIFI_AND_BLE) {
+             m_streamingMode == StreamingMode::WIFI_AND_BLE ) {
        
         uint16_t maxLen = 15000;   //3500
         char txBuffer[maxLen];
@@ -2147,8 +2155,69 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
         iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 1000000,
                                   txBuffer, strlen(txBuffer));
 
-       
         delay(10);
+     }else if(m_streamingMode == StreamingMode::NONE){      // Ethernet Mode
+        uint16_t maxLen = 15000;   //3500
+        char txBuffer[maxLen];
+        for (uint16_t i =0; i < maxLen; i++) {
+            txBuffer[i] = 0;
+        }
+        txBuffer[0] = axis[axisIdx];    
+        uint16_t idx = 1;
+        idx += accelEnergy->sendToBuffer(txBuffer, idx, 4);   //4
+        txBuffer[idx] = 0; // Terminate string (idx incremented in sendToBuffer)
+
+        //construct the FFT JSON
+        char rawAcceleration[maxLen];
+        char* accelX;char* accelY; char* accelZ;
+
+        debugPrint("TXBuffer : ",false);debugPrint(txBuffer);
+        if(txBuffer[0] == 'X' && axisIdx == 0){
+            
+            memmove(rawAccelerationX,txBuffer + 2, strlen(txBuffer) - 1); // sizeof(txBuffer)/sizeof(txBuffer[0]) -2);
+
+            //strcpy(rawAccelerationX,&txBuffer[2]);
+            debugPrint("Address of X :");debugPrint((int)rawAccelerationX);
+            debugPrint("RawAcel X: ",false);debugPrint(rawAccelerationX);
+            
+            //Serial.print("X-data :");Serial.println(rawAccelerationX[0]);
+        }else if(txBuffer[0]== 'Y' && axisIdx == 1)
+        {
+            //rawAccelerationY = txBuffer + 2;
+            
+            //rawAccelerationY = accelY;
+            memmove(rawAccelerationY,txBuffer + 2, strlen(txBuffer) - 1 ); //sizeof(txBuffer)/sizeof(txBuffer[0]) -2);
+            //strcpy(rawAccelerationY,&txBuffer[2]); //,strlen(txBuffer+ 2 ) );
+            
+            debugPrint("Address of Y :");debugPrint((int)rawAccelerationY);
+            debugPrint("RawAcel Y: ",false);debugPrint(rawAccelerationY);
+        }else if(txBuffer[0] == 'Z' && axisIdx == 2){
+            
+            //rawAccelerationZ = txBuffer + 2;  
+            //rawAccelerationZ = accelZ;
+            memmove(rawAccelerationZ,txBuffer + 2, strlen(txBuffer) - 1) ; //sizeof(txBuffer)/sizeof(txBuffer[0]) -2);    
+            //strcpy(rawAccelerationZ,&txBuffer[2]); //,strlen(txBuffer) + 2);
+            
+            debugPrint("Address of Z :");debugPrint((int)rawAccelerationZ);
+            
+            debugPrint("RawAcel Z: ",false);debugPrint(rawAccelerationZ);
+            debugPrint("RawAcel XinZ: ",false);debugPrint(rawAccelerationX);
+            debugPrint("RawAcel YinZ: ",false);debugPrint(rawAccelerationY);
+    
+            //Serial.println();
+
+            snprintf(rawAcceleration,maxLen,"{\"macId\":%s,\"X\":%s,\"Y\":%s,\"Z\":%s }",m_macAddress.toString().c_str(),rawAccelerationX,rawAccelerationY,rawAccelerationZ);
+            iuWiFi.write(rawAcceleration);
+
+            Serial.print("FFT Raw Data");
+            Serial.println(rawAcceleration);
+
+            //FREE MEMORY 
+            memset(rawAccelerationX,0,sizeof(rawAccelerationX));
+            memset(rawAccelerationY,0,sizeof(rawAccelerationY));
+            memset(rawAccelerationZ,0,sizeof(rawAccelerationZ));
+        }
+
      }
 }
 
@@ -2256,7 +2325,7 @@ void Conductor::sendDiagnosticFingerPrints() {
             }   
     }
     else {        
-        debugPrint(F("Fingerprints have not been configured."), true);
+        //debugPrint(F("Fingerprints have not been configured."), true);
     }   
 }
 
