@@ -78,8 +78,9 @@ class IULSM6DSM : public HighFreqSensor
                                   ODR_6660Hz =  0x0A};
         static const scaleOption defaultScale = AFS_4G;
         static const gyroScaleOption defaultGyroScale = GFS_250DPS;
-        static const ODROption defaultODR = ODR_1660Hz;
-        static const uint16_t defaultSamplingRate = 1000; // Hz
+        static const ODROption defaultODR = ODR_3330Hz;
+        static const uint16_t defaultSamplingRate = 3330; // Hz
+        float ambientTemperature = 25.0;
         /***** Constructors and destructors *****/
         IULSM6DSM(IUI2C *iuI2C, const char* name,
                   void (*i2cReadCallback)(uint8_t wireStatus),
@@ -113,6 +114,7 @@ class IULSM6DSM : public HighFreqSensor
         void processData(uint8_t wireStatus);
         /***** Communication *****/
         void sendData(HardwareSerial *port);
+        float* getData(HardwareSerial *port);
         /***** Debugging *****/
         virtual void exposeCalibration();
 

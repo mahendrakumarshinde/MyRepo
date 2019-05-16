@@ -12,6 +12,8 @@
     #include "InstancesButterfly.h"
 #endif
 
+#include "SegmentedMessage.h"
+#define MAX_SEGMENTED_MESSAGES 5
 
 /* =============================================================================
     Operation Mode
@@ -53,18 +55,20 @@ namespace StreamingMode
  */
 namespace UsageMode
 {
-    enum option : uint8_t {CALIBRATION     = 0,
+   enum option :  uint8_t  {CALIBRATION    = 0,
                            EXPERIMENT      = 1,
                            OPERATION       = 2,
                            OPERATION_BIS   = 3,
-                           COUNT           = 4};
+                           CUSTOM          = 4,
+                           COUNT           = 5};
     // Related default config
     const AcquisitionMode::option acquisitionModeDetails[COUNT] =
     {
         AcquisitionMode::FEATURE,
-        AcquisitionMode::RAWDATA,
+        AcquisitionMode::RAWDATA,   // for Experiment
         AcquisitionMode::FEATURE,
         AcquisitionMode::FEATURE,
+        AcquisitionMode::RAWDATA     // for CUSTOM 
     };
 }
 
@@ -110,8 +114,12 @@ class Conductor
         static constexpr double defaultTimestamp = 1524017173.00;
         // Size of Jsn buffr (to parse json)
         static const uint16_t JSON_BUFFER_SIZE = 1600;
-        static const uint32_t BLEconnectionTimeout = 60000;
+        // static const uint32_t BLEconnectionTimeout = 60000;
+        static const uint32_t BLEconnectionTimeout = 15000;
+        //timer ISR period
+        uint16_t timerISRPeriod = 300; // default 3.3KHz
         /***** Core *****/
+        Conductor() {};
         Conductor(MacAddress macAddress) : m_macAddress(macAddress) { }
         Conductor(const char *macAddress)
             { m_macAddress.fromString(macAddress); }
@@ -129,6 +137,7 @@ class Conductor
         bool configureFromFlash(IUFlash::storedConfig configType);
         void sendConfigChecksum(IUFlash::storedConfig configType);
         void periodicSendConfigChecksum();
+        void setThresholdsFromFile();
         /***** Serial Reading & command processing*****/
         bool processConfiguration(char *json, bool saveToFlash);
         void configureMainOptions(JsonVariant &config);
@@ -175,7 +184,30 @@ class Conductor
         void getMCUInfo(char *destination);
         void  streamMCUUInfo(HardwareSerial *port);
         void exposeAllConfigurations();
+        // mqtt / http configuration
+        void fastSwap (const char **i, const char **d);
+        void configureMQTTServer(String filename);
+        bool configureBoardFromFlash(String filename,bool isSet);
+        JsonObject& configureJsonFromFlash(String filename,bool isSet);
+        void sendDiagnosticFingerPrints();
+        void resetBLEonTimeout();
+        void setConductorBLEMacAddress();
+        void printConductorMac();
+        /***** Segmented Messages *****/
+        void extractPayloadFromSegmentedMessage(const char* segment, char* payload);
+        bool checkMessageActive(int messageID);
+        void processSegmentedMessage(const char* buff);
+        bool checkAllSegmentsReceived(int messageID);
+        void compileSegmentedMessage(int messageID);
+        void computeSegmentedMessageHash(int messageID);
+        bool consumeReadySegmentedMessage(char* returnMessage);
+        void cleanSegmentedMessage(int messageID);
+        void cleanTimedoutSegmentedMessages();
+        void cleanConsumedSegmentedMessages();
+        void cleanFailedSegmentedMessage(int messageID);
+        void sendSegmentedMessageResponse(int messageID);
 
+        bool setSensorConfig(char* filename);
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
@@ -212,6 +244,19 @@ class Conductor
         StreamingMode::option m_streamingMode = StreamingMode::NONE;
         IPAddress m_mqttServerIp = MQTT_DEFAULT_SERVER_IP;
         uint16_t m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
+        const char* m_mqttUserName = MQTT_DEFAULT_USERNAME;
+        const char* m_mqttPassword = MQTT_DEFAULT_ASSWORD;
+        //httpendpoint configuration
+        const char* m_httpHost  = "http://13.232.122.10";
+        uint16_t  m_httpPort  = 8080;
+        const char* m_httpPath = "/iu-web/iu-infiniteuptime-api/postdatadump?mac=";
+        const char* m_httpUsername = "infinite_uptime";
+        const char* m_httpPassword ;
+        const char* m_httpOauth ;
+        const char* m_accountId;
+        double last_fingerprint_timestamp = 0;
+        bool computed_first_fingerprint_timestamp = false;
+        SegmentedMessage segmentedMessages[MAX_SEGMENTED_MESSAGES]; // atmost MAX_SEGMENTED_MESSAGES can be captured in interleaved manner
 };
 
 

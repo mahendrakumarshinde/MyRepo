@@ -10,10 +10,10 @@
 ============================================================================= */
 
 /***** Firmware version *****/
-const char FIRMWARE_VERSION[6] = "1.0.0";
+const char FIRMWARE_VERSION[8] = "1.1.0";
 
 
-/***** Device Type *****/
+/***** Device Type *****/  
 const uint8_t DEVICE_TYPE_LENGTH = 9;
 const char DEVICE_TYPE[DEVICE_TYPE_LENGTH] = "ide_plus";
 
@@ -23,7 +23,7 @@ const char DEVICE_TYPE[DEVICE_TYPE_LENGTH] = "ide_plus";
 
     Comment / uncomment lines below to define the optionnal components currently
     used.
-============================================================================= */
+================================================================================ */
 
 /***** Board version *****/
 //#define BUTTERFLY_V03
@@ -102,12 +102,12 @@ namespace IU_VERSION {
 // US-WEST1-A server
 //IPAddress MQTT_DEFAULT_SERVER_IP(35, 197, 32, 136);
 // ASIA-SOUTH1-A (Mumbai) server
-const IPAddress MQTT_DEFAULT_SERVER_IP(35, 200, 183, 103);
-const uint16_t MQTT_DEFAULT_SERVER_PORT = 1883;
+const IPAddress MQTT_DEFAULT_SERVER_IP(13,233,38,155);      //  IU-Default : 35, 200, 183, 103     ,Indicus -Testing IP   : 115,112,92,146  , Indicus-India IP [Production]  : 13,233,38,155
+const uint16_t MQTT_DEFAULT_SERVER_PORT = 1883;             //  IU-Default : 1883                  ,Indicus -Testing Port : 41883           , Indicus-India Port[Production] : 1883
 
 const uint8_t MQTT_CREDENTIALS_MAX_LENGTH = 25;
-const char MQTT_DEFAULT_USERNAME[9] = "ide_plus";
-const char MQTT_DEFAULT_ASSWORD[13] = "nW$Pg81o@EJD";
+const char MQTT_DEFAULT_USERNAME[35] =  "ispl";             // IU-Username : ide_plus              ,Inducus Username Testing : guest        , Indicus-India Username[Production] : ispl
+const char MQTT_DEFAULT_ASSWORD[35] =  "indicus";           // IU-Password : nW$Pg81o@EJD          ,Password                 :cnxmq2016     , Indicus-India Password[Production] : indicus
 
 
 /* =============================================================================

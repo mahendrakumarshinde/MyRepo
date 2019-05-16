@@ -6,6 +6,7 @@
 ============================================================================= */
 
 char hostSerialBuffer[4096];
+
 IUSerial hostSerial(&Serial, hostSerialBuffer, 4096, IUSerial::MS_PROTOCOL,
                     115200, ';', 100);
 
@@ -31,11 +32,10 @@ Conductor::Conductor() :
     m_disconnectionTimerStart(0),
     m_lastWifiStatusUpdate(0),
     m_lastWifiInfoPublication(0),
-    m_mqttServerIP(IPAddress()),
-    m_mqttServerPort(IPAddress()),
-    m_featurePostPort(DATA_DEFAULT_ENDPOINT_PORT),
-    m_diagnosticPostPort(DATA_DEFAULT_ENDPOINT_PORT)
+    m_mqttServerIP(IPAddress())
 {
+    m_featurePostPort = DATA_DEFAULT_ENDPOINT_PORT;
+    m_diagnosticPostPort = DATA_DEFAULT_ENDPOINT_PORT;
     m_credentialValidator.setTimeout(wifiConfigReceptionTimeout);
     m_staticConfigValidator.setTimeout(wifiConfigReceptionTimeout);
     m_mqttServerValidator.setTimeout(wifiConfigReceptionTimeout);
@@ -95,6 +95,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
     uint16_t bufferLength = iuSerial->getCurrentBufferLength();
     char resp[2] = "";
     resp[1] = 0;
+    char message[256];
     switch(cmd) {
         /***** MAC addresses *****/
         case MSPCommand::RECEIVE_BLE_MAC:
@@ -104,7 +105,11 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             iuSerial->mspSendMacAddress(MSPCommand::RECEIVE_WIFI_MAC,
                                         m_wifiMAC);
             break;
-
+        case MSPCommand::RECEIVE_HOST_FIRMWARE_VERSION: 
+            //iuSerial->print(buffer);
+            getDeviceFirmwareVersion(message,buffer,FIRMWARE_VERSION);
+            mqttHelper.publishDiagnostic(message);
+            break;
         /***** Logging *****/
         case MSPCommand::SEND_LOG_MSG:
             mqttHelper.publishLog(buffer);
@@ -147,6 +152,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
 
         /***** Data publication *****/
         case MSPCommand::PUBLISH_RAW_DATA:
+           
             if (accelRawDataHelper.inputHasTimedOut()) {
                 accelRawDataHelper.resetPayload();
             }
@@ -154,6 +160,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                                                strlen(buffer) - 2);
             iuSerial->sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION, buffer, 1);
             accelRawDataHelper.publishIfReady(m_bleMAC);
+                  
             break;
         case MSPCommand::PUBLISH_FEATURE:
             if (publishFeature(&buffer[7], bufferLength - 7, buffer, 6)) {
@@ -194,25 +201,35 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         /***** Settable parameters (addresses, credentials, etc) *****/
         case MSPCommand::SET_RAW_DATA_ENDPOINT_HOST:
             accelRawDataHelper.setEndpointHost(buffer);
+            //mqttHelper.publish(FINGERPRINT_DATA_PUBLISH_TOPIC, "RAW HOST...");
             break;
         case MSPCommand::SET_RAW_DATA_ENDPOINT_ROUTE:
             accelRawDataHelper.setEndpointRoute(buffer);
+            //mqttHelper.publish(FINGERPRINT_DATA_PUBLISH_TOPIC, "RAW ROUTE...");
             break;
         case MSPCommand::SET_RAW_DATA_ENDPOINT_PORT:
             accelRawDataHelper.setEndpointPort(
                 uint16_t(strtol(buffer, NULL, 0)));
+                //mqttHelper.publish(FINGERPRINT_DATA_PUBLISH_TOPIC, "RAW PORT...");
             break;
         case MSPCommand::SET_MQTT_SERVER_IP:
+            //hostSerial.write("FROM WIFI SET_MQTT_SERVER_IP :");
+            //hostSerial.write(buffer);
             if (m_mqttServerValidator.hasTimedOut()) {
                 m_mqttServerValidator.reset();
             }
             m_mqttServerIP = iuSerial->mspReadIPAddress();
+            //hostSerial.write("RECEIVED IP :");hostSerial.write(m_mqttServerIP);
+            
             m_mqttServerValidator.receivedMessage(0);
             if (m_mqttServerValidator.completed()) {
                 mqttHelper.setServer(m_mqttServerIP, m_mqttServerPort);
+                hostSerial.write("RECEIVED MQTT SERVER IP FROM DEVICE ");
+           
             }
             break;
         case MSPCommand::SET_MQTT_SERVER_PORT:
+           
             if (m_mqttServerValidator.hasTimedOut()) {
                 m_mqttServerValidator.reset();
             }
@@ -220,6 +237,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             m_mqttServerValidator.receivedMessage(1);
             if (m_mqttServerValidator.completed()) {
                 mqttHelper.setServer(m_mqttServerIP, m_mqttServerPort);
+                
             }
             break;
         case MSPCommand::SET_MQTT_USERNAME:
@@ -241,7 +259,121 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             if (m_mqttCredentialsValidator.completed()) {
                 mqttHelper.setCredentials(m_mqttUsername, m_mqttPassword);
             }
+        /********** Diagnostic Fingerprints Commands **************/    
+        case MSPCommand::RECEIVE_DIAGNOSTIC_ACK:
+          // Send the Ack to Topic
+            mqttHelper.publish(COMMAND_RESPONSE_TOPIC,buffer);
+                   
             break;
+        case MSPCommand::SEND_DIAGNOSTIC_RESULTS:
+              // publish the diagnostic fingerprints results
+              mqttHelper.publish(FINGERPRINT_DATA_PUBLISH_TOPIC,buffer);
+           break; 
+        case MSPCommand::SEND_RAW_DATA:
+            
+           /* char ack_config[bufferLength];
+            
+            snprintf(ack_config, strlen(buffer), "{\"raw_data\":\"%s\"}",buffer );
+            
+            iuSerial->sendMSPCommand(MSPCommand::RECEIVE_RAW_DATA_ACK, "SEND RAW DATA COMMAND ACK...");
+            publishDiagnostic(ack_config, bufferLength);
+            mqttHelper.publish(FINGERPRINT_DATA_PUBLISH_TOPIC, ack_config); //buffer[0], &buffer[2]
+           */
+          {
+            
+            char ack_config[50];
+            static int statusCount = 0;
+            if(statusCount >2){
+              statusCount = 0;
+            }
+            
+            if (accelRawDataHelper.inputHasTimedOut()) {
+                accelRawDataHelper.resetPayload();
+            }
+            accelRawDataHelper.addKeyValuePair(buffer[0], &buffer[2],
+                                               strlen(buffer) - 2);
+            iuSerial->sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION, buffer, 1);
+            int b = accelRawDataHelper.publishIfReady(m_bleMAC);
+           
+            // send http post using httpClient
+            //int a = accelRawDataHelper.publishJSON(m_bleMAC,buffer,bufferLength);
+            
+            if(statusCount == 2){
+              snprintf(ack_config, 50, "{\"mac\":\"%s\",\"httpCode\":\"%d\"}",m_bleMAC.toString().c_str(),b );
+              mqttHelper.publish(COMMAND_RESPONSE_TOPIC, ack_config);
+              //iuSerial->sendMSPCommand(MSPCommand::RECEIVE_RAW_DATA_ACK, ack_config);
+              
+            }
+            statusCount++;
+          }
+           break;  
+        case MSPCommand::RECEIVE_HTTP_CONFIG_ACK:
+          // Send the Ack to Topic
+            mqttHelper.publish(COMMAND_RESPONSE_TOPIC,buffer);
+                   
+            break;
+       /* case MSPCommand::SEND_ACCOUNTID:
+         {
+             //accountID =  buffer;
+           char* result = strstr(accountID,"XXXAdmin");
+           
+           if(result != NULL  ){    // true
+              accountID = buffer;
+          }else {
+            
+              accountID = "XXXAdmin";     // default accountID
+           }
+           iuSerial->sendMSPCommand(MSPCommand::RECEIVE_RAW_DATA_ACK,buffer);  
+           mqttHelper.publish(COMMAND_RESPONSE_TOPIC, accountID);
+          
+           break;
+
+         }
+       */   
+        case MSPCommand::GET_PENDING_HTTP_CONFIG:
+          // Get all the pending configuration messages over http
+          
+          String response =  accelRawDataHelper.publishConfigMessage(m_bleMAC);
+          
+          // create the JSON objects 
+        //  DynamicJsonBuffer jsonBuffer;
+        //  JsonObject& pendingConfigObject = jsonBuffer.parseObject(response); 
+          
+       /*   String pendingJson;
+          
+           for (auto configKeyValues : pendingConfigObject) {
+               pendingConfigObject["result"][configKeyValues.key];// = configKeyValues.value;
+               
+             }
+           pendingConfigObject.printTo(pendingJson);
+        */
+         // size_t msgLen = strlen(response);
+       //   char fingerprintAlarm[1500];
+       //   char featuresThreshold[1500]; 
+       //   char fingerprintFeatures[1500];   
+          
+        //  JsonVariant fingerprintAlarmConfig  = pendingConfigObject["result"]["fingerprintAlarm"];
+        //  JsonVariant featuresThresholdConfig = pendingConfigObject["result"]["alarm"];
+        //  JsonVariant fingerprintFeaturesConfig = pendingConfigObject["result"]["fingerprint"];
+             
+          //Serial.println(fingerprintFeaturesConfig.size());
+             
+       //   fingerprintAlarmConfig.prettyPrintTo(fingerprintAlarm);
+       //   featuresThresholdConfig.prettyPrintTo(featuresThreshold);
+       //   fingerprintFeaturesConfig.prettyPrintTo(fingerprintFeatures);
+            
+          
+          
+          iuSerial->sendLongMSPCommand(MSPCommand::SET_PENDING_HTTP_CONFIG,1000000,response.c_str(),strlen(response.c_str()));
+          
+          //mqttHelper.publish(COMMAND_RESPONSE_TOPIC, fingerprintAlarm);//response.c_str());
+          //mqttHelper.publish(COMMAND_RESPONSE_TOPIC, featuresThreshold);
+          //mqttHelper.publish(COMMAND_RESPONSE_TOPIC, fingerprintFeatures);
+          //mqttHelper.publish(COMMAND_RESPONSE_TOPIC, response.c_str());
+          
+          
+          break;
+       
     }
 }
 
@@ -375,6 +507,10 @@ bool Conductor::getConfigFromMainBoard()
         }
         hostSerial.sendMSPCommand(MSPCommand::ASK_BLE_MAC);
         hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);
+        hostSerial.sendMSPCommand(MSPCommand::GET_RAW_DATA_ENDPOINT_INFO);
+        
+        // get the IDE Firmware Version from Host
+        //hostSerial.sendMSPCommand(MSPCommand::ASK_HOST_FIRMWARE_VERSION);
         m_lastMQTTInfoRequest = current;
         delay(100);
         hostSerial.readMessages();
@@ -617,7 +753,7 @@ void Conductor::processMessageFromMQTT(const char* topic, const char* payload,
             // Command is longer than TX buffer, send it while taking care to not
             // overflow the buffer. Timeout parameter is in microseconds.
             hostSerial.sendLongMSPCommand(
-                MSPCommand::CONFIG_FORWARD_CONFIG, 100000, payload, length);
+                MSPCommand::CONFIG_FORWARD_CONFIG, 300000, payload, length);
         }
         else
         {
@@ -793,7 +929,7 @@ void Conductor::getWifiInfo(char *destination, uint16_t len, bool mqttOn)
 }
 
 /**
- * Publish a diagnostic message to the cloud about the WiFi connection.
+ * Publish a diagnostic message to the cloud about the WiFi connection & IDE & Wifi Firmware Version.
  */
 void Conductor::publishWifiInfo()
 {
@@ -879,4 +1015,51 @@ void Conductor::debugPrintWifiInfo()
     #endif
 }
 
+/* =================================================================================
+ *  get Device latest Firmware versions
+ *  Function Name: sendDeviceFirmwareVersion 
+ *  return : buffer with IDE and Wifi Firmware
+ *  Output Format : JSON
+ *  {"IDE-FIRMWARE-VR": "x.x.x", "WIFI-FIRMWARE-VR": "x.x.x"} 
+ *==================================================================================*/
 
+ void Conductor:: getDeviceFirmwareVersion(char* destination,char* HOST_VERSION, const char* WIFI_VERSION){
+      //Ask Host firmware version
+      //hostSerial.sendMSPCommand(MSPCommand::ASK_HOST_FIRMWARE_VERSION);
+     
+     uint8_t len = 255; //sizeof(destination)/sizeof(destination[0]); 
+      
+    for (uint16_t i = 0; i < len; ++i)
+    {
+        destination[i] = 0;
+    }
+    /*if (len < 250)  
+    { 
+      if (debugMode)
+      {
+          debugPrint("destination char array is too short to "
+                         "get Version Info");
+       }
+          return;
+    }
+     */
+    strcpy(destination, "{\"ide-firmware-version\":\"");
+    strcat(destination, HOST_VERSION);
+    strcat(destination, "\",\"wifi-firmware-version\":");
+    strcat(destination, WIFI_VERSION);
+    strcat(destination, "\",\"wifi_mac\":\"");
+    strcat(destination, m_wifiMAC.toString().c_str());
+    strcat(destination, "\",\"ble_mac\":\"");
+    strcat(destination, m_bleMAC.toString().c_str());
+    strcat(destination, "\",\"mqtt\":\"");
+    strcat(destination, "on");
+    /*if (mqttOn)
+    {
+        strcat(destination, "on");
+    } else {
+        strcat(destination, "off");
+    }*/
+    strcat(destination, "\"}");
+    
+    
+ }

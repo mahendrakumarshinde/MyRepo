@@ -31,6 +31,7 @@ void onMQTTConnection()
 {
     mqttHelper.onConnection();
     conductor.publishDiagnostic("connected", 10);
+    hostSerial.sendMSPCommand(MSPCommand::ASK_HOST_FIRMWARE_VERSION);
 }
 
 /* =============================================================================
@@ -90,10 +91,9 @@ void loop()
         conductor.publishWifiInfoCycle();
         // Publish raw data (HTTP POST request)
         accelRawDataHelper.publishIfReady(conductor.getBleMAC());
+        
     }
     conductor.updateWiFiStatusCycle();
     conductor.checkWiFiDisconnectionTimeout();
     delay(1);
 }
-
-

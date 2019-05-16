@@ -1,5 +1,15 @@
+#include<string.h>
 #include "Conductor.h"
+//#include<FS.h>
 
+const char* fingerprintData;
+const char* fingerprints_X;
+const char* fingerprints_Y;
+const char* fingerprints_Z;
+
+int sensorSamplingRate;
+int m_temperatureOffset;
+int m_audioOffset;
 
 char Conductor::START_CONFIRM[11] = "IUOK_START";
 char Conductor::END_CONFIRM[9] = "IUOK_END";
@@ -231,8 +241,19 @@ void Conductor::periodicSendConfigChecksum()
  */
 bool Conductor::processConfiguration(char *json, bool saveToFlash)
 {
-    StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
+    //StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;            // make it dynamic
+    //const size_t bufferSize = JSON_ARRAY_SIZE(2) + JSON_OBJECT_SIZE(3) + 60;        // dynamically allociated memory
+    const size_t bufferSize = JSON_OBJECT_SIZE(1) + 41*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(41) + 2430;
+    DynamicJsonBuffer jsonBuffer(bufferSize);
+    //Serial.print("JSON 1 SIZE :");Serial.println(bufferSize);
+    
     JsonObject& root = jsonBuffer.parseObject(json);
+    String jsonChar;
+    root.printTo(jsonChar);
+    
+    JsonVariant variant = root;
+    variant.prettyPrintTo(Serial);
+    
     if (!root.success()) {
         if (debugMode) {
             debugPrint("parseObject() failed");
@@ -241,6 +262,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     }
     // Device level configuration
     JsonVariant subConfig = root["main"];
+    subConfig.printTo(jsonChar);
+    
     if (subConfig.success()) {
         configureMainOptions(subConfig);
         if (saveToFlash) {
@@ -261,6 +284,15 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         configureAllFeatures(subConfig);
         if (saveToFlash) {
             iuFlash.saveConfigJson(IUFlash::CFG_FEATURE, subConfig);
+            setThresholdsFromFile();
+            //send ACK on ide_pluse/command_response/
+            const char* messageId;
+            messageId = root["messageId"]  ;
+            char ack_config[150];
+            snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+            
+            //Serial.println(ack_config);
+            iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config);
         }
     }
     // Feature configuration
@@ -272,7 +304,394 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             iuFlash.saveConfigJson(IUFlash::CFG_OP_STATE, subConfig);
         }
     }
+    // Diagnostic Thresholds configuration
+    subConfig = root["thresholds"];
+    if (subConfig.success()) {
+        configureAllFeatures(subConfig);
+        if (saveToFlash) {
+            //iuFlash.saveConfigJson(IUFlash::CFG_FEATURE, subConfig);
+            //send ACK on ide_pluse/command_response/
+            const char* messageId;
+            messageId = root["messageId"]  ;
+            char ack_config[150];
+            snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+            
+            //Serial.println(ack_config);
+            iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config);
+        }
+    }
+     // MQTT Server configuration
+    subConfig = root["mqtt"];
+    if (subConfig.success()) {
+        //configureAllFeatures(subConfig);
+        bool dataWritten = false;
+        
+        if (saveToFlash) {
+            //DOSFS.begin();
+            File mqttFile = DOSFS.open("MQTT.conf", "w");
+            if (mqttFile)
+            {
+                
+                if (loopDebugMode) {
+                 debugPrint(F("Writting into file: "), true);
+                }
+                mqttFile.print(jsonChar);
+                mqttFile.close();
+                dataWritten = true;
+            }
+            else if (loopDebugMode) {
+                 debugPrint("Failed to write into file: MQTT.conf ");
+                
+            }  
+        
+        }
+        if(dataWritten == true){
+          configureMQTTServer("MQTT.conf");
+          //send Ack to BLE
+          iuBluetooth.write("MQTT-RECEVIED");
+          // get the latest account id and send to wifi
+         /* JsonObject& config = configureJsonFromFlash("MQTT.conf",1);      // get the accountID
+          m_accountId = config["accountid"];
+          iuWiFi.sendMSPCommand(MSPCommand::SEND_ACCOUNTID, m_accountId); 
+
+          Serial.print("READING ACCOUNTID :");Serial.println(  m_accountId );
+         */ 
+        }
+        
+    }
+    //Diagostic Fingerprint configurations
+    subConfig = root["fingerprints"];
+    if (subConfig.success()) {
+        //opStateComputer.configure(subConfig);
+        //activateFeature(&opStateFeature);
+        bool dataWritten = false;
+        if (saveToFlash) {
+          
+          Serial.println("INSIDE SAVE TO FNGERPRINTS....");
+          File fingerprints = DOSFS.open("finterprints.conf","w");
+          if (fingerprints)
+            {
+                debugPrint("Writing to fingerptins.conf ...");
+                fingerprints.print(jsonChar);
+                fingerprints.close();
+                dataWritten = true;
+            }
+            else if (loopDebugMode) {
+                 debugPrint(F("Failed to write into file: "), false);
+                 Serial.println("Error Writting to fingerprints.conf");
+            }  
+        
+        }
+        if(dataWritten == true){
+          debugPrint("Reading from fingerprints.conf file ...........");
+          JsonObject& config = iuDiagnosticEngine.configureFingerPrintsFromFlash("finterprints.conf",dataWritten);   //iuDiagnosticEngine
+
+           
+            if (loopDebugMode) { debugPrint(F("Send Diagnostic configuration Acknowledge to wifi")); }
+            const char* messageId;
+            messageId = config["messageId"]  ;
+            
+          
+            char ack_config[150];
+            snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+            
+            //Serial.println(ack_config);
+            iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config);  
+        }
+        
+      }
+    // http endpoint configuration
+    subConfig = root["httpConfig"];
+    if (subConfig.success()) {
+        //configureAllFeatures(subConfig);
+        bool dataWritten = false;
+        
+        if (saveToFlash) {
+            //DOSFS.begin();
+            File httpFile = DOSFS.open("httpConfig.conf", "w");
+            if (httpFile)
+            {
+                
+                if (loopDebugMode) {
+                 debugPrint(F("Writting into file: "), true);
+                }
+                httpFile.print(jsonChar);
+                httpFile.close();
+                dataWritten = true;
+            }
+            else if (loopDebugMode) {
+                 debugPrint("Failed to write into file: httpConfig.conf ");
+                
+            }  
+        
+        }
+        if(dataWritten == true){
+          //configureBoardFromFlash("httpConfig.conf",dataWritten);
+          JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
+
+           const char* messageId = config["messageId"];
+          //Serial.print("File Content :");Serial.println(jsonChar);
+          //Serial.print("http details :");Serial.print(m_httpHost);Serial.print(",");Serial.print(m_httpPort);Serial.print(",");Serial.print(m_httpPath);Serial.println("/***********/");
+          //iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_HOST,m_httpHost); 
+          //iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_PORT,String(m_httpPort).c_str()); 
+          //iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_ROUTE,m_httpPath); 
+
+          char httpConfig_ack[150];
+          snprintf(httpConfig_ack, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+            
+          debugPrint(F("httpConfig ACK :"));debugPrint(httpConfig_ack);
+          iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HTTP_CONFIG_ACK, httpConfig_ack);
+          
+          //stm reset
+          delay(10);
+          if(subConfig = root["httpConfig"]["host"] != m_httpHost ){
+                STM32.reset();
+          }
+          
+        }
+        
+    } 
+    // SET Sensor Configuration and its OFFSET value
+    subConfig = root["sensorConfig"];
+    if (subConfig.success()) {
+        //configureAllFeatures(subConfig);
+        bool dataWritten = false;
+        
+        if (saveToFlash) {
+            //DOSFS.begin();
+            File sensorConfigFile = DOSFS.open("sensorConfig.conf", "w");
+            if (sensorConfigFile)
+            {
+                
+                if (loopDebugMode) {
+                 debugPrint(F("Writting into file: "), true);
+                }
+                sensorConfigFile.print(jsonChar);
+                sensorConfigFile.close();
+                dataWritten = true;
+            }
+            else if (loopDebugMode) {
+                 debugPrint("Failed to write into file: sensorConfig.conf ");
+                
+            }  
+        
+        }
+        if(dataWritten == true){
+          
+          JsonObject& config = configureJsonFromFlash("sensorConfig.conf",1);      // get the accountID
+          JsonVariant variant = config;
+          
+          m_temperatureOffset = config["sensorConfig"]["TMP_OFFSET"];
+          m_audioOffset = config["sensorConfig"]["SND_OFFSET"];
+        
+          if(loopDebugMode){
+
+            debugPrint("Temperature Offset is: ",false);debugPrint(m_temperatureOffset);
+            debugPrint("Audio Offset is:",false); debugPrint(m_audioOffset);
+            //debugPrint("File content");  
+           // variant.prettyPrintTo(Serial);
+          }
+          
+        }
+        
+    }
     return true;
+}
+
+/*
+ * Read the MQTT Configutation details
+ * 
+ */
+
+ void Conductor::configureMQTTServer(String filename){
+
+  // Open the configuration file
+  IPAddress tempAddress;
+  
+  File myFile = DOSFS.open(filename,"r");
+  
+  
+  StaticJsonBuffer<512> jsonBuffer;
+
+  // Parse the root object
+  JsonObject &root = jsonBuffer.parseObject(myFile);
+
+  if (!root.success()){
+    debugPrint(F("Failed to read MQTT.conf file, using default configuration"));
+    m_mqttServerIp = MQTT_DEFAULT_SERVER_IP;
+    m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
+    m_mqttUserName = MQTT_DEFAULT_USERNAME;
+    m_mqttPassword = MQTT_DEFAULT_ASSWORD;
+    //m_accountid = "XXXAdmin";
+  }
+ else {
+  
+  
+  
+  String mqttServerIP = root["mqtt"]["mqttServerIP"];
+  int mqttport = root["mqtt"]["port"];
+  
+  debugPrint("INside MQTT.conf .......");
+  m_mqttServerIp.fromString(mqttServerIP);//mqttServerIP;
+  m_mqttServerPort = mqttport;
+  m_mqttUserName = root["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
+  m_mqttPassword = root["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
+  m_accountId = root["accountid"];
+  
+  //mqttusername = MQTT_DEFAULT_USERNAME;
+/*
+  Serial.println("Before Swap :");
+  Serial.print("UserName :");Serial.println( userName);
+  Serial.print("Password :");Serial.println( password);
+  
+  fastSwap (&mqttusername, &userName); 
+  fastSwap (&mqttpassword, &password);
+  
+  Serial.println("After Swap :");
+  Serial.print("UserName :");Serial.println( userName);
+  Serial.print("Password :");Serial.println( password);
+
+  m_mqttUserName = userName;
+  m_mqttPassword = password;
+*/  
+  iuWiFi.hardReset();
+  if (debugMode) {
+        debugPrint(F("MQTT ServerIP :"),false);
+        debugPrint(m_mqttServerIp);
+        debugPrint(F("Mqtt Port :"),false);
+        debugPrint(m_mqttServerPort);
+        debugPrint(F("Mqtt UserName :"),false);
+        debugPrint(m_mqttUserName);
+        debugPrint(F("Mqtt Password :"),false);
+        debugPrint(m_mqttPassword);
+        debugPrint(F("Account ID :"));
+        debugPrint(m_accountId);
+  }   
+ 
+ }
+  myFile.close();
+  
+}
+/*
+ * swap credentails
+ */
+void Conductor::fastSwap (const char **i, const char **d)
+{
+    const char *t = *d;
+    *d = *i;
+    *i = t;
+}
+
+/*
+ * get the Board Configuration data
+ * 
+ * Used to configure http endpoint configurations
+ */
+
+
+bool Conductor::configureBoardFromFlash(String filename,bool isSet){
+  
+  if(isSet != true){
+
+    return false;
+  }
+  
+  // Open the configuration file
+ 
+  File myFile = DOSFS.open(filename,"r");
+  
+  StaticJsonBuffer<1024> jsonBuffer;
+
+  // Parse the root object
+  JsonObject &root = jsonBuffer.parseObject(myFile);
+  
+  JsonObject& root2 = root["httpConfig"];
+  if (!root.success()){
+    debugPrint(F("Failed to read httpConf.conf file, using default configuration"));
+    m_httpHost = "http://13.232.122.10";
+    m_httpPort = 8080;
+    m_httpPath = "/iu-web/iu-infiniteuptime-api/postdatadump?mac=";
+   
+  }
+ else {
+
+  // Read configuration from the file
+
+static const char* host = root2["host"];
+static uint16_t    port = root2["port"];
+static const char* path = root2["path"];
+static const char* username = root2["username"];
+static const char* password = root2["password"];
+static const char* oauth = root2["oauth"];
+
+m_httpHost  = host;
+m_httpPort = port;
+m_httpPath = path;
+m_httpUsername = username;
+m_httpPassword = password;
+m_httpOauth = oauth;
+
+if(debugMode){
+  debugPrint("FROM configureBoardFromFlash :");
+
+  debugPrint(F("Http Host :"),false);
+  debugPrint(m_httpHost);
+  //debugPrint(":");
+  debugPrint(F("Port:"),false);
+  debugPrint(m_httpPort);
+  debugPrint(F("Path :"),false);
+  debugPrint(m_httpPath);
+  debugPrint(F("UserName :"),false);
+  debugPrint(m_httpUsername);
+  debugPrint(F("Password :"),false);
+  debugPrint(m_httpPassword);
+  debugPrint(F("Oauth :"),false);
+  debugPrint(m_httpOauth);
+  }
+}
+ myFile.close();
+ 
+ return true;
+}
+
+/*
+ * configureJsonFromFlash(char* filename,bool isSet)
+ * 
+ * 
+ */
+JsonObject& Conductor:: configureJsonFromFlash(String filename,bool isSet){
+
+  if(isSet != true){
+
+    //return false;
+  }
+  
+ // Open the configuration file
+ 
+  File myFile = DOSFS.open(filename,"r");
+  
+  //StaticJsonBuffer<1024> jsonBuffer;
+  //const size_t bufferSize = JSON_ARRAY_SIZE(8) + JSON_OBJECT_SIZE(300) + 60;        // dynamically allociated memory
+  const size_t bufferSize = JSON_OBJECT_SIZE(1) + 45*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(45) + 2430;
+  
+  DynamicJsonBuffer jsonBuffer(bufferSize);
+ // Serial.print("JSON 2 SIZE :");Serial.println(bufferSize);
+ // Parse the root object
+  JsonObject &root = jsonBuffer.parseObject(myFile);
+  //JsonObject& root2 = root["fingerprints"];
+  
+  if (!root.success()){
+    debugPrint(F("Failed to read file, using default configuration"));
+   
+  }
+ else {
+  // close file
+ // Serial.println("Closing the fingerprints.conf file.....");
+  myFile.close();
+
+ }
+    
+ return root;     // JSON Object
 }
 
 /**
@@ -382,7 +801,10 @@ void Conductor::configureAllFeatures(JsonVariant &config)
 void Conductor::processCommand(char *buff)
 {
     IPAddress tempAddress;
+    
     size_t buffLen = strlen(buff);
+   // Serial.println(buff);
+    
     switch(buff[0]) {
         case 'A': // ping device
             if (strcmp(buff, "ALIVE") == 0) {
@@ -432,7 +854,8 @@ void Conductor::processCommand(char *buff)
         case 'S':
             if (strncmp(buff, "SET-MQTT-IP-", 12) == 0) {
                 if (tempAddress.fromString(&buff[12])) {
-                    m_mqttServerIp = tempAddress;
+                    m_mqttServerIp = tempAddress;     // temp adress ?
+                    //Serial.print("mqtt ip :");Serial.println(m_mqttServerIp);
                     iuWiFi.hardReset();
                     if (m_streamingMode == StreamingMode::BLE ||
                         m_streamingMode == StreamingMode::WIFI_AND_BLE)
@@ -440,9 +863,11 @@ void Conductor::processCommand(char *buff)
                         if (loopDebugMode) {
                             debugPrint("Set MQTT server IP: ", false);
                             debugPrint(m_mqttServerIp);
+                            
                         }
                         iuBluetooth.write("SET-MQTT-OK;");
                     }
+                     //Serial.print("MQTT IP Address :");Serial.println(m_mqttServerIp);
                 }
             }
         case '3':  // Collect acceleration raw data
@@ -452,12 +877,37 @@ void Conductor::processCommand(char *buff)
                 if (loopDebugMode) {
                     debugPrint("Record mode");
                 }
+                delay(500);
                 sendAccelRawData(0);  // Axis X
                 sendAccelRawData(1);  // Axis Y
                 sendAccelRawData(2);  // Axis Z
                 resetDataAcquisition();
             }
             break;
+        case '4':              // Set temperature Offset value  [4000:12 < command-value>]
+            if (buff[0] == '4' && buff[3] == '0' && buff[4]==':') {
+                
+                int id; 
+                char temperatureJSON[60];
+                sscanf(buff,"%d:%d",&id,&m_temperatureOffset);
+                snprintf(temperatureJSON, 60, "{\"sensorConfig\":{\"TMP_OFFSET\":%d,\"SND_OFFSET\":%d } }",m_temperatureOffset,m_audioOffset);
+                 
+                processConfiguration(temperatureJSON,true);    
+                
+                }
+            break;
+        case '5':              // Set Audio Offset value  [5000:12 < command-value>]
+            if (buff[0] == '5' && buff[3] == '0' && buff[4]==':') {
+                
+                int id; 
+                char audioOffsetJSON[60];
+                sscanf(buff,"%d:%d",&id,&m_audioOffset);
+                snprintf(audioOffsetJSON,60,"{\"sensorConfig\":{\"SND_OFFSET\":%d,\"TMP_OFFSET\":%d }} ",m_audioOffset,m_temperatureOffset);
+                processConfiguration(audioOffsetJSON,true); 
+                
+                }
+            break;    
+            
         default:
             break;
     }
@@ -513,6 +963,7 @@ void Conductor::processUserCommandForWiFi(char *buff,
 void Conductor::processLegacyCommand(char *buff)
 {
     // TODO Command protocol redefinition required
+    //Serial.print("Leagacy CMD Input :");Serial.println(buff);
     switch (buff[0]) {
         case '0': // Set Thresholds
             if (buff[4] == '-' && buff[9] == '-' && buff[14] == '-') {
@@ -528,7 +979,9 @@ void Conductor::processLegacyCommand(char *buff)
                     opStateComputer.setThresholds(idx, (float) th1, (float) th2,
                                                   (float) th3);
                 }
+               
             }
+            
             break;
         case '1':  // Receive the timestamp data from the bluetooth hub
             if (buff[1] == ':' && buff[12] == '.') {
@@ -571,12 +1024,22 @@ void Conductor::processLegacyCommand(char *buff)
     }
 }
 
+
 /**
  * Process the USB commands
  */
 void Conductor::processUSBMessage(IUSerial *iuSerial)
 {
     char *buff = iuSerial->getBuffer();
+    processCommand(buff);
+    
+    // // resetting BLE from USB, while testing
+    // if (strcmp(buff, "BLE-RESET-USB")) {
+    //     debugPrint("ON BOOT, BLE BUFFER : ", false); debugPrint(buff);
+    //     iuBluetooth.softReset();
+    //     debugPrint("Resetting BLE on USB trigger");
+    // }
+
     if (buff[0] == '{') {
         processConfiguration(buff, true);
     } else if (strncmp(buff, "WIFI-", 5) == 0) {
@@ -652,6 +1115,63 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuUSB.port->println(START_CONFIRM);
                     changeUsageMode(UsageMode::EXPERIMENT);
                 }
+                if (strcmp(buff, "IUGET_DATA") == 0) {
+                  iuUSB.port->write(START_CONFIRM);
+                  //Serial.println("START CUSTOM.....1");
+                  changeUsageMode(UsageMode::CUSTOM);   // switch to CUSTOM usage mode
+                  //Serial.println("START CUSTOM.....2");
+                }
+                break;
+            case UsageMode::CUSTOM:
+                if (strcmp(buff, "IUEND_DATA") == 0) {
+                    iuUSB.port->println(END_CONFIRM);
+                    //Serial.println("End CUSTOM ....");
+                    changeUsageMode(UsageMode::OPERATION);    //back to Operation Mode
+                   return; 
+                }  
+                result = strstr(buff, "Arange");
+                if (result != NULL) {
+                    switch (result[7] - '0') {
+                        case 0:
+                            iuAccelerometer.setScale(iuAccelerometer.AFS_2G);
+                            break;
+                        case 1:
+                            iuAccelerometer.setScale(iuAccelerometer.AFS_4G);
+                            break;
+                        case 2:
+                            iuAccelerometer.setScale(iuAccelerometer.AFS_8G);
+                            break;
+                        case 3:
+                            iuAccelerometer.setScale(iuAccelerometer.AFS_16G);
+                            break;
+                    }
+                    return;
+                }
+                result = strstr(buff, "rgb");
+                if (result != NULL) {
+                    ledManager.overrideColor(RGBColor(255 * (result[7] - '0'),
+                                                      255 * (result[8] - '0'),
+                                                      255 * (result[9] - '0')));
+                    return;
+                }
+                result = strstr(buff, "acosr");
+                if (result != NULL) {
+                    // Change audio sampling rate
+                    int A = result[6] - '0';
+                    int B = result[7] - '0';
+                    uint16_t samplingRate = (uint16_t) ((A * 10 + B) * 1000);
+                    iuI2S.setSamplingRate(samplingRate);
+                    return;
+                }
+                result = strstr(buff, "accsr");
+                if (result != NULL) {
+                    int A = result[6] - '0';
+                    int B = result[7] - '0';
+                    int C = result[8] - '0';
+                    int D = result[9] - '0';
+                    int samplingRate = (A * 1000 + B * 100 + C * 10 + D);
+                    iuAccelerometer.setSamplingRate(samplingRate);
+                }
                 break;
             default:
                 if (loopDebugMode) {
@@ -662,13 +1182,50 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
     }
 }
 
+void processJSONmessage(const char * buff) 
+{
+    if (buff[0] == 'm' || buff[0] == 'M') 
+    {
+        debugPrint("JSON type: ", false); debugPrint(buff[0]);
+        int message_id = int(buff[1]);
+        debugPrint("JSON message ID: ", false); debugPrint(message_id);
+        int segment_index = int(buff[2]);
+        debugPrint("JSON segment index / segment count: ", false); debugPrint(segment_index);
+        debugPrint("JSON segment data/control : ", false); 
+        bool done = false;
+        int i = 3;
+        while (true) {
+            if (done) { break;  }
+            debugPrint(char(buff[i]), false);
+            if(char(buff[i]) == ';') { done = true; }
+            i++;
+        }
+        debugPrint("", true);
+    }
+}
+
 /**
  * Process the instructions sent over Bluetooth
  */
 void Conductor::processBLEMessage(IUSerial *iuSerial)
 {
-    char *buff = iuSerial->getBuffer();
     m_lastBLEmessage = millis();
+    char *buff = iuSerial->getBuffer();
+    // debugPrint("DEBUG: BLE BUFFER: ", false); debugPrint(buff, true);
+
+    if (buff[0] == 'm' || buff[0] == 'M')  { // && (int(buff[1]) < MAX_SEGMENTED_MESSAGES)) {
+        // int(buff[1]) -> messageID
+        char segmentedMessageBuffer[21];
+        for (int i=0; i<20; i++) { segmentedMessageBuffer[i] = buff[i]; }
+        #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+        debugPrint("DEBUG: Conductor::processBLEMessage() calling processSegmentedMessage()");
+        #endif
+        processSegmentedMessage(segmentedMessageBuffer);
+        iuBluetooth.resetBuffer();  // consider the BLE received buffer to be flushed
+        #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+        debugPrint("DEBUG: Back in Conductor::processBLEMessage() after processSegmentedMessage()");
+        #endif
+    }
     if (m_streamingMode == StreamingMode::WIRED) {
         return;  // Do not listen to BLE when wired
     }
@@ -676,6 +1233,13 @@ void Conductor::processBLEMessage(IUSerial *iuSerial)
         processConfiguration(buff, true);
     } else if (strncmp(buff, "WIFI-", 5) == 0) {
         processUserCommandForWiFi(buff, &iuBluetooth);
+    } else if (strncmp(buff, "BLE-RESET", 9) == 0) {
+        debugPrint("RECEIVED BLE-RESET");
+        //  this is the first condition that will be tested to check if bluetooth is connected in updateStreamingMode() -> isBLEConnected(); 
+        // we make this 0 here to indicate that bluetooth is disconnected
+        m_lastBLEmessage = 0;
+        // debugPrint("BLE RESET");
+        iuBluetooth.softReset();     
     } else {
         processCommand(buff);
         processLegacyCommand(buff);
@@ -710,6 +1274,10 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
         case MSPCommand::ASK_BLE_MAC:
             if (loopDebugMode) { debugPrint(F("ASK_BLE_MAC")); }
             iuWiFi.sendBleMacAddress(m_macAddress);
+            break;
+	      case MSPCommand::ASK_HOST_FIRMWARE_VERSION:
+            if(loopDebugMode){ debugPrint(F("ASK_HOST_FIRMWARE_VERSION")); }
+            iuWiFi.sendHostFirmwareVersion(FIRMWARE_VERSION);               
             break;
         case MSPCommand::WIFI_ALERT_CONNECTED:
             if (loopDebugMode) { debugPrint(F("WIFI-CONNECTED;")); }
@@ -765,18 +1333,112 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             break;
         case MSPCommand::GET_RAW_DATA_ENDPOINT_INFO:
             // TODO: Implement
+            {
+            JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
+
+            m_httpHost = config["httpConfig"]["host"];
+            m_httpPort = config["httpConfig"]["port"];
+            m_httpPath = config["httpConfig"]["path"];
+            //Serial.print("File Content :");Serial.println(jsonChar);
+            //Serial.print("http details :");Serial.print(m_httpHost);Serial.print(",");Serial.print(m_httpPort);Serial.print(",");Serial.print(m_httpPath);Serial.println("/****** SWITCH****/");
+            if(m_httpHost == NULL && m_httpPort == 0 && m_httpPath == NULL ){
+              //load default configurations
+              m_httpHost = "http://13.232.122.10";                                       //"ideplus-dot-infinite-uptime-1232.appspot.com";
+              m_httpPort =  8080;                                                        //80;
+              m_httpPath = "/iu-web/iu-infiniteuptime-api/postdatadump?mac=";           //"/raw_data?mac="; 
+            }
+            iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_HOST,m_httpHost); 
+            iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_PORT,String(m_httpPort).c_str()); 
+            iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_ROUTE,m_httpPath);
+                        
             break;
+           }
+            
         case MSPCommand::GET_MQTT_CONNECTION_INFO:
             if (loopDebugMode) { debugPrint(F("GET_MQTT_CONNECTION_INFO")); }
+            {
+            JsonObject& config = configureJsonFromFlash("MQTT.conf",1);
+
+            //m_mqttServerIp = config["mqtt"]["mqttServerIP"];
+            //m_mqttServerPort = config["mqtt"]["port"];
+            m_mqttUserName = config["mqtt"]["username"];
+            m_mqttPassword = config["mqtt"]["password"];
+            m_accountId = config["accountid"];
+            //Serial.print("Account ID. 1... :");Serial.println(m_accountId);
+            //Serial.println("MQTT DEtails :"); Serial.print("IP:");Serial.println(m_mqttServerIp);Serial.print("PORT:");Serial.println(m_mqttServerPort);
+            //Serial.print("USERNAME :");Serial.println(m_mqttUserName); Serial.print("PASSWORD:");Serial.println(m_mqttPassword);
+            if(m_mqttUserName == NULL || m_mqttPassword == NULL || m_mqttServerPort == NULL){
+              // load default configurations
+              //m_mqttServerIp = MQTT_DEFAULT_SERVER_IP;
+              m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
+              m_mqttUserName = MQTT_DEFAULT_USERNAME;
+              m_mqttPassword = MQTT_DEFAULT_ASSWORD;
+            }
+
+            //Serial.print("UserName :");Serial.println(m_mqttUserName);
+            //Serial.print("Password 1 :");Serial.println(m_mqttPassword);
+            
             iuWiFi.mspSendIPAddress(MSPCommand::SET_MQTT_SERVER_IP,
                                     m_mqttServerIp);
             iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_SERVER_PORT,
                                   String(m_mqttServerPort).c_str());
             iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_USERNAME,
-                                  MQTT_DEFAULT_USERNAME);
+                                  m_mqttUserName);// MQTT_DEFAULT_USERNAME);
             iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_PASSWORD,
-                                  MQTT_DEFAULT_ASSWORD);
+                                  m_mqttPassword); //MQTT_DEFAULT_ASSWORD);
+            
+           break;
+          }
+         //case MSPCommand::SEND_FINGERPRINT_ACK:
+         //     if (loopDebugMode) { debugPrint(F("Send Diagnostic message Acknowledge to wifi")); }
+         //     iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_ACK,
+         //                           diagnosticACK);
+        case MSPCommand::PUBLISH_RAW_DATA:
+            //Serial.println("RECEIVED ACK FROM PUBLISH_RAW_DATA COMMAND...");
+            //Serial.print("Buffer:");Serial.println(buff);
             break;
+        //case MSPCommand::RECEIVE_RAW_DATA_ACK:
+        //    Serial.println("RECEIVED ACK FROM SEND_RAW_DATA COMMAND...");
+        //    Serial.print("Buffer:");Serial.println(buff);
+            
+            break;
+        case MSPCommand::SET_PENDING_HTTP_CONFIG:
+            {
+             //Serial.print("HTTP Pending Response ..............................................:");
+             //Serial.println(buff);
+             // create the JSON objects 
+             DynamicJsonBuffer jsonBuffer;
+             JsonObject& pendingConfigObject = jsonBuffer.parseObject(buff); 
+             size_t msgLen = strlen(buff);
+
+             //Serial.print("Size of buff : ");Serial.println(msgLen);
+             char fingerprintAlarm[1500];
+             char featuresThreshold[1500]; 
+             char fingerprintFeatures[1500];
+             char httpConfig[1500];
+             
+             JsonVariant fingerprintAlarmConfig  = pendingConfigObject["result"]["fingerprintAlarm"];
+             JsonVariant featuresThresholdConfig = pendingConfigObject["result"]["alarm"];
+             JsonVariant fingerprintFeaturesConfig = pendingConfigObject["result"]["fingerprint"];
+             JsonVariant httpServerConfig = pendingConfigObject["result"]["httpConfig"];
+             
+             //Serial.println(fingerprintFeaturesConfig.size());
+             
+             fingerprintAlarmConfig.prettyPrintTo(fingerprintAlarm);
+             featuresThresholdConfig.prettyPrintTo(featuresThreshold);
+             fingerprintFeaturesConfig.prettyPrintTo(fingerprintFeatures);
+             httpServerConfig.prettyPrintTo(httpConfig);
+
+             
+
+             processConfiguration(fingerprintAlarm,true);        // apply fingerprints thresholds 
+             processConfiguration(featuresThreshold ,true);       // apply features thresholds 
+             processConfiguration(fingerprintFeatures ,true);     // apply fingerprintsFeatures configurations 
+             processConfiguration(httpConfig ,true);              // apply httpServer configurations 
+              
+             
+             break;
+            }      
         default:
             // pass
             break;
@@ -1042,10 +1704,26 @@ double Conductor::getDatetime()
 
 bool Conductor::isBLEConnected()
 {
-    return (m_lastBLEmessage > 0 &&
-            millis() - m_lastBLEmessage < BLEconnectionTimeout);
+    uint32_t now = millis();
+    char temp[50];
+    // debugPrint("CHECKING BLE CONNECTION STATUS: ", false); debugPrint(itoa(m_lastBLEmessage, temp, 10), true);
+    // debugPrint("TIME DIFF: ", false); debugPrint(itoa(now-m_lastBLEmessage, temp, 10), true);
+
+    // m_lastBLEmessage == 0 indicates that BLE has started (either on boot or after reset) after disconnection
+    return m_lastBLEmessage > 0 && now - m_lastBLEmessage < BLEconnectionTimeout;
 }
 
+void Conductor::resetBLEonTimeout() {
+    // reset m_lastBLEmessage to zero if bluetooth connection is lost i.e. time difference between now and last message is greater than BLEconnectionTimeout
+    // since m_lastBLEmessage > 0 is the first condition to check if bluetooth is connected, 
+    // this will ensure isBLEConnected will return false and the mode will be switched
+    uint32_t now = millis();
+    if (m_lastBLEmessage > 0 && now - m_lastBLEmessage > BLEconnectionTimeout) { 
+        m_lastBLEmessage = 0; 
+        // debugPrint("BLE RESET");
+        iuBluetooth.softReset(); 
+    } 
+}
 
 /**
  * Switch to a StreamingMode
@@ -1056,11 +1734,17 @@ void Conductor::updateStreamingMode()
     switch (m_usageMode)
     {
         case UsageMode::CALIBRATION:
+            newMode = StreamingMode::WIRED;   //+++
+            break;
         case UsageMode::EXPERIMENT:
+            newMode = StreamingMode::WIRED;
+            break;
+        case UsageMode::CUSTOM:                   // CUSTOM Mode
             newMode = StreamingMode::WIRED;
             break;
         case UsageMode::OPERATION:
         case UsageMode::OPERATION_BIS:
+            resetBLEonTimeout(); // reset BLE if it BLE has timed out
             if (isBLEConnected()) {
                 if (iuWiFi.isConnected()) {
                     newMode = StreamingMode::WIFI_AND_BLE;
@@ -1073,6 +1757,8 @@ void Conductor::updateStreamingMode()
             break;
     }
     if (m_streamingMode == newMode) {
+        // char streaming_mode_string[10];
+        // debugPrint("Streaming mode not updated, streaming mode is : ", false); debugPrint(itoa(m_streamingMode, streaming_mode_string, 10), true);
         return; // Nothing to do
     }
     m_streamingMode = newMode;
@@ -1149,6 +1835,9 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             configureGroupsForCalibration();
             ledManager.overrideColor(RGB_CYAN);
             msg = "calibration";
+            timerISRPeriod = 600;  // 1.6KHz
+            sensorSamplingRate = 1660;
+            //Serial.println("STEP - 2");
             break;
         case UsageMode::EXPERIMENT:
             ledManager.overrideColor(RGB_PURPLE);
@@ -1160,7 +1849,14 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             configureGroupsForOperation();
             iuAccelerometer.resetScale();
             msg = "operation";
+            timerISRPeriod = 300;
             break;
+        case UsageMode::CUSTOM:
+            ledManager.overrideColor(RGB_CYAN);
+            //configureGroupsForOperation();
+            //iuAccelerometer.resetScale();
+            msg = "custom";
+            break;        
         default:
             if (loopDebugMode) {
                 debugPrint(F("Invalid usage mode preset"));
@@ -1182,7 +1878,8 @@ void Conductor::changeUsageMode(UsageMode::option usage)
  * NB: Driven sensor data acquisition depends on I2S drumbeat
  */
 bool Conductor::beginDataAcquisition()
-{
+{   
+    //Serial.println("BBBBBBBBBBBBBB");
     if (m_inDataAcquistion) {
         return true; // Already in data acquisition
     }
@@ -1253,10 +1950,46 @@ void Conductor::acquireData(bool inCallback)
                               m_streamingMode != StreamingMode::WIRED)) {
             debugPrint(F("EXPERIMENT should be RAW DATA + USB mode."));
         }
-        if (inCallback) {
-            iuI2S.sendData(iuUSB.port);
-            iuAccelerometer.sendData(iuUSB.port);
+    if (inCallback) {
+            iuI2S.sendData(iuUSB.port);             // raw audio data 
+            iuAccelerometer.sendData(iuUSB.port);   // raw accel data
+       }
+            
+        force = true;
+    }
+
+    // CUSTOM Mode
+
+  if (m_usageMode == UsageMode::CUSTOM ) {
+        if (loopDebugMode && (m_acquisitionMode != AcquisitionMode::RAWDATA ||
+                              m_streamingMode != StreamingMode::WIRED)) {
+            debugPrint(F("CUSTOM Mode should be RAW DATA + USB mode."));
         }
+    if (inCallback) {
+
+          float *acceleration;
+          float aucostic;
+          char rawData[50]; 
+          aucostic = iuI2S.getData();                               // raw audio data 
+          acceleration = iuAccelerometer.getData(iuUSB.port);       // raw accel data
+
+          //Serial.print("Audio :");Serial.println(aucostic);
+          snprintf(rawData,50,"%04.3f,%04.3f,%04.3f,%.3f",acceleration[0],acceleration[1],acceleration[2],aucostic);
+          
+          String payload = "";
+          payload = "$";
+          payload += m_macAddress.toString().c_str();
+          payload += ",";
+          payload += rawData;
+          payload += "#";
+          
+          //Serial.println(payload);
+          iuUSB.port->write(payload.c_str());
+          
+          //Serial.print(features[0],4);Serial.print(",");Serial.print(features[1],4);Serial.print(",");Serial.println(features[2],4);
+          //Serial.print("Data:");Serial.println(rawAccel);
+       }
+            
         force = true;
     }
     // Collect the new data
@@ -1327,7 +2060,8 @@ void Conductor::streamFeatures()
         if (ser1) {
             if (m_streamingMode == StreamingMode::WIFI ||
                 m_streamingMode == StreamingMode::WIFI_AND_BLE)
-            {
+            { 
+                  //Serial.print("@@@@@");
 //                FeatureGroup::instances[i]->bufferAndStream(
 //                    ser1, IUSerial::MS_PROTOCOL, m_macAddress,
 //                    ledManager.getOperationState(), batteryLoad, timestamp,
@@ -1337,12 +2071,15 @@ void Conductor::streamFeatures()
                     ledManager.getOperationState(), batteryLoad, timestamp,
                     sendFeatureGroupName1);
             } else {
+                
+                //Serial.print("1234454667674534");
                 FeatureGroup::instances[i]->legacyStream(ser1, m_macAddress,
                     ledManager.getOperationState(), batteryLoad, timestamp,
                     sendFeatureGroupName1);
             }
         }
         if (ser2) {
+            //Serial.print("SER222222222222222222222222222222222222222");
             FeatureGroup::instances[i]->legacyStream(ser2, m_macAddress,
                 ledManager.getOperationState(), batteryLoad, timestamp,
                 sendFeatureGroupName2, 1);
@@ -1354,6 +2091,7 @@ void Conductor::streamFeatures()
     }
     CharBufferNode *nodeToSend = sendingQueue.getNextBufferToSend();
     if (nodeToSend) {
+        //Serial.println("QQQQQQQQQQQQQQQQQQQQQ");
         uint16_t msgLen = strlen(nodeToSend->buffer);
         iuWiFi.startLiveMSPCommand(MSPCommand::PUBLISH_FEATURE_WITH_CONFIRMATION, msgLen + 2);
         iuWiFi.streamLiveMSPMessage((char) nodeToSend->idx);
@@ -1361,7 +2099,8 @@ void Conductor::streamFeatures()
         iuWiFi.streamLiveMSPMessage(nodeToSend->buffer, msgLen);
         iuWiFi.endLiveMSPCommand();
         sendingQueue.attemptingToSend(nodeToSend->idx);
-    }
+
+     }
     sendingQueue.maintain();
 }
 
@@ -1394,20 +2133,23 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
     }
     else if (m_streamingMode == StreamingMode::WIFI ||
              m_streamingMode == StreamingMode::WIFI_AND_BLE) {
-        uint16_t maxLen = 3500;
+       
+        uint16_t maxLen = 15000;   //3500
         char txBuffer[maxLen];
         for (uint16_t i =0; i < maxLen; i++) {
             txBuffer[i] = 0;
         }
         txBuffer[0] = axis[axisIdx];
         uint16_t idx = 1;
-        idx += accelEnergy->sendToBuffer(txBuffer, idx, 4);
+        idx += accelEnergy->sendToBuffer(txBuffer, idx, 4);   //4
         txBuffer[idx] = 0; // Terminate string (idx incremented in sendToBuffer)
         //iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_RAW_DATA, txBuffer);
-        iuWiFi.sendLongMSPCommand(MSPCommand::PUBLISH_RAW_DATA, 1000000,
+        iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 1000000,
                                   txBuffer, strlen(txBuffer));
+
+       
         delay(10);
-    }
+     }
 }
 
 /**
@@ -1417,6 +2159,7 @@ void Conductor::periodicSendAccelRawData()
 {
     uint32_t now = millis();
     if (now - m_rawDataPublicationStart > m_rawDataPublicationTimer) {
+        delay(500);
         sendAccelRawData(0);
         sendAccelRawData(1);
         sendAccelRawData(2);
@@ -1425,6 +2168,97 @@ void Conductor::periodicSendAccelRawData()
     }
 }
 
+
+/* =============================================================================
+    Send Diagnostic Fingerprint data
+============================================================================= */
+
+// bool Conductor::sendDiagnosticFingerPrints(){
+//   //static int count = 0;
+//   //debugPrint("SENDING ...........");
+
+//   int messageLength = strlen(fingerprintData);
+ 
+//   char FingerPrintResult[150 + messageLength];
+//   snprintf(FingerPrintResult, 150 + messageLength, "{\"macID\":\"%s\",\"timestamp\": %lf,\"state\":\"%d\",\"accountId\":\"%s\",\"fingerprints\": %s }", m_macAddress.toString().c_str(),getDatetime(),ledManager.getOperationState(),"XXXAdmin",fingerprintData);
+
+//     uint32_t lock_delay_start = millis();
+//     while(sync_fingerprint_lock == false && first_compute == true)
+//     {
+//     //   Serial.println("Waiting for lock to be released before publishing fingerprints");
+//       // wait till the lock is released
+//     }
+//     uint32_t lock_delay_end = millis();
+//     char lock_delay[10];
+//     itoa((lock_delay_end - lock_delay_start), lock_delay, 10);
+//     Serial.print("LOCK DELAY: ");
+//     Serial.println(lock_delay);
+    
+// if(sync_fingerprint_lock == true){
+//     first_compute = true;
+
+//  //if( isFingerprintConfigured == NULL) {
+//   debugPrint("Published Fingerprints"); 
+//   //Serial.print("Message Length :");Serial.println(messageLength);
+//   iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );  
+//  }
+//  else {
+//   //debugPrint("FingerprintConfigured is not configured !!!!");
+//  } 
+// }
+
+void Conductor::sendDiagnosticFingerPrints() {  
+
+    double fingerprint_timestamp = getDatetime();
+
+    if (strlen(fingerprintData) > 5) {//handle empty fingerprint configuration (fingerprintData will be "{}" with escape characters)
+            bool ready_to_publish = false;
+
+            if (computed_first_fingerprint_timestamp == false) {
+                computed_first_fingerprint_timestamp = true;
+                last_fingerprint_timestamp = fingerprint_timestamp; // Set the first fingerprint timestamp
+                ready_to_publish = true;
+            }
+            else { // first fingerprint already published, check timestamps
+                if((fingerprint_timestamp - last_fingerprint_timestamp) >= 0.500) {
+                    ready_to_publish = true;
+                }
+            }  
+            
+            if (ready_to_publish == true) {
+                int messageLength = strlen(fingerprintData); 
+                char FingerPrintResult[150 + messageLength];
+            
+                snprintf(FingerPrintResult, 150 + messageLength, "{\"macID\":\"%s\",\"timestamp\": %lf,\"state\":\"%d\",\"accountId\":\"%s\",\"fingerprints\": %s }", m_macAddress.toString().c_str(),fingerprint_timestamp,ledManager.getOperationState(),"XXXAdmin",fingerprintData);
+                
+                // if(loopDebugMode) {
+                //     debugPrint("Published Fingerprints"); 
+                //     char published_time_diff[50];
+                //     sprintf(published_time_diff, "%lf", fingerprint_timestamp - last_fingerprint_timestamp);
+                //     debugPrint(F("Published time diff : "), false); debugPrint(F(published_time_diff), true);
+                // }               
+            
+                last_fingerprint_timestamp = fingerprint_timestamp; // update timestamp for next iterations
+                iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );    
+            }
+            else { // not published as time_diff < 500 ms
+                // if(loopDebugMode) {
+                //     char last_fingerprint_timestamp_string[50];
+                //     char fingerprint_timestamp_string[50];
+                //     char discarded_time_diff[50];
+                //     sprintf(last_fingerprint_timestamp_string, "%lf", last_fingerprint_timestamp);
+                //     sprintf(fingerprint_timestamp_string, "%lf", fingerprint_timestamp);
+                //     sprintf(discarded_time_diff, "%lf", fingerprint_timestamp - last_fingerprint_timestamp);
+                //     debugPrint(F("Fingerprint discarded as time diff < 500, time diff: "),false); debugPrint(F(discarded_time_diff), true);
+                //     debugPrint(F("Last fingerprint timestamp: "), false); debugPrint(F(last_fingerprint_timestamp_string), true);
+                //     debugPrint(F("Fingerprint timestamp: "), false); debugPrint(F(fingerprint_timestamp_string), true);
+                // }                
+            }   
+    }
+    else {        
+        debugPrint(F("Fingerprints have not been configured."), true);
+    }   
+}
 
 
 /* =============================================================================
@@ -1485,4 +2319,538 @@ void Conductor::exposeAllConfigurations()
         FeatureComputer::instances[i]->exposeConfig();
     }
     #endif
+}
+
+void Conductor::printConductorMac() {
+    debugPrint("BLE MAC ADDRESS SET IN CONDUCTOR : ",false); debugPrint(m_macAddress.toString());
+}
+
+void Conductor::setConductorBLEMacAddress() {
+    iuBluetooth.enterATCommandInterface();
+    char BLE_MAC_Address[20];
+    iuBluetooth.sendATCommand("mac?", BLE_MAC_Address, 100);
+    iuBluetooth.exitATCommandInterface();
+    m_macAddress.fromString(BLE_MAC_Address);
+}
+
+/* =============================================================================
+    Segmented Message
+============================================================================= */
+
+void Conductor::extractPayloadFromSegmentedMessage(const char* segment, char* payload) {
+    // payload has to be a c string with  maximum length of 16 characters
+
+    // For segmentIndex = 0, segment will be "M/m | <messageID> |0| <payload>" 
+    // This '0' at segment[2] will be treated as null byte by strlen() Method
+    // Workaround - first 2 bytes are messageID and segmentCount, 
+    // Length = str(payload) + 2 for messageID, segmentCount
+    
+    int index = 0;
+    int segmentLength = strlen(&segment[3]) + 2;
+    while ((index+3) <= segmentLength) {    // here, segment does not have ";" as the last char, copy all the bytes
+        payload[index] = segment[index+3];
+        index++;
+    }
+    payload[index] = '\0';  // make it c_string to allow string functions and debugPrint
+}
+
+bool Conductor::checkMessageActive(int messageID) {
+    bool messageActive = false;
+    if ((segmentedMessages[messageID].messageID != -1) && (segmentedMessages[messageID].messageID < MAX_SEGMENTED_MESSAGES)) 
+        { messageActive = true; }
+    return messageActive;
+}
+
+void Conductor::processSegmentedMessage(const char* buff) {
+    // buff will contain maximum 20 bytes, message terminated with ';'
+
+    // processSegmentedMessage() will be called when buff[0] == 'm' or 'M'
+    // 'M' -> control message
+    // 'm' -> data message
+
+    if (buff[0] == 'M') {
+
+        // Control messages - M | <messageID> | <segmentCount> | INIT / FINISHED | ;
+        // M - 1 byte
+        // <messageID> - 1 byte, value ranges from 0 to 127, both inclusive
+        // <segmentCount> - 1 byte, value ranges from 0 to 127, both inclusive
+        // INIT / FINISHED/ - messageType
+        // ; - sentinel character, 1 byte
+
+        char messageType[PAYLOAD_LENGTH+1];
+        extractPayloadFromSegmentedMessage(buff, messageType);       
+        #ifdef IU_DEBUG_SEGMENTED_MESSAGES 
+        debugPrint("DEBUG: M: messageType: ", false); debugPrint(messageType);
+        #endif
+
+        if (strncmp(messageType, "INIT", 4) == 0) {
+            
+            #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+            debugPrint("DEBUG: M: processing INIT message");
+            #endif
+
+            if (int(buff[1]) >= MAX_SEGMENTED_MESSAGES) { 
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES 
+                debugPrint("ERROR: M: INIT: messageID: ", false); debugPrint(int(buff[1]));
+                debugPrint("ERROR: M: INIT: messageID exceeded MAX_SEGMENTED_MESSAGES");
+                #endif
+                // While processing INIT, if messageID exceeds MAX_SEGMENTED_MESSAGES, then let the rest of the transmission
+                // continue with ERRORS in the logs, a response will be sent when a FINISHED message is received
+                return;
+            }
+
+            if (int(buff[2]) > MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE) {  
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+                debugPrint("ERROR: M: INIT: segmentCount: ", false); debugPrint(int(buff[2]));
+                debugPrint("ERROR: M: INIT: segmentCount exceeded MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE");
+                #endif
+                // While processing INIT, if segmentCount exceeds MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE, then let the rest of the transmission
+                // continue with ERRORS in the logs, a response will be sent when a FINISHED message is received
+                return;
+            }
+
+            int messageID = int(buff[1]);  // setting messageID indicates message is now active i.e. data segment transmission is on-going
+            int segmentCount = int(buff[2]);
+            int startTimestamp = millis();
+            int timeout = (segmentCount + 2) * 500 + TIMEOUT_OFFSET; // 2 added for hash message and FINISHED message
+
+            segmentedMessages[messageID].messageID = messageID;
+            segmentedMessages[messageID].segmentCount = segmentCount;
+            segmentedMessages[messageID].startTimestamp = startTimestamp;
+            segmentedMessages[messageID].timeout = timeout;
+
+            #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+            debugPrint("DEBUG: M: INIT: messageID: ", false); debugPrint(segmentedMessages[messageID].messageID);
+            debugPrint("DEBUG: M: INIT: segmentCount: ", false); debugPrint(segmentedMessages[messageID].segmentCount);
+            debugPrint("DEBUG: M: INIT: startTimestamp: ", false); debugPrint(segmentedMessages[messageID].startTimestamp);   
+            #endif
+        }   
+        
+        else if (strncmp(messageType, "FINISHED", 8) == 0) {
+            #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+            debugPrint("DEBUG: M: FINISHED: processing FINISHED message");
+            #endif IU_DEBUG_SEGMENTED_MESSAGES
+
+            int messageID = int(buff[1]);    
+            int segmentCount = int(buff[2]);
+
+            // Send BLE failure response for messageID >= MAX_SEGMENTED_MESSAGES and return
+            if (messageID >= MAX_SEGMENTED_MESSAGES) { 
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES 
+                debugPrint("ERROR: M: FINISHED: messageID: ", false); debugPrint(messageID);
+                debugPrint("ERROR: M: FINISHED: messageID exceeded MAX_SEGMENTED_MESSAGES");   
+                #endif             
+                char finishedResponse[21];
+                char finishedFailure[] = "FAILURE-MSGID;"; 
+                for (int i=0; i<3; i++) { finishedResponse[i] = buff[i]; }
+                for (int i=0; i<strlen(finishedFailure); i++) { finishedResponse[i+3] = finishedFailure[i]; }
+                finishedResponse[strlen(finishedFailure)+3] = '\0';
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+                debugPrint("DEBUG: M: FINSIHED: SENDING FAILURE-MSGID RESPONSE");
+                #endif
+                if (isBLEConnected()) {
+                    iuBluetooth.write(finishedResponse);
+                    #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+                    debugPrint("DEBUG: M: FINISHED: RESPONSE sent via BLE");
+                    #endif IU_DEBUG_SEGMENTED_MESSAGES
+                }                
+                return;
+            }
+
+            // Send a BLE failure response if segmentCount >= MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE and return
+            if (segmentCount > MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE) {
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+                debugPrint("ERROR: M: FINISHED: segmentCount: ", false); debugPrint(int(buff[1]));
+                debugPrint("ERROR: M: FINISHED: segmentCount exceeded MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE");
+                #endif
+                char finishedResponse[21];
+                char finishedFailure[] = "FAILURE-SEGCNT;"; 
+                for (int i=0; i<3; i++) { finishedResponse[i] = buff[i]; }
+                for (int i=0; i<strlen(finishedFailure); i++) { finishedResponse[i+3] = finishedFailure[i]; }
+                finishedResponse[strlen(finishedFailure)+3] = '\0';
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+                debugPrint("DEBUG: M: FINSIHED: SENDING FAILURE-SEGCNT RESPONSE");
+                #endif
+                if (isBLEConnected()) {
+                        iuBluetooth.write(finishedResponse);
+                        #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+                        debugPrint("DEBUG: M: FINISHED: RESPONSE sent via BLE");
+                        #endif
+                }
+                return;
+            }
+
+            if (checkMessageActive(messageID)) {   // check if message is still active, it hasn't timed out 
+                // check if all segments have been received and hashes match
+                if(checkAllSegmentsReceived(messageID)) {
+                    compileSegmentedMessage(messageID);
+                    computeSegmentedMessageHash(messageID);
+                    if(strncmp(segmentedMessages[messageID].computedHash, segmentedMessages[messageID].receivedHash, PAYLOAD_LENGTH) == 0) {
+                        #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+                        debugPrint("DEBUG: M: FINISHED: message compiled and hashes verified");
+                        #endif                       
+                        // set messageReady to indicate message can be consumed
+                        segmentedMessages[messageID].messageReady = true;
+                        // set messageState for response that message is received successfully
+                        segmentedMessages[messageID].messageState = SEGMENTED_MESSAGE_STATE::MESSAGE_SUCCESSFUL;                         
+                    } else {
+                        // set messageState for response that hash verification failed
+                        segmentedMessages[messageID].messageState = SEGMENTED_MESSAGE_STATE::MESSAGE_HASH_VERIFICATION_FAILED;
+                    }
+                } else {
+                    // set messageState for response that some segments have not been received
+                    segmentedMessages[messageID].messageState = SEGMENTED_MESSAGE_STATE::MESSAGE_SEGMENTS_MISSING;
+                }
+
+                // send a response over BLE
+                sendSegmentedMessageResponse(messageID);
+
+                // if the message failed, then clean the failed message
+                cleanFailedSegmentedMessage(messageID);
+
+            }
+            else {
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+                debugPrint("ERROR: M: Last transmission attempt timed out or INIT not received, retry transmission");
+                #endif
+                // Last transmission attempt timed out, after which the message container was reset and made inactive
+                // or INIT was not received, so no message in segmentedMessages was made active to store incoming segments                
+                
+                // set messageState for response that last transmission timed out
+                segmentedMessages[messageID].messageState = SEGMENTED_MESSAGE_STATE::MESSAGE_TIMED_OUT;
+                
+                // here, segmentCount will be 0 by default, which, in the response message will be  M|<messageID>|0|FINISHED-TIMEDOUT|;
+                // this segmentCount will be considered as null byte by strelen() in iuBluetooth.write(), becausbe of which BLE message won't sent
+                // to avoid this, we set segmentCount to '-', since this segmentCount will not be used anyway.
+                segmentedMessages[messageID].segmentCount = '-';
+
+                // send a response over BLE
+                sendSegmentedMessageResponse(messageID);
+            }
+        }
+    }
+    else {
+        // buff[0] == 'm'
+        // Data message - m | <messageID> | <segmentIndex> | __<dataPayload>__ | ;
+        // m - 1 byte
+        // <messageID> - 1 byte, ranges from 0 to 127
+        // <segmentIndex> - 1 byte, ranges from 0 to 126 (maximum segmentCount is 127, segmentIndex will be [0, segmentCount-1])
+        // __<dataPayload>__ - upto 16 bytes of message segment
+        // ; - 1 byte sentinel character
+
+        int messageID = int(buff[1]);
+        if (int(buff[1]) >= MAX_SEGMENTED_MESSAGES) {
+            #ifdef IU_DEBUG_SEGMENTED_MESSAGES 
+            debugPrint("ERROR: m: messageID: ", false); debugPrint(int(buff[1]));
+            debugPrint("ERROR: m: messageID exceeded MAX_SEGMENTED_MESSAGES");
+            #endif
+            return;
+        }
+        #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+        debugPrint("DEBUG: m: messageID: ", false); debugPrint(messageID);
+        #endif
+
+        int segmentIndex = int(buff[2]);
+        if (segmentIndex >= MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE && segmentIndex != 127) { 
+            // segmentIndex can never be 127 ->  0 < segmentIndex <MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE, as upper bound for MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE = 127
+            // 127 is reserved for HASH message
+            #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+            debugPrint("ERROR: m: segmentIndex: ", false);  debugPrint(segmentIndex);
+            debugPrint("ERROR: m: segmentIndex exceeded MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE");
+            #endif
+            return;
+        }
+        if (segmentIndex >= segmentedMessages[messageID].segmentCount && segmentIndex != 127) { 
+            // 0 <= segmentIndex < segmentCount
+            #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+            debugPrint("ERROR: m: segmentIndex: ", false);  debugPrint(segmentIndex);
+            debugPrint("ERROR: m: segmentIndex exceeded segmentCount");
+            #endif
+            return;
+        }
+        #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+        debugPrint("DEBUG: m: segmentIndex: ", false); debugPrint(segmentIndex);
+        #endif
+
+        if(checkMessageActive(messageID)) {
+            if(segmentIndex != 127) {
+                // add the data segment
+                char payload[PAYLOAD_LENGTH+1];
+                extractPayloadFromSegmentedMessage(buff, payload);
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+                debugPrint("DEBUG: m: payload: ", false); debugPrint(payload);
+                #endif
+                strcpy(segmentedMessages[messageID].dataSegments[segmentIndex], payload);
+                segmentedMessages[messageID].dataSegments[segmentIndex][strlen(payload)] = '\0'; // TODO: might not be needed as strcpy is used
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+                debugPrint("DEBUG: m: added payload to segmentedMessage: ", false); debugPrint(segmentedMessages[messageID].dataSegments[segmentIndex]);
+                #endif
+
+                // update the bool vector tracking received segmentedMessage
+                segmentedMessages[messageID].receivedSegments[segmentIndex] = true;
+            }
+            else { // segmentIndex value is 127, indicating it's the HASH message
+                // save the received hash 
+                char receivedHash[PAYLOAD_LENGTH+1];
+                extractPayloadFromSegmentedMessage(buff, receivedHash);
+                strcpy(segmentedMessages[messageID].receivedHash, receivedHash);
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+                debugPrint("DEBUG: m: processed HASH message, receivedHash: ", false); debugPrint(segmentedMessages[messageID].receivedHash);
+                #endif IU_DEBUG_SEGMENTED_MESSAGES
+            }
+            #ifdef IU_DEBUG_SEGMENTED_MESSAGES            
+            debugPrint("DEBUG: m: processed segmentIndex: ", false); debugPrint(segmentIndex);      
+            #endif              
+        }
+        else {
+            #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+            debugPrint("ERROR: m: INIT not received, retry transmission");
+            #endif
+            // In case INIT is not received, a FAILURE resopnse will be sent for the FINISHED message after all 'm' messages 
+        }
+            
+    }
+    #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+    debugPrint("DEBUG: processSegmentedMessage returning");
+    #endif
+}
+
+bool Conductor::checkAllSegmentsReceived(int messageID) {
+    // check if all segments have been received 
+    bool allSegmentsReceived = true;
+    #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+    debugPrint("DEBUG: in checkAllSegmentsReceived(): segmentCount: ", false); debugPrint(segmentedMessages[messageID].segmentCount);
+    #endif
+    for (int segmentIndex=0; segmentIndex<segmentedMessages[messageID].segmentCount; segmentIndex++) {
+        if (segmentedMessages[messageID].receivedSegments[segmentIndex] != true) {
+            #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+            debugPrint("DEBUG: in checkAllSegmentsReceived(): missing segmentIndex: ", false); debugPrint(segmentIndex);
+            #endif
+            allSegmentsReceived = false;
+            break;
+        }   
+    }
+    #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+    debugPrint("DEBUG: in checkAllSegmentsReceived(): all segments recevied: ", false); debugPrint(allSegmentsReceived);
+    #endif
+    return allSegmentsReceived;
+}
+
+void Conductor::compileSegmentedMessage(int messageID) {
+    // compile message from the segments
+    for (int segmentIndex=0; segmentIndex < segmentedMessages[messageID].segmentCount; segmentIndex++) {
+        #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+        debugPrint("DEBUG: in compileSegmentedMessages(): segmentIndex: ", false); debugPrint(segmentIndex, false);
+        debugPrint(" segmentData: ", false); debugPrint(segmentedMessages[messageID].dataSegments[segmentIndex]);
+        #endif
+        strcat(segmentedMessages[messageID].message, segmentedMessages[messageID].dataSegments[segmentIndex]);
+    }
+    #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+    debugPrint("DEBUG: in compileSegmentedMessages(): message compiled: ", false); debugPrint(segmentedMessages[messageID].message);
+    #endif
+}
+
+void Conductor::computeSegmentedMessageHash(int messageID) {
+    // message has to be successfully compiled before calling this method
+    unsigned char* md5hash = MD5::make_hash(segmentedMessages[messageID].message, strlen(segmentedMessages[messageID].message));
+    memcpy(segmentedMessages[messageID].computedHash, MD5::make_digest(md5hash, 16), PAYLOAD_LENGTH);
+    segmentedMessages[messageID].computedHash[PAYLOAD_LENGTH] = '\0';
+    #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+    debugPrint("DEBUG: in computeSegmentedMessageHash(): message: ", false); debugPrint(segmentedMessages[messageID].message);
+    debugPrint("DEBUG: in computeSegmentedMessageHash(): computedHash: ", false); debugPrint(segmentedMessages[messageID].computedHash);
+    #endif
+}
+
+void Conductor::cleanSegmentedMessage(int messageID) {
+    // resets all data members, message reverts to inactive state
+    segmentedMessages[messageID].messageID = -1;
+    segmentedMessages[messageID].segmentCount = 0;
+    for (int i=0; i<MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE; i++) {  }
+    for (int i=0; i<MAX_NUMBER_OF_SEGMENTS_PER_MESSAGE; i++) {
+        segmentedMessages[messageID].receivedSegments[i] = false;
+        strcpy(segmentedMessages[messageID].dataSegments[i], "");
+    }
+    segmentedMessages[messageID].startTimestamp = 0;
+    segmentedMessages[messageID].timeout = 0;   
+    strcpy(segmentedMessages[messageID].message, ""); 
+    strcpy(segmentedMessages[messageID].receivedHash, "");
+    strcpy(segmentedMessages[messageID].computedHash, "");
+    segmentedMessages[messageID].messageReady = false;
+    segmentedMessages[messageID].messageConsumed = false;
+    segmentedMessages[messageID].messageState = -1;
+}
+
+void Conductor::cleanTimedoutSegmentedMessages() {
+    for (int messageID=0; messageID<MAX_SEGMENTED_MESSAGES; messageID++) {
+        if (checkMessageActive(messageID)) {
+            int timeDiff = millis() - segmentedMessages[messageID].startTimestamp;;
+            if  (timeDiff > segmentedMessages[messageID].timeout) {
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES 
+                debugPrint("DEBUG: Conductor::cleanTimedoutSegmentedMessages(): timeDiff: ", false); debugPrint(timeDiff, false);
+                debugPrint(" for messageID: ", false);  debugPrint(messageID, false);
+                debugPrint(" exceeded timeout: ", false); debugPrint(segmentedMessages[messageID].timeout);
+                #endif
+                cleanSegmentedMessage(messageID);
+            }
+        }        
+    }
+}
+
+void Conductor::cleanConsumedSegmentedMessages() {
+    // this method will be called in main loop(), right after consuming the ready message
+    for (int messageID=0; messageID<MAX_SEGMENTED_MESSAGES; messageID++) {
+        if (checkMessageActive(messageID) && segmentedMessages[messageID].messageConsumed) {
+            #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+            debugPrint("DEBUG: Conductor::cleanConsumedSegmentedMessages(): messageID: ", false); debugPrint(messageID);
+            #endif
+            cleanSegmentedMessage(messageID);
+        }
+    }
+}
+
+void Conductor::cleanFailedSegmentedMessage(int messageID) {
+    if(checkMessageActive(messageID)) {
+        if (segmentedMessages[messageID].messageState == SEGMENTED_MESSAGE_STATE::MESSAGE_HASH_VERIFICATION_FAILED || 
+            segmentedMessages[messageID].messageState == SEGMENTED_MESSAGE_STATE::MESSAGE_SEGMENTS_MISSING || 
+            segmentedMessages[messageID].messageState == SEGMENTED_MESSAGE_STATE::MESSAGE_TIMED_OUT) {
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+                debugPrint("DEBUG: in cleanFailedSegmentedMessage: messageID: ", false); debugPrint(messageID, false);
+                debugPrint(" messageState: ", false); debugPrint(segmentedMessages[messageID].messageState);
+                #endif
+                cleanSegmentedMessage(messageID);
+        }
+    }
+}
+
+bool Conductor::consumeReadySegmentedMessage(char* returnMessage) {
+    // if message is ready, set messageConsumed to true and return the message
+    // if multiple messages are ready, it will return the first ready message, and next ones will be returned in subsequent iterations
+
+    bool readyMessageConsumed = false;
+    for (int messageID=0; messageID<MAX_SEGMENTED_MESSAGES; messageID++) {
+        if (checkMessageActive(messageID) && segmentedMessages[messageID].messageReady) {
+            strcpy(returnMessage, segmentedMessages[messageID].message);
+            segmentedMessages[messageID].messageConsumed = true;
+            readyMessageConsumed = true;
+            break;
+        }
+    } 
+    return readyMessageConsumed;
+}
+
+void Conductor::sendSegmentedMessageResponse(int messageID) {
+
+    char messageState[18];
+    switch (segmentedMessages[messageID].messageState)
+    {
+    case SEGMENTED_MESSAGE_STATE::MESSAGE_SUCCESSFUL :
+        strcpy(messageState, "SUCCESS;");
+        break;
+    case SEGMENTED_MESSAGE_STATE::MESSAGE_SEGMENTS_MISSING :
+        strcpy(messageState, "FAILURE-MISSSGMT;");
+        break;
+    case SEGMENTED_MESSAGE_STATE::MESSAGE_HASH_VERIFICATION_FAILED :
+        strcpy(messageState, "FAILURE-HASH;");
+        break;
+    case SEGMENTED_MESSAGE_STATE::MESSAGE_TIMED_OUT :
+        strcpy(messageState, "FAILURE-TIMEDOUT;");
+        break;
+    }
+    #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+    debugPrint("DEBUG: sendSegmentedMessageResponse: messageState: ", false);  debugPrint(messageState);
+    #endif
+
+    char finishedResponse[21];
+    finishedResponse[0] = 'M';
+    finishedResponse[1] = segmentedMessages[messageID].messageID;
+    finishedResponse[2] = segmentedMessages[messageID].segmentCount;
+    for (int i=0; i<strlen(messageState); i++) { finishedResponse[i+3] = messageState[i]; } 
+    finishedResponse[strlen(messageState)+3] = '\0';
+    
+    if (isBLEConnected()) {
+            iuBluetooth.write(finishedResponse);
+            delay(1000);  // ensure response has been sent
+            #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+            debugPrint("DEBUG: M: sendSegmentedMessageResponse: response sent via BLE");
+            #endif
+    }
+}
+
+void Conductor::setThresholdsFromFile() 
+{
+    StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
+    JsonVariant config = JsonVariant(
+            iuFlash.loadConfigJson(IUFlash::CFG_FEATURE, jsonBuffer));
+    config.prettyPrintTo(Serial);
+    if (config.success()) {
+        const char* threshold = "TRH";
+        float low, mid, high;
+        
+        debugPrint("Current active group name is :",false);debugPrint(m_mainFeatureGroup->getName());
+        for(uint8_t i=0;i<m_mainFeatureGroup->getFeatureCount();i++) {
+            char featureName[Feature::nameLength + 1];
+            strncpy(featureName, m_mainFeatureGroup->getFeature(i)->getName(), Feature::nameLength);
+            featureName[Feature::nameLength]='\0';
+            
+            //To handle discrepency between TMP, TMA, TMB. The google MQTT broker sends "TMA" as 
+            //the temperature key, but locally the temperature feature's name is "TMP"
+            // see https://infinite-uptime.atlassian.net/browse/IF-18 
+            if (strncmp(featureName, "TM", 2) == 0) {
+                if (!config[featureName].success()) {   //local temperature name and JSON temperature name do not match
+                    char* tempNames[3] = {"TMA", "TMB", "TMP"};
+                    int tempCounter;
+                    for (tempCounter = 0; tempCounter < 3; tempCounter++) {
+                        if (config[tempNames[tempCounter]].success()) 
+                            break;
+                    }
+                strcpy(featureName, tempNames[tempCounter]);    //use correct JSON key to set new thresholds     
+                } 
+            }
+            low = config[featureName][threshold][0];
+            mid = config[featureName][threshold][1];
+            high = config[featureName][threshold][2];
+
+            debugPrint("Setting thresholds for feature name: ",false);debugPrint(featureName,false);
+            debugPrint(" low : ",false);debugPrint(low,false);
+            debugPrint(" mid : ",false);debugPrint(mid,false);
+            debugPrint(" high : ",false);debugPrint(high);
+
+            opStateComputer.setThresholds(i, low, mid, high);
+
+        }
+        processLegacyCommand("6000000:1.1.1.1.1.1");            //ensure these features are activated
+        computeFeatures();                                      //compute current state with these thresholds
+    }
+    else {
+        debugPrint("Threshold file read was not successful.");
+    }
+}
+//set the sensor Configuration
+
+bool Conductor::setSensorConfig(char* filename){
+    
+    JsonObject& config = configureJsonFromFlash(filename,1);      
+    JsonVariant variant = config;
+
+    if (!config.success()) {
+        if (debugMode) {
+            debugPrint("parseObject() failed");
+        }
+        return false;
+    }
+    else{
+
+        m_temperatureOffset = config["sensorConfig"]["TMP_OFFSET"];
+        m_audioOffset = config["sensorConfig"]["SND_OFFSET"];
+        if(loopDebugMode){
+            debugPrint("Tempearature Offset: ",false);
+            debugPrint(m_temperatureOffset);
+            debugPrint("Audio Offset:",false);
+            debugPrint(m_audioOffset);
+        }    
+        //variant.prettyPrintTo(Serial);
+        //Serial.println("READING FROM STARTUP COMPLETE...");   
+
+        return true;
+    }
 }

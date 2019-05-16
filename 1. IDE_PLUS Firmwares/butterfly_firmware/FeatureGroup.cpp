@@ -338,6 +338,7 @@ void FeatureGroup::bufferAndQueue(
         now - m_bufferStartTime > maxBufferDelay ||
         CharBufferNode::bufferSize - m_bufferIndex < maxBufferMargin) {
         if (m_charBufferNode) {
+          //Serial.print("SENDCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC");
         // Send current data
             m_charBufferNode->buffer[m_bufferIndex] = 0;
             sendingQueue->finishedWriting(m_charBufferNode->idx);
@@ -351,6 +352,7 @@ void FeatureGroup::bufferAndQueue(
     if (sendName) {
         // Always send for Legacy protocol, send once for MSP
         if (protocol == IUSerial::LEGACY_PROTOCOL || m_bufferIndex == 0) {
+          //Serial.print("LEAGACY$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
             strcat(m_charBufferNode->buffer, m_name);
             m_bufferIndex += strlen(m_name);
             m_charBufferNode->buffer[m_bufferIndex++] = ',';

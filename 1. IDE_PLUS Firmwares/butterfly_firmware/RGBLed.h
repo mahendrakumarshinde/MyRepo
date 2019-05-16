@@ -88,7 +88,7 @@ class RGBLed
 
     protected:
         /***** Hardware and power management *****/
-        uint8_t m_intensityPercent = 100;
+        uint8_t m_intensityPercent = 10;
         /***** Color queue *****/
         bool m_lockedColors = false;
         RGBColor m_colors[maxColorCount];

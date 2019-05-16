@@ -44,6 +44,9 @@ class IURawDataHelper
         virtual bool areAllKeyPresent();
         /***** HTTP Post request *****/
         virtual int publishIfReady(MacAddress macAddress);
+        virtual int publishJSON(MacAddress macAddress,char* value, uint16_t valueLength);
+        //virtual int publishBigJSON(char* values);
+        virtual String publishConfigMessage(MacAddress macAddress);
 
     protected:
         /***** Endpoint *****/
@@ -60,6 +63,7 @@ class IURawDataHelper
         uint32_t m_postTimeout;
         /***** HTTP Post request *****/
         virtual int httpPostPayload(MacAddress macAddress);
+        virtual String httpGetPayload(MacAddress macAddress);
 };
 
 #endif // IURAWDATAHELPER_H

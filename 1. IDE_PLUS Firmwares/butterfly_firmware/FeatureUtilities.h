@@ -185,6 +185,14 @@ namespace RFFTAmplitudes
 
     float getRMS(q31_t *amplitudes, uint16_t sampleCount, bool removeDC=true);
 
+    // function to get accl. mean
+    float getAccelerationMean(q15_t *values,uint16_t sampleCount);
+
+    // removeAccelAmplitudesMean 
+    void removeNewAccelMean(q15_t *values, uint16_t sampleCount,float newAccelMean,q15_t *newAccelAmplitudes);
+    //get the new RMS
+    float getNewAccelRMS(q15_t *newAccelAmplitudes,uint16_t sampleCount);
+    
     uint16_t getRescalingFactorForIntegral(q15_t *amplitudes,
                                            uint16_t sampleCount,
                                            uint16_t samplingRate);

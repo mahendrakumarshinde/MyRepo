@@ -27,7 +27,8 @@ class FeatureComputer;
  * Features handle per section recording on their buffer, publication and
  * acknowledgement.
  * Buffers are split into multiple sections (2 by default). Note that the total
- * length of the buffer should be divisible by maxSectionCount. Each section
+ * length of the buffer should be divisible by (e.g 1024 % 128 )
+. Each section
  * represents a consistent set of values that are recorded together.
  * Note that if a computation uses consecutive sections, there is no in-built
  * garanty that these sections have been recorded consecutively, without time

@@ -15,6 +15,8 @@
 #endif
 
 const uint8_t ESP8285_ENABLE_PIN = A2;
+const uint8_t ESP8285_IO0        = 7; 
+
 
 void changeLedColor(bool R, bool G, bool B)
 {
@@ -31,8 +33,12 @@ void setup()
     pinMode(GREEN_PIN, OUTPUT);
     pinMode(BLUE_PIN, OUTPUT);
     pinMode(ESP8285_ENABLE_PIN, OUTPUT);
+    pinMode(ESP8285_IO0,OUTPUT);
+    
     changeLedColor(1, 0, 0);
+    digitalWrite(ESP8285_IO0,LOW);
     digitalWrite(ESP8285_ENABLE_PIN, LOW);
+    
     delay(100);
     digitalWrite(ESP8285_ENABLE_PIN, HIGH);
     changeLedColor(0, 1, 0);

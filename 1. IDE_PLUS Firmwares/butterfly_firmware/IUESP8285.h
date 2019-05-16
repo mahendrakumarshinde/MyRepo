@@ -86,6 +86,8 @@ class IUESP8285 : public IUSerial, public Component
         void softReset() { sendMSPCommand(MSPCommand::WIFI_SOFT_RESET); }
         void sendBleMacAddress(MacAddress bleMac)
             { mspSendMacAddress(MSPCommand::RECEIVE_BLE_MAC, bleMac); }
+	      void sendHostFirmwareVersion(const char *FirmwareVersion)
+            { sendMSPCommand(MSPCommand::RECEIVE_HOST_FIRMWARE_VERSION, FirmwareVersion); } // send Firmware Vr to WIfi
         void sendWiFiCredentials();
         void forgetCredentials();
         void sendStaticConfig();
