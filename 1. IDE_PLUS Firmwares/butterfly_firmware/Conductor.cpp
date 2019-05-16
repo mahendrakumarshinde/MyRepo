@@ -10,9 +10,6 @@ int sensorSamplingRate;
 int m_temperatureOffset;
 int m_audioOffset;
 
-// static const char* rawAccelerationX;
-// static const char* rawAccelerationY;
-// static const char* rawAccelerationZ;
         
 char Conductor::START_CONFIRM[11] = "IUOK_START";
 char Conductor::END_CONFIRM[9] = "IUOK_END";
@@ -2061,11 +2058,13 @@ void Conductor::streamFeatures()
     if (nodeToSend) {
         //Serial.println("QQQQQQQQQQQQQQQQQQQQQ");
         uint16_t msgLen = strlen(nodeToSend->buffer);
-        iuWiFi.startLiveMSPCommand(MSPCommand::PUBLISH_FEATURE_WITH_CONFIRMATION, msgLen + 2);
-        iuWiFi.streamLiveMSPMessage((char) nodeToSend->idx);
-        iuWiFi.streamLiveMSPMessage(':');
+        //iuWiFi.startLiveMSPCommand(MSPCommand::PUBLISH_FEATURE_WITH_CONFIRMATION, msgLen + 2);
+        //iuWiFi.streamLiveMSPMessage((char) nodeToSend->idx);
+        //iuWiFi.streamLiveMSPMessage(':');
+        //iuWiFi.write("XXXAdmin;;;");
         iuWiFi.streamLiveMSPMessage(nodeToSend->buffer, msgLen);
-        iuWiFi.endLiveMSPCommand();
+        iuWiFi.write("\n");
+        //iuWiFi.endLiveMSPCommand();
         sendingQueue.attemptingToSend(nodeToSend->idx);
 
      }
@@ -2079,9 +2078,9 @@ void Conductor::streamFeatures()
  */
 void Conductor::sendAccelRawData(uint8_t axisIdx)
 {
-    static char* rawAccelerationX;
-    static char* rawAccelerationY;
-    static char* rawAccelerationZ;
+    static char rawAccelerationX[15000];
+    static char rawAccelerationY[15000];
+    static char rawAccelerationZ[15000];
     
     if (axisIdx > 2) {
         return;
@@ -2135,45 +2134,46 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
         char rawAcceleration[maxLen];
         char* accelX;char* accelY; char* accelZ;
 
+        debugPrint("TXBuffer : ",false);debugPrint(txBuffer);
         if(txBuffer[0] == 'X' && axisIdx == 0){
             
-            Serial.print("Axis : ");Serial.println(txBuffer[0]);
-            Serial.print("Axis ID :");Serial.println(axisIdx);
+            memmove(rawAccelerationX,txBuffer + 2, strlen(txBuffer) - 1); // sizeof(txBuffer)/sizeof(txBuffer[0]) -2);
 
-            rawAccelerationX = txBuffer + 2;
-            //rawAccelerationX = accelX;
-            memmove(rawAccelerationX,txBuffer + 2,strlen(txBuffer) + 2);
-            Serial.print("X-data :");Serial.println(rawAccelerationX);
+            //strcpy(rawAccelerationX,&txBuffer[2]);
+            debugPrint("Address of X :");debugPrint((int)rawAccelerationX);
+            debugPrint("RawAcel X: ",false);debugPrint(rawAccelerationX);
+            
+            //Serial.print("X-data :");Serial.println(rawAccelerationX[0]);
         }else if(txBuffer[0]== 'Y' && axisIdx == 1)
         {
-            Serial.print("Axis : ");Serial.println(txBuffer[0]);
-            Serial.print("Axis ID :");Serial.println(axisIdx);
-
-            rawAccelerationY = txBuffer + 2;
+            //rawAccelerationY = txBuffer + 2;
             
             //rawAccelerationY = accelY;
-
-            memmove(rawAccelerationY,txBuffer + 2,strlen(txBuffer) + 2);
-            Serial.print("X1-data :");Serial.println(rawAccelerationX);
-            Serial.print("Y-data :");Serial.println(rawAccelerationY);
-            /* code */
+            memmove(rawAccelerationY,txBuffer + 2, strlen(txBuffer) - 1 ); //sizeof(txBuffer)/sizeof(txBuffer[0]) -2);
+            //strcpy(rawAccelerationY,&txBuffer[2]); //,strlen(txBuffer+ 2 ) );
+            
+            debugPrint("Address of Y :");debugPrint((int)rawAccelerationY);
+            debugPrint("RawAcel Y: ",false);debugPrint(rawAccelerationY);
         }else if(txBuffer[0] == 'Z' && axisIdx == 2){
-            Serial.print("Axis : ");Serial.println(txBuffer[0]);
-            Serial.print("Axis ID :");Serial.println(axisIdx);
-
-            rawAccelerationZ = txBuffer + 2;  
+            
+            //rawAccelerationZ = txBuffer + 2;  
             //rawAccelerationZ = accelZ;
-
-            Serial.print("X @-data :");Serial.println(rawAccelerationX);
-            Serial.print("Y @-data :");Serial.println(rawAccelerationY);
-            Serial.print("Z-data  : ");Serial.println(rawAccelerationZ);
+            memmove(rawAccelerationZ,txBuffer + 2, strlen(txBuffer) - 1) ; //sizeof(txBuffer)/sizeof(txBuffer[0]) -2);    
+            //strcpy(rawAccelerationZ,&txBuffer[2]); //,strlen(txBuffer) + 2);
             
-            Serial.println();
-
-            //snprintf(rawAcceleration,maxLen,"{\"macId\":%s,\"X\":%s,\"Y\":%s,\"Z\":%s }",m_macAddress.toString().c_str(),rawAccelerationX,rawAccelerationY,rawAccelerationZ);
+            debugPrint("Address of Z :");debugPrint((int)rawAccelerationZ);
             
-            //Serial.print("FFT Raw Data");
-            //Serial.println(rawAcceleration);
+            debugPrint("RawAcel Z: ",false);debugPrint(rawAccelerationZ);
+            debugPrint("RawAcel XinZ: ",false);debugPrint(rawAccelerationX);
+            debugPrint("RawAcel YinZ: ",false);debugPrint(rawAccelerationY);
+    
+            //Serial.println();
+
+            snprintf(rawAcceleration,maxLen,"{\"macId\":%s,\"X\":%s,\"Y\":%s,\"Z\":%s }",m_macAddress.toString().c_str(),rawAccelerationX,rawAccelerationY,rawAccelerationZ);
+            iuWiFi.write(rawAcceleration);
+
+            Serial.print("FFT Raw Data");
+            Serial.println(rawAcceleration);
 
             //FREE MEMORY 
             memset(rawAccelerationX,0,sizeof(rawAccelerationX));
