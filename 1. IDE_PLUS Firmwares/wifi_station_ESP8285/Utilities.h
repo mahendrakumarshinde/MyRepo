@@ -2,82 +2,11 @@
 #define UTILITIES_H
 
 #include <Arduino.h>
+#include <time.h>
 
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
-#include <time.h>
-
-
-/* =============================================================================
-    Debugging and testing definitions
-============================================================================= */
-
-// Define TEST_TOPICS to use the PubSub test topics (instead of prod ones)
-//#define TEST_TOPICS
-
-// Define DEBUGMODE to enable debug level messages from the whole firmware
-//#define DEBUGMODE
-
-#ifdef DEBUGMODE
-    const bool debugMode = true;
-#else
-    const bool debugMode = false;
-#endif
-
-
-/* =============================================================================
-    PubSub topic names
-============================================================================= */
-
-#ifdef TEST_TOPICS
-    const uint8_t FEATURE_TOPIC_LENGTH = 20;
-    const uint8_t DIAGNOSTIC_TOPIC_LENGTH = 14;
-//    const uint8_t RAW_DATA_TOPIC_LENGTH = 17;
-    const char FEATURE_TOPIC[FEATURE_TOPIC_LENGTH] = "iu_device_data_test";
-    const char DIAGNOSTIC_TOPIC[DIAGNOSTIC_TOPIC_LENGTH] = "iu_error_test";
-//    const char RAW_DATA_TOPIC[RAW_DATA_TOPIC_LENGTH] = "iu_raw_data_test";
-#else
-    const uint8_t FEATURE_TOPIC_LENGTH = 15;
-    const uint8_t DIAGNOSTIC_TOPIC_LENGTH = 9;
-//    const uint8_t RAW_DATA_TOPIC_LENGTH = 12;
-    const char FEATURE_TOPIC[FEATURE_TOPIC_LENGTH] = "iu_device_data";
-    const char DIAGNOSTIC_TOPIC[DIAGNOSTIC_TOPIC_LENGTH] = "iu_error";
-//    const char RAW_DATA_TOPIC[RAW_DATA_TOPIC_LENGTH] = "iu_raw_data";
-#endif  // TEST_TOPICS
-
-
-/* =============================================================================
-    Debugging utilities
-============================================================================= */
-
-
-template <typename T>
-inline void debugPrint(T msg, bool endline = true)
-{
-    #ifdef DEBUGMODE
-    if (endline) { Serial.println(msg); }
-    else { Serial.print(msg); }
-    #endif
-}
-
-//Specialization for float printing with fixed decimal count
-template <>
-inline void debugPrint(float msg, bool endline)
-{
-    #ifdef DEBUGMODE
-    if (endline) { Serial.println(msg, 6); }
-    else { Serial.print(msg, 6); }
-    #endif
-}
-
-template <typename T>
-inline void raiseException(T msg)
-{
-    #ifdef DEBUGMODE
-    debugPrint(F("Error: "), false);
-    debugPrint(msg);
-    #endif
-}
+#include <IUDebugger.h>
 
 
 /* =============================================================================
@@ -86,7 +15,7 @@ inline void raiseException(T msg)
 
 /**
  * Sends an HTTP GET request - HTTPS is used if fingerprint is given.
- * 
+ *
  * @param url
  * @param responseBody
  * @param maxResponseLength
@@ -126,9 +55,62 @@ inline int httpGetRequest(const char *url, char* responseBody,
     return httpCode;
 }
 
+// Get the configuration messages 
+
+
+/**
+ * Sends an HTTP GET request - HTTPS is used if fingerprint is given.
+ *
+ * @param url
+ * @param maxResponseLength
+ * @param httpsFingerprint
+ * 
+ * return - responseBody 
+ */
+inline String httpGET(const char *url,uint16_t maxResponseLength,
+                          const char *httpsFingerprint=NULL)
+{
+   String responseBody;
+   
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        if (debugMode)
+        {
+            debugPrint("WiFi disconnected: GET request failed");
+        }
+        return "WIFI-DISCONNECTED";
+    }
+    HTTPClient http;
+    if (httpsFingerprint)
+    {
+        http.begin(String(url), String(httpsFingerprint));
+    }
+    else
+    {
+        http.begin(String(url));
+    }
+    int httpCode = http.GET();
+    if (httpCode > 0)
+    {
+        responseBody = http.getString();//.toCharArray(responseBody, maxResponseLength);
+        if (debugMode)
+        {
+            debugPrint(responseBody);
+        }
+    }
+    http.end();
+    if(httpCode > 0){
+      return responseBody;
+    }
+   else {
+    return String(httpCode);
+   }
+}
+
+
 /**
  * Sends an HTTP POST request - HTTPS is used if fingerprint is given.
- * 
+ *
  * @param url
  * @param payload
  * @param payloadLength
@@ -202,8 +184,9 @@ inline int httpPostBigJsonRequest(
         {
             debugPrint("WiFi disconnected: POST request failed");
         }
-        return 0;
+        return 404; // 0
     }
+    
     // create the request and headers
     String request = "POST " + String(endpointURL) + " HTTP/1.1\r\n" +
         "Host: " + String(endpointHost) + "\r\n" +
@@ -224,7 +207,8 @@ inline int httpPostBigJsonRequest(
             debugPrint("\nHEADERS:");
             debugPrint(request);
         }
-        return connectResult;  // 0 means no connection
+      
+       return 505; //connectResult;  // 0 means no connection
     }
 
     // This will send the request and headers to the server
@@ -232,7 +216,8 @@ inline int httpPostBigJsonRequest(
     // now we need to chunk the payload into 1000 byte chunks
     size_t cIndex;
     size_t retSize;
-    for (cIndex = 0; cIndex < payloadLength - chunkSize; cIndex = cIndex + chunkSize)
+    for (cIndex = 0; cIndex < payloadLength - chunkSize;
+         cIndex = cIndex + chunkSize)
     {
         retSize = client.write(&payload[cIndex], chunkSize);
         if(retSize != chunkSize)
@@ -266,7 +251,8 @@ inline int httpPostBigJsonRequest(
             lastDataTime = millis();
 
             if(headerLine.startsWith("HTTP/1.")) {
-                returnCode = headerLine.substring(9, headerLine.indexOf(' ', 9)).toInt();
+                returnCode = headerLine.substring(
+                    9, headerLine.indexOf(' ', 9)).toInt();
             }
             if(headerLine == "")
             {
@@ -292,10 +278,61 @@ inline int httpPostBigJsonRequest(
 }
 
 
-/* =============================================================================
-    OTA functions
-============================================================================= */
+/*
+ * 
+ * post big json with httpclient
+ */
 
+inline int publishBigJSON(const char *endpointHost, const char *endpointURL,
+    uint16_t endpointPort, uint8_t *payload, uint16_t payloadLength,
+    size_t chunkSize=WIFICLIENT_MAX_PACKET_SIZE,
+    uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT){
 
+if(WiFi.status()== WL_CONNECTED){   //Check WiFi connection status
+ 
+   HTTPClient http;    //Declare object of class HTTPClient
+ 
+  
+   //http.begin("http://115.112.92.146:58888/contineonx-web-admin/imiot-infiniteuptime-api/postdatadump");      //Specify request destination
+  
+   String url = String(endpointHost) + String(":")+ String(endpointPort) + String(endpointURL);   
+   http.begin(url);      //Specify request destination
+
+  // http.addHeader("POST",String(endpointURL) + " HTTP/1.1\r\n" );  //Specify content-type header
+  // http.addHeader("Host",String(endpointHost) + "\r\n" );         //Specify content-type header
+  // http.addHeader("Accept","application/json\r\n");         //Specify content-type header
+  // http.addHeader("Content-Type", "application/json\r\n");    //Specify content-type header
+  // http.addHeader("Content-Length", String(payloadLength) + "\r\n\r\n");  //Specify content-type header
+  http.addHeader("Content-Type", "text/plain"); 
+     
+  // create the request and headers
+  //String request =
+ /* http.addHeader("POST " + String(end     pointURL) + " HTTP/1.1\r\n" +
+                  "Host: " + String(endpointHost) + "\r\n" + 
+                  "Accept: application/json" + "\r\n" + 
+                  "Content-Type: application/json\r\n" +
+                  "Content-Length: " + String(payloadLength) + "\r\n\r\n");
+  */                
+   
+   //http.addHeader(request);
+   
+   //int httpCode = http.POST(url); //+ macAddress.toString().c_str() );   //Send the request
+   int httpCode = http.POST((const char*)payload); //+ macAddress.toString().c_str() );   //Send the request
+   
+   String payload = http.getString();                  //Get the response payload
+ 
+   //Serial.println(httpCode);   //Print HTTP return code
+   //Serial.println(payload);    //Print request response payload
+ 
+   http.end();  //Close connectionm_lastSentHeartbeat
+   return httpCode;
+ }else{
+
+    return 222;
+    debugPrint("Error in WiFi connection");   
+ 
+ }
+
+}
 
 #endif // UTILITIES_H

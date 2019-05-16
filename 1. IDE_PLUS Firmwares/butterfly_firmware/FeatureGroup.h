@@ -3,8 +3,11 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <MacAddress.h>
+#include <IUSerial.h>
 
 #include "FeatureClass.h"
+#include "CharBufferSendingQueue.h"
 
 /**
  * A list of features that allows to consistently monitor 1 (part of a) machine.
@@ -17,7 +20,7 @@ class FeatureGroup
     public:
         /***** Preset values and default settings *****/
         static const uint8_t maxFeatureCount = 10;
-        static const uint16_t maxBufferSize = 700;
+//        static const uint16_t maxBufferSize = 700;
         static const uint16_t maxBufferMargin = 200;
         static const uint32_t maxBufferDelay = 3000;
         /***** Instance registry *****/
@@ -43,15 +46,24 @@ class FeatureGroup
         void setDataSendPeriod(uint16_t dataSendPeriod);
         bool isDataSendTime(uint8_t idx=0);
         /***** Communication *****/
-        void stream(HardwareSerial *port, const char *macAddress,
-                    double timestamp, bool sendMACAddress=false);
-        void legacyStream(HardwareSerial *port, const char *macAddress,
-                          OperationState::option opState, float batteryLoad,
-                          double timestamp, bool sendName=false,
-                          uint8_t portIdx=0);
-        void legacyBufferStream(HardwareSerial *port, const char *macAddress,
-                                OperationState::option opState, float batteryLoad,
-                                double timestamp, bool sendName=false);
+        bool isReadyToStream(uint8_t portIdx=0);
+        void MSPstream(IUSerial *iuSerial, MacAddress mac,
+                       double timestamp, bool sendMACAddress=false,
+                       uint8_t portIdx=0);
+        void legacyStream(
+            IUSerial *iuSerial, MacAddress mac, uint8_t opState,
+            float batteryLoad, double timestamp, bool sendName=false,
+            uint8_t portIdx=0);
+//        void bufferAndStream(
+//            IUSerial *iuSerial, IUSerial::PROTOCOL_OPTIONS protocol,
+//            MacAddress mac, uint8_t opState, float batteryLoad,
+//            double timestamp, bool sendName=false, uint8_t portIdx=0);
+        void bufferAndQueue(
+            CharBufferSendingQueue *sendingQueue,
+            IUSerial::PROTOCOL_OPTIONS protocol, MacAddress mac,
+            uint8_t opState, float batteryLoad, double timestamp,
+            bool sendName=false, uint8_t portIdx=0);
+
 
     protected:
         /***** Instance registry *****/
@@ -67,23 +79,10 @@ class FeatureGroup
         uint16_t m_dataSendPeriod;  // ms
         uint32_t m_lastSentTime[2];
         /***** Feature Buffering *****/
-        char m_featureBuffer[maxBufferSize];
+//        char m_featureBuffer[maxBufferSize];
+        CharBufferNode *m_charBufferNode;
         uint16_t m_bufferIndex;
         uint32_t m_bufferStartTime;
 };
-
-
-/***** Instantiation *****/
-
-extern FeatureGroup healthCheckGroup;
-extern FeatureGroup calibrationGroup;
-extern FeatureGroup rawAccelGroup;
-extern FeatureGroup pressStandardGroup;
-extern FeatureGroup motorStandardGroup;
-
-
-/***** Populate groups *****/
-
-extern void populateFeatureGroups();
 
 #endif // FEATUREGROUP_H

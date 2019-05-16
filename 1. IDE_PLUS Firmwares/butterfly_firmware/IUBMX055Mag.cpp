@@ -13,7 +13,7 @@
  */
 IUBMX055Mag::IUBMX055Mag(IUI2C *iuI2C, const char* name, Feature *magneticX,
                          Feature *magneticY, Feature *magneticZ) :
-    DrivenSensor(name, 3, magneticX, magneticY, magneticZ),
+    HighFreqSensor(name, 3, magneticX, magneticY, magneticZ),
     m_forcedMode(false),
     m_odr(defaultODR),
     m_accuracy(defaultAccuracy)
@@ -52,59 +52,53 @@ void IUBMX055Mag::softReset()
     // Write 1 to both bit7 and bit1 from power control byte 0x4B
     m_iuI2C->writeByte(ADDRESS, PWR_CNTL1, 0x82);
     delay(1000);
-    // Reflect the actual state of the sensor
-    DrivenSensor::sleep();
-    m_forcedMode = true;
+    m_powerMode = PowerMode::SUSPEND;  // default after soft-reset
+    m_forcedMode = true;  // default after soft-reset
     setAccuracy(m_accuracy);
     setODR(defaultODR);
 }
 
-
 /**
- * Set the power mode to ACTIVE (between 170μA and 4.9mA).
+ * Manage component power modes
  *
  * After waking up, the Magnetometer will be in Forced Mode by default.
  */
-void IUBMX055Mag::wakeUp()
+void IUBMX055Mag::setPowerMode(PowerMode::option pMode)
 {
-    if (m_powerMode == PowerMode::SUSPEND)
+    if ((m_powerMode == PowerMode::DEEP_SLEEP ||
+         m_powerMode == PowerMode::SUSPEND) &&
+        pMode != PowerMode::DEEP_SLEEP && pMode != PowerMode::SUSPEND)
     {
-        m_iuI2C->writeByte(ADDRESS, PWR_CNTL1, 0x01);
+        m_iuI2C->writeByte(ADDRESS, PWR_CNTL1, 0x01);  // wake up
         delay(100);
+        m_forcedMode = true;  // default after wake-up
         // When exiting suspend mode, need to rewrite configurations
         setAccuracy(m_accuracy);
     }
-    enterForcedMode();
-    DrivenSensor::wakeUp();
-}
-
-/**
- * Set the power mode to SLEEP
- *
- * The registers can be read but no data acquisition can be performed.
- */
-void IUBMX055Mag::sleep()
-{
-    // When exiting suspend mode, need to rewrite configurations
-    if (m_powerMode == PowerMode::SUSPEND)
+    m_powerMode = pMode;
+    switch (m_powerMode)
     {
-        m_iuI2C->writeByte(ADDRESS, PWR_CNTL1, 0x01);
-        setAccuracy(m_accuracy);
+        case PowerMode::PERFORMANCE:
+        case PowerMode::ENHANCED:
+        case PowerMode::REGULAR:
+        case PowerMode::LOW_1:
+        case PowerMode::LOW_2:
+            enterForcedMode();
+            break;
+        case PowerMode::SLEEP:
+            m_iuI2C->writeByte(ADDRESS, PWR_CNTL2, 0x06);
+            break;
+        case PowerMode::DEEP_SLEEP:
+        case PowerMode::SUSPEND:
+            m_iuI2C->writeByte(ADDRESS, PWR_CNTL1, 0x00);
+            break;
+        default:
+            if (debugMode)
+            {
+                debugPrint(F("Unhandled power Mode "), false);
+                debugPrint(m_powerMode);
+            }
     }
-    m_iuI2C->writeByte(ADDRESS, PWR_CNTL2, 0x06);
-    m_forcedMode = true;  // Reflect the actual state of the sensor
-    DrivenSensor::sleep();
-}
-
-/**
- * Set the power mode to SUSPEND (11μA)
- *
- * This is the default after Power-On Reset
- */
-void IUBMX055Mag::suspend()
-{
-    m_iuI2C->writeByte(ADDRESS, PWR_CNTL1, 0x00);
-    DrivenSensor::suspend();
 }
 
 
@@ -240,12 +234,3 @@ void IUBMX055Mag::setAccuracy(IUBMX055Mag::accuracyPreset accuracy)
 /* =============================================================================
     Debugging
 ============================================================================= */
-
-
-/* =============================================================================
-    Instantiation
-============================================================================= */
-
-IUBMX055Mag iuMagnetometer(&iuI2C, "MAG", &magneticX, &magneticY, &magneticZ);
-
-

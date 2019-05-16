@@ -33,16 +33,15 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
+		<Unit filename="BoardDefinition.h" />
+		<Unit filename="Conductor.cpp" />
+		<Unit filename="Conductor.h" />
 		<Unit filename="IUMQTTHelper.cpp" />
 		<Unit filename="IUMQTTHelper.h" />
-		<Unit filename="IURawDataHandler.cpp" />
-		<Unit filename="IURawDataHandler.h" />
-		<Unit filename="IUSerial.cpp" />
-		<Unit filename="IUSerial.h" />
-		<Unit filename="IUWiFiManager.cpp" />
-		<Unit filename="IUWiFiManager.h" />
-		<Unit filename="TimeManager.cpp" />
-		<Unit filename="TimeManager.h" />
+		<Unit filename="IURawDataHelper.cpp" />
+		<Unit filename="IURawDataHelper.h" />
+		<Unit filename="IUTimeHelper.cpp" />
+		<Unit filename="IUTimeHelper.h" />
 		<Unit filename="Utilities.h" />
 		<Extensions>
 			<code_completion />

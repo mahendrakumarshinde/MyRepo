@@ -6,8 +6,15 @@
 /* CMSIS-DSP library for RFFT */
 #include <arm_math.h>
 
-#include "Keywords.h"
-#include "Logger.h"
+#include <IUDebugger.h>
+#include <IUSerial.h>
+
+
+/* =============================================================================
+    Forward declarations
+============================================================================= */
+
+class FeatureComputer;
 
 
 /* =============================================================================
@@ -20,7 +27,8 @@
  * Features handle per section recording on their buffer, publication and
  * acknowledgement.
  * Buffers are split into multiple sections (2 by default). Note that the total
- * length of the buffer should be divisible by maxSectionCount. Each section
+ * length of the buffer should be divisible by (e.g 1024 % 128 )
+. Each section
  * represents a consistent set of values that are recorded together.
  * Note that if a computation uses consecutive sections, there is no in-built
  * garanty that these sections have been recorded consecutively, without time
@@ -30,10 +38,25 @@
  * (all the necessary computations have been done and the section is now
  * available to record new data). Acknowledgement is done on a per-receiver
  * basis.
+ *
+ *The parameter "isFFT" gives meaning to the feature content. If true, the
+ * feature contains FFT coeffs, organised as follow:
+ *  - 3 * i: Index of the Fourrier coefficient
+ *  - 3 * i + 1: Real part the Fourrier coefficient
+ *  - 3 * i + 2: Imaginary part the Fourrier coefficient
+ * That means that if the FFT feature must hold 50 Fourrier coefficients, its
+ * sectionSize should be 150.
+ * If the feature contains FFT coef, the resolution will naturally only apply
+ * to the real and imaginary parts of the coefficients, not to the indexes.
+ * 
+ * An feature is over-writtable when new values can be recorded irregardless
+ * of whether or not its currently published values have been acknowledged
+ * by all the receivers.
  */
 class Feature
 {
     public:
+        static const uint8_t nameLength = 3;
         /* TODO - For now, only slideOption::FIXED is implemented => need to
         implement slideOption::ROLLING */
         enum slideOption : uint8_t {FIXED,
@@ -44,74 +67,98 @@ class Feature
         static const uint8_t MAX_INSTANCE_COUNT = 60;
         static uint8_t instanceCount;
         static Feature *instances[MAX_INSTANCE_COUNT];
+
+        /***** Callback signatures *****/
+        // NB: this callbacks should be kept short as they be called outside of
+        // the main loop
+        typedef void (*onNewValueSignature)(Feature *feature);
+        typedef void (*onNewRecordedSectionSignature)(Feature *feature);
+
         /***** Core *****/
-        Feature(const char* name, uint8_t sectionCount=2,
-                uint16_t sectionSize=1, slideOption sliding=FIXED);
+        Feature(const char* name, uint8_t sectionCount,
+                uint16_t sectionSize, slideOption sliding=FIXED,
+                bool isFFT=false, bool isOverWrittable=false);
         virtual ~Feature();
-        virtual void reset();
-        virtual uint8_t addReceiver(uint8_t receiverId);
-        /***** Feature designation *****/
         virtual char* getName() { return m_name; }
-        virtual bool isNamed(const char* name)
-            { return strcmp(m_name, name) == 0; }
-        virtual bool isScalar() { return m_sectionSize == 1; }
+        virtual bool isNamed(const char* name) {
+            return strcmp(m_name, name) == 0;
+        }
         static Feature *getInstanceByName(const char *name);
+        /***** Configuration *****/
+        virtual bool isRequired() { return (m_alwaysRequired || m_required); }
+        virtual void setRequired(bool required) { m_required = required; }
+        virtual void setAlwaysRequired(bool required)
+            { m_alwaysRequired = required; }
+        virtual void configure(JsonVariant &config) { }
+        virtual void setOnNewValueCallback(onNewValueSignature onNewValue)
+            { m_onNewValue = onNewValue; }
+        virtual void setOnNewRecordedSectionCallback(
+                onNewRecordedSectionSignature onNewRecordedSection)
+            { m_onNewRecordedSection = onNewRecordedSection; }
         /***** Physical metadata *****/
         virtual void setSamplingRate(uint16_t rate) { m_samplingRate = rate; }
         virtual uint16_t getSamplingRate() { return m_samplingRate; }
         virtual void setResolution(float res) { m_resolution = res; }
         virtual float getResolution() { return m_resolution; }
-        /***** Configuration *****/
-        virtual bool isStreaming() { return m_streamingEnabled; }
-        virtual void enableStreaming() { m_streamingEnabled = true; }
-        virtual void disableStreaming() { m_streamingEnabled = false; }
-        virtual bool opStateEnabled() { return m_opStateEnabled; }
-        virtual void enableOperationState() { m_opStateEnabled = true; }
-        virtual void disableOperationState() { m_opStateEnabled = false; }
-        virtual void activate() { m_active = true; }
-        virtual void deactivate();
-        virtual bool isActive() { return m_active; }
-        virtual void configure(JsonVariant &config);
-        /***** OperationState and Thresholds *****/
-        virtual OperationState::option getOperationState()
-            { return m_operationState; }
-        virtual void updateOperationState();
-        virtual void setThreshold(uint8_t idx, float value)
-            { m_thresholds[idx] = value; }
-        virtual void setThresholds(float normalVal, float warningVal,
-                                   float dangerVal);
-        virtual float getThreshold(uint8_t idx) { return m_thresholds[idx]; }
-        virtual float getValueToCompareToThresholds()
-            { return m_thresholds[0] - 1;}
-        /***** Computers tracking *****/
-        virtual void setSensorName(const char* name)
-            { strcpy(m_sensorName, name); }
-        virtual char* getSensorName() { return m_sensorName; }
-        virtual bool isComputedFeature() { return m_computerId != 0; }
-        virtual void setComputerId(uint8_t id) { m_computerId = id; }
-        virtual uint8_t getComputerId() { return m_computerId; }
+        /***** Receivers tracking *****/
+        virtual void addReceiver(FeatureComputer *receiver);
+        virtual bool removeReceiver(FeatureComputer *receiver);
         virtual uint8_t getReceiverCount() { return m_receiverCount; }
-        virtual uint8_t getReceiverId(uint8_t idx)
-            { return m_receiversId[idx]; }
+        virtual FeatureComputer* getReceiver(uint8_t idx)
+            { return m_receivers[idx]; }
+        virtual int getReceiverIndex(FeatureComputer *receiver);
+        /***** Computers tracking *****/
+        virtual bool isComputedFeature() { return m_computer != NULL; }
+        virtual void setComputer(FeatureComputer *cptr) { m_computer = cptr; }
+        virtual void removeComputer() { m_computer = NULL; }
+        virtual FeatureComputer* getComputer() { return m_computer; }
         /***** Buffer core *****/
+        // Reset all counters
+        virtual void reset();
+        // Filling the buffer
+        virtual void addValue(q15_t value) {}
+        virtual void addValue(float value) {}
+        virtual void addValue(q31_t value) {}
+        virtual void incrementFillingIndex();
         // Accessors to values
-        virtual uint16_t getSectionSize() {return m_sectionSize; }
-        virtual q15_t* getNextQ15Values(uint8_t receiverIdx) { return NULL; }
-        virtual float* getNextFloatValues(uint8_t receiverIdx) { return NULL; }
-        virtual q31_t* getNextQ31Values(uint8_t receiverIdx) { return NULL; }
-        virtual void addQ15Value(q15_t value) {}
-        virtual void addFloatValue(float value) {}
-        virtual void addQ31Value(q31_t value) {}
+        virtual uint16_t getSectionSize() { return m_sectionSize; }
+        virtual void* getNextValuesToCompute(FeatureComputer *receiver)
+            { return NULL; }
+        virtual float* getNextFloatValuesToCompute(FeatureComputer *receiver)
+            { return NULL; }
+        virtual q15_t* getNextQ15ValuesToCompute(FeatureComputer *receiver)
+            { return NULL; }
+        virtual q31_t* getNextQ31ValuesToCompute(FeatureComputer *receiver)
+            { return NULL; }
+        virtual void* getLastRecordedValues(uint8_t sectionCount=1)
+            { return NULL; }
+        virtual float* getLastRecordedFloatValues(uint8_t sectionCount=1)
+            { return NULL; }
+        virtual q15_t* getLastRecordedQ15Values(uint8_t sectionCount=1)
+            { return NULL; }
+        virtual q31_t* getLastRecordedQ31Values(uint8_t sectionCount=1)
+            { return NULL; }
         // Tracking the buffer state
+        virtual bool hasBeenFilledOnce() { return m_filledOnce; }
         virtual bool isReadyToRecord(uint8_t sectionCount=1);
         virtual bool isReadyToCompute(uint8_t receiverIdx,
-                                      uint8_t sectionCount=1);
-        virtual void incrementFillingIndex();
-        virtual void acknowledge(uint8_t receiverIdx, uint8_t sectionCount=1);
+                                      uint8_t sectionCount,
+                                       bool computeLast=false);
+        virtual bool isReadyToCompute(FeatureComputer *receiver,
+                                      uint8_t sectionCount=1,
+                                      bool computeLast=false);
+        virtual void acknowledge(uint8_t receiverIdx,
+                                 uint8_t sectionCount=1);
+        virtual void acknowledge(FeatureComputer *receiver,
+                                 uint8_t sectionCount=1);
+        virtual void flagDataError();
+        virtual bool sectionsToComputeHaveDataError(FeatureComputer *receiver,
+                                                    uint8_t sectionCount);
+        virtual bool latestSectionsHaveDataError(uint8_t sectionCount=1);
         /***** Communication *****/
-        virtual void stream(HardwareSerial *port, uint8_t sectionCount=1);
-        virtual void bufferStream(char *destination, uint16_t &destIndex,
-                                  uint8_t sectionCount=1);
+        virtual void stream(IUSerial *ser, uint8_t sectionCount=1);
+        virtual uint16_t sendToBuffer(char *destination, uint16_t startIndex,
+                                      uint8_t sectionCount=1);
         /***** Debugging *****/
         virtual void exposeConfig();
         virtual void exposeCounters();
@@ -121,43 +168,43 @@ class Feature
         /***** Instance registry *****/
         uint8_t m_instanceIdx;
         /***** Feature designation *****/
-        char m_name[4];
-        /***** Physical metadata *****/
-        uint16_t m_samplingRate;
-        float m_resolution;
+        char m_name[nameLength + 1];
         /***** Configuration variables *****/
-        bool m_active;
-        bool m_opStateEnabled;
-        bool m_streamingEnabled;
-        /***** OperationState and Thresholds *****/
-        OperationState::option m_operationState;
-        // Normal, warning and danger thresholds
-        float m_thresholds[OperationState::COUNT - 1];
-        /***** Computers tracking *****/
-        char m_sensorName[4];
-        uint8_t m_computerId;
-        uint8_t m_receiverCount;
-        uint8_t m_receiversId[maxReceiverCount];
+        bool m_required = false;
+        bool m_alwaysRequired = false;
+        onNewValueSignature m_onNewValue = NULL;
+        onNewRecordedSectionSignature m_onNewRecordedSection = NULL;
+        bool m_overWrittable;
+        /***** Physical metadata *****/
+        uint16_t m_samplingRate = 0;
+        float m_resolution = 1;
+        bool m_isFFT;
+        /***** Receivers and computers tracking *****/
+        uint8_t m_receiverCount = 0;
+        FeatureComputer *m_receivers[maxReceiverCount];
+        FeatureComputer *m_computer = NULL;
         /***** Buffer core *****/
         uint8_t m_sectionCount;
         uint16_t m_sectionSize;
         slideOption m_sliding;
         uint16_t m_totalSize;
         // Tracking the buffer state
-        uint16_t m_fillingIndex;
-        uint8_t m_recordIndex;
+        bool m_filledOnce = false;
+        uint16_t m_fillingIndex = 0;
+        uint8_t m_recordIndex = 0;
         uint8_t m_computeIndex[maxReceiverCount];
         bool m_published[maxSectionCount];
         bool m_acknowledged[maxSectionCount][maxReceiverCount];
+        bool m_dataError[maxSectionCount];
         // Lock a section to prevent both recording and computation, useful when
         // streaming the section content for example, to garantee data
         // consistency at section level
         bool m_locked[maxSectionCount];
-        virtual void m_specializedStream(HardwareSerial *port,
+        virtual void m_specializedStream(IUSerial *ser,
                                          uint8_t sectionIdx,
                                          uint8_t sectionCount=1) {}
-        virtual void m_specializedBufferStream(uint8_t sectionIdx,
-            char *destination, uint16_t &destIndex, uint8_t sectionCount=1) {}
+        virtual uint16_t m_specializedBufferStream(uint8_t sectionIdx,
+            char *destination, uint16_t startIndex, uint8_t sectionCount=1) {}
 };
 
 
@@ -166,236 +213,176 @@ class Feature
 ============================================================================= */
 
 /**
- * A Feature which values are float numbers
+ * A template class for Feature with a specific number format.
  *
  * Values should be an array of size = sectionCount * sectionSize
  */
-class FloatFeature : public Feature
+template <typename T>
+class FeatureTemplate : public Feature
 {
     public:
-        FloatFeature(const char* name, uint8_t sectionCount=2,
-                     uint16_t sectionSize=1, float *values=NULL,
-                     Feature::slideOption sliding=Feature::FIXED);
-        virtual ~FloatFeature() {}
-        virtual float* getNextFloatValues(uint8_t receiverIdx);
-        virtual void addFloatValue(float value);
-        /***** OperationState and Thresholds *****/
-        virtual float getValueToCompareToThresholds();
+        FeatureTemplate(const char* name, uint8_t sectionCount,
+                        uint16_t sectionSize, T *values,
+                        Feature::slideOption sliding=Feature::FIXED,
+                        bool isFFT=false, bool isOverWrittable=false) :
+            Feature(name, sectionCount, sectionSize, sliding, isFFT,
+                    isOverWrittable),
+            m_values(values) { }
+        virtual ~FeatureTemplate() {}
+
+        /**
+         * Add a value to the buffer and increment the filling index
+         */
+        virtual void addValue(T value) {
+            m_values[m_fillingIndex] = value;
+            incrementFillingIndex();
+        }
+
+        /**
+         * Return a pointer to the current section start for the receiver.
+         */
+        virtual void* getNextValuesToCompute(FeatureComputer *receiver) {
+            int idx = getReceiverIndex(receiver);
+            if (idx < 0) {
+                return NULL;
+            } else {
+                uint16_t startIdx = (uint16_t) m_computeIndex[uint8_t(idx)] *
+                                    m_sectionSize;
+                return &m_values[startIdx];
+            }
+        }
+        virtual float* getNextFloatValuesToCompute(FeatureComputer *receiver)
+            { return NULL; }
+        virtual q15_t* getNextQ15ValuesToCompute(FeatureComputer *receiver)
+            { return NULL; }
+        virtual q31_t* getNextQ31ValuesToCompute(FeatureComputer *receiver)
+            { return NULL; }
+
+
+        /**
+         * Return a pointer to the start of the k last recorded section.
+         */
+        virtual void* getLastRecordedValues(uint8_t sectionCount=1) {
+            uint8_t sIdx = (m_sectionCount + m_recordIndex - sectionCount) %
+                            m_sectionCount;
+            return &m_values[sIdx * m_sectionSize];
+        }
+        virtual float* getLastRecordedFloatValues(uint8_t sectionCount=1)
+            { return NULL; }
+        virtual q15_t* getLastRecordedQ15Values(uint8_t sectionCount=1)
+            { return NULL; }
+        virtual q31_t* getLastRecordedQ31Values(uint8_t sectionCount=1)
+            { return NULL; }
 
     protected:
-        float *m_values;
-        virtual void m_specializedStream(HardwareSerial *port,
+        T *m_values;
+
+        virtual void m_specializedStream(IUSerial *ser,
                                          uint8_t sectionIdx,
-                                         uint8_t sectionCount=1);
-        virtual void m_specializedBufferStream(uint8_t sectionIdx,
-            char *destination, uint16_t &destIndex, uint8_t sectionCount=1);
+                                         uint8_t sectionCount=1) {
+            uint8_t sIdx = 0;
+            for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++) {
+                sIdx = k % m_sectionCount;
+                if (m_isFFT) {
+                    for (uint16_t i = sIdx * m_sectionSize / 3;
+                         i < (sIdx + 1) * m_sectionSize / 3; ++i) {
+                        ser->write(',');
+                        ser->write(String((uint16_t) m_values[3 * i], DEC).c_str());
+                        ser->write(',');
+                        ser->write(String(((float) m_values[3 * i + 1]) *
+                                    m_resolution, 2).c_str());
+                        ser->write(',');
+                        ser->write(String(((float) m_values[3 * i + 2]) *
+                                    m_resolution, 2).c_str());
+                    }
+                } else {
+                    for (uint16_t i = sIdx * m_sectionSize;
+                         i < (sIdx + 1) * m_sectionSize; ++i) {
+                        ser->write(',');
+                        ser->write(String(((float) m_values[i]) * m_resolution, 2).c_str());
+                    }
+                }
+            }
+        }
+
+        virtual uint16_t m_specializedBufferStream(uint8_t sectionIdx,
+                char *destination, uint16_t startIndex, uint8_t sectionCount=1)
+        {
+            uint8_t sIdx = 0;
+            String strVal = "";
+            uint8_t floatLen = 5;
+            uint16_t destIndex = startIndex;
+            for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++) {
+                sIdx = k % m_sectionCount;
+                if (m_isFFT) {
+                    for (uint16_t i = sIdx * m_sectionSize / 3;
+                         i < (sIdx + 1) * m_sectionSize / 3; ++i) {
+                        destination[destIndex++] = ',';
+                        strcat(destination,
+                               String((int) m_values[3 * i]).c_str());
+                        if (m_values[3 * i] < 10) { destIndex++; }
+                        else if (m_values[3 * i] < 100) { destIndex += 2; }
+                        else { destIndex += 3; }
+                        destination[destIndex++] = ',';
+                        strVal = String(((float) m_values[3 * i + 1]) *
+                                        m_resolution, 2);
+                        strncat(destination, strVal.c_str(), floatLen);
+                        destIndex += min((uint16_t) strVal.length(), floatLen);
+                        destination[destIndex++] = ',';
+                        strVal = String(((float) m_values[3 * i + 2]) *
+                                        m_resolution, 2);
+                        strcat(destination, strVal.c_str());
+                        destIndex += strVal.length();
+                    }
+                } else {
+                    for (uint16_t i = sIdx * m_sectionSize;
+                         i < (sIdx + 1) * m_sectionSize; ++i) {
+                        destination[destIndex++] = ',';
+                        strVal = String(((float) m_values[i]) *
+                                        m_resolution, 2);
+                        strncat(destination, strVal.c_str(), floatLen);
+                        destIndex += min((uint16_t) strVal.length(), floatLen);
+                    }
+                }
+            }
+            return destIndex - startIndex;
+        }
 };
 
-
-/**
- * A Feature which values are q15_t numbers
- *
- * Values should be an array of size = sectionCount * sectionSize
- *
- * The parameter "isFFT" gives meaning to the feature content. If true, the
- * feature contains FFT coeffs, organised as follow:
- *  - 3 * i: Index of the Fourrier coefficient
- *  - 3 * i + 1: Real part the Fourrier coefficient
- *  - 3 * i + 2: Imaginary part the Fourrier coefficient
- * That means that if the FFT feature must hold 50 Fourrier coefficients, its
- * sectionSize should be 150.
- * If the feature contains FFT coef, the resolution will naturally only apply
- * to the real and imaginary parts of the coefficients, not to the indexes.
- */
-class Q15Feature : public Feature
+template <>
+inline float* FeatureTemplate<float>::getNextFloatValuesToCompute(FeatureComputer *receiver)
 {
-    public:
-        Q15Feature(const char* name, uint8_t sectionCount=2,
-                   uint16_t sectionSize=1, q15_t *values=NULL,
-                   Feature::slideOption sliding=Feature::FIXED,
-                   bool isFFT=false);
-        virtual ~Q15Feature() {}
-        virtual q15_t* getNextQ15Values(uint8_t receiverIdx);
-        virtual void addQ15Value(q15_t value);
+    return (float*) getNextValuesToCompute(receiver);
+}
 
-    protected:
-        q15_t *m_values;
-        bool m_isFFT;
-        virtual void m_specializedStream(HardwareSerial *port,
-                                         uint8_t sectionIdx,
-                                         uint8_t sectionCount=1);
-        virtual void m_specializedBufferStream(uint8_t sectionIdx,
-            char *destination, uint16_t &destIndex, uint8_t sectionCount=1);
-};
-
-
-/**
- * A Feature which values are q31_t numbers
- *
- * Values should be an array of size = sectionCount * sectionCount
- *
- * The parameter "isFFT" gives meaning to the feature content. If true, the
- * feature contains FFT coeffs, organised as follow:
- *  - 3 * i: Index of the Fourrier coefficient
- *  - 3 * i + 1: Real part the Fourrier coefficient
- *  - 3 * i + 2: Imaginary part the Fourrier coefficient
- * That means that if the FFT feature must hold 50 Fourrier coefficients, its
- * sectionSize should be 150.
- * If the feature contains FFT coef, the resolution will naturally only apply
- * to the real and imaginary parts of the coefficients, not to the indexes.
- */
-class Q31Feature : public Feature
+template <>
+inline float* FeatureTemplate<float>::getLastRecordedFloatValues(uint8_t sectionCount)
 {
-    public:
-        Q31Feature(const char* name, uint8_t sectionCount=2,
-                   uint16_t sectionSize=1, q31_t *values=NULL,
-                   Feature::slideOption sliding=Feature::FIXED,
-                   bool isFFT=false);
-        virtual ~Q31Feature() {}
-        virtual q31_t* getNextQ31Values(uint8_t receiverIdx);
-        virtual void addQ31Value(q31_t value);
+    return (float*) getLastRecordedValues(sectionCount);
+}
 
-    protected:
-        q31_t *m_values;
-        bool m_isFFT;
-        virtual void m_specializedStream(HardwareSerial *port,
-                                         uint8_t sectionIdx,
-                                         uint8_t sectionCount=1);
-        virtual void m_specializedBufferStream(uint8_t sectionIdx,
-            char *destination, uint16_t &destIndex, uint8_t sectionCount=1);
-};
+template <>
+inline q15_t* FeatureTemplate<q15_t>::getNextQ15ValuesToCompute(FeatureComputer *receiver)
+{
+    return (q15_t*) getNextValuesToCompute(receiver);
+}
 
+template <>
+inline q15_t* FeatureTemplate<q15_t>::getLastRecordedQ15Values(uint8_t sectionCount)
+{
+    return (q15_t*) getLastRecordedValues(sectionCount);
+}
 
-/* =============================================================================
-    Instanciations
-============================================================================= */
+template <>
+inline q31_t* FeatureTemplate<q31_t>::getNextQ31ValuesToCompute(FeatureComputer *receiver)
+{
+    return (q31_t*) getNextValuesToCompute(receiver);
+}
 
-/***** Battery load *****/
-
-extern float batteryLoadValues[2];
-extern FloatFeature batteryLoad;
-
-
-/***** Accelerometer Features *****/
-
-// Sensor data
-extern __attribute__((section(".noinit2"))) q15_t accelerationXValues[1024];
-extern __attribute__((section(".noinit2"))) q15_t accelerationYValues[1024];
-extern __attribute__((section(".noinit2"))) q15_t accelerationZValues[1024];
-extern Q15Feature accelerationX;
-extern Q15Feature accelerationY;
-extern Q15Feature accelerationZ;
-
-
-// 128 sample long accel features
-extern __attribute__((section(".noinit2"))) float accelRMS128XValues[8];
-extern __attribute__((section(".noinit2"))) float accelRMS128YValues[8];
-extern __attribute__((section(".noinit2"))) float accelRMS128ZValues[8];
-extern __attribute__((section(".noinit2"))) float accelRMS128TotalValues[8];
-extern FloatFeature accelRMS128X;
-extern FloatFeature accelRMS128Y;
-extern FloatFeature accelRMS128Z;
-extern FloatFeature accelRMS128Total;
-
-// 512 sample long accel features
-extern __attribute__((section(".noinit2"))) float accelRMS512XValues[2];
-extern __attribute__((section(".noinit2"))) float accelRMS512YValues[2];
-extern __attribute__((section(".noinit2"))) float accelRMS512ZValues[2];
-extern __attribute__((section(".noinit2"))) float accelRMS512TotalValues[2];
-extern FloatFeature accelRMS512X;
-extern FloatFeature accelRMS512Y;
-extern FloatFeature accelRMS512Z;
-extern FloatFeature accelRMS512Total;
-
-// FFT feature from 512 sample long accel data
-extern __attribute__((section(".noinit2"))) q15_t accelReducedFFTXValues[300];
-extern __attribute__((section(".noinit2"))) q15_t accelReducedFFTYValues[300];
-extern __attribute__((section(".noinit2"))) q15_t accelReducedFFTZValues[300];
-extern Q15Feature accelReducedFFTX;
-extern Q15Feature accelReducedFFTY;
-extern Q15Feature accelReducedFFTZ;
-
-// Acceleration main Frequency features from 512 sample long accel data
-extern __attribute__((section(".noinit2"))) float accelMainFreqXValues[2];
-extern __attribute__((section(".noinit2"))) float accelMainFreqYValues[2];
-extern __attribute__((section(".noinit2"))) float accelMainFreqZValues[2];
-extern FloatFeature accelMainFreqX;
-extern FloatFeature accelMainFreqY;
-extern FloatFeature accelMainFreqZ;
-
-// Velocity features from 512 sample long accel data
-extern __attribute__((section(".noinit2"))) float velRMS512XValues[2];
-extern __attribute__((section(".noinit2"))) float velRMS512YValues[2];
-extern __attribute__((section(".noinit2"))) float velRMS512ZValues[2];
-extern FloatFeature velRMS512X;
-extern FloatFeature velRMS512Y;
-extern FloatFeature velRMS512Z;
-
-// Displacements features from 512 sample long accel data
-extern __attribute__((section(".noinit2"))) float dispRMS512XValues[2];
-extern __attribute__((section(".noinit2"))) float dispRMS512YValues[2];
-extern __attribute__((section(".noinit2"))) float dispRMS512ZValues[2];
-extern FloatFeature dispRMS512X;
-extern FloatFeature dispRMS512Y;
-extern FloatFeature dispRMS512Z;
-
-
-/***** Gyroscope Features *****/
-
-// Sensor data
-extern __attribute__((section(".noinit2"))) q15_t tiltXValues[2];
-extern __attribute__((section(".noinit2"))) q15_t tiltYValues[2];
-extern __attribute__((section(".noinit2"))) q15_t tiltZValues[2];
-extern Q15Feature tiltX;
-extern Q15Feature tiltY;
-extern Q15Feature tiltZ;
-
-
-/***** Magnetometer Features *****/
-
-// Sensor data
-extern __attribute__((section(".noinit2"))) q15_t magneticXValues[2];
-extern __attribute__((section(".noinit2"))) q15_t magneticYValues[2];
-extern __attribute__((section(".noinit2"))) q15_t magneticZValues[2];
-extern Q15Feature magneticX;
-extern Q15Feature magneticY;
-extern Q15Feature magneticZ;
-
-
-/***** Barometer Features *****/
-
-// Sensor data
-extern __attribute__((section(".noinit2"))) float temperatureValues[2];
-extern FloatFeature temperature;
-
-extern __attribute__((section(".noinit2"))) float pressureValues[2];
-extern FloatFeature pressure;
-
-
-/***** Audio Features *****/
-
-// Sensor data
-extern q15_t audioValues[8192];
-extern Q15Feature audio;
-
-// 2048 sample long features
-extern __attribute__((section(".noinit2"))) float audioDB2048Values[4];
-extern FloatFeature audioDB2048;
-
-// 4096 sample long features
-extern __attribute__((section(".noinit2"))) float audioDB4096Values[2];
-extern FloatFeature audioDB4096;
-
-
-/***** GNSS Feature *****/
-
-
-/***** RTD Temperature features *****/
-
-#ifdef RTD_DAUGHTER_BOARD // Optionnal hardware
-extern __attribute__((section(".noinit2"))) float rtdTempValues[8];
-extern FloatFeature rtdTemp;
-#endif // RTD_DAUGHTER_BOARD
-
+template <>
+inline q31_t* FeatureTemplate<q31_t>::getLastRecordedQ31Values(uint8_t sectionCount)
+{
+    return (q31_t*) getLastRecordedValues(sectionCount);
+}
 
 #endif // FEATURECLASS_H

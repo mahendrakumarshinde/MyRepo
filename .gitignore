@@ -2,6 +2,8 @@
 ###################
 */bin/
 */obj/
+# Compiled Python files
+*.pyc
 
 
 # Temporary & IDE #
@@ -9,3 +11,17 @@
 *~
 *.layout
 *.cbp
+# Python pth files
+*.pth
+# Vim swap files
+.*.swp
+# Local working files
+*.log
+# Untracked directories
+**/__pycache__/**
+
+# vscode
+**/.vscode/**
+
+# dolphin file manager files
+**/.directory

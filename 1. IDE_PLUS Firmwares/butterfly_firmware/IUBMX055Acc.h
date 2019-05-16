@@ -4,13 +4,7 @@
 #include <Arduino.h>
 #include "Sensor.h"
 #include "IUI2C.h"
-
-
-/***** Data Acquisition callbacks *****/
-
-extern bool newAccelData;
-
-void accelReadCallback(uint8_t wireStatus);
+#include "FeatureUtilities.h"
 
 
 /**
@@ -25,11 +19,11 @@ void accelReadCallback(uint8_t wireStatus);
  *    acquisition configuration, so each sensor has its own class.
  *    Data sheet => http://ae-bst.resource.bosch.com/media/products/dokumente/bmx055/BST-BMX055-DS000-01v2.pdf
  * Destinations:
- *      - accelerationX: a Q15Feature with section size = 128
- *      - accelerationY: a Q15Feature with section size = 128
- *      - accelerationZ: a Q15Feature with section size = 128
+ *      - accelerationX: a Q15 feature
+ *      - accelerationY: a Q15 feature
+ *      - accelerationZ: a Q15 feature
  */
-class IUBMX055Acc : public DrivenSensor
+class IUBMX055Acc : public HighFreqSensor
 {
     public:
         /***** Preset values and default settings *****/
@@ -73,15 +67,16 @@ class IUBMX055Acc : public DrivenSensor
         static const bandwidthOption defaultBandwidth = ABW_16Hz;
         static const uint16_t defaultSamplingRate = 1000; // Hz
         /***** Constructors and destructors *****/
-        IUBMX055Acc(IUI2C *iuI2C, const char* name, Feature *accelerationX=NULL,
-                    Feature *accelerationY=NULL, Feature *accelerationZ=NULL);
+        IUBMX055Acc(IUI2C *iuI2C, const char* name,
+                    void (*i2cReadCallback)(uint8_t wireStatus),
+                    FeatureTemplate<q15_t> *accelerationX,
+                    FeatureTemplate<q15_t> *accelerationY,
+                    FeatureTemplate<q15_t> *accelerationZ);
         virtual ~IUBMX055Acc() {}
         /***** Hardware & power management *****/
         virtual void setupHardware();
         void softReset();
-        virtual void wakeUp();
-        virtual void sleep();
-        virtual void suspend();
+        virtual void setPowerMode(PowerMode::option pMode);
         /***** Configuration and calibration *****/
         virtual void configure(JsonVariant &config);
         void setScale(scaleOption scale);
@@ -93,10 +88,8 @@ class IUBMX055Acc : public DrivenSensor
         void configureInterrupts();
         void doFastCompensation(float *destination);
         /***** Data acquisition *****/
-        virtual void acquireData(bool inCallback=false,
-                                 bool force=false);
         virtual void readData();
-        q15_t getData(uint8_t index) { return m_data[index]; }
+        void processData(uint8_t wireStatus);
         /***** Communication *****/
         void sendData(HardwareSerial *port);
         /***** Debugging *****/
@@ -110,16 +103,12 @@ class IUBMX055Acc : public DrivenSensor
         bandwidthOption m_bandwidth;
         bool m_filteredData;    // Use filter?
         /***** Data acquisition *****/
+        void (*m_readCallback)(uint8_t wireStatus);
         uint8_t m_rawBytes[6];  /* 12bits / 2 bytes per axis: LSB, MSB =>
             last 4 bits of LSB are not data, they are flags */
         q15_t m_rawData[3];     // Q15 accelerometer raw output
         q15_t m_data[3];        // Q15 data (with bias) in G
         q15_t m_bias[3];        // Bias corrections
-        void processData();
 };
-
-/***** Instantiation *****/
-
-extern IUBMX055Acc iuAccelerometer;
 
 #endif // IUBMX055ACC_H

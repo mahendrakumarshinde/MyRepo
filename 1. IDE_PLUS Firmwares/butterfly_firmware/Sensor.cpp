@@ -14,7 +14,9 @@ Sensor *Sensor::instances[Sensor::MAX_INSTANCE_COUNT] = {
 
 Sensor::Sensor(const char* name, uint8_t destinationCount,
                Feature *destination0, Feature *destination1,
-               Feature *destination2) :
+               Feature *destination2, Feature *destination3,
+               Feature *destination4, Feature *destination5,
+               Feature *destination6) :
     Component(),
     m_destinationCount(destinationCount)
 {
@@ -22,6 +24,10 @@ Sensor::Sensor(const char* name, uint8_t destinationCount,
     m_destinations[0] = destination0;
     m_destinations[1] = destination1;
     m_destinations[2] = destination2;
+    m_destinations[3] = destination3;
+    m_destinations[4] = destination4;
+    m_destinations[5] = destination5;
+    m_destinations[6] = destination6;
     setResolution(1); // Default resolution
     // Instance registration
     m_instanceIdx = instanceCount;
@@ -72,11 +78,11 @@ void Sensor::setResolution(float resolution)
 /***** Debugging *****/
 
 /**
- * Shows the sensor and its destination in DEBUGMODE
+ * Shows the sensor and its destination in IUDEBUG_ANY
  */
 void Sensor::expose()
 {
-    #ifdef DEBUGMODE
+    #ifdef IUDEBUG_ANY
     debugPrint(F("Sensor "), false);
     debugPrint(getName(), false);
     debugPrint(F(" has "), false);
@@ -95,10 +101,13 @@ void Sensor::expose()
     Driven Sensor
 ============================================================================= */
 
-DrivenSensor::DrivenSensor(const char* name, uint8_t destinationCount,
-                           Feature *destination0, Feature *destination1,
-                           Feature *destination2) :
-    Sensor(name, destinationCount, destination0, destination1, destination2)
+HighFreqSensor::HighFreqSensor(const char* name, uint8_t destinationCount,
+                               Feature *destination0, Feature *destination1,
+                               Feature *destination2, Feature *destination3,
+                               Feature *destination4, Feature *destination5,
+                               Feature *destination6) :
+    Sensor(name, destinationCount, destination0, destination1, destination2,
+           destination3, destination4, destination5, destination6)
 {
     m_callbackRate = defaultCallbackRate;
     setSamplingRate(defaultSamplingRate);
@@ -112,7 +121,7 @@ DrivenSensor::DrivenSensor(const char* name, uint8_t destinationCount,
  *
  * @param config A reference to a JsonVariant, ie a parsed JSON
  */
-void DrivenSensor::configure(JsonVariant &config)
+void HighFreqSensor::configure(JsonVariant &config)
 {
     Sensor::configure(config);
     uint16_t samplingRate = config["FREQ"];
@@ -129,7 +138,7 @@ void DrivenSensor::configure(JsonVariant &config)
 /**
  * Rate cannot be set to zero + call computeDownclockingRate at the end
  */
-void DrivenSensor::setCallbackRate(uint16_t callbackRate)
+void HighFreqSensor::setCallbackRate(uint16_t callbackRate)
 {
     m_callbackRate = callbackRate;
     computeDownclockingRate();
@@ -138,7 +147,7 @@ void DrivenSensor::setCallbackRate(uint16_t callbackRate)
 /**
  * Rate cannot be set to zero + call computeDownclockingRate at the end
  */
-void DrivenSensor::setSamplingRate(uint16_t samplingRate)
+void HighFreqSensor::setSamplingRate(uint16_t samplingRate)
 {
     m_samplingRate = samplingRate;
     for (uint8_t i = 0; i < getDestinationCount(); ++i)
@@ -153,7 +162,7 @@ void DrivenSensor::setSamplingRate(uint16_t samplingRate)
  *
  * Should be called every time the callback or sampling rates are modified.
  */
-void DrivenSensor::computeDownclockingRate()
+void HighFreqSensor::computeDownclockingRate()
 {
     m_downclocking = m_callbackRate / m_samplingRate;
     m_downclockingCount = 0;
@@ -167,7 +176,7 @@ void DrivenSensor::computeDownclockingRate()
  *
  * @param inCallback  set to true if the function is called from a callback.
  */
-void DrivenSensor::acquireData(bool inCallback, bool force)
+void HighFreqSensor::acquireData(bool inCallback, bool force)
 {
     if (inCallback)
     {
@@ -185,6 +194,7 @@ void DrivenSensor::acquireData(bool inCallback, bool force)
                 return;
             }
         }
+        //digitalWrite(7,LOW);
         readData();
     }
 }
@@ -196,9 +206,11 @@ void DrivenSensor::acquireData(bool inCallback, bool force)
 
 LowFreqSensor::LowFreqSensor(const char* name, uint8_t destinationCount,
                              Feature *destination0, Feature *destination1,
-                             Feature *destination2) :
-    Sensor(name, destinationCount, destination0, destination1, destination2),
-    m_usagePreset(LowFreqSensor::defaultUsagePreset),
+                             Feature *destination2, Feature *destination3,
+                             Feature *destination4, Feature *destination5,
+                             Feature *destination6) :
+    Sensor(name, destinationCount, destination0, destination1, destination2,
+           destination3, destination4, destination5, destination6),
     m_lastAcquisitionTime(0)
 {
     setSamplingPeriod(defaultSamplingPeriod);
@@ -215,43 +227,12 @@ LowFreqSensor::LowFreqSensor(const char* name, uint8_t destinationCount,
 void LowFreqSensor::configure(JsonVariant &config)
 {
     Sensor::configure(config);
-    JsonVariant value = config["USG"];
+    JsonVariant value = config["POW"];
     if (value.success())
     {
-        changeUsagePreset((usagePreset) (value.as<int>()));
+        setPowerMode((PowerMode::option) (value.as<int>()));
     }
 }
-
-/**
- * Change the usagePreset
- *
- * @param usage A usagePreset (Low, Regular, Enhanced, High)
- */
-void LowFreqSensor::changeUsagePreset(Sensor::usagePreset usage)
-{
-    switch (m_usagePreset)
-    {
-    case Sensor::P_LOW:
-        switchToLowUsage();
-        break;
-    case Sensor::P_REGULAR:
-        switchToRegularUsage();
-        break;
-    case Sensor::P_ENHANCED:
-        switchToEnhancedUsage();
-        break;
-    case Sensor::P_HIGH:
-        switchToHighUsage();
-        break;
-    default:
-        if (debugMode)
-        {
-            debugPrint(F("Unknown usagePreset "), false);
-            debugPrint(usage);
-        }
-    }
-}
-
 
 void LowFreqSensor::setSamplingPeriod(uint32_t samplingPeriod)
 {
@@ -281,20 +262,18 @@ void LowFreqSensor::acquireData(bool inCallback, bool force)
         return;  // Do not read low freq sensors in callback
     }
     uint32_t now = millis();
-    if (m_lastAcquisitionTime > 0 &&
-        m_lastAcquisitionTime + m_samplingPeriod > now
-            && m_lastAcquisitionTime < now )  // Handle millis() overflow
+    if (now - m_lastAcquisitionTime > m_samplingPeriod ||
+        m_lastAcquisitionTime == 0)  // Aquire at device start up
     {
-        return;
-    }
-    // Check if destinations are ready
-    for (uint8_t i = 0; i < m_destinationCount; ++i)
-    {
-        if(!force && !m_destinations[i]->isReadyToRecord())
+        // Check if destinations are ready
+        for (uint8_t i = 0; i < m_destinationCount; ++i)
         {
-            return ;
+            if(!force && !m_destinations[i]->isReadyToRecord())
+            {
+                return ;
+            }
         }
+        readData();
+        m_lastAcquisitionTime = now;
     }
-    readData();
-    m_lastAcquisitionTime = now;
 }

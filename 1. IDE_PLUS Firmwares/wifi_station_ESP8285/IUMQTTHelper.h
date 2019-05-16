@@ -1,9 +1,18 @@
 #ifndef IUMQTTHELPER_H
 #define IUMQTTHELPER_H
 
+#include <ESP8266WiFi.h>
 #include <PubSubClient.h>
+#include <time.h>
 
-#include "Utilities.h"
+#include <IUDebugger.h>
+#include <MacAddress.h>
+#include "BoardDefinition.h"
+
+
+/* =============================================================================
+    MQTT Helper
+============================================================================= */
 
 /**
  *
@@ -26,49 +35,58 @@ class IUMQTTHelper
 {
     public:
         /***** Preset values and default settings *****/
-        // MQTT server access
-        static IPAddress SERVER_HOST;
-        static const uint16_t SERVER_PORT = 1883;
-        static char USER_NAME[9];
-        static char PASSWORD[13];
+        static const uint8_t credentialMaxLength = 45;
+        static const uint8_t willMessageMaxLength = 50;
+        static const uint32_t connectionTimeout = 5000;  // ms
+        static const uint32_t connectionRetryDelay = 300;  // ms
+        static char DEFAULT_WILL_MESSAGE[44];
         // Will definition
         static const uint8_t WILL_QOS = 0;
         static const bool WILL_RETAIN = false;
-        // Topics for subscriptions and publications
-        // IMPORTANT - subscribe to each subscription in mqttReconnect functions
-        static char PUB_MQTT_EVENT[19];
-        static char PUB_NETWORK[16];
-        uint16_t HEARTBEAT_DELAY = 45;  // Seconds
-        uint16_t NETWORK_DELAY = 300;  // Seconds
         /***** Core *****/
-        IUMQTTHelper(uint8_t placeholder);
+        IUMQTTHelper(IPAddress serverIP, uint16_t serverPort,
+                     const char *username, const char *password);
+        IUMQTTHelper() : IUMQTTHelper(IPAddress(), 1883, NULL, NULL) {}
         virtual ~IUMQTTHelper() { }
-        void setDeviceInfo(const char *deviceType,
-                           const char *deviceMacAddress);
-        void reconnect(const char *statusTopic, const char *willMsg,
-                       void (*onConnectionCallback)(), uint32_t timeout);
-        void loop(const char *statusTopic, const char *willMsg,
-                  void (*onConnectionCallback)(), uint32_t timeout);
+        void setServer(IPAddress serverIP, uint16_t serverPort);
+        void setCredentials(const char *username, const char *password);
+        void setDeviceMAC(MacAddress deviceMAC);
+        void setOnConnectionCallback(void (*callback)())
+            { m_onConnectionCallback = callback; }
+        bool hasConnectionInformations();
+        void reconnect();
         bool publish(const char* topic, const char* payload);
-        bool subscribe(const char* topic);
-        /***** Faster disconnection detection *****/
-        void extendLifetime(uint16_t durationSec);
-        bool keepAlive();
+        bool subscribe(const char* topic, bool deviceSpecific);
+        /***** Infinite Uptime standard publications *****/
+        bool publishDiagnostic(const char *payload,
+                               const char *topicExtension=NULL,
+                               const uint16_t extensionLength=0);
+        bool publishFeature(const char *payload,
+                            const char *topicExtension=NULL,
+                            const uint16_t extensionLength=0);
+        bool publishLog(const char *payload,
+                        const char *topicExtension=NULL,
+                        const uint16_t extensionLength=0);
+        bool publishToFingerprints(const char *payload,
+                              const char *topicExtension,
+                              const uint16_t extensionLength);
+        void onConnection();
         /***** Public Client for convenience *****/
         PubSubClient client;
 
     protected:
+        /***** Core *****/
         WiFiClient m_wifiClient;
-        char m_deviceType[10];
-        char m_deviceMacAddress[18];
-        uint32_t m_enfOfLife;
-        /***** Utility functions *****/
-        void getFullSubscriptionName(char *destination,
-                                     const char *commandName);
+        MacAddress m_deviceMAC;
+        /***** MQTT server address and credentials *****/
+        /***** Settable parameters (addresses, credentials, etc) *****/
+        IPAddress m_serverIP;
+        uint16_t m_serverPort;
+        char m_username[credentialMaxLength];
+        char m_password[credentialMaxLength];
+        /***** Disconnection handling *****/
+        char m_willMessage[willMessageMaxLength];
+        void (*m_onConnectionCallback)() = NULL;
 };
-
-/***** Instanciation *****/
-
-extern IUMQTTHelper iuMQTTHelper;
 
 #endif // IUMQTTHELPER_H

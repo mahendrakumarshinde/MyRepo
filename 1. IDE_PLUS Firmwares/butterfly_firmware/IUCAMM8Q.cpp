@@ -5,9 +5,10 @@
     Constructors and destructors
 ============================================================================= */
 
-IUCAMM8Q::IUCAMM8Q(IUI2C *iuI2C, const char* name) :
+IUCAMM8Q::IUCAMM8Q(Uart *serial, const char* name, int enablePin) :
     LowFreqSensor(name, 0),
-    m_iuI2C(iuI2C),
+    m_serial(serial),
+    m_enablePin(enablePin),
     m_onTime(defaultOnTime),
     m_period(defaultPeriod),
     m_forcedMode(defaultForcedMode)
@@ -24,8 +25,13 @@ IUCAMM8Q::IUCAMM8Q(IUI2C *iuI2C, const char* name) :
  */
 void IUCAMM8Q::setupHardware()
 {
+    if (m_enablePin >= 0) {
+        pinMode(m_enablePin, OUTPUT);
+        digitalWrite(m_enablePin, HIGH);
+        delay(1000);
+    }
     // Start GNSS
-    GNSS.begin(Serial2, GNSS.MODE_UBLOX, GNSS.RATE_1HZ);
+    GNSS.begin(*m_serial, GNSS.MODE_UBLOX, GNSS.RATE_1HZ);
     while (!GNSS.done()) { }
     /*
     // Choose satellites
@@ -33,40 +39,38 @@ void IUCAMM8Q::setupHardware()
     while (!GNSS.done()) { }
     GNSS.setSBAS(true);
     while (!GNSS.done()) { }
-    wakeUp();
+    setPowerMode(PowerMode::REGULAR);
     */
     // GNSS deactivated for now, irregardless of the power mode
     GNSS.sleep();
 }
 
 /**
- * Set the power mode to ACTIVE
+ * Manage component power modes
  */
-void IUCAMM8Q::wakeUp()
+void IUCAMM8Q::setPowerMode(PowerMode::option pMode)
 {
-    LowFreqSensor::wakeUp();
-    //setPeriodic(m_onTime, m_period, true);
-}
-
-/**
- * Set the power mode to SLEEP
- */
-void IUCAMM8Q::sleep()
-{
-    LowFreqSensor::sleep();
-    //GNSS.sleep();
-}
-
-/**
- * Set the power mode to SUSPEND
- *
- * The SUSPEND mode is actually the same than the SLEEP mode,
- * since GNSS API doesn't offer a suspend mode.
- */
-void IUCAMM8Q::suspend()
-{
-    LowFreqSensor::suspend();
-    //GNSS.sleep();
+    m_powerMode = pMode;
+    // TODO Implement
+    switch (m_powerMode)
+    {
+        case PowerMode::PERFORMANCE:
+        case PowerMode::ENHANCED:
+        case PowerMode::REGULAR:
+        case PowerMode::LOW_1:
+        case PowerMode::LOW_2:
+        case PowerMode::SLEEP:
+        case PowerMode::DEEP_SLEEP:
+        case PowerMode::SUSPEND:
+            // TODO: Implement
+            break;
+        default:
+            if (debugMode)
+            {
+                debugPrint(F("Unhandled power Mode "), false);
+                debugPrint(m_powerMode);
+            }
+    }
 }
 
 
@@ -165,17 +169,7 @@ void IUCAMM8Q::sendData(HardwareSerial *port)
  */
 void IUCAMM8Q::exposeCalibration()
 {
-    #ifdef DEBUGMODE
+    #ifdef IUDEBUG_ANY
     // TODO Implement
     #endif
 }
-
-
-/* =============================================================================
-    Instantiation
-============================================================================= */
-
-#ifdef NO_GPS
-#else
-    IUCAMM8Q iuGNSS(&iuI2C, "GPS");
-#endif

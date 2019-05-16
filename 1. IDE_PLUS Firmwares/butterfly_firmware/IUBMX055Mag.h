@@ -18,11 +18,11 @@
  *    acquisition configuration, so each sensor has its own class.
  *    Data sheet => http://ae-bst.resource.bosch.com/media/products/dokumente/bmx055/BST-BMX055-DS000-01v2.pdf
  * Destinations:
- *      - magneticX: a Q15Feature with section size = 128
- *      - magneticY: a Q15Feature with section size = 128
- *      - magneticZ: a Q15Feature with section size = 128
+ *      - magneticX: a Q15 feature
+ *      - magneticY: a Q15 feature
+ *      - magneticZ: a Q15 feature
  */
-class IUBMX055Mag : public DrivenSensor
+class IUBMX055Mag : public HighFreqSensor
 {
     public:
         /***** Preset values and default settings *****/
@@ -56,15 +56,13 @@ class IUBMX055Mag : public DrivenSensor
             accuracyPreset::LOWPOWER;
         static const uint16_t defaultSamplingRate = 20; // Hz
         /***** Constructors and destructors *****/
-        IUBMX055Mag(IUI2C *iuI2C, const char* name, Feature *magneticX=NULL,
-                    Feature *magneticY=NULL, Feature *magneticZ=NULL);
+        IUBMX055Mag(IUI2C *iuI2C, const char* name, Feature *magneticX,
+                    Feature *magneticY, Feature *magneticZ);
         virtual ~IUBMX055Mag() {}
         /***** Hardware & power management *****/
         virtual void setupHardware();
         void softReset();
-        virtual void wakeUp();
-        virtual void sleep();
-        virtual void suspend();
+        virtual void setPowerMode(PowerMode::option pMode);
         /***** Configuration and calibration *****/
         virtual void configure(JsonVariant &config);
         void enterForcedMode();
@@ -90,9 +88,5 @@ class IUBMX055Mag : public DrivenSensor
         q15_t m_data[3];       // Latest data values
 
 };
-
-/***** Instantiation *****/
-
-extern IUBMX055Mag iuMagnetometer;
 
 #endif // IUBMX055MAG_H

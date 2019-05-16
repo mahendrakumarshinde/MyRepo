@@ -18,11 +18,11 @@
  *    acquisition configuration, so each sensor has its own class.
  *    Data sheet => http://ae-bst.resource.bosch.com/media/products/dokumente/bmx055/BST-BMX055-DS000-01v2.pdf
  * Destinations:
- *      - tiltX: a Q15Feature with section size = 128
- *      - tiltY: a Q15Feature with section size = 128
- *      - tiltZ: a Q15Feature with section size = 128
+ *      - tiltX: a Q15 feature
+ *      - tiltY: a Q15 feature
+ *      - tiltZ: a Q15 feature
  */
-class IUBMX055Gyro : public DrivenSensor
+class IUBMX055Gyro : public HighFreqSensor
 {
     public:
         /***** Preset values and default settings *****/
@@ -52,15 +52,13 @@ class IUBMX055Gyro : public DrivenSensor
         static const bandwidthOption defaultBandwidth = BW_200Hz23Hz;
         static const uint16_t defaultSamplingRate = 1000; // Hz
         /***** Constructors and destructors *****/
-        IUBMX055Gyro(IUI2C *iuI2C, const char* name, Feature *tiltX=NULL,
-                     Feature *tiltY=NULL, Feature *tiltZ=NULL);
+        IUBMX055Gyro(IUI2C *iuI2C, const char* name, Feature *tiltX,
+                     Feature *tiltY, Feature *tiltZ);
         virtual ~IUBMX055Gyro() {}
         /***** Hardware & power management *****/
         virtual void setupHardware();
         void softReset();
-        virtual void wakeUp();
-        virtual void sleep();
-        virtual void suspend();
+        virtual void setPowerMode(PowerMode::option pMode);
         /***** Configuration and calibration *****/
         virtual void configure(JsonVariant &config);
         void setScale(scaleOption scale);
@@ -83,9 +81,5 @@ class IUBMX055Gyro : public DrivenSensor
         int16_t m_rawData[3];  // 16-bit signed gyro sensor output
         q15_t m_data[3];  // Latest data values
 };
-
-/***** Instantiation *****/
-
-extern IUBMX055Gyro iuGyroscope;
 
 #endif // IUBMX055GYRO_H

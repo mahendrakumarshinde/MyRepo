@@ -11,13 +11,21 @@
  */
 test(Utilities__getMax)
 {
+    q15_t maxVal;
+    uint32_t maxIdx;
     q15_t a1[5] = {1, -2, -3, 2, 1};
-    assertEqual(getMax(a1, 5), 2);
-    assertEqual(getMax(a1, 3), 1);
+    getMax(a1, 5, &maxVal, &maxIdx)
+    assertEqual(maxVal, 2);
+    assertEqual(maxIdx, 3);
+    getMax(a1, 3, &maxVal, &maxIdx)
+    assertEqual(maxVal, 1);
+    assertEqual(maxIdx, 0);
 
+    float maxValF;
     float a2[3] = {-12.46, 0.001, 0};
-    assertEqual(getMax(a2, 3), 0.001);
-    assertEqual(getMax(a2, 0), 0);
+    getMax(a2, 3, &maxValF, &maxIdx)
+    assertEqual(maxValF,  0.001);
+    assertEqual(maxIdx, 1);
 }
 
 

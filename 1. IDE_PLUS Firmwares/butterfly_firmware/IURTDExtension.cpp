@@ -7,7 +7,8 @@
 ============================================================================= */
 
 IURTDExtension::IURTDExtension(IUI2C *iuI2C, const char* name,
-                               Feature *temperatures, uint8_t rtdCount) :
+                               FeatureTemplate<float> *temperatures,
+                               uint8_t rtdCount) :
     LowFreqSensor(name, 1, temperatures),
     m_rtdCount(rtdCount)
 {
@@ -57,7 +58,7 @@ void IURTDExtension::readData()
 {
     for (uint8_t i = 0; i < m_rtdCount; ++i)
     {
-        m_destinations[0]->addFloatValue(0);
+        m_destinations[0]->addValue(0);
     }
 }
 

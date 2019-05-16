@@ -1,0 +1,14 @@
+#######################################
+# Datatypes
+#######################################
+
+AssociativeArray	KEYWORD1
+hasKey	KEYWORD2
+getIndex	KEYWORD2
+setItem	KEYWORD2
+deleteItem	KEYWORD2
+getItem	KEYWORD2
+length	KEYWORD2
+getKey	KEYWORD2
+getValue	KEYWORD2
+

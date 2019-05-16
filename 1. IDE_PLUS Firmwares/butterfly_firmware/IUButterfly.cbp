@@ -136,7 +136,21 @@
 			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/CMSIS/Lib" />
 			<Add directory="/home/pat/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.26/system/STM32L4xx/Lib" />
 		</Linker>
+		<Unit filename="BoardDefinition.h" />
+		<Unit filename="CharBufferSendingQueue.cpp" />
+		<Unit filename="CharBufferSendingQueue.h" />
 		<Unit filename="Component.h" />
+		<Unit filename="ComponentTest/CMP_IUBMD350.h" />
+		<Unit filename="ComponentTest/CMP_IUBMP280.h" />
+		<Unit filename="ComponentTest/CMP_IUBMX055.h" />
+		<Unit filename="ComponentTest/CMP_IUBattery.h" />
+		<Unit filename="ComponentTest/CMP_IUCAMM8Q.h" />
+		<Unit filename="ComponentTest/CMP_IUESP8285.h" />
+		<Unit filename="ComponentTest/CMP_IUICS43432.h" />
+		<Unit filename="ComponentTest/CMP_IULSM6DSM.h" />
+		<Unit filename="ComponentTest/CMP_IUMAX31865.h" />
+		<Unit filename="ComponentTest/CMP_IUSPIFlash.h" />
+		<Unit filename="ComponentTest/CMP_RGBLed.h" />
 		<Unit filename="Conductor.cpp" />
 		<Unit filename="Conductor.h" />
 		<Unit filename="FeatureClass.cpp" />
@@ -145,6 +159,8 @@
 		<Unit filename="FeatureComputer.h" />
 		<Unit filename="FeatureGroup.cpp" />
 		<Unit filename="FeatureGroup.h" />
+		<Unit filename="FeatureUtilities.cpp" />
+		<Unit filename="FeatureUtilities.h" />
 		<Unit filename="IUBMD350.cpp" />
 		<Unit filename="IUBMD350.h" />
 		<Unit filename="IUBMP280.cpp" />
@@ -161,24 +177,31 @@
 		<Unit filename="IUCAMM8Q.h" />
 		<Unit filename="IUESP8285.cpp" />
 		<Unit filename="IUESP8285.h" />
+		<Unit filename="IUFlash.cpp" />
+		<Unit filename="IUFlash.h" />
 		<Unit filename="IUI2C.cpp" />
 		<Unit filename="IUI2C.h" />
-		<Unit filename="IUI2S.cpp" />
-		<Unit filename="IUI2S.h" />
-		<Unit filename="IURGBLed.cpp" />
-		<Unit filename="IURGBLed.h" />
+		<Unit filename="IUICS43432.cpp" />
+		<Unit filename="IUICS43432.h" />
+		<Unit filename="IULSM6DSM.cpp" />
+		<Unit filename="IULSM6DSM.h" />
+		<Unit filename="IUMAX31865.cpp" />
+		<Unit filename="IUMAX31865.h" />
 		<Unit filename="IURTDExtension.cpp" />
 		<Unit filename="IURTDExtension.h" />
-		<Unit filename="IUSPIFlash.cpp" />
-		<Unit filename="IUSPIFlash.h" />
-		<Unit filename="IUSerial.cpp" />
-		<Unit filename="IUSerial.h" />
-		<Unit filename="IntegratedTest/IT_Conductor.h" />
-		<Unit filename="IntegratedTest/IT_IUBMX055.h" />
-		<Unit filename="IntegratedTest/IT_IUSPIFlash.h" />
-		<Unit filename="IntegratedTest/IT_Sensors.h" />
-		<Unit filename="Keywords.h" />
-		<Unit filename="Logger.h" />
+		<Unit filename="IUUSB.cpp" />
+		<Unit filename="IUUSB.h" />
+		<Unit filename="InstancesButterfly.cpp" />
+		<Unit filename="InstancesButterfly.h" />
+		<Unit filename="InstancesDragonfly.cpp" />
+		<Unit filename="InstancesDragonfly.h" />
+		<Unit filename="IntegratedTest/IT_All_Conductor.h" />
+		<Unit filename="IntegratedTest/IT_Butterfly.h" />
+		<Unit filename="IntegratedTest/IT_Dragonfly.h" />
+		<Unit filename="LedManager.cpp" />
+		<Unit filename="LedManager.h" />
+		<Unit filename="RGBLed.cpp" />
+		<Unit filename="RGBLed.h" />
 		<Unit filename="Sensor.cpp" />
 		<Unit filename="Sensor.h" />
 		<Unit filename="UnitTest/Test_Component.h" />
@@ -188,8 +211,6 @@
 		<Unit filename="UnitTest/Test_Sensor.h" />
 		<Unit filename="UnitTest/Test_Utilities.h" />
 		<Unit filename="UnitTest/UnitTestData.h" />
-		<Unit filename="Utilities.cpp" />
-		<Unit filename="Utilities.h" />
 		<Extensions>
 			<envvars />
 			<code_completion />
