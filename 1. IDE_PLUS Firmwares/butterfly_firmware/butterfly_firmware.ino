@@ -1,7 +1,7 @@
 /*
 Infinite Uptime IDE+ Firmware
-Vr. 1.1.0
-Update 25-04-2019
+Vr. 1.1.1
+Update 16-05-2019
 Type - Standard Firmware Release
 */
 
@@ -180,6 +180,8 @@ static void watchdogCallback(void) {
         STM32.reset();
     }
     if (iuWiFi.arePublicationsFailing()) {
+        //Ensure your PubSubClient Arduino library version is 2.7
+        debugPrint("Publications are failing: hard resetting now.");
         iuWiFi.hardReset();
     }
     armv7m_timer_start(&watchdogTimer, 1000);
@@ -484,30 +486,32 @@ void setup()
             debugPrint(F("***\n"));
         }
         // Start flash and load configuration files
-        if (!USBDevice.configured())
-        {
-            iuFlash.begin();
-            // WiFi configuration
-            conductor.configureFromFlash(IUFlash::CFG_WIFI0);
-            // Feature, FeatureGroup and sensors coonfigurations
-            for (uint8_t i = 0; i < conductor.CONFIG_TYPE_COUNT; ++i) {
-                conductor.configureFromFlash(conductor.CONFIG_TYPES[i]);
-            }
-            if (setupDebugMode) {
-                ledManager.overrideColor(RGB_PURPLE);
-                delay(5000);
-                ledManager.stopColorOverride();
-            }
-        } else if (setupDebugMode) {
-            ledManager.overrideColor(RGB_ORANGE);
+        // if (!USBDevice.configured())
+        // {
+        iuFlash.begin();
+        // WiFi configuration
+        conductor.configureFromFlash(IUFlash::CFG_WIFI0);
+        // Feature, FeatureGroup and sensors coonfigurations
+        for (uint8_t i = 0; i < conductor.CONFIG_TYPE_COUNT; ++i) {
+            conductor.configureFromFlash(conductor.CONFIG_TYPES[i]);
+        }
+        if (setupDebugMode) {
+            ledManager.overrideColor(RGB_PURPLE);
             delay(5000);
             ledManager.stopColorOverride();
         }
+        // } else if (setupDebugMode) {
+        ledManager.overrideColor(RGB_ORANGE);
+        delay(5000);
+        ledManager.stopColorOverride();
+        // }
         delay(5000);
         //configure mqttServer
         conductor.configureMQTTServer("MQTT.conf");
         //http configuration
         conductor.configureBoardFromFlash("httpConfig.conf",1);
+        // get the previous offset values 
+        conductor.setSensorConfig("sensorConfig.conf");        
         opStateFeature.setOnNewValueCallback(operationStateCallback);
         ledManager.resetStatus();
         conductor.changeUsageMode(UsageMode::OPERATION);
@@ -515,6 +519,9 @@ void setup()
         //attachInterrupt(IULSM6DSM::INT1_PIN, dataAcquisitionISR, RISING);
         //debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
 
+        //Resume previous operational state of device
+        conductor.setThresholdsFromFile();
+                
         // Timer Init
         timerInit();
         
@@ -587,6 +594,24 @@ void loop()
         //   // Send Diagnostic Fingerprint data
         //   conductor.sendDiagnosticFingerPrints();
         // }
+
+        // Consume ready segmented message
+        char configMessageFromBLE[MESSAGE_LENGTH+1];
+        if (conductor.consumeReadySegmentedMessage(configMessageFromBLE)) {
+            // TODO: if all messages [0->MAX_SEGMENTED_MESSAGES-1] are ready, the later messages
+            // might time out which the first few messages are being consumed. Add logic to 
+            // extend timeout for later messages if former messages are being consumed.
+            #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+            debugPrint("DEBUG: LOOP: configMessageFromBLE: ", false); debugPrint(configMessageFromBLE);
+            #endif
+            conductor.processConfiguration(configMessageFromBLE, true);
+        }        
+
+        // Clean consumed segmented messages
+        conductor.cleanConsumedSegmentedMessages();
+
+        // Clean timed out segmented messages
+        conductor.cleanTimedoutSegmentedMessages();
        
         yield();
        

@@ -12,6 +12,9 @@
     #include "InstancesButterfly.h"
 #endif
 
+#include "SegmentedMessage.h"
+#define MAX_SEGMENTED_MESSAGES 5
+
 /* =============================================================================
     Operation Mode
 ============================================================================= */
@@ -134,6 +137,7 @@ class Conductor
         bool configureFromFlash(IUFlash::storedConfig configType);
         void sendConfigChecksum(IUFlash::storedConfig configType);
         void periodicSendConfigChecksum();
+        void setThresholdsFromFile();
         /***** Serial Reading & command processing*****/
         bool processConfiguration(char *json, bool saveToFlash);
         void configureMainOptions(JsonVariant &config);
@@ -189,6 +193,21 @@ class Conductor
         void resetBLEonTimeout();
         void setConductorBLEMacAddress();
         void printConductorMac();
+        /***** Segmented Messages *****/
+        void extractPayloadFromSegmentedMessage(const char* segment, char* payload);
+        bool checkMessageActive(int messageID);
+        void processSegmentedMessage(const char* buff);
+        bool checkAllSegmentsReceived(int messageID);
+        void compileSegmentedMessage(int messageID);
+        void computeSegmentedMessageHash(int messageID);
+        bool consumeReadySegmentedMessage(char* returnMessage);
+        void cleanSegmentedMessage(int messageID);
+        void cleanTimedoutSegmentedMessages();
+        void cleanConsumedSegmentedMessages();
+        void cleanFailedSegmentedMessage(int messageID);
+        void sendSegmentedMessageResponse(int messageID);
+
+        bool setSensorConfig(char* filename);
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
@@ -237,7 +256,7 @@ class Conductor
         const char* m_accountId;
         double last_fingerprint_timestamp = 0;
         bool computed_first_fingerprint_timestamp = false;
-
+        SegmentedMessage segmentedMessages[MAX_SEGMENTED_MESSAGES]; // atmost MAX_SEGMENTED_MESSAGES can be captured in interleaved manner
 };
 
 
