@@ -85,7 +85,8 @@ class IUBMD350 : public IUSerial, public Component
                             char *protocolVersion, char *hardwareInfo,
                             uint8_t len1 = 11, uint8_t len2 = 21,
                             uint8_t len3 = 3, uint8_t len4 = 13);
-
+        //Bluetooth Available
+        bool isBLEAvailable = true;
     protected:
         /***** Pin definition *****/
         uint8_t m_resetPin;  // BMD-350 reset pin active LOW
@@ -103,6 +104,7 @@ class IUBMD350 : public IUSerial, public Component
         uint16_t m_beaconAdInterval;
         txPowerOption m_beaconTxPower;
         txPowerOption m_connectedTxPower;
+        
 };
 
 #endif // IUBMD350_H
