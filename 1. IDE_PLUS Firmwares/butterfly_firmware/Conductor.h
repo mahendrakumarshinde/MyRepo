@@ -42,7 +42,8 @@ namespace StreamingMode
         WIFI         = 3,       // Send over WiFi
         WIFI_AND_BLE = 4,       // Send over both WiFi and BLE
         STORE        = 5,       // Store in SPI Flash to stream later
-        COUNT        = 6};
+        ETHERNET     = 6,       // Send over ETHERNET
+        COUNT        = 7};
 }
 
 
