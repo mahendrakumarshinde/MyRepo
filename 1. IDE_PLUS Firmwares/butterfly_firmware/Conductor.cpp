@@ -1,6 +1,6 @@
 #include<string.h>
 #include "Conductor.h"
-//#include<FS.h>
+#include "rBase64.h"
 
 const char* fingerprintData;
 const char* fingerprints_X;
@@ -1754,6 +1754,8 @@ void Conductor::updateStreamingMode()
                 }
             } else if (iuWiFi.isConnected()) {
                 newMode = StreamingMode::WIFI;
+            }else {
+                newMode = StreamingMode::ETHERNET;  //Wifi is not connected but found ethernet MAC ID
             }
             break;
     }
@@ -1784,6 +1786,9 @@ void Conductor::updateStreamingMode()
             case StreamingMode::STORE:
                 debugPrint(F("Flash storage"));
                 break;
+            case StreamingMode::ETHERNET:
+                debugPrint(F("ETHERNET"));
+                break;    
             default:
                 debugPrint(F("Unhandled streaming Mode"));
                 break;
@@ -2032,7 +2037,7 @@ void Conductor::streamFeatures()
 
     switch (m_streamingMode) {
         case StreamingMode::NONE:
-            ser1 = &iuWiFi;    
+            //ser1 = &iuWiFi;    
             break;
         case StreamingMode::WIRED:
             ser1 = &iuUSB;
@@ -2049,6 +2054,9 @@ void Conductor::streamFeatures()
             sendFeatureGroupName1 = true;
             ser2 = &iuBluetooth;
             break;
+        case StreamingMode::ETHERNET:
+            ser1 = &iuWiFi;    
+            break;
         default:
             if (loopDebugMode) {
                 debugPrint(F("StreamingMode not handled: "), false);
@@ -2061,7 +2069,7 @@ void Conductor::streamFeatures()
         // TODO Switch to new streaming format once the backend is ready
         if (ser1) {
             if (m_streamingMode == StreamingMode::WIFI ||
-                m_streamingMode == StreamingMode::WIFI_AND_BLE || m_streamingMode == StreamingMode::NONE)
+                m_streamingMode == StreamingMode::WIFI_AND_BLE || m_streamingMode == StreamingMode::ETHERNET)
             { 
                   //Serial.print("@@@@@");
 //                FeatureGroup::instances[i]->bufferAndStream(
@@ -2095,15 +2103,30 @@ void Conductor::streamFeatures()
     if (nodeToSend) {
         //Serial.println("QQQQQQQQQQQQQQQQQQQQQ");
         uint16_t msgLen = strlen(nodeToSend->buffer);
-        //iuWiFi.startLiveMSPCommand(MSPCommand::PUBLISH_FEATURE_WITH_CONFIRMATION, msgLen + 2);
-        //iuWiFi.streamLiveMSPMessage((char) nodeToSend->idx);
-        //iuWiFi.streamLiveMSPMessage(':');
-        //iuWiFi.write("XXXAdmin;;;");
-        iuWiFi.streamLiveMSPMessage(nodeToSend->buffer, msgLen);
-        iuWiFi.write("\n");
-        //iuWiFi.endLiveMSPCommand();
+        if(StreamingMode::ETHERNET)
+        {
+         //SEND this in Ethernet Mode
+        //if(StreamingMode::ETHERNET){
+            char streamingHeader[32];
+            snprintf(streamingHeader,32,"XXXAdmin;;;%s;;;", m_macAddress.toString().c_str());
+            //Serial.print("Streamign Header : ");Serial.println(streamingHeader);
+             iuWiFi.write(streamingHeader);
+             iuWiFi.streamLiveMSPMessage(nodeToSend->buffer, msgLen);
+             iuWiFi.write("\n");
+            
+        }   
+        else if (!StreamingMode::ETHERNET)
+        {
+            /* code */
+            iuWiFi.startLiveMSPCommand(MSPCommand::PUBLISH_FEATURE_WITH_CONFIRMATION, msgLen + 2);
+            iuWiFi.streamLiveMSPMessage((char) nodeToSend->idx);
+            iuWiFi.streamLiveMSPMessage(':');
+            iuWiFi.streamLiveMSPMessage(nodeToSend->buffer, msgLen);
+            //iuWiFi.write("\n");
+            iuWiFi.endLiveMSPCommand();
+        }
         sendingQueue.attemptingToSend(nodeToSend->idx);
-
+                 
      }
     sendingQueue.maintain();
 }
@@ -2156,7 +2179,7 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
                                   txBuffer, strlen(txBuffer));
 
         delay(10);
-     }else if(m_streamingMode == StreamingMode::NONE){      // Ethernet Mode
+     }else if(m_streamingMode == StreamingMode::ETHERNET){      // Ethernet Mode
         uint16_t maxLen = 15000;   //3500
         char txBuffer[maxLen];
         for (uint16_t i =0; i < maxLen; i++) {
@@ -2206,8 +2229,19 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
     
             //Serial.println();
 
-            snprintf(rawAcceleration,maxLen,"{\"macId\":%s,\"X\":%s,\"Y\":%s,\"Z\":%s }",m_macAddress.toString().c_str(),rawAccelerationX,rawAccelerationY,rawAccelerationZ);
-            iuWiFi.write(rawAcceleration);
+            snprintf(rawAcceleration,maxLen,"{\"deviceId\":%s,\"transport\":%d,\"messageType\":%d,\"payload\":{\"deviceId\":%s,\"samplingRate\":%d,\"blockSize\":%d,\"X\":%s,\"Y\":%s,\"Z\":%s }",m_macAddress.toString().c_str(),1,2,m_macAddress.toString().c_str(),IULSM6DSM::defaultSamplingRate,512,rawAccelerationX,rawAccelerationY,rawAccelerationZ);
+            //rbase64.encode();
+            
+            /*
+                encode data to base64
+
+            */
+           if (rbase64.encode(rawAcceleration) == RBASE64_STATUS_OK )  {
+                Serial.println("\nConverted the String to Base64 : ");
+                Serial.println(rbase64.result());
+            }
+            //iuWiFi.write(rawAcceleration);
+            iuWiFi.write(rbase64.result());
 
             Serial.print("FFT Raw Data");
             Serial.println(rawAcceleration);
