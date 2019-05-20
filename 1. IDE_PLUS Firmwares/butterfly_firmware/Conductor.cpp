@@ -1754,9 +1754,10 @@ void Conductor::updateStreamingMode()
                 }
             } else if (iuWiFi.isConnected()) {
                 newMode = StreamingMode::WIFI;
-            }else {
-                newMode = StreamingMode::ETHERNET;  //Wifi is not connected but found ethernet MAC ID
             }
+             else {
+                 newMode = StreamingMode::ETHERNET;  //Wifi is not connected but found ethernet MAC ID
+             }
             break;
     }
     if (m_streamingMode == newMode) {
@@ -2100,34 +2101,42 @@ void Conductor::streamFeatures()
 //            true);
     }
     CharBufferNode *nodeToSend = sendingQueue.getNextBufferToSend();
-    if (nodeToSend) {
-        //Serial.println("QQQQQQQQQQQQQQQQQQQQQ");
-        uint16_t msgLen = strlen(nodeToSend->buffer);
-        if(StreamingMode::ETHERNET)
-        {
-         //SEND this in Ethernet Mode
-        //if(StreamingMode::ETHERNET){
-            char streamingHeader[32];
-            snprintf(streamingHeader,32,"XXXAdmin;;;%s;;;", m_macAddress.toString().c_str());
-            //Serial.print("Streamign Header : ");Serial.println(streamingHeader);
-             iuWiFi.write(streamingHeader);
-             iuWiFi.streamLiveMSPMessage(nodeToSend->buffer, msgLen);
-             iuWiFi.write("\n");
+    if (nodeToSend ) {
+            uint16_t msgLen = strlen(nodeToSend->buffer);
+           if (m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE)
+           {
             
-        }   
-        else if (!StreamingMode::ETHERNET)
-        {
-            /* code */
             iuWiFi.startLiveMSPCommand(MSPCommand::PUBLISH_FEATURE_WITH_CONFIRMATION, msgLen + 2);
             iuWiFi.streamLiveMSPMessage((char) nodeToSend->idx);
             iuWiFi.streamLiveMSPMessage(':');
             iuWiFi.streamLiveMSPMessage(nodeToSend->buffer, msgLen);
-            //iuWiFi.write("\n");
             iuWiFi.endLiveMSPCommand();
-        }
-        sendingQueue.attemptingToSend(nodeToSend->idx);
-                 
+            sendingQueue.attemptingToSend(nodeToSend->idx);
+            //Serial.println("Inside WIFI Streaming Mode");
+           }
+           if(m_streamingMode == StreamingMode::ETHERNET){
+                uint16_t msgLen = strlen(nodeToSend->buffer);
+                //char streamingHeader[732];
+                //char streamingData[732];
+                char feturesStreaming[800];
+                //snprintf(streamingData,732,"XXXAdmin;;;%s;;;%s", m_macAddress.toString().c_str(),nodeToSend->buffer);
+                //Serial.print("Streamign Header : ");Serial.println(streamingHeader);
+                //if(rbase64.encode(streamingData) ==  RBASE64_STATUS_OK) {
+                       // send the streaming JSON
+                    snprintf(feturesStreaming,800,"{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\":{\"XXXAdmin;;;%s;;;%s\"} }",
+                    m_macAddress.toString().c_str(),0,0,/*rbase64.result()*/m_macAddress.toString().c_str(),nodeToSend->buffer );   
+                    iuWiFi.write(feturesStreaming);      
+                    iuWiFi.write("\n");
+                //}
+                if(loopDebugMode){
+                    debugPrint(feturesStreaming);
+                }
+                sendingQueue.attemptingToSend(nodeToSend->idx);
+            }
+            //sendingQueue.attemptingToSend(nodeToSend->idx);
+             
      }
+     
     sendingQueue.maintain();
 }
 
@@ -2193,60 +2202,39 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
         //construct the FFT JSON
         char rawAcceleration[maxLen];
         char* accelX;char* accelY; char* accelZ;
-
-        debugPrint("TXBuffer : ",false);debugPrint(txBuffer);
         if(txBuffer[0] == 'X' && axisIdx == 0){
             
             memmove(rawAccelerationX,txBuffer + 2, strlen(txBuffer) - 1); // sizeof(txBuffer)/sizeof(txBuffer[0]) -2);
-
-            //strcpy(rawAccelerationX,&txBuffer[2]);
-            debugPrint("Address of X :");debugPrint((int)rawAccelerationX);
             debugPrint("RawAcel X: ",false);debugPrint(rawAccelerationX);
-            
-            //Serial.print("X-data :");Serial.println(rawAccelerationX[0]);
         }else if(txBuffer[0]== 'Y' && axisIdx == 1)
         {
-            //rawAccelerationY = txBuffer + 2;
-            
-            //rawAccelerationY = accelY;
             memmove(rawAccelerationY,txBuffer + 2, strlen(txBuffer) - 1 ); //sizeof(txBuffer)/sizeof(txBuffer[0]) -2);
-            //strcpy(rawAccelerationY,&txBuffer[2]); //,strlen(txBuffer+ 2 ) );
-            
-            debugPrint("Address of Y :");debugPrint((int)rawAccelerationY);
             debugPrint("RawAcel Y: ",false);debugPrint(rawAccelerationY);
         }else if(txBuffer[0] == 'Z' && axisIdx == 2){
             
-            //rawAccelerationZ = txBuffer + 2;  
-            //rawAccelerationZ = accelZ;
             memmove(rawAccelerationZ,txBuffer + 2, strlen(txBuffer) - 1) ; //sizeof(txBuffer)/sizeof(txBuffer[0]) -2);    
-            //strcpy(rawAccelerationZ,&txBuffer[2]); //,strlen(txBuffer) + 2);
-            
-            debugPrint("Address of Z :");debugPrint((int)rawAccelerationZ);
-            
             debugPrint("RawAcel Z: ",false);debugPrint(rawAccelerationZ);
-            debugPrint("RawAcel XinZ: ",false);debugPrint(rawAccelerationX);
-            debugPrint("RawAcel YinZ: ",false);debugPrint(rawAccelerationY);
-    
-            //Serial.println();
-
             snprintf(rawAcceleration,maxLen,"{\"deviceId\":%s,\"transport\":%d,\"messageType\":%d,\"payload\":{\"deviceId\":%s,\"samplingRate\":%d,\"blockSize\":%d,\"X\":%s,\"Y\":%s,\"Z\":%s }",m_macAddress.toString().c_str(),1,2,m_macAddress.toString().c_str(),IULSM6DSM::defaultSamplingRate,512,rawAccelerationX,rawAccelerationY,rawAccelerationZ);
             //rbase64.encode();
-            
             /*
                 encode data to base64
 
             */
+           #if 0
            if (rbase64.encode(rawAcceleration) == RBASE64_STATUS_OK )  {
                 Serial.println("\nConverted the String to Base64 : ");
                 Serial.println(rbase64.result());
             }
             //iuWiFi.write(rawAcceleration);
             iuWiFi.write(rbase64.result());
-
-            Serial.print("FFT Raw Data");
-            Serial.println(rawAcceleration);
-
-            //FREE MEMORY 
+            #endif
+            iuWiFi.write(rawAcceleration);           // send the rawAcceleration over UART 
+            iuWiFi.write("\n");            
+            if(loopDebugMode){
+               debugPrint("Raw Acceleration:",true);
+               debugPrint(rawAcceleration);     
+            }
+            //FREE ALLOCATED MEMORY 
             memset(rawAccelerationX,0,sizeof(rawAccelerationX));
             memset(rawAccelerationY,0,sizeof(rawAccelerationY));
             memset(rawAccelerationZ,0,sizeof(rawAccelerationZ));
@@ -2431,7 +2419,8 @@ void Conductor::printConductorMac() {
 void Conductor::setConductorBLEMacAddress() {
     iuBluetooth.enterATCommandInterface();
     char BLE_MAC_Address[20];
-    iuBluetooth.sendATCommand("mac?", BLE_MAC_Address, 100);
+    iuBluetooth.sendATCommand("mac?", BLE_MAC_Address, 20);
+    debugPrint("BLE MAC ID:",false);debugPrint(BLE_MAC_Address,true);
     iuBluetooth.exitATCommandInterface();
     m_macAddress.fromString(BLE_MAC_Address);
 }
