@@ -421,17 +421,17 @@ void setup()
         iuBluetooth.setupHardware();
         bool BLESETUP  = iuBluetooth.isBLEAvailable;
         debugPrint("BLE CHIP available ?:",false);debugPrint(BLESETUP);
-        #if BLESETUP
-        //iuBluetooth.setupHardware();
-        iuBluetooth.setOnNewMessageCallback(onNewBLEMessage);
-        
-        armv7m_timer_create(&bleTransmitTimer, (armv7m_timer_callback_t)bleTransmitCallback);
-        armv7m_timer_start(&bleTransmitTimer, 5);
+        if(BLESETUP){
+            //iuBluetooth.setupHardware();
+            iuBluetooth.setOnNewMessageCallback(onNewBLEMessage);
+            
+            armv7m_timer_create(&bleTransmitTimer, (armv7m_timer_callback_t)bleTransmitCallback);
+            armv7m_timer_start(&bleTransmitTimer, 5);
 
-        // set the BLE address for conductor
-        conductor.setConductorBLEMacAddress();
-        #endif
-        //conductor.setConductorDeviceID();
+            // set the BLE address for conductor
+            conductor.setConductorBLEMacAddress();
+        }
+        
 
         // httpConfig message read timerCallback
         armv7m_timer_create(&httpConfigTimer, (armv7m_timer_callback_t)httpConfigCallback);
@@ -533,7 +533,7 @@ void setup()
                 
         // Timer Init
         timerInit();
-        iuWiFi.write("XXXAdmin;;;9C:A5:25:86:34:6E;;;\n");    
+            
     #endif
  #endif   
 }
