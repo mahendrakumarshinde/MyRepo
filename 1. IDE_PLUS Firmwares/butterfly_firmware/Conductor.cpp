@@ -2781,7 +2781,7 @@ void Conductor::setThresholdsFromFile()
     StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
     JsonVariant config = JsonVariant(
             iuFlash.loadConfigJson(IUFlash::CFG_FEATURE, jsonBuffer));
-    config.prettyPrintTo(Serial);
+    // config.prettyPrintTo(Serial);
     if (config.success()) {
         const char* threshold = "TRH";
         float low, mid, high;
