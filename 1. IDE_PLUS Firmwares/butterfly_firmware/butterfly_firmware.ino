@@ -32,7 +32,7 @@ const uint8_t ESP8285_IO0  =  7;
     MAC Address
 ============================================================================= */
 
-// const char MAC_ADDRESS[18] = "94:54:93:3B:81:57";
+ const char MAC_ADDRESS[18] = "9C:A5:25:86:34:6E";
 
 /* Motor Scaling Factor 
  *  
@@ -124,7 +124,7 @@ uint32_t lastDone = 0;
 
 /***** Main operator *****/
 
-Conductor conductor;
+Conductor conductor(MAC_ADDRESS);
 
 
 /* =============================================================================
@@ -427,11 +427,11 @@ void setup()
             
             armv7m_timer_create(&bleTransmitTimer, (armv7m_timer_callback_t)bleTransmitCallback);
             armv7m_timer_start(&bleTransmitTimer, 5);
-
+            
             // set the BLE address for conductor
             conductor.setConductorBLEMacAddress();
         }
-        
+        conductor.isEthernetConnected = true;
 
         // httpConfig message read timerCallback
         armv7m_timer_create(&httpConfigTimer, (armv7m_timer_callback_t)httpConfigCallback);
@@ -533,7 +533,7 @@ void setup()
                 
         // Timer Init
         timerInit();
-            
+
     #endif
  #endif   
 }
