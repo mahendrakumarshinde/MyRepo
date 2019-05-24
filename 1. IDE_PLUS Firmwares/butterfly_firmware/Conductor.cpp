@@ -2123,7 +2123,7 @@ void Conductor::streamFeatures()
                 //Serial.print("Streamign Header : ");Serial.println(streamingHeader);
                 //if(rbase64.encode(streamingData) ==  RBASE64_STATUS_OK) {
                        // send the streaming JSON
-                    snprintf(feturesStreaming,800,"{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\":{\"XXXAdmin;;;%s;;;%s\"} }",
+                    snprintf(feturesStreaming,800,"{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\":\"XXXAdmin;;;%s;;;%s\" }",
                     m_macAddress.toString().c_str(),0,0,/*rbase64.result()*/m_macAddress.toString().c_str(),nodeToSend->buffer );   
                     iuWiFi.write(feturesStreaming);      
                     iuWiFi.write("\n");
@@ -2214,7 +2214,7 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
             
             memmove(rawAccelerationZ,txBuffer + 2, strlen(txBuffer) - 1) ; //sizeof(txBuffer)/sizeof(txBuffer[0]) -2);    
             debugPrint("RawAcel Z: ",false);debugPrint(rawAccelerationZ);
-            snprintf(rawAcceleration,maxLen,"{\"deviceId\":%s,\"transport\":%d,\"messageType\":%d,\"payload\":{\"deviceId\":%s,\"samplingRate\":%d,\"blockSize\":%d,\"X\":%s,\"Y\":%s,\"Z\":%s }",m_macAddress.toString().c_str(),1,2,m_macAddress.toString().c_str(),IULSM6DSM::defaultSamplingRate,512,rawAccelerationX,rawAccelerationY,rawAccelerationZ);
+            snprintf(rawAcceleration,maxLen,"{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\":\"{\\\"deviceId\\\":\\\"%s\\\",\\\"samplingRate\\\":%d,\\\"blockSize\\\":%d,\\\"X\\\":\\\"%s\\\",\\\"Y\\\":\\\"%s\\\",\\\"Z\\\":\\\"%s\\\"}\"}",m_macAddress.toString().c_str(),1,0,m_macAddress.toString().c_str(),IULSM6DSM::defaultSamplingRate,512,rawAccelerationX,rawAccelerationY,rawAccelerationZ);
             //rbase64.encode();
             /*
                 encode data to base64
@@ -2319,9 +2319,10 @@ void Conductor::sendDiagnosticFingerPrints() {
             if (ready_to_publish == true) {
                 int messageLength = strlen(fingerprintData); 
                 char FingerPrintResult[150 + messageLength];
-            
-                snprintf(FingerPrintResult, 150 + messageLength, "{\"macID\":\"%s\",\"timestamp\": %lf,\"state\":\"%d\",\"accountId\":\"%s\",\"fingerprints\": %s }", m_macAddress.toString().c_str(),fingerprint_timestamp,ledManager.getOperationState(),"XXXAdmin",fingerprintData);
+                char sendFingerprints[500 + messageLength];
                 
+                snprintf(FingerPrintResult, 150 + messageLength, "{\"macID\":\"%s\",\"timestamp\": %lf,\"state\":\"%d\",\"accountId\":\"%s\",\"fingerprints\": %s }", m_macAddress.toString().c_str(),fingerprint_timestamp,ledManager.getOperationState(),"XXXAdmin",fingerprintData);
+                    
                 // if(loopDebugMode) {
                 //     debugPrint("Published Fingerprints"); 
                 //     char published_time_diff[50];
@@ -2330,7 +2331,31 @@ void Conductor::sendDiagnosticFingerPrints() {
                 // }               
             
                 last_fingerprint_timestamp = fingerprint_timestamp; // update timestamp for next iterations
-                iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );    
+                if(isEthernetConnected){
+                    /* FingerPrintResult send over Ethernet Mode */
+                    if(rbase64.encode(FingerPrintResult) == RBASE64_STATUS_OK) {
+                        snprintf(sendFingerprints,messageLength+500,"{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\":\"%s\"}",  /* \"{\\\"macID\\\":\\\"%s\\\",\\\"timestamp\\\":%lf,\\\"state\\\":\\\"%d\\\",\\\"accountId\\\":\\\"%s\\\",\\\"fingerprints\\\":%s\"}\"}" , */
+                        m_macAddress.toString().c_str(),0,1,rbase64.result());//m_macAddress.toString().c_str(),fingerprint_timestamp,ledManager.getOperationState(),"XXXAdmin",fingerprintData);
+                        iuWiFi.write(sendFingerprints);
+                        iuWiFi.write("\n");
+                        //rbase64.encode(FingerPrintResult);
+                        //debugPrint("Base64 -Fingerprint : ",false);
+                        //debugPrint(rbase64.result());
+                    
+    
+                    }else
+                    {
+                        debugPrint("base64-encoding failed, Please check");
+                    }
+                        
+                        
+                }else   
+                {   /* FingerPrintResult send over Wifi only */
+
+                    iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );    
+                
+                }
+                
             }
             else { // not published as time_diff < 500 ms
                 // if(loopDebugMode) {
@@ -2388,6 +2413,7 @@ void  Conductor::streamMCUUInfo(HardwareSerial *port)
     port->print("HB,");
     port->print(destination);
     port->print(';');
+    port->println();
 }
 
 /**
