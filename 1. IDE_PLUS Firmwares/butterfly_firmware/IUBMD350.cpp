@@ -223,6 +223,7 @@ void IUBMD350::exitATCommandInterface()
  * @return -1 if the command failed, or the number N of char of the
  *  response. Note that it is possible that N <> responseLength.
  */
+
 int IUBMD350::sendATCommand(String cmd, char *response, uint8_t responseLength)
 {
     if (!m_ATCmdEnabled) {
