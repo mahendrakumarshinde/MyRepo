@@ -496,6 +496,71 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
         
     }
+    // SET the ethernetConfig
+    subConfig = root["ethernetConfig"];
+    if (subConfig.success()) {
+        bool dataWritten = false;
+        
+        if (saveToFlash) {
+            //DOSFS.begin();
+            File ethernetConfigFile = DOSFS.open("ethernetConfig.conf", "w");
+            if (ethernetConfigFile)
+            {
+                
+                if (loopDebugMode) {
+                 debugPrint(F("Writting into file: "), true);
+                }
+                ethernetConfigFile.print(jsonChar);
+                ethernetConfigFile.close();
+                dataWritten = true;
+            }
+            else if (loopDebugMode) {
+                 debugPrint("Failed to write into file: ethernetConfig.conf ");
+                
+            }  
+        
+        }
+        if(dataWritten == true){
+          
+          JsonObject& config = configureJsonFromFlash("ethernetConfig.conf",1);      // get the accountID
+          JsonVariant variant = config;
+          
+          iuEthernet.m_workMode = config["ethernetConfig"]["workMode"];
+          iuEthernet.m_remoteIP = config["ethernetConfig"]["remoteAddr"];
+          iuEthernet.m_remotePort = config["ethernetConfig"]["remotePort"];
+        
+          iuEthernet.SetAT();
+          iuEthernet.SocketConfig(iuEthernet.m_workMode,iuEthernet.m_remoteIP,iuEthernet.m_remotePort);//setupHardware();
+          for(int i=0;i<10;i++){
+            bool currentState = iuEthernet.TCPStatus();
+            delay(500);
+            if (currentState != iuEthernet.isEthernetConnected )
+            {
+                iuEthernet.isEthernetConnected = currentState;
+                break;
+            }
+            
+          }
+          debugPrint("Current TCPStatus:",false);
+          debugPrint(iuEthernet.isEthernetConnected);
+          
+          iuEthernet.Restart();
+            
+         if(loopDebugMode){
+            debugPrint("RunTime workMode: ",false);
+            debugPrint(iuEthernet.m_workMode);
+            debugPrint("RunTime remoteAddr:",false);
+            debugPrint(iuEthernet.m_remoteIP);
+            debugPrint("RunTime remotePort:",false);
+            debugPrint(iuEthernet.m_remotePort,true);
+        }    
+        variant.prettyPrintTo(Serial);
+        //Serial.println("READING FROM STARTUP COMPLETE...");   
+
+        }
+        
+    }
+    
     return true;
 }
 
@@ -841,7 +906,7 @@ void Conductor::processCommand(char *buff)
                     iuBluetooth.write("WIFI-DISCONNECTED;");
                 }
                 delay(10);
-                STM32.reset();
+                STM32.reset();          
             }
             else if (strcmp(buff, "IDE-GET-VERSION") == 0)
             {
@@ -1254,6 +1319,12 @@ void Conductor::processBLEMessage(IUSerial *iuSerial)
 void Conductor::processWiFiMessage(IUSerial *iuSerial)
 {
     char *buff = iuSerial->getBuffer();
+    Serial.print("Available Data:");
+    Serial.println(buff);
+    if (buff[0] == '{')
+    {
+        processConfiguration(buff,true);    //save the configuration into the file
+    }
     if (iuWiFi.processChipMessage()) {
         if (iuWiFi.isWorking()) {
             ledManager.showStatus(&STATUS_WIFI_WORKING);
@@ -1755,7 +1826,7 @@ void Conductor::updateStreamingMode()
             } else if (iuWiFi.isConnected()) {
                 newMode = StreamingMode::WIFI;
             }
-             else {
+             else if(!iuEthernet.isEthernetConnected){
                  newMode = StreamingMode::ETHERNET;  //Wifi is not connected but found ethernet MAC ID
              }
             break;
@@ -2329,9 +2400,8 @@ void Conductor::sendDiagnosticFingerPrints() {
                 //     sprintf(published_time_diff, "%lf", fingerprint_timestamp - last_fingerprint_timestamp);
                 //     debugPrint(F("Published time diff : "), false); debugPrint(F(published_time_diff), true);
                 // }               
-            
                 last_fingerprint_timestamp = fingerprint_timestamp; // update timestamp for next iterations
-                if(isEthernetConnected){
+                if(iuEthernet.isEthernetConnected == 0 && StreamingMode::ETHERNET){
                     /* FingerPrintResult send over Ethernet Mode */
                     if(rbase64.encode(FingerPrintResult) == RBASE64_STATUS_OK) {
                         snprintf(sendFingerprints,messageLength+500,"{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\":\"%s\"}",  /* \"{\\\"macID\\\":\\\"%s\\\",\\\"timestamp\\\":%lf,\\\"state\\\":\\\"%d\\\",\\\"accountId\\\":\\\"%s\\\",\\\"fingerprints\\\":%s\"}\"}" , */
@@ -2349,9 +2419,9 @@ void Conductor::sendDiagnosticFingerPrints() {
                     }
                         
                         
-                }else   
+                }else if(StreamingMode::WIFI || StreamingMode::WIFI_AND_BLE)//iuWiFi.isAvailable() && iuWiFi.isWorking())   
                 {   /* FingerPrintResult send over Wifi only */
-
+                    debugPrint("Wifi connected, ....",true);
                     iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );    
                 
                 }
@@ -2442,13 +2512,19 @@ void Conductor::printConductorMac() {
     debugPrint("BLE MAC ADDRESS SET IN CONDUCTOR : ",false); debugPrint(m_macAddress.toString());
 }
 
-void Conductor::setConductorBLEMacAddress() {
-    iuBluetooth.enterATCommandInterface();
-    char BLE_MAC_Address[20];
-    iuBluetooth.sendATCommand("mac?", BLE_MAC_Address, 20);
-    debugPrint("BLE MAC ID:",false);debugPrint(BLE_MAC_Address,true);
-    iuBluetooth.exitATCommandInterface();
-    m_macAddress.fromString(BLE_MAC_Address);
+void Conductor::setConductorMacAddress() {
+    if(iuBluetooth.isBLEAvailable){
+        iuBluetooth.enterATCommandInterface();
+        char BLE_MAC_Address[20];
+        iuBluetooth.sendATCommand("mac?", BLE_MAC_Address, 20);
+        debugPrint("BLE MAC ID:",false);debugPrint(BLE_MAC_Address,true);
+        iuBluetooth.exitATCommandInterface();
+        m_macAddress.fromString(BLE_MAC_Address);
+    }else
+    {   //set the macAddress from Ethernet Module
+        m_macAddress.fromString(iuEthernet.m_ethernetMacAddress);
+    }
+    
 }
 
 /* =============================================================================
@@ -2971,4 +3047,46 @@ bool Conductor::setSensorConfig(char* filename){
 
         return true;
     }
+}
+
+/**
+ * @brief 
+ * 
+ * @param filename - Storage file 
+ * @return true 
+ * @return false 
+ */
+bool Conductor::setEthernetConfig(char* filename){
+    JsonObject& config = configureJsonFromFlash(filename,1);      
+    JsonVariant variant = config;
+
+    if (!config.success()) {
+        if (debugMode) {
+            debugPrint("parseObject() failed");
+        }
+        return false;
+    }
+    else{
+        //static const char* m_workMode;
+        //static const char* m_remoteIP;
+        //int m_remotePort;
+        iuEthernet.m_workMode /*m_workMode*/= config["ethernetConfig"]["workMode"];
+        iuEthernet.m_remoteIP/*m_remoteIP*/ = config["ethernetConfig"]["remoteAddr"];
+        iuEthernet.m_remotePort/* m_remotePort*/= config["ethernetConfig"]["remotePort"];
+        
+        if(loopDebugMode){
+            debugPrint("workMode: ",false);
+            debugPrint(iuEthernet.m_workMode,true);
+            debugPrint("remoteAddr:",false);
+            debugPrint(iuEthernet.m_remoteIP,true);
+            debugPrint("remotePort:",false);
+            debugPrint(iuEthernet.m_remotePort,true);
+        }    
+        variant.prettyPrintTo(Serial);
+        //Serial.println("READING FROM STARTUP COMPLETE...");   
+
+        return true;
+    }
+
+
 }
