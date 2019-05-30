@@ -32,7 +32,7 @@ const uint8_t ESP8285_IO0  =  7;
     MAC Address
 ============================================================================= */
 
- const char MAC_ADDRESS[18] = "9C:A5:25:86:34:6E";
+ //const char MAC_ADDRESS[18] = "9C:A5:25:86:34:6E";
 
 /* Motor Scaling Factor 
  *  
@@ -124,7 +124,7 @@ uint32_t lastDone = 0;
 
 /***** Main operator *****/
 
-Conductor conductor(MAC_ADDRESS);
+Conductor conductor;//(MAC_ADDRESS);
 
 
 /* =============================================================================
@@ -143,6 +143,14 @@ void onWiFiConnect() {
 }
 
 void onWiFiDisconnect() {
+    ledManager.setBaselineStatus(&STATUS_NO_STATUS);
+}
+// Ethernet callback
+void onEthernetConnect(){
+    ledManager.setBaselineStatus(&STATUS_WIFI_CONNECTED);
+}
+void onEthernetDisconnect(){
+
     ledManager.setBaselineStatus(&STATUS_NO_STATUS);
 }
 
@@ -215,6 +223,18 @@ static void httpConfigCallback(void) {
     armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min  180000
 }
 
+/* ================================================================================
+ * Ethernet Status Timer callback
+ * ===============================================================================*/
+
+static armv7m_timer_t ethernetStatusTimer;
+static void ethernetStatusCallback(void){
+
+    iuEthernet.isEthernetConnected = iuEthernet.TCPStatus();
+    //iuEthernet.ExitAT();
+    Serial.print("Ethernet Status :");Serial.println(iuEthernet.isEthernetConnected);
+    armv7m_timer_start(&ethernetStatusTimer, 2000);    
+}
 /* =============================================================================
     Driven sensors acquisition callback
 ============================================================================= */
@@ -278,6 +298,7 @@ void dataAcquisitionISR()
 ============================================================================= */
 
 void onNewUSBMessage(IUSerial *iuSerial) {
+    Serial.println("Received USB callback");
     conductor.processUSBMessage(iuSerial);
 }
 
@@ -289,6 +310,11 @@ void onNewWiFiMessage(IUSerial *iuSerial) {
     conductor.processWiFiMessage(iuSerial);
 }
 
+void onNewEthernetMessage(IUSerial *iuSerial){
+    debugPrint("DEBUG :",false);
+    debugPrint("Something Received From Ethernet callback......",true);
+    conductor.processWiFiMessage(iuSerial);
+}
 /* =============================================================================
     Microsecond Timer ISR
 ============================================================================= */
@@ -419,30 +445,45 @@ void setup()
         }
         // BLE SETUP BEGIN
         iuBluetooth.setupHardware();
-        bool BLESETUP  = iuBluetooth.isBLEAvailable;
-        debugPrint("BLE CHIP available ?:",false);debugPrint(BLESETUP);
-        if(BLESETUP){
+        debugPrint("BLE CHIP available ?:",false);debugPrint(iuBluetooth.isBLEAvailable);
+        if(iuBluetooth.isBLEAvailable){
             //iuBluetooth.setupHardware();
             iuBluetooth.setOnNewMessageCallback(onNewBLEMessage);
             
             armv7m_timer_create(&bleTransmitTimer, (armv7m_timer_callback_t)bleTransmitCallback);
             armv7m_timer_start(&bleTransmitTimer, 5);
-            
-            // set the BLE address for conductor
-            conductor.setConductorBLEMacAddress();
+             // set the BLE address for conductor
+            conductor.setConductorMacAddress();          
         }
-        conductor.isEthernetConnected = true;
+        if(!iuBluetooth.isBLEAvailable) {
+            // SETUP available Ethernet configurations 
+            conductor.setEthernetConfig("ethernetConfig.conf");        
+            iuEthernet.setupHardware();
+            iuEthernet.setOnNewMessageCallback(onNewEthernetMessage);
 
+            //iuEthernet.setOnConnect(onEthernetConnect);
+            //iuEthernet.setOnDisconnect(onEthernetDisconnect);
+
+            if (!iuBluetooth.isBLEAvailable)
+            {  // set the BLE address for conductor
+                conductor.setConductorMacAddress();
+            }
+            
+            debugPrint("Is TCP connected:",false);
+            debugPrint(!iuEthernet.isEthernetConnected,true);
+        }
         // httpConfig message read timerCallback
         armv7m_timer_create(&httpConfigTimer, (armv7m_timer_callback_t)httpConfigCallback);
         armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min Timer 180000
         
         // WIFI SETUP BEGIN
-        
-        iuWiFi.setupHardware();
-        iuWiFi.setOnNewMessageCallback(onNewWiFiMessage);
-        iuWiFi.setOnConnect(onWiFiConnect);
-        iuWiFi.setOnDisconnect(onWiFiDisconnect);
+        #if 1
+            iuWiFi.setupHardware();
+            iuWiFi.setOnNewMessageCallback(onNewWiFiMessage);
+            iuWiFi.setOnConnect(onWiFiConnect);
+            iuWiFi.setOnDisconnect(onWiFiDisconnect);
+        #endif
+
         if (setupDebugMode) {
             iuI2C.scanDevices();
             debugPrint("");
@@ -533,7 +574,7 @@ void setup()
                 
         // Timer Init
         timerInit();
-
+        
     #endif
  #endif   
 }
@@ -565,11 +606,17 @@ void loop()
         //TESTING
         // conductor.printConductorMac(); // to check if the correct mac address is set up
         // Manage power saving
+       /* if(Serial1.available() > 0 ){
+            char data = Serial1.read();
+            Serial.print(data);
+        }
+       */
         conductor.manageSleepCycles();
         // Receive messages & configurations
         iuUSB.readMessages();
         iuBluetooth.readMessages();
         iuWiFi.readMessages();
+        iuEthernet.readMessages();
         // Manage WiFi autosleep
         iuWiFi.manageAutoSleep();
         // Acquire data from sensors
