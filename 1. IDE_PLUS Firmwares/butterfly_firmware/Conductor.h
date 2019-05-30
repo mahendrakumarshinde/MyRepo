@@ -192,7 +192,7 @@ class Conductor
         JsonObject& configureJsonFromFlash(String filename,bool isSet);
         void sendDiagnosticFingerPrints();
         void resetBLEonTimeout();
-        void setConductorBLEMacAddress();
+        void setConductorMacAddress();
         void printConductorMac();
         /***** Segmented Messages *****/
         void extractPayloadFromSegmentedMessage(const char* segment, char* payload);
@@ -209,7 +209,8 @@ class Conductor
         void sendSegmentedMessageResponse(int messageID);
 
         bool setSensorConfig(char* filename);
-        bool isEthernetConnected = false;
+        bool setEthernetConfig(char* filename);
+        
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
