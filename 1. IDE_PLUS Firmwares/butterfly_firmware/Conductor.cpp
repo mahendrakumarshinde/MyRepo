@@ -252,7 +252,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     root.printTo(jsonChar);
     
     JsonVariant variant = root;
-    variant.prettyPrintTo(Serial);
+    // variant.prettyPrintTo(Serial);
     
     if (!root.success()) {
         if (debugMode) {
@@ -367,7 +367,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         bool dataWritten = false;
         if (saveToFlash) {
           
-          Serial.println("INSIDE SAVE TO FNGERPRINTS....");
+        //   Serial.println("INSIDE SAVE TO FNGERPRINTS....");
           File fingerprints = DOSFS.open("finterprints.conf","w");
           if (fingerprints)
             {
@@ -378,7 +378,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             }
             else if (loopDebugMode) {
                  debugPrint(F("Failed to write into file: "), false);
-                 Serial.println("Error Writting to fingerprints.conf");
+                 debugPrint("Error Writting to fingerprints.conf");
             }  
         
         }
