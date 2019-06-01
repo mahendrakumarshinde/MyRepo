@@ -232,7 +232,7 @@ static void ethernetStatusCallback(void){
 
     iuEthernet.isEthernetConnected = iuEthernet.TCPStatus();
     //iuEthernet.ExitAT();
-    Serial.print("Ethernet Status :");Serial.println(iuEthernet.isEthernetConnected);
+    debugPrint("Ethernet Status :",false);debugPrint(iuEthernet.isEthernetConnected,true);
     armv7m_timer_start(&ethernetStatusTimer, 2000);    
 }
 /* =============================================================================
@@ -298,7 +298,7 @@ void dataAcquisitionISR()
 ============================================================================= */
 
 void onNewUSBMessage(IUSerial *iuSerial) {
-    Serial.println("Received USB callback");
+   debugPrint("Received USB callback",true);
     conductor.processUSBMessage(iuSerial);
 }
 
@@ -445,9 +445,10 @@ void setup()
         }
         // BLE SETUP BEGIN
         iuBluetooth.setupHardware();
-        debugPrint("BLE CHIP available ?:",false);debugPrint(iuBluetooth.isBLEAvailable);
+        debugPrint(" Is BLE Chip Available?:",false);
+        debugPrint(iuBluetooth.isBLEAvailable);
+        
         if(iuBluetooth.isBLEAvailable){
-            //iuBluetooth.setupHardware();
             iuBluetooth.setOnNewMessageCallback(onNewBLEMessage);
             
             armv7m_timer_create(&bleTransmitTimer, (armv7m_timer_callback_t)bleTransmitCallback);
@@ -461,8 +462,8 @@ void setup()
             iuEthernet.setupHardware();
             iuEthernet.setOnNewMessageCallback(onNewEthernetMessage);
 
-            //iuEthernet.setOnConnect(onEthernetConnect);
-            //iuEthernet.setOnDisconnect(onEthernetDisconnect);
+            iuEthernet.setOnConnect(onEthernetConnect);
+            iuEthernet.setOnDisconnect(onEthernetDisconnect);
 
             if (!iuBluetooth.isBLEAvailable)
             {  // set the BLE address for conductor
@@ -615,8 +616,12 @@ void loop()
         // Receive messages & configurations
         iuUSB.readMessages();
         iuBluetooth.readMessages();
-        iuWiFi.readMessages();
-        iuEthernet.readMessages();
+        if (iuEthernet.isEthernetConnected)
+        {
+            iuWiFi.readMessages();
+        }else {
+            iuEthernet.readMessages();
+        }
         // Manage WiFi autosleep
         iuWiFi.manageAutoSleep();
         // Acquire data from sensors
