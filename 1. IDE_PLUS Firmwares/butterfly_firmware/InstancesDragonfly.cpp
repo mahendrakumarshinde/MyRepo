@@ -53,7 +53,7 @@ DiagnosticEngine iuDiagnosticEngine = DiagnosticEngine();
 char iuEthernetBuffer[2048];
 //IUEthernet iuEthernet = IUEthernet();
 Usr2Eth iuEthernet(&Serial1, iuEthernetBuffer, 2048, IUSerial::LEGACY_PROTOCOL,
-                     115200, ';', 250);
+                     115200, '\n', 250);
 /* =============================================================================
     Features
 ============================================================================= */
