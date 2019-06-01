@@ -253,7 +253,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     root.printTo(jsonChar);
     
     JsonVariant variant = root;
-    variant.prettyPrintTo(Serial);
+    char ack_configEthernet[200];
+    //variant.prettyPrintTo(Serial);
     
     if (!root.success()) {
         if (debugMode) {
@@ -290,10 +291,21 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             const char* messageId;
             messageId = root["messageId"]  ;
             char ack_config[150];
+            
             snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
             
             //Serial.println(ack_config);
-            iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config);
+            if(iuWiFi.isWorking()){
+                iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config);
+            }else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
+            {       debugPrint("Sending Fetures ACK over Ethernet");
+                    snprintf(ack_configEthernet, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
+                      m_macAddress.toString().c_str(),0, 2, m_macAddress.toString().c_str(),messageId);
+                   
+                    debugPrint(ack_configEthernet,true);
+                    iuEthernet.write(ack_configEthernet); 
+                    iuEthernet.write("\n");
+            } 
         }
     }
     // Feature configuration
@@ -318,7 +330,18 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
             
             //Serial.println(ack_config);
-            iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config);
+            if(iuWiFi.isWorking()){
+                 iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config);
+            }else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
+            {       debugPrint("Sending Fingerpritns Threshold ACK over Ethernet");
+                    snprintf(ack_configEthernet, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
+                      m_macAddress.toString().c_str(),0, 2, m_macAddress.toString().c_str(),messageId);
+                   
+                    debugPrint(ack_configEthernet,true);
+                    iuEthernet.write(ack_configEthernet); 
+                    iuEthernet.write("\n");
+                   
+            } 
         }
     }
      // MQTT Server configuration
@@ -368,7 +391,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         bool dataWritten = false;
         if (saveToFlash) {
           
-          Serial.println("INSIDE SAVE TO FNGERPRINTS....");
+          //Serial.println("INSIDE SAVE TO FNGERPRINTS....");
           File fingerprints = DOSFS.open("finterprints.conf","w");
           if (fingerprints)
             {
@@ -379,7 +402,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             }
             else if (loopDebugMode) {
                  debugPrint(F("Failed to write into file: "), false);
-                 Serial.println("Error Writting to fingerprints.conf");
+                 //Serial.println("Error Writting to fingerprints.conf");
             }  
         
         }
@@ -395,9 +418,21 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
           
             char ack_config[150];
             snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+
+            if(iuWiFi.isWorking()){
+                 iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config); 
+            }
+            else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
+            {       debugPrint("Sending Fingerprints ACK over Ethernet");
+                    snprintf(ack_configEthernet, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
+                      m_macAddress.toString().c_str(),0, 2, m_macAddress.toString().c_str(),messageId);
+                   
+                    debugPrint(ack_configEthernet,true);
+                    iuEthernet.write(ack_configEthernet); 
+                    iuEthernet.write("\n");
+                    //iuEthernet.write(ack_config);
+            } 
             
-            //Serial.println(ack_config);
-            iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config);  
         }
         
       }
@@ -441,7 +476,22 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
           snprintf(httpConfig_ack, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
             
           debugPrint(F("httpConfig ACK :"));debugPrint(httpConfig_ack);
-          iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HTTP_CONFIG_ACK, httpConfig_ack);
+          if (iuWiFi.isWorking())
+          {
+              iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HTTP_CONFIG_ACK, httpConfig_ack);
+          
+          }else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
+          {     
+                snprintf(ack_configEthernet, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
+                      m_macAddress.toString().c_str(),0, 2, m_macAddress.toString().c_str(),messageId);
+                   
+                    debugPrint(ack_configEthernet,true);
+                    iuEthernet.write(ack_configEthernet); 
+                    iuEthernet.write("\n");
+                //iuEthernet.write(httpConfig_ack);
+          }
+          
+          
           
           //stm reset
           delay(10);
@@ -554,7 +604,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             debugPrint("RunTime remotePort:",false);
             debugPrint(iuEthernet.m_remotePort,true);
         }    
-        variant.prettyPrintTo(Serial);
+        //variant.prettyPrintTo(Serial);
         //Serial.println("READING FROM STARTUP COMPLETE...");   
 
         }
@@ -1319,8 +1369,8 @@ void Conductor::processBLEMessage(IUSerial *iuSerial)
 void Conductor::processWiFiMessage(IUSerial *iuSerial)
 {
     char *buff = iuSerial->getBuffer();
-    Serial.print("Available Data:");
-    Serial.println(buff);
+    debugPrint("Available Data:",false);
+    debugPrint(buff,true);
     if (buff[0] == '{')
     {
         processConfiguration(buff,true);    //save the configuration into the file
@@ -2975,7 +3025,7 @@ void Conductor::setThresholdsFromFile()
     StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
     JsonVariant config = JsonVariant(
             iuFlash.loadConfigJson(IUFlash::CFG_FEATURE, jsonBuffer));
-    config.prettyPrintTo(Serial);
+    //config.prettyPrintTo(Serial);
     if (config.success()) {
         const char* threshold = "TRH";
         float low, mid, high;
@@ -3082,7 +3132,7 @@ bool Conductor::setEthernetConfig(char* filename){
             debugPrint("remotePort:",false);
             debugPrint(iuEthernet.m_remotePort,true);
         }    
-        variant.prettyPrintTo(Serial);
+        //variant.prettyPrintTo(Serial);
         //Serial.println("READING FROM STARTUP COMPLETE...");   
 
         return true;
