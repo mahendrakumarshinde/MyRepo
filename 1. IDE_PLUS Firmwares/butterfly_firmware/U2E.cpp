@@ -38,42 +38,74 @@ void Usr2Eth::dofullConfig(){
     SetAT();
     //clear UART Buffer
     bool uartbuff = UARTClearBuff("on");
-    Serial.print("UART Buffer clear:");
-    Serial.println(uartbuff);
-
-    //configure the UART
+    if(setupDebugMode || loopDebugMode && !uartbuff){
+      debugPrint("UART Buffer clear:",false);
+      debugPrint(uartbuff,true);
+    }else
+    {
+      debugPrint("Failed to clear the UART Buffer",true);
+    }
+    
+    //configure the UART parameters 
     bool setuart = SetUART(DEFAULT_BAUD_RATE,8,1,"NONE","NFC");
-    Serial.print("Set UART : ");
-    Serial.println(setuart);
-    //get macid
+    if(setupDebugMode || loopDebugMode && !setuart){
+      debugPrint("Set UART : ",false);
+      debugPrint(setuart,true);
+    }else
+    {
+      debugPrint("Failed to set the UART parameters",true);
+    }
+      
+    //Get Ethernet MacId
     m_ethernetMacAddress = GetMAC();
-    debugPrint("Ethernet macid:",false);
-    debugPrint(m_ethernetMacAddress,true);
-  
+    if(setupDebugMode || loopDebugMode && m_ethernetMacAddress != NULL){
+      debugPrint("Ethernet macid:",false);
+      debugPrint(m_ethernetMacAddress,true);
+    }else
+    {
+      debugPrint("Failed to Read Ethernet MacId",true);
+    }
+      
     //get Firmware Version
     String Version = FirmVer();
-    Serial.print("Version : ");Serial.println(Version);
-    //Check TCPStatus
+    if(setupDebugMode || loopDebugMode && Version != NULL){
+      debugPrint("Ethernet Version : ",false);
+      debugPrint(Version,true);
+    }else
+    {
+      debugPrint("Failed to get the Ethernet Version",true);
+    }
+    //Check TCP Status
     isEthernetConnected = TCPStatus();
-    Serial.print("TCP Status :");Serial.println(isEthernetConnected);
+    if (setupDebugMode || loopDebugMode && ! isEthernetConnected)
+    {
+      debugPrint("TCP Status :",false);
+      debugPrint(isEthernetConnected,true);
+    }else
+    {
+      debugPrint("TCP Connection Failed",true);
+    }
     
     //configure the network for DHCP
     String ip = NetworkConfig();
-    Serial.print("DHCP IP :");
-    Serial.println(ip);
+    debugPrint("DHCP IP :",false);
+    debugPrint(ip,true);
     //Configure module to TCP Client Mode (SocketConfig)
     //bool isSocketSet = SocketConfig("TCPC","192.168.0.5",8090);            //need to be configurable from USB
-    Serial.print("workMode 1: ");Serial.println(m_workMode);
-    Serial.print("Remote_IP 1: ");Serial.println(m_remoteIP);
-    Serial.print("Remote Port 1:");Serial.println(m_remotePort);
+    debugPrint("workMode 1: ",false);debugPrint(m_workMode,true);
+    debugPrint("Remote_IP 1: ",false);debugPrint(m_remoteIP,true);
+    debugPrint("Remote Port 1:",false);debugPrint(m_remotePort,true);
     bool isSocketSet = SocketConfig(m_workMode,m_remoteIP,m_remotePort);            //need to be configurable from USB
     
-    Serial.print("Socket Config :");
-    Serial.println(isSocketSet);
+    debugPrint("Socket Config :",false);
+    debugPrint(isSocketSet,true);
     //Configure the HeartDirection
-    HeartDirection("COM");  // to Remote_IP
-    HeartTime(5); // every 5 sec
-    HeartData("{thresholds ---->vikas};");
+    m_hearbeatEnabled = EnableHeart("OFF");
+    if(m_hearbeatEnabled){
+      HeartDirection("COM");  // to Remote_IP
+      HeartTime(5); // every 5 sec
+      HeartData("ETHERNET_CONNECTED;");
+    }
     //exit ATCommand Mode
     ExitAT();
     
@@ -1087,8 +1119,8 @@ bool Usr2Eth::HeartDirection(const char* _status)
  * @brief 
  * 
  * @param _status 
- * @return true 
- * @return false 
+ * @return true  Failed
+ * @return false  Sucess
  */
 bool Usr2Eth::EnableHeart(const char* _status)
 {
@@ -1471,31 +1503,27 @@ String Usr2Eth::_readSerial(uint32_t timeout)
 
 bool Usr2Eth::readMessages()
 {
-    // bool atLeastOneNewMsg = false;
-    // while(true)
-    // {
-    //     if (!readUptoOneMessage())
-    //     {
-    //         //debugPrint("Inside readUptoOneMessage, Failed",true);
-    //         break;
-    //     }
-    //     atLeastOneNewMsg = true;
-    //     if (debugMode && m_protocol == PROTOCOL_OPTIONS::LEGACY_PROTOCOL)
-    //     {   
-    //         debugPrint(millis(), false);
-    //         debugPrint("=> Serial input is: ", false);
-    //         debugPrint(m_buffer);
-    //     }
-    //     if (m_newMessageCB != NULL)
-    //     {   
-    //         debugPrint("CALLBACK :",false);
-    //         debugPrint("CALLBACK is received",true);
-    //         m_newMessageCB(this);
-    //     }
-    //     resetBuffer();  // Clear buffer
-    // }
-    // return atLeastOneNewMsg;
-    bool atLeastOneNewMessage = IUSerial::readMessages();
-
-    return atLeastOneNewMessage;
+    bool atLeastOneNewMsg = false;
+    while(true)
+    {
+        if (!readUptoOneMessage())
+        {
+            break;
+        }
+        atLeastOneNewMsg = true;
+        if (debugMode && m_protocol == PROTOCOL_OPTIONS::LEGACY_PROTOCOL)
+        {   
+            debugPrint(millis(), false);
+            debugPrint("=> Serial input is: ", false);
+            debugPrint(m_buffer);
+        }
+        if (m_newMessageCB != NULL)
+        {   
+            debugPrint("CALLBACK :",false);
+            debugPrint("CALLBACK is received",true);
+            m_newMessageCB(this);
+        }
+        resetBuffer();  // Clear buffer
+    }
+    return atLeastOneNewMsg;
 }

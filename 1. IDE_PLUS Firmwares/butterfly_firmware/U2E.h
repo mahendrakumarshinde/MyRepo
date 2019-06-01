@@ -26,7 +26,8 @@ class Usr2Eth : public IUSerial,public Component
     /***** Callbacks *****/
     void (*m_onConnect)() = NULL;
     void (*m_onDisconnect)() = NULL;
-    
+    // General Variables
+    bool m_hearbeatEnabled = true;
         
   public:
     //Usr2Eth();setupHardware
@@ -89,6 +90,7 @@ class Usr2Eth : public IUSerial,public Component
    const char* m_workMode;
    const char* m_remoteIP;
    uint16_t m_remotePort;
+   
 };
 
 #endif
