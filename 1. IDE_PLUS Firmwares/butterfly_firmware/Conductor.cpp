@@ -254,8 +254,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     
     JsonVariant variant = root;
     char ack_configEthernet[200];
-    //variant.prettyPrintTo(Serial);
-    
+  
     if (!root.success()) {
         if (debugMode) {
             debugPrint("parseObject() failed");
@@ -546,54 +545,94 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
         
     }
-    // SET the ethernetConfig
-    subConfig = root["ethernetConfig"];
+    // SET the relayAgentConfig on Ethernet
+    subConfig = root["relayAgentConfig"];
     if (subConfig.success()) {
         bool dataWritten = false;
         
         if (saveToFlash) {
             //DOSFS.begin();
-            File ethernetConfigFile = DOSFS.open("ethernetConfig.conf", "w");
-            if (ethernetConfigFile)
+            File relayAgentConfigFile = DOSFS.open("relayAgentConfig.conf", "w");
+            if (relayAgentConfigFile)
             {
                 
                 if (loopDebugMode) {
                  debugPrint(F("Writting into file: "), true);
                 }
-                ethernetConfigFile.print(jsonChar);
-                ethernetConfigFile.close();
+                relayAgentConfigFile.print(jsonChar);
+                relayAgentConfigFile.close();
                 dataWritten = true;
             }
             else if (loopDebugMode) {
-                 debugPrint("Failed to write into file: ethernetConfig.conf ");
+                 debugPrint("Failed to write into file: relayAgentConfig.conf ");
                 
             }  
         
         }
         if(dataWritten == true){
           
-          JsonObject& config = configureJsonFromFlash("ethernetConfig.conf",1);      // get the accountID
+          JsonObject& config = configureJsonFromFlash("relayAgentConfig.conf",1);      // get the accountID
           JsonVariant variant = config;
-          
-          iuEthernet.m_workMode = config["ethernetConfig"]["workMode"];
-          iuEthernet.m_remoteIP = config["ethernetConfig"]["remoteAddr"];
-          iuEthernet.m_remotePort = config["ethernetConfig"]["remotePort"];
+          bool heartbeatFlag = false;
+
+          iuEthernet.m_workMode = config["relayAgentConfig"]["workMode"];
+          iuEthernet.m_remoteIP = config["relayAgentConfig"]["remoteAddr"];
+          iuEthernet.m_remotePort = config["relayAgentConfig"]["remotePort"];
+          iuEthernet.m_enableHeartbeat = config["relayAgentConfig"]["enableHeartbeat"];
+          iuEthernet.m_heartbeatInterval = config["relayAgentConfig"]["heartbeatInterval"];
+          iuEthernet.m_heartbeatDir = config["relayAgentConfig"]["heartbeatDir"];
+          iuEthernet.m_heartbeatMsg = config["relayAgentConfig"]["heartbeatMsg"];
         
-          iuEthernet.SetAT();
-          iuEthernet.SocketConfig(iuEthernet.m_workMode,iuEthernet.m_remoteIP,iuEthernet.m_remotePort);//setupHardware();
-          for(int i=0;i<10;i++){
-            bool currentState = iuEthernet.TCPStatus();
-            delay(500);
-            if (currentState != iuEthernet.isEthernetConnected )
-            {
-                iuEthernet.isEthernetConnected = currentState;
-                break;
-            }
+           while(iuEthernet.SetAT() != 0);
+           iuEthernet.SocketConfig(iuEthernet.m_workMode,iuEthernet.m_remoteIP,iuEthernet.m_remotePort);//setupHardware();
+           
+          if (iuEthernet.m_enableHeartbeat != NULL)
+          { 
+            // Set Heartbeat configuration  
+            heartbeatFlag = true;
+            iuEthernet.EnableHeart(iuEthernet.m_enableHeartbeat);
+            iuEthernet.HeartDirection(iuEthernet.m_heartbeatDir);              
+            iuEthernet.HeartTime(iuEthernet.m_heartbeatInterval);    
+            iuEthernet.HeartData(iuEthernet.m_heartbeatMsg);
             
-          }
-          debugPrint("Current TCPStatus:",false);
-          debugPrint(iuEthernet.isEthernetConnected);
+          }  
+          bool currentState = false;  
+          debugPrint("Previous Ethernet state : ",false);
+          debugPrint(iuEthernet.isEthernetConnected,true);
+
+           for (size_t i = 0; i < 10; i++)
+           {
+               /* code */
+              currentState =  iuEthernet.TCPStatus(); 
+              debugPrint("Current State : ",false);
+              debugPrint(currentState,true);
+
+            if (currentState == iuEthernet.isEthernetConnected )
+            {                                                   
+                if(m_streamingMode == StreamingMode::ETHERNET){
+                    debugPrint("StreamingMode is Ethernet",true);
+                    iuEthernet.isEthernetConnected = currentState;
+                    break;
+                
+                }   
+                // else{
+                //     debugPrint("StreamingMode is Non Ethernet",true);
+                //     updateStreamingMode();
+                //     if(debugMode){
+                //         debugPrint("Update the StreamingMode with Ethernet",true);
+                //     }          
+                // }
+            }
+                debugPrint("loop count :",false);
+                debugPrint(i,true);
+                delay(1000);
+           }
+           
+           debugPrint(" Final TCP Status:",false);
+           debugPrint(iuEthernet.isEthernetConnected);
+           //iuEthernet.isEthernetConnected = currentState;
           
+          //iuEthernet.ExitAT();
           iuEthernet.Restart();
             
          if(loopDebugMode){
@@ -603,10 +642,20 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             debugPrint(iuEthernet.m_remoteIP);
             debugPrint("RunTime remotePort:",false);
             debugPrint(iuEthernet.m_remotePort,true);
+            if (heartbeatFlag == true)
+            {
+                debugPrint("Heartbeat:",false);
+                debugPrint(iuEthernet.m_enableHeartbeat);
+                debugPrint("Heartbeat Interval:",false);
+                debugPrint(iuEthernet.m_heartbeatInterval);
+                debugPrint("Hearbeat Direction:",false);
+                debugPrint(iuEthernet.m_heartbeatDir);
+                debugPrint("Heartbeat Message:",false);
+                debugPrint(iuEthernet.m_heartbeatMsg);
+            }
+            
         }    
-        //variant.prettyPrintTo(Serial);
-        //Serial.println("READING FROM STARTUP COMPLETE...");   
-
+        heartbeatFlag = false;
         }
         
     }
@@ -1369,8 +1418,9 @@ void Conductor::processBLEMessage(IUSerial *iuSerial)
 void Conductor::processWiFiMessage(IUSerial *iuSerial)
 {
     char *buff = iuSerial->getBuffer();
-    debugPrint("Available Data:",false);
-    debugPrint(buff,true);
+    uint32_t currentTime = millis();
+    debugPrint("Available Data :",false);
+    debugPrint(buff);
     if (buff[0] == '{')
     {
         processConfiguration(buff,true);    //save the configuration into the file
@@ -1383,6 +1433,23 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
         }
         updateStreamingMode();
     }
+    if(! iuEthernet.isEthernetConnected &&  (buff[0]== 'i' && buff[3] == '_' && buff[8] == '/' && buff[13] == '_' && buff[18]=='-')  ){
+        debugPrint("Time sync Receive",true);
+        ledManager.showStatus(&STATUS_WIFI_CONNECTED);
+        lastTimeSync = currentTime;
+    }else {
+        debugPrint("Time sync not received");
+        ledManager.showStatus(&STATUS_NO_STATUS);
+    }
+    if((buff[0] == '3' && buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
+                buff[13] == '0' && buff[15] == '0' && buff[17] == '0') ){
+        processCommand(buff);
+
+    }else
+    {
+        processLegacyCommand(buff);
+    }
+    
     uint8_t idx = 0;
     switch (iuWiFi.getMspCommand()) {
         // MSP Status messages
@@ -2233,7 +2300,7 @@ void Conductor::streamFeatures()
             iuWiFi.streamLiveMSPMessage(nodeToSend->buffer, msgLen);
             iuWiFi.endLiveMSPCommand();
             sendingQueue.attemptingToSend(nodeToSend->idx);
-            //Serial.println("Inside WIFI Streaming Mode");
+            debugPrint("Non Ethernet Streaming Mode",true);
            }
            if(m_streamingMode == StreamingMode::ETHERNET){
                 uint16_t msgLen = strlen(nodeToSend->buffer);
@@ -2336,19 +2403,8 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
             memmove(rawAccelerationZ,txBuffer + 2, strlen(txBuffer) - 1) ; //sizeof(txBuffer)/sizeof(txBuffer[0]) -2);    
             debugPrint("RawAcel Z: ",false);debugPrint(rawAccelerationZ);
             snprintf(rawAcceleration,maxLen,"{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\":\"{\\\"deviceId\\\":\\\"%s\\\",\\\"samplingRate\\\":%d,\\\"blockSize\\\":%d,\\\"X\\\":\\\"%s\\\",\\\"Y\\\":\\\"%s\\\",\\\"Z\\\":\\\"%s\\\"}\"}",m_macAddress.toString().c_str(),1,0,m_macAddress.toString().c_str(),IULSM6DSM::defaultSamplingRate,512,rawAccelerationX,rawAccelerationY,rawAccelerationZ);
-            //rbase64.encode();
-            /*
-                encode data to base64
-
-            */
-           #if 0
-           if (rbase64.encode(rawAcceleration) == RBASE64_STATUS_OK )  {
-                Serial.println("\nConverted the String to Base64 : ");
-                Serial.println(rbase64.result());
-            }
-            //iuWiFi.write(rawAcceleration);
-            iuWiFi.write(rbase64.result());
-            #endif
+            
+            
             iuWiFi.write(rawAcceleration);           // send the rawAcceleration over UART 
             iuWiFi.write("\n");            
             if(loopDebugMode){
@@ -2451,7 +2507,7 @@ void Conductor::sendDiagnosticFingerPrints() {
                 //     debugPrint(F("Published time diff : "), false); debugPrint(F(published_time_diff), true);
                 // }               
                 last_fingerprint_timestamp = fingerprint_timestamp; // update timestamp for next iterations
-                if(iuEthernet.isEthernetConnected == 0 && StreamingMode::ETHERNET){
+                if(iuEthernet.isEthernetConnected == 0 && m_streamingMode == StreamingMode::ETHERNET){
                     /* FingerPrintResult send over Ethernet Mode */
                     if(rbase64.encode(FingerPrintResult) == RBASE64_STATUS_OK) {
                         snprintf(sendFingerprints,messageLength+500,"{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\":\"%s\"}",  /* \"{\\\"macID\\\":\\\"%s\\\",\\\"timestamp\\\":%lf,\\\"state\\\":\\\"%d\\\",\\\"accountId\\\":\\\"%s\\\",\\\"fingerprints\\\":%s\"}\"}" , */
@@ -2469,7 +2525,7 @@ void Conductor::sendDiagnosticFingerPrints() {
                     }
                         
                         
-                }else if(StreamingMode::WIFI || StreamingMode::WIFI_AND_BLE)//iuWiFi.isAvailable() && iuWiFi.isWorking())   
+                }else if(m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE)//iuWiFi.isAvailable() && iuWiFi.isWorking())   
                 {   /* FingerPrintResult send over Wifi only */
                     debugPrint("Wifi connected, ....",true);
                     iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );    
@@ -3117,12 +3173,15 @@ bool Conductor::setEthernetConfig(char* filename){
         return false;
     }
     else{
-        //static const char* m_workMode;
-        //static const char* m_remoteIP;
-        //int m_remotePort;
-        iuEthernet.m_workMode /*m_workMode*/= config["ethernetConfig"]["workMode"];
-        iuEthernet.m_remoteIP/*m_remoteIP*/ = config["ethernetConfig"]["remoteAddr"];
-        iuEthernet.m_remotePort/* m_remotePort*/= config["ethernetConfig"]["remotePort"];
+        // Read availabel relayAgentConfig details
+        iuEthernet.m_workMode = config["relayAgentConfig"]["workMode"];
+        iuEthernet.m_remoteIP = config["relayAgentConfig"]["remoteAddr"];
+        iuEthernet.m_remotePort = config["relayAgentConfig"]["remotePort"];
+        
+        iuEthernet.m_enableHeartbeat = config["relayAgentConfig"]["enableHeartbeat"];
+        iuEthernet.m_heartbeatInterval = config["relayAgentConfig"]["heartbeatInterval"];
+        iuEthernet.m_heartbeatDir = config["relayAgentConfig"]["heartbeatDir"];
+        iuEthernet.m_heartbeatMsg = config["relayAgentConfig"]["heartbeatMsg"];
         
         if(loopDebugMode){
             debugPrint("workMode: ",false);
@@ -3131,12 +3190,19 @@ bool Conductor::setEthernetConfig(char* filename){
             debugPrint(iuEthernet.m_remoteIP,true);
             debugPrint("remotePort:",false);
             debugPrint(iuEthernet.m_remotePort,true);
+            // Heartbeat configurations
+            debugPrint("isHeartbeatEnabled:",false);
+            debugPrint(iuEthernet.m_enableHeartbeat);
+            debugPrint("Heartbeat Interval:",false);
+            debugPrint(iuEthernet.m_heartbeatInterval);
+            debugPrint("Hearbeat Direction:",false);
+            debugPrint(iuEthernet.m_heartbeatDir);
+            debugPrint("Heartbeat Message:",false);
+            debugPrint(iuEthernet.m_heartbeatMsg);
         }    
-        //variant.prettyPrintTo(Serial);
-        //Serial.println("READING FROM STARTUP COMPLETE...");   
-
+        
         return true;
     }
 
-
+    return false;
 }
