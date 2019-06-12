@@ -22,7 +22,8 @@ Usr2Eth::Usr2Eth(HardwareSerial *serialPort, char *charBuffer,
 void Usr2Eth::setupHardware(){
 
   begin();
-  SetAT();
+  ExitAT();     // exit from AT Mode forcefully
+  SetAT(); //!= 0 );
   delay(1000);
   dofullConfig();
   
@@ -35,7 +36,7 @@ void Usr2Eth::setupHardware(){
 void Usr2Eth::dofullConfig(){
   // 
     _Serial->flush();
-    SetAT();
+    //SetAT();
     //clear UART Buffer
     bool uartbuff = UARTClearBuff("on");
     if(setupDebugMode || loopDebugMode && !uartbuff){
@@ -75,37 +76,81 @@ void Usr2Eth::dofullConfig(){
     {
       debugPrint("Failed to get the Ethernet Version",true);
     }
-    //Check TCP Status
-    isEthernetConnected = TCPStatus();
-    if (setupDebugMode || loopDebugMode && ! isEthernetConnected)
-    {
-      debugPrint("TCP Status :",false);
-      debugPrint(isEthernetConnected,true);
-    }else
-    {
-      debugPrint("TCP Connection Failed",true);
-    }
+    // Get the available DNS address
+     String dnsAddr = getDNS();
+     debugPrint("DNS address :",false);
+     debugPrint(dnsAddr);
     
-    //configure the network for DHCP
+     //configure the network for DHCP
     String ip = NetworkConfig();
     debugPrint("DHCP IP :",false);
     debugPrint(ip,true);
     //Configure module to TCP Client Mode (SocketConfig)
     //bool isSocketSet = SocketConfig("TCPC","192.168.0.5",8090);            //need to be configurable from USB
-    debugPrint("workMode 1: ",false);debugPrint(m_workMode,true);
-    debugPrint("Remote_IP 1: ",false);debugPrint(m_remoteIP,true);
-    debugPrint("Remote Port 1:",false);debugPrint(m_remotePort,true);
+    debugPrint("workMode   :",false);debugPrint(m_workMode,true);
+    debugPrint("Remote_IP  :",false);debugPrint(m_remoteIP,true);
+    debugPrint("Remote Port:",false);debugPrint(m_remotePort,true);
     bool isSocketSet = SocketConfig(m_workMode,m_remoteIP,m_remotePort);            //need to be configurable from USB
     
     debugPrint("Socket Config :",false);
     debugPrint(isSocketSet,true);
+    //Check TCP Status
+    //Retry(5,2000);
+    //long now = millis();
+    //debugPrint("Start Time:",false);debugPrint(now);
+    //for (size_t i = 0; i < 5; i++)
+   // {
+      /* code */
+      uint32_t now = millis();
+      do
+      {
+        isEthernetConnected = TCPStatus();
+        //debugPrint("Time Spent : ",false);
+        //debugPrint(now - millis(),true);
+        if(millis() - now > m_ConnectionTimeout){
+          debugPrint("Timeout ");
+          isEthernetConnected = false;      // forcefully set the state 
+        }
+
+
+      } while (isEthernetConnected != false);
+      
+     // while((isEthernetConnected = TCPStatus()) != 0 ) ;  // loop forever until Sucess
+     // m_lastDone = millis();
+      if ((setupDebugMode || loopDebugMode) && ! isEthernetConnected)
+      {
+        debugPrint("TCP Status :",false);
+        debugPrint(isEthernetConnected,true);
+        debugPrint("Time taken :",false);
+        debugPrint(millis() - now,true);
+        
+        //break;
+      }else 
+      { debugPrint("Connection timeout");
+        debugPrint("TCP Connection Failed",true);
+        //break;
+      }
+    //}
+   
     //Configure the HeartDirection
-    m_hearbeatEnabled = EnableHeart("OFF");
-    if(m_hearbeatEnabled){
-      HeartDirection("COM");  // to Remote_IP
-      HeartTime(5); // every 5 sec
-      HeartData("ETHERNET_CONNECTED;");
+    bool isheartbeatEnabled = EnableHeart(m_enableHeartbeat);
+    debugPrint("Hearbit enabled :",false);
+    debugPrint(isheartbeatEnabled,true);
+    if(!isheartbeatEnabled){
+      HeartDirection(m_heartbeatDir);  // to Remote_IP
+      HeartTime(m_heartbeatInterval); // every 5 sec
+      HeartData(m_heartbeatMsg);
     }
+    //set iu username and password
+    bool credentialsSet = SetUserPassword(m_username,m_password);
+    if ((setupDebugMode || loopDebugMode && ! credentialsSet))
+    {
+      debugPrint("Infinite Uptime default Credentials set",true);
+    }else
+    {
+      debugPrint("failed to set the username and password",true);
+    }
+    
     //exit ATCommand Mode
     ExitAT();
     
@@ -176,12 +221,12 @@ bool Usr2Eth::SetAT()
   if (_buffer.indexOf("+ok") == -1 )
   {
     debugPrint("SetAT Failed:",true);
-    //debugPrint(true,true);
+    m_enterATMode = true;
     return  true;
   }
   else{
     debugPrint("SetAT Sucess",true);
-    //debugPrint(false,true);
+    m_enterATMode = false;
     return  false;
   }
 }
@@ -351,22 +396,24 @@ bool Usr2Eth::ExitAT()
   do {
     _Serial->print(F("AT+ENTM\r\n"));
     //port->write("AT+ENTM\r\n");
-    debugPrint("Executing ExitAT()..",true);
+    //debugPrint("Executing ExitAT()..",true);
     _buffer = _readSerial(300);
     count++;
     delay(RetryDelay);
-    debugPrint("Retry Count:",false);
-    debugPrint(count,true);
+    //debugPrint("Retry Count:",false);
+    //debugPrint(count,true);
   }
   while ((count < NumofRetry && count < MAX_Count)&& _buffer.indexOf("+OK") == -1);
   { //why ??
     if (_buffer.indexOf("+OK") == -1 )
     {
       debugPrint("Return Failed",true);
+      m_exitATMode = true;
       return  true;
     }
     else{
       debugPrint("Return Sucess",true);
+      m_exitATMode = false;
       return false;
     }
   }
@@ -684,13 +731,47 @@ bool Usr2Eth::SetDNS(const char* DNS)
   {
     if (_buffer.indexOf("+OK") == -1)
     {
-      return true;
+      return true;        // ERROR
     }
     else
     {
       return false;
     }
   }
+}
+
+/**
+ * @brief 
+ * 
+ * @return String - Available DNS server address 
+ */
+String Usr2Eth::getDNS(){
+  uint8_t indexOne;
+  uint8_t indexTwo;
+  String IP;
+  int count = 0;
+  do {
+    _Serial->print(F("AT+DNS\r\n"));
+    delay(100);
+    IP = _readSerial(200);
+    count++;
+    delay(RetryDelay);
+  }
+
+  while ((count < NumofRetry && count < MAX_Count)&& IP.indexOf("+OK") == -1);
+  {
+    if (IP.indexOf("+OK") == -1 )
+    {
+      return "ERROR";
+    }
+    else
+    {
+      indexOne = IP.indexOf("+OK=") + 4 ;
+      indexTwo = IP.indexOf(",", indexOne);
+      return (IP.substring(indexOne, indexTwo));
+    }
+  }
+
 }
 
 /**
@@ -1059,7 +1140,7 @@ bool Usr2Eth::HeartData(const char* data)
     if (len >= 1 && len <= 40)
     {
       _Serial->print(F("AT+HEARTDT="));
-      _Serial->print(data);
+      _Serial->println(data);
       _Serial->print(F("\r\n"));
 
       _buffer = _readSerial();
@@ -1518,12 +1599,119 @@ bool Usr2Eth::readMessages()
             debugPrint(m_buffer);
         }
         if (m_newMessageCB != NULL)
-        {   
-            debugPrint("CALLBACK :",false);
-            debugPrint("CALLBACK is received",true);
-            m_newMessageCB(this);
+        {  
+           m_newMessageCB(this);
         }
         resetBuffer();  // Clear buffer
     }
     return atLeastOneNewMsg;
+}
+
+/**
+ * @brief Read the Remote Server configuration from DNS address using httpclient
+ * 
+ */
+String Usr2Eth::getServerConfiguration(){
+  begin(); 
+  // Enter into AT Mode
+  if(m_exitATMode == true){    // Already in AT Mode
+    debugPrint("Exiting from AT Mode");
+    while( ExitAT() != 0 );    // Forcefully Exit from AT Mode 
+  }
+  if(m_exitATMode == false && m_enterATMode == false){
+    debugPrint("Entering into AT Mode");
+    while( SetAT() != 0 );
+  } 
+   
+   bool httpheadStatus = controlhttpHeaderResponse("ON");
+   debugPrint("Removed HTTP Head :",false);
+   debugPrint(httpheadStatus);
+   
+   //Enter into httpclient Mode
+   bool setClientMode = SocketConfig("HTPC",m_defaultConfigDomain,m_defaultPort);
+   debugPrint("httpclient Mode:",false);
+   debugPrint(setClientMode);
+   // Send the http GET Request to read the configuration JSON
+  delay(1000);
+  GetHTTP(m_defaultURL);
+  // exit from AT Mode
+  ExitAT();
+ // send the http GET request and read JSON response
+  String availableJSON ;
+  do
+  {
+    port->write("?");
+    availableJSON = SerialRead();
+   if (availableJSON != NULL && availableJSON[0] ==  '{')
+    { 
+      responseIsNotAvailabel = true;
+    }
+  }while(responseIsNotAvailabel != true);  
+
+  responseIsNotAvailabel = false;
+  
+  return availableJSON;
+}
+
+/**
+ * @brief 
+ * 
+ * @param serverIP 
+ * @param port 
+ * @return true - On ERROR 
+ * @return false - On Sucess
+ */
+bool Usr2Eth::updateNetworkMode(String serverIP,uint16_t port){
+  
+  //ExitAT();    // forcefully exit from AT Mode
+  //SetAT();
+  if(m_exitATMode == true){    // Already in AT Mode
+    debugPrint("Exiting from AT Mode");
+    while( ExitAT() != 0 );    // Forcefully Exit from AT Mode 
+  }
+  if(m_exitATMode == false && m_enterATMode == false){
+    debugPrint("Entering into AT Mode");
+    while( SetAT() != 0 );
+  } 
+  //Enter into tcplient Mode
+  while(SocketConfig("TCPC",serverIP.c_str(),port));
+  
+  return true;
+
+}
+
+/**
+ * @brief 
+ * 
+ * @param state 
+ * @return true - On ERROR 
+ * @return false - On Sucess
+ */
+bool Usr2Eth::controlhttpHeaderResponse(const char* _status){
+  int count = 0;
+    do{
+      if (strcmp( _status, "on") == 0 || strcmp( _status, "off") == 0 || strcmp( _status, "ON") == 0 || strcmp( _status, "OFF") == 0)
+      {
+        _Serial->print(F("AT+HTPCHD="));
+        _Serial->print( _status);
+        _Serial->print(F("\r\n"));
+      }
+      else
+      {
+        return true;
+      }
+      _buffer = _readSerial();
+      count++;
+      delay(RetryDelay);
+    }
+
+    while ((count < NumofRetry && count < MAX_Count)&& _buffer.indexOf("+OK") == -1);
+    {
+      if ( (_buffer.indexOf("+OK")) == -1)
+      {
+        return true;
+      }
+      else
+        return false;
+    }
 }

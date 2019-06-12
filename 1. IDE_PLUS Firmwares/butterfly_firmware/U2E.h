@@ -27,7 +27,7 @@ class Usr2Eth : public IUSerial,public Component
     void (*m_onConnect)() = NULL;
     void (*m_onDisconnect)() = NULL;
     // General Variables
-    bool m_hearbeatEnabled = true;
+    bool isheartbeatEnabled = true;
         
   public:
     //Usr2Eth();setupHardware
@@ -58,6 +58,7 @@ class Usr2Eth : public IUSerial,public Component
     bool SetUART(uint32_t bauduart, int data_bits, int stop_bits, const char* parity, const char* flow_control);
     String NetworkConfig();
     bool SetDNS(const char* DNS);
+    String getDNS();
     String NetworkConfig(const char* IP_Address, const char* Mask, const char* Gateway);
     bool SocketConfig(const char*  Protocol, const char* Remote_IP, uint16_t Remote_Port);
     bool TCPStatus();
@@ -84,13 +85,38 @@ class Usr2Eth : public IUSerial,public Component
     void setOnDisconnect(void (*callback)()) { m_onDisconnect = callback; }
 
     virtual bool readMessages();
+    String getServerConfiguration();
+    bool updateNetworkMode(String serverIP,uint16_t port);
+    bool controlhttpHeaderResponse(const char* _status);
    // Variable Member
    bool isEthernetConnected = true;
    String m_ethernetMacAddress;
    const char* m_workMode;
    const char* m_remoteIP;
    uint16_t m_remotePort;
+   //heartbeat Configuration
+   //"hearbeatInterval":5,"heartbeatDir":"NET","heartbeatMsg":"Tigar Zinda hai !!!"}
+   const char* m_enableHeartbeat = "ON";
+   const char* m_heartbeatDir = "COM";
+   uint16_t m_heartbeatInterval = 5;    // Default 5 sec
+   const char* m_heartbeatMsg = "abc"; 
+   // web credentials
+   const char* m_username = "admin";    //default username
+   const char* m_password = "iut";      // default password
    
+   // Default server details
+   const char* m_defaultConfigDomain = "onprem-configs.iu";
+   uint16_t m_defaultPort = 8000;
+   const char* m_defaultURL = "/iu/configs";
+
+   // Timeout Variables
+   long m_atTimeout = 30000;  // sec
+   uint32_t m_ConnectionTimeout=  30000;
+   uint32_t m_lastDone = 0;
+
+   bool responseIsNotAvailabel = false;
+   bool m_exitATMode = false;  
+   bool m_enterATMode = false;
 };
 
 #endif
