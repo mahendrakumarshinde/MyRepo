@@ -311,8 +311,6 @@ void onNewWiFiMessage(IUSerial *iuSerial) {
 }
 
 void onNewEthernetMessage(IUSerial *iuSerial){
-    debugPrint("DEBUG :",false);
-    debugPrint("Something Received From Ethernet callback......",true);
     conductor.processWiFiMessage(iuSerial);
 }
 /* =============================================================================
@@ -457,22 +455,59 @@ void setup()
             conductor.setConductorMacAddress();          
         }
         if(!iuBluetooth.isBLEAvailable) {
-            // SETUP available Ethernet configurations 
-            conductor.setEthernetConfig("ethernetConfig.conf");        
-            iuEthernet.setupHardware();
-            iuEthernet.setOnNewMessageCallback(onNewEthernetMessage);
-
-            iuEthernet.setOnConnect(onEthernetConnect);
-            iuEthernet.setOnDisconnect(onEthernetDisconnect);
-
-            if (!iuBluetooth.isBLEAvailable)
-            {  // set the BLE address for conductor
-                conductor.setConductorMacAddress();
+            // Read the configurations ove httpClient
+            String availableOnpremConfigs = iuEthernet.getServerConfiguration();
+            debugPrint("Available On-Prem Configs:",true);
+            debugPrint(availableOnpremConfigs);
+            bool isDataWriteComplete = false;
+            // SETUP available Ethernet configurations
+            if ( (DOSFS.exists("relayAgentConfig.conf") && availableOnpremConfigs != NULL )  || ( !DOSFS.exists("relayAgentConfig.conf") && availableOnpremConfigs != NULL ))
+            {   
+                debugPrint("__________________Init Ethernet Config__________________________",true);
+                // Write configuration to file
+                File storeConfig = DOSFS.open("relayAgentConfig.conf","w");
+                if(storeConfig){
+                    if(debugMode){
+                        debugPrint("Writing configuration into File");
+                    }    
+                    storeConfig.print(availableOnpremConfigs);
+                    storeConfig.close();
+                    isDataWriteComplete = true;
+                }else
+                {
+                    if (debugMode)
+                    {
+                        debugPrint("Failed to Write into File");
+                    }
+                    
+                }
+                if(isDataWriteComplete == true){
+                    debugPrint("Content From File:");
+                    conductor.setEthernetConfig("relayAgentConfig.conf");       // Handle file not available condition     
+                    
+                    debugPrint("Setting up the Ethernet hardware");
+                    iuEthernet.setupHardware();
+                    
+                    iuEthernet.setOnNewMessageCallback(onNewEthernetMessage);
+                }
+                if (!iuBluetooth.isBLEAvailable)
+                {  // set the BLE address for conductor
+                    conductor.setConductorMacAddress();
+                }
+                debugPrint("Is TCP connected:",false);
+                debugPrint(!iuEthernet.isEthernetConnected,true);
+                debugPrint("___________________Done Ethernet Init ______________________________",true);
+                 
+            }else
+            {
+                debugPrint("iurelayAgent config file does not exists");
             }
             
-            debugPrint("Is TCP connected:",false);
-            debugPrint(!iuEthernet.isEthernetConnected,true);
+        }else 
+        {
+            debugPrint("BLE Chip is Available, BLE init Complete");
         }
+         
         // httpConfig message read timerCallback
         armv7m_timer_create(&httpConfigTimer, (armv7m_timer_callback_t)httpConfigCallback);
         armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min Timer 180000
