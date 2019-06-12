@@ -255,6 +255,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     JsonVariant variant = root;
     char ack_configEthernet[200];
   
+    // variant.prettyPrintTo(Serial);
+    
     if (!root.success()) {
         if (debugMode) {
             debugPrint("parseObject() failed");
@@ -390,7 +392,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         bool dataWritten = false;
         if (saveToFlash) {
           
-          //Serial.println("INSIDE SAVE TO FNGERPRINTS....");
+        //   Serial.println("INSIDE SAVE TO FNGERPRINTS....");
           File fingerprints = DOSFS.open("finterprints.conf","w");
           if (fingerprints)
             {
@@ -402,6 +404,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             else if (loopDebugMode) {
                  debugPrint(F("Failed to write into file: "), false);
                  //Serial.println("Error Writting to fingerprints.conf");
+                 debugPrint("Error Writting to fingerprints.conf");
             }  
         
         }
@@ -3081,7 +3084,7 @@ void Conductor::setThresholdsFromFile()
     StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
     JsonVariant config = JsonVariant(
             iuFlash.loadConfigJson(IUFlash::CFG_FEATURE, jsonBuffer));
-    //config.prettyPrintTo(Serial);
+    // config.prettyPrintTo(Serial);
     if (config.success()) {
         const char* threshold = "TRH";
         float low, mid, high;

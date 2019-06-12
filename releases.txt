@@ -16,6 +16,7 @@ Bug fixes
 
   1.Feature thresholds will now persist across reboots 
   2.Intermittent Wifi resets will reduce significantly. (our stress tests indicate something like once in a day or two)
+  3.Device will no longer reset on any power source (laptop or power socket).
 
 #################################################################################################################################################################################
 
