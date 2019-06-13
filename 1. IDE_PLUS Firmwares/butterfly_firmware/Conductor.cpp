@@ -1422,8 +1422,6 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
 {
     char *buff = iuSerial->getBuffer();
     uint32_t currentTime = millis();
-    debugPrint("Available Data :",false);
-    debugPrint(buff);
     if (buff[0] == '{')
     {
         processConfiguration(buff,true);    //save the configuration into the file
@@ -1436,10 +1434,12 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
         }
         updateStreamingMode();
     }
-    if(! iuEthernet.isEthernetConnected &&  (buff[0]== 'i' && buff[3] == '_' && buff[8] == '/' && buff[13] == '_' && buff[18]=='-')  ){
+    if(! iuEthernet.isEthernetConnected && buff[0] == '1' && buff[1] == ':' ){ 
         debugPrint("Time sync Receive",true);
         ledManager.showStatus(&STATUS_WIFI_CONNECTED);
         lastTimeSync = currentTime;
+        debugPrint("Timestamp value:",false); debugPrint(&buff[2]);
+        setRefDatetime(&buff[2]);
     }else {
         debugPrint("Time sync not received");
         ledManager.showStatus(&STATUS_NO_STATUS);

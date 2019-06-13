@@ -76,12 +76,7 @@ void Usr2Eth::dofullConfig(){
     {
       debugPrint("Failed to get the Ethernet Version",true);
     }
-    // Get the available DNS address
-     String dnsAddr = getDNS();
-     debugPrint("DNS address :",false);
-     debugPrint(dnsAddr);
-    
-     //configure the network for DHCP
+    //configure the network for DHCP
     String ip = NetworkConfig();
     debugPrint("DHCP IP :",false);
     debugPrint(ip,true);
@@ -94,13 +89,7 @@ void Usr2Eth::dofullConfig(){
     
     debugPrint("Socket Config :",false);
     debugPrint(isSocketSet,true);
-    //Check TCP Status
-    //Retry(5,2000);
-    //long now = millis();
-    //debugPrint("Start Time:",false);debugPrint(now);
-    //for (size_t i = 0; i < 5; i++)
-   // {
-      /* code */
+     /* code */
       uint32_t now = millis();
       do
       {
@@ -114,10 +103,8 @@ void Usr2Eth::dofullConfig(){
 
 
       } while (isEthernetConnected != false);
-      
-     // while((isEthernetConnected = TCPStatus()) != 0 ) ;  // loop forever until Sucess
-     // m_lastDone = millis();
-      if ((setupDebugMode || loopDebugMode) && ! isEthernetConnected)
+    
+    if ((setupDebugMode || loopDebugMode) && ! isEthernetConnected)
       {
         debugPrint("TCP Status :",false);
         debugPrint(isEthernetConnected,true);
@@ -130,16 +117,17 @@ void Usr2Eth::dofullConfig(){
         debugPrint("TCP Connection Failed",true);
         //break;
       }
-    //}
-   
+    
     //Configure the HeartDirection
     bool isheartbeatEnabled = EnableHeart(m_enableHeartbeat);
     debugPrint("Hearbit enabled :",false);
     debugPrint(isheartbeatEnabled,true);
     if(!isheartbeatEnabled){
       HeartDirection(m_heartbeatDir);  // to Remote_IP
+      bool msgStatus = HeartData(m_heartbeatMsg);
+      debugPrint("Heartbeat Status :",false);
+      debugPrint(msgStatus);
       HeartTime(m_heartbeatInterval); // every 5 sec
-      HeartData(m_heartbeatMsg);
     }
     //set iu username and password
     bool credentialsSet = SetUserPassword(m_username,m_password);
@@ -1615,23 +1603,26 @@ String Usr2Eth::getServerConfiguration(){
   begin(); 
   // Enter into AT Mode
   if(m_exitATMode == true){    // Already in AT Mode
-    debugPrint("Exiting from AT Mode");
+    //debugPrint("Exiting from AT Mode");
     while( ExitAT() != 0 );    // Forcefully Exit from AT Mode 
   }
   if(m_exitATMode == false && m_enterATMode == false){
-    debugPrint("Entering into AT Mode");
+    //debugPrint("Entering into AT Mode");
     while( SetAT() != 0 );
   } 
    
    bool httpheadStatus = controlhttpHeaderResponse("ON");
-   debugPrint("Removed HTTP Head :",false);
-   debugPrint(httpheadStatus);
-   
+   if(debugMode){
+    debugPrint("Removed HTTP Head :",false);
+    debugPrint(httpheadStatus);
+   }
    //Enter into httpclient Mode
    bool setClientMode = SocketConfig("HTPC",m_defaultConfigDomain,m_defaultPort);
-   debugPrint("httpclient Mode:",false);
-   debugPrint(setClientMode);
-   // Send the http GET Request to read the configuration JSON
+   if(debugMode){
+    debugPrint("httpclient Mode:",false);
+    debugPrint(setClientMode);
+   }
+    // Send the http GET Request to read the configuration JSON
   delay(1000);
   GetHTTP(m_defaultURL);
   // exit from AT Mode
@@ -1666,11 +1657,11 @@ bool Usr2Eth::updateNetworkMode(String serverIP,uint16_t port){
   //ExitAT();    // forcefully exit from AT Mode
   //SetAT();
   if(m_exitATMode == true){    // Already in AT Mode
-    debugPrint("Exiting from AT Mode");
+    //debugPrint("Exiting from AT Mode");
     while( ExitAT() != 0 );    // Forcefully Exit from AT Mode 
   }
   if(m_exitATMode == false && m_enterATMode == false){
-    debugPrint("Entering into AT Mode");
+    //debugPrint("Entering into AT Mode");
     while( SetAT() != 0 );
   } 
   //Enter into tcplient Mode
