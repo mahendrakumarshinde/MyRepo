@@ -118,7 +118,7 @@ class Conductor
         // static const uint32_t BLEconnectionTimeout = 60000;
         static const uint32_t BLEconnectionTimeout = 15000;
         static const uint32_t connectedStatusTimeout = 60000;   // 1 min for ETHERNET connectedStatusTimeout
-        uint32_t lastTimeSync =0;
+        uint32_t m_connectionTimeout = 120100;   // 2 min 100 ms
         //timer ISR period
         uint16_t timerISRPeriod = 300; // default 3.3KHz
         /***** Core *****/

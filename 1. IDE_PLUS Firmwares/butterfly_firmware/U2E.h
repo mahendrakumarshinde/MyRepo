@@ -102,7 +102,7 @@ class Usr2Eth : public IUSerial,public Component
    const char* m_heartbeatMsg = "abc"; 
    // web credentials
    const char* m_username = "admin";    //default username
-   const char* m_password = "iut";      // default password
+   const char* m_password = "@vK$*";      // default password
    
    // Default server details
    const char* m_defaultConfigDomain = "onprem-configs.iu";
@@ -111,12 +111,14 @@ class Usr2Eth : public IUSerial,public Component
 
    // Timeout Variables
    long m_atTimeout = 30000;  // sec
-   uint32_t m_ConnectionTimeout=  30000;
+   uint32_t m_ConnectionTimeout=  60000;
+   uint32_t m_httpTimeout = 10000;
    uint32_t m_lastDone = 0;
 
    bool responseIsNotAvailabel = false;
    bool m_exitATMode = false;  
    bool m_enterATMode = false;
+   bool m_jsonTimeout = false;
 };
 
 #endif

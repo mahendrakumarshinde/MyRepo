@@ -145,15 +145,6 @@ void onWiFiConnect() {
 void onWiFiDisconnect() {
     ledManager.setBaselineStatus(&STATUS_NO_STATUS);
 }
-// Ethernet callback
-void onEthernetConnect(){
-    ledManager.setBaselineStatus(&STATUS_WIFI_CONNECTED);
-}
-void onEthernetDisconnect(){
-
-    ledManager.setBaselineStatus(&STATUS_NO_STATUS);
-}
-
 void onBLEConnect() {
     //TODO Show that BLE is connected on the LED
 }
@@ -454,16 +445,21 @@ void setup()
              // set the BLE address for conductor
             conductor.setConductorMacAddress();          
         }
-        if(!iuBluetooth.isBLEAvailable) {
-            // Read the configurations ove httpClient
+        if(!iuBluetooth.isBLEAvailable) {   // BLE Hardware is Not available
+            // Read the configurations over httpClient
             String availableOnpremConfigs = iuEthernet.getServerConfiguration();
             debugPrint("Available On-Prem Configs:",true);
             debugPrint(availableOnpremConfigs);
+            debugPrint("JSON timeout:",false);
+            debugPrint(iuEthernet.responseIsNotAvailabel);
+
             bool isDataWriteComplete = false;
             // SETUP available Ethernet configurations
-            if ( (DOSFS.exists("relayAgentConfig.conf") && availableOnpremConfigs != NULL )  || ( !DOSFS.exists("relayAgentConfig.conf") && availableOnpremConfigs != NULL ))
+            if ( (DOSFS.exists("relayAgentConfig.conf") && availableOnpremConfigs[0] == '{'  )  || ( !DOSFS.exists("relayAgentConfig.conf") && availableOnpremConfigs[0] == '{' )
+                   || (DOSFS.exists("relayAgentConfig.conf") && iuEthernet.responseIsNotAvailabel && availableOnpremConfigs == NULL )   )
             {   
                 debugPrint("__________________Init Ethernet Config__________________________",true);
+               if( availableOnpremConfigs[0] == '{'){
                 // Write configuration to file
                 File storeConfig = DOSFS.open("relayAgentConfig.conf","w");
                 if(storeConfig){
@@ -481,7 +477,9 @@ void setup()
                     }
                     
                 }
-                if(isDataWriteComplete == true){
+               }
+
+                if(isDataWriteComplete == true || iuEthernet.responseIsNotAvailabel ){
                     debugPrint("Content From File:");
                     conductor.setEthernetConfig("relayAgentConfig.conf");       // Handle file not available condition     
                     
@@ -500,7 +498,7 @@ void setup()
                  
             }else
             {
-                debugPrint("iurelayAgent config file does not exists");
+                debugPrint("iurelayAgent config file does not exists and configJSON is not available");
             }
             
         }else 
@@ -513,13 +511,11 @@ void setup()
         armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min Timer 180000
         
         // WIFI SETUP BEGIN
-        #if 1
-            iuWiFi.setupHardware();
-            iuWiFi.setOnNewMessageCallback(onNewWiFiMessage);
-            iuWiFi.setOnConnect(onWiFiConnect);
-            iuWiFi.setOnDisconnect(onWiFiDisconnect);
-        #endif
-
+        iuWiFi.setupHardware();
+        iuWiFi.setOnNewMessageCallback(onNewWiFiMessage);
+        iuWiFi.setOnConnect(onWiFiConnect);
+        iuWiFi.setOnDisconnect(onWiFiDisconnect);
+       
         if (setupDebugMode) {
             iuI2C.scanDevices();
             debugPrint("");

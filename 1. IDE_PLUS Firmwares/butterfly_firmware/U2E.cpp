@@ -76,12 +76,28 @@ void Usr2Eth::dofullConfig(){
     {
       debugPrint("Failed to get the Ethernet Version",true);
     }
-    //configure the network for DHCP
-    String ip = NetworkConfig();
-    debugPrint("DHCP IP :",false);
-    debugPrint(ip,true);
-    //Configure module to TCP Client Mode (SocketConfig)
-    //bool isSocketSet = SocketConfig("TCPC","192.168.0.5",8090);            //need to be configurable from USB
+    
+    //Configure the HeartDirection
+    bool isheartbeatEnabled = EnableHeart(m_enableHeartbeat);
+    debugPrint("Hearbit enabled :",false);
+    debugPrint(isheartbeatEnabled,true);
+    if(!isheartbeatEnabled){
+      HeartDirection(m_heartbeatDir);  // to Remote_IP
+      bool msgStatus = HeartData("TCP_CONNECTED");  // don't know why this is not setting, for now ignoring.
+      debugPrint("Heartbeat Status :",false);
+      debugPrint(msgStatus);
+      HeartTime(m_heartbeatInterval); // every 5 sec
+    }
+    //set iu username and password
+    bool credentialsSet = SetUserPassword(m_username,m_password);
+    if ((setupDebugMode || loopDebugMode && ! credentialsSet))
+    {
+      debugPrint("Infinite Uptime default Credentials set",true);
+    }else
+    {
+      debugPrint("failed to set the username and password",true);
+    }
+    
     debugPrint("workMode   :",false);debugPrint(m_workMode,true);
     debugPrint("Remote_IP  :",false);debugPrint(m_remoteIP,true);
     debugPrint("Remote Port:",false);debugPrint(m_remotePort,true);
@@ -97,7 +113,7 @@ void Usr2Eth::dofullConfig(){
         //debugPrint("Time Spent : ",false);
         //debugPrint(now - millis(),true);
         if(millis() - now > m_ConnectionTimeout){
-          debugPrint("Timeout ");
+          debugPrint("TCP Timeout ");
           isEthernetConnected = false;      // forcefully set the state 
         }
 
@@ -108,41 +124,17 @@ void Usr2Eth::dofullConfig(){
       {
         debugPrint("TCP Status :",false);
         debugPrint(isEthernetConnected,true);
-        debugPrint("Time taken :",false);
-        debugPrint(millis() - now,true);
+        //debugPrint("Time taken :",false);
+        //debugPrint(millis() - now,true);
         
-        //break;
       }else 
-      { debugPrint("Connection timeout");
+      { 
         debugPrint("TCP Connection Failed",true);
-        //break;
       }
     
-    //Configure the HeartDirection
-    bool isheartbeatEnabled = EnableHeart(m_enableHeartbeat);
-    debugPrint("Hearbit enabled :",false);
-    debugPrint(isheartbeatEnabled,true);
-    if(!isheartbeatEnabled){
-      HeartDirection(m_heartbeatDir);  // to Remote_IP
-      bool msgStatus = HeartData(m_heartbeatMsg);
-      debugPrint("Heartbeat Status :",false);
-      debugPrint(msgStatus);
-      HeartTime(m_heartbeatInterval); // every 5 sec
-    }
-    //set iu username and password
-    bool credentialsSet = SetUserPassword(m_username,m_password);
-    if ((setupDebugMode || loopDebugMode && ! credentialsSet))
-    {
-      debugPrint("Infinite Uptime default Credentials set",true);
-    }else
-    {
-      debugPrint("failed to set the username and password",true);
-    }
     
     //exit ATCommand Mode
     ExitAT();
-    
-
 }
 /**
  * @brief 
@@ -208,12 +200,12 @@ bool Usr2Eth::SetAT()
 
   if (_buffer.indexOf("+ok") == -1 )
   {
-    debugPrint("SetAT Failed:",true);
+    //debugPrint("SetAT Failed:",true);
     m_enterATMode = true;
     return  true;
   }
   else{
-    debugPrint("SetAT Sucess",true);
+    //debugPrint("SetAT Sucess",true);
     m_enterATMode = false;
     return  false;
   }
@@ -311,13 +303,13 @@ String Usr2Eth::GetMAC()
 
     if (mac.indexOf("+OK") == -1)
     {
-      debugPrint("Get MAC Failed",true);
+      //debugPrint("Get MAC Failed",true);
       return "ERROR";
 
     }
     else
     {
-      debugPrint("Constructing MAC ID",true);
+      //debugPrint("Constructing MAC ID",true);
       indexOne = mac.indexOf("+OK=") + 4;
       indexTwo = mac.indexOf(("\r"), indexOne);
       mac = mac.substring(indexOne, indexTwo);
@@ -395,12 +387,12 @@ bool Usr2Eth::ExitAT()
   { //why ??
     if (_buffer.indexOf("+OK") == -1 )
     {
-      debugPrint("Return Failed",true);
+      //debugPrint("Return Failed",true);
       m_exitATMode = true;
       return  true;
     }
     else{
-      debugPrint("Return Sucess",true);
+      //debugPrint("Return Sucess",true);
       m_exitATMode = false;
       return false;
     }
@@ -1495,14 +1487,17 @@ String Usr2Eth::ReadUsernamePassword()
 String Usr2Eth::SerialRead()
 {
   _timeout = 0;
-  while  (!_Serial->available() && _timeout < 12000  )
+  uint32_t now = millis();
+  while  (!_Serial->available() && _timeout < 500  )
   {
-    delay(13);
+    delay(10);
     _timeout++;
+    //debugPrint("Timeout count:",false);debugPrint(_timeout);
   }
   if (_Serial->available()) {
     return _Serial->readString();
   }
+ // debugPrint("TimeTaken:",false);debugPrint(millis() - now);
 }
 
 /**
@@ -1597,6 +1592,9 @@ bool Usr2Eth::readMessages()
 
 /**
  * @brief Read the Remote Server configuration from DNS address using httpclient
+ * Description - This functions is in blocking Mode, until the relayAgent configurations 
+ * are not available.
+ * @return - json String
  * 
  */
 String Usr2Eth::getServerConfiguration(){
@@ -1610,7 +1608,14 @@ String Usr2Eth::getServerConfiguration(){
     //debugPrint("Entering into AT Mode");
     while( SetAT() != 0 );
   } 
-   
+   //configure the network for DHCP
+  String ip = NetworkConfig();
+  if (debugMode)
+  {
+    /* code */
+    debugPrint("DHCP IP :",false);
+    debugPrint(ip,true);
+  }  
    bool httpheadStatus = controlhttpHeaderResponse("ON");
    if(debugMode){
     debugPrint("Removed HTTP Head :",false);
@@ -1629,17 +1634,33 @@ String Usr2Eth::getServerConfiguration(){
   ExitAT();
  // send the http GET request and read JSON response
   String availableJSON ;
+  uint32_t now = millis();
   do
   {
     port->write("?");
-    availableJSON = SerialRead();
-   if (availableJSON != NULL && availableJSON[0] ==  '{')
-    { 
-      responseIsNotAvailabel = true;
+    availableJSON = SerialRead();     // 10 sec timeout
+    if (availableJSON != NULL && availableJSON[0] ==  '{' )
+     { 
+       //debugPrint("Valid data received");
+       responseIsNotAvailabel = true;
     }
-  }while(responseIsNotAvailabel != true);  
+   /* if (millis() - now > m_httpTimeout)         // JOSN Timeout
+    {
+      m_jsonTimeout = true;
+      //debugPrint("JSON Timeout.....");
+      break;
+    }
+   */ 
+  
+  }while(responseIsNotAvailabel != true );  
 
-  responseIsNotAvailabel = false;
+  if(m_jsonTimeout == true){
+    responseIsNotAvailabel = true;
+    m_jsonTimeout = false;
+  }else
+  {
+    responseIsNotAvailabel = false;
+  }
   
   return availableJSON;
 }
@@ -1654,8 +1675,6 @@ String Usr2Eth::getServerConfiguration(){
  */
 bool Usr2Eth::updateNetworkMode(String serverIP,uint16_t port){
   
-  //ExitAT();    // forcefully exit from AT Mode
-  //SetAT();
   if(m_exitATMode == true){    // Already in AT Mode
     //debugPrint("Exiting from AT Mode");
     while( ExitAT() != 0 );    // Forcefully Exit from AT Mode 

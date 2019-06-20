@@ -382,7 +382,7 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
           samplingRate = m_sources[0]->getSamplingRate();
         }
         
-        float resolution = m_sources[0]->getResolution();         // using resolution of 2^16 
+        float resolution = m_sources[0]->getResolution();         // using resolution of 2^15 
         uint16_t sampleCount = m_sources[0]->getSectionSize() * m_sectionCount[0];
         float df = (float) samplingRate / (float) sampleCount;
         T *values = (T*) m_sources[0]->getNextValuesToCompute(this);

@@ -10,7 +10,7 @@ const char* fingerprints_Z;
 int sensorSamplingRate;
 int m_temperatureOffset;
 int m_audioOffset;
-
+static uint32_t lastTimeSync = 0;
         
 char Conductor::START_CONFIRM[11] = "IUOK_START";
 char Conductor::END_CONFIRM[9] = "IUOK_END";
@@ -1289,6 +1289,38 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                   changeUsageMode(UsageMode::CUSTOM);   // switch to CUSTOM usage mode
                   //Serial.println("START CUSTOM.....2");
                 }
+                if(strcmp(buff,"IUGET_TCP_CONFIG") == 0) {
+                    debugPrint("CMD RECEIVED Successfully");
+                    if(DOSFS.exists("relayAgentConfig.conf")){
+                        
+                        const char* _workMode;
+                        const char* _remoteIP;
+                        int _remotePort;
+                        JsonObject& config = configureJsonFromFlash("relayAgentConfig.conf",1);      // get the accountID
+
+                        _workMode = config["relayAgentConfig"]["workMode"];
+                        _remoteIP = config["relayAgentConfig"]["remoteAddr"];
+                        _remotePort = config["relayAgentConfig"]["remotePort"];
+                        
+                        //debugPrint("workMode:",false);debugPrint(_workMode);
+                        iuUSB.port->println("--------- DEVICE CONFIGURATIONS -----------");
+                        iuUSB.port->print("DEVICE_ID:");iuUSB.port->println(m_macAddress);
+                        iuUSB.port->print("FIRMWARE_VERSION:");iuUSB.port->println(FIRMWARE_VERSION);
+                        iuUSB.port->print("U2E_WORKMODE:");iuUSB.port->println(_workMode);
+                        //debugPrint("Remote IP:",false);debugPrint(_remoteIP);
+                        iuUSB.port->print("REMOTE_IP:");iuUSB.port->println(_remoteIP); 
+                        //debugPrint("PORT:",false);debugPrint(_remotePort);
+                        iuUSB.port->print("REMOTE_PORT:");iuUSB.port->println(_remotePort);
+                        iuUSB.port->println("------------------------------------------------------");
+                        
+                    }else
+                    {   
+                        iuUSB.port->println("File does not exists");
+                        debugPrint("File does not exists !!!");
+                    }
+                    
+
+                }
                 break;
             case UsageMode::CUSTOM:
                 if (strcmp(buff, "IUEND_DATA") == 0) {
@@ -1421,7 +1453,6 @@ void Conductor::processBLEMessage(IUSerial *iuSerial)
 void Conductor::processWiFiMessage(IUSerial *iuSerial)
 {
     char *buff = iuSerial->getBuffer();
-    uint32_t currentTime = millis();
     if (buff[0] == '{')
     {
         processConfiguration(buff,true);    //save the configuration into the file
@@ -1434,15 +1465,14 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
         }
         updateStreamingMode();
     }
-    if(! iuEthernet.isEthernetConnected && buff[0] == '1' && buff[1] == ':' ){ 
-        debugPrint("Time sync Receive",true);
-        ledManager.showStatus(&STATUS_WIFI_CONNECTED);
-        lastTimeSync = currentTime;
-        debugPrint("Timestamp value:",false); debugPrint(&buff[2]);
-        setRefDatetime(&buff[2]);
-    }else {
+    uint32_t currentTime = millis();
+    if(currentTime - lastTimeSync > m_connectionTimeout){
         debugPrint("Time sync not received");
         ledManager.showStatus(&STATUS_NO_STATUS);
+    }else if(! iuEthernet.isEthernetConnected && buff[0] == 'i' && buff[3] == '_' && buff[8] =='/' && buff[18] == '-'){ 
+        ledManager.showStatus(&STATUS_WIFI_CONNECTED);
+        //debugPrint("Timestamp value:",false); debugPrint(&buff[19]);
+        setRefDatetime(&buff[19]);
     }
     if((buff[0] == '3' && buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
                 buff[13] == '0' && buff[15] == '0' && buff[17] == '0') ){
@@ -1452,7 +1482,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
     {
         processLegacyCommand(buff);
     }
-    
+    lastTimeSync = currentTime;
     uint8_t idx = 0;
     switch (iuWiFi.getMspCommand()) {
         // MSP Status messages
@@ -2303,7 +2333,6 @@ void Conductor::streamFeatures()
             iuWiFi.streamLiveMSPMessage(nodeToSend->buffer, msgLen);
             iuWiFi.endLiveMSPCommand();
             sendingQueue.attemptingToSend(nodeToSend->idx);
-            debugPrint("Non Ethernet Streaming Mode",true);
            }
            if(m_streamingMode == StreamingMode::ETHERNET){
                 uint16_t msgLen = strlen(nodeToSend->buffer);
@@ -2405,7 +2434,7 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
             
             memmove(rawAccelerationZ,txBuffer + 2, strlen(txBuffer) - 1) ; //sizeof(txBuffer)/sizeof(txBuffer[0]) -2);    
             debugPrint("RawAcel Z: ",false);debugPrint(rawAccelerationZ);
-            snprintf(rawAcceleration,maxLen,"{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\":\"{\\\"deviceId\\\":\\\"%s\\\",\\\"samplingRate\\\":%d,\\\"blockSize\\\":%d,\\\"X\\\":\\\"%s\\\",\\\"Y\\\":\\\"%s\\\",\\\"Z\\\":\\\"%s\\\"}\"}",m_macAddress.toString().c_str(),1,0,m_macAddress.toString().c_str(),IULSM6DSM::defaultSamplingRate,512,rawAccelerationX,rawAccelerationY,rawAccelerationZ);
+            snprintf(rawAcceleration,maxLen,"{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\":\"{\\\"deviceId\\\":\\\"%s\\\",\\\"firmwareVersion\\\":\\\"%s\\\",\\\"samplingRate\\\":%d,\\\"blockSize\\\":%d,\\\"X\\\":\\\"%s\\\",\\\"Y\\\":\\\"%s\\\",\\\"Z\\\":\\\"%s\\\"}\"}",m_macAddress.toString().c_str(),1,0,m_macAddress.toString().c_str(),FIRMWARE_VERSION,IULSM6DSM::defaultSamplingRate,512,rawAccelerationX,rawAccelerationY,rawAccelerationZ);
             
             
             iuWiFi.write(rawAcceleration);           // send the rawAcceleration over UART 
