@@ -94,6 +94,7 @@ namespace UsageMode
 class Conductor
 {
     public:
+        uint32_t lastTimeSync = 0;
         /***** Preset values and default settings *****/
         enum sleepMode : uint8_t {NONE     = 0,
                                   AUTO     = 1,
@@ -118,7 +119,7 @@ class Conductor
         // static const uint32_t BLEconnectionTimeout = 60000;
         static const uint32_t BLEconnectionTimeout = 15000;
         static const uint32_t connectedStatusTimeout = 60000;   // 1 min for ETHERNET connectedStatusTimeout
-        uint32_t m_connectionTimeout = 120100;   // 2 min 100 ms
+        uint32_t m_connectionTimeout = 150000;   // 2 min 30s
         //timer ISR period
         uint16_t timerISRPeriod = 300; // default 3.3KHz
         /***** Core *****/

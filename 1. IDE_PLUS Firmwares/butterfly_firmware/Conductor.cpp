@@ -10,7 +10,6 @@ const char* fingerprints_Z;
 int sensorSamplingRate;
 int m_temperatureOffset;
 int m_audioOffset;
-static uint32_t lastTimeSync = 0;
         
 char Conductor::START_CONFIRM[11] = "IUOK_START";
 char Conductor::END_CONFIRM[9] = "IUOK_END";
@@ -610,7 +609,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
               debugPrint("Current State : ",false);
               debugPrint(currentState,true);
 
-            if (currentState == iuEthernet.isEthernetConnected )
+            if (currentState == iuEthernet.isEthernetConnected)
             {                                                   
                 if(m_streamingMode == StreamingMode::ETHERNET){
                     debugPrint("StreamingMode is Ethernet",true);
@@ -1468,13 +1467,14 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
         updateStreamingMode();
     }
     uint32_t currentTime = millis();
-    if(currentTime - lastTimeSync > m_connectionTimeout){
-        debugPrint("Time sync not received");
-        ledManager.showStatus(&STATUS_NO_STATUS);
-    }else if(! iuEthernet.isEthernetConnected && buff[0] == 'i' && buff[3] == '_' && buff[8] =='/' && buff[18] == '-'){ 
-        ledManager.showStatus(&STATUS_WIFI_CONNECTED);
-        //debugPrint("Timestamp value:",false); debugPrint(&buff[19]);
+    if(buff[0] == 'i' && buff[3] == '_' && buff[8] =='/' && buff[18] == '-'){ // ide_plus/time_sync-timestamp
+       
+       if(iuEthernet.isEthernetConnected == 1) { // check if ethernet is not connected
+           iuEthernet.isEthernetConnected = 0;  // set to connected, when timesync message is received
+           ledManager.showStatus(&STATUS_WIFI_CONNECTED);  
+       }
         setRefDatetime(&buff[19]);
+        lastTimeSync = currentTime;
     }
     if((buff[0] == '3' && buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
                 buff[13] == '0' && buff[15] == '0' && buff[17] == '0') ){
@@ -1484,7 +1484,6 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
     {
         processLegacyCommand(buff);
     }
-    lastTimeSync = currentTime;
     uint8_t idx = 0;
     switch (iuWiFi.getMspCommand()) {
         // MSP Status messages
@@ -2541,7 +2540,7 @@ void Conductor::sendDiagnosticFingerPrints() {
                 //     debugPrint(F("Published time diff : "), false); debugPrint(F(published_time_diff), true);
                 // }               
                 last_fingerprint_timestamp = fingerprint_timestamp; // update timestamp for next iterations
-                if(iuEthernet.isEthernetConnected == 0 && m_streamingMode == StreamingMode::ETHERNET){
+                if(m_streamingMode == StreamingMode::ETHERNET){
                     /* FingerPrintResult send over Ethernet Mode */
                     if(rbase64.encode(FingerPrintResult) == RBASE64_STATUS_OK) {
                         snprintf(sendFingerprints,messageLength+500,"{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\":\"%s\"}",  /* \"{\\\"macID\\\":\\\"%s\\\",\\\"timestamp\\\":%lf,\\\"state\\\":\\\"%d\\\",\\\"accountId\\\":\\\"%s\\\",\\\"fingerprints\\\":%s\"}\"}" , */

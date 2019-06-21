@@ -223,7 +223,6 @@ static void ethernetStatusCallback(void){
 
     iuEthernet.isEthernetConnected = iuEthernet.TCPStatus();
     //iuEthernet.ExitAT();
-    debugPrint("Ethernet Status :",false);debugPrint(iuEthernet.isEthernetConnected,true);
     armv7m_timer_start(&ethernetStatusTimer, 2000);    
 }
 /* =============================================================================
@@ -491,8 +490,6 @@ void setup()
                 {  // set the BLE address for conductor
                     conductor.setConductorMacAddress();
                 }
-                debugPrint("Is TCP connected:",false);
-                debugPrint(!iuEthernet.isEthernetConnected,true);
                 
                 //armv7m_timer_create(&ethernetStatusTimer, (armv7m_timer_callback_t)ethernetStatusCallback);
                 //armv7m_timer_start(&ethernetStatusTimer, 30000);   // 30 sec
@@ -630,27 +627,22 @@ void loop()
             m_ledStrip.overrideColor(RGB_GREEN);
         }
     #else
-        if (loopDebugMode) {
+        // if (loopDebugMode) {
             if (doOnce) {
                 doOnce = false;
                 /* === Place your code to excute once here ===*/
-                
+                if(iuEthernet.isEthernetConnected == 0) {
+                    ledManager.showStatus(&STATUS_WIFI_CONNECTED);
+                }
                 /*======*/
             }
-        }
-        //TESTING
-        // conductor.printConductorMac(); // to check if the correct mac address is set up
-        // Manage power saving
-       /* if(Serial1.available() > 0 ){
-            char data = Serial1.read();
-            Serial.print(data);
-        }
-       */
+        // }
+       
         conductor.manageSleepCycles();
         // Receive messages & configurations
         iuUSB.readMessages();
         iuBluetooth.readMessages();
-        if (iuEthernet.isEthernetConnected)
+        if (iuBluetooth.isBLEAvailable) //  iuEthernet.isEthernetConnected :0 -> connected, 1-> not connected
         {
             iuWiFi.readMessages();
         }else {
@@ -677,6 +669,14 @@ void loop()
             /*======*/
         }
        
+        if (millis() - conductor.lastTimeSync > conductor.m_connectionTimeout ) {
+
+            if(iuEthernet.isEthernetConnected == 0) {
+                iuEthernet.isEthernetConnected = 1;
+                ledManager.showStatus(&STATUS_NO_STATUS);
+            }
+        }
+
         // Consume ready segmented message
         char configMessageFromBLE[MESSAGE_LENGTH+1];
         if (conductor.consumeReadySegmentedMessage(configMessageFromBLE)) {

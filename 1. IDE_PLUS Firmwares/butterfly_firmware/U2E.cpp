@@ -119,7 +119,7 @@ void Usr2Eth::dofullConfig(){
 
 
       } while (isEthernetConnected != false);
-    
+      
     if ((setupDebugMode || loopDebugMode) && ! isEthernetConnected)
       {
         debugPrint("TCP Status :",false);
