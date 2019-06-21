@@ -83,7 +83,7 @@ void Usr2Eth::dofullConfig(){
     debugPrint(isheartbeatEnabled,true);
     if(!isheartbeatEnabled){
       HeartDirection(m_heartbeatDir);  // to Remote_IP
-      bool msgStatus = HeartData("TCP_CONNECTED");  // don't know why this is not setting, for now ignoring.
+      bool msgStatus = HeartData("TCP_CONNECTED");  // don't know why this is not setting, for now ignoring, not blocking
       debugPrint("Heartbeat Status :",false);
       debugPrint(msgStatus);
       HeartTime(m_heartbeatInterval); // every 5 sec
@@ -384,7 +384,7 @@ bool Usr2Eth::ExitAT()
     //debugPrint(count,true);
   }
   while ((count < NumofRetry && count < MAX_Count)&& _buffer.indexOf("+OK") == -1);
-  { //why ??
+  {
     if (_buffer.indexOf("+OK") == -1 )
     {
       //debugPrint("Return Failed",true);
@@ -1616,7 +1616,7 @@ String Usr2Eth::getServerConfiguration(){
     debugPrint("DHCP IP :",false);
     debugPrint(ip,true);
   }  
-   bool httpheadStatus = controlhttpHeaderResponse("ON");
+   bool httpheadStatus = controlhttpHeaderResponseFilter("ON");
    if(debugMode){
     debugPrint("Removed HTTP Head :",false);
     debugPrint(httpheadStatus);
@@ -1644,16 +1644,18 @@ String Usr2Eth::getServerConfiguration(){
        //debugPrint("Valid data received");
        responseIsNotAvailabel = true;
     }
-   /* if (millis() - now > m_httpTimeout)         // JOSN Timeout
+    /* if (millis() - now > m_httpTimeout)         // JOSN Timeout
     {
       m_jsonTimeout = true;
       //debugPrint("JSON Timeout.....");
       break;
     }
-   */ 
+    */
   
   }while(responseIsNotAvailabel != true );  
-
+  ledManager.overrideColor(RGB_CYAN);
+   delay(1000);
+   ledManager.overrideColor(RGB_WHITE);
   if(m_jsonTimeout == true){
     responseIsNotAvailabel = true;
     m_jsonTimeout = false;
@@ -1697,7 +1699,7 @@ bool Usr2Eth::updateNetworkMode(String serverIP,uint16_t port){
  * @return true - On ERROR 
  * @return false - On Sucess
  */
-bool Usr2Eth::controlhttpHeaderResponse(const char* _status){
+bool Usr2Eth::controlhttpHeaderResponseFilter(const char* _status){
   int count = 0;
     do{
       if (strcmp( _status, "on") == 0 || strcmp( _status, "off") == 0 || strcmp( _status, "ON") == 0 || strcmp( _status, "OFF") == 0)

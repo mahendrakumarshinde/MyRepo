@@ -35,7 +35,7 @@ bool IUUSB::readCharCustomProtocol()
         // improved
         if (((m_bufferIndex == 11 && strncmp(m_buffer, "IUCMD_START", 11) == 0) || (m_bufferIndex == 9 && strncmp(m_buffer, "IUCMD_END", 9) == 0)) ||
             ((m_bufferIndex == 10 && strncmp(m_buffer, "IUGET_DATA", 10) == 0)  || (m_bufferIndex == 10 && strncmp(m_buffer, "IUEND_DATA", 10) == 0))
-            || (m_bufferIndex == 16 && strncmp(m_buffer, "IUGET_TCP_CONFIG", 16) == 0)  /*|| (m_bufferIndex == 14 && strncmp(m_buffer, "IUGET_TCP_PORT", 14) == 0) )*/ )    // +++
+            || (m_bufferIndex == 16 && strncmp(m_buffer, "IUGET_TCP_CONFIG", 16) == 0) )
         {
             m_buffer[m_bufferIndex++] = 0;
             messageIsComplete = true;

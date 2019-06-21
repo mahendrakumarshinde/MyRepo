@@ -289,7 +289,6 @@ void dataAcquisitionISR()
 ============================================================================= */
 
 void onNewUSBMessage(IUSerial *iuSerial) {
-   debugPrint("Received USB callback",true);
     conductor.processUSBMessage(iuSerial);
 }
 
@@ -494,6 +493,10 @@ void setup()
                 }
                 debugPrint("Is TCP connected:",false);
                 debugPrint(!iuEthernet.isEthernetConnected,true);
+                
+                //armv7m_timer_create(&ethernetStatusTimer, (armv7m_timer_callback_t)ethernetStatusCallback);
+                //armv7m_timer_start(&ethernetStatusTimer, 30000);   // 30 sec
+        
                 debugPrint("___________________Done Ethernet Init ______________________________",true);
                  
             }else
@@ -673,20 +676,7 @@ void loop()
             conductor.streamMCUUInfo(iuWiFi.port);
             /*======*/
         }
-        // if(now - lastDone > 512){
-        //     char snum[10];
-        //     // convert 123 to string [buf]
-        //     itoa((now-lastDone), snum, 10);
-
-        //     // print our string
-        //     Serial.println("DELAY");
-        //     Serial.println(snum);
-        //     lastDone = now;                           // send diagnostic data every 512 ms
-
-        //   // Send Diagnostic Fingerprint data
-        //   conductor.sendDiagnosticFingerPrints();
-        // }
-
+       
         // Consume ready segmented message
         char configMessageFromBLE[MESSAGE_LENGTH+1];
         if (conductor.consumeReadySegmentedMessage(configMessageFromBLE)) {

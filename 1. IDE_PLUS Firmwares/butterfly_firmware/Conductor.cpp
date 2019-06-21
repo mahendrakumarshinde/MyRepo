@@ -637,6 +637,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
           
           //iuEthernet.ExitAT();
           iuEthernet.Restart();
+          delay(1000);
             
          if(loopDebugMode){
             debugPrint("RunTime workMode: ",false);
@@ -1449,6 +1450,7 @@ void Conductor::processBLEMessage(IUSerial *iuSerial)
 
 /**
  * Process the instructions from the WiFi chip
+ * This is used in case of ETHERNET StreamingMode
  */
 void Conductor::processWiFiMessage(IUSerial *iuSerial)
 {
@@ -3200,7 +3202,7 @@ bool Conductor::setEthernetConfig(char* filename){
 
     if (!config.success()) {
         if (debugMode) {
-            debugPrint("parseObject() failed");
+            debugPrint("parseObject() failed for relayAgentConfig.conf");
         }
         return false;
     }

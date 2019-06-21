@@ -4,6 +4,9 @@
 #include "Arduino.h"
 #include<IUSerial.h>
 #include "Component.h"
+#include "LedManager.h"
+
+extern LedManager ledManager;
 
 #define BUFFER_RESERVE_MEMORY	    255
 #define DEFAULT_BAUD_RATE		      115200
@@ -87,7 +90,7 @@ class Usr2Eth : public IUSerial,public Component
     virtual bool readMessages();
     String getServerConfiguration();
     bool updateNetworkMode(String serverIP,uint16_t port);
-    bool controlhttpHeaderResponse(const char* _status);
+    bool controlhttpHeaderResponseFilter(const char* _status);
    // Variable Member
    bool isEthernetConnected = true;
    String m_ethernetMacAddress;
@@ -97,11 +100,11 @@ class Usr2Eth : public IUSerial,public Component
    //heartbeat Configuration
    //"hearbeatInterval":5,"heartbeatDir":"NET","heartbeatMsg":"Tigar Zinda hai !!!"}
    const char* m_enableHeartbeat = "ON";
-   const char* m_heartbeatDir = "COM";
+   const char* m_heartbeatDir = "NET";
    uint16_t m_heartbeatInterval = 5;    // Default 5 sec
    const char* m_heartbeatMsg = "abc"; 
    // web credentials
-   const char* m_username = "admin";    //default username
+   const char* m_username = "IDE+";    //default username
    const char* m_password = "@vK$*";      // default password
    
    // Default server details
