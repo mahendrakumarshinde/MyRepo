@@ -1320,7 +1320,7 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     {   
                         debugPrint("File does not exists !!!");
                     }
-                    
+                }    
 
                  if (strcmp(buff, "IUGET_DEVICEID") == 0)
                 {
@@ -1339,7 +1339,7 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                 }
                 if (strcmp(buff, "IUGET_HTTP_CONFIG") == 0)
                 {
-                    if  (DOSFS.exists("httpConfig.conf"));
+                    if (DOSFS.exists("httpConfig.conf")){
                     const char* _httpHost;
                     const char* _httpPort;
                     const char* _httpPath;
@@ -1357,10 +1357,13 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuUSB.port->println(_httpPort);
                     iuUSB.port->print("HTTP_PATH : ");
                     iuUSB.port->println(_httpPath);
+                  }else{
+                      debugPrint("httpConfig.conf file does not exists");
+                  }
                 }
                 if (strcmp(buff, "IUGET_MQTT_CONFIG") == 0)
                 {
-                    if  (DOSFS.exists("MQTT.conf"));
+                    if  (DOSFS.exists("MQTT.conf")){
                     const char* _serverIP;
                     const char* _serverPort;
                     const char* _UserName;
@@ -1380,7 +1383,12 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuUSB.port->println(_UserName);
                     iuUSB.port->print("MQTT_PASSWORD : ");
                     iuUSB.port->println(_Password);
-                }
+                  }else
+                  {
+                      debugPrint("MQTT.conf file does not exists");
+                  }
+                  
+                }  
                 break;
             case UsageMode::CUSTOM:
                 if (strcmp(buff, "IUEND_DATA") == 0) {
@@ -1441,7 +1449,7 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
         }
     }
  }
-}
+
 
 void Conductor::processJSONmessage(const char * buff) 
 {
