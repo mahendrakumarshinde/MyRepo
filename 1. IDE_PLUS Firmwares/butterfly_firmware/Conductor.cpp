@@ -1318,7 +1318,6 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                         
                     }else
                     {   
-                        iuUSB.port->println("File does not exists");
                         debugPrint("File does not exists !!!");
                     }
                     
