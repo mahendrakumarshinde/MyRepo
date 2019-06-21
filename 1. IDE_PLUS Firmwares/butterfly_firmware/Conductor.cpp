@@ -1322,6 +1322,64 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     }
                     
 
+                 if (strcmp(buff, "IUGET_DEVICEID") == 0)
+                {
+                    iuUSB.port->print("DEVICE_ID : ");
+                    iuUSB.port->println(m_macAddress);
+                }
+                if (strcmp(buff, "IUGET_FIRMWARE_VERSION") == 0)
+                {
+                    iuUSB.port->print("FIRMWARE_VERSION : ");
+                    iuUSB.port->println(FIRMWARE_VERSION);
+                }
+                if (strcmp(buff, "IUGET_DEVICE_TYPE") == 0)
+                {
+                    iuUSB.port->print("DEVICE_TYPE : ");
+                    iuUSB.port->println(DEVICE_TYPE);
+                }
+                if (strcmp(buff, "IUGET_HTTP_CONFIG") == 0)
+                {
+                    if  (DOSFS.exists("httpConfig.conf"));
+                    const char* _httpHost;
+                    const char* _httpPort;
+                    const char* _httpPath;
+                   
+                    JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
+                    _httpHost = config["httpConfig"]["host"];
+                    _httpPort = config["httpConfig"]["port"];
+                    _httpPath = config["httpConfig"]["path"];
+
+
+                    iuUSB.port->println("*****HTTP_CONFIG*****");
+                    iuUSB.port->print("HTTP_HOST : ");
+                    iuUSB.port->println(_httpHost);
+                    iuUSB.port->print("HTTP_PORT : ");
+                    iuUSB.port->println(_httpPort);
+                    iuUSB.port->print("HTTP_PATH : ");
+                    iuUSB.port->println(_httpPath);
+                }
+                if (strcmp(buff, "IUGET_MQTT_CONFIG") == 0)
+                {
+                    if  (DOSFS.exists("MQTT.conf"));
+                    const char* _serverIP;
+                    const char* _serverPort;
+                    const char* _UserName;
+                    const char* _Password;
+                    JsonObject& config = configureJsonFromFlash("MQTT.conf",1);
+                    _serverIP = config["mqtt"]["mqttServerIP"];
+                    _serverPort = config["mqtt"]["port"];
+                    _UserName = config["mqtt"]["username"];
+                    _Password = config["mqtt"]["password"];
+
+                    iuUSB.port->println("*****MQTT_CONFIG*****");
+                    iuUSB.port->print("MQTT_SERVER_IP : ");
+                    iuUSB.port->println(_serverIP);
+                    iuUSB.port->print("MQTT_PORT : ");
+                    iuUSB.port->println(_serverPort);
+                    iuUSB.port->print("MQTT_USERNAME : ");
+                    iuUSB.port->println(_UserName);
+                    iuUSB.port->print("MQTT_PASSWORD : ");
+                    iuUSB.port->println(_Password);
                 }
                 break;
             case UsageMode::CUSTOM:
@@ -1562,7 +1620,6 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
 
             m_httpHost = config["httpConfig"]["host"];
-            m_httpPort = config["httpConfig"]["port"];
             m_httpPath = config["httpConfig"]["path"];
             //Serial.print("File Content :");Serial.println(jsonChar);
             //Serial.print("http details :");Serial.print(m_httpHost);Serial.print(",");Serial.print(m_httpPort);Serial.print(",");Serial.print(m_httpPath);Serial.println("/****** SWITCH****/");
