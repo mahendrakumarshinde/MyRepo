@@ -1311,7 +1311,7 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                         iuUSB.port->print("REMOTE_IP:");iuUSB.port->println(_remoteIP); 
                         //debugPrint("PORT:",false);debugPrint(_remotePort);
                         iuUSB.port->print("REMOTE_PORT:");iuUSB.port->println(_remotePort);
-                        iuUSB.port->println("------------------------------------------------------");
+                        iuUSB.port->println("----------------------------------------------------------");
                         
                     }else
                     {   
