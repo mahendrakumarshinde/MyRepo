@@ -570,6 +570,11 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 
             }  
         
+        }else
+        {       ledManager.overrideColor(RGB_CYAN);
+                delay(2000);
+                ledManager.stopColorOverride();
+                //iuUSB.port->println("Failed to write into file, try again");
         }
         if(dataWritten == true){
           
@@ -637,7 +642,9 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
           //iuEthernet.ExitAT();
           iuEthernet.Restart();
           delay(1000);
-            
+          ledManager.overrideColor(RGB_PURPLE);
+          delay(2000);
+          ledManager.stopColorOverride();
          if(loopDebugMode){
             debugPrint("RunTime workMode: ",false);
             debugPrint(iuEthernet.m_workMode);
@@ -660,6 +667,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }    
         heartbeatFlag = false;
         }
+        
         
     }
     
@@ -1302,14 +1310,9 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                         _remoteIP = config["relayAgentConfig"]["remoteAddr"];
                         _remotePort = config["relayAgentConfig"]["remotePort"];
                         
-                        //debugPrint("workMode:",false);debugPrint(_workMode);
                         iuUSB.port->println("--------- DEVICE CONFIGURATIONS -----------");
-                        iuUSB.port->print("DEVICE_ID:");iuUSB.port->println(m_macAddress);
-                        iuUSB.port->print("FIRMWARE_VERSION:");iuUSB.port->println(FIRMWARE_VERSION);
-                        iuUSB.port->print("U2E_WORKMODE:");iuUSB.port->println(_workMode);
-                        //debugPrint("Remote IP:",false);debugPrint(_remoteIP);
+                        iuUSB.port->print("U2E_WORK_MODE:");iuUSB.port->println(_workMode);
                         iuUSB.port->print("REMOTE_IP:");iuUSB.port->println(_remoteIP); 
-                        //debugPrint("PORT:",false);debugPrint(_remotePort);
                         iuUSB.port->print("REMOTE_PORT:");iuUSB.port->println(_remotePort);
                         iuUSB.port->println("----------------------------------------------------------");
                         
