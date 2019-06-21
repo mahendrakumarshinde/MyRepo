@@ -1440,9 +1440,10 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                 }
         }
     }
+ }
 }
 
-void processJSONmessage(const char * buff) 
+void Conductor::processJSONmessage(const char * buff) 
 {
     if (buff[0] == 'm' || buff[0] == 'M') 
     {

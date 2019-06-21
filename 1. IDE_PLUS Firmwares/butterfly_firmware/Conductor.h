@@ -154,6 +154,7 @@ class Conductor
         void processUSBMessage(IUSerial *iuSerial);
         void processBLEMessage(IUSerial *iuSerial);
         void processWiFiMessage(IUSerial *iuSerial);
+        void processJSONmessage(const char * buff);
         /***** Features and groups Management *****/
         void activateFeature(Feature* feature);
         bool isFeatureDeactivatable(Feature* feature);
