@@ -1121,6 +1121,57 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                   changeUsageMode(UsageMode::CUSTOM);   // switch to CUSTOM usage mode
                   //Serial.println("START CUSTOM.....2");
                 }
+                 if (strcmp(buff, "GET_IU_DEVICEID") == 0)
+                {
+                    iuUSB.port->print("DEVICE_ID : ");
+                    iuUSB.port->println(m_macAddress);
+                }
+                if (strcmp(buff, "GET_IU_FIRMWARE_VERSION") == 0)
+                {
+                    iuUSB.port->print("FIRMWARE_VERSION : ");
+                    iuUSB.port->println(FIRMWARE_VERSION);
+                }
+                if (strcmp(buff, "GET_IU_DEVICE_TYPE") == 0)
+                {
+                    iuUSB.port->print("DEVICE_TYPE : ");
+                    iuUSB.port->println(DEVICE_TYPE);
+                }
+                if (strcmp(buff, "GET_IU_HTTP_CONFIG") == 0)
+                {
+                    iuUSB.port->print("HTTP_CONFIG : ");
+                    File httpFile = DOSFS.open("httpConfig.conf", "r");
+                    if (httpFile)
+                    {
+                        while (httpFile.available())
+                        {
+                            iuUSB.port->write(httpFile.read());
+                        }
+                        iuUSB.port->write("\n");
+                        httpFile.close();
+                    }
+                    else
+                    {
+                        iuUSB.port->println("Error Opening file.");
+                    }
+                }
+                if (strcmp(buff, "GET_IU_MQTT_CONFIG") == 0)
+                {
+                    iuUSB.port->print("MQTT_CONFIG : ");
+                    File mqttFile = DOSFS.open("MQTT.conf", "r");
+                    if (mqttFile)
+                    {
+                        while (mqttFile.available())
+                        {
+                            iuUSB.port->write(mqttFile.read());
+                        }
+                        iuUSB.port->write("\n");
+                        mqttFile.close();
+                    }
+                    else
+                    {
+                        iuUSB.port->println("Error Opening file.");
+                    }
+                }
                 break;
             case UsageMode::CUSTOM:
                 if (strcmp(buff, "IUEND_DATA") == 0) {
