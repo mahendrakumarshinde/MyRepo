@@ -35,11 +35,11 @@ bool IUUSB::readCharCustomProtocol()
         // improved
         if (((m_bufferIndex == 11 && strncmp(m_buffer, "IUCMD_START", 11) == 0) || (m_bufferIndex == 9 && strncmp(m_buffer, "IUCMD_END", 9) == 0))  ||
             ((m_bufferIndex == 10 && strncmp(m_buffer, "IUGET_DATA", 10) == 0)  || (m_bufferIndex == 10 && strncmp(m_buffer, "IUEND_DATA", 10) == 0))||
-            (m_bufferIndex == 15 && strncmp(m_buffer, "GET_IU_DEVICEID", 15) == 0)||
-            (m_bufferIndex == 23 && strncmp(m_buffer, "GET_IU_FIRMWARE_VERSION", 23) == 0)||
-            (m_bufferIndex == 18 && strncmp(m_buffer, "GET_IU_DEVICE_TYPE", 18) == 0)||
-            (m_bufferIndex == 18 && strncmp(m_buffer, "GET_IU_HTTP_CONFIG", 18) == 0)||
-            (m_bufferIndex == 18 && strncmp(m_buffer, "GET_IU_MQTT_CONFIG", 18) == 0) )    // +++
+            (m_bufferIndex == 14 && strncmp(m_buffer, "IUGET_DEVICEID", 14) == 0)||
+            (m_bufferIndex == 22 && strncmp(m_buffer, "IUGET_FIRMWARE_VERSION", 22) == 0)||
+            (m_bufferIndex == 17 && strncmp(m_buffer, "IUGET_DEVICE_TYPE", 17) == 0)||
+            (m_bufferIndex == 17 && strncmp(m_buffer, "IUGET_HTTP_CONFIG", 17) == 0)||
+            (m_bufferIndex == 17 && strncmp(m_buffer, "IUGET_MQTT_CONFIG", 17) == 0) )    // +++
         {
             m_buffer[m_bufferIndex++] = 0;
             messageIsComplete = true;
