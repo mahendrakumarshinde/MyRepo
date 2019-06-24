@@ -181,6 +181,9 @@ static void watchdogCallback(void) {
     if (iuWiFi.arePublicationsFailing()) {
         //Ensure your PubSubClient Arduino library version is 2.7
         debugPrint("Publications are failing: hard resetting now.");
+        if(conductor.isBLEConnected()) {
+           iuBluetooth.write("WIFI-DISCONNECTED;");
+        }
         iuWiFi.hardReset();
     }
     armv7m_timer_start(&watchdogTimer, 1000);
