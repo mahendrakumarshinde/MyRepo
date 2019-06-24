@@ -42,7 +42,8 @@ namespace StreamingMode
         WIFI         = 3,       // Send over WiFi
         WIFI_AND_BLE = 4,       // Send over both WiFi and BLE
         STORE        = 5,       // Store in SPI Flash to stream later
-        COUNT        = 6};
+        ETHERNET     = 6,       // Send over ETHERNET
+        COUNT        = 7};
 }
 
 
@@ -93,6 +94,7 @@ namespace UsageMode
 class Conductor
 {
     public:
+        uint32_t lastTimeSync = 0;
         /***** Preset values and default settings *****/
         enum sleepMode : uint8_t {NONE     = 0,
                                   AUTO     = 1,
@@ -116,6 +118,8 @@ class Conductor
         static const uint16_t JSON_BUFFER_SIZE = 1600;
         // static const uint32_t BLEconnectionTimeout = 60000;
         static const uint32_t BLEconnectionTimeout = 15000;
+        static const uint32_t connectedStatusTimeout = 60000;   // 1 min for ETHERNET connectedStatusTimeout
+        uint32_t m_connectionTimeout = 150000;   // 2 min 30s
         //timer ISR period
         uint16_t timerISRPeriod = 300; // default 3.3KHz
         /***** Core *****/
@@ -150,6 +154,7 @@ class Conductor
         void processUSBMessage(IUSerial *iuSerial);
         void processBLEMessage(IUSerial *iuSerial);
         void processWiFiMessage(IUSerial *iuSerial);
+        void processJSONmessage(const char * buff);
         /***** Features and groups Management *****/
         void activateFeature(Feature* feature);
         bool isFeatureDeactivatable(Feature* feature);
@@ -191,7 +196,7 @@ class Conductor
         JsonObject& configureJsonFromFlash(String filename,bool isSet);
         void sendDiagnosticFingerPrints();
         void resetBLEonTimeout();
-        void setConductorBLEMacAddress();
+        void setConductorMacAddress();
         void printConductorMac();
         /***** Segmented Messages *****/
         void extractPayloadFromSegmentedMessage(const char* segment, char* payload);
@@ -208,6 +213,8 @@ class Conductor
         void sendSegmentedMessageResponse(int messageID);
 
         bool setSensorConfig(char* filename);
+        bool setEthernetConfig(char* filename);
+        
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
@@ -257,6 +264,7 @@ class Conductor
         double last_fingerprint_timestamp = 0;
         bool computed_first_fingerprint_timestamp = false;
         SegmentedMessage segmentedMessages[MAX_SEGMENTED_MESSAGES]; // atmost MAX_SEGMENTED_MESSAGES can be captured in interleaved manner
+        
 };
 
 

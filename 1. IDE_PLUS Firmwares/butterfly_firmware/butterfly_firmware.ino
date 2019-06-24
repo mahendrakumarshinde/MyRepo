@@ -1,7 +1,7 @@
 /*
 Infinite Uptime IDE+ Firmware
-Vr. 1.1.1
-Update 16-05-2019
+Vr. 1.1.2
+Update 22-06-2019
 Type - Standard Firmware Release
 */
 
@@ -32,7 +32,7 @@ const uint8_t ESP8285_IO0  =  7;
     MAC Address
 ============================================================================= */
 
-// const char MAC_ADDRESS[18] = "94:54:93:3B:81:57";
+ //const char MAC_ADDRESS[18] = "9C:A5:25:86:34:6E";
 
 /* Motor Scaling Factor 
  *  
@@ -124,7 +124,7 @@ uint32_t lastDone = 0;
 
 /***** Main operator *****/
 
-Conductor conductor;
+Conductor conductor;//(MAC_ADDRESS);
 
 
 /* =============================================================================
@@ -145,7 +145,6 @@ void onWiFiConnect() {
 void onWiFiDisconnect() {
     ledManager.setBaselineStatus(&STATUS_NO_STATUS);
 }
-
 void onBLEConnect() {
     //TODO Show that BLE is connected on the LED
 }
@@ -215,6 +214,17 @@ static void httpConfigCallback(void) {
     armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min  180000
 }
 
+/* ================================================================================
+ * Ethernet Status Timer callback
+ * ===============================================================================*/
+
+static armv7m_timer_t ethernetStatusTimer;
+static void ethernetStatusCallback(void){
+
+    iuEthernet.isEthernetConnected = iuEthernet.TCPStatus();
+    //iuEthernet.ExitAT();
+    armv7m_timer_start(&ethernetStatusTimer, 2000);    
+}
 /* =============================================================================
     Driven sensors acquisition callback
 ============================================================================= */
@@ -289,6 +299,9 @@ void onNewWiFiMessage(IUSerial *iuSerial) {
     conductor.processWiFiMessage(iuSerial);
 }
 
+void onNewEthernetMessage(IUSerial *iuSerial){
+    conductor.processWiFiMessage(iuSerial);
+}
 /* =============================================================================
     Microsecond Timer ISR
 ============================================================================= */
@@ -417,23 +430,92 @@ void setup()
         if (debugMode) {
             debugPrint(F("\nInitializing interfaces..."));
         }
+        // BLE SETUP BEGIN
         iuBluetooth.setupHardware();
-        iuBluetooth.setOnNewMessageCallback(onNewBLEMessage);
+        debugPrint(" Is BLE Chip Available?:",false);
+        debugPrint(iuBluetooth.isBLEAvailable);
         
-        armv7m_timer_create(&bleTransmitTimer, (armv7m_timer_callback_t)bleTransmitCallback);
-        armv7m_timer_start(&bleTransmitTimer, 5);
+        if(iuBluetooth.isBLEAvailable){
+            iuBluetooth.setOnNewMessageCallback(onNewBLEMessage);
+            
+            armv7m_timer_create(&bleTransmitTimer, (armv7m_timer_callback_t)bleTransmitCallback);
+            armv7m_timer_start(&bleTransmitTimer, 5);
+             // set the BLE address for conductor
+            conductor.setConductorMacAddress();          
+        }
+        if(!iuBluetooth.isBLEAvailable) {   // BLE Hardware is Not available
+            // Read the configurations over httpClient
+            String availableOnpremConfigs = iuEthernet.getServerConfiguration();
+            debugPrint("Available On-Prem Configs:",true);
+            debugPrint(availableOnpremConfigs);
+            debugPrint("JSON timeout:",false);
+            debugPrint(iuEthernet.responseIsNotAvailabel);
 
-        // set the BLE address for conductor
-        conductor.setConductorBLEMacAddress();
+            bool isDataWriteComplete = false;
+            // SETUP available Ethernet configurations
+            if ( (DOSFS.exists("relayAgentConfig.conf") && availableOnpremConfigs[0] == '{'  )  || ( !DOSFS.exists("relayAgentConfig.conf") && availableOnpremConfigs[0] == '{' )
+                   || (DOSFS.exists("relayAgentConfig.conf") && iuEthernet.responseIsNotAvailabel && availableOnpremConfigs == NULL )   )
+            {   
+                debugPrint("__________________Init Ethernet Config__________________________",true);
+               if( availableOnpremConfigs[0] == '{'){
+                // Write configuration to file
+                File storeConfig = DOSFS.open("relayAgentConfig.conf","w");
+                if(storeConfig){
+                    if(debugMode){
+                        debugPrint("Writing configuration into File");
+                    }    
+                    storeConfig.print(availableOnpremConfigs);
+                    storeConfig.close();
+                    isDataWriteComplete = true;
+                }else
+                {
+                    if (debugMode)
+                    {
+                        debugPrint("Failed to Write into File");
+                    }
+                    
+                }
+               }
 
+                if(isDataWriteComplete == true || iuEthernet.responseIsNotAvailabel ){
+                    debugPrint("Content From File:");
+                    conductor.setEthernetConfig("relayAgentConfig.conf");       // Handle file not available condition     
+                    
+                    debugPrint("Setting up the Ethernet hardware");
+                    iuEthernet.setupHardware();
+                    
+                    iuEthernet.setOnNewMessageCallback(onNewEthernetMessage);
+                }
+                if (!iuBluetooth.isBLEAvailable)
+                {  // set the BLE address for conductor
+                    conductor.setConductorMacAddress();
+                }
+                
+                //armv7m_timer_create(&ethernetStatusTimer, (armv7m_timer_callback_t)ethernetStatusCallback);
+                //armv7m_timer_start(&ethernetStatusTimer, 30000);   // 30 sec
+        
+                debugPrint("___________________Done Ethernet Init ______________________________",true);
+                 
+            }else
+            {
+                debugPrint("iurelayAgent config file does not exists and configJSON is not available");
+            }
+            
+        }else 
+        {
+            debugPrint("BLE Chip is Available, BLE init Complete");
+        }
+         
         // httpConfig message read timerCallback
         armv7m_timer_create(&httpConfigTimer, (armv7m_timer_callback_t)httpConfigCallback);
         armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min Timer 180000
         
+        // WIFI SETUP BEGIN
         iuWiFi.setupHardware();
         iuWiFi.setOnNewMessageCallback(onNewWiFiMessage);
         iuWiFi.setOnConnect(onWiFiConnect);
         iuWiFi.setOnDisconnect(onWiFiDisconnect);
+       
         if (setupDebugMode) {
             iuI2C.scanDevices();
             debugPrint("");
@@ -545,22 +627,27 @@ void loop()
             m_ledStrip.overrideColor(RGB_GREEN);
         }
     #else
-        if (loopDebugMode) {
+        // if (loopDebugMode) {
             if (doOnce) {
                 doOnce = false;
                 /* === Place your code to excute once here ===*/
-                
+                if(iuEthernet.isEthernetConnected == 0) {
+                    ledManager.showStatus(&STATUS_WIFI_CONNECTED);
+                }
                 /*======*/
             }
-        }
-        //TESTING
-        // conductor.printConductorMac(); // to check if the correct mac address is set up
-        // Manage power saving
+        // }
+       
         conductor.manageSleepCycles();
         // Receive messages & configurations
         iuUSB.readMessages();
         iuBluetooth.readMessages();
-        iuWiFi.readMessages();
+        if (iuBluetooth.isBLEAvailable) //  iuEthernet.isEthernetConnected :0 -> connected, 1-> not connected
+        {
+            iuWiFi.readMessages();
+        }else {
+            iuEthernet.readMessages();
+        }
         // Manage WiFi autosleep
         iuWiFi.manageAutoSleep();
         // Acquire data from sensors
@@ -581,19 +668,14 @@ void loop()
             conductor.streamMCUUInfo(iuWiFi.port);
             /*======*/
         }
-        // if(now - lastDone > 512){
-        //     char snum[10];
-        //     // convert 123 to string [buf]
-        //     itoa((now-lastDone), snum, 10);
+       
+        if (millis() - conductor.lastTimeSync > conductor.m_connectionTimeout ) {
 
-        //     // print our string
-        //     Serial.println("DELAY");
-        //     Serial.println(snum);
-        //     lastDone = now;                           // send diagnostic data every 512 ms
-
-        //   // Send Diagnostic Fingerprint data
-        //   conductor.sendDiagnosticFingerPrints();
-        // }
+            if(iuEthernet.isEthernetConnected == 0) {
+                iuEthernet.isEthernetConnected = 1;
+                ledManager.showStatus(&STATUS_NO_STATUS);
+            }
+        }
 
         // Consume ready segmented message
         char configMessageFromBLE[MESSAGE_LENGTH+1];

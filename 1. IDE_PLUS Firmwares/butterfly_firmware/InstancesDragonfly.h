@@ -21,7 +21,7 @@
 
 /****** Diagnostic Engine ****/
 #include "DiagnosticFingerPrint.h"
-
+#include "IUEthernet.h"
 
 /***** Features *****/
 #include "FeatureClass.h"
@@ -78,6 +78,9 @@ extern char iuWiFiBuffer[2048];   //500
     extern IUESP8285 iuWiFi;
 #endif
 
+extern char iuEthernetBuffer[2048];
+
+extern Usr2Eth iuEthernet;
 
 /* =============================================================================
     Flash storage

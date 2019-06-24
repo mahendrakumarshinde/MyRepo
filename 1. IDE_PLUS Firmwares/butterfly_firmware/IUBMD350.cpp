@@ -223,6 +223,7 @@ void IUBMD350::exitATCommandInterface()
  * @return -1 if the command failed, or the number N of char of the
  *  response. Note that it is possible that N <> responseLength.
  */
+
 int IUBMD350::sendATCommand(String cmd, char *response, uint8_t responseLength)
 {
     if (!m_ATCmdEnabled) {
@@ -281,10 +282,17 @@ void IUBMD350::doFullConfig()
     delay(1000);
     enterATCommandInterface();
     queryDeviceName();
-    configureBeacon(m_beaconEnabled, m_beaconAdInterval);
-    configureUARTPassthrough();
-    setPowerMode(PowerMode::REGULAR);
-    exitATCommandInterface();
+    if(isBLEAvailable == true){
+        configureBeacon(m_beaconEnabled, m_beaconAdInterval);
+        configureUARTPassthrough();
+        setPowerMode(PowerMode::REGULAR);
+        exitATCommandInterface();
+    }
+    else
+    {
+        debugPrint("BLE Hardware is not present",true);
+    }
+    
 }
 
 /***** Device Name *****/
@@ -332,6 +340,18 @@ void IUBMD350::queryDeviceName()
                 debugPrint("Attempt ", false); debugPrint(itoa(i, current_attempt, 10));
                 debugPrint(F(" - Failed to query device name: no response"));
             }
+            if (i >= 2) // check till 2 retries
+            {   
+                if (setupDebugMode)
+                {
+                    debugPrint("All Attemps failed, No BLE chip present");
+                }
+                
+                isBLEAvailable = false;
+                break;
+                /* code */
+            }
+            
         }           
     }    
 }

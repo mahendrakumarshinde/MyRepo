@@ -1,6 +1,20 @@
 # This file tell about all the Firmware Release of IDE+
 #################################################################################################################################################################################
 
+Date: 22 June 2019
+Contributed By : Vikas Gaikwad,Darshan Mirajkar
+Firmware Versions : 
+		1. IDE+ Version : 1.1.2
+		2. Wifi Version : 1.0.5
+################################################################################################################################################################################
+Features:
+
+  1. Added support Wired(ETHERNET)on-prem solution.
+  2. Added support for Runtime selection of available hardware components. 
+  3. Included basic USB commands to support on-site troubleshooting.
+
+#################################################################################################################################################################################
+
 Date: 16 May 2019
 Contributed By : Shubham Punekar,Manas Kale, Vikas Gaikwad
 Firmware Versions : 
@@ -16,6 +30,7 @@ Bug fixes
 
   1.Feature thresholds will now persist across reboots 
   2.Intermittent Wifi resets will reduce significantly. (our stress tests indicate something like once in a day or two)
+  3.Device will no longer reset on any power source (laptop or power socket).
 
 #################################################################################################################################################################################
 

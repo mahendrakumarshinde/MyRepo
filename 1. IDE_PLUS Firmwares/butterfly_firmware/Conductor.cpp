@@ -1,6 +1,6 @@
 #include<string.h>
 #include "Conductor.h"
-//#include<FS.h>
+#include "rBase64.h"
 
 const char* fingerprintData;
 const char* fingerprints_X;
@@ -10,7 +10,7 @@ const char* fingerprints_Z;
 int sensorSamplingRate;
 int m_temperatureOffset;
 int m_audioOffset;
-
+        
 char Conductor::START_CONFIRM[11] = "IUOK_START";
 char Conductor::END_CONFIRM[9] = "IUOK_END";
 
@@ -252,7 +252,9 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     root.printTo(jsonChar);
     
     JsonVariant variant = root;
-    variant.prettyPrintTo(Serial);
+    char ack_configEthernet[200];
+  
+    // variant.prettyPrintTo(Serial);
     
     if (!root.success()) {
         if (debugMode) {
@@ -289,10 +291,21 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             const char* messageId;
             messageId = root["messageId"]  ;
             char ack_config[150];
+            
             snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
             
             //Serial.println(ack_config);
-            iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config);
+            if(iuWiFi.isWorking()){
+                iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config);
+            }else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
+            {       debugPrint("Sending Fetures ACK over Ethernet");
+                    snprintf(ack_configEthernet, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
+                      m_macAddress.toString().c_str(),0, 2, m_macAddress.toString().c_str(),messageId);
+                   
+                    debugPrint(ack_configEthernet,true);
+                    iuEthernet.write(ack_configEthernet); 
+                    iuEthernet.write("\n");
+            } 
         }
     }
     // Feature configuration
@@ -317,7 +330,18 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
             
             //Serial.println(ack_config);
-            iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config);
+            if(iuWiFi.isWorking()){
+                 iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config);
+            }else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
+            {       debugPrint("Sending Fingerpritns Threshold ACK over Ethernet");
+                    snprintf(ack_configEthernet, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
+                      m_macAddress.toString().c_str(),0, 2, m_macAddress.toString().c_str(),messageId);
+                   
+                    debugPrint(ack_configEthernet,true);
+                    iuEthernet.write(ack_configEthernet); 
+                    iuEthernet.write("\n");
+                   
+            } 
         }
     }
      // MQTT Server configuration
@@ -367,7 +391,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         bool dataWritten = false;
         if (saveToFlash) {
           
-          Serial.println("INSIDE SAVE TO FNGERPRINTS....");
+        //   Serial.println("INSIDE SAVE TO FNGERPRINTS....");
           File fingerprints = DOSFS.open("finterprints.conf","w");
           if (fingerprints)
             {
@@ -378,7 +402,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             }
             else if (loopDebugMode) {
                  debugPrint(F("Failed to write into file: "), false);
-                 Serial.println("Error Writting to fingerprints.conf");
+                 //Serial.println("Error Writting to fingerprints.conf");
+                 debugPrint("Error Writting to fingerprints.conf");
             }  
         
         }
@@ -394,9 +419,21 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
           
             char ack_config[150];
             snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+
+            if(iuWiFi.isWorking()){
+                 iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config); 
+            }
+            else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
+            {       debugPrint("Sending Fingerprints ACK over Ethernet");
+                    snprintf(ack_configEthernet, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
+                      m_macAddress.toString().c_str(),0, 2, m_macAddress.toString().c_str(),messageId);
+                   
+                    debugPrint(ack_configEthernet,true);
+                    iuEthernet.write(ack_configEthernet); 
+                    iuEthernet.write("\n");
+                    //iuEthernet.write(ack_config);
+            } 
             
-            //Serial.println(ack_config);
-            iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config);  
         }
         
       }
@@ -440,7 +477,22 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
           snprintf(httpConfig_ack, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
             
           debugPrint(F("httpConfig ACK :"));debugPrint(httpConfig_ack);
-          iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HTTP_CONFIG_ACK, httpConfig_ack);
+          if (iuWiFi.isWorking())
+          {
+              iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HTTP_CONFIG_ACK, httpConfig_ack);
+          
+          }else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
+          {     
+                snprintf(ack_configEthernet, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
+                      m_macAddress.toString().c_str(),0, 2, m_macAddress.toString().c_str(),messageId);
+                   
+                    debugPrint(ack_configEthernet,true);
+                    iuEthernet.write(ack_configEthernet); 
+                    iuEthernet.write("\n");
+                //iuEthernet.write(httpConfig_ack);
+          }
+          
+          
           
           //stm reset
           delay(10);
@@ -495,6 +547,130 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
         
     }
+    // SET the relayAgentConfig on Ethernet
+    subConfig = root["relayAgentConfig"];
+    if (subConfig.success()) {
+        bool dataWritten = false;
+        
+        if (saveToFlash) {
+            //DOSFS.begin();
+            File relayAgentConfigFile = DOSFS.open("relayAgentConfig.conf", "w");
+            if (relayAgentConfigFile)
+            {
+                
+                if (loopDebugMode) {
+                 debugPrint(F("Writting into file: "), true);
+                }
+                relayAgentConfigFile.print(jsonChar);
+                relayAgentConfigFile.close();
+                dataWritten = true;
+            }
+            else if (loopDebugMode) {
+                 debugPrint("Failed to write into file: relayAgentConfig.conf ");
+                
+            }  
+        
+        }else
+        {       ledManager.overrideColor(RGB_CYAN);
+                delay(2000);
+                ledManager.stopColorOverride();
+                //iuUSB.port->println("Failed to write into file, try again");
+        }
+        if(dataWritten == true){
+          
+          JsonObject& config = configureJsonFromFlash("relayAgentConfig.conf",1);      // get the accountID
+          JsonVariant variant = config;
+          bool heartbeatFlag = false;
+
+          iuEthernet.m_workMode = config["relayAgentConfig"]["workMode"];
+          iuEthernet.m_remoteIP = config["relayAgentConfig"]["remoteAddr"];
+          iuEthernet.m_remotePort = config["relayAgentConfig"]["remotePort"];
+          iuEthernet.m_enableHeartbeat = config["relayAgentConfig"]["enableHeartbeat"];
+          iuEthernet.m_heartbeatInterval = config["relayAgentConfig"]["heartbeatInterval"];
+          iuEthernet.m_heartbeatDir = config["relayAgentConfig"]["heartbeatDir"];
+          iuEthernet.m_heartbeatMsg = config["relayAgentConfig"]["heartbeatMsg"];
+        
+           while(iuEthernet.SetAT() != 0);
+           iuEthernet.SocketConfig(iuEthernet.m_workMode,iuEthernet.m_remoteIP,iuEthernet.m_remotePort);//setupHardware();
+           
+          if (iuEthernet.m_enableHeartbeat != NULL)
+          { 
+            // Set Heartbeat configuration  
+            heartbeatFlag = true;
+            iuEthernet.EnableHeart(iuEthernet.m_enableHeartbeat);
+            iuEthernet.HeartDirection(iuEthernet.m_heartbeatDir);              
+            iuEthernet.HeartTime(iuEthernet.m_heartbeatInterval);    
+            iuEthernet.HeartData(iuEthernet.m_heartbeatMsg);
+            
+          }  
+          bool currentState = false;  
+          debugPrint("Previous Ethernet state : ",false);
+          debugPrint(iuEthernet.isEthernetConnected,true);
+
+           for (size_t i = 0; i < 10; i++)
+           {
+               /* code */
+              currentState =  iuEthernet.TCPStatus(); 
+              debugPrint("Current State : ",false);
+              debugPrint(currentState,true);
+
+            if (currentState == iuEthernet.isEthernetConnected)
+            {                                                   
+                if(m_streamingMode == StreamingMode::ETHERNET){
+                    debugPrint("StreamingMode is Ethernet",true);
+                    iuEthernet.isEthernetConnected = currentState;
+                    break;
+                
+                }   
+                // else{
+                //     debugPrint("StreamingMode is Non Ethernet",true);
+                //     updateStreamingMode();
+                //     if(debugMode){
+                //         debugPrint("Update the StreamingMode with Ethernet",true);
+                //     }          
+                // }
+            }
+                debugPrint("loop count :",false);
+                debugPrint(i,true);
+                delay(1000);
+           }
+           
+           debugPrint(" Final TCP Status:",false);
+           debugPrint(iuEthernet.isEthernetConnected);
+           //iuEthernet.isEthernetConnected = currentState;
+          
+          //iuEthernet.ExitAT();
+          iuEthernet.Restart();
+          delay(1000);
+          ledManager.overrideColor(RGB_PURPLE);
+          delay(2000);
+          ledManager.stopColorOverride();
+         if(loopDebugMode){
+            debugPrint("RunTime workMode: ",false);
+            debugPrint(iuEthernet.m_workMode);
+            debugPrint("RunTime remoteAddr:",false);
+            debugPrint(iuEthernet.m_remoteIP);
+            debugPrint("RunTime remotePort:",false);
+            debugPrint(iuEthernet.m_remotePort,true);
+            if (heartbeatFlag == true)
+            {
+                debugPrint("Heartbeat:",false);
+                debugPrint(iuEthernet.m_enableHeartbeat);
+                debugPrint("Heartbeat Interval:",false);
+                debugPrint(iuEthernet.m_heartbeatInterval);
+                debugPrint("Hearbeat Direction:",false);
+                debugPrint(iuEthernet.m_heartbeatDir);
+                debugPrint("Heartbeat Message:",false);
+                debugPrint(iuEthernet.m_heartbeatMsg);
+            }
+            
+        }    
+        heartbeatFlag = false;
+        }
+        
+        
+    }
+    
     return true;
 }
 
@@ -840,7 +1016,7 @@ void Conductor::processCommand(char *buff)
                     iuBluetooth.write("WIFI-DISCONNECTED;");
                 }
                 delay(10);
-                STM32.reset();
+                STM32.reset();          
             }
             else if (strcmp(buff, "IDE-GET-VERSION") == 0)
             {
@@ -1121,6 +1297,98 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                   changeUsageMode(UsageMode::CUSTOM);   // switch to CUSTOM usage mode
                   //Serial.println("START CUSTOM.....2");
                 }
+                if(strcmp(buff,"IUGET_TCP_CONFIG") == 0) {
+                    debugPrint("CMD RECEIVED Successfully");
+                    if(DOSFS.exists("relayAgentConfig.conf")){
+                        
+                        const char* _workMode;
+                        const char* _remoteIP;
+                        int _remotePort;
+                        JsonObject& config = configureJsonFromFlash("relayAgentConfig.conf",1);      // get the accountID
+
+                        _workMode = config["relayAgentConfig"]["workMode"];
+                        _remoteIP = config["relayAgentConfig"]["remoteAddr"];
+                        _remotePort = config["relayAgentConfig"]["remotePort"];
+                        
+                        iuUSB.port->println("--------- DEVICE CONFIGURATIONS -----------");
+                        iuUSB.port->print("U2E_WORK_MODE:");iuUSB.port->println(_workMode);
+                        iuUSB.port->print("REMOTE_IP:");iuUSB.port->println(_remoteIP); 
+                        iuUSB.port->print("REMOTE_PORT:");iuUSB.port->println(_remotePort);
+                        iuUSB.port->println("----------------------------------------------------------");
+                        
+                    }else
+                    {   
+                        debugPrint("File does not exists !!!");
+                    }
+                }    
+
+                 if (strcmp(buff, "IUGET_DEVICEID") == 0)
+                {
+                    iuUSB.port->print("DEVICE_ID : ");
+                    iuUSB.port->println(m_macAddress);
+                }
+                if (strcmp(buff, "IUGET_FIRMWARE_VERSION") == 0)
+                {
+                    iuUSB.port->print("FIRMWARE_VERSION : ");
+                    iuUSB.port->println(FIRMWARE_VERSION);
+                }
+                if (strcmp(buff, "IUGET_DEVICE_TYPE") == 0)
+                {
+                    iuUSB.port->print("DEVICE_TYPE : ");
+                    iuUSB.port->println(DEVICE_TYPE);
+                }
+                if (strcmp(buff, "IUGET_HTTP_CONFIG") == 0)
+                {
+                    if (DOSFS.exists("httpConfig.conf")){
+                    const char* _httpHost;
+                    const char* _httpPort;
+                    const char* _httpPath;
+                   
+                    JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
+                    _httpHost = config["httpConfig"]["host"];
+                    _httpPort = config["httpConfig"]["port"];
+                    _httpPath = config["httpConfig"]["path"];
+
+
+                    iuUSB.port->println("*****HTTP_CONFIG*****");
+                    iuUSB.port->print("HTTP_HOST : ");
+                    iuUSB.port->println(_httpHost);
+                    iuUSB.port->print("HTTP_PORT : ");
+                    iuUSB.port->println(_httpPort);
+                    iuUSB.port->print("HTTP_PATH : ");
+                    iuUSB.port->println(_httpPath);
+                  }else{
+                      debugPrint("httpConfig.conf file does not exists");
+                  }
+                }
+                if (strcmp(buff, "IUGET_MQTT_CONFIG") == 0)
+                {
+                    if  (DOSFS.exists("MQTT.conf")){
+                    const char* _serverIP;
+                    const char* _serverPort;
+                    const char* _UserName;
+                    const char* _Password;
+                    JsonObject& config = configureJsonFromFlash("MQTT.conf",1);
+                    _serverIP = config["mqtt"]["mqttServerIP"];
+                    _serverPort = config["mqtt"]["port"];
+                    _UserName = config["mqtt"]["username"];
+                    _Password = config["mqtt"]["password"];
+
+                    iuUSB.port->println("*****MQTT_CONFIG*****");
+                    iuUSB.port->print("MQTT_SERVER_IP : ");
+                    iuUSB.port->println(_serverIP);
+                    iuUSB.port->print("MQTT_PORT : ");
+                    iuUSB.port->println(_serverPort);
+                    iuUSB.port->print("MQTT_USERNAME : ");
+                    iuUSB.port->println(_UserName);
+                    iuUSB.port->print("MQTT_PASSWORD : ");
+                    iuUSB.port->println(_Password);
+                  }else
+                  {
+                      debugPrint("MQTT.conf file does not exists");
+                  }
+                  
+                }  
                 break;
             case UsageMode::CUSTOM:
                 if (strcmp(buff, "IUEND_DATA") == 0) {
@@ -1180,9 +1448,10 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                 }
         }
     }
-}
+ }
 
-void processJSONmessage(const char * buff) 
+
+void Conductor::processJSONmessage(const char * buff) 
 {
     if (buff[0] == 'm' || buff[0] == 'M') 
     {
@@ -1249,10 +1518,15 @@ void Conductor::processBLEMessage(IUSerial *iuSerial)
 
 /**
  * Process the instructions from the WiFi chip
+ * This is used in case of ETHERNET StreamingMode
  */
 void Conductor::processWiFiMessage(IUSerial *iuSerial)
 {
     char *buff = iuSerial->getBuffer();
+    if (buff[0] == '{')
+    {
+        processConfiguration(buff,true);    //save the configuration into the file
+    }
     if (iuWiFi.processChipMessage()) {
         if (iuWiFi.isWorking()) {
             ledManager.showStatus(&STATUS_WIFI_WORKING);
@@ -1260,6 +1534,24 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             ledManager.resetStatus();
         }
         updateStreamingMode();
+    }
+    uint32_t currentTime = millis();
+    if(buff[0] == 'i' && buff[3] == '_' && buff[8] =='/' && buff[18] == '-'){ // ide_plus/time_sync-timestamp
+       
+       if(iuEthernet.isEthernetConnected == 1) { // check if ethernet is not connected
+           iuEthernet.isEthernetConnected = 0;  // set to connected, when timesync message is received
+           ledManager.showStatus(&STATUS_WIFI_CONNECTED);  
+       }
+        setRefDatetime(&buff[19]);
+        lastTimeSync = currentTime;
+    }
+    if((buff[0] == '3' && buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
+                buff[13] == '0' && buff[15] == '0' && buff[17] == '0') ){
+        processCommand(buff);
+
+    }else
+    {
+        processLegacyCommand(buff);
     }
     uint8_t idx = 0;
     switch (iuWiFi.getMspCommand()) {
@@ -1337,7 +1629,6 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
 
             m_httpHost = config["httpConfig"]["host"];
-            m_httpPort = config["httpConfig"]["port"];
             m_httpPath = config["httpConfig"]["path"];
             //Serial.print("File Content :");Serial.println(jsonChar);
             //Serial.print("http details :");Serial.print(m_httpHost);Serial.print(",");Serial.print(m_httpPort);Serial.print(",");Serial.print(m_httpPath);Serial.println("/****** SWITCH****/");
@@ -1754,6 +2045,9 @@ void Conductor::updateStreamingMode()
             } else if (iuWiFi.isConnected()) {
                 newMode = StreamingMode::WIFI;
             }
+             else if(!iuEthernet.isEthernetConnected){
+                 newMode = StreamingMode::ETHERNET;  //Wifi is not connected but found ethernet MAC ID
+             }
             break;
     }
     if (m_streamingMode == newMode) {
@@ -1783,6 +2077,9 @@ void Conductor::updateStreamingMode()
             case StreamingMode::STORE:
                 debugPrint(F("Flash storage"));
                 break;
+            case StreamingMode::ETHERNET:
+                debugPrint(F("ETHERNET"));
+                break;    
             default:
                 debugPrint(F("Unhandled streaming Mode"));
                 break;
@@ -2031,6 +2328,7 @@ void Conductor::streamFeatures()
 
     switch (m_streamingMode) {
         case StreamingMode::NONE:
+            //ser1 = &iuWiFi;    
             break;
         case StreamingMode::WIRED:
             ser1 = &iuUSB;
@@ -2047,6 +2345,9 @@ void Conductor::streamFeatures()
             sendFeatureGroupName1 = true;
             ser2 = &iuBluetooth;
             break;
+        case StreamingMode::ETHERNET:
+            ser1 = &iuWiFi;    
+            break;
         default:
             if (loopDebugMode) {
                 debugPrint(F("StreamingMode not handled: "), false);
@@ -2059,7 +2360,7 @@ void Conductor::streamFeatures()
         // TODO Switch to new streaming format once the backend is ready
         if (ser1) {
             if (m_streamingMode == StreamingMode::WIFI ||
-                m_streamingMode == StreamingMode::WIFI_AND_BLE)
+                m_streamingMode == StreamingMode::WIFI_AND_BLE || m_streamingMode == StreamingMode::ETHERNET)
             { 
                   //Serial.print("@@@@@");
 //                FeatureGroup::instances[i]->bufferAndStream(
@@ -2090,17 +2391,41 @@ void Conductor::streamFeatures()
 //            true);
     }
     CharBufferNode *nodeToSend = sendingQueue.getNextBufferToSend();
-    if (nodeToSend) {
-        //Serial.println("QQQQQQQQQQQQQQQQQQQQQ");
-        uint16_t msgLen = strlen(nodeToSend->buffer);
-        iuWiFi.startLiveMSPCommand(MSPCommand::PUBLISH_FEATURE_WITH_CONFIRMATION, msgLen + 2);
-        iuWiFi.streamLiveMSPMessage((char) nodeToSend->idx);
-        iuWiFi.streamLiveMSPMessage(':');
-        iuWiFi.streamLiveMSPMessage(nodeToSend->buffer, msgLen);
-        iuWiFi.endLiveMSPCommand();
-        sendingQueue.attemptingToSend(nodeToSend->idx);
-
+    if (nodeToSend ) {
+            uint16_t msgLen = strlen(nodeToSend->buffer);
+           if (m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE)
+           {
+            
+            iuWiFi.startLiveMSPCommand(MSPCommand::PUBLISH_FEATURE_WITH_CONFIRMATION, msgLen + 2);
+            iuWiFi.streamLiveMSPMessage((char) nodeToSend->idx);
+            iuWiFi.streamLiveMSPMessage(':');
+            iuWiFi.streamLiveMSPMessage(nodeToSend->buffer, msgLen);
+            iuWiFi.endLiveMSPCommand();
+            sendingQueue.attemptingToSend(nodeToSend->idx);
+           }
+           if(m_streamingMode == StreamingMode::ETHERNET){
+                uint16_t msgLen = strlen(nodeToSend->buffer);
+                //char streamingHeader[732];
+                //char streamingData[732];
+                char feturesStreaming[800];
+                //snprintf(streamingData,732,"XXXAdmin;;;%s;;;%s", m_macAddress.toString().c_str(),nodeToSend->buffer);
+                //Serial.print("Streamign Header : ");Serial.println(streamingHeader);
+                //if(rbase64.encode(streamingData) ==  RBASE64_STATUS_OK) {
+                       // send the streaming JSON
+                    snprintf(feturesStreaming,800,"{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\":\"XXXAdmin;;;%s;;;%s\" }",
+                    m_macAddress.toString().c_str(),0,0,/*rbase64.result()*/m_macAddress.toString().c_str(),nodeToSend->buffer );   
+                    iuWiFi.write(feturesStreaming);      
+                    iuWiFi.write("\n");
+                //}
+                if(loopDebugMode){
+                    debugPrint(feturesStreaming);
+                }
+                sendingQueue.attemptingToSend(nodeToSend->idx);
+            }
+            //sendingQueue.attemptingToSend(nodeToSend->idx);
+             
      }
+     
     sendingQueue.maintain();
 }
 
@@ -2111,6 +2436,10 @@ void Conductor::streamFeatures()
  */
 void Conductor::sendAccelRawData(uint8_t axisIdx)
 {
+    static char rawAccelerationX[15000];
+    static char rawAccelerationY[15000];
+    static char rawAccelerationZ[15000];
+    
     if (axisIdx > 2) {
         return;
     }
@@ -2132,7 +2461,7 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
         delay(10);
     }
     else if (m_streamingMode == StreamingMode::WIFI ||
-             m_streamingMode == StreamingMode::WIFI_AND_BLE) {
+             m_streamingMode == StreamingMode::WIFI_AND_BLE ) {
        
         uint16_t maxLen = 15000;   //3500
         char txBuffer[maxLen];
@@ -2147,8 +2476,48 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
         iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 1000000,
                                   txBuffer, strlen(txBuffer));
 
-       
         delay(10);
+     }else if(m_streamingMode == StreamingMode::ETHERNET){      // Ethernet Mode
+        uint16_t maxLen = 15000;   //3500
+        char txBuffer[maxLen];
+        for (uint16_t i =0; i < maxLen; i++) {
+            txBuffer[i] = 0;
+        }
+        txBuffer[0] = axis[axisIdx];    
+        uint16_t idx = 1;
+        idx += accelEnergy->sendToBuffer(txBuffer, idx, 4);   //4
+        txBuffer[idx] = 0; // Terminate string (idx incremented in sendToBuffer)
+
+        //construct the FFT JSON
+        char rawAcceleration[maxLen];
+        char* accelX;char* accelY; char* accelZ;
+        if(txBuffer[0] == 'X' && axisIdx == 0){
+            
+            memmove(rawAccelerationX,txBuffer + 2, strlen(txBuffer) - 1); // sizeof(txBuffer)/sizeof(txBuffer[0]) -2);
+            debugPrint("RawAcel X: ",false);debugPrint(rawAccelerationX);
+        }else if(txBuffer[0]== 'Y' && axisIdx == 1)
+        {
+            memmove(rawAccelerationY,txBuffer + 2, strlen(txBuffer) - 1 ); //sizeof(txBuffer)/sizeof(txBuffer[0]) -2);
+            debugPrint("RawAcel Y: ",false);debugPrint(rawAccelerationY);
+        }else if(txBuffer[0] == 'Z' && axisIdx == 2){
+            
+            memmove(rawAccelerationZ,txBuffer + 2, strlen(txBuffer) - 1) ; //sizeof(txBuffer)/sizeof(txBuffer[0]) -2);    
+            debugPrint("RawAcel Z: ",false);debugPrint(rawAccelerationZ);
+            snprintf(rawAcceleration,maxLen,"{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\":\"{\\\"deviceId\\\":\\\"%s\\\",\\\"firmwareVersion\\\":\\\"%s\\\",\\\"samplingRate\\\":%d,\\\"blockSize\\\":%d,\\\"X\\\":\\\"%s\\\",\\\"Y\\\":\\\"%s\\\",\\\"Z\\\":\\\"%s\\\"}\"}",m_macAddress.toString().c_str(),1,0,m_macAddress.toString().c_str(),FIRMWARE_VERSION,IULSM6DSM::defaultSamplingRate,512,rawAccelerationX,rawAccelerationY,rawAccelerationZ);
+            
+            
+            iuWiFi.write(rawAcceleration);           // send the rawAcceleration over UART 
+            iuWiFi.write("\n");            
+            if(loopDebugMode){
+               debugPrint("Raw Acceleration:",true);
+               debugPrint(rawAcceleration);     
+            }
+            //FREE ALLOCATED MEMORY 
+            memset(rawAccelerationX,0,sizeof(rawAccelerationX));
+            memset(rawAccelerationY,0,sizeof(rawAccelerationY));
+            memset(rawAccelerationZ,0,sizeof(rawAccelerationZ));
+        }
+
      }
 }
 
@@ -2228,18 +2597,42 @@ void Conductor::sendDiagnosticFingerPrints() {
             if (ready_to_publish == true) {
                 int messageLength = strlen(fingerprintData); 
                 char FingerPrintResult[150 + messageLength];
-            
-                snprintf(FingerPrintResult, 150 + messageLength, "{\"macID\":\"%s\",\"timestamp\": %lf,\"state\":\"%d\",\"accountId\":\"%s\",\"fingerprints\": %s }", m_macAddress.toString().c_str(),fingerprint_timestamp,ledManager.getOperationState(),"XXXAdmin",fingerprintData);
+                char sendFingerprints[500 + messageLength];
                 
+                snprintf(FingerPrintResult, 150 + messageLength, "{\"macID\":\"%s\",\"timestamp\": %lf,\"state\":\"%d\",\"accountId\":\"%s\",\"fingerprints\": %s }", m_macAddress.toString().c_str(),fingerprint_timestamp,ledManager.getOperationState(),"XXXAdmin",fingerprintData);
+                    
                 // if(loopDebugMode) {
                 //     debugPrint("Published Fingerprints"); 
                 //     char published_time_diff[50];
                 //     sprintf(published_time_diff, "%lf", fingerprint_timestamp - last_fingerprint_timestamp);
                 //     debugPrint(F("Published time diff : "), false); debugPrint(F(published_time_diff), true);
                 // }               
-            
                 last_fingerprint_timestamp = fingerprint_timestamp; // update timestamp for next iterations
-                iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );    
+                if(m_streamingMode == StreamingMode::ETHERNET){
+                    /* FingerPrintResult send over Ethernet Mode */
+                    if(rbase64.encode(FingerPrintResult) == RBASE64_STATUS_OK) {
+                        snprintf(sendFingerprints,messageLength+500,"{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\":\"%s\"}",  /* \"{\\\"macID\\\":\\\"%s\\\",\\\"timestamp\\\":%lf,\\\"state\\\":\\\"%d\\\",\\\"accountId\\\":\\\"%s\\\",\\\"fingerprints\\\":%s\"}\"}" , */
+                        m_macAddress.toString().c_str(),0,1,rbase64.result());//m_macAddress.toString().c_str(),fingerprint_timestamp,ledManager.getOperationState(),"XXXAdmin",fingerprintData);
+                        iuWiFi.write(sendFingerprints);
+                        iuWiFi.write("\n");
+                        //rbase64.encode(FingerPrintResult);
+                        //debugPrint("Base64 -Fingerprint : ",false);
+                        //debugPrint(rbase64.result());
+                    
+    
+                    }else
+                    {
+                        debugPrint("base64-encoding failed, Please check");
+                    }
+                        
+                        
+                }else if(m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE)//iuWiFi.isAvailable() && iuWiFi.isWorking())   
+                {   /* FingerPrintResult send over Wifi only */
+                    debugPrint("Wifi connected, ....",true);
+                    iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );    
+                
+                }
+                
             }
             else { // not published as time_diff < 500 ms
                 // if(loopDebugMode) {
@@ -2256,7 +2649,7 @@ void Conductor::sendDiagnosticFingerPrints() {
             }   
     }
     else {        
-        debugPrint(F("Fingerprints have not been configured."), true);
+        //debugPrint(F("Fingerprints have not been configured."), true);
     }   
 }
 
@@ -2297,6 +2690,7 @@ void  Conductor::streamMCUUInfo(HardwareSerial *port)
     port->print("HB,");
     port->print(destination);
     port->print(';');
+    port->println();
 }
 
 /**
@@ -2325,12 +2719,19 @@ void Conductor::printConductorMac() {
     debugPrint("BLE MAC ADDRESS SET IN CONDUCTOR : ",false); debugPrint(m_macAddress.toString());
 }
 
-void Conductor::setConductorBLEMacAddress() {
-    iuBluetooth.enterATCommandInterface();
-    char BLE_MAC_Address[20];
-    iuBluetooth.sendATCommand("mac?", BLE_MAC_Address, 100);
-    iuBluetooth.exitATCommandInterface();
-    m_macAddress.fromString(BLE_MAC_Address);
+void Conductor::setConductorMacAddress() {
+    if(iuBluetooth.isBLEAvailable){
+        iuBluetooth.enterATCommandInterface();
+        char BLE_MAC_Address[20];
+        iuBluetooth.sendATCommand("mac?", BLE_MAC_Address, 20);
+        debugPrint("BLE MAC ID:",false);debugPrint(BLE_MAC_Address,true);
+        iuBluetooth.exitATCommandInterface();
+        m_macAddress.fromString(BLE_MAC_Address);
+    }else
+    {   //set the macAddress from Ethernet Module
+        m_macAddress.fromString(iuEthernet.m_ethernetMacAddress);
+    }
+    
 }
 
 /* =============================================================================
@@ -2781,7 +3182,7 @@ void Conductor::setThresholdsFromFile()
     StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
     JsonVariant config = JsonVariant(
             iuFlash.loadConfigJson(IUFlash::CFG_FEATURE, jsonBuffer));
-    config.prettyPrintTo(Serial);
+    // config.prettyPrintTo(Serial);
     if (config.success()) {
         const char* threshold = "TRH";
         float low, mid, high;
@@ -2853,4 +3254,56 @@ bool Conductor::setSensorConfig(char* filename){
 
         return true;
     }
+}
+
+/**
+ * @brief 
+ * 
+ * @param filename - Storage file 
+ * @return true 
+ * @return false 
+ */
+bool Conductor::setEthernetConfig(char* filename){
+    JsonObject& config = configureJsonFromFlash(filename,1);      
+    JsonVariant variant = config;
+
+    if (!config.success()) {
+        if (debugMode) {
+            debugPrint("parseObject() failed for relayAgentConfig.conf");
+        }
+        return false;
+    }
+    else{
+        // Read availabel relayAgentConfig details
+        iuEthernet.m_workMode = config["relayAgentConfig"]["workMode"];
+        iuEthernet.m_remoteIP = config["relayAgentConfig"]["remoteAddr"];
+        iuEthernet.m_remotePort = config["relayAgentConfig"]["remotePort"];
+        
+        iuEthernet.m_enableHeartbeat = config["relayAgentConfig"]["enableHeartbeat"];
+        iuEthernet.m_heartbeatInterval = config["relayAgentConfig"]["heartbeatInterval"];
+        iuEthernet.m_heartbeatDir = config["relayAgentConfig"]["heartbeatDir"];
+        iuEthernet.m_heartbeatMsg = config["relayAgentConfig"]["heartbeatMsg"];
+        
+        if(loopDebugMode){
+            debugPrint("workMode: ",false);
+            debugPrint(iuEthernet.m_workMode,true);
+            debugPrint("remoteAddr:",false);
+            debugPrint(iuEthernet.m_remoteIP,true);
+            debugPrint("remotePort:",false);
+            debugPrint(iuEthernet.m_remotePort,true);
+            // Heartbeat configurations
+            debugPrint("isHeartbeatEnabled:",false);
+            debugPrint(iuEthernet.m_enableHeartbeat);
+            debugPrint("Heartbeat Interval:",false);
+            debugPrint(iuEthernet.m_heartbeatInterval);
+            debugPrint("Hearbeat Direction:",false);
+            debugPrint(iuEthernet.m_heartbeatDir);
+            debugPrint("Heartbeat Message:",false);
+            debugPrint(iuEthernet.m_heartbeatMsg);
+        }    
+        
+        return true;
+    }
+
+    return false;
 }
