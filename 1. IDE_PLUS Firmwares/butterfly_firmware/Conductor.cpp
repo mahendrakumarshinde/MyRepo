@@ -1625,24 +1625,24 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             break;
         case MSPCommand::GET_RAW_DATA_ENDPOINT_INFO:
             // TODO: Implement
-            {
-            JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
-
-            m_httpHost = config["httpConfig"]["host"];
-            m_httpPath = config["httpConfig"]["path"];
-            //Serial.print("File Content :");Serial.println(jsonChar);
-            //Serial.print("http details :");Serial.print(m_httpHost);Serial.print(",");Serial.print(m_httpPort);Serial.print(",");Serial.print(m_httpPath);Serial.println("/****** SWITCH****/");
-            if(m_httpHost == NULL && m_httpPort == 0 && m_httpPath == NULL ){
-              //load default configurations
-              m_httpHost = "http://13.232.122.10";                                       //"ideplus-dot-infinite-uptime-1232.appspot.com";
-              m_httpPort =  8080;                                                        //80;
-              m_httpPath = "/iu-web/iu-infiniteuptime-api/postdatadump?mac=";           //"/raw_data?mac="; 
-            }
-            iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_HOST,m_httpHost); 
-            iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_PORT,String(m_httpPort).c_str()); 
-            iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_ROUTE,m_httpPath);
-                        
-            break;
+            { 
+              if(DOSFS.exists("httpConfig.conf")) {  
+                JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
+              
+                m_httpHost = config["httpConfig"]["host"];
+                m_httpPath = config["httpConfig"]["path"];
+                m_httpPort = config["httpConfig"]["port"];
+              }  
+              else{
+                m_httpHost = "http://13.232.122.10";                                       //"ideplus-dot-infinite-uptime-1232.appspot.com";
+                m_httpPort =  8080;                                                        //80;
+                m_httpPath = "/iu-web/iu-infiniteuptime-api/postdatadump?mac=";           //"/raw_data?mac="; 
+                }
+                iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_HOST,m_httpHost); 
+                iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_PORT,String(m_httpPort).c_str()); 
+                iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_ROUTE,m_httpPath);
+                            
+                break;
            }
             
         case MSPCommand::GET_MQTT_CONNECTION_INFO:
