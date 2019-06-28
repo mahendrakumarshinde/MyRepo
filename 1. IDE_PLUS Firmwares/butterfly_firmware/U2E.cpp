@@ -1488,9 +1488,9 @@ String Usr2Eth::SerialRead()
 {
   _timeout = 0;
   uint32_t now = millis();
-  while  (!_Serial->available() && _timeout < 500  )
+  while  (!_Serial->available() && _timeout < 100  )
   {
-    delay(10);
+    delay(200);
     _timeout++;
     //debugPrint("Timeout count:",false);debugPrint(_timeout);
   }
@@ -1643,7 +1643,12 @@ String Usr2Eth::getServerConfiguration(){
      { 
        //debugPrint("Valid data received");
        responseIsNotAvailabel = true;
+    }else
+    {
+      _Serial->flush();
+      debugPrint("flushed the buffer");
     }
+    
     /* if (millis() - now > m_httpTimeout)         // JOSN Timeout
     {
       m_jsonTimeout = true;
