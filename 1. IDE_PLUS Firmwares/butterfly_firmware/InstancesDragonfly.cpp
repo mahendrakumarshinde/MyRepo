@@ -73,12 +73,12 @@ FeatureTemplate<float> batteryLoad("BAT", 2, 1, batteryLoadValues);
 /***** Accelerometer Features *****/
 
 // Sensor data
-__attribute__((section(".noinit2"))) q15_t accelerationXValues[1024];     // 1024
-__attribute__((section(".noinit2"))) q15_t accelerationYValues[1024];
-__attribute__((section(".noinit2"))) q15_t accelerationZValues[1024];
-FeatureTemplate<q15_t> accelerationX("A0X", 8, 128, accelerationXValues); // 8, 128
-FeatureTemplate<q15_t> accelerationY("A0Y", 8, 128, accelerationYValues);
-FeatureTemplate<q15_t> accelerationZ("A0Z", 8, 128, accelerationZValues);
+ __attribute__((section(".noinit2"))) q15_t accelerationXValues[8192];     // 1024
+ __attribute__((section(".noinit2"))) q15_t accelerationYValues[8192];
+ __attribute__((section(".noinit2"))) q15_t accelerationZValues[8192];
+FeatureTemplate<q15_t> accelerationX("A0X", 64, 128, accelerationXValues); // 8, 128
+FeatureTemplate<q15_t> accelerationY("A0Y", 64, 128, accelerationYValues);
+FeatureTemplate<q15_t> accelerationZ("A0Z", 64, 128, accelerationZValues);
 
 
 // 128 sample long accel features
@@ -243,7 +243,7 @@ FeatureStateComputer opStateComputer(1, &opStateFeature);
 
 
 // Shared computation space
-q15_t allocatedFFTSpace[2048];    // 1024
+q15_t allocatedFFTSpace[8192];    // 1024
 
 
 // Note that computer_id 0 is reserved to designate an absence of computer.
@@ -345,9 +345,9 @@ void setUpComputerSources()
     accel512ComputerZ.addSource(&accelRMS128Z, 1);
     accel512TotalComputer.addSource(&accelRMS128Total, 1);
     // Acceleration FFTs
-    accelFFTComputerX.addSource(&accelerationX, 4);
-    accelFFTComputerY.addSource(&accelerationY, 4);
-    accelFFTComputerZ.addSource(&accelerationZ, 4);
+    accelFFTComputerX.addSource(&accelerationX, 32);    //block size = 4096
+    accelFFTComputerY.addSource(&accelerationY, 32);    //block size = 4096
+    accelFFTComputerZ.addSource(&accelerationZ, 32);    //block size = 4096
     // Audio DB
     audioDB2048Computer.addSource(&audio, 1);
     audioDB4096Computer.addSource(&audio, 2);

@@ -61,7 +61,7 @@ class Feature
         implement slideOption::ROLLING */
         enum slideOption : uint8_t {FIXED,
                                     ROLLING};
-        static const uint8_t maxSectionCount = 8;
+        static const uint8_t maxSectionCount = 64;
         static const uint8_t maxReceiverCount = 5;
         /***** Feature instance registry *****/
         static const uint8_t MAX_INSTANCE_COUNT = 60;

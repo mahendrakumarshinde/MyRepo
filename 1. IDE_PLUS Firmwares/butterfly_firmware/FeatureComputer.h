@@ -69,6 +69,7 @@ class FeatureComputer
         Feature *m_destinations[maxDestinationCount];
         /***** Computation *****/
         bool m_computeLast;
+        bool m_sourceReadyForStateComputation[maxSourceCount];  // This is to be used only by FeatureStateComputer, however, values have to be updated in FeatureComputer::compute(), hence declared here
         virtual void m_specializedCompute() {}
 };
 
@@ -361,6 +362,88 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         void setCalibrationScaling1(float val) { m_calibrationScaling1 = val; }
         void setCalibrationScaling2(float val) { m_calibrationScaling2 = val; }
 
+        int FFTComputerID = 30;
+        File FFTInput[3], FFTOuput[3];
+        bool isFFTOpened[3] = {false, false, false};
+        char directions[4] = {'X', 'Y', 'Z', 0};
+        char fftInputFile[20];
+        char fftOutputFile[20];
+        int fft_direction;
+        int saveFFTCount = 20;
+        enum buffer { accFFT, velFFT, velRMS, dispFFT, dispRMS };
+        bool fileLogging = false;  // toggle logging for FFT data
+
+        void logFFTInput(File *FFTInput, q15_t *values, uint16_t sampleCount) {
+            if(fileLogging && saveFFTCount > 0) {
+                FFTInput->print("Timestamp -> "); FFTInput->println(millis());
+                for (uint16_t i=0; i< sampleCount; ++i) {
+                    FFTInput->print(float(values[i])*9.8/8192.0, 6);
+                    FFTInput->print(" ");
+                }
+                FFTInput->println("");
+                FFTInput->println("-------------------------------------");
+                FFTInput->flush();
+                debugPrint("FFT: Saved INPUT for FFTComputer:" , false);  debugPrint(directions[fft_direction]);
+            }            
+        }
+
+        void logFFTOutput(File *FFTOutput, buffer value_type, void *values, uint16_t sampleCount, bool flushFile) {
+            if(fileLogging && saveFFTCount > 0) {
+                q15_t *fft_buffer;
+                float *rms_value; 
+
+                switch(value_type) {
+                    case accFFT:
+                    {
+                        FFTOutput->print("Acceleration FFT: Timestamp -> ");
+                        fft_buffer = (q15_t*) values;                 
+                        break;
+                    }
+                    case velFFT:
+                    {
+                        FFTOutput->print("Velocity FFT: Timestamp -> ");
+                        fft_buffer = (q15_t*) values;                 
+                        break;
+                    }
+                    case velRMS: 
+                    {
+                        FFTOutput->print("Velocity RMS: Timestamp -> ");
+                        rms_value = (float*) values;                 
+                        break;
+                    }
+                    case dispFFT:
+                    {
+                        FFTOutput->print("Displacement FFT: Timestamp -> ");
+                        fft_buffer = (q15_t*) values;                 
+                        break;
+                    }
+                    case dispRMS:
+                    {
+                        FFTOutput->print("Displacement RMS: Timestamp -> ");
+                        rms_value = (float*) values;                 
+                        break;
+                    }                
+                }
+                FFTOutput->println(millis());
+                for(uint16_t i=0; i<sampleCount; ++i) {
+                    if(value_type == accFFT || value_type == velFFT || value_type == dispFFT)
+                        FFTOutput->print(fft_buffer[i]);
+                    else  // rms_value
+                        FFTOutput->print(rms_value[i]);
+                    FFTOutput->print(" ");
+                }
+                FFTOutput->println("");
+                if(flushFile) {
+                    FFTOutput->println("===============================================================================");
+                    FFTOutput->flush();
+                } else {
+                    FFTOutput->println("-------------------------------------");
+                }
+                debugPrint("FFT: Saved FFT output: ", false); debugPrint(value_type, false);
+                debugPrint(" for FFTComputer:" , false);  debugPrint(directions[fft_direction]);
+            }
+        }
+
     protected:
         T *m_allocatedFFTSpace;
         T *velocityFFT;
@@ -372,6 +455,20 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         bool m_calibrationScaling2;  // Scaling factor for 2nd derivative RMS
         virtual void m_specializedCompute()
     {
+        // File logging
+        fft_direction = m_id % FFTComputerID; 
+
+        if(fileLogging && !isFFTOpened[fft_direction]) {
+            sprintf(fftInputFile, "FFTInput%c.txt", directions[fft_direction]);
+            sprintf(fftOutputFile, "FFTOuput%c.txt", directions[fft_direction]);
+            FFTInput[fft_direction] = DOSFS.open(fftInputFile, "w");
+            FFTOuput[fft_direction] = DOSFS.open(fftOutputFile, "w");
+            if (FFTInput[fft_direction] && FFTOuput[fft_direction]) {
+                debugPrint("FFT: opened files: ", false); debugPrint(fftInputFile, false); debugPrint(" ", false); debugPrint(fftOutputFile);
+                isFFTOpened[fft_direction] = true;
+            }
+        }
+
         // 0. Preparation
         uint16_t samplingRate;
         if(sensorSamplingRate != 0){
@@ -394,6 +491,9 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         m_destinations[1]->setResolution(1);
         m_destinations[2]->setResolution(resolution);
         m_destinations[3]->setResolution(resolution);
+
+        logFFTInput(&FFTInput[fft_direction], values, sampleCount);
+
         // 1. Compute FFT and get amplitudes
         uint32_t amplitudeCount = sampleCount / 2 + 1;
         T amplitudes[amplitudeCount];
@@ -406,6 +506,8 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         RFFT::computeRFFT(values, m_allocatedFFTSpace, sampleCount, false);
         RFFTAmplitudes::getAmplitudes(m_allocatedFFTSpace, sampleCount,
                                       amplitudes);
+
+        logFFTOutput(&FFTOuput[fft_direction], accFFT, (void*) amplitudes, amplitudeCount, false);
 
         // -----------------------Start -------------------------------------------
         //Raw Data
@@ -560,6 +662,8 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
                 amplitudes, sampleCount, samplingRate, m_lowCutFrequency,
                 m_highCutFrequency, scaling1, false);
 
+            logFFTOutput(&FFTOuput[fft_direction], velFFT,(void*) amplitudes, amplitudeCount, false);
+
           
             /***************************** Applying Diagnostic fingerprints on computated velocity fft amplitude *************************/ 
             //  Serial.print("Axis ID :");Serial.println(direction);
@@ -608,6 +712,9 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
             }
             
             m_destinations[2]->addValue(integratedRMS1);
+            
+            logFFTOutput(&FFTOuput[fft_direction], velRMS, (void*) &integratedRMS1, 1, false);
+
             if (featureDebugMode) {
                 debugPrint(millis(), false);
                 debugPrint(F(" -> "), false);
@@ -627,8 +734,13 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
             float integratedRMS2 = RFFTAmplitudes::getRMS(amplitudes,
                                                           sampleCount);
             
+            logFFTOutput(&FFTOuput[fft_direction], dispFFT, (void*) &amplitudes, amplitudeCount, false);
+
             integratedRMS2 *= 1000 / ((float) scaling1 * (float) scaling2) * m_calibrationScaling2;
             m_destinations[3]->addValue(integratedRMS2); 
+
+            logFFTOutput(&FFTOuput[fft_direction], dispRMS, (void*) &integratedRMS2, 1, true);
+
             if (featureDebugMode) {
                 debugPrint(millis(), false);
                 debugPrint(F(" -> "), false);
@@ -650,6 +762,7 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
                 debugPrint(F(": 0"));
             }
         }
+        --saveFFTCount;
     }
 };
 
