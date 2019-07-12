@@ -416,6 +416,28 @@ uint16_t Feature::sendToBuffer(char *destination, uint16_t startIndex,
     return charCount;
 }
 
+/**
+ * Same function as above, but uses q15_t as destination buffer. 
+ * Used to transmit raw binary values rather than strings.
+ */
+uint16_t Feature::sendToBuffer(q15_t *destination, uint16_t startIndex,
+                               uint8_t sectionCount)
+{
+    uint8_t k = (m_sectionCount + m_recordIndex - sectionCount) %
+        m_sectionCount;
+    for (uint8_t i = k; i < k + sectionCount; ++i)
+    {
+        m_locked[i % m_sectionCount] = true;
+    }
+    uint16_t charCount = m_specializedBufferStream(k, destination, startIndex,
+                                                   sectionCount);
+    for (uint8_t i = k; i < k + sectionCount; ++i)
+    {
+        m_locked[i % m_sectionCount] = false;
+    }
+    debugPrint("INFO returning charCount from sendToBuffer q15_t : ", false);debugPrint(charCount);
+    return charCount;
+}
 
 /***** Debugging *****/
 
