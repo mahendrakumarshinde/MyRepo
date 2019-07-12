@@ -115,6 +115,7 @@ class CalibrationExperiment:
         for field, ref_val, tol in zip(self.fields,
                                        self.ref_values,
                                        self.tolerances):
+
             avg = np.mean(values[field])
             self.avg_values[field] = avg
             err = (avg - ref_val) / float(ref_val) * 100
@@ -349,7 +350,7 @@ class CalibrationInterface(tk.Frame):
                                     self.end_calibration_confirm)
         return self._data_collecter
 
-    def run_calibration(self, calibration_experiment, timeout=6):
+    def run_calibration(self, calibration_experiment, timeout=15):
         """
         Run a calibration experiment
         """
@@ -548,7 +549,7 @@ class CalibrationInterface(tk.Frame):
         Return True if the device is available at given port, else False.
         """
         try:
-            ser = serial.Serial(self.get_user_input('port'))
+            ser = serial.Serial(self.get_user_input('port'), baudrate=115200)
             ser.close()
         except serial.SerialException as e:
             if e.args[0] == 2:
@@ -565,7 +566,7 @@ class CalibrationInterface(tk.Frame):
         """
         data_gen = self.data_collecter.collect_data(
                                 termination_byte=self.data_termination_byte,
-                                timeout=5)
+                                timeout=15)
         data = bytes()
         for d in data_gen:
             # wait for data_gen to empty so that we close properly \

@@ -271,17 +271,17 @@ void dataAcquisitionCallback()
  */
 void dataAcquisitionISR()
 {
-    uint32_t startT = 0;
-    static int isrCnt;
+    // uint32_t startT = 0;
+    // static int isrCnt;
     
-    isrCnt++;
-   // digitalWrite(6,HIGH);
-    if(isrCnt >= 1){      // 150 us X 7
+    // isrCnt++;
+    // digitalWrite(6,HIGH);
+    // if(isrCnt >= 1){      // 150 us X 7
       
      conductor.acquireData(true);
-      isrCnt = 0; 
-   //   digitalWrite(6,LOW);
-    }
+    //   isrCnt = 0; 
+    //   digitalWrite(6,LOW);
+    // }
 
 }
 
@@ -364,13 +364,13 @@ void timerISR(void *context, uint32_t events)
 #if 1
 if(temp == 0)
   {
-    //digitalWrite(6, HIGH);
+    // digitalWrite(6, HIGH);
     dataAcquisitionCallback();      // data acquisition callback 
     temp = 1;
   }
   else if(temp == 1)
   {
-    //digitalWrite(6, LOW);
+    // digitalWrite(6, LOW);
     temp = 0;
   }      
 #endif
@@ -404,6 +404,7 @@ void setup()
   
   pinMode(ESP8285_IO0,OUTPUT);
   pinMode(6,OUTPUT);
+//   pinMode(A3,OUTPUT);
   digitalWrite(ESP8285_IO0,HIGH);
   DOSFS.begin();
   #if 1
@@ -540,12 +541,26 @@ void setup()
                        false);
             debugPrint(String(freeMemory(), DEC));
         }
+
+        iuFlash.begin();
+
+        // Update the configuration of FFT computers from fft.conf
+        if(conductor.setFFTParams()) {
+            if(setupDebugMode) {
+                debugPrint("Updated FFT configuration from file");
+                //TODO: Expose the current FFT config
+            }
+        } else {
+            if(setupDebugMode) debugPrint("Using defaults for FFT Computers: samplingRate = 3.3KHz, blockSize = 4096 samples, publishingPeriod = 512 ms");
+        }
+
         // Sensors
         if (debugMode) {
             debugPrint(F("\nInitializing sensors..."));
         }
         uint16_t callbackRate = iuI2S.getCallbackRate();
         for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
+            debugPrint("Sensor pointer: ", false); debugPrint(int(Sensor::instances[i]));
             Sensor::instances[i]->setupHardware();
             if (Sensor::instances[i]->isHighFrequency()) {
                 Sensor::instances[i]->setCallbackRate(callbackRate);
@@ -573,7 +588,6 @@ void setup()
         // Start flash and load configuration files
         // if (!USBDevice.configured())
         // {
-        iuFlash.begin();
         // WiFi configuration
         conductor.configureFromFlash(IUFlash::CFG_WIFI0);
         // Feature, FeatureGroup and sensors coonfigurations
@@ -600,15 +614,18 @@ void setup()
         opStateFeature.setOnNewValueCallback(operationStateCallback);
         ledManager.resetStatus();
         conductor.changeUsageMode(UsageMode::OPERATION);
-        //pinMode(IULSM6DSM::INT1_PIN, INPUT);
-        //attachInterrupt(IULSM6DSM::INT1_PIN, dataAcquisitionISR, RISING);
-        //debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
+        /* code uncommented */
+        pinMode(IULSM6DSM::INT1_PIN, INPUT);
+        attachInterrupt(IULSM6DSM::INT1_PIN, dataAcquisitionISR, RISING);
+        debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
 
         //Resume previous operational state of device
         conductor.setThresholdsFromFile();
                 
+        
+                
         // Timer Init
-        timerInit();
+        //timerInit();
         
     #endif
  #endif   

@@ -20,8 +20,7 @@ char IUFSFlash::FNAME_OP_STATE[8] = "opState";
 char IUFSFlash::FNAME_RAW_DATA_ENDPOINT[13] = "fft_endpoint";
 char IUFSFlash::FNAME_MQTT_SERVER[12] = "mqtt_server";
 char IUFSFlash::FNAME_MQTT_CREDS[11] = "mqtt_creds";
-
-
+char IUFSFlash::FNAME_FFT[4] = "fft";
 /***** Core *****/
 
 void IUFSFlash::begin()
@@ -125,6 +124,60 @@ bool IUFSFlash::saveConfigJson(storedConfig configType, JsonVariant &config)
     return true;
 }
 
+JsonObject& IUFSFlash::validateConfig(storedConfig configType, JsonObject &config) 
+{
+    // Perform validation checks on the config json
+    // Return the errors in a json object
+    bool validConfig = true;
+    char errorMessage[30] = "";
+    // StaticJsonBuffer<250> errorMessagesBuffer;
+    // StaticJsonBuffer<300> returnJsonBuffer;
+    // JsonArray& errorMessages = errorMessagesBuffer.createArray();
+    // JsonObject& returnJson = returnJsonBuffer.createObject();
+
+    // switch(configType) {
+    //     case CFG_FFT: {
+    //         //Validation for samplingRate field
+    //         if(config.containsKey("samplingRate")) {
+    //             uint16_t samplingRate = config["samplingRate"];
+    //             // Validation for samplingRate
+    //             if (!(samplingRate == 416) && 
+    //                 !(samplingRate == 833) &&
+    //                 !(samplingRate == 1660) && 
+    //                 !(samplingRate == 3330) ) {
+    //                     validConfig = false;
+    //                     sprintf(errorMessage, "Invalid samplingRate: %d", samplingRate);
+    //                     errorMessages.add(samplingRate);
+    //             }
+    //         } else {
+    //             validConfig = false;
+    //             errorMessages.add(strcat("Key missing: samplingRate")); 
+    //         }
+         
+    //         // Validation for blockSize field
+    //         if(config.containsKey("blockSize")) {
+    //             uint16_t blockSize = config["blockSize"];
+    //             // Validation for samplingRate
+    //             if (!(blockSize == 416) && 
+    //                 !(blockSize == 833) &&
+    //                 !(blockSize == 1660) && 
+    //                 !(blockSize == 3330) ) {
+    //                     validConfig = false;
+    //                     sprintf(errorMessage, "Invalid blockSize: %d", blockSize);
+    //                     errorMessages.add(errorMessage);
+    //             }
+    //         } else {
+    //             validConfig = false;
+    //             errorMessages.add("Key missing: blockSize"); 
+    //         }
+    //         break;
+    //     }
+    // }
+    // // Construct the returnJson
+    // returnJson["validConfig"] = validConfig;
+    // returnJson["errorMessages"] = errorMessages;
+    // return returnJson;
+}
 
 /***** Utility *****/
 
@@ -175,6 +228,9 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
             break;
         case CFG_MQTT_CREDS:
             fname = FNAME_MQTT_CREDS;
+            break;
+        case CFG_FFT:
+            fname = FNAME_FFT;
             break;
         default:
             if (debugMode)

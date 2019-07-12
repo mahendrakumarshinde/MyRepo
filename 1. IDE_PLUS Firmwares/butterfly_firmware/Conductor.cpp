@@ -667,10 +667,19 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }    
         heartbeatFlag = false;
         }
-        
-        
     }
-    
+    // FFT configuration
+    // Message is always saved to file, after which STM resets
+    subConfig = root["fft"];
+    if (subConfig.success()) {
+        if(loopDebugMode) debugPrint("Identified FFT configuration");
+        if(saveToFlash) { // TODO: Check if the config is new, then save to file and reset
+            iuFlash.saveConfigJson(IUFlash::CFG_FFT, subConfig);
+            if(loopDebugMode) debugPrint("Saved FFT configuration to file");
+            delay(100);
+            STM32.reset();
+        } // TODO: Handle incorrect json message here
+    }
     return true;
 }
 
@@ -2132,7 +2141,7 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             configureGroupsForCalibration();
             ledManager.overrideColor(RGB_CYAN);
             msg = "calibration";
-            timerISRPeriod = 600;  // 1.6KHz
+            timerISRPeriod = 600;  // 1.6KHz  // TODO: save previous ISR before switching
             sensorSamplingRate = 1660;
             //Serial.println("STEP - 2");
             break;
@@ -2146,7 +2155,7 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             configureGroupsForOperation();
             iuAccelerometer.resetScale();
             msg = "operation";
-            timerISRPeriod = 300;
+            // timerISRPeriod = 300;  // TODO: save previous ISR before switching modes
             break;
         case UsageMode::CUSTOM:
             ledManager.overrideColor(RGB_CYAN);
@@ -2517,7 +2526,6 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
             memset(rawAccelerationY,0,sizeof(rawAccelerationY));
             memset(rawAccelerationZ,0,sizeof(rawAccelerationZ));
         }
-
      }
 }
 
@@ -2653,6 +2661,42 @@ void Conductor::sendDiagnosticFingerPrints() {
     }   
 }
 
+bool Conductor::setFFTParams() {
+    bool configured;
+    JsonObject& config = configureJsonFromFlash("/iuconfig/fft.conf", false);
+    if(config.success()) {
+        uint16_t samplingRate = config["samplingRate"];
+        uint16_t blockSize = config["blockSize"];
+        uint16_t lowCutOffFrequency = DEFAULT_LOW_CUT_FREQUENCY;
+        uint16_t highCutOffFrequency = samplingRate / 2;
+        // TODO: Read cut off frequencies from config
+
+        // Change the required sectionCount for all FFT processors 
+        // Update the lowCutFrequency and highCutFrequency for each FFTComputerID
+        // TODO: update the publishing period of the group with max(SignalEnergyUpdate, RMSValuesUpdate)
+        int FFTComputerID = 30;  // FFTComputers X, Y, Z have m_id = 0, 1, 2 correspondingly
+        for (int i=0; i<3; ++i) {
+            FeatureComputer::getInstanceById(FFTComputerID + i)->updateSectionCount(blockSize / 128);
+            FeatureComputer::getInstanceById(FFTComputerID + i)->updateFrequencyLimits(lowCutOffFrequency, highCutOffFrequency);
+        }        
+
+        // Change the sensor sampling rate 
+        // timerISRPeriod = (samplingRate == 1660) ? 600 : 300;  // 1.6KHz->600, 3.3KHz->300
+        iuAccelerometer.setSamplingRate(samplingRate); // will set the ODR for the sensor
+        timerISRPeriod = int(1000000 / samplingRate); // +1 to ensure that sensor has captured data before mcu ISR gets it, for edge case
+        sensorSamplingRate = samplingRate;
+
+        if(setupDebugMode) {
+            config.prettyPrintTo(Serial);
+        }
+
+        configured = true;
+    } else {
+        if(loopDebugMode) debugPrint("Failed to read fft.conf file");
+        configured = false;
+    }
+    return configured;
+}
 
 /* =============================================================================
     Debugging
