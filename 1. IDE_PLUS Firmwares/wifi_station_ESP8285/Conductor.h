@@ -102,10 +102,10 @@ class Conductor
         
 
     protected:
-        /***** Config from Host *****/      // HOST_FIRMWARE_VERSION, HOST_SAMPLING_RATE, HOST_BLOCK_SIZE should ideally be declared in BoardDefinition.h. Doing so was causing linking errors..
+        /***** Config from Host *****/      
         char HOST_FIRMWARE_VERSION[8];      //filled when the ESP starts or when it connects to MQTT broker
         char HOST_SAMPLING_RATE[7];
-        // char HOST_BLOCK_SIZE[5];
+        char HOST_BLOCK_SIZE[6];
         MacAddress m_bleMAC;
         MacAddress m_wifiMAC;
         bool m_useMQTT;

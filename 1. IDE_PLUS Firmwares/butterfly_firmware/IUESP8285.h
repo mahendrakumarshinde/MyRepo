@@ -94,6 +94,12 @@ class IUESP8285 : public IUSerial, public Component
                 itoa(samplingRate, sampRate, 10);
                 sendMSPCommand(MSPCommand::RECEIVE_HOST_SAMPLING_RATE, sampRate);
             }
+        void sendHostBlockSize(const int blockSize)
+            {
+                char bs[6];                         // increase if block size goes above 5 digits
+                itoa(blockSize, bs, 10);
+                sendMSPCommand(MSPCommand::RECEIVE_HOST_BLOCK_SIZE, bs);
+            }
         void sendWiFiCredentials();
         void forgetCredentials();
         void sendStaticConfig();

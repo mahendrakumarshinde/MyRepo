@@ -1575,6 +1575,9 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             if(loopDebugMode){ debugPrint(F("ASK_HOST_SAMPLING_RATE")); }
             iuWiFi.sendHostSamplingRate(3300);      //TODO : hardcoded SR for now,use variable after merging 
             break;
+        case MSPCommand::ASK_HOST_BLOCK_SIZE:
+            if(loopDebugMode){ debugPrint(F("ASK_HOST_BLOCK_SIZE")); }
+            iuWiFi.sendHostBlockSize(4096);         //TODO : hardcoded BS for now, use variable after merging
         case MSPCommand::WIFI_ALERT_CONNECTED:
             if (loopDebugMode) { debugPrint(F("WIFI-CONNECTED;")); }
             if (isBLEConnected()) {

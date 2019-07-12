@@ -114,6 +114,9 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         case MSPCommand::RECEIVE_HOST_SAMPLING_RATE:
             strncpy(HOST_SAMPLING_RATE, buffer, 7);
             break;
+        case MSPCommand::RECEIVE_HOST_BLOCK_SIZE:
+            strncpy(HOST_BLOCK_SIZE, buffer, 6);
+            break;
         /***** Logging *****/
         case MSPCommand::SEND_LOG_MSG:
             mqttHelper.publishLog(buffer);
