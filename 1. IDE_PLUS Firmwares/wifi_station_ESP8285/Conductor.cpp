@@ -109,6 +109,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             //iuSerial->print(buffer);
             getDeviceFirmwareVersion(message,buffer,FIRMWARE_VERSION);
             mqttHelper.publishDiagnostic(message);
+            strncpy(HOST_FIRMWARE_VERSION, buffer, 8);
             break;
         /***** Logging *****/
         case MSPCommand::SEND_LOG_MSG:

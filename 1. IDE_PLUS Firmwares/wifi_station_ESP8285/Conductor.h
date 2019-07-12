@@ -103,6 +103,7 @@ class Conductor
 
     protected:
         /***** Config from Host *****/
+        char HOST_FIRMWARE_VERSION[8];      //filled when the ESP starts or when it connects to MQTT broker
         MacAddress m_bleMAC;
         MacAddress m_wifiMAC;
         bool m_useMQTT;
