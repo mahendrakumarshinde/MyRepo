@@ -11,6 +11,7 @@ Type - Standard Firmware Release
 // Uart driver update at /home/vikas/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.28/cores/stm32l4/Uart.h RX buffer from 64 Bytes to 512 Bytes
 #include "BoardDefinition.h"
 #include "Conductor.h"
+#include "FFTConfiguration.h"
 
 #include <MemoryFree.h>
 #include <Timer.h>
@@ -92,14 +93,6 @@ float DISPLACEMENT_RMS_SCALING[3] = {
 float DEFAULT_ACCEL_ENERGY_NORMAL_TH = 110;
 float DEFAULT_ACCEL_ENERGY_WARNING_TH = 130;
 float DEFAULT_ACCEL_ENERGY_HIGH_TH = 150;
-
-
-/***** Accelerometer Feature computation parameters *****/
-
-uint16_t DEFAULT_LOW_CUT_FREQUENCY = 10;  // Hz
-uint16_t DEFAULT_HIGH_CUT_FREQUENCY = 1660;  // Hz
-float DEFAULT_MIN_AGITATION = 0.03;
-
 
 /***** Audio DB calibration parameters *****/
 
@@ -655,6 +648,12 @@ void loop()
                     ledManager.showStatus(&STATUS_WIFI_CONNECTED);
                 }
                 /*======*/
+                debugPrint("CURRENT FFT CONFIGURATION: ");
+                debugPrint("Current samplingRate: ", false); debugPrint(FFTConfiguration::currentSamplingRate);
+                debugPrint("Current blockSize: ", false); debugPrint(FFTConfiguration::currentBlockSize);
+                debugPrint("Current lowCutOffFrequency: ", false); debugPrint(FFTConfiguration::currentLowCutOffFrequency);
+                debugPrint("Current highCutOffFrequency: ", false); debugPrint(FFTConfiguration::currentHighCutOffFrequency);
+                debugPrint("Current minAgitation: ", false); debugPrint(FFTConfiguration::currentMinAgitation);
             }
         // }
        

@@ -1,13 +1,13 @@
 #include<string.h>
 #include "Conductor.h"
 #include "rBase64.h"
+#include "FFTConfiguration.h"
 
 const char* fingerprintData;
 const char* fingerprints_X;
 const char* fingerprints_Y;
 const char* fingerprints_Z;
 
-int sensorSamplingRate;
 int m_temperatureOffset;
 int m_audioOffset;
         
@@ -2141,9 +2141,6 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             configureGroupsForCalibration();
             ledManager.overrideColor(RGB_CYAN);
             msg = "calibration";
-            timerISRPeriod = 600;  // 1.6KHz  // TODO: save previous ISR before switching
-            sensorSamplingRate = 1660;
-            //Serial.println("STEP - 2");
             break;
         case UsageMode::EXPERIMENT:
             ledManager.overrideColor(RGB_PURPLE);
@@ -2155,7 +2152,6 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             configureGroupsForOperation();
             iuAccelerometer.resetScale();
             msg = "operation";
-            // timerISRPeriod = 300;  // TODO: save previous ISR before switching modes
             break;
         case UsageMode::CUSTOM:
             ledManager.overrideColor(RGB_CYAN);
@@ -2662,34 +2658,33 @@ void Conductor::sendDiagnosticFingerPrints() {
 }
 
 bool Conductor::setFFTParams() {
-    bool configured;
+    bool configured = false;
     JsonObject& config = configureJsonFromFlash("/iuconfig/fft.conf", false);
     if(config.success()) {
-        uint16_t samplingRate = config["samplingRate"];
-        uint16_t blockSize = config["blockSize"];
-        uint16_t lowCutOffFrequency = DEFAULT_LOW_CUT_FREQUENCY;
-        uint16_t highCutOffFrequency = samplingRate / 2;
-        // TODO: Read cut off frequencies from config
+        FFTConfiguration::currentSamplingRate = config["samplingRate"];
+        FFTConfiguration::currentBlockSize = config["blockSize"];
+        // TODO: The following can be configurable in the future
+        FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY;
+        FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / 2;
+        FFTConfiguration::currentMinAgitation = FFTConfiguration::DEFAULT_MIN_AGITATION;
 
         // Change the required sectionCount for all FFT processors 
         // Update the lowCutFrequency and highCutFrequency for each FFTComputerID
         // TODO: update the publishing period of the group with max(SignalEnergyUpdate, RMSValuesUpdate)
         int FFTComputerID = 30;  // FFTComputers X, Y, Z have m_id = 0, 1, 2 correspondingly
         for (int i=0; i<3; ++i) {
-            FeatureComputer::getInstanceById(FFTComputerID + i)->updateSectionCount(blockSize / 128);
-            FeatureComputer::getInstanceById(FFTComputerID + i)->updateFrequencyLimits(lowCutOffFrequency, highCutOffFrequency);
+            FeatureComputer::getInstanceById(FFTComputerID + i)->updateSectionCount(FFTConfiguration::currentBlockSize / 128);
+            FeatureComputer::getInstanceById(FFTComputerID + i)->updateFrequencyLimits(FFTConfiguration::currentLowCutOffFrequency, FFTConfiguration::currentHighCutOffFrequency);
         }        
 
         // Change the sensor sampling rate 
         // timerISRPeriod = (samplingRate == 1660) ? 600 : 300;  // 1.6KHz->600, 3.3KHz->300
-        iuAccelerometer.setSamplingRate(samplingRate); // will set the ODR for the sensor
-        timerISRPeriod = int(1000000 / samplingRate); // +1 to ensure that sensor has captured data before mcu ISR gets it, for edge case
-        sensorSamplingRate = samplingRate;
+        iuAccelerometer.setSamplingRate(FFTConfiguration::currentSamplingRate); // will set the ODR for the sensor
+        timerISRPeriod = int(1000000 / FFTConfiguration::currentSamplingRate); // +1 to ensure that sensor has captured data before mcu ISR gets it, for edge case
 
         if(setupDebugMode) {
             config.prettyPrintTo(Serial);
         }
-
         configured = true;
     } else {
         if(loopDebugMode) debugPrint("Failed to read fft.conf file");

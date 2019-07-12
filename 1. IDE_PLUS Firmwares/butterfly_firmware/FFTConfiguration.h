@@ -1,0 +1,38 @@
+/*
+    This file includes:
+    - All supported configurations for FFT parameters
+    - The current FFT configuration
+
+    The file tracks all the available configurations for FFT computation: 
+    - samplingRate as dictated by the sensor sampling frequency
+    - blockSize as dictated by available memory    
+ */
+
+#ifndef FFT_CONFIGURATION_H
+#define FFT_CONFIGURATION_H
+
+namespace FFTConfiguration {
+    // The number of possible configurations for samplingRate and blockSize
+    const int samplingRateConfigurations = 4;
+    const int blockSizeConfigurations = 6;
+
+    // Arrays which keep track of available configurations
+    const int samplingRates[samplingRateConfigurations] = { 416, 833, 1660, 3330 };
+    const int blockSizes[blockSizeConfigurations] = { 128, 256, 512, 1024, 2048, 4096 };
+
+    // Default parameter values
+    const int DEFAULT_SAMPLING_RATE = 3330;
+    const int DEFAULT_BLOCK_SIZE = 4096;
+    const int DEFALUT_LOW_CUT_OFF_FREQUENCY = 10;
+    const int DEFAULT_HIGH_CUT_OFF_FREQUENCY = DEFAULT_SAMPLING_RATE / 2;  
+    const float DEFAULT_MIN_AGITATION = 0.03;
+    
+    // Current configurations
+    extern int currentSamplingRate;
+    extern int currentBlockSize;
+    extern int currentLowCutOffFrequency;
+    extern int currentHighCutOffFrequency;
+    extern float currentMinAgitation;
+}
+
+#endif // FFT_CONFIGURATION_H
