@@ -32,6 +32,7 @@ void onMQTTConnection()
     mqttHelper.onConnection();
     conductor.publishDiagnostic("connected", 10);
     hostSerial.sendMSPCommand(MSPCommand::ASK_HOST_FIRMWARE_VERSION);
+    hostSerial.sendMSPCommand(MSPCommand::ASK_HOST_SAMPLING_RATE);
 }
 
 /* =============================================================================

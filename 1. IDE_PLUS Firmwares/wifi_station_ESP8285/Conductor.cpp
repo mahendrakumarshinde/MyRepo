@@ -111,6 +111,9 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             mqttHelper.publishDiagnostic(message);
             strncpy(HOST_FIRMWARE_VERSION, buffer, 8);
             break;
+        case MSPCommand::RECEIVE_HOST_SAMPLING_RATE:
+            strncpy(HOST_SAMPLING_RATE, buffer, 7);
+            break;
         /***** Logging *****/
         case MSPCommand::SEND_LOG_MSG:
             mqttHelper.publishLog(buffer);

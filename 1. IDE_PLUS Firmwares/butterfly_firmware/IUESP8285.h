@@ -88,6 +88,12 @@ class IUESP8285 : public IUSerial, public Component
             { mspSendMacAddress(MSPCommand::RECEIVE_BLE_MAC, bleMac); }
 	      void sendHostFirmwareVersion(const char *FirmwareVersion)
             { sendMSPCommand(MSPCommand::RECEIVE_HOST_FIRMWARE_VERSION, FirmwareVersion); } // send Firmware Vr to WIfi
+        void sendHostSamplingRate(const int samplingRate)
+            { 
+                char sampRate[7];                   // increase if samplingRate goes above 6 digits
+                itoa(samplingRate, sampRate, 10);
+                sendMSPCommand(MSPCommand::RECEIVE_HOST_SAMPLING_RATE, sampRate);
+            }
         void sendWiFiCredentials();
         void forgetCredentials();
         void sendStaticConfig();
