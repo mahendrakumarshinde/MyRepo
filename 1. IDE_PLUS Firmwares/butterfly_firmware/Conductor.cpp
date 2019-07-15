@@ -707,7 +707,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             // Acknowledge incorrect configuration, send the errors on /ide_plus/command_response topic
             // If streaming mode is BLE, send an acknowledgement on BLE as well
             iuWiFi.sendMSPCommand(MSPCommand::FFT_CONFIG_ACK, validationResultString);
-            if(StreamingMode::BLE && isBLEConnected()) { iuBluetooth.write("FFT_CFG_FAILURE;"); delay(100); }
+            if(m_streamingMode == StreamingMode::BLE && isBLEConnected()) { iuBluetooth.write("FFT_CFG_FAILURE;"); delay(100); }
         }
     } // If json is incorrect, it will result in parsing error in jsonBuffer.parseObject(json) which will cause the processConfiguration call to return
  
@@ -1017,7 +1017,7 @@ void Conductor::configureAllFeatures(JsonVariant &config)
 void Conductor::processCommand(char *buff)
 {
     IPAddress tempAddress;
-    
+    debugPrint("IN PROCESS COMMAND: ", false); debugPrint(m_streamingMode);
     size_t buffLen = strlen(buff);
    // Serial.println(buff);
     
@@ -1035,6 +1035,36 @@ void Conductor::processCommand(char *buff)
                 ledManager.resetStatus();
             }
             break;
+        case 'F': {
+            // fetch FFT configuration
+            if (strncmp(buff, "FFT-CFG-SR", 10) == 0) {
+                // TODO: cannot be tested properly with Rigado, as streaming mode won't update properly unless BLE heart-beat is received
+                if(m_streamingMode == StreamingMode::BLE || m_streamingMode ==  StreamingMode::WIFI_AND_BLE) {
+                    char samplingRateString[8];
+                    itoa(FFTConfiguration::currentSamplingRate, samplingRateString, 10);
+                    iuBluetooth.write(samplingRateString);
+                    iuBluetooth.write(";");
+                    if (loopDebugMode) { debugPrint("FFT: Sampling Rate sent over BLE: ", false); debugPrint(FFTConfiguration::currentSamplingRate); }
+                } else {  // command issued via USB
+                    iuUSB.port->print("FFT: Sampling Rate: ");
+                    iuUSB.port->println(FFTConfiguration::currentSamplingRate);
+                    if (loopDebugMode) { debugPrint("FFT: Sampling Rate sent over USB"); }
+                }
+            } else if (strncmp(buff, "FFT-CFG-BS", 10) == 0) {
+                if(m_streamingMode == StreamingMode::BLE || m_streamingMode == StreamingMode::WIFI_AND_BLE) {
+                    char blockSizeString[8];
+                    itoa(FFTConfiguration::currentBlockSize, blockSizeString, 10);
+                    iuBluetooth.write(blockSizeString);
+                    iuBluetooth.write(";");
+                    if (loopDebugMode) { debugPrint("FFT: Block Size sent over BLE: ", false); debugPrint(FFTConfiguration::currentBlockSize); }
+                } else {  // command issued via USB 
+                    iuUSB.port->print("FFT: Block Size: ");
+                    iuUSB.port->println(FFTConfiguration::currentBlockSize);
+                    if (loopDebugMode) { debugPrint("FFT: Block size sent over USB"); }
+                }
+            }
+            break;
+        }    
         case 'G': // set feature group
             if (strncmp(buff, "GROUP-", 6) == 0) {
                 FeatureGroup *group = FeatureGroup::getInstanceByName(&buff[6]);
