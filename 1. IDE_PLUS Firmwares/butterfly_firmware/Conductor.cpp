@@ -3,6 +3,7 @@
 #include "rBase64.h"
 #include "FFTConfiguration.h"
 
+
 const char* fingerprintData;
 const char* fingerprints_X;
 const char* fingerprints_Y;
@@ -672,14 +673,44 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // Message is always saved to file, after which STM resets
     subConfig = root["fft"];
     if (subConfig.success()) {
-        if(loopDebugMode) debugPrint("Identified FFT configuration");
-        if(saveToFlash) { // TODO: Check if the config is new, then save to file and reset
-            iuFlash.saveConfigJson(IUFlash::CFG_FFT, subConfig);
-            if(loopDebugMode) debugPrint("Saved FFT configuration to file");
-            delay(100);
-            STM32.reset();
-        } // TODO: Handle incorrect json message here
-    }
+        // Validate if the received parameters are correct
+        if(loopDebugMode) {
+            debugPrint("FFT configuration received: ", false);
+            subConfig.printTo(Serial); debugPrint("");
+        }
+        char validationResultString[300];
+        bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_FFT, subConfig, validationResultString, getDatetime());
+        debugPrint("FFT configuration validation result: ", false); debugPrint(validationResultString);
+
+        if(validConfiguration) {
+            if(loopDebugMode) debugPrint("Received valid FFT configuration");
+        
+            // Save the valid configuration to file 
+            if(saveToFlash) { 
+                // TODO: Check if the config is new, then save to file and reset
+                iuFlash.saveConfigJson(IUFlash::CFG_FFT, subConfig);
+                if(loopDebugMode) debugPrint("Saved FFT configuration to file");
+                
+                // Acknowledge that configuration has been saved successfully on /ide_plus/command_response/ topic
+                // If streaming mode is BLE, send an acknowledgement on BLE as well
+                // NOTE: MSPCommand FFT_CONFIG_ACK added to Arduino/libraries/IUSerial/src/MSPCommands.h
+                iuWiFi.sendMSPCommand(MSPCommand::FFT_CONFIG_ACK, validationResultString);
+                if(StreamingMode::BLE && isBLEConnected()) { iuBluetooth.write("FFT_CFG_SUCCESS;"); delay(100); }
+
+                // Restart STM, setFFTParams will configure FFT parameters in setup()
+                delay(3000);  // wait for MQTT message to be published
+                STM32.reset();
+            }
+        } else {
+            if(loopDebugMode) debugPrint("Received invalid FFT configuration");
+
+            // Acknowledge incorrect configuration, send the errors on /ide_plus/command_response topic
+            // If streaming mode is BLE, send an acknowledgement on BLE as well
+            iuWiFi.sendMSPCommand(MSPCommand::FFT_CONFIG_ACK, validationResultString);
+            if(StreamingMode::BLE && isBLEConnected()) { iuBluetooth.write("FFT_CFG_FAILURE;"); delay(100); }
+        }
+    } // If json is incorrect, it will result in parsing error in jsonBuffer.parseObject(json) which will cause the processConfiguration call to return
+ 
     return true;
 }
 
@@ -2679,9 +2710,8 @@ bool Conductor::setFFTParams() {
 
         // Change the sensor sampling rate 
         // timerISRPeriod = (samplingRate == 1660) ? 600 : 300;  // 1.6KHz->600, 3.3KHz->300
+        // timerISRPeriod = int(1000000 / FFTConfiguration::currentSamplingRate); // +1 to ensure that sensor has captured data before mcu ISR gets it, for edge case
         iuAccelerometer.setSamplingRate(FFTConfiguration::currentSamplingRate); // will set the ODR for the sensor
-        timerISRPeriod = int(1000000 / FFTConfiguration::currentSamplingRate); // +1 to ensure that sensor has captured data before mcu ISR gets it, for edge case
-
         if(setupDebugMode) {
             config.prettyPrintTo(Serial);
         }

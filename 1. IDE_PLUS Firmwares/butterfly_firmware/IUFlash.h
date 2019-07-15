@@ -43,7 +43,7 @@ class IUFlash
         /***** JSON Config load / save functions *****/
         virtual bool saveConfigJson(storedConfig configType,
                                     JsonVariant &config) = 0;
-        virtual JsonObject& validateConfig(storedConfig configType, JsonObject &config) = 0;
+        virtual bool validateConfig(storedConfig configType, JsonObject &config, char *validationResultString, double timestamp) = 0;
 
 
     protected:
@@ -87,7 +87,7 @@ class IUFSFlash : public IUFlash
         JsonObject& loadConfigJson(
             storedConfig configType, StaticJsonBuffer<capacity> &jsonBuffer);
         bool saveConfigJson(storedConfig configType, JsonVariant &config);
-        JsonObject& validateConfig(storedConfig configType, JsonObject &config);
+        bool validateConfig(storedConfig configType, JsonObject &config, char *validationResultString, double timestamp);
         /***** Utility *****/
         size_t getConfigFilename(storedConfig configType, char *dest,
                                  size_t len);

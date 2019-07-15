@@ -264,18 +264,10 @@ void dataAcquisitionCallback()
  */
 void dataAcquisitionISR()
 {
-    // uint32_t startT = 0;
-    // static int isrCnt;
-    
-    // isrCnt++;
-    // digitalWrite(6,HIGH);
-    // if(isrCnt >= 1){      // 150 us X 7
-      
-     conductor.acquireData(true);
-    //   isrCnt = 0; 
-    //   digitalWrite(6,LOW);
-    // }
 
+    // digitalWrite(A3,HIGH);
+    conductor.acquireData(true);
+    //   digitalWrite(A3,LOW);
 }
 
 
@@ -396,8 +388,8 @@ void setup()
 {   
   
   pinMode(ESP8285_IO0,OUTPUT);
-  pinMode(6,OUTPUT);
-//   pinMode(A3,OUTPUT);
+//   pinMode(6,OUTPUT); 
+//   pinMode(A3,OUTPUT);  // ISR (ODR checked from pin 50)
   digitalWrite(ESP8285_IO0,HIGH);
   DOSFS.begin();
   #if 1
@@ -553,7 +545,6 @@ void setup()
         }
         uint16_t callbackRate = iuI2S.getCallbackRate();
         for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
-            debugPrint("Sensor pointer: ", false); debugPrint(int(Sensor::instances[i]));
             Sensor::instances[i]->setupHardware();
             if (Sensor::instances[i]->isHighFrequency()) {
                 Sensor::instances[i]->setCallbackRate(callbackRate);
@@ -610,7 +601,7 @@ void setup()
         /* code uncommented */
         pinMode(IULSM6DSM::INT1_PIN, INPUT);
         attachInterrupt(IULSM6DSM::INT1_PIN, dataAcquisitionISR, RISING);
-        debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
+        // debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
 
         //Resume previous operational state of device
         conductor.setThresholdsFromFile();

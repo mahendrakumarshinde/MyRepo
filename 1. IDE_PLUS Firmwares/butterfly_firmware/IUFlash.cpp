@@ -1,5 +1,5 @@
 #include "IUFlash.h"
-
+#include "FFTConfiguration.h"
 
 /* =============================================================================
     IUFSFlash - Flash with file system
@@ -124,59 +124,69 @@ bool IUFSFlash::saveConfigJson(storedConfig configType, JsonVariant &config)
     return true;
 }
 
-JsonObject& IUFSFlash::validateConfig(storedConfig configType, JsonObject &config) 
+bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char* validationResultString, double timestamp)
 {
     // Perform validation checks on the config json
     // Return the errors in a json object
     bool validConfig = true;
-    char errorMessage[30] = "";
-    // StaticJsonBuffer<250> errorMessagesBuffer;
-    // StaticJsonBuffer<300> returnJsonBuffer;
-    // JsonArray& errorMessages = errorMessagesBuffer.createArray();
-    // JsonObject& returnJson = returnJsonBuffer.createObject();
+    StaticJsonBuffer<300> validationResultBuffer;
+    JsonObject& validationResult = validationResultBuffer.createObject();
+    JsonArray& errorMessages = validationResult.createNestedArray("errorMessages");
 
-    // switch(configType) {
-    //     case CFG_FFT: {
-    //         //Validation for samplingRate field
-    //         if(config.containsKey("samplingRate")) {
-    //             uint16_t samplingRate = config["samplingRate"];
-    //             // Validation for samplingRate
-    //             if (!(samplingRate == 416) && 
-    //                 !(samplingRate == 833) &&
-    //                 !(samplingRate == 1660) && 
-    //                 !(samplingRate == 3330) ) {
-    //                     validConfig = false;
-    //                     sprintf(errorMessage, "Invalid samplingRate: %d", samplingRate);
-    //                     errorMessages.add(samplingRate);
-    //             }
-    //         } else {
-    //             validConfig = false;
-    //             errorMessages.add(strcat("Key missing: samplingRate")); 
-    //         }
+    switch(configType) {
+        case CFG_FFT: {
+            //Validation for samplingRate field
+            if(config.containsKey("samplingRate")) {
+                uint16_t samplingRate = config["samplingRate"];
+                // Validation for samplingRate
+                bool validSamplingRate = true;
+                for(int i=0; i<FFTConfiguration::samplingRateConfigurations - 1; ++i) {
+                    if( samplingRate < FFTConfiguration::samplingRates[0] || 
+                        samplingRate > FFTConfiguration::samplingRates[FFTConfiguration::samplingRateConfigurations - 1] || 
+                        (FFTConfiguration::samplingRates[i] < samplingRate &&
+                         samplingRate < FFTConfiguration::samplingRates[i+1]) ) {
+                           validSamplingRate = false;
+                       }
+                }
+                if (!validSamplingRate) {
+                        validConfig = false;
+                        errorMessages.add("Invalid samplingRate");
+                }
+            } else {
+                validConfig = false;
+                errorMessages.add("Key missing: samplingRate"); 
+            }
          
-    //         // Validation for blockSize field
-    //         if(config.containsKey("blockSize")) {
-    //             uint16_t blockSize = config["blockSize"];
-    //             // Validation for samplingRate
-    //             if (!(blockSize == 416) && 
-    //                 !(blockSize == 833) &&
-    //                 !(blockSize == 1660) && 
-    //                 !(blockSize == 3330) ) {
-    //                     validConfig = false;
-    //                     sprintf(errorMessage, "Invalid blockSize: %d", blockSize);
-    //                     errorMessages.add(errorMessage);
-    //             }
-    //         } else {
-    //             validConfig = false;
-    //             errorMessages.add("Key missing: blockSize"); 
-    //         }
-    //         break;
-    //     }
-    // }
-    // // Construct the returnJson
-    // returnJson["validConfig"] = validConfig;
-    // returnJson["errorMessages"] = errorMessages;
-    // return returnJson;
+            // Validation for blockSize field
+            if(config.containsKey("blockSize")) {
+                uint16_t blockSize = config["blockSize"];
+                // Validation for samplingRate
+                bool validBlockSize = true;
+                for(int i=0; i<FFTConfiguration::blockSizeConfigurations; i++) {
+                    if( blockSize < FFTConfiguration::blockSizes[0] ||
+                        blockSize > FFTConfiguration::blockSizes[FFTConfiguration::blockSizeConfigurations - 1] ||
+                        (FFTConfiguration::blockSizes[i] < blockSize &&
+                        blockSize < FFTConfiguration::blockSizes[i+1]) ) {
+                            validBlockSize = false;
+                            break;
+                        }
+                }
+                if (!validBlockSize) {
+                        validConfig = false;
+                        errorMessages.add("Invalid blockSize");
+                }
+            } else {
+                validConfig = false;
+                errorMessages.add("Key missing: blockSize"); 
+            }
+            break;
+        }
+    }
+    // Construct the validationResult
+    validationResult["validConfig"] = validConfig;
+    validationResult["timestamp"] = timestamp;
+    validationResult.printTo(validationResultString, 300);
+    return validConfig;
 }
 
 /***** Utility *****/

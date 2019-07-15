@@ -97,6 +97,11 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
     resp[1] = 0;
     char message[256];
     switch(cmd) {
+        case MSPCommand::FFT_CONFIG_ACK:
+            // Send the fft configuration update acknowledgement to command response topic
+            mqttHelper.publish(COMMAND_RESPONSE_TOPIC,buffer);
+            break;
+
         /***** MAC addresses *****/
         case MSPCommand::RECEIVE_BLE_MAC:
             setBleMAC(iuSerial->mspReadMacAddress());
@@ -373,6 +378,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
           
           
           break;
+       
        
     }
 }
