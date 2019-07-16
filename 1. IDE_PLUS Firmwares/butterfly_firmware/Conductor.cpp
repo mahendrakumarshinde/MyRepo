@@ -1046,6 +1046,7 @@ void Conductor::processCommand(char *buff)
                 if(m_streamingMode == StreamingMode::BLE || m_streamingMode ==  StreamingMode::WIFI_AND_BLE) {
                     char samplingRateString[8];
                     itoa(FFTConfiguration::currentSamplingRate, samplingRateString, 10);
+                    iuBluetooth.write("SR:");
                     iuBluetooth.write(samplingRateString);
                     iuBluetooth.write(";");
                     if (loopDebugMode) { debugPrint("FFT: Sampling Rate sent over BLE: ", false); debugPrint(FFTConfiguration::currentSamplingRate); }
@@ -1058,6 +1059,7 @@ void Conductor::processCommand(char *buff)
                 if(m_streamingMode == StreamingMode::BLE || m_streamingMode == StreamingMode::WIFI_AND_BLE) {
                     char blockSizeString[8];
                     itoa(FFTConfiguration::currentBlockSize, blockSizeString, 10);
+                    iuBluetooth.write("BS:");
                     iuBluetooth.write(blockSizeString);
                     iuBluetooth.write(";");
                     if (loopDebugMode) { debugPrint("FFT: Block Size sent over BLE: ", false); debugPrint(FFTConfiguration::currentBlockSize); }
