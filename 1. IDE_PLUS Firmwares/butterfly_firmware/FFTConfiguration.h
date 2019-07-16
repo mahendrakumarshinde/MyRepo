@@ -6,6 +6,11 @@
     The file tracks all the available configurations for FFT computation: 
     - samplingRate as dictated by the sensor sampling frequency
     - blockSize as dictated by available memory    
+
+    NOTE: Update the new samplingRates and blockSizes in the following variables: 
+    samplingRateConfigurations, blockSizeConfigurations,
+    samplingRates[samplingRateConfigurations], blockSizes[blockSizeConfigurations]
+    These values are being used for validation in IUFlash::validateConfig() { case:CFG_FFT }
  */
 
 #ifndef FFT_CONFIGURATION_H

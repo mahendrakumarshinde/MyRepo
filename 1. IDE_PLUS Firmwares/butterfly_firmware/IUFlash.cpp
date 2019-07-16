@@ -135,6 +135,13 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
 
     switch(configType) {
         case CFG_FFT: {
+            // Indicate the type of validation
+            validationResult["config"] = "FFT Configuration";
+
+            // If the received config matches the current config, report an error
+            bool sameBlockSize = false;
+            bool sameSamplingRate = false;
+
             //Validation for samplingRate field
             if(config.containsKey("samplingRate")) {
                 uint16_t samplingRate = config["samplingRate"];
@@ -151,6 +158,8 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                 if (!validSamplingRate) {
                         validConfig = false;
                         errorMessages.add("Invalid samplingRate");
+                } else if (FFTConfiguration::currentSamplingRate == samplingRate) {
+                    sameSamplingRate = true;
                 }
             } else {
                 validConfig = false;
@@ -174,14 +183,23 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                 if (!validBlockSize) {
                         validConfig = false;
                         errorMessages.add("Invalid blockSize");
+                } else if (FFTConfiguration::currentBlockSize == blockSize) {
+                    sameBlockSize = true;
                 }
             } else {
                 validConfig = false;
                 errorMessages.add("Key missing: blockSize"); 
             }
+
+            // If the received config matches the current config, report an error
+            if(sameBlockSize && sameSamplingRate) {
+                validConfig = false;
+                errorMessages.add("Same configuration received");
+            }
             break;
         }
     }
+
     // Construct the validationResult
     validationResult["validConfig"] = validConfig;
     validationResult["timestamp"] = timestamp;

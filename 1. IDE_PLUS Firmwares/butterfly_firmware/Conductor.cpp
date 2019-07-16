@@ -680,7 +680,12 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
         char validationResultString[300];
         bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_FFT, subConfig, validationResultString, getDatetime());
-        debugPrint("FFT configuration validation result: ", false); debugPrint(validationResultString);
+        if(loopDebugMode) { 
+            debugPrint("Validation: ", false);
+            debugPrint(validationResultString); 
+            debugPrint("FFT configuration validation result: ", false); 
+            debugPrint(validConfiguration);
+        }
 
         if(validConfiguration) {
             if(loopDebugMode) debugPrint("Received valid FFT configuration");
@@ -1017,7 +1022,6 @@ void Conductor::configureAllFeatures(JsonVariant &config)
 void Conductor::processCommand(char *buff)
 {
     IPAddress tempAddress;
-    debugPrint("IN PROCESS COMMAND: ", false); debugPrint(m_streamingMode);
     size_t buffLen = strlen(buff);
    // Serial.println(buff);
     
