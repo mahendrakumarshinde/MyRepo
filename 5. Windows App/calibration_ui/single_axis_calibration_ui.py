@@ -106,12 +106,16 @@ class CalibrationExperiment:
         """
         values = defaultdict(list)
         for i, data_byte in enumerate(data_generator):
-            if i == 0:
-                continue
+            # if i == 0:  # No need to skip first loop, generator only returns valid data
+            #     continue
             data = CalibrationData(data_byte)
+            # print(data_byte) # Check the values recorded in the timeout period
             for field, factor in zip(self.fields,
                                      self.unit_conversion_factors):
                 values[field].append(factor * float(data.get(field)))
+        # import pprint  # Check if the values are properly decoded
+        # pp = pprint.PrettyPrinter()
+        # pp.pprint((values))
         for field, ref_val, tol in zip(self.fields,
                                        self.ref_values,
                                        self.tolerances):
@@ -229,7 +233,7 @@ class SerialDataCollector:
             raise TypeError('termination_byte arg needs to be a single byte')
         if not isinstance(termination_byte, bytes):
             termination_byte = termination_byte.encode()
-        ser = serial.Serial(self.port, self.baud_rate, timeout=timeout)
+        ser = serial.Serial(self.port, self.baud_rate) #, timeout=5) # No timeout needed for reading a byte, blocking call is fine
         ser.write(self.start_collection_command)
         time.sleep(.1)
         start_time = time.time()
@@ -350,7 +354,7 @@ class CalibrationInterface(tk.Frame):
                                     self.end_calibration_confirm)
         return self._data_collecter
 
-    def run_calibration(self, calibration_experiment, timeout=15):
+    def run_calibration(self, calibration_experiment, timeout=20):
         """
         Run a calibration experiment
         """
