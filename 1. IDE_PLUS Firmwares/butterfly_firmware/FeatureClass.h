@@ -359,7 +359,7 @@ class FeatureTemplate : public Feature
         {
             uint8_t sIdx = 0;
             uint16_t i = 0;
-            uint16_t valuesWritten = 0;
+            uint16_t valuesWritten = startIndex;
             // debugPrint("INFO transferring values : " );
             for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++) {
                 sIdx = k % m_sectionCount;
