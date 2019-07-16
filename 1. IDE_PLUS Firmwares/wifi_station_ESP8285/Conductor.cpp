@@ -100,6 +100,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         /***** MAC addresses *****/
         case MSPCommand::RECEIVE_BLE_MAC:
             setBleMAC(iuSerial->mspReadMacAddress());
+            strncpy(httpPayload.macId, m_bleMAC.toString().c_str(), 18); 
             break;
         case MSPCommand::ASK_WIFI_MAC:
             iuSerial->mspSendMacAddress(MSPCommand::RECEIVE_WIFI_MAC,
@@ -110,12 +111,15 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             getDeviceFirmwareVersion(message,buffer,FIRMWARE_VERSION);
             mqttHelper.publishDiagnostic(message);
             strncpy(HOST_FIRMWARE_VERSION, buffer, 8);
+            strncpy(httpPayload.firmwareVersion, HOST_FIRMWARE_VERSION, 8);
             break;
         case MSPCommand::RECEIVE_HOST_SAMPLING_RATE:
-            strncpy(HOST_SAMPLING_RATE, buffer, 7);
+            HOST_SAMPLING_RATE = atoi(buffer);
+            httpPayload.samplingRate = HOST_SAMPLING_RATE;
             break;
         case MSPCommand::RECEIVE_HOST_BLOCK_SIZE:
-            strncpy(HOST_BLOCK_SIZE, buffer, 6);
+            HOST_BLOCK_SIZE = atoi(buffer);
+            httpPayload.blockSize = HOST_BLOCK_SIZE;
             break;
         /***** Logging *****/
         case MSPCommand::SEND_LOG_MSG:
