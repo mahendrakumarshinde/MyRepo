@@ -24,7 +24,7 @@ namespace FFTConfiguration {
     const int DEFAULT_SAMPLING_RATE = 3330;
     const int DEFAULT_BLOCK_SIZE = 4096;
     const int DEFALUT_LOW_CUT_OFF_FREQUENCY = 10;
-    const int DEFAULT_HIGH_CUT_OFF_FREQUENCY = DEFAULT_SAMPLING_RATE / 2;  
+    const int DEFAULT_HIGH_CUT_OFF_FREQUENCY = DEFAULT_SAMPLING_RATE / 2.56;  
     const float DEFAULT_MIN_AGITATION = 0.03;
     
     // Current configurations

@@ -2726,7 +2726,7 @@ bool Conductor::setFFTParams() {
         FFTConfiguration::currentBlockSize = config["blockSize"];
         // TODO: The following can be configurable in the future
         FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY;
-        FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / 2;
+        FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / 2.56;
         FFTConfiguration::currentMinAgitation = FFTConfiguration::DEFAULT_MIN_AGITATION;
 
         // Change the required sectionCount for all FFT processors 

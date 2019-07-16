@@ -369,7 +369,7 @@ FeatureGroup *DEFAULT_FEATURE_GROUP = &motorStandardGroup;
 // Health Check
 FeatureGroup healthCheckGroup("HEALTH", 45000);
 // Calibration
-FeatureGroup calibrationGroup("CAL001", 100);
+FeatureGroup calibrationGroup("CAL001", 512);
 // Raw acceleration data
 FeatureGroup rawAccelGroup("RAWACC", 512);
 // Standard Press Monitoring
