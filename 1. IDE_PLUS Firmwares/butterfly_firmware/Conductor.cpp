@@ -1050,10 +1050,6 @@ void Conductor::processCommand(char *buff)
                     iuBluetooth.write(samplingRateString);
                     iuBluetooth.write(";");
                     if (loopDebugMode) { debugPrint("FFT: Sampling Rate sent over BLE: ", false); debugPrint(FFTConfiguration::currentSamplingRate); }
-                } else {  // command issued via USB
-                    iuUSB.port->print("FFT: Sampling Rate: ");
-                    iuUSB.port->println(FFTConfiguration::currentSamplingRate);
-                    if (loopDebugMode) { debugPrint("FFT: Sampling Rate sent over USB"); }
                 }
             } else if (strncmp(buff, "FFT-CFG-BS", 10) == 0) {
                 if(m_streamingMode == StreamingMode::BLE || m_streamingMode == StreamingMode::WIFI_AND_BLE) {
@@ -1063,10 +1059,6 @@ void Conductor::processCommand(char *buff)
                     iuBluetooth.write(blockSizeString);
                     iuBluetooth.write(";");
                     if (loopDebugMode) { debugPrint("FFT: Block Size sent over BLE: ", false); debugPrint(FFTConfiguration::currentBlockSize); }
-                } else {  // command issued via USB 
-                    iuUSB.port->print("FFT: Block Size: ");
-                    iuUSB.port->println(FFTConfiguration::currentBlockSize);
-                    if (loopDebugMode) { debugPrint("FFT: Block size sent over USB"); }
                 }
             }
             break;
@@ -1465,6 +1457,12 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                   }
                   
                 }  
+                if (strcmp(buff, "IUGET_FFT_CONFIG") == 0) {
+                    iuUSB.port->print("FFT: Sampling Rate: ");
+                    iuUSB.port->println(FFTConfiguration::currentSamplingRate);
+                    iuUSB.port->print("FFT: Block Size: ");
+                    iuUSB.port->println(FFTConfiguration::currentBlockSize);
+                }
                 break;
             case UsageMode::CUSTOM:
                 if (strcmp(buff, "IUEND_DATA") == 0) {
