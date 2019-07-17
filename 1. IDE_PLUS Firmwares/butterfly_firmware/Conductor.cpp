@@ -1600,6 +1600,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
     if (buff[0] == '{')
     {
         processConfiguration(buff,true);    //save the configuration into the file
+        return;       // this functon should process only one command in one call, all if conditions should be mutually exclusive
     }
     if (iuWiFi.processChipMessage()) {
         if (iuWiFi.isWorking()) {
