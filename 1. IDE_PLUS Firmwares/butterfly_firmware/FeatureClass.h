@@ -360,16 +360,13 @@ class FeatureTemplate : public Feature
             uint8_t sIdx = 0;
             uint16_t i = 0;
             uint16_t valuesWritten = startIndex;
-            // debugPrint("INFO transferring values : " );
             for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++) {
                 sIdx = k % m_sectionCount;
                 for (i = sIdx * m_sectionSize;
                         i < (sIdx + 1) * m_sectionSize; ++i) {
                     destination[valuesWritten] = (q15_t)m_values[i];
-                    // debugPrint(destination[valuesWritten] ,false);debugPrint(" ",false);
                     ++valuesWritten;
                 }
-                // debugPrint(" ");
             }
             return valuesWritten;
         }

@@ -395,7 +395,7 @@ void Feature::stream(IUSerial *ser, uint8_t sectionCount)
  * [recordIndex - sectionCount; recordIndex - 1].
  * @param destination The destination buffer.
  * @param startIndex The index of the destination to start from buffer.
- * @param sectionCount The number of sectiong to write into destination.
+ * @param sectionCount The number of sections to write into destination.
  * @return the number of chars written.
  */
 uint16_t Feature::sendToBuffer(char *destination, uint16_t startIndex,
@@ -435,7 +435,6 @@ uint16_t Feature::sendToBuffer(q15_t *destination, uint16_t startIndex,
     {
         m_locked[i % m_sectionCount] = false;
     }
-    debugPrint("INFO returning charCount from sendToBuffer q15_t : ", false);debugPrint(charCount);
     return charCount;
 }
 

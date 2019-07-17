@@ -107,7 +107,6 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                                         m_wifiMAC);
             break;
         case MSPCommand::RECEIVE_HOST_FIRMWARE_VERSION: 
-            //iuSerial->print(buffer);
             getDeviceFirmwareVersion(message,buffer,FIRMWARE_VERSION);
             mqttHelper.publishDiagnostic(message);
             strncpy(HOST_FIRMWARE_VERSION, buffer, 8);
@@ -162,7 +161,11 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             break;
 
         /***** Data publication *****/
-        case MSPCommand::PUBLISH_RAW_DATA:
+        // Implemented in Host Firmware v1.1.3
+        case MSPCommand::PUBLISH_DEVICE_DETAILS_MQTT:
+            mqttHelper.publish(COMMAND_RESPONSE_TOPIC, buffer);
+            break;
+        case MSPCommand::PUBLISH_RAW_DATA:      //not used in Host Firmware v1.1.2
            
             if (accelRawDataHelper.inputHasTimedOut()) {
                 accelRawDataHelper.resetPayload();

@@ -1027,6 +1027,25 @@ void Conductor::processCommand(char *buff)
                 }
             }
             break;
+        case 'P': 
+        {
+            if (strcmp(buff, "PUBLISH_DEVICE_DETAILS_MQTT") == 0) {
+                char deviceDetailsString[110];
+                StaticJsonBuffer<110> deviceDetailsBuffer;
+                JsonObject& deviceDetails = deviceDetailsBuffer.createObject();
+                deviceDetails["mac_id"] = m_macAddress.toString().c_str();
+                deviceDetails["fft_blockSize"] = 4096; // TODO: FFTConfiguration::currentBlockSize;
+                deviceDetails["fft_samplingRate"] = 3330; // TODO: FFTConfiguration::currentSamplingRate;
+                deviceDetails["firmware_version"] = FIRMWARE_VERSION;
+                deviceDetails.printTo(deviceDetailsString);
+                debugPrint("INFO deviceDetailsString : ", false);
+                debugPrint(deviceDetailsString);
+                debugPrint("size of device details string : ",false);
+                debugPrint(strlen(deviceDetailsString));
+                iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_DEVICE_DETAILS_MQTT, deviceDetailsString);
+            }
+            break;
+        }
         case 'S':
             if (strncmp(buff, "SET-MQTT-IP-", 12) == 0) {
                 if (tempAddress.fromString(&buff[12])) {
@@ -1573,7 +1592,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             break;
         case MSPCommand::ASK_HOST_SAMPLING_RATE:        
             if(loopDebugMode){ debugPrint(F("ASK_HOST_SAMPLING_RATE")); }
-            iuWiFi.sendHostSamplingRate(3300);      //TODO : hardcoded SR for now,use variable after merging 
+            iuWiFi.sendHostSamplingRate(3330);      //TODO : hardcoded SR for now,use variable after merging 
             break;
         case MSPCommand::ASK_HOST_BLOCK_SIZE:
             if(loopDebugMode){ debugPrint(F("ASK_HOST_BLOCK_SIZE")); }
@@ -2512,7 +2531,7 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
             debugPrint("RawAcel Z: ",false);debugPrint(rawAccelerationZ);
             snprintf(rawAcceleration,maxLen,"{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\":\"{\\\"deviceId\\\":\\\"%s\\\",\\\"firmwareVersion\\\":\\\"%s\\\",\\\"samplingRate\\\":%d,\\\"blockSize\\\":%d,\\\"X\\\":\\\"%s\\\",\\\"Y\\\":\\\"%s\\\",\\\"Z\\\":\\\"%s\\\"}\"}",m_macAddress.toString().c_str(),1,0,m_macAddress.toString().c_str(),FIRMWARE_VERSION,IULSM6DSM::defaultSamplingRate,512,rawAccelerationX,rawAccelerationY,rawAccelerationZ);
             
-            
+            //iuWifi in this case is UART pointing to ethernet controller
             iuWiFi.write(rawAcceleration);           // send the rawAcceleration over UART 
             iuWiFi.write("\n");            
             if(loopDebugMode){
