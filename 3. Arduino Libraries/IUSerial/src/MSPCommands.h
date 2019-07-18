@@ -18,7 +18,12 @@ namespace MSPCommand
         // MAC addresses
         RECEIVE_BLE_MAC,  // Send BLE MAC Address
         ASK_WIFI_MAC,  // Ask WiFi MAC Address
-        // Wifi Config
+	/* ****** Firmware Version and FFT configuration commands: Host to Wifi ******/
+	RECEIVE_HOST_FIRMWARE_VERSION,
+        RECEIVE_HOST_SAMPLING_RATE,
+        RECEIVE_HOST_BLOCK_SIZE,
+        PUBLISH_DEVICE_DETAILS_MQTT,
+	// Wifi Config
         WIFI_RECEIVE_SSID,  // Send WiFi SSID
         WIFI_RECEIVE_PASSWORD,  // Send WiFi Password
         WIFI_FORGET_CREDENTIALS,  // Forget saved WiFi credentials
@@ -31,6 +36,7 @@ namespace MSPCommand
         WIFI_CONNECT,  // Connect WiFi using saved credentials
         WIFI_DISCONNECT,  // Disconnect WiFi and turn off WiFi STA mode
         // Data publication
+	SEND_RAW_DATA,	   //send raw data command	
         PUBLISH_RAW_DATA,  // Publish raw data
         PUBLISH_FEATURE,  // Publish features
         PUBLISH_FEATURE_WITH_CONFIRMATION,  // Publish features and confirm
@@ -46,16 +52,30 @@ namespace MSPCommand
         SET_RAW_DATA_ENDPOINT_HOST,
         SET_RAW_DATA_ENDPOINT_ROUTE,
         SET_RAW_DATA_ENDPOINT_PORT,
+	//SET_HTTP_CLIENT_FLAG,	
         SET_MQTT_SERVER_IP,
         SET_MQTT_SERVER_PORT,
         SET_MQTT_USERNAME,
         SET_MQTT_PASSWORD,
-
+	// Diagnostic Fingerprint commands (Host - Wifi )
+	RECEIVE_DIAGNOSTIC_ACK,
+	SEND_DIAGNOSTIC_RESULTS,
+	// Http Acknowledge commands
+	RECEIVE_HTTP_CONFIG_ACK,
+	GET_PENDING_HTTP_CONFIG,
+	SET_PENDING_HTTP_CONFIG,
+	SEND_ACCOUNTID,	
 
         /***** WiFi to Host commands *****/
         // MAC addresses
         ASK_BLE_MAC,  // Ask BLE MAC Address
         RECEIVE_WIFI_MAC,  // Send WiFi MAC Address
+	
+	/******* wifi to Host Commands ******/
+	ASK_HOST_FIRMWARE_VERSION,
+        ASK_HOST_SAMPLING_RATE,                         // in Hz
+        ASK_HOST_BLOCK_SIZE,
+
         // Wifi Config
         WIFI_CONFIRM_NEW_CREDENTIALS,  // Config msg reception confirmation
         WIFI_CONFIRM_NEW_STATIC_CONFIG,  // Config msg reception confirmation
@@ -69,6 +89,7 @@ namespace MSPCommand
         WIFI_ALERT_AWAKE,  // Notify WiFi is waking up
         // Data publication
         WIFI_CONFIRM_PUBLICATION,  // Confirm publication of data
+	RECEIVE_RAW_DATA_ACK,	
         // Cloud command reception and transmission
         SET_DATETIME,
         CONFIG_FORWARD_CONFIG,  // Forward a config string received by WiFi
@@ -79,6 +100,11 @@ namespace MSPCommand
         // Settable parameters (addresses, credentials, etc)
         GET_RAW_DATA_ENDPOINT_INFO,
         GET_MQTT_CONNECTION_INFO,
+	
+	// Diagnostic Fingerprint commads (Wifi - Host )
+	SEND_DIAGNOSTIC_ACK,
+	RECEIVE_DIAGNOSTIC_RESULTS,
+	GET_ACCOUNTID,	
     };
 }
 
