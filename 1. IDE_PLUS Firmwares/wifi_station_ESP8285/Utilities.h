@@ -12,6 +12,10 @@
 /* =============================================================================
     HTTP functions
 ============================================================================= */
+namespace HttpContentType {
+    static char* applicationJSON = "json\r\n";
+    static char* octetStream = "octet-stream\r\n";
+}
 
 /**
  * Sends an HTTP GET request - HTTPS is used if fingerprint is given.
@@ -175,6 +179,7 @@ inline int httpPostJsonRequest(const char *url, char *payload,
 inline int httpPostBigJsonRequest(
     const char *endpointHost, const char *endpointURL,
     uint16_t endpointPort, uint8_t *payload, uint16_t payloadLength,
+    char* contentType,
     size_t chunkSize=WIFICLIENT_MAX_PACKET_SIZE,
     uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT + 3000)
 {
@@ -191,7 +196,7 @@ inline int httpPostBigJsonRequest(
     String request = "POST " + String(endpointURL) + " HTTP/1.1\r\n" +
         "Host: " + String(endpointHost) + "\r\n" +
         "Accept: application/json" + "\r\n" +
-        "Content-Type: application/json\r\n" +
+        "Content-Type: application/" + contentType +
         "Content-Length: " + String(payloadLength) + "\r\n\r\n";
     // Use WiFiClient class to create TCP connections
     WiFiClient client;

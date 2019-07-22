@@ -304,7 +304,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             
             int b = httpPostBigJsonRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_endpointRoute,
                                             accelRawDataHelper.m_endpointPort, (uint8_t*) &httpPayload, 
-                                            sizeof httpPayload);            
+                                            sizeof httpPayload, HttpContentType::octetStream);            
 
             snprintf(ack_config, 100, "{\"mac\":\"%s\",\"httpCode\":\"%d\",\"axis\":\"%c\",\"timestamp\":%.2f}",m_bleMAC.toString().c_str(),b, httpPayload.axis, httpPayload.timestamp);
             mqttHelper.publish(COMMAND_RESPONSE_TOPIC, ack_config);
@@ -836,7 +836,7 @@ bool Conductor::publishDiagnostic(const char *rawMsg, const uint16_t msgLength,
                  m_bleMAC.toString().c_str());
         return httpPostBigJsonRequest(
             m_diagnosticPostHost, route, m_diagnosticPostPort,
-            (uint8_t*) message, totalMsgLength);
+            (uint8_t*) message, totalMsgLength, HttpContentType::applicationJSON);
     }
 }
 
@@ -876,7 +876,7 @@ bool Conductor::publishFeature(const char *rawMsg, const uint16_t msgLength,
                  m_bleMAC.toString().c_str());
         return httpPostBigJsonRequest(
             m_featurePostHost, route, m_featurePostPort,
-            (uint8_t*) message, totalMsgLength);
+            (uint8_t*) message, totalMsgLength, HttpContentType::applicationJSON);
 
     }
 }
