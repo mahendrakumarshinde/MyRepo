@@ -2476,6 +2476,8 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
     if (accelEnergy == NULL) {
         return;
     }
+    // Streaming raw data through bluetooth for blocksize of 4096 is not possible due to BLE buffer limitations. 
+    //The following function will be deprecated on the app from Firmware v1.1.3, and should not be used.
     if (m_streamingMode == StreamingMode::BLE)
     {
         iuBluetooth.write("REC,");
@@ -2489,20 +2491,20 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
     else if (m_streamingMode == StreamingMode::WIFI ||
              m_streamingMode == StreamingMode::WIFI_AND_BLE ) {
        
-        uint16_t maxLen = 15000;   //3500
-        char txBuffer[maxLen];
-        for (uint16_t i =0; i < maxLen; i++) {
-            txBuffer[i] = 0;
-        }
-        txBuffer[0] = axis[axisIdx];
-        uint16_t idx = 1;
-        idx += accelEnergy->sendToBuffer(txBuffer, idx, 4);   //4
-        txBuffer[idx] = 0; // Terminate string (idx incremented in sendToBuffer)
-        //iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_RAW_DATA, txBuffer);
-        iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 1000000,
-                                  txBuffer, strlen(txBuffer));
+        int idx = 0;                        // Tracks number of elements filled in txBuffer
+        IUMessageFormat::rawDataPacket rawData;
+        for (int i =0; i < IUMessageFormat::maxBlockSize; i++) rawData.txRawValues[i] = 0;
+        
+        rawData.timestamp = getDatetime();
+        rawData.axis = axis[axisIdx];
+        //TODO check if 32 sections are actually ready. If not ready, notify ESP with a different MSP command
+        idx += accelEnergy->sendToBuffer(rawData.txRawValues, idx, 32);   //send 4096 point FFT raw data TODO : make number of ready sections configurable (replace 32 with variable after merge)  
 
-        delay(10);
+        // Although IUMessageFormat::maxBlockSize raw data bytes will be sent to the ESP, it is the server's responsibility to only read raw values upto IUMessageFormat::maxBlockSize.
+        iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 3000000,
+                                  (char*) &rawData, sizeof rawData);               
+        delay(500);
+
      }else if(m_streamingMode == StreamingMode::ETHERNET){      // Ethernet Mode
         uint16_t maxLen = 15000;   //3500
         char txBuffer[maxLen];

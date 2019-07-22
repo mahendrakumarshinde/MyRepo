@@ -5,6 +5,7 @@
 #include <ArduinoJson.h>
 #include <IUSerial.h>
 #include <MacAddress.h>
+#include <IUMessage.h>
 #include "IUMQTTHelper.h"
 #include "IURawDataHelper.h"
 #include "IUTimeHelper.h"
@@ -16,7 +17,7 @@
     Instanciation
 ============================================================================= */
 
-extern char hostSerialBuffer[4096];
+extern char hostSerialBuffer[9000];
 extern IUSerial hostSerial;
 
 extern IURawDataHelper accelRawDataHelper;
@@ -106,6 +107,7 @@ class Conductor
         char HOST_FIRMWARE_VERSION[8];      //filled when the ESP starts or when it connects to MQTT broker
         int HOST_SAMPLING_RATE;
         int HOST_BLOCK_SIZE;
+        IUMessageFormat::rawDataHTTPPayload httpPayload;
         MacAddress m_bleMAC;
         MacAddress m_wifiMAC;
         bool m_useMQTT;

@@ -1,13 +1,14 @@
 #include "Conductor.h"
+#include "Utilities.h"
 
 
 /* =============================================================================
     Instanciation
 ============================================================================= */
 
-char hostSerialBuffer[4096];
+char hostSerialBuffer[9000];
 
-IUSerial hostSerial(&Serial, hostSerialBuffer, 4096, IUSerial::MS_PROTOCOL,
+IUSerial hostSerial(&Serial, hostSerialBuffer, 9000, IUSerial::MS_PROTOCOL,
                     115200, ';', 100);
 
 IURawDataHelper accelRawDataHelper(10000,  // 10s timeout to input all keys
@@ -284,43 +285,31 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
               mqttHelper.publish(FINGERPRINT_DATA_PUBLISH_TOPIC,buffer);
            break; 
         case MSPCommand::SEND_RAW_DATA:
-            
-           /* char ack_config[bufferLength];
-            
-            snprintf(ack_config, strlen(buffer), "{\"raw_data\":\"%s\"}",buffer );
-            
-            iuSerial->sendMSPCommand(MSPCommand::RECEIVE_RAW_DATA_ACK, "SEND RAW DATA COMMAND ACK...");
-            publishDiagnostic(ack_config, bufferLength);
-            mqttHelper.publish(FINGERPRINT_DATA_PUBLISH_TOPIC, ack_config); //buffer[0], &buffer[2]
-           */
           {
-            
-            char ack_config[50];
-            static int statusCount = 0;
-            if(statusCount >2){
-              statusCount = 0;
-            }
-            
+            IUMessageFormat::rawDataPacket* rawData = (IUMessageFormat::rawDataPacket*) buffer;
+            char ack_config[100];
+
             if (accelRawDataHelper.inputHasTimedOut()) {
                 accelRawDataHelper.resetPayload();
             }
-            accelRawDataHelper.addKeyValuePair(buffer[0], &buffer[2],
-                                               strlen(buffer) - 2);
-            iuSerial->sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION, buffer, 1);
-            int b = accelRawDataHelper.publishIfReady(m_bleMAC);
-           
-            // send http post using httpClient
-            //int a = accelRawDataHelper.publishJSON(m_bleMAC,buffer,bufferLength);
-            
-            if(statusCount == 2){
-              snprintf(ack_config, 50, "{\"mac\":\"%s\",\"httpCode\":\"%d\"}",m_bleMAC.toString().c_str(),b );
-              mqttHelper.publish(COMMAND_RESPONSE_TOPIC, ack_config);
-              //iuSerial->sendMSPCommand(MSPCommand::RECEIVE_RAW_DATA_ACK, ack_config);
-              
+
+            // Only X axis timestamp is recorded so that record times can be correlated on server
+            if (rawData->axis == 'X') httpPayload.timestamp = rawData->timestamp;
+            httpPayload.axis = rawData->axis;
+     
+            for(int i = 0; i < HOST_BLOCK_SIZE; ++i) {
+                httpPayload.rawValues[i] = rawData->txRawValues[i];
             }
-            statusCount++;
-          }
+            iuSerial->sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION, &httpPayload.axis, 1);
+            
+            int b = httpPostBigJsonRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_endpointRoute,
+                                            accelRawDataHelper.m_endpointPort, (uint8_t*) &httpPayload, 
+                                            sizeof httpPayload);            
+
+            snprintf(ack_config, 100, "{\"mac\":\"%s\",\"httpCode\":\"%d\",\"axis\":\"%c\",\"timestamp\":%.2f}",m_bleMAC.toString().c_str(),b, httpPayload.axis, httpPayload.timestamp);
+            mqttHelper.publish(COMMAND_RESPONSE_TOPIC, ack_config);
            break;  
+          }
         case MSPCommand::RECEIVE_HTTP_CONFIG_ACK:
           // Send the Ack to Topic
             mqttHelper.publish(COMMAND_RESPONSE_TOPIC,buffer);

@@ -176,7 +176,7 @@ inline int httpPostBigJsonRequest(
     const char *endpointHost, const char *endpointURL,
     uint16_t endpointPort, uint8_t *payload, uint16_t payloadLength,
     size_t chunkSize=WIFICLIENT_MAX_PACKET_SIZE,
-    uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT)
+    uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT + 3000)
 {
     if (WiFi.status() != WL_CONNECTED)
     {
