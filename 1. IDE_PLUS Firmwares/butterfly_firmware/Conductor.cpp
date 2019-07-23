@@ -1642,10 +1642,12 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
     if((buff[0] == '3' && buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
                 buff[13] == '0' && buff[15] == '0' && buff[17] == '0') ){
         processCommand(buff);
+        return;
 
     }else
     {
         processLegacyCommand(buff);
+        return;
     }
     uint8_t idx = 0;
     switch (iuWiFi.getMspCommand()) {
