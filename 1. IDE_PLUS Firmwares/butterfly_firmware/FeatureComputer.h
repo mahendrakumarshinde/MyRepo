@@ -12,7 +12,6 @@
 
 extern float motorScalingFactor ;
 
-extern int sensorSamplingRate;
 //extern char FingerprintMessage[500];
 /* =============================================================================
     Feature Computer Base Class
@@ -48,6 +47,8 @@ class FeatureComputer
         virtual uint8_t getDestinationCount() { return m_destinationCount; }
         virtual Feature* getDestination(uint8_t idx)
             { return m_destinations[idx]; }
+        virtual void updateSectionCount(int sectionCount) {} // to be implemented in FFTComputer, for configuring blockSize
+        virtual void updateFrequencyLimits(int lowCutFrequency, int highCutFrequency) {} // to be implemented in FFTComputer, for configuring the frequency limits
         /***** Computation *****/
         virtual bool compute();
         /***** Debugging *****/
@@ -361,6 +362,18 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         void setMinAgitationRMS(float value) { m_minAgitationRMS = value; }
         void setCalibrationScaling1(float val) { m_calibrationScaling1 = val; }
         void setCalibrationScaling2(float val) { m_calibrationScaling2 = val; }
+        void updateSectionCount(int sectionCount) {
+            m_sectionCount[0] = sectionCount; // update the required sectionCount for A0[X|Y|Z] 
+        }
+        void updateFrequencyLimits(int lowCutFrequency, int highCutFrequency) {
+            // update the frequency limits
+            m_lowCutFrequency = lowCutFrequency;
+            m_highCutFrequency = highCutFrequency;
+        }
+        
+        /***** File Logging *****/
+        int saveFFTCount = 20;
+        bool fileLogging = false;  // toggle logging for FFT data
 
         int FFTComputerID = 30;
         File FFTInput[3], FFTOuput[3];
@@ -369,16 +382,29 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         char fftInputFile[20];
         char fftOutputFile[20];
         int fft_direction;
-        int saveFFTCount = 20;
-        enum buffer { accFFT, velFFT, velRMS, dispFFT, dispRMS };
-        bool fileLogging = false;  // toggle logging for FFT data
+        bool FFTParamsSaved = false;
+        enum buffer { accFFT, velFFT, velRMS, dispFFT, dispRMS };        
+
+        void logFFTParams(File *FFTInput, uint16_t samplingRate, uint16_t blockSize, float fftResolution) {
+            //Save the samplingRate of sensor and the blockSize along with fftResolution
+            if(fileLogging && !FFTParamsSaved) {
+                FFTInput->println("***************************");
+                FFTInput->print("Sampling Rate: "); FFTInput->println(samplingRate);
+                FFTInput->print("Block Size: "); FFTInput->println(blockSize);
+                FFTInput->print("FFT Resolution: "); FFTInput->println(fftResolution, 4);
+                FFTInput->println("***************************");
+                FFTInput->flush();
+                FFTParamsSaved = true;
+            }
+            
+        } 
 
         void logFFTInput(File *FFTInput, q15_t *values, uint16_t sampleCount) {
             if(fileLogging && saveFFTCount > 0) {
                 FFTInput->print("Timestamp -> "); FFTInput->println(millis());
                 for (uint16_t i=0; i< sampleCount; ++i) {
                     FFTInput->print(float(values[i])*9.8/8192.0, 6);
-                    FFTInput->print(" ");
+                    if(i < (sampleCount-1)) FFTInput->print(",");
                 }
                 FFTInput->println("");
                 FFTInput->println("-------------------------------------");
@@ -430,7 +456,7 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
                         FFTOutput->print(fft_buffer[i]);
                     else  // rms_value
                         FFTOutput->print(rms_value[i]);
-                    FFTOutput->print(" ");
+                    if(i < (sampleCount-1))  FFTOutput->print(",");
                 }
                 FFTOutput->println("");
                 if(flushFile) {
@@ -470,15 +496,7 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         }
 
         // 0. Preparation
-        uint16_t samplingRate;
-        if(sensorSamplingRate != 0){
-          samplingRate = sensorSamplingRate;
-          //Serial.print("Sampling Rate :");Serial.println(samplingRate);
-        }else{
-
-          samplingRate = m_sources[0]->getSamplingRate();
-        }
-        
+        uint16_t samplingRate = m_sources[0]->getSamplingRate();
         float resolution = m_sources[0]->getResolution();         // using resolution of 2^15 
         uint16_t sampleCount = m_sources[0]->getSectionSize() * m_sectionCount[0];
         float df = (float) samplingRate / (float) sampleCount;
@@ -492,6 +510,7 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         m_destinations[2]->setResolution(resolution);
         m_destinations[3]->setResolution(resolution);
 
+        logFFTParams(&FFTInput[fft_direction], samplingRate, sampleCount, df);
         logFFTInput(&FFTInput[fft_direction], values, sampleCount);
 
         // 1. Compute FFT and get amplitudes
@@ -763,6 +782,13 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
             }
         }
         --saveFFTCount;
+        if(saveFFTCount == 0) {
+            if(fileLogging && !isFFTOpened[fft_direction]) {
+                FFTInput[fft_direction].close();
+                FFTOuput[fft_direction].close();
+                debugPrint("FFT: closed files: ", false); debugPrint(fftInputFile, false); debugPrint(" ", false); debugPrint(fftOutputFile);
+            }
+        }
     }
 };
 

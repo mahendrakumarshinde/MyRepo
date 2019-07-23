@@ -1,13 +1,14 @@
 #include<string.h>
 #include "Conductor.h"
 #include "rBase64.h"
+#include "FFTConfiguration.h"
+
 
 const char* fingerprintData;
 const char* fingerprints_X;
 const char* fingerprints_Y;
 const char* fingerprints_Z;
 
-int sensorSamplingRate;
 int m_temperatureOffset;
 int m_audioOffset;
         
@@ -667,10 +668,54 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }    
         heartbeatFlag = false;
         }
-        
-        
     }
-    
+    // FFT configuration
+    // Message is always saved to file, after which STM resets
+    subConfig = root["fft"];
+    if (subConfig.success()) {
+        // Validate if the received parameters are correct
+        if(loopDebugMode) {
+            debugPrint("FFT configuration received: ", false);
+            subConfig.printTo(Serial); debugPrint("");
+        }
+        char validationResultString[300];
+        bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_FFT, subConfig, validationResultString, getDatetime());
+        if(loopDebugMode) { 
+            debugPrint("Validation: ", false);
+            debugPrint(validationResultString); 
+            debugPrint("FFT configuration validation result: ", false); 
+            debugPrint(validConfiguration);
+        }
+
+        if(validConfiguration) {
+            if(loopDebugMode) debugPrint("Received valid FFT configuration");
+        
+            // Save the valid configuration to file 
+            if(saveToFlash) { 
+                // TODO: Check if the config is new, then save to file and reset
+                iuFlash.saveConfigJson(IUFlash::CFG_FFT, subConfig);
+                if(loopDebugMode) debugPrint("Saved FFT configuration to file");
+                
+                // Acknowledge that configuration has been saved successfully on /ide_plus/command_response/ topic
+                // If streaming mode is BLE, send an acknowledgement on BLE as well
+                // NOTE: MSPCommand FFT_CONFIG_ACK added to Arduino/libraries/IUSerial/src/MSPCommands.h
+                iuWiFi.sendMSPCommand(MSPCommand::FFT_CONFIG_ACK, validationResultString);
+                if(StreamingMode::BLE && isBLEConnected()) { iuBluetooth.write("FFT_CFG_SUCCESS;"); delay(100); }
+
+                // Restart STM, setFFTParams will configure FFT parameters in setup()
+                delay(3000);  // wait for MQTT message to be published
+                STM32.reset();
+            }
+        } else {
+            if(loopDebugMode) debugPrint("Received invalid FFT configuration");
+
+            // Acknowledge incorrect configuration, send the errors on /ide_plus/command_response topic
+            // If streaming mode is BLE, send an acknowledgement on BLE as well
+            iuWiFi.sendMSPCommand(MSPCommand::FFT_CONFIG_ACK, validationResultString);
+            if(m_streamingMode == StreamingMode::BLE && isBLEConnected()) { iuBluetooth.write("FFT_CFG_FAILURE;"); delay(100); }
+        }
+    } // If json is incorrect, it will result in parsing error in jsonBuffer.parseObject(json) which will cause the processConfiguration call to return
+ 
     return true;
 }
 
@@ -977,7 +1022,6 @@ void Conductor::configureAllFeatures(JsonVariant &config)
 void Conductor::processCommand(char *buff)
 {
     IPAddress tempAddress;
-    
     size_t buffLen = strlen(buff);
    // Serial.println(buff);
     
@@ -995,6 +1039,30 @@ void Conductor::processCommand(char *buff)
                 ledManager.resetStatus();
             }
             break;
+        case 'F': {
+            // fetch FFT configuration
+            if (strncmp(buff, "FFT-CFG-SR", 10) == 0) {
+                // TODO: cannot be tested properly with Rigado, as streaming mode won't update properly unless BLE heart-beat is received
+                if(m_streamingMode == StreamingMode::BLE || m_streamingMode ==  StreamingMode::WIFI_AND_BLE) {
+                    char samplingRateString[8];
+                    itoa(FFTConfiguration::currentSamplingRate, samplingRateString, 10);
+                    iuBluetooth.write("SR:");
+                    iuBluetooth.write(samplingRateString);
+                    iuBluetooth.write(";");
+                    if (loopDebugMode) { debugPrint("FFT: Sampling Rate sent over BLE: ", false); debugPrint(FFTConfiguration::currentSamplingRate); }
+                }
+            } else if (strncmp(buff, "FFT-CFG-BS", 10) == 0) {
+                if(m_streamingMode == StreamingMode::BLE || m_streamingMode == StreamingMode::WIFI_AND_BLE) {
+                    char blockSizeString[8];
+                    itoa(FFTConfiguration::currentBlockSize, blockSizeString, 10);
+                    iuBluetooth.write("BS:");
+                    iuBluetooth.write(blockSizeString);
+                    iuBluetooth.write(";");
+                    if (loopDebugMode) { debugPrint("FFT: Block Size sent over BLE: ", false); debugPrint(FFTConfiguration::currentBlockSize); }
+                }
+            }
+            break;
+        }    
         case 'G': // set feature group
             if (strncmp(buff, "GROUP-", 6) == 0) {
                 FeatureGroup *group = FeatureGroup::getInstanceByName(&buff[6]);
@@ -1408,6 +1476,12 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                   }
                   
                 }  
+                if (strcmp(buff, "IUGET_FFT_CONFIG") == 0) {
+                    iuUSB.port->print("FFT: Sampling Rate: ");
+                    iuUSB.port->println(FFTConfiguration::currentSamplingRate);
+                    iuUSB.port->print("FFT: Block Size: ");
+                    iuUSB.port->println(FFTConfiguration::currentBlockSize);
+                }
                 break;
             case UsageMode::CUSTOM:
                 if (strcmp(buff, "IUEND_DATA") == 0) {
@@ -1545,6 +1619,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
     if (buff[0] == '{')
     {
         processConfiguration(buff,true);    //save the configuration into the file
+        return;       // this functon should process only one command in one call, all if conditions should be mutually exclusive
     }
     if (iuWiFi.processChipMessage()) {
         if (iuWiFi.isWorking()) {
@@ -2158,9 +2233,6 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             configureGroupsForCalibration();
             ledManager.overrideColor(RGB_CYAN);
             msg = "calibration";
-            timerISRPeriod = 600;  // 1.6KHz
-            sensorSamplingRate = 1660;
-            //Serial.println("STEP - 2");
             break;
         case UsageMode::EXPERIMENT:
             ledManager.overrideColor(RGB_PURPLE);
@@ -2172,7 +2244,6 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             configureGroupsForOperation();
             iuAccelerometer.resetScale();
             msg = "operation";
-            timerISRPeriod = 300;
             break;
         case UsageMode::CUSTOM:
             ledManager.overrideColor(RGB_CYAN);
@@ -2545,7 +2616,6 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
             memset(rawAccelerationY,0,sizeof(rawAccelerationY));
             memset(rawAccelerationZ,0,sizeof(rawAccelerationZ));
         }
-
      }
 }
 
@@ -2681,6 +2751,40 @@ void Conductor::sendDiagnosticFingerPrints() {
     }   
 }
 
+bool Conductor::setFFTParams() {
+    bool configured = false;
+    JsonObject& config = configureJsonFromFlash("/iuconfig/fft.conf", false);
+    if(config.success()) {
+        FFTConfiguration::currentSamplingRate = config["samplingRate"];
+        FFTConfiguration::currentBlockSize = config["blockSize"];
+        // TODO: The following can be configurable in the future
+        FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY;
+        FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / 2.56;
+        FFTConfiguration::currentMinAgitation = FFTConfiguration::DEFAULT_MIN_AGITATION;
+
+        // Change the required sectionCount for all FFT processors 
+        // Update the lowCutFrequency and highCutFrequency for each FFTComputerID
+        // TODO: update the publishing period of the group with max(SignalEnergyUpdate, RMSValuesUpdate)
+        int FFTComputerID = 30;  // FFTComputers X, Y, Z have m_id = 0, 1, 2 correspondingly
+        for (int i=0; i<3; ++i) {
+            FeatureComputer::getInstanceById(FFTComputerID + i)->updateSectionCount(FFTConfiguration::currentBlockSize / 128);
+            FeatureComputer::getInstanceById(FFTComputerID + i)->updateFrequencyLimits(FFTConfiguration::currentLowCutOffFrequency, FFTConfiguration::currentHighCutOffFrequency);
+        }        
+
+        // Change the sensor sampling rate 
+        // timerISRPeriod = (samplingRate == 1660) ? 600 : 300;  // 1.6KHz->600, 3.3KHz->300
+        // timerISRPeriod = int(1000000 / FFTConfiguration::currentSamplingRate); // +1 to ensure that sensor has captured data before mcu ISR gets it, for edge case
+        iuAccelerometer.setSamplingRate(FFTConfiguration::currentSamplingRate); // will set the ODR for the sensor
+        if(setupDebugMode) {
+            config.prettyPrintTo(Serial);
+        }
+        configured = true;
+    } else {
+        if(loopDebugMode) debugPrint("Failed to read fft.conf file");
+        configured = false;
+    }
+    return configured;
+}
 
 /* =============================================================================
     Debugging

@@ -25,7 +25,8 @@ class IUFlash
                                      CFG_RAW_DATA_ENDPOINT,
                                      CFG_MQTT_SERVER,
                                      CFG_MQTT_CREDS,
-                                     CFG_COUNT};
+                                     CFG_COUNT,
+                                     CFG_FFT};
         /***** Core *****/
         IUFlash() {}
         virtual ~IUFlash() {}
@@ -42,6 +43,8 @@ class IUFlash
         /***** JSON Config load / save functions *****/
         virtual bool saveConfigJson(storedConfig configType,
                                     JsonVariant &config) = 0;
+        virtual bool validateConfig(storedConfig configType, JsonObject &config, char *validationResultString, double timestamp) = 0;
+
 
     protected:
         bool m_begun = false;
@@ -68,6 +71,7 @@ class IUFSFlash : public IUFlash
         static char FNAME_RAW_DATA_ENDPOINT[13];
         static char FNAME_MQTT_SERVER[12];
         static char FNAME_MQTT_CREDS[11];
+        static char FNAME_FFT[4];
         static const uint8_t MAX_FULL_CONFIG_FPATH_LEN = 28;
         /***** Core *****/
         IUFSFlash() : IUFlash() {}
@@ -83,6 +87,7 @@ class IUFSFlash : public IUFlash
         JsonObject& loadConfigJson(
             storedConfig configType, StaticJsonBuffer<capacity> &jsonBuffer);
         bool saveConfigJson(storedConfig configType, JsonVariant &config);
+        bool validateConfig(storedConfig configType, JsonObject &config, char *validationResultString, double timestamp);
         /***** Utility *****/
         size_t getConfigFilename(storedConfig configType, char *dest,
                                  size_t len);

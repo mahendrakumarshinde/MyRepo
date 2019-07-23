@@ -186,6 +186,7 @@ class Conductor
         void sendAccelRawData(uint8_t axisIdx);
         void periodicSendAccelRawData();
         void storeData() {}  // TODO => implement
+        bool setFFTParams();
         /***** Debugging *****/
         void getMCUInfo(char *destination);
         void  streamMCUUInfo(HardwareSerial *port);
