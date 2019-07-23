@@ -159,6 +159,8 @@ class Feature
         virtual void stream(IUSerial *ser, uint8_t sectionCount=1);
         virtual uint16_t sendToBuffer(char *destination, uint16_t startIndex,
                                       uint8_t sectionCount=1);
+        virtual uint16_t sendToBuffer(q15_t *destination, uint16_t startIndex,
+                                      uint8_t sectionCount=1);
         /***** Debugging *****/
         virtual void exposeConfig();
         virtual void exposeCounters();
@@ -205,6 +207,8 @@ class Feature
                                          uint8_t sectionCount=1) {}
         virtual uint16_t m_specializedBufferStream(uint8_t sectionIdx,
             char *destination, uint16_t startIndex, uint8_t sectionCount=1) {}
+        virtual uint16_t m_specializedBufferStream(uint8_t sectionIdx,
+            q15_t *destination, uint16_t startIndex, uint8_t sectionCount=1) {}
 };
 
 
@@ -346,6 +350,25 @@ class FeatureTemplate : public Feature
                 }
             }
             return destIndex - startIndex;
+        }
+
+        // Writes sectionCount number of sections to q15 buffer without converting to string.
+        // TODO: add functionality for FFT buffer (if m_isFFT flag)
+        virtual uint16_t m_specializedBufferStream(uint8_t sectionIdx,
+                q15_t *destination, uint16_t startIndex, uint8_t sectionCount=1)
+        {
+            uint8_t sIdx = 0;
+            uint16_t i = 0;
+            uint16_t valuesWritten = startIndex;
+            for (uint8_t k = sectionIdx; k < sectionIdx + sectionCount; k++) {
+                sIdx = k % m_sectionCount;
+                for (i = sIdx * m_sectionSize;
+                        i < (sIdx + 1) * m_sectionSize; ++i) {
+                    destination[valuesWritten] = (q15_t)m_values[i];
+                    ++valuesWritten;
+                }
+            }
+            return valuesWritten;
         }
 };
 

@@ -256,7 +256,7 @@ int IURawDataHelper::httpPostPayload(MacAddress macAddress)
     if(result != NULL){
       // infinite uptime http
       return httpPostBigJsonRequest(m_endpointHost, fullUrl, m_endpointPort,
-                                    (uint8_t*) m_payload, m_payloadCounter);
+                                    (uint8_t*) m_payload, m_payloadCounter, HttpContentType::applicationJSON);
       
     }
     else {

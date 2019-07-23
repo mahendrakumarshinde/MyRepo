@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <MD5.h>
+#include <IUMessage.h>
 
 #include "BoardDefinition.h"
 #ifdef DRAGONFLY_V03

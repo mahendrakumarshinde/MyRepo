@@ -1095,6 +1095,25 @@ void Conductor::processCommand(char *buff)
                 }
             }
             break;
+        case 'P': 
+        {
+            if (strcmp(buff, "PUBLISH_DEVICE_DETAILS_MQTT") == 0) {
+                char deviceDetailsString[110];
+                StaticJsonBuffer<110> deviceDetailsBuffer;
+                JsonObject& deviceDetails = deviceDetailsBuffer.createObject();
+                deviceDetails["mac_id"] = m_macAddress.toString().c_str();
+                deviceDetails["fft_blockSize"] = FFTConfiguration::currentBlockSize;
+                deviceDetails["fft_samplingRate"] = FFTConfiguration::currentSamplingRate;
+                deviceDetails["firmware_version"] = FIRMWARE_VERSION;
+                deviceDetails.printTo(deviceDetailsString);
+                debugPrint("INFO deviceDetailsString : ", false);
+                debugPrint(deviceDetailsString);
+                debugPrint("size of device details string : ",false);
+                debugPrint(strlen(deviceDetailsString));
+                iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_DEVICE_DETAILS_MQTT, deviceDetailsString);
+            }
+            break;
+        }
         case 'S':
             if (strncmp(buff, "SET-MQTT-IP-", 12) == 0) {
                 if (tempAddress.fromString(&buff[12])) {
@@ -1646,6 +1665,13 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             if(loopDebugMode){ debugPrint(F("ASK_HOST_FIRMWARE_VERSION")); }
             iuWiFi.sendHostFirmwareVersion(FIRMWARE_VERSION);               
             break;
+        case MSPCommand::ASK_HOST_SAMPLING_RATE:        
+            if(loopDebugMode){ debugPrint(F("ASK_HOST_SAMPLING_RATE")); }
+            iuWiFi.sendHostSamplingRate(FFTConfiguration::currentSamplingRate);    
+            break;
+        case MSPCommand::ASK_HOST_BLOCK_SIZE:
+            if(loopDebugMode){ debugPrint(F("ASK_HOST_BLOCK_SIZE")); }
+            iuWiFi.sendHostBlockSize(FFTConfiguration::currentBlockSize);
         case MSPCommand::WIFI_ALERT_CONNECTED:
             if (loopDebugMode) { debugPrint(F("WIFI-CONNECTED;")); }
             if (isBLEConnected()) {
@@ -2521,6 +2547,8 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
     if (accelEnergy == NULL) {
         return;
     }
+    // Streaming raw data through bluetooth for blocksize of 4096 is not possible due to BLE buffer limitations. 
+    //The following function will be deprecated on the app from Firmware v1.1.3, and should not be used.
     if (m_streamingMode == StreamingMode::BLE)
     {
         iuBluetooth.write("REC,");
@@ -2534,20 +2562,20 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
     else if (m_streamingMode == StreamingMode::WIFI ||
              m_streamingMode == StreamingMode::WIFI_AND_BLE ) {
        
-        uint16_t maxLen = 15000;   //3500
-        char txBuffer[maxLen];
-        for (uint16_t i =0; i < maxLen; i++) {
-            txBuffer[i] = 0;
-        }
-        txBuffer[0] = axis[axisIdx];
-        uint16_t idx = 1;
-        idx += accelEnergy->sendToBuffer(txBuffer, idx, 4);   //4
-        txBuffer[idx] = 0; // Terminate string (idx incremented in sendToBuffer)
-        //iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_RAW_DATA, txBuffer);
-        iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 1000000,
-                                  txBuffer, strlen(txBuffer));
+        int idx = 0;                        // Tracks number of elements filled in txBuffer
+        IUMessageFormat::rawDataPacket rawData;
+        for (int i =0; i < IUMessageFormat::maxBlockSize; i++) rawData.txRawValues[i] = 0;
+        
+        rawData.timestamp = getDatetime();
+        rawData.axis = axis[axisIdx];
+        //TODO check if 32 sections are actually ready. If not ready, notify ESP with a different MSP command?
+        idx = accelEnergy->sendToBuffer(rawData.txRawValues, 0, FFTConfiguration::currentBlockSize / 128);  
 
-        delay(10);
+        // Although IUMessageFormat::maxBlockSize raw data bytes will be sent to the ESP, it is the server's responsibility to only read raw values upto IUMessageFormat::maxBlockSize.
+        iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 3000000,
+                                  (char*) &rawData, sizeof rawData);               
+        delay(500);
+
      }else if(m_streamingMode == StreamingMode::ETHERNET){      // Ethernet Mode
         uint16_t maxLen = 15000;   //3500
         char txBuffer[maxLen];
@@ -2576,7 +2604,7 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
             debugPrint("RawAcel Z: ",false);debugPrint(rawAccelerationZ);
             snprintf(rawAcceleration,maxLen,"{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\":\"{\\\"deviceId\\\":\\\"%s\\\",\\\"firmwareVersion\\\":\\\"%s\\\",\\\"samplingRate\\\":%d,\\\"blockSize\\\":%d,\\\"X\\\":\\\"%s\\\",\\\"Y\\\":\\\"%s\\\",\\\"Z\\\":\\\"%s\\\"}\"}",m_macAddress.toString().c_str(),1,0,m_macAddress.toString().c_str(),FIRMWARE_VERSION,IULSM6DSM::defaultSamplingRate,512,rawAccelerationX,rawAccelerationY,rawAccelerationZ);
             
-            
+            //iuWifi in this case is UART pointing to ethernet controller
             iuWiFi.write(rawAcceleration);           // send the rawAcceleration over UART 
             iuWiFi.write("\n");            
             if(loopDebugMode){

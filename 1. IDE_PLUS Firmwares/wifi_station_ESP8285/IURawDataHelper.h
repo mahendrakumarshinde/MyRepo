@@ -19,6 +19,10 @@
 class IURawDataHelper
 {
     public:
+        /***** Endpoint *****/
+        char m_endpointHost[MAX_HOST_LENGTH];
+        char m_endpointRoute[MAX_ROUTE_LENGTH];
+        uint16_t m_endpointPort;
         /***** Public constants *****/
         static const uint16_t MAX_PAYLOAD_LENGTH = 10000;
         // Expected keys for the JSON creation of keys (at top level).
@@ -49,10 +53,6 @@ class IURawDataHelper
         virtual String publishConfigMessage(MacAddress macAddress);
 
     protected:
-        /***** Endpoint *****/
-        char m_endpointHost[MAX_HOST_LENGTH];
-        char m_endpointRoute[MAX_ROUTE_LENGTH];
-        uint16_t m_endpointPort;
         /***** Payload handling *****/
         char m_payload[MAX_PAYLOAD_LENGTH];
         uint16_t m_payloadCounter;
