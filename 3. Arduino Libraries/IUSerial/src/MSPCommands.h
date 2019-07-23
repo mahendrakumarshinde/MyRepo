@@ -24,8 +24,6 @@ namespace MSPCommand
         RECEIVE_HOST_BLOCK_SIZE,
         PUBLISH_DEVICE_DETAILS_MQTT,
 	/* ****** Firmware Version Commands Host to Wifi ******/
-	RECEIVE_HOST_FIRMWARE_VERSION,
-        
 	// Wifi Config
         WIFI_RECEIVE_SSID,  // Send WiFi SSID
         WIFI_RECEIVE_PASSWORD,  // Send WiFi Password
