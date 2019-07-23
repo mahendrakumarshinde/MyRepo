@@ -1,4 +1,5 @@
 #include "InstancesDragonfly.h"
+#include "FFTConfiguration.h"
 
 #ifdef DRAGONFLY_V03
 
@@ -279,9 +280,9 @@ FFTComputer<q15_t> accelFFTComputerX(30,
                                      &velRMS512X,
                                      &dispRMS512X,
                                      allocatedFFTSpace,
-                                     DEFAULT_LOW_CUT_FREQUENCY,
-                                     DEFAULT_HIGH_CUT_FREQUENCY,
-                                     DEFAULT_MIN_AGITATION,
+                                     FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY,
+                                     FFTConfiguration::DEFAULT_HIGH_CUT_OFF_FREQUENCY,
+                                     FFTConfiguration::DEFAULT_MIN_AGITATION,
                                      VELOCITY_RMS_SCALING[0],
                                      DISPLACEMENT_RMS_SCALING[0],true);
 FFTComputer<q15_t> accelFFTComputerY(31,
@@ -290,9 +291,9 @@ FFTComputer<q15_t> accelFFTComputerY(31,
                                      &velRMS512Y,
                                      &dispRMS512Y,
                                      allocatedFFTSpace,
-                                     DEFAULT_LOW_CUT_FREQUENCY,
-                                     DEFAULT_HIGH_CUT_FREQUENCY,
-                                     DEFAULT_MIN_AGITATION,
+                                     FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY,
+                                     FFTConfiguration::DEFAULT_HIGH_CUT_OFF_FREQUENCY,
+                                     FFTConfiguration::DEFAULT_MIN_AGITATION,
                                      VELOCITY_RMS_SCALING[1],
                                      DISPLACEMENT_RMS_SCALING[1],true);
 FFTComputer<q15_t> accelFFTComputerZ(32,
@@ -301,9 +302,9 @@ FFTComputer<q15_t> accelFFTComputerZ(32,
                                      &velRMS512Z,
                                      &dispRMS512Z,
                                      allocatedFFTSpace,
-                                     DEFAULT_LOW_CUT_FREQUENCY,
-                                     DEFAULT_HIGH_CUT_FREQUENCY,
-                                     DEFAULT_MIN_AGITATION,
+                                     FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY,
+                                     FFTConfiguration::DEFAULT_HIGH_CUT_OFF_FREQUENCY,
+                                     FFTConfiguration::DEFAULT_MIN_AGITATION,
                                      VELOCITY_RMS_SCALING[2],
                                      DISPLACEMENT_RMS_SCALING[2],true);
 
@@ -345,9 +346,9 @@ void setUpComputerSources()
     accel512ComputerZ.addSource(&accelRMS128Z, 1);
     accel512TotalComputer.addSource(&accelRMS128Total, 1);
     // Acceleration FFTs
-    accelFFTComputerX.addSource(&accelerationX, 32);    //block size = 4096
-    accelFFTComputerY.addSource(&accelerationY, 32);    //block size = 4096
-    accelFFTComputerZ.addSource(&accelerationZ, 32);    //block size = 4096
+    accelFFTComputerX.addSource(&accelerationX, FFTConfiguration::DEFAULT_BLOCK_SIZE / 128);    //block size = 4096
+    accelFFTComputerY.addSource(&accelerationY, FFTConfiguration::DEFAULT_BLOCK_SIZE / 128);    //block size = 4096
+    accelFFTComputerZ.addSource(&accelerationZ, FFTConfiguration::DEFAULT_BLOCK_SIZE / 128);    //block size = 4096
     // Audio DB
     audioDB2048Computer.addSource(&audio, 1);
     audioDB4096Computer.addSource(&audio, 2);
@@ -368,7 +369,7 @@ FeatureGroup *DEFAULT_FEATURE_GROUP = &motorStandardGroup;
 // Health Check
 FeatureGroup healthCheckGroup("HEALTH", 45000);
 // Calibration
-FeatureGroup calibrationGroup("CAL001", 100);
+FeatureGroup calibrationGroup("CAL001", 512);
 // Raw acceleration data
 FeatureGroup rawAccelGroup("RAWACC", 512);
 // Standard Press Monitoring

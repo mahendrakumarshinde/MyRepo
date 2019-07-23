@@ -80,6 +80,7 @@ class IULSM6DSM : public HighFreqSensor
         static const gyroScaleOption defaultGyroScale = GFS_250DPS;
         static const ODROption defaultODR = ODR_3330Hz;
         static const uint16_t defaultSamplingRate = 3330; // Hz
+        uint16_t m_samplingRate = defaultSamplingRate;
         float ambientTemperature = 25.0;
         /***** Constructors and destructors *****/
         IULSM6DSM(IUI2C *iuI2C, const char* name,

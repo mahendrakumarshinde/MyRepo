@@ -11,6 +11,7 @@ Type - Standard Firmware Release
 // Uart driver update at /home/vikas/.arduino15/packages/grumpyoldpizza/hardware/stm32l4/0.0.28/cores/stm32l4/Uart.h RX buffer from 64 Bytes to 512 Bytes
 #include "BoardDefinition.h"
 #include "Conductor.h"
+#include "FFTConfiguration.h"
 
 #include <MemoryFree.h>
 #include <Timer.h>
@@ -92,14 +93,6 @@ float DISPLACEMENT_RMS_SCALING[3] = {
 float DEFAULT_ACCEL_ENERGY_NORMAL_TH = 110;
 float DEFAULT_ACCEL_ENERGY_WARNING_TH = 130;
 float DEFAULT_ACCEL_ENERGY_HIGH_TH = 150;
-
-
-/***** Accelerometer Feature computation parameters *****/
-
-uint16_t DEFAULT_LOW_CUT_FREQUENCY = 10;  // Hz
-uint16_t DEFAULT_HIGH_CUT_FREQUENCY = 1660;  // Hz
-float DEFAULT_MIN_AGITATION = 0.03;
-
 
 /***** Audio DB calibration parameters *****/
 
@@ -271,18 +264,10 @@ void dataAcquisitionCallback()
  */
 void dataAcquisitionISR()
 {
-    uint32_t startT = 0;
-    static int isrCnt;
-    
-    isrCnt++;
-   // digitalWrite(6,HIGH);
-    if(isrCnt >= 1){      // 150 us X 7
-      
-     conductor.acquireData(true);
-      isrCnt = 0; 
-   //   digitalWrite(6,LOW);
-    }
 
+    // digitalWrite(A3,HIGH);
+    conductor.acquireData(true);
+    //   digitalWrite(A3,LOW);
 }
 
 
@@ -364,13 +349,13 @@ void timerISR(void *context, uint32_t events)
 #if 1
 if(temp == 0)
   {
-    //digitalWrite(6, HIGH);
+    // digitalWrite(6, HIGH);
     dataAcquisitionCallback();      // data acquisition callback 
     temp = 1;
   }
   else if(temp == 1)
   {
-    //digitalWrite(6, LOW);
+    // digitalWrite(6, LOW);
     temp = 0;
   }      
 #endif
@@ -403,7 +388,8 @@ void setup()
 {   
   
   pinMode(ESP8285_IO0,OUTPUT);
-  pinMode(6,OUTPUT);
+//   pinMode(6,OUTPUT); 
+//   pinMode(A3,OUTPUT);  // ISR (ODR checked from pin 50)
   digitalWrite(ESP8285_IO0,HIGH);
   DOSFS.begin();
   #if 1
@@ -540,6 +526,19 @@ void setup()
                        false);
             debugPrint(String(freeMemory(), DEC));
         }
+
+        iuFlash.begin();
+
+        // Update the configuration of FFT computers from fft.conf
+        if(conductor.setFFTParams()) {
+            if(setupDebugMode) {
+                debugPrint("Updated FFT configuration from file");
+                //TODO: Expose the current FFT config
+            }
+        } else {
+            if(setupDebugMode) debugPrint("Using defaults for FFT Computers: samplingRate = 3.3KHz, blockSize = 4096 samples, publishingPeriod = 512 ms");
+        }
+
         // Sensors
         if (debugMode) {
             debugPrint(F("\nInitializing sensors..."));
@@ -573,7 +572,6 @@ void setup()
         // Start flash and load configuration files
         // if (!USBDevice.configured())
         // {
-        iuFlash.begin();
         // WiFi configuration
         conductor.configureFromFlash(IUFlash::CFG_WIFI0);
         // Feature, FeatureGroup and sensors coonfigurations
@@ -600,15 +598,18 @@ void setup()
         opStateFeature.setOnNewValueCallback(operationStateCallback);
         ledManager.resetStatus();
         conductor.changeUsageMode(UsageMode::OPERATION);
-        //pinMode(IULSM6DSM::INT1_PIN, INPUT);
-        //attachInterrupt(IULSM6DSM::INT1_PIN, dataAcquisitionISR, RISING);
-        //debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
+        /* code uncommented */
+        pinMode(IULSM6DSM::INT1_PIN, INPUT);
+        attachInterrupt(IULSM6DSM::INT1_PIN, dataAcquisitionISR, RISING);
+        // debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
 
         //Resume previous operational state of device
         conductor.setThresholdsFromFile();
                 
+        
+                
         // Timer Init
-        timerInit();
+        //timerInit();
         
     #endif
  #endif   
@@ -638,6 +639,12 @@ void loop()
                     ledManager.showStatus(&STATUS_WIFI_CONNECTED);
                 }
                 /*======*/
+                debugPrint("CURRENT FFT CONFIGURATION: ");
+                debugPrint("Current samplingRate: ", false); debugPrint(FFTConfiguration::currentSamplingRate);
+                debugPrint("Current blockSize: ", false); debugPrint(FFTConfiguration::currentBlockSize);
+                debugPrint("Current lowCutOffFrequency: ", false); debugPrint(FFTConfiguration::currentLowCutOffFrequency);
+                debugPrint("Current highCutOffFrequency: ", false); debugPrint(FFTConfiguration::currentHighCutOffFrequency);
+                debugPrint("Current minAgitation: ", false); debugPrint(FFTConfiguration::currentMinAgitation);
             }
         // }
        

@@ -1,5 +1,5 @@
 #include "IUFlash.h"
-
+#include "FFTConfiguration.h"
 
 /* =============================================================================
     IUFSFlash - Flash with file system
@@ -20,8 +20,7 @@ char IUFSFlash::FNAME_OP_STATE[8] = "opState";
 char IUFSFlash::FNAME_RAW_DATA_ENDPOINT[13] = "fft_endpoint";
 char IUFSFlash::FNAME_MQTT_SERVER[12] = "mqtt_server";
 char IUFSFlash::FNAME_MQTT_CREDS[11] = "mqtt_creds";
-
-
+char IUFSFlash::FNAME_FFT[4] = "fft";
 /***** Core *****/
 
 void IUFSFlash::begin()
@@ -125,6 +124,88 @@ bool IUFSFlash::saveConfigJson(storedConfig configType, JsonVariant &config)
     return true;
 }
 
+bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char* validationResultString, double timestamp)
+{
+    // Perform validation checks on the config json
+    // Return the errors in a json object
+    bool validConfig = true;
+    StaticJsonBuffer<300> validationResultBuffer;
+    JsonObject& validationResult = validationResultBuffer.createObject();
+    JsonArray& errorMessages = validationResult.createNestedArray("errorMessages");
+
+    switch(configType) {
+        case CFG_FFT: {
+            // Indicate the type of validation
+            validationResult["config"] = "FFT Configuration";
+
+            // If the received config matches the current config, report an error
+            bool sameBlockSize = false;
+            bool sameSamplingRate = false;
+
+            //Validation for samplingRate field
+            if(config.containsKey("samplingRate")) {
+                uint16_t samplingRate = config["samplingRate"];
+                // Validation for samplingRate
+                bool validSamplingRate = true;
+                for(int i=0; i<FFTConfiguration::samplingRateConfigurations - 1; ++i) {
+                    if( samplingRate < FFTConfiguration::samplingRates[0] || 
+                        samplingRate > FFTConfiguration::samplingRates[FFTConfiguration::samplingRateConfigurations - 1] || 
+                        (FFTConfiguration::samplingRates[i] < samplingRate &&
+                         samplingRate < FFTConfiguration::samplingRates[i+1]) ) {
+                           validSamplingRate = false;
+                       }
+                }
+                if (!validSamplingRate) {
+                        validConfig = false;
+                        errorMessages.add("Invalid samplingRate");
+                } else if (FFTConfiguration::currentSamplingRate == samplingRate) {
+                    sameSamplingRate = true;
+                }
+            } else {
+                validConfig = false;
+                errorMessages.add("Key missing: samplingRate"); 
+            }
+         
+            // Validation for blockSize field
+            if(config.containsKey("blockSize")) {
+                uint16_t blockSize = config["blockSize"];
+                // Validation for samplingRate
+                bool validBlockSize = true;
+                for(int i=0; i<FFTConfiguration::blockSizeConfigurations; i++) {
+                    if( blockSize < FFTConfiguration::blockSizes[0] ||
+                        blockSize > FFTConfiguration::blockSizes[FFTConfiguration::blockSizeConfigurations - 1] ||
+                        (FFTConfiguration::blockSizes[i] < blockSize &&
+                        blockSize < FFTConfiguration::blockSizes[i+1]) ) {
+                            validBlockSize = false;
+                            break;
+                        }
+                }
+                if (!validBlockSize) {
+                        validConfig = false;
+                        errorMessages.add("Invalid blockSize");
+                } else if (FFTConfiguration::currentBlockSize == blockSize) {
+                    sameBlockSize = true;
+                }
+            } else {
+                validConfig = false;
+                errorMessages.add("Key missing: blockSize"); 
+            }
+
+            // If the received config matches the current config, report an error
+            if(sameBlockSize && sameSamplingRate) {
+                validConfig = false;
+                errorMessages.add("Same configuration received");
+            }
+            break;
+        }
+    }
+
+    // Construct the validationResult
+    validationResult["validConfig"] = validConfig;
+    validationResult["timestamp"] = timestamp;
+    validationResult.printTo(validationResultString, 300);
+    return validConfig;
+}
 
 /***** Utility *****/
 
@@ -175,6 +256,9 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
             break;
         case CFG_MQTT_CREDS:
             fname = FNAME_MQTT_CREDS;
+            break;
+        case CFG_FFT:
+            fname = FNAME_FFT;
             break;
         default:
             if (debugMode)

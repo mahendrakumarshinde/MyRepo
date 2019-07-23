@@ -264,14 +264,6 @@ extern float ACCEL_RMS_SCALING[3];
 extern float VELOCITY_RMS_SCALING[3];
 extern float DISPLACEMENT_RMS_SCALING[3];
 
-
-/***** Accelerometer Feature computation parameters *****/
-
-extern uint16_t DEFAULT_LOW_CUT_FREQUENCY;
-extern uint16_t DEFAULT_HIGH_CUT_FREQUENCY;
-extern float DEFAULT_MIN_AGITATION;
-
-
 /***** Accelerometer Features *****/
 
 // 128 sample long accel computers
