@@ -346,9 +346,9 @@ void setUpComputerSources()
     accel512ComputerZ.addSource(&accelRMS128Z, 1);
     accel512TotalComputer.addSource(&accelRMS128Total, 1);
     // Acceleration FFTs
-    accelFFTComputerX.addSource(&accelerationX, FFTConfiguration::DEFAULT_BLOCK_SIZE / 128);    //block size = 4096
-    accelFFTComputerY.addSource(&accelerationY, FFTConfiguration::DEFAULT_BLOCK_SIZE / 128);    //block size = 4096
-    accelFFTComputerZ.addSource(&accelerationZ, FFTConfiguration::DEFAULT_BLOCK_SIZE / 128);    //block size = 4096
+    accelFFTComputerX.addSource(&accelerationX, FFTConfiguration::DEFAULT_BLOCK_SIZE / 128);    
+    accelFFTComputerY.addSource(&accelerationY, FFTConfiguration::DEFAULT_BLOCK_SIZE / 128);   
+    accelFFTComputerZ.addSource(&accelerationZ, FFTConfiguration::DEFAULT_BLOCK_SIZE / 128);
     // Audio DB
     audioDB2048Computer.addSource(&audio, 1);
     audioDB4096Computer.addSource(&audio, 2);

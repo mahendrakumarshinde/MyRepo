@@ -1102,8 +1102,8 @@ void Conductor::processCommand(char *buff)
                 StaticJsonBuffer<110> deviceDetailsBuffer;
                 JsonObject& deviceDetails = deviceDetailsBuffer.createObject();
                 deviceDetails["mac_id"] = m_macAddress.toString().c_str();
-                deviceDetails["fft_blockSize"] = 4096; // TODO: FFTConfiguration::currentBlockSize;
-                deviceDetails["fft_samplingRate"] = 3330; // TODO: FFTConfiguration::currentSamplingRate;
+                deviceDetails["fft_blockSize"] = FFTConfiguration::currentBlockSize;
+                deviceDetails["fft_samplingRate"] = FFTConfiguration::currentSamplingRate;
                 deviceDetails["firmware_version"] = FIRMWARE_VERSION;
                 deviceDetails.printTo(deviceDetailsString);
                 debugPrint("INFO deviceDetailsString : ", false);
@@ -1667,11 +1667,11 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             break;
         case MSPCommand::ASK_HOST_SAMPLING_RATE:        
             if(loopDebugMode){ debugPrint(F("ASK_HOST_SAMPLING_RATE")); }
-            iuWiFi.sendHostSamplingRate(3330);      //TODO : hardcoded SR for now,use variable after merging 
+            iuWiFi.sendHostSamplingRate(FFTConfiguration::currentSamplingRate);    
             break;
         case MSPCommand::ASK_HOST_BLOCK_SIZE:
             if(loopDebugMode){ debugPrint(F("ASK_HOST_BLOCK_SIZE")); }
-            iuWiFi.sendHostBlockSize(4096);         //TODO : hardcoded BS for now, use variable after merging
+            iuWiFi.sendHostBlockSize(FFTConfiguration::currentBlockSize);
         case MSPCommand::WIFI_ALERT_CONNECTED:
             if (loopDebugMode) { debugPrint(F("WIFI-CONNECTED;")); }
             if (isBLEConnected()) {
@@ -2568,8 +2568,8 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
         
         rawData.timestamp = getDatetime();
         rawData.axis = axis[axisIdx];
-        //TODO check if 32 sections are actually ready. If not ready, notify ESP with a different MSP command
-        idx += accelEnergy->sendToBuffer(rawData.txRawValues, idx, 32);   //send 4096 point FFT raw data TODO : make number of ready sections configurable (replace 32 with variable after merge)  
+        //TODO check if 32 sections are actually ready. If not ready, notify ESP with a different MSP command?
+        idx = accelEnergy->sendToBuffer(rawData.txRawValues, 0, FFTConfiguration::currentBlockSize / 128);  
 
         // Although IUMessageFormat::maxBlockSize raw data bytes will be sent to the ESP, it is the server's responsibility to only read raw values upto IUMessageFormat::maxBlockSize.
         iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 3000000,
