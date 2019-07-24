@@ -106,7 +106,6 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         /***** MAC addresses *****/
         case MSPCommand::RECEIVE_BLE_MAC:
             setBleMAC(iuSerial->mspReadMacAddress());
-            strncpy(httpPayload.macId, m_bleMAC.toString().c_str(), 18); 
             break;
         case MSPCommand::ASK_WIFI_MAC:
             iuSerial->mspSendMacAddress(MSPCommand::RECEIVE_WIFI_MAC,
@@ -116,15 +115,12 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             getDeviceFirmwareVersion(message,buffer,FIRMWARE_VERSION);
             mqttHelper.publishDiagnostic(message);
             strncpy(HOST_FIRMWARE_VERSION, buffer, 8);
-            strncpy(httpPayload.firmwareVersion, HOST_FIRMWARE_VERSION, 8);
             break;
         case MSPCommand::RECEIVE_HOST_SAMPLING_RATE:
             HOST_SAMPLING_RATE = atoi(buffer);
-            httpPayload.samplingRate = HOST_SAMPLING_RATE;
             break;
         case MSPCommand::RECEIVE_HOST_BLOCK_SIZE:
             HOST_BLOCK_SIZE = atoi(buffer);
-            httpPayload.blockSize = HOST_BLOCK_SIZE;
             break;
         /***** Logging *****/
         case MSPCommand::SEND_LOG_MSG:
@@ -299,19 +295,44 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             }
 
             // Only X axis timestamp is recorded so that record times can be correlated on server
-            if (rawData->axis == 'X') httpPayload.timestamp = rawData->timestamp;
-            httpPayload.axis = rawData->axis;
-     
-            for(int i = 0; i < HOST_BLOCK_SIZE; ++i) {
-                httpPayload.rawValues[i] = rawData->txRawValues[i];
-            }
-            iuSerial->sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION, &httpPayload.axis, 1);
+            if (rawData->axis == 'X') timestamp = rawData->timestamp;
+          
+            // This mechanism ensures the ESP sends out only blockSize data points in the POST payload
+            // Tried implementing this using structures, but ran into problems. See commented code in 
+            //  IUMessage.h for details.
+            int rawValuesSize = HOST_BLOCK_SIZE * 2;                // since 1 q15_t occupies 2 bytes
+            int httpBufferSize = macIdSize + hostFirmwareVersionSize + timestampSize 
+                            + blockSizeSize + samplingRateSize + axisSize + rawValuesSize;      // metadata total size will be constant(43 bytes) + variable block size
+            int httpBufferPointer = 0;                      // keeps track of how many bytes are filed in the HTTP buffer 
+
+            memcpy(&httpBuffer[httpBufferPointer], m_bleMAC.toString().c_str(), macIdSize);
+            httpBufferPointer += macIdSize;
+
+            memcpy(&httpBuffer[httpBufferPointer], HOST_FIRMWARE_VERSION, hostFirmwareVersionSize);
+            httpBufferPointer += hostFirmwareVersionSize;
+
+            memcpy(&httpBuffer[httpBufferPointer], &timestamp, timestampSize);
+            httpBufferPointer += timestampSize;
+
+            memcpy(&httpBuffer[httpBufferPointer], &HOST_BLOCK_SIZE, blockSizeSize);            
+            httpBufferPointer += blockSizeSize;
+
+            memcpy(&httpBuffer[httpBufferPointer], &HOST_SAMPLING_RATE, samplingRateSize);
+            httpBufferPointer += samplingRateSize;
+
+            memcpy(&httpBuffer[httpBufferPointer], &rawData->axis, axisSize);
+            httpBufferPointer += axisSize;
+            
+            memcpy(&httpBuffer[httpBufferPointer], rawData->txRawValues, rawValuesSize);
+            httpBufferPointer += rawValuesSize;
+
+            iuSerial->sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION, &rawData->axis, 1);
             
             int b = httpPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_endpointRoute,
-                                            accelRawDataHelper.m_endpointPort, (uint8_t*) &httpPayload, 
-                                            sizeof httpPayload, HttpContentType::octetStream);            
+                                            accelRawDataHelper.m_endpointPort, (uint8_t*) &httpBuffer, 
+                                            httpBufferPointer, HttpContentType::octetStream);            
 
-            snprintf(ack_config, 100, "{\"mac\":\"%s\",\"httpCode\":\"%d\",\"axis\":\"%c\",\"timestamp\":%.2f}",m_bleMAC.toString().c_str(),b, httpPayload.axis, httpPayload.timestamp);
+            snprintf(ack_config, 100, "{\"mac\":\"%s\",\"httpCode\":\"%d\",\"axis\":\"%c\",\"timestamp\":%.2f}",m_bleMAC.toString().c_str(),b, rawData->axis, timestamp);
             mqttHelper.publish(COMMAND_RESPONSE_TOPIC, ack_config);
            break;  
           }

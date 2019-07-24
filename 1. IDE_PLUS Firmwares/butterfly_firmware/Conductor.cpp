@@ -2571,7 +2571,7 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
         //TODO check if 32 sections are actually ready. If not ready, notify ESP with a different MSP command?
         idx = accelEnergy->sendToBuffer(rawData.txRawValues, 0, FFTConfiguration::currentBlockSize / 128);  
 
-        // Although IUMessageFormat::maxBlockSize raw data bytes will be sent to the ESP, it is the server's responsibility to only read raw values upto IUMessageFormat::maxBlockSize.
+        // Although IUMessageFormat::maxBlockSize raw data bytes will be sent to the ESP, the ESP will only HTTP POST currentBlockSize elements
         iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 3000000,
                                   (char*) &rawData, sizeof rawData);               
         delay(500);

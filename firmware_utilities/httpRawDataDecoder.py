@@ -8,34 +8,48 @@ app = Flask(__name__)
 
 @app.route('/')
 def hello_world():
-   return 'IU HTTP raw data decode server'
+   return 'IU HTTP raw data decode test server'
+
+# sizes of metadata in bytes
+macId_size = 18
+firmware_version_size = 8
+timestamp_size = 8
+blockSize_size = 4
+sampling_rate_size = 4
+axis_size = 1
+total_metadata_size = macId_size + firmware_version_size + timestamp_size + blockSize_size + sampling_rate_size + axis_size
+
 
 
 '''
-Constructs byte decoding format string for IDE firmware v1.1.3. See IUMessage.h for details.
+Constructs byte decoding format string for IDE firmware v1.1.3. 
 HTTP payload format :                       size in bytes
-    q15_t rawValues[maxBlockSize];              8192            q15_t is a 2 byte integer
-    char macId[24];                             24 
-    char firmwareVersion[8];                    8
-    double timestamp;                           8
-    int blockSize;                              4
-    int samplingRate;                           4
-    char axis;                                  1
-    char padding[7];                            7
-where maxBlockSize = 4096 and total size of payload = 8248 bytes
+    char macId[18]                                  18
+    char firmwareVersion[8]                         8
+    double timestamp                                8
+    int blockSize                                   4
+    int samplingRate                                4
+    char axis                                       1
+    ---------------------------------------------------
+    Total                                           43
+    ---------------------------------------------------
+    The following decoding is done by the caller of this function since blockSize has to
+    be decoded first:
+    q15_t rawValues[blockSize]                      2 * blockSize       
+    (since 1 q15_t = 2 bytes so can be interpreted as short)                        
 '''
 
 
-def construct_format_string():
-    f_string = '<' + 'h' * 4096     # little endian, rawValues
-    f_string += 'c' * 24       # macId
-    f_string += 'c' * 8        # firmwareVersion
-    f_string += 'd'            # timestamp
-    f_string += 'i'            # blockSize
-    f_string += 'i'            # samplingRate
-    f_string += 'c'            # axis
-    f_string += 'x' * 7        # padding, not used
+def construct_metadata_format_string():
+    f_string = '<'              # little endian
+    f_string += 'c' * 18        # macId
+    f_string += 'c' * 8         # firmwareVersion
+    f_string += 'd'             # timestamp
+    f_string += 'i'             # blockSize
+    f_string += 'i'             # samplingRate
+    f_string += 'c'             # axis
     return f_string
+
 
 
 '''
@@ -53,28 +67,28 @@ Takes in raw HTTP payload and returns a dictionary of format :
 
 
 def get_payload_info(raw_payload):
-    MAX_BLOCK_SIZE = 4096
-    MAC_START = MAX_BLOCK_SIZE
-    MAC_END = MAX_BLOCK_SIZE + 24
-    F_VERSION_START = MAC_END
-    F_VERSION_END = F_VERSION_START + 8
-    SCALING_FACTOR = float(2 ** 13)
-    G = 9.8
 
-    f_string = construct_format_string()
-    decoded = unpack(f_string, raw_payload)
+    scaling_factor = float(2 ** 13)
+    g = 9.8
 
-    axis = decoded[-1].decode('utf-8')
-    sampling_rate = int(decoded[-2])
-    block_size = int(decoded[-3])
-    timestamp = float(decoded[-4])
-    mac_id = "".join([x.decode('utf-8') for x in decoded[MAC_START: MAC_END]]).rstrip('\0')     # remove padding bytes with rstrip()
-    f_version = "".join([x.decode('utf-8') for x in decoded[F_VERSION_START: F_VERSION_END]]).rstrip('\0')
-    all_values = list(map(float, list(decoded[:MAX_BLOCK_SIZE])))
-    print("length : ", len(all_values))
-    raw_values = list(map(float, list(decoded[:block_size])))
-    raw_values = [x / SCALING_FACTOR for x in raw_values]                                       # not using numpy for minimal dependencies
-    raw_values = [x * G for x in raw_values]
+    f_string = construct_metadata_format_string()
+    metadata = raw_payload[: total_metadata_size]
+    decoded_metadata = unpack(f_string, metadata)
+
+    mac_id = "".join(x.decode('utf-8') for x in decoded_metadata[0 : macId_size]).rstrip('\0')
+    f_version = "".join([x.decode('utf-8') for x in decoded_metadata[macId_size : macId_size + firmware_version_size]]).rstrip('\0')
+    timestamp = decoded_metadata[-4]
+    block_size = decoded_metadata[-3]
+    sampling_rate = decoded_metadata[-2]
+    axis = decoded_metadata[-1].decode('utf-8')
+
+    raw_data_format_string = 'h' * block_size
+    decoded_raw_data = unpack(raw_data_format_string, raw_payload[total_metadata_size :])
+    raw_values = list(map(float, decoded_raw_data))
+    # required for fftProcessor script:
+    raw_values = [x / scaling_factor for x in raw_values]
+    raw_values = [x * g for x in raw_values]
+
 
     return {
         'raw_data'      : raw_values,
@@ -91,7 +105,10 @@ def get_payload_info(raw_payload):
 def receive_accel_raw_data():
     data = request.get_data()
     decoded = get_payload_info(data)
+    print("Raw binary data : ", data)
     print('Decoded data : ', decoded)
+    print('Total size of payload data : ', len(data))
+    print('Total size - metadata size : ', len(data) - total_metadata_size)
     return 'done'
 
 

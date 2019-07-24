@@ -107,7 +107,6 @@ class Conductor
         char HOST_FIRMWARE_VERSION[8];      //filled when the ESP starts or when it connects to MQTT broker
         int HOST_SAMPLING_RATE;
         int HOST_BLOCK_SIZE;
-        IUMessageFormat::rawDataHTTPPayload httpPayload;
         MacAddress m_bleMAC;
         MacAddress m_wifiMAC;
         bool m_useMQTT;
@@ -130,6 +129,7 @@ class Conductor
         MultiMessageValidator<2> m_mqttServerValidator;
         IPAddress m_mqttServerIP;
         uint16_t m_mqttServerPort;
+        char httpBuffer[8235];              //maximum possible buffer size (when blockSize = 4096)
         MultiMessageValidator<2> m_mqttCredentialsValidator;
         char m_mqttUsername[IUMQTTHelper::credentialMaxLength];
         char m_mqttPassword[IUMQTTHelper::credentialMaxLength];
@@ -140,6 +140,14 @@ class Conductor
         char m_diagnosticPostHost[MAX_HOST_LENGTH];
         char m_diagnosticPostRoute[MAX_ROUTE_LENGTH];
         uint16_t m_diagnosticPostPort;
+        //HTTP POST metadata
+        const int macIdSize = 18;
+        const int hostFirmwareVersionSize = 8;
+        const int timestampSize = 8;
+        const int blockSizeSize = 4;
+        const int samplingRateSize = 4;
+        const int axisSize = 1; 
+        double timestamp;
 
 };
 
