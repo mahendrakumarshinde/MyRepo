@@ -137,7 +137,7 @@ __attribute__((section(".noinit2"))) float dispRMS512XValues[2];    //2
 __attribute__((section(".noinit2"))) float dispRMS512YValues[2];
 __attribute__((section(".noinit2"))) float dispRMS512ZValues[2];
 FeatureTemplate<float> dispRMS512X("DAX", 2, 1, dispRMS512XValues);   //2,1
-FeatureTemplate<float> dispRMS512Y("DAX", 2, 1, dispRMS512YValues);
+FeatureTemplate<float> dispRMS512Y("DAY", 2, 1, dispRMS512YValues);
 FeatureTemplate<float> dispRMS512Z("DAZ", 2, 1, dispRMS512ZValues);
 
 

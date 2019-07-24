@@ -346,7 +346,7 @@ void FeatureStateComputer::m_specializedCompute()
         if (newState < featureState) {
             newState = featureState;
         }
-        m_sourceReadyForStateComputation[i] = true;
+        m_sourceReadyForStateComputation[i] = false;
         // Indicate that the source section has been consumed for state computation and is ready for next iteration        
     }
     if (featureDebugMode) {

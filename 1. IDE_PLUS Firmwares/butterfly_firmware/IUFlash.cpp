@@ -124,7 +124,7 @@ bool IUFSFlash::saveConfigJson(storedConfig configType, JsonVariant &config)
     return true;
 }
 
-bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char* validationResultString, double timestamp)
+bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char* validationResultString, char* mac_id, double timestamp)
 {
     // Perform validation checks on the config json
     // Return the errors in a json object
@@ -136,7 +136,7 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
     switch(configType) {
         case CFG_FFT: {
             // Indicate the type of validation
-            validationResult["config"] = "FFT Configuration";
+            validationResult["messageType"] = "FFT Configuration ACK";
 
             // If the received config matches the current config, report an error
             bool sameBlockSize = false;
@@ -201,6 +201,7 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
     }
 
     // Construct the validationResult
+    validationResult["mac_id"] = mac_id;
     validationResult["validConfig"] = validConfig;
     validationResult["timestamp"] = timestamp;
     validationResult.printTo(validationResultString, 300);
