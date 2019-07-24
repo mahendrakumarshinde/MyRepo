@@ -160,9 +160,9 @@ inline int httpPostJsonRequest(const char *url, char *payload,
 
 
 /**
- * Sends an HTTP POST request with a big JSON
+ * Sends an HTTP POST request with a "Big" payload
  *
- * "Big" JSON means that its size is above the max packet size which is
+ * "Big" means that its size is above the max packet size which is
  * around 3KB (2920 bytes in my experience).
  *
  * @param endpointHost
@@ -176,10 +176,10 @@ inline int httpPostJsonRequest(const char *url, char *payload,
  * or a negative number for HTTPClient errors (see HTTPC_ERROR in
  * ESP8266HTTPClient.h)
  */
-inline int httpPostBigJsonRequest(
+inline int httpPostBigRequest(
     const char *endpointHost, const char *endpointURL,
     uint16_t endpointPort, uint8_t *payload, uint16_t payloadLength,
-    char* contentType,
+    char* contentType = HttpContentType::applicationJSON,
     size_t chunkSize=WIFICLIENT_MAX_PACKET_SIZE,
     uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT + 3000)
 {

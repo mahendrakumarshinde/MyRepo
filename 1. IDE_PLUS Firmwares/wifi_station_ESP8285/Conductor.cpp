@@ -307,7 +307,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             }
             iuSerial->sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION, &httpPayload.axis, 1);
             
-            int b = httpPostBigJsonRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_endpointRoute,
+            int b = httpPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_endpointRoute,
                                             accelRawDataHelper.m_endpointPort, (uint8_t*) &httpPayload, 
                                             sizeof httpPayload, HttpContentType::octetStream);            
 
@@ -840,9 +840,9 @@ bool Conductor::publishDiagnostic(const char *rawMsg, const uint16_t msgLength,
         char route[routeLength];
         snprintf(route, routeLength, "%s%s", DIAGNOSTIC_DEFAULT_ENDPOINT_ROUTE,
                  m_bleMAC.toString().c_str());
-        return httpPostBigJsonRequest(
+        return httpPostBigRequest(
             m_diagnosticPostHost, route, m_diagnosticPostPort,
-            (uint8_t*) message, totalMsgLength, HttpContentType::applicationJSON);
+            (uint8_t*) message, totalMsgLength);
     }
 }
 
@@ -880,9 +880,9 @@ bool Conductor::publishFeature(const char *rawMsg, const uint16_t msgLength,
         char route[routeLength];
         snprintf(route, routeLength, "%s%s", FEATURE_DEFAULT_ENDPOINT_ROUTE,
                  m_bleMAC.toString().c_str());
-        return httpPostBigJsonRequest(
+        return httpPostBigRequest(
             m_featurePostHost, route, m_featurePostPort,
-            (uint8_t*) message, totalMsgLength, HttpContentType::applicationJSON);
+            (uint8_t*) message, totalMsgLength);
 
     }
 }
