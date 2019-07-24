@@ -679,7 +679,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             subConfig.printTo(Serial); debugPrint("");
         }
         char validationResultString[300];
-        bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_FFT, subConfig, validationResultString, getDatetime());
+        bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_FFT, subConfig, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime());
         if(loopDebugMode) { 
             debugPrint("Validation: ", false);
             debugPrint(validationResultString); 
