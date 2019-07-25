@@ -72,6 +72,7 @@ namespace MSPCommand
         // MAC addresses
         ASK_BLE_MAC,  // Ask BLE MAC Address
         RECEIVE_WIFI_MAC,  // Send WiFi MAC Address
+        RECEIVE_WIFI_FV,   // Host will receive WiFi Firmware Version
 	
 	/******* wifi to Host Commands ******/
 	ASK_HOST_FIRMWARE_VERSION,
