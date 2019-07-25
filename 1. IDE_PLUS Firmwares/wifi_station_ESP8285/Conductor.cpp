@@ -98,6 +98,9 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
     resp[1] = 0;
     char message[256];
     switch(cmd) {
+        case MSPCommand::ASK_WIFI_FV:
+            iuSerial->sendMSPCommand(MSPCommand::RECEIVE_WIFI_FV, FIRMWARE_VERSION);
+            break;
         case MSPCommand::FFT_CONFIG_ACK:
             // Send the fft configuration update acknowledgement to command response topic
             mqttHelper.publish(COMMAND_RESPONSE_TOPIC,buffer);
@@ -288,7 +291,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         case MSPCommand::SEND_RAW_DATA:
           {
             IUMessageFormat::rawDataPacket* rawData = (IUMessageFormat::rawDataPacket*) buffer;
-            char ack_config[100];
+            char ack_config[150];
 
             if (accelRawDataHelper.inputHasTimedOut()) {
                 accelRawDataHelper.resetPayload();
@@ -332,7 +335,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                                             accelRawDataHelper.m_endpointPort, (uint8_t*) &httpBuffer, 
                                             httpBufferPointer, HttpContentType::octetStream);            
 
-            snprintf(ack_config, 100, "{\"mac\":\"%s\",\"httpCode\":\"%d\",\"axis\":\"%c\",\"timestamp\":%.2f}",m_bleMAC.toString().c_str(),b, rawData->axis, timestamp);
+            snprintf(ack_config, 150, "{\"messageType\":\"raw-data-ack\",\"mac\":\"%s\",\"httpCode\":\"%d\",\"axis\":\"%c\",\"timestamp\":%.2f}",m_bleMAC.toString().c_str(),b, rawData->axis, timestamp);
             mqttHelper.publish(COMMAND_RESPONSE_TOPIC, ack_config);
            break;  
           }
