@@ -101,11 +101,27 @@ def get_payload_info(raw_payload):
     }
 
 
+'''
+    Saves HTTP binary payload to file with appropriate 
+    configuration as filename.
+
+'''
+
+
+def save_to_file(data, decoded):
+    file_name = "block_size_" + str(decoded['block_size']) + "_sampling_rate_" + str(decoded['sampling_rate']) + "_axis_" + str(decoded['axis'])
+    file = open(file_name, "wb")
+    file.write(bytearray(data))
+    file.close()
+
+
 @app.route('/accel_raw_data', methods=["POST"])
 def receive_accel_raw_data():
     data = request.get_data()
     decoded = get_payload_info(data)
-    print("Raw binary data : ", data)
+    # save_to_file(data, decoded)
+
+    # print("Raw binary data : ", data)
     print('Decoded data : ', decoded)
     print('Total size of payload data : ', len(data))
     print('Total size - metadata size : ', len(data) - total_metadata_size)
