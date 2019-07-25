@@ -202,6 +202,9 @@ bool IUESP8285::readMessages()
         if (!m_macAddress) {
             sendMSPCommand(MSPCommand::ASK_WIFI_MAC);
         }
+        if (!espFirmwareVersionReceived) {
+            sendMSPCommand(MSPCommand::ASK_WIFI_FV);
+        }
     } else if (m_on && m_lastResponseTime > 0 &&
                now - m_lastResponseTime > noResponseTimeout) {
         // Ensure your ESP8266 library version is 2.5.0 in .arduino15 folder 

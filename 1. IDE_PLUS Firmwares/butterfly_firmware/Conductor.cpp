@@ -1098,13 +1098,14 @@ void Conductor::processCommand(char *buff)
         case 'P': 
         {
             if (strcmp(buff, "PUBLISH_DEVICE_DETAILS_MQTT") == 0) {
-                char deviceDetailsString[110];
-                StaticJsonBuffer<110> deviceDetailsBuffer;
+                char deviceDetailsString[150];
+                StaticJsonBuffer<150> deviceDetailsBuffer;
                 JsonObject& deviceDetails = deviceDetailsBuffer.createObject();
-                deviceDetails["mac_id"] = m_macAddress.toString().c_str();
+                deviceDetails["mac"] = m_macAddress.toString().c_str();
                 deviceDetails["fft_blockSize"] = FFTConfiguration::currentBlockSize;
                 deviceDetails["fft_samplingRate"] = FFTConfiguration::currentSamplingRate;
-                deviceDetails["firmware_version"] = FIRMWARE_VERSION;
+                deviceDetails["host_firmware_version"] = FIRMWARE_VERSION;
+                deviceDetails["wifi_firmware_version"] = iuWiFi.espFirmwareVersion;
                 deviceDetails.printTo(deviceDetailsString);
                 debugPrint("INFO deviceDetailsString : ", false);
                 debugPrint(deviceDetailsString);
@@ -1656,7 +1657,11 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
         case MSPCommand::MSP_TOO_LONG:
             if (loopDebugMode) { debugPrint(F("MSP_TOO_LONG")); }
             break;
-
+        case MSPCommand::RECEIVE_WIFI_FV:{
+            if (loopDebugMode) { debugPrint(F("RECEIVE_WIFI_FV")); }
+            strncpy(iuWiFi.espFirmwareVersion, buff, 6);
+            iuWiFi.espFirmwareVersionReceived = true;
+        }
         case MSPCommand::ASK_BLE_MAC:
             if (loopDebugMode) { debugPrint(F("ASK_BLE_MAC")); }
             iuWiFi.sendBleMacAddress(m_macAddress);

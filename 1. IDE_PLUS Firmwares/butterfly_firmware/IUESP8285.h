@@ -44,6 +44,9 @@ class IUESP8285 : public IUSerial, public Component
         static const IUFlash::storedConfig STORED_CFG_TYPE = IUFlash::CFG_WIFI0;
         // Size of Json buffer (to parse config json)
         static const uint16_t JSON_BUFFER_SIZE = 256;
+        // WiFi firmware FirmwareVersion
+        char espFirmwareVersion[6];
+        bool espFirmwareVersionReceived = false;
         /***** Core *****/
         IUESP8285(HardwareSerial *serialPort, char *charBuffer,
                   uint16_t bufferSize, PROTOCOL_OPTIONS protocol, uint32_t rate,
