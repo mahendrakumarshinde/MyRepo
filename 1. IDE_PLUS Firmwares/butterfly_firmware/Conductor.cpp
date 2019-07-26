@@ -2591,7 +2591,7 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
         // Although IUMessageFormat::maxBlockSize raw data bytes will be sent to the ESP, the ESP will only HTTP POST currentBlockSize elements
         iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 3000000,
                                   (char*) &rawData, sizeof rawData);               
-        delay(500);
+        delay(2800);
 
      }else if(m_streamingMode == StreamingMode::ETHERNET){      // Ethernet Mode
         uint16_t maxLen = 15000;   //3500
