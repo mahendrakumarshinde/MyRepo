@@ -158,6 +158,9 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                 if (!validSamplingRate) {
                         validConfig = false;
                         errorMessages.add("Invalid samplingRate");
+                } else if (samplingRate == 416) {  // Temporary workaround
+                    validConfig = false;
+                    errorMessages.add("Sampling rate not supported");
                 } else if (FFTConfiguration::currentSamplingRate == samplingRate) {
                     sameSamplingRate = true;
                 }
