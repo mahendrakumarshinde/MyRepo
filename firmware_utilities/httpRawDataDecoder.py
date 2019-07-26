@@ -3,6 +3,11 @@ Used for testing HTTP POST raw data functionality on the device.
 '''
 from flask import Flask, request
 from struct import *
+import requests
+import logging
+
+logging.basicConfig(filename="iuDecoder.log", level=logging.DEBUG)
+
 
 app = Flask(__name__)
 
@@ -18,7 +23,6 @@ blockSize_size = 4
 sampling_rate_size = 4
 axis_size = 1
 total_metadata_size = macId_size + firmware_version_size + timestamp_size + blockSize_size + sampling_rate_size + axis_size
-
 
 
 '''
@@ -86,8 +90,8 @@ def get_payload_info(raw_payload):
     decoded_raw_data = unpack(raw_data_format_string, raw_payload[total_metadata_size :])
     raw_values = list(map(float, decoded_raw_data))
     # required for fftProcessor script:
-    raw_values = [x / scaling_factor for x in raw_values]
-    raw_values = [x * g for x in raw_values]
+    # raw_values = [x / scaling_factor for x in raw_values]
+    # raw_values = [x * g for x in raw_values]
 
 
     return {
@@ -115,16 +119,32 @@ def save_to_file(data, decoded):
     file.close()
 
 
-@app.route('/accel_raw_data', methods=["POST"])
+def forward_to_indicus(decoded_data):
+    headers = {'Accept': 'application/json',
+               'Content-Type': 'application/json'}
+    URL = "http://34.68.247.184:8080/iu-web/iu-infiniteuptime-api/rawaccelerationdata"
+    response_from_indicus = requests.post(URL, json=decoded_data, headers=headers)
+    print("Response from indicus : ", response_from_indicus)
+    logging.debug(response_from_indicus)
+
+
+@app.route('/rawaccelerationdata', methods=["POST"])
 def receive_accel_raw_data():
     data = request.get_data()
     decoded = get_payload_info(data)
+
+    print(decoded)
+    logging.debug(decoded)
+
+    forward_to_indicus(decoded)
     # save_to_file(data, decoded)
 
+
     # print("Raw binary data : ", data)
-    print('Decoded data : ', decoded)
-    print('Total size of payload data : ', len(data))
-    print('Total size - metadata size : ', len(data) - total_metadata_size)
+    # print('Decoded data : ', decoded)
+    # print('Total size of payload data : ', len(data))
+    # print('Total size - metadata size : ', len(data) - total_metadata_size)
+
     return 'done'
 
 
