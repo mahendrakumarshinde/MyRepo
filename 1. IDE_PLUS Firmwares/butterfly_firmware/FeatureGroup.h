@@ -44,6 +44,7 @@ class FeatureGroup
         bool isActive() { return m_active; }
         /***** Time management *****/
         void setDataSendPeriod(uint16_t dataSendPeriod);
+        uint16_t getDataSendPeriod() {return m_dataSendPeriod; }
         bool isDataSendTime(uint8_t idx=0);
         /***** Communication *****/
         bool isReadyToStream(uint8_t portIdx=0);

@@ -577,6 +577,8 @@ void setup()
         // Feature, FeatureGroup and sensors coonfigurations
         for (uint8_t i = 0; i < conductor.CONFIG_TYPE_COUNT; ++i) {
             conductor.configureFromFlash(conductor.CONFIG_TYPES[i]);
+            // For "device.conf", value for "DSP" (dataSendPeriod) will be saved from v1.1.3
+            // Devices with v1.1.2 will not apply this value while loading configuration from flash.
         }
         if (setupDebugMode) {
             ledManager.overrideColor(RGB_PURPLE);

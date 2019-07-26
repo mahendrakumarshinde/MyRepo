@@ -271,6 +271,9 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         configureMainOptions(subConfig);
         if (saveToFlash) {
             iuFlash.saveConfigJson(IUFlash::CFG_DEVICE, subConfig);
+            // Devices with all versions of firmware will save this config, 
+            // for v1.1.3 onwards, json contains "DSP" field for configuring dataSendPeriod
+            // for v1.1.2 and below, this "DSP" field will be ignored by device
         }
     }
     // Component configuration
@@ -973,6 +976,12 @@ void Conductor::configureMainOptions(JsonVariant &config)
     if (resetCycleTime) {
         m_startTime = millis();
     }
+    value = config["DSP"];
+    if(value.success()){
+        debugPrint("DEBUG: configureMainOptions: DSP");
+        m_mainFeatureGroup->setDataSendPeriod(value.as<uint16_t>());
+        // NOTE: Older firmware device will not set this parameter even if configJson contains it.
+}
 }
 
 /**
@@ -1098,14 +1107,17 @@ void Conductor::processCommand(char *buff)
         case 'P': 
         {
             if (strcmp(buff, "PUBLISH_DEVICE_DETAILS_MQTT") == 0) {
-                char deviceDetailsString[150];
-                StaticJsonBuffer<150> deviceDetailsBuffer;
+                char deviceDetailsString[250];
+                StaticJsonBuffer<250> deviceDetailsBuffer;
                 JsonObject& deviceDetails = deviceDetailsBuffer.createObject();
                 deviceDetails["mac"] = m_macAddress.toString().c_str();
                 deviceDetails["fft_blockSize"] = FFTConfiguration::currentBlockSize;
                 deviceDetails["fft_samplingRate"] = FFTConfiguration::currentSamplingRate;
                 deviceDetails["host_firmware_version"] = FIRMWARE_VERSION;
                 deviceDetails["wifi_firmware_version"] = iuWiFi.espFirmwareVersion;
+                deviceDetails["data_send_period"] = m_mainFeatureGroup->getDataSendPeriod(); // milliseconds
+                deviceDetails["feature_group"] = m_mainFeatureGroup->getName();
+                deviceDetails["raw_data_period"] = m_rawDataPublicationTimer / 1000;  // seconds
                 deviceDetails.printTo(deviceDetailsString);
                 debugPrint("INFO deviceDetailsString : ", false);
                 debugPrint(deviceDetailsString);
