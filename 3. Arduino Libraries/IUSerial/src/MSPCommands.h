@@ -69,6 +69,7 @@ namespace MSPCommand
 	SEND_ACCOUNTID,	
 
         /***** WiFi to Host commands *****/
+        HTTP_ACK,                       // Used to send back HTTP status code to the MCU
         // MAC addresses
         ASK_BLE_MAC,  // Ask BLE MAC Address
         RECEIVE_WIFI_MAC,  // Send WiFi MAC Address
