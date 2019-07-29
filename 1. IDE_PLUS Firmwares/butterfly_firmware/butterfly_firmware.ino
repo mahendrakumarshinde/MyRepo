@@ -707,6 +707,8 @@ void loop()
         // Clean timed out segmented messages
         conductor.cleanTimedoutSegmentedMessages();
        
+        conductor.manageRawDataSending();
+
         yield();
        
     #endif

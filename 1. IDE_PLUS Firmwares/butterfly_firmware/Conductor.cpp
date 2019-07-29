@@ -1154,10 +1154,12 @@ void Conductor::processCommand(char *buff)
                     debugPrint("Record mode");
                 }
                 delay(500);
-                sendAccelRawData(0);  // Axis X
-                sendAccelRawData(1);  // Axis Y
-                sendAccelRawData(2);  // Axis Z
+                persistRawData();
+                // sendAccelRawData(0);  // Axis X
+                // sendAccelRawData(1);  // Axis Y
+                // sendAccelRawData(2);  // Axis Z
                 resetDataAcquisition();
+                startRawDataSendingSession();
             }
             break;
         case '4':              // Set temperature Offset value  [4000:12 < command-value>]
@@ -1679,16 +1681,34 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             iuWiFi.sendBleMacAddress(m_macAddress);
             break;
 	      case MSPCommand::ASK_HOST_FIRMWARE_VERSION:
-            if(loopDebugMode){ debugPrint(F("ASK_HOST_FIRMWARE_VERSION")); }
+            if (loopDebugMode){ debugPrint(F("ASK_HOST_FIRMWARE_VERSION")); }
             iuWiFi.sendHostFirmwareVersion(FIRMWARE_VERSION);               
             break;
         case MSPCommand::ASK_HOST_SAMPLING_RATE:        
-            if(loopDebugMode){ debugPrint(F("ASK_HOST_SAMPLING_RATE")); }
+            if (loopDebugMode){ debugPrint(F("ASK_HOST_SAMPLING_RATE")); }
             iuWiFi.sendHostSamplingRate(FFTConfiguration::currentSamplingRate);    
             break;
         case MSPCommand::ASK_HOST_BLOCK_SIZE:
-            if(loopDebugMode){ debugPrint(F("ASK_HOST_BLOCK_SIZE")); }
+            if (loopDebugMode){ debugPrint(F("ASK_HOST_BLOCK_SIZE")); }
             iuWiFi.sendHostBlockSize(FFTConfiguration::currentBlockSize);
+            break;
+        case MSPCommand::HTTP_ACK: {
+            if (loopDebugMode){ debugPrint(F("HTTP_ACK")); }
+            if (buff[0] == 'X') {
+                httpStatusCodeX = atoi(&buff[1]);
+            } else if (buff[0] == 'Y') {
+                httpStatusCodeY = atoi(&buff[1]);
+            } else if (buff[0] == 'Z') {
+                httpStatusCodeZ = atoi(&buff[1]);
+            }
+            if (loopDebugMode) {
+                debugPrint("HTTP status codes X | Y | Z ",false);
+                debugPrint(httpStatusCodeX, false);debugPrint(" | ", false);
+                debugPrint(httpStatusCodeY, false);debugPrint(" | ", false);
+                debugPrint(httpStatusCodeZ, true);
+            }
+            break;
+        }
         case MSPCommand::WIFI_ALERT_CONNECTED:
             if (loopDebugMode) { debugPrint(F("WIFI-CONNECTED;")); }
             if (isBLEConnected()) {
@@ -2550,10 +2570,7 @@ void Conductor::streamFeatures()
  */
 void Conductor::sendAccelRawData(uint8_t axisIdx)
 {
-    static char rawAccelerationX[15000];
-    static char rawAccelerationY[15000];
-    static char rawAccelerationZ[15000];
-    
+     
     if (axisIdx > 2) {
         return;
     }
@@ -2580,7 +2597,6 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
              m_streamingMode == StreamingMode::WIFI_AND_BLE ) {
        
         int idx = 0;                        // Tracks number of elements filled in txBuffer
-        IUMessageFormat::rawDataPacket rawData;
         for (int i =0; i < IUMessageFormat::maxBlockSize; i++) rawData.txRawValues[i] = 0;
         
         rawData.timestamp = getDatetime();
@@ -2636,6 +2652,81 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
      }
 }
 
+// Copies raw data at current time instant to buffers. These buffers should 
+// be changed later in the optimization pass after v1.1.3
+void Conductor::persistRawData() {  
+    memset(rawAccelerationX, 0, IUMessageFormat::maxBlockSize * 2);
+    memset(rawAccelerationY, 0, IUMessageFormat::maxBlockSize * 2);
+    memset(rawAccelerationZ, 0, IUMessageFormat::maxBlockSize * 2);
+    
+    Feature *accelEnergyX = Feature::getInstanceByName("A0X");
+    Feature *accelEnergyY = Feature::getInstanceByName("A0Y");
+    Feature *accelEnergyZ = Feature::getInstanceByName("A0Z");
+    
+    rawDataRecordedAt = getDatetime();
+
+    accelEnergyX->sendToBuffer((q15_t*) rawAccelerationX, 0, FFTConfiguration::currentBlockSize / 128);
+    accelEnergyY->sendToBuffer((q15_t*) rawAccelerationY, 0, FFTConfiguration::currentBlockSize / 128);
+    accelEnergyZ->sendToBuffer((q15_t*) rawAccelerationZ, 0, FFTConfiguration::currentBlockSize / 128);   
+     
+    debugPrint("Stored raw data at time : ", false);debugPrint(rawDataRecordedAt);
+    
+}
+/**
+ * Should be called every loop iteration. If session is in progress, sends stored axis data to the ESP then waits untill
+ * HTTP 200 is received for that axis. Does not proceed to next axis if HTTP 200 is not received.
+ * TODO : Implement a retry mechanism.
+ */
+void Conductor::manageRawDataSending() {
+    if (isSendingInProgress) {        
+        // double timeSinceLastSentToESP = millis() - lastPacketSentToESP; // use later for retry mechanism
+        if (!XSentToWifi) {
+            prepareRawDataPacketAndSend('X');
+            XSentToWifi = true; 
+            // lastPacketSentToESP = millis();
+        } else if (httpStatusCodeX == 200 && !YsentToWifi) { 
+            prepareRawDataPacketAndSend('Y');
+            YsentToWifi = true;
+            // lastPacketSentToESP = millis();
+        } else if (httpStatusCodeY == 200 && !ZsentToWifi) {
+            prepareRawDataPacketAndSend('Z');
+            ZsentToWifi = true;
+            // lastPacketSentToESP = millis();
+        }
+        if (httpStatusCodeX == 200 && httpStatusCodeY == 200 && httpStatusCodeZ == 200) {
+            isSendingInProgress = false;    // ends the sending session
+        }
+    }
+}
+
+void Conductor::prepareRawDataPacketAndSend(char axis) {
+    rawData.axis = axis;
+    rawData.timestamp = rawDataRecordedAt;
+    switch(axis) {
+        case 'X':
+            memcpy(rawData.txRawValues, rawAccelerationX, IUMessageFormat::maxBlockSize * 2);
+            break;
+        case 'Y':
+            memcpy(rawData.txRawValues, rawAccelerationY, IUMessageFormat::maxBlockSize * 2);
+            break;
+        case 'Z':
+            memcpy(rawData.txRawValues, rawAccelerationZ, IUMessageFormat::maxBlockSize * 2);
+            break;
+    }
+    iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 3000000,
+                                        (char*) &rawData, sizeof rawData);
+    if (loopDebugMode) {
+        debugPrint("Sent ", false);debugPrint(axis,false);debugPrint(" data which was recorded at ",false);
+        debugPrint(rawDataRecordedAt);
+    }
+}
+
+void Conductor::startRawDataSendingSession() {
+    isSendingInProgress = true;
+    httpStatusCodeX = httpStatusCodeY = httpStatusCodeZ = 0;
+    XSentToWifi = YsentToWifi = ZsentToWifi = false;    
+}
+
 /**
  * Handle periodical publication of accel raw data.
  */
@@ -2644,11 +2735,13 @@ void Conductor::periodicSendAccelRawData()
     uint32_t now = millis();
     if (now - m_rawDataPublicationStart > m_rawDataPublicationTimer) {
         delay(500);
-        sendAccelRawData(0);
-        sendAccelRawData(1);
-        sendAccelRawData(2);
+        persistRawData();
+        // sendAccelRawData(0);
+        // sendAccelRawData(1);
+        // sendAccelRawData(2);
         m_rawDataPublicationStart = now;
         resetDataAcquisition();
+        startRawDataSendingSession();
     }
 }
 
