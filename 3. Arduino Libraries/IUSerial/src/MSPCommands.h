@@ -109,8 +109,8 @@ namespace MSPCommand
 	RECEIVE_DIAGNOSTIC_RESULTS,
 	GET_ACCOUNTID,	
 
-        // FFT Config update (Host - Wifi)
-        FFT_CONFIG_ACK
+        // Config update (Host - Wifi)
+        CONFIG_ACK
     };
 }
 

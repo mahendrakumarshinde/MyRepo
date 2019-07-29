@@ -101,7 +101,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         case MSPCommand::ASK_WIFI_FV:
             iuSerial->sendMSPCommand(MSPCommand::RECEIVE_WIFI_FV, FIRMWARE_VERSION);
             break;
-        case MSPCommand::FFT_CONFIG_ACK:
+        case MSPCommand::CONFIG_ACK:
             // Send the fft configuration update acknowledgement to command response topic
             mqttHelper.publish(COMMAND_RESPONSE_TOPIC,buffer);
             break;

@@ -281,13 +281,11 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             if (saveToFlash) {
                 iuFlash.updateConfigJson(IUFlash::CFG_DEVICE, subConfig);
                 // Devices with all versions of firmware will save this config, 
-            // Devices with all versions of firmware will save this config, 
-                // Devices with all versions of firmware will save this config, 
                 // for v1.1.3 onwards, json contains "DSP" field for configuring dataSendPeriod
                 // for v1.1.2 and below, this "DSP" field will be ignored by device
             }
         }
-        iuWiFi.sendMSPCommand(MSPCommand::FFT_CONFIG_ACK, validationResultString);
+        iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
     }
     // Component configuration
     subConfig = root["components"];
@@ -713,8 +711,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 
                 // Acknowledge that configuration has been saved successfully on /ide_plus/command_response/ topic
                 // If streaming mode is BLE, send an acknowledgement on BLE as well
-                // NOTE: MSPCommand FFT_CONFIG_ACK added to Arduino/libraries/IUSerial/src/MSPCommands.h
-                iuWiFi.sendMSPCommand(MSPCommand::FFT_CONFIG_ACK, validationResultString);
+                // NOTE: MSPCommand CONFIG_ACK added to Arduino/libraries/IUSerial/src/MSPCommands.h
+                iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
                 if(StreamingMode::BLE && isBLEConnected()) { iuBluetooth.write("FFT_CFG_SUCCESS;"); delay(100); }
 
                 // Restart STM, setFFTParams will configure FFT parameters in setup()
@@ -726,7 +724,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 
             // Acknowledge incorrect configuration, send the errors on /ide_plus/command_response topic
             // If streaming mode is BLE, send an acknowledgement on BLE as well
-            iuWiFi.sendMSPCommand(MSPCommand::FFT_CONFIG_ACK, validationResultString);
+            iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
             if(m_streamingMode == StreamingMode::BLE && isBLEConnected()) { iuBluetooth.write("FFT_CFG_FAILURE;"); delay(100); }
         }
     } // If json is incorrect, it will result in parsing error in jsonBuffer.parseObject(json) which will cause the processConfiguration call to return
