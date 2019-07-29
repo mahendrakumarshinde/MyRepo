@@ -3,6 +3,7 @@ Used for testing HTTP POST raw data functionality on the device.
 '''
 from flask import Flask, request
 from struct import *
+from threading import Thread
 import requests
 import logging
 
@@ -11,9 +12,11 @@ logging.basicConfig(filename="iuDecoder.log", level=logging.DEBUG)
 
 app = Flask(__name__)
 
+
 @app.route('/')
 def hello_world():
-   return 'IU HTTP raw data decode test server'
+    return 'IU HTTP raw data decode test server'
+
 
 # sizes of metadata in bytes
 macId_size = 18
@@ -136,9 +139,13 @@ def receive_accel_raw_data():
     print(decoded)
     logging.debug(decoded)
 
-    forward_to_indicus(decoded)
-    # save_to_file(data, decoded)
+    # POST the decoded data to Indicus asynchronously. If not done asynchronously, the Flask server will wait for
+    # response from the Indicus server. This will make it not serve incoming Y axis data from the device
+    indicus_send_thread = Thread(target=forward_to_indicus, args=(decoded,))
+    indicus_send_thread.start()
 
+    # uncomment this if you want to save HTTP binary payload to use later
+    # save_to_file(data, decoded)
 
     # print("Raw binary data : ", data)
     # print('Decoded data : ', decoded)
