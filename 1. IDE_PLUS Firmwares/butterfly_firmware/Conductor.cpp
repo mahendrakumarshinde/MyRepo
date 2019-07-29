@@ -242,6 +242,9 @@ void Conductor::periodicSendConfigChecksum()
  */
 bool Conductor::processConfiguration(char *json, bool saveToFlash)
 {
+    // String to hold the result of validation of the config json
+    char validationResultString[300];
+
     //StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;            // make it dynamic
     //const size_t bufferSize = JSON_ARRAY_SIZE(2) + JSON_OBJECT_SIZE(3) + 60;        // dynamically allociated memory
     const size_t bufferSize = JSON_OBJECT_SIZE(1) + 41*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(41) + 2430;
@@ -268,13 +271,23 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     subConfig.printTo(jsonChar);
     
     if (subConfig.success()) {
-        configureMainOptions(subConfig);
-        if (saveToFlash) {
-            iuFlash.saveConfigJson(IUFlash::CFG_DEVICE, subConfig);
+        // This subconfig has to be validated for the provided fields, note the that subconfig may contain only a subset of all the fields present in device config
+        // i.e. Complete device conf: {"main":{"GRP":["MOTSTD"],"RAW":1800,"POW":0,"TSL":60,"TOFF":10,"TCY":20,"DSP":512}}
+        // the received config may contain only DSP or RAW or any subset of the fields.
+        // The incorrect fields should be weeded out, corresponding error messages should be attached in the validationResultString.
+        bool validConfig = iuFlash.validateConfig(IUFlash::CFG_DEVICE, subConfig, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime());
+        if(validConfig) {
+            configureMainOptions(subConfig);
+            if (saveToFlash) {
+                iuFlash.updateConfigJson(IUFlash::CFG_DEVICE, subConfig);
+                // Devices with all versions of firmware will save this config, 
             // Devices with all versions of firmware will save this config, 
-            // for v1.1.3 onwards, json contains "DSP" field for configuring dataSendPeriod
-            // for v1.1.2 and below, this "DSP" field will be ignored by device
+                // Devices with all versions of firmware will save this config, 
+                // for v1.1.3 onwards, json contains "DSP" field for configuring dataSendPeriod
+                // for v1.1.2 and below, this "DSP" field will be ignored by device
+            }
         }
+        iuWiFi.sendMSPCommand(MSPCommand::FFT_CONFIG_ACK, validationResultString);
     }
     // Component configuration
     subConfig = root["components"];
@@ -681,7 +694,6 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             debugPrint("FFT configuration received: ", false);
             subConfig.printTo(Serial); debugPrint("");
         }
-        char validationResultString[300];
         bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_FFT, subConfig, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime());
         if(loopDebugMode) { 
             debugPrint("Validation: ", false);
@@ -695,7 +707,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         
             // Save the valid configuration to file 
             if(saveToFlash) { 
-                // TODO: Check if the config is new, then save to file and reset
+                // Check if the config is new, then save to file and reset
                 iuFlash.saveConfigJson(IUFlash::CFG_FFT, subConfig);
                 if(loopDebugMode) debugPrint("Saved FFT configuration to file");
                 
@@ -978,7 +990,6 @@ void Conductor::configureMainOptions(JsonVariant &config)
     }
     value = config["DSP"];
     if(value.success()){
-        debugPrint("DEBUG: configureMainOptions: DSP");
         m_mainFeatureGroup->setDataSendPeriod(value.as<uint16_t>());
         // NOTE: Older firmware device will not set this parameter even if configJson contains it.
 }

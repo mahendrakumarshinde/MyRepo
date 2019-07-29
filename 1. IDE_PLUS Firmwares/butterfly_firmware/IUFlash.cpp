@@ -123,6 +123,40 @@ bool IUFSFlash::saveConfigJson(storedConfig configType, JsonVariant &config)
     }
     return true;
 }
+/*
+    Following method only updates the fields received in the config message.
+    It will not overwrite the previous json string, only add/update the fields
+    received in the config message.
+ */
+bool IUFSFlash::updateConfigJson(storedConfig configType, JsonVariant &config)
+{
+    if (!available()) {
+        return false;
+    }
+    StaticJsonBuffer<300> storedConfigJsonBuffer;
+    const int storedConfigMaxLength = 300;
+    char storedConfigJsonString[storedConfigMaxLength];
+    int charCount;
+    strcpy(storedConfigJsonString, "");
+    charCount = readConfig(configType, storedConfigJsonString, storedConfigMaxLength);    
+    storedConfigJsonString[charCount] = '\0';
+    JsonObject& storedConfigJson = storedConfigJsonBuffer.parse(storedConfigJsonString);
+    for(auto kv:(JsonObject&)config) {
+        storedConfigJson[kv.key] = kv.value;
+    }
+    File file = openConfigFile(configType, "w");
+    if (storedConfigJson.printTo(file) == 0)
+    {
+        return false;
+    }
+    file.close();
+    if (debugMode)
+    {
+        debugPrint("Successfully saved config type #", false);
+        debugPrint((uint8_t) configType);
+    }
+    return true;
+}
 
 bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char* validationResultString, char* mac_id, double timestamp)
 {
@@ -134,7 +168,48 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
     JsonArray& errorMessages = validationResult.createNestedArray("errorMessages");
 
     switch(configType) {
+        case CFG_DEVICE: {
+            // Configuration is valid if there is atleast one correct key           
+
+            // Indicate the type of validation
+            validationResult["messageType"] = "device-config-ack";
+
+            // Save the updated params
+            JsonArray& validParams = validationResult.createNestedArray("validParams");
+
+            // Validation for "DSP" parameter
+            if(config.containsKey("DSP")) {
+                int newDataSendPeriod = config["DSP"];
+                if(newDataSendPeriod < 200) { // DSP cannot be less than 200 milliseconds
+                    errorMessages.add("DSP < 200 ms");
+                    config.remove("DSP");
+                } else {
+                    validParams.add("DSP");
+                }
+            }
+
+            // Validation for "RAW parameter"
+            if(config.containsKey("RAW")) {
+                int newRawDataPublishPeriod = config["RAW"];
+                if(newRawDataPublishPeriod < 30) { // RAW cannot be less than 10 seconds
+                    errorMessages.add("RAW < 30 seconds");
+                    config.remove("RAW");
+                } else {
+                    validParams.add("RAW");
+                }
+            }
+
+            // If no valid parameter is present, set validConfig to false
+            if (validParams.size() == 0) {
+                validConfig = false;
+            }
+            break;
+        }
         case CFG_FFT: {
+            // Configuration is valid only if both samplingRate and blockSize are present
+            // and both are within their acceptable range of values
+            validConfig = true;
+
             // Indicate the type of validation
             validationResult["messageType"] = "fft-config-ack";
 
@@ -204,8 +279,8 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
     }
 
     // Construct the validationResult
-    validationResult["mac"] = mac_id;
     validationResult["validConfig"] = validConfig;
+    validationResult["mac"] = mac_id;
     validationResult["timestamp"] = timestamp;
     validationResult.printTo(validationResultString, 300);
     return validConfig;
