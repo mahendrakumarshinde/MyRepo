@@ -1163,12 +1163,15 @@ void Conductor::processCommand(char *buff)
                     debugPrint("Record mode");
                 }
                 delay(500);
-                persistRawData();
-                // sendAccelRawData(0);  // Axis X
-                // sendAccelRawData(1);  // Axis Y
-                // sendAccelRawData(2);  // Axis Z
+                if (m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE) {
+                    persistRawData();
+                    startRawDataSendingSession();
+                } else if (m_streamingMode == StreamingMode::ETHERNET) {
+                    sendAccelRawData(0);  // Axis X
+                    sendAccelRawData(1);  // Axis Y
+                    sendAccelRawData(2);  // Axis Z
+                }
                 resetDataAcquisition();
-                startRawDataSendingSession();
             }
             break;
         case '4':              // Set temperature Offset value  [4000:12 < command-value>]
@@ -2744,13 +2747,16 @@ void Conductor::periodicSendAccelRawData()
     uint32_t now = millis();
     if (now - m_rawDataPublicationStart > m_rawDataPublicationTimer) {
         delay(500);
-        persistRawData();
-        // sendAccelRawData(0);
-        // sendAccelRawData(1);
-        // sendAccelRawData(2);
+        if (m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE) {
+            persistRawData();
+            startRawDataSendingSession();
+        } else if (m_streamingMode == StreamingMode::ETHERNET) {
+            sendAccelRawData(0);
+            sendAccelRawData(1);
+            sendAccelRawData(2);
+        }
         m_rawDataPublicationStart = now;
         resetDataAcquisition();
-        startRawDataSendingSession();
     }
 }
 
