@@ -586,10 +586,10 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
       // Serial.print(fingerprintResult_X);Serial.print("\t");Serial.print(fingerprintResult_Y);Serial.print("\t");
       // Serial.println(fingerprintResult_Z);
       // direction++;
-        T newamplitudesCopy[amplitudeCount];
-        float newFloatAmplitudesCopy[amplitudeCount];
-        float new_df = (float) samplingRate / (float) sampleCount;        
-        copyArray(amplitudes, newamplitudesCopy, amplitudeCount);
+        // T newamplitudesCopy[amplitudeCount];
+        // float newFloatAmplitudesCopy[amplitudeCount];
+        // float new_df = (float) samplingRate / (float) sampleCount;        
+        // copyArray(amplitudes, newamplitudesCopy, amplitudeCount);
 
       /*  Serial.println("Accel FFT Amplitudes Copy :");
         Serial.print("[");
@@ -614,17 +614,17 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         * @newFloatAmplitudesCopy  return the velocity fft amplitudes. 
         */
         
-        float q15_amplitudes;
+        // float q15_amplitudes;
         
-        for(int i=1;i<amplitudeCount;i++){
-          q15_amplitudes =  (((float)newamplitudesCopy[i])/128.0*1000); 
-          //Serial.print(q15_amplitudes);Serial.print(",");
+        // for(int i=1;i<amplitudeCount;i++){
+        //   q15_amplitudes =  (((float)newamplitudesCopy[i])/128.0*1000); 
+        //   //Serial.print(q15_amplitudes);Serial.print(",");
            
-          newFloatAmplitudesCopy[i] =  q15_amplitudes/(2*3.14*i*new_df)*0.001197*256/1.414 ;       // ((float(newamplitudesCopy[i])/32768.0)/(2*3.14*i*new_df))* 1000;
+        //   newFloatAmplitudesCopy[i] =  q15_amplitudes/(2*3.14*i*new_df)*resolution*(FFTConfiguration::currentBlockSize/2)/1.414 ;       // ((float(newamplitudesCopy[i])/32768.0)/(2*3.14*i*new_df))* 1000;
           
-          //Serial.print(newFloatAmplitudesCopy[i],4);Serial.print(",");
+        //   //Serial.print(newFloatAmplitudesCopy[i],4);Serial.print(",");
           
-        }
+        // }
           //Serial.println("]");
         
         float agitation = RFFTAmplitudes::getRMS(amplitudes, sampleCount, true);
@@ -695,17 +695,18 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
                }
               Serial.println("]"); 
            */           
+    
              if(direction == 0) {
-                fingerprintResult_X =  DiagnosticEngine::m_specializedCompute (direction,newFloatAmplitudesCopy,float(scaling1)/32768.0);  // resolution
+                fingerprintResult_X =  DiagnosticEngine::m_specializedCompute (direction,(const q15_t*)amplitudes,amplitudeCount,resolution,scaling1);  // resolution
                 // debugPrint("X", false);debugPrint(fingerprintResult_X, true);
              }
              if(direction ==1){
-                fingerprintResult_Y = DiagnosticEngine::m_specializedCompute (direction, newFloatAmplitudesCopy,float(scaling1)/32768.0);
+                fingerprintResult_Y = DiagnosticEngine::m_specializedCompute (direction, (const q15_t*)amplitudes,amplitudeCount,resolution, scaling1);
                 // debugPrint("Y", false);debugPrint(fingerprintResult_Y, true);
 
              }
              if(direction == 2){
-                fingerprintResult_Z = DiagnosticEngine::m_specializedCompute (direction, newFloatAmplitudesCopy,float(scaling1)/32768.0);
+                fingerprintResult_Z = DiagnosticEngine::m_specializedCompute (direction, (const q15_t*)amplitudes,amplitudeCount,resolution,scaling1);
                 // debugPrint("Z", false);debugPrint(fingerprintResult_Z, true);
              }
             

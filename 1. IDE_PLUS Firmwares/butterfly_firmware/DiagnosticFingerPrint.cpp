@@ -1,6 +1,7 @@
 #include "DiagnosticFingerPrint.h"
 #include "IUESP8285.h"
 #include "Conductor.h"
+#include "FFTConfiguration.h"
 
 extern Conductor conductor;
 extern const char* fingerprintData ;
@@ -13,6 +14,9 @@ const char* iuFingerprintOutput;//[500];
  * 
  */
 
+int DiagnosticEngine::m_SampleingFrequency = FFTConfiguration::DEFAULT_SAMPLING_RATE;
+int DiagnosticEngine::m_smapleSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
+int DiagnosticEngine::m_fftLength = FFTConfiguration::DEFAULT_BLOCK_SIZE / 2;
 
 bool DiagnosticEngine::isDiagnosticConfigAvailable() {
 
@@ -226,7 +230,7 @@ q15_t DiagnosticEngine::m_specializedCompute(int m_parameterId, float m_speedMul
 
 
 
-char* DiagnosticEngine::m_specializedCompute (int m_direction, float *m_amplitudes,float m_resolution)
+char* DiagnosticEngine::m_specializedCompute (int m_direction, const q15_t *m_amplitudes,int amplitudeCount, float m_resolution, float scaling)
 {
     // read all the available keys and there values
      const char* fingerprintsIdBuffer_X[13]; 
@@ -374,8 +378,8 @@ char* DiagnosticEngine::m_specializedCompute (int m_direction, float *m_amplitud
       {
         lth = 1;
       }
-      if(hth >=257){      // maximum spectral lines
-        hth =257;         //higher bin index i.e 800Hz
+      if(hth >=(FFTConfiguration::currentBlockSize/2 + 1)){      // maximum spectral lines
+        hth = (FFTConfiguration::currentBlockSize/2 + 1);         //higher bin index i.e 800Hz
       }
       
       if(( (root3["dir"] == "VX" || root3["dir"] == "AX") && dirFlag_X == true )|| ( (root3["dir"] == "VY" || root3["dir"] == "AY" ) && dirFlag_Y == true ) ||
@@ -383,7 +387,28 @@ char* DiagnosticEngine::m_specializedCompute (int m_direction, float *m_amplitud
       //   Serial.println("Inside Computation Loop ......");
          
         // Serial.print("[");
+        // lower_bound and upper_bound are frequency bounds as per the entered fingeprint configuration
+        float lower_bound = sxm - sxm * bandValue/100.0;
+        float upper_bound = sxm + sxm * bandValue/100.0;
+        if(lower_bound <= FFTConfiguration::currentLowCutOffFrequency )    
+        {
+          lower_bound = 10;
+        }
+        if(upper_bound >=(FFTConfiguration::currentSamplingRate / 2)){      // maximum spectral lines
+          upper_bound = (FFTConfiguration::currentSamplingRate / 2);         //higher bin index i.e 800Hz
+        }
      
+        float df = (float)FFTConfiguration::currentSamplingRate / (float)FFTConfiguration::currentBlockSize;
+        for (int i=0; i<amplitudeCount; i++) {
+            if((lower_bound < df*i) && (df*i < upper_bound)) {
+                addition = (float)m_amplitudes[i];
+                addition /= (float)scaling;
+                addition *= 1000;
+                addition *= 1.414;
+                addition *= m_resolution; 
+                sum += addition;
+            }
+        }
          for(int i= lth; i<= hth; i++){     // sum all the amplitudes between lower to higher thresholds
          
           addition = m_amplitudes[i];
