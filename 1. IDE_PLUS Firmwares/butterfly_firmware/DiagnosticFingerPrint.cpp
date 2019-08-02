@@ -388,35 +388,31 @@ char* DiagnosticEngine::m_specializedCompute (int m_direction, const q15_t *m_am
          
         // Serial.print("[");
         // lower_bound and upper_bound are frequency bounds as per the entered fingeprint configuration
-        float lower_bound = sxm - sxm * bandValue/100.0;
-        float upper_bound = sxm + sxm * bandValue/100.0;
+        float lower_bound = sxm - sxm * bandValue/100.0;  // lower frequency bound
+        float upper_bound = sxm + sxm * bandValue/100.0;  // upper frequency bound
         if(lower_bound <= FFTConfiguration::currentLowCutOffFrequency )    
         {
-          lower_bound = 10;
+          lower_bound = FFTConfiguration::currentLowCutOffFrequency;
         }
-        if(upper_bound >=(FFTConfiguration::currentSamplingRate / 2)){      // maximum spectral lines
-          upper_bound = (FFTConfiguration::currentSamplingRate / 2);         //higher bin index i.e 800Hz
+        if(upper_bound >= FFTConfiguration::currentHighCutOffFrequency) {      
+          upper_bound = FFTConfiguration::currentHighCutOffFrequency;        
         }
      
         float df = (float)FFTConfiguration::currentSamplingRate / (float)FFTConfiguration::currentBlockSize;
-        for (int i=0; i<amplitudeCount; i++) {
-            if((lower_bound < df*i) && (df*i < upper_bound)) {
-                addition = (float)m_amplitudes[i];
-                addition /= (float)scaling;
-                addition *= 1000;
-                addition *= 1.414;
-                addition *= m_resolution; 
+        int lower_index = (int)(lower_bound/df + 1); // ceiling(lower_bound/df)
+        int upper_index = (int)(upper_bound/df); // floor(upper_bound/df)
+        // ideally we need to start from lower_index = ceiling(lower_bound/df) to upper_index = floor(upper_bound/df)
+        // to ensure we are not losing out any sample in edge case (if lower_bound is a multiple of df),
+        // we consider one extra index at lower and bound and select the value only if : lower_bound < df*i < upper_bound
+        float factor = (1000*1.414*m_resolution/scaling);
+        // 1000 -> convert m/s to mm/s
+        // 1.414 -> sqrt(2) for converting to rms
+        for (int i = lower_index-1; i <= upper_index+1; i++) {
+            if((lower_bound <= df*i) && (df*i <= upper_bound)) {
+                addition = (float)m_amplitudes[i] * factor;
                 sum += addition;
             }
-        }
-         for(int i= lth; i<= hth; i++){     // sum all the amplitudes between lower to higher thresholds
-         
-          addition = m_amplitudes[i];
-          sum += addition;  
-        //  Serial.print(m_amplitudes[i],4);Serial.print(","); 
-        }
-      //  Serial.println("]");
-        
+        }        
       }
 
       
