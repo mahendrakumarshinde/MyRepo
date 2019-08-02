@@ -7,7 +7,7 @@
 #include "FeatureClass.h"
 #include "IUFlash.h"
 #include <IUSerial.h>
-
+#include "FFTConfiguration.h"
 
 /*
 #include "BoardDefinition.h"
@@ -57,7 +57,7 @@
   
   
   q15_t m_specializedCompute(int m_parameterId, float m_speedMultiplier,uint8_t m_bandValue,q15_t *m_amplitudes);        // compute the diagnostic fingerprints
-  char* m_specializedCompute(int m_direction, float *m_amplitudes,float m_resolution);
+  char* m_specializedCompute(int m_direction, const q15_t *m_amplitudes,int amplitudeCount, float m_resolution, float scaling);
   
   float lowerCutoff(float m_speedMultiplier,int m_bandValue,float m_freqResolution );//{ return  m_speedMultiplier - m_speedMultiplier*band/100);  // get lower cutoff in frequency domain
   float higherCutoff(float  m_speedMultiplier,int m_bandValue, float m_freqResolution );//{ return m_speedMultiplier + m_speedMultiplier*band/100}; // get higher cutoff in frequency domain
@@ -67,13 +67,13 @@
   const char* generateJSONPayload(JsonObject &config, float* values);
 
   const char* mergeJOSN(JsonObject& dest, JsonObject& src);
-  protected:
+  static int m_SampleingFrequency;
+  static int m_smapleSize;
+  static int m_fftLength; 
 
-  const int m_SampleingFrequency = 3330;
-  const int m_smapleSize = 512;
+  protected:
   //float m_resolution  =  4.0 * 9.80665; // 0.244/32768.0f;
   float m_resolution;
-  int m_fftLength = 256; 
   float m_scalingFactor = 1.414;
   
   int m_direction;

@@ -1,4 +1,5 @@
 #include "InstancesDragonfly.h"
+#include "FFTConfiguration.h"
 
 #ifdef DRAGONFLY_V03
 
@@ -73,12 +74,12 @@ FeatureTemplate<float> batteryLoad("BAT", 2, 1, batteryLoadValues);
 /***** Accelerometer Features *****/
 
 // Sensor data
-__attribute__((section(".noinit2"))) q15_t accelerationXValues[1024];     // 1024
-__attribute__((section(".noinit2"))) q15_t accelerationYValues[1024];
-__attribute__((section(".noinit2"))) q15_t accelerationZValues[1024];
-FeatureTemplate<q15_t> accelerationX("A0X", 8, 128, accelerationXValues); // 8, 128
-FeatureTemplate<q15_t> accelerationY("A0Y", 8, 128, accelerationYValues);
-FeatureTemplate<q15_t> accelerationZ("A0Z", 8, 128, accelerationZValues);
+ __attribute__((section(".noinit2"))) q15_t accelerationXValues[8192];     // 1024
+ __attribute__((section(".noinit2"))) q15_t accelerationYValues[8192];
+ __attribute__((section(".noinit2"))) q15_t accelerationZValues[8192];
+FeatureTemplate<q15_t> accelerationX("A0X", 64, 128, accelerationXValues); // 8, 128
+FeatureTemplate<q15_t> accelerationY("A0Y", 64, 128, accelerationYValues);
+FeatureTemplate<q15_t> accelerationZ("A0Z", 64, 128, accelerationZValues);
 
 
 // 128 sample long accel features
@@ -136,7 +137,7 @@ __attribute__((section(".noinit2"))) float dispRMS512XValues[2];    //2
 __attribute__((section(".noinit2"))) float dispRMS512YValues[2];
 __attribute__((section(".noinit2"))) float dispRMS512ZValues[2];
 FeatureTemplate<float> dispRMS512X("DAX", 2, 1, dispRMS512XValues);   //2,1
-FeatureTemplate<float> dispRMS512Y("DAX", 2, 1, dispRMS512YValues);
+FeatureTemplate<float> dispRMS512Y("DAY", 2, 1, dispRMS512YValues);
 FeatureTemplate<float> dispRMS512Z("DAZ", 2, 1, dispRMS512ZValues);
 
 
@@ -243,7 +244,7 @@ FeatureStateComputer opStateComputer(1, &opStateFeature);
 
 
 // Shared computation space
-q15_t allocatedFFTSpace[2048];    // 1024
+q15_t allocatedFFTSpace[8192];    // 1024
 
 
 // Note that computer_id 0 is reserved to designate an absence of computer.
@@ -279,9 +280,9 @@ FFTComputer<q15_t> accelFFTComputerX(30,
                                      &velRMS512X,
                                      &dispRMS512X,
                                      allocatedFFTSpace,
-                                     DEFAULT_LOW_CUT_FREQUENCY,
-                                     DEFAULT_HIGH_CUT_FREQUENCY,
-                                     DEFAULT_MIN_AGITATION,
+                                     FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY,
+                                     FFTConfiguration::DEFAULT_HIGH_CUT_OFF_FREQUENCY,
+                                     FFTConfiguration::DEFAULT_MIN_AGITATION,
                                      VELOCITY_RMS_SCALING[0],
                                      DISPLACEMENT_RMS_SCALING[0],true);
 FFTComputer<q15_t> accelFFTComputerY(31,
@@ -290,9 +291,9 @@ FFTComputer<q15_t> accelFFTComputerY(31,
                                      &velRMS512Y,
                                      &dispRMS512Y,
                                      allocatedFFTSpace,
-                                     DEFAULT_LOW_CUT_FREQUENCY,
-                                     DEFAULT_HIGH_CUT_FREQUENCY,
-                                     DEFAULT_MIN_AGITATION,
+                                     FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY,
+                                     FFTConfiguration::DEFAULT_HIGH_CUT_OFF_FREQUENCY,
+                                     FFTConfiguration::DEFAULT_MIN_AGITATION,
                                      VELOCITY_RMS_SCALING[1],
                                      DISPLACEMENT_RMS_SCALING[1],true);
 FFTComputer<q15_t> accelFFTComputerZ(32,
@@ -301,9 +302,9 @@ FFTComputer<q15_t> accelFFTComputerZ(32,
                                      &velRMS512Z,
                                      &dispRMS512Z,
                                      allocatedFFTSpace,
-                                     DEFAULT_LOW_CUT_FREQUENCY,
-                                     DEFAULT_HIGH_CUT_FREQUENCY,
-                                     DEFAULT_MIN_AGITATION,
+                                     FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY,
+                                     FFTConfiguration::DEFAULT_HIGH_CUT_OFF_FREQUENCY,
+                                     FFTConfiguration::DEFAULT_MIN_AGITATION,
                                      VELOCITY_RMS_SCALING[2],
                                      DISPLACEMENT_RMS_SCALING[2],true);
 
@@ -345,9 +346,9 @@ void setUpComputerSources()
     accel512ComputerZ.addSource(&accelRMS128Z, 1);
     accel512TotalComputer.addSource(&accelRMS128Total, 1);
     // Acceleration FFTs
-    accelFFTComputerX.addSource(&accelerationX, 4);
-    accelFFTComputerY.addSource(&accelerationY, 4);
-    accelFFTComputerZ.addSource(&accelerationZ, 4);
+    accelFFTComputerX.addSource(&accelerationX, FFTConfiguration::DEFAULT_BLOCK_SIZE / 128);    
+    accelFFTComputerY.addSource(&accelerationY, FFTConfiguration::DEFAULT_BLOCK_SIZE / 128);   
+    accelFFTComputerZ.addSource(&accelerationZ, FFTConfiguration::DEFAULT_BLOCK_SIZE / 128);
     // Audio DB
     audioDB2048Computer.addSource(&audio, 1);
     audioDB4096Computer.addSource(&audio, 2);

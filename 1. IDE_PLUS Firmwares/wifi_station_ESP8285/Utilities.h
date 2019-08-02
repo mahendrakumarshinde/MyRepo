@@ -12,6 +12,10 @@
 /* =============================================================================
     HTTP functions
 ============================================================================= */
+namespace HttpContentType {
+    static char* applicationJSON = "json\r\n";
+    static char* octetStream = "octet-stream\r\n";
+}
 
 /**
  * Sends an HTTP GET request - HTTPS is used if fingerprint is given.
@@ -156,9 +160,9 @@ inline int httpPostJsonRequest(const char *url, char *payload,
 
 
 /**
- * Sends an HTTP POST request with a big JSON
+ * Sends an HTTP POST request with a "Big" payload
  *
- * "Big" JSON means that its size is above the max packet size which is
+ * "Big" means that its size is above the max packet size which is
  * around 3KB (2920 bytes in my experience).
  *
  * @param endpointHost
@@ -172,11 +176,12 @@ inline int httpPostJsonRequest(const char *url, char *payload,
  * or a negative number for HTTPClient errors (see HTTPC_ERROR in
  * ESP8266HTTPClient.h)
  */
-inline int httpPostBigJsonRequest(
+inline int httpPostBigRequest(
     const char *endpointHost, const char *endpointURL,
     uint16_t endpointPort, uint8_t *payload, uint16_t payloadLength,
+    char* contentType = HttpContentType::applicationJSON,
     size_t chunkSize=WIFICLIENT_MAX_PACKET_SIZE,
-    uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT)
+    uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT + 3000)
 {
     if (WiFi.status() != WL_CONNECTED)
     {
@@ -191,7 +196,7 @@ inline int httpPostBigJsonRequest(
     String request = "POST " + String(endpointURL) + " HTTP/1.1\r\n" +
         "Host: " + String(endpointHost) + "\r\n" +
         "Accept: application/json" + "\r\n" +
-        "Content-Type: application/json\r\n" +
+        "Content-Type: application/" + contentType +
         "Content-Length: " + String(payloadLength) + "\r\n\r\n";
     // Use WiFiClient class to create TCP connections
     WiFiClient client;

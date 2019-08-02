@@ -39,11 +39,14 @@ class IUESP8285 : public IUSerial, public Component
         // Timeout for no response (only when WiFi is awake)
         static const uint32_t noResponseTimeout = 45000; // ms
         // Timeout for failing to confim feature publication
-        static const uint32_t confirmPublicationTimeout = 30000; // ms
+        static const uint32_t confirmPublicationTimeout = 40000; // ms
         // Default Config type for flash storing
         static const IUFlash::storedConfig STORED_CFG_TYPE = IUFlash::CFG_WIFI0;
         // Size of Json buffer (to parse config json)
         static const uint16_t JSON_BUFFER_SIZE = 256;
+        // WiFi firmware FirmwareVersion
+        char espFirmwareVersion[6];
+        bool espFirmwareVersionReceived = false;
         /***** Core *****/
         IUESP8285(HardwareSerial *serialPort, char *charBuffer,
                   uint16_t bufferSize, PROTOCOL_OPTIONS protocol, uint32_t rate,
@@ -88,6 +91,18 @@ class IUESP8285 : public IUSerial, public Component
             { mspSendMacAddress(MSPCommand::RECEIVE_BLE_MAC, bleMac); }
 	      void sendHostFirmwareVersion(const char *FirmwareVersion)
             { sendMSPCommand(MSPCommand::RECEIVE_HOST_FIRMWARE_VERSION, FirmwareVersion); } // send Firmware Vr to WIfi
+        void sendHostSamplingRate(const int samplingRate)
+            { 
+                char sampRate[7];                   // increase if samplingRate goes above 6 digits
+                itoa(samplingRate, sampRate, 10);
+                sendMSPCommand(MSPCommand::RECEIVE_HOST_SAMPLING_RATE, sampRate);
+            }
+        void sendHostBlockSize(const int blockSize)
+            {
+                char bs[6];                         // increase if block size goes above 5 digits
+                itoa(blockSize, bs, 10);
+                sendMSPCommand(MSPCommand::RECEIVE_HOST_BLOCK_SIZE, bs);
+            }
         void sendWiFiCredentials();
         void forgetCredentials();
         void sendStaticConfig();

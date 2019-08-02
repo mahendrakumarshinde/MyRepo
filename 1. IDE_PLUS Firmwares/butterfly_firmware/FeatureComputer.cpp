@@ -40,6 +40,9 @@ FeatureComputer::FeatureComputer(uint8_t id, uint8_t destinationCount,
     m_instanceIdx = instanceCount;
     instances[m_instanceIdx] = this;
     instanceCount++;
+    for (int i=0; i<maxSourceCount; i++) {
+        m_sourceReadyForStateComputation[i] = false;
+    }
 }
 
 FeatureComputer::~FeatureComputer()
@@ -123,21 +126,34 @@ bool FeatureComputer::compute()
     // Check if sources are ready (and check if there was an error in the
     // source for the data sections that this computer uses).
     bool sourceError = false;
-    for (uint8_t i = 0; i < m_sourceCount; ++i) {
-        if(!m_sources[i]->isReadyToCompute(this, m_sectionCount[i],
-                                           m_computeLast))
-        {
-            return false;
+    if(m_id != 1) {        
+        for (uint8_t i = 0; i < m_sourceCount; ++i) {
+            if(!m_sources[i]->isReadyToCompute(this, m_sectionCount[i],
+                                            m_computeLast))
+            {
+                return false;
+            }
+            sourceError |= m_sources[i]->sectionsToComputeHaveDataError(
+                this, m_sectionCount[i]);
         }
-        sourceError |= m_sources[i]->sectionsToComputeHaveDataError(
-            this, m_sectionCount[i]);
-    }
-    // Check if destinations are ready
-    for (uint8_t i = 0; i < m_destinationCount; ++i) {
-        if(!m_destinations[i]->isReadyToRecord()) {
-            return false;
+        // Check if destinations are ready
+        for (uint8_t i = 0; i < m_destinationCount; ++i) {
+            if(!m_destinations[i]->isReadyToRecord()) {
+                return false;
+            }
+        }    
+    } else {
+        // For FeatureStateComputer (opStateComputer m_id==1)
+        // Indicate which sources are ready for state computation 
+        // If source has error, don't compute state from it
+        for (uint8_t i = 0; i < m_sourceCount; ++i) {
+            if(m_sources[i]->isReadyToCompute(this, m_sectionCount[i], m_computeLast) && 
+               !m_sources[i]->sectionsToComputeHaveDataError(this, m_sectionCount[i])) {
+                m_sourceReadyForStateComputation[i] = true;
+            }
         }
-    }
+    }    
+    
     if (m_active)
     {
         // If there was an error in the source,  transmit it to the destinations
@@ -313,10 +329,10 @@ void FeatureStateComputer::m_specializedCompute()
         debugPrint(F(""));
     }
     for (uint8_t i = 0; i < m_sourceCount; i++) {
-        if (!m_activeOpStateFeatures[i]) {
-            continue;  // Skip features not used for OP State
+        if (!m_activeOpStateFeatures[i] && !m_sourceReadyForStateComputation[i]) {
+            continue;  // Skip features not used for OP State or feature which is not ready for computation yet
         }
-        // Feature is active: we can compute the OP state
+        // Feature is active and section is ready: we can compute the OP state
         avg = m_getSectionAverage(m_sources[i]);
         if (avg > m_highThresholds[i]) {
             featureState = 3;
@@ -330,6 +346,8 @@ void FeatureStateComputer::m_specializedCompute()
         if (newState < featureState) {
             newState = featureState;
         }
+        m_sourceReadyForStateComputation[i] = false;
+        // Indicate that the source section has been consumed for state computation and is ready for next iteration        
     }
     if (featureDebugMode) {
         debugPrint(millis(), false);
