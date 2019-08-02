@@ -16,6 +16,8 @@
 #ifndef FFT_CONFIGURATION_H
 #define FFT_CONFIGURATION_H
 
+#define FMAX_FACTOR 2.56
+
 namespace FFTConfiguration {
     // The number of possible configurations for samplingRate and blockSize
     const int samplingRateConfigurations = 4;
@@ -29,7 +31,7 @@ namespace FFTConfiguration {
     const int DEFAULT_SAMPLING_RATE = 3330;
     const int DEFAULT_BLOCK_SIZE = 512;
     const int DEFALUT_LOW_CUT_OFF_FREQUENCY = 10;
-    const int DEFAULT_HIGH_CUT_OFF_FREQUENCY = DEFAULT_SAMPLING_RATE / 2.56;  
+    const int DEFAULT_HIGH_CUT_OFF_FREQUENCY = DEFAULT_SAMPLING_RATE / FMAX_FACTOR;  
     const float DEFAULT_MIN_AGITATION = 0.03;
     
     // Current configurations

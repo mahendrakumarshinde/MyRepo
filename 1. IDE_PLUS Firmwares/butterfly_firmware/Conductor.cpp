@@ -2884,17 +2884,21 @@ bool Conductor::setFFTParams() {
         FFTConfiguration::currentBlockSize = config["blockSize"];
         // TODO: The following can be configurable in the future
         FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY;
-        FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / 2.56;
+        FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
         FFTConfiguration::currentMinAgitation = FFTConfiguration::DEFAULT_MIN_AGITATION;
 
         // Change the required sectionCount for all FFT processors 
         // Update the lowCutFrequency and highCutFrequency for each FFTComputerID
-        // TODO: update the publishing period of the group with max(SignalEnergyUpdate, RMSValuesUpdate)
         int FFTComputerID = 30;  // FFTComputers X, Y, Z have m_id = 0, 1, 2 correspondingly
         for (int i=0; i<3; ++i) {
             FeatureComputer::getInstanceById(FFTComputerID + i)->updateSectionCount(FFTConfiguration::currentBlockSize / 128);
             FeatureComputer::getInstanceById(FFTComputerID + i)->updateFrequencyLimits(FFTConfiguration::currentLowCutOffFrequency, FFTConfiguration::currentHighCutOffFrequency);
         }        
+
+        // Update the parameters of the diagnostic engine
+        DiagnosticEngine::m_SampleingFrequency = FFTConfiguration::currentSamplingRate;
+        DiagnosticEngine::m_smapleSize = FFTConfiguration::currentBlockSize;
+        DiagnosticEngine::m_fftLength = FFTConfiguration::currentBlockSize / 2;
 
         // Change the sensor sampling rate 
         // timerISRPeriod = (samplingRate == 1660) ? 600 : 300;  // 1.6KHz->600, 3.3KHz->300
