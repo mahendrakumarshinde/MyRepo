@@ -243,7 +243,7 @@ void Conductor::periodicSendConfigChecksum()
 bool Conductor::processConfiguration(char *json, bool saveToFlash)
 {
     // String to hold the result of validation of the config json
-    char validationResultString[300];
+    char validationResultString[400];
 
     //StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;            // make it dynamic
     //const size_t bufferSize = JSON_ARRAY_SIZE(2) + JSON_OBJECT_SIZE(3) + 60;        // dynamically allociated memory
@@ -259,8 +259,15 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     char ack_configEthernet[200];
   
     // variant.prettyPrintTo(Serial);
-    
-    if (!root.success()) {
+            
+    char messageId[60];
+    if(root.success()) {
+        // Get the message id, to be used in acknowledgements
+        strcpy(messageId, ((JsonObject&)root)["messageId"].as<char*>());
+        if(debugMode) {
+            debugPrint("Config message received with messageID: ", false); debugPrint(messageId);
+        }
+    } else {
         if (debugMode) {
             debugPrint("parseObject() failed");
         }
@@ -275,7 +282,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         // i.e. Complete device conf: {"main":{"GRP":["MOTSTD"],"RAW":1800,"POW":0,"TSL":60,"TOFF":10,"TCY":20,"DSP":512}}
         // the received config may contain only DSP or RAW or any subset of the fields.
         // The incorrect fields should be weeded out, corresponding error messages should be attached in the validationResultString.
-        bool validConfig = iuFlash.validateConfig(IUFlash::CFG_DEVICE, subConfig, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime());
+        bool validConfig = iuFlash.validateConfig(IUFlash::CFG_DEVICE, subConfig, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime(), messageId);
         if(validConfig) {
             configureMainOptions(subConfig);
             if (saveToFlash) {
@@ -692,7 +699,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             debugPrint("FFT configuration received: ", false);
             subConfig.printTo(Serial); debugPrint("");
         }
-        bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_FFT, subConfig, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime());
+        bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_FFT, subConfig, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime(), messageId);
         if(loopDebugMode) { 
             debugPrint("Validation: ", false);
             debugPrint(validationResultString); 
