@@ -1,13 +1,14 @@
 #include "Conductor.h"
+#include "Utilities.h"
 
 
 /* =============================================================================
     Instanciation
 ============================================================================= */
 
-char hostSerialBuffer[4096];
+char hostSerialBuffer[8500];
 
-IUSerial hostSerial(&Serial, hostSerialBuffer, 4096, IUSerial::MS_PROTOCOL,
+IUSerial hostSerial(&Serial, hostSerialBuffer, 8500, IUSerial::MS_PROTOCOL,
                     115200, ';', 100);
 
 IURawDataHelper accelRawDataHelper(10000,  // 10s timeout to input all keys
@@ -97,6 +98,14 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
     resp[1] = 0;
     char message[256];
     switch(cmd) {
+        case MSPCommand::ASK_WIFI_FV:
+            iuSerial->sendMSPCommand(MSPCommand::RECEIVE_WIFI_FV, FIRMWARE_VERSION);
+            break;
+        case MSPCommand::CONFIG_ACK:
+            // Send the fft configuration update acknowledgement to command response topic
+            mqttHelper.publish(COMMAND_RESPONSE_TOPIC,buffer);
+            break;
+
         /***** MAC addresses *****/
         case MSPCommand::RECEIVE_BLE_MAC:
             setBleMAC(iuSerial->mspReadMacAddress());
@@ -106,9 +115,15 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                                         m_wifiMAC);
             break;
         case MSPCommand::RECEIVE_HOST_FIRMWARE_VERSION: 
-            //iuSerial->print(buffer);
             getDeviceFirmwareVersion(message,buffer,FIRMWARE_VERSION);
             mqttHelper.publishDiagnostic(message);
+            strncpy(HOST_FIRMWARE_VERSION, buffer, 8);
+            break;
+        case MSPCommand::RECEIVE_HOST_SAMPLING_RATE:
+            HOST_SAMPLING_RATE = atoi(buffer);
+            break;
+        case MSPCommand::RECEIVE_HOST_BLOCK_SIZE:
+            HOST_BLOCK_SIZE = atoi(buffer);
             break;
         /***** Logging *****/
         case MSPCommand::SEND_LOG_MSG:
@@ -151,7 +166,11 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             break;
 
         /***** Data publication *****/
-        case MSPCommand::PUBLISH_RAW_DATA:
+        // Implemented in Host Firmware v1.1.3
+        case MSPCommand::PUBLISH_DEVICE_DETAILS_MQTT:
+            mqttHelper.publish(COMMAND_RESPONSE_TOPIC, buffer);
+            break;
+        case MSPCommand::PUBLISH_RAW_DATA:      //not used in Host Firmware v1.1.2
            
             if (accelRawDataHelper.inputHasTimedOut()) {
                 accelRawDataHelper.resetPayload();
@@ -270,43 +289,64 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
               mqttHelper.publish(FINGERPRINT_DATA_PUBLISH_TOPIC,buffer);
            break; 
         case MSPCommand::SEND_RAW_DATA:
-            
-           /* char ack_config[bufferLength];
-            
-            snprintf(ack_config, strlen(buffer), "{\"raw_data\":\"%s\"}",buffer );
-            
-            iuSerial->sendMSPCommand(MSPCommand::RECEIVE_RAW_DATA_ACK, "SEND RAW DATA COMMAND ACK...");
-            publishDiagnostic(ack_config, bufferLength);
-            mqttHelper.publish(FINGERPRINT_DATA_PUBLISH_TOPIC, ack_config); //buffer[0], &buffer[2]
-           */
           {
-            
-            char ack_config[50];
-            static int statusCount = 0;
-            if(statusCount >2){
-              statusCount = 0;
-            }
-            
+            IUMessageFormat::rawDataPacket* rawData = (IUMessageFormat::rawDataPacket*) buffer;
+            char ack_config[150];
+
             if (accelRawDataHelper.inputHasTimedOut()) {
                 accelRawDataHelper.resetPayload();
             }
-            accelRawDataHelper.addKeyValuePair(buffer[0], &buffer[2],
-                                               strlen(buffer) - 2);
-            iuSerial->sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION, buffer, 1);
-            int b = accelRawDataHelper.publishIfReady(m_bleMAC);
-           
-            // send http post using httpClient
-            //int a = accelRawDataHelper.publishJSON(m_bleMAC,buffer,bufferLength);
+
+            // Only X axis timestamp is recorded so that record times can be correlated on server
+            if (rawData->axis == 'X') timestamp = rawData->timestamp;
+          
+            // This mechanism ensures the ESP sends out only blockSize data points in the POST payload
+            // Tried implementing this using structures, but ran into problems. See commented code in 
+            //  IUMessage.h for details.
+            int rawValuesSize = HOST_BLOCK_SIZE * 2;                // since 1 q15_t occupies 2 bytes
+            int httpBufferSize = macIdSize + hostFirmwareVersionSize + timestampSize 
+                            + blockSizeSize + samplingRateSize + axisSize + rawValuesSize;      // metadata total size will be constant(43 bytes) + variable block size
+            int httpBufferPointer = 0;                      // keeps track of how many bytes are filed in the HTTP buffer 
+
+            memcpy(&httpBuffer[httpBufferPointer], m_bleMAC.toString().c_str(), macIdSize);
+            httpBufferPointer += macIdSize;
+
+            memcpy(&httpBuffer[httpBufferPointer], HOST_FIRMWARE_VERSION, hostFirmwareVersionSize);
+            httpBufferPointer += hostFirmwareVersionSize;
+
+            memcpy(&httpBuffer[httpBufferPointer], &timestamp, timestampSize);
+            httpBufferPointer += timestampSize;
+
+            memcpy(&httpBuffer[httpBufferPointer], &HOST_BLOCK_SIZE, blockSizeSize);            
+            httpBufferPointer += blockSizeSize;
+
+            memcpy(&httpBuffer[httpBufferPointer], &HOST_SAMPLING_RATE, samplingRateSize);
+            httpBufferPointer += samplingRateSize;
+
+            memcpy(&httpBuffer[httpBufferPointer], &rawData->axis, axisSize);
+            httpBufferPointer += axisSize;
             
-            if(statusCount == 2){
-              snprintf(ack_config, 50, "{\"mac\":\"%s\",\"httpCode\":\"%d\"}",m_bleMAC.toString().c_str(),b );
-              mqttHelper.publish(COMMAND_RESPONSE_TOPIC, ack_config);
-              //iuSerial->sendMSPCommand(MSPCommand::RECEIVE_RAW_DATA_ACK, ack_config);
-              
-            }
-            statusCount++;
-          }
+            memcpy(&httpBuffer[httpBufferPointer], rawData->txRawValues, rawValuesSize);
+            httpBufferPointer += rawValuesSize;
+
+            iuSerial->sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION, &rawData->axis, 1);
+            
+            int httpStatusCode = httpPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_endpointRoute,
+                                            accelRawDataHelper.m_endpointPort, (uint8_t*) &httpBuffer, 
+                                            httpBufferPointer, HttpContentType::octetStream);            
+
+            // send HTTP status code back to the MCU
+            char httpAckBuffer[1 + 4];      // axis + 3 digit HTTP status code + null terminator
+            httpAckBuffer[0] = rawData->axis;
+            itoa(httpStatusCode, &httpAckBuffer[1], 10);
+            iuSerial->sendMSPCommand(MSPCommand::HTTP_ACK, httpAckBuffer);
+
+            // send HTTP status code to MQTT
+            snprintf(ack_config, 150, "{\"messageType\":\"raw-data-ack\",\"mac\":\"%s\",\"httpCode\":\"%d\",\"axis\":\"%c\",\"timestamp\":%.2f}",
+            m_bleMAC.toString().c_str(),httpStatusCode, rawData->axis, timestamp);
+            mqttHelper.publish(COMMAND_RESPONSE_TOPIC, ack_config);
            break;  
+          }
         case MSPCommand::RECEIVE_HTTP_CONFIG_ACK:
           // Send the Ack to Topic
             mqttHelper.publish(COMMAND_RESPONSE_TOPIC,buffer);
@@ -373,6 +413,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
           
           
           break;
+       
        
     }
 }
@@ -831,7 +872,7 @@ bool Conductor::publishDiagnostic(const char *rawMsg, const uint16_t msgLength,
         char route[routeLength];
         snprintf(route, routeLength, "%s%s", DIAGNOSTIC_DEFAULT_ENDPOINT_ROUTE,
                  m_bleMAC.toString().c_str());
-        return httpPostBigJsonRequest(
+        return httpPostBigRequest(
             m_diagnosticPostHost, route, m_diagnosticPostPort,
             (uint8_t*) message, totalMsgLength);
     }
@@ -871,7 +912,7 @@ bool Conductor::publishFeature(const char *rawMsg, const uint16_t msgLength,
         char route[routeLength];
         snprintf(route, routeLength, "%s%s", FEATURE_DEFAULT_ENDPOINT_ROUTE,
                  m_bleMAC.toString().c_str());
-        return httpPostBigJsonRequest(
+        return httpPostBigRequest(
             m_featurePostHost, route, m_featurePostPort,
             (uint8_t*) message, totalMsgLength);
 

@@ -1,5 +1,29 @@
 # This file tell about all the Firmware Release of IDE+
 #################################################################################################################################################################################
+Date: 7 August 2019
+Contributed By : Manas Kale, Shubham Punekar
+Special thanks to : Pranjal Bisht, Vikas Gaikwad, Darshan Mirajkar, Mahendrakumar Shinde, Sumit Sharma
+Firmware Versions :
+		1. IDE+ Version : 1.1.3
+		2. Wifi Version : 1.0.6
+################################################################################################################################################################################
+Features:
+	1. Added support for configurable block size (from 512 to 4096).
+	2. Added support for configurable sampling rate (from 833Hz to 3330Hz).
+	3. Configuration message for above two parameters can be sent via USB,MQTT or BLE with acknowledgements 
+	   received on MQTT and BLE.
+	4. HTTP raw data is now streamed in binary format separately for each axis.
+	5. Exposed device configuration details over MQTT and BLE, command to fetch details can be passed via USB, MQTT and              BLE.
+	6. Real time data send rate(DSP) and raw data publication period(RAW) are now configurable over 
+	   USB, MQTT and BLE with acknowledgement over MQTT.
+	7. Diagnostic fingerprints now are generic and include varying block size and sampling rates.
+
+Bug Fixes:
+	1. Calibration utility NaN errors have been fixed.
+	2. Fixed naming error for displacement computer (dispRMS512Y).
+	3. Fixed OpStateComputer - a new state is computed when any activated feature is ready.
+
+#################################################################################################################################################################################
 
 Date: 22 June 2019
 Contributed By : Vikas Gaikwad,Darshan Mirajkar

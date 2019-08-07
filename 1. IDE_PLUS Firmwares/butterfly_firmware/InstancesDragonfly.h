@@ -115,9 +115,9 @@ extern FeatureTemplate<float> batteryLoad;
 /***** Accelerometer Features *****/
 
 // Sensor data
-extern __attribute__((section(".noinit2"))) q15_t accelerationXValues[1024];      // 1024 
-extern __attribute__((section(".noinit2"))) q15_t accelerationYValues[1024];
-extern __attribute__((section(".noinit2"))) q15_t accelerationZValues[1024];
+extern __attribute__((section(".noinit2"))) q15_t accelerationXValues[8192];      // 1024 
+extern __attribute__((section(".noinit2"))) q15_t accelerationYValues[8192];
+extern __attribute__((section(".noinit2"))) q15_t accelerationZValues[8192];
 extern FeatureTemplate<q15_t> accelerationX;
 extern FeatureTemplate<q15_t> accelerationY;
 extern FeatureTemplate<q15_t> accelerationZ;
@@ -255,7 +255,7 @@ extern IUICS43432 iuI2S;
 extern FeatureStateComputer opStateComputer;
 
 // Shared computation space
-extern q15_t allocatedFFTSpace[2048]; // 1024
+extern q15_t allocatedFFTSpace[8192]; // 1024
 
 
 /***** Accelerometer Calibration parameters *****/
@@ -263,14 +263,6 @@ extern q15_t allocatedFFTSpace[2048]; // 1024
 extern float ACCEL_RMS_SCALING[3];
 extern float VELOCITY_RMS_SCALING[3];
 extern float DISPLACEMENT_RMS_SCALING[3];
-
-
-/***** Accelerometer Feature computation parameters *****/
-
-extern uint16_t DEFAULT_LOW_CUT_FREQUENCY;
-extern uint16_t DEFAULT_HIGH_CUT_FREQUENCY;
-extern float DEFAULT_MIN_AGITATION;
-
 
 /***** Accelerometer Features *****/
 

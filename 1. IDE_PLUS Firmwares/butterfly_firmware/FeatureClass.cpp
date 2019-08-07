@@ -395,7 +395,7 @@ void Feature::stream(IUSerial *ser, uint8_t sectionCount)
  * [recordIndex - sectionCount; recordIndex - 1].
  * @param destination The destination buffer.
  * @param startIndex The index of the destination to start from buffer.
- * @param sectionCount The number of sectiong to write into destination.
+ * @param sectionCount The number of sections to write into destination.
  * @return the number of chars written.
  */
 uint16_t Feature::sendToBuffer(char *destination, uint16_t startIndex,
@@ -416,6 +416,27 @@ uint16_t Feature::sendToBuffer(char *destination, uint16_t startIndex,
     return charCount;
 }
 
+/**
+ * Same function as above, but uses q15_t as destination buffer. 
+ * Used to transmit raw binary values rather than strings.
+ */
+uint16_t Feature::sendToBuffer(q15_t *destination, uint16_t startIndex,
+                               uint8_t sectionCount)
+{
+    uint8_t k = (m_sectionCount + m_recordIndex - sectionCount) %
+        m_sectionCount;
+    for (uint8_t i = k; i < k + sectionCount; ++i)
+    {
+        m_locked[i % m_sectionCount] = true;
+    }
+    uint16_t charCount = m_specializedBufferStream(k, destination, startIndex,
+                                                   sectionCount);
+    for (uint8_t i = k; i < k + sectionCount; ++i)
+    {
+        m_locked[i % m_sectionCount] = false;
+    }
+    return charCount;
+}
 
 /***** Debugging *****/
 

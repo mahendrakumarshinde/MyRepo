@@ -1,13 +1,14 @@
 #include<string.h>
 #include "Conductor.h"
 #include "rBase64.h"
+#include "FFTConfiguration.h"
+
 
 const char* fingerprintData;
 const char* fingerprints_X;
 const char* fingerprints_Y;
 const char* fingerprints_Z;
 
-int sensorSamplingRate;
 int m_temperatureOffset;
 int m_audioOffset;
         
@@ -241,6 +242,9 @@ void Conductor::periodicSendConfigChecksum()
  */
 bool Conductor::processConfiguration(char *json, bool saveToFlash)
 {
+    // String to hold the result of validation of the config json
+    char validationResultString[400];
+
     //StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;            // make it dynamic
     //const size_t bufferSize = JSON_ARRAY_SIZE(2) + JSON_OBJECT_SIZE(3) + 60;        // dynamically allociated memory
     const size_t bufferSize = JSON_OBJECT_SIZE(1) + 41*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(41) + 2430;
@@ -255,8 +259,15 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     char ack_configEthernet[200];
   
     // variant.prettyPrintTo(Serial);
-    
-    if (!root.success()) {
+            
+    char messageId[60];
+    if(root.success()) {
+        // Get the message id, to be used in acknowledgements
+        strcpy(messageId, ((JsonObject&)root)["messageId"].as<char*>());
+        if(debugMode) {
+            debugPrint("Config message received with messageID: ", false); debugPrint(messageId);
+        }
+    } else {
         if (debugMode) {
             debugPrint("parseObject() failed");
         }
@@ -267,10 +278,21 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     subConfig.printTo(jsonChar);
     
     if (subConfig.success()) {
-        configureMainOptions(subConfig);
-        if (saveToFlash) {
-            iuFlash.saveConfigJson(IUFlash::CFG_DEVICE, subConfig);
+        // This subconfig has to be validated for the provided fields, note the that subconfig may contain only a subset of all the fields present in device config
+        // i.e. Complete device conf: {"main":{"GRP":["MOTSTD"],"RAW":1800,"POW":0,"TSL":60,"TOFF":10,"TCY":20,"DSP":512}}
+        // the received config may contain only DSP or RAW or any subset of the fields.
+        // The incorrect fields should be weeded out, corresponding error messages should be attached in the validationResultString.
+        bool validConfig = iuFlash.validateConfig(IUFlash::CFG_DEVICE, subConfig, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime(), messageId);
+        if(validConfig) {
+            configureMainOptions(subConfig);
+            if (saveToFlash) {
+                iuFlash.updateConfigJson(IUFlash::CFG_DEVICE, subConfig);
+                // Devices with all versions of firmware will save this config, 
+                // for v1.1.3 onwards, json contains "DSP" field for configuring dataSendPeriod
+                // for v1.1.2 and below, this "DSP" field will be ignored by device
+            }
         }
+        iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
     }
     // Component configuration
     subConfig = root["components"];
@@ -667,10 +689,53 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }    
         heartbeatFlag = false;
         }
-        
-        
     }
-    
+    // FFT configuration
+    // Message is always saved to file, after which STM resets
+    subConfig = root["fft"];
+    if (subConfig.success()) {
+        // Validate if the received parameters are correct
+        if(loopDebugMode) {
+            debugPrint("FFT configuration received: ", false);
+            subConfig.printTo(Serial); debugPrint("");
+        }
+        bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_FFT, subConfig, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime(), messageId);
+        if(loopDebugMode) { 
+            debugPrint("Validation: ", false);
+            debugPrint(validationResultString); 
+            debugPrint("FFT configuration validation result: ", false); 
+            debugPrint(validConfiguration);
+        }
+
+        if(validConfiguration) {
+            if(loopDebugMode) debugPrint("Received valid FFT configuration");
+        
+            // Save the valid configuration to file 
+            if(saveToFlash) { 
+                // Check if the config is new, then save to file and reset
+                iuFlash.saveConfigJson(IUFlash::CFG_FFT, subConfig);
+                if(loopDebugMode) debugPrint("Saved FFT configuration to file");
+                
+                // Acknowledge that configuration has been saved successfully on /ide_plus/command_response/ topic
+                // If streaming mode is BLE, send an acknowledgement on BLE as well
+                // NOTE: MSPCommand CONFIG_ACK added to Arduino/libraries/IUSerial/src/MSPCommands.h
+                iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
+                if(StreamingMode::BLE && isBLEConnected()) { iuBluetooth.write("FFT_CFG_SUCCESS;"); delay(100); }
+
+                // Restart STM, setFFTParams will configure FFT parameters in setup()
+                delay(3000);  // wait for MQTT message to be published
+                STM32.reset();
+            }
+        } else {
+            if(loopDebugMode) debugPrint("Received invalid FFT configuration");
+
+            // Acknowledge incorrect configuration, send the errors on /ide_plus/command_response topic
+            // If streaming mode is BLE, send an acknowledgement on BLE as well
+            iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
+            if(m_streamingMode == StreamingMode::BLE && isBLEConnected()) { iuBluetooth.write("FFT_CFG_FAILURE;"); delay(100); }
+        }
+    } // If json is incorrect, it will result in parsing error in jsonBuffer.parseObject(json) which will cause the processConfiguration call to return
+ 
     return true;
 }
 
@@ -928,6 +993,11 @@ void Conductor::configureMainOptions(JsonVariant &config)
     if (resetCycleTime) {
         m_startTime = millis();
     }
+    value = config["DSP"];
+    if(value.success()){
+        m_mainFeatureGroup->setDataSendPeriod(value.as<uint16_t>());
+        // NOTE: Older firmware device will not set this parameter even if configJson contains it.
+}
 }
 
 /**
@@ -977,7 +1047,6 @@ void Conductor::configureAllFeatures(JsonVariant &config)
 void Conductor::processCommand(char *buff)
 {
     IPAddress tempAddress;
-    
     size_t buffLen = strlen(buff);
    // Serial.println(buff);
     
@@ -995,6 +1064,30 @@ void Conductor::processCommand(char *buff)
                 ledManager.resetStatus();
             }
             break;
+        case 'F': {
+            // fetch FFT configuration
+            if (strncmp(buff, "FFT-CFG-SR", 10) == 0) {
+                // TODO: cannot be tested properly with Rigado, as streaming mode won't update properly unless BLE heart-beat is received
+                if(m_streamingMode == StreamingMode::BLE || m_streamingMode ==  StreamingMode::WIFI_AND_BLE) {
+                    char samplingRateString[8];
+                    itoa(FFTConfiguration::currentSamplingRate, samplingRateString, 10);
+                    iuBluetooth.write("SR:");
+                    iuBluetooth.write(samplingRateString);
+                    iuBluetooth.write(";");
+                    if (loopDebugMode) { debugPrint("FFT: Sampling Rate sent over BLE: ", false); debugPrint(FFTConfiguration::currentSamplingRate); }
+                }
+            } else if (strncmp(buff, "FFT-CFG-BS", 10) == 0) {
+                if(m_streamingMode == StreamingMode::BLE || m_streamingMode == StreamingMode::WIFI_AND_BLE) {
+                    char blockSizeString[8];
+                    itoa(FFTConfiguration::currentBlockSize, blockSizeString, 10);
+                    iuBluetooth.write("BS:");
+                    iuBluetooth.write(blockSizeString);
+                    iuBluetooth.write(";");
+                    if (loopDebugMode) { debugPrint("FFT: Block Size sent over BLE: ", false); debugPrint(FFTConfiguration::currentBlockSize); }
+                }
+            }
+            break;
+        }    
         case 'G': // set feature group
             if (strncmp(buff, "GROUP-", 6) == 0) {
                 FeatureGroup *group = FeatureGroup::getInstanceByName(&buff[6]);
@@ -1027,6 +1120,29 @@ void Conductor::processCommand(char *buff)
                 }
             }
             break;
+        case 'P': 
+        {
+            if (strcmp(buff, "PUBLISH_DEVICE_DETAILS_MQTT") == 0) {
+                char deviceDetailsString[250];
+                StaticJsonBuffer<250> deviceDetailsBuffer;
+                JsonObject& deviceDetails = deviceDetailsBuffer.createObject();
+                deviceDetails["mac"] = m_macAddress.toString().c_str();
+                deviceDetails["fft_blockSize"] = FFTConfiguration::currentBlockSize;
+                deviceDetails["fft_samplingRate"] = FFTConfiguration::currentSamplingRate;
+                deviceDetails["host_firmware_version"] = FIRMWARE_VERSION;
+                deviceDetails["wifi_firmware_version"] = iuWiFi.espFirmwareVersion;
+                deviceDetails["data_send_period"] = m_mainFeatureGroup->getDataSendPeriod(); // milliseconds
+                deviceDetails["feature_group"] = m_mainFeatureGroup->getName();
+                deviceDetails["raw_data_period"] = m_rawDataPublicationTimer / 1000;  // seconds
+                deviceDetails.printTo(deviceDetailsString);
+                debugPrint("INFO deviceDetailsString : ", false);
+                debugPrint(deviceDetailsString);
+                debugPrint("size of device details string : ",false);
+                debugPrint(strlen(deviceDetailsString));
+                iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_DEVICE_DETAILS_MQTT, deviceDetailsString);
+            }
+            break;
+        }
         case 'S':
             if (strncmp(buff, "SET-MQTT-IP-", 12) == 0) {
                 if (tempAddress.fromString(&buff[12])) {
@@ -1054,9 +1170,14 @@ void Conductor::processCommand(char *buff)
                     debugPrint("Record mode");
                 }
                 delay(500);
-                sendAccelRawData(0);  // Axis X
-                sendAccelRawData(1);  // Axis Y
-                sendAccelRawData(2);  // Axis Z
+                if (m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE) {
+                    persistRawData();
+                    startRawDataSendingSession();
+                } else if (m_streamingMode == StreamingMode::ETHERNET) {
+                    sendAccelRawData(0);  // Axis X
+                    sendAccelRawData(1);  // Axis Y
+                    sendAccelRawData(2);  // Axis Z
+                }
                 resetDataAcquisition();
             }
             break;
@@ -1389,6 +1510,12 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                   }
                   
                 }  
+                if (strcmp(buff, "IUGET_FFT_CONFIG") == 0) {
+                    iuUSB.port->print("FFT: Sampling Rate: ");
+                    iuUSB.port->println(FFTConfiguration::currentSamplingRate);
+                    iuUSB.port->print("FFT: Block Size: ");
+                    iuUSB.port->println(FFTConfiguration::currentBlockSize);
+                }
                 break;
             case UsageMode::CUSTOM:
                 if (strcmp(buff, "IUEND_DATA") == 0) {
@@ -1526,6 +1653,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
     if (buff[0] == '{')
     {
         processConfiguration(buff,true);    //save the configuration into the file
+        return;       // this functon should process only one command in one call, all if conditions should be mutually exclusive
     }
     if (iuWiFi.processChipMessage()) {
         if (iuWiFi.isWorking()) {
@@ -1562,15 +1690,44 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
         case MSPCommand::MSP_TOO_LONG:
             if (loopDebugMode) { debugPrint(F("MSP_TOO_LONG")); }
             break;
-
+        case MSPCommand::RECEIVE_WIFI_FV:{
+            if (loopDebugMode) { debugPrint(F("RECEIVE_WIFI_FV")); }
+            strncpy(iuWiFi.espFirmwareVersion, buff, 6);
+            iuWiFi.espFirmwareVersionReceived = true;
+        }
         case MSPCommand::ASK_BLE_MAC:
             if (loopDebugMode) { debugPrint(F("ASK_BLE_MAC")); }
             iuWiFi.sendBleMacAddress(m_macAddress);
             break;
 	      case MSPCommand::ASK_HOST_FIRMWARE_VERSION:
-            if(loopDebugMode){ debugPrint(F("ASK_HOST_FIRMWARE_VERSION")); }
+            if (loopDebugMode){ debugPrint(F("ASK_HOST_FIRMWARE_VERSION")); }
             iuWiFi.sendHostFirmwareVersion(FIRMWARE_VERSION);               
             break;
+        case MSPCommand::ASK_HOST_SAMPLING_RATE:        
+            if (loopDebugMode){ debugPrint(F("ASK_HOST_SAMPLING_RATE")); }
+            iuWiFi.sendHostSamplingRate(FFTConfiguration::currentSamplingRate);    
+            break;
+        case MSPCommand::ASK_HOST_BLOCK_SIZE:
+            if (loopDebugMode){ debugPrint(F("ASK_HOST_BLOCK_SIZE")); }
+            iuWiFi.sendHostBlockSize(FFTConfiguration::currentBlockSize);
+            break;
+        case MSPCommand::HTTP_ACK: {
+            if (loopDebugMode){ debugPrint(F("HTTP_ACK")); }
+            if (buff[0] == 'X') {
+                httpStatusCodeX = atoi(&buff[1]);
+            } else if (buff[0] == 'Y') {
+                httpStatusCodeY = atoi(&buff[1]);
+            } else if (buff[0] == 'Z') {
+                httpStatusCodeZ = atoi(&buff[1]);
+            }
+            if (loopDebugMode) {
+                debugPrint("HTTP status codes X | Y | Z ",false);
+                debugPrint(httpStatusCodeX, false);debugPrint(" | ", false);
+                debugPrint(httpStatusCodeY, false);debugPrint(" | ", false);
+                debugPrint(httpStatusCodeZ, true);
+            }
+            break;
+        }
         case MSPCommand::WIFI_ALERT_CONNECTED:
             if (loopDebugMode) { debugPrint(F("WIFI-CONNECTED;")); }
             if (isBLEConnected()) {
@@ -2132,9 +2289,6 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             configureGroupsForCalibration();
             ledManager.overrideColor(RGB_CYAN);
             msg = "calibration";
-            timerISRPeriod = 600;  // 1.6KHz
-            sensorSamplingRate = 1660;
-            //Serial.println("STEP - 2");
             break;
         case UsageMode::EXPERIMENT:
             ledManager.overrideColor(RGB_PURPLE);
@@ -2146,7 +2300,6 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             configureGroupsForOperation();
             iuAccelerometer.resetScale();
             msg = "operation";
-            timerISRPeriod = 300;
             break;
         case UsageMode::CUSTOM:
             ledManager.overrideColor(RGB_CYAN);
@@ -2436,10 +2589,7 @@ void Conductor::streamFeatures()
  */
 void Conductor::sendAccelRawData(uint8_t axisIdx)
 {
-    static char rawAccelerationX[15000];
-    static char rawAccelerationY[15000];
-    static char rawAccelerationZ[15000];
-    
+     
     if (axisIdx > 2) {
         return;
     }
@@ -2450,6 +2600,8 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
     if (accelEnergy == NULL) {
         return;
     }
+    // Streaming raw data through bluetooth for blocksize of 4096 is not possible due to BLE buffer limitations. 
+    //The following function will be deprecated on the app from Firmware v1.1.3, and should not be used.
     if (m_streamingMode == StreamingMode::BLE)
     {
         iuBluetooth.write("REC,");
@@ -2463,20 +2615,19 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
     else if (m_streamingMode == StreamingMode::WIFI ||
              m_streamingMode == StreamingMode::WIFI_AND_BLE ) {
        
-        uint16_t maxLen = 15000;   //3500
-        char txBuffer[maxLen];
-        for (uint16_t i =0; i < maxLen; i++) {
-            txBuffer[i] = 0;
-        }
-        txBuffer[0] = axis[axisIdx];
-        uint16_t idx = 1;
-        idx += accelEnergy->sendToBuffer(txBuffer, idx, 4);   //4
-        txBuffer[idx] = 0; // Terminate string (idx incremented in sendToBuffer)
-        //iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_RAW_DATA, txBuffer);
-        iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 1000000,
-                                  txBuffer, strlen(txBuffer));
+        int idx = 0;                        // Tracks number of elements filled in txBuffer
+        for (int i =0; i < IUMessageFormat::maxBlockSize; i++) rawData.txRawValues[i] = 0;
+        
+        rawData.timestamp = getDatetime();
+        rawData.axis = axis[axisIdx];
+        //TODO check if 32 sections are actually ready. If not ready, notify ESP with a different MSP command?
+        idx = accelEnergy->sendToBuffer(rawData.txRawValues, 0, FFTConfiguration::currentBlockSize / 128);  
 
-        delay(10);
+        // Although IUMessageFormat::maxBlockSize raw data bytes will be sent to the ESP, the ESP will only HTTP POST currentBlockSize elements
+        iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 3000000,
+                                  (char*) &rawData, sizeof rawData);               
+        delay(2800);
+
      }else if(m_streamingMode == StreamingMode::ETHERNET){      // Ethernet Mode
         uint16_t maxLen = 15000;   //3500
         char txBuffer[maxLen];
@@ -2505,7 +2656,7 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
             debugPrint("RawAcel Z: ",false);debugPrint(rawAccelerationZ);
             snprintf(rawAcceleration,maxLen,"{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\":\"{\\\"deviceId\\\":\\\"%s\\\",\\\"firmwareVersion\\\":\\\"%s\\\",\\\"samplingRate\\\":%d,\\\"blockSize\\\":%d,\\\"X\\\":\\\"%s\\\",\\\"Y\\\":\\\"%s\\\",\\\"Z\\\":\\\"%s\\\"}\"}",m_macAddress.toString().c_str(),1,0,m_macAddress.toString().c_str(),FIRMWARE_VERSION,IULSM6DSM::defaultSamplingRate,512,rawAccelerationX,rawAccelerationY,rawAccelerationZ);
             
-            
+            //iuWifi in this case is UART pointing to ethernet controller
             iuWiFi.write(rawAcceleration);           // send the rawAcceleration over UART 
             iuWiFi.write("\n");            
             if(loopDebugMode){
@@ -2517,8 +2668,82 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
             memset(rawAccelerationY,0,sizeof(rawAccelerationY));
             memset(rawAccelerationZ,0,sizeof(rawAccelerationZ));
         }
-
      }
+}
+
+// Copies raw data at current time instant to buffers. These buffers should 
+// be changed later in the optimization pass after v1.1.3
+void Conductor::persistRawData() {  
+    memset(rawAccelerationX, 0, IUMessageFormat::maxBlockSize * 2);
+    memset(rawAccelerationY, 0, IUMessageFormat::maxBlockSize * 2);
+    memset(rawAccelerationZ, 0, IUMessageFormat::maxBlockSize * 2);
+    
+    Feature *accelEnergyX = Feature::getInstanceByName("A0X");
+    Feature *accelEnergyY = Feature::getInstanceByName("A0Y");
+    Feature *accelEnergyZ = Feature::getInstanceByName("A0Z");
+    
+    rawDataRecordedAt = getDatetime();
+
+    accelEnergyX->sendToBuffer((q15_t*) rawAccelerationX, 0, FFTConfiguration::currentBlockSize / 128);
+    accelEnergyY->sendToBuffer((q15_t*) rawAccelerationY, 0, FFTConfiguration::currentBlockSize / 128);
+    accelEnergyZ->sendToBuffer((q15_t*) rawAccelerationZ, 0, FFTConfiguration::currentBlockSize / 128);   
+     
+    debugPrint("Stored raw data at time : ", false);debugPrint(rawDataRecordedAt);
+    
+}
+/**
+ * Should be called every loop iteration. If session is in progress, sends stored axis data to the ESP then waits untill
+ * HTTP 200 is received for that axis. Does not proceed to next axis if HTTP 200 is not received.
+ * TODO : Implement a retry mechanism.
+ */
+void Conductor::manageRawDataSending() {
+    if (isSendingInProgress) {        
+        // double timeSinceLastSentToESP = millis() - lastPacketSentToESP; // use later for retry mechanism
+        if (!XSentToWifi) {
+            prepareRawDataPacketAndSend('X');
+            XSentToWifi = true; 
+            // lastPacketSentToESP = millis();
+        } else if (httpStatusCodeX == 200 && !YsentToWifi) { 
+            prepareRawDataPacketAndSend('Y');
+            YsentToWifi = true;
+            // lastPacketSentToESP = millis();
+        } else if (httpStatusCodeY == 200 && !ZsentToWifi) {
+            prepareRawDataPacketAndSend('Z');
+            ZsentToWifi = true;
+            // lastPacketSentToESP = millis();
+        }
+        if (httpStatusCodeX == 200 && httpStatusCodeY == 200 && httpStatusCodeZ == 200) {
+            isSendingInProgress = false;    // ends the sending session
+        }
+    }
+}
+
+void Conductor::prepareRawDataPacketAndSend(char axis) {
+    rawData.axis = axis;
+    rawData.timestamp = rawDataRecordedAt;
+    switch(axis) {
+        case 'X':
+            memcpy(rawData.txRawValues, rawAccelerationX, IUMessageFormat::maxBlockSize * 2);
+            break;
+        case 'Y':
+            memcpy(rawData.txRawValues, rawAccelerationY, IUMessageFormat::maxBlockSize * 2);
+            break;
+        case 'Z':
+            memcpy(rawData.txRawValues, rawAccelerationZ, IUMessageFormat::maxBlockSize * 2);
+            break;
+    }
+    iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 3000000,
+                                        (char*) &rawData, sizeof rawData);
+    if (loopDebugMode) {
+        debugPrint("Sent ", false);debugPrint(axis,false);debugPrint(" data which was recorded at ",false);
+        debugPrint(rawDataRecordedAt);
+    }
+}
+
+void Conductor::startRawDataSendingSession() {
+    isSendingInProgress = true;
+    httpStatusCodeX = httpStatusCodeY = httpStatusCodeZ = 0;
+    XSentToWifi = YsentToWifi = ZsentToWifi = false;    
 }
 
 /**
@@ -2529,9 +2754,14 @@ void Conductor::periodicSendAccelRawData()
     uint32_t now = millis();
     if (now - m_rawDataPublicationStart > m_rawDataPublicationTimer) {
         delay(500);
-        sendAccelRawData(0);
-        sendAccelRawData(1);
-        sendAccelRawData(2);
+        if (m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE) {
+            persistRawData();
+            startRawDataSendingSession();
+        } else if (m_streamingMode == StreamingMode::ETHERNET) {
+            sendAccelRawData(0);
+            sendAccelRawData(1);
+            sendAccelRawData(2);
+        }
         m_rawDataPublicationStart = now;
         resetDataAcquisition();
     }
@@ -2653,6 +2883,44 @@ void Conductor::sendDiagnosticFingerPrints() {
     }   
 }
 
+bool Conductor::setFFTParams() {
+    bool configured = false;
+    JsonObject& config = configureJsonFromFlash("/iuconfig/fft.conf", false);
+    if(config.success()) {
+        FFTConfiguration::currentSamplingRate = config["samplingRate"];
+        FFTConfiguration::currentBlockSize = config["blockSize"];
+        // TODO: The following can be configurable in the future
+        FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY;
+        FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
+        FFTConfiguration::currentMinAgitation = FFTConfiguration::DEFAULT_MIN_AGITATION;
+
+        // Change the required sectionCount for all FFT processors 
+        // Update the lowCutFrequency and highCutFrequency for each FFTComputerID
+        int FFTComputerID = 30;  // FFTComputers X, Y, Z have m_id = 0, 1, 2 correspondingly
+        for (int i=0; i<3; ++i) {
+            FeatureComputer::getInstanceById(FFTComputerID + i)->updateSectionCount(FFTConfiguration::currentBlockSize / 128);
+            FeatureComputer::getInstanceById(FFTComputerID + i)->updateFrequencyLimits(FFTConfiguration::currentLowCutOffFrequency, FFTConfiguration::currentHighCutOffFrequency);
+        }        
+
+        // Update the parameters of the diagnostic engine
+        DiagnosticEngine::m_SampleingFrequency = FFTConfiguration::currentSamplingRate;
+        DiagnosticEngine::m_smapleSize = FFTConfiguration::currentBlockSize;
+        DiagnosticEngine::m_fftLength = FFTConfiguration::currentBlockSize / 2;
+
+        // Change the sensor sampling rate 
+        // timerISRPeriod = (samplingRate == 1660) ? 600 : 300;  // 1.6KHz->600, 3.3KHz->300
+        // timerISRPeriod = int(1000000 / FFTConfiguration::currentSamplingRate); // +1 to ensure that sensor has captured data before mcu ISR gets it, for edge case
+        iuAccelerometer.setSamplingRate(FFTConfiguration::currentSamplingRate); // will set the ODR for the sensor
+        if(setupDebugMode) {
+            config.prettyPrintTo(Serial);
+        }
+        configured = true;
+    } else {
+        if(loopDebugMode) debugPrint("Failed to read fft.conf file");
+        configured = false;
+    }
+    return configured;
+}
 
 /* =============================================================================
     Debugging
