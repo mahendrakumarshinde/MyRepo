@@ -158,12 +158,12 @@ bool IUFSFlash::updateConfigJson(storedConfig configType, JsonVariant &config)
     return true;
 }
 
-bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char* validationResultString, char* mac_id, double timestamp)
+bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char* validationResultString, char* mac_id, double timestamp, char* messageId)
 {
     // Perform validation checks on the config json
     // Return the errors in a json object
     bool validConfig = true;
-    StaticJsonBuffer<300> validationResultBuffer;
+    StaticJsonBuffer<400> validationResultBuffer;
     JsonObject& validationResult = validationResultBuffer.createObject();
     JsonArray& errorMessages = validationResult.createNestedArray("errorMessages");
 
@@ -279,6 +279,7 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
     }
 
     // Construct the validationResult
+    validationResult["messageId"] = messageId;
     validationResult["validConfig"] = validConfig;
     validationResult["mac"] = mac_id;
     validationResult["timestamp"] = timestamp;
