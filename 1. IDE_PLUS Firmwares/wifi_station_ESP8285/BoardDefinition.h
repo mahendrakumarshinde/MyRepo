@@ -45,7 +45,7 @@ const char DATA_DEFAULT_ENDPOINT_HOST[45] =
     "http://13.232.122.10";             //"http://115.112.92.146";                  //"ideplus-dot-infinite-uptime-1232.appspot.com";                                                           //                              
 const uint16_t DATA_DEFAULT_ENDPOINT_PORT = 8080;                                   //58888;      //80;                                                              
 // Raw data
-const char RAW_DATA_DEFAULT_ENDPOINT_ROUTE[70] =  "/iu-web/iu-infiniteuptime-api/postdatadump?mac=";  //"/contineonx-web-admin/imiot-infiniteuptime-api/postdatadump?mac=";   //"/raw_data?mac=";                                            
+const char RAW_DATA_DEFAULT_ENDPOINT_ROUTE[70] =  "/iu-web/rawaccelerationdata";  //"/contineonx-web-admin/imiot-infiniteuptime-api/postdatadump?mac=";   //"/raw_data?mac=";                                            
 // Feature data
 const char FEATURE_DEFAULT_ENDPOINT_ROUTE[19] = "/mailbox/data?mac=";
 // Diagnostic data
