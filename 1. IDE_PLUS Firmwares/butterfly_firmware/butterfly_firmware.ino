@@ -536,7 +536,11 @@ void setup()
                 //TODO: Expose the current FFT config
             }
         } else {
-            if(setupDebugMode) debugPrint("Using defaults for FFT Computers: samplingRate = 3.3KHz, blockSize = 4096 samples, publishingPeriod = 512 ms");
+            if(setupDebugMode) {
+                debugPrint("Using defaults for FFT Computers", false);
+                debugPrint(": samplingRate = ", false); debugPrint(FFTConfiguration::DEFAULT_SAMPLING_RATE, false);
+                debugPrint(": block size = ", false); debugPrint(FFTConfiguration::DEFAULT_BLOCK_SIZE, false);
+            }
         }
 
         // Sensors
