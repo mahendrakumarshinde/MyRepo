@@ -2,7 +2,7 @@
 #include "Conductor.h"
 #include "rBase64.h"
 #include "FFTConfiguration.h"
-
+#include "RawDataState.h"
 
 const char* fingerprintData;
 const char* fingerprints_X;
@@ -1171,8 +1171,8 @@ void Conductor::processCommand(char *buff)
                 }
                 delay(500);
                 if (m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE) {
-                    persistRawData();
-                    startRawDataSendingSession();
+                    rawDataRequest();
+                    // startRawDataSendingSession(); // Will be handled in the main loop
                 } else if (m_streamingMode == StreamingMode::ETHERNET) {
                     sendAccelRawData(0);  // Axis X
                     sendAccelRawData(1);  // Axis Y
@@ -2644,17 +2644,17 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
         char* accelX;char* accelY; char* accelZ;
         if(txBuffer[0] == 'X' && axisIdx == 0){
             
-            memmove(rawAccelerationX,txBuffer + 2, strlen(txBuffer) - 1); // sizeof(txBuffer)/sizeof(txBuffer[0]) -2);
-            debugPrint("RawAcel X: ",false);debugPrint(rawAccelerationX);
+            memmove(RawDataState::rawAccelerationX,txBuffer + 2, strlen(txBuffer) - 1); // sizeof(txBuffer)/sizeof(txBuffer[0]) -2);
+            debugPrint("RawAcel X: ",false);debugPrint(RawDataState::rawAccelerationX);
         }else if(txBuffer[0]== 'Y' && axisIdx == 1)
         {
-            memmove(rawAccelerationY,txBuffer + 2, strlen(txBuffer) - 1 ); //sizeof(txBuffer)/sizeof(txBuffer[0]) -2);
-            debugPrint("RawAcel Y: ",false);debugPrint(rawAccelerationY);
+            memmove(RawDataState::rawAccelerationY,txBuffer + 2, strlen(txBuffer) - 1 ); //sizeof(txBuffer)/sizeof(txBuffer[0]) -2);
+            debugPrint("RawAcel Y: ",false);debugPrint(RawDataState::rawAccelerationY);
         }else if(txBuffer[0] == 'Z' && axisIdx == 2){
             
-            memmove(rawAccelerationZ,txBuffer + 2, strlen(txBuffer) - 1) ; //sizeof(txBuffer)/sizeof(txBuffer[0]) -2);    
-            debugPrint("RawAcel Z: ",false);debugPrint(rawAccelerationZ);
-            snprintf(rawAcceleration,maxLen,"{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\":\"{\\\"deviceId\\\":\\\"%s\\\",\\\"firmwareVersion\\\":\\\"%s\\\",\\\"samplingRate\\\":%d,\\\"blockSize\\\":%d,\\\"X\\\":\\\"%s\\\",\\\"Y\\\":\\\"%s\\\",\\\"Z\\\":\\\"%s\\\"}\"}",m_macAddress.toString().c_str(),1,0,m_macAddress.toString().c_str(),FIRMWARE_VERSION,IULSM6DSM::defaultSamplingRate,512,rawAccelerationX,rawAccelerationY,rawAccelerationZ);
+            memmove(RawDataState::rawAccelerationZ,txBuffer + 2, strlen(txBuffer) - 1) ; //sizeof(txBuffer)/sizeof(txBuffer[0]) -2);    
+            debugPrint("RawAcel Z: ",false);debugPrint(RawDataState::rawAccelerationZ);
+            snprintf(rawAcceleration,maxLen,"{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\":\"{\\\"deviceId\\\":\\\"%s\\\",\\\"firmwareVersion\\\":\\\"%s\\\",\\\"samplingRate\\\":%d,\\\"blockSize\\\":%d,\\\"X\\\":\\\"%s\\\",\\\"Y\\\":\\\"%s\\\",\\\"Z\\\":\\\"%s\\\"}\"}",m_macAddress.toString().c_str(),1,0,m_macAddress.toString().c_str(),FIRMWARE_VERSION,IULSM6DSM::defaultSamplingRate,512,RawDataState::rawAccelerationX,RawDataState::rawAccelerationY,RawDataState::rawAccelerationZ);
             
             //iuWifi in this case is UART pointing to ethernet controller
             iuWiFi.write(rawAcceleration);           // send the rawAcceleration over UART 
@@ -2664,32 +2664,40 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
                debugPrint(rawAcceleration);     
             }
             //FREE ALLOCATED MEMORY 
-            memset(rawAccelerationX,0,sizeof(rawAccelerationX));
-            memset(rawAccelerationY,0,sizeof(rawAccelerationY));
-            memset(rawAccelerationZ,0,sizeof(rawAccelerationZ));
+            memset(RawDataState::rawAccelerationX,0,sizeof(RawDataState::rawAccelerationX));
+            memset(RawDataState::rawAccelerationY,0,sizeof(RawDataState::rawAccelerationY));
+            memset(RawDataState::rawAccelerationZ,0,sizeof(RawDataState::rawAccelerationZ));
         }
      }
 }
 
 // Copies raw data at current time instant to buffers. These buffers should 
 // be changed later in the optimization pass after v1.1.3
-void Conductor::persistRawData() {  
-    memset(rawAccelerationX, 0, IUMessageFormat::maxBlockSize * 2);
-    memset(rawAccelerationY, 0, IUMessageFormat::maxBlockSize * 2);
-    memset(rawAccelerationZ, 0, IUMessageFormat::maxBlockSize * 2);
+void Conductor::rawDataRequest() {  
     
-    Feature *accelEnergyX = Feature::getInstanceByName("A0X");
-    Feature *accelEnergyY = Feature::getInstanceByName("A0Y");
-    Feature *accelEnergyZ = Feature::getInstanceByName("A0Z");
+    memset(RawDataState::rawAccelerationX, 0, IUMessageFormat::maxBlockSize * 2);
+    memset(RawDataState::rawAccelerationY, 0, IUMessageFormat::maxBlockSize * 2);
+    memset(RawDataState::rawAccelerationZ, 0, IUMessageFormat::maxBlockSize * 2);
+    
+    // Feature *accelEnergyX = Feature::getInstanceByName("A0X");
+    // Feature *accelEnergyY = Feature::getInstanceByName("A0Y");
+    // Feature *accelEnergyZ = Feature::getInstanceByName("A0Z");
     
     rawDataRecordedAt = getDatetime();
 
-    accelEnergyX->sendToBuffer((q15_t*) rawAccelerationX, 0, FFTConfiguration::currentBlockSize / 128);
-    accelEnergyY->sendToBuffer((q15_t*) rawAccelerationY, 0, FFTConfiguration::currentBlockSize / 128);
-    accelEnergyZ->sendToBuffer((q15_t*) rawAccelerationZ, 0, FFTConfiguration::currentBlockSize / 128);   
-     
+    // accelEnergyX->sendToBuffer((q15_t*) rawAccelerationX, 0, FFTConfiguration::currentBlockSize / 128);
+    // accelEnergyY->sendToBuffer((q15_t*) rawAccelerationY, 0, FFTConfiguration::currentBlockSize / 128);
+    // accelEnergyZ->sendToBuffer((q15_t*) rawAccelerationZ, 0, FFTConfiguration::currentBlockSize / 128);   
+
+    // Indicate the raw data is to be collected
+    RawDataState::startRawDataCollection = true;
+    RawDataState::XCollected = false;
+    RawDataState::YCollected = false;
+    RawDataState::ZCollected = false;
+    RawDataState::startRawDataTransmission = false;
+    RawDataState::rawDataTransmissionInProgress = false;
+    debugPrint("DEBUG: RAW DATA: starting raw data collection at: ",false); debugPrint(rawDataRecordedAt);
     debugPrint("Stored raw data at time : ", false);debugPrint(rawDataRecordedAt);
-    
 }
 /**
  * Should be called every loop iteration. If session is in progress, sends stored axis data to the ESP then waits untill
@@ -2697,23 +2705,41 @@ void Conductor::persistRawData() {
  * TODO : Implement a retry mechanism.
  */
 void Conductor::manageRawDataSending() {
-    if (isSendingInProgress) {        
+    // Start raw data transmission session
+    if(RawDataState::startRawDataCollection &&
+       RawDataState::XCollected && RawDataState::YCollected && RawDataState::ZCollected &&
+       !RawDataState::rawDataTransmissionInProgress)
+    {
+        debugPrint("DEBUG: RAW DATA: Collected raw data, starting transmission");
+        RawDataState::rawDataTransmissionInProgress = true;
+        httpStatusCodeX = httpStatusCodeY = httpStatusCodeZ = 0;
+        XSentToWifi = YsentToWifi = ZsentToWifi = false;    
+    }
+
+    if (RawDataState::rawDataTransmissionInProgress) {
         // double timeSinceLastSentToESP = millis() - lastPacketSentToESP; // use later for retry mechanism
         if (!XSentToWifi) {
             prepareRawDataPacketAndSend('X');
             XSentToWifi = true; 
+            debugPrint("DEBUG: RAW DATA: X sent to wifi");
             // lastPacketSentToESP = millis();
         } else if (httpStatusCodeX == 200 && !YsentToWifi) { 
             prepareRawDataPacketAndSend('Y');
             YsentToWifi = true;
+            debugPrint("DEBUG: RAW DATA: X delivered, Y sent to wifi");
             // lastPacketSentToESP = millis();
         } else if (httpStatusCodeY == 200 && !ZsentToWifi) {
             prepareRawDataPacketAndSend('Z');
             ZsentToWifi = true;
+            debugPrint("DEBUG: RAW DATA: Y delivered, Z sent to wifi");
             // lastPacketSentToESP = millis();
         }
         if (httpStatusCodeX == 200 && httpStatusCodeY == 200 && httpStatusCodeZ == 200) {
-            isSendingInProgress = false;    // ends the sending session
+            // End the transmission session, reset RawDataState::startRawDataCollection and RawDataState::rawDataTransmissionInProgress
+            // Rest of the tracking variables are reset when rawDataRequest() is called
+            debugPrint("DEBUG: RAW DATA: Z delivered, ending transmission session");
+            RawDataState::startRawDataCollection = false;
+            RawDataState::rawDataTransmissionInProgress = false;    
         }
     }
 }
@@ -2723,13 +2749,13 @@ void Conductor::prepareRawDataPacketAndSend(char axis) {
     rawData.timestamp = rawDataRecordedAt;
     switch(axis) {
         case 'X':
-            memcpy(rawData.txRawValues, rawAccelerationX, IUMessageFormat::maxBlockSize * 2);
+            memcpy(rawData.txRawValues, RawDataState::rawAccelerationX, IUMessageFormat::maxBlockSize * 2);
             break;
         case 'Y':
-            memcpy(rawData.txRawValues, rawAccelerationY, IUMessageFormat::maxBlockSize * 2);
+            memcpy(rawData.txRawValues, RawDataState::rawAccelerationY, IUMessageFormat::maxBlockSize * 2);
             break;
         case 'Z':
-            memcpy(rawData.txRawValues, rawAccelerationZ, IUMessageFormat::maxBlockSize * 2);
+            memcpy(rawData.txRawValues, RawDataState::rawAccelerationZ, IUMessageFormat::maxBlockSize * 2);
             break;
     }
     iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 3000000,
@@ -2740,11 +2766,11 @@ void Conductor::prepareRawDataPacketAndSend(char axis) {
     }
 }
 
-void Conductor::startRawDataSendingSession() {
-    isSendingInProgress = true;
-    httpStatusCodeX = httpStatusCodeY = httpStatusCodeZ = 0;
-    XSentToWifi = YsentToWifi = ZsentToWifi = false;    
-}
+// void Conductor::startRawDataSendingSession() {
+//     RawDataState::rawDataTransmissionInProgress = true;
+//     httpStatusCodeX = httpStatusCodeY = httpStatusCodeZ = 0;
+//     XSentToWifi = YsentToWifi = ZsentToWifi = false;    
+// }
 
 /**
  * Handle periodical publication of accel raw data.
@@ -2755,8 +2781,8 @@ void Conductor::periodicSendAccelRawData()
     if (now - m_rawDataPublicationStart > m_rawDataPublicationTimer) {
         delay(500);
         if (m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE) {
-            persistRawData();
-            startRawDataSendingSession();
+            rawDataRequest();
+            // startRawDataSendingSession();
         } else if (m_streamingMode == StreamingMode::ETHERNET) {
             sendAccelRawData(0);
             sendAccelRawData(1);

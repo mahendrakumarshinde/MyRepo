@@ -123,13 +123,7 @@ class Conductor
         uint32_t m_connectionTimeout = 150000;   // 2 min 30s
         //timer ISR period
         uint16_t timerISRPeriod = 300; // default 3.3KHz
-        // Raw data storage buffers. TODO: This is temporary for v1.1.3,
-        // sizes of these buffers should be optimized in later releases and 
-        // the extra freed up space should be used to create dedicated raw data buffers
-        // of datatype q15_t.
-        char rawAccelerationX[15000];
-        char rawAccelerationY[15000];
-        char rawAccelerationZ[15000];
+
         /***** Core *****/
         Conductor() {};
         Conductor(MacAddress macAddress) : m_macAddress(macAddress) { }
@@ -233,16 +227,15 @@ class Conductor
          * Tried 1st solution - getting compilation errors, implemented for second solution
          * TODO : Implement first solution in optimization pass
         */
-        void persistRawData();
+        void rawDataRequest();
         void manageRawDataSending();
-        void startRawDataSendingSession();
+        // void startRawDataSendingSession();
         void prepareRawDataPacketAndSend(char axis);       // to send to ESP
         int httpStatusCodeX, httpStatusCodeY, httpStatusCodeZ;         
-        bool isSendingInProgress;
         bool XSentToWifi, YsentToWifi, ZsentToWifi;     // TODO optimize using bit vector
         double rawDataRecordedAt, lastPacketSentToESP;
         IUMessageFormat::rawDataPacket rawData;
-       
+        
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
