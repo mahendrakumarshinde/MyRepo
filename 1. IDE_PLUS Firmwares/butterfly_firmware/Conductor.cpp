@@ -2696,8 +2696,9 @@ void Conductor::rawDataRequest() {
     RawDataState::ZCollected = false;
     RawDataState::startRawDataTransmission = false;
     RawDataState::rawDataTransmissionInProgress = false;
-    debugPrint("DEBUG: RAW DATA: starting raw data collection at: ",false); debugPrint(rawDataRecordedAt);
-    debugPrint("Stored raw data at time : ", false);debugPrint(rawDataRecordedAt);
+    if(loopDebugMode) {
+        debugPrint("Raw data request: starting raw data collection at: ",false); debugPrint(rawDataRecordedAt);
+    }
 }
 /**
  * Should be called every loop iteration. If session is in progress, sends stored axis data to the ESP then waits untill
@@ -2710,7 +2711,9 @@ void Conductor::manageRawDataSending() {
        RawDataState::XCollected && RawDataState::YCollected && RawDataState::ZCollected &&
        !RawDataState::rawDataTransmissionInProgress)
     {
-        debugPrint("DEBUG: RAW DATA: Collected raw data, starting transmission");
+        if(loopDebugMode) {
+            debugPrint("Raw data request: collected raw data, starting transmission");
+        }
         RawDataState::rawDataTransmissionInProgress = true;
         httpStatusCodeX = httpStatusCodeY = httpStatusCodeZ = 0;
         XSentToWifi = YsentToWifi = ZsentToWifi = false;    
@@ -2721,23 +2724,31 @@ void Conductor::manageRawDataSending() {
         if (!XSentToWifi) {
             prepareRawDataPacketAndSend('X');
             XSentToWifi = true; 
-            debugPrint("DEBUG: RAW DATA: X sent to wifi");
+            if(loopDebugMode) {
+                debugPrint("Raw data request: X sent to wifi");
+            }
             // lastPacketSentToESP = millis();
         } else if (httpStatusCodeX == 200 && !YsentToWifi) { 
             prepareRawDataPacketAndSend('Y');
             YsentToWifi = true;
-            debugPrint("DEBUG: RAW DATA: X delivered, Y sent to wifi");
+            if(loopDebugMode) {
+                debugPrint("Raw data request: X delivered, Y sent to wifi");
+            }
             // lastPacketSentToESP = millis();
         } else if (httpStatusCodeY == 200 && !ZsentToWifi) {
             prepareRawDataPacketAndSend('Z');
             ZsentToWifi = true;
-            debugPrint("DEBUG: RAW DATA: Y delivered, Z sent to wifi");
+            if(loopDebugMode) {
+                debugPrint("Raw data request: Y delivered, Z sent to wifi");
+            }
             // lastPacketSentToESP = millis();
         }
         if (httpStatusCodeX == 200 && httpStatusCodeY == 200 && httpStatusCodeZ == 200) {
             // End the transmission session, reset RawDataState::startRawDataCollection and RawDataState::rawDataTransmissionInProgress
             // Rest of the tracking variables are reset when rawDataRequest() is called
-            debugPrint("DEBUG: RAW DATA: Z delivered, ending transmission session");
+            if(loopDebugMode) {
+                debugPrint("Raw data request: Z delivered, ending transmission session");
+            }
             RawDataState::startRawDataCollection = false;
             RawDataState::rawDataTransmissionInProgress = false;    
         }

@@ -517,17 +517,23 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         // Save the raw data 
         if(m_id == 30 && RawDataState::startRawDataCollection && !RawDataState::XCollected) {
             memcpy(RawDataState::rawAccelerationX, (q15_t*)values, FFTConfiguration::currentBlockSize * 2);
-            debugPrint("DEBUG: RAW DATA: Collected X");
+            if(loopDebugMode) {
+                debugPrint("Raw data request: collected X");
+            }
             RawDataState::XCollected = true;
         }
         if(m_id == 31 && RawDataState::startRawDataCollection && !RawDataState::YCollected) {
             memcpy(RawDataState::rawAccelerationY, (q15_t*)values, FFTConfiguration::currentBlockSize * 2);
-            debugPrint("DEBUG: RAW DATA: Collected Y");
+            if(loopDebugMode) {
+                debugPrint("Raw data request: collected Y");
+            }
             RawDataState::YCollected = true;
         }
         if(m_id == 32 && RawDataState::startRawDataCollection && !RawDataState::ZCollected) {
             memcpy(RawDataState::rawAccelerationZ, (q15_t*)values, FFTConfiguration::currentBlockSize * 2);
-            debugPrint("DEBUG: RAW DATA: Collected Z");
+            if(loopDebugMode) {
+                debugPrint("Raw data request: collected Z");
+            }
             RawDataState::ZCollected = true;
         }
 
