@@ -710,7 +710,8 @@ void loop()
 
         // Clean timed out segmented messages
         conductor.cleanTimedoutSegmentedMessages();
-       
+
+        // Manage raw data sending depending on RawDataState::startRawDataTransmission and RawDataState::rawDataTransmissionInProgress
         conductor.manageRawDataSending();
 
         yield();
