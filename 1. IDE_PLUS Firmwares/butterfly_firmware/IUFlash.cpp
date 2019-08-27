@@ -211,16 +211,20 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
             char parametersWithValidationChecks[2][4] = {"DSP", "RAW"};
             // All parameters in "config" excluding parametersWithValidationChecks are to be added to the list of valid params
             for (auto kv:config) {
+                bool parameterWithValidationCheck = false;
                 for (int i=0; i<numberOfParametersWithValidationChecks; ++i) {
                     if (strcmp(kv.key, parametersWithValidationChecks[i]) == 0) {
-                        continue;
+                        parameterWithValidationCheck = true;
+                        break;
                     }
                 }
-                validParams.add(kv.key);
+                if(!parameterWithValidationCheck) {
+                    validParams.add(kv.key);
+                }
             }   
             /* THIS WORKAROUND CAN BE REMOVED AFTER VALIDATION CHECKS ARE ADDED FOR ALL PARAMETERS */         
 
-            if (validParams.size()) {
+            if (validParams.size() == 0) {
                 validConfig = false;
             }
             break;
