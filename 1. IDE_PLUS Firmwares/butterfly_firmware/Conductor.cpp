@@ -943,7 +943,7 @@ JsonObject& Conductor:: configureJsonFromFlash(String filename,bool isSet){
 void Conductor::configureMainOptions(JsonVariant &config)
 {
     JsonVariant value = config["GRP"];
-    if (value.success()) {
+    if (value.success()) {        
         deactivateAllGroups();
         bool mainGroupFound = false;
         // activateGroup(&healthCheckGroup);  // Health check is always active
@@ -2103,10 +2103,11 @@ void Conductor::changeMainFeatureGroup(FeatureGroup *group)
             } else {
                 opStateComputer.addOpStateFeature(feat,
                                                   10000, 10000, 10000,
-                                                  1, false);
+                                                  1, false); 
             }
         }
         activateFeature(&opStateFeature);
+        setThresholdsFromFile();
     }
 }
 
