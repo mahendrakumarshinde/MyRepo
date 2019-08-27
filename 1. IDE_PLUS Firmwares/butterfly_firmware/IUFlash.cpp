@@ -199,7 +199,31 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                 }
             }
 
-            // If no valid parameter is present, set validConfig to false
+            // Device configuration message : {"main":{"GRP":["MOTSTD"],"RAW":1800,"POW":0,"TSL":60,"TOFF":10,"TCY":20,"DSP":512}}
+            // TODO: Validation should be added for these keys (GRP, POW, TSL, TOFF, TCY etc.) as well, right now these keys
+            // are assumed to be correct and are being added without any validation checks. After adding validation checks, 
+            // if the parameter is incorrect it should be removed from "config". The following logic is added as a temporary workaround, 
+            // it ensures that the parameters which do not have validation checks will be considered to be valid.
+            /* WORKAROUND FOR PARAMS WITHOUT VALIDATION CHECKS*/
+            const int numberOfParametersWithValidationChecks = 2;
+            const int parameterNameLength = 4; 
+            // The following list contains the parameters which have validation checks
+            char parametersWithValidationChecks[2][4] = {"DSP", "RAW"};
+            // All parameters in "config" excluding parametersWithValidationChecks are to be added to the list of valid params
+            for (auto kv:config) {
+                bool parameterWithValidationCheck = false;
+                for (int i=0; i<numberOfParametersWithValidationChecks; ++i) {
+                    if (strcmp(kv.key, parametersWithValidationChecks[i]) == 0) {
+                        parameterWithValidationCheck = true;
+                        break;
+                    }
+                }
+                if(!parameterWithValidationCheck) {
+                    validParams.add(kv.key);
+                }
+            }   
+            /* THIS WORKAROUND CAN BE REMOVED AFTER VALIDATION CHECKS ARE ADDED FOR ALL PARAMETERS */         
+
             if (validParams.size() == 0) {
                 validConfig = false;
             }
