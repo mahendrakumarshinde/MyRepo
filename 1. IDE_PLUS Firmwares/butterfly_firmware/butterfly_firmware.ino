@@ -18,7 +18,7 @@ Type - Standard Firmware Release
 #include <FS.h>
 //#include"IUTimer.h"
 
-const uint8_t ESP8285_IO0  =  7;
+const uint8_t ESP32_IO0  =  7;  // ESP32_PORT_TRUE
 
 #ifdef DRAGONFLY_V03
 #else
@@ -113,7 +113,7 @@ float audioHigherCutoff = 160.0;
 bool doOnce = true;
 uint32_t interval = 30000;
 uint32_t lastDone = 0;
-
+uint32_t lastpr = 0;
 
 /***** Main operator *****/
 
@@ -169,6 +169,8 @@ static void watchdogCallback(void) {
     if (now > oneDayTimeout ||
         (lastActive > 0 && now - lastActive > loopTimeout))
     {
+        Serial.println("STM Watchdog Reset !");
+        delay(100);
         STM32.reset();
     }
     if (iuWiFi.arePublicationsFailing()) {
@@ -177,6 +179,7 @@ static void watchdogCallback(void) {
         if(conductor.isBLEConnected()) {
            iuBluetooth.write("WIFI-DISCONNECTED;");
         }
+        Serial.println("Pub Failed !");
         iuWiFi.hardReset();
     }
     armv7m_timer_start(&watchdogTimer, 1000);
@@ -387,10 +390,10 @@ void timerInit(void)
 void setup()
 {   
   
-  pinMode(ESP8285_IO0,OUTPUT);
+  pinMode(ESP32_IO0,OUTPUT); // ESP32_PORT_TRUE
 //   pinMode(6,OUTPUT); 
 //   pinMode(A3,OUTPUT);  // ISR (ODR checked from pin 50)
-  digitalWrite(ESP8285_IO0,HIGH);
+  digitalWrite(ESP32_IO0,HIGH); // ESP32_PORT_TRUE
   DOSFS.begin();
   #if 1
     
@@ -494,10 +497,10 @@ void setup()
         {
             debugPrint("BLE Chip is Available, BLE init Complete");
         }
-         
+ //   ESP32_PORT_TRUE - Disabled for testing. This Req is causing ESP32 Reset.         
         // httpConfig message read timerCallback
-        armv7m_timer_create(&httpConfigTimer, (armv7m_timer_callback_t)httpConfigCallback);
-        armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min Timer 180000
+ //       armv7m_timer_create(&httpConfigTimer, (armv7m_timer_callback_t)httpConfigCallback);
+ //       armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min Timer 180000
         
         // WIFI SETUP BEGIN
         iuWiFi.setupHardware();
@@ -577,7 +580,7 @@ void setup()
         // if (!USBDevice.configured())
         // {
         // WiFi configuration
-        conductor.configureFromFlash(IUFlash::CFG_WIFI0);
+//        conductor.configureFromFlash(IUFlash::CFG_WIFI0);
         // Feature, FeatureGroup and sensors coonfigurations
         for (uint8_t i = 0; i < conductor.CONFIG_TYPE_COUNT; ++i) {
             conductor.configureFromFlash(conductor.CONFIG_TYPES[i]);
@@ -600,7 +603,11 @@ void setup()
         //http configuration
         conductor.configureBoardFromFlash("httpConfig.conf",1);
         // get the previous offset values 
-        conductor.setSensorConfig("sensorConfig.conf");        
+        conductor.setSensorConfig("sensorConfig.conf"); 
+
+        delay(1000);
+        conductor.configureFromFlash(IUFlash::CFG_WIFI0);
+        delay(100);
         opStateFeature.setOnNewValueCallback(operationStateCallback);
         ledManager.resetStatus();
         conductor.changeUsageMode(UsageMode::OPERATION);
@@ -684,7 +691,11 @@ void loop()
             conductor.streamMCUUInfo(iuWiFi.port);
             /*======*/
         }
-       
+        if(now - lastpr > 7000)
+        {
+            lastpr = now;
+            Serial.println("STM Loop Alive @ 7 Sec.");
+        }
         if (millis() - conductor.lastTimeSync > conductor.m_connectionTimeout ) {
 
             if(iuEthernet.isEthernetConnected == 0) {

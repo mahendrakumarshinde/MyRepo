@@ -24,7 +24,7 @@ class IUESP8285 : public IUSerial, public Component
 {
     public:
         /***** Preset values and default settings *****/
-        static const uint8_t ESP8285_ENABLE_PIN = A2;
+        static const uint8_t ESP32_ENABLE_PIN = 6;  // ESP32_PORT_TRUE
         // Max expected length of WiFi SSID or password
         static const uint8_t wifiCredentialLength = 64;
         // WiFi config (credentials or Static IP)
@@ -115,7 +115,6 @@ class IUESP8285 : public IUSerial, public Component
             { sendMSPCommand(MSPCommand::PUBLISH_FEATURE, features); }
         void publishDiagnostic(char *diagnotic)
             { sendMSPCommand(MSPCommand::PUBLISH_DIAGNOSTIC, diagnotic); }
-
     private:
         /***** Configuring the WiFi *****/
         char m_ssid[wifiCredentialLength];

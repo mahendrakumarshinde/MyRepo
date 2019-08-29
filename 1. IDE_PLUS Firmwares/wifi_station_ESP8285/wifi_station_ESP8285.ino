@@ -6,7 +6,9 @@
 
 #include "Conductor.h"
 #include <Ticker.h>
+#include <rom/rtc.h>
 
+uint32_t lastprint = 0;
 
 Conductor conductor;
 
@@ -19,7 +21,7 @@ Conductor conductor;
  *
  * See conductor.processMessageFromMQTT
  */
-void mqttNewMessageCallback(char* topic, byte* payload, uint16_t length)
+void mqttNewMessageCallback(char* topic, byte* payload, unsigned int length) // ESP32_PORT_TRUE
 {
     conductor.processMessageFromMQTT(topic, (char*) payload, length);
 }
@@ -50,11 +52,14 @@ void onNewHostMessageFromHost(IUSerial *iuSerial) {
 
 void setup()
 {
+    char TestStr1[64];    
+    sprintf(TestStr1,"Reset:%d C0:%d C1:%d",esp_reset_reason(),(int)rtc_get_reset_reason(0),(int)rtc_get_reset_reason(1));
     hostSerial.begin();
     hostSerial.setOnNewMessageCallback(onNewHostMessageFromHost);
     if (debugMode) {
         delay(5000);
     }
+    hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, TestStr1,32);
     #if IUDEBUG_ANY == 1
         conductor.forceWiFiConfig(testSSID, testPSK, testStaticIP,
                                   testGateway, testSubnet);
@@ -71,6 +76,7 @@ void setup()
     #if IUDEBUG_ANY == 1
         conductor.reconnect(true);
     #endif
+    hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "@ WIFI_CLIENT SETP @",20);
 }
 
 /**
@@ -92,8 +98,13 @@ void loop()
         conductor.loopMQTT();
         conductor.publishWifiInfoCycle();
         // Publish raw data (HTTP POST request)
-        accelRawDataHelper.publishIfReady(conductor.getBleMAC());
+//        accelRawDataHelper.publishIfReady(conductor.getBleMAC());
         
+    }
+    if(millis() - lastprint > 7000)
+    {
+        lastprint = millis();
+        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "WiFi Loop OK",12);
     }
     conductor.updateWiFiStatusCycle();
     conductor.checkWiFiDisconnectionTimeout();

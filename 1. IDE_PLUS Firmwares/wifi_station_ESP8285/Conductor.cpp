@@ -154,10 +154,12 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
 
         /***** Wifi commands *****/
         case MSPCommand::WIFI_SOFT_RESET:
-            ESP.reset();
+            ESP.restart(); // ESP32_PORT_TRUE
             break;
         case MSPCommand::WIFI_CONNECT:
             // Reset disconnection timer
+            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "WIFI_CONNECT REQ RX",19);
+            delay(500);
             m_disconnectionTimerStart = millis();
             reconnect();
             break;
@@ -294,6 +296,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             char ack_config[150];
 
             if (accelRawDataHelper.inputHasTimedOut()) {
+                hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "HTTP PAYLOAD TMOUT",18);
                 accelRawDataHelper.resetPayload();
             }
 
@@ -463,6 +466,7 @@ void Conductor::forgetWiFiCredentials()
  */
 void Conductor::receiveNewCredentials(char *newSSID, char *newPSK)
 {
+    hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "@ RX NEW WIFI CRED @",20);
     if (m_credentialValidator.hasTimedOut())
     {
         forgetWiFiCredentials();
@@ -619,7 +623,7 @@ bool Conductor::reconnect(bool forceNewCredentials)
         {
             // New and different user input for SSID and Password => disconnect
             // from current SSID then reconnect to new SSID
-            ESP.eraseConfig();
+            // ESP.eraseConfig();  // ESP32_PORT_TRUE
             disconnectWifi();
             delay(1000);  // Wait for effective disconnection
         }
@@ -645,6 +649,9 @@ bool Conductor::reconnect(bool forceNewCredentials)
         {
             WiFi.config(m_staticIp, m_gateway, m_subnetMask);
         }
+        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "@ WIFI_RECONNECT   @",20);
+        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, m_userSSID,20);
+        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, m_userPassword,20);
         WiFi.begin(m_userSSID, m_userPassword);
         m_lastConnectionAttempt = current;
         wifiConnected = (waitForConnectResult() == WL_CONNECTED);
@@ -653,10 +660,12 @@ bool Conductor::reconnect(bool forceNewCredentials)
             debugPrint(WiFi.SSID());
         }
     }
+#if 0 // ESP32_PORT_TRUE
     // Set light sleep mode if not done
     if (wifiConnected && WiFi.getSleepMode() != WIFI_LIGHT_SLEEP) {
         WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
     }
+#endif
     return wifiConnected;
 }
 
@@ -712,7 +721,9 @@ void Conductor::checkWiFiDisconnectionTimeout()
         {
             debugPrint("Exceeded disconnection time-out");
         }
-        ESP.reset();
+        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "ESP RST DIS 100Sec",18);
+        delay(100);
+        ESP.restart(); // Resetting ESP32 if not connected to WiFi (every 100 Sec.) // ESP32_PORT_TRUE
     }
 }
 
@@ -1003,13 +1014,18 @@ void Conductor::publishWifiInfoCycle()
  */
 void Conductor::updateWiFiStatus()
 {
+    char TestStr[32];
     if (WiFi.isConnected() && mqttHelper.client.connected())
     {
         hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_CONNECTED);
+        sprintf(TestStr,"AP:%s FR_H:%d",WiFi.SSID().c_str(),esp_get_free_heap_size());
+        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,TestStr ,32);
     }
     else
     {
         hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_DISCONNECTED);
+        sprintf(TestStr,"WIFI_DISCONNECT FR_H:%d",esp_get_free_heap_size());
+        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,TestStr ,32);
     }
 }
 

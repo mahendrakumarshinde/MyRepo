@@ -1683,6 +1683,10 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
     }
     uint8_t idx = 0;
     switch (iuWiFi.getMspCommand()) {
+        case MSPCommand::ESP_DEBUG_TO_STM_HOST:
+            Serial.write(buff);
+            Serial.write('\n');
+            break;
         // MSP Status messages
         case MSPCommand::MSP_INVALID_CHECKSUM:
             if (loopDebugMode) { debugPrint(F("MSP_INVALID_CHECKSUM")); }
@@ -1769,6 +1773,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 debugPrint(F("WIFI_CONFIRM_ACTION: "), false);
                 debugPrint(buff);
             }
+            Serial.print("WIFI_CONFIRM_ACTION");
+            Serial.println(buff);
             break;
         case MSPCommand::WIFI_CONFIRM_PUBLICATION:
             idx = (uint8_t) buff[0];
@@ -2715,6 +2721,7 @@ void Conductor::manageRawDataSending() {
         if(loopDebugMode) {
             debugPrint("Raw data request: collected raw data, starting transmission");
         }
+        Serial.println(F("Raw data request: starting transmission"));
         RawDataState::rawDataTransmissionInProgress = true;
         httpStatusCodeX = httpStatusCodeY = httpStatusCodeZ = 0;
         XSentToWifi = YsentToWifi = ZsentToWifi = false;    
@@ -2728,6 +2735,7 @@ void Conductor::manageRawDataSending() {
             if(loopDebugMode) {
                 debugPrint("Raw data request: X sent to wifi");
             }
+            Serial.println(F("Raw data request: X sent to wifi"));
             // lastPacketSentToESP = millis();
         } else if (httpStatusCodeX == 200 && !YsentToWifi) { 
             prepareRawDataPacketAndSend('Y');
@@ -2735,6 +2743,7 @@ void Conductor::manageRawDataSending() {
             if(loopDebugMode) {
                 debugPrint("Raw data request: X delivered, Y sent to wifi");
             }
+            Serial.println(F("Raw data request: X delivered, Y sent to wifi"));
             // lastPacketSentToESP = millis();
         } else if (httpStatusCodeY == 200 && !ZsentToWifi) {
             prepareRawDataPacketAndSend('Z');
@@ -2742,6 +2751,7 @@ void Conductor::manageRawDataSending() {
             if(loopDebugMode) {
                 debugPrint("Raw data request: Y delivered, Z sent to wifi");
             }
+            Serial.println(F("Raw data request: Y delivered, Z sent to wifi")); 
             // lastPacketSentToESP = millis();
         }
         if (httpStatusCodeX == 200 && httpStatusCodeY == 200 && httpStatusCodeZ == 200) {
@@ -2750,6 +2760,7 @@ void Conductor::manageRawDataSending() {
             if(loopDebugMode) {
                 debugPrint("Raw data request: Z delivered, ending transmission session");
             }
+            Serial.println(F("Raw data request: Z delivered, ending transmission session"));
             RawDataState::startRawDataCollection = false;
             RawDataState::rawDataTransmissionInProgress = false;    
         }
@@ -2757,6 +2768,7 @@ void Conductor::manageRawDataSending() {
 }
 
 void Conductor::prepareRawDataPacketAndSend(char axis) {
+    char TestStr[32];
     rawData.axis = axis;
     rawData.timestamp = rawDataRecordedAt;
     switch(axis) {
@@ -2776,6 +2788,8 @@ void Conductor::prepareRawDataPacketAndSend(char axis) {
         debugPrint("Sent ", false);debugPrint(axis,false);debugPrint(" data which was recorded at ",false);
         debugPrint(rawDataRecordedAt);
     }
+    sprintf(TestStr, "Sent %c Size:%d", axis,sizeof rawData);
+    Serial.println(TestStr);
 }
 
 // void Conductor::startRawDataSendingSession() {
@@ -2791,6 +2805,7 @@ void Conductor::periodicSendAccelRawData()
 {
     uint32_t now = millis();
     if (now - m_rawDataPublicationStart > m_rawDataPublicationTimer) {
+        Serial.println(F("***  Sending Raw Data ***"));
         delay(500);
         if (m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE) {
             rawDataRequest();

@@ -4,10 +4,13 @@
 #include <Arduino.h>
 #include <time.h>
 
-#include <ESP8266WiFi.h>
-#include <ESP8266HTTPClient.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
 #include <IUDebugger.h>
 
+#include "IUSerial.h" // ESP32_PORT_TRUE Debug changes
+#include "MSPCommands.h" // ESP32_PORT_TRUE Debug changes
+extern IUSerial hostSerial; // ESP32_PORT_TRUE Debug changes
 
 /* =============================================================================
     HTTP functions
@@ -16,7 +19,7 @@ namespace HttpContentType {
     static char* applicationJSON = "json\r\n";
     static char* octetStream = "octet-stream\r\n";
 }
-
+#if 0 // ESP32_PORT_TRUE
 /**
  * Sends an HTTP GET request - HTTPS is used if fingerprint is given.
  *
@@ -58,7 +61,7 @@ inline int httpGetRequest(const char *url, char* responseBody,
     http.end();
     return httpCode;
 }
-
+#endif // ESP32_PORT_TRUE
 // Get the configuration messages 
 
 
@@ -87,7 +90,7 @@ inline String httpGET(const char *url,uint16_t maxResponseLength,
     HTTPClient http;
     if (httpsFingerprint)
     {
-        http.begin(String(url), String(httpsFingerprint));
+      //  http.begin(String(url), String(httpsFingerprint)); // ESP32_PORT_TRUE  
     }
     else
     {
@@ -111,7 +114,7 @@ inline String httpGET(const char *url,uint16_t maxResponseLength,
    }
 }
 
-
+#if 0 // ESP32_PORT_TRUE
 /**
  * Sends an HTTP POST request - HTTPS is used if fingerprint is given.
  *
@@ -157,7 +160,7 @@ inline int httpPostJsonRequest(const char *url, char *payload,
     http.end();
     return httpCode;
 }
-
+#endif // ESP32_PORT_TRUE
 
 /**
  * Sends an HTTP POST request with a "Big" payload
@@ -183,12 +186,16 @@ inline int httpPostBigRequest(
     size_t chunkSize=WIFICLIENT_MAX_PACKET_SIZE,
     uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT + 3000)
 {
+    char TestStr1[32];    
+    sprintf(TestStr1,"HTTP-P:%d C:%d",payloadLength,chunkSize);
+    hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, TestStr1);
     if (WiFi.status() != WL_CONNECTED)
     {
         if (debugMode)
         {
             debugPrint("WiFi disconnected: POST request failed");
         }
+        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "HTTP:WiFi Disconenct",20);
         return 404; // 0
     }
     
@@ -212,7 +219,7 @@ inline int httpPostBigRequest(
             debugPrint("\nHEADERS:");
             debugPrint(request);
         }
-      
+       hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "HTTP:Err. Conn. Host",20);
        return 505; //connectResult;  // 0 means no connection
     }
 
@@ -221,6 +228,7 @@ inline int httpPostBigRequest(
     // now we need to chunk the payload into 1000 byte chunks
     size_t cIndex;
     size_t retSize;
+    if(payloadLength > chunkSize) {
     for (cIndex = 0; cIndex < payloadLength - chunkSize;
          cIndex = cIndex + chunkSize)
     {
@@ -231,6 +239,8 @@ inline int httpPostBigRequest(
             {
                 client.stop();
             }
+            sprintf(TestStr1,"HTTP1-C:%d R:%d",chunkSize,retSize);
+            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, TestStr1);
             return HTTPC_ERROR_SEND_PAYLOAD_FAILED;  // -3
         }
     }
@@ -241,7 +251,25 @@ inline int httpPostBigRequest(
         {
             client.stop();
         }
+        sprintf(TestStr1,"HTTP1-C:%d R:%d",chunkSize,retSize);
+        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, TestStr1);
         return HTTPC_ERROR_SEND_PAYLOAD_FAILED;  // -3
+    }
+    }
+    else if(payloadLength < chunkSize && payloadLength > 0)
+    {
+        retSize = client.write(&payload[0], payloadLength);
+        if(retSize != payloadLength)
+        {
+            if (client.connected() || (client.available() > 0))
+            {
+                client.stop();
+            }
+
+            sprintf(TestStr1,"HTTP1-C:%d R:%d",chunkSize,retSize);
+            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, TestStr1);
+            return HTTPC_ERROR_SEND_PAYLOAD_FAILED;  // -3
+        }       
     }
     // Handle response
     uint32_t lastDataTime = millis();

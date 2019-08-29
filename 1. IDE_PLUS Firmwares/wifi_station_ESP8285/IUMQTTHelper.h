@@ -1,7 +1,7 @@
 #ifndef IUMQTTHELPER_H
 #define IUMQTTHELPER_H
 
-#include <ESP8266WiFi.h>
+#include <WiFi.h>
 #include <PubSubClient.h>
 #include <time.h>
 

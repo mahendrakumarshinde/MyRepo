@@ -29,7 +29,7 @@ void IUTimeHelper::begin()
     if (debugMode)
     {
         debugPrint("Starting UDP at port: ", false);
-        debugPrint(m_udp.localPort());
+ //       debugPrint(m_udp.localPort()); // ESP32_PORT_TRUE
     }
 }
 
