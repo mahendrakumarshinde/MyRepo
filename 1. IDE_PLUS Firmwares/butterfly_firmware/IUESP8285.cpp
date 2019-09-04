@@ -1,4 +1,5 @@
 #include "IUESP8285.h"
+#include "RawDataState.h"
 
 /* =============================================================================
     Constructor & desctructors
@@ -86,7 +87,7 @@ void IUESP8285::turnOn(bool forceTimerReset)
         digitalWrite(ESP32_ENABLE_PIN, HIGH);
         if(forceTimerReset == true) {
             m_credentialSent = false;
-            delay(5000); // ESP32_PORT_TRUE -- After ESP Reset, wait for ESP32 to boot up
+            delay(6000); // ESP32_PORT_TRUE -- After ESP Reset, wait for ESP32 to boot up
         }
         m_on = true;
         m_awakeTimerStart = millis();
@@ -119,6 +120,9 @@ void IUESP8285::turnOff()
         {
             debugPrint("Wifi turned off");
         }
+        // ESP32_PORT_TRUE - To reset Raw data transmission on ESP reset
+        RawDataState::startRawDataCollection = false;
+        RawDataState::rawDataTransmissionInProgress = false;
     }
 }
 
@@ -320,6 +324,9 @@ void IUESP8285::setSSID(const char *ssid, uint8_t length)
     if (m_credentialValidator.hasTimedOut())
     {
         m_credentialValidator.reset();
+    }
+    for (uint8_t i = 0; i < wifiCredentialLength; i++) {
+        m_psk[i] = 0;
     }
     uint8_t charCount = min(wifiCredentialLength, length);
     strncpy(m_ssid, ssid, charCount);

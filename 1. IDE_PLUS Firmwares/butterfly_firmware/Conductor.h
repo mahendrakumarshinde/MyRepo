@@ -233,6 +233,7 @@ class Conductor
         void prepareRawDataPacketAndSend(char axis);       // to send to ESP
         int httpStatusCodeX, httpStatusCodeY, httpStatusCodeZ;         
         bool XSentToWifi, YsentToWifi, ZsentToWifi;     // TODO optimize using bit vector
+        uint32_t RawDataTimeout = 0;
         double rawDataRecordedAt, lastPacketSentToESP;
         IUMessageFormat::rawDataPacket rawData;
         

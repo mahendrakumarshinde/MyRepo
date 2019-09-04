@@ -296,7 +296,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             char ack_config[150];
 
             if (accelRawDataHelper.inputHasTimedOut()) {
-                hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "HTTP PAYLOAD TMOUT",18);
+ //               hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "HTTP PAYLOAD TMOUT",18);
                 accelRawDataHelper.resetPayload();
             }
 

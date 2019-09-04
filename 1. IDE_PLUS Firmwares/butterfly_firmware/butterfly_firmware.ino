@@ -691,11 +691,13 @@ void loop()
             conductor.streamMCUUInfo(iuWiFi.port);
             /*======*/
         }
+#if 0
         if(now - lastpr > 7000)
         {
             lastpr = now;
             Serial.println("STM Loop Alive @ 7 Sec.");
         }
+#endif
         if (millis() - conductor.lastTimeSync > conductor.m_connectionTimeout ) {
 
             if(iuEthernet.isEthernetConnected == 0) {

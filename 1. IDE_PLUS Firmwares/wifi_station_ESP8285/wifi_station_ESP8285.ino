@@ -101,11 +101,13 @@ void loop()
 //        accelRawDataHelper.publishIfReady(conductor.getBleMAC());
         
     }
+#if 0
     if(millis() - lastprint > 7000)
     {
         lastprint = millis();
         hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "WiFi Loop OK",12);
     }
+#endif    
     conductor.updateWiFiStatusCycle();
     conductor.checkWiFiDisconnectionTimeout();
     delay(1);

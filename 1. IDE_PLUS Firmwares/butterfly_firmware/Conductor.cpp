@@ -1690,6 +1690,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
         // MSP Status messages
         case MSPCommand::MSP_INVALID_CHECKSUM:
             if (loopDebugMode) { debugPrint(F("MSP_INVALID_CHECKSUM")); }
+            Serial.println("Invalid Checksum !");
             break;
         case MSPCommand::MSP_TOO_LONG:
             if (loopDebugMode) { debugPrint(F("MSP_TOO_LONG")); }
@@ -1730,6 +1731,20 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 debugPrint(httpStatusCodeY, false);debugPrint(" | ", false);
                 debugPrint(httpStatusCodeZ, true);
             }
+#if 1
+            if(httpStatusCodeX != 200 || (httpStatusCodeX == 200 && httpStatusCodeY != 200 && httpStatusCodeY != 0) || (httpStatusCodeX == 200 && httpStatusCodeY == 200 && httpStatusCodeZ != 200 && httpStatusCodeZ != 0))
+            {
+                Serial.println("Aborting Raw Data Send !");
+                Serial.print(httpStatusCodeX);
+                Serial.print(" | ");
+                Serial.print(httpStatusCodeY);
+                Serial.print(" | ");
+                Serial.println(httpStatusCodeZ);
+                // Abort transmission on failure  // ESP32_PORT_TRUE Change
+                RawDataState::rawDataTransmissionInProgress = false;
+                RawDataState::startRawDataCollection = false;             
+            }
+#endif
             break;
         }
         case MSPCommand::WIFI_ALERT_CONNECTED:
@@ -1773,8 +1788,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 debugPrint(F("WIFI_CONFIRM_ACTION: "), false);
                 debugPrint(buff);
             }
-            Serial.print("WIFI_CONFIRM_ACTION");
-            Serial.println(buff);
+//            Serial.print("WIFI_CONFIRM_ACTION");
+//            Serial.println(buff);
             break;
         case MSPCommand::WIFI_CONFIRM_PUBLICATION:
             idx = (uint8_t) buff[0];
@@ -2555,13 +2570,15 @@ void Conductor::streamFeatures()
             uint16_t msgLen = strlen(nodeToSend->buffer);
            if (m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE)
            {
-            
+            if(RawDataState::rawDataTransmissionInProgress == false)
+            {     
             iuWiFi.startLiveMSPCommand(MSPCommand::PUBLISH_FEATURE_WITH_CONFIRMATION, msgLen + 2);
             iuWiFi.streamLiveMSPMessage((char) nodeToSend->idx);
             iuWiFi.streamLiveMSPMessage(':');
             iuWiFi.streamLiveMSPMessage(nodeToSend->buffer, msgLen);
             iuWiFi.endLiveMSPCommand();
             sendingQueue.attemptingToSend(nodeToSend->idx);
+           }
            }
            if(m_streamingMode == StreamingMode::ETHERNET){
                 uint16_t msgLen = strlen(nodeToSend->buffer);
@@ -2732,6 +2749,7 @@ void Conductor::manageRawDataSending() {
         if (!XSentToWifi) {
             prepareRawDataPacketAndSend('X');
             XSentToWifi = true; 
+            RawDataTimeout = millis(); // ESP32_PORT_TRUE
             if(loopDebugMode) {
                 debugPrint("Raw data request: X sent to wifi");
             }
@@ -2740,6 +2758,7 @@ void Conductor::manageRawDataSending() {
         } else if (httpStatusCodeX == 200 && !YsentToWifi) { 
             prepareRawDataPacketAndSend('Y');
             YsentToWifi = true;
+            RawDataTimeout = millis(); // ESP32_PORT_TRUE
             if(loopDebugMode) {
                 debugPrint("Raw data request: X delivered, Y sent to wifi");
             }
@@ -2748,6 +2767,7 @@ void Conductor::manageRawDataSending() {
         } else if (httpStatusCodeY == 200 && !ZsentToWifi) {
             prepareRawDataPacketAndSend('Z');
             ZsentToWifi = true;
+            RawDataTimeout = millis(); // ESP32_PORT_TRUE
             if(loopDebugMode) {
                 debugPrint("Raw data request: Y delivered, Z sent to wifi");
             }
@@ -2764,11 +2784,17 @@ void Conductor::manageRawDataSending() {
             RawDataState::startRawDataCollection = false;
             RawDataState::rawDataTransmissionInProgress = false;    
         }
+        if((millis() - RawDataTimeout) > 5000)
+        { // ESP32_PORT_TRUE -- On timeout of 4 Sec. if no response OK/FAIL then abort transmission
+            Serial.println("Raw Data Send Timeout !!");
+            RawDataState::startRawDataCollection = false;
+            RawDataState::rawDataTransmissionInProgress = false;              
+        }
     }
 }
 
 void Conductor::prepareRawDataPacketAndSend(char axis) {
-    char TestStr[32];
+ //   char TestStr[32];
     rawData.axis = axis;
     rawData.timestamp = rawDataRecordedAt;
     switch(axis) {
@@ -2788,8 +2814,8 @@ void Conductor::prepareRawDataPacketAndSend(char axis) {
         debugPrint("Sent ", false);debugPrint(axis,false);debugPrint(" data which was recorded at ",false);
         debugPrint(rawDataRecordedAt);
     }
-    sprintf(TestStr, "Sent %c Size:%d", axis,sizeof rawData);
-    Serial.println(TestStr);
+//    sprintf(TestStr, "Sent %c Size:%d", axis,sizeof rawData);
+//    Serial.println(TestStr);
 }
 
 // void Conductor::startRawDataSendingSession() {
@@ -2912,8 +2938,10 @@ void Conductor::sendDiagnosticFingerPrints() {
                 }else if(m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE)//iuWiFi.isAvailable() && iuWiFi.isWorking())   
                 {   /* FingerPrintResult send over Wifi only */
                     debugPrint("Wifi connected, ....",true);
+                    if(RawDataState::rawDataTransmissionInProgress == false)
+                    { 
                     iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );    
-                
+                    }
                 }
                 
             }
