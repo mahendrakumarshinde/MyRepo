@@ -849,9 +849,9 @@ bool Conductor::configureBoardFromFlash(String filename,bool isSet){
   JsonObject& root2 = root["httpConfig"];
   if (!root.success()){
     debugPrint(F("Failed to read httpConf.conf file, using default configuration"));
-    m_httpHost = "http://13.232.122.10";
+    m_httpHost = "13.232.122.10";
     m_httpPort = 8080;
-    m_httpPath = "/iu-web/iu-infiniteuptime-api/postdatadump?mac=";
+    m_httpPath = "/iu-web/rawaccelerationdata";
    
   }
  else {
@@ -1791,9 +1791,9 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 m_httpPort = config["httpConfig"]["port"];
               }  
               else{
-                m_httpHost = "http://13.232.122.10";                                       //"ideplus-dot-infinite-uptime-1232.appspot.com";
+                m_httpHost = "13.232.122.10";                                       //"ideplus-dot-infinite-uptime-1232.appspot.com";
                 m_httpPort =  8080;                                                        //80;
-                m_httpPath = "/iu-web/iu-infiniteuptime-api/postdatadump?mac=";           //"/raw_data?mac="; 
+                m_httpPath = "/iu-web/rawaccelerationdata";           //"/raw_data?mac="; 
                 }
                 iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_HOST,m_httpHost); 
                 iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_PORT,String(m_httpPort).c_str()); 
