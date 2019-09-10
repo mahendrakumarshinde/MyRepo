@@ -276,9 +276,9 @@ class Conductor
         const char* m_mqttUserName = MQTT_DEFAULT_USERNAME;
         const char* m_mqttPassword = MQTT_DEFAULT_ASSWORD;
         //httpendpoint configuration
-        const char* m_httpHost  = "http://13.232.122.10";
+        const char* m_httpHost  = "13.232.122.10";
         uint16_t  m_httpPort  = 8080;
-        const char* m_httpPath = "/iu-web/iu-infiniteuptime-api/postdatadump?mac=";
+        const char* m_httpPath = "/iu-web/rawaccelerationdata";
         const char* m_httpUsername = "infinite_uptime";
         const char* m_httpPassword ;
         const char* m_httpOauth ;
