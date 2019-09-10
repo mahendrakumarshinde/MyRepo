@@ -220,7 +220,7 @@ inline int httpPostBigRequest(
             debugPrint(request);
         }
         hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "HTTP:Err. Conn. Host",20);
-        client.stop();
+ //       client.stop();
         return 505; //connectResult;  // 0 means no connection
     }
 
@@ -242,7 +242,7 @@ inline int httpPostBigRequest(
             }
     //        sprintf(TestStr1,"HTTP1-C:%d R:%d",chunkSize,retSize);
     //        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, TestStr1);
-            client.stop();
+ //           client.stop();
             return HTTPC_ERROR_SEND_PAYLOAD_FAILED;  // -3
         }
     }
@@ -255,7 +255,7 @@ inline int httpPostBigRequest(
         }
     //    sprintf(TestStr1,"HTTP1-C:%d R:%d",chunkSize,retSize);
     //    hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, TestStr1);
-        client.stop();
+ //       client.stop();
         return HTTPC_ERROR_SEND_PAYLOAD_FAILED;  // -3
     }
     }
@@ -271,7 +271,7 @@ inline int httpPostBigRequest(
 
       //      sprintf(TestStr1,"HTTP1-C:%d R:%d",chunkSize,retSize);
        //     hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, TestStr1);
-            client.stop();
+  //          client.stop();
             return HTTPC_ERROR_SEND_PAYLOAD_FAILED;  // -3
         }       
     }
@@ -295,12 +295,12 @@ inline int httpPostBigRequest(
             {
                 if(returnCode)
                 {
-                    client.stop();
+ //                   client.stop();
                     return returnCode;
                 }
                 else
                 {
-                    client.stop();
+  //                  client.stop();
                     return HTTPC_ERROR_NO_HTTP_SERVER;  // -7
                 }
             }
@@ -308,13 +308,13 @@ inline int httpPostBigRequest(
         else
         {
             if((millis() - lastDataTime) > tcpTimeout) {
-                client.stop();
+  //              client.stop();
                 return HTTPC_ERROR_READ_TIMEOUT;  // -11
             }
             delay(0);
         }
     }
-    client.stop();
+ //   client.stop();
     return HTTPC_ERROR_CONNECTION_LOST;  // -5
 }
 

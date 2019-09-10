@@ -2784,7 +2784,7 @@ void Conductor::manageRawDataSending() {
             RawDataState::startRawDataCollection = false;
             RawDataState::rawDataTransmissionInProgress = false;    
         }
-        if((millis() - RawDataTimeout) > 5000)
+        if((millis() - RawDataTimeout) > 10000)
         { // ESP32_PORT_TRUE -- On timeout of 4 Sec. if no response OK/FAIL then abort transmission
             Serial.println("Raw Data Send Timeout !!");
             RawDataState::startRawDataCollection = false;
