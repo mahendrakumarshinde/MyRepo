@@ -66,14 +66,15 @@ void IUESP8285::setupHardware()
 //        IUSerial::suspend();
 //        return;
 //    }
-    Serial.println("Setup HW");
+ //   Serial.println("Setup ESP HW");
     // ESP32_PORT_TRUE - Dont sent WiFi Credentials (hardReset->turnOn->sendWiFiCredentials()) 
     // as MQTT resets ESP during MQTT Config.
     m_credentialSent = true;
     pinMode(ESP32_ENABLE_PIN, OUTPUT);
-    hardReset();
+//    hardReset();
     begin();
     setPowerMode(PowerMode::REGULAR);
+    m_credentialSent = false;
 }
 
 /**
@@ -83,7 +84,7 @@ void IUESP8285::turnOn(bool forceTimerReset)
 {
     if (!m_on)
     {
-        Serial.println("WiFi Turn ON");
+//        Serial.println("WiFi Turn ON ");
         digitalWrite(ESP32_ENABLE_PIN, HIGH);
         if(forceTimerReset == true) {
             m_credentialSent = false;
@@ -112,7 +113,7 @@ void IUESP8285::turnOff()
     m_setConnectedStatus(false);
     if (m_on)
     {
-        Serial.println("WiFi Turn OFF");
+ //       Serial.println("WiFi Turn OFF");
         digitalWrite(ESP32_ENABLE_PIN, LOW);
         m_on = false;
         m_sleepTimerStart = millis();  // Reset auto-sleep start timer
@@ -134,7 +135,6 @@ void IUESP8285::hardReset()
     turnOff();
     delay(100);
     resetBuffer();
-    Serial.println("Hard Reset- WiFi ON");
     turnOn();
 }
 
@@ -168,9 +168,12 @@ void IUESP8285::manageAutoSleep(bool wakeUpNow)
         case PowerMode::REGULAR:
         case PowerMode::LOW_1:
         case PowerMode::LOW_2:
-            if (m_connected || wakeUpNow)
+            if (m_connected)
             {
-//                Serial.println("WiFi ON REGULAR Mode");
+                turnOn();
+            }
+            else if (wakeUpNow)
+            {
                 turnOn(true);
             }
             // Not connected, sleeping but need to wake up

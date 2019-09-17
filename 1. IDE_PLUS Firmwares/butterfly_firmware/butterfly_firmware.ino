@@ -604,7 +604,8 @@ void setup()
         conductor.configureBoardFromFlash("httpConfig.conf",1);
         // get the previous offset values 
         conductor.setSensorConfig("sensorConfig.conf"); 
-
+        delay(500);
+        iuWiFi.hardReset();
         delay(1000);
         conductor.configureFromFlash(IUFlash::CFG_WIFI0);
         delay(100);

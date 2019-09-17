@@ -97,6 +97,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
     char resp[2] = "";
     resp[1] = 0;
     char message[256];
+    char TestStr1[32];
     switch(cmd) {
         case MSPCommand::ASK_WIFI_FV:
             iuSerial->sendMSPCommand(MSPCommand::RECEIVE_WIFI_FV, FIRMWARE_VERSION);
@@ -158,7 +159,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             break;
         case MSPCommand::WIFI_CONNECT:
             // Reset disconnection timer
-            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "WIFI_CONNECT REQ RX",19);
+//            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "WIFI_CONNECT REQ RX",19);
             delay(500);
             m_disconnectionTimerStart = millis();
             reconnect();
@@ -221,10 +222,14 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
 
         /***** Settable parameters (addresses, credentials, etc) *****/
         case MSPCommand::SET_RAW_DATA_ENDPOINT_HOST:
+            sprintf(TestStr1,"H1:%s",buffer);
+            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, TestStr1);
             accelRawDataHelper.setEndpointHost(buffer);
             //mqttHelper.publish(FINGERPRINT_DATA_PUBLISH_TOPIC, "RAW HOST...");
             break;
         case MSPCommand::SET_RAW_DATA_ENDPOINT_ROUTE:
+            sprintf(TestStr1,"H2:%s",buffer);
+            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, TestStr1);
             accelRawDataHelper.setEndpointRoute(buffer);
             //mqttHelper.publish(FINGERPRINT_DATA_PUBLISH_TOPIC, "RAW ROUTE...");
             break;
@@ -258,7 +263,6 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             m_mqttServerValidator.receivedMessage(1);
             if (m_mqttServerValidator.completed()) {
                 mqttHelper.setServer(m_mqttServerIP, m_mqttServerPort);
-                
             }
             break;
         case MSPCommand::SET_MQTT_USERNAME:
@@ -280,6 +284,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             if (m_mqttCredentialsValidator.completed()) {
                 mqttHelper.setCredentials(m_mqttUsername, m_mqttPassword);
             }
+            break;
         /********** Diagnostic Fingerprints Commands **************/    
         case MSPCommand::RECEIVE_DIAGNOSTIC_ACK:
           // Send the Ack to Topic
@@ -466,13 +471,16 @@ void Conductor::forgetWiFiCredentials()
  */
 void Conductor::receiveNewCredentials(char *newSSID, char *newPSK)
 {
-    hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "@ RX NEW WIFI CRED @",20);
+//    hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "@ RX NEW WIFI CRED @",20);
     if (m_credentialValidator.hasTimedOut())
     {
         forgetWiFiCredentials();
     }
     if (newSSID)
     {
+        m_credentialValidator.reset();
+        memset(m_userSSID,0x00,wifiCredentialLength);
+        memset(m_userPassword,0x00,wifiCredentialLength);
         strncpy(m_userSSID, newSSID, wifiCredentialLength);
         m_credentialValidator.receivedMessage(0);
     }
@@ -548,11 +556,13 @@ bool Conductor::getConfigFromMainBoard()
             {
                 debugPrint("Host didn't respond");
             }
+            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "Host didn't respond",19);
             deepsleep();
         }
+        delay(500);
         hostSerial.sendMSPCommand(MSPCommand::ASK_BLE_MAC);
         hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);
-        hostSerial.sendMSPCommand(MSPCommand::GET_RAW_DATA_ENDPOINT_INFO);
+        hostSerial.sendMSPCommand(MSPCommand::GET_RAW_DATA_ENDPOINT_INFO); 
         
         // get the IDE Firmware Version from Host
         //hostSerial.sendMSPCommand(MSPCommand::ASK_HOST_FIRMWARE_VERSION);
@@ -561,6 +571,7 @@ bool Conductor::getConfigFromMainBoard()
         hostSerial.readMessages();
         current = millis();
     }
+ //   hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "WIFI_BLE_MAC1 ",14);
     return (uint64_t(m_bleMAC) > 0);
 }
 

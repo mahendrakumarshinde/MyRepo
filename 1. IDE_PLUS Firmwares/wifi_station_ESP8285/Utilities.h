@@ -186,8 +186,8 @@ inline int httpPostBigRequest(
     size_t chunkSize=WIFICLIENT_MAX_PACKET_SIZE,
     uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT + 3000)
 {
- //   char TestStr1[32];    
- //   sprintf(TestStr1,"HTTP-P:%d C:%d",payloadLength,chunkSize);
+//    char TestStr1[64];    
+//    sprintf(TestStr1,"HE:%s HU:%s P:%d",endpointHost,endpointURL,endpointPort);
  //   hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, TestStr1);
     if (WiFi.status() != WL_CONNECTED)
     {
@@ -240,8 +240,6 @@ inline int httpPostBigRequest(
             {
                 client.stop();
             }
-    //        sprintf(TestStr1,"HTTP1-C:%d R:%d",chunkSize,retSize);
-    //        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, TestStr1);
  //           client.stop();
             return HTTPC_ERROR_SEND_PAYLOAD_FAILED;  // -3
         }
@@ -253,8 +251,6 @@ inline int httpPostBigRequest(
         {
             client.stop();
         }
-    //    sprintf(TestStr1,"HTTP1-C:%d R:%d",chunkSize,retSize);
-    //    hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, TestStr1);
  //       client.stop();
         return HTTPC_ERROR_SEND_PAYLOAD_FAILED;  // -3
     }
@@ -269,8 +265,6 @@ inline int httpPostBigRequest(
                 client.stop();
             }
 
-      //      sprintf(TestStr1,"HTTP1-C:%d R:%d",chunkSize,retSize);
-       //     hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, TestStr1);
   //          client.stop();
             return HTTPC_ERROR_SEND_PAYLOAD_FAILED;  // -3
         }       

@@ -795,7 +795,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
   m_mqttUserName = userName;
   m_mqttPassword = password;
 */  
-  iuWiFi.hardReset();
+//  iuWiFi.hardReset();
   if (debugMode) {
         debugPrint(F("MQTT ServerIP :"),false);
         debugPrint(m_mqttServerIp);
