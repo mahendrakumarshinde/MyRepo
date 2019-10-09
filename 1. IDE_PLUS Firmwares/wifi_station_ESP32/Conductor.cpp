@@ -1,6 +1,7 @@
 #include "Conductor.h"
 #include "Utilities.h"
 
+#define UART_TX_FIFO_SIZE 0x80
 
 /* =============================================================================
     Instanciation

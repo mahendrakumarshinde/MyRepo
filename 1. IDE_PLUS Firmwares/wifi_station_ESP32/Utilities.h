@@ -12,6 +12,8 @@
 #include "MSPCommands.h" // ESP32_PORT_TRUE Debug changes
 extern IUSerial hostSerial; // ESP32_PORT_TRUE Debug changes
 
+#define WIFICLIENT_MAX_PACKET_SIZE 1460
+
 /* =============================================================================
     HTTP functions
 ============================================================================= */
