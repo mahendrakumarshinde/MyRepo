@@ -24,6 +24,7 @@ class IUI2C
         /***** Communication with components *****/
         // Base functions
         bool writeByte(uint8_t address, uint8_t subAddress, uint8_t data);
+        bool writeBytes(uint8_t address, uint8_t subAddress, uint8_t dataH, uint8_t dataL);
         bool writeByte(uint8_t address, uint8_t subAddress, uint8_t data,
                        void(*callback)(uint8_t wireStatus));
         uint8_t readByte(uint8_t address, uint8_t subAddress);

@@ -173,8 +173,8 @@ __attribute__((section(".noinit2"))) float temperatureBValues[2];
 FeatureTemplate<float> temperatureB("TMB", 2, 1, temperatureBValues);
 
 // Temperaute measured on the LSM6DSM
-__attribute__((section(".noinit2"))) float allTemperatureValues[1024];
-FeatureTemplate<float> allTemperatures("T09", 2, 512, allTemperatureValues);
+__attribute__((section(".noinit2"))) float allTemperatureValues[2];
+FeatureTemplate<float> allTemperatures("T09", 2, 1, allTemperatureValues);
 
 __attribute__((section(".noinit2"))) float temperatureValues[2];
 FeatureTemplate<float> temperature("TMP", 2, 1, temperatureValues);
@@ -222,7 +222,13 @@ void LSM6DSMAccelReadCallback(uint8_t wireStatus)
 }
 IULSM6DSM iuAccelerometer(&iuI2C, "ACC", LSM6DSMAccelReadCallback,
                           &accelerationX, &accelerationY, &accelerationZ,
-                          &tiltX, &tiltY, &tiltZ, &allTemperatures);
+                          &tiltX, &tiltY, &tiltZ);
+
+void TMP116TempReadCallback(uint8_t wireStatus)
+{
+     iuTemp.processTemperatureData(wireStatus);
+}
+IUTMP116 iuTemp(&iuI2C,"T10",TMP116TempReadCallback, &allTemperatures);
 
 #ifdef WITH_CAM_M8Q
     IUCAMM8Q iuGNSS(&Serial2, "GPS", -1);
