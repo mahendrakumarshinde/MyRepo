@@ -18,7 +18,7 @@ Type - Standard Firmware Release
 #include <FS.h>
 //#include"IUTimer.h"
 
-const uint8_t ESP32_IO0  =  7;  // ESP32_PORT_TRUE
+const uint8_t ESP32_IO0  =  7;  // IDE1.5_PORT_CHANGE
 
 #ifdef DRAGONFLY_V03
 #else
@@ -109,6 +109,10 @@ float audioHigherCutoff = 160.0;
 ============================================================================= */
 
 /***** Debbugging variables *****/
+
+bool doOnceFWValid = true;
+int FWValidDelCnt = 0;
+char FW_Valid_State = 0;
 
 bool doOnce = true;
 uint32_t interval = 30000;
@@ -390,10 +394,10 @@ void timerInit(void)
 void setup()
 {   
   
-  pinMode(ESP32_IO0,OUTPUT); // ESP32_PORT_TRUE
+  pinMode(ESP32_IO0,OUTPUT); // IDE1.5_PORT_CHANGE
 //   pinMode(6,OUTPUT); 
 //   pinMode(A3,OUTPUT);  // ISR (ODR checked from pin 50)
-  digitalWrite(ESP32_IO0,HIGH); // ESP32_PORT_TRUE
+  digitalWrite(ESP32_IO0,HIGH); // IDE1.5_PORT_CHANGE
   DOSFS.begin();
   #if 1
     
@@ -497,7 +501,7 @@ void setup()
         {
             debugPrint("BLE Chip is Available, BLE init Complete");
         }
- //   ESP32_PORT_TRUE - Disabled for testing. This Req is causing ESP32 Reset.         
+ //   IDE1.5_PORT_CHANGE - Disabled for testing. This Req is causing ESP32 Reset.         
         // httpConfig message read timerCallback
  //       armv7m_timer_create(&httpConfigTimer, (armv7m_timer_callback_t)httpConfigCallback);
  //       armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min Timer 180000
@@ -727,7 +731,29 @@ void loop()
 
         // Manage raw data sending depending on RawDataState::startRawDataTransmission and RawDataState::rawDataTransmissionInProgress
         conductor.manageRawDataSending();
-
+#if 0 // FW Validation
+        if(doOnceFWValid == true)
+        {
+            if((FWValidDelCnt % 2000) == 0 && FWValidDelCnt > 0)
+            {
+                yield();
+                uint32_t ret = 0;
+                ret = conductor.FW_Validation();
+                if(ret != 0)
+                {// Waiting for WiFi Disconnect/Connect Cycle.
+                    doOnceFWValid = true;
+                    FWValidDelCnt = 1;                    
+                }
+                else if(ret == 0)
+                    doOnceFWValid = false;
+ //               FWValidDelCnt++;
+            }
+            else
+            {
+                FWValidDelCnt++;
+            }                  
+        }
+#endif
         yield();
        
     #endif

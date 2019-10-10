@@ -3,6 +3,11 @@
 #include "rBase64.h"
 #include "FFTConfiguration.h"
 #include "RawDataState.h"
+#include <MemoryFree.h>
+#include "stm32l4_iap.h"
+char FW_Valid_Ftrdata[128];
+extern "C" bool doOnceFWValid;
+extern "C" char FW_Valid_State;
 
 const char* fingerprintData;
 const char* fingerprints_X;
@@ -1740,7 +1745,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 Serial.print(httpStatusCodeY);
                 Serial.print(" | ");
                 Serial.println(httpStatusCodeZ);
-                // Abort transmission on failure  // ESP32_PORT_TRUE Change
+                // Abort transmission on failure  // IDE1.5_PORT_CHANGE Change
                 RawDataState::rawDataTransmissionInProgress = false;
                 RawDataState::startRawDataCollection = false;             
             }
@@ -2568,6 +2573,10 @@ void Conductor::streamFeatures()
     CharBufferNode *nodeToSend = sendingQueue.getNextBufferToSend();
     if (nodeToSend ) {
             uint16_t msgLen = strlen(nodeToSend->buffer);
+            if(doOnceFWValid == true)
+            { // Copy Sample feature data required for FM Validation
+                memcpy(FW_Valid_Ftrdata,nodeToSend->buffer,128);
+            }
            if (m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE)
            {
             if(RawDataState::rawDataTransmissionInProgress == false)
@@ -2749,7 +2758,7 @@ void Conductor::manageRawDataSending() {
         if (!XSentToWifi) {
             prepareRawDataPacketAndSend('X');
             XSentToWifi = true; 
-            RawDataTimeout = millis(); // ESP32_PORT_TRUE
+            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
             if(loopDebugMode) {
                 debugPrint("Raw data request: X sent to wifi");
             }
@@ -2758,7 +2767,7 @@ void Conductor::manageRawDataSending() {
         } else if (httpStatusCodeX == 200 && !YsentToWifi) { 
             prepareRawDataPacketAndSend('Y');
             YsentToWifi = true;
-            RawDataTimeout = millis(); // ESP32_PORT_TRUE
+            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
             if(loopDebugMode) {
                 debugPrint("Raw data request: X delivered, Y sent to wifi");
             }
@@ -2767,7 +2776,7 @@ void Conductor::manageRawDataSending() {
         } else if (httpStatusCodeY == 200 && !ZsentToWifi) {
             prepareRawDataPacketAndSend('Z');
             ZsentToWifi = true;
-            RawDataTimeout = millis(); // ESP32_PORT_TRUE
+            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
             if(loopDebugMode) {
                 debugPrint("Raw data request: Y delivered, Z sent to wifi");
             }
@@ -2785,7 +2794,7 @@ void Conductor::manageRawDataSending() {
             RawDataState::rawDataTransmissionInProgress = false;    
         }
         if((millis() - RawDataTimeout) > 10000)
-        { // ESP32_PORT_TRUE -- On timeout of 4 Sec. if no response OK/FAIL then abort transmission
+        { // IDE1.5_PORT_CHANGE -- On timeout of 4 Sec. if no response OK/FAIL then abort transmission
             Serial.println("Raw Data Send Timeout !!");
             RawDataState::startRawDataCollection = false;
             RawDataState::rawDataTransmissionInProgress = false;              
@@ -3656,3 +3665,471 @@ bool Conductor::setEthernetConfig(char* filename){
 
     return false;
 }
+uint32_t Conductor::FW_Validation()
+{
+    bool WiFiCon = false;
+
+    if(FW_Valid_State == 0) {
+        Serial.println(F("FW Validation Started....."));
+        Serial.println(F("*************************************************************" ));
+        Serial.println(F("*********  STM/ESP FIRMWARE VALIDATION REPORT  **************" ));
+        Serial.println(F("*************************************************************" ));
+        File ValidationFile = DOSFS.open("Validation.txt", "w");
+        if (ValidationFile)
+        {
+            ValidationFile.println(F("*************************************************************" ));
+            ValidationFile.println(F("*********  STM/ESP FIRMWARE VALIDATION REPORT  **************" ));
+            ValidationFile.println(F("*************************************************************" ));
+            ValidationFile.println(F(""));
+            ValidationFile.println(F("Validation[DEV]-File Open: OK"));
+        }
+#if 0
+        /***** Firmware version Check *****/
+        const char FIRMWARE_VERSION_STM_OTA[8] = "1.1.3";
+        Serial.print(F("STM FIRMWARE_VERSION:"));
+        Serial.println(FIRMWARE_VERSION);
+        ValidationFile.print(F("STM FIRMWARE_VERSION:"));
+        ValidationFile.println(FIRMWARE_VERSION);
+        if(strcmp(FIRMWARE_VERSION, FIRMWARE_VERSION_STM_OTA))
+        {
+            Serial.println(F("Validation[DEV]-STM FW Version: Fail !"));
+            ValidationFile.println(F("Validation[DEV]-STM FW Version: Fail !"));
+        }
+
+        /***** Firmware version Check *****/
+        const char FIRMWARE_VERSION_ESP_OTA[8] = "1.0.6";
+        Serial.print(F("ESP FIRMWARE_VERSION:"));
+        Serial.println(iuWiFi.espFirmwareVersion);
+        ValidationFile.print(F("ESP FIRMWARE_VERSION:"));
+        ValidationFile.println(iuWiFi.espFirmwareVersion);
+        if(strcmp(iuWiFi.espFirmwareVersion, FIRMWARE_VERSION_ESP_OTA))
+        {
+            Serial.println(F("Validation[DEV]-ESP FW Version: Fail !"));
+            ValidationFile.println(F("Validation[DEV]-ESP FW Version: Fail !"));
+        }
+
+    //   Serial.println(F("Validation[DEV]-STM FW Version:OK !"));
+    //   ValidationFile.println(F("Validation[DEV]-STM FW Version: OK"));
+        /***** Device Type Check *****/
+        Serial.print(F("DEVICE_TYPE:"));
+        Serial.println(DEVICE_TYPE);
+        ValidationFile.print(F("DEVICE_TYPE:"));
+        ValidationFile.println(DEVICE_TYPE);
+        if(strcmp(DEVICE_TYPE, "ide_plus"))
+        {
+            Serial.println(F("Validation[DEV]-Device Type: Fail !"));
+            ValidationFile.println(F("Validation[DEV]-Device Type: Fail !"));
+        }
+    //   Serial.println(F("Validation[DEV]-Device Type: OK"));
+    //   ValidationFile.println(F("Validation[DEV]-Device Type: OK"));
+#endif
+        Serial.println(F("STM MCU INFORMATION:"));
+        ValidationFile.println(F("STM MCU INFORMATION:"));
+        char Cnt = 0;
+        for(int i = 0 ; i < 10; i++)
+        {
+            float vdda = STM32.getVREF();
+            float temperature = STM32.getTemperature();
+            Serial.println("Voltage: " + String(vdda) + " Temp." + String(temperature));
+            ValidationFile.print(F("Voltage:"));
+            ValidationFile.print(vdda);
+            ValidationFile.print(F(" Volts, Temperature:"));
+            ValidationFile.print(temperature);
+            ValidationFile.println(F(" C"));
+            if (vdda < 3.0 || temperature > 40)
+            {
+                Cnt++;            
+            }
+            if(Cnt > 7)
+            {
+                Serial.println(F("Validation [DEV]-MCU INFO: Fail !"));
+                ValidationFile.println(F("Validation [DEV]-MCU INFO: Fail !"));
+            }
+            delay(500);
+        }
+        Serial.print(F("DEVICE FREE MEMORY(RAM): "));
+        Serial.println(freeMemory(),DEC);
+        ValidationFile.print(F("DEVICE FREE MEMORY(RAM): "));
+        ValidationFile.println(freeMemory(),DEC);  
+        if(freeMemory() < 30000)
+        {
+            Serial.println(F("Validation [DEV]-Free Memory: Fail !"));
+            ValidationFile.println(F("Validation [DEV]-Free Memory: Fail !"));      
+        }
+        Serial.print(F("DEVICE BLE  MAC ADDRESS:"));
+        Serial.println(m_macAddress);
+        ValidationFile.print(F("DEVICE BLE  MAC ADDRESS:"));
+        ValidationFile.println(m_macAddress);
+        MacAddress Mac(00,00,00,00,00,00);
+        if(m_macAddress == Mac || !iuBluetooth.isBLEAvailable)
+        {
+            Serial.println("Validation [DEV]-BLE MAC: Fail !");
+            ValidationFile.println(F("Validation [DEV]-BLE MAC: Fail !"));
+        }
+        Serial.print(F("DEVICE WIFI MAC ADDRESS:"));
+        Serial.println(iuWiFi.getMacAddress());
+        ValidationFile.print(F("DEVICE WIFI MAC ADDRESS:"));
+        ValidationFile.println(iuWiFi.getMacAddress());
+        if(iuWiFi.getMacAddress() == Mac)
+        {
+            Serial.println("Validation [DEV]-WiFi MAC: Fail !");
+            ValidationFile.println(F("Validation [DEV]-WiFi MAC: Fail !"));
+        }
+        Serial.println(F("DEVICE SENSOR INTERFACE CHECK:-"));
+        ValidationFile.println(F("DEVICE SENSOR INTERFACE CHECK:-"));
+        Get_Device_Details(&ValidationFile);
+
+        Serial.println(F("DEVICE MQTT CONFIG CHECK:-"));
+        ValidationFile.println(F("DEVICE MQTT CONFIG CHECK:-"));
+        STM_MQTT_Validation(&ValidationFile);
+        Serial.println(F("DEVICE HTTP CONFIG CHECK:-"));
+        ValidationFile.println(F("DEVICE HTTP CONFIG CHECK:-"));
+        STM_HTTP_Validation(&ValidationFile);
+        Serial.println(F("DEVICE FFT CONFIG CHECK:-"));
+        ValidationFile.println(F("DEVICE FFT CONFIG CHECK:-"));
+        STM_FFT_Validation(&ValidationFile);
+
+        Serial.println(F("DEVICE WIFI STATUS:"));
+        ValidationFile.println(F("DEVICE WIFI STATUS:"));
+        WiFiCon = iuWiFi.isConnected();
+        if(WiFiCon)
+        {
+            Serial.println(F("DEVICE WIFI STATUS: CONNECTED"));
+            ValidationFile.println(F("DEVICE WIFI STATUS: CONNECTED"));
+            iuWiFi.turnOff();
+            FW_Valid_State = 1;
+        }
+        else
+        {
+            Serial.print(F("DEVICE WIFI STATUS: NOT CONNECTED !"));
+            ValidationFile.print(F("DEVICE WIFI STATUS: NOT CONNECTED !"));
+            FW_Valid_State = 0;
+            ValidationFile.close();
+            return 0;
+        }
+        ValidationFile.close();
+        return 1; 
+    }
+    else if(FW_Valid_State == 1)
+    {
+        File ValidationFile = DOSFS.open("Validation.txt", "w");
+        Serial.println(F("DEVICE WIFI DISCONNECT TEST:"));
+        ValidationFile.println(F("DEVICE WIFI DISCONNECT TEST:"));
+        WiFiCon = iuWiFi.isConnected();    
+        if(WiFiCon == 1)
+        {
+            Serial.println(F("DEVICE WIFI DISCONNECT-FAILED"));
+            ValidationFile.println(F("DEVICE WIFI DISCONNECT-FAILED"));
+            FW_Valid_State = 0;
+            ValidationFile.close();
+            return 0;
+        }
+        else
+        {
+            Serial.println(F("DEVICE WIFI DISCONNECT-PASSED"));
+            ValidationFile.println(F("DEVICE WIFI DISCONNECT-PASSED"));
+            iuWiFi.turnOff();
+            delay(100);
+            iuWiFi.turnOn(1);   
+            FW_Valid_State = 2;
+            ValidationFile.close();
+            return 1;
+        }
+    }
+    else if(FW_Valid_State == 2)
+    {
+        File ValidationFile = DOSFS.open("Validation.txt", "w");
+        Serial.println(F("DEVICE WIFI CONNECT TEST:"));
+        ValidationFile.println(F("DEVICE WIFI CONNECT TEST:"));
+        WiFiCon = iuWiFi.isConnected();    
+        if(WiFiCon == 0)
+        {
+            Serial.println(F("DEVICE WIFI CONNECT-FAILED"));
+            ValidationFile.println(F("DEVICE WIFI CONNECT-FAILED"));
+        }
+        else
+        {
+            Serial.println(F("DEVICE WIFI CONNECT-PASSED"));
+            ValidationFile.println(F("DEVICE WIFI CONNECT-PASSED"));
+        }
+        FW_Valid_State = 3;
+        ValidationFile.close();
+//        iuWiFi.hardReset(); // Do Hardreset before concluding test, Write result, restart STM
+        return 0;
+    } 
+}
+
+bool Conductor::STM_MQTT_Validation(File *ValidationFile)
+{
+    // 1. Check default parameter setting
+    Serial.print(F(" - MQTT DEFAULT SERVER IP:"));
+    Serial.println(MQTT_DEFAULT_SERVER_IP);
+    ValidationFile->print(F(" - MQTT DEFAULT SERVER IP:"));
+    ValidationFile->println(MQTT_DEFAULT_SERVER_IP);
+    if(MQTT_DEFAULT_SERVER_IP != IPAddress(13,233,38,155))
+    {
+        Serial.println("   Validation [MQTT]-Default IP Add: Fail !");
+        ValidationFile->println(F("   Validation [MQTT]-Default IP Add: Fail !"));
+    }
+    Serial.print(F(" - MQTT DEFAULT SERVER PORT:"));
+    Serial.println(MQTT_DEFAULT_SERVER_PORT);
+    ValidationFile->print(F(" - MQTT DEFAULT SERVER PORT:"));
+    ValidationFile->println(MQTT_DEFAULT_SERVER_PORT);
+    if(MQTT_DEFAULT_SERVER_PORT != 1883)
+    {
+        Serial.println("   Validation [MQTT]-Default Port: Fail !");
+        ValidationFile->println(F("   Validation [MQTT]-Default Port: Fail !"));
+    }
+
+    Serial.print(F(" - MQTT DEFAULT USERNAME:"));
+    Serial.println(MQTT_DEFAULT_USERNAME);
+    ValidationFile->print(F(" - MQTT DEFAULT USERNAME:"));
+    ValidationFile->println(MQTT_DEFAULT_USERNAME);
+    if(strcmp(MQTT_DEFAULT_USERNAME,"ispl"))
+    {
+        Serial.println("   Validation [MQTT]-Default Username: Fail !");
+        ValidationFile->println(F("   Validation [MQTT]-Default Username: Fail !"));
+    }
+
+    Serial.print(F(" - MQTT DEFAULT PASSOWRD:"));
+    Serial.println(MQTT_DEFAULT_ASSWORD);
+    ValidationFile->print(F(" - MQTT DEFAULT PASSOWRD:"));
+    ValidationFile->println(MQTT_DEFAULT_ASSWORD);
+    if(strcmp(MQTT_DEFAULT_ASSWORD,"indicus"))
+    {
+        Serial.println("   Validation [MQTT]-Default Password: Fail !");
+        ValidationFile->println(F("   Validation [MQTT]-Default Password: Fail !"));
+    }
+
+    // 2. Check MQTT update from config file stored in ext. flash
+    conductor.configureMQTTServer("MQTT.conf");
+    // 3. Check default parameter setting changed to read from config file ?
+    if(m_mqttServerIp == IPAddress(13,233,38,155) && m_mqttServerPort == 1883 &&
+      (strcmp(m_mqttUserName,"ispl") == 0) && (strcmp(m_mqttPassword,"indicus") == 0))
+    {
+        Serial.println("   Validation [MQTT]-Read Config File: Fail !");
+        ValidationFile->println(F("   Validation [MQTT]-Read Config File: Fail !"));
+    }
+    Serial.println(F(" - MQTT FLASH CONFIG FILE READ: OK"));
+    ValidationFile->println(F(" - MQTT FLASH CONFIG FILE READ: OK"));
+}
+
+bool Conductor::STM_HTTP_Validation(File *ValidationFile)
+{
+    //http configuration
+    if(configureBoardFromFlash("httpConfig.conf",1) == false)
+    {
+        Serial.println("   Validation [HTTP]-Read Config File: Fail !");
+        ValidationFile->println(F("   Validation [HTTP]-Read Config File: Fail !"));
+        Serial.print(F(" - HTTP DEFAULT HOST IP:"));
+        Serial.println(m_httpHost);
+        ValidationFile->print(F(" - HTTP DEFAULT HOST IP:"));
+        ValidationFile->println(m_httpHost);
+        if(strcmp(m_httpHost,"13.232.122.10"))
+        {
+            Serial.println("   Validation [HTTP]-Default HOST IP: Fail !");
+            ValidationFile->println(F("   Validation [HTTP]-Default HOST IP: Fail !")); 
+        }
+        Serial.print(F(" - HTTP DEFAULT HOST PORT:"));
+        Serial.println(m_httpPort);
+        ValidationFile->print(F(" - HTTP DEFAULT HOST PORT:"));
+        ValidationFile->println(m_httpPort);
+        if(m_httpPort != 8080)
+        {
+            Serial.println("   Validation [HTTP]-Default HOST PORT: Fail !");
+            ValidationFile->println(F("   Validation [HTTP]-Default HOST PORT: Fail !"));        
+        }
+        Serial.print(F(" - HTTP DEFAULT HOST END POINT:"));
+        Serial.println(m_httpPath);
+        ValidationFile->print(F(" - HTTP DEFAULT HOST END POINT:"));
+        ValidationFile->println(m_httpPath);
+        if(strcmp(m_httpPath,"/iu-web/rawaccelerationdata"))
+        {
+            Serial.println("   Validation [HTTP]-Default HOST END Point: Fail !");
+            ValidationFile->println(F("   Validation [HTTP]-Default HOST END Point: Fail !"));
+        }
+    }
+    else
+    {
+        Serial.println(F(" - HTTP FLASH CONFIG FILE READ: Ok"));
+        ValidationFile->println(F(" - HTTP FLASH CONFIG FILE READ: OK"));
+    }    
+}
+
+bool Conductor::STM_FFT_Validation(File *ValidationFile)
+{
+    Serial.print(F(" - FFT DEFAULT SAMPLING RATE:"));
+    Serial.println(FFTConfiguration::DEFAULT_SAMPLING_RATE); 
+    ValidationFile->print(F(" - FFT DEFAULT SAMPLING RATE:"));
+    ValidationFile->println(FFTConfiguration::DEFAULT_SAMPLING_RATE);
+    if(FFTConfiguration::DEFAULT_SAMPLING_RATE != 3330)
+    {
+        Serial.println("   Validation [FFT]-Default Sampling Rate: Fail !");
+        ValidationFile->println(F("   Validation [FFT]-Default Sampling Rate: Fail !"));
+    }
+    Serial.print(F(" - FFT DEFAULT BLOCK SIZE:"));
+    Serial.println(FFTConfiguration::DEFAULT_BLOCK_SIZE);
+    ValidationFile->print(F(" - FFT DEFAULT BLOCK SIZE:"));
+    ValidationFile->println(FFTConfiguration::DEFAULT_BLOCK_SIZE);
+    if(FFTConfiguration::DEFAULT_BLOCK_SIZE != 512)
+    {
+        Serial.println("   Validation [FFT]-Default Block Size: Fail !");
+        ValidationFile->println(F("   Validation [FFT]-Default Block Size: Fail !"));
+    }
+
+    // Update the configuration of FFT computers from fft.conf
+    if(setFFTParams() == false)
+    {
+        Serial.println("   Validation [FFT]-Read Config File: Fail !");
+        ValidationFile->print(F("   Validation [FFT]-Read Config File: Fail !"));
+    }
+    Serial.println(F(" - FFT FLASH CONFIG FILE READ: OK"));
+    ValidationFile->println(F(" - FFT FLASH CONFIG FILE READ: OK"));
+}
+
+bool Conductor::Get_Device_Details(File *ValidationFile)
+{
+    Serial.println(F("DEVICE LSM COMM CHECK:-"));
+    ValidationFile->println(F("DEVICE LSM COMM CHECK:-"));
+    if (!iuI2C.checkComponentWhoAmI("LSM6DSM ACC", iuAccelerometer.ADDRESS,iuAccelerometer.WHO_AM_I,iuAccelerometer.I_AM))
+    {
+        Serial.println("   Validation [LSM]-Read Add: Fail !");
+        ValidationFile->println(F("   Validation [FFT]-Read Add: Fail !"));
+    }
+   // iuI2C.releaseReadLock();
+    Serial.print("LSM6DSM I2C Add:0x");
+    Serial.println(iuAccelerometer.I_AM,HEX);
+    ValidationFile->print(F("LSM6DSM I2C Add:0x"));
+    ValidationFile->println(iuAccelerometer.I_AM,HEX);
+
+ //   Serial.print("TMP116 I2C Add:0x");
+ //   Serial.println(iuTmp116.I_AM,HEX);
+  //  ValidationFile->print(F("TMP116 I2C Add:0x"));
+  //  ValidationFile->println(iuTmp116.I_AM,HEX);
+}
+#if 0
+bool Conductor::Get_Device_FeatureData(File *ValidationFile)
+{
+    char rawData[50];
+    float aucostic =0;
+    float* acceleration = NULL;
+
+    Serial.println(F("DEVICE READ FEATURE RAW DATA:-"));
+    ValidationFile->println(F("DEVICE READ FEATURE RAW DATA:-"));
+    acceleration = iuAccelerometer.getData(iuUSB.port);
+    Serial.print(F("AX : "));
+    Serial.print(acceleration[0]);
+    Serial.print(F(" g, AY : "));
+    Serial.print(acceleration[1]);
+    Serial.print(F(" g, AZ : "));
+    Serial.print(acceleration[2]);
+    Serial.println(F(" g"));
+    Serial.print("Temperature : ");
+    Serial.print(iuAccelerometer.m_LSMtemperature);
+    Serial.println(" C");
+
+    ValidationFile->print(F("AX : "));
+    ValidationFile->print(acceleration[0]);
+    ValidationFile->print(F(" g, AY : "));
+    ValidationFile->print(acceleration[1]);
+    ValidationFile->print(F(" g, AZ : "));
+    ValidationFile->print(acceleration[2]);
+    ValidationFile->println(F(" g"));
+    ValidationFile->print("Temperature : ");
+    ValidationFile->print(iuAccelerometer.m_LSMtemperature);
+    ValidationFile->println(" C");
+
+    aucostic = iuI2S.getData();
+    snprintf(rawData,50,"%04.3f,%04.3f,%04.3f,%.3f",acceleration[0],acceleration[1],acceleration[2],aucostic);
+    Serial.println(rawData);
+    ValidationFile->print("Feature raw data: ");
+    ValidationFile->println(rawData);
+
+    Serial.print(F("DEVICE READ Acoustic Data: "));
+    Serial.print(audioDB4096Computer.dBresult);
+    Serial.println(F(" dB"));
+    ValidationFile->print(F("DEVICE READ Acoustic Data: "));
+    ValidationFile->print(audioDB4096Computer.dBresult);
+    ValidationFile->println(F(" dB"));
+
+    if ( (audioDB4096Computer.dBresult < 58.0) && (audioDB4096Computer.dBresult > 160.0) ){
+        Serial.println("   Validation [LSM]-Read Acoustic: Fail !");
+        ValidationFile->println(F("   Validation [FFT]-Read Acoustic: Fail !"));
+    }
+
+    double fingerprint_timestamp = getDatetime();
+    int messageLength = strlen(fingerprintData); 
+    char FingerPrintResult[150 + messageLength];
+    DynamicJsonBuffer jBuffer;
+    JsonObject& object =jBuffer.parseObject(fingerprintData);
+    Serial.println("********* FINGERDATA **********");
+    float  f1 = object["100"];
+    Serial.println(f1);
+     f1 = object["101"];
+    Serial.println(f1);
+     f1 = object["102"];
+    Serial.println(f1);        
+     f1 = object["103"];
+    Serial.println(f1);
+     f1 = object["104"];
+    Serial.println(f1);
+     f1 = object["105"];
+    Serial.println(f1);
+    Serial.println("*******************************");
+    Serial.println(F("DEVICE READ FINGERPRINT DATA:-"));
+    ValidationFile->println(F("DEVICE READ FINGERPRINT DATA:-"));
+
+    snprintf(FingerPrintResult, 150 + messageLength, "{\"macID\":\"%s\",\"timestamp\": %lf,\"state\":\"%d\",\"accountId\":\"%s\",\"fingerprints\": %s }", m_macAddress.toString().c_str(),fingerprint_timestamp,ledManager.getOperationState(),"XXXAdmin",fingerprintData);
+    Serial.println(FingerPrintResult);
+    ValidationFile->println(FingerPrintResult);
+
+    Serial.println(F("DEVICE READ FEATURE PUBLISH DATA:-"));
+    ValidationFile->println(F("DEVICE READ FEATURE PUBLISH DATA:-"));
+    Serial.println(FW_Valid_Ftrdata);
+    ValidationFile->println(FW_Valid_Ftrdata);
+
+ //   Serial.println("FW Validation Sending Raw Data:");
+ //   CheckRawData(ValidationFile);
+}
+
+bool Conductor::STM_FINGERPRINT_Validation(File *ValidationFile)
+{
+    const char* fingerprintsKey[13];
+    int i = 0; 
+  //  JsonObject& config = configureJsonFromFlash("fingerprints.conf",1);
+    JsonObject& config = iuDiagnosticEngine.configureFingerPrintsFromFlash("finterprints.conf",true);
+    JsonObject& root2 = config["fingerprints"];
+    String messageId = config["messageId"];
+    Serial.print("messageId:");
+    Serial.println(messageId);
+    for (auto fingerprintsKeyValues : root2) {              // main for loop        
+        
+        JsonObject &root3 = root2[fingerprintsKeyValues.key];       // get the nested Keys
+    
+        fingerprintsKey[i] = fingerprintsKeyValues.key;
+         
+   //  if(m_direction == 0 && root3["dir"] =="VX" || root3["dir"] == "AX"){                             // seperate all the directions 
+          // VX
+      //   float  speedX = root3["speed"]; 
+      //   float multiplierX = root3["mult"];
+      //   float bandX = root3["band"];
+      //   float frequencyX = root3["freq"];
+        
+        Serial.print("FingerPrint Key:");
+        Serial.println(fingerprintsKeyValues.key); 
+        i++;
+    }
+
+}
+
+bool Conductor::CheckRawData(File *ValidationFile)
+{
+    if (m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE) {
+        rawDataRequest();
+    }
+    resetDataAcquisition();
+//  delay(100);
+//   manageRawDataSending();
+}
+
+#endif

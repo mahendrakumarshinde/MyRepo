@@ -67,7 +67,7 @@ void IUESP8285::setupHardware()
 //        return;
 //    }
  //   Serial.println("Setup ESP HW");
-    // ESP32_PORT_TRUE - Dont sent WiFi Credentials (hardReset->turnOn->sendWiFiCredentials()) 
+    // IDE1.5_PORT_CHANGE - Dont send WiFi Credentials (hardReset->turnOn->sendWiFiCredentials()) 
     // as MQTT resets ESP during MQTT Config.
     m_credentialSent = true;
     pinMode(ESP32_ENABLE_PIN, OUTPUT);
@@ -88,7 +88,7 @@ void IUESP8285::turnOn(bool forceTimerReset)
         digitalWrite(ESP32_ENABLE_PIN, HIGH);
         if(forceTimerReset == true) {
             m_credentialSent = false;
-            delay(6000); // ESP32_PORT_TRUE -- After ESP Reset, wait for ESP32 to boot up
+            delay(6000); // IDE1.5_PORT_CHANGE -- After ESP Reset, wait for ESP32 to boot up
         }
         m_on = true;
         m_awakeTimerStart = millis();
@@ -121,7 +121,7 @@ void IUESP8285::turnOff()
         {
             debugPrint("Wifi turned off");
         }
-        // ESP32_PORT_TRUE - To reset Raw data transmission on ESP reset
+        // IDE1.5_PORT_CHANGE - To reset Raw data transmission on ESP reset
         RawDataState::startRawDataCollection = false;
         RawDataState::rawDataTransmissionInProgress = false;
     }

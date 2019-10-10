@@ -223,14 +223,10 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
 
         /***** Settable parameters (addresses, credentials, etc) *****/
         case MSPCommand::SET_RAW_DATA_ENDPOINT_HOST:
-            sprintf(TestStr1,"H1:%s",buffer);
-            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, TestStr1);
             accelRawDataHelper.setEndpointHost(buffer);
             //mqttHelper.publish(FINGERPRINT_DATA_PUBLISH_TOPIC, "RAW HOST...");
             break;
         case MSPCommand::SET_RAW_DATA_ENDPOINT_ROUTE:
-            sprintf(TestStr1,"H2:%s",buffer);
-            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, TestStr1);
             accelRawDataHelper.setEndpointRoute(buffer);
             //mqttHelper.publish(FINGERPRINT_DATA_PUBLISH_TOPIC, "RAW ROUTE...");
             break;

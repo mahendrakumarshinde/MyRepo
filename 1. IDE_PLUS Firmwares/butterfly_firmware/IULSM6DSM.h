@@ -118,7 +118,7 @@ class IULSM6DSM : public HighFreqSensor
         float* getData(HardwareSerial *port);
         /***** Debugging *****/
         virtual void exposeCalibration();
-
+        float m_LSMtemperature;
     protected:
         /***** Core *****/
         IUI2C *m_iuI2C;
