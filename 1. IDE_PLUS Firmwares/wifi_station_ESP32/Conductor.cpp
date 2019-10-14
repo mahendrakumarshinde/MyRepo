@@ -668,10 +668,10 @@ bool Conductor::reconnect(bool forceNewCredentials)
             debugPrint(WiFi.SSID());
         }
     }
-#if 0 // ESP32_PORT_TRUE
+#if 1 // ESP32_PORT_TRUE
     // Set light sleep mode if not done
-    if (wifiConnected && WiFi.getSleepMode() != WIFI_LIGHT_SLEEP) {
-        WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
+    if (wifiConnected && WiFi.getSleep() != WIFI_PS_MIN_MODEM) {
+        WiFi.setSleep(WIFI_PS_MIN_MODEM);
     }
 #endif
     return wifiConnected;

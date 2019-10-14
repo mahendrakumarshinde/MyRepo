@@ -10,8 +10,6 @@
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 
-uint32_t lastprint = 0;
-
 Conductor conductor;
 
 /* =============================================================================
@@ -106,13 +104,6 @@ void loop()
 //        accelRawDataHelper.publishIfReady(conductor.getBleMAC());
         
     }
-#if 0
-    if(millis() - lastprint > 7000)
-    {
-        lastprint = millis();
-        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "WiFi Loop OK",12);
-    }
-#endif    
     conductor.updateWiFiStatusCycle();
     conductor.checkWiFiDisconnectionTimeout();
 //   esp_task_wdt_reset(); // To Reset Watchdog - Temp add. need to check if required

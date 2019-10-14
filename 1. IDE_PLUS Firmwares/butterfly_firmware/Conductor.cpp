@@ -5,8 +5,6 @@
 #include "RawDataState.h"
 #include <MemoryFree.h>
 #include "stm32l4_iap.h"
-char FW_Valid_Ftrdata[128];
-extern "C" bool doOnceFWValid;
 extern "C" char FW_Valid_State;
 
 const char* fingerprintData;
@@ -1793,8 +1791,6 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 debugPrint(F("WIFI_CONFIRM_ACTION: "), false);
                 debugPrint(buff);
             }
-//            Serial.print("WIFI_CONFIRM_ACTION");
-//            Serial.println(buff);
             break;
         case MSPCommand::WIFI_CONFIRM_PUBLICATION:
             idx = (uint8_t) buff[0];
@@ -2573,21 +2569,17 @@ void Conductor::streamFeatures()
     CharBufferNode *nodeToSend = sendingQueue.getNextBufferToSend();
     if (nodeToSend ) {
             uint16_t msgLen = strlen(nodeToSend->buffer);
-            if(doOnceFWValid == true)
-            { // Copy Sample feature data required for FM Validation
-                memcpy(FW_Valid_Ftrdata,nodeToSend->buffer,128);
-            }
            if (m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE)
            {
-            if(RawDataState::rawDataTransmissionInProgress == false)
-            {     
-            iuWiFi.startLiveMSPCommand(MSPCommand::PUBLISH_FEATURE_WITH_CONFIRMATION, msgLen + 2);
-            iuWiFi.streamLiveMSPMessage((char) nodeToSend->idx);
-            iuWiFi.streamLiveMSPMessage(':');
-            iuWiFi.streamLiveMSPMessage(nodeToSend->buffer, msgLen);
-            iuWiFi.endLiveMSPCommand();
-            sendingQueue.attemptingToSend(nodeToSend->idx);
-           }
+                if(RawDataState::rawDataTransmissionInProgress == false)
+                {     
+                    iuWiFi.startLiveMSPCommand(MSPCommand::PUBLISH_FEATURE_WITH_CONFIRMATION, msgLen + 2);
+                    iuWiFi.streamLiveMSPMessage((char) nodeToSend->idx);
+                    iuWiFi.streamLiveMSPMessage(':');
+                    iuWiFi.streamLiveMSPMessage(nodeToSend->buffer, msgLen);
+                    iuWiFi.endLiveMSPCommand();
+                    sendingQueue.attemptingToSend(nodeToSend->idx);
+                }
            }
            if(m_streamingMode == StreamingMode::ETHERNET){
                 uint16_t msgLen = strlen(nodeToSend->buffer);
@@ -2803,7 +2795,6 @@ void Conductor::manageRawDataSending() {
 }
 
 void Conductor::prepareRawDataPacketAndSend(char axis) {
- //   char TestStr[32];
     rawData.axis = axis;
     rawData.timestamp = rawDataRecordedAt;
     switch(axis) {
@@ -2823,8 +2814,6 @@ void Conductor::prepareRawDataPacketAndSend(char axis) {
         debugPrint("Sent ", false);debugPrint(axis,false);debugPrint(" data which was recorded at ",false);
         debugPrint(rawDataRecordedAt);
     }
-//    sprintf(TestStr, "Sent %c Size:%d", axis,sizeof rawData);
-//    Serial.println(TestStr);
 }
 
 // void Conductor::startRawDataSendingSession() {
@@ -2949,7 +2938,7 @@ void Conductor::sendDiagnosticFingerPrints() {
                     debugPrint("Wifi connected, ....",true);
                     if(RawDataState::rawDataTransmissionInProgress == false)
                     { 
-                    iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );    
+                        iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );    
                     }
                 }
                 
@@ -3989,23 +3978,51 @@ bool Conductor::STM_FFT_Validation(File *ValidationFile)
 
 bool Conductor::Get_Device_Details(File *ValidationFile)
 {
+    iuI2C.scanDevices();
     Serial.println(F("DEVICE LSM COMM CHECK:-"));
     ValidationFile->println(F("DEVICE LSM COMM CHECK:-"));
     if (!iuI2C.checkComponentWhoAmI("LSM6DSM ACC", iuAccelerometer.ADDRESS,iuAccelerometer.WHO_AM_I,iuAccelerometer.I_AM))
     {
         Serial.println("   Validation [LSM]-Read Add: Fail !");
-        ValidationFile->println(F("   Validation [FFT]-Read Add: Fail !"));
+        ValidationFile->println(F("   Validation [LSM]-Read Add: Fail !"));
     }
-   // iuI2C.releaseReadLock();
-    Serial.print("LSM6DSM I2C Add:0x");
-    Serial.println(iuAccelerometer.I_AM,HEX);
-    ValidationFile->print(F("LSM6DSM I2C Add:0x"));
-    ValidationFile->println(iuAccelerometer.I_AM,HEX);
+    else
+    {        // iuI2C.releaseReadLock();
+        if(iuI2C.i2c_dev[0] == iuAccelerometer.I_AM || iuI2C.i2c_dev[1] == iuAccelerometer.I_AM)
+        {
+            Serial.print("LSM6DSM I2C Add:0x");
+            Serial.println(iuAccelerometer.I_AM,HEX);
+            ValidationFile->print(F("LSM6DSM I2C Add:0x"));
+            ValidationFile->println(iuAccelerometer.I_AM,HEX);
+            Serial.println("   Validation [LSM]-Read Add: OK");
+            ValidationFile->println(F("   Validation [LSM]-Read Add: Ok"));
+        }
+        else
+        {
+            Serial.println("   Validation [LSM]-Read Add: Fail !");
+            ValidationFile->println(F("   Validation [LSM]-Read Add: Fail !"));
+        }
+    }
 
- //   Serial.print("TMP116 I2C Add:0x");
- //   Serial.println(iuTmp116.I_AM,HEX);
-  //  ValidationFile->print(F("TMP116 I2C Add:0x"));
-  //  ValidationFile->println(iuTmp116.I_AM,HEX);
+    if(iuI2C.i2c_dev[0] == iuTemp.I_AM || iuI2C.i2c_dev[1] == iuTemp.I_AM)
+    {
+        Serial.print("TMP116 I2C Add:0x");
+        Serial.println(iuTemp.I_AM,HEX);
+        ValidationFile->print(F("TMP116 I2C Add:0x"));
+        ValidationFile->println(iuTemp.I_AM,HEX);
+        Serial.println("   Validation [TMP]-Read Add: OK");
+        ValidationFile->println(F("   Validation [TMP]-Read Add: Ok"));
+    }
+    else
+    {
+        Serial.println("   Validation [TMP]-Read Add: Fail !");
+        ValidationFile->println(F("   Validation [TMP]-Read Add: Fail !"));
+    }
+
+    SPIClass *m_SPI;
+    m_SPI->begin();
+    /* Device communication check with Keonics Sensor usign SPI */
+    /* Device communication check with External SRAM using QSPI ?? */
 }
 #if 0
 bool Conductor::Get_Device_FeatureData(File *ValidationFile)
@@ -4082,11 +4099,6 @@ bool Conductor::Get_Device_FeatureData(File *ValidationFile)
     snprintf(FingerPrintResult, 150 + messageLength, "{\"macID\":\"%s\",\"timestamp\": %lf,\"state\":\"%d\",\"accountId\":\"%s\",\"fingerprints\": %s }", m_macAddress.toString().c_str(),fingerprint_timestamp,ledManager.getOperationState(),"XXXAdmin",fingerprintData);
     Serial.println(FingerPrintResult);
     ValidationFile->println(FingerPrintResult);
-
-    Serial.println(F("DEVICE READ FEATURE PUBLISH DATA:-"));
-    ValidationFile->println(F("DEVICE READ FEATURE PUBLISH DATA:-"));
-    Serial.println(FW_Valid_Ftrdata);
-    ValidationFile->println(FW_Valid_Ftrdata);
 
  //   Serial.println("FW Validation Sending Raw Data:");
  //   CheckRawData(ValidationFile);

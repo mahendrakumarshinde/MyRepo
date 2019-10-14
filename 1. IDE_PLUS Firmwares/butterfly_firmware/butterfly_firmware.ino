@@ -117,7 +117,7 @@ char FW_Valid_State = 0;
 bool doOnce = true;
 uint32_t interval = 30000;
 uint32_t lastDone = 0;
-uint32_t lastpr = 0;
+
 
 /***** Main operator *****/
 
@@ -696,13 +696,7 @@ void loop()
             conductor.streamMCUUInfo(iuWiFi.port);
             /*======*/
         }
-#if 0
-        if(now - lastpr > 7000)
-        {
-            lastpr = now;
-            Serial.println("STM Loop Alive @ 7 Sec.");
-        }
-#endif
+
         if (millis() - conductor.lastTimeSync > conductor.m_connectionTimeout ) {
 
             if(iuEthernet.isEthernetConnected == 0) {
@@ -731,7 +725,7 @@ void loop()
 
         // Manage raw data sending depending on RawDataState::startRawDataTransmission and RawDataState::rawDataTransmissionInProgress
         conductor.manageRawDataSending();
-#if 0 // FW Validation
+#if 1 // FW Validation
         if(doOnceFWValid == true)
         {
             if((FWValidDelCnt % 2000) == 0 && FWValidDelCnt > 0)

@@ -115,6 +115,7 @@ class IUESP8285 : public IUSerial, public Component
             { sendMSPCommand(MSPCommand::PUBLISH_FEATURE, features); }
         void publishDiagnostic(char *diagnotic)
             { sendMSPCommand(MSPCommand::PUBLISH_DIAGNOSTIC, diagnotic); }
+
     private:
         /***** Configuring the WiFi *****/
         char m_ssid[wifiCredentialLength];

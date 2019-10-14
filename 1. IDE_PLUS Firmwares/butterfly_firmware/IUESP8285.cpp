@@ -66,7 +66,6 @@ void IUESP8285::setupHardware()
 //        IUSerial::suspend();
 //        return;
 //    }
- //   Serial.println("Setup ESP HW");
     // IDE1.5_PORT_CHANGE - Dont send WiFi Credentials (hardReset->turnOn->sendWiFiCredentials()) 
     // as MQTT resets ESP during MQTT Config.
     m_credentialSent = true;
@@ -84,7 +83,6 @@ void IUESP8285::turnOn(bool forceTimerReset)
 {
     if (!m_on)
     {
-//        Serial.println("WiFi Turn ON ");
         digitalWrite(ESP32_ENABLE_PIN, HIGH);
         if(forceTimerReset == true) {
             m_credentialSent = false;
@@ -92,7 +90,6 @@ void IUESP8285::turnOn(bool forceTimerReset)
         }
         m_on = true;
         m_awakeTimerStart = millis();
-//        m_credentialSent = false;
         sendWiFiCredentials();
         if (loopDebugMode)
         {
@@ -113,7 +110,6 @@ void IUESP8285::turnOff()
     m_setConnectedStatus(false);
     if (m_on)
     {
- //       Serial.println("WiFi Turn OFF");
         digitalWrite(ESP32_ENABLE_PIN, LOW);
         m_on = false;
         m_sleepTimerStart = millis();  // Reset auto-sleep start timer
@@ -162,7 +158,6 @@ void IUESP8285::manageAutoSleep(bool wakeUpNow)
     {
         case PowerMode::PERFORMANCE:
         case PowerMode::ENHANCED:
-            Serial.println("WiFi ON Powermode Performance");
             turnOn(true);
             break;
         case PowerMode::REGULAR:
@@ -179,18 +174,14 @@ void IUESP8285::manageAutoSleep(bool wakeUpNow)
             // Not connected, sleeping but need to wake up
             else if (!m_on && now - m_sleepTimerStart > m_autoSleepDuration)
             {
-                Serial.println("WiFi ON Powermode autosleep Wakeup");
                 turnOn();
                 debugPrint("Slept for ", false);
                 debugPrint(now - m_sleepTimerStart, false);
                 debugPrint("ms");
-                Serial.println("Slept for:");
-                Serial.println(now - m_sleepTimerStart);
             }
             // Not connected, not sleeping yet, but need to go to sleep
             else if (m_on && now - m_awakeTimerStart > m_autoSleepDelay)
             {
-                Serial.println("Going to Sleep");
                 turnOff();
                 if (loopDebugMode)
                 {
@@ -211,7 +202,6 @@ void IUESP8285::manageAutoSleep(bool wakeUpNow)
                 debugPrint(F("Unhandled power Mode "), false);
                 debugPrint(m_powerMode);
             }
-            Serial.println("Unhandled power mode..wifi off");
             turnOff();
     }
     if (m_on && !m_sleeping) {
@@ -445,14 +435,10 @@ void IUESP8285::processUserMessage(char *buff, IUFlash *iuFlashPtr)
 {
     if (strncmp(buff, "WIFI-HARDRESET", 15) == 0)
     {
-        Serial.println("WIFI HARD-RESET !");
         hardReset();
     }
     else if (strncmp(buff, "WIFI-USE-SAVED", 15) == 0)
     {
-        Serial.println("WIFI USE SAVED CREDENTIALS:");
-        Serial.println(m_ssid);
-        Serial.println(m_psk);
         if (debugMode)
         {
             debugPrint("Current WiFi info: ", false);
@@ -578,7 +564,6 @@ bool IUESP8285::processChipMessage()
             break;
         case MSPCommand::WIFI_ALERT_CONNECTED:
             if (loopDebugMode) { debugPrint("WIFI_ALERT_CONNECTED"); }
- //           Serial.println("STM:WiFi ALERT CONN");
             m_awakeTimerStart = millis();
             m_lastConnectedStatusTime = m_awakeTimerStart;
             m_setConnectedStatus(true);
@@ -586,7 +571,6 @@ bool IUESP8285::processChipMessage()
             break;
         case MSPCommand::WIFI_ALERT_DISCONNECTED:
             if (loopDebugMode) { debugPrint("WIFI_ALERT_DISCONNECTED"); }
- //           Serial.println("STM:WiFi ALERT DISCON");
             m_setConnectedStatus(false);
             if (millis() - m_displayConnectAttemptStart >
                 displayConnectAttemptTimeout)
@@ -687,7 +671,6 @@ void IUESP8285::connect()
     sendMSPCommand(MSPCommand::WIFI_CONNECT);
     m_displayConnectAttemptStart = millis();
     m_working = true;
-    Serial.println("SEND WIFI_CONNECT");
 }
 
 /**

@@ -345,7 +345,6 @@ void IULSM6DSM::processData(uint8_t wireStatus)
         
         //Serial.print("RAW TEMP Byte:");Serial.print("\t\t"); Serial.print("H BYTE:"); Serial.print(m_rawBytes[1],HEX);Serial.print("\t\t");Serial.print("L BYTE:");Serial.print( m_rawBytes[0],HEX);Serial.print("\t\t");Serial.print("DATA:");Serial.println(( m_rawBytes[1] << 8) | m_rawBytes[0],HEX);
          m_temperature = float( (int16_t) ( (uint16_t) (m_rawBytes[1] << 8) ) | m_rawBytes[0]) / 256.0f +25.0f;    // working formula
-        m_LSMtemperature = m_temperature;
     }
     
     //Serial.print("Temperature 2 :");Serial.println(m_temperature);

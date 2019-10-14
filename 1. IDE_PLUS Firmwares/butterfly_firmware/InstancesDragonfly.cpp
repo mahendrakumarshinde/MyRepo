@@ -166,11 +166,11 @@ FeatureTemplate<q15_t> magneticZ("M0Z", 2, 1, magneticZValues);
 /***** Barometer Features *****/
 
 // Sensor data
-__attribute__((section(".noinit2"))) float temperatureAValues[2];
-FeatureTemplate<float> temperatureA("TMA", 2, 1, temperatureAValues);
+//__attribute__((section(".noinit2"))) float temperatureAValues[2];
+//FeatureTemplate<float> temperatureA("TMA", 2, 1, temperatureAValues);
 
-__attribute__((section(".noinit2"))) float temperatureBValues[2];
-FeatureTemplate<float> temperatureB("TMB", 2, 1, temperatureBValues);
+//__attribute__((section(".noinit2"))) float temperatureBValues[2];
+//FeatureTemplate<float> temperatureB("TMB", 2, 1, temperatureBValues);
 
 // Temperaute measured on the LSM6DSM
 __attribute__((section(".noinit2"))) float allTemperatureValues[2];
@@ -211,10 +211,10 @@ FeatureTemplate<float> rtdTemp("RTD", 2, 4, rtdTempValues);
 
 IUBattery iuBattery("BAT", &batteryLoad);
 
-IUMAX31865 iuRTDSensorA(&SPI1, 42, SPISettings(500000, MSBFIRST, SPI_MODE1),
-                        "THA", &temperatureA);
-IUMAX31865 iuRTDSensorB(&SPI1, 43, SPISettings(500000, MSBFIRST, SPI_MODE1),
-                        "THB", &temperatureB);
+//IUMAX31865 iuRTDSensorA(&SPI1, 42, SPISettings(500000, MSBFIRST, SPI_MODE1),
+ //                       "THA", &temperatureA);
+//IUMAX31865 iuRTDSensorB(&SPI1, 43, SPISettings(500000, MSBFIRST, SPI_MODE1),
+ //                       "THB", &temperatureB);
 
 void LSM6DSMAccelReadCallback(uint8_t wireStatus)
 {

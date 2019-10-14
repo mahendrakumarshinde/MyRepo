@@ -25,7 +25,6 @@ IUTMP116::IUTMP116(IUI2C *iuI2C, const char* name,
 
 void IUTMP116::setupHardware()
 {
-    Serial.println("Setting up TMP116 !");
 #if 0
     if(!m_iuI2C->checkComponentWhoAmI("TMP116", ADDRESS, DEVICE_ID,I_AM))
     {
@@ -43,7 +42,6 @@ void IUTMP116::setupHardware()
             debugPrint("TMPERR");
         }
         return;
-        Serial.println("Error Setting up TMP116 !");
     }
     m_iuI2C->writeBytes(ADDRESS, CFGR,0x02,0x20);
     delay(10);
@@ -59,12 +57,14 @@ void IUTMP116::setupHardware()
 
 void IUTMP116::setTempHighLimit()
 {
-
+    m_iuI2C->writeBytes(ADDRESS, HIGH_LIM,0x60,0x00);
+    delay(10);
 }
 
 void IUTMP116::setTempLowLimit()
 {
-
+    m_iuI2C->writeBytes(ADDRESS, LOW_LIM,0x00,0x00);
+    delay(10);
 }
 /**
  * Manage component power modes
@@ -113,6 +113,7 @@ void IUTMP116::readData()
  */
 void IUTMP116::processTemperatureData(uint8_t wireStatus)
 {
+    int iTemp = 0;
     iuI2C.releaseReadLock();
     if (wireStatus != 0) {
         if (asyncDebugMode) {
@@ -123,10 +124,13 @@ void IUTMP116::processTemperatureData(uint8_t wireStatus)
         return;
     }
     m_temperature = 0;
-    m_temperature = float(((uint16_t) (m_rawBytes[0] << 8) | (uint16_t) m_rawBytes[1]) * TEMP_COEFFICIENT);
+    iTemp = ((int16_t) (m_rawBytes[0] << 8) | (uint16_t) m_rawBytes[1]);
+    if(iTemp < 0)
+    { // For negative temperature measurement
+        iTemp = ~iTemp + 1;
+    }
+    m_temperature = iTemp * TEMP_COEFFICIENT;
     m_destinations[0]->addValue(m_temperature);
-//    Serial.print("TMP116:");
- //   Serial.println(m_temperature);
 }
 
 /**

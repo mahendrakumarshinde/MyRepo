@@ -200,8 +200,6 @@ extern FeatureTemplate<float> allTemperatures;
 extern __attribute__((section(".noinit2"))) float temperatureValues[2];
 extern FeatureTemplate<float> temperature;
 
-extern __attribute__((section(".noinit2"))) float temperatureValuesS[2];
-extern FeatureTemplate<float> temperatureS;
 
 /***** Audio Features *****/
 
