@@ -53,7 +53,7 @@ bool IUI2C::writeByte(uint8_t address, uint8_t subAddress, uint8_t data)
 }
 
 /**
- * Write a byte to given address and sub-address
+ * Write 2 bytes to given address and sub-address
  */
 bool IUI2C::writeBytes(uint8_t address, uint8_t subAddress, uint8_t dataH,  uint8_t dataL)
 {

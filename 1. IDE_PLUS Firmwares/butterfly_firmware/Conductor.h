@@ -237,14 +237,10 @@ class Conductor
         double rawDataRecordedAt, lastPacketSentToESP;
         IUMessageFormat::rawDataPacket rawData;
 
-        bool STM_MQTT_Validation(File *ValidationFile);
-        bool STM_HTTP_Validation(File *ValidationFile);
-        bool STM_FFT_Validation(File *ValidationFile);
-        uint32_t FW_Validation();
-        bool Get_Device_Details(File *ValidationFile);
-        bool Get_Device_FeatureData(File *ValidationFile);
-        bool STM_FINGERPRINT_Validation(File *ValidationFile);
-        bool CheckRawData(File *ValidationFile);
+        uint32_t firmwareValidation();
+        bool firmwareConfigValidation(File *ValidationFile);
+        bool firmwareDeviceValidation(File *ValidationFile);
+        uint8_t firmwareWifiValidation(File *ValidationFile);
 
     protected:
         MacAddress m_macAddress;

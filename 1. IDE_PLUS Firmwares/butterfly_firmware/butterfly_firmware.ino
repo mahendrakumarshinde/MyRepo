@@ -111,7 +111,7 @@ float audioHigherCutoff = 160.0;
 /***** Debbugging variables *****/
 
 bool doOnceFWValid = true;
-int FWValidDelCnt = 0;
+int FWValidCnt = 0;
 char FW_Valid_State = 0;
 
 bool doOnce = true;
@@ -173,8 +173,6 @@ static void watchdogCallback(void) {
     if (now > oneDayTimeout ||
         (lastActive > 0 && now - lastActive > loopTimeout))
     {
-        Serial.println("STM Watchdog Reset !");
-        delay(100);
         STM32.reset();
     }
     if (iuWiFi.arePublicationsFailing()) {
@@ -183,7 +181,6 @@ static void watchdogCallback(void) {
         if(conductor.isBLEConnected()) {
            iuBluetooth.write("WIFI-DISCONNECTED;");
         }
-        Serial.println("Pub Failed !");
         iuWiFi.hardReset();
     }
     armv7m_timer_start(&watchdogTimer, 1000);
@@ -728,23 +725,21 @@ void loop()
 #if 1 // FW Validation
         if(doOnceFWValid == true)
         {
-            if((FWValidDelCnt % 2000) == 0 && FWValidDelCnt > 0)
+            if((FWValidCnt % 2000) == 0 && FWValidCnt > 0)
             {
-                yield();
                 uint32_t ret = 0;
-                ret = conductor.FW_Validation();
+                ret = conductor.firmwareValidation();
                 if(ret != 0)
                 {// Waiting for WiFi Disconnect/Connect Cycle.
                     doOnceFWValid = true;
-                    FWValidDelCnt = 1;                    
+                    FWValidCnt = 1;                    
                 }
                 else if(ret == 0)
                     doOnceFWValid = false;
- //               FWValidDelCnt++;
             }
             else
             {
-                FWValidDelCnt++;
+                FWValidCnt++;
             }                  
         }
 #endif
