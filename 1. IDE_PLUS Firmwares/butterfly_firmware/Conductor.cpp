@@ -1365,17 +1365,26 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                 result = strstr(buff, "Arange");
                 if (result != NULL) {
                     switch (result[7] - '0') {
+                        // case 0:
+                        //     iuAccelerometer.setScale(iuAccelerometer.AFS_2G);
+                        //     break;
+                        // case 1:
+                        //     iuAccelerometer.setScale(iuAccelerometer.AFS_4G);
+                        //     break;
+                        // case 2:
+                        //     iuAccelerometer.setScale(iuAccelerometer.AFS_8G);
+                        //     break;
+                        // case 3:
+                        //     iuAccelerometer.setScale(iuAccelerometer.AFS_16G);
+                        //     break;
                         case 0:
-                            iuAccelerometer.setScale(iuAccelerometer.AFS_2G);
+                            iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_8G);
                             break;
                         case 1:
-                            iuAccelerometer.setScale(iuAccelerometer.AFS_4G);
+                            iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_16G);
                             break;
                         case 2:
-                            iuAccelerometer.setScale(iuAccelerometer.AFS_8G);
-                            break;
-                        case 3:
-                            iuAccelerometer.setScale(iuAccelerometer.AFS_16G);
+                            iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_32G);
                             break;
                     }
                     return;
@@ -1403,7 +1412,7 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     int C = result[8] - '0';
                     int D = result[9] - '0';
                     int samplingRate = (A * 1000 + B * 100 + C * 10 + D);
-                    iuAccelerometer.setSamplingRate(samplingRate);
+                    iuAccelerometerKX222.setSamplingRate(samplingRate);
                 }
                 break;
             case UsageMode::OPERATION:
@@ -1530,17 +1539,26 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                 result = strstr(buff, "Arange");
                 if (result != NULL) {
                     switch (result[7] - '0') {
+                        // case 0:
+                        //     iuAccelerometer.setScale(iuAccelerometer.AFS_2G);
+                        //     break;
+                        // case 1:
+                        //     iuAccelerometer.setScale(iuAccelerometer.AFS_4G);
+                        //     break;
+                        // case 2:
+                        //     iuAccelerometer.setScale(iuAccelerometer.AFS_8G);
+                        //     break;
+                        // case 3:
+                        //     iuAccelerometer.setScale(iuAccelerometer.AFS_16G);
+                        //     break;
                         case 0:
-                            iuAccelerometer.setScale(iuAccelerometer.AFS_2G);
+                            iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_8G);
                             break;
                         case 1:
-                            iuAccelerometer.setScale(iuAccelerometer.AFS_4G);
+                            iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_16G);
                             break;
                         case 2:
-                            iuAccelerometer.setScale(iuAccelerometer.AFS_8G);
-                            break;
-                        case 3:
-                            iuAccelerometer.setScale(iuAccelerometer.AFS_16G);
+                            iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_32G);
                             break;
                     }
                     return;
@@ -1568,7 +1586,7 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     int C = result[8] - '0';
                     int D = result[9] - '0';
                     int samplingRate = (A * 1000 + B * 100 + C * 10 + D);
-                    iuAccelerometer.setSamplingRate(samplingRate);
+                    iuAccelerometerKX222.setSamplingRate(samplingRate);
                 }
                 break;
             default:
@@ -2321,7 +2339,7 @@ void Conductor::changeUsageMode(UsageMode::option usage)
         case UsageMode::OPERATION_BIS:
             ledManager.stopColorOverride();
             configureGroupsForOperation();
-            iuAccelerometer.resetScale();
+            iuAccelerometerKX222.resetScale();
             msg = "operation";
             break;
         case UsageMode::CUSTOM:
@@ -2425,7 +2443,7 @@ void Conductor::acquireData(bool inCallback)
         }
     if (inCallback) {
             iuI2S.sendData(iuUSB.port);             // raw audio data 
-            iuAccelerometer.sendData(iuUSB.port);   // raw accel data
+            iuAccelerometerKX222.sendData(iuUSB.port);   // raw accel data
        }
             
         force = true;
@@ -2444,7 +2462,7 @@ void Conductor::acquireData(bool inCallback)
           float aucostic;
           char rawData[50]; 
           aucostic = iuI2S.getData();                               // raw audio data 
-          acceleration = iuAccelerometer.getData(iuUSB.port);       // raw accel data
+          acceleration = iuAccelerometerKX222.getData(iuUSB.port);       // raw accel data
 
           //Serial.print("Audio :");Serial.println(aucostic);
           snprintf(rawData,50,"%04.3f,%04.3f,%04.3f,%.3f",acceleration[0],acceleration[1],acceleration[2],aucostic);
@@ -2989,7 +3007,7 @@ bool Conductor::setFFTParams() {
         // Change the sensor sampling rate 
         // timerISRPeriod = (samplingRate == 1660) ? 600 : 300;  // 1.6KHz->600, 3.3KHz->300
         // timerISRPeriod = int(1000000 / FFTConfiguration::currentSamplingRate); // +1 to ensure that sensor has captured data before mcu ISR gets it, for edge case
-        iuAccelerometer.setSamplingRate(FFTConfiguration::currentSamplingRate); // will set the ODR for the sensor
+        iuAccelerometerKX222.updateSamplingRate(FFTConfiguration::currentSamplingRate); // will set the ODR for the sensor
         if(setupDebugMode) {
             config.prettyPrintTo(Serial);
         }

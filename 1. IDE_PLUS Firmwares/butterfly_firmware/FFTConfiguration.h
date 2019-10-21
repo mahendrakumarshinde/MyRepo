@@ -20,11 +20,13 @@
 
 namespace FFTConfiguration {
     // The number of possible configurations for samplingRate and blockSize
-    const int samplingRateConfigurations = 4;
+    // const int samplingRateConfigurations = 4;
+    const int samplingRateConfigurations = 6;
     const int blockSizeConfigurations = 5;
 
     // Arrays which keep track of available configurations
-    const int samplingRates[samplingRateConfigurations] = { 416, 833, 1660, 3330 };
+    // const int samplingRates[samplingRateConfigurations] = { 416, 833, 1660, 3330 };
+    const int samplingRates[samplingRateConfigurations] = { 800, 1600, 3200, 6400, 12800, 25600};
     const int blockSizes[blockSizeConfigurations] = { 256, 512, 1024, 2048, 4096 };
 
     // Default parameter values

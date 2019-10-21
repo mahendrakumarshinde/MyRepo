@@ -36,6 +36,8 @@
 #include "IULSM6DSM.h"
 #include "IUMAX31865.h"
 #include "IUTMP116.h"
+#include "IUKX222.h"
+#include "IUkx224reg.h"
 /***** Managers and helpers *****/
 #include "LedManager.h"
 
@@ -238,6 +240,9 @@ extern IUMAX31865 iuRTDSensorB;
 
 void LSM6DSMAccelReadCallback(uint8_t wireStatus);
 extern IULSM6DSM iuAccelerometer;
+
+void KX222AccelReadCallback();
+extern IUKX222 iuAccelerometerKX222;
 
 void TMP116TempReadCallback(uint8_t wireStatus);
 extern IUTMP116 iuTemp;

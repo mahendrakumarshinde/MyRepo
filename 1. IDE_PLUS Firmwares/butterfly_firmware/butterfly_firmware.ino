@@ -617,8 +617,10 @@ void setup()
         ledManager.resetStatus();
         conductor.changeUsageMode(UsageMode::OPERATION);
         /* code uncommented */
-        pinMode(IULSM6DSM::INT1_PIN, INPUT);
-        attachInterrupt(IULSM6DSM::INT1_PIN, dataAcquisitionISR, RISING);
+        // pinMode(IULSM6DSM::INT1_PIN, INPUT);
+        // attachInterrupt(IULSM6DSM::INT1_PIN, dataAcquisitionISR, RISING);
+        pinMode(IUKX222::INT1_PIN, INPUT);
+        attachInterrupt(IUKX222::INT1_PIN, dataAcquisitionISR, RISING);
         // debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
 
         //Resume previous operational state of device
@@ -725,7 +727,7 @@ void loop()
 
         // Manage raw data sending depending on RawDataState::startRawDataTransmission and RawDataState::rawDataTransmissionInProgress
         conductor.manageRawDataSending();
-#if 1 // FW Validation
+#if 0 // FW Validation
         if(doOnceFWValid == true)
         {
             if((FWValidDelCnt % 2000) == 0 && FWValidDelCnt > 0)
