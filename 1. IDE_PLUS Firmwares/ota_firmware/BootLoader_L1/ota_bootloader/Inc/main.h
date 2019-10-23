@@ -70,17 +70,18 @@ void Error_Handler(void);
 
 //----------------------------------------------------------------------------------------------//
 //-----------------------------FLAG SETTING ADDRESS----------------------------------------------//
-#define MAIN_FW 0
-#define FACTORY_FW 1
-#define MFW_VER 2
-#define FW_VALIDATION 3
-#define FW_ROLLBACK 4
-#define STABLE_FW 5
+#define MFW_FLASH_FLAG 0
+#define RETRY_FLAG 1
+#define FACTORY_FW 2
+#define MFW_VER 3
+#define FW_VALIDATION 4
+#define FW_ROLLBACK 5
+#define STABLE_FW 6
 
-#define ESP_FW_VER 6
-#define ESP_FW_UPGRAD 7
-#define ESP_RUNNING_VER 8
-#define ESP_ROLLBACK 9
+#define ESP_FW_VER 7
+#define ESP_FW_UPGRAD 8
+#define ESP_RUNNING_VER 9
+#define ESP_ROLLBACK 10
 
 /* USER CODE BEGIN Private defines */
 

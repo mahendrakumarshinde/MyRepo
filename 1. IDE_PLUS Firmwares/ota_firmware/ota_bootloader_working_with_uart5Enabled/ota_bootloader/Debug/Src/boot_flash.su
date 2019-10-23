@@ -1,9 +1,0 @@
-boot_flash.c:15:6:flash_jump_to_factory_firmware	16	static,ignoring_inline_asm
-boot_flash.c:31:6:flash_jump_to_main_firmware	16	static,ignoring_inline_asm
-boot_flash.c:46:6:Bootloader_Init	16	static
-boot_flash.c:57:9:Flag_Erase_All	40	static
-boot_flash.c:96:6:Bootloader_FlashBegin	8	static
-boot_flash.c:104:9:Bootloader_FlashNext	24	static
-boot_flash.c:133:9:Write_Flag	32	static
-boot_flash.c:164:6:Bootloader_FlashEnd	8	static
-boot_flash.c:169:10:Read_Flag	24	static

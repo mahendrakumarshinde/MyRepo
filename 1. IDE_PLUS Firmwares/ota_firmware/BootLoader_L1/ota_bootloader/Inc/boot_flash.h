@@ -5,7 +5,8 @@
 
 /* Start and end addresses of the user application. */
 #define FLASH_MFW_START_ADDRESS ((uint32_t)0x08060000u)
-#define FLASH_FFW_START_ADDRESS ((uint32_t)0x08010000u)
+#define FLASH_FFW_START_ADDRESS ((uint32_t)0x08036000u)
+#define FLASH_BL2_START_ADDRESS ((uint32_t)0x08010000u)
 #define FLASH_APP_END_ADDRESS   ((uint32_t)FLASH_BANK1_END-0x10u) /**< Leave a little extra space at the end. */
 
 #define FLAG_ADDRESS     (uint32_t)0x080FF800    /* Start address of application space in flash */
@@ -33,6 +34,7 @@ enum
 
 void flash_jump_to_factory_firmware(void);
 void flash_jump_to_main_firmware(void);
+void flash_jump_boot_loader_L2(void);
 void    Bootloader_Init(void);
 uint8_t Flag_Erase_All(void);
 

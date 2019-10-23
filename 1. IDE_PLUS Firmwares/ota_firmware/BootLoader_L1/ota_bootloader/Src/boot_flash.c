@@ -5,6 +5,7 @@
  *      Author: arun
  */
 #include "boot_flash.h"
+#include "stm32l4xx.h"
 
 /* Function pointer for jumping to user application. */
 typedef void (*fnc_ptr)(void);
@@ -24,6 +25,13 @@ void flash_jump_to_factory_firmware(void)
   SysTick->LOAD = 0;
   SysTick->VAL = 0;
   SCB->VTOR = FLASH_FFW_START_ADDRESS;
+
+
+ // SCB->VTOR = SRAM_BASE | 0x00; /* Vector Table Relocation in Internal SRAM */
+
+ // SCB->VTOR = FLASH_FFW_START_ADDRESS | 0x00; /* Vector Table Relocation in Internal FLASH */
+
+
   /* Change the main stack pointer. */
   __set_MSP(*(volatile uint32_t*)FLASH_FFW_START_ADDRESS);
   jump_to_app();
@@ -39,8 +47,38 @@ void flash_jump_to_main_firmware(void)
   SysTick->LOAD = 0;
   SysTick->VAL = 0;
   SCB->VTOR = FLASH_MFW_START_ADDRESS;
+
+
+ // SCB->VTOR = SRAM_BASE | 0x00; /* Vector Table Relocation in Internal SRAM */
+
+  //SCB->VTOR = FLASH_MFW_START_ADDRESS | 0x00; /* Vector Table Relocation in Internal FLASH */
+
+
   /* Change the main stack pointer. */
   __set_MSP(*(volatile uint32_t*)FLASH_MFW_START_ADDRESS);
+  jump_to_app();
+}
+void flash_jump_boot_loader_L2(void)
+{
+  /* Function pointer to the address of the user application. */
+	uart_transmit_str((uint8_t*)"inside fuct.... \n\r");
+  fnc_ptr jump_to_app;
+  jump_to_app = (fnc_ptr)(*(volatile uint32_t*) (FLASH_BL2_START_ADDRESS+4u));
+  HAL_RCC_DeInit();
+  HAL_DeInit();
+  SysTick->CTRL = 0;
+  SysTick->LOAD = 0;
+  SysTick->VAL = 0;
+  SCB->VTOR = FLASH_BL2_START_ADDRESS;
+
+
+ // SCB->VTOR = SRAM_BASE | 0x00; /* Vector Table Relocation in Internal SRAM */
+
+ // SCB->VTOR = FLASH_FFW_START_ADDRESS | 0x00; /* Vector Table Relocation in Internal FLASH */
+
+
+  /* Change the main stack pointer. */
+  __set_MSP(*(volatile uint32_t*)FLASH_BL2_START_ADDRESS);
   jump_to_app();
 }
 void Bootloader_Init(void)
@@ -64,8 +102,8 @@ uint8_t Flag_Erase_All(void)
     HAL_FLASH_Unlock();
 
     /* Get the number of pages to erase */
-   // NbrOfPages = (FLASH_BASE + FLASH_SIZE - FLAG_ADDRESS) / FLASH_PAGE_SIZE;//stm32l496rg number of pages = 512
-    /*NbrOfPages= 511;
+    NbrOfPages = (FLASH_BASE + FLASH_SIZE - FLAG_ADDRESS) / FLASH_PAGE_SIZE;//stm32l496rg number of pages = 512
+   // NbrOfPages= 511;
 
     if(NbrOfPages > FLASH_PAGE_NBPERBANK)
     {
@@ -75,18 +113,18 @@ uint8_t Flag_Erase_All(void)
         pEraseInit.TypeErase = FLASH_TYPEERASE_PAGES;
         status = HAL_FLASHEx_Erase(&pEraseInit, &PageError);
         NbrOfPages = FLASH_PAGE_NBPERBANK;
-    }*/
+    }
 
- //   if(status == HAL_OK)
-   // {
+    if(status == HAL_OK)
+    {
         pEraseInit.Banks = FLASH_BANK_2;
         pEraseInit.NbPages = 4;
-        //pEraseInit.Page = FLASH_PAGE_NBPERBANK - pEraseInit.NbPages;
+        pEraseInit.Page = FLASH_PAGE_NBPERBANK - pEraseInit.NbPages;
         pEraseInit.Page = 508;
         pEraseInit.TypeErase = FLASH_TYPEERASE_PAGES;
-       // status = HAL_FLASHEx_Erase(&pEraseInit, &PageError);
-      //  status = HAL_FLASHEx_Erase(&pEraseInit, PageError);
-   // }
+        status = HAL_FLASHEx_Erase(&pEraseInit, &PageError);
+        //status = HAL_FLASHEx_Erase(&pEraseInit, PageError);
+    }
 
     HAL_FLASH_Lock();
 
@@ -96,7 +134,7 @@ uint8_t Flag_Erase_All(void)
 void Bootloader_FlashBegin(void)
 {
     /* Reset flash destination address */
-   // flash_ptr = FLAG_ADDRESS;
+	flash_ptr = FLAG_ADDRESS;
 
     /* Unlock flash */
     HAL_FLASH_Unlock();

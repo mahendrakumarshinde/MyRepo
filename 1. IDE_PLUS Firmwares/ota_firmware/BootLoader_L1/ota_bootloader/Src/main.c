@@ -27,13 +27,15 @@
 static uint16_t Buffercmp(uint8_t* pBuffer1, uint8_t* pBuffer2, uint16_t BufferLength);
 static uint16_t Buffercmp32(uint32_t* pBuffer1, uint32_t* pBuffer2, uint16_t BufferLength);
 void Buffercpy(uint32_t* sBuffer, uint32_t* dBuffer, uint16_t BufferLength);
-void uart_debug();
+int uart_debug();
 int boot_pins_read();
-void boot_uart_read(uint8_t* rx_buffer);
+int boot_uart_read(uint8_t* rx_buffer);
 void led_blink(void);
 void write_flag_init();
 void read_all_flags();
 void write_all_flags();
+void update_flag(uint8_t flag_addr, uint32_t flag_data);
+void update_all_flag();
 
 
 uint8_t Boot_MFW_Flag;
@@ -133,16 +135,16 @@ uint8_t FlagAddr;
   /* USER CODE BEGIN 2 */
   //--------------------------------------led toggle----------------------------------------//
 
-  led_blink();
+  led_blink(); /* Blink On board RGB LED */
 
   //----------------------------------------------------------------------------------------//
   //---------------------------------------Debug UART---------------------------------------//
   uart_transmit_str((uint8_t*)"\n\r================================\n\r");
-  uart_transmit_str((uint8_t*)"IU Bootloader v0.01 \n\r");
+  uart_transmit_str((uint8_t*)"IU Bootloader V0.01 \n\r");
   uart_transmit_str((uint8_t*)"================================\n\r\n\r");
   //uart_transmit_str((uint8_t*)"Waiting for the input.............. \n\r");
 
-  //----------------------------------------------------------------------------------------//
+  //---------------------------------Test code-----------------------------------------//
 //  Bootloader_Init();
 //  Flag_Erase_All();
 //  Bootloader_FlashBegin();
@@ -158,8 +160,18 @@ uint8_t FlagAddr;
 //  uint32_t FlashValue_2 = Read_Flag(FACTORY_FW);
 //  uint32_t FlashValue_3 = Read_Flag(MFW_VER);
   //---------------------------------------GPIO INPUT---------------------------------------//
-  boot_value =  boot_pins_read();
-  boot_value = 1; //forcing to uart
+  boot_value =  boot_pins_read(); /* read PC0 and PC1 GPIO input*/
+
+  /*------------------------------------Test Code -----------------------------------------*/
+  /*
+   * 0 -> Factory Firmware
+   * 1 -> UART Debug mode
+   * 2 -> Roll Back Main Firmware
+   * 3 -> Main Firmware (Default)
+   */
+  boot_value = 1; // pass control to UART
+
+//---------------------------------End of Test code-----------------------------------------------//
 
 
   switch(boot_value)
@@ -170,18 +182,32 @@ uint8_t FlagAddr;
 	  break;
   case 2: Boot_RB_MFW_Flag = 1; //roll back main firmware
 	  break;
-  default :  Boot_MFW_Flag =1 ;//normal boot / boot main firmware (default)
+  default :  Boot_MFW_Flag =0 ;//normal boot / boot main firmware (default)
   }
+
+
   if(Debug_UART_Flag == 1)
   {
-/*
-	  uint8_t rx_buffer_temp[50];
+	  /*------------------------------------Test Code -----------------------------------------*/
+/*	  uint8_t rx_buffer_temp[50];
 
 	  boot_uart_read(&rx_buffer_temp);
-	  HAL_Delay(1000);
-*/
+	  HAL_Delay(1000);*/
+	  /*------------------------------------ Test Code End -----------------------------------------*/
 
-	  uart_debug();
+
+	  uart_transmit_str((uint8_t*)"\n\r----------UART DEBUG MODE----------- \n\r");
+	 // update_flag(uint8_t flag_addr, uint32_t flag_data)
+
+	  int uart_debug_exit = 0;
+
+	  while(!uart_debug_exit)
+	  {
+		  uart_debug_exit =  uart_debug();
+
+	  }
+	  uart_transmit_str((uint8_t*)"\n\r exiting from uart debug mode \n\r");
+
   }
 
   if(Boot_RB_MFW_Flag == 1)
@@ -190,7 +216,7 @@ uint8_t FlagAddr;
 	  update_flag(FW_ROLLBACK, 1);
 	  uart_transmit_str((uint8_t*)"Jumping to ROLLBACK MFW.... \n\r");
 	  HAL_Delay(1000);
-	  flash_jump_to_factory_firmware();
+	  flash_jump_boot_loader_L2();
 
   }else if(Boot_FFW_Flag == 1)
   {
@@ -204,8 +230,35 @@ uint8_t FlagAddr;
 	  HAL_Delay(1000);
 	  flash_jump_to_main_firmware();
   }
+/*--------------------------------------------------------------------------------------------*/
+  read_all_flags();
+  if(all_flags[MFW_FLASH_FLAG]==0)
+  {
+	  flash_jump_to_main_firmware();
 
+  }else if(all_flags[MFW_FLASH_FLAG]==1)
+  {
 
+	  flash_jump_boot_loader_L2();
+  }else if((all_flags[MFW_FLASH_FLAG]==2) && (all_flags[RETRY_FLAG]<3))
+  {
+
+	  read_all_flags();
+	  all_flags[MFW_FLASH_FLAG] = 1;
+	  all_flags[RETRY_FLAG] =  all_flags[RETRY_FLAG]+1;
+	  update_all_flag();
+	  flash_jump_boot_loader_L2();
+  }else if(all_flags[MFW_FLASH_FLAG]==3)
+  {
+	  update_flag(RETRY_FLAG, 0);
+	  flash_jump_to_main_firmware();
+  }else if(all_flags[MFW_FLASH_FLAG]==4)
+  {
+	  flash_jump_boot_loader_L2();
+  }else
+  {
+	  flash_jump_to_main_firmware();
+  }
 
   //----------------------------------------------------------------------------------------//
   /* USER CODE END 2 */
@@ -233,6 +286,14 @@ void update_flag(uint8_t flag_addr, uint32_t flag_data)
 	  write_all_flags();
 	  Bootloader_FlashEnd();
 
+}
+void update_all_flag()
+{
+	//all_flags_temp[32];
+
+		write_flag_init();
+		write_all_flags();
+		Bootloader_FlashEnd();
 }
 void read_all_flags()
 {
@@ -284,8 +345,8 @@ void write_all_flags()
 
 	for(int i =0 ; i<32 ; i++)
 	{
-		//Write_Flag(i,all_flags[i]);
-		//HAL_Delay(1000);
+		Write_Flag(i,all_flags[i]);
+		HAL_Delay(1);
 	}
 	read_all_flags();
 
@@ -302,8 +363,13 @@ void write_all_flags()
 }
 void write_flag_init()
 {
-	Bootloader_Init();
-	Flag_Erase_All();
+	Bootloader_Init(); /* to clear system flags  */
+	int return_val = Flag_Erase_All();
+	if(return_val)
+		uart_transmit_str((uint8_t*)"Flash Erase Failed.... \n\r");
+	else
+		uart_transmit_str((uint8_t*)"Flash Erase Successful.... \n\r");
+
 	Bootloader_FlashBegin();
 }
 int boot_pins_read()
@@ -354,7 +420,7 @@ if((boot_0 >= 2) && (boot_1 >= 2) )
 	}
 return boot_value;
 }
-void uart_debug()
+int uart_debug()
 {
 	unsigned char rx_buffer[50];
 	unsigned char rx_flag_address_buffer[50];
@@ -366,69 +432,144 @@ void uart_debug()
 	unsigned char cmd_4[3]={'W','F','L'};
 	unsigned char cmd_5[4]={'H','E','L','P'};
 
-label1:uart_transmit_str((uint8_t*)"Waiting for command");
-	boot_uart_read((uint8_t*)rx_buffer);
+	int uart_debug_flag = 0;
 
-	  if(Buffercmp((uint8_t*)cmd_0,(uint8_t*)rx_buffer,3))
+	uart_transmit_str((uint8_t*)"Waiting for command");
+	uart_debug_flag = boot_uart_read((uint8_t*)rx_buffer);
+	if(uart_debug_flag == 1)
+	{
+		//uart_debug_flag =1
+		uart_debug_flag =1;
+		Boot_MFW_Flag = 0;
+	}else if(Buffercmp((uint8_t*)cmd_0,(uint8_t*)rx_buffer,3))
 	  {
 		  uart_transmit_str((uint8_t*)"received BMF.......\n\r");
 		  Boot_MFW_Flag = 1; // Boot main firmware.
-
+		  uart_debug_flag =  1 ;
 	  }else if(Buffercmp((uint8_t*)cmd_1,(uint8_t*)rx_buffer,3))
 	  {
 		  uart_transmit_str((uint8_t*)"received BFF.......\n\r");
 		  Boot_FFW_Flag = 1; // Boot Factory firmware.
-
+		  uart_debug_flag =  1;
 
 	  }else if(Buffercmp((uint8_t*)cmd_2,(uint8_t*)rx_buffer,3))
 	  {
 		  uart_transmit_str((uint8_t*)"Received RBM.......\n\r");
 		  Boot_RB_MFW_Flag = 1; // Rollback main firmware.
 
+		  uart_debug_flag = 1;
+
 	  }else if(Buffercmp((uint8_t*)cmd_3,(uint8_t*)rx_buffer,3))
 	  {
+			for(int j =0; j<= 50 ; j++)
+			{
+				rx_flag_address_buffer[j] = '\0';
+
+			}
 		  uart_transmit_str((uint8_t*)"Received RFL.......\n\r");
-		  uart_transmit_str((uint8_t*)"Enter the flag address...");
+		  uart_transmit_str((uint8_t*)"Enter the 2 digit flag address(01 - 13)");
 		  boot_uart_read((uint8_t*)rx_flag_address_buffer);
-		  uart_transmit_str((uint8_t*)"Received address :");
+/*		  uart_transmit_str((uint8_t*)"Received address :");
+		  uart_transmit_str(rx_flag_address_buffer);*/
+		  uart_transmit_str((uint8_t*)"Flag value at  ");
 		  uart_transmit_str(rx_flag_address_buffer);
-		  uart_transmit_str((uint8_t*)"Flag value at");
-		  uart_transmit_str(rx_flag_address_buffer);
-		  uart_transmit_str((uint8_t*)"is ");
-		  //
-		  goto label1;
+		  uart_transmit_str((uint8_t*)"is  : ");
+
+
+
+		  /* Calculate the length. */
+		  uint8_t result_address = 0;
+		  uint32_t result = 0;
+		  for (int i=0; i<2;i++)
+		  {
+			  result_address=(result_address*10)+(rx_flag_address_buffer[i]-'0');
+		  }
+
+//-------------------------------------------------------------------------------
+		 // read_all_flags();
+		 // uart_transmit_str(all_flags[(uint8_t)rx_flag_address_buffer]);
+		 // uint32_t result = rx_flag_address_buffer - '0';
+		//  uint8_t result =  5 ;//(uint8_t*)rx_flag_address_buffer - 48 ;
+		  //uint8_t address = (ui)
+		  result = Read_Flag(result_address);
+//-------------------------------------------------------------------------------
+		  char buffer[10];
+		  sprintf(buffer, "0%d", result);
+		  uart_transmit_str((uint8_t*)buffer);
+		  uart_transmit_str((uint8_t*)"\n\r");
+
+
+		  //goto label1;
+		  uart_debug_flag = 0;
+
 	  }else if(Buffercmp((uint8_t*)cmd_4,(uint8_t*)rx_buffer,3))
 	  {
+			for(int j =0; j<= 50 ; j++)
+			{
+				rx_flag_address_buffer[j] = '\0';
+
+			}
+			for(int j =0; j<= 50 ; j++)
+			{
+				rx_data_buffer[j] = '\0';
+
+			}
 		  uart_transmit_str((uint8_t*)"Received WFL.......\n\r");
-		  uart_transmit_str((uint8_t*)"Enter the flag address...");
+		  uart_transmit_str((uint8_t*)"Enter the 2 digit flag address(01-13)");
 		  boot_uart_read((uint8_t*)rx_flag_address_buffer);
 		  uart_transmit_str((uint8_t*)"received address :");
 		  uart_transmit_str(rx_flag_address_buffer);
-		  uart_transmit_str((uint8_t*)"Enter the flag value...");
+		  uart_transmit_str((uint8_t*)"Enter the 2 digit flag value(01-09)");
 		  boot_uart_read((uint8_t*)rx_data_buffer);
 		  uart_transmit_str((uint8_t*)"received data :");
 		  uart_transmit_str(rx_data_buffer);
-		  //
-		  goto label1;
+
+
+		  uint8_t flag_address = 0;
+		  uint32_t flag_data = 0;
+		  for (int i=0; i<2;i++)
+		  {
+			  flag_address=(flag_address*10)+(rx_flag_address_buffer[i]-'0');
+		  }
+		  for (int i=0; i<2;i++)
+			  {
+			  flag_data=(flag_data*10)+(rx_data_buffer[i]-'0');
+			  }
+		  update_flag(flag_address, flag_data);
+		  uart_transmit_str((uint8_t*)"\n\r flag updated !!\n\r");
+
+		  //goto label1;
+		  uart_debug_flag = 0;
+
 	  }else if(Buffercmp((uint8_t*)cmd_5,(uint8_t*)rx_buffer,4))
 	  {
+		  uart_transmit_str((uint8_t*)"-----------IU Bootloader Commands------------\n\r");
+		  uart_transmit_str((uint8_t*)"BMF : Boot Main Firmware\n\r");
+		  uart_transmit_str((uint8_t*)"BFF : Boot Factory Firmware\n\r");
+		  uart_transmit_str((uint8_t*)"RBM : RollBack Main Firmware\n\r");
 		  uart_transmit_str((uint8_t*)"WFL : Write flag\n\r");
-
-
+		  uart_transmit_str((uint8_t*)"RFL : Read flag\n\r");
+		  return 0;
+		  //goto label1;
 	  }
 	  else
 	  {
-		  uart_transmit_str((uint8_t*)"invalid command.......\n\r");
-		  //uart_transmit_str((uint8_t*)"Waiting for command.......\n\r");
-		  goto label1;
+		  if(rx_buffer[0]!='\0')
+		  {
+		  uart_transmit_str((uint8_t*)"\n\r Invalid command !!!\n\r");
+		  uart_transmit_str((uint8_t*)"enter HELP for list of supported commands !\n\r");
+		  }
+		  //goto label1;
+		  uart_debug_flag = 0;
 	  }
-
+return uart_debug_flag;
 
 }
-void boot_uart_read(uint8_t* rx_buffer)
+int boot_uart_read(uint8_t* rx_buffer)
 {
 
 int uart_receive_timout_1 =0;
+int time_out_flag = 0;
 
 //uart_transmit_str((uint8_t*)"waiting for command.......");
 	for(int i =0 ;i<=50; i++)
@@ -442,7 +583,8 @@ int uart_receive_timout_1 =0;
 		uart_receive_timout_1++;
 		if(uart_receive_timout_1 >=60)
 		 	 {
-		 	 	uart_transmit_str((uint8_t*)"uart timeout.......\n\r");
+		 	 	uart_transmit_str((uint8_t*)"UART timeout !!!\n\r");
+		 	 	time_out_flag = 1;
 		 	 	break;
 		 	 }
 		 if(rx_buffer[0]!='\0')
@@ -453,6 +595,7 @@ int uart_receive_timout_1 =0;
 
 		 	 }
 		  }// end of loop
+	return time_out_flag;
 
 }
 void led_blink(void)
