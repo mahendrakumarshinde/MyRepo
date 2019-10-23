@@ -617,10 +617,17 @@ void setup()
         ledManager.resetStatus();
         conductor.changeUsageMode(UsageMode::OPERATION);
         /* code uncommented */
-        // pinMode(IULSM6DSM::INT1_PIN, INPUT);
-        // attachInterrupt(IULSM6DSM::INT1_PIN, dataAcquisitionISR, RISING);
-        pinMode(IUKX222::INT1_PIN, INPUT);
-        attachInterrupt(IUKX222::INT1_PIN, dataAcquisitionISR, RISING);
+        if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+        {
+            pinMode(IULSM6DSM::INT1_PIN, INPUT);
+            attachInterrupt(IULSM6DSM::INT1_PIN, dataAcquisitionISR, RISING);
+        // debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
+        }
+        else
+        {
+            pinMode(IUKX222::INT1_PIN,INPUT);
+            attachInterrupt(IUKX222::INT1_PIN,dataAcquisitionISR,RISING);
+        }
         // debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
 
         //Resume previous operational state of device
@@ -665,6 +672,7 @@ void loop()
                 debugPrint("Current lowCutOffFrequency: ", false); debugPrint(FFTConfiguration::currentLowCutOffFrequency);
                 debugPrint("Current highCutOffFrequency: ", false); debugPrint(FFTConfiguration::currentHighCutOffFrequency);
                 debugPrint("Current minAgitation: ", false); debugPrint(FFTConfiguration::currentMinAgitation);
+                debugPrint(F("Sensor:"),false);debugPrint(FFTConfiguration::currentSensor);
             }
         // }
        

@@ -216,19 +216,19 @@ IUBattery iuBattery("BAT", &batteryLoad);
 //IUMAX31865 iuRTDSensorB(&SPI1, 43, SPISettings(500000, MSBFIRST, SPI_MODE1),
  //                       "THB", &temperatureB);
 
-// void LSM6DSMAccelReadCallback(uint8_t wireStatus)
-// {
-//     iuAccelerometer.processData(wireStatus);
-// }
-// IULSM6DSM iuAccelerometer(&iuI2C, "ACC", LSM6DSMAccelReadCallback,
-//                           &accelerationX, &accelerationY, &accelerationZ,
-//                           &tiltX, &tiltY, &tiltZ);
+void LSM6DSMAccelReadCallback(uint8_t wireStatus)
+{
+    iuAccelerometer.processData(wireStatus);
+}
+IULSM6DSM iuAccelerometer(&iuI2C, "ACC", LSM6DSMAccelReadCallback,
+                          &accelerationX, &accelerationY, &accelerationZ,
+                          &tiltX, &tiltY, &tiltZ);
 
 void KX222AccelReadCallback()
 {
     iuAccelerometerKX222.processData();
 }
-IUKX222 iuAccelerometerKX222(&SPI1, 43, SPISettings(10000000,MSBFIRST,SPI_MODE0), "ACC", 
+IUKX222 iuAccelerometerKX222(&SPI1, 43, SPISettings(10000000,MSBFIRST,SPI_MODE0), "ACX", 
                             KX222AccelReadCallback, &accelerationX, &accelerationY, &accelerationZ);
 
 void TMP116TempReadCallback(uint8_t wireStatus)

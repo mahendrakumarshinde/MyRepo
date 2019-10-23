@@ -1363,29 +1363,38 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     return;
                 }
                 result = strstr(buff, "Arange");
-                if (result != NULL) {
-                    switch (result[7] - '0') {
-                        // case 0:
-                        //     iuAccelerometer.setScale(iuAccelerometer.AFS_2G);
-                        //     break;
-                        // case 1:
-                        //     iuAccelerometer.setScale(iuAccelerometer.AFS_4G);
-                        //     break;
-                        // case 2:
-                        //     iuAccelerometer.setScale(iuAccelerometer.AFS_8G);
-                        //     break;
-                        // case 3:
-                        //     iuAccelerometer.setScale(iuAccelerometer.AFS_16G);
-                        //     break;
-                        case 0:
-                            iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_8G);
-                            break;
-                        case 1:
-                            iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_16G);
-                            break;
-                        case 2:
-                            iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_32G);
-                            break;
+                    if (result != NULL) {
+                    
+                    if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+                    {
+                        switch (result[7] - '0') {
+                            case 0:
+                                iuAccelerometer.setScale(iuAccelerometer.AFS_2G);
+                                break;
+                            case 1:
+                                iuAccelerometer.setScale(iuAccelerometer.AFS_4G);
+                                break;
+                            case 2:
+                                iuAccelerometer.setScale(iuAccelerometer.AFS_8G);
+                                break;
+                            case 3:
+                                iuAccelerometer.setScale(iuAccelerometer.AFS_16G);
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        switch (result[7] - '0') {
+                            case 0:
+                                iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_8G);
+                                break;
+                            case 1:
+                                iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_16G);
+                                break;
+                            case 2:
+                                iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_32G);
+                                break;
+                        }
                     }
                     return;
                 }
@@ -1412,7 +1421,14 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     int C = result[8] - '0';
                     int D = result[9] - '0';
                     int samplingRate = (A * 1000 + B * 100 + C * 10 + D);
-                    iuAccelerometerKX222.setSamplingRate(samplingRate);
+                    if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+                    {
+                        iuAccelerometer.setSamplingRate(samplingRate);
+                    }
+                    else
+                    {
+                        iuAccelerometerKX222.setSamplingRate(samplingRate);
+                    }
                 }
                 break;
             case UsageMode::OPERATION:
@@ -1537,29 +1553,38 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                    return; 
                 }  
                 result = strstr(buff, "Arange");
-                if (result != NULL) {
-                    switch (result[7] - '0') {
-                        // case 0:
-                        //     iuAccelerometer.setScale(iuAccelerometer.AFS_2G);
-                        //     break;
-                        // case 1:
-                        //     iuAccelerometer.setScale(iuAccelerometer.AFS_4G);
-                        //     break;
-                        // case 2:
-                        //     iuAccelerometer.setScale(iuAccelerometer.AFS_8G);
-                        //     break;
-                        // case 3:
-                        //     iuAccelerometer.setScale(iuAccelerometer.AFS_16G);
-                        //     break;
-                        case 0:
-                            iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_8G);
-                            break;
-                        case 1:
-                            iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_16G);
-                            break;
-                        case 2:
-                            iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_32G);
-                            break;
+                                if (result != NULL) {
+                    
+                    if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+                    {
+                        switch (result[7] - '0') {
+                            case 0:
+                                iuAccelerometer.setScale(iuAccelerometer.AFS_2G);
+                                break;
+                            case 1:
+                                iuAccelerometer.setScale(iuAccelerometer.AFS_4G);
+                                break;
+                            case 2:
+                                iuAccelerometer.setScale(iuAccelerometer.AFS_8G);
+                                break;
+                            case 3:
+                                iuAccelerometer.setScale(iuAccelerometer.AFS_16G);
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        switch (result[7] - '0') {
+                            case 0:
+                                iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_8G);
+                                break;
+                            case 1:
+                                iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_16G);
+                                break;
+                            case 2:
+                                iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_32G);
+                                break;
+                        }
                     }
                     return;
                 }
@@ -1586,7 +1611,14 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     int C = result[8] - '0';
                     int D = result[9] - '0';
                     int samplingRate = (A * 1000 + B * 100 + C * 10 + D);
-                    iuAccelerometerKX222.setSamplingRate(samplingRate);
+                    if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+                    {
+                        iuAccelerometer.setSamplingRate(samplingRate);
+                    }
+                    else
+                    {
+                        iuAccelerometerKX222.setSamplingRate(samplingRate);
+                    }
                 }
                 break;
             default:
@@ -2339,13 +2371,27 @@ void Conductor::changeUsageMode(UsageMode::option usage)
         case UsageMode::OPERATION_BIS:
             ledManager.stopColorOverride();
             configureGroupsForOperation();
-            iuAccelerometerKX222.resetScale();
+            if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+            {
+                iuAccelerometer.resetScale();
+            }
+            else
+            {
+                iuAccelerometerKX222.resetScale();
+            }
             msg = "operation";
             break;
         case UsageMode::CUSTOM:
             ledManager.overrideColor(RGB_CYAN);
             //configureGroupsForOperation();
-            //iuAccelerometer.resetScale();
+            if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+            {
+                iuAccelerometer.resetScale();
+            }
+            else
+            {
+                iuAccelerometerKX222.resetScale();
+            }
             msg = "custom";
             break;        
         default:
@@ -2443,7 +2489,14 @@ void Conductor::acquireData(bool inCallback)
         }
     if (inCallback) {
             iuI2S.sendData(iuUSB.port);             // raw audio data 
-            iuAccelerometerKX222.sendData(iuUSB.port);   // raw accel data
+            if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+            {
+                iuAccelerometer.sendData(iuUSB.port);   // raw accel data
+            }
+            else
+            {
+                iuAccelerometerKX222.sendData(iuUSB.port);
+            }
        }
             
         force = true;
@@ -2462,7 +2515,14 @@ void Conductor::acquireData(bool inCallback)
           float aucostic;
           char rawData[50]; 
           aucostic = iuI2S.getData();                               // raw audio data 
-          acceleration = iuAccelerometerKX222.getData(iuUSB.port);       // raw accel data
+          if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+          {                            // raw audio data 
+            acceleration = iuAccelerometer.getData(iuUSB.port);       // raw accel data
+          }
+          else
+          {
+            acceleration = iuAccelerometerKX222.getData(iuUSB.port);
+          }
 
           //Serial.print("Audio :");Serial.println(aucostic);
           snprintf(rawData,50,"%04.3f,%04.3f,%04.3f,%.3f",acceleration[0],acceleration[1],acceleration[2],aucostic);
@@ -2485,7 +2545,18 @@ void Conductor::acquireData(bool inCallback)
     }
     // Collect the new data
     for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
-        Sensor::instances[i]->acquireData(inCallback, force);
+        if ( strcmp("ACC", Sensor::instances[i]->getName())==0 && (FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) )
+        {
+            NULL;
+        }
+        else if ( strcmp("ACX", Sensor::instances[i]->getName())==0 && (FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor) )
+        {
+            NULL;
+        }
+        else
+        {
+            Sensor::instances[i]->acquireData(inCallback, force);
+        }
     }
 }
 
@@ -2986,6 +3057,22 @@ bool Conductor::setFFTParams() {
     if(config.success()) {
         FFTConfiguration::currentSamplingRate = config["samplingRate"];
         FFTConfiguration::currentBlockSize = config["blockSize"];
+        FFTConfiguration::currentSensor = config["sensor"];
+        for (int i=0;i<FFTConfiguration::LSMsamplingRateOption;i++)
+        {
+            if (FFTConfiguration::currentSamplingRate == FFTConfiguration::samplingRates[i] && FFTConfiguration::currentSensor == 0)
+            {
+                FFTConfiguration::currentSensor = FFTConfiguration::lsmSensor;
+            }
+        }
+
+        for (int i=0;i<FFTConfiguration::KNXsamplingRateOption;i++)
+        {
+            if (FFTConfiguration::currentSamplingRate == FFTConfiguration::samplingRates2[i] && FFTConfiguration::currentSensor == 1)
+            {
+                FFTConfiguration::currentSensor = FFTConfiguration::kionixSensor;
+            }
+        }
         // TODO: The following can be configurable in the future
         FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY;
         FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
@@ -3007,7 +3094,14 @@ bool Conductor::setFFTParams() {
         // Change the sensor sampling rate 
         // timerISRPeriod = (samplingRate == 1660) ? 600 : 300;  // 1.6KHz->600, 3.3KHz->300
         // timerISRPeriod = int(1000000 / FFTConfiguration::currentSamplingRate); // +1 to ensure that sensor has captured data before mcu ISR gets it, for edge case
-        iuAccelerometerKX222.updateSamplingRate(FFTConfiguration::currentSamplingRate); // will set the ODR for the sensor
+        if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+        {
+            iuAccelerometer.setSamplingRate(FFTConfiguration::currentSamplingRate);
+        }
+        else
+        {
+            iuAccelerometerKX222.updateSamplingRate(FFTConfiguration::currentSamplingRate); // will set the ODR for the sensor
+        }
         if(setupDebugMode) {
             config.prettyPrintTo(Serial);
         }
