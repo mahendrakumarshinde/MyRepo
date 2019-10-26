@@ -6,6 +6,9 @@
 ============================================================================= */
 
 char IUFSFlash::CONFIG_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iuconfig";
+char IUFSFlash::IUFWMAINBKUP_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iufwBkup";
+char IUFSFlash::IUFWMAINIMG_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN]  = "/iufwMain";
+char IUFSFlash::IUFWROLLBACK_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iuFwRlBk";
 char IUFSFlash::CONFIG_EXTENSION[IUFSFlash::CONFIG_EXTENSION_LEN] = ".conf";
 
 char IUFSFlash::FNAME_WIFI0[6] = "wifi0";
@@ -21,6 +24,7 @@ char IUFSFlash::FNAME_RAW_DATA_ENDPOINT[13] = "fft_endpoint";
 char IUFSFlash::FNAME_MQTT_SERVER[12] = "mqtt_server";
 char IUFSFlash::FNAME_MQTT_CREDS[11] = "mqtt_creds";
 char IUFSFlash::FNAME_FFT[4] = "fft";
+char IUFSFlash::FNAME_OTA[4] = "ota";
 /***** Core *****/
 
 void IUFSFlash::begin()
@@ -40,6 +44,36 @@ void IUFSFlash::begin()
         if (!m_begun && setupDebugMode)
         {
             debugPrint("Unable to find or create the config directory");
+        }
+    }
+    m_otaDir = DOSFS.exists(IUFWMAINBKUP_SUBDIR);
+    if (!m_otaDir)
+    {
+        DOSFS.mkdir(IUFWMAINBKUP_SUBDIR);
+        m_otaDir = DOSFS.exists(IUFWMAINBKUP_SUBDIR);
+        if (!m_otaDir && setupDebugMode)
+        {
+            debugPrint("Unable to find/create the ota_mainbkup directory");
+        }
+    }
+    m_otaDir = DOSFS.exists(IUFWMAINIMG_SUBDIR);
+    if (!m_otaDir)
+    {
+        DOSFS.mkdir(IUFWMAINIMG_SUBDIR);
+        m_otaDir = DOSFS.exists(IUFWMAINIMG_SUBDIR);
+        if (!m_otaDir && setupDebugMode)
+        {
+            debugPrint("Unable to find or create the ota_mainimage directory");
+        }
+    }
+    m_otaDir = DOSFS.exists(IUFWROLLBACK_SUBDIR);
+    if (!m_otaDir)
+    {
+        DOSFS.mkdir(IUFWROLLBACK_SUBDIR);
+        m_otaDir = DOSFS.exists(IUFWROLLBACK_SUBDIR);
+        if (!m_otaDir && setupDebugMode)
+        {
+            debugPrint("Unable to find or create the ota_rollback directory");
         }
     }
 }
@@ -363,6 +397,9 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
             break;
         case CFG_FFT:
             fname = FNAME_FFT;
+            break;
+        case CFG_OTA:
+            fname = FNAME_OTA;
             break;
         default:
             if (debugMode)

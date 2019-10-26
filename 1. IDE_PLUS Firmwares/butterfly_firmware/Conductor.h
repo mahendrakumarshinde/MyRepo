@@ -62,7 +62,8 @@ namespace UsageMode
                            OPERATION       = 2,
                            OPERATION_BIS   = 3,
                            CUSTOM          = 4,
-                           COUNT           = 5};
+                           OTA             = 5,
+                           COUNT           = 6};
     // Related default config
     const AcquisitionMode::option acquisitionModeDetails[COUNT] =
     {
@@ -176,6 +177,7 @@ class Conductor
         void changeAcquisitionMode(AcquisitionMode::option mode);
         void updateStreamingMode();
         void changeUsageMode(UsageMode::option usage);
+        UsageMode::option getUsageMode() { return m_usageMode ;}
         /***** Operations *****/
         void setCallback(void (*callback)()) { m_callback = callback; };
         bool beginDataAcquisition();
@@ -195,6 +197,8 @@ class Conductor
         // mqtt / http configuration
         void fastSwap (const char **i, const char **d);
         void configureMQTTServer(String filename);
+        void configureOTAServer(String filename);
+        void configureOta(JsonVariant &config);
         bool configureBoardFromFlash(String filename,bool isSet);
         JsonObject& configureJsonFromFlash(String filename,bool isSet);
         void sendDiagnosticFingerPrints();
@@ -236,12 +240,15 @@ class Conductor
         uint32_t RawDataTimeout = 0;
         double rawDataRecordedAt, lastPacketSentToESP;
         IUMessageFormat::rawDataPacket rawData;
-
+        
+        void otaChkFwdnldTmout();
         uint32_t firmwareValidation();
         bool firmwareConfigValidation(File *ValidationFile);
         bool firmwareDeviceValidation(File *ValidationFile);
         uint8_t firmwareWifiValidation(File *ValidationFile);
-
+        static const uint32_t fwDnldStartTmout = 30000;
+        uint32_t otaFwdnldTmout = 0;
+        bool waitingDnldStrart = false;
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
@@ -291,7 +298,15 @@ class Conductor
         double last_fingerprint_timestamp = 0;
         bool computed_first_fingerprint_timestamp = false;
         SegmentedMessage segmentedMessages[MAX_SEGMENTED_MESSAGES]; // atmost MAX_SEGMENTED_MESSAGES can be captured in interleaved manner
-        
+        char m_otaStmUri[512];
+        char m_otaEspUri[512];
+        char m_type1[8];
+        char m_type2[8];
+        char m_otaMsgId[32];
+        char m_otaMsgType[16];
+        char m_otaFwVer[16];
+        //char  m_accessToken = "Token";
+        char  fwBinFileName[32];        
 };
 
 

@@ -115,7 +115,8 @@ class IUESP8285 : public IUSerial, public Component
             { sendMSPCommand(MSPCommand::PUBLISH_FEATURE, features); }
         void publishDiagnostic(char *diagnotic)
             { sendMSPCommand(MSPCommand::PUBLISH_DIAGNOSTIC, diagnotic); }
-
+        // Reset last publication confirmation timer on establishing connection.
+        void m_setLastConfirmedPublication(void) { m_lastConfirmedPublication = millis();} 
     private:
         /***** Configuring the WiFi *****/
         char m_ssid[wifiCredentialLength];

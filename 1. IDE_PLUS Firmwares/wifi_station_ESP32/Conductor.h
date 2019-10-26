@@ -50,11 +50,14 @@ class Conductor
         static const uint32_t connectionTimeout = 30000;  // ms
         // Delay between 2 connection attemps
         static const uint32_t reconnectionInterval = 1000;  // ms
-        // ESP82 will deep-sleep after being disconnected for more than:
+        //ESP32 will deep-sleep after being disconnected for more than:
         static const uint32_t disconnectionTimeout = 100000;  // ms
         // Cyclic publication
         static const uint32_t wifiStatusUpdateDelay = 5000;  // ms
         static const uint32_t wifiInfoPublicationDelay = 300000;  // ms
+        // OTA Update in progress, timoue for packet ack from STM
+        static const uint32_t otaPktAckTimeout = 10000;  // ms
+        static const uint32_t otaPktReadTimeout = 2000; //ms;
         /***** Core *****/
         Conductor();
         virtual ~Conductor() {}
@@ -99,8 +102,8 @@ class Conductor
         void debugPrintWifiInfo();
         /***** get Device Firmware Versions ******/
         void getDeviceFirmwareVersion(char* destination,char* HOST_VERSION, const char* WIFI_VERSION);
-          
-        
+        bool getHttpData(bool otaDnldProgress);
+        void checkOtaPacketTimeout();       
 
     protected:
         /***** Config from Host *****/      
@@ -148,7 +151,17 @@ class Conductor
         const int samplingRateSize = 4;
         const int axisSize = 1; 
         double timestamp;
-
+        char otaStm_uri[512] = "http://iu-firmware.s3.ap-south-1.amazonaws.com/butterfly_firmware.ino.iap";
+        char otaEsp_uri[512] = "http://iu-firmware.s3.ap-south-1.amazonaws.com/WiFiClient.ino.bin";
+        char ota_uri[512];
+        char otaMqttBuff[256];
+        HTTPClient http_ota;
+        int contentLen = 0;
+        int fwdnldLen = 0;
+        uint32_t totlen = 0;
+        uint32_t pktWaitTimeStr = 0;
+        bool otaInProgress = false;
+        bool waitingForPktAck = false;
 };
 
 #endif // CONDUCTOR_H

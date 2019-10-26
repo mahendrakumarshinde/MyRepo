@@ -3,10 +3,11 @@
 #include "rBase64.h"
 #include "FFTConfiguration.h"
 #include "RawDataState.h"
+#include "IUOTA.h"
 #include <MemoryFree.h>
 #include "stm32l4_iap.h"
 extern "C" char FW_Valid_State;
-
+extern IUOTA iuOta;
 const char* fingerprintData;
 const char* fingerprints_X;
 const char* fingerprints_Y;
@@ -738,9 +739,166 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             if(m_streamingMode == StreamingMode::BLE && isBLEConnected()) { iuBluetooth.write("FFT_CFG_FAILURE;"); delay(100); }
         }
     } // If json is incorrect, it will result in parsing error in jsonBuffer.parseObject(json) which will cause the processConfiguration call to return
- 
+    Serial.println("Processing OTA Config");
+    // OTA configuration
+    //subConfig = root["otaConfig"];
+
+    subConfig = root["messageType"];
+    if (subConfig.success()) {
+        if(loopDebugMode) {
+            debugPrint("OTA configuration received: ", false);
+            subConfig.printTo(Serial); debugPrint("");
+        }
+
+        String msgType = root["messageType"];
+        strcpy(m_otaMsgType,msgType.c_str());
+        Serial.print("OTA Message Type:");
+        Serial.println(m_otaMsgType);
+        if(!(strcmp((const char *)m_otaMsgType,(const char *)"initiateota")))
+        {    
+            strcpy(m_otaMsgId,(const char*)root["messageId"]);
+            Serial.print("OTA Message ID:");
+            Serial.println(m_otaMsgId);
+            strcpy(m_otaFwVer,(const char*)root["fwVersion"]);
+            //static const char* fwVer = root["otaConfig"]["fwVersion"];
+            Serial.print("OTA FW Version:");
+            Serial.println(m_otaFwVer);
+
+    //     String test1 = root["otaConfig"]["supportedDeviceTypes"];
+        //    Serial.println(test1);
+
+            subConfig = root["fwBinaries"][0];
+            String fwType = subConfig["type"];
+            if(!(strcmp((const char *)fwType.c_str(),(const char *)"STM32")))
+            {
+                strcpy(m_type1,(const char*)fwType.c_str());
+                Serial.print("OTA Type:");
+                Serial.println(m_type1);
+                strcpy(m_otaStmUri,(const char*)subConfig["url"]);
+                Serial.print("OTA STM32 URI:");
+                Serial.println(m_otaStmUri);
+                static const char* stmHash = subConfig["hash"];
+                Serial.print("OTA STM32 Bin Hash:");
+                Serial.println(stmHash);
+            }
+            else if(!(strcmp((const char *)fwType.c_str(),(const char *)"ESP32")))
+            {
+                strcpy(m_type2,(const char*)fwType.c_str());
+                Serial.print("OTA Type:");
+                Serial.println(m_type2);
+                strcpy(m_otaEspUri,(const char*)subConfig["url"]);
+                Serial.print("OTA ESP32 URI:");
+                Serial.println(m_otaEspUri);
+                static const char* espHash = subConfig["hash"];
+                Serial.print("OTA ESP32 Bin Hash:");
+                Serial.println(espHash);
+            }
+
+            subConfig = root["fwBinaries"][1];
+            String fwType1 = subConfig["type"];
+            if(!(strcmp((const char *)fwType1.c_str(),(const char *)"STM32")))
+            {
+                strcpy(m_type1,(const char*)fwType1.c_str());
+                Serial.print("OTA Type:");
+                Serial.println(m_type1);
+                strcpy(m_otaStmUri,(const char*)subConfig["url"]);
+                Serial.print("OTA STM32 URI:");
+                Serial.println(m_otaStmUri);
+                static const char* stmHash = subConfig["hash"];
+                Serial.print("OTA STM32 Bin Hash:");
+                Serial.println(stmHash);
+            }
+            else if(!(strcmp((const char *)fwType1.c_str(),(const char *)"ESP32")))
+            {
+                strcpy(m_type2,(const char*)fwType1.c_str());
+                Serial.print("OTA Type:");
+                Serial.println(m_type2);
+                strcpy(m_otaEspUri,(const char*)subConfig["url"]);
+                Serial.print("OTA ESP32 URI:");
+                Serial.println(m_otaEspUri);
+                static const char* espHash = subConfig["hash"];
+                Serial.print("OTA ESP32 Bin Hash:");
+                Serial.println(espHash);
+            }
+
+            if((!(strcmp(m_type1,"STM32"))) && (!(strcmp(m_type2,"ESP32"))))
+            {
+                if(saveToFlash) {
+                    subConfig = root;
+                    // Check if the config is new, then save to file and reset
+                    iuFlash.saveConfigJson(IUFlash::CFG_OTA, subConfig);
+                    if(loopDebugMode) 
+                        debugPrint("Saved OTA configuration to file");
+                }
+                changeUsageMode(UsageMode::OTA);
+                Serial.println("Changed Device mode: OTA");
+                delay(1);
+                iuWiFi.sendLongMSPCommand(MSPCommand::SET_OTA_STM_URI,300000,m_otaStmUri,512);
+                delay(1);
+                iuWiFi.sendLongMSPCommand(MSPCommand::SET_OTA_ESP_URI,300000,m_otaEspUri,512); 
+                delay(1);
+                Serial.println("Sending INIT_ACK");
+            // iuWiFi.sendMSPCommand(MSPCommand::OTA_INIT_ACK,otaResponse);
+                double otaInitTimeStamp = conductor.getDatetime();
+                char otaResponse[256];
+                snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
+                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-INIT-ACK", "0" ,otaInitTimeStamp);
+                iuOta.otaSendResponse(MSPCommand::OTA_INIT_ACK, otaResponse);
+                delay(1);
+                strcpy(fwBinFileName, "butterfly_firmware.bin");
+                iuOta.otaFileRemove(iuFlash.IUFWMAINIMG_SUBDIR,"butterfly_firmware.bin");
+                snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
+                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-FDW-START", "0" ,otaInitTimeStamp);
+                delay(1);
+                iuOta.otaSendResponse(MSPCommand::OTA_FDW_START, otaResponse);
+                otaFwdnldTmout = millis();
+                waitingDnldStrart = true;
+             //   iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWMAINIMG_SUBDIR);
+            }
+        }
+    }
     return true;
 }
+
+/*
+ * Read the OTA Configutation details
+ * 
+ */
+ void Conductor::configureOTAServer(String filename){
+  // Open the configuration file
+
+  File myFile = DOSFS.open(filename,"r");
+
+  StaticJsonBuffer<512> jsonBuffer;
+  // Parse the root object
+  JsonObject &root = jsonBuffer.parseObject(myFile);
+  if (!root.success()){
+      Serial.println("OTA Partse Failed !!");
+  }
+ else {  
+    String msgId = root["otaconfig"]["messageId"];
+    Serial.print("OTA Message ID:");
+    Serial.println(msgId);
+    String fwVer = root["otaconfig"]["fwVersion"];
+    Serial.print("OTA FW Version:");
+    Serial.println(fwVer);
+    String fwVer1 = root["otaconfig"]["fwBinaries"];
+    Serial.print("OTA FW Binaries:");
+    Serial.println(fwVer1);
+    String fwVer2 = root["fwBinaries"]["stmUri"];
+    Serial.print("OTA STM URI:");
+    Serial.println(fwVer2);
+    String fwVer3 = root["fwBinaries"]["espUri"];
+    Serial.print("OTA ESP URI:");
+    Serial.println(fwVer3);
+
+    String fwVer4 = root["otaconfig"]["accesstoken"];
+    Serial.print("OTA Access Token:");
+    Serial.println(fwVer4);
+ }
+  myFile.close(); 
+}
+
 
 /*
  * Read the MQTT Configutation details
@@ -1001,6 +1159,24 @@ void Conductor::configureMainOptions(JsonVariant &config)
         m_mainFeatureGroup->setDataSendPeriod(value.as<uint16_t>());
         // NOTE: Older firmware device will not set this parameter even if configJson contains it.
 }
+}
+
+/**
+ * OTA configuration
+ *
+ * @return True if the configuration is valid, else false.
+ */
+void Conductor::configureOta(JsonVariant &config)
+{
+    Serial.println("configOta()");
+    JsonVariant value = config["messageId"];
+    if (value.success()) {
+        Serial.println((uint32_t) (value.as<int>()));
+    }
+    value = config["fwVersion"];
+    if (value.success()) {
+        Serial.println("FW Ver OK");
+    }
 }
 
 /**
@@ -1571,6 +1747,9 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuAccelerometer.setSamplingRate(samplingRate);
                 }
                 break;
+            case UsageMode::OTA:
+                Serial.println("Usage Mode: OTA");
+                break;
             default:
                 if (loopDebugMode) {
                     debugPrint(F("Unhandled usage mode: "), false);
@@ -1653,6 +1832,7 @@ void Conductor::processBLEMessage(IUSerial *iuSerial)
 void Conductor::processWiFiMessage(IUSerial *iuSerial)
 {
     char *buff = iuSerial->getBuffer();
+    uint16_t packetLen =  iuSerial->mspGetDataSize();
     if (buff[0] == '{')
     {
         processConfiguration(buff,true);    //save the configuration into the file
@@ -1685,13 +1865,76 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
         processLegacyCommand(buff);
     }
     uint8_t idx = 0;
+    char otaResponse[256];
+    double otaInitTimeStamp;
     switch (iuWiFi.getMspCommand()) {
         case MSPCommand::ESP_DEBUG_TO_STM_HOST:
             Serial.write(buff);
             Serial.write('\n');
             break;
+        case MSPCommand::OTA_STM_DNLD_STS:
+            Serial.println("STM FW Download Completed !");
+            delay(1);
+            iuWiFi.sendMSPCommand(MSPCommand::OTA_STM_DNLD_OK);
+            waitingDnldStrart = false;
+            strcpy(fwBinFileName, "WiFiClient.bin");
+            iuOta.otaFileRemove(iuFlash.IUFWMAINIMG_SUBDIR,"WiFiClient.bin");
+            break;
+        case MSPCommand::OTA_DNLD_FAIL:
+            Serial.println("OTA FW Download Failed !");
+            Serial.println(buff);
+            delay(1);
+            waitingDnldStrart = false;
+            otaInitTimeStamp = conductor.getDatetime();            
+            snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
+            m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", buff ,otaInitTimeStamp);
+            iuOta.otaSendResponse(MSPCommand::OTA_FDW_ABORT, otaResponse);
+            iuWiFi.m_setLastConfirmedPublication();
+            changeUsageMode(UsageMode::OPERATION);
+            delay(100); 
+            break;
+        case MSPCommand::OTA_ESP_DNLD_STS:
+            Serial.println("ESP FW Download Completed !");
+            iuWiFi.sendMSPCommand(MSPCommand::OTA_ESP_DNLD_OK);
+            waitingDnldStrart = false;
+            delay(1);
+            otaInitTimeStamp = conductor.getDatetime();            
+            snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
+            m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-FDW-SUCCESS", "0" ,otaInitTimeStamp);
+            iuOta.otaSendResponse(MSPCommand::OTA_FDW_SUCCESS, otaResponse);
+            delay(10);
+            Serial.println("File Download Completed");
+            iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWMAINIMG_SUBDIR,"butterfly_firmware.bin");
+            iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWMAINIMG_SUBDIR,"WiFiClient.bin");
+            delay(10);
+            iuWiFi.m_setLastConfirmedPublication();
+            changeUsageMode(UsageMode::OPERATION);
+            delay(100);   
+            break;
+        case MSPCommand::OTA_PACKET_DATA:
+         //   Serial.print("Packet Data Len:");
+          //  Serial.println(packetLen);
+          //  Serial.println("Packet Data:");
+          //  Serial.print(buff);
+          //  Serial.write('\n');
+            waitingDnldStrart = false;
+            if(iuOta.otaFwBinWrite(iuFlash.IUFWMAINIMG_SUBDIR,fwBinFileName, buff, packetLen))
+                iuWiFi.sendMSPCommand(MSPCommand::OTA_PACKET_ACK);
+            else
+            { // Fw File write failed... Abort OTA
+                waitingDnldStrart = false;
+                otaInitTimeStamp = conductor.getDatetime();            
+                snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
+                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", "FW_FILE_WRITE_FAIL" ,otaInitTimeStamp);
+                iuOta.otaSendResponse(MSPCommand::OTA_FDW_ABORT, otaResponse);
+                iuWiFi.m_setLastConfirmedPublication();
+                changeUsageMode(UsageMode::OPERATION);
+                delay(100);         
+            }
+            break;
         // MSP Status messages
         case MSPCommand::MSP_INVALID_CHECKSUM:
+            Serial.println("Invalid Checksum");
             if (loopDebugMode) { debugPrint(F("MSP_INVALID_CHECKSUM")); }
             break;
         case MSPCommand::MSP_TOO_LONG:
@@ -1701,7 +1944,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             if (loopDebugMode) { debugPrint(F("RECEIVE_WIFI_FV")); }
             strncpy(iuWiFi.espFirmwareVersion, buff, 6);
             iuWiFi.espFirmwareVersionReceived = true;
-        }
+            }
+        break;
         case MSPCommand::ASK_BLE_MAC:
             if (loopDebugMode) { debugPrint(F("ASK_BLE_MAC")); }
             iuWiFi.sendBleMacAddress(m_macAddress);
@@ -2226,6 +2470,9 @@ void Conductor::updateStreamingMode()
                  newMode = StreamingMode::ETHERNET;  //Wifi is not connected but found ethernet MAC ID
              }
             break;
+        case UsageMode::OTA: // During OTA, no streaming
+            newMode = StreamingMode::NONE;
+            break;
     }
     if (m_streamingMode == newMode) {
         // char streaming_mode_string[10];
@@ -2302,6 +2549,13 @@ void Conductor::changeUsageMode(UsageMode::option usage)
     if (m_usageMode == usage) {
         return; // Nothing to do
     }
+    if(m_usageMode == UsageMode::OTA && usage != UsageMode::OPERATION)
+    {
+        if (loopDebugMode) {
+            debugPrint(F("Except OPERATION, No other mode is allowed during OTA"));
+        }
+        return; // Nothing to do
+    }
     m_usageMode = usage;
     String msg;
     switch (m_usageMode) {
@@ -2327,6 +2581,10 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             //iuAccelerometer.resetScale();
             msg = "custom";
             break;        
+        case UsageMode::OTA:
+            ledManager.overrideColor(RGB_CYAN);
+            msg = "ota";
+            break;
         default:
             if (loopDebugMode) {
                 debugPrint(F("Invalid usage mode preset"));
@@ -2426,6 +2684,10 @@ void Conductor::acquireData(bool inCallback)
        }
             
         force = true;
+    }
+
+    if (m_usageMode == UsageMode::OTA) {
+  //      m_acquisitionMode = AcquisitionMode::NONE;
     }
 
     // CUSTOM Mode
@@ -3646,6 +3908,35 @@ bool Conductor::setEthernetConfig(char* filename){
 
     return false;
 }
+
+/**
+ *
+ */
+void Conductor::otaChkFwdnldTmout()
+{
+    uint32_t now = millis();
+    if (waitingDnldStrart == true)
+    {
+        if (now - otaFwdnldTmout > fwDnldStartTmout)
+        {
+            waitingDnldStrart = false;
+            char otaResponse[256];
+            double otaInitTimeStamp;
+            otaInitTimeStamp = conductor.getDatetime();            
+            snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
+            m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", "FW_DNLD_WAIT_TMOUT" ,otaInitTimeStamp);
+            iuOta.otaSendResponse(MSPCommand::OTA_FDW_ABORT, otaResponse);
+            iuWiFi.m_setLastConfirmedPublication();
+            changeUsageMode(UsageMode::OPERATION);
+            delay(100);
+            if (debugMode)
+            {
+                debugPrint("Exceeded OTA download start time-out");
+            }
+        }
+    }
+}
+
 uint32_t Conductor::firmwareValidation()
 {
     File ValidationFile;

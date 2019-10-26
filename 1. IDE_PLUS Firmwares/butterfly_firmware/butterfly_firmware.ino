@@ -175,13 +175,16 @@ static void watchdogCallback(void) {
     {
         STM32.reset();
     }
-    if (iuWiFi.arePublicationsFailing()) {
-        //Ensure your PubSubClient Arduino library version is 2.7
-        debugPrint("Publications are failing: hard resetting now.");
-        if(conductor.isBLEConnected()) {
-           iuBluetooth.write("WIFI-DISCONNECTED;");
+    if(conductor.getUsageMode() != UsageMode::OTA) {
+        if (iuWiFi.arePublicationsFailing()) {
+            //Ensure your PubSubClient Arduino library version is 2.7
+            debugPrint("Publications are failing: hard resetting now.");
+            if(conductor.isBLEConnected()) {
+            iuBluetooth.write("WIFI-DISCONNECTED;");
+            }
+            Serial.println("Publications are failing: hard resetting now.");
+            iuWiFi.hardReset();
         }
-        iuWiFi.hardReset();
     }
     armv7m_timer_start(&watchdogTimer, 1000);
 }
@@ -200,7 +203,7 @@ static void bleTransmitCallback(void) {
     armv7m_timer_start(&bleTransmitTimer, 5);
 }
 
-
+#if 0
 /* =============================================================================
  *  Read HTTP pending config messages using timer
  * ============================================================================*/
@@ -213,7 +216,7 @@ static void httpConfigCallback(void) {
     iuWiFi.sendMSPCommand(MSPCommand::GET_PENDING_HTTP_CONFIG);
     armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min  180000
 }
-
+#endif
 /* ================================================================================
  * Ethernet Status Timer callback
  * ===============================================================================*/
@@ -673,25 +676,28 @@ void loop()
         }else {
             iuEthernet.readMessages();
         }
-        // Manage WiFi autosleep
-        iuWiFi.manageAutoSleep();
-        // Acquire data from sensors
-        conductor.acquireData(false);
-        // Compute features depending on operation mode
-        conductor.computeFeatures();
-        // Stream features
-        conductor.streamFeatures();
-        // Send accel raw data
-        conductor.periodicSendAccelRawData();
-        // Send config checksum
-        conductor.periodicSendConfigChecksum();
-        ledManager.updateColors();
+        if(conductor.getUsageMode() != UsageMode::OTA) {
+            // Manage WiFi autosleep
+            iuWiFi.manageAutoSleep();
+            // Acquire data from sensors
+            conductor.acquireData(false);
+            // Compute features depending on operation mode
+            conductor.computeFeatures();
+            // Stream features
+            conductor.streamFeatures();
+            // Send accel raw data
+            conductor.periodicSendAccelRawData();
+            // Send config checksum
+            conductor.periodicSendConfigChecksum();
+            ledManager.updateColors();
+        }
         uint32_t now = millis();
         if (now - lastDone > interval) {
             lastDone = now;
             /* === Place your code to excute at fixed interval here ===*/
             conductor.streamMCUUInfo(iuWiFi.port);
             /*======*/
+            //    Serial.println("Usage Mode:" + String(conductor.getUsageMode()));
         }
 
         if (millis() - conductor.lastTimeSync > conductor.m_connectionTimeout ) {
@@ -719,10 +725,14 @@ void loop()
 
         // Clean timed out segmented messages
         conductor.cleanTimedoutSegmentedMessages();
-
-        // Manage raw data sending depending on RawDataState::startRawDataTransmission and RawDataState::rawDataTransmissionInProgress
-        conductor.manageRawDataSending();
-#if 1 // FW Validation
+        if(conductor.getUsageMode() != UsageMode::OTA) {
+            // Manage raw data sending depending on RawDataState::startRawDataTransmission and RawDataState::rawDataTransmissionInProgress
+            conductor.manageRawDataSending();
+        }
+        if(conductor.getUsageMode() == UsageMode::OTA) {
+            conductor.otaChkFwdnldTmout();
+        }
+#if 0 // FW Validation
         if(doOnceFWValid == true)
         {
             if((FWValidCnt % 2000) == 0 && FWValidCnt > 0)
