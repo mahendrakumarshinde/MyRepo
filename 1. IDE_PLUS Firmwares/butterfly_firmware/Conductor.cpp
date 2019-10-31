@@ -3057,10 +3057,10 @@ bool Conductor::setFFTParams() {
     if(config.success()) {
         FFTConfiguration::currentSamplingRate = config["samplingRate"];
         FFTConfiguration::currentBlockSize = config["blockSize"];
-        FFTConfiguration::currentSensor = config["sensor"];
+        //FFTConfiguration::currentSensor = config["sensor"];
         for (int i=0;i<FFTConfiguration::LSMsamplingRateOption;i++)
         {
-            if (FFTConfiguration::currentSamplingRate == FFTConfiguration::samplingRates[i] && FFTConfiguration::currentSensor == 0)
+            if (FFTConfiguration::currentSamplingRate == FFTConfiguration::samplingRates[i])
             {
                 FFTConfiguration::currentSensor = FFTConfiguration::lsmSensor;
             }
@@ -3068,7 +3068,7 @@ bool Conductor::setFFTParams() {
 
         for (int i=0;i<FFTConfiguration::KNXsamplingRateOption;i++)
         {
-            if (FFTConfiguration::currentSamplingRate == FFTConfiguration::samplingRates2[i] && FFTConfiguration::currentSensor == 1)
+            if (FFTConfiguration::currentSamplingRate == FFTConfiguration::samplingRates2[i])
             {
                 FFTConfiguration::currentSensor = FFTConfiguration::kionixSensor;
             }
