@@ -6,6 +6,12 @@
 #include "IUI2C.h"
 #include "FeatureUtilities.h"
 
+#define TEMP_COEFFICIENT 0.0078125
+#define MIN_TEMP_RANGE -55.00
+#define MAX_TEMP_RANGE 125.00
+
+#define DEFAULT_MAX_TEMP 45.00
+#define DEFAULT_MIN_TEMP 20.00
 
 class IUTMP116 : public LowFreqSensor
 {
@@ -19,35 +25,56 @@ class IUTMP116 : public LowFreqSensor
         static const uint8_t EEPROM_UL        = 0x04;           // EEPROM unlock register
         static const uint8_t DEVICE_ID        = 0x0F;           // Device ID register
 
-        const uint8_t highlimH = B00001101;            // High byte of high lim
-        const uint8_t highlimL = B10000000;            // Low byte of high lim  - High 27 C
-        const uint8_t lowlimH  = B00001100;            // High byte of low lim
-        const uint8_t lowlimL  = B00000000;            // Low byte of low lim   - Low 24 C
+	enum mode { CONTINOUS_CONVERSION,   /*MOD 00:Continous conversion(CC)*/
+            	SHUTDOWN,               /*01:Shutdown(SD)*/
+            	CONTINOUS_CONVERSION1,  /*10:reads back same as 00*/
+            	ONE_SHOT_CONVERSION };  /*11:One-shot conversion (OS)*/
+				                        // One_shot_conversion mode is not working right now.
+
+	enum conversion { CONV_0,   /*CONV 0: afap*/
+					  CONV_1,   /*CONV 1: 0.125s*/
+					  CONV_2,   /*CONV 2: 0.250s*/
+					  CONV_3,   /*CONV 3: 0.500s*/
+					  CONV_4,   /*CONV 4: 1s*/
+					  CONV_5,   /*CONV 5: 4s*/
+					  CONV_6,   /*CONV 6: 8s*/
+					  CONV_7 }; /*CONV 7: 16s*/
+
+	enum average { AVG_0,   /*AVG 0: no_avg (15.5ms)*/
+				   AVG_1,   /*AVG 1: 8 avg(125ms)*/
+				   AVG_2,   /*AVG 2: 32 avg(500ms)*/
+				   AVG_3 }; /*AVG 3: 64 avg(1000ms)*/
         
-        IUTMP116(IUI2C *iuI2C, const char* name,
+    IUTMP116(IUI2C *iuI2C, const char* name,
                     void (*i2cReadCallback)(uint8_t wireStatus),
                     FeatureTemplate<float> *temperature);
-        virtual ~IUTMP116() {}
+    virtual ~IUTMP116() {}
 
-        virtual void setupHardware();
-        virtual void setPowerMode(PowerMode::option pMode);
-        virtual void setTempHighLimit();
-        virtual void setTempLowLimit();
+	virtual void setupHardware();
+    void setPowerMode(PowerMode::option pMode);
+    void setTempLimit(uint8_t reg, float value);
+    void setWorkingMode(uint8_t mod, uint8_t conv, uint8_t avg);
+    void processTemperatureData(uint8_t wireStatus);
+    float getTemperature() { return m_temperature; }
+	bool getHighAlert() { return high_alert; }
+	bool getLowAlert() { return low_alert; }
 
-        void processTemperatureData(uint8_t wireStatus);
-        float getTemperature() { return m_temperature; }
-
-        virtual void readData();
-        void sendData(HardwareSerial *port);
-        float getData(HardwareSerial *port);
+	virtual void readData();
+	uint16_t ReadConfigReg();
+    void sendData(HardwareSerial *port);
+    float getData(HardwareSerial *port);
 
 	protected:
         /***** Core *****/
         IUI2C *m_iuI2C;
- //       uint8_t m_powerByte;
+        uint8_t m_powerByte;
         void (*m_readCallback)(uint8_t wireStatus);
         float m_temperature;                      // Temperature in degree Celsius
-        uint8_t m_rawBytes[2];                // 16-bit temperature data from register 
+        uint8_t m_rawBytes[2];                // 16-bit temperature data from register
+        uint8_t m_rawConfigBytes[2];          // 16-bit Config register data
+        bool high_alert = false;
+        bool low_alert = false;
+        uint16_t config_reg;
 };
 
 #endif

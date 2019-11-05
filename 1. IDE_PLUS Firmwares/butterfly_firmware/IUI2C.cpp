@@ -53,29 +53,6 @@ bool IUI2C::writeByte(uint8_t address, uint8_t subAddress, uint8_t data)
 }
 
 /**
- * Write 2 bytes to given address and sub-address
- */
-bool IUI2C::writeBytes(uint8_t address, uint8_t subAddress, uint8_t dataH,  uint8_t dataL)
-{
-    uint8_t temp[3];
-    temp[0] = subAddress;
-    temp[1] = dataH;
-    temp[2] = dataL;   
-    byte errorCode = Wire.transfer(address, &temp[0], 3, NULL, 0);
-    if (errorCode != 0x00)
-    {
-        m_errorFlag = true;
-        if (debugMode)
-        {
-            debugPrint("I2C error Code:", false);
-            debugPrint(errorCode);
-        }
-        return false;
-    }
-    return true;
-}
-
-/**
  * Write a byte to given address and sub-address
  */
 bool IUI2C::writeByte(uint8_t address, uint8_t subAddress, uint8_t data,
@@ -90,6 +67,28 @@ bool IUI2C::writeByte(uint8_t address, uint8_t subAddress, uint8_t data,
         if (asyncDebugMode)
         {
             debugPrint(F("I2C error"));
+        }
+    }
+    return success;
+}
+
+/**
+ * Write a word data to given address and sub-address
+ */
+
+bool IUI2C::writeWord(uint8_t address, uint8_t subAddress, uint16_t data)
+{ 
+    uint8_t temp[3];
+    temp[0] = subAddress;
+    temp[1] = (byte) ( data >> 8 ) & 0xFF;
+    temp[2] = (byte) data & 0xFF;
+    
+    bool success = Wire.transfer(address, &temp[0], 3, NULL, 0);
+    if (!success)
+    {
+        if (asyncDebugMode)
+        {
+            debugPrint(F("I2C Temperature Limit set error"));
         }
     }
     return success;
@@ -167,6 +166,32 @@ bool IUI2C::readBytes(uint8_t address, uint8_t subAddress, uint8_t count,
         }
         return false;
     }
+    return true;
+}
+
+/**
+ * Read a word data from given address, subaddress regsiter 
+ *
+ * @param address Where to read the byte from
+ * @param subAddress Where to read the byte from
+ * @param readValue read register data
+ */
+
+bool IUI2C::readWord(uint8_t address, uint8_t subAddress,uint16_t *readValue)
+{
+    uint8_t temp[2];
+    byte errorCode = Wire.transfer(address, &subAddress, 2, &temp[0], 2);
+    if (isError())
+    {
+        m_errorFlag = true;
+        if (debugMode)
+        {
+            debugPrint("I2C error code:", false);
+            debugPrint(errorCode);
+        }
+        return false;
+    }
+    *readValue  = ((temp[0]) << 8 | temp[1]);
     return true;
 }
 

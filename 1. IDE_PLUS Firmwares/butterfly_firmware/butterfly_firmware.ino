@@ -110,9 +110,6 @@ float audioHigherCutoff = 160.0;
 
 /***** Debbugging variables *****/
 
-bool doOnceFWValid = true;
-int FWValidCnt = 0;
-char FW_Valid_State = 0;
 
 bool doOnce = true;
 uint32_t interval = 30000;
@@ -200,7 +197,7 @@ static void bleTransmitCallback(void) {
     armv7m_timer_start(&bleTransmitTimer, 5);
 }
 
-
+#if 0
 /* =============================================================================
  *  Read HTTP pending config messages using timer
  * ============================================================================*/
@@ -213,7 +210,7 @@ static void httpConfigCallback(void) {
     iuWiFi.sendMSPCommand(MSPCommand::GET_PENDING_HTTP_CONFIG);
     armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min  180000
 }
-
+#endif
 /* ================================================================================
  * Ethernet Status Timer callback
  * ===============================================================================*/
@@ -722,27 +719,6 @@ void loop()
 
         // Manage raw data sending depending on RawDataState::startRawDataTransmission and RawDataState::rawDataTransmissionInProgress
         conductor.manageRawDataSending();
-#if 1 // FW Validation
-        if(doOnceFWValid == true)
-        {
-            if((FWValidCnt % 2000) == 0 && FWValidCnt > 0)
-            {
-                uint32_t ret = 0;
-                ret = conductor.firmwareValidation();
-                if(ret != 0)
-                {// Waiting for WiFi Disconnect/Connect Cycle.
-                    doOnceFWValid = true;
-                    FWValidCnt = 1;                    
-                }
-                else if(ret == 0)
-                    doOnceFWValid = false;
-            }
-            else
-            {
-                FWValidCnt++;
-            }                  
-        }
-#endif
         yield();
        
     #endif
