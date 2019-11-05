@@ -9,7 +9,7 @@ extern UART_HandleTypeDef huart3;
 
 /* Timeout for HAL. */
 #define UART_TIMEOUT ((uint16_t)1000u)
-#define DEBUG_UART huart3
+#define DEBUG_UART huart5	//
 
 /* Status report for the functions. */
 typedef enum {
