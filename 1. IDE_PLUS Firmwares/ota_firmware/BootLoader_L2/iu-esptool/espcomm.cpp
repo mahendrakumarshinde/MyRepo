@@ -1,10 +1,10 @@
-/****************************************************************************
+  /****************************************************************************
  ***
  ***    espcomm.c
  ***    - routines to access the bootloader in the ESP
  ***
  **/
-//#include <FS.h>
+#include "FS.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -22,7 +22,9 @@
 #include "espcomm_boards.h"
 //#include "delay.h"
 #include "HardwareSerial.h"
-#include "Arduino.h"
+#include <Arduino.h>
+#include "stm32l4_flash.h"
+#include "stm32l4_wiring_private.h"
 
 
 
@@ -103,7 +105,7 @@ static uint32_t espcomm_send_command(unsigned char command, unsigned char *data,
 	if (command != NO_COMMAND) {
 		send_packet.direction = 0x00;
 		send_packet.command = command;
-		send_packet.size = data_size;
+		send_packet.size_f = data_size;
 
 		serialport_send_C0();
 
@@ -142,25 +144,26 @@ static uint32_t espcomm_send_command(unsigned char command, unsigned char *data,
 			serialport_set_timeout(old_timeout);
 
 		if (serialport_receive_slip((unsigned char*) &receive_packet, 8)) {
-			if (receive_packet.size) {
+			if (receive_packet.size_f) {
 				if (!upload_stage)
-					LOGDEBUG("espcomm_send_command: receiving %i bytes of data", receive_packet.size);
+					LOGDEBUG("espcomm_send_command: receiving %i bytes of data", receive_packet.size_f);
 				else
-					LOGVERBOSE("espcomm_send_command: receiving %i bytes of data", receive_packet.size);
+					LOGVERBOSE("espcomm_send_command: receiving %i bytes of data", receive_packet.size_f);
 
 				if (receive_packet.data) {
 					free(receive_packet.data);
 					receive_packet.data = NULL;
 				}
 
-				receive_packet.data = (unsigned char *)malloc(receive_packet.size);
+				receive_packet.data = (unsigned char *)malloc(receive_packet.size_f);
 
-				if (serialport_receive_slip(receive_packet.data, receive_packet.size) == 0) {
+				if (serialport_receive_slip(receive_packet.data, receive_packet.size_f) == 0) {
 					LOGWARN("espcomm_send_command: can't receive slip payload data");
+         Serial.println("espcomm_send_command: can't receive slip payload data");
 					return 0;
 				} else {
-					LOGVERBOSE("espcomm_send_command: received %x bytes: ", receive_packet.size);
-					for (cnt = 0; cnt < receive_packet.size; cnt++) {
+					LOGVERBOSE("espcomm_send_command: received %x bytes: ", receive_packet.size_f);
+					for (cnt = 0; cnt < receive_packet.size_f; cnt++) {
 						LOGVERBOSE("0x%02X ", receive_packet.data[cnt]);
 					}
 				}
@@ -173,6 +176,7 @@ static uint32_t espcomm_send_command(unsigned char command, unsigned char *data,
 				} else {
 					LOGWARN("espcomm_send_command: wrong direction/command: 0x%02X 0x%02X, expected 0x%02X 0x%02X",
 						receive_packet.direction, receive_packet.command, 1, command);
+            Serial.println("espcomm_send_command: wrong direction/command:");
 					return 0;
 				}
 			} else {
@@ -180,10 +184,12 @@ static uint32_t espcomm_send_command(unsigned char command, unsigned char *data,
 					LOGWARN("espcomm_send_command: no final C0");
 				else
 					LOGVERBOSE("espcomm_send_command: no final C0");
+          Serial.println("espcomm_send_command: no final C0");
 				return 0;
 			}
 		} else {
 			LOGWARN("espcomm_send_command: can't receive command response header");
+     Serial.println("espcomm_send_command: can't receive command response header");
 			return 0;
 		}
 	} else {
@@ -194,6 +200,7 @@ static uint32_t espcomm_send_command(unsigned char command, unsigned char *data,
 			LOGWARN("espcomm_send_command: didn't receive command response");
 		else
 			LOGVERBOSE("espcomm_send_command: didn't receive command response");
+      Serial.println("espcomm_send_command: didn't receive command response");
 		return 0;
 	}
 
@@ -279,7 +286,7 @@ int espcomm_set_flash_params(uint32_t device_id, uint32_t chip_size,
 int espcomm_start_flash(uint32_t size, uint32_t address)
 {
 	uint32_t res;
-
+  Serial.println("inside espcomm start flash");
 	LOGDEBUG("size: %06x address: %06x", size, address);
 
 	uint32_t min_chip_size = size + address;
@@ -349,29 +356,33 @@ int espcomm_start_flash(uint32_t size, uint32_t address)
 	return res;
 }
 
-bool espcomm_upload_mem(uint8_t* src, size_t size, const char* source_name)
+bool espcomm_upload_mem(uint8_t* src, size_t size_f, const char* source_name)
 {
 	//LOGDEBUG("espcomm_upload_mem");
-	if (!espcomm_open()) {
-		//LOGERR("espcomm_open failed");
-		return false;
-	}
+//	if (!espcomm_open()) {
+//		LOGERR("espcomm_open failed");
+//		return false;
+//	}
 
-	//INFO("Uploading %i bytes from %s to flash at 0x%08X\n", size, source_name, espcomm_address);
+	Serial.print("Uploading bytes from to flash\n");
+  Serial.print(size_f);
+  Serial.println(source_name);
 	//LOGDEBUG("erasing flash");
-	int res = espcomm_start_flash(size, espcomm_address);
+	int res = espcomm_start_flash(size_f, espcomm_address);
+ Serial.print("returning from espcomm_start_flash_ with res :");
+ Serial.println(res);
 	if (res == 0) {
-		//LOGWARN("espcomm_send_command(FLASH_DOWNLOAD_BEGIN) failed");
+		LOGWARN("espcomm_send_command(FLASH_DOWNLOAD_BEGIN) failed");
 		espcomm_close();
 		return false;
 	}
 
 	//LOGDEBUG("writing flash");
 	upload_stage = true;
-	size_t total_count = (size + BLOCKSIZE_FLASH - 1) / BLOCKSIZE_FLASH;
+	size_t total_count = (size_f + BLOCKSIZE_FLASH - 1) / BLOCKSIZE_FLASH;
 	size_t count = 0;
 
-	while(size) {
+	while(size_f) {
 		flash_packet[0] = BLOCKSIZE_FLASH;
 		flash_packet[1] = count;
 		flash_packet[2] = 0;
@@ -379,14 +390,15 @@ bool espcomm_upload_mem(uint8_t* src, size_t size, const char* source_name)
 
 		memset(flash_packet + 4, 0xff, BLOCKSIZE_FLASH);
 
-		size_t write_size = (size < BLOCKSIZE_FLASH)?size:BLOCKSIZE_FLASH;
+		size_t write_size = (size_f < BLOCKSIZE_FLASH)?size_f:BLOCKSIZE_FLASH;
 		memcpy(flash_packet + 4, src, write_size);
-		size -= write_size;
+		size_f -= write_size;
 		src += write_size;
 
 		send_packet.checksum = espcomm_calc_checksum((unsigned char *) (flash_packet + 4), BLOCKSIZE_FLASH);
 		res = espcomm_send_command(FLASH_DOWNLOAD_DATA, (unsigned char*) flash_packet, BLOCKSIZE_FLASH + 16, 0);
-
+    Serial.print("res :");
+    Serial.println(res);
 		if (res == 0) {
 			//LOGWARN("espcomm_send_command(FLASH_DOWNLOAD_DATA) failed");
 			res = espcomm_send_command(FLASH_DOWNLOAD_DONE, (unsigned char*) flash_packet, 4, 0);
@@ -413,7 +425,7 @@ bool espcomm_upload_mem(uint8_t* src, size_t size, const char* source_name)
 	return true;
 }
 
-bool espcomm_upload_mem_to_RAM(uint8_t* src, size_t size, int address, int entry)
+bool espcomm_upload_mem_to_RAM(uint8_t* src, size_t size_f, int address, int entry)
 {
 	//LOGDEBUG("espcomm_upload_mem_to_RAM");
 	if (!espcomm_open()) {
@@ -423,7 +435,7 @@ bool espcomm_upload_mem_to_RAM(uint8_t* src, size_t size, int address, int entry
 
 	//INFO("Uploading %i bytes to RAM at 0x%08X\n", size, address);
 
-	ram_packet[0] = size;
+	ram_packet[0] = size_f;
 	ram_packet[1] = 0x00000200;
 	ram_packet[2] = BLOCKSIZE_RAM;
 	ram_packet[3] = address;
@@ -441,8 +453,8 @@ bool espcomm_upload_mem_to_RAM(uint8_t* src, size_t size, int address, int entry
 
 	size_t count = 0;
 
-	while (size) {
-		size_t will_write = (size < BLOCKSIZE_RAM)?size:BLOCKSIZE_RAM;
+	while (size_f) {
+		size_t will_write = (size_f < BLOCKSIZE_RAM)?size_f:BLOCKSIZE_RAM;
 
 		will_write = (will_write + 3) & (~3);
 
@@ -453,10 +465,10 @@ bool espcomm_upload_mem_to_RAM(uint8_t* src, size_t size, int address, int entry
 
 		memset(ram_packet + 4, 0xff, BLOCKSIZE_RAM);
 
-		size_t write_size = (size < BLOCKSIZE_RAM)?size:BLOCKSIZE_RAM;
+		size_t write_size = (size_f < BLOCKSIZE_RAM)?size_f:BLOCKSIZE_RAM;
 
 		memcpy(ram_packet + 4, src, write_size);
-		size -= write_size;
+		size_f -= write_size;
 		src += write_size;
 
 		send_packet.checksum = espcomm_calc_checksum((unsigned char *) (ram_packet + 4), will_write);
@@ -481,50 +493,67 @@ bool espcomm_upload_mem_to_RAM(uint8_t* src, size_t size, int address, int entry
 	return true;
 }
 
-bool espcomm_upload_file(const char *name)
+bool espcomm_upload_file(const char *name_f)
 {
-	//LOGDEBUG("espcomm_upload_file");
-	struct stat st;
-
-	if (stat(name, &st) != 0) {
+	LOGDEBUG("espcomm_upload_file");
+//	struct stat st;
+//
+//	if (stat(name_f, &st) != 0) {
 //		LOGERR("stat %s failed: %s", name, strerror(errno));
-		//LOGERR("stat %s failed", name);
-		return false;
-	}
+//		LOGERR("stat %s failed", name);
+//		return false;
+//	}
 
-	FILE* f = fopen(name, "rb");
-
+	File f = DOSFS.open(name_f,"r");
+  
+  
+	
 	if (!f) {
-		//LOGERR("failed to open file for reading");
+    Serial.println("failed to open file for reading");
+		LOGERR("failed to open file for reading");
 		return false;
 	}
-
-	uint8_t* file_contents = (uint8_t*) malloc(st.st_size);
+  uint16_t file_size = f.size();
+  
+	uint8_t* file_contents = (uint8_t*) malloc(file_size);
 
 	if (!file_contents) {
+    Serial.println("failed to allocate buffer for file contents");
 		//LOGERR("failed to allocate buffer for file contents");
-		fclose(f);
+		//fclose(f);
+    f.close();
 		return false;
 	}
+    size_t cb = f.read(file_contents,file_size);
+//	size_t cb = f.read(file_contents, 1, st.st_size, f);
 
-	size_t cb = fread(file_contents, 1, st.st_size, f);
+  f.close();
+//	fclose(f);
 
-	fclose(f);
-
-	if (cb != st.st_size) {
+	if (cb != file_size) {
+    Serial.println("failed to read file contents");
 		//LOGERR("failed to read file contents");
 		free(file_contents);
 		return false;
 	}
-
-	if (!espcomm_upload_mem(file_contents, st.st_size, name)) {
+ Serial.print("befor calling espcomm upload mem :");
+  Serial.println(file_size);
+  for(int i =0 ; i<10 ; i++)
+  {
+	if (!espcomm_upload_mem(file_contents, file_size, name_f)) {
+    Serial.println("espcomm_upload_mem failed");
 		//LOGERR("espcomm_upload_mem failed");
-		free(file_contents);
-		return false;
-    }
+		free(file_contents); 
+  }
+
+  delay(1000);
+  }
+  return false;
+ 
 
 	free(file_contents);
 	return true;
+  
 }
 
 /*

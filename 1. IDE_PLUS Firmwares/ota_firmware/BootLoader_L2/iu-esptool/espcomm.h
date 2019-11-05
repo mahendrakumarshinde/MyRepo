@@ -34,7 +34,7 @@ typedef struct
 {
     uint8_t     direction;
     uint8_t     command;
-    uint16_t    size;
+    uint16_t    size_f;
     union
     {
         uint32_t    checksum;
@@ -59,14 +59,14 @@ int espcomm_set_chip(const char* name);
 int espcomm_open(void);
 void espcomm_close(void);
 
-bool espcomm_upload_mem_to_RAM(uint8_t* src, size_t size, int address, int entry);
+bool espcomm_upload_mem_to_RAM(uint8_t* src, size_t size_f, int address, int entry);
 bool espcomm_upload_mem(uint8_t* src, size_t sizev, const char* source_name);
 bool espcomm_upload_file(const char *name);
 bool espcomm_upload_file_compressed(const char* name);
 int espcomm_file_uploaded();
 int espcomm_start_app(int reboot);
 bool espcomm_reset();
-bool espcomm_erase_region(const char* size);
+bool espcomm_erase_region(const char* size_f);
 bool espcomm_erase_flash();
 
 #endif

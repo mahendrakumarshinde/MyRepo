@@ -138,13 +138,13 @@ unsigned serialport_get_timeout()
   //  return sTIMEOUTS.ReadTotalTimeoutConstant;
 }
 
-unsigned serialport_read(unsigned char* data, unsigned int size)
+unsigned serialport_read(unsigned char* data, unsigned int size_f)
 {
 //	unsigned long cb;
-//	ReadFile(sPort, data, size, &cb, NULL);
-//	if (cb != size)
+//	ReadFile(sPort, data, size_f, &cb, NULL);
+//	if (cb != size_f)
 //	{
-//		LOGDEBUG("read %d, requested %d", cb, size);
+//		LOGDEBUG("read %d, requested %d", cb, size_f);
 //	}
 //	return (unsigned) cb;
   if(Serial.available())
@@ -153,13 +153,13 @@ unsigned serialport_read(unsigned char* data, unsigned int size)
   }
 }
 
-unsigned serialport_write(const unsigned char* data, unsigned int size)
+unsigned serialport_write(const unsigned char* data, unsigned int size_f)
 {
 //	unsigned long cb;
-//	WriteFile(sPort, data, size, &cb, NULL);
-//	if (cb != size)
+//	WriteFile(sPort, data, size_f, &cb, NULL);
+//	if (cb != size_f)
 //	{
-//		LOGDEBUG("wrote %d, requested %d", cb, size);
+//		LOGDEBUG("wrote %d, requested %d", cb, size_f);
 //	}
 //	return (unsigned) cb; 
 Serial1.write(data1);
@@ -305,19 +305,19 @@ void serialport_send_break()
     }
 }*/
 
-/*void serialport_set_timeout(unsigned int t)
+void serialport_set_timeout(unsigned int t)
 {
-    if(t != timeout)
-    {
-        LOGDEBUG("setting timeout %i", t);
-        timeout = t;
-    }
-}*/
+//    if(t != timeout)
+//    {
+//        LOGDEBUG("setting timeout %i", t);
+//        timeout = t;
+//    }
+}
 
-/*unsigned serialport_get_timeout()
+unsigned serialport_get_timeout()
 {
-    return timeout;
-}*/
+ //   return timeout;
+}
 
 /*int serialport_open(const char *device, unsigned int baudrate)
 {
@@ -392,7 +392,7 @@ void serialport_send_break()
     return serial_port;
 }*/
 
-unsigned serialport_read(unsigned char* data, unsigned int size)
+unsigned serialport_read(unsigned char* data, unsigned int size_f)
 {
   
 //    struct timeval tv0, tv1;
@@ -401,11 +401,11 @@ unsigned serialport_read(unsigned char* data, unsigned int size)
 //    unsigned time_spent = 0;
 //    do
 //    {
-//        unsigned cb = read(serial_port, data + n, size - n);
+//        unsigned cb = read(serial_port, data + n, size_f - n);
 //        n += cb;
 //        gettimeofday(&tv1, NULL);
 //        time_spent = (tv1.tv_sec - tv0.tv_sec) * 1000 + tv1.tv_usec / 1000 - tv0.tv_usec / 1000;
-//    } while (n < size && time_spent < timeout);
+//    } while (n < size_f && time_spent < timeout);
 //    return n;
 if(Serial1.available())
 {
@@ -416,7 +416,7 @@ if(Serial1.available())
 
 unsigned serialport_write(const unsigned char* data, unsigned int size_b)
 {
-	//return write(serial_port, data, size);
+	//return write(serial_port, data, size_f);
   for(int i =0 ; i<size_b ; i++)
   Serial1.write(data[i]);
   
@@ -511,11 +511,11 @@ static unsigned char subst_C0[2] = { 0xDB, 0xDC };
 static unsigned char subst_DB[2] = { 0xDB, 0xDD };
 
 #define STATIC_SLIP_BUF_SIZE 4096
-int serialport_send_slip_static(unsigned char *data, unsigned int size)
+int serialport_send_slip_static(unsigned char *data, unsigned int size_f)
 {
     unsigned char buf[STATIC_SLIP_BUF_SIZE];
     unsigned out_pos = 0;
-    for (int i = 0; i < size; ++i)
+    for (int i = 0; i < size_f; ++i)
     {
         unsigned char cur = data[i];
         if (cur == 0xC0)
@@ -538,20 +538,20 @@ int serialport_send_slip_static(unsigned char *data, unsigned int size)
         return 0;
     }
     serialport_drain();
-    return size;
+    return size_f;
 }
 
-int serialport_send_slip(unsigned char *data, unsigned int size)
+int serialport_send_slip(unsigned char *data, unsigned int size_f)
 {
     unsigned int sent;
     unsigned char cur_byte;
     
-    if (size < STATIC_SLIP_BUF_SIZE / 2)
-        return serialport_send_slip_static(data, size);
+    if (size_f < STATIC_SLIP_BUF_SIZE / 2)
+        return serialport_send_slip_static(data, size_f);
     
     sent = 0;
     
-    while(sent != size)
+    while(sent != size_f)
     {
         cur_byte = *data++;
         if(cur_byte == 0xC0)
@@ -586,14 +586,14 @@ int serialport_send_slip(unsigned char *data, unsigned int size)
     return sent;
 }
 
-int serialport_receive_slip(unsigned char *data, unsigned int size)
+int serialport_receive_slip(unsigned char *data, unsigned int size_f)
 {
     unsigned int received;
     unsigned char cur_byte;
     
     received = 0;
     
-    while(received != size)
+    while(received != size_f)
     {
         if(serialport_read(&cur_byte, 1) != 1)
         {

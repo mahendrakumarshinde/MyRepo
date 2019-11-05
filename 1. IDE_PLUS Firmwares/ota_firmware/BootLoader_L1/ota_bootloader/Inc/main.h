@@ -72,7 +72,7 @@ void Error_Handler(void);
 //-----------------------------FLAG SETTING ADDRESS----------------------------------------------//
 #define MFW_FLASH_FLAG 0
 #define RETRY_FLAG 1
-#define FACTORY_FW 2
+#define FACTORY_FW 2op
 #define MFW_VER 3
 #define FW_VALIDATION 4
 #define FW_ROLLBACK 5

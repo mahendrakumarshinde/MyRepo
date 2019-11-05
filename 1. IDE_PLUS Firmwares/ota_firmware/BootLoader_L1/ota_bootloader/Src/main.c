@@ -36,6 +36,8 @@ void read_all_flags();
 void write_all_flags();
 void update_flag(uint8_t flag_addr, uint32_t flag_data);
 void update_all_flag();
+void iu_reset();
+void Clear_all_flags();
 
 
 uint8_t Boot_MFW_Flag;
@@ -287,6 +289,25 @@ void update_flag(uint8_t flag_addr, uint32_t flag_data)
 	  Bootloader_FlashEnd();
 
 }
+
+
+void iu_reset()
+{
+
+	HAL_NVIC_SystemReset();
+}
+
+
+void Clear_all_flags()
+{
+	for(int i = 0 ; i<32 ; i++)
+	{
+	all_flags[i] = 0 ;
+	}
+	write_flag_init();
+	write_all_flags();
+	Bootloader_FlashEnd();
+}
 void update_all_flag()
 {
 	//all_flags_temp[32];
@@ -431,6 +452,9 @@ int uart_debug()
 	unsigned char cmd_3[3]={'R','F','L'};
 	unsigned char cmd_4[3]={'W','F','L'};
 	unsigned char cmd_5[4]={'H','E','L','P'};
+	unsigned char cmd_6[3]={'C','L','F'};
+	unsigned char cmd_7[3]={'R','B','T'};
+	unsigned char cmd_8[4]={'B','O','O','T'};
 
 	int uart_debug_flag = 0;
 
@@ -467,7 +491,7 @@ int uart_debug()
 
 			}
 		  uart_transmit_str((uint8_t*)"Received RFL.......\n\r");
-		  uart_transmit_str((uint8_t*)"Enter the 2 digit flag address(01 - 13)");
+		  uart_transmit_str((uint8_t*)"Enter the 2 digit flag address(00 - 13)");
 		  boot_uart_read((uint8_t*)rx_flag_address_buffer);
 /*		  uart_transmit_str((uint8_t*)"Received address :");
 		  uart_transmit_str(rx_flag_address_buffer);*/
@@ -515,11 +539,11 @@ int uart_debug()
 
 			}
 		  uart_transmit_str((uint8_t*)"Received WFL.......\n\r");
-		  uart_transmit_str((uint8_t*)"Enter the 2 digit flag address(01-13)");
+		  uart_transmit_str((uint8_t*)"Enter the 2 digit flag address(00-13)");
 		  boot_uart_read((uint8_t*)rx_flag_address_buffer);
 		  uart_transmit_str((uint8_t*)"received address :");
 		  uart_transmit_str(rx_flag_address_buffer);
-		  uart_transmit_str((uint8_t*)"Enter the 2 digit flag value(01-09)");
+		  uart_transmit_str((uint8_t*)"Enter the 2 digit flag value(00-09)");
 		  boot_uart_read((uint8_t*)rx_data_buffer);
 		  uart_transmit_str((uint8_t*)"received data :");
 		  uart_transmit_str(rx_data_buffer);
@@ -544,15 +568,37 @@ int uart_debug()
 	  }else if(Buffercmp((uint8_t*)cmd_5,(uint8_t*)rx_buffer,4))
 	  {
 		  uart_transmit_str((uint8_t*)"-----------IU Bootloader Commands------------\n\r");
-		  uart_transmit_str((uint8_t*)"BMF : Boot Main Firmware\n\r");
-		  uart_transmit_str((uint8_t*)"BFF : Boot Factory Firmware\n\r");
-		  uart_transmit_str((uint8_t*)"RBM : RollBack Main Firmware\n\r");
-		  uart_transmit_str((uint8_t*)"WFL : Write flag\n\r");
-		  uart_transmit_str((uint8_t*)"RFL : Read flag\n\r");
+		  uart_transmit_str((uint8_t*)"BMF	: Boot Main Firmware\n\r");
+		  uart_transmit_str((uint8_t*)"BFF	: Boot Factory Firmware\n\r");
+		  uart_transmit_str((uint8_t*)"RBM	: RollBack Main Firmware\n\r");
+		  uart_transmit_str((uint8_t*)"WFL	: Write flag\n\r");
+		  uart_transmit_str((uint8_t*)"RFL	: Read flag\n\r");
+		  uart_transmit_str((uint8_t*)"RBT	: Reboot\n\r");
+		  uart_transmit_str((uint8_t*)"BOOT	: Boot/Continue\n\r");
+		 // uart_transmit_str((uint8_t*)"CLF 	: Clear all flags\n\r");
+
 		  return 0;
 		  //goto label1;
-	  }
-	  else
+	  }else if(Buffercmp((uint8_t*)cmd_6,(uint8_t*)rx_buffer,3))
+	  {
+		  Clear_all_flags();
+		  uart_transmit_str((uint8_t*)"All Flags cleared !!\n\r");
+		  uart_debug_flag = 0;
+
+	  }else if(Buffercmp((uint8_t*)cmd_7,(uint8_t*)rx_buffer,3))
+	  {
+		  uart_transmit_str((uint8_t*)"resetting IDE......\n\r");
+		  HAL_Delay(1000);
+		  iu_reset();
+		  uart_debug_flag = 0;
+
+	  }else if(Buffercmp((uint8_t*)cmd_8,(uint8_t*)rx_buffer,4))
+	  {
+		  uart_transmit_str((uint8_t*)"received BOOT.......\n\r");
+		  Boot_MFW_Flag = 1; // Boot main firmware.
+		  uart_debug_flag =  1 ;
+
+	  }else
 	  {
 		  if(rx_buffer[0]!='\0')
 		  {

@@ -18,11 +18,11 @@ void serialport_set_timeout(unsigned int timeout);
 unsigned serialport_get_timeout();
 void serialport_drain(void);
 void serialport_flush(void);
-unsigned serialport_read(unsigned char* data, unsigned int size);
-unsigned serialport_write(const unsigned char* data, unsigned int size);
+unsigned serialport_read(unsigned char* data, unsigned int size_f);
+unsigned serialport_write(const unsigned char* data, unsigned int size_f);
 
-int serialport_send_slip(unsigned char *data, unsigned int size);
-int serialport_receive_slip(unsigned char *data, unsigned int size);
+int serialport_send_slip(unsigned char *data, unsigned int size_f);
+int serialport_receive_slip(unsigned char *data, unsigned int size_f);
 int serialport_send_C0(void);
 int serialport_receive_C0(void);
 

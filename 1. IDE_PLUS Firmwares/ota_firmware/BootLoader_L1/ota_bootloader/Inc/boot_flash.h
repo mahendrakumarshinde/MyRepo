@@ -9,8 +9,10 @@
 #define FLASH_BL2_START_ADDRESS ((uint32_t)0x08010000u)
 #define FLASH_APP_END_ADDRESS   ((uint32_t)FLASH_BANK1_END-0x10u) /**< Leave a little extra space at the end. */
 
-#define FLAG_ADDRESS     (uint32_t)0x080FF800    /* Start address of application space in flash */
-#define FLAG_END_ADDRESS     (uint32_t)0x080FFFFF    /* End address of application space (addr. of last byte) */
+//#define FLAG_ADDRESS     (uint32_t)0x08060000u    /* Start address of application space in flash */
+#define FLAG_ADDRESS     (uint32_t)0x080FF800u    /* Start address of application space in flash */
+//#define FLAG_END_ADDRESS     (uint32_t)0x08060FFFu    /* End address of application space (addr. of last byte) */
+#define FLAG_END_ADDRESS     (uint32_t)0x080FFFFFu    /* End address of application space (addr. of last byte) */
 #define FLASH_PAGE_NBPERBANK    256             /* Number of pages per bank in flash */
 /* Status report for the functions. */
 typedef enum {
