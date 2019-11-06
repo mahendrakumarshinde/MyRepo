@@ -15,12 +15,12 @@
  * The class also handles the streaming itself, including formatting the
  * message. The features are indexed and streamed in the order of the index.
  */
-class FeatureGroup
-{
+class FeatureGroup //: public Feature
+{   
     public:
         /***** Preset values and default settings *****/
         static const uint8_t maxFeatureCount = 10;
-//        static const uint16_t maxBufferSize = 700;
+        static const uint16_t maxBufferSize = 700;
         static const uint16_t maxBufferMargin = 200;
         static const uint32_t maxBufferDelay = 3000;
         /***** Instance registry *****/
@@ -55,17 +55,19 @@ class FeatureGroup
             IUSerial *iuSerial, MacAddress mac, uint8_t opState,
             float batteryLoad, double timestamp, bool sendName=false,
             uint8_t portIdx=0);
-//        void bufferAndStream(
-//            IUSerial *iuSerial, IUSerial::PROTOCOL_OPTIONS protocol,
-//            MacAddress mac, uint8_t opState, float batteryLoad,
-//            double timestamp, bool sendName=false, uint8_t portIdx=0);
+       void bufferAndStream(
+           IUSerial *iuSerial, IUSerial::PROTOCOL_OPTIONS protocol,
+           MacAddress mac, uint8_t opState, float batteryLoad,
+           double timestamp, bool sendName=false, uint8_t portIdx=0);
         void bufferAndQueue(
             CharBufferSendingQueue *sendingQueue,
             IUSerial::PROTOCOL_OPTIONS protocol, MacAddress mac,
             uint8_t opState, float batteryLoad, double timestamp,
             bool sendName=false, uint8_t portIdx=0);
-
-
+        /***** timestamp log variables *******/
+            double isr_featureData_publish=0;
+        /****** Feature publications flasgs  */
+            bool isFeatureStreamComplete = false;
     protected:
         /***** Instance registry *****/
         uint8_t m_instanceIdx;
@@ -80,7 +82,7 @@ class FeatureGroup
         uint16_t m_dataSendPeriod;  // ms
         uint32_t m_lastSentTime[2];
         /***** Feature Buffering *****/
-//        char m_featureBuffer[maxBufferSize];
+        char m_featureBuffer[maxBufferSize];
         CharBufferNode *m_charBufferNode;
         uint16_t m_bufferIndex;
         uint32_t m_bufferStartTime;

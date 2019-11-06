@@ -1,6 +1,8 @@
 #include "FeatureGroup.h"
+#include "RawDataState.h"
+//#include "IULSM6DSM.h"
 
-
+//extern Feature feature;
 /* =============================================================================
     Constructors & destructor
 ============================================================================= */
@@ -229,11 +231,12 @@ void FeatureGroup::legacyStream(IUSerial *iuSerial, MacAddress mac,
         iuSerial->write(String(i + 1, DEC).c_str());
         if (m_features[i] != NULL) {
             m_features[i]->stream(iuSerial);
+            //Serial.print(m_features[i]->getName());Serial.print(",");
         }
     }
     iuSerial->write(',');
     iuSerial->write(String(timestamp, 2).c_str());
-    iuSerial->write(';');
+    iuSerial->write(';'); 
     if (featureDebugMode) {
         debugPrint(millis(), false);
         debugPrint(F(" -> "), false);
@@ -256,71 +259,91 @@ void FeatureGroup::legacyStream(IUSerial *iuSerial, MacAddress mac,
 // *
 // * Can use either the IUSerial MSP protocol or the IUSerial Legacy protocol.
 // */
-//void FeatureGroup::bufferAndStream(
-//    IUSerial *iuSerial, IUSerial::PROTOCOL_OPTIONS protocol, MacAddress mac,
-//    uint8_t opState, float batteryLoad, double timestamp,
-//    bool sendName, uint8_t portIdx)
-//{
-//    if (!isReadyToStream(portIdx)) {
-//        return;  // Not ready to stream
-//    }
-//    uint32_t now = millis();
-//    if (m_bufferStartTime == 0 ||
-//        now - m_bufferStartTime > maxBufferDelay ||
-//        maxBufferSize - m_bufferIndex < maxBufferMargin) {
-//        // Send current data
-//        m_featureBuffer[m_bufferIndex] = 0;
-//        if (protocol == IUSerial::LEGACY_PROTOCOL) {
-//            iuSerial->port->print(m_featureBuffer);
-//            if (loopDebugMode)
-//            {
-//                iuSerial->port->println("");
-//            }
-//        } else if (protocol == IUSerial::MS_PROTOCOL) {
-//            iuSerial->sendMSPCommand(MSPCommand::PUBLISH_FEATURE,
-//                                     m_featureBuffer);
-//        }
-//        // Reset buffer
-//        m_bufferIndex = 0;
-//        m_bufferStartTime = now;
-//        for (uint16_t i = 0; i < maxBufferSize; ++i) {
-//            m_featureBuffer[i] = 0;
-//        }
-//    }
-//    if (sendName) {
-//        // Always send for Legacy protocol, send once for MSP
-//        if (protocol == IUSerial::LEGACY_PROTOCOL || m_bufferIndex == 0) {
-//            strcat(m_featureBuffer, m_name);
-//            m_bufferIndex += strlen(m_name);
-//            m_featureBuffer[m_bufferIndex++] = ',';
-//        }
-//    }
-//    strncat(m_featureBuffer, mac.toString().c_str(), 17);
-//    m_bufferIndex += 17;
-//    m_featureBuffer[m_bufferIndex++] = ',';
-//    m_featureBuffer[m_bufferIndex++] = '0';
-//    m_featureBuffer[m_bufferIndex++] = opState + 48;
-//    m_featureBuffer[m_bufferIndex++] = ',';
-//    String stringBattery((int) round(batteryLoad));
-//    strcat(m_featureBuffer, stringBattery.c_str());
-//    m_bufferIndex += stringBattery.length();
-//    for (uint8_t i = 0; i < m_featureCount; ++i) {
-//        m_featureBuffer[m_bufferIndex++] = ',';
-//        m_featureBuffer[m_bufferIndex++] = '0';
-//        m_featureBuffer[m_bufferIndex++] = '0';
-//        m_featureBuffer[m_bufferIndex++] = '0';
-//        m_featureBuffer[m_bufferIndex++] = i + 49;
-//        if (m_features[i] != NULL) {
-//            m_bufferIndex += m_features[i]->sendToBuffer(m_featureBuffer,
-//                                                         m_bufferIndex);
-//        }
-//    }
-//    m_featureBuffer[m_bufferIndex++] = ',';
-//    String stringTS = String(timestamp, 2);
-//    strcat(m_featureBuffer, stringTS.c_str());
-//    m_bufferIndex += stringTS.length();
-//    m_featureBuffer[m_bufferIndex++] = ';';
-//}
+void FeatureGroup::bufferAndStream(
+   IUSerial *iuSerial, IUSerial::PROTOCOL_OPTIONS protocol, MacAddress mac,
+   uint8_t opState, float batteryLoad, double timestamp,
+   bool sendName, uint8_t portIdx)
+{
+   if (!isReadyToStream(portIdx)) {
+       return;  // Not ready to stream
+   }
+   //Serial.print("isISRDisabled : ");Serial.println(FeatureStates::isISRDisabled);
+   uint32_t now = millis();
+//    Serial.print("m_bufferStartTime : ");Serial.println(m_bufferStartTime);
+//    Serial.print("maxBufferDelay :");Serial.println(now - m_bufferStartTime);
+//    Serial.print("maxBufferMargin :");Serial.println(maxBufferSize - m_bufferIndex);
+   if (m_bufferStartTime == 0 ||
+       now - m_bufferStartTime > maxBufferDelay ||
+       maxBufferSize - m_bufferIndex < maxBufferMargin) {
+       // Send current data
+       m_featureBuffer[m_bufferIndex] = 0;
+       if (protocol == IUSerial::LEGACY_PROTOCOL) {
+           iuSerial->port->print(m_featureBuffer);
+           if (loopDebugMode)
+           {
+               iuSerial->port->println("");
+           }
+       } else if (protocol == IUSerial::MS_PROTOCOL /* && FeatureStates::isISRDisabled */) {
+            iuSerial->sendMSPCommand(MSPCommand::PUBLISH_FEATURE,
+                                    m_featureBuffer);
+            //Serial.print(" m_featureBuffer : ");Serial.println(m_featureBuffer);
+            //Serial.println("ISR attachInterrupt !!!");
+            //isFeatureStreamComplete = true;
+            // if (FeatureStates::isISRActive != true && FeatureStates::isISRDisabled)
+            // {   
+            //     FeatureStates::isFeatureStreamComplete = true;   // publication completed
+            //     FeatureStates::isISRActive = true;
+            //     //Serial.println("isISRActive is true");
+            // }
+            
+            
+       }
+       // Reset buffer
+       m_bufferIndex = 0;
+       m_bufferStartTime = now;
+       for (uint16_t i = 0; i < maxBufferSize; ++i) {
+           m_featureBuffer[i] = 0;
+       }
+   }
+   if (sendName) {
+       // Always send for Legacy protocol, send once for MSP
+       if (protocol == IUSerial::LEGACY_PROTOCOL || m_bufferIndex == 0) {
+           strcat(m_featureBuffer, m_name);
+           m_bufferIndex += strlen(m_name);
+           m_featureBuffer[m_bufferIndex++] = ',';
+       }
+   }
+   strncat(m_featureBuffer, mac.toString().c_str(), 17);
+   m_bufferIndex += 17;
+   m_featureBuffer[m_bufferIndex++] = ',';
+   m_featureBuffer[m_bufferIndex++] = '0';
+   m_featureBuffer[m_bufferIndex++] = opState + 48;
+   m_featureBuffer[m_bufferIndex++] = ',';
+   String stringBattery((int) round(batteryLoad));
+   strcat(m_featureBuffer, stringBattery.c_str());
+   m_bufferIndex += stringBattery.length();
+   for (uint8_t i = 0; i < m_featureCount; ++i) {
+       m_featureBuffer[m_bufferIndex++] = ',';
+       m_featureBuffer[m_bufferIndex++] = '0';
+       m_featureBuffer[m_bufferIndex++] = '0';
+       m_featureBuffer[m_bufferIndex++] = '0';
+       m_featureBuffer[m_bufferIndex++] = i + 49;
+       if (m_features[i] != NULL) {
+           m_bufferIndex += m_features[i]->sendToBuffer(m_featureBuffer,
+                                                        m_bufferIndex);
+           }
+   }
+   m_featureBuffer[m_bufferIndex++] = ',';
+   String stringTS = String(timestamp, 2);
+   strcat(m_featureBuffer, stringTS.c_str());
+   m_bufferIndex += stringTS.length();
+   m_featureBuffer[m_bufferIndex++] = ';';
+    // Serial.print("ISR Disabled Time : ");Serial.println(m_features);
+    //Serial.print("Time to publised : ");Serial.println(isr_featureData_publish);
+    //Serial.print("Feature Buffers : ");Serial.println(m_featureBuffer); 
+    //attachInterrupt(digitalPinToInterrupt(IULSM6DSM::INT1_PIN),dataAcquisitionISR,RISING);
+    
+}
 
 /**
  *
