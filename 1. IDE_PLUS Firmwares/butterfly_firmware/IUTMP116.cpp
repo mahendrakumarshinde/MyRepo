@@ -32,8 +32,8 @@ void IUTMP116::setupHardware()
         }
         return;
     }
-    setTempLimit(HIGH_LIM,DEFAULT_MAX_TEMP);
-    setTempLimit(LOW_LIM,DEFAULT_MIN_TEMP);
+    setTempLimit(HIGH_LIM,HIGH_ALERT_TEMP);
+    setTempLimit(LOW_LIM,LOW_ALERT_TEMP);
     setPowerMode(PowerMode::REGULAR);
 }
 
@@ -184,7 +184,6 @@ void IUTMP116::readData()
         low_alert = false;
     }
 }
-#if 1
 /**
  * Process a raw Temperature reading
  */
@@ -200,45 +199,17 @@ void IUTMP116::processTemperatureData(uint8_t wireStatus)
         }
         return;
     }
-    //m_temperature = float( (int16_t) ((m_rawBytes[0] << 8) | m_rawBytes[1]) * TEMP_COEFFICIENT);
     m_temperature = 0.00;
     iTemp = ( (int16_t) (m_rawBytes[0] << 8) | m_rawBytes[1]);
+    m_temperature = (iTemp * TEMP_COEFFICIENT);
     if (debugMode)
     {
         debugPrint("iTemp: " + String(iTemp,HEX));
         debugPrint("Temp: " + String(m_temperature));
+    }
+    m_destinations[0]->addValue(m_temperature);
+}
 
-    }
-    m_temperature = (iTemp * TEMP_COEFFICIENT);
-    m_destinations[0]->addValue(m_temperature);
-}
-#endif
-#if 0
-/**
- * Process a raw Temperature reading
- */
-void IUTMP116::processTemperatureData(uint8_t wireStatus)
-{
-    int iTemp = 0;
-    iuI2C.releaseReadLock();
-    if (wireStatus != 0) {
-        if (asyncDebugMode) {
-            debugPrint(micros(), false);
-            debugPrint(F(" Temperature processing read error "), false);
-            debugPrint(wireStatus);
-        }
-        return;
-    }
-    m_temperature = 0;
-    iTemp = ((int16_t) (m_rawBytes[0] << 8) | (uint16_t) m_rawBytes[1]);
-    if(iTemp < 0)
-    { // For negative temperature measurement
-        iTemp = ~iTemp + 1;
-    }
-    m_temperature = iTemp * TEMP_COEFFICIENT;
-    m_destinations[0]->addValue(m_temperature);
-}
-#endif
 /**
    Temperature data to serial
 

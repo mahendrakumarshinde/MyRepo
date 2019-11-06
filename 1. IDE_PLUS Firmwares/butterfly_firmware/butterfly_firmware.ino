@@ -197,20 +197,6 @@ static void bleTransmitCallback(void) {
     armv7m_timer_start(&bleTransmitTimer, 5);
 }
 
-#if 0
-/* =============================================================================
- *  Read HTTP pending config messages using timer
- * ============================================================================*/
-
-static armv7m_timer_t httpConfigTimer;
-
-static void httpConfigCallback(void) {
-    //iuBluetooth.bleTransmit();
-    //Serial.println("HIT HTTP CONFIG....................................................");
-    iuWiFi.sendMSPCommand(MSPCommand::GET_PENDING_HTTP_CONFIG);
-    armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min  180000
-}
-#endif
 /* ================================================================================
  * Ethernet Status Timer callback
  * ===============================================================================*/

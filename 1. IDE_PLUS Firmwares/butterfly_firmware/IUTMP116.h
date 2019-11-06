@@ -10,8 +10,8 @@
 #define MIN_TEMP_RANGE -55.00
 #define MAX_TEMP_RANGE 125.00
 
-#define DEFAULT_MAX_TEMP 45.00
-#define DEFAULT_MIN_TEMP 20.00
+#define HIGH_ALERT_TEMP 45.00
+#define LOW_ALERT_TEMP 20.00
 
 class IUTMP116 : public LowFreqSensor
 {

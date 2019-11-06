@@ -237,11 +237,6 @@ class Conductor
         double rawDataRecordedAt, lastPacketSentToESP;
         IUMessageFormat::rawDataPacket rawData;
 
-        uint32_t firmwareValidation();
-        bool firmwareConfigValidation(File *ValidationFile);
-        bool firmwareDeviceValidation(File *ValidationFile);
-        uint8_t firmwareWifiValidation(File *ValidationFile);
-
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
