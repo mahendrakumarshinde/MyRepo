@@ -11,3 +11,13 @@ namespace RawDataState {
     char rawAccelerationY[15000];
     char rawAccelerationZ[15000];
 }
+
+namespace FeatureStates {
+
+    bool isFeatureStreamComplete = false;
+    bool isISRActive = false;
+    bool isISRDisabled = false;
+    int isrCount =0;
+
+
+}
