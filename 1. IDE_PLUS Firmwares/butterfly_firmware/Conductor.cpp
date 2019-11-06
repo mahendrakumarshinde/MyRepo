@@ -1205,6 +1205,24 @@ void Conductor::processCommand(char *buff)
                 processConfiguration(audioOffsetJSON,true); 
                 
                 }
+            break; 
+        case 'E' :
+            if (buff[0]=='E' && buff[1]=='N'&&buff[2]=='A'&&buff[3]=='B'&&buff[4]=='L'&&buff[5]=='E') // ENABLE-ISR
+            {
+                //Start the Sensor DATA AcquisitionMode
+                FeatureStates::isISRActive = true;
+                Serial.println("ISR-ENABLE from USB !!!");
+            }
+            break;
+        case 'D' :
+            if (buff[0]=='D' && buff[1]=='I'&&buff[2]=='S'&&buff[3]=='A'&&buff[4]=='B'&&buff[5]=='L'&&buff[6]=='E') // DISABLE-ISR
+            {
+                //Start the Sensor DATA AcquisitionMode
+                detachInterrupt(digitalPinToInterrupt(IULSM6DSM::INT1_PIN));
+                FeatureStates::isISRActive = false;
+                FeatureStates::isISRDisabled = true;
+                Serial.println("ISR-DISABLE form USB !!!");
+            }
             break;    
             
         default:
@@ -1901,7 +1919,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
              processConfiguration(featuresThreshold ,true);       // apply features thresholds 
              processConfiguration(fingerprintFeatures ,true);     // apply fingerprintsFeatures configurations 
              processConfiguration(httpConfig ,true);              // apply httpServer configurations 
-              
+             debugPrint("DEBUG INGO : Executed Pending HTTP Configs "); 
              
              break;
             }      
@@ -2528,31 +2546,29 @@ void Conductor::streamFeatures()
     }
     double timestamp = getDatetime();
     float batteryLoad = iuBattery.getBatteryLoad();
-    for (uint8_t i = 0; i < FeatureGroup::instanceCount; ++i) {
+    for (uint8_t i = 0; i < FeatureGroup::instanceCount; ++i) {                       // instanceCount =  [0:7]
         // TODO Switch to new streaming format once the backend is ready
         if (ser1) {
             if (m_streamingMode == StreamingMode::WIFI ||
                 m_streamingMode == StreamingMode::WIFI_AND_BLE || m_streamingMode == StreamingMode::ETHERNET)
             { 
-                  //Serial.print("@@@@@");
-//                FeatureGroup::instances[i]->bufferAndStream(
-//                    ser1, IUSerial::MS_PROTOCOL, m_macAddress,
-//                    ledManager.getOperationState(), batteryLoad, timestamp,
-//                    sendFeatureGroupName1);
-                FeatureGroup::instances[i]->bufferAndQueue(
-                    &sendingQueue, IUSerial::MS_PROTOCOL, m_macAddress,
-                    ledManager.getOperationState(), batteryLoad, timestamp,
-                    sendFeatureGroupName1);
-            } else {
+       
+               FeatureGroup::instances[i]->bufferAndStream(
+                   ser1, IUSerial::MS_PROTOCOL, m_macAddress,
+                   ledManager.getOperationState(), batteryLoad, timestamp,
+                   sendFeatureGroupName1);
                 
-                //Serial.print("1234454667674534");
+                // FeatureGroup::instances[i]->bufferAndQueue(
+                //     &sendingQueue, IUSerial::MS_PROTOCOL, m_macAddress,
+                //     ledManager.getOperationState(), batteryLoad, timestamp,
+                //     sendFeatureGroupName1);
+            } else {
                 FeatureGroup::instances[i]->legacyStream(ser1, m_macAddress,
                     ledManager.getOperationState(), batteryLoad, timestamp,
                     sendFeatureGroupName1);
             }
         }
-        if (ser2) {
-            //Serial.print("SER222222222222222222222222222222222222222");
+        if (ser2) {                                                                 // Streaming only over BLE
             FeatureGroup::instances[i]->legacyStream(ser2, m_macAddress,
                 ledManager.getOperationState(), batteryLoad, timestamp,
                 sendFeatureGroupName2, 1);
@@ -2561,10 +2577,17 @@ void Conductor::streamFeatures()
 //            &sendingQueue, IUSerial::MS_PROTOCOL, m_macAddress,
 //            ledManager.getOperationState(), batteryLoad, timestamp,
 //            true);
+        if (FeatureStates::isISRActive != true && FeatureStates::isISRDisabled){   
+                FeatureStates::isFeatureStreamComplete = true;   // publication completed
+                FeatureStates::isISRActive = true;
+                Serial.println("Published to WiFi Complete !!!");
+            }
     }
-    CharBufferNode *nodeToSend = sendingQueue.getNextBufferToSend();
+   #if 0
+   CharBufferNode *nodeToSend = sendingQueue.getNextBufferToSend();
+    //Serial.print("nodeToSend : ");Serial.println(nodeToSend->buffer);
     if (nodeToSend ) {
-            uint16_t msgLen = strlen(nodeToSend->buffer);
+           uint16_t msgLen = strlen(nodeToSend->buffer);
            if (m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE)
            {
                 if(RawDataState::rawDataTransmissionInProgress == false)
@@ -2601,6 +2624,16 @@ void Conductor::streamFeatures()
      }
      
     sendingQueue.maintain();
+    
+    if (FeatureStates::isISRActive != true && FeatureStates::isISRDisabled){   
+                Serial.print("Streaming Data : ");
+                Serial.println(nodeToSend->buffer);
+                FeatureStates::isFeatureStreamComplete = true;   // publication completed
+                FeatureStates::isISRActive = true;
+                Serial.println("Published to WiFi Complete !!!");
+            }
+
+    #endif 
 }
 
 /**

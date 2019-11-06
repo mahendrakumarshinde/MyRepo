@@ -21,4 +21,12 @@ namespace RawDataState {
     extern char rawAccelerationZ[15000];
 }
 
+namespace FeatureStates {
+
+    extern bool isFeatureStreamComplete;
+    extern bool isISRActive;
+    extern bool isISRDisabled;
+    extern int isrCount; 
+}
+
 #endif // RAW_DATA_STATE_H

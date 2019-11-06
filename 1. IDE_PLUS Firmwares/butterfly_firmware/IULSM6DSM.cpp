@@ -312,6 +312,7 @@ void IULSM6DSM::readData()
         if (asyncDebugMode) {
             debugPrint("Skip accel read");
         }
+        
     } else if (m_iuI2C->readBytes(ADDRESS, OUT_TEMP_L, 14, &m_rawBytes[0],
                m_readCallback)) {
         m_readingData = true;
