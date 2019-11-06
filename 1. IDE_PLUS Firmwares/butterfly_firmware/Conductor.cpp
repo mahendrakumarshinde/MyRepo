@@ -3,6 +3,8 @@
 #include "rBase64.h"
 #include "FFTConfiguration.h"
 #include "RawDataState.h"
+#include <MemoryFree.h>
+#include "stm32l4_iap.h"
 
 const char* fingerprintData;
 const char* fingerprints_X;
@@ -795,7 +797,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
   m_mqttUserName = userName;
   m_mqttPassword = password;
 */  
-  iuWiFi.hardReset();
+//  iuWiFi.hardReset();
   if (debugMode) {
         debugPrint(F("MQTT ServerIP :"),false);
         debugPrint(m_mqttServerIp);
@@ -1683,6 +1685,10 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
     }
     uint8_t idx = 0;
     switch (iuWiFi.getMspCommand()) {
+        case MSPCommand::ESP_DEBUG_TO_STM_HOST:
+            Serial.write(buff);
+            Serial.write('\n');
+            break;
         // MSP Status messages
         case MSPCommand::MSP_INVALID_CHECKSUM:
             if (loopDebugMode) { debugPrint(F("MSP_INVALID_CHECKSUM")); }
@@ -1726,6 +1732,18 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 debugPrint(httpStatusCodeY, false);debugPrint(" | ", false);
                 debugPrint(httpStatusCodeZ, true);
             }
+#if 1
+            if(httpStatusCodeX != 200 || (httpStatusCodeX == 200 && httpStatusCodeY != 200 && httpStatusCodeY != 0) || (httpStatusCodeX == 200 && httpStatusCodeY == 200 && httpStatusCodeZ != 200 && httpStatusCodeZ != 0))
+            {
+                debugPrint("HTTP status codes X | Y | Z ",false);
+                debugPrint(httpStatusCodeX, false);debugPrint(" | ", false);
+                debugPrint(httpStatusCodeY, false);debugPrint(" | ", false);
+                debugPrint(httpStatusCodeZ, true);
+                // Abort transmission on failure  // IDE1.5_PORT_CHANGE Change
+                RawDataState::rawDataTransmissionInProgress = false;
+                RawDataState::startRawDataCollection = false;             
+            }
+#endif
             break;
         }
         case MSPCommand::WIFI_ALERT_CONNECTED:
@@ -2549,13 +2567,15 @@ void Conductor::streamFeatures()
             uint16_t msgLen = strlen(nodeToSend->buffer);
            if (m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE)
            {
-            
-            iuWiFi.startLiveMSPCommand(MSPCommand::PUBLISH_FEATURE_WITH_CONFIRMATION, msgLen + 2);
-            iuWiFi.streamLiveMSPMessage((char) nodeToSend->idx);
-            iuWiFi.streamLiveMSPMessage(':');
-            iuWiFi.streamLiveMSPMessage(nodeToSend->buffer, msgLen);
-            iuWiFi.endLiveMSPCommand();
-            sendingQueue.attemptingToSend(nodeToSend->idx);
+                if(RawDataState::rawDataTransmissionInProgress == false)
+                {     
+                    iuWiFi.startLiveMSPCommand(MSPCommand::PUBLISH_FEATURE_WITH_CONFIRMATION, msgLen + 2);
+                    iuWiFi.streamLiveMSPMessage((char) nodeToSend->idx);
+                    iuWiFi.streamLiveMSPMessage(':');
+                    iuWiFi.streamLiveMSPMessage(nodeToSend->buffer, msgLen);
+                    iuWiFi.endLiveMSPCommand();
+                    sendingQueue.attemptingToSend(nodeToSend->idx);
+                }
            }
            if(m_streamingMode == StreamingMode::ETHERNET){
                 uint16_t msgLen = strlen(nodeToSend->buffer);
@@ -2725,6 +2745,7 @@ void Conductor::manageRawDataSending() {
         if (!XSentToWifi) {
             prepareRawDataPacketAndSend('X');
             XSentToWifi = true; 
+            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
             if(loopDebugMode) {
                 debugPrint("Raw data request: X sent to wifi");
             }
@@ -2732,6 +2753,7 @@ void Conductor::manageRawDataSending() {
         } else if (httpStatusCodeX == 200 && !YsentToWifi) { 
             prepareRawDataPacketAndSend('Y');
             YsentToWifi = true;
+            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
             if(loopDebugMode) {
                 debugPrint("Raw data request: X delivered, Y sent to wifi");
             }
@@ -2739,6 +2761,7 @@ void Conductor::manageRawDataSending() {
         } else if (httpStatusCodeY == 200 && !ZsentToWifi) {
             prepareRawDataPacketAndSend('Z');
             ZsentToWifi = true;
+            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
             if(loopDebugMode) {
                 debugPrint("Raw data request: Y delivered, Z sent to wifi");
             }
@@ -2752,6 +2775,11 @@ void Conductor::manageRawDataSending() {
             }
             RawDataState::startRawDataCollection = false;
             RawDataState::rawDataTransmissionInProgress = false;    
+        }
+        if((millis() - RawDataTimeout) > 10000)
+        { // IDE1.5_PORT_CHANGE -- On timeout of 4 Sec. if no response OK/FAIL then abort transmission
+            RawDataState::startRawDataCollection = false;
+            RawDataState::rawDataTransmissionInProgress = false;              
         }
     }
 }
@@ -2791,6 +2819,8 @@ void Conductor::periodicSendAccelRawData()
 {
     uint32_t now = millis();
     if (now - m_rawDataPublicationStart > m_rawDataPublicationTimer) {
+        if (loopDebugMode)
+            debugPrint(F("***  Sending Raw Data ***"));
         delay(500);
         if (m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE) {
             rawDataRequest();
@@ -2897,8 +2927,10 @@ void Conductor::sendDiagnosticFingerPrints() {
                 }else if(m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE)//iuWiFi.isAvailable() && iuWiFi.isWorking())   
                 {   /* FingerPrintResult send over Wifi only */
                     debugPrint("Wifi connected, ....",true);
-                    iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );    
-                
+                    if(RawDataState::rawDataTransmissionInProgress == false)
+                    { 
+                        iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );    
+                    }
                 }
                 
             }

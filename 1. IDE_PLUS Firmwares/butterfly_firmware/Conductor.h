@@ -233,9 +233,15 @@ class Conductor
         void prepareRawDataPacketAndSend(char axis);       // to send to ESP
         int httpStatusCodeX, httpStatusCodeY, httpStatusCodeZ;         
         bool XSentToWifi, YsentToWifi, ZsentToWifi;     // TODO optimize using bit vector
+        uint32_t RawDataTimeout = 0;
         double rawDataRecordedAt, lastPacketSentToESP;
         IUMessageFormat::rawDataPacket rawData;
-        
+
+        uint32_t firmwareValidation();
+        bool firmwareConfigValidation(File *ValidationFile);
+        bool firmwareDeviceValidation(File *ValidationFile);
+        uint8_t firmwareWifiValidation(File *ValidationFile);
+
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/

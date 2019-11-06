@@ -1,4 +1,5 @@
 #include "IUESP8285.h"
+#include "RawDataState.h"
 
 /* =============================================================================
     Constructor & desctructors
@@ -65,10 +66,14 @@ void IUESP8285::setupHardware()
 //        IUSerial::suspend();
 //        return;
 //    }
-    pinMode(ESP8285_ENABLE_PIN, OUTPUT);
-    hardReset();
+    // IDE1.5_PORT_CHANGE - Dont send WiFi Credentials (hardReset->turnOn->sendWiFiCredentials()) 
+    // as MQTT resets ESP during MQTT Config.
+    m_credentialSent = true;
+    pinMode(ESP32_ENABLE_PIN, OUTPUT);
+//    hardReset();
     begin();
     setPowerMode(PowerMode::REGULAR);
+    m_credentialSent = false;
 }
 
 /**
@@ -78,7 +83,11 @@ void IUESP8285::turnOn(bool forceTimerReset)
 {
     if (!m_on)
     {
-        digitalWrite(ESP8285_ENABLE_PIN, HIGH);
+        digitalWrite(ESP32_ENABLE_PIN, HIGH);
+        if(forceTimerReset == true) {
+            m_credentialSent = false;
+            delay(6000); // IDE1.5_PORT_CHANGE -- After ESP Reset, wait for ESP32 to boot up
+        }
         m_on = true;
         m_awakeTimerStart = millis();
         sendWiFiCredentials();
@@ -101,13 +110,16 @@ void IUESP8285::turnOff()
     m_setConnectedStatus(false);
     if (m_on)
     {
-        digitalWrite(ESP8285_ENABLE_PIN, LOW);
+        digitalWrite(ESP32_ENABLE_PIN, LOW);
         m_on = false;
         m_sleepTimerStart = millis();  // Reset auto-sleep start timer
         if (loopDebugMode)
         {
             debugPrint("Wifi turned off");
         }
+        // IDE1.5_PORT_CHANGE - To reset Raw data transmission on ESP reset
+        RawDataState::startRawDataCollection = false;
+        RawDataState::rawDataTransmissionInProgress = false;
     }
 }
 
@@ -151,7 +163,11 @@ void IUESP8285::manageAutoSleep(bool wakeUpNow)
         case PowerMode::REGULAR:
         case PowerMode::LOW_1:
         case PowerMode::LOW_2:
-            if (m_connected || wakeUpNow)
+            if (m_connected)
+            {
+                turnOn();
+            }
+            else if (wakeUpNow)
             {
                 turnOn(true);
             }
@@ -211,6 +227,7 @@ bool IUESP8285::readMessages()
         if (debugMode) {
             debugPrint("WiFi irresponsive: hard resetting now");
         }
+//        Serial.println("WiFi No Responding !");
         hardReset();
         m_lastResponseTime = now;
     }
@@ -289,6 +306,7 @@ bool IUESP8285::configure(JsonVariant &config)
     value = config["subnet"];
     if (value) { setSubnetMask(value, strlen(value)); }
     // Send to WiFi module (consistency check is done inside send functions)
+    m_credentialSent = false;
     sendWiFiCredentials();
     sendStaticConfig();
     return success;
@@ -299,6 +317,9 @@ void IUESP8285::setSSID(const char *ssid, uint8_t length)
     if (m_credentialValidator.hasTimedOut())
     {
         m_credentialValidator.reset();
+    }
+    for (uint8_t i = 0; i < wifiCredentialLength; i++) {
+        m_psk[i] = 0;
     }
     uint8_t charCount = min(wifiCredentialLength, length);
     strncpy(m_ssid, ssid, charCount);
@@ -595,6 +616,7 @@ void IUESP8285::sendWiFiCredentials()
 {
     if (m_credentialValidator.completed() && !m_credentialSent)
     {
+ //       Serial.println("Sending WiFi Credentials");
         sendMSPCommand(MSPCommand::WIFI_RECEIVE_SSID, m_ssid);
         sendMSPCommand(MSPCommand::WIFI_RECEIVE_PASSWORD, m_psk);
         m_credentialSent = true;

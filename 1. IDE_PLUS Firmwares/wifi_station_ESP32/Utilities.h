@@ -4,10 +4,15 @@
 #include <Arduino.h>
 #include <time.h>
 
-#include <ESP8266WiFi.h>
-#include <ESP8266HTTPClient.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
 #include <IUDebugger.h>
 
+#include "IUSerial.h" // ESP32_PORT_TRUE Debug changes
+#include "MSPCommands.h" // ESP32_PORT_TRUE Debug changes
+extern IUSerial hostSerial; // ESP32_PORT_TRUE Debug changes
+
+#define WIFICLIENT_MAX_PACKET_SIZE 1460
 
 /* =============================================================================
     HTTP functions
@@ -16,7 +21,7 @@ namespace HttpContentType {
     static char* applicationJSON = "json\r\n";
     static char* octetStream = "octet-stream\r\n";
 }
-
+#if 0 // ESP32_PORT_TRUE
 /**
  * Sends an HTTP GET request - HTTPS is used if fingerprint is given.
  *
@@ -58,7 +63,7 @@ inline int httpGetRequest(const char *url, char* responseBody,
     http.end();
     return httpCode;
 }
-
+#endif // ESP32_PORT_TRUE
 // Get the configuration messages 
 
 
@@ -87,7 +92,7 @@ inline String httpGET(const char *url,uint16_t maxResponseLength,
     HTTPClient http;
     if (httpsFingerprint)
     {
-        http.begin(String(url), String(httpsFingerprint));
+      //  http.begin(String(url), String(httpsFingerprint)); // ESP32_PORT_TRUE  
     }
     else
     {
@@ -111,7 +116,7 @@ inline String httpGET(const char *url,uint16_t maxResponseLength,
    }
 }
 
-
+#if 0 // ESP32_PORT_TRUE
 /**
  * Sends an HTTP POST request - HTTPS is used if fingerprint is given.
  *
@@ -157,7 +162,7 @@ inline int httpPostJsonRequest(const char *url, char *payload,
     http.end();
     return httpCode;
 }
-
+#endif // ESP32_PORT_TRUE
 
 /**
  * Sends an HTTP POST request with a "Big" payload
@@ -189,7 +194,7 @@ inline int httpPostBigRequest(
         {
             debugPrint("WiFi disconnected: POST request failed");
         }
-        return 404; // 0
+         return 404; // 0
     }
     
     // create the request and headers
@@ -212,8 +217,7 @@ inline int httpPostBigRequest(
             debugPrint("\nHEADERS:");
             debugPrint(request);
         }
-      
-       return 505; //connectResult;  // 0 means no connection
+        return 505; //connectResult;  // 0 means no connection
     }
 
     // This will send the request and headers to the server
@@ -221,6 +225,7 @@ inline int httpPostBigRequest(
     // now we need to chunk the payload into 1000 byte chunks
     size_t cIndex;
     size_t retSize;
+    if(payloadLength > chunkSize) {
     for (cIndex = 0; cIndex < payloadLength - chunkSize;
          cIndex = cIndex + chunkSize)
     {
@@ -243,6 +248,20 @@ inline int httpPostBigRequest(
         }
         return HTTPC_ERROR_SEND_PAYLOAD_FAILED;  // -3
     }
+    }
+    else if(payloadLength < chunkSize && payloadLength > 0)
+    {
+        retSize = client.write(&payload[0], payloadLength);
+        if(retSize != payloadLength)
+        {
+            if (client.connected() || (client.available() > 0))
+            {
+                client.stop();
+            }
+
+            return HTTPC_ERROR_SEND_PAYLOAD_FAILED;  // -3
+        }       
+    }
     // Handle response
     uint32_t lastDataTime = millis();
     int returnCode;
@@ -263,7 +282,7 @@ inline int httpPostBigRequest(
             {
                 if(returnCode)
                 {
-                    return returnCode;
+                     return returnCode;
                 }
                 else
                 {

@@ -134,7 +134,7 @@ class APA102RGBLedStrip : public RGBLed
 {
     public:
         /***** Preset values and default settings *****/
-        static const uint8_t DATA_PIN = 11;
+        static const uint8_t DATA_PIN = 14;  // IDE1.5_PORT_CHANGE
         static const uint8_t CLOCK_PIN = 12;
         /***** Constructors & desctructors *****/
         APA102RGBLedStrip(uint16_t ledCount);

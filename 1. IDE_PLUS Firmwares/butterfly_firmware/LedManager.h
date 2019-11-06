@@ -70,8 +70,8 @@ class LedManager
     public:
         /***** Preset values and default settings *****/
         static const uint8_t maxFeatureCount = 6;
-        static const uint8_t LED_STRIP_DATA_PIN = 11;
-        static const uint8_t LED_STRIP_CLOCK_PIN = 12;
+        static const uint8_t LED_STRIP_DATA_PIN = 14; // IDE1.5_PORT_CHANGE Duplicate can be removed
+        static const uint8_t LED_STRIP_CLOCK_PIN = 12; // Duplicate can be removed
         /***** Core *****/
         LedManager(RGBLed *led, RGBLed *ledStrip=NULL);
         void updateColors();
