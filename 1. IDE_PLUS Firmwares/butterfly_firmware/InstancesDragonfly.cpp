@@ -74,12 +74,12 @@ FeatureTemplate<float> batteryLoad("BAT", 2, 1, batteryLoadValues);
 /***** Accelerometer Features *****/
 
 // Sensor data
- __attribute__((section(".noinit2"))) q15_t accelerationXValues[8192];     // 1024
- __attribute__((section(".noinit2"))) q15_t accelerationYValues[8192];
- __attribute__((section(".noinit2"))) q15_t accelerationZValues[8192];
-FeatureTemplate<q15_t> accelerationX("A0X", 64, 128, accelerationXValues); // 8, 128
-FeatureTemplate<q15_t> accelerationY("A0Y", 64, 128, accelerationYValues);
-FeatureTemplate<q15_t> accelerationZ("A0Z", 64, 128, accelerationZValues);
+ __attribute__((section(".noinit2"))) q15_t accelerationXValues[8192/2];     // 1024
+ __attribute__((section(".noinit2"))) q15_t accelerationYValues[8192/2];
+ __attribute__((section(".noinit2"))) q15_t accelerationZValues[8192/2];
+FeatureTemplate<q15_t> accelerationX("A0X", 64/2 , 128, accelerationXValues); // 8, 128
+FeatureTemplate<q15_t> accelerationY("A0Y", 64/2 , 128, accelerationYValues);
+FeatureTemplate<q15_t> accelerationZ("A0Z", 64/2 , 128, accelerationZValues);
 
 
 // 128 sample long accel features
@@ -424,7 +424,7 @@ void populateFeatureGroups()
     motorStandardGroup.addFeature(&velRMS512Z);
     motorStandardGroup.addFeature(&temperature);
     motorStandardGroup.addFeature(&audioDB4096);
-
+    
     /** Bearing monitoring **/
     bearingZGroup.addFeature(&accelRMS512Total);
     bearingZGroup.addFeature(&velRMS512X);

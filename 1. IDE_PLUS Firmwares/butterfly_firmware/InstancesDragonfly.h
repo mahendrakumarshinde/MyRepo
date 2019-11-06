@@ -115,9 +115,9 @@ extern FeatureTemplate<float> batteryLoad;
 /***** Accelerometer Features *****/
 
 // Sensor data
-extern __attribute__((section(".noinit2"))) q15_t accelerationXValues[8192];      // 1024 
-extern __attribute__((section(".noinit2"))) q15_t accelerationYValues[8192];
-extern __attribute__((section(".noinit2"))) q15_t accelerationZValues[8192];
+extern __attribute__((section(".noinit2"))) q15_t accelerationXValues[8192/2];      // 1024 
+extern __attribute__((section(".noinit2"))) q15_t accelerationYValues[8192/2];
+extern __attribute__((section(".noinit2"))) q15_t accelerationZValues[8192/2];
 extern FeatureTemplate<q15_t> accelerationX;
 extern FeatureTemplate<q15_t> accelerationY;
 extern FeatureTemplate<q15_t> accelerationZ;
