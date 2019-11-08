@@ -1,5 +1,6 @@
 #include "Conductor.h"
 #include "Utilities.h"
+#include "esp_http_client.h"
 
 #define UART_TX_FIFO_SIZE 0x80
 #define OTA_PACKET_SIZE 1024
@@ -149,7 +150,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
   //          http_ota.end();
   //          break;
         case MSPCommand::OTA_PACKET_ACK:
-          //   hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "OTA_PACKET_ACK",16);
+             hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "OTA_PACKET_ACK",16);
           //  delay(1);
           //  pktWaitTimeStr = millis();
             waitingForPktAck = false;
@@ -1233,15 +1234,15 @@ bool Conductor:: getHttpData(bool otaDnldProgress)
 {
     char TestStr[128];
  //   if(otaInProgress == false || waitingForPktAck == true) { // if OTA is not in progress
-  //      otaInProgress = true;
+        otaInProgress = true;
         if(otaDnldProgress == false) 
         {
             //hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"OTA_FDW_STARTED ",16);
             if(WiFi.status() == WL_CONNECTED) 
             {
                 http_ota.end(); //  in case of error... need to close handle as it defined global
-                http_ota.setTimeout(10000);
-                http_ota.setConnectTimeout(10000);
+                http_ota.setTimeout(40000);
+                http_ota.setConnectTimeout(40000);
             // sprintf(TestStr,"Host:%s",host.c_str());
             //  hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,TestStr,128);
             //  http_ota.begin("http://iu-firmware.s3.ap-south-1.amazonaws.com/WiFiClient.ino.bin"); //HTTP
@@ -1260,8 +1261,8 @@ bool Conductor:: getHttpData(bool otaDnldProgress)
                         {
                             contentLen = http_ota.getSize();
                             fwdnldLen = contentLen;
-                            sprintf(TestStr,"contentLen:%d",contentLen);
-                            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,TestStr,32);
+                      //      sprintf(TestStr,"contentLen:%d",contentLen);
+                      //      hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,TestStr,32);
                             delay(100);
                             // get tcp stream
                             WiFiClient * stream = http_ota.getStreamPtr();
@@ -1270,16 +1271,16 @@ bool Conductor:: getHttpData(bool otaDnldProgress)
                             size_t size = 0;
                             do {
                                 size = stream->available();
-                                if(size >= 0 || ((millis() - otaStramStr) > otaPktReadTimeout))
+                                if(size > 0 || ((millis() - otaStramStr) > otaPktReadTimeout))
                                     break;
-                            } while(1);
+                            } while(http_ota.connected());
                             if(size) {
                                 // read up to 1024 byte
         //                        int c = stream->readBytes(ota_buff, ((size > sizeof(ota_buff)) ? sizeof(ota_buff) : size));
         //                        hostSerial.sendLongMSPCommand(MSPCommand::OTA_PACKET_DATA, 2000000, (const char*) ota_buff, OTA_PACKET_SIZE);
 
                                 int c = stream->readBytes(httpBuffer, ((size > OTA_PACKET_SIZE) ? OTA_PACKET_SIZE : size));
-                                hostSerial.sendLongMSPCommand(MSPCommand::OTA_PACKET_DATA, 2000000, (const char*) httpBuffer, c);
+                                hostSerial.sendLongMSPCommand(MSPCommand::OTA_PACKET_DATA, 5000000, (const char*) httpBuffer, c);
                                 pktWaitTimeStr  = millis();
                                 waitingForPktAck = true;
                                 if(contentLen > 0) {
@@ -1336,8 +1337,8 @@ bool Conductor:: getHttpData(bool otaDnldProgress)
               //  hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"FWDNLD_CONT",11);
                 if(contentLen > 0)
                 {
-                    http_ota.setTimeout(10000);
-                    http_ota.setConnectTimeout(10000);
+                    http_ota.setTimeout(40000);
+                    http_ota.setConnectTimeout(40000);
                 // get tcp stream
                     WiFiClient * stream = http_ota.getStreamPtr();
                     // read all data from server
@@ -1346,9 +1347,9 @@ bool Conductor:: getHttpData(bool otaDnldProgress)
                     size_t size = 0;
                     do {
                         size = stream->available();
-                        if(size >= 0 || ((millis() - otaStramStr) > otaPktReadTimeout))
+                        if(size > 0 || ((millis() - otaStramStr) > otaPktReadTimeout))
                             break;
-                    } while(1);
+                    } while(http_ota.connected());
 
                     if(size) {
                         // read up to 1024 byte
@@ -1356,7 +1357,7 @@ bool Conductor:: getHttpData(bool otaDnldProgress)
     //                    hostSerial.sendLongMSPCommand(MSPCommand::OTA_PACKET_DATA, 2000000, (const char*) ota_buff, OTA_PACKET_SIZE);
 
                         uint16_t c = stream->readBytes(httpBuffer, ((size > OTA_PACKET_SIZE) ? OTA_PACKET_SIZE : size));
-                        hostSerial.sendLongMSPCommand(MSPCommand::OTA_PACKET_DATA, 2000000, (const char*) httpBuffer, c);
+                        hostSerial.sendLongMSPCommand(MSPCommand::OTA_PACKET_DATA, 5000000, (const char*) httpBuffer, c);
                         pktWaitTimeStr  = millis();
                         waitingForPktAck = true;
                         if(contentLen > 0) {
@@ -1411,4 +1412,43 @@ bool Conductor:: getHttpData(bool otaDnldProgress)
             }        
         }
    // }
+}
+
+
+void esp_httpData()
+{
+    uint8_t buff[2048] = { 0 };
+    int length = 0;
+    uint32_t total = 0;
+    esp_err_t err;
+    esp_http_client_config_t config = {
+        .url = "http://iu-firmware.s3.ap-south-1.amazonaws.com/IDELog.txt.txt",
+      //.auth_type = HTTP_AUTH_TYPE_NONE,
+      //  .transport_type = HTTP_TRANSPORT_OVER_TCP,
+     // .buffer_size = 2048,
+    };
+    
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+    esp_http_client_set_url(client, "https://fw-binaries.s3.ap-south-1.amazonaws.com/1.1.6/butterfly_firmware.ino.iap?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20191031T061432Z&X-Amz-SignedHeaders=host&X-Amz-Expires=129599&X-Amz-Credential=AKIA2TU3ZTPXUMHVRAHA%2F20191031%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Signature=17c13437e0b26e109ff37fa9862497be171c0b93df63f21c11d769cca8787d48");
+    err = esp_http_client_perform(client);
+    Serial.println("Client Perform:" + String(err));
+    if (err == ESP_OK) {
+        int esp_code = esp_http_client_get_status_code(client);
+        Serial.println("Client espcode:" + String(esp_code));
+        length = esp_http_client_get_content_length(client);
+        Serial.println("Client length:" + String(length));
+    }
+    while(length > 0 ) {
+
+        int readlen = esp_http_client_read(client,(char *)buff,2048);
+      //  Serial.write(buff, readlen);
+      //  Serial.println(" ");
+        if(length > 0) {
+            total+= readlen;
+            length -= readlen;
+            Serial.println("Read size:" + String(readlen) + "Total size:" + String(total));
+        }
+    }
+    esp_http_client_close(client);
+    esp_http_client_cleanup(client);
 }

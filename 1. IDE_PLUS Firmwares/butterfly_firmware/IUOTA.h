@@ -3,10 +3,11 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
-#include <MD5.h>
+#include "IUMD5Builder.h"
 #include <IUMessage.h>
 #include "MSPCommands.h"
 #include "MacAddress.h"
+#include <FS.h>
 
 class IUOTA
 {
@@ -22,7 +23,8 @@ class IUOTA
         
         bool otaFileCopy(char *destFilePath,char *srcFilePath, char *filename);
         bool otaSendResponse(MSPCommand::command resp, const char *otaResponse);
-  
+        String file_md5 (File & f);
+        char * otaGetMD5(char *folderName,char *fileName); 
     //    const char *otaGetStmUri() { return m_otaStmUri; }
     //    const char *otaGetEspUri() { return m_ota_EspUri; }
 	protected:

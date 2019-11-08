@@ -14,7 +14,7 @@
     const uint8_t BLUE_PIN = 38;
 #endif
 
-const uint8_t ESP32_ENABLE_PIN = 10; // IDE1.5_PORT_CHANGE Actual Value = A2. Temp. used - 10
+const uint8_t ESP32_ENABLE_PIN = A2; // IDE1.5_PORT_CHANGE Actual Value = A2. Temp. used - 10
 const uint8_t ESP32_IO0        = 7; // IDE1.5_PORT_CHANGE
 
 

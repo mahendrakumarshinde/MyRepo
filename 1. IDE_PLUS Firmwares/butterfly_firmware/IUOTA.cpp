@@ -80,7 +80,7 @@ bool IUOTA::otaFwBinRead(char *folderName,char *fileName, char *buff, uint16_t *
 {
     uint16_t readLen = 0;
     uint16_t readSize = MAX_FILE_RW_SIZE;
-    uint16_t fileSize = 0;
+    uint32_t fileSize = 0;
     
     if(buff == NULL || fileName == NULL)
     {
@@ -112,6 +112,51 @@ bool IUOTA::otaFwBinRead(char *folderName,char *fileName, char *buff, uint16_t *
         return false;
     }
 }
+
+String IUOTA::file_md5 (File & f)
+{
+    if (!f) {
+        return String();
+    }
+
+    if (f.seek(0, SeekSet)) {
+
+        MD5Builder md5;
+        md5.begin();
+        md5.addStream(f, f.size());
+        md5.calculate();
+        return md5.toString();
+    } 
+return String();
+
+}
+
+#if 1
+char * IUOTA::otaGetMD5(char *folderName,char *fileName)
+{
+    char filepath[40];
+    uint32_t fileSize = 0;
+    File fwFile;
+    snprintf(filepath, 40, "%s/%s", folderName, fileName);
+    Serial.println(filepath);
+    if(DOSFS.exists(filepath))
+    {
+        fwFile = DOSFS.open(filepath,"r");
+        if(fwFile)
+        {        
+            fileSize = fwFile.size();
+            Serial.println("File Size:" + String(fileSize));
+            if(fileSize > 0)
+            {
+                String md5hash = file_md5(fwFile);
+                Serial.println("Filename " + String(fileName) + " of size " + String(fileSize));
+                Serial.print("MD5 Hash : ");
+                Serial.println(md5hash);               
+            }           
+        }
+    }
+}
+#endif
 
 /**
  * Copy bin files to actual OTA folder

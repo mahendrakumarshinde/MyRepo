@@ -745,6 +745,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 
     subConfig = root["messageType"];
     if (subConfig.success()) {
+        double otaInitTimeStamp = conductor.getDatetime();
+        char otaResponse[256];
         if(loopDebugMode) {
             debugPrint("OTA configuration received: ", false);
             subConfig.printTo(Serial); debugPrint("");
@@ -839,21 +841,26 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 delay(1);
                 Serial.println("Sending INIT_ACK");
             // iuWiFi.sendMSPCommand(MSPCommand::OTA_INIT_ACK,otaResponse);
-                double otaInitTimeStamp = conductor.getDatetime();
-                char otaResponse[256];
                 snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
                 m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-INIT-ACK", "0" ,otaInitTimeStamp);
                 iuOta.otaSendResponse(MSPCommand::OTA_INIT_ACK, otaResponse);
                 delay(1);
                 strcpy(fwBinFileName, "butterfly_firmware.bin");
-                iuOta.otaFileRemove(iuFlash.IUFWMAINIMG_SUBDIR,"butterfly_firmware.bin");
+                iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,"butterfly_firmware.bin");
                 snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
                 m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-FDW-START", "0" ,otaInitTimeStamp);
                 delay(1);
                 iuOta.otaSendResponse(MSPCommand::OTA_FDW_START, otaResponse);
                 otaFwdnldTmout = millis();
                 waitingDnldStrart = true;
-             //   iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWMAINIMG_SUBDIR);
+             //   iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR);
+            }
+            else
+            {
+                otaInitTimeStamp = conductor.getDatetime();            
+                snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
+                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", "DNLD_URL_ERR" ,otaInitTimeStamp);
+                iuOta.otaSendResponse(MSPCommand::OTA_FDW_ABORT, otaResponse);
             }
         }
     }
@@ -873,7 +880,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
   // Parse the root object
   JsonObject &root = jsonBuffer.parseObject(myFile);
   if (!root.success()){
-      Serial.println("OTA Partse Failed !!");
+      Serial.println("OTA Parse Failed !!");
   }
  else {  
     String msgId = root["otaconfig"]["messageId"];
@@ -1833,36 +1840,38 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
 {
     char *buff = iuSerial->getBuffer();
     uint16_t packetLen =  iuSerial->mspGetDataSize();
-    if (buff[0] == '{')
-    {
-        processConfiguration(buff,true);    //save the configuration into the file
-        return;       // this functon should process only one command in one call, all if conditions should be mutually exclusive
-    }
-    if (iuWiFi.processChipMessage()) {
-        if (iuWiFi.isWorking()) {
-            ledManager.showStatus(&STATUS_WIFI_WORKING);
-        } else {
-            ledManager.resetStatus();
+    if(getUsageMode() != UsageMode::OTA) {
+        if (buff[0] == '{')
+        {
+            processConfiguration(buff,true);    //save the configuration into the file
+            return;       // this functon should process only one command in one call, all if conditions should be mutually exclusive
         }
-        updateStreamingMode();
-    }
-    uint32_t currentTime = millis();
-    if(buff[0] == 'i' && buff[3] == '_' && buff[8] =='/' && buff[18] == '-'){ // ide_plus/time_sync-timestamp
-       
-       if(iuEthernet.isEthernetConnected == 1) { // check if ethernet is not connected
-           iuEthernet.isEthernetConnected = 0;  // set to connected, when timesync message is received
-           ledManager.showStatus(&STATUS_WIFI_CONNECTED);  
-       }
-        setRefDatetime(&buff[19]);
-        lastTimeSync = currentTime;
-    }
-    if((buff[0] == '3' && buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
-                buff[13] == '0' && buff[15] == '0' && buff[17] == '0') ){
-        processCommand(buff);
+        if (iuWiFi.processChipMessage()) {
+            if (iuWiFi.isWorking()) {
+                ledManager.showStatus(&STATUS_WIFI_WORKING);
+            } else {
+                ledManager.resetStatus();
+            }
+            updateStreamingMode();
+        }
+        uint32_t currentTime = millis();
+        if(buff[0] == 'i' && buff[3] == '_' && buff[8] =='/' && buff[18] == '-'){ // ide_plus/time_sync-timestamp
+        
+        if(iuEthernet.isEthernetConnected == 1) { // check if ethernet is not connected
+            iuEthernet.isEthernetConnected = 0;  // set to connected, when timesync message is received
+            ledManager.showStatus(&STATUS_WIFI_CONNECTED);  
+        }
+            setRefDatetime(&buff[19]);
+            lastTimeSync = currentTime;
+        }
+        if((buff[0] == '3' && buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
+                    buff[13] == '0' && buff[15] == '0' && buff[17] == '0') ){
+            processCommand(buff);
 
-    }else
-    {
-        processLegacyCommand(buff);
+        }else
+        {
+            processLegacyCommand(buff);
+        }
     }
     uint8_t idx = 0;
     char otaResponse[256];
@@ -1874,11 +1883,11 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             break;
         case MSPCommand::OTA_STM_DNLD_STS:
             Serial.println("STM FW Download Completed !");
-            delay(1);
-            iuWiFi.sendMSPCommand(MSPCommand::OTA_STM_DNLD_OK);
-            waitingDnldStrart = false;
             strcpy(fwBinFileName, "WiFiClient.bin");
-            iuOta.otaFileRemove(iuFlash.IUFWMAINIMG_SUBDIR,"WiFiClient.bin");
+            iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,"WiFiClient.bin");
+            iuWiFi.sendMSPCommand(MSPCommand::OTA_STM_DNLD_OK);
+            delay(1);
+  //          waitingDnldStrart = false; 
             break;
         case MSPCommand::OTA_DNLD_FAIL:
             Serial.println("OTA FW Download Failed !");
@@ -1904,21 +1913,24 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             iuOta.otaSendResponse(MSPCommand::OTA_FDW_SUCCESS, otaResponse);
             delay(10);
             Serial.println("File Download Completed");
-            iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWMAINIMG_SUBDIR,"butterfly_firmware.bin");
-            iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWMAINIMG_SUBDIR,"WiFiClient.bin");
+            iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"butterfly_firmware.bin");
+            iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"WiFiClient.bin");
             delay(10);
+            iuOta.otaGetMD5(iuFlash.IUFWTMPIMG_SUBDIR,"butterfly_firmware.bin");
+            iuOta.otaGetMD5(iuFlash.IUFWTMPIMG_SUBDIR,"WiFiClient.bin");
+            delay(100);
             iuWiFi.m_setLastConfirmedPublication();
             changeUsageMode(UsageMode::OPERATION);
             delay(100);   
             break;
         case MSPCommand::OTA_PACKET_DATA:
          //   Serial.print("Packet Data Len:");
-          //  Serial.println(packetLen);
+            Serial.println(packetLen);
           //  Serial.println("Packet Data:");
           //  Serial.print(buff);
           //  Serial.write('\n');
             waitingDnldStrart = false;
-            if(iuOta.otaFwBinWrite(iuFlash.IUFWMAINIMG_SUBDIR,fwBinFileName, buff, packetLen))
+            if(iuOta.otaFwBinWrite(iuFlash.IUFWTMPIMG_SUBDIR,fwBinFileName, buff, packetLen))
                 iuWiFi.sendMSPCommand(MSPCommand::OTA_PACKET_ACK);
             else
             { // Fw File write failed... Abort OTA

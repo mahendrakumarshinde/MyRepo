@@ -6,9 +6,9 @@
 ============================================================================= */
 
 char IUFSFlash::CONFIG_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iuconfig";
-char IUFSFlash::IUFWMAINBKUP_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iufwBkup";
-char IUFSFlash::IUFWMAINIMG_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN]  = "/iufwMain";
-char IUFSFlash::IUFWROLLBACK_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iuFwRlBk";
+char IUFSFlash::IUFWBACKUP_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iuBackupFirmware";
+char IUFSFlash::IUFWTMPIMG_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN]  = "/iuTempFirmware";
+char IUFSFlash::IUFWROLLBACK_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iuRollbackFirmware";
 char IUFSFlash::CONFIG_EXTENSION[IUFSFlash::CONFIG_EXTENSION_LEN] = ".conf";
 
 char IUFSFlash::FNAME_WIFI0[6] = "wifi0";
@@ -46,21 +46,21 @@ void IUFSFlash::begin()
             debugPrint("Unable to find or create the config directory");
         }
     }
-    m_otaDir = DOSFS.exists(IUFWMAINBKUP_SUBDIR);
+    m_otaDir = DOSFS.exists(IUFWBACKUP_SUBDIR);
     if (!m_otaDir)
     {
-        DOSFS.mkdir(IUFWMAINBKUP_SUBDIR);
-        m_otaDir = DOSFS.exists(IUFWMAINBKUP_SUBDIR);
+        DOSFS.mkdir(IUFWBACKUP_SUBDIR);
+        m_otaDir = DOSFS.exists(IUFWBACKUP_SUBDIR);
         if (!m_otaDir && setupDebugMode)
         {
             debugPrint("Unable to find/create the ota_mainbkup directory");
         }
     }
-    m_otaDir = DOSFS.exists(IUFWMAINIMG_SUBDIR);
+    m_otaDir = DOSFS.exists(IUFWTMPIMG_SUBDIR);
     if (!m_otaDir)
     {
-        DOSFS.mkdir(IUFWMAINIMG_SUBDIR);
-        m_otaDir = DOSFS.exists(IUFWMAINIMG_SUBDIR);
+        DOSFS.mkdir(IUFWTMPIMG_SUBDIR);
+        m_otaDir = DOSFS.exists(IUFWTMPIMG_SUBDIR);
         if (!m_otaDir && setupDebugMode)
         {
             debugPrint("Unable to find or create the ota_mainimage directory");

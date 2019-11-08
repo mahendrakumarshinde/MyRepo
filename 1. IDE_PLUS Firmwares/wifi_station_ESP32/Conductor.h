@@ -56,8 +56,8 @@ class Conductor
         static const uint32_t wifiStatusUpdateDelay = 5000;  // ms
         static const uint32_t wifiInfoPublicationDelay = 300000;  // ms
         // OTA Update in progress, timoue for packet ack from STM
-        static const uint32_t otaPktAckTimeout = 10000;  // ms
-        static const uint32_t otaPktReadTimeout = 2000; //ms;
+        static const uint32_t otaPktAckTimeout = 15000;  // ms
+        static const uint32_t otaPktReadTimeout = 50000; //ms;
         /***** Core *****/
         Conductor();
         virtual ~Conductor() {}

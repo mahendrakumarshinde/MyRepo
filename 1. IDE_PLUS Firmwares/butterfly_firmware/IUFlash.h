@@ -58,10 +58,10 @@ class IUFSFlash : public IUFlash
 {
     public:
         /***** Preset values and default settings *****/
-        static const uint8_t CONFIG_SUBDIR_LEN = 10;
+        static const uint8_t CONFIG_SUBDIR_LEN = 24;
         static char CONFIG_SUBDIR[CONFIG_SUBDIR_LEN];
-        static char IUFWMAINBKUP_SUBDIR[CONFIG_SUBDIR_LEN];
-        static char IUFWMAINIMG_SUBDIR[CONFIG_SUBDIR_LEN];
+        static char IUFWBACKUP_SUBDIR[CONFIG_SUBDIR_LEN];
+        static char IUFWTMPIMG_SUBDIR[CONFIG_SUBDIR_LEN];
         static char IUFWROLLBACK_SUBDIR[CONFIG_SUBDIR_LEN];
         static const uint8_t CONFIG_EXTENSION_LEN = 6;
         static char CONFIG_EXTENSION[CONFIG_EXTENSION_LEN];

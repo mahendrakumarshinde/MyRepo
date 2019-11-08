@@ -246,7 +246,7 @@ class Conductor
         bool firmwareConfigValidation(File *ValidationFile);
         bool firmwareDeviceValidation(File *ValidationFile);
         uint8_t firmwareWifiValidation(File *ValidationFile);
-        static const uint32_t fwDnldStartTmout = 30000;
+        static const uint32_t fwDnldStartTmout = 60000;
         uint32_t otaFwdnldTmout = 0;
         bool waitingDnldStrart = false;
     protected:
