@@ -35,7 +35,6 @@ class IUI2C
         bool readBytes(uint8_t address, uint8_t subAddress, uint8_t count,
                        uint8_t *destination,
                        void(*callback)(uint8_t wireStatus));
-        bool readWord(uint8_t address, uint8_t subAddress,uint16_t *readValue);
         void releaseReadLock() { m_readFlag = true; }
         // Detection and identification
         bool scanDevices();

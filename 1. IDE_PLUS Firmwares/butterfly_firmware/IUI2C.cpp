@@ -83,15 +83,16 @@ bool IUI2C::writeWord(uint8_t address, uint8_t subAddress, uint16_t data)
     temp[1] = (byte) ( data >> 8 ) & 0xFF;
     temp[2] = (byte) data & 0xFF;
     
-    bool success = Wire.transfer(address, &temp[0], 3, NULL, 0);
-    if (!success)
+    byte errorCode = Wire.transfer(address, &temp[0], 3, NULL, 0);
+    if (errorCode != 0x00)
     {
         if (asyncDebugMode)
         {
             debugPrint(F("I2C Temperature Limit set error"));
         }
+        return false;
     }
-    return success;
+    return true;
 }
 
 /**
@@ -166,32 +167,6 @@ bool IUI2C::readBytes(uint8_t address, uint8_t subAddress, uint8_t count,
         }
         return false;
     }
-    return true;
-}
-
-/**
- * Read a word data from given address, subaddress regsiter 
- *
- * @param address Where to read the byte from
- * @param subAddress Where to read the byte from
- * @param readValue read register data
- */
-
-bool IUI2C::readWord(uint8_t address, uint8_t subAddress,uint16_t *readValue)
-{
-    uint8_t temp[2];
-    byte errorCode = Wire.transfer(address, &subAddress, 2, &temp[0], 2);
-    if (isError())
-    {
-        m_errorFlag = true;
-        if (debugMode)
-        {
-            debugPrint("I2C error code:", false);
-            debugPrint(errorCode);
-        }
-        return false;
-    }
-    *readValue  = ((temp[0]) << 8 | temp[1]);
     return true;
 }
 

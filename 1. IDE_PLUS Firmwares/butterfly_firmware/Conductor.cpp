@@ -3,8 +3,6 @@
 #include "rBase64.h"
 #include "FFTConfiguration.h"
 #include "RawDataState.h"
-#include <MemoryFree.h>
-#include "stm32l4_iap.h"
 
 const char* fingerprintData;
 const char* fingerprints_X;

@@ -24,13 +24,26 @@ IUTMP116::IUTMP116(IUI2C *iuI2C, const char* name,
 
 void IUTMP116::setupHardware()
 {
-    if(ADDRESS != I_AM)
+    m_iuI2C->readBytes(ADDRESS, DEVICE_ID, 2, &m_rawConfigBytes[0]);
+    uint16_t deviceId =  ((uint16_t) (m_rawConfigBytes[0]) << 8 | m_rawConfigBytes[1]);
+    if(deviceId != I_AM)
     {
-        if (debugMode)
+        if (setupDebugMode)
         {
+            debugPrint(F("Could not connect to "), false);
+            debugPrint("TMP116", false);
             debugPrint("TMPERR");
+            debugPrint(deviceId);
         }
         return;
+    }
+    if (setupDebugMode)
+    {
+        debugPrint("TMP116- ", false);
+        debugPrint(F("DevID:0x"), false);
+        debugPrint(deviceId, false);
+        debugPrint(F(", I should be 0x"), false);
+        debugPrint(I_AM);
     }
     setTempLimit(HIGH_LIM,HIGH_ALERT_TEMP);
     setTempLimit(LOW_LIM,LOW_ALERT_TEMP);
@@ -42,6 +55,8 @@ void IUTMP116::setupHardware()
  */
 uint16_t IUTMP116::ReadConfigReg()
 {
+    m_rawConfigBytes[0] = 0;
+    m_rawConfigBytes[1] = 0;
     m_iuI2C->readBytes(ADDRESS, CFGR, 2, &m_rawConfigBytes[0]);
     uint16_t config_value =  ((uint16_t) (m_rawConfigBytes[0]) << 8 | m_rawConfigBytes[1]);
     return config_value;           
@@ -52,16 +67,10 @@ void IUTMP116::setTempLimit(uint8_t reg, float value)
     if(value >= MIN_TEMP_RANGE && value <= MAX_TEMP_RANGE)  //TMP116 accuracy without calibration ±0.2°C (maximum) from –10°C to +85°C. (currently for +ve temp) 
     {
     	int16_t val = (int16_t) ( value/TEMP_COEFFICIENT );
-        if (debugMode)
-        {
-            debugPrint("Limit value Before Write:");
-            debugPrint(val);
-            //Serial.println(val,HEX);
-        }    
     	if (!m_iuI2C->writeWord(ADDRESS, reg, val))
     	{
-        	if (asyncDebugMode) {
-            		debugPrint("Temperature Limit Register Write Failure");
+        	if (debugMode) {
+            	debugPrint("Temperature Limit Register Write Failure");
         	}
     	}
         if (debugMode)
@@ -69,19 +78,16 @@ void IUTMP116::setTempLimit(uint8_t reg, float value)
             uint8_t m_rawLimitBytes[2];           // 16-bit High and Low limit data from register
             if (!m_iuI2C->readBytes(ADDRESS, reg, 2, &m_rawLimitBytes[0]))
             {
-                if (asyncDebugMode) {
-            		    debugPrint("Temperature Limit Register Read Failure");
-        	    }
+       		    debugPrint("Temperature Limit Register Read Failure");
             }
             int16_t r_val =  ((int16_t) (m_rawLimitBytes[0]) << 8 | m_rawLimitBytes[1]);
             debugPrint("Limit value After Read:");
             debugPrint(r_val);
-            //Serial.println(r_val,HEX); 
         }
     }
     else
     {
-    	if (asyncDebugMode) {
+    	if (debugMode) {
             	debugPrint("Not Valid Temperature limit range");
         }
     }
@@ -149,7 +155,6 @@ void IUTMP116::readData()
 {
     m_rawBytes[0] = 0;
     m_rawBytes[1] = 0;
-
     if (!m_iuI2C->readBytes(ADDRESS, TEMP, 2, &m_rawBytes[0],m_readCallback))
     {
         if (asyncDebugMode) 
@@ -157,7 +162,6 @@ void IUTMP116::readData()
             debugPrint("Temperature Read Failure");
         }
     }
-
     config_reg = ReadConfigReg();
     if((config_reg >> 15) & 0x01)
     {
@@ -202,11 +206,6 @@ void IUTMP116::processTemperatureData(uint8_t wireStatus)
     m_temperature = 0.00;
     iTemp = ( (int16_t) (m_rawBytes[0] << 8) | m_rawBytes[1]);
     m_temperature = (iTemp * TEMP_COEFFICIENT);
-    if (debugMode)
-    {
-        debugPrint("iTemp: " + String(iTemp,HEX));
-        debugPrint("Temp: " + String(m_temperature));
-    }
     m_destinations[0]->addValue(m_temperature);
 }
 

@@ -10,14 +10,14 @@
 #define MIN_TEMP_RANGE -55.00
 #define MAX_TEMP_RANGE 125.00
 
-#define HIGH_ALERT_TEMP 45.00
-#define LOW_ALERT_TEMP 20.00
+#define HIGH_ALERT_TEMP 50.00
+#define LOW_ALERT_TEMP 15.00
 
 class IUTMP116 : public LowFreqSensor
 {
     public:
         static const uint8_t ADDRESS          = 0x48;           // TMP116 I2C address
-        static const uint8_t I_AM             = 0x48;
+        static const uint16_t I_AM            = 0x1116;         // Device ID Value read from DEVICE_ID regsiter
         static const uint8_t TEMP             = 0x00;           // Temperature register
         static const uint8_t CFGR             = 0x01;           // Configuration register
         static const uint8_t HIGH_LIM         = 0x02;           // High limit register
