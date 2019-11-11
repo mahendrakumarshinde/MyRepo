@@ -49,7 +49,9 @@ extern StatusVisual STATUS_NO_STATUS;
 extern StatusVisual STATUS_WIFI_WORKING;
 extern StatusVisual STATUS_WIFI_CONNECTED;
 extern StatusVisual STATUS_IS_ALIVE;
-
+extern StatusVisual STATUS_OTA_DOWNLOAD;
+extern StatusVisual STATUS_OTA_UPGRADE;
+extern StatusVisual STATUS_OTA_ROLLBACK;
 
 /* =============================================================================
     Led Manager

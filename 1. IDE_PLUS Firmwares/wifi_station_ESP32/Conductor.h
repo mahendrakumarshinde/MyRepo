@@ -102,7 +102,7 @@ class Conductor
         void debugPrintWifiInfo();
         /***** get Device Firmware Versions ******/
         void getDeviceFirmwareVersion(char* destination,char* HOST_VERSION, const char* WIFI_VERSION);
-        bool getHttpData(bool otaDnldProgress);
+        bool otaDnldFw(bool otaDnldProgress);
         void checkOtaPacketTimeout();       
 
     protected:

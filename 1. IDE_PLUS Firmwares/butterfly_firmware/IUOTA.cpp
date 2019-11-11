@@ -22,16 +22,19 @@ void IUOTA::otaFileDownload()
 bool IUOTA::otaFwBinWrite(char *folderName,char *fileName, char *buff, uint16_t size)
 {
     uint16_t writeLen = 0;
-    uint16_t writeSize = MAX_FILE_RW_SIZE;
-    
+    uint16_t writeSize = MAX_FILE_RW_SIZE;    
     if(buff == NULL || size == 0 || fileName == NULL)
     {
-        Serial.println("fw bin file write param error !");
+        if (debugMode) {
+            debugPrint(F("fw bin file write param error !"));
+        }
         return false;
     }
     char filepath[40];
     snprintf(filepath, 40, "%s/%s", folderName, fileName);
-    //Serial.println(filepath);
+    if (debugMode) {
+        debugPrint(filepath);
+    }
     File fwFile;
     if(DOSFS.exists(filepath))
     {
@@ -39,7 +42,10 @@ bool IUOTA::otaFwBinWrite(char *folderName,char *fileName, char *buff, uint16_t 
     }
     else
     {
-        Serial.println("Creating FW download file:" + String(filepath));
+        if (debugMode) {
+            debugPrint(F("Creating FW download file:"),false);
+            debugPrint(filepath);
+        }
         fwFile = DOSFS.open(filepath,"w");
     } 
     if(fwFile)
@@ -65,52 +71,13 @@ bool IUOTA::otaFwBinWrite(char *folderName,char *fileName, char *buff, uint16_t 
     }
     else
     {
-        Serial.println("Error opening FW download file:" + String(filepath));
+        if (debugMode) {
+            debugPrint(F("Error opening FW download file:"),false);
+            debugPrint(filepath);
+        }
         return false;
     }
     return true;
-}
-
-
-
-/**
- * Read OTA FW binary data from external flash as .bin
- */
-bool IUOTA::otaFwBinRead(char *folderName,char *fileName, char *buff, uint16_t *size)
-{
-    uint16_t readLen = 0;
-    uint16_t readSize = MAX_FILE_RW_SIZE;
-    uint32_t fileSize = 0;
-    
-    if(buff == NULL || fileName == NULL)
-    {
-        Serial.println("fw bin file read param error !");
-        return false;
-    }
- //   char filepath[40];
- //   snprintf(filepath, 40, "%s/%s", iuFlash.IUOTA1_SUBDIR, fileName);
-    //Serial.println(filepath);
-    File fwFile;
-    if(DOSFS.exists(fileName))
-    {
-        fwFile = DOSFS.open(fileName,"r");
-        if(fwFile)
-        {        
-            fileSize = fwFile.size();
-  
-            fwFile.close();
-        }
-        else
-        {
-            Serial.println("Error opening FW download file:" + String(fileName));
-            return false;            
-        }
-    }
-    else
-    {
-        Serial.println("fw bin file available:" + String(fileName));
-        return false;
-    }
 }
 
 String IUOTA::file_md5 (File & f)
@@ -132,29 +99,45 @@ return String();
 }
 
 #if 1
-char * IUOTA::otaGetMD5(char *folderName,char *fileName)
+bool IUOTA::otaGetMD5(char *folderName,char *fileName, char *md5HashRet)
 {
     char filepath[40];
     uint32_t fileSize = 0;
+    String md5hash = "";
     File fwFile;
     snprintf(filepath, 40, "%s/%s", folderName, fileName);
-    Serial.println(filepath);
+    if (debugMode) {
+        debugPrint(F("Get MD5 of file:"),false);
+        debugPrint(filepath);
+    }
     if(DOSFS.exists(filepath))
     {
         fwFile = DOSFS.open(filepath,"r");
         if(fwFile)
         {        
             fileSize = fwFile.size();
-            Serial.println("File Size:" + String(fileSize));
+            if (debugMode) {
+                debugPrint(F("File Size:"),false);
+                debugPrint(fileSize);
+            }
             if(fileSize > 0)
             {
-                String md5hash = file_md5(fwFile);
-                Serial.println("Filename " + String(fileName) + " of size " + String(fileSize));
-                Serial.print("MD5 Hash : ");
-                Serial.println(md5hash);               
-            }           
+                md5hash = file_md5(fwFile);
+                if (debugMode) {
+                    debugPrint(F("File Name:"),false);
+                    debugPrint(fileName,false);
+                    debugPrint(F(" of size:"),false);
+                    debugPrint(fileSize);
+                    debugPrint(F("MD5 Hash :"),false);
+                    debugPrint(md5hash);
+                }
+                strcpy(md5HashRet,md5hash.c_str());
+            }
+            fwFile.close();
+            return true;
         }
     }
+    return false;
 }
 #endif
 
@@ -165,7 +148,10 @@ bool IUOTA::otaFileRemove(char *folderName,char *fileName)
 {
     char filepath[40];
     snprintf(filepath, 40, "%s/%s", folderName, fileName);
- //   Serial.println(filepath);
+    if (debugMode) {
+        debugPrint(F("Remove file:"),false);
+        debugPrint(filepath);
+    }
     if(DOSFS.exists(filepath))
     { // Remove existing file
         DOSFS.remove(filepath);
@@ -189,8 +175,12 @@ bool IUOTA::otaFileCopy(char *dstFolderPath,char *srcFolderPath, char *filename)
         otaFileRemove(dstFolderPath,filename);
         snprintf(dstFilePath, 40, "%s/%s", dstFolderPath, filename);
         snprintf(srcFilePath, 40, "%s/%s", srcFolderPath, filename);
-      //  Serial.println(dstFilePath);
-      //  Serial.println(srcFilePath);        
+        if (debugMode) {
+            debugPrint(F("File Copy Dest FilePath:"),false);
+            debugPrint(dstFilePath);
+            debugPrint(F("File Copy Source FilePath:"),false);
+            debugPrint(srcFilePath);
+        }       
         if(DOSFS.exists(srcFilePath))
         {
             fwSrcFile = DOSFS.open(srcFilePath,"r");
@@ -199,7 +189,10 @@ bool IUOTA::otaFileCopy(char *dstFolderPath,char *srcFolderPath, char *filename)
             {
                 unsigned char fileBuf[MAX_FILE_RW_SIZE];
                 uint32_t fileSize = fwSrcFile.size();
-                Serial.println("File Size:" + String(fileSize));
+                if (debugMode) {
+                    debugPrint(F("File Size:"),false);
+                    debugPrint(fileSize);
+                }
                 if(fileSize > 0)
                 {
                     do
@@ -224,7 +217,11 @@ bool IUOTA::otaFileCopy(char *dstFolderPath,char *srcFolderPath, char *filename)
             }
             else
             {
-                Serial.println("Source/Dest File Open Fail" + String(srcFilePath) + String(dstFilePath) );
+                if (loopDebugMode) {
+                    debugPrint(F("Source/Dest File Open Fail"),false);
+                    debugPrint(srcFilePath);
+                    debugPrint(dstFilePath);
+                }
                 return false;
             }
         }        

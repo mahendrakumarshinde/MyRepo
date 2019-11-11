@@ -300,6 +300,8 @@ class Conductor
         SegmentedMessage segmentedMessages[MAX_SEGMENTED_MESSAGES]; // atmost MAX_SEGMENTED_MESSAGES can be captured in interleaved manner
         char m_otaStmUri[512];
         char m_otaEspUri[512];
+        char stmHash[34];
+        char espHash[34];
         char m_type1[8];
         char m_type2[8];
         char m_otaMsgId[32];

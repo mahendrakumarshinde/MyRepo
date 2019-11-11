@@ -731,6 +731,7 @@ void loop()
         }
         if(conductor.getUsageMode() == UsageMode::OTA) {
             conductor.otaChkFwdnldTmout();
+            ledManager.updateColors();
         }
 #if 0 // FW Validation
         if(doOnceFWValid == true)
@@ -742,10 +743,18 @@ void loop()
                 if(ret != 0)
                 {// Waiting for WiFi Disconnect/Connect Cycle.
                     doOnceFWValid = true;
-                    FWValidCnt = 1;                    
+                    FWValidCnt = 1;         
                 }
                 else if(ret == 0)
+                {
                     doOnceFWValid = false;
+                    iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"butterfly_firmware.bin");
+                    iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"WiFiClient.bin");
+                    delay(10);
+                    iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"butterfly_firmware.bin");
+                    iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"WiFiClient.bin");
+                    delay(10);
+                }
             }
             else
             {

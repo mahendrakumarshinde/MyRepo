@@ -18,15 +18,15 @@ class IUOTA
 
         void otaFileDownload();
         bool otaFwBinWrite(char *folderName,char *fileName, char *buff, uint16_t size);
-        bool otaFwBinRead(char *folderName,char *fileName, char *buff, uint16_t *size);
         bool otaFileRemove(char *folderName,char *fileName);
         
         bool otaFileCopy(char *destFilePath,char *srcFilePath, char *filename);
         bool otaSendResponse(MSPCommand::command resp, const char *otaResponse);
         String file_md5 (File & f);
-        char * otaGetMD5(char *folderName,char *fileName); 
+        bool otaGetMD5(char *folderName,char *fileName, char* md5HashRet); 
     //    const char *otaGetStmUri() { return m_otaStmUri; }
     //    const char *otaGetEspUri() { return m_ota_EspUri; }
+
 	protected:
         /***** Core *****/
     //    MacAddress m_macAddress;        
