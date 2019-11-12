@@ -307,8 +307,7 @@ class Conductor
         char m_otaMsgId[32];
         char m_otaMsgType[16];
         char m_otaFwVer[16];
-        //char  m_accessToken = "Token";
-        char  fwBinFileName[32];        
+        char fwBinFileName[32];        
 };
 
 

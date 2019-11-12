@@ -268,3 +268,29 @@ bool IUOTA::otaSendResponse(MSPCommand::command resp, const char *otaResponse)
             break;
     }
 }
+
+/**
+ * Get RCA Reason code based on HTTP error code value
+ * @param error int
+ * @return String
+ * OTA-RCA-0001 to OTA-RCA-0010 - Used at STM code for sending OTA Failure reason code
+ */
+String IUOTA::getOtaRca(int error)
+{
+    switch(error) {
+    case OTA_DOWNLOAD_SUCCESS:
+        return F("OTA-RCA-0000");
+    case OTA_INVALID_MQTT:
+        return F("OTA-RCA-0001");
+    case OTA_CHECKSUM_FAIL:
+        return F("OTA-RCA-0002");
+    case OTA_WIFI_DISCONNECT:
+        return F("OTA-RCA-0003");
+    case OTA_FLASH_RDWR_FAIL:
+        return F("OTA-RCA-0004");
+    case OTA_DOWNLOAD_TMOUT:
+        return F("OTA-RCA-0005"); 
+    default:
+        return F("OTA-RCA-1111");
+    }
+}

@@ -862,13 +862,13 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 }
             // iuWiFi.sendMSPCommand(MSPCommand::OTA_INIT_ACK,otaResponse);
                 snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
-                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-INIT-ACK", "0" ,otaInitTimeStamp);
+                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-INIT-ACK", "OTA-RCA-0000" ,otaInitTimeStamp);
                 iuOta.otaSendResponse(MSPCommand::OTA_INIT_ACK, otaResponse);
                 delay(1);
                 strcpy(fwBinFileName, "butterfly_firmware.bin");
                 iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,"butterfly_firmware.bin");
                 snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
-                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-FDW-START", "0" ,otaInitTimeStamp);
+                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-FDW-START", "OTA-RCA-0000" ,otaInitTimeStamp);
                 delay(1);
                 if(loopDebugMode) {
                     debugPrint(F("Sending OTA_FDW_START"));
@@ -886,7 +886,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 }
                 otaInitTimeStamp = conductor.getDatetime();            
                 snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
-                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", "DNLD_URL_ERR" ,otaInitTimeStamp);
+                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", String(iuOta.getOtaRca(OTA_INVALID_MQTT)).c_str() ,otaInitTimeStamp);
                 iuOta.otaSendResponse(MSPCommand::OTA_FDW_ABORT, otaResponse);
             }
         }
@@ -1917,8 +1917,10 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
   //          waitingDnldStrart = false; 
             break;
         case MSPCommand::OTA_DNLD_FAIL:
-            if (loopDebugMode) { debugPrint(F("OTA FW Download Failed !")); }
-            Serial.println(buff);
+            if (loopDebugMode) {
+                debugPrint(F("OTA FW Download Failed !"));
+                debugPrint(buff);
+            } 
             delay(1);
             waitingDnldStrart = false;
             otaInitTimeStamp = conductor.getDatetime();            
@@ -1986,8 +1988,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 waitingDnldStrart = false;
                 otaInitTimeStamp = conductor.getDatetime();            
                 snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
-                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", "FW_HASH_CHK_FAIL" ,otaInitTimeStamp);
-                iuOta.otaSendResponse(MSPCommand::OTA_FDW_ABORT, otaResponse);
+                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", String(iuOta.getOtaRca(OTA_CHECKSUM_FAIL)).c_str() ,otaInitTimeStamp);
+                iuOta.otaSendResponse(MSPCommand::OTA_FDW_ABORT, otaResponse);  // Checksum failed
             }
             delay(100);
             if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
@@ -2015,8 +2017,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 waitingDnldStrart = false;
                 otaInitTimeStamp = conductor.getDatetime();            
                 snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
-                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", "FW_FILE_WRITE_FAIL" ,otaInitTimeStamp);
-                iuOta.otaSendResponse(MSPCommand::OTA_FDW_ABORT, otaResponse);
+                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", String(iuOta.getOtaRca(OTA_FLASH_RDWR_FAIL)).c_str() ,otaInitTimeStamp);
+                iuOta.otaSendResponse(MSPCommand::OTA_FDW_ABORT, otaResponse); // File write failed
                 if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
                 iuWiFi.m_setLastConfirmedPublication();
                 changeUsageMode(UsageMode::OPERATION);
@@ -2104,7 +2106,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 // In case WiFi Disconnect/ESP Reset durig OTA, switch to OPERTATION Mode ??
                 otaInitTimeStamp = conductor.getDatetime();            
                 snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
-                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", "WIFI_DISCONECT" ,otaInitTimeStamp);
+                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", String(iuOta.getOtaRca(OTA_WIFI_DISCONNECT)).c_str() ,otaInitTimeStamp);
                 iuOta.otaSendResponse(MSPCommand::OTA_FDW_ABORT, otaResponse);
                 if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
                 iuWiFi.m_setLastConfirmedPublication();
@@ -4034,9 +4036,9 @@ void Conductor::otaChkFwdnldTmout()
             double otaInitTimeStamp;
             otaInitTimeStamp = conductor.getDatetime();            
             snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
-            m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", "FW_DNLD_WAIT_TMOUT" ,otaInitTimeStamp);
+            m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", String(iuOta.getOtaRca(OTA_DOWNLOAD_TMOUT)).c_str() ,otaInitTimeStamp);
             iuOta.otaSendResponse(MSPCommand::OTA_FDW_ABORT, otaResponse);
-            iuWiFi.m_setLastConfirmedPublication();
+            iuWiFi.m_setLastConfirmedPublication();  // Download Timeout , No response
             changeUsageMode(UsageMode::OPERATION);
             delay(100);
             if (debugMode)
@@ -4051,6 +4053,7 @@ uint32_t Conductor::firmwareValidation()
 {
     File ValidationFile;
     if(FW_Valid_State == 0) {
+        if(loopDebugMode){ debugPrint(F("FW Validation Start")); }
         ValidationFile = DOSFS.open("Validation.txt", "w");
         if (ValidationFile)
         {
@@ -4059,6 +4062,7 @@ uint32_t Conductor::firmwareValidation()
             ValidationFile.println(F("*************************************************************" ));
             ValidationFile.println(F(""));
             ValidationFile.println(F("Validation[DEV]-File Open: OK"));
+            if(loopDebugMode){ debugPrint(F("Validation[DEV]-File Open: OK")); }
         }
         firmwareConfigValidation(&ValidationFile);
 
@@ -4075,10 +4079,12 @@ uint8_t Conductor::firmwareWifiValidation(File *ValidationFile)
     uint8_t ret = 0;
     if(FW_Valid_State == 0) {
         ValidationFile->println(F("DEVICE WIFI STATUS:"));
+        if(loopDebugMode){ debugPrint(F("DEVICE WIFI STATUS")); }
         WiFiCon = iuWiFi.isConnected();
         if(WiFiCon)
         {
             ValidationFile->println(F("DEVICE WIFI STATUS: CONNECTED"));
+            if(loopDebugMode){ debugPrint(F("DEVICE WIFI STATUS:CONNECTED")); }
             iuWiFi.turnOff();
             FW_Valid_State = 1;
             ret = 1;
@@ -4086,6 +4092,7 @@ uint8_t Conductor::firmwareWifiValidation(File *ValidationFile)
         else
         {
             ValidationFile->print(F("DEVICE WIFI STATUS: NOT CONNECTED !"));
+            if(loopDebugMode){ debugPrint(F("DEVICE WIFI STATUS:NOT CONNECTED !")); }
             FW_Valid_State = 0;
             ValidationFile->close();
             ret = 0;
@@ -4096,17 +4103,20 @@ uint8_t Conductor::firmwareWifiValidation(File *ValidationFile)
     {
         File ValidationFile = DOSFS.open("Validation.txt", "w");
         ValidationFile.println(F("DEVICE WIFI DISCONNECT TEST:"));
+        if(loopDebugMode){ debugPrint(F("DEVICE WIFI DISCONNECT TEST:")); }
         WiFiCon = iuWiFi.isConnected();    
         if(WiFiCon == 1)
         {
             ValidationFile.println(F("DEVICE WIFI DISCONNECT-FAILED"));
+            if(loopDebugMode){ debugPrint(F("DEVICE WIFI DISCONNECT-FAILED")); }
             FW_Valid_State = 0;
             ValidationFile.close();
             ret = 0;
         }
         else
         {
-            ValidationFile.println(F("DEVICE WIFI DISCONNECT-PASSED"));
+            ValidationFile.println(F("DEVICE WIFI DISCONNECT-OK"));
+            if(loopDebugMode){ debugPrint(F("DEVICE WIFI DISCONNECT-OK")); }
             iuWiFi.turnOff();
             delay(100);
             iuWiFi.turnOn(1);   
@@ -4119,24 +4129,29 @@ uint8_t Conductor::firmwareWifiValidation(File *ValidationFile)
     {
         File ValidationFile = DOSFS.open("Validation.txt", "w");
         ValidationFile.println(F("DEVICE WIFI CONNECT TEST:"));
+        if(loopDebugMode){ debugPrint(F("DEVICE WIFI CONNECT TEST:")); }
         WiFiCon = iuWiFi.isConnected();    
         if(WiFiCon == 0)
         {
             ValidationFile.println(F("DEVICE WIFI CONNECT-FAILED"));
+            if(loopDebugMode){ debugPrint(F("DEVICE WIFI CONNECT-FAILED")); }
         }
         else
         {
-            ValidationFile.println(F("DEVICE WIFI CONNECT-PASSED"));
+            ValidationFile.println(F("DEVICE WIFI CONNECT-OK"));
+            if(loopDebugMode){ debugPrint(F("DEVICE WIFI CONNECT-OK")); }
         }
         FW_Valid_State = 3;
         ValidationFile.close();
 //        iuWiFi.hardReset(); // Do Hardreset before concluding test, Write result, restart STM
         ret = 0;
-    }
+        if(loopDebugMode){ debugPrint(F("FIRMWARE VALIDATION COMPLETED")); }
+    }    
     return ret;
 }
 bool Conductor::firmwareConfigValidation(File *ValidationFile)
 {
+    if(loopDebugMode){ debugPrint(F("DEVICE MQTT CONFIG CHECK:-")); }
     ValidationFile->println(F("DEVICE MQTT CONFIG CHECK:-"));
     // 1. Check default parameter setting
     ValidationFile->print(F(" - MQTT DEFAULT SERVER IP:"));
@@ -4144,12 +4159,14 @@ bool Conductor::firmwareConfigValidation(File *ValidationFile)
     if(MQTT_DEFAULT_SERVER_IP != IPAddress(13,233,38,155))
     {
         ValidationFile->println(F("   Validation [MQTT]-Default IP Add: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Default IP Add: Fail !")); }
     }
     ValidationFile->print(F(" - MQTT DEFAULT SERVER PORT:"));
     ValidationFile->println(MQTT_DEFAULT_SERVER_PORT);
     if(MQTT_DEFAULT_SERVER_PORT != 1883)
     {
         ValidationFile->println(F("   Validation [MQTT]-Default Port: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Default Port: Fail !")); }
     }
 
     ValidationFile->print(F(" - MQTT DEFAULT USERNAME:"));
@@ -4157,12 +4174,14 @@ bool Conductor::firmwareConfigValidation(File *ValidationFile)
     if(strcmp(MQTT_DEFAULT_USERNAME,"ispl"))
     {
         ValidationFile->println(F("   Validation [MQTT]-Default Username: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Default Username: Fail !")); }
     }
     ValidationFile->print(F(" - MQTT DEFAULT PASSOWRD:"));
     ValidationFile->println(MQTT_DEFAULT_ASSWORD);
     if(strcmp(MQTT_DEFAULT_ASSWORD,"indicus"))
     {
         ValidationFile->println(F("   Validation [MQTT]-Default Password: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Default Password: Fail !")); }
     }
 
     // 2. Check MQTT update from config file stored in ext. flash
@@ -4172,8 +4191,10 @@ bool Conductor::firmwareConfigValidation(File *ValidationFile)
       (strcmp(m_mqttUserName,"ispl") == 0) && (strcmp(m_mqttPassword,"indicus") == 0))
     {
         ValidationFile->println(F("   Validation [MQTT]-Read Config File: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Read Config File: Fail !")); }
     }
     ValidationFile->println(F(" - MQTT FLASH CONFIG FILE READ: OK"));
+    if(loopDebugMode){ debugPrint(F("MQTT FLASH CONFIG FILE READ: OK")); }
 
     ValidationFile->println(F("DEVICE HTTP CONFIG CHECK:-"));
     //http configuration
@@ -4184,24 +4205,28 @@ bool Conductor::firmwareConfigValidation(File *ValidationFile)
         ValidationFile->println(m_httpHost);
         if(strcmp(m_httpHost,"13.232.122.10"))
         {
-            ValidationFile->println(F("   Validation [HTTP]-Default HOST IP: Fail !")); 
+            ValidationFile->println(F("   Validation [HTTP]-Default HOST IP: Fail !"));
+            if(loopDebugMode){ debugPrint(F("Validation [HTTP]-Default HOST IP: Fail !")); }
         }
         ValidationFile->print(F(" - HTTP DEFAULT HOST PORT:"));
         ValidationFile->println(m_httpPort);
         if(m_httpPort != 8080)
         {
-            ValidationFile->println(F("   Validation [HTTP]-Default HOST PORT: Fail !"));        
+            ValidationFile->println(F("   Validation [HTTP]-Default HOST PORT: Fail !"));
+            if(loopDebugMode){ debugPrint(F("Validation [HTTP]-Default HOST PORT: Fail !")); }    
         }
         ValidationFile->print(F(" - HTTP DEFAULT HOST END POINT:"));
         ValidationFile->println(m_httpPath);
         if(strcmp(m_httpPath,"/iu-web/rawaccelerationdata"))
         {
             ValidationFile->println(F("   Validation [HTTP]-Default HOST END Point: Fail !"));
+            if(loopDebugMode){ debugPrint(F("Validation [HTTP]-Default HOST END Point: Fail !")); }
         }
     }
     else
     {
         ValidationFile->println(F(" - HTTP FLASH CONFIG FILE READ: OK"));
+        if(loopDebugMode){ debugPrint(F("HTTP FLASH CONFIG FILE READ: OK")); }
     }    
     ValidationFile->println(F("DEVICE FFT CONFIG CHECK:-"));
     ValidationFile->print(F(" - FFT DEFAULT SAMPLING RATE:"));
@@ -4209,20 +4234,24 @@ bool Conductor::firmwareConfigValidation(File *ValidationFile)
     if(FFTConfiguration::DEFAULT_SAMPLING_RATE != 3330)
     {
         ValidationFile->println(F("   Validation [FFT]-Default Sampling Rate: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [FFT]-Default Sampling Rate: Fail !")); }
     }
     ValidationFile->print(F(" - FFT DEFAULT BLOCK SIZE:"));
     ValidationFile->println(FFTConfiguration::DEFAULT_BLOCK_SIZE);
     if(FFTConfiguration::DEFAULT_BLOCK_SIZE != 512)
     {
         ValidationFile->println(F("   Validation [FFT]-Default Block Size: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [FFT]-Default Block Size: Fail !")); }
     }
 
     // Update the configuration of FFT computers from fft.conf
     if(setFFTParams() == false)
     {
         ValidationFile->print(F("   Validation [FFT]-Read Config File: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [FFT]-Read Config File: Fail !")); }
     }
     ValidationFile->println(F(" - FFT FLASH CONFIG FILE READ: OK"));
+    if(loopDebugMode){ debugPrint(F("FFT FLASH CONFIG FILE READ: OK")); }
 }
 
 bool Conductor::firmwareDeviceValidation(File *ValidationFile)
@@ -4238,42 +4267,67 @@ bool Conductor::firmwareDeviceValidation(File *ValidationFile)
         ValidationFile->print(F(" Volts, Temperature:"));
         ValidationFile->print(temperature);
         ValidationFile->println(F(" C"));
-        if (vdda < 3.0 || temperature > 40)
+        if (debugMode) {
+            debugPrint("VDDA = ", false);
+            debugPrint(vdda);
+            debugPrint("MCU Temp = ", false);
+            debugPrint(temperature);
+        }
+        if (vdda < 3.0 || temperature > 45)
         {
             Cnt++;            
         }
         if(Cnt > 7)
         {
             ValidationFile->println(F("Validation [DEV]-MCU INFO: Fail !"));
+            if(loopDebugMode){ debugPrint(F("Validation [DEV]-MCU INFO: Fail !")); }
+            break; // ?? Return Fail ??
         }
         delay(500);
     }
+    if(Cnt < 4)
+    {
+        ValidationFile->println(F("Validation [DEV]-MCU INFO: Ok"));
+        if(loopDebugMode){ debugPrint(F("Validation [DEV]-MCU INFO: Ok")); }
+    }
+
     ValidationFile->print(F("DEVICE FREE MEMORY(RAM): "));
     ValidationFile->println(freeMemory(),DEC);  
     if(freeMemory() < 30000)
     {
-        ValidationFile->println(F("Validation [DEV]-Free Memory: Fail !"));      
+        ValidationFile->println(F("Validation [DEV]-Free Memory: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [DEV]-Free Memory: Fail !")); }      
     }
+    if(loopDebugMode){ debugPrint(F("Validation [DEV]-Free Memory: Ok")); }  
     ValidationFile->print(F("DEVICE BLE  MAC ADDRESS:"));
     ValidationFile->println(m_macAddress);
     MacAddress Mac(00,00,00,00,00,00);
     if(m_macAddress == Mac || !iuBluetooth.isBLEAvailable)
     {
         ValidationFile->println(F("Validation [DEV]-BLE MAC: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [DEV]-BLE MAC: Fail !")); }
+    }
+    if(loopDebugMode){
+        debugPrint(F("Validation [DEV]-BLE MAC: OK - "),false);
     }
     ValidationFile->print(F("DEVICE WIFI MAC ADDRESS:"));
     ValidationFile->println(iuWiFi.getMacAddress());
     if(iuWiFi.getMacAddress() == Mac)
     {
         ValidationFile->println(F("Validation [DEV]-WiFi MAC: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [DEV]-WiFi MAC: Fail !")); }
     }
-    ValidationFile->println(F("DEVICE SENSOR INTERFACE CHECK:-"));
+    if(loopDebugMode){
+        debugPrint(F("Validation [DEV]-WiFi MAC: Ok"));
+    }
 
+    ValidationFile->println(F("DEVICE SENSOR INTERFACE CHECK:-"));
     iuI2C.scanDevices();
     ValidationFile->println(F("DEVICE LSM COMM CHECK:-"));
     if (!iuI2C.checkComponentWhoAmI("LSM6DSM ACC", iuAccelerometer.ADDRESS,iuAccelerometer.WHO_AM_I,iuAccelerometer.I_AM))
     {
         ValidationFile->println(F("   Validation [LSM]-Read Add: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [LSM]-Read Add: Fail !")); }
     }
     else
     {        // iuI2C.releaseReadLock();
@@ -4282,10 +4336,12 @@ bool Conductor::firmwareDeviceValidation(File *ValidationFile)
             ValidationFile->print(F("LSM6DSM I2C Add:0x"));
             ValidationFile->println(iuAccelerometer.I_AM,HEX);
             ValidationFile->println(F("   Validation [LSM]-Read Add: Ok"));
+            if(loopDebugMode){ debugPrint(F("Validation [LSM]-Read Add: Ok")); }
         }
         else
         {
             ValidationFile->println(F("   Validation [LSM]-Read Add: Fail !"));
+            if(loopDebugMode){ debugPrint(F("Validation [LSM]-Read Add: Fail")); }
         }
     }
 
@@ -4294,10 +4350,12 @@ bool Conductor::firmwareDeviceValidation(File *ValidationFile)
         ValidationFile->print(F("TMP116 I2C Add:0x"));
         ValidationFile->println(iuTemp.I_AM,HEX);
         ValidationFile->println(F("   Validation [TMP]-Read Add: Ok"));
+        if(loopDebugMode){ debugPrint(F("Validation [TMP]-Read Add: Ok")); }
     }
     else
     {
         ValidationFile->println(F("   Validation [TMP]-Read Add: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [TMP]-Read Add: Fail !")); }
     }
 
     SPIClass *m_SPI;

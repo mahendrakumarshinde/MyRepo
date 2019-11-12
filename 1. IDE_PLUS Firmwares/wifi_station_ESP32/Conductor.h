@@ -27,6 +27,11 @@ extern IUMQTTHelper mqttHelper;
 extern IUTimeHelper timeHelper;
 
 
+#define OTA_STM_PKT_ACK_TMOUT   1000
+#define OTA_DATA_READ_TIMOUT    1001
+#define OTA_HTTP_INIT_FAIL      1002
+#define OTA_WIFI_DISCONNECT     1003
+
 /* =============================================================================
     Conductor
 ============================================================================= */
@@ -103,7 +108,8 @@ class Conductor
         /***** get Device Firmware Versions ******/
         void getDeviceFirmwareVersion(char* destination,char* HOST_VERSION, const char* WIFI_VERSION);
         bool otaDnldFw(bool otaDnldProgress);
-        void checkOtaPacketTimeout();       
+        void checkOtaPacketTimeout();
+        String getOtaRca(int error);
 
     protected:
         /***** Config from Host *****/      

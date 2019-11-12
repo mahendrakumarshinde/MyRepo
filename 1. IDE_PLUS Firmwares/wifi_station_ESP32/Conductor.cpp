@@ -545,7 +545,6 @@ void Conductor::forgetWiFiCredentials()
  */
 void Conductor::receiveNewCredentials(char *newSSID, char *newPSK)
 {
-//    hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "@ RX NEW WIFI CRED @",20);
     if (m_credentialValidator.hasTimedOut())
     {
         forgetWiFiCredentials();
@@ -630,7 +629,6 @@ bool Conductor::getConfigFromMainBoard()
             {
                 debugPrint("Host didn't respond");
             }
- //           hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "Host didn't respond",19);
             deepsleep();
         }
         delay(500);
@@ -645,7 +643,6 @@ bool Conductor::getConfigFromMainBoard()
         hostSerial.readMessages();
         current = millis();
     }
- //   hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "WIFI_BLE_MAC1 ",14);
     return (uint64_t(m_bleMAC) > 0);
 }
 
@@ -734,9 +731,6 @@ bool Conductor::reconnect(bool forceNewCredentials)
         {
             WiFi.config(m_staticIp, m_gateway, m_subnetMask);
         }
-//        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "@ WIFI_RECONNECT   @",20);
-//        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, m_userSSID,20);
- //       hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, m_userPassword,20);
         WiFi.begin(m_userSSID, m_userPassword);
         m_lastConnectionAttempt = current;
         wifiConnected = (waitForConnectResult() == WL_CONNECTED);
@@ -798,7 +792,7 @@ void Conductor::checkOtaPacketTimeout()
         if (now - pktWaitTimeStr > otaPktAckTimeout)
         {
             waitingForPktAck = false;
-            hostSerial.sendMSPCommand(MSPCommand::OTA_DNLD_FAIL,"STM_PKT_ACK_TMOUT");
+            hostSerial.sendMSPCommand(MSPCommand::OTA_DNLD_FAIL, String(getOtaRca(OTA_STM_PKT_ACK_TMOUT)).c_str());//"STM_PKT_ACK_TMOUT");
             if (debugMode)
             {
                 debugPrint("Exceeded OTA packet wait time-out");
@@ -822,7 +816,6 @@ void Conductor::checkWiFiDisconnectionTimeout()
         {
             debugPrint("Exceeded disconnection time-out");
         }
-//        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "ESP RST DIS 100Sec",18);
         delay(100);
         ESP.restart(); // Resetting ESP32 if not connected to WiFi (every 100 Sec.) // ESP32_PORT_TRUE
     }
@@ -1221,7 +1214,7 @@ void Conductor::debugPrintWifiInfo()
 
 bool Conductor:: otaDnldFw(bool otaDnldProgress)
 {
-    char TestStr[128];
+  //  char TestStr[128];
     if(otaDnldProgress == false) 
     {
         otaInProgress = true;
@@ -1275,30 +1268,30 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
                         }
                         else if(size == 0 || ((millis() - otaStramStr) > otaPktReadTimeout))
                         { // Read timeout
-                            hostSerial.sendMSPCommand(MSPCommand::OTA_DNLD_FAIL,"DATA_READ_TIMOUT");
+                            hostSerial.sendMSPCommand(MSPCommand::OTA_DNLD_FAIL,String(getOtaRca(OTA_DATA_READ_TIMOUT)).c_str());//"DATA_READ_TIMOUT");
                             waitingForPktAck = false;
                         }
                         delay(1);
                     }
                     else
                     {
-                        sprintf(TestStr,"HTTP Failed:%d",httpCode);
-                        hostSerial.sendMSPCommand(MSPCommand::OTA_DNLD_FAIL,TestStr);
+                       // sprintf(TestStr,"HTTP FAIL:%d",httpCode);
+                        hostSerial.sendMSPCommand(MSPCommand::OTA_DNLD_FAIL,String(getOtaRca(httpCode)).c_str());
                         waitingForPktAck = false;
                         http_ota.end();
                     }
                 } 
                 else
                 {            
-                    sprintf(TestStr,"HTTP Failed:%d",httpCode);
-                    hostSerial.sendMSPCommand(MSPCommand::OTA_DNLD_FAIL,TestStr);
+          //          sprintf(TestStr,"HTTP FAIL:%d",httpCode);
+                    hostSerial.sendMSPCommand(MSPCommand::OTA_DNLD_FAIL,String(getOtaRca(httpCode)).c_str());
                     waitingForPktAck = false;
                     http_ota.end();                    
                 }
             }
             else
             {                    
-                hostSerial.sendMSPCommand(MSPCommand::OTA_DNLD_FAIL,"HTTP_INIT_FAIL");
+                hostSerial.sendMSPCommand(MSPCommand::OTA_DNLD_FAIL,String(getOtaRca(OTA_HTTP_INIT_FAIL)).c_str());//"HTTP_INIT_FAIL");
                 waitingForPktAck = false;
                 http_ota.end();                       
             }
@@ -1307,7 +1300,7 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
         {
             //hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"OTA_WiFi Discon",16);
             // FW Download was initiated... but failed due to WiFi disconnect
-            hostSerial.sendMSPCommand(MSPCommand::OTA_DNLD_FAIL,"WIFI_DISCONNECT");
+            hostSerial.sendMSPCommand(MSPCommand::OTA_DNLD_FAIL,String(getOtaRca(OTA_WIFI_DISCONNECT)).c_str());//"WIFI_DISCONNECT");
             http_ota.end();
             waitingForPktAck = false;
             return false;       
@@ -1352,7 +1345,7 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
                 }
                 else if(size == 0 || ((millis() - otaStramStr) > otaPktReadTimeout))
                 { // Read timeout
-                    hostSerial.sendMSPCommand(MSPCommand::OTA_DNLD_FAIL,"DATA_READ_TIMOUT");
+                    hostSerial.sendMSPCommand(MSPCommand::OTA_DNLD_FAIL,String(getOtaRca(OTA_DATA_READ_TIMOUT)).c_str());//"DATA_READ_TIMOUT");
                     waitingForPktAck = false;
                 }
                 delay(1);
@@ -1384,14 +1377,94 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
         }
         else
         {
-            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"OTA_WiFi Discon",16);
+          //  hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"OTA_WiFi Discon",16);
             if(fwdnldLen != totlen && contentLen > 0)
             { // FW Download is not completed... and was in progress
-                hostSerial.sendMSPCommand(MSPCommand::OTA_DNLD_FAIL,"WIFI_DISCONNECT");
+                hostSerial.sendMSPCommand(MSPCommand::OTA_DNLD_FAIL,String(getOtaRca(OTA_WIFI_DISCONNECT)).c_str());//"WIFI_DISCONNECT");
             }
             http_ota.end();
             waitingForPktAck = false;
             return false;  
         }        
+    }
+}
+
+/**
+ * Get RCA Reason code based on HTTP error code value
+ * @param error int
+ * @return String
+ * OTA-RCA-0001 to OTA-RCA-0010 - Used at STM code for sending OTA Failure reason code
+ * 
+ */
+String Conductor::getOtaRca(int error)
+{
+    switch(error) {
+        case OTA_WIFI_DISCONNECT:
+            /* WiFi Disconnection error handled both at STM and ESP, with same RCA Code = 3  */
+            return F("OTA-RCA-0003");
+        case OTA_HTTP_INIT_FAIL:
+            return F("OTA-RCA-0011");
+        case OTA_DATA_READ_TIMOUT:
+            return F("OTA-RCA-0012");
+        case OTA_STM_PKT_ACK_TMOUT:
+            return F("OTA-RCA-0014");
+        case HTTPC_ERROR_CONNECTION_REFUSED:
+            return F("OTA-RCA-0015");
+        case HTTPC_ERROR_SEND_PAYLOAD_FAILED:
+            return F("OTA-RCA-0016");
+        case HTTPC_ERROR_NOT_CONNECTED:
+            return F("OTA-RCA-0017");
+        case HTTPC_ERROR_CONNECTION_LOST:
+            return F("OTA-RCA-0018");
+        case HTTPC_ERROR_NO_STREAM:
+            return F("OTA-RCA-0019");;
+        case HTTPC_ERROR_NO_HTTP_SERVER:
+            return F("OTA-RCA-0020");
+        case HTTPC_ERROR_TOO_LESS_RAM:
+            return F("OTA-RCA-0021");
+        case HTTPC_ERROR_ENCODING:
+            return F("OTA-RCA-0022");
+        case HTTPC_ERROR_STREAM_WRITE:
+            return F("OTA-RCA-0023");
+        case HTTPC_ERROR_READ_TIMEOUT:
+            return F("OTA-RCA-0024");
+        case HTTP_CODE_BAD_REQUEST:
+            return F("OTA-RCA-0025");
+        case HTTP_CODE_FORBIDDEN:
+            return F("OTA-RCA-0026");
+        case HTTP_CODE_NOT_FOUND:
+            return F("OTA-RCA-0027");
+        case HTTP_CODE_METHOD_NOT_ALLOWED:
+            return F("OTA-RCA-0028");
+        case HTTP_CODE_NOT_ACCEPTABLE:
+            return F("OTA-RCA-0029");
+        case HTTP_CODE_PROXY_AUTHENTICATION_REQUIRED:
+            return F("OTA-RCA-0030");
+        case HTTP_CODE_REQUEST_TIMEOUT:
+            return F("OTA-RCA-0031");
+        case HTTP_CODE_INTERNAL_SERVER_ERROR:
+            return F("OTA-RCA-0032");
+        case HTTP_CODE_NOT_IMPLEMENTED:
+            return F("OTA-RCA-0033");
+        case HTTP_CODE_BAD_GATEWAY:
+            return F("OTA-RCA-0034");
+        case HTTP_CODE_SERVICE_UNAVAILABLE:
+            return F("OTA-RCA-0035");
+        case HTTP_CODE_GATEWAY_TIMEOUT:
+            return F("OTA-RCA-0036");
+        case HTTP_CODE_HTTP_VERSION_NOT_SUPPORTED:
+            return F("OTA-RCA-0037");
+        case HTTP_CODE_VARIANT_ALSO_NEGOTIATES:
+            return F("OTA-RCA-0038");
+        case HTTP_CODE_INSUFFICIENT_STORAGE:
+            return F("OTA-RCA-0039");
+        case HTTP_CODE_LOOP_DETECTED:
+            return F("OTA-RCA-0040");
+        case HTTP_CODE_NOT_EXTENDED:
+            return F("OTA-RCA-0051");
+        case HTTP_CODE_NETWORK_AUTHENTICATION_REQUIRED:
+            return F("OTA-RCA-0042"); 
+        default:
+            return F("OTA-RCA-1111");
     }
 }
