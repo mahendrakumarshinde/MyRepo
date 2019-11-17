@@ -2530,7 +2530,7 @@ void Conductor::streamFeatures()
         // TODO Switch to new streaming format once the backend is ready
         if (ser1) {
             if (m_streamingMode == StreamingMode::WIFI ||
-                m_streamingMode == StreamingMode::WIFI_AND_BLE || m_streamingMode == StreamingMode::ETHERNET)
+                m_streamingMode == StreamingMode::WIFI_AND_BLE || m_streamingMode == StreamingMode::ETHERNET || m_streamingMode == StreamingMode::NONE)
             { 
                   //Serial.print("@@@@@");
 //                FeatureGroup::instances[i]->bufferAndStream(

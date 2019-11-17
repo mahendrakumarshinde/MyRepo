@@ -402,6 +402,7 @@ void setup()
             debugPrint(String(freeMemory(), DEC));
         }
         iuI2C.begin();
+        iuI2C1.begin();
         // Interfaces
         if (debugMode) {
             debugPrint(F("\nInitializing interfaces..."));
@@ -490,6 +491,8 @@ void setup()
        
         if (setupDebugMode) {
             iuI2C.scanDevices();
+            debugPrint("Testing New I2C Bus ..............");
+            iuI2C1.scanDevices();
             debugPrint("");
         }
         if (debugMode) {
@@ -551,6 +554,11 @@ void setup()
                 debugPrint(F("\nI2C Satus: Error"));
             } else {
                 debugPrint(F("\nI2C Satus: OK"));
+            }
+            if (iuI2C1.isError()) {
+                debugPrint(F("\nI2C1 Satus: Error"));
+            } else {
+                debugPrint(F("\nI2C1 Satus: OK"));
             }
             debugPrint(F("\n***Finished setup at (ms): "), false);
             debugPrint(millis(), false);

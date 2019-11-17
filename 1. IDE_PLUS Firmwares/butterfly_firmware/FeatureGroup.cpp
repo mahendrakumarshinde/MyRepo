@@ -383,5 +383,6 @@ void FeatureGroup::bufferAndQueue(
     strcat(m_charBufferNode->buffer, stringTS.c_str());
     m_bufferIndex += stringTS.length();
     m_charBufferNode->buffer[m_bufferIndex++] = ';';
+    debugPrint("Streaming Data :");debugPrint(m_charBufferNode->buffer);
 }
 
