@@ -75,6 +75,7 @@ class IUTMP116 : public LowFreqSensor
         bool high_alert = false;
         bool low_alert = false;
         uint16_t config_reg;
+        volatile bool m_readingData;
 };
 
 #endif

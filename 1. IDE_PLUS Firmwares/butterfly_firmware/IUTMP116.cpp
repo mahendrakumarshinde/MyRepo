@@ -156,38 +156,53 @@ void IUTMP116::readData()
 {
     m_rawBytes[0] = 0;
     m_rawBytes[1] = 0;
-    if (!m_iuI2C1->readBytes(ADDRESS, TEMP, 2, &m_rawBytes[0],m_readCallback))
+    iuI2C1.releaseReadLock();
+    if (m_readingData) {
+        // previous data reading is not done: flag errors in destinations and
+        // skip reading
+        // for (uint8_t i = 0; i < m_destinationCount; ++i) {
+        //     //m_destinations[i]->flagDataError();
+        // }
+        if (debugMode) {
+            debugPrint("Skip TMP116 read");
+        }
+    } else if (m_iuI2C1->readBytes(ADDRESS, TEMP, 2, &m_rawBytes[0],m_readCallback))
     {
-        if (asyncDebugMode) 
+        m_readingData = true;
+        config_reg = ReadConfigReg();
+        if((config_reg >> 15) & 0x01)
+        {
+            high_alert = true;
+            low_alert = false;
+            if (debugMode) {
+                debugPrint("high alert");
+            }
+        }
+        else
+        {
+            high_alert = false;
+        }
+        if((config_reg >> 14) & 0x01)
+        {
+            high_alert = false;
+            low_alert = true;
+            if (debugMode) {
+                debugPrint("low alert");
+            }
+        } else
+        {
+            low_alert = false;
+        }
+    }else
+    {
+        if (debugMode) 
         {
             debugPrint("Temperature Read Failure");
         }
     }
-    config_reg = ReadConfigReg();
-    if((config_reg >> 15) & 0x01)
-    {
-        high_alert = true;
-        low_alert = false;
-        if (debugMode) {
-            debugPrint("high alert");
-        }
-    }
-    else
-    {
-        high_alert = false;
-    }
-    if((config_reg >> 14) & 0x01)
-    {
-        high_alert = false;
-        low_alert = true;
-        if (debugMode) {
-            debugPrint("low alert");
-        }
-    }
-    else
-    {
-        low_alert = false;
-    }
+   
+
+    m_readingData = false;
 }
 /**
  * Process a raw Temperature reading
@@ -197,7 +212,7 @@ void IUTMP116::processTemperatureData(uint8_t wireStatus)
     int iTemp = 0;
     iuI2C1.releaseReadLock();
     if (wireStatus != 0) {
-        if (asyncDebugMode) {
+        if (asyncDebugMode || debugMode) {
             debugPrint(micros(), false);
             debugPrint(F(" Temperature processing read error "), false);
             debugPrint(wireStatus);
