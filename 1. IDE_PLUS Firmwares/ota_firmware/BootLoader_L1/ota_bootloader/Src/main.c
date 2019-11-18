@@ -107,7 +107,7 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
 
-int boot_value = 3 ;
+int boot_value = 4 ;
 uint8_t  FlashValue = 0;
 uint8_t FlagAddr;
 
@@ -167,14 +167,16 @@ uint8_t FlagAddr;
   /*------------------------------------Test Code -----------------------------------------*/
   /*
    * 0 -> Factory Firmware
-   * 1 -> UART Debug mode
+   * 1 -> UART Debug mode0
    * 2 -> Roll Back Main Firmware
    * 3 -> Main Firmware (Default)
    */
-  boot_value = 1; // pass control to UART
+  //boot_value = 1; // pass control to UART
 
 //---------------------------------End of Test code-----------------------------------------------//
 
+  //uart_transmit_str((uint8_t*)"\n\r boot_value =  ");
+  //uart_transmit_str((uint8_t*)boot_value);
 
   switch(boot_value)
   {
@@ -215,8 +217,9 @@ uint8_t FlagAddr;
   if(Boot_RB_MFW_Flag == 1)
   {
 
-	  update_flag(FW_ROLLBACK, 1);
+	  update_flag(MFW_FLASH_FLAG, 4);
 	  uart_transmit_str((uint8_t*)"Jumping to ROLLBACK MFW.... \n\r");
+
 	  HAL_Delay(1000);
 	  flash_jump_boot_loader_L2();
 
@@ -250,16 +253,31 @@ uint8_t FlagAddr;
 	  all_flags[RETRY_FLAG] =  all_flags[RETRY_FLAG]+1;
 	  update_all_flag();
 	  flash_jump_boot_loader_L2();
+  }else if((all_flags[MFW_FLASH_FLAG]==2) && (all_flags[RETRY_FLAG]>=3))
+  {
+
+	  read_all_flags();
+	  all_flags[MFW_FLASH_FLAG] = 4; // rollbacking from L2
+	  all_flags[RETRY_FLAG] = 0;
+	  update_all_flag();
+	  flash_jump_boot_loader_L2();
+
   }else if(all_flags[MFW_FLASH_FLAG]==3)
   {
 	  update_flag(RETRY_FLAG, 0);
 	  flash_jump_to_main_firmware();
   }else if(all_flags[MFW_FLASH_FLAG]==4)
   {
-	  flash_jump_boot_loader_L2();
+	  flash_jump_boot_loader_L2(); // rollbacking from L2
+  }else if(all_flags[MFW_FLASH_FLAG]==5)
+  {
+	  flash_jump_boot_loader_L2(); // rollback using backup folder
+  }else if(all_flags[MFW_FLASH_FLAG]==6)
+  {
+	  flash_jump_to_main_firmware(); //File read error
   }else
   {
-	  flash_jump_to_main_firmware();
+	  flash_jump_to_main_firmware(); // unknown command
   }
 
   //----------------------------------------------------------------------------------------//
@@ -432,7 +450,7 @@ if(boot1_1 && boot1_2 && boot1_3 && boot1_4)
 	{
 		boot_1 = 2;
 	}
-if((boot_0 >= 2) && (boot_1 >= 2) )
+if((boot_0 < 2) && (boot_1 < 2) )
 	{
 	 boot_value = boot_0 *2 + boot_1;
 	}else
@@ -543,7 +561,7 @@ int uart_debug()
 		  boot_uart_read((uint8_t*)rx_flag_address_buffer);
 		  uart_transmit_str((uint8_t*)"received address :");
 		  uart_transmit_str(rx_flag_address_buffer);
-		  uart_transmit_str((uint8_t*)"Enter the 2 digit flag value(00-09)");
+		  uart_transmit_str((uint8_t*)"\n\r Enter the 2 digit flag value(00-09)");
 		  boot_uart_read((uint8_t*)rx_data_buffer);
 		  uart_transmit_str((uint8_t*)"received data :");
 		  uart_transmit_str(rx_data_buffer);
@@ -595,7 +613,9 @@ int uart_debug()
 	  }else if(Buffercmp((uint8_t*)cmd_8,(uint8_t*)rx_buffer,4))
 	  {
 		  uart_transmit_str((uint8_t*)"received BOOT.......\n\r");
-		  Boot_MFW_Flag = 1; // Boot main firmware.
+		  uart_transmit_str((uint8_t*)"booting.......\n\r");
+
+		  //Boot_MFW_Flag = 1; // Boot main firmware.
 		  uart_debug_flag =  1 ;
 
 	  }else

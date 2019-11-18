@@ -1,12 +1,12 @@
-#include "MD5.h"
+#include "iuMD5.h"
 
-MD5::MD5()
+iuMD5::iuMD5()
 {
 	//nothing
 	return;
 }
 
-char* MD5::make_digest(const unsigned char *digest, int len) /* {{{ */
+char* iuMD5::make_digest(const unsigned char *digest, int len) /* {{{ */
 {
 	char * md5str = (char*) malloc(sizeof(char)*(len*2+1));
 	static const char hexits[17] = "0123456789abcdef";
@@ -69,7 +69,7 @@ char* MD5::make_digest(const unsigned char *digest, int len) /* {{{ */
  * This processes one or more 64-byte data blocks, but does NOT update
  * the bit counters.  There are no alignment requirements.
  */
-const void *MD5::body(void *ctxBuf, const void *data, size_t size)
+const void *iuMD5::body(void *ctxBuf, const void *data, size_t size)
 {
 	MD5_CTX *ctx = (MD5_CTX*)ctxBuf;
 	const unsigned char *ptr;
@@ -179,9 +179,10 @@ const void *MD5::body(void *ctxBuf, const void *data, size_t size)
 	return ptr;
 }
 
-void MD5::MD5Init(void *ctxBuf)
+void iuMD5::MD5Init(void *ctxBuf)
 {
 	MD5_CTX *ctx = (MD5_CTX*)ctxBuf;
+
 	ctx->a = 0x67452301;
 	ctx->b = 0xefcdab89;
 	ctx->c = 0x98badcfe;
@@ -189,9 +190,12 @@ void MD5::MD5Init(void *ctxBuf)
 
 	ctx->lo = 0;
 	ctx->hi = 0;
+
+    memset(ctx->block, 0, sizeof(ctx->block));
+    memset(ctx->buffer, 0, sizeof(ctx->buffer));
 }
 
-void MD5::MD5Update(void *ctxBuf, const void *data, size_t size)
+void iuMD5::MD5Update(void *ctxBuf, const void *data, size_t size)
 {
 	MD5_CTX *ctx = (MD5_CTX*)ctxBuf;
 	MD5_u32plus saved_lo;
@@ -227,7 +231,7 @@ void MD5::MD5Update(void *ctxBuf, const void *data, size_t size)
 	memcpy(ctx->buffer, data, size);
 }
 
-void MD5::MD5Final(unsigned char *result, void *ctxBuf)
+void iuMD5::MD5Final(unsigned char *result, void *ctxBuf)
 {
 	MD5_CTX *ctx = (MD5_CTX*)ctxBuf;
 	MD5_u32plus used, free;
@@ -257,6 +261,7 @@ void MD5::MD5Final(unsigned char *result, void *ctxBuf)
 	ctx->buffer[62] = ctx->hi >> 16;
 	ctx->buffer[63] = ctx->hi >> 24;
 
+
 	body(ctx, ctx->buffer, 64);
 
 	result[0] = ctx->a;
@@ -278,109 +283,44 @@ void MD5::MD5Final(unsigned char *result, void *ctxBuf)
 
 	memset(ctx, 0, sizeof(*ctx));
 }
-unsigned char* MD5::make_hash(const void *arg)
+
+unsigned char* iuMD5::make_hash(char *arg)
 {
 	MD5_CTX context;
-	unsigned char * hash = (unsigned char *) malloc(BLOCK_SIZE);
+	unsigned char *hash=(unsigned char *)malloc(16);
+
 	MD5Init(&context);
-	MD5Update(&context, arg, strlen((char*)arg));
+	MD5Update(&context, arg, strlen(arg));
 	MD5Final(hash, &context);
 	return hash;
 }
 
-char* MD5::md5(const void *arg){
-	return make_digest(make_hash(arg), BLOCK_SIZE);
-}
-
-void MD5::hmac_md5(const void *text, int text_len,void *key, int key_len, unsigned char *digest){
+unsigned char* iuMD5::make_hash(char *arg,size_t size)
+{
 	MD5_CTX context;
-	unsigned char k_ipad[65];
-	unsigned char k_opad[65];
-	unsigned char tk[BLOCK_SIZE];
-	int i;
-	
-	if (key_len > 64){
-		MD5_CTX tctx;
-		MD5Init(&tctx);
-		MD5Update(&tctx, key, key_len);
-		MD5Final(tk,&tctx);
-		
-		key = tk;
-		key_len= 16;
-	}
-	
-	memset( k_ipad, 0, sizeof(k_ipad));
-	memset( k_opad, 0, sizeof(k_opad));
-	memcpy( k_ipad, key, key_len);
-	memcpy( k_opad, key, key_len);
-	
-	for(i = 0; i < 64; i++){
-			k_ipad[i] ^= HMAC_IPAD;
-			k_opad[i] ^= HMAC_OPAD;
-	}
-	
-	//inner
+	unsigned char *hash=(unsigned char *)malloc(16);
+
 	MD5Init(&context);
-	MD5Update(&context, k_ipad, 64);
-	MD5Update(&context, text, text_len);
-	MD5Final(digest, &context);
-	
-	//outer
-	MD5Init(&context);
-	MD5Update(&context, k_opad, 64);
-	MD5Update(&context, digest, 16);
-	MD5Final(digest,&context);
+	MD5Update(&context, arg, size);
+	MD5Final(hash, &context);
+	return hash;
 }
 
-char* MD5::hmac_md5(const void *text, int text_len,void *key, int key_len){
-	unsigned char digest[17];
-	digest[16] = 0x00;
-	MD5_CTX context;
-	unsigned char k_ipad[65];
-	unsigned char k_opad[65];
-	unsigned char tk[BLOCK_SIZE];
-	int i;
-	
-	if (key_len > 64){
-		MD5_CTX tctx;
-		MD5Init(&tctx);
-		MD5Update(&tctx, key, key_len);
-		MD5Final(tk,&tctx);
-		
-		key = tk;
-		key_len= 16;
-	}
-	
-	memset( k_ipad, 0, sizeof(k_ipad));
-	memset( k_opad, 0, sizeof(k_opad));
-	memcpy( k_ipad, key, key_len);
-	memcpy( k_opad, key, key_len);
-	
-	for(i = 0; i < 64; i++){
-			k_ipad[i] ^= HMAC_IPAD;
-			k_opad[i] ^= HMAC_OPAD;
-	}
-	
-	//inner
-	MD5Init(&context);
-	MD5Update(&context, k_ipad, 64);
-	MD5Update(&context, text, text_len);
-	MD5Final(digest, &context);
-	
-	//outer
-	MD5Init(&context);
-	MD5Update(&context, k_opad, 64);
-	MD5Update(&context, digest, 16);
-	MD5Final(digest,&context);
-	
-	return make_digest(digest,BLOCK_SIZE);
+void iuMD5::init_hash(void *ctxBuf, char *arg, size_t argSize)
+{
+	MD5Init((MD5_CTX *)ctxBuf);
+	MD5Update((MD5_CTX *)ctxBuf, arg, argSize);
 }
 
-/******************************************************************************/
-#if defined(MD5_LINUX)
-double MD5::millis(){
-	gettimeofday(&tv, NULL);
-	return (tv.tv_sec + 0.000001 * tv.tv_usec);
+void iuMD5::make_chunk_hash(void *ctxBuf, char *arg, size_t argSize)
+{
+	MD5Update((MD5_CTX *)ctxBuf, arg, argSize);
 }
-#endif
 
+unsigned char * iuMD5::make_final_hash(void *ctxBuf)
+{
+	unsigned char *hash=(unsigned char *)malloc(16);
+
+	MD5Final(hash, (MD5_CTX *)ctxBuf);
+	return(hash);
+}
