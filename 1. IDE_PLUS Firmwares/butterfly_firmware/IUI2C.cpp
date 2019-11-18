@@ -299,8 +299,8 @@ IUI2C1::IUI2C1() :
  */
 void IUI2C1::begin()
 {
-    Wire1.begin(TWI_PINS_18_19); // set master mode on pins 21/20
-    //Wire1.setClock(CLOCK_RATE);
+    Wire1.begin(); // set master mode on pins 21/20
+    Wire1.setClock(CLOCK_RATE);
     delay(2000);
 }
 
@@ -468,6 +468,7 @@ bool IUI2C1::readBytes(uint8_t address, uint8_t subAddress, uint8_t count,
     if (!m_readFlag)
     {
         // Restrain multiple simultoneous read accesses to I2C bus
+        debugPrint("DEBUG ERROR : m_readFlag not set");
         return false;
     }
     m_readFlag = false;
@@ -475,7 +476,7 @@ bool IUI2C1::readBytes(uint8_t address, uint8_t subAddress, uint8_t count,
                                  true, callback);
     if (!success)
     {
-        if (asyncDebugMode)
+        if (asyncDebugMode || loopDebugMode)
         {
             debugPrint(F("I2C error"));
         }
