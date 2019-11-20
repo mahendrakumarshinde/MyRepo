@@ -197,20 +197,6 @@ static void bleTransmitCallback(void) {
     armv7m_timer_start(&bleTransmitTimer, 5);
 }
 
-#if 0
-/* =============================================================================
- *  Read HTTP pending config messages using timer
- * ============================================================================*/
-
-static armv7m_timer_t httpConfigTimer;
-
-static void httpConfigCallback(void) {
-    //iuBluetooth.bleTransmit();
-    //Serial.println("HIT HTTP CONFIG....................................................");
-    iuWiFi.sendMSPCommand(MSPCommand::GET_PENDING_HTTP_CONFIG);
-    armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min  180000
-}
-#endif
 /* ================================================================================
  * Ethernet Status Timer callback
  * ===============================================================================*/
@@ -495,11 +481,7 @@ void setup()
         {
             debugPrint("BLE Chip is Available, BLE init Complete");
         }
- //   IDE1.5_PORT_CHANGE - Disabled for testing. This Req is causing ESP32 Reset.         
-        // httpConfig message read timerCallback
- //       armv7m_timer_create(&httpConfigTimer, (armv7m_timer_callback_t)httpConfigCallback);
- //       armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min Timer 180000
-        
+       
         // WIFI SETUP BEGIN
         iuWiFi.setupHardware();
         iuWiFi.setOnNewMessageCallback(onNewWiFiMessage);
