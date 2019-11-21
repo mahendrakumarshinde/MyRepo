@@ -70,7 +70,7 @@ void IUESP8285::setupHardware()
     // as MQTT resets ESP during MQTT Config.
     m_credentialSent = true;
     pinMode(ESP32_ENABLE_PIN, OUTPUT);
-//    hardReset();
+    hardReset();
     begin();
     setPowerMode(PowerMode::REGULAR);
     m_credentialSent = false;
@@ -227,7 +227,6 @@ bool IUESP8285::readMessages()
         if (debugMode) {
             debugPrint("WiFi irresponsive: hard resetting now");
         }
-        Serial.println("WiFi No Responding !");
         hardReset();
         m_lastResponseTime = now;
     }
@@ -616,7 +615,7 @@ void IUESP8285::sendWiFiCredentials()
 {
     if (m_credentialValidator.completed() && !m_credentialSent)
     {
-        Serial.println("Sending WiFi Credentials");
+ //       Serial.println("Sending WiFi Credentials");
         sendMSPCommand(MSPCommand::WIFI_RECEIVE_SSID, m_ssid);
         sendMSPCommand(MSPCommand::WIFI_RECEIVE_PASSWORD, m_psk);
         m_credentialSent = true;

@@ -110,9 +110,6 @@ float audioHigherCutoff = 160.0;
 
 /***** Debbugging variables *****/
 
-bool doOnceFWValid = true;
-int FWValidDelCnt = 0;
-char FW_Valid_State = 0;
 
 bool doOnce = true;
 uint32_t interval = 30000;
@@ -173,8 +170,6 @@ static void watchdogCallback(void) {
     if (now > oneDayTimeout ||
         (lastActive > 0 && now - lastActive > loopTimeout))
     {
-        Serial.println("STM Watchdog Reset !");
-        delay(100);
         STM32.reset();
     }
     if (iuWiFi.arePublicationsFailing()) {
@@ -183,7 +178,6 @@ static void watchdogCallback(void) {
         if(conductor.isBLEConnected()) {
            iuBluetooth.write("WIFI-DISCONNECTED;");
         }
-        Serial.println("Pub Failed !");
         iuWiFi.hardReset();
     }
     armv7m_timer_start(&watchdogTimer, 1000);
@@ -201,20 +195,6 @@ static armv7m_timer_t bleTransmitTimer;
 static void bleTransmitCallback(void) {
     iuBluetooth.bleTransmit();
     armv7m_timer_start(&bleTransmitTimer, 5);
-}
-
-
-/* =============================================================================
- *  Read HTTP pending config messages using timer
- * ============================================================================*/
-
-static armv7m_timer_t httpConfigTimer;
-
-static void httpConfigCallback(void) {
-    //iuBluetooth.bleTransmit();
-    //Serial.println("HIT HTTP CONFIG....................................................");
-    iuWiFi.sendMSPCommand(MSPCommand::GET_PENDING_HTTP_CONFIG);
-    armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min  180000
 }
 
 /* ================================================================================
@@ -501,11 +481,7 @@ void setup()
         {
             debugPrint("BLE Chip is Available, BLE init Complete");
         }
- //   IDE1.5_PORT_CHANGE - Disabled for testing. This Req is causing ESP32 Reset.         
-        // httpConfig message read timerCallback
- //       armv7m_timer_create(&httpConfigTimer, (armv7m_timer_callback_t)httpConfigCallback);
- //       armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min Timer 180000
-        
+       
         // WIFI SETUP BEGIN
         iuWiFi.setupHardware();
         iuWiFi.setOnNewMessageCallback(onNewWiFiMessage);
@@ -735,29 +711,6 @@ void loop()
 
         // Manage raw data sending depending on RawDataState::startRawDataTransmission and RawDataState::rawDataTransmissionInProgress
         conductor.manageRawDataSending();
-#if 0 // FW Validation
-        if(doOnceFWValid == true)
-        {
-            if((FWValidDelCnt % 2000) == 0 && FWValidDelCnt > 0)
-            {
-                yield();
-                uint32_t ret = 0;
-                ret = conductor.FW_Validation();
-                if(ret != 0)
-                {// Waiting for WiFi Disconnect/Connect Cycle.
-                    doOnceFWValid = true;
-                    FWValidDelCnt = 1;                    
-                }
-                else if(ret == 0)
-                    doOnceFWValid = false;
- //               FWValidDelCnt++;
-            }
-            else
-            {
-                FWValidDelCnt++;
-            }                  
-        }
-#endif
         yield();
        
     #endif

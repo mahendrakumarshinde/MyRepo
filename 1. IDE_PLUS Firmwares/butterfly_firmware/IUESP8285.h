@@ -24,7 +24,7 @@ class IUESP8285 : public IUSerial, public Component
 {
     public:
         /***** Preset values and default settings *****/
-        static const uint8_t ESP32_ENABLE_PIN = 10;  // IDE1.5_PORT_CHANGE Actual Value = A2. Temp. used - 10
+        static const uint8_t ESP32_ENABLE_PIN = A2;  // IDE1.5_PORT_CHANGE
         // Max expected length of WiFi SSID or password
         static const uint8_t wifiCredentialLength = 64;
         // WiFi config (credentials or Static IP)
