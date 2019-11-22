@@ -90,7 +90,7 @@ void loop()
             break;
     case 1:  /* 1 -> Flash STM Main Firmware */
             DEBUG_SERIAL.println("Upgrading STM Main Firmware..");
-            retVal3 = Flash_Verify_STM_File(STM_MFW_1);
+            retVal3 = Flash_Verify_STM_File(STM_MFW_1,STM_MFW_1_SUM);
             //Flash_STM_File(STM_MFW_1);
             /*Verify_STM_FW();
             * If Error, iu_all_flags[MFW_FLASH_FLAG] = 2; else iu_all_flags[MFW_FLASH_FLAG] =3;
@@ -117,22 +117,22 @@ void loop()
             DEBUG_SERIAL.println("Roll back STM Main Firmware..");
             
             if((DOSFS.exists(STM_MFW_1)) && (DOSFS.exists(STM_MFW_2)) && (DOSFS.exists(STM_MFW_1_SUM)) && (DOSFS.exists(STM_MFW_2_SUM))) {
-              DOSFS.rename(STM_MFW_1, "STM-TEMP.bin");
-              delay(1000);
-              DOSFS.rename(STM_MFW_2, STM_MFW_1);
-              delay(1000);
-              DOSFS.rename("STM-TEMP.bin", STM_MFW_2);
-              delay(1000);
-              DOSFS.rename(STM_MFW_1_SUM, "STM-TEMP.md5");
-              delay(1000);
-              DOSFS.rename(STM_MFW_2_SUM, STM_MFW_1_SUM);
-              delay(1000);
-              DOSFS.rename("STM-TEMP.md5", STM_MFW_2_SUM);
-              delay(1000);
+              // DOSFS.rename(STM_MFW_1, "STM-TEMP.bin");
+              // delay(1000);
+              // DOSFS.rename(STM_MFW_2, STM_MFW_1);
+              // delay(1000);
+              // DOSFS.rename("STM-TEMP.bin", STM_MFW_2);
+              // delay(1000);
+              // DOSFS.rename(STM_MFW_1_SUM, "STM-TEMP.md5");
+              // delay(1000);
+              // DOSFS.rename(STM_MFW_2_SUM, STM_MFW_1_SUM);
+              // delay(1000);
+              // DOSFS.rename("STM-TEMP.md5", STM_MFW_2_SUM);
+              // delay(1000);
               
               
               DEBUG_SERIAL.println("Flashing STM Main Firmware..");
-              retVal3 = Flash_Verify_STM_File(STM_MFW_1);
+              retVal3 = Flash_Verify_STM_File(STM_MFW_2,STM_MFW_2_SUM);
               //Flash_STM_File(STM_MFW_1);
               /*Verify STM FW;
               * If Error, iu_all_flags[MFW_FLASH_FLAG] = 2; else iu_all_flags[MFW_FLASH_FLAG] =3;
@@ -158,23 +158,23 @@ void loop()
             */
             if((DOSFS.exists(STM_MFW_1)) && (DOSFS.exists(STM_MFW_3)) && (DOSFS.exists(STM_MFW_1_SUM)) && (DOSFS.exists(STM_MFW_3_SUM))) {
               DEBUG_SERIAL.println("Roll back STM Main Firmware..");
-              DOSFS.rename(STM_MFW_3, "TEMP");
-              delay(1000);
-              DOSFS.rename(STM_MFW_1, STM_MFW_3);
-              delay(1000);
-              DOSFS.rename("TEMP", STM_MFW_1);
-              delay(1000);
-              DOSFS.rename(STM_MFW_3_SUM, "TEMP");
-              delay(1000);
-              DOSFS.rename(STM_MFW_1_SUM, STM_MFW_3_SUM);
-              delay(1000);
-              DOSFS.rename("TEMP", STM_MFW_1_SUM);
-              delay(1000);
+              // DOSFS.rename(STM_MFW_3, "TEMP");
+              // delay(1000);
+              // DOSFS.rename(STM_MFW_1, STM_MFW_3);
+              // delay(1000);
+              // DOSFS.rename("TEMP", STM_MFW_1);
+              // delay(1000);
+              // DOSFS.rename(STM_MFW_3_SUM, "TEMP");
+              // delay(1000);
+              // DOSFS.rename(STM_MFW_1_SUM, STM_MFW_3_SUM);
+              // delay(1000);
+              // DOSFS.rename("TEMP", STM_MFW_1_SUM);
+              // delay(1000);
               //DOSFS.rename("STM-TEMP.bin", STM_MFW_2);
               //delay(1000);
               
               DEBUG_SERIAL.println("Flashing STM Main Firmware..");
-              retVal3 = Flash_Verify_STM_File(STM_MFW_1);
+              retVal3 = Flash_Verify_STM_File(STM_MFW_3,STM_MFW_3_SUM);
               //Flash_STM_File(STM_MFW_1);
               /*Verify STM FW;
               * If Error, iu_all_flags[MFW_FLASH_FLAG] = 2; else iu_all_flags[MFW_FLASH_FLAG] =3;
@@ -314,7 +314,7 @@ uint16_t Flash_STM_File(char* TEST_READ_FILE) /* Write File to Internal Flash */
   
 }
 
-uint16_t Flash_Verify_STM_File(char* INPUT_FILE) /* Verify, Write and Verify */
+uint16_t Flash_Verify_STM_File(char* INPUT_FILE,char* md5Checksum) /* Verify, Write and Verify */
 {
   String md5_val = MD5_sum_file(INPUT_FILE);
   DEBUG_SERIAL.print("MD5 Calculated value: ");
@@ -322,7 +322,7 @@ uint16_t Flash_Verify_STM_File(char* INPUT_FILE) /* Verify, Write and Verify */
   DEBUG_SERIAL.print ("Length = "); DEBUG_SERIAL.println(md5_val.length());
   calculated = md5_val;
 
-  String md5_read = Read_MD5(STM_MFW_1_SUM);
+  String md5_read = Read_MD5(md5Checksum);
   DEBUG_SERIAL.print("MD5 Read value: ");
   DEBUG_SERIAL.println(md5_read);
   DEBUG_SERIAL.print ("Length = "); DEBUG_SERIAL.println(md5_read.length());
