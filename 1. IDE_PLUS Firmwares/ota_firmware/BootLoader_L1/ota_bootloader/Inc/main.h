@@ -72,7 +72,7 @@ void Error_Handler(void);
 //-----------------------------FLAG SETTING ADDRESS----------------------------------------------//
 #define MFW_FLASH_FLAG 0
 #define RETRY_FLAG 1
-#define FACTORY_FW 2op
+#define RETRY_VALIDATION 2
 #define MFW_VER 3
 #define FW_VALIDATION 4
 #define FW_ROLLBACK 5
@@ -82,7 +82,10 @@ void Error_Handler(void);
 #define ESP_FW_UPGRAD 8
 #define ESP_RUNNING_VER 9
 #define ESP_ROLLBACK 10
-
+//-----------------------------------------------------------------------------------------------//
+#define MAX_RETRY_VAL 5
+#define MAX_RETRY_FLAG 3
+//-----------------------------------------------------------------------------------------------//
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

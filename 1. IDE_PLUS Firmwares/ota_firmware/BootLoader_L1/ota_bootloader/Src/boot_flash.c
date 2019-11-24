@@ -16,7 +16,7 @@ static uint32_t flash_ptr = FLAG_ADDRESS;
 void flash_jump_to_factory_firmware(void)
 {
   /* Function pointer to the address of the user application. */
-	uart_transmit_str((uint8_t*)"inside fuct.... \n\r");
+	//uart_transmit_str((uint8_t*)"inside fuct.... \n\r");
   fnc_ptr jump_to_app;
   jump_to_app = (fnc_ptr)(*(volatile uint32_t*) (FLASH_FFW_START_ADDRESS+4u));
   HAL_RCC_DeInit();
@@ -61,7 +61,7 @@ void flash_jump_to_main_firmware(void)
 void flash_jump_boot_loader_L2(void)
 {
   /* Function pointer to the address of the user application. */
-	uart_transmit_str((uint8_t*)"inside fuct.... \n\r");
+	//uart_transmit_str((uint8_t*)"inside fuct.... \n\r");
   fnc_ptr jump_to_app;
   jump_to_app = (fnc_ptr)(*(volatile uint32_t*) (FLASH_BL2_START_ADDRESS+4u));
   HAL_RCC_DeInit();
