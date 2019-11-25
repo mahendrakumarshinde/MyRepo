@@ -2,7 +2,7 @@
 #include <Arduino.h>
 #include "stm32l4_flash.h"
 #include "stm32l4_wiring_private.h"
-
+#include "espComm.h"
 
 #include "iuMD5.h"
 
@@ -43,6 +43,8 @@
 //#define TEST_READ_FILE STM_MFW_1
 
 
+espComm esp32;
+
 char calculatedMD5Sum[64], receivedMD5Sum[64], verifiedMD5Sum[64];
 iuMD5 myMD5inst;
 MD5_CTX iuCtx;
@@ -59,7 +61,7 @@ void setup()
   delay(5000);
   pinMode(6,OUTPUT);
   digitalWrite(6,HIGH);
-  
+  Serial1.begin(115200);
 	DEBUG_SERIAL.begin(115200);
 	DEBUG_SERIAL.print("Initializing External Flash Memory...");
 	DOSFS.format();
@@ -69,6 +71,7 @@ void setup()
     // don't do anything more:
 	}
 	DEBUG_SERIAL.println("Memory initialized.");
+  
 }
 
 
@@ -87,6 +90,9 @@ void loop()
     case 1:  /* 1 -> Flash STM Main Firmware */
             DEBUG_SERIAL.println("Upgrading STM Main Firmware..");
             if((DOSFS.exists(STM_MFW_1)) && (DOSFS.exists(STM_MFW_1_SUM))) {
+              esp32.flash_esp32_verify();
+              DEBUG_SERIAL.println("ESP FW Flashing Completed..");
+              delay(5000);
               retVal3 = Flash_Verify_STM_File(STM_MFW_1,STM_MFW_1_SUM);
               //Flash_STM_File(STM_MFW_1);
               /*Verify_STM_FW();
