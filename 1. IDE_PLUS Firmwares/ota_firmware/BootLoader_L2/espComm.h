@@ -13,7 +13,7 @@ class espComm
 {
     /* data */
     public:
-        bool flash_esp32_verify();
+        uint16_t flash_esp32_verify();
         void espCleanup();
         bool esp_SendSyncCmd(uint8_t rebootCount, uint8_t retrySync);
         bool espSendCmd(byte command[], int size, int retry,uint8_t countC0 = 2);

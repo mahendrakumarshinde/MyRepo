@@ -31,7 +31,7 @@
 #define ESP_ROLLBACK 10
 
 
-#define TEST_CHUNK_SIZE	256
+#define TEST_CHUNK_SIZE	512
 #define STM_MFW_1 "iuTempFirmware/STM-MFW.bin"
 #define STM_MFW_2 "iuRollbackFirmware/STM-MFW.bin"
 #define STM_MFW_3 "iuBackupFirmware/STM-MFW.bin"
@@ -70,8 +70,7 @@ void setup()
 		DEBUG_SERIAL.println("Memory failed, or not present");
     // don't do anything more:
 	}
-	DEBUG_SERIAL.println("Memory initialized.");
-  
+	DEBUG_SERIAL.println("Memory initialized.");  
 }
 
 
@@ -90,17 +89,25 @@ void loop()
     case 1:  /* 1 -> Flash STM Main Firmware */
             DEBUG_SERIAL.println("Upgrading STM Main Firmware..");
             if((DOSFS.exists(STM_MFW_1)) && (DOSFS.exists(STM_MFW_1_SUM))) {
-              esp32.flash_esp32_verify();
-              DEBUG_SERIAL.println("ESP FW Flashing Completed..");
-              delay(5000);
-              retVal3 = Flash_Verify_STM_File(STM_MFW_1,STM_MFW_1_SUM);
-              //Flash_STM_File(STM_MFW_1);
-              /*Verify_STM_FW();
-              * If Error, iu_all_flags[MFW_FLASH_FLAG] = 2; else iu_all_flags[MFW_FLASH_FLAG] =3;
-              */
+              retVal3 = esp32.flash_esp32_verify();
               delay(2000);
-              DEBUG_SERIAL.println("Setting MFW Flag");
-              if(retVal3 == 0){
+              if(retVal3 == 0)
+              {
+                DEBUG_SERIAL.println("ESP32 FW Flashing Successfull.");
+                retVal3 = Flash_Verify_STM_File(STM_MFW_1,STM_MFW_1_SUM);
+                delay(2000);
+                if(retVal3 == 0)
+                  DEBUG_SERIAL.println("STM32 FW Flashing Successfull."); 
+                else
+                  DEBUG_SERIAL.println("STM32 FW Flashing Failed !!");                
+              }
+              else
+              {
+                DEBUG_SERIAL.println("ESP32 FW Flashing Failed !!");
+              }
+              
+              if(retVal3 == 0) 
+              {
                 update_flag(0,3); 
               } else if (retVal3 == 2) {
                 DEBUG_SERIAL.println("Error : File Checksum mismatch! Download file(s) again!!");
@@ -190,6 +197,7 @@ void loop()
 
   delay(1000);
   DEBUG_SERIAL.println("Rebooting IDE....");
+  DOSFS.end();
   delay(1000);
   stm32l4_system_reset(); // Call reset function. 
   delay(1000);
@@ -278,18 +286,27 @@ uint16_t Flash_STM_File(char* readFileName)
   DEBUG_SERIAL.print("File Size is ="); DEBUG_SERIAL.println(dataFileSize);
   stm32l4_flash_unlock();
   stm32l4_flash_erase((uint32_t)MFW_ADDRESS,((dataFileSize/2048)+1)*2048);
-  delay(1000);
+  delay(3000);
 
-  unsigned char received[dataFileSize];
-  size_t charCount=0;
-   
-  for (int i=1; i <= (dataFileSize/TEST_CHUNK_SIZE)+1; i++) {
+  //unsigned char received[dataFileSize];
+  uint32_t sectorCnt = 0;
+  if(dataFileSize > TEST_CHUNK_SIZE) {
+    sectorCnt = (dataFileSize/TEST_CHUNK_SIZE);
+    if(dataFileSize%TEST_CHUNK_SIZE)
+      sectorCnt = sectorCnt + 1;
+  }
+  else if(dataFileSize == TEST_CHUNK_SIZE)
+  {
+    sectorCnt = 1;
+  }     
+  //for (int i=1; i <= (dataFileSize/TEST_CHUNK_SIZE)+1; i++) {
+    for (int i=1; i <= sectorCnt; i++) {
     if ((bytesRead=iu_flash_read_file_chunk(&dataFileFP, dataBuffer, TEST_CHUNK_SIZE, i)) > 0) {
-      DEBUG_SERIAL.print("Chunk Seq="); DEBUG_SERIAL.println(i);
-      DEBUG_SERIAL.print("Bytes Read="); DEBUG_SERIAL.println(bytesRead);
+      DEBUG_SERIAL.print("Sector Write: "); 
+      DEBUG_SERIAL.print(i);DEBUG_SERIAL.print("/");DEBUG_SERIAL.println(sectorCnt);
       //DEBUG_SERIAL.println((char*)dataBuffer);
       stm32l4_flash_program((uint32_t)(MFW_ADDRESS + ((i-1)*TEST_CHUNK_SIZE)), dataBuffer, bytesRead);
-      delay(10);
+      delay(100);
     }
   }
 
