@@ -18,7 +18,7 @@
 
 #define MFW_FLASH_FLAG 0
 #define RETRY_FLAG 1
-#define FACTORY_FW 2
+#define RETRY_VALIDATION 2
 #define MFW_VER 3
 #define FW_VALIDATION 4
 #define FW_ROLLBACK 5
@@ -43,7 +43,7 @@
 //#define TEST_READ_FILE STM_MFW_1
 
 
-String calculated, received_md5;
+char calculatedMD5Sum[64], receivedMD5Sum[64], verifiedMD5Sum[64];
 iuMD5 myMD5inst;
 MD5_CTX iuCtx;
 unsigned char *hashVal=NULL;
@@ -53,14 +53,13 @@ uint8_t iu_all_flags[128];
 void iu_read_all_flags(void);
 
 
+/*--------------------------------------------------------------------------------------------------------*/
 void setup()
 {
   delay(5000);
   pinMode(6,OUTPUT);
   digitalWrite(6,HIGH);
   
-  //while (!DEBUG_SERIAL)
-  //yield();
 	DEBUG_SERIAL.begin(115200);
 	DEBUG_SERIAL.print("Initializing External Flash Memory...");
 	DOSFS.format();
@@ -68,7 +67,6 @@ void setup()
 	if (!DOSFS.begin()) {
 		DEBUG_SERIAL.println("Memory failed, or not present");
     // don't do anything more:
-    //while (1);
 	}
 	DEBUG_SERIAL.println("Memory initialized.");
 }
@@ -76,11 +74,9 @@ void setup()
 
 void loop()
 {
-  // iu_all_flags[MFW_FLASH_FLAG] = 0;
   iu_read_all_flags();
   //iu_all_flags[MFW_FLASH_FLAG] = 1; /* Forcing the Flag, for testing */
 
-  //DEBUG_SERIAL.println(switch_input1);
   File MD5_value;
   uint16_t retVal3;
 
@@ -90,20 +86,27 @@ void loop()
             break;
     case 1:  /* 1 -> Flash STM Main Firmware */
             DEBUG_SERIAL.println("Upgrading STM Main Firmware..");
-            retVal3 = Flash_Verify_STM_File(STM_MFW_1,STM_MFW_1_SUM);
-            //Flash_STM_File(STM_MFW_1);
-            /*Verify_STM_FW();
-            * If Error, iu_all_flags[MFW_FLASH_FLAG] = 2; else iu_all_flags[MFW_FLASH_FLAG] =3;
-            */
-            delay(2000);
-            DEBUG_SERIAL.println("Setting MFW Flag");
-            if(retVal3 == 0){
-              update_flag(0,3); 
-            } else if (retVal3 == 2) {
-              update_flag(0,5); // File error
+            if((DOSFS.exists(STM_MFW_1)) && (DOSFS.exists(STM_MFW_1_SUM))) {
+              retVal3 = Flash_Verify_STM_File(STM_MFW_1,STM_MFW_1_SUM);
+              //Flash_STM_File(STM_MFW_1);
+              /*Verify_STM_FW();
+              * If Error, iu_all_flags[MFW_FLASH_FLAG] = 2; else iu_all_flags[MFW_FLASH_FLAG] =3;
+              */
+              delay(2000);
+              DEBUG_SERIAL.println("Setting MFW Flag");
+              if(retVal3 == 0){
+                update_flag(0,3); 
+              } else if (retVal3 == 2) {
+                DEBUG_SERIAL.println("Error : File Checksum mismatch! Download file(s) again!!");
+                update_flag(0,6); // File error
+              } else {
+                DEBUG_SERIAL.println("Error : Flashing Verification failed..");
+                update_flag(0,2); // Verification failed error
+              }
             } else {
-              update_flag(0,2); // Verification failed error
-            }
+              DEBUG_SERIAL.println("Error : File(s) Missing..");
+              update_flag(0,7);
+            } 
             delay(100);
             break;
     case 2:  /* 2 -> No action here */
@@ -116,22 +119,9 @@ void loop()
             */
             DEBUG_SERIAL.println("Roll back STM Main Firmware..");
             
-            if((DOSFS.exists(STM_MFW_1)) && (DOSFS.exists(STM_MFW_2)) && (DOSFS.exists(STM_MFW_1_SUM)) && (DOSFS.exists(STM_MFW_2_SUM))) {
-              // DOSFS.rename(STM_MFW_1, "STM-TEMP.bin");
-              // delay(1000);
-              // DOSFS.rename(STM_MFW_2, STM_MFW_1);
-              // delay(1000);
-              // DOSFS.rename("STM-TEMP.bin", STM_MFW_2);
-              // delay(1000);
-              // DOSFS.rename(STM_MFW_1_SUM, "STM-TEMP.md5");
-              // delay(1000);
-              // DOSFS.rename(STM_MFW_2_SUM, STM_MFW_1_SUM);
-              // delay(1000);
-              // DOSFS.rename("STM-TEMP.md5", STM_MFW_2_SUM);
-              // delay(1000);
+            if((DOSFS.exists(STM_MFW_2)) && (DOSFS.exists(STM_MFW_2_SUM))) {
               
-              
-              DEBUG_SERIAL.println("Flashing STM Main Firmware..");
+              DEBUG_SERIAL.println("Flashing STM (RB) Firmware..");
               retVal3 = Flash_Verify_STM_File(STM_MFW_2,STM_MFW_2_SUM);
               //Flash_STM_File(STM_MFW_1);
               /*Verify STM FW;
@@ -142,39 +132,27 @@ void loop()
               if(retVal3 == 0){
                 update_flag(0,3); 
               } else if (retVal3 == 2) {
+                DEBUG_SERIAL.println("Error : File Checksum mismatch! Download file(s) again!!");
                 update_flag(0,6); // File error
               } else {
+                DEBUG_SERIAL.println("Error : Flash Verification failed ..");
                 update_flag(0,2); // Verification failed error
               }
-              delay(100);              
             } else {
-              DEBUG_SERIAL.println("File(s) Missing");
+              update_flag(0,7);
+              DEBUG_SERIAL.println("Error : File(s) Missing");
             }
-  
+            delay(100);  
             break;
     case 5: // Rollback Main FW using Backup FW
             /* Swap STM-MFW1.bin and STM-MFW2.bin
             * need to check the file excist or not 
             */
-            if((DOSFS.exists(STM_MFW_1)) && (DOSFS.exists(STM_MFW_3)) && (DOSFS.exists(STM_MFW_1_SUM)) && (DOSFS.exists(STM_MFW_3_SUM))) {
-              DEBUG_SERIAL.println("Roll back STM Main Firmware..");
-              // DOSFS.rename(STM_MFW_3, "TEMP");
-              // delay(1000);
-              // DOSFS.rename(STM_MFW_1, STM_MFW_3);
-              // delay(1000);
-              // DOSFS.rename("TEMP", STM_MFW_1);
-              // delay(1000);
-              // DOSFS.rename(STM_MFW_3_SUM, "TEMP");
-              // delay(1000);
-              // DOSFS.rename(STM_MFW_1_SUM, STM_MFW_3_SUM);
-              // delay(1000);
-              // DOSFS.rename("TEMP", STM_MFW_1_SUM);
-              // delay(1000);
-              //DOSFS.rename("STM-TEMP.bin", STM_MFW_2);
-              //delay(1000);
+            if((DOSFS.exists(STM_MFW_3)) && (DOSFS.exists(STM_MFW_3_SUM))) {
+              DEBUG_SERIAL.println("Roll back STM (Backup) Firmware..");
               
-              DEBUG_SERIAL.println("Flashing STM Main Firmware..");
-              retVal3 = Flash_Verify_STM_File(STM_MFW_3,STM_MFW_3_SUM);
+              DEBUG_SERIAL.println("Flashing STM (Backup) Firmware..");
+              retVal3 = Flash_Verify_STM_File(STM_MFW_3, STM_MFW_3_SUM);
               //Flash_STM_File(STM_MFW_1);
               /*Verify STM FW;
               * If Error, iu_all_flags[MFW_FLASH_FLAG] = 2; else iu_all_flags[MFW_FLASH_FLAG] =3;
@@ -184,27 +162,32 @@ void loop()
               if(retVal3 == 0){
                 update_flag(0,3); 
               } else if (retVal3 == 2) {
+                DEBUG_SERIAL.println("Error : File Checksum mismatch! Download file(s) again!!");
                 update_flag(0,6); // File error
               } else {
+                DEBUG_SERIAL.println("Error : Flash verification failed..");
                 update_flag(0,2); // Verification failed error
               }
             } else {
-              DEBUG_SERIAL.println("File(s) Missing");
+              update_flag(0,7);
+              DEBUG_SERIAL.println("Error : File(s) Missing");
             }
-            delay(100);            
+            delay(100);
+            break;            
     case 6: /* File read error, No action here */
             break;
-            
-      default:
+    case 7: /* File(s) Missing, No action here */
+            break;            
+    default:
             delay(1);
-    }
+  }
 
-    delay(1000);
-    DEBUG_SERIAL.println("Rebooting IDE....");
-    delay(1000);
-    stm32l4_system_reset(); // Call reset function. 
-    delay(1000);
-    DEBUG_SERIAL.println("Reset failed...");
+  delay(1000);
+  DEBUG_SERIAL.println("Rebooting IDE....");
+  delay(1000);
+  stm32l4_system_reset(); // Call reset function. 
+  delay(1000);
+  DEBUG_SERIAL.println("Reset failed...");
 
 	while (1);
 }
@@ -274,16 +257,16 @@ int iu_flash_close_file(File *fp)
 }
 /*--------------------------------------------------------------------------------------------------------*/ 
 
- 
-uint16_t Flash_STM_File(char* TEST_READ_FILE) /* Write File to Internal Flash */
+/* Write File to Internal Flash */ 
+uint16_t Flash_STM_File(char* readFileName) 
 {
   DEBUG_SERIAL.println("dosFileSys: Writing to Memory");
   File dataFileFP;
   size_t dataFileSize, bytesRead;
   uint8_t dataBuffer[TEST_CHUNK_SIZE];
 
-  if (iu_flash_open_file(&dataFileFP, TEST_READ_FILE, "r", &dataFileSize)
-    != F_NO_ERROR) {
+  if (iu_flash_open_file(&dataFileFP, readFileName, "r", &dataFileSize)
+      != F_NO_ERROR) {
     DEBUG_SERIAL.println("Error Opening file.");
   }
   DEBUG_SERIAL.print("File Size is ="); DEBUG_SERIAL.println(dataFileSize);
@@ -291,10 +274,9 @@ uint16_t Flash_STM_File(char* TEST_READ_FILE) /* Write File to Internal Flash */
   stm32l4_flash_erase((uint32_t)MFW_ADDRESS,((dataFileSize/2048)+1)*2048);
   delay(1000);
 
-   unsigned char received[dataFileSize];
-   size_t charCount=0;
+  unsigned char received[dataFileSize];
+  size_t charCount=0;
    
-//  for (int i=1; i <= (dataFileSize/TEST_CHUNK_SIZE+1); i++) {
   for (int i=1; i <= (dataFileSize/TEST_CHUNK_SIZE)+1; i++) {
     if ((bytesRead=iu_flash_read_file_chunk(&dataFileFP, dataBuffer, TEST_CHUNK_SIZE, i)) > 0) {
       DEBUG_SERIAL.print("Chunk Seq="); DEBUG_SERIAL.println(i);
@@ -305,42 +287,40 @@ uint16_t Flash_STM_File(char* TEST_READ_FILE) /* Write File to Internal Flash */
     }
   }
 
-  
   iu_flash_close_file(&dataFileFP);
-  //update_flag(0,3);
   stm32l4_flash_lock();
   DEBUG_SERIAL.println("Flashing completed..."); 
   return 1;
-  
 }
 
-uint16_t Flash_Verify_STM_File(char* INPUT_FILE,char* md5Checksum) /* Verify, Write and Verify */
-{
-  String md5_val = MD5_sum_file(INPUT_FILE);
-  DEBUG_SERIAL.print("MD5 Calculated value: ");
-  DEBUG_SERIAL.println(md5_val);
-  DEBUG_SERIAL.print ("Length = "); DEBUG_SERIAL.println(md5_val.length());
-  calculated = md5_val;
 
-  String md5_read = Read_MD5(md5Checksum);
+/* Verify, Write and Verify */
+uint16_t Flash_Verify_STM_File(char* INPUT_BIN_FILE,char* INPUT_MD5_FILE) 
+{
+  MD5_sum_file(INPUT_BIN_FILE, calculatedMD5Sum);
+  DEBUG_SERIAL.print("MD5 Calculated value: ");
+  DEBUG_SERIAL.println(calculatedMD5Sum);
+  DEBUG_SERIAL.print ("Length = "); DEBUG_SERIAL.println(strlen(calculatedMD5Sum));
+
+  Read_MD5(INPUT_MD5_FILE, receivedMD5Sum);
   DEBUG_SERIAL.print("MD5 Read value: ");
-  DEBUG_SERIAL.println(md5_read);
-  DEBUG_SERIAL.print ("Length = "); DEBUG_SERIAL.println(md5_read.length());
-  received_md5 = md5_read;
-  
-  if(received_md5 == calculated){
+  DEBUG_SERIAL.println(receivedMD5Sum);
+  DEBUG_SERIAL.print ("Length = "); DEBUG_SERIAL.println(strlen(receivedMD5Sum));
+
+  if (strcmp(receivedMD5Sum, calculatedMD5Sum) == 0) {
     DEBUG_SERIAL.println("STM MFW File ok..");
-    uint16_t retval4 = Flash_STM_File(INPUT_FILE); // Flashing the code to Internal memory
+    uint16_t retval4 = Flash_STM_File(INPUT_BIN_FILE); // Flashing the code to Internal memory
     delay(1000);
-    String verify_md5 = Flash_MD5_Sum(INPUT_FILE);
-    if(verify_md5 == calculated) {
-      DEBUG_SERIAL.println("STM MFW Flashed..!");
+    Flash_MD5_Sum(INPUT_BIN_FILE, verifiedMD5Sum);
+    if (strcmp(verifiedMD5Sum,calculatedMD5Sum) == 0) {
+      DEBUG_SERIAL.println("STM Firmware flashed successfully..!");
       return 0;
     } else {
+      DEBUG_SERIAL.println("Error : Internal memory checksum mismatch..");
       return 1;
     }           
   }else {
-    DEBUG_SERIAL.println("Error in STM MFW File");
+    DEBUG_SERIAL.println("Error in STM MFW / MD5 File(s)");
     return 2;
   }
   
@@ -358,23 +338,24 @@ void update_flag(uint8_t flag_addr , uint8_t flag_data)
     stm32l4_flash_unlock();
     stm32l4_flash_erase((uint32_t)FLAG_ADDRESS, 2048);
     delay(1000);
-    //DEBUG_SERIAL.write(rv);
-    DEBUG_SERIAL.println("Flash Erased...");
+    // DEBUG_SERIAL.println("Flash Erased...");
     stm32l4_flash_program((uint32_t)FLAG_ADDRESS, iu_all_flags, 128);
     delay(1000);
     stm32l4_flash_lock();
     DEBUG_SERIAL.println("Flag updated...");
     }
 
-String MD5_sum_file(char* TEST_READ_FILE) /* Calculate MD5SUM for a file in External Flash */
+
+/* Calculate MD5SUM for a file in External Flash */
+void MD5_sum_file(char* readFileName, char *md5Result)
 {
   File dataFileFP;
   size_t dataFileSize, bytesRead;
   uint8_t dataBuffer[TEST_CHUNK_SIZE];
   bool retVal;
 
-  if (iu_flash_open_file(&dataFileFP, TEST_READ_FILE, "r", &dataFileSize)
-    != F_NO_ERROR) {
+  if (iu_flash_open_file(&dataFileFP, readFileName, "r", &dataFileSize)
+      != F_NO_ERROR) {
     DEBUG_SERIAL.println("Error Opening file.");
   }
   DEBUG_SERIAL.print("File Size is ="); DEBUG_SERIAL.println(dataFileSize);
@@ -387,8 +368,7 @@ String MD5_sum_file(char* TEST_READ_FILE) /* Calculate MD5SUM for a file in Exte
     if ((bytesRead=iu_flash_read_file_chunk(&dataFileFP, dataBuffer, TEST_CHUNK_SIZE, i)) > 0) {
       if (i == 1){
         myMD5inst.init_hash(&iuCtx, (char *)dataBuffer, bytesRead);
-      }
-      else{
+      } else {
         myMD5inst.make_chunk_hash(&iuCtx, (char *)dataBuffer, bytesRead);   
       }
     }
@@ -396,51 +376,61 @@ String MD5_sum_file(char* TEST_READ_FILE) /* Calculate MD5SUM for a file in Exte
   
   hashVal = myMD5inst.make_final_hash(&iuCtx);
   char *md5str = myMD5inst.make_digest(hashVal,16);
-  String str1 = String(md5str); 
+  memset(md5Result, 0x00, 64);
+  strcpy(md5Result, md5str);
+  free(md5str);
   iu_flash_close_file(&dataFileFP);
-  return str1;        
 }
    
 
-String Read_MD5(char* TEST_FILE) /* Read MD5SUM from .md5 file */
+/* Read MD5SUM from .md5 file */
+void Read_MD5(char* TEST_FILE, char *md5Result)
 {
-  if(DOSFS.exists(TEST_FILE)) {
+  if (DOSFS.exists(TEST_FILE)) {
     File MD5_value = DOSFS.open(TEST_FILE,"r");
-    while(MD5_value)
-      {        
-        //fileSize = MD5_value.size();
-        //DEBUG_SERIAL.println("File Size:" + String(fileSize));
-        String rd = MD5_value.readStringUntil('\0');
-        DEBUG_SERIAL.print("Received MD5 value: ");DEBUG_SERIAL.println(rd);
-        rd.remove(rd.length()-1);
-        received_md5 = rd;
-          MD5_value.close(); 
-    }       
+
+    if (MD5_value) {
+      memset(md5Result, 0x00, 64);
+      int readLen=MD5_value.readBytesUntil('\0', md5Result, 64);
+      DEBUG_SERIAL.print("Received MD5 value: ");DEBUG_SERIAL.println(md5Result);
+      byte lastChar = strlen(md5Result)-1;
+      md5Result[lastChar] = '\0'; 
+      MD5_value.close(); 
+    }
   }
-  return received_md5;
 }
 
-String Flash_MD5_Sum(char* TEST_READ_FILE)  /* Calculate MD5SUm for Internal Flash */
+/* Calculate MD5SUm for Internal Flash */
+void Flash_MD5_Sum(char* readFileName, char *md5Result)
 {
-  //DEBUG_SERIAL.println("dosFileSys: Writing to Memory");
+//  DEBUG_SERIAL.println("dosFileSys: Writing to Memory");
   File dataFileFP;
   size_t dataFileSize, bytesRead;
   uint8_t dataBuffer[TEST_CHUNK_SIZE];
 
-  if (iu_flash_open_file(&dataFileFP, TEST_READ_FILE, "r", &dataFileSize)
-    != F_NO_ERROR) {
+  if (iu_flash_open_file(&dataFileFP, readFileName, "r", &dataFileSize)
+      != F_NO_ERROR) {
     DEBUG_SERIAL.println("Error Opening file.");
   }
+//  iu_flash_close_file(&dataFileFP);
   DEBUG_SERIAL.print("File Size is ="); DEBUG_SERIAL.println(dataFileSize);
   delay(1000);
+
   uint8_t *bytes = (uint8_t *)MFW_ADDRESS;
+
   myMD5inst.init_hash(&iuCtx, (char *)bytes, TEST_CHUNK_SIZE);
   myMD5inst.make_chunk_hash(&iuCtx, (char *)(bytes + TEST_CHUNK_SIZE), (dataFileSize-TEST_CHUNK_SIZE));
-  DEBUG_SERIAL.println("MD5 checksum make final digest...");
+  //DEBUG_SERIAL.println("MD5 checksum make final digest...");
   hashVal = myMD5inst.make_final_hash(&iuCtx);
+
   char *md5str = myMD5inst.make_digest(hashVal,16);
-  String MD5_final = String(md5str);  
-  return MD5_final;
+
+  memset(md5Result, 0x00, 64);
+  strcpy(md5Result, md5str);
+  DEBUG_SERIAL.print("MD5 sum of Flash : "); DEBUG_SERIAL.println(md5str);
+  iu_flash_close_file(&dataFileFP);
+//  Need to free the md5str that was allocated by make_digest()
+  free(md5str);
 }
 
 void iu_read_all_flags(void)
@@ -452,6 +442,20 @@ void iu_read_all_flags(void)
     iu_all_flags[i] = *(uint8_t*)(FLAG_ADDRESS + i);
     //DEBUG_SERIAL.println(iu_all_flags[i],HEX);
   }    
+}
+
+void swap_files(char* INPUT_FILE_1, char* INPUT_FILE_2)
+{
+  if((DOSFS.exists(INPUT_FILE_1)) && (DOSFS.exists(INPUT_FILE_2))) {
+    DOSFS.rename(INPUT_FILE_1, "TEMP");
+    delay(1000);
+    DOSFS.rename(INPUT_FILE_2, INPUT_FILE_1);
+    delay(1000);
+    DOSFS.rename("TEMP", INPUT_FILE_2);
+    delay(1000);
+  } else {
+    DEBUG_SERIAL.println("Error : File(s) Missing..");
+  }
 }
 
 /*--------------------------------*/

@@ -210,7 +210,7 @@ uint8_t FlagAddr;
 		  uart_debug_exit =  uart_debug();
 
 	  }
-	  uart_transmit_str((uint8_t*)"\n\r exiting from uart debug mode \n\r");
+	  uart_transmit_str((uint8_t*)"\n\rExiting from UART debug mode \n\r");
 
   }
 
@@ -239,33 +239,60 @@ uint8_t FlagAddr;
   read_all_flags();
   if(all_flags[MFW_FLASH_FLAG]==0)
   {
+	  if((all_flags[RETRY_FLAG]!=0) || all_flags[RETRY_VALIDATION]!=0)
+	  {
+	  all_flags[RETRY_FLAG] = 0;
+	  all_flags[RETRY_VALIDATION] = 0;
+	  update_all_flag();
+	  }
+
 	  flash_jump_to_main_firmware();
 
   }else if(all_flags[MFW_FLASH_FLAG]==1)
   {
 
 	  flash_jump_boot_loader_L2();
-  }else if((all_flags[MFW_FLASH_FLAG]==2) && (all_flags[RETRY_FLAG]<3))
+  }else if((all_flags[MFW_FLASH_FLAG]==2) && (all_flags[RETRY_FLAG]<MAX_RETRY_FLAG))
   {
 
 	  read_all_flags();
 	  all_flags[MFW_FLASH_FLAG] = 1;
 	  all_flags[RETRY_FLAG] =  all_flags[RETRY_FLAG]+1;
+	  all_flags[RETRY_VALIDATION] = 0;
 	  update_all_flag();
 	  flash_jump_boot_loader_L2();
-  }else if((all_flags[MFW_FLASH_FLAG]==2) && (all_flags[RETRY_FLAG]>=3))
+  }else if((all_flags[MFW_FLASH_FLAG]==2) && (all_flags[RETRY_FLAG]>= MAX_RETRY_FLAG))
   {
 
 	  read_all_flags();
 	  all_flags[MFW_FLASH_FLAG] = 4; // rollbacking from L2
 	  all_flags[RETRY_FLAG] = 0;
+	  all_flags[RETRY_VALIDATION] = 0;
 	  update_all_flag();
+	  uart_transmit_str((uint8_t*)"\n\rError : Flashing exceeded number of retries !!!\n\r");
+	  uart_transmit_str((uint8_t*)"\n\rRolling back to older Firmware ....\n\r");
 	  flash_jump_boot_loader_L2();
 
-  }else if(all_flags[MFW_FLASH_FLAG]==3)
+  }else if((all_flags[MFW_FLASH_FLAG]==3) && all_flags[RETRY_VALIDATION]< MAX_RETRY_VAL)
   {
-	  update_flag(RETRY_FLAG, 0);
+	  all_flags[RETRY_VALIDATION] = all_flags[RETRY_VALIDATION]+1;
+	  all_flags[RETRY_FLAG] = 0;
+	  update_all_flag();
+	 // update_flag(RETRY_FLAG, 0);
 	  flash_jump_to_main_firmware();
+
+  }else if((all_flags[MFW_FLASH_FLAG]==3) && all_flags[RETRY_VALIDATION]>= MAX_RETRY_VAL)
+  {
+	  all_flags[RETRY_VALIDATION] = 0;
+	  all_flags[RETRY_FLAG] = 0;
+	  all_flags[MFW_FLASH_FLAG] = 4;
+	  update_all_flag();
+	  uart_transmit_str((uint8_t*)"\n\rExceeded number of retries without validation !!!\n\r");
+	  uart_transmit_str((uint8_t*)"\n\rRolling back to older Firmware ....\n\r");
+	  flash_jump_boot_loader_L2(); // rollbacking from L2
+	 // update_flag(RETRY_FLAG, 0);
+	  //flash_jump_to_main_firmware();
+
   }else if(all_flags[MFW_FLASH_FLAG]==4)
   {
 	  flash_jump_boot_loader_L2(); // rollbacking from L2
@@ -274,6 +301,14 @@ uint8_t FlagAddr;
 	  flash_jump_boot_loader_L2(); // rollback using backup folder
   }else if(all_flags[MFW_FLASH_FLAG]==6)
   {
+	  uart_transmit_str((uint8_t*)"\n\rError : File Checksum mismatch! Download file(s) again !!!");
+	  uart_transmit_str((uint8_t*)"\n\rBooting Main Firmware.....\n\r");
+	  flash_jump_to_main_firmware(); //File read error
+  }else if(all_flags[MFW_FLASH_FLAG]==7)
+  {
+	  uart_transmit_str((uint8_t*)"\n\rFile(S) missing !!");
+	  uart_transmit_str((uint8_t*)"\n\rDownload files !!");
+	  uart_transmit_str((uint8_t*)"\n\rBooting Main Firmware.....\n\r");
 	  flash_jump_to_main_firmware(); //File read error
   }else
   {
@@ -391,11 +426,11 @@ void write_all_flags()
 
 	if(Buffercmp32(all_flag_temp , all_flags, 32))
 	{
-		uart_transmit_str((uint8_t*)"Success.... \n\r");
+		//uart_transmit_str((uint8_t*)"Success.... \n\r");
 
 	}else
 	{
-		uart_transmit_str((uint8_t*)"Failed.... \n\r");
+		//uart_transmit_str((uint8_t*)"Failed.... \n\r");
 
 	}
 
@@ -405,10 +440,13 @@ void write_flag_init()
 	Bootloader_Init(); /* to clear system flags  */
 	int return_val = Flag_Erase_All();
 	if(return_val)
-		uart_transmit_str((uint8_t*)"Flash Erase Failed.... \n\r");
+	{
+		//uart_transmit_str((uint8_t*)"Flash Erase Failed.... \n\r");
+	}
 	else
-		uart_transmit_str((uint8_t*)"Flash Erase Successful.... \n\r");
-
+	{
+		//uart_transmit_str((uint8_t*)"Flash Erase Successful.... \n\r");
+	}
 	Bootloader_FlashBegin();
 }
 int boot_pins_read()
@@ -485,18 +523,18 @@ int uart_debug()
 		Boot_MFW_Flag = 0;
 	}else if(Buffercmp((uint8_t*)cmd_0,(uint8_t*)rx_buffer,3))
 	  {
-		  uart_transmit_str((uint8_t*)"received BMF.......\n\r");
+		  uart_transmit_str((uint8_t*)"\n\r Received BMF.......\n\r");
 		  Boot_MFW_Flag = 1; // Boot main firmware.
 		  uart_debug_flag =  1 ;
 	  }else if(Buffercmp((uint8_t*)cmd_1,(uint8_t*)rx_buffer,3))
 	  {
-		  uart_transmit_str((uint8_t*)"received BFF.......\n\r");
+		  uart_transmit_str((uint8_t*)"\n\r Received BFF.......\n\r");
 		  Boot_FFW_Flag = 1; // Boot Factory firmware.
 		  uart_debug_flag =  1;
 
 	  }else if(Buffercmp((uint8_t*)cmd_2,(uint8_t*)rx_buffer,3))
 	  {
-		  uart_transmit_str((uint8_t*)"Received RBM.......\n\r");
+		  uart_transmit_str((uint8_t*)"\n\r Received RBM.......\n\r");
 		  Boot_RB_MFW_Flag = 1; // Rollback main firmware.
 
 		  uart_debug_flag = 1;
@@ -508,14 +546,12 @@ int uart_debug()
 				rx_flag_address_buffer[j] = '\0';
 
 			}
-		  uart_transmit_str((uint8_t*)"Received RFL.......\n\r");
-		  uart_transmit_str((uint8_t*)"Enter the 2 digit flag address(00 - 13)");
+		  uart_transmit_str((uint8_t*)"\n\r Received RFL.......\n\r");
+		  uart_transmit_str((uint8_t*)"\n\rEnter the 2 digit flag address(00 - 13)");
 		  boot_uart_read((uint8_t*)rx_flag_address_buffer);
 /*		  uart_transmit_str((uint8_t*)"Received address :");
 		  uart_transmit_str(rx_flag_address_buffer);*/
-		  uart_transmit_str((uint8_t*)"Flag value at  ");
-		  uart_transmit_str(rx_flag_address_buffer);
-		  uart_transmit_str((uint8_t*)"is  : ");
+
 
 
 
@@ -533,12 +569,25 @@ int uart_debug()
 		 // uint32_t result = rx_flag_address_buffer - '0';
 		//  uint8_t result =  5 ;//(uint8_t*)rx_flag_address_buffer - 48 ;
 		  //uint8_t address = (ui)
-		  result = Read_Flag(result_address);
+		  if((result_address >= 0) && (result_address < 14))
+		  {
+			  char buffer[10];
+			 // uart_transmit_str((uint8_t*)" valid address ");
+			  uart_transmit_str((uint8_t*)"\n\r Flag value at  ");
+			  sprintf(buffer, "0%d", result_address);
+			  uart_transmit_str((uint8_t*)buffer);
+			 // uart_transmit_str(rx_flag_address_buffer -1);
+			  uart_transmit_str((uint8_t*)" is  : ");
+			  result = Read_Flag(result_address);
+
+			  sprintf(buffer, "0%d", result);
+			  uart_transmit_str((uint8_t*)buffer);
+			  uart_transmit_str((uint8_t*)"\n\r");
+		  }else{
+			  uart_transmit_str((uint8_t*)"\n\r Invalid address !!\n\r");
+		  }
 //-------------------------------------------------------------------------------
-		  char buffer[10];
-		  sprintf(buffer, "0%d", result);
-		  uart_transmit_str((uint8_t*)buffer);
-		  uart_transmit_str((uint8_t*)"\n\r");
+
 
 
 		  //goto label1;
@@ -556,14 +605,14 @@ int uart_debug()
 				rx_data_buffer[j] = '\0';
 
 			}
-		  uart_transmit_str((uint8_t*)"Received WFL.......\n\r");
+		  uart_transmit_str((uint8_t*)"\n\r Received WFL.......\n\r");
 		  uart_transmit_str((uint8_t*)"Enter the 2 digit flag address(00-13)");
 		  boot_uart_read((uint8_t*)rx_flag_address_buffer);
-		  uart_transmit_str((uint8_t*)"received address :");
+		  uart_transmit_str((uint8_t*)"\n\r Received address :");
 		  uart_transmit_str(rx_flag_address_buffer);
-		  uart_transmit_str((uint8_t*)"\n\r Enter the 2 digit flag value(00-09)");
+		  uart_transmit_str((uint8_t*)"\n\rEnter the 2 digit flag value(00-09)");
 		  boot_uart_read((uint8_t*)rx_data_buffer);
-		  uart_transmit_str((uint8_t*)"received data :");
+		  uart_transmit_str((uint8_t*)"\n\r Received data :");
 		  uart_transmit_str(rx_data_buffer);
 
 
@@ -577,15 +626,21 @@ int uart_debug()
 			  {
 			  flag_data=(flag_data*10)+(rx_data_buffer[i]-'0');
 			  }
+		  if((flag_address >= 0) && (flag_address <= 13) && (flag_data >= 0) && (flag_data <= 9))
+		  {
 		  update_flag(flag_address, flag_data);
-		  uart_transmit_str((uint8_t*)"\n\r flag updated !!\n\r");
+		  uart_transmit_str((uint8_t*)"\n\r Flag updated !!\n\r");
+		  }else
+		  {
+			  uart_transmit_str((uint8_t*)"\n\r Invalid address or data !!\n\r");
 
+		  }
 		  //goto label1;
 		  uart_debug_flag = 0;
 
 	  }else if(Buffercmp((uint8_t*)cmd_5,(uint8_t*)rx_buffer,4))
 	  {
-		  uart_transmit_str((uint8_t*)"-----------IU Bootloader Commands------------\n\r");
+		  uart_transmit_str((uint8_t*)"\n\r-----------IU Bootloader Commands------------\n\r");
 		  uart_transmit_str((uint8_t*)"BMF	: Boot Main Firmware\n\r");
 		  uart_transmit_str((uint8_t*)"BFF	: Boot Factory Firmware\n\r");
 		  uart_transmit_str((uint8_t*)"RBM	: RollBack Main Firmware\n\r");
@@ -594,26 +649,27 @@ int uart_debug()
 		  uart_transmit_str((uint8_t*)"RBT	: Reboot\n\r");
 		  uart_transmit_str((uint8_t*)"BOOT	: Boot/Continue\n\r");
 		 // uart_transmit_str((uint8_t*)"CLF 	: Clear all flags\n\r");
+		  uart_transmit_str((uint8_t*)"----------------------------------------------\n\r");
 
 		  return 0;
 		  //goto label1;
 	  }else if(Buffercmp((uint8_t*)cmd_6,(uint8_t*)rx_buffer,3))
 	  {
 		  Clear_all_flags();
-		  uart_transmit_str((uint8_t*)"All Flags cleared !!\n\r");
+		  uart_transmit_str((uint8_t*)"\n\rAll Flags cleared !!\n\r");
 		  uart_debug_flag = 0;
 
 	  }else if(Buffercmp((uint8_t*)cmd_7,(uint8_t*)rx_buffer,3))
 	  {
-		  uart_transmit_str((uint8_t*)"resetting IDE......\n\r");
+		  uart_transmit_str((uint8_t*)"\n\rResetting IDE......\n\r");
 		  HAL_Delay(1000);
 		  iu_reset();
 		  uart_debug_flag = 0;
 
 	  }else if(Buffercmp((uint8_t*)cmd_8,(uint8_t*)rx_buffer,4))
 	  {
-		  uart_transmit_str((uint8_t*)"received BOOT.......\n\r");
-		  uart_transmit_str((uint8_t*)"booting.......\n\r");
+		  uart_transmit_str((uint8_t*)"\n\r Received BOOT.......\n\r");
+		  uart_transmit_str((uint8_t*)"Booting.......\n\r");
 
 		  //Boot_MFW_Flag = 1; // Boot main firmware.
 		  uart_debug_flag =  1 ;
@@ -623,7 +679,7 @@ int uart_debug()
 		  if(rx_buffer[0]!='\0')
 		  {
 		  uart_transmit_str((uint8_t*)"\n\r Invalid command !!!\n\r");
-		  uart_transmit_str((uint8_t*)"enter HELP for list of supported commands !\n\r");
+		  uart_transmit_str((uint8_t*)"Enter HELP for list of supported commands !\n\r");
 		  }
 		  //goto label1;
 		  uart_debug_flag = 0;
@@ -656,7 +712,7 @@ int time_out_flag = 0;
 		 if(rx_buffer[0]!='\0')
 		 	 {
 			 	 uart_receive_timout_1 = 0;
-		 		uart_transmit_str((uint8_t*)"\n\r command received !\n\r");
+		 		//uart_transmit_str((uint8_t*)"\n\r command received !\n\r");
 		 		break;
 
 		 	 }
