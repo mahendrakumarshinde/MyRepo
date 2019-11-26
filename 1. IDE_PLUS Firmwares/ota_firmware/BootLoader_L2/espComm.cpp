@@ -1,6 +1,9 @@
 #include "espComm.h"
 #include "Arduino.h"
 #include "FS.h"
+#include "LedManager.h"
+
+extern LedManager ledManager;
 
 uint16_t espComm::flash_esp32_verify()
 {
@@ -124,7 +127,7 @@ bool espComm::espBinWrite(char *folderName,char *fileName)
     {
         fwFile = DOSFS.open(filepath,"r");
         if(fwFile)
-        {
+        { 
             unsigned char fileBuf[MAX_FILE_RW_SIZE];
             fileSize = fwFile.size();
             DEBUG_SERIAL.print(F("File Size:"));
@@ -149,7 +152,7 @@ bool espComm::espBinWrite(char *folderName,char *fileName)
                 }
                 delay(100);
                 do
-                {                    
+                {    ledManager.updateColors();                
                     if(fileSize >= FLASH_BLOCK_SIZE)
                     {
                         readIdx = 0;

@@ -3,8 +3,16 @@
 #include "stm32l4_flash.h"
 #include "stm32l4_wiring_private.h"
 #include "espComm.h"
+#include "RGBLed.h"
+#include "LedManager.h"
 
 #include "iuMD5.h"
+
+APA102RGBLedStrip rgbLedStrip(16);
+GPIORGBLed rgbLed(25, 26, 38);
+
+LedManager ledManager(&rgbLed,&rgbLedStrip);
+
 
 /* Serial - for USB-UART, Serial1 - for UART3, Serail4 - for UART5 */
 #define DEBUG_SERIAL Serial4  
@@ -61,8 +69,14 @@ void setup()
   delay(5000);
   pinMode(6,OUTPUT);
   digitalWrite(6,HIGH);
+  rgbLed.setup();
+  ledManager.setBaselineStatus(&STATUS_NO_STATUS);
+  ledManager.showStatus(&STATUS_NO_STATUS);
+  ledManager.stopColorOverride();
+
   Serial1.begin(115200);
 	DEBUG_SERIAL.begin(115200);
+
 	DEBUG_SERIAL.print("Initializing External Flash Memory...");
 	DOSFS.format();
   delay(1000);
@@ -70,10 +84,25 @@ void setup()
 		DEBUG_SERIAL.println("Memory failed, or not present");
     // don't do anything more:
 	}
-	DEBUG_SERIAL.println("Memory initialized.");  
+	DEBUG_SERIAL.println("Memory initialized.");
+  ledManager.stopColorOverride();
+   
+  ledManager.showStatus(&STATUS_OTA_UPGRADE);
+  delay(2000);
+  
 }
 
+#if 0
+void loop(){
+ DEBUG_SERIAL.println("Inside Loop L2");
+ //ledManager.overrideColor(RGB_ORANGE);
+  ledManager.updateColors();
 
+}
+
+#endif
+
+#if 1
 void loop()
 {
   iu_read_all_flags();
@@ -121,6 +150,7 @@ void loop()
               update_flag(0,7);
             } 
             delay(100);
+            ledManager.overrideColor(RGB_BLACK);
             break;
     case 2:  /* 2 -> No action here */
             break;
@@ -202,10 +232,11 @@ void loop()
   stm32l4_system_reset(); // Call reset function. 
   delay(1000);
   DEBUG_SERIAL.println("Reset failed...");
-
+  
 	while (1);
 }
 
+#endif
 /*----------------------------------------------------------------------------------------------------*/
 
 int iu_flash_open_file(File *fp, char * fileName, const char * fileMode, size_t * fileSize)
@@ -301,12 +332,13 @@ uint16_t Flash_STM_File(char* readFileName)
   }     
   //for (int i=1; i <= (dataFileSize/TEST_CHUNK_SIZE)+1; i++) {
     for (int i=1; i <= sectorCnt; i++) {
+    ledManager.updateColors();
     if ((bytesRead=iu_flash_read_file_chunk(&dataFileFP, dataBuffer, TEST_CHUNK_SIZE, i)) > 0) {
       DEBUG_SERIAL.print("Sector Write: "); 
       DEBUG_SERIAL.print(i);DEBUG_SERIAL.print("/");DEBUG_SERIAL.println(sectorCnt);
       //DEBUG_SERIAL.println((char*)dataBuffer);
       stm32l4_flash_program((uint32_t)(MFW_ADDRESS + ((i-1)*TEST_CHUNK_SIZE)), dataBuffer, bytesRead);
-      delay(100);
+      delay(10);
     }
   }
 
