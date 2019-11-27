@@ -2,8 +2,9 @@
 #define ESPCOMM_H
 #include <inttypes.h>
 #include "FS.h"
+#include "bootloaderCodes.h"
 
-#define FLASH_BLOCK_SIZE 16384
+#define FLASH_BLOCK_SIZE  4096  //16384
 #define MAX_FILE_RW_SIZE  512
 #define ESP32_ENABLE_PIN  A2
 #define ESP32_IO0         7
@@ -13,7 +14,7 @@ class espComm
 {
     /* data */
     public:
-        uint16_t flash_esp32_verify();
+        uint16_t flash_esp32_verify(char* folderPath,char* fileName);
         void espCleanup();
         bool esp_SendSyncCmd(uint8_t rebootCount, uint8_t retrySync);
         bool espSendCmd(byte command[], int size, int retry,uint8_t countC0 = 2);
@@ -114,10 +115,11 @@ class espComm
         const unsigned char subst_DB[2] = { 0xDB, 0xDD };
                     // {Start of PAcket, Direction, Opcode, Length of packet }
        // unsigned char Startheader[5] = {0xc0,0x00,0x03,0x10,0x04};  // 1024 Packet size 
-       // unsigned char Startheader[5] = {0xc0,0x00,0x03,0x10,0x10};  // 4096 Packet size
+        unsigned char Startheader[5] = {0xc0,0x00,0x03,0x10,0x10};  // 4096 Packet size
        /* Following header shall be edited based on Packet size */
-        unsigned char Startheader[5] = {0xc0,0x00,0x03,0x10,0x40};   // 16384+16 Packet size
-        unsigned char header2[4] = {0x00,0x40,0x00,0x00};  // Packet size 16384 (0x4000)
+        //unsigned char Startheader[5] = {0xc0,0x00,0x03,0x10,0x40};   // 16384+16 Packet size
+        //unsigned char header2[4] = {0x00,0x40,0x00,0x00};  // Packet size 16384 (0x4000)
+        unsigned char header2[4] = {0x00,0x10,0x00,0x00};  // Packet size 16384 (0x4000)
         unsigned char paddingZero[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
         unsigned char readBuf[FLASH_BLOCK_SIZE];
         unsigned char PktBuf[FLASH_BLOCK_SIZE+2048];        
