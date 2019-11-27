@@ -7,6 +7,7 @@
 #include "LedManager.h"
 
 #include "iuMD5.h"
+#include "bootloaderCodes.h"
 
 APA102RGBLedStrip rgbLedStrip(16);
 GPIORGBLed rgbLed(25, 26, 38);
@@ -15,40 +16,13 @@ LedManager ledManager(&rgbLed,&rgbLedStrip);
 
 
 /* Serial - for USB-UART, Serial1 - for UART3, Serail4 - for UART5 */
-#define DEBUG_SERIAL Serial4  
+#define DEBUG_SERIAL Serial4 
 
 #define BL1_ADDRESS     (uint32_t)0x08000000    /* Start address of Bootloader 1 */
 #define BL2_ADDRESS     (uint32_t)0x08010000    /* Start address of Bootloader 2 */
 #define FFW_ADDRESS     (uint32_t)0x08036000    /* Start address of Facotry Firmware */
 #define MFW_ADDRESS     (uint32_t)0x08060000    /* Start address of Main Firmware */
 #define FLAG_ADDRESS    (uint32_t)0x080FF800    /* Start address of FLAG location*/
-
-
-#define MFW_FLASH_FLAG 0
-#define RETRY_FLAG 1
-#define RETRY_VALIDATION 2
-#define MFW_VER 3
-#define FW_VALIDATION 4
-#define FW_ROLLBACK 5
-#define STABLE_FW 6
-
-
-#define ESP_FW_VER 7
-#define ESP_FW_UPGRAD 8
-#define ESP_RUNNING_VER 9
-#define ESP_ROLLBACK 10
-
-
-#define TEST_CHUNK_SIZE	512
-#define STM_MFW_1 "iuTempFirmware/STM-MFW.bin"
-#define STM_MFW_2 "iuRollbackFirmware/STM-MFW.bin"
-#define STM_MFW_3 "iuBackupFirmware/STM-MFW.bin"
-#define STM_MFW_1_SUM "iuTempFirmware/STM-MFW.md5"
-#define STM_MFW_2_SUM "iuRollbackFirmware/STM-MFW.md5"
-#define STM_MFW_3_SUM "iuBackupFirmware/STM-MFW.md5"
-#define ESP_MFW_1 "ESP-MFW1.bin"
-#define ESP_MFW_2 "ESP-MFW2.bin"
-//#define TEST_READ_FILE STM_MFW_1
 
 
 espComm esp32;
@@ -92,17 +66,7 @@ void setup()
   
 }
 
-#if 0
-void loop(){
- DEBUG_SERIAL.println("Inside Loop L2");
- //ledManager.overrideColor(RGB_ORANGE);
-  ledManager.updateColors();
 
-}
-
-#endif
-
-#if 1
 void loop()
 {
   iu_read_all_flags();
@@ -117,13 +81,13 @@ void loop()
             break;
     case 1:  /* 1 -> Flash STM Main Firmware */
             DEBUG_SERIAL.println("Upgrading STM Main Firmware..");
-            if((DOSFS.exists(STM_MFW_1)) && (DOSFS.exists(STM_MFW_1_SUM))) {
-              retVal3 = esp32.flash_esp32_verify();
+            if((DOSFS.exists(STM_MAIN_FIRMWARE)) && (DOSFS.exists(STM_MFW_1_SUM))) {
+              retVal3 = esp32.flash_esp32_verify(ESP_MAIN_FIRMWARE,ESP_FIRMWARE_FILENAME);
               delay(2000);
               if(retVal3 == 0)
               {
                 DEBUG_SERIAL.println("ESP32 FW Flashing Successfull.");
-                retVal3 = Flash_Verify_STM_File(STM_MFW_1,STM_MFW_1_SUM);
+                retVal3 = Flash_Verify_STM_File(STM_MAIN_FIRMWARE,STM_MFW_1_SUM);
                 delay(2000);
                 if(retVal3 == 0)
                   DEBUG_SERIAL.println("STM32 FW Flashing Successfull."); 
@@ -139,7 +103,7 @@ void loop()
               {
                 update_flag(0,3); 
               } else if (retVal3 == 2) {
-                DEBUG_SERIAL.println("Error : File Checksum mismatch! Download file(s) again!!");
+                DEBUG_SERIAL.println("Error : File Open Failed try again!!");
                 update_flag(0,6); // File error
               } else {
                 DEBUG_SERIAL.println("Error : Flashing Verification failed..");
@@ -153,6 +117,8 @@ void loop()
             ledManager.overrideColor(RGB_BLACK);
             break;
     case 2:  /* 2 -> No action here */
+             /* Using Factory Firmware */
+             DEBUG_SERIAL.println("Upgrading STM with Factory Firmware..");
             break;
     case 3:  /* 3 -> No Action here...*/
             break;
@@ -160,17 +126,28 @@ void loop()
             /* Swap STM-MFW1.bin and STM-MFW2.bin
             * need to check the file excist or not 
             */
-            DEBUG_SERIAL.println("Roll back STM Main Firmware..");
+            DEBUG_SERIAL.println("Rollback STM Main Firmware..");
             
-            if((DOSFS.exists(STM_MFW_2)) && (DOSFS.exists(STM_MFW_2_SUM))) {
+            if((DOSFS.exists(STM_ROLLBACK_FIRMWARE)) && (DOSFS.exists(STM_MFW_2_SUM))) {
               
               DEBUG_SERIAL.println("Flashing STM (RB) Firmware..");
-              retVal3 = Flash_Verify_STM_File(STM_MFW_2,STM_MFW_2_SUM);
-              //Flash_STM_File(STM_MFW_1);
-              /*Verify STM FW;
-              * If Error, iu_all_flags[MFW_FLASH_FLAG] = 2; else iu_all_flags[MFW_FLASH_FLAG] =3;
-              */
+              retVal3 = esp32.flash_esp32_verify(ESP_ROLLBACK_FIRMWARE,ESP_FIRMWARE_FILENAME);
               delay(2000);
+              if(retVal3 == 0)
+              {
+                DEBUG_SERIAL.println("Rollback of ESP32 FW Flashing Successfull.");
+                retVal3 = Flash_Verify_STM_File(STM_ROLLBACK_FIRMWARE,STM_MFW_2_SUM);
+                delay(2000);
+                if(retVal3 == 0)
+                  DEBUG_SERIAL.println("Rollback of STM32 FW Flashing Successfull."); 
+                else
+                  DEBUG_SERIAL.println("Rollback of STM32 FW Flashing Failed !!");                
+              }
+              else
+              {
+                DEBUG_SERIAL.println("Rollback of ESP32 FW Flashing Failed !!");
+              }
+              //delay(2000);
               DEBUG_SERIAL.println("Setting MFW Flag");
               if(retVal3 == 0){
                 update_flag(0,3); 
@@ -179,7 +156,7 @@ void loop()
                 update_flag(0,6); // File error
               } else {
                 DEBUG_SERIAL.println("Error : Flash Verification failed ..");
-                update_flag(0,2); // Verification failed error
+                update_flag(0,4); // Verification failed error
               }
             } else {
               update_flag(0,7);
@@ -191,25 +168,36 @@ void loop()
             /* Swap STM-MFW1.bin and STM-MFW2.bin
             * need to check the file excist or not 
             */
-            if((DOSFS.exists(STM_MFW_3)) && (DOSFS.exists(STM_MFW_3_SUM))) {
-              DEBUG_SERIAL.println("Roll back STM (Backup) Firmware..");
+            if((DOSFS.exists(STM_FORCED_ROLLBACK_FIRMWARE)) && (DOSFS.exists(STM_MFW_3_SUM))) {
+              DEBUG_SERIAL.println("Forced Rollback STM (Backup) Firmware..");
               
               DEBUG_SERIAL.println("Flashing STM (Backup) Firmware..");
-              retVal3 = Flash_Verify_STM_File(STM_MFW_3, STM_MFW_3_SUM);
-              //Flash_STM_File(STM_MFW_1);
-              /*Verify STM FW;
-              * If Error, iu_all_flags[MFW_FLASH_FLAG] = 2; else iu_all_flags[MFW_FLASH_FLAG] =3;
-              */
+              retVal3 = esp32.flash_esp32_verify(ESP_FORCED_ROLLBACK_FIRMWARE,ESP_FIRMWARE_FILENAME);
+              delay(2000);
+              if(retVal3 == 0)
+              {
+                DEBUG_SERIAL.println("Forced Rollback of ESP32 FW Flashing Successfull.");
+                retVal3 = Flash_Verify_STM_File(STM_FORCED_ROLLBACK_FIRMWARE,STM_MFW_3_SUM);
+                delay(2000);
+                if(retVal3 == 0)
+                  DEBUG_SERIAL.println("Forced Rollback of STM32 FW Flashing Successfull."); 
+                else
+                  DEBUG_SERIAL.println("Forced Rollback of STM32 FW Flashing Failed !!");                
+              }
+              else
+              {
+                DEBUG_SERIAL.println("Forced Rollback of ESP32 FW Flashing Failed !!");
+              }
               delay(2000);
               DEBUG_SERIAL.println("Setting MFW Flag");
               if(retVal3 == 0){
-                update_flag(0,3); 
+                update_flag(0,2); 
               } else if (retVal3 == 2) {
                 DEBUG_SERIAL.println("Error : File Checksum mismatch! Download file(s) again!!");
                 update_flag(0,6); // File error
               } else {
                 DEBUG_SERIAL.println("Error : Flash verification failed..");
-                update_flag(0,2); // Verification failed error
+                update_flag(0,5); // Verification failed error
               }
             } else {
               update_flag(0,7);
@@ -236,7 +224,6 @@ void loop()
 	while (1);
 }
 
-#endif
 /*----------------------------------------------------------------------------------------------------*/
 
 int iu_flash_open_file(File *fp, char * fileName, const char * fileMode, size_t * fileSize)
@@ -309,14 +296,23 @@ uint16_t Flash_STM_File(char* readFileName)
   File dataFileFP;
   size_t dataFileSize, bytesRead;
   uint8_t dataBuffer[TEST_CHUNK_SIZE];
-
+  bool falshFailed = false;
+  
   if (iu_flash_open_file(&dataFileFP, readFileName, "r", &dataFileSize)
       != F_NO_ERROR) {
     DEBUG_SERIAL.println("Error Opening file.");
+    return FILE_OPEN_FAILED;
+    
   }
   DEBUG_SERIAL.print("File Size is ="); DEBUG_SERIAL.println(dataFileSize);
-  stm32l4_flash_unlock();
-  stm32l4_flash_erase((uint32_t)MFW_ADDRESS,((dataFileSize/2048)+1)*2048);
+  if(!stm32l4_flash_unlock() ){
+      DEBUG_SERIAL.println("FLASH STM32_FLASH_UNLOCK_FAILED !!!");
+      //return STM32_FLASH_UNLOCK_FAILED; 
+  }
+  if(!stm32l4_flash_erase((uint32_t)MFW_ADDRESS,((dataFileSize/2048)+1)*2048) ){
+    DEBUG_SERIAL.println("STM32_FLASH_ERASE_FAILED !!!");
+    return STM32_FLASH_ERASE_FAILED;
+  }
   delay(3000);
 
   //unsigned char received[dataFileSize];
@@ -337,22 +333,32 @@ uint16_t Flash_STM_File(char* readFileName)
       DEBUG_SERIAL.print("Sector Write: "); 
       DEBUG_SERIAL.print(i);DEBUG_SERIAL.print("/");DEBUG_SERIAL.println(sectorCnt);
       //DEBUG_SERIAL.println((char*)dataBuffer);
-      stm32l4_flash_program((uint32_t)(MFW_ADDRESS + ((i-1)*TEST_CHUNK_SIZE)), dataBuffer, bytesRead);
+      if(!stm32l4_flash_program((uint32_t)(MFW_ADDRESS + ((i-1)*TEST_CHUNK_SIZE)), dataBuffer, bytesRead) ){
+          // Retry could be required ?
+          return STM32_FLASH_WRITE_ERROR;
+      }
       delay(10);
     }
   }
 
   iu_flash_close_file(&dataFileFP);
-  stm32l4_flash_lock();
+  stm32l4_flash_lock(); 
   DEBUG_SERIAL.println("Flashing completed..."); 
-  return 1;
+  return RETURN_SUCESS;
 }
 
 
 /* Verify, Write and Verify */
 uint16_t Flash_Verify_STM_File(char* INPUT_BIN_FILE,char* INPUT_MD5_FILE) 
-{
-  MD5_sum_file(INPUT_BIN_FILE, calculatedMD5Sum);
+{ 
+  uint8_t md5Status;
+
+  md5Status = MD5_sum_file(INPUT_BIN_FILE, calculatedMD5Sum);
+  if (md5Status > 0)
+  {
+    return md5Status;
+  }
+  
   DEBUG_SERIAL.print("MD5 Calculated value: ");
   DEBUG_SERIAL.println(calculatedMD5Sum);
   DEBUG_SERIAL.print ("Length = "); DEBUG_SERIAL.println(strlen(calculatedMD5Sum));
@@ -366,10 +372,15 @@ uint16_t Flash_Verify_STM_File(char* INPUT_BIN_FILE,char* INPUT_MD5_FILE)
     DEBUG_SERIAL.println("STM MFW File ok..");
     uint16_t retval4 = Flash_STM_File(INPUT_BIN_FILE); // Flashing the code to Internal memory
     delay(1000);
+    if(RETURN_SUCESS != retval4) {
+      //DO Retry
+       return RETURN_FAILED;
+    }
+
     Flash_MD5_Sum(INPUT_BIN_FILE, verifiedMD5Sum);
     if (strcmp(verifiedMD5Sum,calculatedMD5Sum) == 0) {
       DEBUG_SERIAL.println("STM Firmware flashed successfully..!");
-      return 0;
+      return RETURN_SUCESS;
     } else {
       DEBUG_SERIAL.println("Error : Internal memory checksum mismatch..");
       return 1;
@@ -402,7 +413,7 @@ void update_flag(uint8_t flag_addr , uint8_t flag_data)
 
 
 /* Calculate MD5SUM for a file in External Flash */
-void MD5_sum_file(char* readFileName, char *md5Result)
+uint8_t MD5_sum_file(char* readFileName, char *md5Result)
 {
   File dataFileFP;
   size_t dataFileSize, bytesRead;
@@ -412,6 +423,7 @@ void MD5_sum_file(char* readFileName, char *md5Result)
   if (iu_flash_open_file(&dataFileFP, readFileName, "r", &dataFileSize)
       != F_NO_ERROR) {
     DEBUG_SERIAL.println("Error Opening file.");
+    return  FILE_OPEN_FAILED;
   }
   DEBUG_SERIAL.print("File Size is ="); DEBUG_SERIAL.println(dataFileSize);
 
@@ -435,6 +447,8 @@ void MD5_sum_file(char* readFileName, char *md5Result)
   strcpy(md5Result, md5str);
   free(md5str);
   iu_flash_close_file(&dataFileFP);
+  
+  return RETURN_SUCESS;
 }
    
 
@@ -456,7 +470,7 @@ void Read_MD5(char* TEST_FILE, char *md5Result)
 }
 
 /* Calculate MD5SUm for Internal Flash */
-void Flash_MD5_Sum(char* readFileName, char *md5Result)
+uint8_t Flash_MD5_Sum(char* readFileName, char *md5Result)
 {
 //  DEBUG_SERIAL.println("dosFileSys: Writing to Memory");
   File dataFileFP;
@@ -466,6 +480,7 @@ void Flash_MD5_Sum(char* readFileName, char *md5Result)
   if (iu_flash_open_file(&dataFileFP, readFileName, "r", &dataFileSize)
       != F_NO_ERROR) {
     DEBUG_SERIAL.println("Error Opening file.");
+    return FILE_OPEN_FAILED;
   }
 //  iu_flash_close_file(&dataFileFP);
   DEBUG_SERIAL.print("File Size is ="); DEBUG_SERIAL.println(dataFileSize);
