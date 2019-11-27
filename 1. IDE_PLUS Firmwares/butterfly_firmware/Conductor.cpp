@@ -4350,7 +4350,6 @@ uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
 
     return otaRtryValidation;
 
-//    SPIClass *m_SPI;
 //    m_SPI->begin();
     /* Device communication check with Keonics Sensor usign SPI */
 }
