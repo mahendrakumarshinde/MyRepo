@@ -5,7 +5,7 @@
 
 extern LedManager ledManager;
 
-uint16_t espComm::flash_esp32_verify()
+uint16_t espComm::flash_esp32_verify(char* folderPath,char* fileName)
 {
     bool ret = false;
  // DOSFS.begin();
@@ -18,7 +18,7 @@ uint16_t espComm::flash_esp32_verify()
     else
     {
         DEBUG_SERIAL.println("Failed to Open ESP32 debug log File !");
-        return 2;
+        return FILE_OPEN_FAILED;
     }
     DEBUG_SERIAL.println("Setting ESP32 in Downloand mode...");
     pinMode(ESP32_ENABLE_PIN, OUTPUT); // IDE1.5_PORT_CHANGE
@@ -46,41 +46,41 @@ uint16_t espComm::flash_esp32_verify()
         if(ret == false)
         {
             espFlashLog.close();
-            return 2;
+            return RETURN_FAILED;
         }
         ret = espGetFeature();
         if(ret == false)
         {
             espFlashLog.close();
-            return 2;
+            return RETURN_FAILED;
         }
         ret = espGetMacId();
         if(ret == false)
         {
             espFlashLog.close();
-            return 2;
+            return RETURN_FAILED;
         }
         ret = espUploadStub();
         if(ret == false)
         {
             espFlashLog.close();
-            return 2;
+            return RETURN_FAILED;
         }
         ret = espConfigureFlash();
         if(ret == false)
         {
             espFlashLog.close();
-            return 2;
+            return RETURN_FAILED;
         }
         espFlashLog.close();
         delay(100);
         espFlashLog = DOSFS.open("esp32Response.log", "a");
-        ret = espBinWrite("iuTempFirmware","wifi_ESP32.ino.bin");
+        ret = espBinWrite(folderPath,fileName);
         delay(100);
         if(ret == false)
         {
             espFlashLog.close();
-            return 2;
+            return RETURN_FAILED;
         }
         espFlashLog = DOSFS.open("esp32Response.log", "a");
         delay(100);
@@ -90,15 +90,18 @@ uint16_t espComm::flash_esp32_verify()
         if(ret == false)
         {
             espFlashLog.close();
-            return 2;
+            //return RETURN_FAILED;
         }
     }
     else
     {
         DEBUG_SERIAL.println("SYNC failed, aborting ESP32 FW download !!!");
+        espFlashLog.close();
+        return RETURN_FAILED;
     }  
     espFlashLog.close();
-    // File log = DOSFS.open("esp32Response.log", "r");
+    // FILE LOGGING ENABLE/DISABLE
+    //File log = DOSFS.open("esp32Response.log", "r");
     // while (log.available())
     // {
     //   DEBUG_SERIAL.write(log.read());
@@ -150,7 +153,7 @@ bool espComm::espBinWrite(char *folderName,char *fileName)
                     fwFile.close();
                     return false;
                 }
-                delay(100);
+                delay(50);
                 do
                 {    ledManager.updateColors();                
                     if(fileSize >= FLASH_BLOCK_SIZE)
@@ -350,7 +353,7 @@ bool espComm::preparePkt(unsigned char* buff,uint16_t pktSeqNo, uint32_t pktsize
     //  }
     // }
    ret = espSendDataPkt(PktBuf, writeIdx, 1,pktSeqNo);
-   delay(100);
+   //delay(50);
    if(ret == false)
     return false;
    else
@@ -564,7 +567,8 @@ bool espComm:: esp_SendSyncCmd(uint8_t rebootCount, uint8_t retrySync)
 	byte expectedResponse[] = {0x01, 0x07, 0x12, 0x20, 0x01, 0x07, 0x12, 0x20, 0x01, 0x07, 0x12, 0x20, 0x01, 0x07, 0x12, 0x20, 0x01, 0x07, 0x12, 0x20, 0x01, 0x07, 0x12, 0x20, 0x01, 0x07, 0x12, 0x20, 0x01, 0x07, 0x12, 0x20};
 	byte responseCmd[32];
 	while (m_retrySync >= 0 && m_rebootCount > 0)
-	{
+	{ 
+    ledManager.updateColors();
 		if (m_retrySync > 0)
 		{
 			--m_retrySync;
@@ -614,7 +618,7 @@ bool espComm:: esp_SendSyncCmd(uint8_t rebootCount, uint8_t retrySync)
                     }
                 }
             }
-			delay(400);
+			delay(200);
 			espFlashLog.println();
 		}
 		else
@@ -643,8 +647,8 @@ bool espComm::espSendCmd(byte command[], int size, int retry,uint8_t countC0)
 	espFlashLog.println();
 	espFlashLog.print("Response : ");
 	while (retry > 0)
-	{
-		--retry;
+	{ 
+    --retry;
 		//espFlashLog.println();
 		for (int i = 0; i < size; i++)
 		{
