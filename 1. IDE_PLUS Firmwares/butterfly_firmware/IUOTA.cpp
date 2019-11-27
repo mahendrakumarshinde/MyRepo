@@ -3,9 +3,21 @@
 #include "IUFlash.h"
 
 #define MAX_FILE_RW_SIZE    512
+#define FLASH_BLOCK_SIZE    4096
+
+
+
+
 /* =============================================================================
     Constructors and destructors
 ============================================================================= */
+
+extern "C" {
+extern void stm32l4_flash_lock(void);
+extern bool stm32l4_flash_unlock(void);
+extern bool stm32l4_flash_erase(uint32_t address, uint32_t count);
+extern bool stm32l4_flash_program(uint32_t address, const uint8_t *data, uint32_t count);
+}
 
 /**
  * Set device mode = OTA
@@ -78,6 +90,126 @@ bool IUOTA::otaFwBinWrite(char *folderName,char *fileName, char *buff, uint16_t 
         return false;
     }
     return true;
+}
+
+/**
+ * Read OTA FW binary data in to external flash as .bin
+ */
+bool IUOTA::otaFwBinRead(char *folderName,char *fileName)
+{
+    char readBuf[FLASH_BLOCK_SIZE];
+    uint32_t readIdx = 0;
+    uint32_t fileSize = 0;
+ 
+    if(folderName == NULL || fileName == NULL)
+    {
+        if (debugMode) {
+            debugPrint(F("fw bin file read param error !"));
+        }
+        return false;
+    }
+    char filepath[40];
+    snprintf(filepath, 40, "%s/%s", folderName, fileName);
+    if (debugMode) {
+        debugPrint(filepath);
+    }
+    Serial.println("File path:" + String(filepath));
+    File fwFile;
+    if(DOSFS.exists(filepath))
+    {
+        fwFile = DOSFS.open(filepath,"r");
+        if(fwFile)
+        {
+            unsigned char fileBuf[MAX_FILE_RW_SIZE];
+            fileSize = fwFile.size();
+            if (debugMode) {
+                debugPrint(F("File Size:"),false);
+                debugPrint(fileSize);
+            }
+            readIdx = 0;
+            if(fileSize > 0)
+            {
+                do
+                {                    
+                    if(fileSize >= FLASH_BLOCK_SIZE)
+                    {
+                        readIdx = 0;
+                        for(int i = 0; i < (FLASH_BLOCK_SIZE/MAX_FILE_RW_SIZE); i++)
+                        {
+                            memset(fileBuf,'\0',MAX_FILE_RW_SIZE);
+                            fwFile.read(fileBuf,MAX_FILE_RW_SIZE);
+                            memcpy(&readBuf[readIdx],&fileBuf[0],MAX_FILE_RW_SIZE);
+                            readIdx = readIdx + MAX_FILE_RW_SIZE;
+                            fileSize = fileSize - MAX_FILE_RW_SIZE;                    
+                        }
+                        if (debugMode) {
+                            debugPrint(F("File Read Size:"),false);
+                            debugPrint(readIdx);
+                            for(int i = 0; i < FLASH_BLOCK_SIZE; i++)
+                                debugPrint(readBuf[i]);
+                        }
+                        memset(readBuf,'\0',FLASH_BLOCK_SIZE);            
+                    }
+                    else
+                    {     
+                        readIdx = 0;                   
+                        do
+                        {                            
+                            if(fileSize >= MAX_FILE_RW_SIZE) {
+                                memset(fileBuf,'\0',MAX_FILE_RW_SIZE);
+                                fwFile.read(fileBuf,MAX_FILE_RW_SIZE);
+                                memcpy(&readBuf[readIdx],&fileBuf[0],MAX_FILE_RW_SIZE);
+                                readIdx = readIdx + MAX_FILE_RW_SIZE;
+                                fileSize = fileSize - MAX_FILE_RW_SIZE;
+                            }
+                            else
+                            {
+                                memset(fileBuf,'\0',MAX_FILE_RW_SIZE);
+                                fwFile.read(fileBuf,fileSize);
+                                memcpy(&readBuf[readIdx],&fileBuf[0],fileSize);
+                                readIdx = readIdx + fileSize;
+                                fileSize = 0; 
+                            }                                              
+                        } while(fileSize);
+                        if (debugMode) {
+                            debugPrint(F("File Read Size:"),false);
+                            debugPrint(readIdx);
+                            for(int i = 0; i < readIdx; i++)
+                                debugPrint(readBuf[i]);
+                        }
+                        fileSize = 0;                    
+                    }                        
+                } while (fileSize);
+                fwFile.close();
+                return true;                
+            }
+            else
+            {
+                if (debugMode) {
+                    debugPrint(F("File size error, size = 0"),false);
+                    debugPrint(filepath);
+                }
+                fwFile.close();
+                return false;
+            }
+        }
+        else
+        {
+            if (debugMode) {
+                debugPrint(F("Error opening FW download file:"),false);
+                debugPrint(filepath);
+            }
+            return false;
+        }
+    }
+    else
+    {
+        if (debugMode) {
+            debugPrint(F("FW download file doesn't exists !"),false);
+            debugPrint(filepath);
+        }
+        return false;
+    }
 }
 
 String IUOTA::file_md5 (File & f)
@@ -293,4 +425,44 @@ String IUOTA::getOtaRca(int error)
     default:
         return F("OTA-RCA-1111");
     }
+}
+
+/**
+ * Read OTA status flag
+ * @param error int
+ * @return String
+ * OTA-RCA-0001 to OTA-RCA-0010 - Used at STM code for sending OTA Failure reason code
+ */
+void IUOTA:: readOtaFlag(void)
+{
+  for(int i = 0 ; i <128 ; i++) {
+    OtaStatusFlag[i] = 0;
+  }
+  for (int i = 0 ; i < 128; i= i+8){
+    OtaStatusFlag[i] = *(uint8_t*)(FLAG_ADDRESS + i);
+    //debugPrint(iu_all_flags[i],HEX);
+  }    
+}
+
+/**
+ * Update OTA status flag
+ * @param error int
+ * @return String
+ * OTA-RCA-0001 to OTA-RCA-0010 - Used at STM code for sending OTA Failure reason code
+ */
+void IUOTA::updateOtaFlag(uint8_t flag_addr , uint8_t flag_data)
+{
+    debugPrint("Updating flag..."); 
+    uint8_t flag_addr_temp = flag_addr * 8;
+    readOtaFlag();
+    OtaStatusFlag[flag_addr_temp] = flag_data;
+    
+    stm32l4_flash_unlock();
+    stm32l4_flash_erase((uint32_t)FLAG_ADDRESS, 2048);
+    delay(1000);
+    // DEBUG_SERIAL.println("Flash Erased...");
+    stm32l4_flash_program((uint32_t)FLAG_ADDRESS, OtaStatusFlag, 128);
+    delay(1000);
+    stm32l4_flash_lock();
+    debugPrint("Flag updated...");
 }

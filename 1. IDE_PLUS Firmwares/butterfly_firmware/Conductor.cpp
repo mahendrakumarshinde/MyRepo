@@ -6,6 +6,8 @@
 #include "IUOTA.h"
 #include <MemoryFree.h>
 #include "stm32l4_iap.h"
+
+extern "C" bool doOnceFWValid;
 extern "C" char FW_Valid_State;
 extern IUOTA iuOta;
 const char* fingerprintData;
@@ -783,9 +785,9 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 if(loopDebugMode) {
                     debugPrint(F("OTA Type: "), false);
                     debugPrint(m_type1);
-                    debugPrint(F("OTA STM32 URI: "), false);
+                    debugPrint(F("OTA Main FW URI: "), false);
                     debugPrint(m_otaStmUri);
-                    debugPrint(F("OTA STM32 Bin Hash: "), false);
+                    debugPrint(F("OTA Main FW Bin Hash: "), false);
                     debugPrint(stmHash);
                 }
             }
@@ -798,9 +800,9 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 if(loopDebugMode) {
                     debugPrint(F("OTA Type: "), false);
                     debugPrint(m_type2);
-                    debugPrint(F("OTA ESP32 URI: "), false);
+                    debugPrint(F("OTA WiFi FW URI: "), false);
                     debugPrint(m_otaEspUri);
-                    debugPrint(F("OTA ESP32 Bin Hash: "), false);
+                    debugPrint(F("OTA WiFi FW Bin Hash: "), false);
                     debugPrint(espHash);
                 }
             }
@@ -816,9 +818,9 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 if(loopDebugMode) {
                     debugPrint(F("OTA Type: "), false);
                     debugPrint(m_type1);
-                    debugPrint(F("OTA STM32 URI: "), false);
+                    debugPrint(F("OTA Main FW URI: "), false);
                     debugPrint(m_otaStmUri);
-                    debugPrint(F("OTA STM32 Bin Hash: "), false);
+                    debugPrint(F("OTA Main FW Bin Hash: "), false);
                     debugPrint(stmHash);
                 }
             }
@@ -831,9 +833,9 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 if(loopDebugMode) {
                     debugPrint(F("OTA Type: "), false);
                     debugPrint(m_type2);
-                    debugPrint(F("OTA ESP32 URI: "), false);
+                    debugPrint(F("OTA WiFi FW URI: "), false);
                     debugPrint(m_otaEspUri);
-                    debugPrint(F("OTA ESP32 Bin Hash: "), false);
+                    debugPrint(F("OTA WiFi FW Bin Hash: "), false);
                     debugPrint(espHash);
                 }
             }
@@ -865,8 +867,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-INIT-ACK", "OTA-RCA-0000" ,otaInitTimeStamp);
                 iuOta.otaSendResponse(MSPCommand::OTA_INIT_ACK, otaResponse);
                 delay(1);
-                strcpy(fwBinFileName, "butterfly_firmware.bin");
-                iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,"butterfly_firmware.bin");
+                strcpy(fwBinFileName, "vEdge_main.bin");
+                iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_main.bin");
                 snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
                 m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-FDW-START", "OTA-RCA-0000" ,otaInitTimeStamp);
                 delay(1);
@@ -1910,8 +1912,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             break;
         case MSPCommand::OTA_STM_DNLD_STS:
             if (loopDebugMode) { debugPrint(F("STM FW Download Completed !")); }
-            strcpy(fwBinFileName, "WiFiClient.bin");
-            iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,"WiFiClient.bin");
+            strcpy(fwBinFileName, "vEdge_wifi.bin");
+            iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_wifi.bin");
             iuWiFi.sendMSPCommand(MSPCommand::OTA_STM_DNLD_OK);
             delay(1);
   //          waitingDnldStrart = false; 
@@ -1942,37 +1944,37 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             bool hashCheck;
             hashCheck = false;
             memset(hashMD5,'\0', 34);
-            iuOta.otaGetMD5(iuFlash.IUFWTMPIMG_SUBDIR,"butterfly_firmware.bin",hashMD5);
+            iuOta.otaGetMD5(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_main.bin",hashMD5);
             if (loopDebugMode) {
-                debugPrint(F("STM32 hash received:"),false);
+                debugPrint(F("Main FW hash received:"),false);
                 debugPrint(espHash);
-                debugPrint(F("STM32 hash computed:"),false);
+                debugPrint(F("Main FW hash computed:"),false);
                 debugPrint(hashMD5);
             }
             if(!(strcmp(hashMD5,stmHash)))
             {
                 memset(hashMD5,'\0', 34);
-                iuOta.otaGetMD5(iuFlash.IUFWTMPIMG_SUBDIR,"WiFiClient.bin",hashMD5);
+                iuOta.otaGetMD5(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_wifi.bin",hashMD5);
                 if (loopDebugMode) {                    
-                    debugPrint(F("ESP32 hash received:"),false);
+                    debugPrint(F("WiFi FW hash received:"),false);
                     debugPrint(espHash);
-                    debugPrint(F("ESP32 hash computed:"),false);
+                    debugPrint(F("WiFi FW hash computed:"),false);
                     debugPrint(hashMD5);
                 }
                 if(!(strcmp(hashMD5,espHash)))
                 {
-                    if (loopDebugMode) { debugPrint(F("STm32,ESP32 Hash match Ok")); }
+                    if (loopDebugMode) { debugPrint(F("Main FW,WiFi FW Hash match Ok")); }
                     hashCheck = true;
                 }
                 else
                 {
-                    if (loopDebugMode) { debugPrint(F("ESP32 Hash match Fail !")); }
+                    if (loopDebugMode) { debugPrint(F("WiFi FW Hash match Fail !")); }
                     hashCheck = false;
                 }
             }
             else
             {
-                if (loopDebugMode) { debugPrint(F("STM32 Hash match Fail !")); }
+                if (loopDebugMode) { debugPrint(F("Main FW Hash match Fail !")); }
                 hashCheck = false;
             } 
             if(hashCheck == true) {
@@ -1981,6 +1983,11 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
                 m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-FDW-SUCCESS", "OTA-RCA-0000" ,otaInitTimeStamp);
                 iuOta.otaSendResponse(MSPCommand::OTA_FDW_SUCCESS, otaResponse);
+                iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_DOWNLOAD_SUCCESS);
+                doOnceFWValid = false;
+                FW_Valid_State = 0;
+                delay(100);
+                STM32.reset();
             }
             else
             {
@@ -4066,11 +4073,10 @@ uint32_t Conductor::firmwareValidation()
         }
         firmwareConfigValidation(&ValidationFile);
 
-        firmwareDeviceValidation(&ValidationFile);
-    }
-    
+        if(firmwareDeviceValidation(&ValidationFile))
+            return OTA_VALIDATION_RETRY;        
+    }    
     return (firmwareWifiValidation(&ValidationFile));
-
 }
 
 uint8_t Conductor::firmwareWifiValidation(File *ValidationFile)
@@ -4087,7 +4093,7 @@ uint8_t Conductor::firmwareWifiValidation(File *ValidationFile)
             if(loopDebugMode){ debugPrint(F("DEVICE WIFI STATUS:CONNECTED")); }
             iuWiFi.turnOff();
             FW_Valid_State = 1;
-            ret = 1;
+            ret = OTA_VALIDATION_WIFI;
         }
         else
         {
@@ -4095,7 +4101,7 @@ uint8_t Conductor::firmwareWifiValidation(File *ValidationFile)
             if(loopDebugMode){ debugPrint(F("DEVICE WIFI STATUS:NOT CONNECTED !")); }
             FW_Valid_State = 0;
             ValidationFile->close();
-            ret = 0;
+            ret = OTA_VALIDATION_WIFI;
         }
         ValidationFile->close();
     }
@@ -4111,7 +4117,7 @@ uint8_t Conductor::firmwareWifiValidation(File *ValidationFile)
             if(loopDebugMode){ debugPrint(F("DEVICE WIFI DISCONNECT-FAILED")); }
             FW_Valid_State = 0;
             ValidationFile.close();
-            ret = 0;
+            ret = OTA_VALIDATION_WIFI;
         }
         else
         {
@@ -4122,7 +4128,7 @@ uint8_t Conductor::firmwareWifiValidation(File *ValidationFile)
             iuWiFi.turnOn(1);   
             FW_Valid_State = 2;
             ValidationFile.close();
-            ret = 1;
+            ret = OTA_VALIDATION_WIFI;
         }
     }
     else if(FW_Valid_State == 2)
@@ -4143,13 +4149,13 @@ uint8_t Conductor::firmwareWifiValidation(File *ValidationFile)
         }
         FW_Valid_State = 3;
         ValidationFile.close();
-//        iuWiFi.hardReset(); // Do Hardreset before concluding test, Write result, restart STM
-        ret = 0;
+        ret = OTA_VALIDATION_SUCCESS;
         if(loopDebugMode){ debugPrint(F("FIRMWARE VALIDATION COMPLETED")); }
     }    
     return ret;
 }
-bool Conductor::firmwareConfigValidation(File *ValidationFile)
+
+uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
 {
     if(loopDebugMode){ debugPrint(F("DEVICE MQTT CONFIG CHECK:-")); }
     ValidationFile->println(F("DEVICE MQTT CONFIG CHECK:-"));
@@ -4254,42 +4260,11 @@ bool Conductor::firmwareConfigValidation(File *ValidationFile)
     if(loopDebugMode){ debugPrint(F("FFT FLASH CONFIG FILE READ: OK")); }
 }
 
-bool Conductor::firmwareDeviceValidation(File *ValidationFile)
+uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
 {
     ValidationFile->println(F("STM MCU INFORMATION:"));
     char Cnt = 0;
-    for(int i = 0 ; i < 10; i++)
-    {
-        float vdda = STM32.getVREF();
-        float temperature = STM32.getTemperature();
-        ValidationFile->print(F("Voltage:"));
-        ValidationFile->print(vdda);
-        ValidationFile->print(F(" Volts, Temperature:"));
-        ValidationFile->print(temperature);
-        ValidationFile->println(F(" C"));
-        if (debugMode) {
-            debugPrint("VDDA = ", false);
-            debugPrint(vdda);
-            debugPrint("MCU Temp = ", false);
-            debugPrint(temperature);
-        }
-        if (vdda < 3.0 || temperature > 45)
-        {
-            Cnt++;            
-        }
-        if(Cnt > 7)
-        {
-            ValidationFile->println(F("Validation [DEV]-MCU INFO: Fail !"));
-            if(loopDebugMode){ debugPrint(F("Validation [DEV]-MCU INFO: Fail !")); }
-            break; // ?? Return Fail ??
-        }
-        delay(500);
-    }
-    if(Cnt < 4)
-    {
-        ValidationFile->println(F("Validation [DEV]-MCU INFO: Ok"));
-        if(loopDebugMode){ debugPrint(F("Validation [DEV]-MCU INFO: Ok")); }
-    }
+    uint8_t otaRtryValidation = 0;
 
     ValidationFile->print(F("DEVICE FREE MEMORY(RAM): "));
     ValidationFile->println(freeMemory(),DEC);  
@@ -4297,6 +4272,7 @@ bool Conductor::firmwareDeviceValidation(File *ValidationFile)
     {
         ValidationFile->println(F("Validation [DEV]-Free Memory: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [DEV]-Free Memory: Fail !")); }      
+        return OTA_VALIDATION_FAIL;
     }
     if(loopDebugMode){ debugPrint(F("Validation [DEV]-Free Memory: Ok")); }  
     ValidationFile->print(F("DEVICE BLE  MAC ADDRESS:"));
@@ -4306,6 +4282,7 @@ bool Conductor::firmwareDeviceValidation(File *ValidationFile)
     {
         ValidationFile->println(F("Validation [DEV]-BLE MAC: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [DEV]-BLE MAC: Fail !")); }
+        otaRtryValidation++;
     }
     if(loopDebugMode){
         debugPrint(F("Validation [DEV]-BLE MAC: OK - "),false);
@@ -4316,6 +4293,7 @@ bool Conductor::firmwareDeviceValidation(File *ValidationFile)
     {
         ValidationFile->println(F("Validation [DEV]-WiFi MAC: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [DEV]-WiFi MAC: Fail !")); }
+        otaRtryValidation++;
     }
     if(loopDebugMode){
         debugPrint(F("Validation [DEV]-WiFi MAC: Ok"));
@@ -4328,6 +4306,7 @@ bool Conductor::firmwareDeviceValidation(File *ValidationFile)
     {
         ValidationFile->println(F("   Validation [LSM]-Read Add: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [LSM]-Read Add: Fail !")); }
+        otaRtryValidation++;
     }
     else
     {        // iuI2C.releaseReadLock();
@@ -4342,6 +4321,7 @@ bool Conductor::firmwareDeviceValidation(File *ValidationFile)
         {
             ValidationFile->println(F("   Validation [LSM]-Read Add: Fail !"));
             if(loopDebugMode){ debugPrint(F("Validation [LSM]-Read Add: Fail")); }
+            otaRtryValidation++;
         }
     }
 
@@ -4356,10 +4336,21 @@ bool Conductor::firmwareDeviceValidation(File *ValidationFile)
     {
         ValidationFile->println(F("   Validation [TMP]-Read Add: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [TMP]-Read Add: Fail !")); }
+        otaRtryValidation++;
     }
 
-    SPIClass *m_SPI;
-    m_SPI->begin();
+    ValidationFile->print(F("DEVICE READ Audio Data: "));
+    ValidationFile->print(audioDB4096Computer.dBresult);
+    ValidationFile->println(F(" dB"));
+
+    if ( (audioDB4096Computer.dBresult < 58.0) && (audioDB4096Computer.dBresult > 160.0) ){
+        ValidationFile->println(F("   Validation [AUD]-Read Acoustic: Fail !"));
+        otaRtryValidation++;
+    }
+
+    return otaRtryValidation;
+
+//    SPIClass *m_SPI;
+//    m_SPI->begin();
     /* Device communication check with Keonics Sensor usign SPI */
-    /* Device communication check with External SRAM using QSPI ?? */
 }

@@ -243,8 +243,8 @@ class Conductor
         
         void otaChkFwdnldTmout();
         uint32_t firmwareValidation();
-        bool firmwareConfigValidation(File *ValidationFile);
-        bool firmwareDeviceValidation(File *ValidationFile);
+        uint8_t firmwareConfigValidation(File *ValidationFile);
+        uint8_t firmwareDeviceValidation(File *ValidationFile);
         uint8_t firmwareWifiValidation(File *ValidationFile);
         static const uint32_t fwDnldStartTmout = 60000;
         uint32_t otaFwdnldTmout = 0;

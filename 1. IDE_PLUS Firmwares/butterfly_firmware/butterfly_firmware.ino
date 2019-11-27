@@ -110,7 +110,7 @@ float audioHigherCutoff = 160.0;
 
 /***** Debbugging variables *****/
 
-bool doOnceFWValid = true;
+bool doOnceFWValid;
 int FWValidCnt = 0;
 char FW_Valid_State = 0;
 
@@ -624,8 +624,41 @@ void setup()
         //Resume previous operational state of device
         conductor.setThresholdsFromFile();
                 
-        
-                
+        iuOta.readOtaFlag();
+        uint8_t otaSts = iuOta.getOtaFlagValue(OTA_STATUS_FLAG_LOC);
+        if (setupDebugMode) {
+            debugPrint("Main FW:OTA Status Code: ",false);
+            debugPrint(otaSts);
+        }
+        switch(otaSts)
+        {
+            case OTA_FW_VALIDATION_SUCCESS:
+                if (setupDebugMode) debugPrint("Main FW:OTA Validation Success...");
+                break;                  // Alrady validated FW, continue running it.
+            case OTA_FW_UPGRADW_SUCCESS:
+                if (setupDebugMode) debugPrint("Main FW:OTA Upgrade Success, Doing validation..");
+                if(doOnceFWValid == false) {
+                    /*  Initialize OTA FW Validation retry count */
+                    iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);
+                }
+                doOnceFWValid = true;   // New FW upgraded, perform validation
+//                iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_VALIDATION_SUCCESS);
+                break;
+            case OTA_FW_UPGRADE_FAILED:
+            case OTA_FW_INTERNAL_ROLLBACK:
+            case OTA_FW_FORCED_ROLLBACK: // Reset, as L2 shall perform Upgrade,Rollback or Forced Rollback
+                if (setupDebugMode) debugPrint("Main FW:OTA Upgrade Failed ! Rebooting device..");
+                delay(2000);
+                STM32.reset();
+                break;
+            case OTA_FW_FILE_SYS_ERROR:
+                if (setupDebugMode) debugPrint("Main FW:File System Error !");
+                // Need to handle ?
+                break;
+            default:
+                if (setupDebugMode) debugPrint("Main FW:Unknown OTA Status code !",false);
+                break;
+        }
         // Timer Init
         //timerInit();
         
@@ -733,27 +766,56 @@ void loop()
             conductor.otaChkFwdnldTmout();
             ledManager.updateColors();
         }
-#if 0 // FW Validation
+#if 1 // FW Validation
         if(doOnceFWValid == true)
         {
             if((FWValidCnt % 2000) == 0 && FWValidCnt > 0)
             {
                 uint32_t ret = 0;
                 ret = conductor.firmwareValidation();
-                if(ret != 0)
+                if(ret == OTA_VALIDATION_WIFI)
                 {// Waiting for WiFi Disconnect/Connect Cycle.
                     doOnceFWValid = true;
                     FWValidCnt = 1;         
                 }
-                else if(ret == 0)
+                else if(ret == OTA_VALIDATION_RETRY)
+                {
+                    uint8_t otaVldnRetry = iuOta.getOtaFlagValue(OTA_VLDN_RETRY_FLAG_LOC);
+                    otaVldnRetry++;
+                    iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,otaVldnRetry);
+                    if (loopDebugMode) {
+                        debugPrint("OTA Validation Retry No: ",false);
+                        debugPrint(otaVldnRetry);
+                    }
+                    if(otaVldnRetry > OTA_MAX_VALIDATION_RETRY)
+                    {
+                        if (loopDebugMode) {
+                            debugPrint("OTA FW Validation Retry Overflow ! Validation Failed");
+                            debugPrint("Initiating Rollback FW. Device reseting.......");
+                            delay(1000);
+                        }
+                        iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_INTERNAL_ROLLBACK);
+                    }
+                    STM32.reset();
+                }
+                else if(ret == OTA_VALIDATION_SUCCESS)
                 {
                     doOnceFWValid = false;
-                    iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"butterfly_firmware.bin");
-                    iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"WiFiClient.bin");
+                    FW_Valid_State = 0;
+                    iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_VALIDATION_SUCCESS);
+                    /*  Initialize OTA FW Validation retry count */
+                    iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);
+                    iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"vEdge_main.bin");
+                    iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"vEdge_wifi.bin");
                     delay(10);
-                    iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"butterfly_firmware.bin");
-                    iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"WiFiClient.bin");
+                    iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_main.bin");
+                    iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_wifi.bin");
                     delay(10);
+                }
+                else if(ret == OTA_VALIDATION_FAIL)
+                {
+                    iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_INTERNAL_ROLLBACK);
+                    STM32.reset();
                 }
             }
             else
