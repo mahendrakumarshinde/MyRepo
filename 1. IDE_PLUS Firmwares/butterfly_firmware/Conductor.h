@@ -246,6 +246,7 @@ class Conductor
         uint8_t firmwareConfigValidation(File *ValidationFile);
         uint8_t firmwareDeviceValidation(File *ValidationFile);
         uint8_t firmwareWifiValidation(File *ValidationFile);
+        void sendOtaStsMsg(MSPCommand::command type, char *msg, char *errMsg);
         static const uint32_t fwDnldStartTmout = 60000;
         uint32_t otaFwdnldTmout = 0;
         bool waitingDnldStrart = false;
@@ -307,7 +308,11 @@ class Conductor
         char m_otaMsgId[32];
         char m_otaMsgType[16];
         char m_otaFwVer[16];
-        char fwBinFileName[32];        
+        char m_rlbkMsgId[32];
+        char m_rlbkFwVer[16];
+        char fwBinFileName[32];
+        MacAddress m_rlbkDevId;
+        bool m_rlbkDowngrade = false;
 };
 
 

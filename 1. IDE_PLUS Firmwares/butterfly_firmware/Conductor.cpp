@@ -742,20 +742,11 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
     } // If json is incorrect, it will result in parsing error in jsonBuffer.parseObject(json) which will cause the processConfiguration call to return
     
-    if(debugMode) 
-        debugPrint(F("Processing OTA Config"));
-    // OTA configuration
-    //subConfig = root["otaConfig"];
 
     subConfig = root["messageType"];
     if (subConfig.success()) {
         double otaInitTimeStamp = conductor.getDatetime();
         char otaResponse[256];
-        if(loopDebugMode) {
-            debugPrint(F("OTA configuration received: "), false);
-            subConfig.printTo(Serial); debugPrint("");
-        }
-
         String msgType = root["messageType"];
         strcpy(m_otaMsgType,msgType.c_str());
         if(loopDebugMode) {
@@ -764,6 +755,10 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
         if(!(strcmp((const char *)m_otaMsgType,(const char *)"initiateota")))
         {    
+            if(loopDebugMode) {
+                debugPrint(F("OTA configuration received: "), false);
+                subConfig.printTo(Serial); debugPrint("");
+            }
             strcpy(m_otaMsgId,(const char*)root["messageId"]);
             strcpy(m_otaFwVer,(const char*)root["fwVersion"]);
     //     String test1 = root["otaConfig"]["supportedDeviceTypes"];
@@ -890,6 +885,36 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
                 m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", String(iuOta.getOtaRca(OTA_INVALID_MQTT)).c_str() ,otaInitTimeStamp);
                 iuOta.otaSendResponse(MSPCommand::OTA_FDW_ABORT, otaResponse);
+            }
+        }
+        if(!(strcmp((const char *)m_otaMsgType,(const char *)"ota-rollback")))
+        {    
+            if(loopDebugMode) {
+                debugPrint(F("OTA Forced Rollback Request received: "), false);
+                subConfig.printTo(Serial); debugPrint("");
+            }
+            strcpy(m_rlbkMsgId,(const char*)root["messageId"]);
+            debugPrint("MessageId:",false);
+            debugPrint(m_rlbkMsgId);
+            subConfig = root["ota-ollback"];
+            if(subConfig.success()) {
+                strcpy(m_rlbkFwVer,(const char*)subConfig["fwVersion"]); 
+                //String devId = subConfig["deviceId"];
+                m_rlbkDevId.fromString((const char*)subConfig["deviceId"]);            
+                m_rlbkDowngrade = subConfig["downgrade"];
+                debugPrint("Fw Version:",false);
+                debugPrint(m_rlbkFwVer);
+                debugPrint("Device ID:",false);
+                debugPrint(m_rlbkDevId.toString().c_str());
+                debugPrint("Downgrade:",false);
+                debugPrint(m_rlbkDowngrade);
+                if(conductor.getUsageMode() == UsageMode::OTA) {
+                    if(m_rlbkDevId == m_macAddress && m_rlbkDowngrade == true)
+                    {
+                        iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_FORCED_ROLLBACK);
+                        delay(100);
+                    }
+                }
             }
         }
     }
@@ -1986,7 +2011,15 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_DOWNLOAD_SUCCESS);
                 doOnceFWValid = false;
                 FW_Valid_State = 0;
-                delay(100);
+                iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_DOWNLOAD_SUCCESS);
+                delay(1000);
+                otaInitTimeStamp = conductor.getDatetime();            
+                snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
+                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-FUG-START", "OTA-RCA-0000" ,otaInitTimeStamp);
+                iuOta.otaSendResponse(MSPCommand::OTA_FUG_START, otaResponse);
+                delay(1000);
+                if (loopDebugMode) { debugPrint(F("Rebooting device for FW Upgrade......")); }
+                delay(500);
                 STM32.reset();
             }
             else
@@ -1998,11 +2031,11 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", String(iuOta.getOtaRca(OTA_CHECKSUM_FAIL)).c_str() ,otaInitTimeStamp);
                 iuOta.otaSendResponse(MSPCommand::OTA_FDW_ABORT, otaResponse);  // Checksum failed
             }
-            delay(100);
+            delay(1000);
             if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
             iuWiFi.m_setLastConfirmedPublication();
             changeUsageMode(UsageMode::OPERATION);
-            delay(100);   
+            delay(100);
             break;
         case MSPCommand::OTA_PACKET_DATA:
             if (loopDebugMode) {
@@ -2097,6 +2130,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 iuBluetooth.write("WIFI-CONNECTED;");
             }
             if(conductor.getUsageMode() == UsageMode::OTA) {
+                if (loopDebugMode) { debugPrint(F("OTA DNLD MODE")); }
                 ledManager.stopColorOverride();
                 ledManager.showStatus(&STATUS_OTA_DOWNLOAD);
             }
@@ -2107,7 +2141,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             }
             if(conductor.getUsageMode() == UsageMode::OTA) {
                 if (loopDebugMode) { 
-                    debugPrint(F("OTA In Progress - WIFI-CONNECTED"));
+                    debugPrint(F("OTA In Progress - WIFI-DISCONNECTED"));
                     debugPrint(F("Sending OTA-ERR-FDW-ABORT"));
                 }
                 // In case WiFi Disconnect/ESP Reset durig OTA, switch to OPERTATION Mode ??
@@ -4352,4 +4386,13 @@ uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
 
 //    m_SPI->begin();
     /* Device communication check with Keonics Sensor usign SPI */
+}
+
+void Conductor::sendOtaStsMsg(MSPCommand::command type, char *msg, char *errMsg)
+{
+    char otaResponse[256];
+    double otaInitTimeStamp = conductor.getDatetime();            
+    snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
+    m_otaMsgId,m_macAddress.toString().c_str(), m_type1,msg, errMsg ,otaInitTimeStamp);
+    iuOta.otaSendResponse(type, otaResponse);  // Checksum failed
 }

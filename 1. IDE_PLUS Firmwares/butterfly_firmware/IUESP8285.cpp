@@ -229,6 +229,7 @@ bool IUESP8285::readMessages()
         }
 //        Serial.println("WiFi No Responding !");
         hardReset();
+        delay(3000);
         m_lastResponseTime = now;
     }
     if (now - m_lastConnectedStatusTime > connectedStatusTimeout) {
@@ -616,7 +617,7 @@ void IUESP8285::sendWiFiCredentials()
 {
     if (m_credentialValidator.completed() && !m_credentialSent)
     {
- //       Serial.println("Sending WiFi Credentials");
+        if (loopDebugMode) { debugPrint(F("Sending WiFi Credentials")); }
         sendMSPCommand(MSPCommand::WIFI_RECEIVE_SSID, m_ssid);
         sendMSPCommand(MSPCommand::WIFI_RECEIVE_PASSWORD, m_psk);
         m_credentialSent = true;

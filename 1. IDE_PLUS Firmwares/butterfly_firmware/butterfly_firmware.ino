@@ -649,7 +649,7 @@ void setup()
             case OTA_FW_FORCED_ROLLBACK: // Reset, as L2 shall perform Upgrade,Rollback or Forced Rollback
                 if (setupDebugMode) debugPrint("Main FW:OTA Upgrade Failed ! Rebooting device..");
                 delay(2000);
-                STM32.reset();
+                //STM32.reset();
                 break;
             case OTA_FW_FILE_SYS_ERROR:
                 if (setupDebugMode) debugPrint("Main FW:File System Error !");
@@ -766,7 +766,7 @@ void loop()
             conductor.otaChkFwdnldTmout();
             ledManager.updateColors();
         }
-#if 1 // FW Validation
+#if 0 // FW Validation
         if(doOnceFWValid == true)
         {
             if((FWValidCnt % 2000) == 0 && FWValidCnt > 0)
@@ -811,6 +811,8 @@ void loop()
                     iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_main.bin");
                     iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_wifi.bin");
                     delay(10);
+                    sendOtaStsMsg(MSPCommand::OTA_FUG_SUCCESS, "OTA-FUG-SUCCESS", "OTA-RCA-0000")
+                    delay(1000);                    
                 }
                 else if(ret == OTA_VALIDATION_FAIL)
                 {

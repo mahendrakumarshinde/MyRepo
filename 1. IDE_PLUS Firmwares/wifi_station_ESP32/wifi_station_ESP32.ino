@@ -80,6 +80,8 @@ void setup()
         conductor.reconnect(true);
     #endif
     hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "@ WIFI_CLIENT SETP @",20);
+    WiFi.mode(WIFI_STA);
+    WiFi.begin();
 }
 
 /**
