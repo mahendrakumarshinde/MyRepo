@@ -5,9 +5,9 @@
 // OTA Firmware Path deteails
 
 #define TEST_CHUNK_SIZE	                512                         // Need to update in final run
-#define STM_MAIN_FIRMWARE               "iuTempFirmware/STM-MFW.bin"
-#define STM_ROLLBACK_FIRMWARE           "iuRollbackFirmware/STM-MFW.bin"
-#define STM_FORCED_ROLLBACK_FIRMWARE    "iuBackupFirmware/STM-MFW.bin"
+#define STM_MAIN_FIRMWARE               "iuTempFirmware/vEdge_main.bin"
+#define STM_ROLLBACK_FIRMWARE           "iuRollbackFirmware/vEdge_main.bin"
+#define STM_FORCED_ROLLBACK_FIRMWARE    "iuBackupFirmware/vEdge_main.bin"
 #define STM_FACTORY_FIRMWARE            "iuFactoryFirmware/STM-FFW.bin"
 
 #define STM_MFW_1_SUM                   "iuTempFirmware/STM-MFW.md5"
@@ -19,7 +19,7 @@
 #define ESP_ROLLBACK_FIRMWARE           "iuRollbackFirmware"
 #define ESP_FORCED_ROLLBACK_FIRMWARE    "iuBackupFirmware"
 #define ESP_FACTORY_FIRMWARE            "iuFactoryFirmware"
-#define ESP_FIRMWARE_FILENAME           "wifi_ESP32.ino.bin"
+#define ESP_FIRMWARE_FILENAME           "vEdge_wifi.bin"
 
 //#define TEST_READ_FILE STM_MFW_1
 
