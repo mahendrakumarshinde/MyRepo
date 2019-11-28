@@ -663,17 +663,9 @@ void loop()
         // Manage WiFi autosleep
         iuWiFi.manageAutoSleep();
         // Acquire data from sensors
-        // conductor.acquireData(false);
-        for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
-           if (strcmp("ACX", Sensor::instances[i]->getName())==0 && ( FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor)  )
-                {
-                    NULL;
-                }
-                else
-                {
-                    Sensor::instances[i]->acquireData(true, false);
-                }
-        }
+        conductor.acquireData(false);
+
+        conductor.acquireTemperatureAudioData();
 
 
         conductor.acquireData(false);

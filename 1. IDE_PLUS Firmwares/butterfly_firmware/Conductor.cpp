@@ -2564,13 +2564,33 @@ void Conductor::acquireData(bool inCallback)
     }
     // Collect the new data
     for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
-    if (strcmp("ACX", Sensor::instances[i]->getName())==0 && ( FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor)  )
+        if(strcmp("ACC", Sensor::instances[i]->getName())==0 && ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)  )
+        {
+            Sensor::instances[i]->acquireData(inCallback, force);
+        }
+        else if (strcmp("ACX", Sensor::instances[i]->getName())==0 && ( FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor)  )
         {
             Sensor::instances[i]->acquireData(inCallback, force);
         }
         else
         {
             NULL;
+        }
+    }
+}
+
+/**
+ * Data acquisition function
+ *
+ * Method formerly benchmarked for (Temperature and Audio).
+ */
+
+void Conductor::acquireTemperatureAudioData()
+{
+    for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
+        if ( strcmp("MIC", Sensor::instances[i]->getName())==0 || strcmp("T10", Sensor::instances[i]->getName())==0)
+        {
+            Sensor::instances[i]->acquireData();
         }
     }
 }
