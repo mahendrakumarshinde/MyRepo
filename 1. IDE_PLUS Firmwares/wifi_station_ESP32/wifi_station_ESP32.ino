@@ -73,6 +73,8 @@ void setup()
     #if IUDEBUG_ANY == 1
         conductor.reconnect(true);
     #endif
+    WiFi.mode(WIFI_STA);
+    WiFi.begin();
 }
 
 /**

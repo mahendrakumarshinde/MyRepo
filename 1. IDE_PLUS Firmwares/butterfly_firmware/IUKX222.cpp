@@ -275,7 +275,7 @@ void IUKX222::readData()
 		m_rawData[i] = acc;
 	}
 	digitalWrite(m_cspin, HIGH);
-	m_spi->endTransaction();
+	// m_spi->endTransaction();
 	m_readCallback();
 }
 

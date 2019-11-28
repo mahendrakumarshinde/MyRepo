@@ -1,6 +1,6 @@
 /*
 Infinite Uptime IDE+ Firmware
-Vr. 1.1.2
+Vr. 1.1.3
 Update 22-06-2019
 Type - Standard Firmware Release
 */
@@ -12,13 +12,13 @@ Type - Standard Firmware Release
 #include "BoardDefinition.h"
 #include "Conductor.h"
 #include "FFTConfiguration.h"
-
 #include <MemoryFree.h>
 #include <Timer.h>
 #include <FS.h>
+#include "RawDataState.h"
 //#include"IUTimer.h"
 
-const uint8_t ESP32_IO0  =  7;  // IDE1.5_PORT_CHANGE
+const uint8_t ESP8285_IO0  =  7;  // IDE1.5_PORT_CHANGE
 
 #ifdef DRAGONFLY_V03
 #else
@@ -252,9 +252,9 @@ void dataAcquisitionCallback()
 void dataAcquisitionISR()
 {
 
-    // digitalWrite(A3,HIGH);
+    // digitalWrite(6,HIGH);
     conductor.acquireData(true);
-    //   digitalWrite(A3,LOW);
+    // digitalWrite(6,LOW);
 }
 
 
@@ -374,10 +374,10 @@ void timerInit(void)
 void setup()
 {   
   
-  pinMode(ESP32_IO0,OUTPUT); // IDE1.5_PORT_CHANGE
-//   pinMode(6,OUTPUT); 
+  pinMode(ESP8285_IO0,OUTPUT);
+  pinMode(6,OUTPUT); 
 //   pinMode(A3,OUTPUT);  // ISR (ODR checked from pin 50)
-  digitalWrite(ESP32_IO0,HIGH); // IDE1.5_PORT_CHANGE
+  digitalWrite(ESP8285_IO0,HIGH); // IDE1.5_PORT_CHANGE
   DOSFS.begin();
   #if 1
     
@@ -605,11 +605,9 @@ void setup()
             attachInterrupt(IUKX222::INT1_PIN,dataAcquisitionISR,RISING);
         }
         // debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
-
         //Resume previous operational state of device
         conductor.setThresholdsFromFile();
                 
-        
                 
         // Timer Init
         //timerInit();
@@ -665,11 +663,48 @@ void loop()
         // Manage WiFi autosleep
         iuWiFi.manageAutoSleep();
         // Acquire data from sensors
+        // conductor.acquireData(false);
+        for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
+           if (strcmp("ACX", Sensor::instances[i]->getName())==0 && ( FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor)  )
+                {
+                    NULL;
+                }
+                else
+                {
+                    Sensor::instances[i]->acquireData(true, false);
+                }
+        }
+
+
         conductor.acquireData(false);
+        //Serial.println("acquireData complete !!!");
         // Compute features depending on operation mode
         conductor.computeFeatures();
+        //Serial.println("Computation Complete !!!");
         // Stream features
         conductor.streamFeatures();
+        //Serial.println("Feature Streaming Complete !!!");
+        //Serial.print("Feature Stream Status : ");
+        //Serial.println(FeatureStates::isISRActive);
+        if (FeatureStates::isISRActive)
+        {   
+            //Serial.println("attachInterrupt Again !!!!");
+            //Feature::ISRcount = 0;
+            //FeatureStates::isrCount=0;
+            if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+            {
+                attachInterrupt(IULSM6DSM::INT1_PIN, dataAcquisitionISR, RISING);
+            }
+            else
+            {
+                attachInterrupt(IUKX222::INT1_PIN,dataAcquisitionISR,RISING);
+            }
+            FeatureStates::isISRDisabled = false;
+            FeatureStates::isISRActive = false;
+            // Serial.println("ISR Enabled !!!");
+            
+        }
+        
         // Send accel raw data
         conductor.periodicSendAccelRawData();
         // Send config checksum
@@ -681,6 +716,7 @@ void loop()
             /* === Place your code to excute at fixed interval here ===*/
             conductor.streamMCUUInfo(iuWiFi.port);
             /*======*/
+            
         }
 
         if (millis() - conductor.lastTimeSync > conductor.m_connectionTimeout ) {
@@ -716,3 +752,4 @@ void loop()
     #endif
   #endif  
 }
+
