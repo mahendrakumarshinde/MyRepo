@@ -25,6 +25,7 @@ void IUKX222::SetupSPI()
 	pinMode(m_cspin, OUTPUT);
 	digitalWrite(m_cspin, HIGH);
 	m_spi->begin();
+	m_spi->beginTransaction(m_spiSettings);
 }
 
 bool IUKX222::checkWHO_AM_I()
@@ -259,7 +260,7 @@ void IUKX222::readData()
 {
 	uint16_t bitLow, bitHigh;
 	int16_t acc;
-	m_spi->beginTransaction(m_spiSettings);
+	// m_spi->beginTransaction(m_spiSettings);
 	digitalWrite(m_cspin, LOW);
 	//Since we're performing a read operation, the most significant bit (bit 7(counting starts from bit 0)) of the register address should be set high.
 	int x = m_spi->transfer(KX224_XOUT_L | 0x80);
@@ -391,7 +392,7 @@ float* IUKX222::getData(HardwareSerial *port)
 
 uint8_t IUKX222::readConfig(uint8_t addr)
 {
-	m_spi->beginTransaction(m_spiSettings);
+	// m_spi->beginTransaction(m_spiSettings);
 	digitalWrite(m_cspin, LOW);
 
 	uint8_t reg;
@@ -399,19 +400,19 @@ uint8_t IUKX222::readConfig(uint8_t addr)
 	reg = m_spi->transfer(0);
 
 	digitalWrite(m_cspin, HIGH);
-	m_spi->endTransaction();
+	// m_spi->endTransaction();
 
 	return reg;
 }
 
 void IUKX222::writeConfig(uint8_t addr, uint8_t value)
 {
-	m_spi->beginTransaction(m_spiSettings);
+	// m_spi->beginTransaction(m_spiSettings);
 	digitalWrite(m_cspin, LOW);
 	m_spi->transfer(addr & ~0x80);
 	m_spi->transfer(value);
 	digitalWrite(m_cspin, HIGH);
-	m_spi->endTransaction();
+	// m_spi->endTransaction();
 }
 
 void IUKX222::exposeCalibration()

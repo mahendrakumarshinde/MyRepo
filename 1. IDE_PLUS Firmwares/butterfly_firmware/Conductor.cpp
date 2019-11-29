@@ -2488,93 +2488,97 @@ bool Conductor::resetDataAcquisition()
  */
 void Conductor::acquireData(bool inCallback)
 {
-    if (!m_inDataAcquistion || m_acquisitionMode == AcquisitionMode::NONE) {
-        return;
-    }
-    if (iuI2C.isError()) {
-        if (debugMode) {
-            debugPrint(F("I2C error"));
-        }
-        iuI2C.resetErrorFlag();  // Reset I2C error
-        iuI2S.readData();         // Empty I2S buffer to continue
-        return;
-    }
     bool force = false;
-    // If EXPERIMENT mode, send last data batch before collecting the new data
-    if (m_usageMode == UsageMode::EXPERIMENT) {
-        if (loopDebugMode && (m_acquisitionMode != AcquisitionMode::RAWDATA ||
-                              m_streamingMode != StreamingMode::WIRED)) {
-            debugPrint(F("EXPERIMENT should be RAW DATA + USB mode."));
+    if (FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+    {
+        if (!m_inDataAcquistion || m_acquisitionMode == AcquisitionMode::NONE) {
+            return;
         }
-    if (inCallback) {
-            iuI2S.sendData(iuUSB.port);             // raw audio data 
+        if (iuI2C.isError()) {
+            if (debugMode) {
+                debugPrint(F("I2C error"));
+            }
+            iuI2C.resetErrorFlag();  // Reset I2C error
+            iuI2S.readData();         // Empty I2S buffer to continue
+            return;
+        }
+        // If EXPERIMENT mode, send last data batch before collecting the new data
+        if (m_usageMode == UsageMode::EXPERIMENT) {
+            if (loopDebugMode && (m_acquisitionMode != AcquisitionMode::RAWDATA ||
+                                m_streamingMode != StreamingMode::WIRED)) {
+                debugPrint(F("EXPERIMENT should be RAW DATA + USB mode."));
+            }
+        if (inCallback) {
+                iuI2S.sendData(iuUSB.port);             // raw audio data 
+                if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+                {
+                    iuAccelerometer.sendData(iuUSB.port);   // raw accel data
+                }
+                else
+                {
+                    iuAccelerometerKX222.sendData(iuUSB.port);
+                }
+        }
+                
+            force = true;
+        }
+
+        // CUSTOM Mode
+
+    if (m_usageMode == UsageMode::CUSTOM ) {
+            if (loopDebugMode && (m_acquisitionMode != AcquisitionMode::RAWDATA ||
+                                m_streamingMode != StreamingMode::WIRED)) {
+                debugPrint(F("CUSTOM Mode should be RAW DATA + USB mode."));
+            }
+        if (inCallback) {
+
+            float *acceleration;
+            float aucostic;
+            char rawData[50]; 
+            aucostic = iuI2S.getData();                               // raw audio data 
             if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
-            {
-                iuAccelerometer.sendData(iuUSB.port);   // raw accel data
+            {                            // raw audio data 
+                acceleration = iuAccelerometer.getData(iuUSB.port);       // raw accel data
             }
             else
             {
-                iuAccelerometerKX222.sendData(iuUSB.port);
+                acceleration = iuAccelerometerKX222.getData(iuUSB.port);
             }
-       }
+
+            //Serial.print("Audio :");Serial.println(aucostic);
+            snprintf(rawData,50,"%04.3f,%04.3f,%04.3f,%.3f",acceleration[0],acceleration[1],acceleration[2],aucostic);
             
-        force = true;
-    }
-
-    // CUSTOM Mode
-
-  if (m_usageMode == UsageMode::CUSTOM ) {
-        if (loopDebugMode && (m_acquisitionMode != AcquisitionMode::RAWDATA ||
-                              m_streamingMode != StreamingMode::WIRED)) {
-            debugPrint(F("CUSTOM Mode should be RAW DATA + USB mode."));
-        }
-    if (inCallback) {
-
-          float *acceleration;
-          float aucostic;
-          char rawData[50]; 
-          aucostic = iuI2S.getData();                               // raw audio data 
-          if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
-          {                            // raw audio data 
-            acceleration = iuAccelerometer.getData(iuUSB.port);       // raw accel data
-          }
-          else
-          {
-            acceleration = iuAccelerometerKX222.getData(iuUSB.port);
-          }
-
-          //Serial.print("Audio :");Serial.println(aucostic);
-          snprintf(rawData,50,"%04.3f,%04.3f,%04.3f,%.3f",acceleration[0],acceleration[1],acceleration[2],aucostic);
-          
-          String payload = "";
-          payload = "$";
-          payload += m_macAddress.toString().c_str();
-          payload += ",";
-          payload += rawData;
-          payload += "#";
-          
-          //Serial.println(payload);
-          iuUSB.port->write(payload.c_str());
-          
-          //Serial.print(features[0],4);Serial.print(",");Serial.print(features[1],4);Serial.print(",");Serial.println(features[2],4);
-          //Serial.print("Data:");Serial.println(rawAccel);
-       }
+            String payload = "";
+            payload = "$";
+            payload += m_macAddress.toString().c_str();
+            payload += ",";
+            payload += rawData;
+            payload += "#";
             
-        force = true;
+            //Serial.println(payload);
+            iuUSB.port->write(payload.c_str());
+            
+            //Serial.print(features[0],4);Serial.print(",");Serial.print(features[1],4);Serial.print(",");Serial.println(features[2],4);
+            //Serial.print("Data:");Serial.println(rawAccel);
+        }
+                
+            force = true;
+        }
+        // Collect the new data
+        for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
+        if (strcmp("ACC", Sensor::instances[i]->getName())==0)
+            {
+                Sensor::instances[i]->acquireData(inCallback, force);
+            }
+        }
     }
-    // Collect the new data
-    for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
-        if(strcmp("ACC", Sensor::instances[i]->getName())==0 && ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)  )
-        {
-            Sensor::instances[i]->acquireData(inCallback, force);
-        }
-        else if (strcmp("ACX", Sensor::instances[i]->getName())==0 && ( FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor)  )
-        {
-            Sensor::instances[i]->acquireData(inCallback, force);
-        }
-        else
-        {
-            NULL;
+    else if ( FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor)
+    {
+        for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
+        if (strcmp("ACX", Sensor::instances[i]->getName())==0)
+            {
+                Sensor::instances[i]->acquireData(inCallback, force);
+            }
         }
     }
 }
@@ -2588,7 +2592,7 @@ void Conductor::acquireData(bool inCallback)
 void Conductor::acquireTemperatureAudioData()
 {
     for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
-        if ( strcmp("MIC", Sensor::instances[i]->getName())==0 || strcmp("T10", Sensor::instances[i]->getName())==0)
+        if ( strcmp("MIC", Sensor::instances[i]->getName())==0 || strcmp("T10", Sensor::instances[i]->getName())==0 || strcmp("BAT", Sensor::instances[i]->getName())==0)
         {
             Sensor::instances[i]->acquireData();
         }
@@ -2690,7 +2694,7 @@ void Conductor::streamFeatures()
         if (FeatureStates::isISRActive != true && FeatureStates::isISRDisabled){   
                 FeatureStates::isFeatureStreamComplete = true;   // publication completed
                 FeatureStates::isISRActive = true;
-                Serial.println("Published to WiFi Complete !!!");
+                debugPrint("Published to WiFi Complete !!!");
             }
     }
    #if 0

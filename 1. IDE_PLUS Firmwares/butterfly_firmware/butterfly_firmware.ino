@@ -252,9 +252,9 @@ void dataAcquisitionCallback()
 void dataAcquisitionISR()
 {
 
-    // digitalWrite(6,HIGH);
+    digitalWrite(19,HIGH);
     conductor.acquireData(true);
-    // digitalWrite(6,LOW);
+    digitalWrite(19,LOW);
 }
 
 
@@ -375,7 +375,7 @@ void setup()
 {   
   
   pinMode(ESP8285_IO0,OUTPUT);
-  pinMode(6,OUTPUT); 
+  pinMode(19,OUTPUT); 
 //   pinMode(A3,OUTPUT);  // ISR (ODR checked from pin 50)
   digitalWrite(ESP8285_IO0,HIGH); // IDE1.5_PORT_CHANGE
   DOSFS.begin();
