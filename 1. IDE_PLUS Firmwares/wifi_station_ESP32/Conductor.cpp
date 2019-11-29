@@ -1214,15 +1214,15 @@ void Conductor::debugPrintWifiInfo()
 
 bool Conductor:: otaDnldFw(bool otaDnldProgress)
 {
-  //  char TestStr[128];
+    char TestStr[128];
     if(otaDnldProgress == false) 
     {
         otaInProgress = true;
         if(WiFi.status() == WL_CONNECTED) 
         {
             http_ota.end(); //  in case of error... need to close handle as it defined global
-            http_ota.setTimeout(40000);
-            http_ota.setConnectTimeout(40000);
+            http_ota.setTimeout(otaHttpTimeout);
+            http_ota.setConnectTimeout(otaHttpTimeout);
            // hostSerial.sendLongMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,300000,ota_uri,512);
             totlen = 0;
             contentLen = 0;
@@ -1237,8 +1237,8 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
                     {
                         contentLen = http_ota.getSize();
                         fwdnldLen = contentLen;
-                    //      sprintf(TestStr,"contentLen:%d",contentLen);
-                    //      hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,TestStr,32);
+                        sprintf(TestStr,"contentLen:%d",contentLen);
+                        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,TestStr,32);
                         delay(100);
                         // get tcp stream
                         WiFiClient * stream = http_ota.getStreamPtr();
@@ -1262,8 +1262,8 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
                             if(contentLen > 0) {
                                 totlen = totlen + c;
                                 contentLen -= c;
-                             //   sprintf(TestStr,"Avl:%d Read:%d Tot:%d",size,c,totlen);
-                              //  hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,TestStr,32);
+                                sprintf(TestStr,"Pkt:%d Read:%d Rem:%d",c,totlen,contentLen);
+                                hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,TestStr,32);
                             }                        
                         }
                         else if(size == 0 || ((millis() - otaStramStr) > otaPktReadTimeout))
@@ -1283,7 +1283,6 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
                 } 
                 else
                 {            
-          //          sprintf(TestStr,"HTTP FAIL:%d",httpCode);
                     hostSerial.sendMSPCommand(MSPCommand::OTA_DNLD_FAIL,String(getOtaRca(httpCode)).c_str());
                     waitingForPktAck = false;
                     http_ota.end();                    
@@ -1313,8 +1312,8 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
             //  hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"FWDNLD_CONT",11);
             if(contentLen > 0)
             {
-                http_ota.setTimeout(40000);
-                http_ota.setConnectTimeout(40000);
+                http_ota.setTimeout(otaHttpTimeout);
+                http_ota.setConnectTimeout(otaHttpTimeout);
             // get tcp stream
                 WiFiClient * stream = http_ota.getStreamPtr();
                 // read all data from server
@@ -1339,8 +1338,8 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
                     if(contentLen > 0) {
                         totlen = totlen + c;
                         contentLen -= c;
-                      //  sprintf(TestStr,"Avl:%d Read:%d Tot:%d",size,c,totlen);
-                      //  hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,TestStr,32);
+                        sprintf(TestStr,"Pkt:%d Read:%d Rem:%d",c,totlen,contentLen);
+                        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,TestStr,32);
                     }
                 }
                 else if(size == 0 || ((millis() - otaStramStr) > otaPktReadTimeout))
@@ -1377,7 +1376,7 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
         }
         else
         {
-          //  hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"OTA_WiFi Discon",16);
+            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"OTA_WiFi Discon",16);
             if(fwdnldLen != totlen && contentLen > 0)
             { // FW Download is not completed... and was in progress
                 hostSerial.sendMSPCommand(MSPCommand::OTA_DNLD_FAIL,String(getOtaRca(OTA_WIFI_DISCONNECT)).c_str());//"WIFI_DISCONNECT");

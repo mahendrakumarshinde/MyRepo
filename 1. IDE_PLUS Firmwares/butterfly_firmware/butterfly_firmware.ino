@@ -637,12 +637,7 @@ void setup()
                 break;                  // Alrady validated FW, continue running it.
             case OTA_FW_UPGRADW_SUCCESS:
                 if (setupDebugMode) debugPrint("Main FW:OTA Upgrade Success, Doing validation..");
-                if(doOnceFWValid == false) {
-                    /*  Initialize OTA FW Validation retry count */
-                    iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);
-                }
                 doOnceFWValid = true;   // New FW upgraded, perform validation
-//                iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_VALIDATION_SUCCESS);
                 break;
             case OTA_FW_UPGRADE_FAILED:
             case OTA_FW_INTERNAL_ROLLBACK:

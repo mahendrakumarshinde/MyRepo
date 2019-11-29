@@ -63,6 +63,7 @@ class Conductor
         // OTA Update in progress, timoue for packet ack from STM
         static const uint32_t otaPktAckTimeout = 15000;  // ms
         static const uint32_t otaPktReadTimeout = 50000; //ms;
+        static const uint32_t otaHttpTimeout = 50000; //ms;
         /***** Core *****/
         Conductor();
         virtual ~Conductor() {}

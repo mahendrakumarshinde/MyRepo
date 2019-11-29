@@ -2012,6 +2012,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 doOnceFWValid = false;
                 FW_Valid_State = 0;
                 iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_DOWNLOAD_SUCCESS);
+                iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);
                 delay(1000);
                 otaInitTimeStamp = conductor.getDatetime();            
                 snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
@@ -2039,10 +2040,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             break;
         case MSPCommand::OTA_PACKET_DATA:
             if (loopDebugMode) {
-            //    debugPrint(F("OTA_PACKET_DATA Data:"),false);
-            //    debugPrint(buff);
-                debugPrint(F("OTA_PACKET_DATA Len:"),false);
-                debugPrint(packetLen);
+            //    debugPrint(F("OTA_PACKET_DATA Len:"),false);
+            //    debugPrint(packetLen);
             }
             waitingDnldStrart = false;
             if(iuOta.otaFwBinWrite(iuFlash.IUFWTMPIMG_SUBDIR,fwBinFileName, buff, packetLen)) {
