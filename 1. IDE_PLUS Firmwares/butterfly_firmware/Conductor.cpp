@@ -929,46 +929,6 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 }
 
 /*
- * Read the OTA Configutation details
- * 
- */
- void Conductor::configureOTAServer(String filename){
-  // Open the configuration file
-
-  File myFile = DOSFS.open(filename,"r");
-
-  StaticJsonBuffer<512> jsonBuffer;
-  // Parse the root object
-  JsonObject &root = jsonBuffer.parseObject(myFile);
-  if (!root.success()){
-      Serial.println("OTA Parse Failed !!");
-  }
- else {  
-    String msgId = root["otaconfig"]["messageId"];
-    Serial.print("OTA Message ID:");
-    Serial.println(msgId);
-    String fwVer = root["otaconfig"]["fwVersion"];
-    Serial.print("OTA FW Version:");
-    Serial.println(fwVer);
-    String fwVer1 = root["otaconfig"]["fwBinaries"];
-    Serial.print("OTA FW Binaries:");
-    Serial.println(fwVer1);
-    String fwVer2 = root["fwBinaries"]["stmUri"];
-    Serial.print("OTA STM URI:");
-    Serial.println(fwVer2);
-    String fwVer3 = root["fwBinaries"]["espUri"];
-    Serial.print("OTA ESP URI:");
-    Serial.println(fwVer3);
-
-    String fwVer4 = root["otaconfig"]["accesstoken"];
-    Serial.print("OTA Access Token:");
-    Serial.println(fwVer4);
- }
-  myFile.close(); 
-}
-
-
-/*
  * Read the MQTT Configutation details
  * 
  */

@@ -197,7 +197,6 @@ class Conductor
         // mqtt / http configuration
         void fastSwap (const char **i, const char **d);
         void configureMQTTServer(String filename);
-        void configureOTAServer(String filename);
         void configureOta(JsonVariant &config);
         bool configureBoardFromFlash(String filename,bool isSet);
         JsonObject& configureJsonFromFlash(String filename,bool isSet);

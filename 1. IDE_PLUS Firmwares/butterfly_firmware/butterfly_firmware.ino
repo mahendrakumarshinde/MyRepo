@@ -623,7 +623,13 @@ void setup()
 
         //Resume previous operational state of device
         conductor.setThresholdsFromFile();
-                
+    
+
+        JsonObject& config = conductor.configureJsonFromFlash("/iuconfig/ota.conf",1);
+        const char *otaMsgId;
+        otaMsgId = config["messageId"];
+        Serial.println(otaMsgId);
+
         iuOta.readOtaFlag();
         uint8_t otaSts = iuOta.getOtaFlagValue(OTA_STATUS_FLAG_LOC);
         if (setupDebugMode) {
@@ -797,6 +803,10 @@ void loop()
                 }
                 else if(ret == OTA_VALIDATION_SUCCESS)
                 {
+                    // JsonObject& config = conductor.configureJsonFromFlash("/iuconfig/ota.conf",1);
+                    // const char *otaMsgId;
+                    // otaMsgId = config["root"]["messageId"];
+                    // Serial.println(otaMsgId);
                     doOnceFWValid = false;
                     FW_Valid_State = 0;
                     iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_VALIDATION_SUCCESS);
@@ -813,6 +823,9 @@ void loop()
                     iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_wifi.bin");
                     iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"STM-MFW.md5");
                     iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"ESP-MFW.md5");
+                    conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_SUCCESS,"OTA-FUG-SUCCESS","OTA-RCA-0000");
+                    delay(1000);
+                    STM32.reset();
                 }
                 else if(ret == OTA_VALIDATION_FAIL)
                 {   
