@@ -51,7 +51,7 @@ public:
 
     static const uint16_t defaultSamplingRate = 3200; // Hz
     uint16_t m_samplingRate = defaultSamplingRate;
-
+    bool kionixPresence = false;
     /// Checking WHO_AM_I
     bool checkWHO_AM_I();
 

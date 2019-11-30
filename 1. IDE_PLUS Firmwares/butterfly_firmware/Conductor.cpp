@@ -3122,6 +3122,31 @@ bool Conductor::setFFTParams() {
                 FFTConfiguration::currentSensor = FFTConfiguration::kionixSensor;
             }
         }
+                // Change the sensor sampling rate 
+        // timerISRPeriod = (samplingRate == 1660) ? 600 : 300;  // 1.6KHz->600, 3.3KHz->300
+        // timerISRPeriod = int(1000000 / FFTConfiguration::currentSamplingRate); // +1 to ensure that sensor has captured data before mcu ISR gets it, for edge case
+        if ((FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor) && (iuAccelerometer.lsmPresence))
+        {
+            debugPrint(F("LSM Present & LSM set"));
+            iuAccelerometer.setSamplingRate(FFTConfiguration::currentSamplingRate);
+        }
+        else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (iuAccelerometerKX222.kionixPresence))
+        {
+            debugPrint(F("KIONIX Present & KIONIX set"));
+            iuAccelerometerKX222.updateSamplingRate(FFTConfiguration::currentSamplingRate); // will set the ODR for the sensor
+        }else if((FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor) && (!iuAccelerometer.lsmPresence)){
+            debugPrint(F("LSM absent & KIONIX set"));
+            iuAccelerometerKX222.updateSamplingRate(iuAccelerometerKX222.defaultSamplingRate);
+            FFTConfiguration::currentSamplingRate = iuAccelerometerKX222.defaultSamplingRate;
+            FFTConfiguration::currentSensor = FFTConfiguration::kionixSensor;
+            FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
+        }else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (!iuAccelerometerKX222.kionixPresence)){
+            debugPrint(F("KIONIX Absent & LSM set"));
+            iuAccelerometer.setSamplingRate(iuAccelerometer.defaultSamplingRate);
+            FFTConfiguration::currentSamplingRate = iuAccelerometer.defaultSamplingRate;
+            FFTConfiguration::currentSensor = FFTConfiguration::lsmSensor;
+            FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
+        }
         // TODO: The following can be configurable in the future
         FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY;
         FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
@@ -3140,17 +3165,6 @@ bool Conductor::setFFTParams() {
         DiagnosticEngine::m_smapleSize = FFTConfiguration::currentBlockSize;
         DiagnosticEngine::m_fftLength = FFTConfiguration::currentBlockSize / 2;
 
-        // Change the sensor sampling rate 
-        // timerISRPeriod = (samplingRate == 1660) ? 600 : 300;  // 1.6KHz->600, 3.3KHz->300
-        // timerISRPeriod = int(1000000 / FFTConfiguration::currentSamplingRate); // +1 to ensure that sensor has captured data before mcu ISR gets it, for edge case
-        if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
-        {
-            iuAccelerometer.setSamplingRate(FFTConfiguration::currentSamplingRate);
-        }
-        else
-        {
-            iuAccelerometerKX222.updateSamplingRate(FFTConfiguration::currentSamplingRate); // will set the ODR for the sensor
-        }
         if(setupDebugMode) {
             config.prettyPrintTo(Serial);
         }

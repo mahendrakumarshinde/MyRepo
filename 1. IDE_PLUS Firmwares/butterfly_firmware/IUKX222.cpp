@@ -31,8 +31,11 @@ void IUKX222::SetupSPI()
 bool IUKX222::checkWHO_AM_I()
 {
 	uint8_t c = readConfig(IUKX222_WHO_AM_I);
-	if (c != IUKX222_WHO_AM_I_WIA_ID)
+	if (c != IUKX222_WHO_AM_I_WIA_ID){
+		kionixPresence = false;
 		return false;
+	}
+	kionixPresence = true;
 	return true;
 }
 
@@ -134,7 +137,7 @@ void IUKX222::setupHardware()
 	SetupSPI();
 	// put device into standby mode first
 	operate(false);
-	if(!checkWHO_AM_I() && !sanityCheck()){
+	if(!checkWHO_AM_I() || !sanityCheck()){
 		debugPrint("Kionix KX222 Error");
 	} else {
 		debugPrint("Kionix KX222 Found");

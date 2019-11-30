@@ -1,6 +1,6 @@
 #include "IUFlash.h"
 #include "FFTConfiguration.h"
-
+#include "InstancesDragonfly.h"
 /* =============================================================================
     IUFSFlash - Flash with file system
 ============================================================================= */
@@ -263,6 +263,14 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                          samplingRate < FFTConfiguration::samplingRates2[i+1]) ) {
                              validSamplingRate2 = false;
                        }
+                }
+                if(!iuAccelerometer.lsmPresence && validSamplingRate) {
+                     validConfig = false;
+                     errorMessages.add("LSM not Present");
+                }
+                if(!iuAccelerometerKX222.kionixPresence && validSamplingRate2) {
+                     validConfig = false;
+                     errorMessages.add("Kionix not Present");
                 }
                 // if(config.containsKey("sensor") && validSamplingRate2) {
                 //         uint16_t sensor = config["sensor"];

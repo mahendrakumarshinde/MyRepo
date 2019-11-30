@@ -511,7 +511,9 @@ void setup()
         }
 
         iuFlash.begin();
-
+        debugPrint(F("Initilizing Kionix and Lsm"));
+        iuAccelerometer.setupHardware();
+        iuAccelerometerKX222.setupHardware();
         // Update the configuration of FFT computers from fft.conf
         if(conductor.setFFTParams()) {
             if(setupDebugMode) {
@@ -528,7 +530,7 @@ void setup()
 
         // Sensors
         if (debugMode) {
-            debugPrint(F("\nInitializing sensors..."));
+            debugPrint(F("\nInitializing sensors and updating"));
         }
         uint16_t callbackRate = iuI2S.getCallbackRate();
         for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
