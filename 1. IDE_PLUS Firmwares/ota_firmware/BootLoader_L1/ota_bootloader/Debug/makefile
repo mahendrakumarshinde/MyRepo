@@ -43,8 +43,8 @@ ota_bootloader.bin \
 all: ota_bootloader.elf secondary-outputs
 
 # Tool invocations
-ota_bootloader.elf: $(OBJS) $(USER_OBJS) /home/arun/STM32CubeIDE/workspace_1.0.0/ota_bootloader/STM32L496RGTX_FLASH.ld
-	arm-none-eabi-gcc -o "ota_bootloader.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/home/arun/STM32CubeIDE/workspace_1.0.0/ota_bootloader/STM32L496RGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="ota_bootloader.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+ota_bootloader.elf: $(OBJS) $(USER_OBJS) /media/vikas/DATA1/IU-Softwares/FirmwareReleases-Build/v-Edge/1.\ IDE_PLUS\ Firmwares/ota_firmware/BootLoader_L1/ota_bootloader/STM32L496RGTX_FLASH.ld
+	arm-none-eabi-gcc -o "ota_bootloader.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/media/vikas/DATA1/IU-Softwares/FirmwareReleases-Build/v-Edge/1. IDE_PLUS Firmwares/ota_firmware/BootLoader_L1/ota_bootloader/STM32L496RGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="ota_bootloader.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

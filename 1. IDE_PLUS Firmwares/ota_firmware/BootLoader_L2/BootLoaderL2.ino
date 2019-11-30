@@ -28,6 +28,10 @@ LedManager ledManager(&rgbLed,&rgbLedStrip);
 espComm esp32;
 
 char calculatedMD5Sum[64], receivedMD5Sum[64], verifiedMD5Sum[64];
+
+char stmcalcMD5Sum[64];
+char espcalcMD5Sum[64];
+
 iuMD5 myMD5inst;
 MD5_CTX iuCtx;
 unsigned char *hashVal=NULL;
@@ -51,14 +55,16 @@ void setup()
   Serial1.begin(115200);
 	DEBUG_SERIAL.begin(115200);
 
-	DEBUG_SERIAL.print("Initializing External Flash Memory...");
+	DEBUG_SERIAL.println("=================================");
+	DEBUG_SERIAL.println("     Starting Bootloader2        ");
+	DEBUG_SERIAL.println("=================================");  
 	DOSFS.format();
   delay(1000);
 	if (!DOSFS.begin()) {
-		DEBUG_SERIAL.println("Memory failed, or not present");
+		DEBUG_SERIAL.println("Memory access failed, or not present");
     // don't do anything more:
 	}
-	DEBUG_SERIAL.println("Memory initialized.");
+//	DEBUG_SERIAL.println("Memory initialized.");
   ledManager.stopColorOverride();
    
   ledManager.showStatus(&STATUS_OTA_UPGRADE);
@@ -81,22 +87,38 @@ void loop()
             break;
     case 1:  /* 1 -> Flash STM Main Firmware */
             DEBUG_SERIAL.println("Upgrading STM Main Firmware..");
-            if((DOSFS.exists(STM_MAIN_FIRMWARE)) && (DOSFS.exists(STM_MFW_1_SUM))) {
+            if((DOSFS.exists(STM_MAIN_FIRMWARE)) && (DOSFS.exists(STM_MFW_1_SUM)) &&
+               (DOSFS.exists(ESP_MAIN_FIRMWARE1)) && (DOSFS.exists(ESP_MFW_1_SUM))) {
+
+              if(checkMainFWMD5Hash(STM_MAIN_FIRMWARE,STM_MFW_1_SUM) == false)
+              {                
+                DEBUG_SERIAL.println("Error : Main FW File check failed !!");
+                update_flag(0,6); // File error
+                break;
+              }
+              if(checkWifiFWMD5Hash(ESP_MAIN_FIRMWARE1,ESP_MFW_1_SUM) == false)
+              {
+                DEBUG_SERIAL.println("Error : WiFi FW File check failed !!");
+                update_flag(0,6); // File error
+                break;
+              }
+
+
               retVal3 = esp32.flash_esp32_verify(ESP_MAIN_FIRMWARE,ESP_FIRMWARE_FILENAME);
               delay(2000);
               if(retVal3 == 0)
               {
-                DEBUG_SERIAL.println("ESP32 FW Flashing Successfull.");
+                DEBUG_SERIAL.println("WiFi FW Flashing Successful.");
                 retVal3 = Flash_Verify_STM_File(STM_MAIN_FIRMWARE,STM_MFW_1_SUM);
                 delay(2000);
                 if(retVal3 == 0)
-                  DEBUG_SERIAL.println("STM32 FW Flashing Successfull."); 
+                  DEBUG_SERIAL.println("Main FW Flashing Successful."); 
                 else
-                  DEBUG_SERIAL.println("STM32 FW Flashing Failed !!");                
+                  DEBUG_SERIAL.println("Main FW Flashing Failed !!");                
               }
               else
               {
-                DEBUG_SERIAL.println("ESP32 FW Flashing Failed !!");
+                DEBUG_SERIAL.println("WiFi FW Flashing Failed !!");
               }
               
               if(retVal3 == 0) 
@@ -128,29 +150,44 @@ void loop()
             */
             DEBUG_SERIAL.println("Rollback STM Main Firmware..");
             
-            if((DOSFS.exists(STM_ROLLBACK_FIRMWARE)) && (DOSFS.exists(STM_MFW_2_SUM))) {
-              
+            if((DOSFS.exists(STM_ROLLBACK_FIRMWARE)) && (DOSFS.exists(STM_MFW_2_SUM)) &&
+               (DOSFS.exists(ESP_ROLLBACK_FIRMWARE1)) && (DOSFS.exists(ESP_MFW_2_SUM))) {
+
+              if(checkMainFWMD5Hash(STM_ROLLBACK_FIRMWARE,STM_MFW_2_SUM) == false)
+              {                
+                DEBUG_SERIAL.println("Error : Main FW File check failed !!");
+                update_flag(0,6); // File error
+                break;
+              }
+              if(checkWifiFWMD5Hash(ESP_ROLLBACK_FIRMWARE1,ESP_MFW_2_SUM) == false)
+              {
+                DEBUG_SERIAL.println("Error : WiFi FW File check failed !!");
+                update_flag(0,6); // File error
+                break;
+              }
+
+
               DEBUG_SERIAL.println("Flashing STM (RB) Firmware..");
               retVal3 = esp32.flash_esp32_verify(ESP_ROLLBACK_FIRMWARE,ESP_FIRMWARE_FILENAME);
               delay(2000);
               if(retVal3 == 0)
               {
-                DEBUG_SERIAL.println("Rollback of ESP32 FW Flashing Successfull.");
+                DEBUG_SERIAL.println("Rollback of WiFi FW Flashing Successfull.");
                 retVal3 = Flash_Verify_STM_File(STM_ROLLBACK_FIRMWARE,STM_MFW_2_SUM);
                 delay(2000);
                 if(retVal3 == 0)
-                  DEBUG_SERIAL.println("Rollback of STM32 FW Flashing Successfull."); 
+                  DEBUG_SERIAL.println("Rollback of Main FW Flashing Successfull."); 
                 else
-                  DEBUG_SERIAL.println("Rollback of STM32 FW Flashing Failed !!");                
+                  DEBUG_SERIAL.println("Rollback of Main FW Flashing Failed !!");                
               }
               else
               {
-                DEBUG_SERIAL.println("Rollback of ESP32 FW Flashing Failed !!");
+                DEBUG_SERIAL.println("Rollback of WiFi FW Flashing Failed !!");
               }
               //delay(2000);
               DEBUG_SERIAL.println("Setting MFW Flag");
               if(retVal3 == 0){
-                update_flag(0,3); 
+                update_flag(0,0); 
               } else if (retVal3 == 2) {
                 DEBUG_SERIAL.println("Error : File Checksum mismatch! Download file(s) again!!");
                 update_flag(0,6); // File error
@@ -168,7 +205,21 @@ void loop()
             /* Swap STM-MFW1.bin and STM-MFW2.bin
             * need to check the file excist or not 
             */
-            if((DOSFS.exists(STM_FORCED_ROLLBACK_FIRMWARE)) && (DOSFS.exists(STM_MFW_3_SUM))) {
+            if((DOSFS.exists(STM_FORCED_ROLLBACK_FIRMWARE)) && (DOSFS.exists(STM_MFW_3_SUM)) &&
+               (DOSFS.exists(ESP_FORCED_ROLLBACK_FIRMWARE1)) && (DOSFS.exists(ESP_MFW_3_SUM))) {
+
+              if(checkMainFWMD5Hash(STM_FORCED_ROLLBACK_FIRMWARE,STM_MFW_3_SUM) == false)
+              {                
+                DEBUG_SERIAL.println("Error : Main FW File check failed !!");
+                update_flag(0,6); // File error
+                break;
+              }
+              if(checkWifiFWMD5Hash(ESP_FORCED_ROLLBACK_FIRMWARE1,ESP_MFW_3_SUM) == false)
+              {
+                DEBUG_SERIAL.println("Error : WiFi FW File check failed !!");
+                update_flag(0,6); // File error
+                break;
+              }
               DEBUG_SERIAL.println("Forced Rollback STM (Backup) Firmware..");
               
               DEBUG_SERIAL.println("Flashing STM (Backup) Firmware..");
@@ -176,22 +227,22 @@ void loop()
               delay(2000);
               if(retVal3 == 0)
               {
-                DEBUG_SERIAL.println("Forced Rollback of ESP32 FW Flashing Successfull.");
+                DEBUG_SERIAL.println("Forced Rollback of WiFi FW Flashing Successfull.");
                 retVal3 = Flash_Verify_STM_File(STM_FORCED_ROLLBACK_FIRMWARE,STM_MFW_3_SUM);
                 delay(2000);
                 if(retVal3 == 0)
-                  DEBUG_SERIAL.println("Forced Rollback of STM32 FW Flashing Successfull."); 
+                  DEBUG_SERIAL.println("Forced Rollback of Main FW Flashing Successfull."); 
                 else
-                  DEBUG_SERIAL.println("Forced Rollback of STM32 FW Flashing Failed !!");                
+                  DEBUG_SERIAL.println("Forced Rollback of Main FW Flashing Failed !!");                
               }
               else
               {
-                DEBUG_SERIAL.println("Forced Rollback of ESP32 FW Flashing Failed !!");
+                DEBUG_SERIAL.println("Forced Rollback of WiFi FW Flashing Failed !!");
               }
               delay(2000);
               DEBUG_SERIAL.println("Setting MFW Flag");
               if(retVal3 == 0){
-                update_flag(0,2); 
+                update_flag(0,0); 
               } else if (retVal3 == 2) {
                 DEBUG_SERIAL.println("Error : File Checksum mismatch! Download file(s) again!!");
                 update_flag(0,6); // File error
@@ -222,6 +273,70 @@ void loop()
   DEBUG_SERIAL.println("Reset failed...");
   
 	while (1);
+}
+
+
+
+bool checkWifiFWMD5Hash(char *ESP_FW_FILE,char *ESP_MD5_FILE)
+{
+    uint8_t md5Status;
+
+    md5Status = MD5_sum_file(ESP_FW_FILE, calculatedMD5Sum);
+    if (md5Status > 0)
+    {
+      DEBUG_SERIAL.print("WiFi FW MD5 Check Fail: ");
+      return false;
+    }    
+    DEBUG_SERIAL.print("WiFi FW MD5 Calculated value: ");
+    DEBUG_SERIAL.println(calculatedMD5Sum);
+    //DEBUG_SERIAL.print ("Length = "); DEBUG_SERIAL.println(strlen(calculatedMD5Sum));
+
+    Read_MD5(ESP_MD5_FILE, receivedMD5Sum);
+    DEBUG_SERIAL.print("WiFi FW MD5 Read value: ");
+    DEBUG_SERIAL.println(receivedMD5Sum);
+    //DEBUG_SERIAL.print ("Length = "); DEBUG_SERIAL.println(strlen(receivedMD5Sum));
+    if (strcmp(receivedMD5Sum, calculatedMD5Sum) == 0) 
+    {
+      DEBUG_SERIAL.println("WiFi FW File MD5 Hash Ok");
+      strncpy(espcalcMD5Sum,calculatedMD5Sum,64);
+      return true;
+    }
+    else
+    {
+      DEBUG_SERIAL.println("WiFi FW File MD5 Hash Failed !");
+      return false;
+    }
+}
+
+bool checkMainFWMD5Hash(char *STM_FW_FILE,char *STM_MD5_FILE)
+{
+    uint8_t md5Status;
+
+    md5Status = MD5_sum_file(STM_FW_FILE, calculatedMD5Sum);
+    if (md5Status > 0)
+    {
+      return false;
+    }
+    
+    DEBUG_SERIAL.print("Main FW MD5 Calculated value: ");
+    DEBUG_SERIAL.println(calculatedMD5Sum);
+    //DEBUG_SERIAL.print ("Length = "); DEBUG_SERIAL.println(strlen(calculatedMD5Sum));
+
+    Read_MD5(STM_MD5_FILE, receivedMD5Sum);
+    DEBUG_SERIAL.print("Main FW MD5 Read value: ");
+    DEBUG_SERIAL.println(receivedMD5Sum);
+    //DEBUG_SERIAL.print ("Length = "); DEBUG_SERIAL.println(strlen(receivedMD5Sum));
+    if (strcmp(receivedMD5Sum, calculatedMD5Sum) == 0) 
+    {
+      DEBUG_SERIAL.println("Main FW File MD5 Hash Ok");
+      strncpy(stmcalcMD5Sum,calculatedMD5Sum,64);
+      return true;
+    }
+    else
+    {
+      DEBUG_SERIAL.println("Main FW File MD5 Hash Failed !");
+      return false;
+    }
 }
 
 /*----------------------------------------------------------------------------------------------------*/
@@ -292,7 +407,7 @@ int iu_flash_close_file(File *fp)
 /* Write File to Internal Flash */ 
 uint16_t Flash_STM_File(char* readFileName) 
 {
-  DEBUG_SERIAL.println("dosFileSys: Writing to Memory");
+  //DEBUG_SERIAL.println("dosFileSys: Writing to Memory");
   File dataFileFP;
   size_t dataFileSize, bytesRead;
   uint8_t dataBuffer[TEST_CHUNK_SIZE];
@@ -330,7 +445,7 @@ uint16_t Flash_STM_File(char* readFileName)
     for (int i=1; i <= sectorCnt; i++) {
     ledManager.updateColors();
     if ((bytesRead=iu_flash_read_file_chunk(&dataFileFP, dataBuffer, TEST_CHUNK_SIZE, i)) > 0) {
-      DEBUG_SERIAL.print("Sector Write: "); 
+      DEBUG_SERIAL.print("Main FW Sector Write: "); 
       DEBUG_SERIAL.print(i);DEBUG_SERIAL.print("/");DEBUG_SERIAL.println(sectorCnt);
       //DEBUG_SERIAL.println((char*)dataBuffer);
       if(!stm32l4_flash_program((uint32_t)(MFW_ADDRESS + ((i-1)*TEST_CHUNK_SIZE)), dataBuffer, bytesRead) ){
@@ -351,25 +466,26 @@ uint16_t Flash_STM_File(char* readFileName)
 /* Verify, Write and Verify */
 uint16_t Flash_Verify_STM_File(char* INPUT_BIN_FILE,char* INPUT_MD5_FILE) 
 { 
-  uint8_t md5Status;
+  // uint8_t md5Status;
 
-  md5Status = MD5_sum_file(INPUT_BIN_FILE, calculatedMD5Sum);
-  if (md5Status > 0)
-  {
-    return md5Status;
-  }
+  // md5Status = MD5_sum_file(INPUT_BIN_FILE, calculatedMD5Sum);
+  // if (md5Status > 0)
+  // {
+  //   return md5Status;
+  // }
   
-  DEBUG_SERIAL.print("MD5 Calculated value: ");
-  DEBUG_SERIAL.println(calculatedMD5Sum);
-  DEBUG_SERIAL.print ("Length = "); DEBUG_SERIAL.println(strlen(calculatedMD5Sum));
+  // DEBUG_SERIAL.print("Main FW MD5 Calculated value: ");
+  // DEBUG_SERIAL.println(calculatedMD5Sum);
+  // DEBUG_SERIAL.print ("Length = "); DEBUG_SERIAL.println(strlen(calculatedMD5Sum));
 
-  Read_MD5(INPUT_MD5_FILE, receivedMD5Sum);
-  DEBUG_SERIAL.print("MD5 Read value: ");
-  DEBUG_SERIAL.println(receivedMD5Sum);
-  DEBUG_SERIAL.print ("Length = "); DEBUG_SERIAL.println(strlen(receivedMD5Sum));
+  // Read_MD5(INPUT_MD5_FILE, receivedMD5Sum);
+  // DEBUG_SERIAL.print("Main FW MD5 Read value: ");
+  // DEBUG_SERIAL.println(receivedMD5Sum);
+  // DEBUG_SERIAL.print ("Length = "); DEBUG_SERIAL.println(strlen(receivedMD5Sum));
 
-  if (strcmp(receivedMD5Sum, calculatedMD5Sum) == 0) {
-    DEBUG_SERIAL.println("STM MFW File ok..");
+ // if (strcmp(receivedMD5Sum, calculatedMD5Sum) == 0) 
+  {
+    DEBUG_SERIAL.println("Main FW File ok..");
     uint16_t retval4 = Flash_STM_File(INPUT_BIN_FILE); // Flashing the code to Internal memory
     delay(1000);
     if(RETURN_SUCESS != retval4) {
@@ -378,24 +494,28 @@ uint16_t Flash_Verify_STM_File(char* INPUT_BIN_FILE,char* INPUT_MD5_FILE)
     }
 
     Flash_MD5_Sum(INPUT_BIN_FILE, verifiedMD5Sum);
-    if (strcmp(verifiedMD5Sum,calculatedMD5Sum) == 0) {
-      DEBUG_SERIAL.println("STM Firmware flashed successfully..!");
+    if (strcmp(verifiedMD5Sum,stmcalcMD5Sum) == 0) {
+      //DEBUG_SERIAL.println("STM Firmware flashed successfully..!");
       return RETURN_SUCESS;
     } else {
       DEBUG_SERIAL.println("Error : Internal memory checksum mismatch..");
       return 1;
     }           
-  }else {
-    DEBUG_SERIAL.println("Error in STM MFW / MD5 File(s)");
-    return 2;
   }
+  // else {
+  //   DEBUG_SERIAL.println("Error in STM MFW / MD5 File(s)");
+  //   return 2;
+  // }
   
 }
 
   
 void update_flag(uint8_t flag_addr , uint8_t flag_data)
   {
-    DEBUG_SERIAL.println("Updating flag..."); 
+    DEBUG_SERIAL.print("Updating flag:");
+    DEBUG_SERIAL.print(flag_addr);
+    DEBUG_SERIAL.print(" Val:");
+    DEBUG_SERIAL.println(flag_data); 
  
     uint8_t flag_addr_temp = flag_addr * 8;
     iu_read_all_flags();
@@ -462,7 +582,7 @@ void Read_MD5(char* TEST_FILE, char *md5Result)
       memset(md5Result, 0x00, 64);
       int readLen=MD5_value.readBytesUntil('\0', md5Result, 64);
       DEBUG_SERIAL.print("Received MD5 value: ");DEBUG_SERIAL.println(md5Result);
-      byte lastChar = strlen(md5Result)-1;
+      byte lastChar = strlen(md5Result);
       md5Result[lastChar] = '\0'; 
       MD5_value.close(); 
     }

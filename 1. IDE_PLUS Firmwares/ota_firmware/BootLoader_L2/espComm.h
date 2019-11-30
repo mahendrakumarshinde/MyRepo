@@ -122,7 +122,9 @@ class espComm
         unsigned char header2[4] = {0x00,0x10,0x00,0x00};  // Packet size 16384 (0x4000)
         unsigned char paddingZero[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
         unsigned char readBuf[FLASH_BLOCK_SIZE];
-        unsigned char PktBuf[FLASH_BLOCK_SIZE+2048];        
+        unsigned char PktBuf[FLASH_BLOCK_SIZE+2048];
+        uint32_t stmFileSize;
+        uint32_t espTotBlock;        
 };
 
 #endif

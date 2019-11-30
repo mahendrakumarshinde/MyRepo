@@ -5,9 +5,17 @@
 
 extern LedManager ledManager;
 
+extern "C" uint8_t MD5_sum_file(char* readFileName, char *md5Result);
+extern "C" void Read_MD5(char* TEST_FILE, char *md5Result);
+extern "C" char calculatedMD5Sum[64];
+extern "C" char receivedMD5Sum[64];
+extern "C" char verifiedMD5Sum[64];
+
+
 uint16_t espComm::flash_esp32_verify(char* folderPath,char* fileName)
 {
     bool ret = false;
+
  // DOSFS.begin();
     espFlashLog = DOSFS.open("esp32Response.log", "w");
     if (espFlashLog)
@@ -133,6 +141,9 @@ bool espComm::espBinWrite(char *folderName,char *fileName)
         { 
             unsigned char fileBuf[MAX_FILE_RW_SIZE];
             fileSize = fwFile.size();
+            espTotBlock = fileSize/FLASH_BLOCK_SIZE;
+            if(fileSize%FLASH_BLOCK_SIZE)
+                espTotBlock = espTotBlock + 1; 
             DEBUG_SERIAL.print(F("File Size:"));
             DEBUG_SERIAL.println(fileSize);
             readIdx = 0;
@@ -285,8 +296,8 @@ bool espComm::preparePkt(unsigned char* buff,uint16_t pktSeqNo, uint32_t pktsize
     
     /* CRC (4 byte) - (LSB First) */
     pktCrc = espcomm_calc_checksum(buff,pktsize);
-    DEBUG_SERIAL.print("Packet CRC: 0x");
-    DEBUG_SERIAL.println(pktCrc, HEX);
+//    DEBUG_SERIAL.print("Packet CRC: 0x");
+//    DEBUG_SERIAL.println(pktCrc, HEX);
     if(pktCrc == 0xDB)
     {
         PktBuf[writeIdx++] = 0xDB;
@@ -313,7 +324,7 @@ bool espComm::preparePkt(unsigned char* buff,uint16_t pktSeqNo, uint32_t pktsize
     memcpy(&PktBuf[writeIdx],header2,4);
     writeIdx = writeIdx + 4; // Size of header2
     
-    DEBUG_SERIAL.println("Packet Seq. No: " + String(pktSeqNo));
+    DEBUG_SERIAL.println("WiFi FW Flash Sector: " + String(pktSeqNo) + "/" + String(espTotBlock));
     /* Write Sequence No in 4 byte (LSB First) */
     if(pktSeqNo == 0xDB)
     {
@@ -596,7 +607,7 @@ bool espComm:: esp_SendSyncCmd(uint8_t rebootCount, uint8_t retrySync)
                 --cnt;
                 if (cnt <= 0)
                 {
-                    DEBUG_SERIAL.println("Found C0");
+                    //DEBUG_SERIAL.println("Found C0");
                     espFlashLog.println();
                     if (compareResponse(expectedResponse, responseCmd, sizeof(expectedResponse), sizeof(responseCmd)) == true)
                     {
@@ -707,7 +718,7 @@ String espComm:: espGetMD5Hash()
 	}
 	espFlashLog.println();
 	espFlashLog.print("MD5 Response : ");
-  DEBUG_SERIAL.println("\nMD5 Response : ");
+    DEBUG_SERIAL.println("\nMD5 Response : ");
 	delay(1500);
 	while (Serial1.available() > 0)
 	{
@@ -768,7 +779,7 @@ bool espComm::espSendDataPkt(unsigned char *command, uint32_t size, int retry, u
     int index = 0;
     byte expectedResponse[] = {0x01, 0x03, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     byte responseCmd[10];
-    DEBUG_SERIAL.println(size);
+   // DEBUG_SERIAL.println(size);
     // espFlashLog.print("Data Packet, Seq:");
     // espFlashLog.print(seq);
     // espFlashLog.print(" Size:");
@@ -812,19 +823,19 @@ bool espComm::espSendDataPkt(unsigned char *command, uint32_t size, int retry, u
                // espFlashLog.println();
                 if (compareResponse(expectedResponse, responseCmd, sizeof(expectedResponse), sizeof(responseCmd)) == true)
                 {
-                    DEBUG_SERIAL.println("Response Matched");
+                    //DEBUG_SERIAL.println("Response Matched");
                     return true;
                 }
                 else
                 {
-                    DEBUG_SERIAL.println("Response Missmatch");
+                    DEBUG_SERIAL.println("Response Missmatch, Flash write failed !!");
                     Serial1.flush();
                     return false;
                 }
             }
         }
       //  espFlashLog.println();
-        DEBUG_SERIAL.println(".");
+      //  DEBUG_SERIAL.println("");
         delay(100);
     }
     return false;
