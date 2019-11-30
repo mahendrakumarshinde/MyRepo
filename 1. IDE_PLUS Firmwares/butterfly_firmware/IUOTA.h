@@ -54,6 +54,7 @@ class IUOTA
 
         void otaFileDownload();
         bool otaFwBinWrite(char *folderName,char *fileName, char *buff, uint16_t size);
+        bool otaMD5Write(char *folderName,char *fileName, char *md5);
         bool otaFwBinRead(char *folderName,char *fileName);//), char *readBuff, uint16_t *readSize);
         bool otaFileRemove(char *folderName,char *fileName);
         

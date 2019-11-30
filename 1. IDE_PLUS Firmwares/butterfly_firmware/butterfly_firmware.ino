@@ -680,6 +680,7 @@ void loop()
         // if (loopDebugMode) {
             if (doOnce) {
                 doOnce = false;
+                debugPrint("Executing Image Flashed From PC...");
                 /* === Place your code to excute once here ===*/
                 if(iuEthernet.isEthernetConnected == 0) {
                     ledManager.showStatus(&STATUS_WIFI_CONNECTED);
@@ -761,12 +762,13 @@ void loop()
             conductor.otaChkFwdnldTmout();
             ledManager.updateColors();
         }
-#if 0 // FW Validation
+#if 1 // FW Validation
         if(doOnceFWValid == true)
         {
             if((FWValidCnt % 2000) == 0 && FWValidCnt > 0)
             {
                 uint32_t ret = 0;
+                debugPrint("Running Firmware Validation ");
                 ret = conductor.firmwareValidation();
                 if(ret == OTA_VALIDATION_WIFI)
                 {// Waiting for WiFi Disconnect/Connect Cycle.
@@ -787,9 +789,9 @@ void loop()
                         if (loopDebugMode) {
                             debugPrint("OTA FW Validation Retry Overflow ! Validation Failed");
                             debugPrint("Initiating Rollback FW. Device reseting.......");
-                            delay(1000);
                         }
                         iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_INTERNAL_ROLLBACK);
+                        delay(1000);
                     }
                     STM32.reset();
                 }
@@ -800,18 +802,23 @@ void loop()
                     iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_VALIDATION_SUCCESS);
                     /*  Initialize OTA FW Validation retry count */
                     iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);
+                    /* Copy FW binaries, MD5 from rollback to Backup folder */
                     iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"vEdge_main.bin");
                     iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"vEdge_wifi.bin");
+                    iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"STM-MFW.md5");
+                    iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"ESP-MFW.md5");
                     delay(10);
+                    /* Copy FW binaries, MD5 from Temp folder to rollback folder */
                     iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_main.bin");
                     iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_wifi.bin");
-                    delay(10);
-                    sendOtaStsMsg(MSPCommand::OTA_FUG_SUCCESS, "OTA-FUG-SUCCESS", "OTA-RCA-0000")
-                    delay(1000);                    
+                    iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"STM-MFW.md5");
+                    iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"ESP-MFW.md5");
                 }
                 else if(ret == OTA_VALIDATION_FAIL)
-                {
+                {   
+                    debugPrint("Firmware Validation Failed...");
                     iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_INTERNAL_ROLLBACK);
+                    delay(1000);
                     STM32.reset();
                 }
             }

@@ -864,6 +864,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 delay(1);
                 strcpy(fwBinFileName, "vEdge_main.bin");
                 iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_main.bin");
+                iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,"STM-MFW.md5");
+                iuOta.otaMD5Write(iuFlash.IUFWTMPIMG_SUBDIR,"STM-MFW.md5",stmHash);
                 snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
                 m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-FDW-START", "OTA-RCA-0000" ,otaInitTimeStamp);
                 delay(1);
@@ -908,11 +910,16 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 debugPrint(m_rlbkDevId.toString().c_str());
                 debugPrint("Downgrade:",false);
                 debugPrint(m_rlbkDowngrade);
-                if(conductor.getUsageMode() == UsageMode::OTA) {
+                if(conductor.getUsageMode() != UsageMode::OTA) {
                     if(m_rlbkDevId == m_macAddress && m_rlbkDowngrade == true)
                     {
+                        debugPrint("Updating flag for Forced Rollback = 0x05");
                         iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_FORCED_ROLLBACK);
-                        delay(100);
+                        iuOta.readOtaFlag();
+                        debugPrint("OTA Status Flag:",false);
+                        debugPrint(iuOta.getOtaFlagValue(OTA_STATUS_FLAG_LOC));
+                        delay(1000);
+                        STM32.reset();
                     }
                 }
             }
@@ -1939,6 +1946,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             if (loopDebugMode) { debugPrint(F("STM FW Download Completed !")); }
             strcpy(fwBinFileName, "vEdge_wifi.bin");
             iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_wifi.bin");
+            iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,"ESP-MFW.md5");
+            iuOta.otaMD5Write(iuFlash.IUFWTMPIMG_SUBDIR,"ESP-MFW.md5",espHash);
             iuWiFi.sendMSPCommand(MSPCommand::OTA_STM_DNLD_OK);
             delay(1);
   //          waitingDnldStrart = false; 

@@ -29,6 +29,44 @@ void IUOTA::otaFileDownload()
 
 
 /**
+ * Write OTA FW binary MD5 in to external flash as .MD5
+ */
+bool IUOTA::otaMD5Write(char *folderName,char *fileName, char *md5)
+{
+    if(md5 == NULL || fileName == NULL)
+    {
+        if (debugMode) {
+            debugPrint(F("fw md5 file write param error !"));
+            if(fileName)
+                debugPrint(fileName);
+        } 
+        return false;
+    }
+    char filepath[40];
+    snprintf(filepath, 40, "%s/%s", folderName, fileName);
+    if (debugMode) {
+        debugPrint(filepath);
+    }
+    File md5File;
+    md5File = DOSFS.open(filepath,"w");
+    if(md5File)
+    {
+        md5File.write((uint8_t *)md5,33);
+        md5File.close();
+        return true;
+    }
+    else
+    {
+        if (debugMode) {
+            debugPrint(F("Error Creating MD5 file:"),false);
+            debugPrint(filepath);
+        }
+        return false;
+    }
+}
+
+
+/**
  * Write OTA FW binary data in to external flash as .bin
  */
 bool IUOTA::otaFwBinWrite(char *folderName,char *fileName, char *buff, uint16_t size)
