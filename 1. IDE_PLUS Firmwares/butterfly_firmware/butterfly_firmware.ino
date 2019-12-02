@@ -642,14 +642,26 @@ void setup()
                 doOnceFWValid = true;   // New FW upgraded, perform validation
                 break;
             case OTA_FW_UPGRADE_FAILED:
+                if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Upgrade retry ");
+                conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-FUG-ABORT","OTA-RCA-0002");
+                delay(1000);
+                break;
             case OTA_FW_INTERNAL_ROLLBACK:
+                if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Internal Rollback ");
+                conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-FUG-ABORT","OTA-RCA-0004");
+                delay(1000);
+                break;
             case OTA_FW_FORCED_ROLLBACK: // Reset, as L2 shall perform Upgrade,Rollback or Forced Rollback
-                if (setupDebugMode) debugPrint("Main FW:OTA Upgrade Failed ! Rebooting device..");
-                delay(2000);
-                //STM32.reset();
+                if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Forced Rollback ");
+                conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-FUG-ABORT","OTA-RCA-0005");
+                delay(1000);
                 break;
             case OTA_FW_FILE_SYS_ERROR:
-                if (setupDebugMode) debugPrint("Main FW:File System Error !");
+                if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Missing or Invalid File(s) ");
+                conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-FUG-ABORT","OTA-RCA-0006");
+                delay(1000);
+                break;
+//                STM32.reset();
                 // Need to handle ?
                 break;
             default:
@@ -790,7 +802,7 @@ void loop()
                     {
                         if (loopDebugMode) {
                             debugPrint("OTA FW Validation Retry Overflow ! Validation Failed");
-                            debugPrint("Initiating Rollback FW. Device reseting.......");
+                            debugPrint("Initiating Rollback FW. Rebooting Device.....");
                         }
                         iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_INTERNAL_ROLLBACK);
                         delay(1000);
@@ -811,15 +823,16 @@ void loop()
                     /* Copy FW binaries, MD5 from rollback to Backup folder */
                     iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"vEdge_main.bin");
                     iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"vEdge_wifi.bin");
-                    iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"STM-MFW.md5");
-                    iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"ESP-MFW.md5");
+                    iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"vEdge_main.md5");
+                    iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"vEdge_main.md5");
                     delay(10);
                     /* Copy FW binaries, MD5 from Temp folder to rollback folder */
                     iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_main.bin");
                     iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_wifi.bin");
-                    iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"STM-MFW.md5");
-                    iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"ESP-MFW.md5");
+                    iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_main.md5");
+                    iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_wifi.md5");
                     conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_SUCCESS,"OTA-FUG-SUCCESS","OTA-RCA-0000");
+                    if (loopDebugMode) debugPrint("OTA FW Validation Successful. Rebooting device....");
                     delay(1000);
                     STM32.reset();
                 }

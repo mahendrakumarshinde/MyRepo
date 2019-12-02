@@ -864,8 +864,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 delay(1);
                 strcpy(fwBinFileName, "vEdge_main.bin");
                 iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_main.bin");
-                iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,"STM-MFW.md5");
-                iuOta.otaMD5Write(iuFlash.IUFWTMPIMG_SUBDIR,"STM-MFW.md5",stmHash);
+                iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_main.md5");
+                iuOta.otaMD5Write(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_main.md5",stmHash);
                 snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
                 m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-FDW-START", "OTA-RCA-0000" ,otaInitTimeStamp);
                 delay(1);
@@ -911,23 +911,39 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 debugPrint("Downgrade:",false);
                 debugPrint(m_rlbkDowngrade);
                 if(conductor.getUsageMode() != UsageMode::OTA) {
-                    if(m_rlbkDevId == m_macAddress && m_rlbkDowngrade == true)
+                    if(DOSFS.exists(OTA_MAIN_FW3) && DOSFS.exists(OTA_MAIN_CHK3) && 
+                       DOSFS.exists(OTA_WIFI_FW3) && DOSFS.exists(OTA_WIFI_CHK3))
                     {
-                        if(saveToFlash) {
-                            subConfig = root;
-                            // Check if the config is new, then save to file and reset
-                            iuFlash.saveConfigJson(IUFlash::CFG_FORCE_OTA, subConfig);
+                        if(m_rlbkDevId == m_macAddress && m_rlbkDowngrade == true)
+                        {
+                            if(saveToFlash) {
+                                subConfig = root;
+                                // Check if the config is new, then save to file and reset
+                                iuFlash.saveConfigJson(IUFlash::CFG_FORCE_OTA, subConfig);
+                                if(loopDebugMode) 
+                                    debugPrint("Saved OTA configuration to file");
+                            }                        
+                            if(loopDebugMode) debugPrint("Updating flag for Forced Rollback = 0x05");
+                            iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_FORCED_ROLLBACK);
+                            iuOta.readOtaFlag();
+                            if(loopDebugMode) { 
+                                debugPrint("OTA Status Flag:",false);
+                                debugPrint(iuOta.getOtaFlagValue(OTA_STATUS_FLAG_LOC));
+                            }
+                            delay(1000);
+                            STM32.reset();
+                        }
+                        else
+                        {
                             if(loopDebugMode) 
-                                debugPrint("Saved OTA configuration to file");
-                        }                        
-                        debugPrint("Updating flag for Forced Rollback = 0x05");
-                        iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_FORCED_ROLLBACK);
-                        iuOta.readOtaFlag();
-                        debugPrint("OTA Status Flag:",false);
-                        debugPrint(iuOta.getOtaFlagValue(OTA_STATUS_FLAG_LOC));
-                        delay(1000);
-                        STM32.reset();
+                                debugPrint("Invalid Device ID for Forced Rollback !");
+                        }
                     }
+                    else
+                    {
+                        if(loopDebugMode) 
+                            debugPrint("Missing Backup FW file(s) Forced rollback failed.");
+                    }    
                 }
             }
         }
@@ -2020,8 +2036,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             if (loopDebugMode) { debugPrint(F("STM FW Download Completed !")); }
             strcpy(fwBinFileName, "vEdge_wifi.bin");
             iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_wifi.bin");
-            iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,"ESP-MFW.md5");
-            iuOta.otaMD5Write(iuFlash.IUFWTMPIMG_SUBDIR,"ESP-MFW.md5",espHash);
+            iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_wifi.md5");
+            iuOta.otaMD5Write(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_wifi.md5",espHash);
             iuWiFi.sendMSPCommand(MSPCommand::OTA_STM_DNLD_OK);
             delay(1);
   //          waitingDnldStrart = false; 
@@ -4215,7 +4231,7 @@ uint8_t Conductor::firmwareWifiValidation(File *ValidationFile)
         {
             ValidationFile->print(F("DEVICE WIFI STATUS: NOT CONNECTED !"));
             if(loopDebugMode){ debugPrint(F("DEVICE WIFI STATUS:NOT CONNECTED !")); }
-            FW_Valid_State = 0;
+            FW_Valid_State = 1;
             ValidationFile->close();
             ret = OTA_VALIDATION_WIFI;
         }
@@ -4231,7 +4247,7 @@ uint8_t Conductor::firmwareWifiValidation(File *ValidationFile)
         {
             ValidationFile.println(F("DEVICE WIFI DISCONNECT-FAILED"));
             if(loopDebugMode){ debugPrint(F("DEVICE WIFI DISCONNECT-FAILED")); }
-            FW_Valid_State = 0;
+            FW_Valid_State = 2;
             ValidationFile.close();
             ret = OTA_VALIDATION_WIFI;
         }

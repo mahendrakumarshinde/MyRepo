@@ -9,6 +9,23 @@
 #include "MacAddress.h"
 #include <FS.h>
 
+
+#define  OTA_MAIN_FW1 "/iuTempFirmware/vEdge_main.bin"
+#define  OTA_MAIN_FW2 "/iuRollbackFirmware/vEdge_main.bin"
+#define  OTA_MAIN_FW3 "/iuBackupFirmware/vEdge_main.bin"
+#define  OTA_MAIN_CHK1 "/iuTempFirmware/vEdge_main.md5"
+#define  OTA_MAIN_CHK2 "/iuRollbackFirmware/vEdge_main.md5"
+#define  OTA_MAIN_CHK3 "/iuBackupFirmware/vEdge_main.md5"
+
+#define  OTA_WIFI_FW1 "/iuTempFirmware/vEdge_wifi.bin"
+#define  OTA_WIFI_FW2 "/iuRollbackFirmware/vEdge_wifi.bin"
+#define  OTA_WIFI_FW3 "/iuBackupFirmware/vEdge_wifi.bin"
+#define  OTA_WIFI_CHK1 "/iuTempFirmware/vEdge_wifi.md5"
+#define  OTA_WIFI_CHK2 "/iuRollbackFirmware/vEdge_wifi.md5"
+#define  OTA_WIFI_CHK3 "/iuBackupFirmware/vEdge_wifi.md5"
+
+
+
 #define  OTA_DOWNLOAD_SUCCESS 00
 #define  OTA_INVALID_MQTT     01
 #define  OTA_CHECKSUM_FAIL    02
