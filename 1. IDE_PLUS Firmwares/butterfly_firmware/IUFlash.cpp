@@ -25,6 +25,7 @@ char IUFSFlash::FNAME_MQTT_SERVER[12] = "mqtt_server";
 char IUFSFlash::FNAME_MQTT_CREDS[11] = "mqtt_creds";
 char IUFSFlash::FNAME_FFT[4] = "fft";
 char IUFSFlash::FNAME_OTA[4] = "ota";
+char IUFSFlash::FNAME_FORCE_OTA[10] = "force_ota";
 /***** Core *****/
 
 void IUFSFlash::begin()
@@ -400,6 +401,9 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
             break;
         case CFG_OTA:
             fname = FNAME_OTA;
+            break;
+        case CFG_FORCE_OTA:
+            fname = FNAME_FORCE_OTA;
             break;
         default:
             if (debugMode)

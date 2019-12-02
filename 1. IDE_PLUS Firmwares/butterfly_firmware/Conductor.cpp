@@ -913,6 +913,13 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 if(conductor.getUsageMode() != UsageMode::OTA) {
                     if(m_rlbkDevId == m_macAddress && m_rlbkDowngrade == true)
                     {
+                        if(saveToFlash) {
+                            subConfig = root;
+                            // Check if the config is new, then save to file and reset
+                            iuFlash.saveConfigJson(IUFlash::CFG_FORCE_OTA, subConfig);
+                            if(loopDebugMode) 
+                                debugPrint("Saved OTA configuration to file");
+                        }                        
                         debugPrint("Updating flag for Forced Rollback = 0x05");
                         iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_FORCED_ROLLBACK);
                         iuOta.readOtaFlag();
@@ -926,6 +933,113 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
     }
     return true;
+}
+
+/*
+ * Read the OTA Configutation details
+ * 
+ */
+void Conductor::readOtaConfig()
+{
+    JsonObject& config = conductor.configureJsonFromFlash("/iuconfig/ota.conf",1);
+    strcpy(m_otaMsgId,(const char *)config["messageId"]);
+    Serial.print("OTA m_otaMsgId: ");
+    Serial.println(m_otaMsgId);
+    strcpy(m_otaFwVer,(const char*)config["fwVersion"]);
+
+    JsonVariant subConfig = config["fwBinaries"][0];
+    String fwType = subConfig["type"];
+    if(!(strcmp((const char *)fwType.c_str(),(const char *)"STM32")))
+    {
+        strcpy(m_type1,(const char*)fwType.c_str());
+        strcpy(m_otaStmUri,(const char*)subConfig["url"]);
+        strcpy(stmHash,(const char*)subConfig["hash"]);
+        //static const char* stmHash = subConfig["hash"];
+        if(loopDebugMode) {
+            debugPrint(F("OTA Type: "), false);
+            debugPrint(m_type1);
+            debugPrint(F("OTA Main FW URI: "), false);
+            debugPrint(m_otaStmUri);
+            debugPrint(F("OTA Main FW Bin Hash: "), false);
+            debugPrint(stmHash);
+        }
+    }
+    else if(!(strcmp((const char *)fwType.c_str(),(const char *)"ESP32")))
+    {
+        strcpy(m_type2,(const char*)fwType.c_str());
+        strcpy(m_otaEspUri,(const char*)subConfig["url"]);
+        strcpy(espHash,(const char*)subConfig["hash"]);
+        //static const char* espHash = subConfig["hash"];
+        if(loopDebugMode) {
+            debugPrint(F("OTA Type: "), false);
+            debugPrint(m_type2);
+            debugPrint(F("OTA WiFi FW URI: "), false);
+            debugPrint(m_otaEspUri);
+            debugPrint(F("OTA WiFi FW Bin Hash: "), false);
+            debugPrint(espHash);
+        }
+    }
+
+    subConfig = config["fwBinaries"][1];
+    String fwType1 = subConfig["type"];
+    if(!(strcmp((const char *)fwType1.c_str(),(const char *)"STM32")))
+    {
+        strcpy(m_type1,(const char*)fwType1.c_str());
+        strcpy(m_otaStmUri,(const char*)subConfig["url"]);
+        strcpy(stmHash,(const char*)subConfig["hash"]);
+        //static const char* stmHash = subConfig["hash"];
+        if(loopDebugMode) {
+            debugPrint(F("OTA Type: "), false);
+            debugPrint(m_type1);
+            debugPrint(F("OTA Main FW URI: "), false);
+            debugPrint(m_otaStmUri);
+            debugPrint(F("OTA Main FW Bin Hash: "), false);
+            debugPrint(stmHash);
+        }
+    }
+    else if(!(strcmp((const char *)fwType1.c_str(),(const char *)"ESP32")))
+    {
+        strcpy(m_type2,(const char*)fwType1.c_str());
+        strcpy(m_otaEspUri,(const char*)subConfig["url"]);
+        strcpy(espHash,(const char*)subConfig["hash"]);
+        //  static const char* espHash = subConfig["hash"];
+        if(loopDebugMode) {
+            debugPrint(F("OTA Type: "), false);
+            debugPrint(m_type2);
+            debugPrint(F("OTA WiFi FW URI: "), false);
+            debugPrint(m_otaEspUri);
+            debugPrint(F("OTA WiFi FW Bin Hash: "), false);
+            debugPrint(espHash);
+        }
+    }
+}
+
+
+/*
+ * Read the OTA Configutation details
+ * 
+ */
+void Conductor::readForceOtaConfig()
+{
+    JsonObject& config = conductor.configureJsonFromFlash("/iuconfig/force_ota.conf",1);
+    strcpy(m_rlbkMsgId,(const char*)config["messageId"]);
+    debugPrint("MessageId:",false);
+    debugPrint(m_rlbkMsgId);
+    JsonVariant subConfig = config["ota-ollback"];
+    if(subConfig.success()) {
+        strcpy(m_rlbkFwVer,(const char*)subConfig["fwVersion"]); 
+        //String devId = subConfig["deviceId"];
+        m_rlbkDevId.fromString((const char*)subConfig["deviceId"]);            
+        m_rlbkDowngrade = subConfig["downgrade"];
+        if(loopDebugMode) {
+            debugPrint("Fw Version:",false);
+            debugPrint(m_rlbkFwVer);
+            debugPrint("Device ID:",false);
+            debugPrint(m_rlbkDevId.toString().c_str());
+            debugPrint("Downgrade:",false);
+            debugPrint(m_rlbkDowngrade);
+        }
+    }
 }
 
 /*
@@ -4361,6 +4475,6 @@ void Conductor::sendOtaStsMsg(MSPCommand::command type, char *msg, char *errMsg)
     char otaResponse[256];
     double otaInitTimeStamp = conductor.getDatetime();            
     snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
-    m_otaMsgId,m_macAddress.toString().c_str(), m_type1,msg, errMsg ,otaInitTimeStamp);
+    m_otaMsgId,m_macAddress.toString().c_str(), "vEdge",msg, errMsg ,otaInitTimeStamp);
     iuOta.otaSendResponse(type, otaResponse);  // Checksum failed
 }

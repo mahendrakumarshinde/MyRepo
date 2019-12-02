@@ -624,12 +624,8 @@ void setup()
         //Resume previous operational state of device
         conductor.setThresholdsFromFile();
     
-
-        JsonObject& config = conductor.configureJsonFromFlash("/iuconfig/ota.conf",1);
-        const char *otaMsgId;
-        otaMsgId = config["messageId"];
-        Serial.println(otaMsgId);
-
+        conductor.readOtaConfig();
+        conductor.readForceOtaConfig();
         iuOta.readOtaFlag();
         uint8_t otaSts = iuOta.getOtaFlagValue(OTA_STATUS_FLAG_LOC);
         if (setupDebugMode) {

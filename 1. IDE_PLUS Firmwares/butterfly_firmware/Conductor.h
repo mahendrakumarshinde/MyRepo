@@ -246,6 +246,8 @@ class Conductor
         uint8_t firmwareDeviceValidation(File *ValidationFile);
         uint8_t firmwareWifiValidation(File *ValidationFile);
         void sendOtaStsMsg(MSPCommand::command type, char *msg, char *errMsg);
+        void readOtaConfig();
+        void readForceOtaConfig();
         static const uint32_t fwDnldStartTmout = 60000;
         uint32_t otaFwdnldTmout = 0;
         bool waitingDnldStrart = false;
