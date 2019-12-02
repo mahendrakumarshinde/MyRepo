@@ -324,7 +324,7 @@ bool espComm::preparePkt(unsigned char* buff,uint16_t pktSeqNo, uint32_t pktsize
     memcpy(&PktBuf[writeIdx],header2,4);
     writeIdx = writeIdx + 4; // Size of header2
     
-    DEBUG_SERIAL.println("WiFi FW Flash Sector: " + String(pktSeqNo) + "/" + String(espTotBlock));
+    DEBUG_SERIAL.println("WiFi FW Flash Sector: " + String(pktSeqNo+1) + "/" + String(espTotBlock));
     /* Write Sequence No in 4 byte (LSB First) */
     if(pktSeqNo == 0xDB)
     {
@@ -569,9 +569,9 @@ void espComm::espCleanup()
 
 bool espComm:: esp_SendSyncCmd(uint8_t rebootCount, uint8_t retrySync)
 {
-    DEBUG_SERIAL.println("Sending SYNC command...");
+  //  DEBUG_SERIAL.println("Sending SYNC command...");
 	int cnt = 112;
-	DEBUG_SERIAL.println(sizeof(syncCommand));
+  //	DEBUG_SERIAL.println(sizeof(syncCommand));
 	int index = 0;
 	uint8_t m_rebootCount = rebootCount;
 	uint8_t m_retrySync = retrySync;

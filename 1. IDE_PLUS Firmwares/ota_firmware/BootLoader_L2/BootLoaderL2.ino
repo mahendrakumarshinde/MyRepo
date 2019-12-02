@@ -56,8 +56,9 @@ void setup()
 	DEBUG_SERIAL.begin(115200);
 
 	DEBUG_SERIAL.println("=================================");
-	DEBUG_SERIAL.println("     Starting Bootloader2        ");
-	DEBUG_SERIAL.println("=================================");  
+	DEBUG_SERIAL.println("     IU Bootloader-2             ");
+	DEBUG_SERIAL.println("=================================");
+
 	DOSFS.format();
   delay(1000);
 	if (!DOSFS.begin()) {
@@ -86,7 +87,7 @@ void loop()
     case 0:  /* 0 -> Normal boot*/
             break;
     case 1:  /* 1 -> Flash STM Main Firmware */
-            DEBUG_SERIAL.println("Upgrading STM Main Firmware..");
+            DEBUG_SERIAL.println("Upgrading vEdge Main,WiFi Firmware..");
             if((DOSFS.exists(STM_MAIN_FIRMWARE)) && (DOSFS.exists(STM_MFW_1_SUM)) &&
                (DOSFS.exists(ESP_MAIN_FIRMWARE1)) && (DOSFS.exists(ESP_MFW_1_SUM))) {
 
@@ -102,7 +103,6 @@ void loop()
                 update_flag(0,6); // File error
                 break;
               }
-
 
               retVal3 = esp32.flash_esp32_verify(ESP_MAIN_FIRMWARE,ESP_FIRMWARE_FILENAME);
               delay(2000);
@@ -140,7 +140,7 @@ void loop()
             break;
     case 2:  /* 2 -> No action here */
              /* Using Factory Firmware */
-             DEBUG_SERIAL.println("Upgrading STM with Factory Firmware..");
+            DEBUG_SERIAL.println("Upgrading vEdge with Factory Firmware..");
             break;
     case 3:  /* 3 -> No Action here...*/
             break;
@@ -148,7 +148,7 @@ void loop()
             /* Swap STM-MFW1.bin and STM-MFW2.bin
             * need to check the file excist or not 
             */
-            DEBUG_SERIAL.println("Rollback STM Main Firmware..");
+            DEBUG_SERIAL.println("Internal Rollback vEdge Main,WiFi Firmware..");
             
             if((DOSFS.exists(STM_ROLLBACK_FIRMWARE)) && (DOSFS.exists(STM_MFW_2_SUM)) &&
                (DOSFS.exists(ESP_ROLLBACK_FIRMWARE1)) && (DOSFS.exists(ESP_MFW_2_SUM))) {
@@ -166,17 +166,15 @@ void loop()
                 break;
               }
 
-
-              DEBUG_SERIAL.println("Flashing STM (RB) Firmware..");
               retVal3 = esp32.flash_esp32_verify(ESP_ROLLBACK_FIRMWARE,ESP_FIRMWARE_FILENAME);
               delay(2000);
               if(retVal3 == 0)
               {
-                DEBUG_SERIAL.println("Rollback of WiFi FW Flashing Successfull.");
+                DEBUG_SERIAL.println("Rollback of WiFi FW Flashing Successful.");
                 retVal3 = Flash_Verify_STM_File(STM_ROLLBACK_FIRMWARE,STM_MFW_2_SUM);
                 delay(2000);
                 if(retVal3 == 0)
-                  DEBUG_SERIAL.println("Rollback of Main FW Flashing Successfull."); 
+                  DEBUG_SERIAL.println("Rollback of Main FW Flashing Successful."); 
                 else
                   DEBUG_SERIAL.println("Rollback of Main FW Flashing Failed !!");                
               }
@@ -185,7 +183,7 @@ void loop()
                 DEBUG_SERIAL.println("Rollback of WiFi FW Flashing Failed !!");
               }
               //delay(2000);
-              DEBUG_SERIAL.println("Setting MFW Flag");
+//              DEBUG_SERIAL.println("Setting MFW Flag");
               if(retVal3 == 0){
                 update_flag(0,0); 
               } else if (retVal3 == 2) {
@@ -205,6 +203,8 @@ void loop()
             /* Swap STM-MFW1.bin and STM-MFW2.bin
             * need to check the file excist or not 
             */
+            DEBUG_SERIAL.println("Forced Rollback vEdge (Backup) Firmware..");
+
             if((DOSFS.exists(STM_FORCED_ROLLBACK_FIRMWARE)) && (DOSFS.exists(STM_MFW_3_SUM)) &&
                (DOSFS.exists(ESP_FORCED_ROLLBACK_FIRMWARE1)) && (DOSFS.exists(ESP_MFW_3_SUM))) {
 
@@ -220,9 +220,7 @@ void loop()
                 update_flag(0,6); // File error
                 break;
               }
-              DEBUG_SERIAL.println("Forced Rollback STM (Backup) Firmware..");
-              
-              DEBUG_SERIAL.println("Flashing STM (Backup) Firmware..");
+            
               retVal3 = esp32.flash_esp32_verify(ESP_FORCED_ROLLBACK_FIRMWARE,ESP_FIRMWARE_FILENAME);
               delay(2000);
               if(retVal3 == 0)
@@ -240,7 +238,7 @@ void loop()
                 DEBUG_SERIAL.println("Forced Rollback of WiFi FW Flashing Failed !!");
               }
               delay(2000);
-              DEBUG_SERIAL.println("Setting MFW Flag");
+//              DEBUG_SERIAL.println("Setting MFW Flag");
               if(retVal3 == 0){
                 update_flag(0,0); 
               } else if (retVal3 == 2) {
@@ -421,7 +419,7 @@ uint16_t Flash_STM_File(char* readFileName)
   }
   DEBUG_SERIAL.print("File Size is ="); DEBUG_SERIAL.println(dataFileSize);
   if(!stm32l4_flash_unlock() ){
-      DEBUG_SERIAL.println("FLASH STM32_FLASH_UNLOCK_FAILED !!!");
+    //  DEBUG_SERIAL.println("FLASH STM32_FLASH_UNLOCK_FAILED !!!");
       //return STM32_FLASH_UNLOCK_FAILED; 
   }
   if(!stm32l4_flash_erase((uint32_t)MFW_ADDRESS,((dataFileSize/2048)+1)*2048) ){
