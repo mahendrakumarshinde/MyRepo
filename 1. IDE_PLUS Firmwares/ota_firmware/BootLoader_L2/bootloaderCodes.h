@@ -8,20 +8,20 @@
 #define STM_MAIN_FIRMWARE               "iuTempFirmware/vEdge_main.bin"
 #define STM_ROLLBACK_FIRMWARE           "iuRollbackFirmware/vEdge_main.bin"
 #define STM_FORCED_ROLLBACK_FIRMWARE    "iuBackupFirmware/vEdge_main.bin"
-#define STM_FACTORY_FIRMWARE            "iuFactoryFirmware/STM-FFW.bin"
+#define STM_FACTORY_FIRMWARE            "iuFactoryFirmware/vEdge_main.bin"
 
-#define STM_MFW_1_SUM                   "iuTempFirmware/STM-MFW.md5"
-#define STM_MFW_2_SUM                   "iuRollbackFirmware/STM-MFW.md5"
-#define STM_MFW_3_SUM                   "iuBackupFirmware/STM-MFW.md5"
-#define STM_FFW_1_SUM                   "iuFactoryFirmware/STM-FFW.md5"
+#define STM_MFW_1_SUM                   "iuTempFirmware/vEdge_main.md5"
+#define STM_MFW_2_SUM                   "iuRollbackFirmware/vEdge_main.md5"
+#define STM_MFW_3_SUM                   "iuBackupFirmware/vEdge_main.md5"
+#define STM_FFW_1_SUM                   "iuFactoryFirmware/vEdge_main.md5"
 
 
 #define ESP_MAIN_FIRMWARE1               "iuTempFirmware/vEdge_wifi.bin"
 #define ESP_ROLLBACK_FIRMWARE1           "iuRollbackFirmware/vEdge_wifi.bin"
 #define ESP_FORCED_ROLLBACK_FIRMWARE1    "iuBackupFirmware/vEdge_wifi.bin"
-#define ESP_MFW_1_SUM                   "iuTempFirmware/ESP-MFW.md5"
-#define ESP_MFW_2_SUM                   "iuRollbackFirmware/ESP-MFW.md5"
-#define ESP_MFW_3_SUM                   "iuBackupFirmware/ESP-MFW.md5"
+#define ESP_MFW_1_SUM                   "iuTempFirmware/vEdge_wifi.md5"
+#define ESP_MFW_2_SUM                   "iuRollbackFirmware/vEdge_wifi.md5"
+#define ESP_MFW_3_SUM                   "iuBackupFirmware/vEdge_wifi.md5"
 
 #define ESP_MAIN_FIRMWARE               "iuTempFirmware"
 #define ESP_ROLLBACK_FIRMWARE           "iuRollbackFirmware"
