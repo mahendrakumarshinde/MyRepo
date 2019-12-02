@@ -3147,6 +3147,9 @@ bool Conductor::setFFTParams() {
             FFTConfiguration::currentSensor = FFTConfiguration::lsmSensor;
             FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
         }
+        else{
+            debugPrint(F("KIONIX, LSM not found"));
+        }
         // TODO: The following can be configurable in the future
         FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY;
         FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
