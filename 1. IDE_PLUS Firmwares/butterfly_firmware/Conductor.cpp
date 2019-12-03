@@ -898,7 +898,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             strcpy(m_rlbkMsgId,(const char*)root["messageId"]);
             debugPrint("MessageId:",false);
             debugPrint(m_rlbkMsgId);
-            subConfig = root["ota-ollback"];
+            subConfig = root["ota-rollback"];
             if(subConfig.success()) {
                 strcpy(m_rlbkFwVer,(const char*)subConfig["fwVersion"]); 
                 //String devId = subConfig["deviceId"];
