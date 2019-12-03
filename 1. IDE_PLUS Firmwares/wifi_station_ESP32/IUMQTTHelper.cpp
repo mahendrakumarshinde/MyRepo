@@ -221,7 +221,25 @@ bool IUMQTTHelper::publishFeature(const char *payload,
         return publish(FEATURE_TOPIC, payload);
     }
 }
-
+/**
+ *
+ */
+bool IUMQTTHelper::publishOta(const char *payload,
+                              const char *topicExtension,
+                              const uint16_t extensionLength)
+{
+    if (topicExtension && extensionLength > 0)
+    {
+        uint16_t topicLength = OTA_TOPIC_LENGTH + extensionLength + 1;
+        char topic[topicLength];
+        snprintf(topic, topicLength, "%s/%s", OTA_TOPIC, topicExtension);
+        return publish(topic, payload);
+    }
+    else
+    {
+        return publish(OTA_TOPIC, payload);
+    }
+}
 /**
  *
  */

@@ -1,4 +1,5 @@
 #include "LedManager.h"
+#include "Conductor.h"
 
 /* =============================================================================
     Visual representation (color blinking or breathing) of a status
@@ -8,6 +9,9 @@ StatusVisual STATUS_NO_STATUS(RGB_BLACK, 0, 0, 1000);
 StatusVisual STATUS_WIFI_WORKING(RGB_PURPLE, 25, 50, 50);
 StatusVisual STATUS_WIFI_CONNECTED(RGB_WHITE, 0, 100, 3000);
 StatusVisual STATUS_IS_ALIVE(RGB_CYAN, 25, 50, 50);
+StatusVisual STATUS_OTA_DOWNLOAD(RGB_WHITE, 0, 100, 100);
+StatusVisual STATUS_OTA_UPGRADE(RGB_ORANGE, 0, 200, 200);
+StatusVisual STATUS_OTA_ROLLBACK(RGB_CYAN, 0, 200, 200);
 
 
 /* =============================================================================
@@ -68,6 +72,9 @@ RGBColor LedManager::m_getOpStateColor()
         case OperationState::DANGER:
             col = RGB_RED;
             break;
+    }
+    if(conductor.getUsageMode() == UsageMode::OTA) {
+        col = RGB_BLACK;
     }
     return col;
 }

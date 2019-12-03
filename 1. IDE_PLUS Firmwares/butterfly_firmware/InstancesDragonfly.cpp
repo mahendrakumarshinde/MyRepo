@@ -32,7 +32,7 @@ char iuWiFiBuffer[2048] = "";
     IUESP8285 iuWiFi(&Serial1, iuWiFiBuffer, 2048, IUSerial::MS_PROTOCOL,
                      115200, ';', 250);
 #endif
-
+    IUOTA iuOta = IUOTA();
 
 /* =============================================================================
     Flash storage

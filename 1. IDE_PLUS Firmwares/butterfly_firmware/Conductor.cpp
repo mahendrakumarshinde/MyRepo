@@ -3,7 +3,13 @@
 #include "rBase64.h"
 #include "FFTConfiguration.h"
 #include "RawDataState.h"
+#include "IUOTA.h"
+#include <MemoryFree.h>
+#include "stm32l4_iap.h"
 
+extern "C" bool doOnceFWValid;
+extern "C" char FW_Valid_State;
+extern IUOTA iuOta;
 const char* fingerprintData;
 const char* fingerprints_X;
 const char* fingerprints_Y;
@@ -735,8 +741,321 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             if(m_streamingMode == StreamingMode::BLE && isBLEConnected()) { iuBluetooth.write("FFT_CFG_FAILURE;"); delay(100); }
         }
     } // If json is incorrect, it will result in parsing error in jsonBuffer.parseObject(json) which will cause the processConfiguration call to return
- 
+    
+
+    subConfig = root["messageType"];
+    if (subConfig.success()) {
+        double otaInitTimeStamp = conductor.getDatetime();
+        char otaResponse[256];
+        String msgType = root["messageType"];
+        strcpy(m_otaMsgType,msgType.c_str());
+        if(loopDebugMode) {
+            debugPrint(F("OTA Message type: "), false);
+            debugPrint(m_otaMsgType);
+        }
+        if(!(strcmp((const char *)m_otaMsgType,(const char *)"initiateota")))
+        {    
+            if(loopDebugMode) {
+                debugPrint(F("OTA configuration received: "), false);
+                subConfig.printTo(Serial); debugPrint("");
+            }
+            strcpy(m_otaMsgId,(const char*)root["messageId"]);
+            strcpy(m_otaFwVer,(const char*)root["fwVersion"]);
+    //     String test1 = root["otaConfig"]["supportedDeviceTypes"];
+        //    Serial.println(test1);
+            if(loopDebugMode) {
+                debugPrint(F("OTA Message ID: "), false);
+                debugPrint(m_otaMsgId);
+                debugPrint(F("OTA FW Version: "), false);
+                debugPrint(m_otaFwVer);
+            }
+            subConfig = root["fwBinaries"][0];
+            String fwType = subConfig["type"];
+            if(!(strcmp((const char *)fwType.c_str(),(const char *)"STM32")))
+            {
+                strcpy(m_type1,(const char*)fwType.c_str());
+                strcpy(m_otaStmUri,(const char*)subConfig["url"]);
+                strcpy(stmHash,(const char*)subConfig["hash"]);
+                //static const char* stmHash = subConfig["hash"];
+                if(loopDebugMode) {
+                    debugPrint(F("OTA Type: "), false);
+                    debugPrint(m_type1);
+                    debugPrint(F("OTA Main FW URI: "), false);
+                    debugPrint(m_otaStmUri);
+                    debugPrint(F("OTA Main FW Bin Hash: "), false);
+                    debugPrint(stmHash);
+                }
+            }
+            else if(!(strcmp((const char *)fwType.c_str(),(const char *)"ESP32")))
+            {
+                strcpy(m_type2,(const char*)fwType.c_str());
+                strcpy(m_otaEspUri,(const char*)subConfig["url"]);
+                strcpy(espHash,(const char*)subConfig["hash"]);
+                //static const char* espHash = subConfig["hash"];
+                if(loopDebugMode) {
+                    debugPrint(F("OTA Type: "), false);
+                    debugPrint(m_type2);
+                    debugPrint(F("OTA WiFi FW URI: "), false);
+                    debugPrint(m_otaEspUri);
+                    debugPrint(F("OTA WiFi FW Bin Hash: "), false);
+                    debugPrint(espHash);
+                }
+            }
+
+            subConfig = root["fwBinaries"][1];
+            String fwType1 = subConfig["type"];
+            if(!(strcmp((const char *)fwType1.c_str(),(const char *)"STM32")))
+            {
+                strcpy(m_type1,(const char*)fwType1.c_str());
+                strcpy(m_otaStmUri,(const char*)subConfig["url"]);
+                strcpy(stmHash,(const char*)subConfig["hash"]);
+                //static const char* stmHash = subConfig["hash"];
+                if(loopDebugMode) {
+                    debugPrint(F("OTA Type: "), false);
+                    debugPrint(m_type1);
+                    debugPrint(F("OTA Main FW URI: "), false);
+                    debugPrint(m_otaStmUri);
+                    debugPrint(F("OTA Main FW Bin Hash: "), false);
+                    debugPrint(stmHash);
+                }
+            }
+            else if(!(strcmp((const char *)fwType1.c_str(),(const char *)"ESP32")))
+            {
+                strcpy(m_type2,(const char*)fwType1.c_str());
+                strcpy(m_otaEspUri,(const char*)subConfig["url"]);
+                strcpy(espHash,(const char*)subConfig["hash"]);
+              //  static const char* espHash = subConfig["hash"];
+                if(loopDebugMode) {
+                    debugPrint(F("OTA Type: "), false);
+                    debugPrint(m_type2);
+                    debugPrint(F("OTA WiFi FW URI: "), false);
+                    debugPrint(m_otaEspUri);
+                    debugPrint(F("OTA WiFi FW Bin Hash: "), false);
+                    debugPrint(espHash);
+                }
+            }
+
+            if((!(strcmp(m_type1,"STM32"))) && (!(strcmp(m_type2,"ESP32"))))
+            {
+                if(saveToFlash) {
+                    subConfig = root;
+                    // Check if the config is new, then save to file and reset
+                    iuFlash.saveConfigJson(IUFlash::CFG_OTA, subConfig);
+                    if(loopDebugMode) 
+                        debugPrint("Saved OTA configuration to file");
+                }
+                if (loopDebugMode) { debugPrint(F("Switching Device mode:OPERATION -> OTA")); }
+                changeUsageMode(UsageMode::OTA);
+                if(loopDebugMode) {
+                    debugPrint(F("Changed Device mode: OTA"));
+                }
+                delay(1);
+                iuWiFi.sendLongMSPCommand(MSPCommand::SET_OTA_STM_URI,300000,m_otaStmUri,512);
+                delay(1);
+                iuWiFi.sendLongMSPCommand(MSPCommand::SET_OTA_ESP_URI,300000,m_otaEspUri,512); 
+                delay(1);
+                if(loopDebugMode) {
+                    debugPrint(F("Sending FDW_INI_ACK"));
+                }
+            // iuWiFi.sendMSPCommand(MSPCommand::OTA_INIT_ACK,otaResponse);
+                snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
+                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-INIT-ACK", "OTA-RCA-0000" ,otaInitTimeStamp);
+                iuOta.otaSendResponse(MSPCommand::OTA_INIT_ACK, otaResponse);
+                delay(1);
+                strcpy(fwBinFileName, "vEdge_main.bin");
+                iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_main.bin");
+                iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_main.md5");
+                iuOta.otaMD5Write(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_main.md5",stmHash);
+                snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
+                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-FDW-START", "OTA-RCA-0000" ,otaInitTimeStamp);
+                delay(1);
+                if(loopDebugMode) {
+                    debugPrint(F("Sending OTA_FDW_START"));
+                }
+                iuOta.otaSendResponse(MSPCommand::OTA_FDW_START, otaResponse);
+                otaFwdnldTmout = millis();
+                waitingDnldStrart = true;
+                ledManager.stopColorOverride();
+                ledManager.showStatus(&STATUS_OTA_DOWNLOAD);
+            }
+            else
+            {
+                if(loopDebugMode) {
+                    debugPrint(F("Sending OTA_FDW_ABORT"));
+                }
+                otaInitTimeStamp = conductor.getDatetime();            
+                snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
+                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", String(iuOta.getOtaRca(OTA_INVALID_MQTT)).c_str() ,otaInitTimeStamp);
+                iuOta.otaSendResponse(MSPCommand::OTA_FDW_ABORT, otaResponse);
+            }
+        }
+        if(!(strcmp((const char *)m_otaMsgType,(const char *)"ota-rollback")))
+        {    
+            if(loopDebugMode) {
+                debugPrint(F("OTA Forced Rollback Request received: "), false);
+                subConfig.printTo(Serial); debugPrint("");
+            }
+            strcpy(m_rlbkMsgId,(const char*)root["messageId"]);
+            debugPrint("MessageId:",false);
+            debugPrint(m_rlbkMsgId);
+            subConfig = root["ota-ollback"];
+            if(subConfig.success()) {
+                strcpy(m_rlbkFwVer,(const char*)subConfig["fwVersion"]); 
+                //String devId = subConfig["deviceId"];
+                m_rlbkDevId.fromString((const char*)subConfig["deviceId"]);            
+                m_rlbkDowngrade = subConfig["downgrade"];
+                debugPrint("Fw Version:",false);
+                debugPrint(m_rlbkFwVer);
+                debugPrint("Device ID:",false);
+                debugPrint(m_rlbkDevId.toString().c_str());
+                debugPrint("Downgrade:",false);
+                debugPrint(m_rlbkDowngrade);
+                if(conductor.getUsageMode() != UsageMode::OTA) {
+                    if(DOSFS.exists(OTA_MAIN_FW3) && DOSFS.exists(OTA_MAIN_CHK3) && 
+                       DOSFS.exists(OTA_WIFI_FW3) && DOSFS.exists(OTA_WIFI_CHK3))
+                    {
+                        if(m_rlbkDevId == m_macAddress && m_rlbkDowngrade == true)
+                        {
+                            if(saveToFlash) {
+                                subConfig = root;
+                                // Check if the config is new, then save to file and reset
+                                iuFlash.saveConfigJson(IUFlash::CFG_FORCE_OTA, subConfig);
+                                if(loopDebugMode) 
+                                    debugPrint("Saved OTA configuration to file");
+                            }                        
+                            if(loopDebugMode) debugPrint("Updating flag for Forced Rollback = 0x05");
+                            iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_FORCED_ROLLBACK);
+                            iuOta.readOtaFlag();
+                            if(loopDebugMode) { 
+                                debugPrint("OTA Status Flag:",false);
+                                debugPrint(iuOta.getOtaFlagValue(OTA_STATUS_FLAG_LOC));
+                            }
+                            delay(1000);
+                            STM32.reset();
+                        }
+                        else
+                        {
+                            if(loopDebugMode) 
+                                debugPrint("Invalid Device ID for Forced Rollback !");
+                        }
+                    }
+                    else
+                    {
+                        if(loopDebugMode) 
+                            debugPrint("Missing Backup FW file(s) Forced rollback failed.");
+                    }    
+                }
+            }
+        }
+    }
     return true;
+}
+
+/*
+ * Read the OTA Configutation details
+ * 
+ */
+void Conductor::readOtaConfig()
+{
+    JsonObject& config = conductor.configureJsonFromFlash("/iuconfig/ota.conf",1);
+    strcpy(m_otaMsgId,(const char *)config["messageId"]);
+    Serial.print("OTA m_otaMsgId: ");
+    Serial.println(m_otaMsgId);
+    strcpy(m_otaFwVer,(const char*)config["fwVersion"]);
+
+    JsonVariant subConfig = config["fwBinaries"][0];
+    String fwType = subConfig["type"];
+    if(!(strcmp((const char *)fwType.c_str(),(const char *)"STM32")))
+    {
+        strcpy(m_type1,(const char*)fwType.c_str());
+        strcpy(m_otaStmUri,(const char*)subConfig["url"]);
+        strcpy(stmHash,(const char*)subConfig["hash"]);
+        //static const char* stmHash = subConfig["hash"];
+        if(loopDebugMode) {
+            debugPrint(F("OTA Type: "), false);
+            debugPrint(m_type1);
+            debugPrint(F("OTA Main FW URI: "), false);
+            debugPrint(m_otaStmUri);
+            debugPrint(F("OTA Main FW Bin Hash: "), false);
+            debugPrint(stmHash);
+        }
+    }
+    else if(!(strcmp((const char *)fwType.c_str(),(const char *)"ESP32")))
+    {
+        strcpy(m_type2,(const char*)fwType.c_str());
+        strcpy(m_otaEspUri,(const char*)subConfig["url"]);
+        strcpy(espHash,(const char*)subConfig["hash"]);
+        //static const char* espHash = subConfig["hash"];
+        if(loopDebugMode) {
+            debugPrint(F("OTA Type: "), false);
+            debugPrint(m_type2);
+            debugPrint(F("OTA WiFi FW URI: "), false);
+            debugPrint(m_otaEspUri);
+            debugPrint(F("OTA WiFi FW Bin Hash: "), false);
+            debugPrint(espHash);
+        }
+    }
+
+    subConfig = config["fwBinaries"][1];
+    String fwType1 = subConfig["type"];
+    if(!(strcmp((const char *)fwType1.c_str(),(const char *)"STM32")))
+    {
+        strcpy(m_type1,(const char*)fwType1.c_str());
+        strcpy(m_otaStmUri,(const char*)subConfig["url"]);
+        strcpy(stmHash,(const char*)subConfig["hash"]);
+        //static const char* stmHash = subConfig["hash"];
+        if(loopDebugMode) {
+            debugPrint(F("OTA Type: "), false);
+            debugPrint(m_type1);
+            debugPrint(F("OTA Main FW URI: "), false);
+            debugPrint(m_otaStmUri);
+            debugPrint(F("OTA Main FW Bin Hash: "), false);
+            debugPrint(stmHash);
+        }
+    }
+    else if(!(strcmp((const char *)fwType1.c_str(),(const char *)"ESP32")))
+    {
+        strcpy(m_type2,(const char*)fwType1.c_str());
+        strcpy(m_otaEspUri,(const char*)subConfig["url"]);
+        strcpy(espHash,(const char*)subConfig["hash"]);
+        //  static const char* espHash = subConfig["hash"];
+        if(loopDebugMode) {
+            debugPrint(F("OTA Type: "), false);
+            debugPrint(m_type2);
+            debugPrint(F("OTA WiFi FW URI: "), false);
+            debugPrint(m_otaEspUri);
+            debugPrint(F("OTA WiFi FW Bin Hash: "), false);
+            debugPrint(espHash);
+        }
+    }
+}
+
+
+/*
+ * Read the OTA Configutation details
+ * 
+ */
+void Conductor::readForceOtaConfig()
+{
+    JsonObject& config = conductor.configureJsonFromFlash("/iuconfig/force_ota.conf",1);
+    strcpy(m_rlbkMsgId,(const char*)config["messageId"]);
+    debugPrint("MessageId:",false);
+    debugPrint(m_rlbkMsgId);
+    JsonVariant subConfig = config["ota-ollback"];
+    if(subConfig.success()) {
+        strcpy(m_rlbkFwVer,(const char*)subConfig["fwVersion"]); 
+        //String devId = subConfig["deviceId"];
+        m_rlbkDevId.fromString((const char*)subConfig["deviceId"]);            
+        m_rlbkDowngrade = subConfig["downgrade"];
+        if(loopDebugMode) {
+            debugPrint("Fw Version:",false);
+            debugPrint(m_rlbkFwVer);
+            debugPrint("Device ID:",false);
+            debugPrint(m_rlbkDevId.toString().c_str());
+            debugPrint("Downgrade:",false);
+            debugPrint(m_rlbkDowngrade);
+        }
+    }
 }
 
 /*
@@ -998,6 +1317,24 @@ void Conductor::configureMainOptions(JsonVariant &config)
         m_mainFeatureGroup->setDataSendPeriod(value.as<uint16_t>());
         // NOTE: Older firmware device will not set this parameter even if configJson contains it.
 }
+}
+
+/**
+ * OTA configuration
+ *
+ * @return True if the configuration is valid, else false.
+ */
+void Conductor::configureOta(JsonVariant &config)
+{
+    Serial.println("configOta()");
+    JsonVariant value = config["messageId"];
+    if (value.success()) {
+        Serial.println((uint32_t) (value.as<int>()));
+    }
+    value = config["fwVersion"];
+    if (value.success()) {
+        Serial.println("FW Ver OK");
+    }
 }
 
 /**
@@ -1568,6 +1905,9 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuAccelerometer.setSamplingRate(samplingRate);
                 }
                 break;
+            case UsageMode::OTA:
+                Serial.println("Usage Mode: OTA");
+                break;
             default:
                 if (loopDebugMode) {
                     debugPrint(F("Unhandled usage mode: "), false);
@@ -1650,45 +1990,182 @@ void Conductor::processBLEMessage(IUSerial *iuSerial)
 void Conductor::processWiFiMessage(IUSerial *iuSerial)
 {
     char *buff = iuSerial->getBuffer();
-    if (buff[0] == '{')
-    {
-        processConfiguration(buff,true);    //save the configuration into the file
-        return;       // this functon should process only one command in one call, all if conditions should be mutually exclusive
-    }
-    if (iuWiFi.processChipMessage()) {
-        if (iuWiFi.isWorking()) {
-            ledManager.showStatus(&STATUS_WIFI_WORKING);
-        } else {
-            ledManager.resetStatus();
+    uint16_t packetLen =  iuSerial->mspGetDataSize();
+    if(getUsageMode() != UsageMode::OTA) {
+        if (buff[0] == '{')
+        {
+            processConfiguration(buff,true);    //save the configuration into the file
+            return;       // this functon should process only one command in one call, all if conditions should be mutually exclusive
         }
-        updateStreamingMode();
-    }
-    uint32_t currentTime = millis();
-    if(buff[0] == 'i' && buff[3] == '_' && buff[8] =='/' && buff[18] == '-'){ // ide_plus/time_sync-timestamp
-       
-       if(iuEthernet.isEthernetConnected == 1) { // check if ethernet is not connected
-           iuEthernet.isEthernetConnected = 0;  // set to connected, when timesync message is received
-           ledManager.showStatus(&STATUS_WIFI_CONNECTED);  
-       }
-        setRefDatetime(&buff[19]);
-        lastTimeSync = currentTime;
-    }
-    if((buff[0] == '3' && buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
-                buff[13] == '0' && buff[15] == '0' && buff[17] == '0') ){
-        processCommand(buff);
+        if (iuWiFi.processChipMessage()) {
+            if (iuWiFi.isWorking()) {
+                ledManager.showStatus(&STATUS_WIFI_WORKING);
+            } else {
+                ledManager.resetStatus();
+            }
+            updateStreamingMode();
+        }
+        uint32_t currentTime = millis();
+        if(buff[0] == 'i' && buff[3] == '_' && buff[8] =='/' && buff[18] == '-'){ // ide_plus/time_sync-timestamp
+        
+        if(iuEthernet.isEthernetConnected == 1) { // check if ethernet is not connected
+            iuEthernet.isEthernetConnected = 0;  // set to connected, when timesync message is received
+            ledManager.showStatus(&STATUS_WIFI_CONNECTED);  
+        }
+            setRefDatetime(&buff[19]);
+            lastTimeSync = currentTime;
+        }
+        if((buff[0] == '3' && buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
+                    buff[13] == '0' && buff[15] == '0' && buff[17] == '0') ){
+            processCommand(buff);
 
-    }else
-    {
-        processLegacyCommand(buff);
+        }else
+        {
+            processLegacyCommand(buff);
+        }
     }
     uint8_t idx = 0;
+    char otaResponse[256];
+    double otaInitTimeStamp;
     switch (iuWiFi.getMspCommand()) {
         case MSPCommand::ESP_DEBUG_TO_STM_HOST:
             Serial.write(buff);
             Serial.write('\n');
             break;
+        case MSPCommand::OTA_STM_DNLD_STS:
+            if (loopDebugMode) { debugPrint(F("STM FW Download Completed !")); }
+            strcpy(fwBinFileName, "vEdge_wifi.bin");
+            iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_wifi.bin");
+            iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_wifi.md5");
+            iuOta.otaMD5Write(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_wifi.md5",espHash);
+            iuWiFi.sendMSPCommand(MSPCommand::OTA_STM_DNLD_OK);
+            delay(1);
+  //          waitingDnldStrart = false; 
+            break;
+        case MSPCommand::OTA_DNLD_FAIL:
+            if (loopDebugMode) {
+                debugPrint(F("OTA FW Download Failed !"));
+                debugPrint(buff);
+            } 
+            delay(1);
+            waitingDnldStrart = false;
+            otaInitTimeStamp = conductor.getDatetime();            
+            snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
+            m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", buff ,otaInitTimeStamp);
+            iuOta.otaSendResponse(MSPCommand::OTA_FDW_ABORT, otaResponse);
+            iuWiFi.m_setLastConfirmedPublication();
+            changeUsageMode(UsageMode::OPERATION);
+            delay(100); 
+            break;
+        case MSPCommand::OTA_ESP_DNLD_STS:
+            Serial.println(F("STM,ESP FW Download Completed !")); 
+            if (loopDebugMode) { debugPrint(F("ESP FW Download Completed !")); }
+            iuWiFi.sendMSPCommand(MSPCommand::OTA_ESP_DNLD_OK);
+            waitingDnldStrart = false;
+            delay(1);
+            if (loopDebugMode) { debugPrint(F("STM,ESP FW Download Completed")); }
+            char hashMD5[34];
+            bool hashCheck;
+            hashCheck = false;
+            memset(hashMD5,'\0', 34);
+            iuOta.otaGetMD5(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_main.bin",hashMD5);
+            if (loopDebugMode) {
+                debugPrint(F("Main FW hash received:"),false);
+                debugPrint(espHash);
+                debugPrint(F("Main FW hash computed:"),false);
+                debugPrint(hashMD5);
+            }
+            if(!(strcmp(hashMD5,stmHash)))
+            {
+                memset(hashMD5,'\0', 34);
+                iuOta.otaGetMD5(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_wifi.bin",hashMD5);
+                if (loopDebugMode) {                    
+                    debugPrint(F("WiFi FW hash received:"),false);
+                    debugPrint(espHash);
+                    debugPrint(F("WiFi FW hash computed:"),false);
+                    debugPrint(hashMD5);
+                }
+                if(!(strcmp(hashMD5,espHash)))
+                {
+                    if (loopDebugMode) { debugPrint(F("Main FW,WiFi FW Hash match Ok")); }
+                    hashCheck = true;
+                }
+                else
+                {
+                    if (loopDebugMode) { debugPrint(F("WiFi FW Hash match Fail !")); }
+                    hashCheck = false;
+                }
+            }
+            else
+            {
+                if (loopDebugMode) { debugPrint(F("Main FW Hash match Fail !")); }
+                hashCheck = false;
+            } 
+            if(hashCheck == true) {
+                if (loopDebugMode) { debugPrint(F("OTA File Write Success, Sending OTA-FDW-SUCCESS")); }
+                otaInitTimeStamp = conductor.getDatetime();            
+                snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
+                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-FDW-SUCCESS", "OTA-RCA-0000" ,otaInitTimeStamp);
+                iuOta.otaSendResponse(MSPCommand::OTA_FDW_SUCCESS, otaResponse);
+                iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_DOWNLOAD_SUCCESS);
+                doOnceFWValid = false;
+                FW_Valid_State = 0;
+                iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_DOWNLOAD_SUCCESS);
+                iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);
+                delay(1000);
+                otaInitTimeStamp = conductor.getDatetime();            
+                snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
+                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-FUG-START", "OTA-RCA-0000" ,otaInitTimeStamp);
+                iuOta.otaSendResponse(MSPCommand::OTA_FUG_START, otaResponse);
+                delay(1000);
+                if (loopDebugMode) { debugPrint(F("Rebooting device for FW Upgrade......")); }
+                delay(500);
+                STM32.reset();
+            }
+            else
+            {
+                if (loopDebugMode) { debugPrint(F("OTA File Write Failed, Sending OTA-ERR-FDW-ABORT")); }
+                waitingDnldStrart = false;
+                otaInitTimeStamp = conductor.getDatetime();            
+                snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
+                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", String(iuOta.getOtaRca(OTA_CHECKSUM_FAIL)).c_str() ,otaInitTimeStamp);
+                iuOta.otaSendResponse(MSPCommand::OTA_FDW_ABORT, otaResponse);  // Checksum failed
+            }
+            delay(1000);
+            if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
+            iuWiFi.m_setLastConfirmedPublication();
+            changeUsageMode(UsageMode::OPERATION);
+            delay(100);
+            break;
+        case MSPCommand::OTA_PACKET_DATA:
+            if (loopDebugMode) {
+            //    debugPrint(F("OTA_PACKET_DATA Len:"),false);
+            //    debugPrint(packetLen);
+            }
+            waitingDnldStrart = false;
+            if(iuOta.otaFwBinWrite(iuFlash.IUFWTMPIMG_SUBDIR,fwBinFileName, buff, packetLen)) {
+                if (loopDebugMode) { debugPrint(F("Sending OTA_PACKET_ACK")); }
+                iuWiFi.sendMSPCommand(MSPCommand::OTA_PACKET_ACK);
+            }
+            else
+            { // Fw File write failed... Abort OTA
+                if (loopDebugMode) {
+                    debugPrint(F("OTA File Write Failed, Sending OTA-ERR-FDW-ABORT"));
+                }
+                waitingDnldStrart = false;
+                otaInitTimeStamp = conductor.getDatetime();            
+                snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
+                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", String(iuOta.getOtaRca(OTA_FLASH_RDWR_FAIL)).c_str() ,otaInitTimeStamp);
+                iuOta.otaSendResponse(MSPCommand::OTA_FDW_ABORT, otaResponse); // File write failed
+                if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
+                iuWiFi.m_setLastConfirmedPublication();
+                changeUsageMode(UsageMode::OPERATION);
+                delay(100);         
+            }
+            break;
         // MSP Status messages
         case MSPCommand::MSP_INVALID_CHECKSUM:
+            Serial.println("Invalid Checksum");
             if (loopDebugMode) { debugPrint(F("MSP_INVALID_CHECKSUM")); }
             break;
         case MSPCommand::MSP_TOO_LONG:
@@ -1698,7 +2175,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             if (loopDebugMode) { debugPrint(F("RECEIVE_WIFI_FV")); }
             strncpy(iuWiFi.espFirmwareVersion, buff, 6);
             iuWiFi.espFirmwareVersionReceived = true;
-        }
+            }
+        break;
         case MSPCommand::ASK_BLE_MAC:
             if (loopDebugMode) { debugPrint(F("ASK_BLE_MAC")); }
             iuWiFi.sendBleMacAddress(m_macAddress);
@@ -1749,10 +2227,30 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             if (isBLEConnected()) {
                 iuBluetooth.write("WIFI-CONNECTED;");
             }
+            if(conductor.getUsageMode() == UsageMode::OTA) {
+                if (loopDebugMode) { debugPrint(F("OTA DNLD MODE")); }
+                ledManager.stopColorOverride();
+                ledManager.showStatus(&STATUS_OTA_DOWNLOAD);
+            }
             break;
         case MSPCommand::WIFI_ALERT_DISCONNECTED:
             if (isBLEConnected()) {
                 iuBluetooth.write("WIFI-DISCONNECTED;");
+            }
+            if(conductor.getUsageMode() == UsageMode::OTA) {
+                if (loopDebugMode) { 
+                    debugPrint(F("OTA In Progress - WIFI-DISCONNECTED"));
+                    debugPrint(F("Sending OTA-ERR-FDW-ABORT"));
+                }
+                // In case WiFi Disconnect/ESP Reset durig OTA, switch to OPERTATION Mode ??
+                otaInitTimeStamp = conductor.getDatetime();            
+                snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
+                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", String(iuOta.getOtaRca(OTA_WIFI_DISCONNECT)).c_str() ,otaInitTimeStamp);
+                iuOta.otaSendResponse(MSPCommand::OTA_FDW_ABORT, otaResponse);
+                if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
+                iuWiFi.m_setLastConfirmedPublication();
+                changeUsageMode(UsageMode::OPERATION);
+                delay(100);
             }
             break;
         case MSPCommand::WIFI_ALERT_NO_SAVED_CREDENTIALS:
@@ -2223,6 +2721,9 @@ void Conductor::updateStreamingMode()
                  newMode = StreamingMode::ETHERNET;  //Wifi is not connected but found ethernet MAC ID
              }
             break;
+        case UsageMode::OTA: // During OTA, no streaming
+            newMode = StreamingMode::NONE;
+            break;
     }
     if (m_streamingMode == newMode) {
         // char streaming_mode_string[10];
@@ -2299,6 +2800,13 @@ void Conductor::changeUsageMode(UsageMode::option usage)
     if (m_usageMode == usage) {
         return; // Nothing to do
     }
+    if(m_usageMode == UsageMode::OTA && usage != UsageMode::OPERATION)
+    {
+        if (loopDebugMode) {
+            debugPrint(F("Except OPERATION, No other mode is allowed during OTA"));
+        }
+        return; // Nothing to do
+    }
     m_usageMode = usage;
     String msg;
     switch (m_usageMode) {
@@ -2324,6 +2832,10 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             //iuAccelerometer.resetScale();
             msg = "custom";
             break;        
+        case UsageMode::OTA:
+            ledManager.overrideColor(RGB_CYAN);
+            msg = "ota";
+            break;
         default:
             if (loopDebugMode) {
                 debugPrint(F("Invalid usage mode preset"));
@@ -2423,6 +2935,10 @@ void Conductor::acquireData(bool inCallback)
        }
             
         force = true;
+    }
+
+    if (m_usageMode == UsageMode::OTA) {
+  //      m_acquisitionMode = AcquisitionMode::NONE;
     }
 
     // CUSTOM Mode
@@ -3642,4 +4158,339 @@ bool Conductor::setEthernetConfig(char* filename){
     }
 
     return false;
+}
+
+/**
+ *
+ */
+void Conductor::otaChkFwdnldTmout()
+{
+    uint32_t now = millis();
+    if (waitingDnldStrart == true)
+    {
+        if (now - otaFwdnldTmout > fwDnldStartTmout)
+        {
+            waitingDnldStrart = false;
+            char otaResponse[256];
+            double otaInitTimeStamp;
+            otaInitTimeStamp = conductor.getDatetime();            
+            snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
+            m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", String(iuOta.getOtaRca(OTA_DOWNLOAD_TMOUT)).c_str() ,otaInitTimeStamp);
+            iuOta.otaSendResponse(MSPCommand::OTA_FDW_ABORT, otaResponse);
+            iuWiFi.m_setLastConfirmedPublication();  // Download Timeout , No response
+            changeUsageMode(UsageMode::OPERATION);
+            delay(100);
+            if (debugMode)
+            {
+                debugPrint("Exceeded OTA download start time-out");
+            }
+        }
+    }
+}
+
+uint32_t Conductor::firmwareValidation()
+{
+    File ValidationFile;
+    if(FW_Valid_State == 0) {
+        if(loopDebugMode){ debugPrint(F("FW Validation Start")); }
+        ValidationFile = DOSFS.open("Validation.txt", "w");
+        if (ValidationFile)
+        {
+            ValidationFile.println(F("*************************************************************" ));
+            ValidationFile.println(F("*********  STM/ESP FIRMWARE VALIDATION REPORT  **************" ));
+            ValidationFile.println(F("*************************************************************" ));
+            ValidationFile.println(F(""));
+            ValidationFile.println(F("Validation[DEV]-File Open: OK"));
+            if(loopDebugMode){ debugPrint(F("Validation[DEV]-File Open: OK")); }
+        }
+        firmwareConfigValidation(&ValidationFile);
+
+        if(firmwareDeviceValidation(&ValidationFile))
+            return OTA_VALIDATION_RETRY;        
+    }    
+    return (firmwareWifiValidation(&ValidationFile));
+}
+
+uint8_t Conductor::firmwareWifiValidation(File *ValidationFile)
+{
+    bool WiFiCon = false;
+    uint8_t ret = 0;
+    if(FW_Valid_State == 0) {
+        ValidationFile->println(F("DEVICE WIFI STATUS:"));
+        if(loopDebugMode){ debugPrint(F("DEVICE WIFI STATUS")); }
+        WiFiCon = iuWiFi.isConnected();
+        if(WiFiCon)
+        {
+            ValidationFile->println(F("DEVICE WIFI STATUS: CONNECTED"));
+            if(loopDebugMode){ debugPrint(F("DEVICE WIFI STATUS:CONNECTED")); }
+            iuWiFi.turnOff();
+            FW_Valid_State = 1;
+            ret = OTA_VALIDATION_WIFI;
+        }
+        else
+        {
+            ValidationFile->print(F("DEVICE WIFI STATUS: NOT CONNECTED !"));
+            if(loopDebugMode){ debugPrint(F("DEVICE WIFI STATUS:NOT CONNECTED !")); }
+            FW_Valid_State = 1;
+            ValidationFile->close();
+            ret = OTA_VALIDATION_WIFI;
+        }
+        ValidationFile->close();
+    }
+    else if(FW_Valid_State == 1)
+    {
+        File ValidationFile = DOSFS.open("Validation.txt", "w");
+        ValidationFile.println(F("DEVICE WIFI DISCONNECT TEST:"));
+        if(loopDebugMode){ debugPrint(F("DEVICE WIFI DISCONNECT TEST:")); }
+        WiFiCon = iuWiFi.isConnected();    
+        if(WiFiCon == 1)
+        {
+            ValidationFile.println(F("DEVICE WIFI DISCONNECT-FAILED"));
+            if(loopDebugMode){ debugPrint(F("DEVICE WIFI DISCONNECT-FAILED")); }
+            FW_Valid_State = 2;
+            ValidationFile.close();
+            ret = OTA_VALIDATION_WIFI;
+        }
+        else
+        {
+            ValidationFile.println(F("DEVICE WIFI DISCONNECT-OK"));
+            if(loopDebugMode){ debugPrint(F("DEVICE WIFI DISCONNECT-OK")); }
+            iuWiFi.turnOff();
+            delay(100);
+            iuWiFi.turnOn(1);   
+            FW_Valid_State = 2;
+            ValidationFile.close();
+            ret = OTA_VALIDATION_WIFI;
+        }
+    }
+    else if(FW_Valid_State == 2)
+    {
+        File ValidationFile = DOSFS.open("Validation.txt", "w");
+        ValidationFile.println(F("DEVICE WIFI CONNECT TEST:"));
+        if(loopDebugMode){ debugPrint(F("DEVICE WIFI CONNECT TEST:")); }
+        WiFiCon = iuWiFi.isConnected();    
+        if(WiFiCon == 0)
+        {
+            ValidationFile.println(F("DEVICE WIFI CONNECT-FAILED"));
+            if(loopDebugMode){ debugPrint(F("DEVICE WIFI CONNECT-FAILED")); }
+        }
+        else
+        {
+            ValidationFile.println(F("DEVICE WIFI CONNECT-OK"));
+            if(loopDebugMode){ debugPrint(F("DEVICE WIFI CONNECT-OK")); }
+        }
+        FW_Valid_State = 3;
+        ValidationFile.close();
+        ret = OTA_VALIDATION_SUCCESS;
+        if(loopDebugMode){ debugPrint(F("FIRMWARE VALIDATION COMPLETED")); }
+    }    
+    return ret;
+}
+
+uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
+{
+    if(loopDebugMode){ debugPrint(F("DEVICE MQTT CONFIG CHECK:-")); }
+    ValidationFile->println(F("DEVICE MQTT CONFIG CHECK:-"));
+    // 1. Check default parameter setting
+    ValidationFile->print(F(" - MQTT DEFAULT SERVER IP:"));
+    ValidationFile->println(MQTT_DEFAULT_SERVER_IP);
+    if(MQTT_DEFAULT_SERVER_IP != IPAddress(13,233,38,155))
+    {
+        ValidationFile->println(F("   Validation [MQTT]-Default IP Add: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Default IP Add: Fail !")); }
+    }
+    ValidationFile->print(F(" - MQTT DEFAULT SERVER PORT:"));
+    ValidationFile->println(MQTT_DEFAULT_SERVER_PORT);
+    if(MQTT_DEFAULT_SERVER_PORT != 1883)
+    {
+        ValidationFile->println(F("   Validation [MQTT]-Default Port: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Default Port: Fail !")); }
+    }
+
+    ValidationFile->print(F(" - MQTT DEFAULT USERNAME:"));
+    ValidationFile->println(MQTT_DEFAULT_USERNAME);
+    if(strcmp(MQTT_DEFAULT_USERNAME,"ispl"))
+    {
+        ValidationFile->println(F("   Validation [MQTT]-Default Username: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Default Username: Fail !")); }
+    }
+    ValidationFile->print(F(" - MQTT DEFAULT PASSOWRD:"));
+    ValidationFile->println(MQTT_DEFAULT_ASSWORD);
+    if(strcmp(MQTT_DEFAULT_ASSWORD,"indicus"))
+    {
+        ValidationFile->println(F("   Validation [MQTT]-Default Password: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Default Password: Fail !")); }
+    }
+
+    // 2. Check MQTT update from config file stored in ext. flash
+    conductor.configureMQTTServer("MQTT.conf");
+    // 3. Check default parameter setting changed to read from config file ?
+    if(m_mqttServerIp == IPAddress(13,233,38,155) && m_mqttServerPort == 1883 &&
+      (strcmp(m_mqttUserName,"ispl") == 0) && (strcmp(m_mqttPassword,"indicus") == 0))
+    {
+        ValidationFile->println(F("   Validation [MQTT]-Read Config File: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Read Config File: Fail !")); }
+    }
+    ValidationFile->println(F(" - MQTT FLASH CONFIG FILE READ: OK"));
+    if(loopDebugMode){ debugPrint(F("MQTT FLASH CONFIG FILE READ: OK")); }
+
+    ValidationFile->println(F("DEVICE HTTP CONFIG CHECK:-"));
+    //http configuration
+    if(configureBoardFromFlash("httpConfig.conf",1) == false)
+    {
+        ValidationFile->println(F("   Validation [HTTP]-Read Config File: Fail !"));
+        ValidationFile->print(F(" - HTTP DEFAULT HOST IP:"));
+        ValidationFile->println(m_httpHost);
+        if(strcmp(m_httpHost,"13.232.122.10"))
+        {
+            ValidationFile->println(F("   Validation [HTTP]-Default HOST IP: Fail !"));
+            if(loopDebugMode){ debugPrint(F("Validation [HTTP]-Default HOST IP: Fail !")); }
+        }
+        ValidationFile->print(F(" - HTTP DEFAULT HOST PORT:"));
+        ValidationFile->println(m_httpPort);
+        if(m_httpPort != 8080)
+        {
+            ValidationFile->println(F("   Validation [HTTP]-Default HOST PORT: Fail !"));
+            if(loopDebugMode){ debugPrint(F("Validation [HTTP]-Default HOST PORT: Fail !")); }    
+        }
+        ValidationFile->print(F(" - HTTP DEFAULT HOST END POINT:"));
+        ValidationFile->println(m_httpPath);
+        if(strcmp(m_httpPath,"/iu-web/rawaccelerationdata"))
+        {
+            ValidationFile->println(F("   Validation [HTTP]-Default HOST END Point: Fail !"));
+            if(loopDebugMode){ debugPrint(F("Validation [HTTP]-Default HOST END Point: Fail !")); }
+        }
+    }
+    else
+    {
+        ValidationFile->println(F(" - HTTP FLASH CONFIG FILE READ: OK"));
+        if(loopDebugMode){ debugPrint(F("HTTP FLASH CONFIG FILE READ: OK")); }
+    }    
+    ValidationFile->println(F("DEVICE FFT CONFIG CHECK:-"));
+    ValidationFile->print(F(" - FFT DEFAULT SAMPLING RATE:"));
+    ValidationFile->println(FFTConfiguration::DEFAULT_SAMPLING_RATE);
+    if(FFTConfiguration::DEFAULT_SAMPLING_RATE != 3330)
+    {
+        ValidationFile->println(F("   Validation [FFT]-Default Sampling Rate: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [FFT]-Default Sampling Rate: Fail !")); }
+    }
+    ValidationFile->print(F(" - FFT DEFAULT BLOCK SIZE:"));
+    ValidationFile->println(FFTConfiguration::DEFAULT_BLOCK_SIZE);
+    if(FFTConfiguration::DEFAULT_BLOCK_SIZE != 512)
+    {
+        ValidationFile->println(F("   Validation [FFT]-Default Block Size: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [FFT]-Default Block Size: Fail !")); }
+    }
+
+    // Update the configuration of FFT computers from fft.conf
+    if(setFFTParams() == false)
+    {
+        ValidationFile->print(F("   Validation [FFT]-Read Config File: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [FFT]-Read Config File: Fail !")); }
+    }
+    ValidationFile->println(F(" - FFT FLASH CONFIG FILE READ: OK"));
+    if(loopDebugMode){ debugPrint(F("FFT FLASH CONFIG FILE READ: OK")); }
+}
+
+uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
+{
+    ValidationFile->println(F("STM MCU INFORMATION:"));
+    char Cnt = 0;
+    uint8_t otaRtryValidation = 0;
+
+    ValidationFile->print(F("DEVICE FREE MEMORY(RAM): "));
+    ValidationFile->println(freeMemory(),DEC);  
+    if(freeMemory() < 30000)
+    {
+        ValidationFile->println(F("Validation [DEV]-Free Memory: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [DEV]-Free Memory: Fail !")); }      
+        return OTA_VALIDATION_FAIL;
+    }
+    if(loopDebugMode){ debugPrint(F("Validation [DEV]-Free Memory: Ok")); }  
+    ValidationFile->print(F("DEVICE BLE  MAC ADDRESS:"));
+    ValidationFile->println(m_macAddress);
+    MacAddress Mac(00,00,00,00,00,00);
+    if(m_macAddress == Mac || !iuBluetooth.isBLEAvailable)
+    {
+        ValidationFile->println(F("Validation [DEV]-BLE MAC: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [DEV]-BLE MAC: Fail !")); }
+        otaRtryValidation++;
+    }
+    if(loopDebugMode){
+        debugPrint(F("Validation [DEV]-BLE MAC: OK - "),false);
+    }
+    ValidationFile->print(F("DEVICE WIFI MAC ADDRESS:"));
+    ValidationFile->println(iuWiFi.getMacAddress());
+    if(iuWiFi.getMacAddress() == Mac)
+    {
+        ValidationFile->println(F("Validation [DEV]-WiFi MAC: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [DEV]-WiFi MAC: Fail !")); }
+        otaRtryValidation++;
+    }
+    if(loopDebugMode){
+        debugPrint(F("Validation [DEV]-WiFi MAC: Ok"));
+    }
+
+    ValidationFile->println(F("DEVICE SENSOR INTERFACE CHECK:-"));
+    iuI2C.scanDevices();
+    ValidationFile->println(F("DEVICE LSM COMM CHECK:-"));
+    if (!iuI2C.checkComponentWhoAmI("LSM6DSM ACC", iuAccelerometer.ADDRESS,iuAccelerometer.WHO_AM_I,iuAccelerometer.I_AM))
+    {
+        ValidationFile->println(F("   Validation [LSM]-Read Add: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [LSM]-Read Add: Fail !")); }
+        otaRtryValidation++;
+    }
+    else
+    {        // iuI2C.releaseReadLock();
+        if(iuI2C.i2c_dev[0] == iuAccelerometer.I_AM || iuI2C.i2c_dev[1] == iuAccelerometer.I_AM)
+        {
+            ValidationFile->print(F("LSM6DSM I2C Add:0x"));
+            ValidationFile->println(iuAccelerometer.I_AM,HEX);
+            ValidationFile->println(F("   Validation [LSM]-Read Add: Ok"));
+            if(loopDebugMode){ debugPrint(F("Validation [LSM]-Read Add: Ok")); }
+        }
+        else
+        {
+            ValidationFile->println(F("   Validation [LSM]-Read Add: Fail !"));
+            if(loopDebugMode){ debugPrint(F("Validation [LSM]-Read Add: Fail")); }
+            otaRtryValidation++;
+        }
+    }
+
+    if(iuI2C.i2c_dev[0] == iuTemp.I_AM || iuI2C.i2c_dev[1] == iuTemp.I_AM)
+    {
+        ValidationFile->print(F("TMP116 I2C Add:0x"));
+        ValidationFile->println(iuTemp.I_AM,HEX);
+        ValidationFile->println(F("   Validation [TMP]-Read Add: Ok"));
+        if(loopDebugMode){ debugPrint(F("Validation [TMP]-Read Add: Ok")); }
+    }
+    else
+    {
+        ValidationFile->println(F("   Validation [TMP]-Read Add: Fail !"));
+        if(loopDebugMode){ debugPrint(F("Validation [TMP]-Read Add: Fail !")); }
+        otaRtryValidation++;
+    }
+
+    ValidationFile->print(F("DEVICE READ Audio Data: "));
+    ValidationFile->print(audioDB4096Computer.dBresult);
+    ValidationFile->println(F(" dB"));
+
+    if ( (audioDB4096Computer.dBresult < 58.0) && (audioDB4096Computer.dBresult > 160.0) ){
+        ValidationFile->println(F("   Validation [AUD]-Read Acoustic: Fail !"));
+        otaRtryValidation++;
+    }
+
+    return otaRtryValidation;
+
+//    m_SPI->begin();
+    /* Device communication check with Keonics Sensor usign SPI */
+}
+
+void Conductor::sendOtaStsMsg(MSPCommand::command type, char *msg, char *errMsg)
+{
+    char otaResponse[256];
+    double otaInitTimeStamp = conductor.getDatetime();            
+    snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
+    m_otaMsgId,m_macAddress.toString().c_str(), "vEdge",msg, errMsg ,otaInitTimeStamp);
+    iuOta.otaSendResponse(type, otaResponse);  // Checksum failed
 }

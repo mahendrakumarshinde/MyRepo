@@ -110,6 +110,9 @@ float audioHigherCutoff = 160.0;
 
 /***** Debbugging variables *****/
 
+bool doOnceFWValid;
+int FWValidCnt = 0;
+char FW_Valid_State = 0;
 
 bool doOnce = true;
 uint32_t interval = 30000;
@@ -172,13 +175,16 @@ static void watchdogCallback(void) {
     {
         STM32.reset();
     }
-    if (iuWiFi.arePublicationsFailing()) {
-        //Ensure your PubSubClient Arduino library version is 2.7
-        debugPrint("Publications are failing: hard resetting now.");
-        if(conductor.isBLEConnected()) {
-           iuBluetooth.write("WIFI-DISCONNECTED;");
+    if(conductor.getUsageMode() != UsageMode::OTA) {
+        if (iuWiFi.arePublicationsFailing()) {
+            //Ensure your PubSubClient Arduino library version is 2.7
+            debugPrint("Publications are failing: hard resetting now.");
+            if(conductor.isBLEConnected()) {
+            iuBluetooth.write("WIFI-DISCONNECTED;");
+            }
+            Serial.println("Publications are failing: hard resetting now.");
+            iuWiFi.hardReset();
         }
-        iuWiFi.hardReset();
     }
     armv7m_timer_start(&watchdogTimer, 1000);
 }
@@ -197,6 +203,20 @@ static void bleTransmitCallback(void) {
     armv7m_timer_start(&bleTransmitTimer, 5);
 }
 
+#if 0
+/* =============================================================================
+ *  Read HTTP pending config messages using timer
+ * ============================================================================*/
+
+static armv7m_timer_t httpConfigTimer;
+
+static void httpConfigCallback(void) {
+    //iuBluetooth.bleTransmit();
+    //Serial.println("HIT HTTP CONFIG....................................................");
+    iuWiFi.sendMSPCommand(MSPCommand::GET_PENDING_HTTP_CONFIG);
+    armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min  180000
+}
+#endif
 /* ================================================================================
  * Ethernet Status Timer callback
  * ===============================================================================*/
@@ -599,9 +619,51 @@ void setup()
 
         //Resume previous operational state of device
         conductor.setThresholdsFromFile();
-                
-        
-                
+    
+        conductor.readOtaConfig();
+        conductor.readForceOtaConfig();
+        iuOta.readOtaFlag();
+        uint8_t otaSts = iuOta.getOtaFlagValue(OTA_STATUS_FLAG_LOC);
+        if (setupDebugMode) {
+            debugPrint("Main FW:OTA Status Code: ",false);
+            debugPrint(otaSts);
+        }
+        switch(otaSts)
+        {
+            case OTA_FW_VALIDATION_SUCCESS:
+                if (setupDebugMode) debugPrint("Main FW:OTA Validation Success...");
+                break;                  // Alrady validated FW, continue running it.
+            case OTA_FW_UPGRADW_SUCCESS:
+                if (setupDebugMode) debugPrint("Main FW:OTA Upgrade Success, Doing validation..");
+                doOnceFWValid = true;   // New FW upgraded, perform validation
+                break;
+            case OTA_FW_UPGRADE_FAILED:
+                if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Upgrade retry ");
+                conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-FUG-ABORT","OTA-RCA-0002");
+                delay(1000);
+                break;
+            case OTA_FW_INTERNAL_ROLLBACK:
+                if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Internal Rollback ");
+                conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-FUG-ABORT","OTA-RCA-0004");
+                delay(1000);
+                break;
+            case OTA_FW_FORCED_ROLLBACK: // Reset, as L2 shall perform Upgrade,Rollback or Forced Rollback
+                if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Forced Rollback ");
+                conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-FUG-ABORT","OTA-RCA-0005");
+                delay(1000);
+                break;
+            case OTA_FW_FILE_SYS_ERROR:
+                if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Missing or Invalid File(s) ");
+                conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-FUG-ABORT","OTA-RCA-0006");
+                delay(1000);
+                break;
+//                STM32.reset();
+                // Need to handle ?
+                break;
+            default:
+                if (setupDebugMode) debugPrint("Main FW:Unknown OTA Status code !",false);
+                break;
+        }
         // Timer Init
         //timerInit();
         
@@ -628,6 +690,7 @@ void loop()
         // if (loopDebugMode) {
             if (doOnce) {
                 doOnce = false;
+                debugPrint("Executing Image Flashed From PC...");
                 /* === Place your code to excute once here ===*/
                 if(iuEthernet.isEthernetConnected == 0) {
                     ledManager.showStatus(&STATUS_WIFI_CONNECTED);
@@ -652,25 +715,28 @@ void loop()
         }else {
             iuEthernet.readMessages();
         }
-        // Manage WiFi autosleep
-        iuWiFi.manageAutoSleep();
-        // Acquire data from sensors
-        conductor.acquireData(false);
-        // Compute features depending on operation mode
-        conductor.computeFeatures();
-        // Stream features
-        conductor.streamFeatures();
-        // Send accel raw data
-        conductor.periodicSendAccelRawData();
-        // Send config checksum
-        conductor.periodicSendConfigChecksum();
-        ledManager.updateColors();
+        if(conductor.getUsageMode() != UsageMode::OTA) {
+            // Manage WiFi autosleep
+            iuWiFi.manageAutoSleep();
+            // Acquire data from sensors
+            conductor.acquireData(false);
+            // Compute features depending on operation mode
+            conductor.computeFeatures();
+            // Stream features
+            conductor.streamFeatures();
+            // Send accel raw data
+            conductor.periodicSendAccelRawData();
+            // Send config checksum
+            conductor.periodicSendConfigChecksum();
+            ledManager.updateColors();
+        }
         uint32_t now = millis();
         if (now - lastDone > interval) {
             lastDone = now;
             /* === Place your code to excute at fixed interval here ===*/
             conductor.streamMCUUInfo(iuWiFi.port);
             /*======*/
+            //    Serial.println("Usage Mode:" + String(conductor.getUsageMode()));
         }
 
         if (millis() - conductor.lastTimeSync > conductor.m_connectionTimeout ) {
@@ -698,6 +764,84 @@ void loop()
 
         // Clean timed out segmented messages
         conductor.cleanTimedoutSegmentedMessages();
+        if(conductor.getUsageMode() != UsageMode::OTA) {
+            // Manage raw data sending depending on RawDataState::startRawDataTransmission and RawDataState::rawDataTransmissionInProgress
+            conductor.manageRawDataSending();
+        }
+        if(conductor.getUsageMode() == UsageMode::OTA) {
+            conductor.otaChkFwdnldTmout();
+            ledManager.updateColors();
+        }
+#if 1 // FW Validation
+        if(doOnceFWValid == true)
+        {
+            if((FWValidCnt % 2000) == 0 && FWValidCnt > 0)
+            {
+                uint32_t ret = 0;
+                debugPrint("Running Firmware Validation ");
+                ret = conductor.firmwareValidation();
+                if(ret == OTA_VALIDATION_WIFI)
+                {// Waiting for WiFi Disconnect/Connect Cycle.
+                    doOnceFWValid = true;
+                    FWValidCnt = 1;         
+                }
+                else if(ret == OTA_VALIDATION_RETRY)
+                {
+                    uint8_t otaVldnRetry = iuOta.getOtaFlagValue(OTA_VLDN_RETRY_FLAG_LOC);
+                    otaVldnRetry++;
+                    iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,otaVldnRetry);
+                    if (loopDebugMode) {
+                        debugPrint("OTA Validation Retry No: ",false);
+                        debugPrint(otaVldnRetry);
+                    }
+                    if(otaVldnRetry > OTA_MAX_VALIDATION_RETRY)
+                    {
+                        if (loopDebugMode) {
+                            debugPrint("OTA FW Validation Retry Overflow ! Validation Failed");
+                            debugPrint("Initiating Rollback FW. Rebooting Device.....");
+                        }
+                        iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_INTERNAL_ROLLBACK);
+                        delay(1000);
+                    }
+                    STM32.reset();
+                }
+                else if(ret == OTA_VALIDATION_SUCCESS)
+                {
+                    doOnceFWValid = false;
+                    FW_Valid_State = 0;
+                    /* Copy FW binaries, MD5 from rollback to Backup folder */
+                    iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"vEdge_main.bin");
+                    iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"vEdge_wifi.bin");
+                    iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"vEdge_main.md5");
+                    iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"vEdge_wifi.md5");
+                    delay(10);
+                    /* Copy FW binaries, MD5 from Temp folder to rollback folder */
+                    iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_main.bin");
+                    iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_wifi.bin");
+                    iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_main.md5");
+                    iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_wifi.md5");
+                    conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_SUCCESS,"OTA-FUG-SUCCESS","OTA-RCA-0000");
+                    if (loopDebugMode) debugPrint("OTA FW Validation Successful. Rebooting device....");
+                    iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_VALIDATION_SUCCESS);
+                    /*  Initialize OTA FW Validation retry count */
+                    iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);
+                    delay(1000);                
+                    STM32.reset();
+                }
+                else if(ret == OTA_VALIDATION_FAIL)
+                {   
+                    debugPrint("Firmware Validation Failed...");
+                    iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_INTERNAL_ROLLBACK);
+                    delay(1000);
+                    STM32.reset();
+                }
+            }
+            else
+            {
+                FWValidCnt++;
+            }                  
+        }
+#endif
 
         // Manage raw data sending depending on RawDataState::startRawDataTransmission and RawDataState::rawDataTransmissionInProgress
         conductor.manageRawDataSending();

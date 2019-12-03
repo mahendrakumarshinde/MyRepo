@@ -36,6 +36,7 @@
 #include "IULSM6DSM.h"
 #include "IUMAX31865.h"
 #include "IUTMP116.h"
+#include "IUOTA.h"
 /***** Managers and helpers *****/
 #include "LedManager.h"
 
@@ -81,7 +82,10 @@ extern char iuWiFiBuffer[2048];   //500
 extern char iuEthernetBuffer[2048];
 
 extern Usr2Eth iuEthernet;
-
+/* =============================================================================
+    OTA
+============================================================================= */
+extern IUOTA iuOta;
 /* =============================================================================
     Flash storage
 ============================================================================= */
