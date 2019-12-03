@@ -52,17 +52,11 @@ void onNewHostMessageFromHost(IUSerial *iuSerial) {
 
 void setup()
 {
-    char TestStr1[64];    
-    sprintf(TestStr1,"Reset:%d C0:%d C1:%d",esp_reset_reason(),(int)rtc_get_reset_reason(0),(int)rtc_get_reset_reason(1));
-    //disable brownout detector - ESP32_PORT_TRUE Temp. change to prevent reset due to supply drop
-    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
-
     hostSerial.begin();
     hostSerial.setOnNewMessageCallback(onNewHostMessageFromHost);
     if (debugMode) {
         delay(5000);
     }
-    hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, TestStr1,32);
     #if IUDEBUG_ANY == 1
         conductor.forceWiFiConfig(testSSID, testPSK, testStaticIP,
                                   testGateway, testSubnet);
@@ -79,9 +73,9 @@ void setup()
     #if IUDEBUG_ANY == 1
         conductor.reconnect(true);
     #endif
-    hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "@ WIFI_CLIENT SETP @",20);
     WiFi.mode(WIFI_STA);
     WiFi.begin();
+
 }
 
 /**

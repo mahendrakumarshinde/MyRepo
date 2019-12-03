@@ -1,0 +1,2 @@
+boot_flag.c:10:6:read_flag	24	static
+boot_flag.c:17:6:write_flag	16	static

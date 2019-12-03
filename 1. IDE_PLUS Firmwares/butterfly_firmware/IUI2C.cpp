@@ -53,29 +53,6 @@ bool IUI2C::writeByte(uint8_t address, uint8_t subAddress, uint8_t data)
 }
 
 /**
- * Write 2 bytes to given address and sub-address
- */
-bool IUI2C::writeBytes(uint8_t address, uint8_t subAddress, uint8_t dataH,  uint8_t dataL)
-{
-    uint8_t temp[3];
-    temp[0] = subAddress;
-    temp[1] = dataH;
-    temp[2] = dataL;   
-    byte errorCode = Wire.transfer(address, &temp[0], 3, NULL, 0);
-    if (errorCode != 0x00)
-    {
-        m_errorFlag = true;
-        if (debugMode)
-        {
-            debugPrint("I2C error Code:", false);
-            debugPrint(errorCode);
-        }
-        return false;
-    }
-    return true;
-}
-
-/**
  * Write a byte to given address and sub-address
  */
 bool IUI2C::writeByte(uint8_t address, uint8_t subAddress, uint8_t data,
@@ -93,6 +70,29 @@ bool IUI2C::writeByte(uint8_t address, uint8_t subAddress, uint8_t data,
         }
     }
     return success;
+}
+
+/**
+ * Write a word data to given address and sub-address
+ */
+
+bool IUI2C::writeWord(uint8_t address, uint8_t subAddress, uint16_t data)
+{ 
+    uint8_t temp[3];
+    temp[0] = subAddress;
+    temp[1] = (byte) ( data >> 8 ) & 0xFF;
+    temp[2] = (byte) data & 0xFF;
+    
+    byte errorCode = Wire.transfer(address, &temp[0], 3, NULL, 0);
+    if (errorCode != 0x00)
+    {
+        if (asyncDebugMode)
+        {
+            debugPrint(F("I2C Temperature Limit set error"));
+        }
+        return false;
+    }
+    return true;
 }
 
 /**
@@ -230,8 +230,6 @@ bool IUI2C::scanDevices()
                 if (address < 16) debugPrint(F("0"), false);
                 debugPrint(String(address, HEX));
             }
-            if(nDevices < 2)
-                i2c_dev[nDevices] = address;
             nDevices++;
         }
         else if (error == 4)

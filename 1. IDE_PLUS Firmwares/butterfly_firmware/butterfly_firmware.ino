@@ -1,6 +1,6 @@
 /*
 Infinite Uptime IDE+ Firmware
-Vr. 1.1.2
+Vr. 1.1.3
 Update 22-06-2019
 Type - Standard Firmware Release
 */
@@ -501,11 +501,7 @@ void setup()
         {
             debugPrint("BLE Chip is Available, BLE init Complete");
         }
- //   IDE1.5_PORT_CHANGE - Disabled for testing. This Req is causing ESP32 Reset.         
-        // httpConfig message read timerCallback
- //       armv7m_timer_create(&httpConfigTimer, (armv7m_timer_callback_t)httpConfigCallback);
- //       armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min Timer 180000
-        
+       
         // WIFI SETUP BEGIN
         iuWiFi.setupHardware();
         iuWiFi.setOnNewMessageCallback(onNewWiFiMessage);
@@ -846,6 +842,9 @@ void loop()
             }                  
         }
 #endif
+
+        // Manage raw data sending depending on RawDataState::startRawDataTransmission and RawDataState::rawDataTransmissionInProgress
+        conductor.manageRawDataSending();
         yield();
        
     #endif
