@@ -64,7 +64,7 @@ void Error_Handler(void);
 
 #define Boot_button_0 GPIO_PIN_0
 #define Boot_button_1 GPIO_PIN_1
-#define Boot_button_port GPIOC
+#define Boot_button_port GPIOA
 //-----------------------------------------UART--------------------------------------------------//
 
 
