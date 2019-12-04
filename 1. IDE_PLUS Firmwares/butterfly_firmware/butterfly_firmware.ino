@@ -182,7 +182,6 @@ static void watchdogCallback(void) {
             if(conductor.isBLEConnected()) {
             iuBluetooth.write("WIFI-DISCONNECTED;");
             }
-            Serial.println("Publications are failing: hard resetting now.");
             iuWiFi.hardReset();
         }
     }
@@ -778,7 +777,7 @@ void loop()
             if((FWValidCnt % 2000) == 0 && FWValidCnt > 0)
             {
                 uint32_t ret = 0;
-                debugPrint("Running Firmware Validation ");
+                if(loopDebugMode) debugPrint("Running Firmware Validation ");
                 ret = conductor.firmwareValidation();
                 if(ret == OTA_VALIDATION_WIFI)
                 {// Waiting for WiFi Disconnect/Connect Cycle.

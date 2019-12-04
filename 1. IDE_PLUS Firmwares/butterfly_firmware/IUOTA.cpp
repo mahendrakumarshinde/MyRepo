@@ -151,7 +151,10 @@ bool IUOTA::otaFwBinRead(char *folderName,char *fileName)
     if (debugMode) {
         debugPrint(filepath);
     }
-    Serial.println("File path:" + String(filepath));
+    if(loopDebugMode){
+        debugPrint(F("File Path"),false);
+        debugPrint(filepath);
+    }
     File fwFile;
     if(DOSFS.exists(filepath))
     {

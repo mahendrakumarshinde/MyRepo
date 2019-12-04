@@ -959,8 +959,10 @@ void Conductor::readOtaConfig()
 {
     JsonObject& config = conductor.configureJsonFromFlash("/iuconfig/ota.conf",1);
     strcpy(m_otaMsgId,(const char *)config["messageId"]);
-    Serial.print("OTA m_otaMsgId: ");
-    Serial.println(m_otaMsgId);
+    if(loopDebugMode) {
+        debugPrint("OTA m_otaMsgId: ",false);
+        debugPrint(m_otaMsgId);
+    }
     strcpy(m_otaFwVer,(const char*)config["fwVersion"]);
 
     JsonVariant subConfig = config["fwBinaries"][0];
@@ -1317,24 +1319,6 @@ void Conductor::configureMainOptions(JsonVariant &config)
         m_mainFeatureGroup->setDataSendPeriod(value.as<uint16_t>());
         // NOTE: Older firmware device will not set this parameter even if configJson contains it.
 }
-}
-
-/**
- * OTA configuration
- *
- * @return True if the configuration is valid, else false.
- */
-void Conductor::configureOta(JsonVariant &config)
-{
-    Serial.println("configOta()");
-    JsonVariant value = config["messageId"];
-    if (value.success()) {
-        Serial.println((uint32_t) (value.as<int>()));
-    }
-    value = config["fwVersion"];
-    if (value.success()) {
-        Serial.println("FW Ver OK");
-    }
 }
 
 /**
@@ -1906,7 +1890,9 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                 }
                 break;
             case UsageMode::OTA:
-                Serial.println("Usage Mode: OTA");
+                if (loopDebugMode) {
+                    debugPrint("Usage Mode: OTA");
+                }
                 break;
             default:
                 if (loopDebugMode) {
@@ -2029,8 +2015,9 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
     double otaInitTimeStamp;
     switch (iuWiFi.getMspCommand()) {
         case MSPCommand::ESP_DEBUG_TO_STM_HOST:
-            Serial.write(buff);
-            Serial.write('\n');
+            if (loopDebugMode) {
+                debugPrint(buff);
+            }
             break;
         case MSPCommand::OTA_STM_DNLD_STS:
             if (loopDebugMode) { debugPrint(F("STM FW Download Completed !")); }
@@ -2058,7 +2045,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             delay(100); 
             break;
         case MSPCommand::OTA_ESP_DNLD_STS:
-            Serial.println(F("STM,ESP FW Download Completed !")); 
+//            Serial.println(F("STM,ESP FW Download Completed !")); 
             if (loopDebugMode) { debugPrint(F("ESP FW Download Completed !")); }
             iuWiFi.sendMSPCommand(MSPCommand::OTA_ESP_DNLD_OK);
             waitingDnldStrart = false;
@@ -2164,7 +2151,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             break;
         // MSP Status messages
         case MSPCommand::MSP_INVALID_CHECKSUM:
-            Serial.println("Invalid Checksum");
+      //      Serial.println("Invalid Checksum");
             if (loopDebugMode) { debugPrint(F("MSP_INVALID_CHECKSUM")); }
             break;
         case MSPCommand::MSP_TOO_LONG:
@@ -4230,6 +4217,7 @@ uint32_t Conductor::firmwareValidation()
             ValidationFile.println(F(""));
             ValidationFile.print(F("Retry Validation Time: " ));
             ValidationFile.println(conductor.getDatetime());
+            ValidationFile.close();
             return OTA_VALIDATION_RETRY;        
         }
     }    
