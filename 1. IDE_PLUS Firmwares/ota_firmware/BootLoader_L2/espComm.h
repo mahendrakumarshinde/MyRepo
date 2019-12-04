@@ -18,6 +18,7 @@ class espComm
         void espCleanup();
         bool esp_SendSyncCmd(uint8_t rebootCount, uint8_t retrySync);
         bool espSendCmd(byte command[], int size, int retry,uint8_t countC0 = 2);
+        void espReadMD5(char* TEST_FILE, char *md5Result);
         bool espDetect();
     // bool espEraseFlash();
         bool espGetFeature();

@@ -16,7 +16,6 @@ uint16_t espComm::flash_esp32_verify(char* folderPath,char* fileName)
 {
     bool ret = false;
 
- // DOSFS.begin();
     espFlashLog = DOSFS.open("esp32Response.log", "w");
     if (espFlashLog)
     {
@@ -93,7 +92,29 @@ uint16_t espComm::flash_esp32_verify(char* folderPath,char* fileName)
         espFlashLog = DOSFS.open("esp32Response.log", "a");
         delay(100);
         String fwhash = espGetMD5Hash();
-        DEBUG_SERIAL.println(fwhash);
+//        DEBUG_SERIAL.println(fwhash);
+
+        char *WIFI_MD5File;
+        if(ESP_MAIN_FIRMWARE)
+            WIFI_MD5File = ESP_MFW_1_SUM;
+        else if(ESP_ROLLBACK_FIRMWARE)
+            WIFI_MD5File = ESP_MFW_2_SUM;
+        else if(ESP_FORCED_ROLLBACK_FIRMWARE)
+            WIFI_MD5File = ESP_MFW_3_SUM;        
+            
+        espReadMD5(WIFI_MD5File, receivedMD5Sum);
+        DEBUG_SERIAL.print("WiFi FW MD5 Received: ");
+        DEBUG_SERIAL.println(receivedMD5Sum);
+        DEBUG_SERIAL.print("WiFi FW MD5 RD from ESP:");
+        DEBUG_SERIAL.println(fwhash.c_str());
+
+        if (strcmp(receivedMD5Sum, fwhash.c_str()) != 0) 
+        {
+            DEBUG_SERIAL.println("WiFi FW File MD5 Hash Failed !");
+            return RETURN_FAILED;
+        }
+        DEBUG_SERIAL.println("WiFi FW File MD5 Hash Ok");
+
         ret = espExitFlash();
         if(ret == false)
         {
@@ -108,14 +129,7 @@ uint16_t espComm::flash_esp32_verify(char* folderPath,char* fileName)
         return RETURN_FAILED;
     }  
     espFlashLog.close();
-    // FILE LOGGING ENABLE/DISABLE
-    //File log = DOSFS.open("esp32Response.log", "r");
-    // while (log.available())
-    // {
-    //   DEBUG_SERIAL.write(log.read());
-    // }
-    // log.close();
-    DOSFS.end();
+    return RETURN_SUCESS;
 }
 
 
@@ -382,6 +396,25 @@ uint32_t espComm::espcomm_calc_checksum(unsigned char *data, uint16_t data_size)
     }
     return result;
 }
+
+/* Read MD5SUM from .md5 file */
+void espComm:: espReadMD5(char* TEST_FILE, char *md5Result)
+{
+  if (DOSFS.exists(TEST_FILE)) {
+    File MD5_value = DOSFS.open(TEST_FILE,"r");
+
+    if (MD5_value) {
+      memset(md5Result, 0x00, 64);
+      int readLen=MD5_value.readBytesUntil('\0', md5Result, 64);
+      DEBUG_SERIAL.print("Received MD5 value: ");DEBUG_SERIAL.println(md5Result);
+      byte lastChar = strlen(md5Result);
+      md5Result[lastChar] = '\0'; 
+      MD5_value.close(); 
+    }
+  }
+}
+
+
 #if 0
 bool espComm::espEraseFlash()
 {
@@ -704,7 +737,7 @@ String espComm:: espGetMD5Hash()
 	char ReceivedMd5Hash[32];
 	int index = 0;
 //	Serial1.flush();
-  delay(2000);
+    delay(2000);
 	// DEBUG_SERIAL.println(sizeof(md5Hash));
 	espFlashLog.print("MD5 Command  : ");
 	for (int i = 0; i < sizeof(md5Hash); i++)
@@ -718,7 +751,7 @@ String espComm:: espGetMD5Hash()
 	}
 	espFlashLog.println();
 	espFlashLog.print("MD5 Response : ");
-    DEBUG_SERIAL.println("\nMD5 Response : ");
+    DEBUG_SERIAL.print("\nMD5 Response : ");
 	delay(2000);                    // Increase delay if required
 	while (Serial1.available() > 0)
 	{

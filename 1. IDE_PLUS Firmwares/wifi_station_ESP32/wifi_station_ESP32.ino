@@ -75,7 +75,6 @@ void setup()
     #endif
     WiFi.mode(WIFI_STA);
     WiFi.begin();
-
 }
 
 /**
