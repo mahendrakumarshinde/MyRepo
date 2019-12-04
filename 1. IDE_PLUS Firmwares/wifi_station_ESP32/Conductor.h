@@ -158,8 +158,8 @@ class Conductor
         const int samplingRateSize = 4;
         const int axisSize = 1; 
         double timestamp;
-        char otaStm_uri[512] = "http://iu-firmware.s3.ap-south-1.amazonaws.com/butterfly_firmware.ino.iap";
-        char otaEsp_uri[512] = "http://iu-firmware.s3.ap-south-1.amazonaws.com/WiFiClient.ino.bin";
+        char otaStm_uri[512];
+        char otaEsp_uri[512];
         char ota_uri[512];
         char otaMqttBuff[256];
         HTTPClient http_ota;

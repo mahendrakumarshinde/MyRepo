@@ -4419,6 +4419,7 @@ uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
         if(loopDebugMode){ debugPrint(F("Validation [DEV]-Free Memory: Fail !")); }      
         ValidationFile->println(F("*************************************************************" ));
         ValidationFile->println(F(""));
+        ValidationFile->close();
         return OTA_VALIDATION_FAIL;
     }
     if(loopDebugMode){ debugPrint(F("Validation [DEV]-Free Memory: Ok")); }  
@@ -4494,7 +4495,7 @@ uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
         ValidationFile->println(F("   Validation [AUD]-Read Acoustic: Fail !"));
         otaRtryValidation++;
     }
-
+    ValidationFile->close();
     return otaRtryValidation;
 
 //    m_SPI->begin();
