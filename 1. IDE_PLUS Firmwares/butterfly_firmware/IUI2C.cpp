@@ -230,6 +230,8 @@ bool IUI2C::scanDevices()
                 if (address < 16) debugPrint(F("0"), false);
                 debugPrint(String(address, HEX));
             }
+            if(nDevices < 2)
+                i2c_dev[nDevices] = address;
             nDevices++;
         }
         else if (error == 4)

@@ -787,6 +787,7 @@ void loop()
                 }
                 else if(ret == OTA_VALIDATION_RETRY)
                 {
+                    iuOta.readOtaFlag();
                     uint8_t otaVldnRetry = iuOta.getOtaFlagValue(OTA_VLDN_RETRY_FLAG_LOC);
                     otaVldnRetry++;
                     iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,otaVldnRetry);
@@ -801,8 +802,8 @@ void loop()
                             debugPrint("Initiating Rollback FW. Rebooting Device.....");
                         }
                         iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_INTERNAL_ROLLBACK);
-                        delay(1000);
                     }
+                    delay(1000);
                     STM32.reset();
                 }
                 else if(ret == OTA_VALIDATION_SUCCESS)

@@ -490,7 +490,12 @@ void IUOTA:: readOtaFlag(void)
  */
 void IUOTA::updateOtaFlag(uint8_t flag_addr , uint8_t flag_data)
 {
-    debugPrint("Updating flag..."); 
+    if(loopDebugMode) {
+        debugPrint("Updating flag:",false);
+        debugPrint(flag_addr,false);
+        debugPrint(" Value:",false);
+        debugPrint(flag_data);
+    }
     uint8_t flag_addr_temp = flag_addr * 8;
     readOtaFlag();
     OtaStatusFlag[flag_addr_temp] = flag_data;
@@ -502,5 +507,4 @@ void IUOTA::updateOtaFlag(uint8_t flag_addr , uint8_t flag_data)
     stm32l4_flash_program((uint32_t)FLAG_ADDRESS, OtaStatusFlag, 128);
     delay(1000);
     stm32l4_flash_lock();
-    debugPrint("Flag updated...");
 }
