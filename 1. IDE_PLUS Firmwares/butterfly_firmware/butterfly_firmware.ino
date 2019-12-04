@@ -1,8 +1,8 @@
 /*
 Infinite Uptime IDE+ Firmware
-Vr. 1.1.3
-Update 22-06-2019
-Type - Standard Firmware Release
+Vr. 2.0.0
+Update 03-12-2019
+Type - Standard vEdge Firmware Release
 */
 
 /* =============================================================================
