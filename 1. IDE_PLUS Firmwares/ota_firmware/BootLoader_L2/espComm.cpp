@@ -91,6 +91,7 @@ uint16_t espComm::flash_esp32_verify(char* folderPath,char* fileName)
         }
         espFlashLog = DOSFS.open("esp32Response.log", "a");
         delay(100);
+#if 0
         String fwhash = espGetMD5Hash();
 //        DEBUG_SERIAL.println(fwhash);
 
@@ -114,7 +115,7 @@ uint16_t espComm::flash_esp32_verify(char* folderPath,char* fileName)
             return RETURN_FAILED;
         }
         DEBUG_SERIAL.println("WiFi FW File MD5 Hash Ok");
-
+#endif
         ret = espExitFlash();
         if(ret == false)
         {
