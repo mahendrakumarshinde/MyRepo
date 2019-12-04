@@ -92,8 +92,8 @@ uint16_t espComm::flash_esp32_verify(char* folderPath,char* fileName)
         }
         espFlashLog = DOSFS.open("esp32Response.log", "a");
         delay(100);
-        //String fwhash = espGetMD5Hash();
-        //DEBUG_SERIAL.println(fwhash);
+        String fwhash = espGetMD5Hash();
+        DEBUG_SERIAL.println(fwhash);
         ret = espExitFlash();
         if(ret == false)
         {
@@ -705,7 +705,7 @@ String espComm:: espGetMD5Hash()
 	int index = 0;
 //	Serial1.flush();
   delay(2000);
-	DEBUG_SERIAL.println(sizeof(md5Hash));
+	// DEBUG_SERIAL.println(sizeof(md5Hash));
 	espFlashLog.print("MD5 Command  : ");
 	for (int i = 0; i < sizeof(md5Hash); i++)
 	{
@@ -719,12 +719,13 @@ String espComm:: espGetMD5Hash()
 	espFlashLog.println();
 	espFlashLog.print("MD5 Response : ");
     DEBUG_SERIAL.println("\nMD5 Response : ");
-	delay(1500);
+	delay(2000);                    // Increase delay if required
 	while (Serial1.available() > 0)
 	{
 		byte a = Serial1.read();
-    // espFlashLog.print(a, HEX);
-    // espFlashLog.print(" ");
+        // espFlashLog.print(a, HEX);
+        // espFlashLog.print(" ");
+        delayMicroseconds(10);
 		if (cnt < 20 && cnt > 2)
 		{
 			hash[index] = a;
