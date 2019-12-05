@@ -174,7 +174,8 @@ bool IUFSFlash::updateConfigJson(storedConfig configType, JsonVariant &config)
     int charCount;
     strcpy(storedConfigJsonString, "");
     charCount = readConfig(configType, storedConfigJsonString, storedConfigMaxLength);    
-    storedConfigJsonString[charCount] = '\0';
+    if (charCount == 0) { strcpy(storedConfigJsonString, "{}"); }
+    //storedConfigJsonString[charCount] = '\0'; //DOES NOT WORK, json is created as {}, however no fields can be added in this json
     JsonObject& storedConfigJson = storedConfigJsonBuffer.parse(storedConfigJsonString);
     for(auto kv:(JsonObject&)config) {
         storedConfigJson[kv.key] = kv.value;
