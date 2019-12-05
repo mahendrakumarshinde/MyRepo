@@ -260,7 +260,6 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     JsonObject& root = jsonBuffer.parseObject(json);
     String jsonChar;
     root.printTo(jsonChar);
-    
     JsonVariant variant = root;
     char ack_configEthernet[200];
   
@@ -494,7 +493,14 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
           //configureBoardFromFlash("httpConfig.conf",dataWritten);
           JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
 
-           const char* messageId = config["messageId"];
+        const char* messageId = config["messageId"];
+        const char*  host = config["httpConfig"]["host"].as<char*>();
+        int port = config["httpConfig"]["port"].as<int>();
+        const char* httpPath = config["httpConfig"]["path"].as<char*>();
+        //    debugPrint("Host :",false);debugPrint(host);
+        //    debugPrint("Port :",false);debugPrint(port);
+        //    debugPrint("Path :",false);debugPrint(httpPath);
+
           //Serial.print("File Content :");Serial.println(jsonChar);
           //Serial.print("http details :");Serial.print(m_httpHost);Serial.print(",");Serial.print(m_httpPort);Serial.print(",");Serial.print(m_httpPath);Serial.println("/***********/");
           //iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_HOST,m_httpHost); 
@@ -524,7 +530,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
           
           //stm reset
           delay(10);
-          if(subConfig = root["httpConfig"]["host"] != m_httpHost ){
+          if(strcmp( host, m_httpHost) != 0  || port != m_httpPort || strcmp(httpPath, m_httpPath) != 0 ){
                 STM32.reset();
           }
           
@@ -1837,6 +1843,26 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuUSB.port->print("FFT: Block Size: ");
                     iuUSB.port->println(FFTConfiguration::currentBlockSize);
                 }
+                if (strcmp(buff,"IUGET_DEVICE_CONF") == 0)
+                {
+                    // Read the device.conf file
+                    if(DOSFS.exists("/iuconfig/device.conf")){
+                        JsonObject& config = configureJsonFromFlash("/iuconfig/device.conf",1);
+                        String jsonChar;
+                        config.printTo(jsonChar);
+                        if (loopDebugMode)
+                        {
+                            debugPrint("Data From : device.conf ",true);
+                        }
+                        //debugPrint(jsonChar);
+                        iuUSB.port->println(jsonChar);
+                    }else
+                    {
+                        debugPrint("device.conf file does not exists.");
+                    }
+                    
+                }
+                
                 break;
             case UsageMode::CUSTOM:
                 if (strcmp(buff, "IUEND_DATA") == 0) {
