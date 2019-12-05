@@ -82,7 +82,7 @@ uint16_t espComm::flash_esp32_verify(char* folderPath,char* fileName)
         espFlashLog.close();
         delay(100);
         espFlashLog = DOSFS.open("esp32Response.log", "a");
-        ret = espBinWrite(folderPath,fileName);
+        ret= espBinWrite(folderPath,fileName);
         delay(100);
         if(ret == false)
         {
@@ -91,18 +91,16 @@ uint16_t espComm::flash_esp32_verify(char* folderPath,char* fileName)
         }
         espFlashLog = DOSFS.open("esp32Response.log", "a");
         delay(100);
-
-        String fwhash = espGetMD5Hash();
         // DEBUG_SERIAL.println(fwhash);
 #if 1
         char *WIFI_MD5File;
-        if(ESP_MAIN_FIRMWARE)
+        if(strcmp(ESP_MAIN_FIRMWARE,folderPath)==0)
             WIFI_MD5File = ESP_MFW_1_SUM;
-        else if(ESP_ROLLBACK_FIRMWARE)
+        else if(strcmp(ESP_ROLLBACK_FIRMWARE,folderPath)==0)
             WIFI_MD5File = ESP_MFW_2_SUM;
-        else if(ESP_FORCED_ROLLBACK_FIRMWARE)
+        else if(strcmp(ESP_FORCED_ROLLBACK_FIRMWARE,folderPath)==0)
             WIFI_MD5File = ESP_MFW_3_SUM;        
-            
+
         espReadMD5(WIFI_MD5File, receivedMD5Sum);
         DEBUG_SERIAL.print("WiFi FW MD5 Received: ");
         DEBUG_SERIAL.println(receivedMD5Sum);
@@ -791,13 +789,13 @@ String espComm:: espGetMD5Hash()
                 {
                     char tempHash[2];
                     if(hash[i] == 0xDB && hash[i+1] == 0xDC){
-                        hash[i] == 0xC0;
+                        hash[i] = 0xC0;
                         sprintf(tempHash, "%02x", hash[i]);
                         strncat(ReceivedMd5Hash, tempHash, 2);
                         i++;
                     }
                     else if(hash[i] == 0xDB && hash[i+1] == 0xDD){
-                        hash[i] == 0xDB;
+                        hash[i] = 0xDB;
                         sprintf(tempHash, "%02x", hash[i]);
                         strncat(ReceivedMd5Hash, tempHash, 2);
                         i++;
