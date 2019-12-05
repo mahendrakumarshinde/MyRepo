@@ -278,7 +278,7 @@ uint8_t FlagAddr;
 
   }else if((all_flags[MFW_FLASH_FLAG]==3) && all_flags[RETRY_VALIDATION]< MAX_RETRY_VAL)
   {
-	  all_flags[RETRY_VALIDATION] = all_flags[RETRY_VALIDATION]+1;
+	  //all_flags[RETRY_VALIDATION] = all_flags[RETRY_VALIDATION]+1;
 	  all_flags[RETRY_FLAG] = 0;
 	  update_all_flag();
 	 // update_flag(RETRY_FLAG, 0);
