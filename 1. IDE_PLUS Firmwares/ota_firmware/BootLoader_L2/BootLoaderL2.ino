@@ -15,9 +15,6 @@ GPIORGBLed rgbLed(25, 26, 38);
 LedManager ledManager(&rgbLed,&rgbLedStrip);
 
 
-/* Serial - for USB-UART, Serial1 - for UART3, Serail4 - for UART5 */
-#define DEBUG_SERIAL Serial4 
-
 #define BL1_ADDRESS     (uint32_t)0x08000000    /* Start address of Bootloader 1 */
 #define BL2_ADDRESS     (uint32_t)0x08010000    /* Start address of Bootloader 2 */
 #define FFW_ADDRESS     (uint32_t)0x08036000    /* Start address of Facotry Firmware */
@@ -52,7 +49,7 @@ void setup()
   ledManager.showStatus(&STATUS_NO_STATUS);
   ledManager.stopColorOverride();
 
-  Serial1.begin(115200);
+  ESP_SERIAL.begin(115200);
 	DEBUG_SERIAL.begin(115200);
 
 	DEBUG_SERIAL.println("=================================");

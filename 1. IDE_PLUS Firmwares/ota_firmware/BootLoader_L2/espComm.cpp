@@ -91,10 +91,10 @@ uint16_t espComm::flash_esp32_verify(char* folderPath,char* fileName)
         }
         espFlashLog = DOSFS.open("esp32Response.log", "a");
         delay(100);
-#if 0
-        String fwhash = espGetMD5Hash();
-//        DEBUG_SERIAL.println(fwhash);
 
+        String fwhash = espGetMD5Hash();
+        // DEBUG_SERIAL.println(fwhash);
+#if 1
         char *WIFI_MD5File;
         if(ESP_MAIN_FIRMWARE)
             WIFI_MD5File = ESP_MFW_1_SUM;
@@ -595,9 +595,9 @@ unsigned int espComm::update_C0_DB(unsigned char *destPkt,unsigned char *srcBuf,
 
 void espComm::espCleanup()
 {
-  while (Serial1.available() > 0)
+  while (ESP_SERIAL.available() > 0)
   {
-    Serial1.read();
+    ESP_SERIAL.read();
   }
 }
 
@@ -606,6 +606,8 @@ bool espComm:: esp_SendSyncCmd(uint8_t rebootCount, uint8_t retrySync)
   //  DEBUG_SERIAL.println("Sending SYNC command...");
 	int cnt = 112;
   //	DEBUG_SERIAL.println(sizeof(syncCommand));
+    unsigned long timeout = ESP_SYNC_TIMEOUT; 
+    unsigned long now = millis();
 	int index = 0;
 	uint8_t m_rebootCount = rebootCount;
 	uint8_t m_retrySync = retrySync;
@@ -620,7 +622,7 @@ bool espComm:: esp_SendSyncCmd(uint8_t rebootCount, uint8_t retrySync)
 			espFlashLog.print("Sync Command : ");
 			for (int i = 0; i < sizeof(syncCommand); i++)
 			{
-				Serial1.write(syncCommand[i]);
+				ESP_SERIAL.write(syncCommand[i]);
 				espFlashLog.print(syncCommand[i], HEX);
 				espFlashLog.print(" ");
 			}
@@ -628,9 +630,13 @@ bool espComm:: esp_SendSyncCmd(uint8_t rebootCount, uint8_t retrySync)
 			espFlashLog.print("Sync Response : ");
 			delay(600);
 			index = 0;
-            while (Serial1.available() > 0)
+            while (ESP_SERIAL.available() > 0 || ((millis()-now) > timeout))
             {
-                byte x = Serial1.read();
+                if((millis()-now) > timeout)
+                    {
+                        return false;
+                    }
+                byte x = ESP_SERIAL.read();
                 if (x != 0xc0 && x != 0x08 && x != 0x04 && x != 0x00 && x != 0x55)
                 {
                     responseCmd[index] = x;
@@ -655,7 +661,7 @@ bool espComm:: esp_SendSyncCmd(uint8_t rebootCount, uint8_t retrySync)
                         m_retrySync = retrySync;
                         cnt = 112;
                         m_rebootCount--;
-                        Serial1.flush();
+                        ESP_SERIAL.flush();
                         for (int i = 0; i < sizeof(responseCmd); i++)
                         {
                             responseCmd[i] = 0x00;
@@ -680,6 +686,8 @@ bool espComm:: esp_SendSyncCmd(uint8_t rebootCount, uint8_t retrySync)
 bool espComm::espSendCmd(byte command[], int size, int retry,uint8_t countC0)
 {
 	int cnt = countC0;
+    unsigned long timeout = ESP_SEND_CMD_TIMEOUT; 
+    unsigned long now = millis();
 //	DEBUG_SERIAL.println(size);
 	espFlashLog.print("Command  : ");
 	for (int i = 0; i < size; i++)
@@ -697,7 +705,7 @@ bool espComm::espSendCmd(byte command[], int size, int retry,uint8_t countC0)
 		//espFlashLog.println();
 		for (int i = 0; i < size; i++)
 		{
-			Serial1.write(command[i]);
+			ESP_SERIAL.write(command[i]);
 		}
         if(command[2] == 0xD0) //  for erase command
         {
@@ -706,9 +714,13 @@ bool espComm::espSendCmd(byte command[], int size, int retry,uint8_t countC0)
         }
         else
 		    delay(300);
-		while (Serial1.available() > 0)
-		{
-			byte a = Serial1.read();
+        while (ESP_SERIAL.available() > 0 || ((millis()-now) > timeout))
+        {
+            if((millis()-now) > timeout)
+                {
+                    return false;
+                }
+			byte a = ESP_SERIAL.read();
 			//DEBUG_SERIAL.write(a);
 			espFlashLog.print(a, HEX);
 			espFlashLog.print(" ");
@@ -719,7 +731,7 @@ bool espComm::espSendCmd(byte command[], int size, int retry,uint8_t countC0)
 				{
 					//DEBUG_SERIAL.println("Found C0");
 					espFlashLog.println();
-					Serial1.flush();
+					ESP_SERIAL.flush();
 					return true;
 				}
 			}
@@ -733,11 +745,14 @@ bool espComm::espSendCmd(byte command[], int size, int retry,uint8_t countC0)
 
 String espComm:: espGetMD5Hash()
 {
-	int cnt = 28;
-	char hash[16];
+	int cnt = 2;
+    unsigned long timeout = ESP_GET_HASH_TIMEOUT; 
+    unsigned long now = millis();
+	char hash[64];
 	char ReceivedMd5Hash[32];
+    memset(ReceivedMd5Hash,'\0',sizeof(ReceivedMd5Hash));
 	int index = 0;
-//	Serial1.flush();
+//	ESP_SERIAL.flush();
     delay(2000);
 	// DEBUG_SERIAL.println(sizeof(md5Hash));
 	espFlashLog.print("MD5 Command  : ");
@@ -748,34 +763,53 @@ String espComm:: espGetMD5Hash()
 	}
 	for (int i = 0; i < sizeof(md5Hash); i++)
 	{
-		Serial1.write(md5Hash[i]);
+		ESP_SERIAL.write(md5Hash[i]);
 	}
 	espFlashLog.println();
 	espFlashLog.print("MD5 Response : ");
     DEBUG_SERIAL.print("\nMD5 Response : ");
 	delay(2000);                    // Increase delay if required
-	while (Serial1.available() > 0)
-	{
-		byte a = Serial1.read();
+    while (ESP_SERIAL.available() > 0 || ((millis()-now) > timeout))
+    {
+        if((millis()-now) > timeout)
+            {
+                return String(0);
+            }
+		byte a = ESP_SERIAL.read();
         // espFlashLog.print(a, HEX);
         // espFlashLog.print(" ");
         delayMicroseconds(10);
-		if (cnt < 20 && cnt > 2)
+        hash[index] = a;
+		index++;
+		if (a == 0xc0)
 		{
-			hash[index] = a;
-			index++;
-		}
-		--cnt;
-		if (cnt <= 0)
-		{
-			Serial1.flush();
-			for (int i = 0; i < sizeof(hash); i++)
-			{
-				char tempHash[4];
-				sprintf(tempHash, "%02x", hash[i]);
-				strncat(ReceivedMd5Hash, tempHash, 2);
-			}
-			return (String)ReceivedMd5Hash;
+			--cnt;
+            if (cnt <= 0)
+		    {
+                // ESP_SERIAL.flush();
+                for (int i = 9; i < (index-3); i++)
+                {
+                    char tempHash[2];
+                    if(hash[i] == 0xDB && hash[i+1] == 0xDC){
+                        hash[i] == 0xC0;
+                        sprintf(tempHash, "%02x", hash[i]);
+                        strncat(ReceivedMd5Hash, tempHash, 2);
+                        i++;
+                    }
+                    else if(hash[i] == 0xDB && hash[i+1] == 0xDD){
+                        hash[i] == 0xDB;
+                        sprintf(tempHash, "%02x", hash[i]);
+                        strncat(ReceivedMd5Hash, tempHash, 2);
+                        i++;
+                    }
+                    else{
+                        sprintf(tempHash, "%02x", hash[i]);
+                        strncat(ReceivedMd5Hash, tempHash, 2);
+                    }
+
+                }
+			    return (String)ReceivedMd5Hash;
+		    }
 		}
 	}
 }
@@ -803,7 +837,7 @@ void espComm:: espReboot()
 	delay(100);
 	digitalWrite(ESP32_ENABLE_PIN, HIGH); // IDE1.5_PORT_CHANGE
 	delay(100);
-	// Serial1.flush();
+	// ESP_SERIAL.flush();
 	espCleanup();
 	DEBUG_SERIAL.println("Download Mode");
 }
@@ -811,6 +845,8 @@ void espComm:: espReboot()
 bool espComm::espSendDataPkt(unsigned char *command, uint32_t size, int retry, uint16_t seq)
 {
     int cnt = 12;
+    unsigned long timeout = ESP_SEND_DATA_TIMOUT; 
+    unsigned long now = millis();
     int index = 0;
     byte expectedResponse[] = {0x01, 0x03, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     byte responseCmd[10];
@@ -830,16 +866,20 @@ bool espComm::espSendDataPkt(unsigned char *command, uint32_t size, int retry, u
     while (retry > 0)
     {
         --retry;
-        Serial1.println();
+        ESP_SERIAL.println();
         for (int i = 0; i < size; i++)
         {
-            Serial1.write(command[i]);
+            ESP_SERIAL.write(command[i]);
         }
-        // Serial1.write(0x0a);
+        // ESP_SERIAL.write(0x0a);
         delay(100);
-        while (Serial1.available() > 0)
+        while (ESP_SERIAL.available() > 0 || ((millis()-now) > timeout))
         {
-            byte a = Serial1.read();
+            if((millis()-now) > timeout)
+                {
+                    return false;
+                }
+            byte a = ESP_SERIAL.read();
             // DEBUG_SERIAL.print(a,HEX);
             //  DEBUG_SERIAL.print(" ");
             // espFlashLog.print(a, HEX);
@@ -864,7 +904,7 @@ bool espComm::espSendDataPkt(unsigned char *command, uint32_t size, int retry, u
                 else
                 {
                     DEBUG_SERIAL.println("Response Missmatch, Flash write failed !!");
-                    Serial1.flush();
+                    ESP_SERIAL.flush();
                     return false;
                 }
             }

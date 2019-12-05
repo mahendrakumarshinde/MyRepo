@@ -8,8 +8,16 @@
 #define MAX_FILE_RW_SIZE  512
 #define ESP32_ENABLE_PIN  A2
 #define ESP32_IO0         7
-#define DEBUG_SERIAL Serial4 
 
+/* Serial - for USB-UART, Serial1 - for UART3, Serail4 - for UART5 */
+#define DEBUG_SERIAL Serial4 
+#define ESP_SERIAL Serial1
+
+/* ESP Command Timeout */
+#define ESP_SYNC_TIMEOUT 120000
+#define ESP_SEND_CMD_TIMEOUT 60000
+#define ESP_SEND_DATA_TIMOUT 60000
+#define ESP_GET_HASH_TIMEOUT 60000
 class espComm
 {
     /* data */
