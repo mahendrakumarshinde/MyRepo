@@ -646,22 +646,22 @@ void setup()
                 break;
             case OTA_FW_UPGRADE_FAILED:
                 if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Upgrade retry ");
-                conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-FUG-ABORT","OTA-RCA-0002");
+                conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-FUG-ABORT","OTA-RCA-0007");
                 delay(1000);
                 break;
             case OTA_FW_INTERNAL_ROLLBACK:
                 if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Internal Rollback ");
-                conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-FUG-ABORT","OTA-RCA-0004");
+                conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-FUG-ABORT","OTA-RCA-0008");
                 delay(1000);
                 break;
             case OTA_FW_FORCED_ROLLBACK: // Reset, as L2 shall perform Upgrade,Rollback or Forced Rollback
                 if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Forced Rollback ");
-                conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-FUG-ABORT","OTA-RCA-0005");
+                conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-FUG-ABORT","OTA-RCA-0009");
                 delay(1000);
                 break;
             case OTA_FW_FILE_SYS_ERROR:
                 if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Missing or Invalid File(s) ");
-                conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-FUG-ABORT","OTA-RCA-0006");
+                conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-FUG-ABORT","OTA-RCA-0010");
                 delay(1000);
                 break;
 //                STM32.reset();
@@ -801,16 +801,20 @@ void loop()
                     if (loopDebugMode) {
                         debugPrint("OTA Validation Retry No: ",false);
                         debugPrint(otaVldnRetry);
+                        debugPrint("Retrying Validation. Rebooting Device.....");
                     }
                     if(otaVldnRetry > OTA_MAX_VALIDATION_RETRY)
                     {
                         if (loopDebugMode) {
                             debugPrint("OTA FW Validation Retry Overflow ! Validation Failed");
                             debugPrint("Initiating Rollback FW. Rebooting Device.....");
-                        }
+                        }                        
+                        conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-FUG-ABORT", (char *)iuOta.getOtaRca(OTA_VALIDATION_FAILED).c_str());
+                        /*  Initialize OTA FW Validation retry count */
+                        iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);  
                         iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_INTERNAL_ROLLBACK);
                     }
-                    delay(1000);
+                    delay(2000);
                     STM32.reset();
                 }
                 else if(ret == OTA_VALIDATION_SUCCESS)
@@ -833,14 +837,14 @@ void loop()
                     iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_VALIDATION_SUCCESS);
                     /*  Initialize OTA FW Validation retry count */
                     iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);
-                    delay(1000);                
+                    delay(2000);                
                     STM32.reset();
                 }
                 else if(ret == OTA_VALIDATION_FAIL)
                 {   
                     debugPrint("Firmware Validation Failed...");
                     iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_INTERNAL_ROLLBACK);
-                    delay(1000);
+                    delay(2000);
                     STM32.reset();
                 }
             }

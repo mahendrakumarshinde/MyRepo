@@ -32,6 +32,7 @@
 #define  OTA_WIFI_DISCONNECT  03
 #define  OTA_FLASH_RDWR_FAIL  04
 #define  OTA_DOWNLOAD_TMOUT   05
+#define  OTA_VALIDATION_FAILED   06
 
 
 #define OTA_VALIDATION_SUCCESS  0
@@ -45,7 +46,6 @@
 #define FFW_ADDRESS     (uint32_t)0x08036000    /* Start address of Facotry Firmware */
 #define MFW_ADDRESS     (uint32_t)0x08060000    /* Start address of Main Firmware */
 #define FLAG_ADDRESS    (uint32_t)0x080FF800    /* Start address of FLAG location*/
-
 
 #define OTA_MAX_VALIDATION_RETRY    2
 
@@ -81,7 +81,7 @@ class IUOTA
         bool otaGetMD5(char *folderName,char *fileName, char* md5HashRet);
         String getOtaRca(int error);
         void updateOtaFlag(uint8_t flag_addr , uint8_t flag_data);
-        uint8_t getOtaFlagValue(uint8_t flag_addr) {return OtaStatusFlag[flag_addr]; }
+        uint8_t getOtaFlagValue(uint8_t flag_addr) {return OtaStatusFlag[flag_addr*8]; }
         void readOtaFlag(void);
     //    const char *otaGetStmUri() { return m_otaStmUri; }
     //    const char *otaGetEspUri() { return m_ota_EspUri; }

@@ -463,6 +463,8 @@ String IUOTA::getOtaRca(int error)
         return F("OTA-RCA-0004");
     case OTA_DOWNLOAD_TMOUT:
         return F("OTA-RCA-0005"); 
+    case OTA_VALIDATION_FAILED:
+        return F("OTA-RCA-0006");
     default:
         return F("OTA-RCA-1111");
     }
@@ -481,7 +483,6 @@ void IUOTA:: readOtaFlag(void)
   }
   for (int i = 0 ; i < 128; i= i+8){
     OtaStatusFlag[i] = *(uint8_t*)(FLAG_ADDRESS + i);
-    //debugPrint(iu_all_flags[i],HEX);
   }    
 }
 

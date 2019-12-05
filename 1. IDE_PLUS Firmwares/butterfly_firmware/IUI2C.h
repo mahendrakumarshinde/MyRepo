@@ -88,7 +88,7 @@ class IUI2C1
         // Status
         bool isError() { return m_errorFlag; }
         void resetErrorFlag() { m_errorFlag = false; }
-
+        uint8_t i2c_dev[2];
     protected:
         /***** Communication with components *****/
         bool m_readFlag;
