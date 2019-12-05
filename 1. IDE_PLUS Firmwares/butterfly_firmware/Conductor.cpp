@@ -4237,7 +4237,6 @@ uint8_t Conductor::firmwareWifiValidation(File *ValidationFile)
         {
             ValidationFile->println(F("DEVICE WIFI STATUS: CONNECTED"));
             if(loopDebugMode){ debugPrint(F("DEVICE WIFI STATUS:CONNECTED")); }
-            iuWiFi.turnOff();
             FW_Valid_State = 2;
             ret = OTA_VALIDATION_SUCCESS;
         }
