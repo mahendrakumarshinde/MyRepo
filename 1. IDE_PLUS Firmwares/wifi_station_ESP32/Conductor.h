@@ -163,7 +163,6 @@ class Conductor
         char otaStm_uri[512];
         char otaEsp_uri[512];
         char ota_uri[512];
-        char otaMqttBuff[256];
         HTTPClient http_ota;
         int contentLen = 0;
         int fwdnldLen = 0;

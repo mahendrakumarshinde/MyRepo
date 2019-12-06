@@ -83,21 +83,9 @@ class IUOTA
         void updateOtaFlag(uint8_t flag_addr , uint8_t flag_data);
         uint8_t getOtaFlagValue(uint8_t flag_addr) {return OtaStatusFlag[flag_addr*8]; }
         void readOtaFlag(void);
-    //    const char *otaGetStmUri() { return m_otaStmUri; }
-    //    const char *otaGetEspUri() { return m_ota_EspUri; }
 
 	protected:
         uint8_t OtaStatusFlag[128];
-        /***** Core *****/
-    //    MacAddress m_macAddress;        
-    //    char m_otaStmUri[512];
-    //    char m_otaEspUri[512];
-     //   char m_type1[8];
-     //   char m_type2[8];
-     //   char m_otaMsgId[32];
-     //   char m_otaMsgType[16];
-     //   char m_otaFwVer[16];
-     //   char fwBinFileName[32]; 
 };
 
 #endif
