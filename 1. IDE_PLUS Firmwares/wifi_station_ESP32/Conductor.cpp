@@ -1375,63 +1375,63 @@ String Conductor::getOtaRca(int error)
         case OTA_DATA_READ_TIMOUT:
             return F("OTA-RCA-0012");
         case OTA_STM_PKT_ACK_TMOUT:
-            return F("OTA-RCA-0014");
+            return F("OTA-RCA-0013");
         case HTTPC_ERROR_CONNECTION_REFUSED:
-            return F("OTA-RCA-0015");
+            return F("OTA-RCA-0014");
         case HTTPC_ERROR_SEND_PAYLOAD_FAILED:
-            return F("OTA-RCA-0016");
+            return F("OTA-RCA-0015");
         case HTTPC_ERROR_NOT_CONNECTED:
-            return F("OTA-RCA-0017");
+            return F("OTA-RCA-0016");
         case HTTPC_ERROR_CONNECTION_LOST:
-            return F("OTA-RCA-0018");
+            return F("OTA-RCA-0017");
         case HTTPC_ERROR_NO_STREAM:
-            return F("OTA-RCA-0019");;
+            return F("OTA-RCA-0018");;
         case HTTPC_ERROR_NO_HTTP_SERVER:
-            return F("OTA-RCA-0020");
+            return F("OTA-RCA-0019");
         case HTTPC_ERROR_TOO_LESS_RAM:
-            return F("OTA-RCA-0021");
+            return F("OTA-RCA-0020");
         case HTTPC_ERROR_ENCODING:
-            return F("OTA-RCA-0022");
+            return F("OTA-RCA-0021");
         case HTTPC_ERROR_STREAM_WRITE:
-            return F("OTA-RCA-0023");
+            return F("OTA-RCA-0022");
         case HTTPC_ERROR_READ_TIMEOUT:
-            return F("OTA-RCA-0024");
+            return F("OTA-RCA-0023");
         case HTTP_CODE_BAD_REQUEST:
-            return F("OTA-RCA-0025");
+            return F("OTA-RCA-0024");
         case HTTP_CODE_FORBIDDEN:
-            return F("OTA-RCA-0026");
+            return F("OTA-RCA-0025");
         case HTTP_CODE_NOT_FOUND:
-            return F("OTA-RCA-0027");
+            return F("OTA-RCA-0026");
         case HTTP_CODE_METHOD_NOT_ALLOWED:
-            return F("OTA-RCA-0028");
+            return F("OTA-RCA-0027");
         case HTTP_CODE_NOT_ACCEPTABLE:
-            return F("OTA-RCA-0029");
+            return F("OTA-RCA-0028");
         case HTTP_CODE_PROXY_AUTHENTICATION_REQUIRED:
-            return F("OTA-RCA-0030");
+            return F("OTA-RCA-0029");
         case HTTP_CODE_REQUEST_TIMEOUT:
-            return F("OTA-RCA-0031");
+            return F("OTA-RCA-0030");
         case HTTP_CODE_INTERNAL_SERVER_ERROR:
-            return F("OTA-RCA-0032");
+            return F("OTA-RCA-0031");
         case HTTP_CODE_NOT_IMPLEMENTED:
-            return F("OTA-RCA-0033");
+            return F("OTA-RCA-0032");
         case HTTP_CODE_BAD_GATEWAY:
-            return F("OTA-RCA-0034");
+            return F("OTA-RCA-0033");
         case HTTP_CODE_SERVICE_UNAVAILABLE:
-            return F("OTA-RCA-0035");
+            return F("OTA-RCA-0034");
         case HTTP_CODE_GATEWAY_TIMEOUT:
-            return F("OTA-RCA-0036");
+            return F("OTA-RCA-0035");
         case HTTP_CODE_HTTP_VERSION_NOT_SUPPORTED:
-            return F("OTA-RCA-0037");
+            return F("OTA-RCA-0036");
         case HTTP_CODE_VARIANT_ALSO_NEGOTIATES:
-            return F("OTA-RCA-0038");
+            return F("OTA-RCA-0037");
         case HTTP_CODE_INSUFFICIENT_STORAGE:
-            return F("OTA-RCA-0039");
+            return F("OTA-RCA-0038");
         case HTTP_CODE_LOOP_DETECTED:
-            return F("OTA-RCA-0040");
+            return F("OTA-RCA-0039");
         case HTTP_CODE_NOT_EXTENDED:
-            return F("OTA-RCA-0051");
+            return F("OTA-RCA-0040");
         case HTTP_CODE_NETWORK_AUTHENTICATION_REQUIRED:
-            return F("OTA-RCA-0042"); 
+            return F("OTA-RCA-0041"); 
         default:
             return F("OTA-RCA-1111");
     }
