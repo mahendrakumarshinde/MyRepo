@@ -804,15 +804,15 @@ void loop()
                     }
                     if(otaVldnRetry > OTA_MAX_VALIDATION_RETRY)
                     {
-                        if (loopDebugMode) {
-                            debugPrint("OTA FW Validation Retry Overflow ! Validation Failed");
-                            debugPrint("Initiating Rollback FW. Rebooting Device.....");
-                        }
                         ledManager.overrideColor(RGB_RED);
                         conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-ERR-FUG-ABORT", (char *)iuOta.getOtaRca(OTA_VALIDATION_FAILED).c_str());
                         /*  Initialize OTA FW Validation retry count */
                         iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);  
                         iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_INTERNAL_ROLLBACK);
+                        if (loopDebugMode) {
+                            debugPrint("OTA FW Validation Retry Overflow ! Validation Failed");
+                            debugPrint("Initiating Rollback FW. Rebooting Device.....");
+                        }
                     }
                     delay(2000);
                     STM32.reset();
@@ -834,21 +834,24 @@ void loop()
                     iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_main.md5");
                     iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_wifi.md5");
                     conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_SUCCESS,"OTA-FUG-SUCCESS","OTA-RCA-0000");
-                    if (loopDebugMode) debugPrint("OTA FW Validation Successful. Rebooting device....");
                     iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_VALIDATION_SUCCESS);
                     /*  Initialize OTA FW Validation retry count */
                     iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);
+                    if (loopDebugMode) debugPrint("OTA FW Validation Successful. Rebooting device....");
                     delay(2000);                
                     STM32.reset();
                 }
                 else if(ret == OTA_VALIDATION_FAIL)
                 {   
-                    debugPrint("Firmware Validation Failed...");
                     ledManager.overrideColor(RGB_RED);
                     conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-ERR-FUG-ABORT", (char *)iuOta.getOtaRca(OTA_VALIDATION_FAILED).c_str());
                     /*  Initialize OTA FW Validation retry count */
                     iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);  
                     iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_INTERNAL_ROLLBACK);
+                    if (loopDebugMode) {
+                        debugPrint("OTA FW Validation Failed ! ");
+                        debugPrint("Initiating Rollback Rollback. Rebooting Device.....");
+                    }
                     delay(2000);
                     STM32.reset();
                 }

@@ -935,8 +935,9 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                             if(loopDebugMode) { 
                                 debugPrint("OTA Status Flag:",false);
                                 debugPrint(iuOta.getOtaFlagValue(OTA_STATUS_FLAG_LOC));
+                                debugPrint("Rebooting Device.....");
                             }
-                            delay(1000);
+                            delay(2000);
                             STM32.reset();
                         }
                         else
