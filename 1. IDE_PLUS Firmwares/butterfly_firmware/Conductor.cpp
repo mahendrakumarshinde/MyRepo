@@ -4418,9 +4418,10 @@ uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
     char Cnt = 0;
     uint8_t otaRtryValidation = 0;
 
-    ValidationFile->print(F("DEVICE FREE MEMORY(RAM): "));
-    ValidationFile->print(freeMemory(),DEC);
-    ValidationFile->println(F(" Bytes"));
+    ValidationFile->print(F("DEVICE MEMORY: "));
+    ValidationFile->print(F(" - Internal RAM Free: "));
+    ValidationFile->print((freeMemory()/1024),DEC);
+    ValidationFile->println(F(" KBytes"));
     if(freeMemory() < 30000)
     {
         ValidationFile->println(F("Validation [DEV]-Free Memory: Fail !"));
@@ -4430,18 +4431,17 @@ uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
         return OTA_VALIDATION_FAIL;
     }
     if(loopDebugMode){ debugPrint(F("Validation [DEV]-Free Memory: Ok")); }  
-    ValidationFile->print(F("DEVICE FREE MEMORY(Ext.Flash): "));
     F_SPACE space;
     f_getfreespace(&space);
     size_t total_space = (uint64_t)space.total | ((uint64_t)space.total_high << 32);
     size_t used_space = (uint64_t)space.used  | ((uint64_t)space.used_high << 32);
-    ValidationFile->print("External Flash Total Memory:");
+    ValidationFile->print(F(" - External Flash Memory Total: "));
     ValidationFile->print((total_space/1024));
     ValidationFile->println(" KBytes");
-    ValidationFile->print("External Flash Used Memory:");
+    ValidationFile->print(F(" - External Flash Memory Used: "));
     ValidationFile->print((used_space/1024));
     ValidationFile->println(" KBytes");
-    ValidationFile->print("External Flash Free Memory:");
+    ValidationFile->print(F(" - External Flash Memory Free: "));
     ValidationFile->print(((total_space-used_space)/1024));
     ValidationFile->println(" KBytes");
     if(loopDebugMode) {
