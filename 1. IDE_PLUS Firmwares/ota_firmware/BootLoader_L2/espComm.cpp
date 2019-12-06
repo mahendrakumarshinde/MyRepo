@@ -93,6 +93,7 @@ uint16_t espComm::flash_esp32_verify(char* folderPath,char* fileName)
         delay(100);
         // DEBUG_SERIAL.println(fwhash);
 #if 1
+        String fwhash = espGetMD5Hash();
         char *WIFI_MD5File;
         if(strcmp(ESP_MAIN_FIRMWARE,folderPath)==0)
             WIFI_MD5File = ESP_MFW_1_SUM;
