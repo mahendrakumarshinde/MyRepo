@@ -1075,8 +1075,6 @@ void Conductor::readForceOtaConfig()
  void Conductor::configureMQTTServer(String filename){
 
   // Open the configuration file
-  IPAddress tempAddress;
-  
   File myFile = DOSFS.open(filename,"r");
   
   
@@ -1095,35 +1093,16 @@ void Conductor::readForceOtaConfig()
   }
  else {
   
-  
-  
   String mqttServerIP = root["mqtt"]["mqttServerIP"];
   int mqttport = root["mqtt"]["port"];
-  
-  debugPrint("INside MQTT.conf .......");
+   //debugPrint("INside MQTT.conf .......");
   m_mqttServerIp.fromString(mqttServerIP);//mqttServerIP;
   m_mqttServerPort = mqttport;
   m_mqttUserName = root["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
   m_mqttPassword = root["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
   m_accountId = root["accountid"];
   
-  //mqttusername = MQTT_DEFAULT_USERNAME;
-/*
-  Serial.println("Before Swap :");
-  Serial.print("UserName :");Serial.println( userName);
-  Serial.print("Password :");Serial.println( password);
-  
-  fastSwap (&mqttusername, &userName); 
-  fastSwap (&mqttpassword, &password);
-  
-  Serial.println("After Swap :");
-  Serial.print("UserName :");Serial.println( userName);
-  Serial.print("Password :");Serial.println( password);
-
-  m_mqttUserName = userName;
-  m_mqttPassword = password;
-*/  
-//  iuWiFi.hardReset();
+  iuWiFi.hardReset();
   if (debugMode) {
         debugPrint(F("MQTT ServerIP :"),false);
         debugPrint(m_mqttServerIp);
