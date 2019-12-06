@@ -102,16 +102,11 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
     switch(cmd) {
 #if 1
         case MSPCommand::OTA_INIT_ACK:
-         //   delay(1);
-         //   hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "OTA_INIT_ACK",16);
-        //    mqttHelper.publishOta("OTA_INIT_ACK");
             if(otaInProgress == false) {
                 mqttHelper.publish(OTA_TOPIC,buffer);
-                strcpy(otaMqttBuff,buffer);
             }
             break;
         case MSPCommand::OTA_FDW_START:
-          //  hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "OTA_FDW_START",16);
             if(otaInProgress == false) {    
                 mqttHelper.publish(OTA_TOPIC,buffer);
                 strncpy(ota_uri, otaStm_uri, 512);
@@ -120,63 +115,48 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             }
             break;
         case MSPCommand::OTA_FDW_ABORT:
-          //  hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "OTA_FDW_ABORT",16);
             mqttHelper.publish(OTA_TOPIC,buffer);
             http_ota.end();
             otaInProgress = false;
             waitingForPktAck = false;
             break;
         case MSPCommand::OTA_FUG_START:
-         //   hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "OTA_FUG_START",16);
             mqttHelper.publish(OTA_TOPIC,buffer);
             break;
-        case MSPCommand::OTA_FUG_SUCCESS: // Sent only after FW validation ??
-         //   hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "OTA_FUG_SUCCESS",16);
+        case MSPCommand::OTA_FUG_SUCCESS:
             mqttHelper.publish(OTA_TOPIC,buffer);
             otaInProgress = false;
             waitingForPktAck = false;
             delay(100);
             break;
         case MSPCommand::OTA_FUG_ABORT:
-         //   hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "OTA_FUG_ABORT",16);
             mqttHelper.publish(OTA_TOPIC,buffer);
             otaInProgress = false;
             waitingForPktAck = false;
             delay(100);
             break;
         case MSPCommand::OTA_PACKET_ACK:
-           //  hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "OTA_PACKET_ACK",16);
-          //  delay(1);
-          //  pktWaitTimeStr = millis();
             waitingForPktAck = false;
             otaDnldFw(true);   //true => Cont. of FW Dnld
             break;
         case MSPCommand::OTA_STM_DNLD_OK:
-          //  hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "OTA_STM_DNLD_OK",20);
             strncpy(ota_uri, otaEsp_uri, 512);
             otaDnldFw(false); //false => Start of FW Dnld
             break;
         case MSPCommand::OTA_ESP_DNLD_OK:
-           // hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "OTA_ESP_DNLD_OK",16);
             break;
         case MSPCommand::OTA_FDW_SUCCESS:
-           // hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "OTA_FDW_SUCCESS",16);
             delay(10);
             mqttHelper.publish(OTA_TOPIC,buffer);
-            otaInProgress = false; // Temp. Only after Download+Upgrade+Validation this shall be set to false
+//            otaInProgress = false; // Temp. Only after Download+Upgrade+Validation this shall be set to false
             waitingForPktAck = false;
             break;
         case MSPCommand::SET_OTA_STM_URI:
-   //         hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "SET_OTA_STM_URI",16);
-//            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, buffer,512);
             strcpy(otaStm_uri,buffer);
-          //  hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, otaStm_uri,512);
             delay(1);
             break;
         case MSPCommand::SET_OTA_ESP_URI:
-    //        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "SET_OTA_ESP_URI",16);
             strcpy(otaEsp_uri,buffer);
-           // hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, otaEsp_uri,512);  
             delay(1);
             break;
 #endif
@@ -1093,9 +1073,6 @@ void Conductor::autoReconncetWifi()
     uint32_t now = millis();
     if (now - m_lastWifiStatusCheck > (wifiStatusUpdateDelay))
     {
-        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "********************",20);
-        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "WIFI_AUTO_RECONNECT ",20);
-        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "********************",20);
         WiFi.mode(WIFI_STA);
         WiFi.begin();
         m_lastWifiStatusCheck = now;
@@ -1183,7 +1160,7 @@ void Conductor::debugPrintWifiInfo()
 
 bool Conductor:: otaDnldFw(bool otaDnldProgress)
 {
-    char TestStr[128];
+  //  char TestStr[128];
     if(otaDnldProgress == false) 
     {
         otaInProgress = true;
@@ -1206,8 +1183,8 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
                     {
                         contentLen = http_ota.getSize();
                         fwdnldLen = contentLen;
-                        sprintf(TestStr,"contentLen:%d",contentLen);
-                        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,TestStr,32);
+  //                      sprintf(TestStr,"contentLen:%d",contentLen);
+  //                      hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,TestStr,32);
                         delay(100);
                         // get tcp stream
                         WiFiClient * stream = http_ota.getStreamPtr();
@@ -1231,8 +1208,8 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
                             if(contentLen > 0) {
                                 totlen = totlen + c;
                                 contentLen -= c;
-                                sprintf(TestStr,"Pkt:%d Read:%d Rem:%d",c,totlen,contentLen);
-                                hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,TestStr,32);
+    //                            sprintf(TestStr,"Pkt:%d Read:%d Rem:%d",c,totlen,contentLen);
+    //                            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,TestStr,32);
                             }                        
                         }
                         else if(size == 0 || ((millis() - otaStramStr) > otaPktReadTimeout))
@@ -1266,7 +1243,6 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
         }
         else
         {
-            //hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"OTA_WiFi Discon",16);
             // FW Download was initiated... but failed due to WiFi disconnect
             hostSerial.sendMSPCommand(MSPCommand::OTA_DNLD_FAIL,String(getOtaRca(OTA_WIFI_DISCONNECT)).c_str());//"WIFI_DISCONNECT");
             http_ota.end();
@@ -1278,7 +1254,6 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
     {
         if(WiFi.status() == WL_CONNECTED) 
         {
-            //  hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"FWDNLD_CONT",11);
             if(contentLen > 0)
             {
                 http_ota.setTimeout(otaHttpTimeout);
@@ -1307,8 +1282,8 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
                     if(contentLen > 0) {
                         totlen = totlen + c;
                         contentLen -= c;
-                        sprintf(TestStr,"Pkt:%d Read:%d Rem:%d",c,totlen,contentLen);
-                        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,TestStr,32);
+         //               sprintf(TestStr,"Pkt:%d Read:%d Rem:%d",c,totlen,contentLen);
+         //               hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,TestStr,32);
                     }
                 }
                 else if(size == 0 || ((millis() - otaStramStr) > otaPktReadTimeout))
@@ -1325,7 +1300,6 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
                     if(strcmp(ota_uri,otaStm_uri) == 0)
                     {
                         hostSerial.sendMSPCommand(MSPCommand::OTA_STM_DNLD_STS);
-                        // hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"STM File DNLD OK",16);
                         fwdnldLen = 0;
                         totlen = 0;
                         waitingForPktAck = false;
@@ -1334,7 +1308,6 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
                     if(strcmp(ota_uri,otaEsp_uri) == 0)
                     {
                         hostSerial.sendMSPCommand(MSPCommand::OTA_ESP_DNLD_STS);
-                        // hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP File DNLD OK",16);
                         fwdnldLen = 0;
                         totlen = 0;
                         waitingForPktAck = false;
@@ -1345,7 +1318,6 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
         }
         else
         {
-            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"OTA_WiFi Discon",16);
             if(fwdnldLen != totlen && contentLen > 0)
             { // FW Download is not completed... and was in progress
                 hostSerial.sendMSPCommand(MSPCommand::OTA_DNLD_FAIL,String(getOtaRca(OTA_WIFI_DISCONNECT)).c_str());//"WIFI_DISCONNECT");
