@@ -2510,14 +2510,8 @@ void Conductor::acquireData(bool inCallback)
             }
         if (inCallback) {
                 iuI2S.sendData(iuUSB.port);             // raw audio data 
-                if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
-                {
-                    iuAccelerometer.sendData(iuUSB.port);   // raw accel data
-                }
-                else
-                {
-                    iuAccelerometerKX222.sendData(iuUSB.port);
-                }
+                iuAccelerometer.sendData(iuUSB.port);
+
         }
                 
             force = true;
@@ -2536,14 +2530,7 @@ void Conductor::acquireData(bool inCallback)
             float aucostic;
             char rawData[50]; 
             aucostic = iuI2S.getData();                               // raw audio data 
-            if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
-            {                            // raw audio data 
-                acceleration = iuAccelerometer.getData(iuUSB.port);       // raw accel data
-            }
-            else
-            {
-                acceleration = iuAccelerometerKX222.getData(iuUSB.port);
-            }
+            acceleration = iuAccelerometer.getData(iuUSB.port);       // raw accel data
 
             //Serial.print("Audio :");Serial.println(aucostic);
             snprintf(rawData,50,"%04.3f,%04.3f,%04.3f,%.3f",acceleration[0],acceleration[1],acceleration[2],aucostic);
