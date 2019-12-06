@@ -4430,6 +4430,31 @@ uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
         return OTA_VALIDATION_FAIL;
     }
     if(loopDebugMode){ debugPrint(F("Validation [DEV]-Free Memory: Ok")); }  
+    ValidationFile->print(F("DEVICE FREE MEMORY(Ext.Flash): "));
+    F_SPACE space;
+    f_getfreespace(&space);
+    size_t total_space = (uint64_t)space.total | ((uint64_t)space.total_high << 32);
+    size_t used_space = (uint64_t)space.used  | ((uint64_t)space.used_high << 32);
+    ValidationFile->print("External Flash Total Memory:");
+    ValidationFile->print((total_space/1024));
+    ValidationFile->println(" KBytes");
+    ValidationFile->print("External Flash Used Memory:");
+    ValidationFile->print((used_space/1024));
+    ValidationFile->println(" KBytes");
+    ValidationFile->print("External Flash Free Memory:");
+    ValidationFile->print(((total_space-used_space)/1024));
+    ValidationFile->println(" KBytes");
+    if(loopDebugMode) {
+        debugPrint("External Flash Total Memory:",false);
+        debugPrint((total_space/1024),false);
+        debugPrint(" KBytes");
+        debugPrint("External Flash Used Memory:",false);
+        debugPrint((used_space/1024),false);
+        debugPrint(" KBytes");
+        debugPrint("External Flash Free Memory:",false);
+        debugPrint(((total_space-used_space)/1024),false);
+        debugPrint(" KBytes");
+    }
     ValidationFile->print(F("DEVICE BLE MAC ADDRESS :"));
     ValidationFile->println(m_macAddress);
     MacAddress Mac(00,00,00,00,00,00);

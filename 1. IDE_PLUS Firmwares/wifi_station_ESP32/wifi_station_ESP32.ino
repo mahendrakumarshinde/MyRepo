@@ -102,6 +102,9 @@ void loop()
     conductor.updateWiFiStatusCycle();
     conductor.checkWiFiDisconnectionTimeout();
     conductor.checkOtaPacketTimeout();
-//   esp_task_wdt_reset(); // To Reset Watchdog - Temp add. need to check if required
+    if(WiFi.isConnected() == false)
+    {
+        conductor.autoReconncetWifi();
+    } 
     delay(1);
 }

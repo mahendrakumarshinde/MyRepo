@@ -104,6 +104,7 @@ class Conductor
         void publishWifiInfoCycle();
         void updateWiFiStatus();
         void updateWiFiStatusCycle();
+        void autoReconncetWifi();
         /***** Debugging *****/
         void debugPrintWifiInfo();
         /***** get Device Firmware Versions ******/
@@ -134,6 +135,7 @@ class Conductor
         IPAddress m_subnetMask;
         /***** Cyclic Update *****/
         uint32_t m_lastWifiStatusUpdate;
+        uint32_t m_lastWifiStatusCheck;
         uint32_t m_lastWifiInfoPublication;
         /***** Settable parameters (addresses, credentials, etc) *****/
         MultiMessageValidator<2> m_mqttServerValidator;

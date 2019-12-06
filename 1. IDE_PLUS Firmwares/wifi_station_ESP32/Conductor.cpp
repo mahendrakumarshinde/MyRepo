@@ -33,6 +33,7 @@ Conductor::Conductor() :
     m_lastConnectionAttempt(0),
     m_disconnectionTimerStart(0),
     m_lastWifiStatusUpdate(0),
+    m_lastWifiStatusCheck(0),
     m_lastWifiInfoPublication(0),
     m_mqttServerIP(IPAddress())
 {
@@ -1084,6 +1085,22 @@ void Conductor::updateWiFiStatusCycle()
     }
 }
 
+/**
+ * Periodically check WiFi status, if disconnected, try to connect using saved credentials
+ */
+void Conductor::autoReconncetWifi()
+{
+    uint32_t now = millis();
+    if (now - m_lastWifiStatusCheck > (wifiStatusUpdateDelay))
+    {
+        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "********************",20);
+        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "WIFI_AUTO_RECONNECT ",20);
+        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "********************",20);
+        WiFi.mode(WIFI_STA);
+        WiFi.begin();
+        m_lastWifiStatusCheck = now;
+    }
+}
 
 /* =============================================================================
     Debugging

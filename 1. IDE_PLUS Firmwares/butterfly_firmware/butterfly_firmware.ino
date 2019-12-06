@@ -697,7 +697,6 @@ void loop()
         // if (loopDebugMode) {
             if (doOnce) {
                 doOnce = false;
-                debugPrint("Executing Image Flashed From PC...");
                 /* === Place your code to excute once here ===*/
                 if(iuEthernet.isEthernetConnected == 0) {
                     ledManager.showStatus(&STATUS_WIFI_CONNECTED);
@@ -808,7 +807,8 @@ void loop()
                         if (loopDebugMode) {
                             debugPrint("OTA FW Validation Retry Overflow ! Validation Failed");
                             debugPrint("Initiating Rollback FW. Rebooting Device.....");
-                        }                        
+                        }
+                        ledManager.overrideColor(RGB_RED);
                         conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-FUG-ABORT", (char *)iuOta.getOtaRca(OTA_VALIDATION_FAILED).c_str());
                         /*  Initialize OTA FW Validation retry count */
                         iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);  
@@ -821,6 +821,7 @@ void loop()
                 {
                     doOnceFWValid = false;
                     FW_Valid_State = 0;
+                    ledManager.overrideColor(RGB_PURPLE);
                     /* Copy FW binaries, MD5 from rollback to Backup folder */
                     iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"vEdge_main.bin");
                     iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"vEdge_wifi.bin");
@@ -843,6 +844,10 @@ void loop()
                 else if(ret == OTA_VALIDATION_FAIL)
                 {   
                     debugPrint("Firmware Validation Failed...");
+                    ledManager.overrideColor(RGB_RED);
+                    conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-FUG-ABORT", (char *)iuOta.getOtaRca(OTA_VALIDATION_FAILED).c_str());
+                    /*  Initialize OTA FW Validation retry count */
+                    iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);  
                     iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_INTERNAL_ROLLBACK);
                     delay(2000);
                     STM32.reset();
