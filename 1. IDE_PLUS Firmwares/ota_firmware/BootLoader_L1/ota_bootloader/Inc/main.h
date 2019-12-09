@@ -58,6 +58,7 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+
 #define RED_LED_Pin GPIO_PIN_2
 #define RED_LED_GPIO_Port GPIOB
 
@@ -66,26 +67,35 @@ void Error_Handler(void);
 #define Boot_button_1 GPIO_PIN_1
 #define Boot_button_port GPIOA
 //-----------------------------------------UART--------------------------------------------------//
-
-
 //----------------------------------------------------------------------------------------------//
 //-----------------------------FLAG SETTING ADDRESS----------------------------------------------//
-#define MFW_FLASH_FLAG 0
-#define RETRY_FLAG 1
-#define RETRY_VALIDATION 2
-#define MFW_VER 3
-#define FW_VALIDATION 4
-#define FW_ROLLBACK 5
-#define STABLE_FW 6
+#define MFW_FLASH_FLAG          0
+#define RETRY_FLAG              1
+#define RETRY_VALIDATION        2
+#define MFW_VER                 3
+#define FW_VALIDATION           4
+#define FW_ROLLBACK             5
+#define STABLE_FW               6
 
-#define ESP_FW_VER 7
-#define ESP_FW_UPGRAD 8
-#define ESP_RUNNING_VER 9
-#define ESP_ROLLBACK 10
+#define ESP_FW_VER              7
+#define ESP_FW_UPGRAD           8
+#define ESP_RUNNING_VER         9
+#define ESP_ROLLBACK            10
 //-----------------------------------------------------------------------------------------------//
-#define MAX_RETRY_VAL 5
-#define MAX_RETRY_FLAG 3
+#define MAX_RETRY_VAL           5
+#define MAX_RETRY_FLAG          3
 //-----------------------------------------------------------------------------------------------//
+// OTA Flags
+
+#define OTA_FW_SUCCESS              0  // OTA FW Success, continue with new OTA FW
+#define OTA_FW_DOWNLOAD_SUCCESS     1  // OTA FW Download Success, Bootloader L2 shall perform Upgrade to new FW
+#define OTA_FW_UPGRADE_FAILED       2  // OTA FW Upgrade Failed, Bootloader L2 shall perform retry, internal rollback
+#define OTA_FW_UPGRADE_SUCCESS      3  // OTA FW Upgrade Success, New FW shall perform validation
+#define OTA_FW_INTERNAL_ROLLBACK    4  // OTA FW Validation failed,Bootloader L2 shall perform internal rollback
+#define OTA_FW_FORCED_ROLLBACK      5  // OTA FW Forced rollback,Bootloader L2 shall perform Forced rollback
+#define OTA_FW_FILE_CHKSUM_ERROR    6  // OTA FW File checksum failed, OTA can not be performed.
+#define OTA_FW_FILE_SYS_ERROR       7  // OTA FW File system error, OTA can not be performed.
+#define OTA_FW_FACTORY_IMAGE        8  // OTA FW Factory Firmware bootup
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

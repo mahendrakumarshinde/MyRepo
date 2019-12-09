@@ -46,18 +46,11 @@ uint8_t Boot_RB_MFW_Flag;
 uint8_t Debug_UART_Flag;
 
 
-/*uint32_t MAIN_FW_TEMP = 0;
-uint32_t FACTORY_FW_TEMP = 0;
-uint32_t MFW_VER_TEMP = 0;
-uint32_t FW_VALIDATION_TEMP = 0;
-uint32_t FW_ROLLBACK_TEMP = 0;
-uint32_t STABLE_FW_TEMP = 0;
-uint32_t ESP_FW_VER_TEMP = 0;
-uint32_t ESP_FW_UPGRAD_TEMP = 0;
-uint32_t ESP_RUNNING_VER_TEMP = 0;
-uint32_t ESP_ROLLBACK_TEMP = 0;*/
-
 uint32_t all_flags[32] ;
+
+/*****************************************************************************/
+//Bootloader Firmware Version
+const char BOOTLOADER1_VERSION[8] = "1.0.0";
 
 
 /* USER CODE END Includes */
@@ -143,7 +136,9 @@ uint8_t FlagAddr;
   //---------------------------------------Debug UART---------------------------------------//
   uart_transmit_str((uint8_t*)"\n\r=================================\n\r");
   uart_transmit_str((uint8_t*)"     IU Bootloader-1         \n\r");
-  uart_transmit_str((uint8_t*)"=================================\n\r\n\r");
+  uart_transmit_str((uint8_t*)"Bootloader Version :");
+  uart_transmit_str((uint8_t*)BOOTLOADER1_VERSION);
+  uart_transmit_str((uint8_t*)"\r\n=================================\n\r\n\r");
   //uart_transmit_str((uint8_t*)"Waiting for the input.............. \n\r");
 
   //---------------------------------Test code-----------------------------------------//
@@ -237,7 +232,7 @@ uint8_t FlagAddr;
   }
 /*--------------------------------------------------------------------------------------------*/
   read_all_flags();
-  if(all_flags[MFW_FLASH_FLAG]==0)
+  if(all_flags[MFW_FLASH_FLAG]== OTA_FW_SUCCESS)
   {
 	  if((all_flags[RETRY_FLAG]!=0) || all_flags[RETRY_VALIDATION]!=0)
 	  {
@@ -249,26 +244,26 @@ uint8_t FlagAddr;
 	  HAL_Delay(100);
 	  flash_jump_to_main_firmware();
 
-  }else if(all_flags[MFW_FLASH_FLAG]==1)
+  }else if(all_flags[MFW_FLASH_FLAG]== OTA_FW_DOWNLOAD_SUCCESS)
   {
 	  uart_transmit_str((uint8_t*)"Jumping to IU Bootloader-2 for new FW upgrade..\n\r");
 	  HAL_Delay(100);
 	  flash_jump_boot_loader_L2();
-  }else if((all_flags[MFW_FLASH_FLAG]==2) && (all_flags[RETRY_FLAG]<MAX_RETRY_FLAG))
+  }else if((all_flags[MFW_FLASH_FLAG]== OTA_FW_UPGRADE_FAILED) && (all_flags[RETRY_FLAG]<MAX_RETRY_FLAG))
   {
 	  uart_transmit_str((uint8_t*)"Jumping to IU Bootloader-2 for new FW upgrade- RETRY \n\r");
 	  HAL_Delay(100);
 	  read_all_flags();
-	  all_flags[MFW_FLASH_FLAG] = 1;
+	  all_flags[MFW_FLASH_FLAG] = OTA_FW_DOWNLOAD_SUCCESS;		// Continue Firmware Upgrade
 	  all_flags[RETRY_FLAG] =  all_flags[RETRY_FLAG]+1;
 	  all_flags[RETRY_VALIDATION] = 0;
 	  update_all_flag();
 	  flash_jump_boot_loader_L2();
-  }else if((all_flags[MFW_FLASH_FLAG]==2) && (all_flags[RETRY_FLAG]>= MAX_RETRY_FLAG))
+  }else if((all_flags[MFW_FLASH_FLAG]== OTA_FW_UPGRADE_FAILED) && (all_flags[RETRY_FLAG]>= MAX_RETRY_FLAG))
   {
 
 	  read_all_flags();
-	  all_flags[MFW_FLASH_FLAG] = 4; // rollbacking from L2
+	  all_flags[MFW_FLASH_FLAG] = OTA_FW_INTERNAL_ROLLBACK; // Perform Internal Rollback
 	  all_flags[RETRY_FLAG] = 0;
 	  all_flags[RETRY_VALIDATION] = 0;
 	  update_all_flag();
@@ -276,7 +271,7 @@ uint8_t FlagAddr;
 	  uart_transmit_str((uint8_t*)"\n\rRolling back to older Firmware ....\n\r");
 	  flash_jump_boot_loader_L2();
 
-  }else if((all_flags[MFW_FLASH_FLAG]==3) && all_flags[RETRY_VALIDATION]< MAX_RETRY_VAL)
+  }else if((all_flags[MFW_FLASH_FLAG]== OTA_FW_UPGRADE_SUCCESS) && all_flags[RETRY_VALIDATION]< MAX_RETRY_VAL)
   {
 	  //all_flags[RETRY_VALIDATION] = all_flags[RETRY_VALIDATION]+1;
 	  all_flags[RETRY_FLAG] = 0;
@@ -286,11 +281,11 @@ uint8_t FlagAddr;
 	  HAL_Delay(100);
 	  flash_jump_to_main_firmware();
 
-  }else if((all_flags[MFW_FLASH_FLAG]==3) && all_flags[RETRY_VALIDATION]>= MAX_RETRY_VAL)
+  }else if((all_flags[MFW_FLASH_FLAG]== OTA_FW_UPGRADE_SUCCESS) && all_flags[RETRY_VALIDATION]>= MAX_RETRY_VAL)
   {
 	  all_flags[RETRY_VALIDATION] = 0;
 	  all_flags[RETRY_FLAG] = 0;
-	  all_flags[MFW_FLASH_FLAG] = 4;
+	  all_flags[MFW_FLASH_FLAG] = OTA_FW_INTERNAL_ROLLBACK;	// Do Internal Rollback
 	  update_all_flag();
 	  uart_transmit_str((uint8_t*)"\n\rExceeded number of retries without validation !!!\n\r");
 	  uart_transmit_str((uint8_t*)"\n\rRolling back to older Firmware ....\n\r");
@@ -298,21 +293,21 @@ uint8_t FlagAddr;
 	 // update_flag(RETRY_FLAG, 0);
 	  //flash_jump_to_main_firmware();
 
-  }else if(all_flags[MFW_FLASH_FLAG]==4 && (all_flags[RETRY_FLAG] < MAX_RETRY_FLAG) )
+  }else if(all_flags[MFW_FLASH_FLAG]== OTA_FW_INTERNAL_ROLLBACK && (all_flags[RETRY_FLAG] < MAX_RETRY_FLAG) )
   {
 	  uart_transmit_str((uint8_t*)"Jumping to IU Bootloader-2 for Internal Rollback\n\r");
 	  HAL_Delay(100);
 	  read_all_flags();
-	  all_flags[MFW_FLASH_FLAG] = 4;
+	  all_flags[MFW_FLASH_FLAG] = OTA_FW_INTERNAL_ROLLBACK ;	// Continue with Internal Rollback
 	  all_flags[RETRY_FLAG] =  all_flags[RETRY_FLAG]+1;
 	  all_flags[RETRY_VALIDATION] = 0;
 	  update_all_flag();
 	  flash_jump_boot_loader_L2(); 
-  }else if((all_flags[MFW_FLASH_FLAG]==4) && (all_flags[RETRY_FLAG]>= MAX_RETRY_FLAG))
+  }else if((all_flags[MFW_FLASH_FLAG]== OTA_FW_INTERNAL_ROLLBACK) && (all_flags[RETRY_FLAG]>= MAX_RETRY_FLAG))
   {
 
 	  read_all_flags();
-	  all_flags[MFW_FLASH_FLAG] = 8; 
+	  all_flags[MFW_FLASH_FLAG] = OTA_FW_FACTORY_IMAGE;		// Switch to Factory Firmware
 	  all_flags[RETRY_FLAG] = 0;
 	  all_flags[RETRY_VALIDATION] = 0;
 	  update_all_flag();
@@ -320,20 +315,20 @@ uint8_t FlagAddr;
 	  uart_transmit_str((uint8_t*)"\n\rRolling back to factory Firmware ....\n\r");
 	  flash_jump_to_factory_firmware();
   }
-  else if(all_flags[MFW_FLASH_FLAG]==5  && (all_flags[RETRY_FLAG] < MAX_RETRY_FLAG) )
+  else if(all_flags[MFW_FLASH_FLAG]== OTA_FW_FORCED_ROLLBACK  && (all_flags[RETRY_FLAG] < MAX_RETRY_FLAG) )
   {
 	  uart_transmit_str((uint8_t*)"Jumping to IU Bootloader-2 for Forced Rollback\n\r");
   	  HAL_Delay(100);
   	  read_all_flags();
-  	  all_flags[MFW_FLASH_FLAG] = 5;
+  	  all_flags[MFW_FLASH_FLAG] = OTA_FW_FORCED_ROLLBACK;		// Perform the Forced Rollback
   	  all_flags[RETRY_FLAG] =  all_flags[RETRY_FLAG]+1;
   	  all_flags[RETRY_VALIDATION] = 0;
   	  update_all_flag();
   	  flash_jump_boot_loader_L2(); 
-  }else if((all_flags[MFW_FLASH_FLAG]==5) && (all_flags[RETRY_FLAG]>= MAX_RETRY_FLAG))
+  }else if((all_flags[MFW_FLASH_FLAG]== OTA_FW_FORCED_ROLLBACK) && (all_flags[RETRY_FLAG]>= MAX_RETRY_FLAG))
   {
   	  read_all_flags();
-  	  all_flags[MFW_FLASH_FLAG] = 8; 
+  	  all_flags[MFW_FLASH_FLAG] = OTA_FW_FACTORY_IMAGE;			// Switch to Factory Firmware
   	  all_flags[RETRY_FLAG] = 0;
   	  all_flags[RETRY_VALIDATION] = 0;
   	  update_all_flag();
@@ -341,18 +336,18 @@ uint8_t FlagAddr;
   	  uart_transmit_str((uint8_t*)"\n\rRolling back to factory Firmware ....\n\r");
   	  flash_jump_to_factory_firmware();
   }
-  else if(all_flags[MFW_FLASH_FLAG]==6)
+  else if(all_flags[MFW_FLASH_FLAG]== OTA_FW_FILE_CHKSUM_ERROR)
   {
 	  uart_transmit_str((uint8_t*)"\n\rError : File Checksum mismatch! Download file(s) again !!!");
 	  uart_transmit_str((uint8_t*)"\n\rBooting Main Firmware.....\n\r");
 	  flash_jump_to_main_firmware(); //File read error
-  }else if(all_flags[MFW_FLASH_FLAG]==7)
+  }else if(all_flags[MFW_FLASH_FLAG]== OTA_FW_FILE_SYS_ERROR)
   {
 	  uart_transmit_str((uint8_t*)"\n\rFile(S) missing !!");
 	  uart_transmit_str((uint8_t*)"\n\rDownload files !!");
 	  uart_transmit_str((uint8_t*)"\n\rBooting Main Firmware.....\n\r");
 	  flash_jump_to_main_firmware(); //File read error
-  }else if(all_flags[MFW_FLASH_FLAG]==8)
+  }else if(all_flags[MFW_FLASH_FLAG]== OTA_FW_FACTORY_IMAGE)
   {
 	  uart_transmit_str((uint8_t*)"\n\rUpgrade Failed, retry overflow !!");
 	  uart_transmit_str((uint8_t*)"\n\rBooting Factory Firmware.....\n\r");
