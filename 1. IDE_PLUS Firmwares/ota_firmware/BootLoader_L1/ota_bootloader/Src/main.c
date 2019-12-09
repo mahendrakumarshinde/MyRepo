@@ -307,12 +307,12 @@ uint8_t FlagAddr;
 	  all_flags[RETRY_FLAG] =  all_flags[RETRY_FLAG]+1;
 	  all_flags[RETRY_VALIDATION] = 0;
 	  update_all_flag();
-	  flash_jump_boot_loader_L2(); // rollbacking from L2
+	  flash_jump_boot_loader_L2(); 
   }else if((all_flags[MFW_FLASH_FLAG]==4) && (all_flags[RETRY_FLAG]>= MAX_RETRY_FLAG))
   {
 
 	  read_all_flags();
-	  all_flags[MFW_FLASH_FLAG] = 8; // rollbacking from L2
+	  all_flags[MFW_FLASH_FLAG] = 8; 
 	  all_flags[RETRY_FLAG] = 0;
 	  all_flags[RETRY_VALIDATION] = 0;
 	  update_all_flag();
@@ -329,11 +329,11 @@ uint8_t FlagAddr;
   	  all_flags[RETRY_FLAG] =  all_flags[RETRY_FLAG]+1;
   	  all_flags[RETRY_VALIDATION] = 0;
   	  update_all_flag();
-  	  flash_jump_boot_loader_L2(); // rollbacking from L2
+  	  flash_jump_boot_loader_L2(); 
   }else if((all_flags[MFW_FLASH_FLAG]==5) && (all_flags[RETRY_FLAG]>= MAX_RETRY_FLAG))
   {
   	  read_all_flags();
-  	  all_flags[MFW_FLASH_FLAG] = 8; // rollbacking from L2
+  	  all_flags[MFW_FLASH_FLAG] = 8; 
   	  all_flags[RETRY_FLAG] = 0;
   	  all_flags[RETRY_VALIDATION] = 0;
   	  update_all_flag();
