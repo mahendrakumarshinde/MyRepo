@@ -429,7 +429,51 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
            break;
 
          }
-       */       
+       */  
+      case MSPCommand::GET_PENDING_HTTP_CONFIG:
+          // Get all the pending configuration messages over http
+          
+          String response =  accelRawDataHelper.publishConfigMessage(m_bleMAC);
+          
+          // create the JSON objects 
+        //  DynamicJsonBuffer jsonBuffer;
+        //  JsonObject& pendingConfigObject = jsonBuffer.parseObject(response); 
+          
+       /*   String pendingJson;
+          
+           for (auto configKeyValues : pendingConfigObject) {
+               pendingConfigObject["result"][configKeyValues.key];// = configKeyValues.value;
+               
+             }
+           pendingConfigObject.printTo(pendingJson);
+        */
+         // size_t msgLen = strlen(response);
+       //   char fingerprintAlarm[1500];
+       //   char featuresThreshold[1500]; 
+       //   char fingerprintFeatures[1500];   
+          
+        //  JsonVariant fingerprintAlarmConfig  = pendingConfigObject["result"]["fingerprintAlarm"];
+        //  JsonVariant featuresThresholdConfig = pendingConfigObject["result"]["alarm"];
+        //  JsonVariant fingerprintFeaturesConfig = pendingConfigObject["result"]["fingerprint"];
+             
+          //Serial.println(fingerprintFeaturesConfig.size());
+             
+       //   fingerprintAlarmConfig.prettyPrintTo(fingerprintAlarm);
+       //   featuresThresholdConfig.prettyPrintTo(featuresThreshold);
+       //   fingerprintFeaturesConfig.prettyPrintTo(fingerprintFeatures);
+            
+          
+          
+          iuSerial->sendLongMSPCommand(MSPCommand::SET_PENDING_HTTP_CONFIG,1000000,response.c_str(),strlen(response.c_str()));
+          
+          //mqttHelper.publish(COMMAND_RESPONSE_TOPIC, fingerprintAlarm);//response.c_str());
+          //mqttHelper.publish(COMMAND_RESPONSE_TOPIC, featuresThreshold);
+          //mqttHelper.publish(COMMAND_RESPONSE_TOPIC, fingerprintFeatures);
+          //mqttHelper.publish(COMMAND_RESPONSE_TOPIC, response.c_str());
+          
+          
+          break;
+            
     }
 }
 
