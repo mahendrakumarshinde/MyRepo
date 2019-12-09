@@ -3540,8 +3540,44 @@ void Conductor::setConductorMacAddress() {
     if(iuBluetooth.isBLEAvailable){
         iuBluetooth.enterATCommandInterface();
         char BLE_MAC_Address[20];
-        iuBluetooth.sendATCommand("mac?", BLE_MAC_Address, 20);
+        uint8_t retryCount = 3;
+        int mac_Response = iuBluetooth.sendATCommand("mac?", BLE_MAC_Address, 20);
         debugPrint("BLE MAC ID:",false);debugPrint(BLE_MAC_Address,true);
+        //debugPrint("SET MAC RESPONSE :",false);
+        //debugPrint(mac_Response);
+        if( mac_Response < 0 || (BLE_MAC_Address[0] == '0' && BLE_MAC_Address[1] == '0' ) ){
+            
+            // Retry to get BLE MAC
+            for (size_t i = 0; i < retryCount; i++)
+            {
+                // flushed the BLE_MAC_Address buffer
+                memset(BLE_MAC_Address,0,20);
+
+                int mac_Response = iuBluetooth.sendATCommand("mac?", BLE_MAC_Address, 20);
+                if(debugMode){
+                    debugPrint("RetryCount:",false);debugPrint(i);
+                    debugPrint("BLE MAC ID IN RETRY : ",false);
+                    debugPrint(BLE_MAC_Address);
+                }                    
+                if(mac_Response < 0 && ( BLE_MAC_Address[0] != '0')){
+                    if(debugMode){
+                        debugPrint("Found the BLE MAC ADDRESS");
+                    }
+                    break;
+                 }
+                if(i>=2){
+                    // RESET the Device   
+                    if(debugMode){
+                        debugPrint("RESET THE DEVICE All Retries Failed.");
+                    }
+                    delay(1000);
+                    STM32.reset();
+                }  
+                
+            }
+            // Success
+        }
+        
         iuBluetooth.exitATCommandInterface();
         m_macAddress.fromString(BLE_MAC_Address);
     }else
