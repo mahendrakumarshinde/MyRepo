@@ -90,8 +90,7 @@ class IULSM6DSM : public HighFreqSensor
                   FeatureTemplate<q15_t> *accelerationZ,
                   FeatureTemplate<q15_t> *tiltX,
                   FeatureTemplate<q15_t> *tiltY,
-                  FeatureTemplate<q15_t> *tiltZ,
-                  FeatureTemplate<float> *temperature);
+                  FeatureTemplate<q15_t> *tiltZ);
         virtual ~IULSM6DSM() {}
         /***** Hardware & power management *****/
         virtual void setupHardware();
@@ -118,7 +117,6 @@ class IULSM6DSM : public HighFreqSensor
         float* getData(HardwareSerial *port);
         /***** Debugging *****/
         virtual void exposeCalibration();
-
     protected:
         /***** Core *****/
         IUI2C *m_iuI2C;

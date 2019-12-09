@@ -1,8 +1,8 @@
 /*
 Infinite Uptime IDE+ Firmware
-Vr. 1.1.2
-Update 22-06-2019
-Type - Standard Firmware Release
+Vr. 2.0.0
+Update 03-12-2019
+Type - Standard vEdge Firmware Release
 */
 
 /* =============================================================================
@@ -18,7 +18,7 @@ Type - Standard Firmware Release
 #include <FS.h>
 //#include"IUTimer.h"
 
-const uint8_t ESP8285_IO0  =  7;
+const uint8_t ESP32_IO0  =  7;  // IDE1.5_PORT_CHANGE
 
 #ifdef DRAGONFLY_V03
 #else
@@ -171,13 +171,15 @@ static void watchdogCallback(void) {
     {
         STM32.reset();
     }
-    if (iuWiFi.arePublicationsFailing()) {
-        //Ensure your PubSubClient Arduino library version is 2.7
-        debugPrint("Publications are failing: hard resetting now.");
-        if(conductor.isBLEConnected()) {
-           iuBluetooth.write("WIFI-DISCONNECTED;");
+    if(conductor.getUsageMode() != UsageMode::OTA) {
+        if (iuWiFi.arePublicationsFailing()) {
+            //Ensure your PubSubClient Arduino library version is 2.7
+            debugPrint("Publications are failing: hard resetting now.");
+            if(conductor.isBLEConnected()) {
+            iuBluetooth.write("WIFI-DISCONNECTED;");
+            }
+            iuWiFi.hardReset();
         }
-        iuWiFi.hardReset();
     }
     armv7m_timer_start(&watchdogTimer, 1000);
 }
@@ -196,7 +198,7 @@ static void bleTransmitCallback(void) {
     armv7m_timer_start(&bleTransmitTimer, 5);
 }
 
-
+#if 0
 /* =============================================================================
  *  Read HTTP pending config messages using timer
  * ============================================================================*/
@@ -209,7 +211,7 @@ static void httpConfigCallback(void) {
     iuWiFi.sendMSPCommand(MSPCommand::GET_PENDING_HTTP_CONFIG);
     armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min  180000
 }
-
+#endif
 /* ================================================================================
  * Ethernet Status Timer callback
  * ===============================================================================*/
@@ -387,10 +389,10 @@ void timerInit(void)
 void setup()
 {   
   
-  pinMode(ESP8285_IO0,OUTPUT);
+  pinMode(ESP32_IO0,OUTPUT); // IDE1.5_PORT_CHANGE
 //   pinMode(6,OUTPUT); 
 //   pinMode(A3,OUTPUT);  // ISR (ODR checked from pin 50)
-  digitalWrite(ESP8285_IO0,HIGH);
+  digitalWrite(ESP32_IO0,HIGH); // IDE1.5_PORT_CHANGE
   DOSFS.begin();
   #if 1
     
@@ -415,6 +417,7 @@ void setup()
             debugPrint(String(freeMemory(), DEC));
         }
         iuI2C.begin();
+        iuI2C1.begin();
         // Interfaces
         if (debugMode) {
             debugPrint(F("\nInitializing interfaces..."));
@@ -494,10 +497,10 @@ void setup()
         {
             debugPrint("BLE Chip is Available, BLE init Complete");
         }
-         
+
         // httpConfig message read timerCallback
-        armv7m_timer_create(&httpConfigTimer, (armv7m_timer_callback_t)httpConfigCallback);
-        armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min Timer 180000
+        //armv7m_timer_create(&httpConfigTimer, (armv7m_timer_callback_t)httpConfigCallback);
+        //armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min Timer 180000
         
         // WIFI SETUP BEGIN
         iuWiFi.setupHardware();
@@ -507,6 +510,8 @@ void setup()
        
         if (setupDebugMode) {
             iuI2C.scanDevices();
+            debugPrint("Testing New I2C Bus ..............");
+            iuI2C1.scanDevices();
             debugPrint("");
         }
         if (debugMode) {
@@ -569,6 +574,11 @@ void setup()
             } else {
                 debugPrint(F("\nI2C Satus: OK"));
             }
+            if (iuI2C1.isError()) {
+                debugPrint(F("\nI2C1 Satus: Error"));
+            } else {
+                debugPrint(F("\nI2C1 Satus: OK"));
+            }
             debugPrint(F("\n***Finished setup at (ms): "), false);
             debugPrint(millis(), false);
             debugPrint(F("***\n"));
@@ -577,7 +587,7 @@ void setup()
         // if (!USBDevice.configured())
         // {
         // WiFi configuration
-        conductor.configureFromFlash(IUFlash::CFG_WIFI0);
+//        conductor.configureFromFlash(IUFlash::CFG_WIFI0);
         // Feature, FeatureGroup and sensors coonfigurations
         for (uint8_t i = 0; i < conductor.CONFIG_TYPE_COUNT; ++i) {
             conductor.configureFromFlash(conductor.CONFIG_TYPES[i]);
@@ -600,7 +610,12 @@ void setup()
         //http configuration
         conductor.configureBoardFromFlash("httpConfig.conf",1);
         // get the previous offset values 
-        conductor.setSensorConfig("sensorConfig.conf");        
+        conductor.setSensorConfig("sensorConfig.conf"); 
+        delay(500);
+        iuWiFi.hardReset();
+        delay(1000);
+        conductor.configureFromFlash(IUFlash::CFG_WIFI0);
+        delay(100);
         opStateFeature.setOnNewValueCallback(operationStateCallback);
         ledManager.resetStatus();
         conductor.changeUsageMode(UsageMode::OPERATION);
@@ -611,9 +626,9 @@ void setup()
 
         //Resume previous operational state of device
         conductor.setThresholdsFromFile();
-                
-        
-                
+        // Get OTA status flag and take appropraite action    
+        conductor.getOtaStatus();
+    
         // Timer Init
         //timerInit();
         
@@ -664,27 +679,30 @@ void loop()
         }else {
             iuEthernet.readMessages();
         }
-        // Manage WiFi autosleep
-        iuWiFi.manageAutoSleep();
-        // Acquire data from sensors
-        conductor.acquireData(false);
-        // Compute features depending on operation mode
-        conductor.computeFeatures();
-        // Stream features
-        conductor.streamFeatures();
-        // Send accel raw data
-        conductor.periodicSendAccelRawData();
-        // Send config checksum
-        conductor.periodicSendConfigChecksum();
-        ledManager.updateColors();
+        if(conductor.getUsageMode() != UsageMode::OTA) {
+            // Manage WiFi autosleep
+            iuWiFi.manageAutoSleep();
+            // Acquire data from sensors
+            conductor.acquireData(false);
+            // Compute features depending on operation mode
+            conductor.computeFeatures();
+            // Stream features
+            conductor.streamFeatures();
+            // Send accel raw data
+            conductor.periodicSendAccelRawData();
+            // Send config checksum
+            conductor.periodicSendConfigChecksum();
+            ledManager.updateColors();
+        }
         uint32_t now = millis();
         if (now - lastDone > interval) {
             lastDone = now;
             /* === Place your code to excute at fixed interval here ===*/
             conductor.streamMCUUInfo(iuWiFi.port);
             /*======*/
+            //    Serial.println("Usage Mode:" + String(conductor.getUsageMode()));
         }
-       
+
         if (millis() - conductor.lastTimeSync > conductor.m_connectionTimeout ) {
 
             if(iuEthernet.isEthernetConnected == 0) {
@@ -710,10 +728,19 @@ void loop()
 
         // Clean timed out segmented messages
         conductor.cleanTimedoutSegmentedMessages();
-
-        // Manage raw data sending depending on RawDataState::startRawDataTransmission and RawDataState::rawDataTransmissionInProgress
-        conductor.manageRawDataSending();
-
+        if(conductor.getUsageMode() != UsageMode::OTA) {
+            // Manage raw data sending depending on RawDataState::startRawDataTransmission and RawDataState::rawDataTransmissionInProgress
+            conductor.manageRawDataSending();
+        }
+        if(conductor.getUsageMode() == UsageMode::OTA) {
+            conductor.otaChkFwdnldTmout();
+            ledManager.updateColors();
+        }
+        // Send OTA status message based on error values (File checksum failed in L2, file missing etc)
+        conductor.sendOtaStatus();
+        // Do FW validation for first time (only once) after new OTA images are flashed
+        // No validation for Rollback and Forced Rollback cases.
+        conductor.otaFWValidation();
         yield();
        
     #endif

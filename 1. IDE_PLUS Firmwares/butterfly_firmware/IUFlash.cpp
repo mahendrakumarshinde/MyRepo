@@ -6,6 +6,9 @@
 ============================================================================= */
 
 char IUFSFlash::CONFIG_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iuconfig";
+char IUFSFlash::IUFWBACKUP_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iuBackupFirmware";
+char IUFSFlash::IUFWTMPIMG_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN]  = "/iuTempFirmware";
+char IUFSFlash::IUFWROLLBACK_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iuRollbackFirmware";
 char IUFSFlash::CONFIG_EXTENSION[IUFSFlash::CONFIG_EXTENSION_LEN] = ".conf";
 
 char IUFSFlash::FNAME_WIFI0[6] = "wifi0";
@@ -21,6 +24,8 @@ char IUFSFlash::FNAME_RAW_DATA_ENDPOINT[13] = "fft_endpoint";
 char IUFSFlash::FNAME_MQTT_SERVER[12] = "mqtt_server";
 char IUFSFlash::FNAME_MQTT_CREDS[11] = "mqtt_creds";
 char IUFSFlash::FNAME_FFT[4] = "fft";
+char IUFSFlash::FNAME_OTA[4] = "ota";
+char IUFSFlash::FNAME_FORCE_OTA[10] = "force_ota";
 /***** Core *****/
 
 void IUFSFlash::begin()
@@ -40,6 +45,36 @@ void IUFSFlash::begin()
         if (!m_begun && setupDebugMode)
         {
             debugPrint("Unable to find or create the config directory");
+        }
+    }
+    m_otaDir = DOSFS.exists(IUFWBACKUP_SUBDIR);
+    if (!m_otaDir)
+    {
+        DOSFS.mkdir(IUFWBACKUP_SUBDIR);
+        m_otaDir = DOSFS.exists(IUFWBACKUP_SUBDIR);
+        if (!m_otaDir && setupDebugMode)
+        {
+            debugPrint("Unable to find/create the ota_mainbkup directory");
+        }
+    }
+    m_otaDir = DOSFS.exists(IUFWTMPIMG_SUBDIR);
+    if (!m_otaDir)
+    {
+        DOSFS.mkdir(IUFWTMPIMG_SUBDIR);
+        m_otaDir = DOSFS.exists(IUFWTMPIMG_SUBDIR);
+        if (!m_otaDir && setupDebugMode)
+        {
+            debugPrint("Unable to find or create the ota_mainimage directory");
+        }
+    }
+    m_otaDir = DOSFS.exists(IUFWROLLBACK_SUBDIR);
+    if (!m_otaDir)
+    {
+        DOSFS.mkdir(IUFWROLLBACK_SUBDIR);
+        m_otaDir = DOSFS.exists(IUFWROLLBACK_SUBDIR);
+        if (!m_otaDir && setupDebugMode)
+        {
+            debugPrint("Unable to find or create the ota_rollback directory");
         }
     }
 }
@@ -139,7 +174,8 @@ bool IUFSFlash::updateConfigJson(storedConfig configType, JsonVariant &config)
     int charCount;
     strcpy(storedConfigJsonString, "");
     charCount = readConfig(configType, storedConfigJsonString, storedConfigMaxLength);    
-    storedConfigJsonString[charCount] = '\0';
+    if (charCount == 0) { strcpy(storedConfigJsonString, "{}"); }
+    //storedConfigJsonString[charCount] = '\0'; //DOES NOT WORK, json is created as {}, however no fields can be added in this json
     JsonObject& storedConfigJson = storedConfigJsonBuffer.parse(storedConfigJsonString);
     for(auto kv:(JsonObject&)config) {
         storedConfigJson[kv.key] = kv.value;
@@ -363,6 +399,12 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
             break;
         case CFG_FFT:
             fname = FNAME_FFT;
+            break;
+        case CFG_OTA:
+            fname = FNAME_OTA;
+            break;
+        case CFG_FORCE_OTA:
+            fname = FNAME_FORCE_OTA;
             break;
         default:
             if (debugMode)

@@ -32,7 +32,7 @@ char iuWiFiBuffer[2048] = "";
     IUESP8285 iuWiFi(&Serial1, iuWiFiBuffer, 2048, IUSerial::MS_PROTOCOL,
                      115200, ';', 250);
 #endif
-
+    IUOTA iuOta = IUOTA();
 
 /* =============================================================================
     Flash storage
@@ -166,15 +166,15 @@ FeatureTemplate<q15_t> magneticZ("M0Z", 2, 1, magneticZValues);
 /***** Barometer Features *****/
 
 // Sensor data
-__attribute__((section(".noinit2"))) float temperatureAValues[2];
-FeatureTemplate<float> temperatureA("TMA", 2, 1, temperatureAValues);
+//__attribute__((section(".noinit2"))) float temperatureAValues[2];
+//FeatureTemplate<float> temperatureA("TMA", 2, 1, temperatureAValues);
 
-__attribute__((section(".noinit2"))) float temperatureBValues[2];
-FeatureTemplate<float> temperatureB("TMB", 2, 1, temperatureBValues);
+//__attribute__((section(".noinit2"))) float temperatureBValues[2];
+//FeatureTemplate<float> temperatureB("TMB", 2, 1, temperatureBValues);
 
 // Temperaute measured on the LSM6DSM
-__attribute__((section(".noinit2"))) float allTemperatureValues[1024];
-FeatureTemplate<float> allTemperatures("T09", 2, 512, allTemperatureValues);
+__attribute__((section(".noinit2"))) float allTemperatureValues[2];
+FeatureTemplate<float> allTemperatures("T09", 2, 1, allTemperatureValues);
 
 __attribute__((section(".noinit2"))) float temperatureValues[2];
 FeatureTemplate<float> temperature("TMP", 2, 1, temperatureValues);
@@ -211,10 +211,10 @@ FeatureTemplate<float> rtdTemp("RTD", 2, 4, rtdTempValues);
 
 IUBattery iuBattery("BAT", &batteryLoad);
 
-IUMAX31865 iuRTDSensorA(&SPI1, 42, SPISettings(500000, MSBFIRST, SPI_MODE1),
-                        "THA", &temperatureA);
-IUMAX31865 iuRTDSensorB(&SPI1, 43, SPISettings(500000, MSBFIRST, SPI_MODE1),
-                        "THB", &temperatureB);
+//IUMAX31865 iuRTDSensorA(&SPI1, 42, SPISettings(500000, MSBFIRST, SPI_MODE1),
+ //                       "THA", &temperatureA);
+//IUMAX31865 iuRTDSensorB(&SPI1, 43, SPISettings(500000, MSBFIRST, SPI_MODE1),
+ //                       "THB", &temperatureB);
 
 void LSM6DSMAccelReadCallback(uint8_t wireStatus)
 {
@@ -222,7 +222,13 @@ void LSM6DSMAccelReadCallback(uint8_t wireStatus)
 }
 IULSM6DSM iuAccelerometer(&iuI2C, "ACC", LSM6DSMAccelReadCallback,
                           &accelerationX, &accelerationY, &accelerationZ,
-                          &tiltX, &tiltY, &tiltZ, &allTemperatures);
+                          &tiltX, &tiltY, &tiltZ);
+
+void TMP116TempReadCallback(uint8_t wireStatus)
+{
+     iuTemp.processTemperatureData(wireStatus);
+}
+IUTMP116 iuTemp(&iuI2C1,"T10",TMP116TempReadCallback, &allTemperatures);
 
 #ifdef WITH_CAM_M8Q
     IUCAMM8Q iuGNSS(&Serial2, "GPS", -1);
@@ -338,7 +344,7 @@ void setUpComputerSources()
     accelRMS128TotalComputer.addSource(&accelRMS128X, 1);
     accelRMS128TotalComputer.addSource(&accelRMS128Y, 1);
     accelRMS128TotalComputer.addSource(&accelRMS128Z, 1);
-    // Average LSM6DSM temperatures
+    // Average TMP116 temperatures
     temperatureAverager.addSource(&allTemperatures, 1);
     // Aggregate acceleration RMS
     accel512ComputerX.addSource(&accelRMS128X, 1);
