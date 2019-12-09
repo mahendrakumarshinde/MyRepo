@@ -465,6 +465,14 @@ String IUOTA::getOtaRca(int error)
         return F("OTA-RCA-0005"); 
     case OTA_VALIDATION_FAILED:
         return F("OTA-RCA-0006");
+    case OTA_UPGRADE_FAIL:
+        return F("OTA-RCA-0007");
+    case OTA_INT_RLBK_FAIL:
+        return F("OTA-RCA-0008");
+    case OTA_FORCED_RLBK_FAIL:
+        return F("OTA-RCA-0009");
+    case OTA_FILE_MISSING:
+        return F("OTA-RCA-0010");
     default:
         return F("OTA-RCA-1111");
     }

@@ -100,7 +100,6 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
     resp[1] = 0;
     char message[256];
     switch(cmd) {
-#if 1
         case MSPCommand::OTA_INIT_ACK:
             if(otaInProgress == false) {
                 mqttHelper.publish(OTA_TOPIC,buffer);
@@ -159,7 +158,6 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             strcpy(otaEsp_uri,buffer);
             delay(1);
             break;
-#endif
         case MSPCommand::ASK_WIFI_FV:
             iuSerial->sendMSPCommand(MSPCommand::RECEIVE_WIFI_FV, FIRMWARE_VERSION);
             break;
@@ -1152,9 +1150,7 @@ void Conductor::debugPrintWifiInfo()
     } else {
         strcat(destination, "off");
     }*/
-    strcat(destination, "\"}");
-    
-    
+    strcat(destination, "\"}");    
  }
 
 
@@ -1299,7 +1295,7 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
                 {
                     if(strcmp(ota_uri,otaStm_uri) == 0)
                     {
-                        hostSerial.sendMSPCommand(MSPCommand::OTA_STM_DNLD_STS);
+                        hostSerial.sendMSPCommand(MSPCommand::OTA_STM_DNLD_STATUS);
                         fwdnldLen = 0;
                         totlen = 0;
                         waitingForPktAck = false;
@@ -1307,7 +1303,7 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
                     }
                     if(strcmp(ota_uri,otaEsp_uri) == 0)
                     {
-                        hostSerial.sendMSPCommand(MSPCommand::OTA_ESP_DNLD_STS);
+                        hostSerial.sendMSPCommand(MSPCommand::OTA_ESP_DNLD_STATUS);
                         fwdnldLen = 0;
                         totlen = 0;
                         waitingForPktAck = false;

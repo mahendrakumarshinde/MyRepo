@@ -11,7 +11,8 @@ extern "C" char calculatedMD5Sum[64];
 extern "C" char receivedMD5Sum[64];
 extern "C" char verifiedMD5Sum[64];
 
-
+/* This function is used to verify and write WiFi FW binary into ESP32 flash memory
+ */
 uint16_t espComm::flash_esp32_verify(char* folderPath,char* fileName)
 {
     bool ret = false;
@@ -30,12 +31,7 @@ uint16_t espComm::flash_esp32_verify(char* folderPath,char* fileName)
     DEBUG_SERIAL.println("Setting ESP32 in Downloand mode...");
     pinMode(ESP32_ENABLE_PIN, OUTPUT); // IDE1.5_PORT_CHANGE
     pinMode(ESP32_IO0,OUTPUT); // IDE1.5_PORT_CHANGE
-    digitalWrite(ESP32_IO0,LOW); // IDE1.5_PORT_CHANGE
-    digitalWrite(ESP32_ENABLE_PIN, LOW); // IDE1.5_PORT_CHANGE
-    delay(100);
-    digitalWrite(ESP32_ENABLE_PIN, HIGH); // IDE1.5_PORT_CHANGE
-    delay(100);
-    espCleanup();
+    espReboot();
     DEBUG_SERIAL.println("Setting ESP32 Downloand mode...OK");
     for(int i=1;i<=20;++i)
     { 
@@ -92,7 +88,6 @@ uint16_t espComm::flash_esp32_verify(char* folderPath,char* fileName)
         espFlashLog = DOSFS.open("esp32Response.log", "a");
         delay(100);
         // DEBUG_SERIAL.println(fwhash);
-#if 1
         String fwhash = espGetMD5Hash();
         char *WIFI_MD5File;
         if(strcmp(ESP_MAIN_FIRMWARE,folderPath)==0)
@@ -114,7 +109,6 @@ uint16_t espComm::flash_esp32_verify(char* folderPath,char* fileName)
             return RETURN_FAILED;
         }
         DEBUG_SERIAL.println("WiFi FW File MD5 Hash Ok");
-#endif
         ret = espExitFlash();
         if(ret == false)
         {
@@ -132,7 +126,8 @@ uint16_t espComm::flash_esp32_verify(char* folderPath,char* fileName)
     return RETURN_SUCESS;
 }
 
-
+/* This function is used to write FW binary in the form packtes to ESP32
+ */
 bool espComm::espBinWrite(char *folderName,char *fileName)
 {    
     uint32_t readIdx = 0;
@@ -173,7 +168,7 @@ bool espComm::espBinWrite(char *folderName,char *fileName)
                 md5Hash[15] = (uint8_t)((fileSize & 0x00FF0000) >> 16);
                 md5Hash[16] = (uint8_t)((fileSize & 0xFF000000) >> 24);
               // Set File size in Flash configure- Address set command 
-                ret = espSendCmd(FlashAdd, sizeof(FlashAdd), 1);
+                ret = espSendCmd(FlashAdd, sizeof(FlashAdd), ESP_CMD_RETRY);
                 if(ret == false) {
                     fwFile.close();
                     return false;
@@ -299,6 +294,8 @@ bool espComm::espBinWrite(char *folderName,char *fileName)
 0xc0                                        ==> End of packet
 },
 */
+/* This function is used to prepare packet data to be written into ESP32 flash
+ */
 bool espComm::preparePkt(unsigned char* buff,uint16_t pktSeqNo, uint32_t pktsize)
 {    
     uint32_t writeIdx = 0;
@@ -377,7 +374,7 @@ bool espComm::preparePkt(unsigned char* buff,uint16_t pktSeqNo, uint32_t pktsize
     //      DEBUG_SERIAL.print(" ");
     //  }
     // }
-   ret = espSendDataPkt(PktBuf, writeIdx, 1,pktSeqNo);
+   ret = espSendDataPkt(PktBuf, writeIdx, ESP_CMD_RETRY,pktSeqNo);
    //delay(50);
    if(ret == false)
     return false;
@@ -385,6 +382,8 @@ bool espComm::preparePkt(unsigned char* buff,uint16_t pktSeqNo, uint32_t pktsize
        return true;
 }
 
+/* This function is used to calculated checksum of data packets sent to ESP32
+ */
 uint32_t espComm::espcomm_calc_checksum(unsigned char *data, uint16_t data_size)
 {
     uint16_t cnt;
@@ -397,7 +396,8 @@ uint32_t espComm::espcomm_calc_checksum(unsigned char *data, uint16_t data_size)
     return result;
 }
 
-/* Read MD5SUM from .md5 file */
+/* This function is used to Read MD5SUM from .md5 file 
+ */
 void espComm:: espReadMD5(char* TEST_FILE, char *md5Result)
 {
   if (DOSFS.exists(TEST_FILE)) {
@@ -416,157 +416,178 @@ void espComm:: espReadMD5(char* TEST_FILE, char *md5Result)
 
 
 #if 0
+/* This function is used to ESP32 chip erase command before writing FW binary
+ */
 bool espComm::espEraseFlash()
 {
-  espSendCmd(eraseFlash, sizeof(eraseFlash), 1);
+  espSendCmd(eraseFlash, sizeof(eraseFlash), ESP_CMD_RETRY);
   delay(100);
 }
 #endif
+/* This function is used to ESP32 chip detect command before writing FW binary
+ */
 bool espComm::espDetect()
 {
     bool ret = false;
     DEBUG_SERIAL.println("Sending ESP32 Detect command...");
-    ret = espSendCmd(deviceType, sizeof(deviceType), 1);
+    ret = espSendCmd(deviceType, sizeof(deviceType), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
         return false;
-    ret = espSendCmd(chipId, sizeof(chipId), 2);  
+    ret = espSendCmd(chipId, sizeof(chipId), ESP_CMD_RETRY+ESP_CMD_RETRY);  
     delay(100);
     if(ret == false)
         return false;
 }
 
+/* This function is used to ESP32 chip get feature(WIFI,BT function details) 
+ * command before writing FW binary
+ */
 bool espComm::espGetFeature()
 {
     bool ret = false;
     DEBUG_SERIAL.println("Sending ESP32 GetFeature command...");
-    ret = espSendCmd(readReg1, sizeof(readReg1), 1);
+    ret = espSendCmd(readReg1, sizeof(readReg1), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
         return false;
 
-    ret = espSendCmd(readReg2, sizeof(readReg2), 1);
+    ret = espSendCmd(readReg2, sizeof(readReg2), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
         return false;
 }
 
+/* This function is used to ESP32 chip get WIFI MAC Address 
+ * command before writing FW binary
+ */
 bool espComm::espGetMacId()
 {
     bool ret = false;
     DEBUG_SERIAL.println("Sending ESP32 Get MAC command...");
-    ret = espSendCmd(MacIDreg1, sizeof(MacIDreg1), 1);
+    ret = espSendCmd(MacIDreg1, sizeof(MacIDreg1), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
         return false;
 
-    ret = espSendCmd(MacIDreg2, sizeof(MacIDreg2), 1);
+    ret = espSendCmd(MacIDreg2, sizeof(MacIDreg2), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
         return false;
 }
 
+/* This function is used to send stub code used by ESP32 for FW binary write
+ */
 bool espComm::espUploadStub()
 {
     bool ret = false;
     DEBUG_SERIAL.println("Sending ESP32 Upload Stub command...");
-    ret = espSendCmd(uploadStub, sizeof(uploadStub), 1);
+    ret = espSendCmd(uploadStub, sizeof(uploadStub), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
         return false;
 
-    ret = espSendCmd(uploadStub0, sizeof(uploadStub0), 1);
+    ret = espSendCmd(uploadStub0, sizeof(uploadStub0), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
         return false;
 
-    ret = espSendCmd(uploadStub1, sizeof(uploadStub1), 1);
+    ret = espSendCmd(uploadStub1, sizeof(uploadStub1), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
         return false;
 
-    ret = espSendCmd(uploadStub2, sizeof(uploadStub2), 1);
+    ret = espSendCmd(uploadStub2, sizeof(uploadStub2), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
         return false;
-
-    ret = espSendCmd(uploadStub3, sizeof(uploadStub3), 1,4);
+    /* Send Stub Code , 2 Response packets are sent from ESP  */
+    ret = espSendCmd(uploadStub3, sizeof(uploadStub3), ESP_CMD_RETRY,STUB_RESP_PKT_C0_COUNT);
     delay(100);
     if(ret == false)
         return false;
 }
 
+/* This function is used to configure ESP32 flash memory
+ */
 bool espComm::espConfigureFlash()
 {
     bool ret = false;
     DEBUG_SERIAL.println("Sending ESP32 Configure Flash command...");
-    ret = espSendCmd(configFlash1, sizeof(configFlash1), 1);
+    ret = espSendCmd(configFlash1, sizeof(configFlash1), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
         return false;
-    ret = espSendCmd(configFlash2, sizeof(configFlash2), 1);
+    ret = espSendCmd(configFlash2, sizeof(configFlash2), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
         return false;
-    ret = espSendCmd(configFlash3, sizeof(configFlash3), 1);
+    ret = espSendCmd(configFlash3, sizeof(configFlash3), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
         return false;
-    ret = espSendCmd(configFlash4, sizeof(configFlash4), 1);
+    ret = espSendCmd(configFlash4, sizeof(configFlash4), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
         return false;
-    ret = espSendCmd(configFlash5, sizeof(configFlash5), 1);
+    ret = espSendCmd(configFlash5, sizeof(configFlash5), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
         return false;
-    ret = espSendCmd(configFlash6, sizeof(configFlash6), 1);
+    ret = espSendCmd(configFlash6, sizeof(configFlash6), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
         return false;
-    ret = espSendCmd(configFlash7, sizeof(configFlash7), 1);
+    ret = espSendCmd(configFlash7, sizeof(configFlash7), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
         return false;
-    ret = espSendCmd(configFlash8, sizeof(configFlash8), 1);
+    ret = espSendCmd(configFlash8, sizeof(configFlash8), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
         return false;
-    ret = espSendCmd(configFlash9, sizeof(configFlash9), 1);
+    ret = espSendCmd(configFlash9, sizeof(configFlash9), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
         return false;
-    ret = espSendCmd(configFlash10, sizeof(configFlash10), 1);
+    ret = espSendCmd(configFlash10, sizeof(configFlash10), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
         return false;
-    ret = espSendCmd(configFlash11, sizeof(configFlash11), 1);
+    ret = espSendCmd(configFlash11, sizeof(configFlash11), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
         return false;
-    ret = espSendCmd(configFlash12, sizeof(configFlash12), 1);
+    ret = espSendCmd(configFlash12, sizeof(configFlash12), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
         return false;
-    // ret = espSendCmd(FlashAdd, sizeof(FlashAdd), 1);
+    // ret = espSendCmd(FlashAdd, sizeof(FlashAdd), ESP_CMD_RETRY);
     // delay(100);
     // if(ret == false)
     //     return false;
 }
 
+/* This function is used to send commnad after writing FW binary to exit write process
+ */
 bool espComm::espExitFlash()
 {
     bool ret = false;
-    ret = espSendCmd(FlashLeave1, sizeof(FlashLeave1), 1);
+    ret = espSendCmd(FlashLeave1, sizeof(FlashLeave1), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
         return false;
-    ret = espSendCmd(FlashLeave2, sizeof(FlashLeave2), 1);
+    ret = espSendCmd(FlashLeave2, sizeof(FlashLeave2), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
         return false;
 }
 
+/* All data sent and received from ESP32 needs to be parsed and all occurances of 0xC0 and 0xDB
+ * shall be replaced with corresponding seq. as mentioend in below function.
+ * This replacement is required to avoid conflicting 0xC0 character, which is packet start and End identifier
+ * Used in all Commmand and data sent to and from ESP32.
+ */
 unsigned int espComm::update_C0_DB(unsigned char *destPkt,unsigned char *srcBuf, unsigned int size)
 {
     unsigned int out_pos = 0;
@@ -591,7 +612,8 @@ unsigned int espComm::update_C0_DB(unsigned char *destPkt,unsigned char *srcBuf,
     return out_pos;
 }
 
-
+/* This function is used to clear any unread data from ESP32
+ */
 void espComm::espCleanup()
 {
   while (ESP_SERIAL.available() > 0)
@@ -600,10 +622,13 @@ void espComm::espCleanup()
   }
 }
 
+/* This function is used to send SYNC command to ESP32. Before writing any FW binary, ESP32 shall be 
+ * sent with SYNC packets to establish comm. between STM and ESP
+ */
 bool espComm:: esp_SendSyncCmd(uint8_t rebootCount, uint8_t retrySync)
 {
   //  DEBUG_SERIAL.println("Sending SYNC command...");
-	int cnt = 112;
+	int cnt = SYNC_RESP_LEN;
   //	DEBUG_SERIAL.println(sizeof(syncCommand));
     unsigned long timeout = ESP_SYNC_TIMEOUT; 
     unsigned long now = millis();
@@ -629,12 +654,15 @@ bool espComm:: esp_SendSyncCmd(uint8_t rebootCount, uint8_t retrySync)
 			espFlashLog.print("Sync Response : ");
 			delay(600);
 			index = 0;
+            now = millis();
             while (ESP_SERIAL.available() > 0 || ((millis()-now) > timeout))
             {
                 if((millis()-now) > timeout)
-                    {
-                        return false;
-                    }
+                {
+                    DEBUG_SERIAL.print("SYNC Packet Response Wait Timeout !");
+                    delay(100);
+                    return false;
+                }
                 byte x = ESP_SERIAL.read();
                 if (x != 0xc0 && x != 0x08 && x != 0x04 && x != 0x00 && x != 0x55)
                 {
@@ -679,9 +707,8 @@ bool espComm:: esp_SendSyncCmd(uint8_t rebootCount, uint8_t retrySync)
 	return false;
 }
 
-/*
-  Get the command response  from ESP32
-*/
+/* This function is used to send command packets to ESP32. 
+ */
 bool espComm::espSendCmd(byte command[], int size, int retry,uint8_t countC0)
 {
 	int cnt = countC0;
@@ -713,12 +740,15 @@ bool espComm::espSendCmd(byte command[], int size, int retry,uint8_t countC0)
         }
         else
 		    delay(300);
+        now = millis();
         while (ESP_SERIAL.available() > 0 || ((millis()-now) > timeout))
         {
             if((millis()-now) > timeout)
-                {
-                    return false;
-                }
+            {
+                DEBUG_SERIAL.print("Send Command Response Wait Timeout !");
+                delay(100);
+                return false;
+            }
 			byte a = ESP_SERIAL.read();
 			//DEBUG_SERIAL.write(a);
 			espFlashLog.print(a, HEX);
@@ -742,9 +772,11 @@ bool espComm::espSendCmd(byte command[], int size, int retry,uint8_t countC0)
 	return false;
 }
 
+/* This function is used to get MD5 hash of FW binary written in to ESP32. 
+ */
 String espComm:: espGetMD5Hash()
 {
-	int cnt = 2;
+	int cnt = RESP_PKT_C0_COUNT;
     unsigned long timeout = ESP_GET_HASH_TIMEOUT; 
     unsigned long now = millis();
 	char hash[64];
@@ -767,13 +799,16 @@ String espComm:: espGetMD5Hash()
 	espFlashLog.println();
 	espFlashLog.print("MD5 Response : ");
     DEBUG_SERIAL.print("\nMD5 Response : ");
-	delay(2000);                    // Increase delay if required
+	delay(MD5_RESP_WAIT_DEL);   // Increase delay if required
+    now = millis();
     while (ESP_SERIAL.available() > 0 || ((millis()-now) > timeout))
     {
         if((millis()-now) > timeout)
-            {
-                return String(0);
-            }
+        {
+            DEBUG_SERIAL.print("ESP Hash Response Wait Timeout !");
+            delay(100);
+            return String("");
+        }
 		byte a = ESP_SERIAL.read();
         // espFlashLog.print(a, HEX);
         // espFlashLog.print(" ");
@@ -786,7 +821,7 @@ String espComm:: espGetMD5Hash()
             if (cnt <= 0)
 		    {
                 // ESP_SERIAL.flush();
-                for (int i = 9; i < (index-3); i++)
+                for (int i = START_OF_MD5_RESP; i < (index-MD5_RESP_TAIL_LEN); i++)
                 {
                     char tempHash[2];
                     if(hash[i] == 0xDB && hash[i+1] == 0xDC){
@@ -813,6 +848,8 @@ String espComm:: espGetMD5Hash()
 	}
 }
 
+/* This function is used to compare response packets received from ESP32
+ */
 bool espComm:: compareResponse(byte *a, byte *b, int len_a, int len_b)
 {
 	int n;
@@ -826,6 +863,9 @@ bool espComm:: compareResponse(byte *a, byte *b, int len_a, int len_b)
 	//ok, if we have not returned yet, they are equal :)
 	return true;
 }
+
+/* This function is used to reboot ESP32
+ */
 void espComm:: espReboot()
 {
 	DEBUG_SERIAL.println("Rebooting esp32");
@@ -841,9 +881,11 @@ void espComm:: espReboot()
 	DEBUG_SERIAL.println("Download Mode");
 }
 
+/* This function is used to send FW binary Data packets to ESP32
+ */
 bool espComm::espSendDataPkt(unsigned char *command, uint32_t size, int retry, uint16_t seq)
 {
-    int cnt = 12;
+    int cnt = DATA_PKT_RESP_LEN;
     unsigned long timeout = ESP_SEND_DATA_TIMOUT; 
     unsigned long now = millis();
     int index = 0;
@@ -872,12 +914,15 @@ bool espComm::espSendDataPkt(unsigned char *command, uint32_t size, int retry, u
         }
         // ESP_SERIAL.write(0x0a);
         delay(100);
+        now = millis();
         while (ESP_SERIAL.available() > 0 || ((millis()-now) > timeout))
         {
             if((millis()-now) > timeout)
-                {
-                    return false;
-                }
+            {
+                DEBUG_SERIAL.print("Data Packet Response Wait Timeout !");
+                delay(100);
+                return false;
+            }
             byte a = ESP_SERIAL.read();
             // DEBUG_SERIAL.print(a,HEX);
             //  DEBUG_SERIAL.print(" ");
@@ -902,7 +947,7 @@ bool espComm::espSendDataPkt(unsigned char *command, uint32_t size, int retry, u
                 }
                 else
                 {
-                    DEBUG_SERIAL.println("Response Missmatch, Flash write failed !!");
+                    DEBUG_SERIAL.println("Response Mismatch, Flash write failed !!");
                     ESP_SERIAL.flush();
                     return false;
                 }

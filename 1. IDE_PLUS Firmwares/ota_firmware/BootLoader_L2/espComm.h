@@ -9,6 +9,17 @@
 #define ESP32_ENABLE_PIN  A2
 #define ESP32_IO0         7
 
+#define ESP_CMD_RETRY   1
+
+#define SYNC_RESP_LEN       112
+#define RESP_PKT_C0_COUNT   2
+#define STUB_RESP_PKT_C0_COUNT  4
+#define START_OF_MD5_RESP   9
+#define MD5_RESP_TAIL_LEN   3
+
+#define DATA_PKT_RESP_LEN 12
+#define MD5_RESP_WAIT_DEL   2000  // May need to adjust based on FW binary size written to ESP flash
+
 /* Serial - for USB-UART, Serial1 - for UART3, Serail4 - for UART5 */
 #define DEBUG_SERIAL Serial4 
 #define ESP_SERIAL Serial1
@@ -25,7 +36,7 @@ class espComm
         uint16_t flash_esp32_verify(char* folderPath,char* fileName);
         void espCleanup();
         bool esp_SendSyncCmd(uint8_t rebootCount, uint8_t retrySync);
-        bool espSendCmd(byte command[], int size, int retry,uint8_t countC0 = 2);
+        bool espSendCmd(byte command[], int size, int retry,uint8_t countC0 = RESP_PKT_C0_COUNT);
         void espReadMD5(char* TEST_FILE, char *md5Result);
         bool espDetect();
     // bool espEraseFlash();

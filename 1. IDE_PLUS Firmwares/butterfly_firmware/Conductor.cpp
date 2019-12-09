@@ -7,8 +7,6 @@
 #include <MemoryFree.h>
 #include "stm32l4_iap.h"
 
-extern "C" bool doOnceFWValid;
-extern "C" char FW_Valid_State;
 extern IUOTA iuOta;
 const char* fingerprintData;
 const char* fingerprints_X;
@@ -751,8 +749,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 
     subConfig = root["messageType"];
     if (subConfig.success()) {
-        double otaInitTimeStamp = conductor.getDatetime();
-        char otaResponse[256];
+//        double otaInitTimeStamp = conductor.getDatetime();
+//        char otaResponse[256];
         String msgType = root["messageType"];
         strcpy(m_otaMsgType,msgType.c_str());
         if(loopDebugMode) {
@@ -863,22 +861,18 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 if(loopDebugMode) {
                     debugPrint(F("Sending FDW_INI_ACK"));
                 }
-            // iuWiFi.sendMSPCommand(MSPCommand::OTA_INIT_ACK,otaResponse);
-                snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
-                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-INIT-ACK", "OTA-RCA-0000" ,otaInitTimeStamp);
-                iuOta.otaSendResponse(MSPCommand::OTA_INIT_ACK, otaResponse);
+                sendOtaStatusMsg(MSPCommand::OTA_INIT_ACK,OTA_REQ_ACK,OTA_RESPONE_OK);
                 delay(1);
-                strcpy(fwBinFileName, "vEdge_main.bin");
-                iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_main.bin");
-                iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_main.md5");
-                iuOta.otaMD5Write(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_main.md5",stmHash);
-                snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
-                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-FDW-START", "OTA-RCA-0000" ,otaInitTimeStamp);
+                strcpy(fwBinFileName, vEdge_Main_FW_BIN);
+                iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Main_FW_BIN);
+                iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Main_FW_MD5);
+                iuOta.otaMD5Write(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Main_FW_MD5,stmHash);
+                
+                sendOtaStatusMsg(MSPCommand::OTA_FDW_START,OTA_DOWNLOAD_START,OTA_RESPONE_OK);
                 delay(1);
                 if(loopDebugMode) {
                     debugPrint(F("Sending OTA_FDW_START"));
                 }
-                iuOta.otaSendResponse(MSPCommand::OTA_FDW_START, otaResponse);
                 otaFwdnldTmout = millis();
                 waitingDnldStrart = true;
                 ledManager.stopColorOverride();
@@ -889,10 +883,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 if(loopDebugMode) {
                     debugPrint(F("Sending OTA_FDW_ABORT"));
                 }
-                otaInitTimeStamp = conductor.getDatetime();            
-                snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
-                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", String(iuOta.getOtaRca(OTA_INVALID_MQTT)).c_str() ,otaInitTimeStamp);
-                iuOta.otaSendResponse(MSPCommand::OTA_FDW_ABORT, otaResponse);
+                sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_INVALID_MQTT)).c_str());
             }
         }
         if(!(strcmp((const char *)m_otaMsgType,(const char *)"ota-rollback")))
@@ -1050,7 +1041,7 @@ void Conductor::readForceOtaConfig()
     strcpy(m_rlbkMsgId,(const char*)config["messageId"]);
     debugPrint("MessageId:",false);
     debugPrint(m_rlbkMsgId);
-    JsonVariant subConfig = config["ota-ollback"];
+    JsonVariant subConfig = config["ota-rollback"];
     if(subConfig.success()) {
         strcpy(m_rlbkFwVer,(const char*)subConfig["fwVersion"]); 
         //String devId = subConfig["deviceId"];
@@ -2017,20 +2008,20 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
         }
     }
     uint8_t idx = 0;
-    char otaResponse[256];
-    double otaInitTimeStamp;
+ //   char otaResponse[256];
+ //   double otaInitTimeStamp;
     switch (iuWiFi.getMspCommand()) {
         case MSPCommand::ESP_DEBUG_TO_STM_HOST:
             if (loopDebugMode) {
                 debugPrint(buff);
             }
             break;
-        case MSPCommand::OTA_STM_DNLD_STS:
+        case MSPCommand::OTA_STM_DNLD_STATUS:
             if (loopDebugMode) { debugPrint(F("STM FW Download Completed !")); }
-            strcpy(fwBinFileName, "vEdge_wifi.bin");
-            iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_wifi.bin");
-            iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_wifi.md5");
-            iuOta.otaMD5Write(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_wifi.md5",espHash);
+            strcpy(fwBinFileName, vEdge_Wifi_FW_BIN);
+            iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Wifi_FW_BIN);
+            iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Wifi_FW_MD5);
+            iuOta.otaMD5Write(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Wifi_FW_MD5,espHash);
             iuWiFi.sendMSPCommand(MSPCommand::OTA_STM_DNLD_OK);
             delay(1);
   //          waitingDnldStrart = false; 
@@ -2042,15 +2033,12 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             } 
             delay(1);
             waitingDnldStrart = false;
-            otaInitTimeStamp = conductor.getDatetime();            
-            snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
-            m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", buff ,otaInitTimeStamp);
-            iuOta.otaSendResponse(MSPCommand::OTA_FDW_ABORT, otaResponse);
+            sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR,buff);
             iuWiFi.m_setLastConfirmedPublication();
             changeUsageMode(UsageMode::OPERATION);
             delay(100); 
             break;
-        case MSPCommand::OTA_ESP_DNLD_STS:
+        case MSPCommand::OTA_ESP_DNLD_STATUS:
 //            Serial.println(F("STM,ESP FW Download Completed !")); 
             if (loopDebugMode) { debugPrint(F("ESP FW Download Completed !")); }
             iuWiFi.sendMSPCommand(MSPCommand::OTA_ESP_DNLD_OK);
@@ -2061,17 +2049,17 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             bool hashCheck;
             hashCheck = false;
             memset(hashMD5,'\0', 34);
-            iuOta.otaGetMD5(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_main.bin",hashMD5);
+            iuOta.otaGetMD5(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Main_FW_BIN,hashMD5);
             if (loopDebugMode) {
                 debugPrint(F("Main FW hash received:"),false);
-                debugPrint(espHash);
+                debugPrint(stmHash);
                 debugPrint(F("Main FW hash computed:"),false);
                 debugPrint(hashMD5);
             }
             if(!(strcmp(hashMD5,stmHash)))
             {
                 memset(hashMD5,'\0', 34);
-                iuOta.otaGetMD5(iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_wifi.bin",hashMD5);
+                iuOta.otaGetMD5(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Wifi_FW_BIN,hashMD5);
                 if (loopDebugMode) {                    
                     debugPrint(F("WiFi FW hash received:"),false);
                     debugPrint(espHash);
@@ -2096,19 +2084,13 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             } 
             if(hashCheck == true) {
                 if (loopDebugMode) { debugPrint(F("OTA File Write Success, Sending OTA-FDW-SUCCESS")); }
-                otaInitTimeStamp = conductor.getDatetime();            
-                snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
-                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-FDW-SUCCESS", "OTA-RCA-0000" ,otaInitTimeStamp);
-                iuOta.otaSendResponse(MSPCommand::OTA_FDW_SUCCESS, otaResponse);
+                sendOtaStatusMsg(MSPCommand::OTA_FDW_SUCCESS,OTA_DOWNLOAD_OK,OTA_RESPONE_OK);
                 doOnceFWValid = false;
                 FW_Valid_State = 0;
                 iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_DOWNLOAD_SUCCESS);
                 iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);
                 delay(1000);
-                otaInitTimeStamp = conductor.getDatetime();            
-                snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
-                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-FUG-START", "OTA-RCA-0000" ,otaInitTimeStamp);
-                iuOta.otaSendResponse(MSPCommand::OTA_FUG_START, otaResponse);
+                sendOtaStatusMsg(MSPCommand::OTA_FUG_START,OTA_UPGRADE_START,OTA_RESPONE_OK);
                 delay(1000);
                 if (loopDebugMode) { debugPrint(F("Rebooting device for FW Upgrade......")); }
                 delay(500);
@@ -2118,10 +2100,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             {
                 if (loopDebugMode) { debugPrint(F("OTA File Write Failed, Sending OTA-ERR-FDW-ABORT")); }
                 waitingDnldStrart = false;
-                otaInitTimeStamp = conductor.getDatetime();            
-                snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
-                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", String(iuOta.getOtaRca(OTA_CHECKSUM_FAIL)).c_str() ,otaInitTimeStamp);
-                iuOta.otaSendResponse(MSPCommand::OTA_FDW_ABORT, otaResponse);  // Checksum failed
+                sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_CHECKSUM_FAIL)).c_str());
             }
             delay(1000);
             if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
@@ -2145,10 +2124,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                     debugPrint(F("OTA File Write Failed, Sending OTA-ERR-FDW-ABORT"));
                 }
                 waitingDnldStrart = false;
-                otaInitTimeStamp = conductor.getDatetime();            
-                snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
-                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", String(iuOta.getOtaRca(OTA_FLASH_RDWR_FAIL)).c_str() ,otaInitTimeStamp);
-                iuOta.otaSendResponse(MSPCommand::OTA_FDW_ABORT, otaResponse); // File write failed
+                sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_FLASH_RDWR_FAIL)).c_str());
                 if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
                 iuWiFi.m_setLastConfirmedPublication();
                 changeUsageMode(UsageMode::OPERATION);
@@ -2235,10 +2211,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                     debugPrint(F("Sending OTA-ERR-FDW-ABORT"));
                 }
                 // In case WiFi Disconnect/ESP Reset durig OTA, switch to OPERTATION Mode ??
-                otaInitTimeStamp = conductor.getDatetime();            
-                snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
-                m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", String(iuOta.getOtaRca(OTA_WIFI_DISCONNECT)).c_str() ,otaInitTimeStamp);
-                iuOta.otaSendResponse(MSPCommand::OTA_FDW_ABORT, otaResponse);
+                sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_WIFI_DISCONNECT)).c_str());
                 if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
                 iuWiFi.m_setLastConfirmedPublication();
                 changeUsageMode(UsageMode::OPERATION);
@@ -4153,8 +4126,12 @@ bool Conductor::setEthernetConfig(char* filename){
 }
 
 /**
- *
- */
+ * @brief 
+ * This function checks for time out of OTA packet download. Once OTA is started and Packet reception
+ * stopped from WiFi, then this function tineout shall abort the OTA process. 
+ * @param None 
+ * @return None 
+  */
 void Conductor::otaChkFwdnldTmout()
 {
     uint32_t now = millis();
@@ -4163,12 +4140,7 @@ void Conductor::otaChkFwdnldTmout()
         if (now - otaFwdnldTmout > fwDnldStartTmout)
         {
             waitingDnldStrart = false;
-            char otaResponse[256];
-            double otaInitTimeStamp;
-            otaInitTimeStamp = conductor.getDatetime();            
-            snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
-            m_otaMsgId,m_macAddress.toString().c_str(), m_type1,"OTA-ERR-FDW-ABORT", String(iuOta.getOtaRca(OTA_DOWNLOAD_TMOUT)).c_str() ,otaInitTimeStamp);
-            iuOta.otaSendResponse(MSPCommand::OTA_FDW_ABORT, otaResponse);
+            sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_DOWNLOAD_TMOUT)).c_str());
             iuWiFi.m_setLastConfirmedPublication();  // Download Timeout , No response
             changeUsageMode(UsageMode::OPERATION);
             delay(100);
@@ -4180,6 +4152,12 @@ void Conductor::otaChkFwdnldTmout()
     }
 }
 
+/**
+ * @brief 
+ * This function does the FW validation after OTA process downloads new FW.
+ * @param None 
+ * @return None 
+  */
 uint32_t Conductor::firmwareValidation()
 {
     File ValidationFile;
@@ -4203,7 +4181,8 @@ uint32_t Conductor::firmwareValidation()
         ValidationFile.println(F("**************************  vEdge OTA FW VALIDATION REPORT  ***************************" ));
         ValidationFile.println(F("***************************************************************************************" ));
         ValidationFile.println(F(""));
-        ValidationFile.println(F("Device Type    : vEdge " ));
+        ValidationFile.print(F("Device Type    : " ));
+        ValidationFile.println(OTA_DEVICE_TYPE);
         ValidationFile.print(F("Main FW Version: " ));
         ValidationFile.println(FIRMWARE_VERSION);
         ValidationFile.print(F("WiFi FW Version: " ));
@@ -4230,6 +4209,12 @@ uint32_t Conductor::firmwareValidation()
     return (firmwareWifiValidation(&ValidationFile));
 }
 
+/**
+ * @brief 
+ * Part of main FW validation for WiFi functionality.
+ * @param None 
+ * @return None 
+ */
 uint8_t Conductor::firmwareWifiValidation(File *ValidationFile)
 {
     bool WiFiCon = false;
@@ -4248,9 +4233,9 @@ uint8_t Conductor::firmwareWifiValidation(File *ValidationFile)
         }
         else
         {
-            ValidationFile->print(F("DEVICE WIFI STATUS: NOT CONNECTED !"));
+            ValidationFile->println(F("DEVICE WIFI STATUS: NOT CONNECTED !"));
             if(loopDebugMode){ debugPrint(F("DEVICE WIFI STATUS:NOT CONNECTED !")); }
-            ValidationFile->print(F("DEVICE WIFI TRYING CONNECT (WIFI RESET)"));
+            ValidationFile->println(F("DEVICE WIFI TRYING CONNECT (WIFI RESET)"));
             iuWiFi.turnOff();
             delay(100);
             iuWiFi.turnOn(1);   
@@ -4282,6 +4267,12 @@ uint8_t Conductor::firmwareWifiValidation(File *ValidationFile)
     return ret;
 }
 
+/**
+ * @brief 
+ * Part of main FW validation for configuration files check.
+ * @param None 
+ * @return None 
+ */
 uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
 {
     ValidationFile->println(F("***** DEVICE CONFIGURATION DETAILS  *****" ));
@@ -4392,13 +4383,19 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
     }
 }
 
+/**
+ * @brief 
+ * Part of main FW validation for device parameter check.
+ * @param None 
+ * @return None 
+ */
 uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
 {
     ValidationFile->println(F("***** DEVICE PERIPHERAL DETAILS  *****" ));
     char Cnt = 0;
     uint8_t otaRtryValidation = 0;
 
-    ValidationFile->print(F("DEVICE MEMORY: "));
+    ValidationFile->println(F("DEVICE MEMORY: "));
     ValidationFile->print(F(" - Internal RAM Free: "));
     ValidationFile->print((freeMemory()/1024),DEC);
     ValidationFile->println(F(" KBytes"));
@@ -4528,11 +4525,221 @@ uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
     /* Device communication check with Keonics Sensor usign SPI */
 }
 
-void Conductor::sendOtaStsMsg(MSPCommand::command type, char *msg, char *errMsg)
+/**
+ * @brief 
+ * Read STM internal flash status flag values
+ * @param None 
+ * @return None 
+ */
+void Conductor::getOtaStatus()
+{
+    conductor.readOtaConfig();
+    conductor.readForceOtaConfig();
+    iuOta.readOtaFlag();
+    uint8_t otaStatus = iuOta.getOtaFlagValue(OTA_STATUS_FLAG_LOC);
+    if (setupDebugMode) {
+        debugPrint("Main FW:OTA Status Code: ",false);
+        debugPrint(otaStatus);
+    }
+    conductor.otaSendMsg = false;
+    switch(otaStatus)
+    {
+        case OTA_FW_VALIDATION_SUCCESS:
+            if (setupDebugMode) debugPrint("Main FW:OTA Validation Success...");
+            break;                  // Alrady validated FW, continue running it.
+        case OTA_FW_UPGRADW_SUCCESS:
+            if (setupDebugMode) debugPrint("Main FW:OTA Upgrade Success, Doing validation..");
+            doOnceFWValid = true;   // New FW upgraded, perform validation
+            break;
+        case OTA_FW_UPGRADE_FAILED:
+            if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Upgrade retry ");
+            conductor.otaSendMsg = true;
+            break;
+        case OTA_FW_INTERNAL_ROLLBACK:
+            if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Internal Rollback ");
+            conductor.otaSendMsg = true;
+            break;
+        case OTA_FW_FORCED_ROLLBACK: // Reset, as L2 shall perform Upgrade,Rollback or Forced Rollback
+            if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Forced Rollback ");
+            conductor.otaSendMsg = true;
+            break;
+        case OTA_FW_FILE_CHKSUM_ERROR:
+            if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! File Checksum Failed ");
+            conductor.otaSendMsg = true;
+            break;
+        case OTA_FW_FILE_SYS_ERROR:
+            if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Missing or Invalid File(s) ");
+            conductor.otaSendMsg = true;
+            break;
+        default:
+            if (setupDebugMode) debugPrint("Main FW:Unknown OTA Status code !",false);
+            break;
+    }
+}
+
+/**
+ * @brief 
+ * Send MQTT message based on Internal STM flash status flag values
+ * @param None 
+ * @return None 
+ */
+void Conductor::sendOtaStatus()
+{
+    if((iuWiFi.isConnected()) && (otaSendMsg == true)) 
+    {
+        iuOta.readOtaFlag();
+        uint8_t otaStatus = iuOta.getOtaFlagValue(OTA_STATUS_FLAG_LOC);
+        if (setupDebugMode) {
+            debugPrint("Main FW:OTA Status Code: ",false);
+            debugPrint(otaStatus);
+        }
+        switch(otaStatus)
+        {
+            case OTA_FW_UPGRADE_FAILED:
+                if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Upgrade retry ");
+                conductor.sendOtaStatusMsg(MSPCommand::OTA_FUG_ABORT,OTA_UPGRADE_ERR,String(iuOta.getOtaRca(OTA_UPGRADE_FAIL)).c_str());
+                delay(1000);
+                break;
+            case OTA_FW_INTERNAL_ROLLBACK:
+                if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Internal Rollback ");
+                conductor.sendOtaStatusMsg(MSPCommand::OTA_FUG_ABORT,OTA_UPGRADE_ERR,String(iuOta.getOtaRca(OTA_INT_RLBK_FAIL)).c_str());
+                delay(1000);
+                break;
+            case OTA_FW_FORCED_ROLLBACK: // Reset, as L2 shall perform Upgrade,Rollback or Forced Rollback
+                if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Forced Rollback ");
+                conductor.sendOtaStatusMsg(MSPCommand::OTA_FUG_ABORT,OTA_UPGRADE_ERR,String(iuOta.getOtaRca(OTA_FORCED_RLBK_FAIL)).c_str());
+                delay(1000);
+                break;
+            case OTA_FW_FILE_CHKSUM_ERROR:
+                if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! File Checksum Failed ");
+                conductor.sendOtaStatusMsg(MSPCommand::OTA_FUG_ABORT,OTA_UPGRADE_ERR,String(iuOta.getOtaRca(OTA_CHECKSUM_FAIL)).c_str());
+                delay(1000);
+                break;
+            case OTA_FW_FILE_SYS_ERROR:
+                if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Missing or Invalid File(s) ");
+                conductor.sendOtaStatusMsg(MSPCommand::OTA_FUG_ABORT,OTA_UPGRADE_ERR,String(iuOta.getOtaRca(OTA_FILE_MISSING)).c_str());
+                delay(1000);
+                break;
+            default:
+                if (setupDebugMode) debugPrint("Main FW:Unknown OTA Status code !",false);
+                break;
+        }
+        conductor.otaSendMsg = false;
+        /* Send Error message only once. Not to send on every bootup */
+        iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_VALIDATION_SUCCESS);
+    }
+}
+
+/**
+ * @brief 
+ * Send MQTT message for OTA status
+ * @param None 
+ * @return None 
+ */
+void Conductor::sendOtaStatusMsg(MSPCommand::command type, char *msg, const char *errMsg)
 {
     char otaResponse[256];
     double otaInitTimeStamp = conductor.getDatetime();            
     snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
-    m_otaMsgId,m_macAddress.toString().c_str(), "vEdge",msg, errMsg ,otaInitTimeStamp);
+    m_otaMsgId,m_macAddress.toString().c_str(), OTA_DEVICE_TYPE,msg, errMsg ,otaInitTimeStamp);
     iuOta.otaSendResponse(type, otaResponse);  // Checksum failed
+}
+
+/**
+ * @brief 
+ * OTA FW Validation main function. After bootup, waits for get device details, streaming to start
+ * 1. Check external flash and create Validation.txt
+ * 2. Check configuration files
+ * 3. Check device parameter, peripheral access, RAM, External flash
+ * On Validation success, copy new Rollback files to backup folder, and new OTA files to rollback folder
+ * On Validation fail, update status flag for internal rollback
+ * @param None 
+ * @return None 
+ */
+void Conductor::otaFWValidation()
+{
+#if 1 // FW Validation
+    if(doOnceFWValid == true)
+    {
+        if((FWValidCnt % 2000) == 0 && FWValidCnt > 0)
+        {
+            uint32_t ret = 0;
+            if(loopDebugMode) debugPrint("Running Firmware Validation ");
+            ret = conductor.firmwareValidation();
+            if(ret == OTA_VALIDATION_WIFI)
+            {// Waiting for WiFi Disconnect/Connect Cycle.
+                doOnceFWValid = true;
+                FWValidCnt = 1;         
+            }
+            else if(ret == OTA_VALIDATION_RETRY)
+            {
+                iuOta.readOtaFlag();
+                uint8_t otaVldnRetry = iuOta.getOtaFlagValue(OTA_VLDN_RETRY_FLAG_LOC);
+                otaVldnRetry++;
+                iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,otaVldnRetry);
+                if (loopDebugMode) {
+                    debugPrint("OTA Validation Retry No: ",false);
+                    debugPrint(otaVldnRetry);
+                    debugPrint("Retrying Validation. Rebooting Device.....");
+                }
+                if(otaVldnRetry > OTA_MAX_VALIDATION_RETRY)
+                {
+                    ledManager.overrideColor(RGB_RED);
+                    conductor.sendOtaStatusMsg(MSPCommand::OTA_FUG_ABORT,OTA_UPGRADE_ERR, (char *)iuOta.getOtaRca(OTA_VALIDATION_FAILED).c_str());
+                    /*  Initialize OTA FW Validation retry count */
+                    iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);  
+                    iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_INTERNAL_ROLLBACK);
+                    if (loopDebugMode) {
+                        debugPrint("OTA FW Validation Retry Overflow ! Validation Failed");
+                        debugPrint("Initiating Rollback FW. Rebooting Device.....");
+                    }
+                }
+                delay(2000);
+                STM32.reset();
+            }
+            else if(ret == OTA_VALIDATION_SUCCESS)
+            {
+                doOnceFWValid = false;
+                FW_Valid_State = 0;
+                ledManager.overrideColor(RGB_PURPLE);
+                /* Copy FW binaries, MD5 from rollback to Backup folder */
+                iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Main_FW_BIN);
+                iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_FW_BIN);
+                iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Main_FW_MD5);
+                iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_FW_MD5);
+                delay(10);
+                /* Copy FW binaries, MD5 from Temp folder to rollback folder */
+                iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Main_FW_BIN);
+                iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Wifi_FW_BIN);
+                iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Main_FW_MD5);
+                iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Wifi_FW_MD5);
+                conductor.sendOtaStatusMsg(MSPCommand::OTA_FUG_SUCCESS,OTA_UPGRADE_OK,OTA_RESPONE_OK);
+                iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_VALIDATION_SUCCESS);
+                /*  Initialize OTA FW Validation retry count */
+                iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);
+                if (loopDebugMode) debugPrint("OTA FW Validation Successful. Rebooting device....");
+                delay(2000);                
+                STM32.reset();
+            }
+            else if(ret == OTA_VALIDATION_FAIL)
+            {   
+                ledManager.overrideColor(RGB_RED);
+                conductor.sendOtaStatusMsg(MSPCommand::OTA_FUG_ABORT,OTA_UPGRADE_ERR, (char *)iuOta.getOtaRca(OTA_VALIDATION_FAILED).c_str());
+                /*  Initialize OTA FW Validation retry count */
+                iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);  
+                iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_INTERNAL_ROLLBACK);
+                if (loopDebugMode) {
+                    debugPrint("OTA FW Validation Failed ! ");
+                    debugPrint("Initiating Rollback Rollback. Rebooting Device.....");
+                }
+                delay(2000);
+                STM32.reset();
+            }
+        }
+        else
+        {
+            FWValidCnt++;
+        }                  
+    }
+#endif
 }

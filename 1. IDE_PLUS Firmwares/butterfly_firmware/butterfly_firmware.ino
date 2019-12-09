@@ -110,10 +110,6 @@ float audioHigherCutoff = 160.0;
 
 /***** Debbugging variables *****/
 
-bool doOnceFWValid;
-int FWValidCnt = 0;
-char FW_Valid_State = 0;
-
 bool doOnce = true;
 uint32_t interval = 30000;
 uint32_t lastDone = 0;
@@ -626,51 +622,9 @@ void setup()
 
         //Resume previous operational state of device
         conductor.setThresholdsFromFile();
+        // Get OTA status flag and take appropraite action    
+        conductor.getOtaStatus();
     
-        conductor.readOtaConfig();
-        conductor.readForceOtaConfig();
-        iuOta.readOtaFlag();
-        uint8_t otaSts = iuOta.getOtaFlagValue(OTA_STATUS_FLAG_LOC);
-        if (setupDebugMode) {
-            debugPrint("Main FW:OTA Status Code: ",false);
-            debugPrint(otaSts);
-        }
-        switch(otaSts)
-        {
-            case OTA_FW_VALIDATION_SUCCESS:
-                if (setupDebugMode) debugPrint("Main FW:OTA Validation Success...");
-                break;                  // Alrady validated FW, continue running it.
-            case OTA_FW_UPGRADW_SUCCESS:
-                if (setupDebugMode) debugPrint("Main FW:OTA Upgrade Success, Doing validation..");
-                doOnceFWValid = true;   // New FW upgraded, perform validation
-                break;
-            case OTA_FW_UPGRADE_FAILED:
-                if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Upgrade retry ");
-                conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-ERR-FUG-ABORT","OTA-RCA-0007");
-                delay(1000);
-                break;
-            case OTA_FW_INTERNAL_ROLLBACK:
-                if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Internal Rollback ");
-                conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-ERR-FUG-ABORT","OTA-RCA-0008");
-                delay(1000);
-                break;
-            case OTA_FW_FORCED_ROLLBACK: // Reset, as L2 shall perform Upgrade,Rollback or Forced Rollback
-                if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Forced Rollback ");
-                conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-ERR-FUG-ABORT","OTA-RCA-0009");
-                delay(1000);
-                break;
-            case OTA_FW_FILE_SYS_ERROR:
-                if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Missing or Invalid File(s) ");
-                conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-ERR-FUG-ABORT","OTA-RCA-0010");
-                delay(1000);
-                break;
-//                STM32.reset();
-                // Need to handle ?
-                break;
-            default:
-                if (setupDebugMode) debugPrint("Main FW:Unknown OTA Status code !",false);
-                break;
-        }
         // Timer Init
         //timerInit();
         
@@ -778,93 +732,11 @@ void loop()
             conductor.otaChkFwdnldTmout();
             ledManager.updateColors();
         }
-#if 1 // FW Validation
-        if(doOnceFWValid == true)
-        {
-            if((FWValidCnt % 2000) == 0 && FWValidCnt > 0)
-            {
-                uint32_t ret = 0;
-                if(loopDebugMode) debugPrint("Running Firmware Validation ");
-                ret = conductor.firmwareValidation();
-                if(ret == OTA_VALIDATION_WIFI)
-                {// Waiting for WiFi Disconnect/Connect Cycle.
-                    doOnceFWValid = true;
-                    FWValidCnt = 1;         
-                }
-                else if(ret == OTA_VALIDATION_RETRY)
-                {
-                    iuOta.readOtaFlag();
-                    uint8_t otaVldnRetry = iuOta.getOtaFlagValue(OTA_VLDN_RETRY_FLAG_LOC);
-                    otaVldnRetry++;
-                    iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,otaVldnRetry);
-                    if (loopDebugMode) {
-                        debugPrint("OTA Validation Retry No: ",false);
-                        debugPrint(otaVldnRetry);
-                        debugPrint("Retrying Validation. Rebooting Device.....");
-                    }
-                    if(otaVldnRetry > OTA_MAX_VALIDATION_RETRY)
-                    {
-                        ledManager.overrideColor(RGB_RED);
-                        conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-ERR-FUG-ABORT", (char *)iuOta.getOtaRca(OTA_VALIDATION_FAILED).c_str());
-                        /*  Initialize OTA FW Validation retry count */
-                        iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);  
-                        iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_INTERNAL_ROLLBACK);
-                        if (loopDebugMode) {
-                            debugPrint("OTA FW Validation Retry Overflow ! Validation Failed");
-                            debugPrint("Initiating Rollback FW. Rebooting Device.....");
-                        }
-                    }
-                    delay(2000);
-                    STM32.reset();
-                }
-                else if(ret == OTA_VALIDATION_SUCCESS)
-                {
-                    doOnceFWValid = false;
-                    FW_Valid_State = 0;
-                    ledManager.overrideColor(RGB_PURPLE);
-                    /* Copy FW binaries, MD5 from rollback to Backup folder */
-                    iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"vEdge_main.bin");
-                    iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"vEdge_wifi.bin");
-                    iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"vEdge_main.md5");
-                    iuOta.otaFileCopy(iuFlash.IUFWBACKUP_SUBDIR, iuFlash.IUFWROLLBACK_SUBDIR,"vEdge_wifi.md5");
-                    delay(10);
-                    /* Copy FW binaries, MD5 from Temp folder to rollback folder */
-                    iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_main.bin");
-                    iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_wifi.bin");
-                    iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_main.md5");
-                    iuOta.otaFileCopy(iuFlash.IUFWROLLBACK_SUBDIR, iuFlash.IUFWTMPIMG_SUBDIR,"vEdge_wifi.md5");
-                    conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_SUCCESS,"OTA-FUG-SUCCESS","OTA-RCA-0000");
-                    iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_VALIDATION_SUCCESS);
-                    /*  Initialize OTA FW Validation retry count */
-                    iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);
-                    if (loopDebugMode) debugPrint("OTA FW Validation Successful. Rebooting device....");
-                    delay(2000);                
-                    STM32.reset();
-                }
-                else if(ret == OTA_VALIDATION_FAIL)
-                {   
-                    ledManager.overrideColor(RGB_RED);
-                    conductor.sendOtaStsMsg(MSPCommand::OTA_FUG_ABORT,"OTA-ERR-FUG-ABORT", (char *)iuOta.getOtaRca(OTA_VALIDATION_FAILED).c_str());
-                    /*  Initialize OTA FW Validation retry count */
-                    iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);  
-                    iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_INTERNAL_ROLLBACK);
-                    if (loopDebugMode) {
-                        debugPrint("OTA FW Validation Failed ! ");
-                        debugPrint("Initiating Rollback Rollback. Rebooting Device.....");
-                    }
-                    delay(2000);
-                    STM32.reset();
-                }
-            }
-            else
-            {
-                FWValidCnt++;
-            }                  
-        }
-#endif
-
-        // Manage raw data sending depending on RawDataState::startRawDataTransmission and RawDataState::rawDataTransmissionInProgress
-        conductor.manageRawDataSending();
+        // Send OTA status message based on error values (File checksum failed in L2, file missing etc)
+        conductor.sendOtaStatus();
+        // Do FW validation for first time (only once) after new OTA images are flashed
+        // No validation for Rollback and Forced Rollback cases.
+        conductor.otaFWValidation();
         yield();
        
     #endif

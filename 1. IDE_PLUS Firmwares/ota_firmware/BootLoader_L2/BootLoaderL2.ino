@@ -54,6 +54,9 @@ void setup()
 
 	DEBUG_SERIAL.println("=================================");
 	DEBUG_SERIAL.println("     IU Bootloader-2             ");
+	  DEBUG_SERIAL.print("Bootloader Version :");
+	DEBUG_SERIAL.print(BOOTLOADER2_VERSION);
+  DEBUG_SERIAL.println("        ");
 	DEBUG_SERIAL.println("=================================");
 
 	DOSFS.format();
@@ -81,9 +84,9 @@ void loop()
 
   switch (iu_all_flags[MFW_FLASH_FLAG]) {
        
-    case 0:  /* 0 -> Normal boot*/
+    case OTA_FW_SUCCESS:  /* 0 -> Normal boot*/
             break;
-    case 1:  /* 1 -> Flash STM Main Firmware */
+    case OTA_FW_DOWNLOAD_SUCCESS:  /* 1 -> Flash STM Main Firmware */
             DEBUG_SERIAL.println("Upgrading vEdge Main,WiFi Firmware..");
             if((DOSFS.exists(STM_MAIN_FIRMWARE)) && (DOSFS.exists(STM_MFW_1_SUM)) &&
                (DOSFS.exists(ESP_MAIN_FIRMWARE1)) && (DOSFS.exists(ESP_MFW_1_SUM))) {
@@ -91,24 +94,24 @@ void loop()
               if(checkMainFWMD5Hash(STM_MAIN_FIRMWARE,STM_MFW_1_SUM) == false)
               {                
                 DEBUG_SERIAL.println("Error : Main FW File check failed !!");
-                update_flag(0,6); // File error
+                update_flag(MFW_FLASH_FLAG,OTA_FW_FILE_CHKSUM_ERROR); // File error
                 break;
               }
               if(checkWifiFWMD5Hash(ESP_MAIN_FIRMWARE1,ESP_MFW_1_SUM) == false)
               {
                 DEBUG_SERIAL.println("Error : WiFi FW File check failed !!");
-                update_flag(0,6); // File error
+                update_flag(MFW_FLASH_FLAG,OTA_FW_FILE_CHKSUM_ERROR); // File error
                 break;
               }
 
               retVal3 = esp32.flash_esp32_verify(ESP_MAIN_FIRMWARE,ESP_FIRMWARE_FILENAME);
               delay(2000);
-              if(retVal3 == 0)
+              if(retVal3 == RETURN_SUCESS)
               {
                 DEBUG_SERIAL.println("WiFi FW Flashing Successful.");
                 retVal3 = Flash_Verify_STM_File(STM_MAIN_FIRMWARE,STM_MFW_1_SUM);
                 delay(2000);
-                if(retVal3 == 0)
+                if(retVal3 == RETURN_SUCESS)
                   DEBUG_SERIAL.println("Main FW Flashing Successful."); 
                 else
                   DEBUG_SERIAL.println("Main FW Flashing Failed !!");                
@@ -118,30 +121,30 @@ void loop()
                 DEBUG_SERIAL.println("WiFi FW Flashing Failed !!");
               }
               
-              if(retVal3 == 0) 
+              if(retVal3 == RETURN_SUCESS) 
               {
-                update_flag(0,3); 
+                update_flag(MFW_FLASH_FLAG,OTA_FW_UPGRADE_SUCCESS); 
               } else if (retVal3 == 2) {
                 DEBUG_SERIAL.println("Error : File Open Failed try again!!");
-                update_flag(0,6); // File error
+                update_flag(MFW_FLASH_FLAG,OTA_FW_FILE_CHKSUM_ERROR); // File error
               } else {
                 DEBUG_SERIAL.println("Error : Flashing Verification failed..");
-                update_flag(0,2); // Verification failed error
+                update_flag(MFW_FLASH_FLAG,OTA_FW_UPGRADE_FAILED); // Verification failed error
               }
             } else {
               DEBUG_SERIAL.println("Error : File(s) Missing..");
-              update_flag(0,7);
+              update_flag(MFW_FLASH_FLAG,OTA_FW_FILE_SYS_ERROR);
             } 
             delay(100);
             ledManager.overrideColor(RGB_BLACK);
             break;
-    case 2:  /* 2 -> No action here */
+    case OTA_FW_UPGRADE_FAILED:  /* 2 -> No action here */
              /* Using Factory Firmware */
             DEBUG_SERIAL.println("Upgrading vEdge with Factory Firmware..");
             break;
-    case 3:  /* 3 -> No Action here...*/
+    case OTA_FW_UPGRADE_SUCCESS:  /* 3 -> No Action here...*/
             break;
-    case 4: /* 4-> Rollback STM MFW*/
+    case OTA_FW_INTERNAL_ROLLBACK: /* 4-> Rollback STM MFW*/
             /* Swap STM-MFW1.bin and STM-MFW2.bin
             * need to check the file excist or not 
             */
@@ -153,24 +156,24 @@ void loop()
               if(checkMainFWMD5Hash(STM_ROLLBACK_FIRMWARE,STM_MFW_2_SUM) == false)
               {                
                 DEBUG_SERIAL.println("Error : Main FW File check failed !!");
-                update_flag(0,6); // File error
+                update_flag(MFW_FLASH_FLAG,OTA_FW_FILE_CHKSUM_ERROR); // File error
                 break;
               }
               if(checkWifiFWMD5Hash(ESP_ROLLBACK_FIRMWARE1,ESP_MFW_2_SUM) == false)
               {
                 DEBUG_SERIAL.println("Error : WiFi FW File check failed !!");
-                update_flag(0,6); // File error
+                update_flag(MFW_FLASH_FLAG,OTA_FW_FILE_CHKSUM_ERROR); // File error
                 break;
               }
 
               retVal3 = esp32.flash_esp32_verify(ESP_ROLLBACK_FIRMWARE,ESP_FIRMWARE_FILENAME);
               delay(2000);
-              if(retVal3 == 0)
+              if(retVal3 == RETURN_SUCESS)
               {
                 DEBUG_SERIAL.println("Rollback of WiFi FW Flashing Successful.");
                 retVal3 = Flash_Verify_STM_File(STM_ROLLBACK_FIRMWARE,STM_MFW_2_SUM);
                 delay(2000);
-                if(retVal3 == 0)
+                if(retVal3 == RETURN_SUCESS)
                   DEBUG_SERIAL.println("Rollback of Main FW Flashing Successful."); 
                 else
                   DEBUG_SERIAL.println("Rollback of Main FW Flashing Failed !!");                
@@ -181,22 +184,22 @@ void loop()
               }
               //delay(2000);
 //              DEBUG_SERIAL.println("Setting MFW Flag");
-              if(retVal3 == 0){
-                update_flag(0,0); 
+              if(retVal3 == RETURN_SUCESS){
+                update_flag(MFW_FLASH_FLAG,OTA_FW_SUCCESS); 
               } else if (retVal3 == 2) {
                 DEBUG_SERIAL.println("Error : File Checksum mismatch! Download file(s) again!!");
-                update_flag(0,6); // File error
+                update_flag(MFW_FLASH_FLAG,OTA_FW_FILE_CHKSUM_ERROR); // File error
               } else {
                 DEBUG_SERIAL.println("Error : Flash Verification failed ..");
-                update_flag(0,4); // Verification failed error
+                update_flag(MFW_FLASH_FLAG,OTA_FW_INTERNAL_ROLLBACK); // Verification failed error
               }
             } else {
-              update_flag(0,7);
+              update_flag(MFW_FLASH_FLAG,OTA_FW_FILE_SYS_ERROR);
               DEBUG_SERIAL.println("Error : File(s) Missing");
             }
             delay(100);  
             break;
-    case 5: // Rollback Main FW using Backup FW
+    case OTA_FW_FORCED_ROLLBACK: // Rollback Main FW using Backup FW
             /* Swap STM-MFW1.bin and STM-MFW2.bin
             * need to check the file excist or not 
             */
@@ -208,24 +211,24 @@ void loop()
               if(checkMainFWMD5Hash(STM_FORCED_ROLLBACK_FIRMWARE,STM_MFW_3_SUM) == false)
               {                
                 DEBUG_SERIAL.println("Error : Main FW File check failed !!");
-                update_flag(0,6); // File error
+                update_flag(MFW_FLASH_FLAG,OTA_FW_FILE_CHKSUM_ERROR); // File error
                 break;
               }
               if(checkWifiFWMD5Hash(ESP_FORCED_ROLLBACK_FIRMWARE1,ESP_MFW_3_SUM) == false)
               {
                 DEBUG_SERIAL.println("Error : WiFi FW File check failed !!");
-                update_flag(0,6); // File error
+                update_flag(MFW_FLASH_FLAG,OTA_FW_FILE_CHKSUM_ERROR); // File error
                 break;
               }
             
               retVal3 = esp32.flash_esp32_verify(ESP_FORCED_ROLLBACK_FIRMWARE,ESP_FIRMWARE_FILENAME);
               delay(2000);
-              if(retVal3 == 0)
+              if(retVal3 == RETURN_SUCESS)
               {
                 DEBUG_SERIAL.println("Forced Rollback of WiFi FW Flashing Successfull.");
                 retVal3 = Flash_Verify_STM_File(STM_FORCED_ROLLBACK_FIRMWARE,STM_MFW_3_SUM);
                 delay(2000);
-                if(retVal3 == 0)
+                if(retVal3 == RETURN_SUCESS)
                   DEBUG_SERIAL.println("Forced Rollback of Main FW Flashing Successfull."); 
                 else
                   DEBUG_SERIAL.println("Forced Rollback of Main FW Flashing Failed !!");                
@@ -236,31 +239,31 @@ void loop()
               }
               delay(2000);
 //              DEBUG_SERIAL.println("Setting MFW Flag");
-              if(retVal3 == 0){
-                update_flag(0,0); 
+              if(retVal3 == RETURN_SUCESS){
+                update_flag(MFW_FLASH_FLAG,OTA_FW_SUCCESS); 
               } else if (retVal3 == 2) {
                 DEBUG_SERIAL.println("Error : File Checksum mismatch! Download file(s) again!!");
-                update_flag(0,6); // File error
+                update_flag(MFW_FLASH_FLAG,OTA_FW_FILE_CHKSUM_ERROR); // File error
               } else {
                 DEBUG_SERIAL.println("Error : Flash verification failed..");
-                update_flag(0,5); // Verification failed error
+                update_flag(MFW_FLASH_FLAG,OTA_FW_FORCED_ROLLBACK); // Verification failed error
               }
             } else {
-              update_flag(0,7);
+              update_flag(MFW_FLASH_FLAG,OTA_FW_FILE_SYS_ERROR);
               DEBUG_SERIAL.println("Error : File(s) Missing");
             }
             delay(100);
             break;            
-    case 6: /* File read error, No action here */
+    case OTA_FW_FILE_CHKSUM_ERROR: /* File read error, No action here */
             break;
-    case 7: /* File(s) Missing, No action here */
+    case OTA_FW_FILE_SYS_ERROR: /* File(s) Missing, No action here */
             break;            
     default:
             delay(1);
   }
 
   delay(1000);
-  DEBUG_SERIAL.println("Rebooting IDE....");
+  DEBUG_SERIAL.println("Rebooting Device....");
   DOSFS.end();
   delay(1000);
   stm32l4_system_reset(); // Call reset function. 
@@ -270,8 +273,9 @@ void loop()
 	while (1);
 }
 
-
-
+/* This function is used to check MD5 of WiFi FW binary stored in external flash and 
+ * MD5 hash received during OTA req. (stored in .MD5 file along with FW binary file) 
+ */
 bool checkWifiFWMD5Hash(char *ESP_FW_FILE,char *ESP_MD5_FILE)
 {
     uint8_t md5Status;
@@ -303,6 +307,9 @@ bool checkWifiFWMD5Hash(char *ESP_FW_FILE,char *ESP_MD5_FILE)
     }
 }
 
+/* This function is used to check MD5 of Main FW binary stored in external flash and 
+ * MD5 hash received during OTA req. (stored in .MD5 file along with FW binary file) 
+ */
 bool checkMainFWMD5Hash(char *STM_FW_FILE,char *STM_MD5_FILE)
 {
     uint8_t md5Status;
@@ -336,6 +343,9 @@ bool checkMainFWMD5Hash(char *STM_FW_FILE,char *STM_MD5_FILE)
 
 /*----------------------------------------------------------------------------------------------------*/
 
+/* This function is used to open file from external flash memory
+ *  
+ */
 int iu_flash_open_file(File *fp, char * fileName, const char * fileMode, size_t * fileSize)
 {
 	*fp = DOSFS.open(fileName, fileMode);
@@ -347,6 +357,9 @@ int iu_flash_open_file(File *fp, char * fileName, const char * fileMode, size_t 
 	return(F_NO_ERROR);
 }
 
+/* This function is used to read file from external flash memory in chunks
+ *  
+ */
 size_t iu_flash_read_file_chunk(File *fp, uint8_t *buffer, size_t chunkSize, int chunkSeq)
 {
 	size_t fileSize=0, bytesRead=0;
@@ -374,6 +387,9 @@ size_t iu_flash_read_file_chunk(File *fp, uint8_t *buffer, size_t chunkSize, int
 	return(bytesRead);
 }
 
+/* This function is used to append file stored on external flash memory in chunks
+ *  
+ */
 size_t iu_flash_append_to_file(File *fp, uint8_t *buffer, uint8_t chunkSize, size_t buffSize)
 {
 	size_t bytesWritten=0;
@@ -389,6 +405,9 @@ size_t iu_flash_append_to_file(File *fp, uint8_t *buffer, uint8_t chunkSize, siz
 	return(bytesWritten);
 }
 
+/* This function is used to close file stored on external flash memory
+ *  
+ */
 int iu_flash_close_file(File *fp)
 {
 	if (!fp) {
@@ -399,6 +418,9 @@ int iu_flash_close_file(File *fp)
 }
 /*--------------------------------------------------------------------------------------------------------*/ 
 
+/* This function is used to  write Main FW binary into internal STM flash memory
+ *  
+ */
 /* Write File to Internal Flash */ 
 uint16_t Flash_STM_File(char* readFileName) 
 {
@@ -458,55 +480,34 @@ uint16_t Flash_STM_File(char* readFileName)
 }
 
 
-/* Verify, Write and Verify */
+/* This function is used to  Verify checksum, and write Main FW binary 
+ * into internal STM flash memory
+ */
 uint16_t Flash_Verify_STM_File(char* INPUT_BIN_FILE,char* INPUT_MD5_FILE) 
-{ 
-  // uint8_t md5Status;
-
-  // md5Status = MD5_sum_file(INPUT_BIN_FILE, calculatedMD5Sum);
-  // if (md5Status > 0)
-  // {
-  //   return md5Status;
-  // }
-  
-  // DEBUG_SERIAL.print("Main FW MD5 Calculated value: ");
-  // DEBUG_SERIAL.println(calculatedMD5Sum);
-  // DEBUG_SERIAL.print ("Length = "); DEBUG_SERIAL.println(strlen(calculatedMD5Sum));
-
-  // Read_MD5(INPUT_MD5_FILE, receivedMD5Sum);
-  // DEBUG_SERIAL.print("Main FW MD5 Read value: ");
-  // DEBUG_SERIAL.println(receivedMD5Sum);
-  // DEBUG_SERIAL.print ("Length = "); DEBUG_SERIAL.println(strlen(receivedMD5Sum));
-
- // if (strcmp(receivedMD5Sum, calculatedMD5Sum) == 0) 
-  {
-    DEBUG_SERIAL.println("Main FW File ok..");
-    uint16_t retval4 = Flash_STM_File(INPUT_BIN_FILE); // Flashing the code to Internal memory
-    delay(1000);
-    if(RETURN_SUCESS != retval4) {
-      //DO Retry
-       return RETURN_FAILED;
-    }
-
-    Flash_MD5_Sum(INPUT_BIN_FILE, verifiedMD5Sum);
-    if (strcmp(verifiedMD5Sum,stmcalcMD5Sum) == 0) {
-      //DEBUG_SERIAL.println("STM Firmware flashed successfully..!");
-      return RETURN_SUCESS;
-    } else {
-      DEBUG_SERIAL.println("Error : Internal memory checksum mismatch..");
-      return 1;
-    }           
+{
+  DEBUG_SERIAL.println("Main FW File ok..");
+  uint16_t retval4 = Flash_STM_File(INPUT_BIN_FILE); // Flashing the code to Internal memory
+  delay(1000);
+  if(RETURN_SUCESS != retval4) {
+    //DO Retry
+      return RETURN_FAILED;
   }
-  // else {
-  //   DEBUG_SERIAL.println("Error in STM MFW / MD5 File(s)");
-  //   return 2;
-  // }
-  
+
+  Flash_MD5_Sum(INPUT_BIN_FILE, verifiedMD5Sum);
+  if (strcmp(verifiedMD5Sum,stmcalcMD5Sum) == 0) {
+    //DEBUG_SERIAL.println("STM Firmware flashed successfully..!");
+    return RETURN_SUCESS;
+  } else {
+    DEBUG_SERIAL.println("Error : Internal memory checksum mismatch..");
+    return 1;
+  }  
 }
 
-  
+
+/* This function is used to update status flag values stored in STM internal flash @FLAG_ADDRESS
+ */
 void update_flag(uint8_t flag_addr , uint8_t flag_data)
-  {
+{
     DEBUG_SERIAL.print("Updating flag:");
     DEBUG_SERIAL.print(flag_addr);
     DEBUG_SERIAL.print(" Val:");
@@ -524,10 +525,10 @@ void update_flag(uint8_t flag_addr , uint8_t flag_data)
     delay(1000);
     stm32l4_flash_lock();
     DEBUG_SERIAL.println("Flag updated...");
-    }
+}
 
-
-/* Calculate MD5SUM for a file in External Flash */
+/* This function is used to Calculate MD5SUM for a file in External Flash
+ */
 uint8_t MD5_sum_file(char* readFileName, char *md5Result)
 {
   File dataFileFP;
@@ -566,8 +567,8 @@ uint8_t MD5_sum_file(char* readFileName, char *md5Result)
   return RETURN_SUCESS;
 }
    
-
-/* Read MD5SUM from .md5 file */
+/* This function is used to Read MD5SUM from .md5 file
+ */
 void Read_MD5(char* TEST_FILE, char *md5Result)
 {
   if (DOSFS.exists(TEST_FILE)) {
@@ -584,7 +585,8 @@ void Read_MD5(char* TEST_FILE, char *md5Result)
   }
 }
 
-/* Calculate MD5SUm for Internal Flash */
+/* This function is used to Calculate MD5SUm for Internal Flash
+ */
 uint8_t Flash_MD5_Sum(char* readFileName, char *md5Result)
 {
 //  DEBUG_SERIAL.println("dosFileSys: Writing to Memory");
@@ -618,6 +620,8 @@ uint8_t Flash_MD5_Sum(char* readFileName, char *md5Result)
   free(md5str);
 }
 
+/* This function is used to read status flag values stored in STM internal flash @FLAG_ADDRESS
+ */
 void iu_read_all_flags(void)
 {
   for(int i = 0 ; i <128 ; i++) {
@@ -629,6 +633,7 @@ void iu_read_all_flags(void)
   }    
 }
 
+#if 0
 void swap_files(char* INPUT_FILE_1, char* INPUT_FILE_2)
 {
   if((DOSFS.exists(INPUT_FILE_1)) && (DOSFS.exists(INPUT_FILE_2))) {
@@ -642,5 +647,5 @@ void swap_files(char* INPUT_FILE_1, char* INPUT_FILE_2)
     DEBUG_SERIAL.println("Error : File(s) Missing..");
   }
 }
-
+#endif
 /*--------------------------------*/
