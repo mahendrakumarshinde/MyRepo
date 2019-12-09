@@ -18,8 +18,8 @@ Type - Standard Firmware Release
 #include "RawDataState.h"
 //#include"IUTimer.h"
 
-const uint8_t ESP8285_IO0  =  7;  // IDE1.5_PORT_CHANGE
-
+const uint8_t ESP32_IO0  =  7;  // IDE1.5_PORT_CHANGE
+bool sensorStatus = true;
 #ifdef DRAGONFLY_V03
 #else
     // FIXME For some reason, if this is included in conductor,
@@ -251,10 +251,7 @@ void dataAcquisitionCallback()
  */
 void dataAcquisitionISR()
 {
-
-    digitalWrite(19,HIGH);
     conductor.acquireData(true);
-    digitalWrite(19,LOW);
 }
 
 
@@ -374,10 +371,9 @@ void timerInit(void)
 void setup()
 {   
   
-  pinMode(ESP8285_IO0,OUTPUT);
-  pinMode(19,OUTPUT); 
+  pinMode(ESP32_IO0,OUTPUT);
 //   pinMode(A3,OUTPUT);  // ISR (ODR checked from pin 50)
-  digitalWrite(ESP8285_IO0,HIGH); // IDE1.5_PORT_CHANGE
+  digitalWrite(ESP32_IO0,HIGH); // IDE1.5_PORT_CHANGE
   DOSFS.begin();
   #if 1
     
@@ -482,6 +478,11 @@ void setup()
             debugPrint("BLE Chip is Available, BLE init Complete");
         }
        
+        //       // httpConfig message read timerCallback
+        // armv7m_timer_create(&httpConfigTimer, (armv7m_timer_callback_t)httpConfigCallback);
+        // armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min Timer 180000
+
+
         // WIFI SETUP BEGIN
         iuWiFi.setupHardware();
         iuWiFi.setOnNewMessageCallback(onNewWiFiMessage);
@@ -595,17 +596,22 @@ void setup()
         ledManager.resetStatus();
         conductor.changeUsageMode(UsageMode::OPERATION);
         /* code uncommented */
-        if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+        if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor && iuAccelerometer.lsmPresence)
         {
             pinMode(IULSM6DSM::INT1_PIN, INPUT);
-            attachInterrupt(IULSM6DSM::INT1_PIN, dataAcquisitionISR, RISING);
+            attachInterrupt(digitalPinToInterrupt(IULSM6DSM::INT1_PIN), dataAcquisitionISR, RISING);
         // debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
+        }
+        else if ( FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor && iuAccelerometerKX222.kionixPresence)
+        {
+            pinMode(IUKX222::INT1_PIN,INPUT);
+            attachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN),dataAcquisitionISR,RISING);
         }
         else
         {
-            pinMode(IUKX222::INT1_PIN,INPUT);
-            attachInterrupt(IUKX222::INT1_PIN,dataAcquisitionISR,RISING);
+            debugPrint(F("LSM and kionix Not found"));
         }
+        
         // debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
         //Resume previous operational state of device
         conductor.setThresholdsFromFile();
@@ -651,7 +657,11 @@ void loop()
                 debugPrint(F("Sensor:"),false);debugPrint(FFTConfiguration::currentSensor);
             }
         // }
-       
+        if (iuWiFi.isConnected() == true && sensorStatus == true && conductor.getDatetime() > 1570000000.00)
+        {
+            conductor.sendSensorStatus();
+            sensorStatus = false;
+        }
         conductor.manageSleepCycles();
         // Receive messages & configurations
         iuUSB.readMessages();
@@ -665,12 +675,12 @@ void loop()
         // Manage WiFi autosleep
         iuWiFi.manageAutoSleep();
         // Acquire data from sensors
-        conductor.acquireData(false);
+        // conductor.acquireData(false);
 
         conductor.acquireTemperatureAudioData();
 
 
-        conductor.acquireData(false);
+        // conductor.acquireData(false);
         //Serial.println("acquireData complete !!!");
         // Compute features depending on operation mode
         conductor.computeFeatures();
@@ -687,11 +697,11 @@ void loop()
             //FeatureStates::isrCount=0;
             if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
             {
-                attachInterrupt(IULSM6DSM::INT1_PIN, dataAcquisitionISR, RISING);
+                attachInterrupt(digitalPinToInterrupt(IULSM6DSM::INT1_PIN), dataAcquisitionISR, RISING);
             }
             else
             {
-                attachInterrupt(IUKX222::INT1_PIN,dataAcquisitionISR,RISING);
+                attachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN),dataAcquisitionISR,RISING);
             }
             FeatureStates::isISRDisabled = false;
             FeatureStates::isISRActive = false;

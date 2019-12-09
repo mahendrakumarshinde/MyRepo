@@ -1209,7 +1209,7 @@ void Conductor::processCommand(char *buff)
             {
                 //Start the Sensor DATA AcquisitionMode
                 FeatureStates::isISRActive = true;
-                Serial.println("ISR-ENABLE from USB !!!");
+                debugPrint(F("ISR-ENABLE from USB !!!"));
             }
             break;
         case 'D' :
@@ -1226,7 +1226,7 @@ void Conductor::processCommand(char *buff)
                 }
                 FeatureStates::isISRActive = false;
                 FeatureStates::isISRDisabled = true;
-                Serial.println("ISR-DISABLE form USB !!!");
+                debugPrint(F("ISR-DISABLE form USB !!!"));
             }
             break;    
             
@@ -2653,12 +2653,13 @@ void Conductor::streamFeatures()
             if (m_streamingMode == StreamingMode::WIFI ||
                 m_streamingMode == StreamingMode::WIFI_AND_BLE || m_streamingMode == StreamingMode::ETHERNET)
             { 
-       
-               FeatureGroup::instances[i]->bufferAndStream(
-                   ser1, IUSerial::MS_PROTOCOL, m_macAddress,
-                   ledManager.getOperationState(), batteryLoad, timestamp,
-                   sendFeatureGroupName1);
-                
+                if(RawDataState::rawDataTransmissionInProgress == false)
+                {   
+                    FeatureGroup::instances[i]->bufferAndStream(
+                    ser1, IUSerial::MS_PROTOCOL, m_macAddress,
+                    ledManager.getOperationState(), batteryLoad, timestamp,
+                    sendFeatureGroupName1);
+                }
                 // FeatureGroup::instances[i]->bufferAndQueue(
                 //     &sendingQueue, IUSerial::MS_PROTOCOL, m_macAddress,
                 //     ledManager.getOperationState(), batteryLoad, timestamp,
@@ -3116,26 +3117,31 @@ bool Conductor::setFFTParams() {
         {
             debugPrint(F("LSM Present & LSM set"));
             iuAccelerometer.setSamplingRate(FFTConfiguration::currentSamplingRate);
+            setSensorStatus(SensorStatusCode::LSM_SET);
         }
         else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (iuAccelerometerKX222.kionixPresence))
         {
             debugPrint(F("KIONIX Present & KIONIX set"));
             iuAccelerometerKX222.updateSamplingRate(FFTConfiguration::currentSamplingRate); // will set the ODR for the sensor
-        }else if((FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor) && (!iuAccelerometer.lsmPresence)){
+            setSensorStatus(SensorStatusCode::KNX_SET);
+        }else if((FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor) && (!iuAccelerometer.lsmPresence) && (iuAccelerometerKX222.kionixPresence)){
             debugPrint(F("LSM absent & KIONIX set"));
             iuAccelerometerKX222.updateSamplingRate(iuAccelerometerKX222.defaultSamplingRate);
             FFTConfiguration::currentSamplingRate = iuAccelerometerKX222.defaultSamplingRate;
             FFTConfiguration::currentSensor = FFTConfiguration::kionixSensor;
-            FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
-        }else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (!iuAccelerometerKX222.kionixPresence)){
+            FFTConfiguration::currentBlockSize = iuAccelerometerKX222.DEFAULT_BLOCK_SIZE;
+            setSensorStatus(SensorStatusCode::LSM_ABS);
+        }else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (!iuAccelerometerKX222.kionixPresence) && (iuAccelerometer.lsmPresence)){
             debugPrint(F("KIONIX Absent & LSM set"));
             iuAccelerometer.setSamplingRate(iuAccelerometer.defaultSamplingRate);
             FFTConfiguration::currentSamplingRate = iuAccelerometer.defaultSamplingRate;
             FFTConfiguration::currentSensor = FFTConfiguration::lsmSensor;
             FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
+            setSensorStatus(SensorStatusCode::KNX_ABS);
         }
         else{
             debugPrint(F("KIONIX, LSM not found"));
+            setSensorStatus(SensorStatusCode::SEN_ABS);
         }
         // TODO: The following can be configurable in the future
         FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY;
@@ -3818,4 +3824,38 @@ bool Conductor::setEthernetConfig(char* filename){
     }
 
     return false;
+}
+
+void Conductor::setSensorStatus(SensorStatusCode errorCode)
+{
+    debugPrint("Sensor Error Code: ",false);
+    debugPrint(errorCode);
+    statusCode = errorCode;
+    switch (errorCode)
+    {
+        case SensorStatusCode::LSM_SET:
+            strcpy(status, "Running with LSM");
+            break;
+        case SensorStatusCode::KNX_SET:
+            strcpy(status, "Running with Kionix");
+            break;
+        case SensorStatusCode::LSM_ABS:
+            strcpy(status, "LSM not found, Running with Kionix defaults");
+            break;
+        case SensorStatusCode::KNX_ABS:
+            strcpy(status, "Kionix not found, Running with LSM defaults");
+            break;
+        case SensorStatusCode::SEN_ABS:
+            strcpy(status, "Sensors not found, Please check the Hardware");
+            break;
+    }
+}
+
+void Conductor::sendSensorStatus()
+{
+    char SensorResponse[256];
+    double TimeStamp = conductor.getDatetime();            
+    snprintf(SensorResponse, 256, "{\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%d\",\"status\":\"%s\",\"timestamp\":%.2f}",
+    m_macAddress.toString().c_str(), "vEdge", statusCode, status ,TimeStamp);
+    iuWiFi.sendMSPCommand(MSPCommand::SEND_SENSOR_STATUS,SensorResponse);
 }

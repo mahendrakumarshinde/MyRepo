@@ -469,9 +469,6 @@ bool Feature::sectionsToComputeHaveDataError(FeatureComputer *receiver,
                                              uint8_t sectionCount)
 {
     int idx = getReceiverIndex(receiver);
-    //Serial.print("Receiver Index :");Serial.println(idx);
-    //Serial.print("Sections Count :");Serial.println(sectionCount);
-    //Serial.print("m_sectionCount : ");Serial.println(m_sectionCount);
     if (idx >= 0) {
         uint8_t sIdx = m_computeIndex[uint8_t(idx)];
         for (uint8_t i = sIdx; i < sIdx + sectionCount; i++) {
@@ -534,10 +531,6 @@ uint16_t Feature::sendToBuffer(char *destination, uint16_t startIndex,
                                uint8_t sectionCount)
 {
     uint8_t k = (m_sectionCount + m_recordIndex - sectionCount) % m_sectionCount;
-        // Serial.print("startIndex : ");Serial.println(startIndex);
-        // Serial.print("m_sectionCount : ");Serial.println(m_sectionCount);
-        // Serial.print("m_recordIndex : ");Serial.println(m_recordIndex);
-        // Serial.print("DEBUG INFO : sendToBuffer : k :"); Serial.println(k);
     for (uint8_t i = k; i < k + sectionCount; ++i)
     {
         m_locked[i % m_sectionCount] = true;

@@ -31,12 +31,17 @@ void IUKX222::SetupSPI()
 bool IUKX222::checkWHO_AM_I()
 {
 	uint8_t c = readConfig(IUKX222_WHO_AM_I);
-	if (c != IUKX222_WHO_AM_I_WIA_ID){
-		kionixPresence = false;
-		return false;
+	uint8_t retry = retryCount;
+	while(retry >= 0)
+	{
+		if (c != IUKX222_WHO_AM_I_WIA_ID){
+			retry--;
+		}
+		kionixPresence = true;
+		return true;
 	}
-	kionixPresence = true;
-	return true;
+	kionixPresence = false;
+	return false;
 }
 
 void IUKX222::softReset()
@@ -139,6 +144,7 @@ void IUKX222::setupHardware()
 	operate(false);
 	if(!checkWHO_AM_I() || !sanityCheck()){
 		debugPrint("Kionix KX222 Error");
+		return;
 	} else {
 		debugPrint("Kionix KX222 Found");
 	}

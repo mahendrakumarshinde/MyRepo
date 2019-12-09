@@ -49,8 +49,10 @@ public:
 
     static const LpfSetting defaultLPF = LPF_AVG16;
 
-    static const uint16_t defaultSamplingRate = 3200; // Hz
+    static const uint16_t defaultSamplingRate = 6400; // Hz
     uint16_t m_samplingRate = defaultSamplingRate;
+    const int DEFAULT_BLOCK_SIZE = 4096;
+
     bool kionixPresence = false;
     /// Checking WHO_AM_I
     bool checkWHO_AM_I();
@@ -126,6 +128,8 @@ protected:
 
     q15_t m_data[3]; 
     q15_t m_bias[3];        // Bias corrections
+
+    uint8_t retryCount = 3;
 
 };
 #endif 

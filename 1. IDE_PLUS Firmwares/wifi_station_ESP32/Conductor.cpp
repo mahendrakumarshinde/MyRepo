@@ -353,6 +353,11 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             mqttHelper.publish(COMMAND_RESPONSE_TOPIC,buffer);
                    
             break;
+        case MSPCommand::SEND_SENSOR_STATUS:
+          // Send the Ack to Topic
+            mqttHelper.publish(COMMAND_RESPONSE_TOPIC,buffer);
+                   
+            break;
        /* case MSPCommand::SEND_ACCOUNTID:
          {
              //accountID =  buffer;

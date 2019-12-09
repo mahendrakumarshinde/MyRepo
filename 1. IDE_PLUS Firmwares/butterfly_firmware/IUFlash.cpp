@@ -245,15 +245,15 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
             if(config.containsKey("samplingRate")) {
                 uint16_t samplingRate = config["samplingRate"];
                 // Validation for samplingRate
-                bool validSamplingRate = true;
-                bool validSamplingRate2 = true;
+                bool validLSMSamplingRate = true;
+                bool validKionixSamplingRate = true;
                 //bool validSensor = true;
                 for(int i=0; i<FFTConfiguration::LSMsamplingRateOption - 1; ++i) {
                     if( samplingRate < FFTConfiguration::samplingRates[0] || 
                         samplingRate > FFTConfiguration::samplingRates[FFTConfiguration::LSMsamplingRateOption - 1] || 
                         (FFTConfiguration::samplingRates[i] < samplingRate &&
                          samplingRate < FFTConfiguration::samplingRates[i+1]) ) {
-                           validSamplingRate = false;
+                           validLSMSamplingRate = false;
                        }
                 }
                 for(int i=0; i<FFTConfiguration::KNXsamplingRateOption - 1; ++i) {
@@ -261,18 +261,18 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                         samplingRate > FFTConfiguration::samplingRates2[FFTConfiguration::KNXsamplingRateOption - 1] || 
                         (FFTConfiguration::samplingRates2[i] < samplingRate &&
                          samplingRate < FFTConfiguration::samplingRates2[i+1]) ) {
-                             validSamplingRate2 = false;
+                             validKionixSamplingRate = false;
                        }
                 }
-                if(!iuAccelerometer.lsmPresence && validSamplingRate) {
+                if(!iuAccelerometer.lsmPresence && validLSMSamplingRate) {
                      validConfig = false;
                      errorMessages.add("LSM not Present");
                 }
-                if(!iuAccelerometerKX222.kionixPresence && validSamplingRate2) {
+                if(!iuAccelerometerKX222.kionixPresence && validKionixSamplingRate) {
                      validConfig = false;
                      errorMessages.add("Kionix not Present");
                 }
-                // if(config.containsKey("sensor") && validSamplingRate2) {
+                // if(config.containsKey("sensor") && validKionixSamplingRate) {
                 //         uint16_t sensor = config["sensor"];
                 //         if (sensor != FFTConfiguration::kionixSensor){
                 //             validSensor = false;
@@ -281,7 +281,7 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                 //             validSensor = true;
                 //         }    
                 // }
-                // if(config.containsKey("sensor") && validSamplingRate) {
+                // if(config.containsKey("sensor") && validLSMSamplingRate) {
                 //         uint16_t sensor = config["sensor"];
                 //         if (sensor != FFTConfiguration::lsmSensor){
                 //             validSensor = false;
@@ -290,7 +290,7 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                 //             validSensor = true;
                 //         }    
                 // }
-                if (!validSamplingRate && !validSamplingRate2) {
+                if (!validLSMSamplingRate && !validKionixSamplingRate) {
                         validConfig = false;
                         errorMessages.add("Invalid samplingRate");
                 } else if (samplingRate == 416) {  // Temporary workaround
