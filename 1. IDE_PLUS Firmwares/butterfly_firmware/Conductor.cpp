@@ -3855,7 +3855,7 @@ void Conductor::sendSensorStatus()
 {
     char SensorResponse[256];
     double TimeStamp = conductor.getDatetime();            
-    snprintf(SensorResponse, 256, "{\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%d\",\"status\":\"%s\",\"timestamp\":%.2f}",
+    snprintf(SensorResponse, 256, "{\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"statusCode\":\"%d\",\"status\":\"%s\",\"timestamp\":%.2f}",
     m_macAddress.toString().c_str(), "vEdge", statusCode, status ,TimeStamp);
     iuWiFi.sendMSPCommand(MSPCommand::SEND_SENSOR_STATUS,SensorResponse);
 }
