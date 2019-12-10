@@ -3848,6 +3848,9 @@ void Conductor::setSensorStatus(SensorStatusCode errorCode)
         case SensorStatusCode::SEN_ABS:
             strcpy(status, "Sensors not found, Please check the Hardware");
             break;
+        case SensorStatusCode::LSM_DEFAULT:
+            strcpy(status, "Configuration not found, Using LSM defaults");
+            break;
     }
 }
 
