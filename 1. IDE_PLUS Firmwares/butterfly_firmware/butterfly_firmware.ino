@@ -395,8 +395,6 @@ void setup()
   digitalWrite(ESP32_IO0,HIGH); // IDE1.5_PORT_CHANGE
   DOSFS.begin();
   #if 1
-    
-    
     iuUSB.begin();
     iuUSB.setOnNewMessageCallback(onNewUSBMessage);
     rgbLed.setup();
@@ -418,6 +416,36 @@ void setup()
         }
         iuI2C.begin();
         iuI2C1.begin();
+        // Flash Test
+        if(DOSFS.exists("temp.conf"))
+        {  
+            File tempFile = DOSFS.open("temp.conf","r");
+            String fileContent = tempFile.readString();
+            debugPrint("File Present");
+            if(strcmp(fileContent.c_str(),"SUCCESS")==0)
+            {
+                debugPrint("File Read Success");
+            }else{
+                debugPrint("File Read Failed...Formating Flash Please wait");
+                DOSFS.format();
+                debugPrint("Formated Successfully");
+            }
+            tempFile.close();
+            
+        }else{
+            File tempFile = DOSFS.open("temp.conf","w");
+            if(tempFile)
+            {
+                tempFile.print("SUCCESS");
+                tempFile.flush();
+                tempFile.close();
+                debugPrint("File Write Success");
+            }else{
+                debugPrint("Unable to Write file..Formating Flash Please wait");
+                DOSFS.format();
+                debugPrint("Formated Successfully");
+            }
+        }
         // Interfaces
         if (debugMode) {
             debugPrint(F("\nInitializing interfaces..."));

@@ -444,6 +444,40 @@ File IUFSFlash::openConfigFile(storedConfig configType,
     return DOSFS.open(filepath, mode);
 }
 
+String IUFSFlash::readInternalFlash(uint32_t address)
+{
+  uint8_t type;
+  uint8_t length;
+  uint8_t result[255];
+  char resultConfig[255];
+    type = *(uint8_t*)(address );
+    length = *(uint8_t*)(address + 1);
+    if(length < 255 && length > 0 )
+    {
+      for (int i = 0 ; i < length; i++){
+      result[i] = *(uint8_t*)(address + i + 2);
+    }
+  }
+ 
+  sprintf(resultConfig,"%s",(char*)result);
+  return resultConfig;
+
+}
+
+void IUFSFlash::writeInternalFlash(uint8_t type, uint32_t address, uint8_t dataLength, const uint8_t* data)
+{
+  uint8_t dataSize;
+  char allData[255];
+  dataSize = sizeof(type)+sizeof(dataLength)+dataLength;
+  stm32l4_flash_erase(address, 2048);
+
+  delay(1000);
+  allData[0] = type;
+  allData[1] = dataLength;
+  sprintf(&allData[2],"%s",data);
+  bool Status = stm32l4_flash_program(address, (const uint8_t*)allData,dataSize);
+   Serial.println(Status);
+}
 
 /* =============================================================================
     IUSPIFlash - Flash accessible via SPI
