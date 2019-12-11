@@ -27,11 +27,16 @@ extern IUMQTTHelper mqttHelper;
 extern IUTimeHelper timeHelper;
 
 
-#define OTA_STM_PKT_ACK_TMOUT   1000
-#define OTA_DATA_READ_TIMOUT    1001
-#define OTA_HTTP_INIT_FAIL      1002
-#define OTA_WIFI_DISCONNECT     1003
+#define OTA_STM_PKT_ACK_TMOUT       1000
+#define OTA_DATA_READ_TIMOUT        1001
+#define OTA_HTTP_INIT_FAIL          1002
+#define OTA_WIFI_DISCONNECT         1003
+#define OTA_INVALID_MAIN_FW_SIZE    1004
+#define OTA_INVALID_WIFI_FW_SIZE    1005
 
+
+#define MAX_MAIN_FW_SIZE        634880 // 0x9B000‬ // 620 KB
+#define MAX_WIFI_FW_SIZE        1572864 // 0x180000‬ // 1.5 MB
 /* =============================================================================
     Conductor
 ============================================================================= */
@@ -61,7 +66,7 @@ class Conductor
         static const uint32_t wifiStatusUpdateDelay = 5000;  // ms
         static const uint32_t wifiInfoPublicationDelay = 300000;  // ms
         // OTA Update in progress, timoue for packet ack from STM
-        static const uint32_t otaPktAckTimeout = 15000;  // ms
+        static const uint32_t otaPktAckTimeout = 30000;  // ms
         static const uint32_t otaPktReadTimeout = 50000; //ms;
         static const uint32_t otaHttpTimeout = 60000; //ms;
         /***** Core *****/
@@ -164,8 +169,8 @@ class Conductor
         char otaEsp_uri[512];
         char ota_uri[512];
         HTTPClient http_ota;
-        int contentLen = 0;
-        int fwdnldLen = 0;
+        uint32_t contentLen = 0;
+        uint32_t fwdnldLen = 0;
         uint32_t totlen = 0;
         uint32_t pktWaitTimeStr = 0;
         bool otaInProgress = false;
