@@ -768,7 +768,7 @@ void loop()
         }
         //check flash runtime
         uint32_t current = millis();
-        if ((current - flashCheckLastDone > flashCheckInterval) && conductor.getDatetime() > 1570000000.00 && iuWiFi.isConnected()) {
+        if (current - flashCheckLastDone > flashCheckInterval) {
             flashCheckLastDone = current;
             if(DOSFS.exists("temp.conf"))
             {  
