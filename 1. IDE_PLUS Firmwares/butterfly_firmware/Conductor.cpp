@@ -4588,10 +4588,10 @@ uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
     ValidationFile->print(audioDB4096Computer.dBresult);
     ValidationFile->println(F(" dB"));
 
-    if ( (audioDB4096Computer.dBresult < 58.0) && (audioDB4096Computer.dBresult > 160.0) ){
-        ValidationFile->println(F("   Validation [AUD]-Read Acoustic: Fail !"));
-        otaRtryValidation++;
-    }
+    // if ( (audioDB4096Computer.dBresult < 58.0) && (audioDB4096Computer.dBresult > 160.0) ){
+    //     ValidationFile->println(F("   Validation [AUD]-Read Acoustic: Fail !"));
+    //     otaRtryValidation++;
+    // }
     return otaRtryValidation;
 
 // To be added Keonics sensor
