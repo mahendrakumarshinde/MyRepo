@@ -395,6 +395,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         
         }
         if(dataWritten == true){
+          iuFlash.writeInternalFlash(1,CONFIG_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
           configureMQTTServer("MQTT.conf");
           //send Ack to BLE
           iuBluetooth.write("MQTT-RECEVIED");
