@@ -15,7 +15,8 @@
 
 #include "SegmentedMessage.h"
 #define MAX_SEGMENTED_MESSAGES 5
-
+#define FLASH_ERROR 1
+#define FLASH_SUCCESS 0
 /* =============================================================================
     Operation Mode
 ============================================================================= */
@@ -253,6 +254,8 @@ class Conductor
         static const uint32_t fwDnldStartTmout = 60000;
         uint32_t otaFwdnldTmout = 0;
         bool waitingDnldStrart = false;
+        void sendFlashStatusMsg(int flashStatus, char *deviceStatus);
+        bool flashStatusFlag = false;
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/

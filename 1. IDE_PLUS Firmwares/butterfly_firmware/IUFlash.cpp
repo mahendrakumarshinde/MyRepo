@@ -470,15 +470,30 @@ void IUFSFlash::writeInternalFlash(uint8_t type, uint32_t address, uint8_t dataL
   char allData[255];
   dataSize = sizeof(type)+sizeof(dataLength)+dataLength;
   stm32l4_flash_erase(address, 2048);
-
+  debugPrint("ALL Zize : ");
+  debugPrint(sizeof(type));
+  debugPrint(sizeof(dataLength));
+  debugPrint(dataLength);
   delay(1000);
   allData[0] = type;
   allData[1] = dataLength;
   sprintf(&allData[2],"%s",data);
-  bool Status = stm32l4_flash_program(address, (const uint8_t*)allData,dataSize);
-   Serial.println(Status);
+  debugPrint("ALL DATA : ");
+  debugPrint(allData[0]);
+  debugPrint(allData[1]);
+  stm32l4_flash_program(address, (const uint8_t*)allData,dataSize);
 }
 
+bool IUFSFlash::checkConfig(uint32_t address)
+{
+    uint8_t presence;
+    presence = *(uint8_t*)(address );
+    if(presence == 0x01)
+    {
+        return true;
+    }
+    return false;
+}
 /* =============================================================================
     IUSPIFlash - Flash accessible via SPI
 ============================================================================= */

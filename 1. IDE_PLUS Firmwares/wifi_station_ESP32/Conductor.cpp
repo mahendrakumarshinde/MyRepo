@@ -412,6 +412,9 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             mqttHelper.publish(COMMAND_RESPONSE_TOPIC,buffer);
                    
             break;
+        case MSPCommand::SEND_FLASH_STATUS:
+            mqttHelper.publish(DIAGNOSTIC_TOPIC,buffer);                 
+            break;
        /* case MSPCommand::SEND_ACCOUNTID:
          {
              //accountID =  buffer;

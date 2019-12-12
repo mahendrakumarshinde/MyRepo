@@ -374,7 +374,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     if (subConfig.success()) {
         //configureAllFeatures(subConfig);
         bool dataWritten = false;
-        
+        iuFlash.writeInternalFlash(1,CONFIG_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
         if (saveToFlash) {
             //DOSFS.begin();
             File mqttFile = DOSFS.open("MQTT.conf", "w");
@@ -1074,13 +1074,59 @@ void Conductor::readForceOtaConfig()
   // Parse the root object
   JsonObject &root = jsonBuffer.parseObject(myFile);
 
-  if (!root.success()){
+  if (!root.success() && !iuFlash.checkConfig(CONFIG_FLASH_ADDRESS)){
     debugPrint(F("Failed to read MQTT.conf file, using default configuration"));
     m_mqttServerIp = MQTT_DEFAULT_SERVER_IP;
     m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
     m_mqttUserName = MQTT_DEFAULT_USERNAME;
     m_mqttPassword = MQTT_DEFAULT_ASSWORD;
     //m_accountid = "XXXAdmin";
+  }
+  else if(iuFlash.checkConfig(CONFIG_FLASH_ADDRESS) && !root.success()){
+        String mqttConfig = iuFlash.readInternalFlash(CONFIG_FLASH_ADDRESS);
+        debugPrint(mqttConfig);
+        JsonObject &config = jsonBuffer.parseObject(mqttConfig);
+        if(config.success() && strncmp(mqttConfig.c_str(),"{\"mqtt\"",7)==0)
+        {
+            debugPrint("Mqtt Config Found");
+            String mqttServerIP = config["mqtt"]["mqttServerIP"];
+
+            int mqttport = config["mqtt"]["port"];
+            //debugPrint("INside MQTT.conf .......");
+            m_mqttServerIp.fromString(mqttServerIP);//mqttServerIP;
+            m_mqttServerPort = mqttport;
+            m_mqttUserName = config["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
+            m_mqttPassword = config["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
+            m_accountId = config["accountid"];
+            File mqttFile = DOSFS.open("MQTT.conf","w");
+            if(mqttFile)
+            {
+                mqttFile.print(mqttConfig);
+                debugPrint("MQTT.conf File write Success");
+                flashStatusFlag = true;
+                mqttFile.close();
+            }
+
+            iuWiFi.hardReset();
+            if (debugMode) {
+                debugPrint(F("MQTT ServerIP :"),false);
+                debugPrint(m_mqttServerIp);
+                debugPrint(F("Mqtt Port :"),false);
+                debugPrint(m_mqttServerPort);
+                debugPrint(F("Mqtt UserName :"),false);
+                debugPrint(m_mqttUserName);
+                debugPrint(F("Mqtt Password :"),false);
+                debugPrint(m_mqttPassword);
+                debugPrint(F("Account ID :"));
+                debugPrint(m_accountId);
+            }   
+        }else{
+            debugPrint(F("Failed to read MQTT.conf file, using default configuration"));
+            m_mqttServerIp = MQTT_DEFAULT_SERVER_IP;
+            m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
+            m_mqttUserName = MQTT_DEFAULT_USERNAME;
+            m_mqttPassword = MQTT_DEFAULT_ASSWORD;
+        }
   }
  else {
   
@@ -2301,7 +2347,6 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
               m_mqttUserName = MQTT_DEFAULT_USERNAME;
               m_mqttPassword = MQTT_DEFAULT_ASSWORD;
             }
-
             //Serial.print("UserName :");Serial.println(m_mqttUserName);
             //Serial.print("Password 1 :");Serial.println(m_mqttPassword);
             
@@ -2313,7 +2358,6 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                                   m_mqttUserName);// MQTT_DEFAULT_USERNAME);
             iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_PASSWORD,
                                   m_mqttPassword); //MQTT_DEFAULT_ASSWORD);
-            
            break;
           }
          //case MSPCommand::SEND_FINGERPRINT_ACK:
@@ -4778,4 +4822,29 @@ void Conductor::otaFWValidation()
         }                  
     }
 #endif
+}
+
+/**
+ * @brief 
+ * Send Flash Status Message
+ * @param None 
+ * @return None 
+ */
+void Conductor::sendFlashStatusMsg(int flashStatus, char *deviceStatus)
+{
+    char falshStatusResponse[256];
+    char falshStatusCode[20];
+    double timeStamp = conductor.getDatetime();     
+    switch(flashStatus)
+        {
+            case FLASH_SUCCESS:
+                strcpy(falshStatusCode,"FLASH-RCA-0000");
+                break;
+            case FLASH_ERROR:
+                strcpy(falshStatusCode,"FLASH-RCA-0001");
+                break;
+        }       
+    snprintf(falshStatusResponse, 256, "{ \"flashStatus\":{\"mac\":\"%s\",\"flash_status\":\"%s\",\"device_status\":\"%s\",\"timestamp\":%.2f}",
+        m_macAddress.toString().c_str(),falshStatusCode, deviceStatus ,timeStamp);
+    iuWiFi.sendMSPCommand(MSPCommand::SEND_FLASH_STATUS,falshStatusResponse);
 }

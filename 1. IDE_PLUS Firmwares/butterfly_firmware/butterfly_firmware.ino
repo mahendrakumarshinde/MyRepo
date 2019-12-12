@@ -114,6 +114,9 @@ bool doOnce = true;
 uint32_t interval = 30000;
 uint32_t lastDone = 0;
 
+/**Flash Check Timer variable**/
+uint32_t flashCheckInterval = 60000;
+uint32_t flashCheckLastDone = 0;
 
 /***** Main operator *****/
 
@@ -429,6 +432,16 @@ void setup()
                 debugPrint("File Read Failed...Formating Flash Please wait");
                 DOSFS.format();
                 debugPrint("Formated Successfully");
+                File tempFile = DOSFS.open("temp.conf","w");
+                if(tempFile)
+                {
+                    tempFile.print("SUCCESS");
+                    tempFile.flush();
+                    tempFile.close();
+                    debugPrint("File Write Success");
+                }else{
+                    debugPrint("Formated failed");
+                }
             }
             tempFile.close();
             
@@ -635,6 +648,7 @@ void setup()
         delay(5000);
         //configure mqttServer
         conductor.configureMQTTServer("MQTT.conf");
+
         //http configuration
         conductor.configureBoardFromFlash("httpConfig.conf",1);
         // get the previous offset values 
@@ -696,7 +710,11 @@ void loop()
                 debugPrint("Current minAgitation: ", false); debugPrint(FFTConfiguration::currentMinAgitation);
             }
         // }
-       
+        if (iuWiFi.isConnected() == true && conductor.flashStatusFlag == true && conductor.getDatetime() > 1570000000.00)
+        {
+            conductor.sendFlashStatusMsg(FLASH_SUCCESS,"Flash Recovery Successfull..Send the configuration");
+            conductor.flashStatusFlag = false;
+        }
         conductor.manageSleepCycles();
         // Receive messages & configurations
         iuUSB.readMessages();
@@ -738,7 +756,35 @@ void loop()
                 ledManager.showStatus(&STATUS_NO_STATUS);
             }
         }
-
+        //check flash runtime
+        uint32_t current = millis();
+        if (current - flashCheckLastDone > flashCheckInterval) {
+            flashCheckLastDone = current;
+            if(DOSFS.exists("temp.conf"))
+            {  
+                File tempFile = DOSFS.open("temp.conf","r");
+                String fileContent = tempFile.readString();
+                debugPrint("File Present");
+                if(strcmp(fileContent.c_str(),"SUCCESS")==0)
+                {
+                    debugPrint("File Read Success");
+                }
+                else
+                {
+                    debugPrint("File Read Failed...Rebooting...");
+                    delay(3000);
+                    STM32.reset();
+                }
+                    tempFile.close();
+            }
+            else
+            {
+                debugPrint("File Read Failed...Rebooting...");
+                conductor.sendFlashStatusMsg(FLASH_ERROR,"Rebooting");
+                delay(3000);
+                STM32.reset();
+            }
+        }
         // Consume ready segmented message
         char configMessageFromBLE[MESSAGE_LENGTH+1];
         if (conductor.consumeReadySegmentedMessage(configMessageFromBLE)) {
