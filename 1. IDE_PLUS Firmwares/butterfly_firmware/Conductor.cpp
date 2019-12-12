@@ -1101,7 +1101,8 @@ void Conductor::readForceOtaConfig()
             File mqttFile = DOSFS.open("MQTT.conf","w");
             if(mqttFile)
             {
-                mqttFile.print(mqttConfig);
+                mqttFile.print(mqttConfig.c_str());
+                mqttFile.flush();
                 debugPrint("MQTT.conf File write Success");
                 flashStatusFlag = true;
                 mqttFile.close();
@@ -1840,6 +1841,7 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     _Password = config["mqtt"]["password"];
 
                     iuUSB.port->println("*****MQTT_CONFIG*****");
+                    iuUSB.port->println("MQTT.conf File Found");
                     iuUSB.port->print("MQTT_SERVER_IP : ");
                     iuUSB.port->println(_serverIP);
                     iuUSB.port->print("MQTT_PORT : ");
@@ -1848,9 +1850,34 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuUSB.port->println(_UserName);
                     iuUSB.port->print("MQTT_PASSWORD : ");
                     iuUSB.port->println(_Password);
-                  }else
+                  }else if(iuFlash.checkConfig(CONFIG_FLASH_ADDRESS))
                   {
-                      debugPrint("MQTT.conf file does not exists");
+                    String mqttConfig = iuFlash.readInternalFlash(CONFIG_FLASH_ADDRESS);
+                    StaticJsonBuffer<512> jsonBuffer;
+                    JsonObject &config = jsonBuffer.parseObject(mqttConfig);
+                    if(config.success() && strncmp(mqttConfig.c_str(),"{\"mqtt\"",7)==0)
+                    {
+                        String mqttServerIP = config["mqtt"]["mqttServerIP"];
+                        int mqttport = config["mqtt"]["port"];
+                        //debugPrint("INside MQTT.conf .......");
+                        m_mqttServerIp.fromString(mqttServerIP);//mqttServerIP;
+                        m_mqttServerPort = mqttport;
+                        m_mqttUserName = config["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
+                        m_mqttPassword = config["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
+                        m_accountId = config["accountid"];
+                    }
+                    iuUSB.port->println("*****MQTT_CONFIG*****");
+                    iuUSB.port->println("MQTT.conf File not found. Using Last configurations");
+                    iuUSB.port->print("MQTT_SERVER_IP : ");
+                    iuUSB.port->println(m_mqttServerIp);
+                    iuUSB.port->print("MQTT_PORT : ");
+                    iuUSB.port->println(m_mqttServerPort);
+                    iuUSB.port->print("MQTT_USERNAME : ");
+                    iuUSB.port->println(m_mqttUserName);
+                    iuUSB.port->print("MQTT_PASSWORD : ");
+                    iuUSB.port->println(m_mqttPassword);
+                  }else{
+                    iuUSB.port->println("No MQTT Configuration found, using Default MQTT Configurations");
                   }
                   
                 }  
@@ -2342,11 +2369,31 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             //Serial.print("USERNAME :");Serial.println(m_mqttUserName); Serial.print("PASSWORD:");Serial.println(m_mqttPassword);
             if(m_mqttUserName == NULL || m_mqttPassword == NULL || m_mqttServerPort == NULL){
               // load default configurations
-              //m_mqttServerIp = MQTT_DEFAULT_SERVER_IP;
-              m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
-              m_mqttUserName = MQTT_DEFAULT_USERNAME;
-              m_mqttPassword = MQTT_DEFAULT_ASSWORD;
+                String mqttConfig = iuFlash.readInternalFlash(CONFIG_FLASH_ADDRESS);
+                debugPrint(mqttConfig);
+                StaticJsonBuffer<512> jsonBuffer;
+                JsonObject &config = jsonBuffer.parseObject(mqttConfig);
+                if(config.success() && strncmp(mqttConfig.c_str(),"{\"mqtt\"",7)==0)
+                {
+                debugPrint("Mqtt Config Found");
+                String mqttServerIP = config["mqtt"]["mqttServerIP"];
+
+                int mqttport = config["mqtt"]["port"];
+                //debugPrint("INside MQTT.conf .......");
+                m_mqttServerIp.fromString(mqttServerIP);//mqttServerIP;
+                m_mqttServerPort = mqttport;
+                m_mqttUserName = config["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
+                m_mqttPassword = config["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
+                m_accountId = config["accountid"];
+                }
+                else{
+                m_mqttServerIp = MQTT_DEFAULT_SERVER_IP;
+                m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
+                m_mqttUserName = MQTT_DEFAULT_USERNAME;
+                m_mqttPassword = MQTT_DEFAULT_ASSWORD;
+                }
             }
+           
             //Serial.print("UserName :");Serial.println(m_mqttUserName);
             //Serial.print("Password 1 :");Serial.println(m_mqttPassword);
             

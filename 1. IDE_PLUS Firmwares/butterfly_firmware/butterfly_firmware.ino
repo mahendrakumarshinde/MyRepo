@@ -115,7 +115,7 @@ uint32_t interval = 30000;
 uint32_t lastDone = 0;
 
 /**Flash Check Timer variable**/
-uint32_t flashCheckInterval = 60000;
+uint32_t flashCheckInterval = 300000;
 uint32_t flashCheckLastDone = 0;
 
 /***** Main operator *****/
@@ -419,7 +419,7 @@ void setup()
         }
         iuI2C.begin();
         iuI2C1.begin();
-        // Flash Test
+        /***Flash Test****/
         if(DOSFS.exists("temp.conf"))
         {  
             File tempFile = DOSFS.open("temp.conf","r");
@@ -454,9 +454,19 @@ void setup()
                 tempFile.close();
                 debugPrint("File Write Success");
             }else{
-                debugPrint("Unable to Write file..Formating Flash Please wait");
+                debugPrint("File Read Failed...Formating Flash Please wait");
                 DOSFS.format();
                 debugPrint("Formated Successfully");
+                File tempFile = DOSFS.open("temp.conf","w");
+                if(tempFile)
+                {
+                    tempFile.print("SUCCESS");
+                    tempFile.flush();
+                    tempFile.close();
+                    debugPrint("File Write Success");
+                }else{
+                    debugPrint("Formated failed");
+                }
             }
         }
         // Interfaces
@@ -758,7 +768,7 @@ void loop()
         }
         //check flash runtime
         uint32_t current = millis();
-        if (current - flashCheckLastDone > flashCheckInterval) {
+        if ((current - flashCheckLastDone > flashCheckInterval) && conductor.getDatetime() > 1570000000.00 && iuWiFi.isConnected()) {
             flashCheckLastDone = current;
             if(DOSFS.exists("temp.conf"))
             {  
@@ -772,6 +782,7 @@ void loop()
                 else
                 {
                     debugPrint("File Read Failed...Rebooting...");
+                    conductor.sendFlashStatusMsg(FLASH_ERROR,"Rebooting");
                     delay(3000);
                     STM32.reset();
                 }
