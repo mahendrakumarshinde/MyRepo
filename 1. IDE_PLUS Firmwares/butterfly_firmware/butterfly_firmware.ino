@@ -164,7 +164,7 @@ void operationStateCallback(Feature *feature) {
 
 static armv7m_timer_t watchdogTimer;
 uint32_t lastActive = 0;
-uint32_t loopTimeout = 60000;  // 1min timeout
+uint32_t loopTimeout = 120000;  // 2min timeout
 uint32_t oneDayTimeout = 86400000;
 
 static void watchdogCallback(void) {
@@ -172,6 +172,8 @@ static void watchdogCallback(void) {
     if (now > oneDayTimeout ||
         (lastActive > 0 && now - lastActive > loopTimeout))
     {
+        DOSFS.end();
+        delay(10);
         STM32.reset();
     }
     if(conductor.getUsageMode() != UsageMode::OTA) {

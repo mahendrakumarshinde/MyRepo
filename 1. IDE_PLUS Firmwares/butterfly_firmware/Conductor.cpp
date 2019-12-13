@@ -530,6 +530,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
           //stm reset
           delay(10);
           if(strcmp( host, m_httpHost) != 0  || port != m_httpPort || strcmp(httpPath, m_httpPath) != 0 ){
+                DOSFS.end();
+                delay(10);
                 STM32.reset();
           }
           
@@ -735,6 +737,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 
                 // Restart STM, setFFTParams will configure FFT parameters in setup()
                 delay(3000);  // wait for MQTT message to be published
+                DOSFS.end();
+                delay(10);
                 STM32.reset();
             }
         } else {
@@ -930,6 +934,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                                 debugPrint("Rebooting Device.....");
                             }
                             delay(2000);
+                            DOSFS.end();
+                            delay(10);
                             STM32.reset();
                         }
                         else
@@ -1081,6 +1087,7 @@ void Conductor::readForceOtaConfig()
     m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
     m_mqttUserName = MQTT_DEFAULT_USERNAME;
     m_mqttPassword = MQTT_DEFAULT_ASSWORD;
+    flashStatusFlag = true;
     //m_accountid = "XXXAdmin";
   }
   else if(iuFlash.checkConfig(CONFIG_FLASH_ADDRESS) && !root.success()){
@@ -1454,6 +1461,7 @@ void Conductor::processCommand(char *buff)
                 if (isBLEConnected()) {
                     iuBluetooth.write("WIFI-DISCONNECTED;");
                 }
+                DOSFS.end();
                 delay(10);
                 STM32.reset();          
             }
@@ -1907,7 +1915,17 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     }
                     
                 }
-                
+                if (strcmp(buff, "IUSET_ERASE_FLASH") == 0)
+                {
+                    debugPrint("Formating Flash Please wait");
+                    ledManager.overrideColor(RGB_RED);
+                    DOSFS.format();
+                    ledManager.overrideColor(RGB_WHITE);
+                    DOSFS.end();
+                    debugPrint("Format Successfully");
+                    delay(2000);
+                    STM32.reset();
+                }
                 break;
             case UsageMode::CUSTOM:
                 if (strcmp(buff, "IUEND_DATA") == 0) {
@@ -2168,6 +2186,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 delay(1000);
                 if (loopDebugMode) { debugPrint(F("Rebooting device for FW Upgrade......")); }
                 delay(500);
+                DOSFS.end();
+                delay(10);
                 STM32.reset();
             }
             else
@@ -3663,6 +3683,8 @@ void Conductor::setConductorMacAddress() {
                         debugPrint("RESET THE DEVICE All Retries Failed.");
                     }
                     delay(1000);
+                    DOSFS.end();
+                    delay(10);
                     STM32.reset();
                 }  
                 
@@ -4823,6 +4845,8 @@ void Conductor::otaFWValidation()
                     }
                 }
                 delay(2000);
+                DOSFS.end();
+                delay(10);
                 STM32.reset();
             }
             else if(ret == OTA_VALIDATION_SUCCESS)
@@ -4846,7 +4870,9 @@ void Conductor::otaFWValidation()
                 /*  Initialize OTA FW Validation retry count */
                 iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);
                 if (loopDebugMode) debugPrint("OTA FW Validation Successful. Rebooting device....");
-                delay(2000);                
+                delay(2000);
+                DOSFS.end();
+                delay(10);               
                 STM32.reset();
             }
             else if(ret == OTA_VALIDATION_FAIL)
@@ -4861,6 +4887,8 @@ void Conductor::otaFWValidation()
                     debugPrint("Initiating Rollback Rollback. Rebooting Device.....");
                 }
                 delay(2000);
+                DOSFS.end();
+                delay(10);
                 STM32.reset();
             }
         }
@@ -4939,6 +4967,8 @@ void Conductor::periodicFlashTest()
             debugPrint("File Read Failed...Rebooting...");
             conductor.sendFlashStatusMsg(FLASH_ERROR,"Rebooting");
             delay(3000);
+            DOSFS.end();
+            delay(10);
             STM32.reset();
         }
             tempFile.close();
@@ -4948,6 +4978,8 @@ void Conductor::periodicFlashTest()
         debugPrint("File Read Failed...Rebooting...");
         conductor.sendFlashStatusMsg(FLASH_ERROR,"Rebooting");
         delay(3000);
+        DOSFS.end();
+        delay(10);
         STM32.reset();
     }
 }
