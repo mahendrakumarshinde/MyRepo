@@ -5003,7 +5003,7 @@ void Conductor::sendFlashStatusMsg(int flashStatus, char *deviceStatus)
                 strcpy(falshStatusCode,"FLASH-RCA-0001");
                 break;
         }       
-    snprintf(falshStatusResponse, 256, "{ \"flashStatus\":{\"mac\":\"%s\",\"flash_status\":\"%s\",\"device_status\":\"%s\",\"timestamp\":%.2f}",
+    snprintf(falshStatusResponse, 256, "{ \"flashStatus\":{\"mac\":\"%s\",\"flash_status\":\"%s\",\"device_status\":\"%s\",\"timestamp\":%.2f}}",
         m_macAddress.toString().c_str(),falshStatusCode, deviceStatus ,timeStamp);
     iuWiFi.sendMSPCommand(MSPCommand::SEND_FLASH_STATUS,falshStatusResponse);
 }
