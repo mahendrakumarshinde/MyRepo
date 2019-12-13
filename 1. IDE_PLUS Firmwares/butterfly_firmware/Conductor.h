@@ -103,6 +103,13 @@ class Conductor
                                   AUTO     = 1,
                                   PERIODIC = 2,
                                   COUNT    = 3};
+        enum SensorStatusCode : uint8_t {LSM_SET = 0,
+                                        KNX_SET = 1,
+                                        LSM_ABS = 2,
+                                        KNX_ABS = 3,
+                                        LSM_DEFAULT = 4,
+                                        SEN_ABS = 5
+                                        };
         static const uint32_t defaultAutoSleepDelay = 60000;
         static const uint32_t defaultSleepDuration = 10000;
         static const uint32_t defaultCycleTime = 20000;
@@ -185,6 +192,7 @@ class Conductor
         void endDataAcquisition();
         bool resetDataAcquisition();
         void acquireData(bool inCallback);
+        void acquireTemperatureAudioData();
         void computeFeatures();
         void streamFeatures();
         void sendAccelRawData(uint8_t axisIdx);
@@ -239,6 +247,10 @@ class Conductor
         uint32_t RawDataTimeout = 0;
         double rawDataRecordedAt, lastPacketSentToESP;
         IUMessageFormat::rawDataPacket rawData;
+
+        //Send Sensor error codes
+        void setSensorStatus(SensorStatusCode errorCode);
+        void sendSensorStatus();
         
         void otaChkFwdnldTmout();
         uint32_t firmwareValidation();
@@ -307,6 +319,9 @@ class Conductor
         double last_fingerprint_timestamp = 0;
         bool computed_first_fingerprint_timestamp = false;
         SegmentedMessage segmentedMessages[MAX_SEGMENTED_MESSAGES]; // atmost MAX_SEGMENTED_MESSAGES can be captured in interleaved manner
+        
+        char status[50];
+        SensorStatusCode statusCode;
         char m_otaStmUri[512];
         char m_otaEspUri[512];
         char stmHash[34];

@@ -12,14 +12,14 @@ Type - Standard vEdge Firmware Release
 #include "BoardDefinition.h"
 #include "Conductor.h"
 #include "FFTConfiguration.h"
-
 #include <MemoryFree.h>
 #include <Timer.h>
 #include <FS.h>
+#include "RawDataState.h"
 //#include"IUTimer.h"
 
 const uint8_t ESP32_IO0  =  7;  // IDE1.5_PORT_CHANGE
-
+bool sensorStatus = true;
 #ifdef DRAGONFLY_V03
 #else
     // FIXME For some reason, if this is included in conductor,
@@ -271,10 +271,7 @@ void dataAcquisitionCallback()
  */
 void dataAcquisitionISR()
 {
-
-    // digitalWrite(A3,HIGH);
     conductor.acquireData(true);
-    //   digitalWrite(A3,LOW);
 }
 
 
@@ -394,8 +391,7 @@ void timerInit(void)
 void setup()
 {   
   
-  pinMode(ESP32_IO0,OUTPUT); // IDE1.5_PORT_CHANGE
-//   pinMode(6,OUTPUT); 
+  pinMode(ESP32_IO0,OUTPUT);
 //   pinMode(A3,OUTPUT);  // ISR (ODR checked from pin 50)
   digitalWrite(ESP32_IO0,HIGH); // IDE1.5_PORT_CHANGE
   DOSFS.begin();
@@ -502,11 +498,12 @@ void setup()
         {
             debugPrint("BLE Chip is Available, BLE init Complete");
         }
+       
+        //       // httpConfig message read timerCallback
+        // armv7m_timer_create(&httpConfigTimer, (armv7m_timer_callback_t)httpConfigCallback);
+        // armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min Timer 180000
 
-        // httpConfig message read timerCallback
-        //armv7m_timer_create(&httpConfigTimer, (armv7m_timer_callback_t)httpConfigCallback);
-        //armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min Timer 180000
-        
+
         // WIFI SETUP BEGIN
         iuWiFi.setupHardware();
         iuWiFi.setOnNewMessageCallback(onNewWiFiMessage);
@@ -538,7 +535,9 @@ void setup()
         }
 
         iuFlash.begin();
-
+        debugPrint(F("Initilizing Kionix and Lsm"));
+        iuAccelerometer.setupHardware();
+        iuAccelerometerKX222.setupHardware();
         // Update the configuration of FFT computers from fft.conf
         if(conductor.setFFTParams()) {
             if(setupDebugMode) {
@@ -551,11 +550,12 @@ void setup()
                 debugPrint(": samplingRate = ", false); debugPrint(FFTConfiguration::DEFAULT_SAMPLING_RATE, false);
                 debugPrint(": block size = ", false); debugPrint(FFTConfiguration::DEFAULT_BLOCK_SIZE, false);
             }
+            conductor.setSensorStatus(conductor.SensorStatusCode::LSM_DEFAULT);
         }
 
         // Sensors
         if (debugMode) {
-            debugPrint(F("\nInitializing sensors..."));
+            debugPrint(F("\nInitializing sensors and updating"));
         }
         uint16_t callbackRate = iuI2S.getCallbackRate();
         for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
@@ -626,10 +626,23 @@ void setup()
         ledManager.resetStatus();
         conductor.changeUsageMode(UsageMode::OPERATION);
         /* code uncommented */
-        pinMode(IULSM6DSM::INT1_PIN, INPUT);
-        attachInterrupt(IULSM6DSM::INT1_PIN, dataAcquisitionISR, RISING);
+        if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor && iuAccelerometer.lsmPresence)
+        {
+            pinMode(IULSM6DSM::INT1_PIN, INPUT);
+            attachInterrupt(digitalPinToInterrupt(IULSM6DSM::INT1_PIN), dataAcquisitionISR, RISING);
         // debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
-
+        }
+        else if ( FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor && iuAccelerometerKX222.kionixPresence)
+        {
+            pinMode(IUKX222::INT1_PIN,INPUT);
+            attachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN),dataAcquisitionISR,RISING);
+        }
+        else
+        {
+            debugPrint(F("LSM and kionix Not found"));
+        }
+        
+        // debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
         //Resume previous operational state of device
         conductor.setThresholdsFromFile();
         // Get OTA status flag and take appropraite action    
@@ -672,6 +685,7 @@ void loop()
                 debugPrint("Current lowCutOffFrequency: ", false); debugPrint(FFTConfiguration::currentLowCutOffFrequency);
                 debugPrint("Current highCutOffFrequency: ", false); debugPrint(FFTConfiguration::currentHighCutOffFrequency);
                 debugPrint("Current minAgitation: ", false); debugPrint(FFTConfiguration::currentMinAgitation);
+                debugPrint(F("Sensor:"),false);debugPrint(FFTConfiguration::currentSensor);
             }
         // }
         if (iuWiFi.isConnected() == true && conductor.flashStatusFlag == true && conductor.getDatetime() > 1570000000.00)
@@ -679,10 +693,18 @@ void loop()
             conductor.sendFlashStatusMsg(FLASH_SUCCESS,"Flash Recovery Successfull..Send the configuration");
             conductor.flashStatusFlag = false;
         }
+        if (iuWiFi.isConnected() == true && sensorStatus == true && conductor.getDatetime() > 1570000000.00)
+        {
+            conductor.sendSensorStatus();
+            sensorStatus = false;
+        }
         conductor.manageSleepCycles();
         // Receive messages & configurations
-        iuUSB.readMessages();
-        iuBluetooth.readMessages();
+        if(conductor.getUsageMode() != UsageMode::OTA) {
+            /* Block BLE messages during OTA download */
+            iuUSB.readMessages();
+            iuBluetooth.readMessages();
+        }
         if (iuBluetooth.isBLEAvailable) //  iuEthernet.isEthernetConnected :0 -> connected, 1-> not connected
         {
             iuWiFi.readMessages();
@@ -690,14 +712,35 @@ void loop()
             iuEthernet.readMessages();
         }
         if(conductor.getUsageMode() != UsageMode::OTA) {
+            /* Block Data acquistion, computation, streaming during OTA download */
             // Manage WiFi autosleep
             iuWiFi.manageAutoSleep();
             // Acquire data from sensors
-            conductor.acquireData(false);
+            //conductor.acquireData(false);
+            conductor.acquireTemperatureAudioData();
             // Compute features depending on operation mode
             conductor.computeFeatures();
             // Stream features
             conductor.streamFeatures();
+            // Firmware Serial Execution 
+            if (FeatureStates::isISRActive)
+            {   
+                //Serial.println("attachInterrupt Again !!!!");
+                //Feature::ISRcount = 0;
+                //FeatureStates::isrCount=0;
+                if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+                {
+                    attachInterrupt(digitalPinToInterrupt(IULSM6DSM::INT1_PIN), dataAcquisitionISR, RISING);
+                }
+                else
+                {
+                    attachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN),dataAcquisitionISR,RISING);
+                }
+                FeatureStates::isISRDisabled = false;
+                FeatureStates::isISRActive = false;
+                // Serial.println("ISR Enabled !!!");
+                
+            }
             // Send accel raw data
             conductor.periodicSendAccelRawData();
             // Send config checksum
@@ -720,30 +763,31 @@ void loop()
                 ledManager.showStatus(&STATUS_NO_STATUS);
             }
         }
-        //check flash runtime
-        uint32_t current = millis();
-        if (current - flashCheckLastDone > flashCheckInterval) {
-            flashCheckLastDone = current;
-            conductor.periodicFlashTest();
-        }
-        // Consume ready segmented message
-        char configMessageFromBLE[MESSAGE_LENGTH+1];
-        if (conductor.consumeReadySegmentedMessage(configMessageFromBLE)) {
-            // TODO: if all messages [0->MAX_SEGMENTED_MESSAGES-1] are ready, the later messages
-            // might time out which the first few messages are being consumed. Add logic to 
-            // extend timeout for later messages if former messages are being consumed.
-            #ifdef IU_DEBUG_SEGMENTED_MESSAGES
-            debugPrint("DEBUG: LOOP: configMessageFromBLE: ", false); debugPrint(configMessageFromBLE);
-            #endif
-            conductor.processConfiguration(configMessageFromBLE, true);
-        }        
+        if(conductor.getUsageMode() != UsageMode::OTA) { /* Block BLE messages, raw data during OTA download */
 
-        // Clean consumed segmented messages
-        conductor.cleanConsumedSegmentedMessages();
+            uint32_t current = millis();
+            if (current - flashCheckLastDone > flashCheckInterval) {
+                flashCheckLastDone = current;
+                conductor.periodicFlashTest();
+            }
+            // Consume ready segmented message
+            char configMessageFromBLE[MESSAGE_LENGTH+1];
+            if (conductor.consumeReadySegmentedMessage(configMessageFromBLE)) {
+                // TODO: if all messages [0->MAX_SEGMENTED_MESSAGES-1] are ready, the later messages
+                // might time out which the first few messages are being consumed. Add logic to 
+                // extend timeout for later messages if former messages are being consumed.
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+                debugPrint("DEBUG: LOOP: configMessageFromBLE: ", false); debugPrint(configMessageFromBLE);
+                #endif
+                conductor.processConfiguration(configMessageFromBLE, true);
+            }        
 
-        // Clean timed out segmented messages
-        conductor.cleanTimedoutSegmentedMessages();
-        if(conductor.getUsageMode() != UsageMode::OTA) {
+            // Clean consumed segmented messages
+            conductor.cleanConsumedSegmentedMessages();
+
+            // Clean timed out segmented messages
+            conductor.cleanTimedoutSegmentedMessages();
+
             // Manage raw data sending depending on RawDataState::startRawDataTransmission and RawDataState::rawDataTransmissionInProgress
             conductor.manageRawDataSending();
         }
@@ -761,3 +805,4 @@ void loop()
     #endif
   #endif  
 }
+

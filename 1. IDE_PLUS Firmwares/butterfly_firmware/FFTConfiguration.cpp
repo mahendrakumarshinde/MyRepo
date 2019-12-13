@@ -6,4 +6,5 @@ namespace FFTConfiguration {
     int currentLowCutOffFrequency = DEFALUT_LOW_CUT_OFF_FREQUENCY;
     int currentHighCutOffFrequency = DEFAULT_HIGH_CUT_OFF_FREQUENCY;
     float currentMinAgitation = DEFAULT_MIN_AGITATION;
+    bool currentSensor = lsmSensor;
 }

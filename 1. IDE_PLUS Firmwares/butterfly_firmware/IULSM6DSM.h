@@ -82,6 +82,7 @@ class IULSM6DSM : public HighFreqSensor
         static const uint16_t defaultSamplingRate = 3330; // Hz
         uint16_t m_samplingRate = defaultSamplingRate;
         float ambientTemperature = 25.0;
+        bool lsmPresence = false;
         /***** Constructors and destructors *****/
         IULSM6DSM(IUI2C *iuI2C, const char* name,
                   void (*i2cReadCallback)(uint8_t wireStatus),

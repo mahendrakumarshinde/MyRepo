@@ -413,7 +413,12 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                    
             break;
         case MSPCommand::SEND_FLASH_STATUS:
-            mqttHelper.publish(DIAGNOSTIC_TOPIC,buffer);                 
+            mqttHelper.publish(DIAGNOSTIC_TOPIC,buffer); 
+            break;                
+        case MSPCommand::SEND_SENSOR_STATUS:
+          // Send the Ack to Topic
+            mqttHelper.publish(COMMAND_RESPONSE_TOPIC,buffer);
+                   
             break;
        /* case MSPCommand::SEND_ACCOUNTID:
          {
@@ -1225,6 +1230,26 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
                     if(httpCode == HTTP_CODE_OK)
                     {
                         contentLen = http_ota.getSize();
+                        if(!strcmp(ota_uri,otaStm_uri))
+                        {
+                            if(contentLen == 0 || contentLen > MAX_MAIN_FW_SIZE)
+                            {
+                                hostSerial.sendMSPCommand(MSPCommand::OTA_DNLD_FAIL,String(getOtaRca(OTA_INVALID_MAIN_FW_SIZE)).c_str());
+                                waitingForPktAck = false;
+                                http_ota.end();
+                                return false;                           
+                            }
+                        }
+                        else if(!strcmp(ota_uri,otaEsp_uri))
+                        {
+                            if(contentLen == 0 || contentLen > MAX_WIFI_FW_SIZE)
+                            {
+                                hostSerial.sendMSPCommand(MSPCommand::OTA_DNLD_FAIL,String(getOtaRca(OTA_INVALID_WIFI_FW_SIZE)).c_str());
+                                waitingForPktAck = false;
+                                http_ota.end();
+                                return false;                             
+                            }                            
+                        }
                         fwdnldLen = contentLen;
   //                      sprintf(TestStr,"contentLen:%d",contentLen);
   //                      hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,TestStr,32);
@@ -1446,7 +1471,11 @@ String Conductor::getOtaRca(int error)
         case HTTP_CODE_NOT_EXTENDED:
             return F("OTA-RCA-0040");
         case HTTP_CODE_NETWORK_AUTHENTICATION_REQUIRED:
-            return F("OTA-RCA-0041"); 
+            return F("OTA-RCA-0041");
+        case OTA_INVALID_MAIN_FW_SIZE:
+            return F("OTA-RCA-0042");
+        case OTA_INVALID_WIFI_FW_SIZE:
+            return F("OTA-RCA-0043");
         default:
             return F("OTA-RCA-1111");
     }

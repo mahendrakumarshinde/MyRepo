@@ -1611,6 +1611,31 @@ void Conductor::processCommand(char *buff)
                 processConfiguration(audioOffsetJSON,true); 
                 
                 }
+            break; 
+        case 'E' :
+            if (buff[0]=='E' && buff[1]=='N'&&buff[2]=='A'&&buff[3]=='B'&&buff[4]=='L'&&buff[5]=='E') // ENABLE-ISR
+            {
+                //Start the Sensor DATA AcquisitionMode
+                FeatureStates::isISRActive = true;
+                debugPrint(F("ISR-ENABLE from USB !!!"));
+            }
+            break;
+        case 'D' :
+            if (buff[0]=='D' && buff[1]=='I'&&buff[2]=='S'&&buff[3]=='A'&&buff[4]=='B'&&buff[5]=='L'&&buff[6]=='E') // DISABLE-ISR
+            {
+                //Start the Sensor DATA AcquisitionMode
+                if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+                {
+                    detachInterrupt(digitalPinToInterrupt(IULSM6DSM::INT1_PIN));
+                }
+                else
+                {
+                    detachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN));
+                }
+                FeatureStates::isISRActive = false;
+                FeatureStates::isISRDisabled = true;
+                debugPrint(F("ISR-DISABLE form USB !!!"));
+            }
             break;    
             
         default:
@@ -1768,20 +1793,38 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     return;
                 }
                 result = strstr(buff, "Arange");
-                if (result != NULL) {
-                    switch (result[7] - '0') {
-                        case 0:
-                            iuAccelerometer.setScale(iuAccelerometer.AFS_2G);
-                            break;
-                        case 1:
-                            iuAccelerometer.setScale(iuAccelerometer.AFS_4G);
-                            break;
-                        case 2:
-                            iuAccelerometer.setScale(iuAccelerometer.AFS_8G);
-                            break;
-                        case 3:
-                            iuAccelerometer.setScale(iuAccelerometer.AFS_16G);
-                            break;
+                    if (result != NULL) {
+                    
+                    if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+                    {
+                        switch (result[7] - '0') {
+                            case 0:
+                                iuAccelerometer.setScale(iuAccelerometer.AFS_2G);
+                                break;
+                            case 1:
+                                iuAccelerometer.setScale(iuAccelerometer.AFS_4G);
+                                break;
+                            case 2:
+                                iuAccelerometer.setScale(iuAccelerometer.AFS_8G);
+                                break;
+                            case 3:
+                                iuAccelerometer.setScale(iuAccelerometer.AFS_16G);
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        switch (result[7] - '0') {
+                            case 0:
+                                iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_8G);
+                                break;
+                            case 1:
+                                iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_16G);
+                                break;
+                            case 2:
+                                iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_32G);
+                                break;
+                        }
                     }
                     return;
                 }
@@ -1808,7 +1851,14 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     int C = result[8] - '0';
                     int D = result[9] - '0';
                     int samplingRate = (A * 1000 + B * 100 + C * 10 + D);
-                    iuAccelerometer.setSamplingRate(samplingRate);
+                    if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+                    {
+                        iuAccelerometer.setSamplingRate(samplingRate);
+                    }
+                    else
+                    {
+                        iuAccelerometerKX222.setSamplingRate(samplingRate);
+                    }
                 }
                 break;
             case UsageMode::OPERATION:
@@ -1989,20 +2039,38 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                    return; 
                 }  
                 result = strstr(buff, "Arange");
-                if (result != NULL) {
-                    switch (result[7] - '0') {
-                        case 0:
-                            iuAccelerometer.setScale(iuAccelerometer.AFS_2G);
-                            break;
-                        case 1:
-                            iuAccelerometer.setScale(iuAccelerometer.AFS_4G);
-                            break;
-                        case 2:
-                            iuAccelerometer.setScale(iuAccelerometer.AFS_8G);
-                            break;
-                        case 3:
-                            iuAccelerometer.setScale(iuAccelerometer.AFS_16G);
-                            break;
+                                if (result != NULL) {
+                    
+                    if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+                    {
+                        switch (result[7] - '0') {
+                            case 0:
+                                iuAccelerometer.setScale(iuAccelerometer.AFS_2G);
+                                break;
+                            case 1:
+                                iuAccelerometer.setScale(iuAccelerometer.AFS_4G);
+                                break;
+                            case 2:
+                                iuAccelerometer.setScale(iuAccelerometer.AFS_8G);
+                                break;
+                            case 3:
+                                iuAccelerometer.setScale(iuAccelerometer.AFS_16G);
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        switch (result[7] - '0') {
+                            case 0:
+                                iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_8G);
+                                break;
+                            case 1:
+                                iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_16G);
+                                break;
+                            case 2:
+                                iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_32G);
+                                break;
+                        }
                     }
                     return;
                 }
@@ -2029,7 +2097,14 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     int C = result[8] - '0';
                     int D = result[9] - '0';
                     int samplingRate = (A * 1000 + B * 100 + C * 10 + D);
-                    iuAccelerometer.setSamplingRate(samplingRate);
+                    if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+                    {
+                        iuAccelerometer.setSamplingRate(samplingRate);
+                    }
+                    else
+                    {
+                        iuAccelerometerKX222.setSamplingRate(samplingRate);
+                    }
                 }
                 break;
             case UsageMode::OTA:
@@ -2169,6 +2244,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Wifi_FW_MD5);
             iuOta.otaMD5Write(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Wifi_FW_MD5,espHash);
             iuWiFi.sendMSPCommand(MSPCommand::OTA_STM_DNLD_OK);
+            otaFwdnldTmout = millis();
             delay(1);
   //          waitingDnldStrart = false; 
             break;
@@ -2178,8 +2254,18 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 debugPrint(buff);
             } 
             delay(1);
+            otaFwdnldTmout = millis();
             waitingDnldStrart = false;
             sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR,buff);
+            if(!strcmp(String(iuOta.getOtaRca(OTA_WIFI_DISCONNECT)).c_str(),buff))
+            {
+                for(int i = 0 ; i < 15; i++) {
+                    ledManager.overrideColor(RGB_RED);
+                    delay(200);
+                    ledManager.stopColorOverride();
+                    delay(200);
+                }
+            }                
             iuWiFi.m_setLastConfirmedPublication();
             changeUsageMode(UsageMode::OPERATION);
             delay(100); 
@@ -2188,6 +2274,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
 //            Serial.println(F("STM,ESP FW Download Completed !")); 
             if (loopDebugMode) { debugPrint(F("ESP FW Download Completed !")); }
             iuWiFi.sendMSPCommand(MSPCommand::OTA_ESP_DNLD_OK);
+            otaFwdnldTmout = millis();
             waitingDnldStrart = false;
             delay(1);
             if (loopDebugMode) { debugPrint(F("STM,ESP FW Download Completed")); }
@@ -2249,6 +2336,12 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 if (loopDebugMode) { debugPrint(F("OTA File Write Failed, Sending OTA-ERR-FDW-ABORT")); }
                 waitingDnldStrart = false;
                 sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_CHECKSUM_FAIL)).c_str());
+                for(int i = 0 ; i < 15; i++) {
+                    ledManager.overrideColor(RGB_RED);
+                    delay(200);
+                    ledManager.stopColorOverride();
+                    delay(200);
+                }
             }
             delay(1000);
             if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
@@ -2261,7 +2354,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             //    debugPrint(F("OTA_PACKET_DATA Len:"),false);
             //    debugPrint(packetLen);
             }
-            waitingDnldStrart = false;
+//            waitingDnldStrart = false;
+            otaFwdnldTmout = millis();
             if(iuOta.otaFwBinWrite(iuFlash.IUFWTMPIMG_SUBDIR,fwBinFileName, buff, packetLen)) {
                 if (loopDebugMode) { debugPrint(F("Sending OTA_PACKET_ACK")); }
                 iuWiFi.sendMSPCommand(MSPCommand::OTA_PACKET_ACK);
@@ -2273,6 +2367,12 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 }
                 waitingDnldStrart = false;
                 sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_FLASH_RDWR_FAIL)).c_str());
+                for(int i = 0 ; i < 15; i++) {
+                    ledManager.overrideColor(RGB_RED);
+                    delay(200);
+                    ledManager.stopColorOverride();
+                    delay(200);
+                }
                 if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
                 iuWiFi.m_setLastConfirmedPublication();
                 changeUsageMode(UsageMode::OPERATION);
@@ -2357,6 +2457,12 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 if (loopDebugMode) { 
                     debugPrint(F("OTA In Progress - WIFI-DISCONNECTED"));
                     debugPrint(F("Sending OTA-ERR-FDW-ABORT"));
+                }
+                for(int i = 0 ; i < 15; i++) {
+                    ledManager.overrideColor(RGB_RED);
+                    delay(200);
+                    ledManager.stopColorOverride();
+                    delay(200);
                 }
                 // In case WiFi Disconnect/ESP Reset durig OTA, switch to OPERTATION Mode ??
                 sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_WIFI_DISCONNECT)).c_str());
@@ -2564,7 +2670,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
              processConfiguration(featuresThreshold ,true);       // apply features thresholds 
              processConfiguration(fingerprintFeatures ,true);     // apply fingerprintsFeatures configurations 
              processConfiguration(httpConfig ,true);              // apply httpServer configurations 
-              
+             debugPrint("DEBUG INGO : Executed Pending HTTP Configs "); 
              
              break;
             }      
@@ -2990,13 +3096,27 @@ void Conductor::changeUsageMode(UsageMode::option usage)
         case UsageMode::OPERATION_BIS:
             ledManager.stopColorOverride();
             configureGroupsForOperation();
-            iuAccelerometer.resetScale();
+            if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+            {
+                iuAccelerometer.resetScale();
+            }
+            else
+            {
+                iuAccelerometerKX222.resetScale();
+            }
             msg = "operation";
             break;
         case UsageMode::CUSTOM:
             ledManager.overrideColor(RGB_CYAN);
             //configureGroupsForOperation();
-            //iuAccelerometer.resetScale();
+            if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+            {
+                iuAccelerometer.resetScale();
+            }
+            else
+            {
+                iuAccelerometerKX222.resetScale();
+            }
             msg = "custom";
             break;        
         case UsageMode::OTA:
@@ -3078,73 +3198,101 @@ bool Conductor::resetDataAcquisition()
  */
 void Conductor::acquireData(bool inCallback)
 {
-    if (!m_inDataAcquistion || m_acquisitionMode == AcquisitionMode::NONE) {
-        return;
-    }
-    if (iuI2C.isError()) {
-        if (debugMode) {
-            debugPrint(F("I2C error"));
-        }
-        iuI2C.resetErrorFlag();  // Reset I2C error
-        iuI2S.readData();         // Empty I2S buffer to continue
-        return;
-    }
     bool force = false;
-    // If EXPERIMENT mode, send last data batch before collecting the new data
-    if (m_usageMode == UsageMode::EXPERIMENT) {
-        if (loopDebugMode && (m_acquisitionMode != AcquisitionMode::RAWDATA ||
-                              m_streamingMode != StreamingMode::WIRED)) {
-            debugPrint(F("EXPERIMENT should be RAW DATA + USB mode."));
+    if (FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+    {
+        if (!m_inDataAcquistion || m_acquisitionMode == AcquisitionMode::NONE) {
+            return;
         }
-    if (inCallback) {
-            iuI2S.sendData(iuUSB.port);             // raw audio data 
-            iuAccelerometer.sendData(iuUSB.port);   // raw accel data
-       }
-            
-        force = true;
-    }
-
-    if (m_usageMode == UsageMode::OTA) {
-  //      m_acquisitionMode = AcquisitionMode::NONE;
-    }
-
-    // CUSTOM Mode
-
-  if (m_usageMode == UsageMode::CUSTOM ) {
-        if (loopDebugMode && (m_acquisitionMode != AcquisitionMode::RAWDATA ||
-                              m_streamingMode != StreamingMode::WIRED)) {
-            debugPrint(F("CUSTOM Mode should be RAW DATA + USB mode."));
+        if (iuI2C.isError()) {
+            if (debugMode) {
+                debugPrint(F("I2C error"));
+            }
+            iuI2C.resetErrorFlag();  // Reset I2C error
+            iuI2S.readData();         // Empty I2S buffer to continue
+            return;
         }
-    if (inCallback) {
+        // If EXPERIMENT mode, send last data batch before collecting the new data
+        if (m_usageMode == UsageMode::EXPERIMENT) {
+            if (loopDebugMode && (m_acquisitionMode != AcquisitionMode::RAWDATA ||
+                                m_streamingMode != StreamingMode::WIRED)) {
+                debugPrint(F("EXPERIMENT should be RAW DATA + USB mode."));
+            }
+        if (inCallback) {
+                iuI2S.sendData(iuUSB.port);             // raw audio data 
+                iuAccelerometer.sendData(iuUSB.port);
 
-          float *acceleration;
-          float aucostic;
-          char rawData[50]; 
-          aucostic = iuI2S.getData();                               // raw audio data 
-          acceleration = iuAccelerometer.getData(iuUSB.port);       // raw accel data
+        }
+                
+            force = true;
+        }
 
-          //Serial.print("Audio :");Serial.println(aucostic);
-          snprintf(rawData,50,"%04.3f,%04.3f,%04.3f,%.3f",acceleration[0],acceleration[1],acceleration[2],aucostic);
-          
-          String payload = "";
-          payload = "$";
-          payload += m_macAddress.toString().c_str();
-          payload += ",";
-          payload += rawData;
-          payload += "#";
-          
-          //Serial.println(payload);
-          iuUSB.port->write(payload.c_str());
-          
-          //Serial.print(features[0],4);Serial.print(",");Serial.print(features[1],4);Serial.print(",");Serial.println(features[2],4);
-          //Serial.print("Data:");Serial.println(rawAccel);
-       }
+        // CUSTOM Mode
+
+    if (m_usageMode == UsageMode::CUSTOM ) {
+            if (loopDebugMode && (m_acquisitionMode != AcquisitionMode::RAWDATA ||
+                                m_streamingMode != StreamingMode::WIRED)) {
+                debugPrint(F("CUSTOM Mode should be RAW DATA + USB mode."));
+            }
+        if (inCallback) {
+
+            float *acceleration;
+            float aucostic;
+            char rawData[50]; 
+            aucostic = iuI2S.getData();                               // raw audio data 
+            acceleration = iuAccelerometer.getData(iuUSB.port);       // raw accel data
+
+            //Serial.print("Audio :");Serial.println(aucostic);
+            snprintf(rawData,50,"%04.3f,%04.3f,%04.3f,%.3f",acceleration[0],acceleration[1],acceleration[2],aucostic);
             
-        force = true;
+            String payload = "";
+            payload = "$";
+            payload += m_macAddress.toString().c_str();
+            payload += ",";
+            payload += rawData;
+            payload += "#";
+            
+            //Serial.println(payload);
+            iuUSB.port->write(payload.c_str());
+            
+            //Serial.print(features[0],4);Serial.print(",");Serial.print(features[1],4);Serial.print(",");Serial.println(features[2],4);
+            //Serial.print("Data:");Serial.println(rawAccel);
+        }
+                
+            force = true;
+        }
+        // Collect the new data
+        for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
+        if (strcmp("ACC", Sensor::instances[i]->getName())==0)
+            {
+                Sensor::instances[i]->acquireData(inCallback, force);
+            }
+        }
     }
-    // Collect the new data
+    else if ( FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor)
+    {
+        for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
+        if (strcmp("ACX", Sensor::instances[i]->getName())==0)
+            {
+                Sensor::instances[i]->acquireData(inCallback, force);
+            }
+        }
+    }
+}
+
+/**
+ * Data acquisition function
+ *
+ * Method formerly benchmarked for (Temperature and Audio).
+ */
+
+void Conductor::acquireTemperatureAudioData()
+{
     for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
-        Sensor::instances[i]->acquireData(inCallback, force);
+        if ( strcmp("MIC", Sensor::instances[i]->getName())==0 || strcmp("T10", Sensor::instances[i]->getName())==0 || strcmp("BAT", Sensor::instances[i]->getName())==0)
+        {
+            Sensor::instances[i]->acquireData();
+        }
     }
 }
 
@@ -3209,31 +3357,30 @@ void Conductor::streamFeatures()
     }
     double timestamp = getDatetime();
     float batteryLoad = iuBattery.getBatteryLoad();
-    for (uint8_t i = 0; i < FeatureGroup::instanceCount; ++i) {
+    for (uint8_t i = 0; i < FeatureGroup::instanceCount; ++i) {                       // instanceCount =  [0:7]
         // TODO Switch to new streaming format once the backend is ready
         if (ser1) {
             if (m_streamingMode == StreamingMode::WIFI ||
                 m_streamingMode == StreamingMode::WIFI_AND_BLE || m_streamingMode == StreamingMode::ETHERNET)
             { 
-                  //Serial.print("@@@@@");
-//                FeatureGroup::instances[i]->bufferAndStream(
-//                    ser1, IUSerial::MS_PROTOCOL, m_macAddress,
-//                    ledManager.getOperationState(), batteryLoad, timestamp,
-//                    sendFeatureGroupName1);
-                FeatureGroup::instances[i]->bufferAndQueue(
-                    &sendingQueue, IUSerial::MS_PROTOCOL, m_macAddress,
+                if(RawDataState::rawDataTransmissionInProgress == false)
+                {   
+                    FeatureGroup::instances[i]->bufferAndStream(
+                    ser1, IUSerial::MS_PROTOCOL, m_macAddress,
                     ledManager.getOperationState(), batteryLoad, timestamp,
                     sendFeatureGroupName1);
+                }
+                // FeatureGroup::instances[i]->bufferAndQueue(
+                //     &sendingQueue, IUSerial::MS_PROTOCOL, m_macAddress,
+                //     ledManager.getOperationState(), batteryLoad, timestamp,
+                //     sendFeatureGroupName1);
             } else {
-                
-                //Serial.print("1234454667674534");
                 FeatureGroup::instances[i]->legacyStream(ser1, m_macAddress,
                     ledManager.getOperationState(), batteryLoad, timestamp,
                     sendFeatureGroupName1);
             }
         }
-        if (ser2) {
-            //Serial.print("SER222222222222222222222222222222222222222");
+        if (ser2) {                                                                 // Streaming only over BLE
             FeatureGroup::instances[i]->legacyStream(ser2, m_macAddress,
                 ledManager.getOperationState(), batteryLoad, timestamp,
                 sendFeatureGroupName2, 1);
@@ -3242,10 +3389,17 @@ void Conductor::streamFeatures()
 //            &sendingQueue, IUSerial::MS_PROTOCOL, m_macAddress,
 //            ledManager.getOperationState(), batteryLoad, timestamp,
 //            true);
+        if (FeatureStates::isISRActive != true && FeatureStates::isISRDisabled){   
+                FeatureStates::isFeatureStreamComplete = true;   // publication completed
+                FeatureStates::isISRActive = true;
+                debugPrint("Published to WiFi Complete !!!");
+            }
     }
-    CharBufferNode *nodeToSend = sendingQueue.getNextBufferToSend();
+   #if 0
+   CharBufferNode *nodeToSend = sendingQueue.getNextBufferToSend();
+    //Serial.print("nodeToSend : ");Serial.println(nodeToSend->buffer);
     if (nodeToSend ) {
-            uint16_t msgLen = strlen(nodeToSend->buffer);
+           uint16_t msgLen = strlen(nodeToSend->buffer);
            if (m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE)
            {
                 if(RawDataState::rawDataTransmissionInProgress == false)
@@ -3282,6 +3436,16 @@ void Conductor::streamFeatures()
      }
      
     sendingQueue.maintain();
+    
+    if (FeatureStates::isISRActive != true && FeatureStates::isISRDisabled){   
+                Serial.print("Streaming Data : ");
+                Serial.println(nodeToSend->buffer);
+                FeatureStates::isFeatureStreamComplete = true;   // publication completed
+                FeatureStates::isISRActive = true;
+                Serial.println("Published to WiFi Complete !!!");
+            }
+
+    #endif 
 }
 
 /**
@@ -3640,6 +3804,55 @@ bool Conductor::setFFTParams() {
     if(config.success()) {
         FFTConfiguration::currentSamplingRate = config["samplingRate"];
         FFTConfiguration::currentBlockSize = config["blockSize"];
+        //FFTConfiguration::currentSensor = config["sensor"];
+        for (int i=0;i<FFTConfiguration::LSMsamplingRateOption;i++)
+        {
+            if (FFTConfiguration::currentSamplingRate == FFTConfiguration::samplingRates[i])
+            {
+                FFTConfiguration::currentSensor = FFTConfiguration::lsmSensor;
+            }
+        }
+
+        for (int i=0;i<FFTConfiguration::KNXsamplingRateOption;i++)
+        {
+            if (FFTConfiguration::currentSamplingRate == FFTConfiguration::samplingRates2[i])
+            {
+                FFTConfiguration::currentSensor = FFTConfiguration::kionixSensor;
+            }
+        }
+                // Change the sensor sampling rate 
+        // timerISRPeriod = (samplingRate == 1660) ? 600 : 300;  // 1.6KHz->600, 3.3KHz->300
+        // timerISRPeriod = int(1000000 / FFTConfiguration::currentSamplingRate); // +1 to ensure that sensor has captured data before mcu ISR gets it, for edge case
+        if ((FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor) && (iuAccelerometer.lsmPresence))
+        {
+            debugPrint(F("LSM Present & LSM set"));
+            iuAccelerometer.setSamplingRate(FFTConfiguration::currentSamplingRate);
+            setSensorStatus(SensorStatusCode::LSM_SET);
+        }
+        else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (iuAccelerometerKX222.kionixPresence))
+        {
+            debugPrint(F("KIONIX Present & KIONIX set"));
+            iuAccelerometerKX222.updateSamplingRate(FFTConfiguration::currentSamplingRate); // will set the ODR for the sensor
+            setSensorStatus(SensorStatusCode::KNX_SET);
+        }else if((FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor) && (!iuAccelerometer.lsmPresence) && (iuAccelerometerKX222.kionixPresence)){
+            debugPrint(F("LSM absent & KIONIX set"));
+            iuAccelerometerKX222.updateSamplingRate(iuAccelerometerKX222.defaultSamplingRate);
+            FFTConfiguration::currentSamplingRate = iuAccelerometerKX222.defaultSamplingRate;
+            FFTConfiguration::currentSensor = FFTConfiguration::kionixSensor;
+            FFTConfiguration::currentBlockSize = iuAccelerometerKX222.DEFAULT_BLOCK_SIZE;
+            setSensorStatus(SensorStatusCode::LSM_ABS);
+        }else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (!iuAccelerometerKX222.kionixPresence) && (iuAccelerometer.lsmPresence)){
+            debugPrint(F("KIONIX Absent & LSM set"));
+            iuAccelerometer.setSamplingRate(iuAccelerometer.defaultSamplingRate);
+            FFTConfiguration::currentSamplingRate = iuAccelerometer.defaultSamplingRate;
+            FFTConfiguration::currentSensor = FFTConfiguration::lsmSensor;
+            FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
+            setSensorStatus(SensorStatusCode::KNX_ABS);
+        }
+        else{
+            debugPrint(F("KIONIX, LSM not found"));
+            setSensorStatus(SensorStatusCode::SEN_ABS);
+        }
         // TODO: The following can be configurable in the future
         FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY;
         FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
@@ -3658,10 +3871,6 @@ bool Conductor::setFFTParams() {
         DiagnosticEngine::m_smapleSize = FFTConfiguration::currentBlockSize;
         DiagnosticEngine::m_fftLength = FFTConfiguration::currentBlockSize / 2;
 
-        // Change the sensor sampling rate 
-        // timerISRPeriod = (samplingRate == 1660) ? 600 : 300;  // 1.6KHz->600, 3.3KHz->300
-        // timerISRPeriod = int(1000000 / FFTConfiguration::currentSamplingRate); // +1 to ensure that sensor has captured data before mcu ISR gets it, for edge case
-        iuAccelerometer.setSamplingRate(FFTConfiguration::currentSamplingRate); // will set the ODR for the sensor
         if(setupDebugMode) {
             config.prettyPrintTo(Serial);
         }
@@ -4365,6 +4574,40 @@ bool Conductor::setEthernetConfig(char* filename){
     return false;
 }
 
+void Conductor::setSensorStatus(SensorStatusCode errorCode)
+{
+    statusCode = errorCode;
+    switch (errorCode)
+    {
+        case SensorStatusCode::LSM_SET:
+            strcpy(status, "Running with LSM");
+            break;
+        case SensorStatusCode::KNX_SET:
+            strcpy(status, "Running with Kionix");
+            break;
+        case SensorStatusCode::LSM_ABS:
+            strcpy(status, "LSM not found, Running with Kionix defaults");
+            break;
+        case SensorStatusCode::KNX_ABS:
+            strcpy(status, "Kionix not found, Running with LSM defaults");
+            break;
+        case SensorStatusCode::SEN_ABS:
+            strcpy(status, "Sensors not found, Please check the Hardware");
+            break;
+        case SensorStatusCode::LSM_DEFAULT:
+            strcpy(status, "Configuration not found, Using LSM defaults");
+            break;
+    }
+}
+
+void Conductor::sendSensorStatus()
+{
+    char SensorResponse[256];
+    double TimeStamp = conductor.getDatetime();            
+    snprintf(SensorResponse, 256, "{\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"statusCode\":\"%d\",\"status\":\"%s\",\"timestamp\":%.2f}",
+    m_macAddress.toString().c_str(), "vEdge", statusCode, status ,TimeStamp);
+    iuWiFi.sendMSPCommand(MSPCommand::SEND_SENSOR_STATUS,SensorResponse);
+}
 /**
  * @brief 
  * This function checks for time out of OTA packet download. Once OTA is started and Packet reception
@@ -4380,6 +4623,12 @@ void Conductor::otaChkFwdnldTmout()
         if (now - otaFwdnldTmout > fwDnldStartTmout)
         {
             waitingDnldStrart = false;
+            for(int i = 0 ; i < 15; i++) {
+                ledManager.overrideColor(RGB_RED);
+                delay(200);
+                ledManager.stopColorOverride();
+                delay(200);
+            }
             sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_DOWNLOAD_TMOUT)).c_str());
             iuWiFi.m_setLastConfirmedPublication();  // Download Timeout , No response
             changeUsageMode(UsageMode::OPERATION);
@@ -4755,10 +5004,10 @@ uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
     ValidationFile->print(audioDB4096Computer.dBresult);
     ValidationFile->println(F(" dB"));
 
-    if ( (audioDB4096Computer.dBresult < 58.0) && (audioDB4096Computer.dBresult > 160.0) ){
-        ValidationFile->println(F("   Validation [AUD]-Read Acoustic: Fail !"));
-        otaRtryValidation++;
-    }
+    // if ( (audioDB4096Computer.dBresult < 58.0) && (audioDB4096Computer.dBresult > 160.0) ){
+    //     ValidationFile->println(F("   Validation [AUD]-Read Acoustic: Fail !"));
+    //     otaRtryValidation++;
+    // }
     return otaRtryValidation;
 
 // To be added Keonics sensor
