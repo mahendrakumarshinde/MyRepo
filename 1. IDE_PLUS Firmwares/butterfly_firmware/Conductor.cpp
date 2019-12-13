@@ -374,7 +374,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     if (subConfig.success()) {
         //configureAllFeatures(subConfig);
         bool dataWritten = false;
-        iuFlash.writeInternalFlash(1,CONFIG_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
+        iuFlash.writeInternalFlash(1,CONFIG_MQTT_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
         if (saveToFlash) {
             //DOSFS.begin();
             File mqttFile = DOSFS.open("MQTT.conf", "w");
@@ -395,7 +395,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         
         }
         if(dataWritten == true){
-          iuFlash.writeInternalFlash(1,CONFIG_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
+          iuFlash.writeInternalFlash(1,CONFIG_MQTT_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
           configureMQTTServer("MQTT.conf");
           //send Ack to BLE
           iuBluetooth.write("MQTT-RECEVIED");
@@ -468,7 +468,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     if (subConfig.success()) {
         //configureAllFeatures(subConfig);
         bool dataWritten = false;
-        
+        iuFlash.writeInternalFlash(1,CONFIG_HTTP_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
         if (saveToFlash) {
             //DOSFS.begin();
             File httpFile = DOSFS.open("httpConfig.conf", "w");
@@ -489,6 +489,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         
         }
         if(dataWritten == true){
+            iuFlash.writeInternalFlash(1,CONFIG_HTTP_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
           //configureBoardFromFlash("httpConfig.conf",dataWritten);
           JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
 
@@ -1081,7 +1082,7 @@ void Conductor::readForceOtaConfig()
   // Parse the root object
   JsonObject &root = jsonBuffer.parseObject(myFile);
 
-  if (!root.success() && !iuFlash.checkConfig(CONFIG_FLASH_ADDRESS)){
+  if (!root.success() && !iuFlash.checkConfig(CONFIG_MQTT_FLASH_ADDRESS)){
     debugPrint(F("Failed to read MQTT.conf file, using default configuration"));
     m_mqttServerIp = MQTT_DEFAULT_SERVER_IP;
     m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
@@ -1090,8 +1091,8 @@ void Conductor::readForceOtaConfig()
     flashStatusFlag = true;
     //m_accountid = "XXXAdmin";
   }
-  else if(iuFlash.checkConfig(CONFIG_FLASH_ADDRESS) && !root.success()){
-        String mqttConfig = iuFlash.readInternalFlash(CONFIG_FLASH_ADDRESS);
+  else if(iuFlash.checkConfig(CONFIG_MQTT_FLASH_ADDRESS) && !root.success()){
+        String mqttConfig = iuFlash.readInternalFlash(CONFIG_MQTT_FLASH_ADDRESS);
         debugPrint(mqttConfig);
         JsonObject &config = jsonBuffer.parseObject(mqttConfig);
         if(config.success() && strncmp(mqttConfig.c_str(),"{\"mqtt\"",7)==0)
@@ -1200,13 +1201,66 @@ bool Conductor::configureBoardFromFlash(String filename,bool isSet){
   JsonObject &root = jsonBuffer.parseObject(myFile);
   
   JsonObject& root2 = root["httpConfig"];
-  if (!root.success()){
+  if (!root.success() && !iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS)){
     debugPrint(F("Failed to read httpConf.conf file, using default configuration"));
     m_httpHost = "13.232.122.10";
     m_httpPort = 8080;
     m_httpPath = "/iu-web/rawaccelerationdata";
    
-  }
+  }else if(iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS) && !root.success()){
+      String httpConfig = iuFlash.readInternalFlash(CONFIG_HTTP_FLASH_ADDRESS);
+        debugPrint(httpConfig);
+        JsonObject &config = jsonBuffer.parseObject(httpConfig);
+        if(config.success() && strncmp(httpConfig.c_str(),"{\"httpConfig\"",13)==0)
+        {
+            debugPrint("Http Config Found");
+            static const char* host = config["host"];
+            static uint16_t    port = config["port"];
+            static const char* path = config["path"];
+            static const char* username = config["username"];
+            static const char* password = config["password"];
+            static const char* oauth = config["oauth"];
+
+            m_httpHost  = host;
+            m_httpPort = port;
+            m_httpPath = path;
+            m_httpUsername = username;
+            m_httpPassword = password;
+            m_httpOauth = oauth;
+            File httpFile = DOSFS.open("httpConfig.conf","w");
+            if(httpFile)
+            {
+                httpFile.print(httpConfig.c_str());
+                httpFile.flush();
+                debugPrint("httpConfig.conf File write Success");
+                flashStatusFlag = true;
+                httpFile.close();
+            }
+
+            if(debugMode){
+                debugPrint("FROM configureBoardFromFlash :");
+
+                debugPrint(F("Http Host :"),false);
+                debugPrint(m_httpHost);
+                //debugPrint(":");
+                debugPrint(F("Port:"),false);
+                debugPrint(m_httpPort);
+                debugPrint(F("Path :"),false);
+                debugPrint(m_httpPath);
+                debugPrint(F("UserName :"),false);
+                debugPrint(m_httpUsername);
+                debugPrint(F("Password :"),false);
+                debugPrint(m_httpPassword);
+                debugPrint(F("Oauth :"),false);
+                debugPrint(m_httpOauth);
+                }
+            }else{
+                debugPrint(F("Failed to read httpConf.conf file, using default configuration"));
+                m_httpHost = "13.232.122.10";
+                m_httpPort = 8080;
+                m_httpPath = "/iu-web/rawaccelerationdata";
+            }
+        }
  else {
 
   // Read configuration from the file
@@ -1859,9 +1913,9 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuUSB.port->println(_UserName);
                     iuUSB.port->print("MQTT_PASSWORD : ");
                     iuUSB.port->println(_Password);
-                  }else if(iuFlash.checkConfig(CONFIG_FLASH_ADDRESS))
+                  }else if(iuFlash.checkConfig(CONFIG_MQTT_FLASH_ADDRESS))
                   {
-                    String mqttConfig = iuFlash.readInternalFlash(CONFIG_FLASH_ADDRESS);
+                    String mqttConfig = iuFlash.readInternalFlash(CONFIG_MQTT_FLASH_ADDRESS);
                     StaticJsonBuffer<512> jsonBuffer;
                     JsonObject &config = jsonBuffer.parseObject(mqttConfig);
                     if(config.success() && strncmp(mqttConfig.c_str(),"{\"mqtt\"",7)==0)
@@ -2362,6 +2416,42 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 m_httpHost = config["httpConfig"]["host"];
                 m_httpPath = config["httpConfig"]["path"];
                 m_httpPort = config["httpConfig"]["port"];
+              }else if(iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS)){
+                    String httpConfig = iuFlash.readInternalFlash(CONFIG_HTTP_FLASH_ADDRESS);
+                    debugPrint(httpConfig);
+                     StaticJsonBuffer<1024> jsonBuffer;
+                    JsonObject &config = jsonBuffer.parseObject(httpConfig);
+                    if(config.success() && strncmp(httpConfig.c_str(),"{\"httpConfig\"",13)==0)
+                    {
+                        debugPrint("Http Config Found");
+                        static const char* host = config["host"];
+                        static uint16_t    port = config["port"];
+                        static const char* path = config["path"];
+                        static const char* username = config["username"];
+                        static const char* password = config["password"];
+                        static const char* oauth = config["oauth"];
+
+                        m_httpHost  = host;
+                        m_httpPort = port;
+                        m_httpPath = path;
+                        m_httpUsername = username;
+                        m_httpPassword = password;
+                        m_httpOauth = oauth;
+                        File httpFile = DOSFS.open("httpConfig.conf","w");
+                        if(httpFile)
+                        {
+                            httpFile.print(httpConfig.c_str());
+                            httpFile.flush();
+                            debugPrint("httpConfig.conf File write Success");
+                            flashStatusFlag = true;
+                            httpFile.close();
+                        }
+                    }else{
+                        debugPrint(F("Failed to read httpConf.conf file, using default configuration"));
+                        m_httpHost = "13.232.122.10";
+                        m_httpPort = 8080;
+                        m_httpPath = "/iu-web/rawaccelerationdata";
+                    }
               }  
               else{
                 m_httpHost = "13.232.122.10";                                       //"ideplus-dot-infinite-uptime-1232.appspot.com";
@@ -2390,7 +2480,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             //Serial.print("USERNAME :");Serial.println(m_mqttUserName); Serial.print("PASSWORD:");Serial.println(m_mqttPassword);
             if(m_mqttUserName == NULL || m_mqttPassword == NULL || m_mqttServerPort == NULL){
               // load default configurations
-                String mqttConfig = iuFlash.readInternalFlash(CONFIG_FLASH_ADDRESS);
+                String mqttConfig = iuFlash.readInternalFlash(CONFIG_MQTT_FLASH_ADDRESS);
                 debugPrint(mqttConfig);
                 StaticJsonBuffer<512> jsonBuffer;
                 JsonObject &config = jsonBuffer.parseObject(mqttConfig);
