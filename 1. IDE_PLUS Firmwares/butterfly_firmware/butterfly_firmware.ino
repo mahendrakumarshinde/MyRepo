@@ -671,8 +671,11 @@ void loop()
        
         conductor.manageSleepCycles();
         // Receive messages & configurations
-        iuUSB.readMessages();
-        iuBluetooth.readMessages();
+        if(conductor.getUsageMode() != UsageMode::OTA) {
+            /* Block BLE messages during OTA download */
+            iuUSB.readMessages();
+            iuBluetooth.readMessages();
+        }
         if (iuBluetooth.isBLEAvailable) //  iuEthernet.isEthernetConnected :0 -> connected, 1-> not connected
         {
             iuWiFi.readMessages();
@@ -680,6 +683,7 @@ void loop()
             iuEthernet.readMessages();
         }
         if(conductor.getUsageMode() != UsageMode::OTA) {
+            /* Block Data acquistion, computation, streaming during OTA download */
             // Manage WiFi autosleep
             iuWiFi.manageAutoSleep();
             // Acquire data from sensors
@@ -710,25 +714,25 @@ void loop()
                 ledManager.showStatus(&STATUS_NO_STATUS);
             }
         }
+        if(conductor.getUsageMode() != UsageMode::OTA) { /* Block BLE messages, raw data during OTA download */
+            // Consume ready segmented message
+            char configMessageFromBLE[MESSAGE_LENGTH+1];
+            if (conductor.consumeReadySegmentedMessage(configMessageFromBLE)) {
+                // TODO: if all messages [0->MAX_SEGMENTED_MESSAGES-1] are ready, the later messages
+                // might time out which the first few messages are being consumed. Add logic to 
+                // extend timeout for later messages if former messages are being consumed.
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+                debugPrint("DEBUG: LOOP: configMessageFromBLE: ", false); debugPrint(configMessageFromBLE);
+                #endif
+                conductor.processConfiguration(configMessageFromBLE, true);
+            }        
 
-        // Consume ready segmented message
-        char configMessageFromBLE[MESSAGE_LENGTH+1];
-        if (conductor.consumeReadySegmentedMessage(configMessageFromBLE)) {
-            // TODO: if all messages [0->MAX_SEGMENTED_MESSAGES-1] are ready, the later messages
-            // might time out which the first few messages are being consumed. Add logic to 
-            // extend timeout for later messages if former messages are being consumed.
-            #ifdef IU_DEBUG_SEGMENTED_MESSAGES
-            debugPrint("DEBUG: LOOP: configMessageFromBLE: ", false); debugPrint(configMessageFromBLE);
-            #endif
-            conductor.processConfiguration(configMessageFromBLE, true);
-        }        
+            // Clean consumed segmented messages
+            conductor.cleanConsumedSegmentedMessages();
 
-        // Clean consumed segmented messages
-        conductor.cleanConsumedSegmentedMessages();
+            // Clean timed out segmented messages
+            conductor.cleanTimedoutSegmentedMessages();
 
-        // Clean timed out segmented messages
-        conductor.cleanTimedoutSegmentedMessages();
-        if(conductor.getUsageMode() != UsageMode::OTA) {
             // Manage raw data sending depending on RawDataState::startRawDataTransmission and RawDataState::rawDataTransmissionInProgress
             conductor.manageRawDataSending();
         }

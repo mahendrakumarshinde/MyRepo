@@ -2023,6 +2023,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Wifi_FW_MD5);
             iuOta.otaMD5Write(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Wifi_FW_MD5,espHash);
             iuWiFi.sendMSPCommand(MSPCommand::OTA_STM_DNLD_OK);
+            otaFwdnldTmout = millis();
             delay(1);
   //          waitingDnldStrart = false; 
             break;
@@ -2032,8 +2033,18 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 debugPrint(buff);
             } 
             delay(1);
+            otaFwdnldTmout = millis();
             waitingDnldStrart = false;
             sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR,buff);
+            if(!strcmp(String(iuOta.getOtaRca(OTA_WIFI_DISCONNECT)).c_str(),buff))
+            {
+                for(int i = 0 ; i < 15; i++) {
+                    ledManager.overrideColor(RGB_RED);
+                    delay(200);
+                    ledManager.stopColorOverride();
+                    delay(200);
+                }
+            }                
             iuWiFi.m_setLastConfirmedPublication();
             changeUsageMode(UsageMode::OPERATION);
             delay(100); 
@@ -2042,6 +2053,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
 //            Serial.println(F("STM,ESP FW Download Completed !")); 
             if (loopDebugMode) { debugPrint(F("ESP FW Download Completed !")); }
             iuWiFi.sendMSPCommand(MSPCommand::OTA_ESP_DNLD_OK);
+            otaFwdnldTmout = millis();
             waitingDnldStrart = false;
             delay(1);
             if (loopDebugMode) { debugPrint(F("STM,ESP FW Download Completed")); }
@@ -2101,6 +2113,12 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 if (loopDebugMode) { debugPrint(F("OTA File Write Failed, Sending OTA-ERR-FDW-ABORT")); }
                 waitingDnldStrart = false;
                 sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_CHECKSUM_FAIL)).c_str());
+                for(int i = 0 ; i < 15; i++) {
+                    ledManager.overrideColor(RGB_RED);
+                    delay(200);
+                    ledManager.stopColorOverride();
+                    delay(200);
+                }
             }
             delay(1000);
             if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
@@ -2113,7 +2131,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             //    debugPrint(F("OTA_PACKET_DATA Len:"),false);
             //    debugPrint(packetLen);
             }
-            waitingDnldStrart = false;
+//            waitingDnldStrart = false;
+            otaFwdnldTmout = millis();
             if(iuOta.otaFwBinWrite(iuFlash.IUFWTMPIMG_SUBDIR,fwBinFileName, buff, packetLen)) {
                 if (loopDebugMode) { debugPrint(F("Sending OTA_PACKET_ACK")); }
                 iuWiFi.sendMSPCommand(MSPCommand::OTA_PACKET_ACK);
@@ -2125,6 +2144,12 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 }
                 waitingDnldStrart = false;
                 sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_FLASH_RDWR_FAIL)).c_str());
+                for(int i = 0 ; i < 15; i++) {
+                    ledManager.overrideColor(RGB_RED);
+                    delay(200);
+                    ledManager.stopColorOverride();
+                    delay(200);
+                }
                 if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
                 iuWiFi.m_setLastConfirmedPublication();
                 changeUsageMode(UsageMode::OPERATION);
@@ -2209,6 +2234,12 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 if (loopDebugMode) { 
                     debugPrint(F("OTA In Progress - WIFI-DISCONNECTED"));
                     debugPrint(F("Sending OTA-ERR-FDW-ABORT"));
+                }
+                for(int i = 0 ; i < 15; i++) {
+                    ledManager.overrideColor(RGB_RED);
+                    delay(200);
+                    ledManager.stopColorOverride();
+                    delay(200);
                 }
                 // In case WiFi Disconnect/ESP Reset durig OTA, switch to OPERTATION Mode ??
                 sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_WIFI_DISCONNECT)).c_str());
@@ -4176,6 +4207,12 @@ void Conductor::otaChkFwdnldTmout()
         if (now - otaFwdnldTmout > fwDnldStartTmout)
         {
             waitingDnldStrart = false;
+            for(int i = 0 ; i < 15; i++) {
+                ledManager.overrideColor(RGB_RED);
+                delay(200);
+                ledManager.stopColorOverride();
+                delay(200);
+            }
             sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_DOWNLOAD_TMOUT)).c_str());
             iuWiFi.m_setLastConfirmedPublication();  // Download Timeout , No response
             changeUsageMode(UsageMode::OPERATION);
@@ -4551,10 +4588,10 @@ uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
     ValidationFile->print(audioDB4096Computer.dBresult);
     ValidationFile->println(F(" dB"));
 
-    if ( (audioDB4096Computer.dBresult < 58.0) && (audioDB4096Computer.dBresult > 160.0) ){
-        ValidationFile->println(F("   Validation [AUD]-Read Acoustic: Fail !"));
-        otaRtryValidation++;
-    }
+    // if ( (audioDB4096Computer.dBresult < 58.0) && (audioDB4096Computer.dBresult > 160.0) ){
+    //     ValidationFile->println(F("   Validation [AUD]-Read Acoustic: Fail !"));
+    //     otaRtryValidation++;
+    // }
     return otaRtryValidation;
 
 // To be added Keonics sensor
