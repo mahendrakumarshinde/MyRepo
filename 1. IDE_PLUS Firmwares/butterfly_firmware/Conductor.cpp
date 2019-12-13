@@ -1217,16 +1217,16 @@ bool Conductor::configureBoardFromFlash(String filename,bool isSet){
             static const char* host = config["host"];
             static uint16_t    port = config["port"];
             static const char* path = config["path"];
-            static const char* username = config["username"];
-            static const char* password = config["password"];
-            static const char* oauth = config["oauth"];
+            // static const char* username = config["username"];
+            // static const char* password = config["password"];
+            // static const char* oauth = config["oauth"];
 
             m_httpHost  = host;
             m_httpPort = port;
             m_httpPath = path;
-            m_httpUsername = username;
-            m_httpPassword = password;
-            m_httpOauth = oauth;
+            // m_httpUsername = username;
+            // m_httpPassword = password;
+            // m_httpOauth = oauth;
             File httpFile = DOSFS.open("httpConfig.conf","w");
             if(httpFile)
             {
@@ -2427,16 +2427,16 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                         static const char* host = config["host"];
                         static uint16_t    port = config["port"];
                         static const char* path = config["path"];
-                        static const char* username = config["username"];
-                        static const char* password = config["password"];
-                        static const char* oauth = config["oauth"];
+                        // static const char* username = config["username"];
+                        // static const char* password = config["password"];
+                        // static const char* oauth = config["oauth"];
 
                         m_httpHost  = host;
                         m_httpPort = port;
                         m_httpPath = path;
-                        m_httpUsername = username;
-                        m_httpPassword = password;
-                        m_httpOauth = oauth;
+                        // m_httpUsername = username;
+                        // m_httpPassword = password;
+                        // m_httpOauth = oauth;
                         File httpFile = DOSFS.open("httpConfig.conf","w");
                         if(httpFile)
                         {
