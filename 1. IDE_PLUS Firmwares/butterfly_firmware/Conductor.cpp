@@ -3828,8 +3828,6 @@ bool Conductor::setEthernetConfig(char* filename){
 
 void Conductor::setSensorStatus(SensorStatusCode errorCode)
 {
-    debugPrint("Sensor Error Code: ",false);
-    debugPrint(errorCode);
     statusCode = errorCode;
     switch (errorCode)
     {
