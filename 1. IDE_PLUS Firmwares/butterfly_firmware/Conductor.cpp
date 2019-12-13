@@ -4403,6 +4403,7 @@ void Conductor::sendSensorStatus()
     snprintf(SensorResponse, 256, "{\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"statusCode\":\"%d\",\"status\":\"%s\",\"timestamp\":%.2f}",
     m_macAddress.toString().c_str(), "vEdge", statusCode, status ,TimeStamp);
     iuWiFi.sendMSPCommand(MSPCommand::SEND_SENSOR_STATUS,SensorResponse);
+}
 /**
  * @brief 
  * This function checks for time out of OTA packet download. Once OTA is started and Packet reception
@@ -4740,31 +4741,52 @@ uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
         debugPrint(F("Validation [DEV]-WIFI MAC: OK "));
     }
     ValidationFile->println(F("DEVICE SENSOR INTERFACE CHECK:-"));
-  //  iuI2C.scanDevices();
+
     iuI2C1.scanDevices();
-    ValidationFile->println(F("DEVICE LSM COMM CHECK:-"));
-    if (iuI2C.checkComponentWhoAmI("LSM6DSM ACC", iuAccelerometer.ADDRESS,iuAccelerometer.WHO_AM_I,iuAccelerometer.I_AM) == false)
+    if ((FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor) && (iuAccelerometer.lsmPresence))
     {
-        ValidationFile->println(F("   Validation [LSM]-Read Add: Fail !"));
-        if(loopDebugMode){ debugPrint(F("Validation [LSM]-Read Add: Fail !")); }
-        otaRtryValidation++;
-    }
-    else
-    {        // iuI2C.releaseReadLock();
-        if(iuI2C.i2c_dev[0] == iuAccelerometer.I_AM || iuI2C.i2c_dev[1] == iuAccelerometer.I_AM)
+        iuI2C.scanDevices();
+        ValidationFile->println(F("DEVICE LSM COMM CHECK:-"));
+        if (iuI2C.checkComponentWhoAmI("LSM6DSM ACC", iuAccelerometer.ADDRESS,iuAccelerometer.WHO_AM_I,iuAccelerometer.I_AM) == false)
         {
-            ValidationFile->print(F("LSM6DSM I2C Add: 0x"));
-            ValidationFile->println(iuAccelerometer.I_AM,HEX);
-            ValidationFile->println(F("   Validation [LSM]-Read Add: Ok"));
-            if(loopDebugMode){ debugPrint(F("Validation [LSM]-Read Add: Ok")); }
+            ValidationFile->println(F("   Validation [LSM]-Read Add: Fail !"));
+            if(loopDebugMode){ debugPrint(F("Validation [LSM]-Read Add: Fail !")); }
+            otaRtryValidation++;
+        }
+        else
+        {        // iuI2C.releaseReadLock();
+            if(iuI2C.i2c_dev[0] == iuAccelerometer.I_AM || iuI2C.i2c_dev[1] == iuAccelerometer.I_AM)
+            {
+                ValidationFile->print(F("LSM6DSM I2C Add: 0x"));
+                ValidationFile->println(iuAccelerometer.I_AM,HEX);
+                ValidationFile->println(F("   Validation [LSM]-Read Add: Ok"));
+                if(loopDebugMode){ debugPrint(F("Validation [LSM]-Read Add: Ok")); }
+            }
+            else
+            {
+                ValidationFile->println(F("   Validation [LSM]-Read Add: Fail !"));
+                if(loopDebugMode){ debugPrint(F("Validation [LSM]-Read Add: Fail")); }
+                otaRtryValidation++;
+            }
+        }
+    }
+    else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (iuAccelerometerKX222.kionixPresence))
+    {
+        if(iuAccelerometerKX222.checkWHO_AM_I() == false)
+        {
+            ValidationFile->println(F("   Validation [KX222]-Read ID: Fail !"));
+            if(loopDebugMode){ debugPrint(F("Validation [KX222]-Read ID: Fail")); }
+            otaRtryValidation++;
         }
         else
         {
-            ValidationFile->println(F("   Validation [LSM]-Read Add: Fail !"));
-            if(loopDebugMode){ debugPrint(F("Validation [LSM]-Read Add: Fail")); }
-            otaRtryValidation++;
+            ValidationFile->print(F("KX222 WIA ID: 0x"));
+            ValidationFile->println(IUKX222_WHO_AM_I_WIA_ID,HEX);
+            ValidationFile->println(F("   Validation [KX222]-Read Add: Ok"));
+            if(loopDebugMode){ debugPrint(F("Validation [KX222]-Read Add: Ok")); }
         }
     }
+
 #if 0 // On board temperature Sensor detetction
     if(iuI2C.i2c_dev[0] == iuTemp.ADDRESS || iuI2C.i2c_dev[1] == iuTemp.ADDRESS)
     {
