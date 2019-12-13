@@ -5,14 +5,14 @@
 ============================================================================= */
 
 
-IUTMP116::IUTMP116(IUI2C *iuI2C, const char* name,
+IUTMP116::IUTMP116(IUI2C1 *iuI2C1, const char* name,
                    void (*i2cReadCallback)(uint8_t wireStatus),
                    FeatureTemplate<float> *temperature) :
     LowFreqSensor(name, 1, temperature),
     m_temperature(30.0),
     m_readCallback(i2cReadCallback)
 {
-    m_iuI2C = iuI2C;
+    m_iuI2C1= iuI2C1;
 }
 
 /* =============================================================================
@@ -24,7 +24,7 @@ IUTMP116::IUTMP116(IUI2C *iuI2C, const char* name,
 
 void IUTMP116::setupHardware()
 {
-    m_iuI2C->readBytes(ADDRESS, DEVICE_ID, 2, &m_rawConfigBytes[0]);
+    m_iuI2C1->readBytes(ADDRESS, DEVICE_ID, 2, &m_rawConfigBytes[0]);
     uint16_t deviceId =  ((uint16_t) (m_rawConfigBytes[0]) << 8 | m_rawConfigBytes[1]);
     if(deviceId != I_AM)
     {
@@ -39,6 +39,7 @@ void IUTMP116::setupHardware()
     }
     if (setupDebugMode)
     {
+        debugPrint("I2C1 Setup Hardware!!!");
         debugPrint("TMP116- ", false);
         debugPrint(F("DevID:0x"), false);
         debugPrint(deviceId, false);
@@ -57,7 +58,7 @@ uint16_t IUTMP116::ReadConfigReg()
 {
     m_rawConfigBytes[0] = 0;
     m_rawConfigBytes[1] = 0;
-    m_iuI2C->readBytes(ADDRESS, CFGR, 2, &m_rawConfigBytes[0]);
+    m_iuI2C1->readBytes(ADDRESS, CFGR, 2, &m_rawConfigBytes[0]);
     uint16_t config_value =  ((uint16_t) (m_rawConfigBytes[0]) << 8 | m_rawConfigBytes[1]);
     return config_value;           
 }
@@ -67,7 +68,7 @@ void IUTMP116::setTempLimit(uint8_t reg, float value)
     if(value >= MIN_TEMP_RANGE && value <= MAX_TEMP_RANGE)  //TMP116 accuracy without calibration ±0.2°C (maximum) from –10°C to +85°C. (currently for +ve temp) 
     {
     	int16_t val = (int16_t) ( value/TEMP_COEFFICIENT );
-    	if (!m_iuI2C->writeWord(ADDRESS, reg, val))
+    	if (!m_iuI2C1->writeWord(ADDRESS, reg, val))
     	{
         	if (debugMode) {
             	debugPrint("Temperature Limit Register Write Failure");
@@ -76,7 +77,7 @@ void IUTMP116::setTempLimit(uint8_t reg, float value)
         if (debugMode)
         {
             uint8_t m_rawLimitBytes[2];           // 16-bit High and Low limit data from register
-            if (!m_iuI2C->readBytes(ADDRESS, reg, 2, &m_rawLimitBytes[0]))
+            if (!m_iuI2C1->readBytes(ADDRESS, reg, 2, &m_rawLimitBytes[0]))
             {
        		    debugPrint("Temperature Limit Register Read Failure");
             }
@@ -127,7 +128,7 @@ void IUTMP116::setPowerMode(PowerMode::option pMode)
 
 void IUTMP116::setWorkingMode(uint8_t mod, uint8_t conv, uint8_t avg)
 {
-    m_iuI2C->readBytes(ADDRESS, CFGR, 2, &m_rawConfigBytes[0]);
+    m_iuI2C1->readBytes(ADDRESS, CFGR, 2, &m_rawConfigBytes[0]);
     uint16_t config_value =  ((uint16_t) (m_rawConfigBytes[0]) << 8 | m_rawConfigBytes[1]);
     uint8_t data[3];
 
@@ -142,7 +143,7 @@ void IUTMP116::setWorkingMode(uint8_t mod, uint8_t conv, uint8_t avg)
 
     config_value = (data[1]) << 8 | data[2];
     
-    if (!m_iuI2C->writeWord(ADDRESS, CFGR, config_value))
+    if (!m_iuI2C1->writeWord(ADDRESS, CFGR, config_value))
     {
         if (asyncDebugMode) {
             debugPrint("TMP116 write configuration failure");
@@ -155,38 +156,53 @@ void IUTMP116::readData()
 {
     m_rawBytes[0] = 0;
     m_rawBytes[1] = 0;
-    if (!m_iuI2C->readBytes(ADDRESS, TEMP, 2, &m_rawBytes[0],m_readCallback))
+    iuI2C1.releaseReadLock();
+    if (m_readingData) {
+        // previous data reading is not done: flag errors in destinations and
+        // skip reading
+        // for (uint8_t i = 0; i < m_destinationCount; ++i) {
+        //     //m_destinations[i]->flagDataError();
+        // }
+        if (debugMode) {
+            debugPrint("Skip TMP116 read");
+        }
+    } else if (m_iuI2C1->readBytes(ADDRESS, TEMP, 2, &m_rawBytes[0],m_readCallback))
     {
-        if (asyncDebugMode) 
+        m_readingData = true;
+        config_reg = ReadConfigReg();
+        if((config_reg >> 15) & 0x01)
+        {
+            high_alert = true;
+            low_alert = false;
+            if (debugMode) {
+                debugPrint("high alert");
+            }
+        }
+        else
+        {
+            high_alert = false;
+        }
+        if((config_reg >> 14) & 0x01)
+        {
+            high_alert = false;
+            low_alert = true;
+            if (debugMode) {
+                debugPrint("low alert");
+            }
+        } else
+        {
+            low_alert = false;
+        }
+    }else
+    {
+        if (debugMode) 
         {
             debugPrint("Temperature Read Failure");
         }
     }
-    config_reg = ReadConfigReg();
-    if((config_reg >> 15) & 0x01)
-    {
-        high_alert = true;
-        low_alert = false;
-        if (debugMode) {
-            debugPrint("high alert");
-        }
-    }
-    else
-    {
-        high_alert = false;
-    }
-    if((config_reg >> 14) & 0x01)
-    {
-        high_alert = false;
-        low_alert = true;
-        if (debugMode) {
-            debugPrint("low alert");
-        }
-    }
-    else
-    {
-        low_alert = false;
-    }
+   
+
+    m_readingData = false;
 }
 /**
  * Process a raw Temperature reading
@@ -194,9 +210,9 @@ void IUTMP116::readData()
 void IUTMP116::processTemperatureData(uint8_t wireStatus)
 {
     int iTemp = 0;
-    iuI2C.releaseReadLock();
+    iuI2C1.releaseReadLock();
     if (wireStatus != 0) {
-        if (asyncDebugMode) {
+        if (asyncDebugMode || debugMode) {
             debugPrint(micros(), false);
             debugPrint(F(" Temperature processing read error "), false);
             debugPrint(wireStatus);

@@ -26,6 +26,8 @@ class IUFlash
                                      CFG_MQTT_SERVER,
                                      CFG_MQTT_CREDS,
                                      CFG_FFT,
+                                     CFG_OTA,
+                                     CFG_FORCE_OTA, // Forced OTA request
                                      CFG_COUNT};
         /***** Core *****/
         IUFlash() {}
@@ -49,6 +51,7 @@ class IUFlash
 
     protected:
         bool m_begun = false;
+        bool m_otaDir = false;
 };
 
 
@@ -56,8 +59,11 @@ class IUFSFlash : public IUFlash
 {
     public:
         /***** Preset values and default settings *****/
-        static const uint8_t CONFIG_SUBDIR_LEN = 10;
+        static const uint8_t CONFIG_SUBDIR_LEN = 24;
         static char CONFIG_SUBDIR[CONFIG_SUBDIR_LEN];
+        static char IUFWBACKUP_SUBDIR[CONFIG_SUBDIR_LEN];
+        static char IUFWTMPIMG_SUBDIR[CONFIG_SUBDIR_LEN];
+        static char IUFWROLLBACK_SUBDIR[CONFIG_SUBDIR_LEN];
         static const uint8_t CONFIG_EXTENSION_LEN = 6;
         static char CONFIG_EXTENSION[CONFIG_EXTENSION_LEN];
         static char FNAME_WIFI0[6];
@@ -73,6 +79,8 @@ class IUFSFlash : public IUFlash
         static char FNAME_MQTT_SERVER[12];
         static char FNAME_MQTT_CREDS[11];
         static char FNAME_FFT[4];
+        static char FNAME_OTA[4];
+        static char FNAME_FORCE_OTA[10];        
         static const uint8_t MAX_FULL_CONFIG_FPATH_LEN = 28;
         /***** Core *****/
         IUFSFlash() : IUFlash() {}

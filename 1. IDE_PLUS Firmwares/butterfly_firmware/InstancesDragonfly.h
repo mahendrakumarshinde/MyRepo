@@ -38,6 +38,7 @@
 #include "IUTMP116.h"
 #include "IUKX222.h"
 #include "IUkx224reg.h"
+#include "IUOTA.h"
 /***** Managers and helpers *****/
 #include "LedManager.h"
 
@@ -83,7 +84,10 @@ extern char iuWiFiBuffer[2048];   //500
 extern char iuEthernetBuffer[2048];
 
 extern Usr2Eth iuEthernet;
-
+/* =============================================================================
+    OTA
+============================================================================= */
+extern IUOTA iuOta;
 /* =============================================================================
     Flash storage
 ============================================================================= */
@@ -196,7 +200,7 @@ extern __attribute__((section(".noinit2"))) float temperatureAValues[2];
 extern FeatureTemplate<float> temperatureA;
 extern __attribute__((section(".noinit2"))) float temperatureBValues[2];
 extern FeatureTemplate<float> temperatureB;
-// Temperaute measured on the LSM6DSM
+// Temperaute measured on the TMP116
 extern __attribute__((section(".noinit2"))) float allTemperatureValues[2];
 extern FeatureTemplate<float> allTemperatures;
 extern __attribute__((section(".noinit2"))) float temperatureValues[2];

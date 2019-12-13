@@ -833,6 +833,7 @@ class AudioDBComputer: public FeatureComputer
                         float calibrationScaling=1., float calibrationOffset=0.);
         void setCalibrationScaling(float val) { m_calibrationScaling = val; }
         void setCalibrationOffset(float val) { m_calibrationOffset = val; }
+        float dBresult;
     protected:
         virtual void m_specializedCompute();
         float m_calibrationScaling;  // Scaling factor

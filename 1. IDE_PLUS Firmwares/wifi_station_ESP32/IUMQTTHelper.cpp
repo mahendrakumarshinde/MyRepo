@@ -221,7 +221,6 @@ bool IUMQTTHelper::publishFeature(const char *payload,
         return publish(FEATURE_TOPIC, payload);
     }
 }
-
 /**
  *
  */

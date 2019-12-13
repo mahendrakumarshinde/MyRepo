@@ -1,8 +1,8 @@
 /*
 Infinite Uptime IDE+ Firmware
-Vr. 1.1.3
-Update 22-06-2019
-Type - Standard Firmware Release
+Vr. 2.0.0
+Update 03-12-2019
+Type - Standard vEdge Firmware Release
 */
 
 /* =============================================================================
@@ -110,7 +110,6 @@ float audioHigherCutoff = 160.0;
 
 /***** Debbugging variables *****/
 
-
 bool doOnce = true;
 uint32_t interval = 30000;
 uint32_t lastDone = 0;
@@ -172,13 +171,15 @@ static void watchdogCallback(void) {
     {
         STM32.reset();
     }
-    if (iuWiFi.arePublicationsFailing()) {
-        //Ensure your PubSubClient Arduino library version is 2.7
-        debugPrint("Publications are failing: hard resetting now.");
-        if(conductor.isBLEConnected()) {
-           iuBluetooth.write("WIFI-DISCONNECTED;");
+    if(conductor.getUsageMode() != UsageMode::OTA) {
+        if (iuWiFi.arePublicationsFailing()) {
+            //Ensure your PubSubClient Arduino library version is 2.7
+            debugPrint("Publications are failing: hard resetting now.");
+            if(conductor.isBLEConnected()) {
+            iuBluetooth.write("WIFI-DISCONNECTED;");
+            }
+            iuWiFi.hardReset();
         }
-        iuWiFi.hardReset();
     }
     armv7m_timer_start(&watchdogTimer, 1000);
 }
@@ -197,6 +198,20 @@ static void bleTransmitCallback(void) {
     armv7m_timer_start(&bleTransmitTimer, 5);
 }
 
+#if 0
+/* =============================================================================
+ *  Read HTTP pending config messages using timer
+ * ============================================================================*/
+
+static armv7m_timer_t httpConfigTimer;
+
+static void httpConfigCallback(void) {
+    //iuBluetooth.bleTransmit();
+    //Serial.println("HIT HTTP CONFIG....................................................");
+    iuWiFi.sendMSPCommand(MSPCommand::GET_PENDING_HTTP_CONFIG);
+    armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min  180000
+}
+#endif
 /* ================================================================================
  * Ethernet Status Timer callback
  * ===============================================================================*/
@@ -398,6 +413,7 @@ void setup()
             debugPrint(String(freeMemory(), DEC));
         }
         iuI2C.begin();
+        iuI2C1.begin();
         // Interfaces
         if (debugMode) {
             debugPrint(F("\nInitializing interfaces..."));
@@ -491,6 +507,8 @@ void setup()
        
         if (setupDebugMode) {
             iuI2C.scanDevices();
+            debugPrint("Testing New I2C Bus ..............");
+            iuI2C1.scanDevices();
             debugPrint("");
         }
         if (debugMode) {
@@ -556,6 +574,11 @@ void setup()
             } else {
                 debugPrint(F("\nI2C Satus: OK"));
             }
+            if (iuI2C1.isError()) {
+                debugPrint(F("\nI2C1 Satus: Error"));
+            } else {
+                debugPrint(F("\nI2C1 Satus: OK"));
+            }
             debugPrint(F("\n***Finished setup at (ms): "), false);
             debugPrint(millis(), false);
             debugPrint(F("***\n"));
@@ -616,8 +639,9 @@ void setup()
         // debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
         //Resume previous operational state of device
         conductor.setThresholdsFromFile();
-                
-                
+        // Get OTA status flag and take appropraite action    
+        conductor.getOtaStatus();
+    
         // Timer Init
         //timerInit();
         
@@ -665,63 +689,60 @@ void loop()
         }
         conductor.manageSleepCycles();
         // Receive messages & configurations
-        iuUSB.readMessages();
-        iuBluetooth.readMessages();
+        if(conductor.getUsageMode() != UsageMode::OTA) {
+            /* Block BLE messages during OTA download */
+            iuUSB.readMessages();
+            iuBluetooth.readMessages();
+        }
         if (iuBluetooth.isBLEAvailable) //  iuEthernet.isEthernetConnected :0 -> connected, 1-> not connected
         {
             iuWiFi.readMessages();
         }else {
             iuEthernet.readMessages();
         }
-        // Manage WiFi autosleep
-        iuWiFi.manageAutoSleep();
-        // Acquire data from sensors
-        // conductor.acquireData(false);
-
-        conductor.acquireTemperatureAudioData();
-
-
-        // conductor.acquireData(false);
-        //Serial.println("acquireData complete !!!");
-        // Compute features depending on operation mode
-        conductor.computeFeatures();
-        //Serial.println("Computation Complete !!!");
-        // Stream features
-        conductor.streamFeatures();
-        //Serial.println("Feature Streaming Complete !!!");
-        //Serial.print("Feature Stream Status : ");
-        //Serial.println(FeatureStates::isISRActive);
-        if (FeatureStates::isISRActive)
-        {   
-            //Serial.println("attachInterrupt Again !!!!");
-            //Feature::ISRcount = 0;
-            //FeatureStates::isrCount=0;
-            if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
-            {
-                attachInterrupt(digitalPinToInterrupt(IULSM6DSM::INT1_PIN), dataAcquisitionISR, RISING);
+        if(conductor.getUsageMode() != UsageMode::OTA) {
+            /* Block Data acquistion, computation, streaming during OTA download */
+            // Manage WiFi autosleep
+            iuWiFi.manageAutoSleep();
+            // Acquire data from sensors
+            //conductor.acquireData(false);
+            conductor.acquireTemperatureAudioData();
+            // Compute features depending on operation mode
+            conductor.computeFeatures();
+            // Stream features
+            conductor.streamFeatures();
+            // Firmware Serial Execution 
+            if (FeatureStates::isISRActive)
+            {   
+                //Serial.println("attachInterrupt Again !!!!");
+                //Feature::ISRcount = 0;
+                //FeatureStates::isrCount=0;
+                if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+                {
+                    attachInterrupt(digitalPinToInterrupt(IULSM6DSM::INT1_PIN), dataAcquisitionISR, RISING);
+                }
+                else
+                {
+                    attachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN),dataAcquisitionISR,RISING);
+                }
+                FeatureStates::isISRDisabled = false;
+                FeatureStates::isISRActive = false;
+                // Serial.println("ISR Enabled !!!");
+                
             }
-            else
-            {
-                attachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN),dataAcquisitionISR,RISING);
-            }
-            FeatureStates::isISRDisabled = false;
-            FeatureStates::isISRActive = false;
-            // Serial.println("ISR Enabled !!!");
-            
+            // Send accel raw data
+            conductor.periodicSendAccelRawData();
+            // Send config checksum
+            conductor.periodicSendConfigChecksum();
+            ledManager.updateColors();
         }
-        
-        // Send accel raw data
-        conductor.periodicSendAccelRawData();
-        // Send config checksum
-        conductor.periodicSendConfigChecksum();
-        ledManager.updateColors();
         uint32_t now = millis();
         if (now - lastDone > interval) {
             lastDone = now;
             /* === Place your code to excute at fixed interval here ===*/
             conductor.streamMCUUInfo(iuWiFi.port);
             /*======*/
-            
+            //    Serial.println("Usage Mode:" + String(conductor.getUsageMode()));
         }
 
         if (millis() - conductor.lastTimeSync > conductor.m_connectionTimeout ) {
@@ -731,27 +752,37 @@ void loop()
                 ledManager.showStatus(&STATUS_NO_STATUS);
             }
         }
+        if(conductor.getUsageMode() != UsageMode::OTA) { /* Block BLE messages, raw data during OTA download */
+            // Consume ready segmented message
+            char configMessageFromBLE[MESSAGE_LENGTH+1];
+            if (conductor.consumeReadySegmentedMessage(configMessageFromBLE)) {
+                // TODO: if all messages [0->MAX_SEGMENTED_MESSAGES-1] are ready, the later messages
+                // might time out which the first few messages are being consumed. Add logic to 
+                // extend timeout for later messages if former messages are being consumed.
+                #ifdef IU_DEBUG_SEGMENTED_MESSAGES
+                debugPrint("DEBUG: LOOP: configMessageFromBLE: ", false); debugPrint(configMessageFromBLE);
+                #endif
+                conductor.processConfiguration(configMessageFromBLE, true);
+            }        
 
-        // Consume ready segmented message
-        char configMessageFromBLE[MESSAGE_LENGTH+1];
-        if (conductor.consumeReadySegmentedMessage(configMessageFromBLE)) {
-            // TODO: if all messages [0->MAX_SEGMENTED_MESSAGES-1] are ready, the later messages
-            // might time out which the first few messages are being consumed. Add logic to 
-            // extend timeout for later messages if former messages are being consumed.
-            #ifdef IU_DEBUG_SEGMENTED_MESSAGES
-            debugPrint("DEBUG: LOOP: configMessageFromBLE: ", false); debugPrint(configMessageFromBLE);
-            #endif
-            conductor.processConfiguration(configMessageFromBLE, true);
-        }        
+            // Clean consumed segmented messages
+            conductor.cleanConsumedSegmentedMessages();
 
-        // Clean consumed segmented messages
-        conductor.cleanConsumedSegmentedMessages();
+            // Clean timed out segmented messages
+            conductor.cleanTimedoutSegmentedMessages();
 
-        // Clean timed out segmented messages
-        conductor.cleanTimedoutSegmentedMessages();
-
-        // Manage raw data sending depending on RawDataState::startRawDataTransmission and RawDataState::rawDataTransmissionInProgress
-        conductor.manageRawDataSending();
+            // Manage raw data sending depending on RawDataState::startRawDataTransmission and RawDataState::rawDataTransmissionInProgress
+            conductor.manageRawDataSending();
+        }
+        if(conductor.getUsageMode() == UsageMode::OTA) {
+            conductor.otaChkFwdnldTmout();
+            ledManager.updateColors();
+        }
+        // Send OTA status message based on error values (File checksum failed in L2, file missing etc)
+        conductor.sendOtaStatus();
+        // Do FW validation for first time (only once) after new OTA images are flashed
+        // No validation for Rollback and Forced Rollback cases.
+        conductor.otaFWValidation();
         yield();
        
     #endif

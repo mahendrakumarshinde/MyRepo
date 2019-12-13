@@ -6,9 +6,9 @@
 
 #include "Conductor.h"
 #include <Ticker.h>
-//#include <rom/rtc.h>
-//#include "soc/soc.h"
-//#include "soc/rtc_cntl_reg.h"
+#include <rom/rtc.h>
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
 
 Conductor conductor;
 
@@ -101,6 +101,10 @@ void loop()
     }
     conductor.updateWiFiStatusCycle();
     conductor.checkWiFiDisconnectionTimeout();
-//   esp_task_wdt_reset(); // To Reset Watchdog - Temp add. need to check if required
+    conductor.checkOtaPacketTimeout();
+    if(WiFi.isConnected() == false)
+    {
+        conductor.autoReconncetWifi();
+    } 
     delay(1);
 }

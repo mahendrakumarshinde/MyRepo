@@ -45,7 +45,7 @@ class IUTMP116 : public LowFreqSensor
 				   AVG_2,   /*AVG 2: 32 avg(500ms)*/
 				   AVG_3 }; /*AVG 3: 64 avg(1000ms)*/
         
-    IUTMP116(IUI2C *iuI2C, const char* name,
+    IUTMP116(IUI2C1 *iuI2C1, const char* name,
                     void (*i2cReadCallback)(uint8_t wireStatus),
                     FeatureTemplate<float> *temperature);
     virtual ~IUTMP116() {}
@@ -66,7 +66,7 @@ class IUTMP116 : public LowFreqSensor
 
 	protected:
         /***** Core *****/
-        IUI2C *m_iuI2C;
+        IUI2C1 *m_iuI2C1;
         uint8_t m_powerByte;
         void (*m_readCallback)(uint8_t wireStatus);
         float m_temperature;                      // Temperature in degree Celsius
@@ -75,6 +75,7 @@ class IUTMP116 : public LowFreqSensor
         bool high_alert = false;
         bool low_alert = false;
         uint16_t config_reg;
+        volatile bool m_readingData;
 };
 
 #endif

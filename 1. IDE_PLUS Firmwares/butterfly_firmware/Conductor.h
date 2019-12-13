@@ -62,7 +62,8 @@ namespace UsageMode
                            OPERATION       = 2,
                            OPERATION_BIS   = 3,
                            CUSTOM          = 4,
-                           COUNT           = 5};
+                           OTA             = 5,
+                           COUNT           = 6};
     // Related default config
     const AcquisitionMode::option acquisitionModeDetails[COUNT] =
     {
@@ -183,6 +184,7 @@ class Conductor
         void changeAcquisitionMode(AcquisitionMode::option mode);
         void updateStreamingMode();
         void changeUsageMode(UsageMode::option usage);
+        UsageMode::option getUsageMode() { return m_usageMode ;}
         /***** Operations *****/
         void setCallback(void (*callback)()) { m_callback = callback; };
         bool beginDataAcquisition();
@@ -248,6 +250,21 @@ class Conductor
         //Send Sensor error codes
         void setSensorStatus(SensorStatusCode errorCode);
         void sendSensorStatus();
+        
+        void otaChkFwdnldTmout();
+        uint32_t firmwareValidation();
+        uint8_t firmwareConfigValidation(File *ValidationFile);
+        uint8_t firmwareDeviceValidation(File *ValidationFile);
+        uint8_t firmwareWifiValidation(File *ValidationFile);
+        void sendOtaStatusMsg(MSPCommand::command type, char *msg, const char *errMsg);
+        void readOtaConfig();
+        void readForceOtaConfig();
+        void getOtaStatus();
+        void sendOtaStatus();
+        void otaFWValidation();
+        static const uint32_t fwDnldStartTmout = 60000;
+        uint32_t otaFwdnldTmout = 0;
+        bool waitingDnldStrart = false;
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
@@ -300,6 +317,24 @@ class Conductor
         
         char status[50];
         SensorStatusCode statusCode;
+        char m_otaStmUri[512];
+        char m_otaEspUri[512];
+        char stmHash[34];
+        char espHash[34];
+        char m_type1[8];
+        char m_type2[8];
+        char m_otaMsgId[32];
+        char m_otaMsgType[16];
+        char m_otaFwVer[16];
+        char m_rlbkMsgId[32];
+        char m_rlbkFwVer[16];
+        char fwBinFileName[32];
+        MacAddress m_rlbkDevId;
+        bool m_rlbkDowngrade = false;
+        bool otaSendMsg = false;
+        bool doOnceFWValid;
+        int FWValidCnt = 0;
+        char FW_Valid_State = 0;
 };
 
 

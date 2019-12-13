@@ -32,7 +32,7 @@ char iuWiFiBuffer[2048] = "";
     IUESP8285 iuWiFi(&Serial1, iuWiFiBuffer, 2048, IUSerial::MS_PROTOCOL,
                      115200, ';', 250);
 #endif
-
+    IUOTA iuOta = IUOTA();
 
 /* =============================================================================
     Flash storage
@@ -235,7 +235,7 @@ void TMP116TempReadCallback(uint8_t wireStatus)
 {
      iuTemp.processTemperatureData(wireStatus);
 }
-IUTMP116 iuTemp(&iuI2C,"T10",TMP116TempReadCallback, &allTemperatures);
+IUTMP116 iuTemp(&iuI2C1,"T10",TMP116TempReadCallback, &allTemperatures);
 
 #ifdef WITH_CAM_M8Q
     IUCAMM8Q iuGNSS(&Serial2, "GPS", -1);
@@ -351,7 +351,7 @@ void setUpComputerSources()
     accelRMS128TotalComputer.addSource(&accelRMS128X, 1);
     accelRMS128TotalComputer.addSource(&accelRMS128Y, 1);
     accelRMS128TotalComputer.addSource(&accelRMS128Z, 1);
-    // Average LSM6DSM temperatures
+    // Average TMP116 temperatures
     temperatureAverager.addSource(&allTemperatures, 1);
     // Aggregate acceleration RMS
     accel512ComputerX.addSource(&accelRMS128X, 1);
