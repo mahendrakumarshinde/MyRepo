@@ -420,55 +420,7 @@ void setup()
         iuI2C.begin();
         iuI2C1.begin();
         /***Flash Test****/
-        if(DOSFS.exists("temp.conf"))
-        {  
-            File tempFile = DOSFS.open("temp.conf","r");
-            String fileContent = tempFile.readString();
-            debugPrint("File Present");
-            if(strcmp(fileContent.c_str(),"SUCCESS")==0)
-            {
-                debugPrint("File Read Success");
-            }else{
-                debugPrint("File Read Failed...Formating Flash Please wait");
-                DOSFS.format();
-                debugPrint("Formated Successfully");
-                File tempFile = DOSFS.open("temp.conf","w");
-                if(tempFile)
-                {
-                    tempFile.print("SUCCESS");
-                    tempFile.flush();
-                    tempFile.close();
-                    debugPrint("File Write Success");
-                }else{
-                    debugPrint("Formated failed");
-                }
-            }
-            tempFile.close();
-            
-        }else{
-            File tempFile = DOSFS.open("temp.conf","w");
-            if(tempFile)
-            {
-                tempFile.print("SUCCESS");
-                tempFile.flush();
-                tempFile.close();
-                debugPrint("File Write Success");
-            }else{
-                debugPrint("File Read Failed...Formating Flash Please wait");
-                DOSFS.format();
-                debugPrint("Formated Successfully");
-                File tempFile = DOSFS.open("temp.conf","w");
-                if(tempFile)
-                {
-                    tempFile.print("SUCCESS");
-                    tempFile.flush();
-                    tempFile.close();
-                    debugPrint("File Write Success");
-                }else{
-                    debugPrint("Formated failed");
-                }
-            }
-        }
+        conductor.onBootFlashTest();
         // Interfaces
         if (debugMode) {
             debugPrint(F("\nInitializing interfaces..."));
@@ -770,31 +722,7 @@ void loop()
         uint32_t current = millis();
         if (current - flashCheckLastDone > flashCheckInterval) {
             flashCheckLastDone = current;
-            if(DOSFS.exists("temp.conf"))
-            {  
-                File tempFile = DOSFS.open("temp.conf","r");
-                String fileContent = tempFile.readString();
-                debugPrint("File Present");
-                if(strcmp(fileContent.c_str(),"SUCCESS")==0)
-                {
-                    debugPrint("File Read Success");
-                }
-                else
-                {
-                    debugPrint("File Read Failed...Rebooting...");
-                    conductor.sendFlashStatusMsg(FLASH_ERROR,"Rebooting");
-                    delay(3000);
-                    STM32.reset();
-                }
-                    tempFile.close();
-            }
-            else
-            {
-                debugPrint("File Read Failed...Rebooting...");
-                conductor.sendFlashStatusMsg(FLASH_ERROR,"Rebooting");
-                delay(3000);
-                STM32.reset();
-            }
+            conductor.periodicFlashTest();
         }
         // Consume ready segmented message
         char configMessageFromBLE[MESSAGE_LENGTH+1];

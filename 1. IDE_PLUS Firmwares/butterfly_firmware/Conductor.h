@@ -256,6 +256,8 @@ class Conductor
         bool waitingDnldStrart = false;
         void sendFlashStatusMsg(int flashStatus, char *deviceStatus);
         bool flashStatusFlag = false;
+        void periodicFlashTest();
+        void onBootFlashTest();
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/

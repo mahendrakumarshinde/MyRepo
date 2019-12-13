@@ -444,6 +444,8 @@ File IUFSFlash::openConfigFile(storedConfig configType,
     return DOSFS.open(filepath, mode);
 }
 
+/***Read Write Internal Flag***/
+
 String IUFSFlash::readInternalFlash(uint32_t address)
 {
     uint8_t type;
