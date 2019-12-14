@@ -59,7 +59,6 @@ void setup()
   DEBUG_SERIAL.println("        ");
 	DEBUG_SERIAL.println("=================================");
 
-	DOSFS.format();
   delay(1000);
 	if (!DOSFS.begin()) {
 		DEBUG_SERIAL.println("Memory access failed, or not present");
