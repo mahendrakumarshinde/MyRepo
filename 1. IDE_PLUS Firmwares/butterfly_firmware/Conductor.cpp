@@ -1211,15 +1211,16 @@ bool Conductor::configureBoardFromFlash(String filename,bool isSet){
       String httpConfig = iuFlash.readInternalFlash(CONFIG_HTTP_FLASH_ADDRESS);
         debugPrint(httpConfig);
         JsonObject &config = jsonBuffer.parseObject(httpConfig);
+        JsonObject& config2 = config["httpConfig"];
         if(config.success() && strncmp(httpConfig.c_str(),"{\"httpConfig\"",13)==0)
         {
             debugPrint("Http Config Found");
-            static const char* host = config["host"];
-            static uint16_t    port = config["port"];
-            static const char* path = config["path"];
-            static const char* username = config["username"];
-            static const char* password = config["password"];
-            static const char* oauth = config["oauth"];
+            static const char* host = config2["host"];
+            static uint16_t    port = config2["port"];
+            static const char* path = config2["path"];
+            static const char* username = config2["username"];
+            static const char* password = config2["password"];
+            static const char* oauth = config2["oauth"];
 
             m_httpHost  = host;
             m_httpPort = port;
@@ -2533,15 +2534,16 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                     debugPrint(httpConfig);
                      StaticJsonBuffer<1024> jsonBuffer;
                     JsonObject &config = jsonBuffer.parseObject(httpConfig);
+                    JsonObject& config2 = config["httpConfig"];
                     if(config.success() && strncmp(httpConfig.c_str(),"{\"httpConfig\"",13)==0)
                     {
                         debugPrint("Http Config Found");
-                        static const char* host = config["host"];
-                        static uint16_t    port = config["port"];
-                        static const char* path = config["path"];
-                        static const char* username = config["username"];
-                        static const char* password = config["password"];
-                        static const char* oauth = config["oauth"];
+                        static const char* host = config2["host"];
+                        static uint16_t    port = config2["port"];
+                        static const char* path = config2["path"];
+                        static const char* username = config2["username"];
+                        static const char* password = config2["password"];
+                        static const char* oauth = config2["oauth"];
 
                         m_httpHost  = host;
                         m_httpPort = port;
