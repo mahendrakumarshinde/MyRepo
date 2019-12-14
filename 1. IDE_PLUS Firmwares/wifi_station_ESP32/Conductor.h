@@ -117,7 +117,7 @@ class Conductor
         bool otaDnldFw(bool otaDnldProgress);
         void checkOtaPacketTimeout();
         String getOtaRca(int error);
-
+        bool configStatus = false;
     protected:
         /***** Config from Host *****/      
         char HOST_FIRMWARE_VERSION[8];      //filled when the ESP starts or when it connects to MQTT broker

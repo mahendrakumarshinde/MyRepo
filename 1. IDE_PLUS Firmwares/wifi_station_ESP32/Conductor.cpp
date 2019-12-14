@@ -185,6 +185,31 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         case MSPCommand::RECEIVE_HOST_BLOCK_SIZE:
             HOST_BLOCK_SIZE = atoi(buffer);
             break;
+        case MSPCommand::GET_DEVICE_CONFIG: 
+             if(strlen(buffer)>0){
+                char *str;
+                int i=0;
+                while((str = strtok_r(buffer,"-",&buffer)) != NULL)
+                {
+                    if(i==0)
+                    {
+                        strcpy(HOST_FIRMWARE_VERSION,str);
+                        i++;
+                    }else if(i == 1){
+                        HOST_SAMPLING_RATE=atoi(str);
+                        i++;
+                    }else if(i == 2){
+                        HOST_BLOCK_SIZE=atoi(str);
+                        i++;
+                    }
+                
+                }
+                configStatus = true;
+            }
+            else{
+                configStatus = false;
+            }
+            break;
         /***** Logging *****/
         case MSPCommand::SEND_LOG_MSG:
             mqttHelper.publishLog(buffer);
