@@ -1938,7 +1938,7 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuUSB.port->print("HTTP_PATH : ");
                     iuUSB.port->println(_httpPath);
                   }else{
-                      debugPrint("httpConfig.conf file does not exists");
+                      debugPrint(F("httpConfig.conf file does not exists"));
                   }
                 }
                 if (strcmp(buff, "IUGET_MQTT_CONFIG") == 0)
@@ -1955,7 +1955,6 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     _Password = config["mqtt"]["password"];
 
                     iuUSB.port->println("*****MQTT_CONFIG*****");
-                    iuUSB.port->println("MQTT.conf File Found");
                     iuUSB.port->print("MQTT_SERVER_IP : ");
                     iuUSB.port->println(_serverIP);
                     iuUSB.port->print("MQTT_PORT : ");
@@ -1964,34 +1963,8 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuUSB.port->println(_UserName);
                     iuUSB.port->print("MQTT_PASSWORD : ");
                     iuUSB.port->println(_Password);
-                  }else if(iuFlash.checkConfig(CONFIG_MQTT_FLASH_ADDRESS))
-                  {
-                    String mqttConfig = iuFlash.readInternalFlash(CONFIG_MQTT_FLASH_ADDRESS);
-                    StaticJsonBuffer<512> jsonBuffer;
-                    JsonObject &config = jsonBuffer.parseObject(mqttConfig);
-                    if(config.success() && strncmp(mqttConfig.c_str(),"{\"mqtt\"",7)==0)
-                    {
-                        String mqttServerIP = config["mqtt"]["mqttServerIP"];
-                        int mqttport = config["mqtt"]["port"];
-                        //debugPrint("INside MQTT.conf .......");
-                        m_mqttServerIp.fromString(mqttServerIP);//mqttServerIP;
-                        m_mqttServerPort = mqttport;
-                        m_mqttUserName = config["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
-                        m_mqttPassword = config["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
-                        m_accountId = config["accountid"];
-                    }
-                    iuUSB.port->println("*****MQTT_CONFIG*****");
-                    iuUSB.port->println("MQTT.conf File not found. Using Last configurations");
-                    iuUSB.port->print("MQTT_SERVER_IP : ");
-                    iuUSB.port->println(m_mqttServerIp);
-                    iuUSB.port->print("MQTT_PORT : ");
-                    iuUSB.port->println(m_mqttServerPort);
-                    iuUSB.port->print("MQTT_USERNAME : ");
-                    iuUSB.port->println(m_mqttUserName);
-                    iuUSB.port->print("MQTT_PASSWORD : ");
-                    iuUSB.port->println(m_mqttPassword);
                   }else{
-                    iuUSB.port->println("No MQTT Configuration found, using Default MQTT Configurations");
+                    debugPrint(F("MQTT.conf file does not exists"));
                   }
                   
                 }  
@@ -2016,7 +1989,7 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                         iuUSB.port->println(jsonChar);
                     }else
                     {
-                        debugPrint("device.conf file does not exists.");
+                        debugPrint(F("device.conf file does not exists."));
                     }
                     
                 }
