@@ -36,6 +36,8 @@
 #include "IULSM6DSM.h"
 #include "IUMAX31865.h"
 #include "IUTMP116.h"
+#include "IUKX222.h"
+#include "IUkx224reg.h"
 #include "IUOTA.h"
 /***** Managers and helpers *****/
 #include "LedManager.h"
@@ -119,9 +121,9 @@ extern FeatureTemplate<float> batteryLoad;
 /***** Accelerometer Features *****/
 
 // Sensor data
-extern __attribute__((section(".noinit2"))) q15_t accelerationXValues[8192];      // 1024 
-extern __attribute__((section(".noinit2"))) q15_t accelerationYValues[8192];
-extern __attribute__((section(".noinit2"))) q15_t accelerationZValues[8192];
+extern __attribute__((section(".noinit2"))) q15_t accelerationXValues[8192/2];      // 1024 
+extern __attribute__((section(".noinit2"))) q15_t accelerationYValues[8192/2];
+extern __attribute__((section(".noinit2"))) q15_t accelerationZValues[8192/2];
 extern FeatureTemplate<q15_t> accelerationX;
 extern FeatureTemplate<q15_t> accelerationY;
 extern FeatureTemplate<q15_t> accelerationZ;
@@ -242,6 +244,9 @@ extern IUMAX31865 iuRTDSensorB;
 
 void LSM6DSMAccelReadCallback(uint8_t wireStatus);
 extern IULSM6DSM iuAccelerometer;
+
+void KX222AccelReadCallback();
+extern IUKX222 iuAccelerometerKX222;
 
 void TMP116TempReadCallback(uint8_t wireStatus);
 extern IUTMP116 iuTemp;

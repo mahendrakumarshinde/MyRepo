@@ -38,6 +38,13 @@ void onMQTTConnection()
     hostSerial.sendMSPCommand(MSPCommand::ASK_HOST_BLOCK_SIZE);
 }
 
+void getAllConfig()
+{
+    mqttHelper.onConnection();
+    conductor.publishDiagnostic("connected", 10);
+    hostSerial.sendMSPCommand(MSPCommand::GET_DEVICE_CONFIG);
+    
+}
 /* =============================================================================
     Host message callback
 ============================================================================= */
@@ -68,7 +75,8 @@ void setup()
     hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_AWAKE);
     // Prepare to receive MQTT messages
     mqttHelper.client.setCallback(mqttNewMessageCallback);
-    mqttHelper.setOnConnectionCallback(onMQTTConnection);
+    // mqttHelper.setOnConnectionCallback(onMQTTConnection);
+    mqttHelper.setOnConnectionCallback(getAllConfig);
     delay(100);
     #if IUDEBUG_ANY == 1
         conductor.reconnect(true);
@@ -84,6 +92,9 @@ void setup()
  */
 void loop()
 {
+    if(!conductor.configStatus){
+        getAllConfig();
+    }
     hostSerial.readMessages();  // Read and process messages from host
     if (conductor.reconnect()) {  // If Wifi is connected
         if (!timeHelper.active()) {

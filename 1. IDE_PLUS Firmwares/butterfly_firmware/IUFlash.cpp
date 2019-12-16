@@ -1,6 +1,6 @@
 #include "IUFlash.h"
 #include "FFTConfiguration.h"
-
+#include "InstancesDragonfly.h"
 /* =============================================================================
     IUFSFlash - Flash with file system
 ============================================================================= */
@@ -281,16 +281,52 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
             if(config.containsKey("samplingRate")) {
                 uint16_t samplingRate = config["samplingRate"];
                 // Validation for samplingRate
-                bool validSamplingRate = true;
-                for(int i=0; i<FFTConfiguration::samplingRateConfigurations - 1; ++i) {
+                bool validLSMSamplingRate = true;
+                bool validKionixSamplingRate = true;
+                //bool validSensor = true;
+                for(int i=0; i<FFTConfiguration::LSMsamplingRateOption - 1; ++i) {
                     if( samplingRate < FFTConfiguration::samplingRates[0] || 
-                        samplingRate > FFTConfiguration::samplingRates[FFTConfiguration::samplingRateConfigurations - 1] || 
+                        samplingRate > FFTConfiguration::samplingRates[FFTConfiguration::LSMsamplingRateOption - 1] || 
                         (FFTConfiguration::samplingRates[i] < samplingRate &&
                          samplingRate < FFTConfiguration::samplingRates[i+1]) ) {
-                           validSamplingRate = false;
+                           validLSMSamplingRate = false;
                        }
                 }
-                if (!validSamplingRate) {
+                for(int i=0; i<FFTConfiguration::KNXsamplingRateOption - 1; ++i) {
+                    if( samplingRate < FFTConfiguration::samplingRates2[0] || 
+                        samplingRate > FFTConfiguration::samplingRates2[FFTConfiguration::KNXsamplingRateOption - 1] || 
+                        (FFTConfiguration::samplingRates2[i] < samplingRate &&
+                         samplingRate < FFTConfiguration::samplingRates2[i+1]) ) {
+                             validKionixSamplingRate = false;
+                       }
+                }
+                if(!iuAccelerometer.lsmPresence && validLSMSamplingRate) {
+                     validConfig = false;
+                     errorMessages.add("LSM not Present");
+                }
+                if(!iuAccelerometerKX222.kionixPresence && validKionixSamplingRate) {
+                     validConfig = false;
+                     errorMessages.add("Kionix not Present");
+                }
+                // if(config.containsKey("sensor") && validKionixSamplingRate) {
+                //         uint16_t sensor = config["sensor"];
+                //         if (sensor != FFTConfiguration::kionixSensor){
+                //             validSensor = false;
+                //         }
+                //         else{
+                //             validSensor = true;
+                //         }    
+                // }
+                // if(config.containsKey("sensor") && validLSMSamplingRate) {
+                //         uint16_t sensor = config["sensor"];
+                //         if (sensor != FFTConfiguration::lsmSensor){
+                //             validSensor = false;
+                //         }
+                //         else{
+                //             validSensor = true;
+                //         }    
+                // }
+                if (!validLSMSamplingRate && !validKionixSamplingRate) {
                         validConfig = false;
                         errorMessages.add("Invalid samplingRate");
                 } else if (samplingRate == 416) {  // Temporary workaround
@@ -298,7 +334,11 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                     errorMessages.add("Sampling rate not supported");
                 } else if (FFTConfiguration::currentSamplingRate == samplingRate) {
                     sameSamplingRate = true;
-                }
+                } 
+                // else if (!validSensor){
+                //     validConfig = false;
+                //     errorMessages.add("Invalid Sensor Selection");
+                // }
             } else {
                 validConfig = false;
                 errorMessages.add("Key missing: samplingRate"); 
@@ -328,6 +368,7 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                 validConfig = false;
                 errorMessages.add("Key missing: blockSize"); 
             }
+            
 
             // If the received config matches the current config, report an error
             if(sameBlockSize && sameSamplingRate) {

@@ -42,14 +42,17 @@ IULSM6DSM::IULSM6DSM(IUI2C *iuI2C, const char* name,
  */
 void IULSM6DSM::setupHardware()
 {
+    // if (!m_iuI2C->checkComponentWhoAmI("LSM6DSM ACC", ADDRESS, WHO_AM_I, I_AM))
     if (!m_iuI2C->checkComponentWhoAmI("LSM6DSM ACC", ADDRESS, WHO_AM_I, I_AM))
     {
         if (debugMode)
         {
             debugPrint(F("LSM6DSM ERROR"));
         }
+        lsmPresence = false;
         return;
     }
+    lsmPresence = true;
     softReset();
 
     /* CTRL3_C Data output configuration: Noting to do
@@ -312,6 +315,7 @@ void IULSM6DSM::readData()
         if (asyncDebugMode) {
             debugPrint("Skip accel read");
         }
+        
     } else if (m_iuI2C->readBytes(ADDRESS, OUT_TEMP_L, 14, &m_rawBytes[0],
                m_readCallback)) {
         m_readingData = true;

@@ -1,6 +1,9 @@
 #include "FeatureClass.h"
-
-
+#include "IULSM6DSM.h"
+#include "RawDataState.h"
+#include "IUKX222.h"
+#include "FFTConfiguration.h"
+//#include "FeatureGroup.h"
 /* =============================================================================
     Core
 ============================================================================= */
@@ -173,21 +176,146 @@ void Feature::incrementFillingIndex()
 {
     m_fillingIndex++;
     bool newFullSection = false;
-    // Publish the current section if has been entirely recorded
-    if (m_fillingIndex >= (m_recordIndex + 1) * m_sectionSize) {
-        m_published[m_recordIndex] = true;
-        for (uint8_t j = 0; j < m_receiverCount; ++j) {
-            m_acknowledged[m_recordIndex][j] = false;
+    bool isrFlag = false;
+    static int isrCount;
+    // int copyRecorIndex;
+    // int copyFillingIndex;
+    // int copyReceiverCount;
+   #if 0 
+    if(strcmp(getName(),"A0X") == 0 ){
+        if(m_recordIndex == 31){
+            Serial.print("Record Index : ");Serial.println(m_recordIndex);
+            Serial.print("Filling Index count :");
+            Serial.println(m_fillingIndex);
         }
-        m_recordIndex = (m_recordIndex + 1) % m_sectionCount;
+    }
+    #endif
+    // Publish the current section if has been entirely recorded
+    if (m_fillingIndex >= (m_recordIndex + 1) * m_sectionSize) {   // ( [0:8192] >= ([0:63] + 1)*128 ) 
+        m_published[m_recordIndex] = true;                         // publish last filled section
+        for (uint8_t j = 0; j < m_receiverCount; ++j) {            // m_receiverCount = 2
+            m_acknowledged[m_recordIndex][j] = false;              // ack[0:63][0],qck[0:63][1],ack[0:63][2]
+        }                                                           
+        
+        if(strcmp(getName(),"A0Z") == 0 && m_recordIndex == 31 /* && m_totalSize >= 4096 && m_fillingIndex >= 4096 */ ){
+                // isrCount++;
+                // Serial.print("ISR count : ");Serial.println(isrCount);
+                //if(isrCount == 10){ 
+                    // Disabled the ISR
+                    if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+                    {
+                        detachInterrupt(digitalPinToInterrupt(IULSM6DSM::INT1_PIN));
+                    }
+                    else
+                    {
+                        detachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN));
+                    }
+                    //isr_detached_startTime = micros();
+                    FeatureStates::isISRActive = false;
+                    FeatureStates::isISRDisabled = true;
+                   // isrFlag = true;
+                    //isrCount = 0;
+                    // Serial.println("ISR Disabled !!!");
+                    
+                //}
+                
+                //FeatureGroup::isFeatureStreamComplete = false;
+        }   
+            
+        m_recordIndex = (m_recordIndex + 1) % m_sectionCount;       // m_recordIndex++
         newFullSection = true;
         // Clear the data error flag for the next section
         m_dataError[m_recordIndex] = false;
+        
     }
-    // Filling Index restart from 0 if needed
+    // if(isrFlag){
+    //     Serial.print("m_fillingIndex : ");
+    //     Serial.println(m_fillingIndex);
+    //     Serial.print("m_recordIndex : ");
+    //     Serial.println(m_recordIndex);
+    //}
+    // Filling Index restart from 0 if needed       // Starting pointer for data filling Index rest to 0 (m_totalSize = 8192 )
     if (m_fillingIndex >= m_totalSize) {
         m_filledOnce = true;
+       #if 0 
+        if(m_fillingIndex == 4096 && strcmp(getName(),"A0Z") == 0 ) {
+             Serial.print("m_totalSize : ");Serial.println(m_totalSize);
+             Serial.print("Feature name : ");Serial.println(getName());
+             Serial.print("m_fillingIndex IN : ");
+             Serial.println(m_fillingIndex);
+             Serial.println("ISR Disabled !!!");
+             detachInterrupt(digitalPinToInterrupt(IULSM6DSM::INT1_PIN) );
+             FeatureStates::isISRActive = false;
+             FeatureStates::isISRDisabled = true;
+          }
+        #endif
+
         m_fillingIndex %= m_totalSize;
+        //Serial.println("ISR Disabled **********");  // 4096 buffer filled Completely
+        #if 0
+         if( strcmp(getName(),"A0X") == 0 ) {
+            Serial.println("A0X is Filled");
+            Serial.print("Total Size X:");
+            Serial.println(m_totalSize);
+            Serial.print("Section Size X:");
+            Serial.println(m_sectionSize);
+            Serial.print(" 1 Section Filled :");
+            Serial.println(copyFillingIndex);
+            Serial.print("Record Index:");
+            Serial.println(copyRecorIndex);
+            Serial.print("ReceiverCount : X");
+            Serial.println(copyReceiverCount);
+            Serial.print("current Filling Index:");
+            Serial.println(count);
+            
+            }
+        if( strcmp(getName(),"A0Y") == 0){
+            Serial.println("A0Y is Filled");
+            Serial.print("Total Size Y:");
+            Serial.println(m_totalSize);
+            Serial.print("Section Size Y:");
+            Serial.println(m_sectionSize);
+            Serial.print(" 1 Section Filled :");
+            Serial.println(copyFillingIndex);
+            Serial.print("Record Index:");
+            Serial.println(copyRecorIndex);
+            Serial.print("ReceiverCount : Y");
+            Serial.println(copyReceiverCount);
+            Serial.print("current Filling Index:");
+            Serial.println(count);
+            
+        }    
+        if( strcmp(getName(),"A0Z")== 0){
+            Serial.println("A0Z is Filled");
+            Serial.print("Total Size Z:");
+            Serial.println(m_totalSize);
+            Serial.print("Section Size Z:");
+            Serial.println(m_sectionSize);
+            Serial.print(" 1 Section Filled :");
+            Serial.println(copyFillingIndex);
+            Serial.print("Record Index:");
+            Serial.println(copyRecorIndex);
+            Serial.print("ReceiverCount : Z");
+            Serial.println(copyReceiverCount);
+            Serial.print("current Filling Index:");
+            Serial.println(count);
+  
+        } 
+        if(strcmp(getName(),"A7X") == 0){
+            Serial.print("A7X Section Size: ");
+            Serial.println(m_sectionSize);
+            Serial.print("ReceiverCount A7X: ");
+            Serial.println(copyReceiverCount);
+        }
+        #endif
+        //  if(count >= 1000){
+        //     //dittached ISR after N-counts
+        //     //detachInterrupt(digitalPinToInterrupt(IULSM6DSM::INT1_PIN));
+        //     // Stop filling the data into buffer
+        // }
+
+        //count++;
+        
     }
     // Run the callbacks
     if (m_onNewValue != NULL) {
@@ -345,6 +473,7 @@ bool Feature::sectionsToComputeHaveDataError(FeatureComputer *receiver,
         uint8_t sIdx = m_computeIndex[uint8_t(idx)];
         for (uint8_t i = sIdx; i < sIdx + sectionCount; i++) {
             if (m_dataError[i % m_sectionCount]) {
+                //Serial.println("Data error !");
                 return true;
             }
         }
@@ -401,8 +530,7 @@ void Feature::stream(IUSerial *ser, uint8_t sectionCount)
 uint16_t Feature::sendToBuffer(char *destination, uint16_t startIndex,
                                uint8_t sectionCount)
 {
-    uint8_t k = (m_sectionCount + m_recordIndex - sectionCount) %
-        m_sectionCount;
+    uint8_t k = (m_sectionCount + m_recordIndex - sectionCount) % m_sectionCount;
     for (uint8_t i = k; i < k + sectionCount; ++i)
     {
         m_locked[i % m_sectionCount] = true;
@@ -413,6 +541,7 @@ uint16_t Feature::sendToBuffer(char *destination, uint16_t startIndex,
     {
         m_locked[i % m_sectionCount] = false;
     }
+    //Serial.print("charCount : ");Serial.println(charCount);
     return charCount;
 }
 
@@ -427,7 +556,7 @@ uint16_t Feature::sendToBuffer(q15_t *destination, uint16_t startIndex,
         m_sectionCount;
     for (uint8_t i = k; i < k + sectionCount; ++i)
     {
-        m_locked[i % m_sectionCount] = true;
+            m_locked[i % m_sectionCount] = true;
     }
     uint16_t charCount = m_specializedBufferStream(k, destination, startIndex,
                                                    sectionCount);
