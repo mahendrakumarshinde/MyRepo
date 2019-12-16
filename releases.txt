@@ -1,3 +1,60 @@
+#################################################################################################################################################################################
+Date: 16 December 2019
+Contributed By : Mahendrakumar Shinde, Darshan Mirajkar,Vikas Gaikwad
+Product Name : vEdge
+Firmware Versions :
+		1. vEdge_main(STM32) : 2.0.0
+		2. vEdge_wifi (ESP32): 2.0.0
+		3. Bootloader L1	 : 2.0.0
+		4. Bootloader L2     : 2.0.0
+		5. Factory Firmware  : 2.0.0 
+################################################################################################################################################################################
+
+Features
+
+1. KX222 SPI driver development.
+2. Over The Air Firmware Upgrades.
+   Development of Bootloader L1 to switch between the multiple firmware partitions.
+   Development of Bootloader L2 for firmware up-gradations.
+   Allocated space for main firmware is 620 KB STM32 ROM.
+   Memory Allocated for Factory Firmware allocated 168 KB STM32 ROM space.
+   Allocated 2 KB STM32 ROM space for boot-loader flags.
+   Implemented the Internal rolback in case firmware up-gradation failed.
+   Implemented the Forced rollback mechanism on device.
+   Generating the Firmware validation history log.
+3.ESP32 WiFi Firmware porting and development.
+4.Modified the Firmware data pipeline , executing the task in serial manner , data acquisition happens in serial manner.
+5.Added fix for external Flash auto-recovery.
+6.Added support of higher sampling rates and support Fmax upto 8.1 KHz in X & Y axis and 5 KHz in Z-axis.
+7.Added support to switch between the Low frequency and High Frequency accelerometer based on configurations.
+8.Added support to acquire the TMP116 temperature data from different I2C bus.
+
+Bug fixes :
+
+1.Modified the logic to compare the httpConfigs and added checks to compare the port and http path.
+2.Resolved the issue of writing the {} empty JSON to device.conf.
+3.Handle the case of reading incorrect BLE MAC address.
+
+Minor Changes:
+
+1.Modified the mechanism to get the SAMPLING RATE, BLOCK SIZE, FIRMWARE VERSION from HOST device.
+2.Added new USB Command support.
+  Storing the MQTT and http configurations to STM32 Internal Flash memory as a backup in case of external FLASH memory failure, allocated 8 KB STM32 ROM memory space.
+3.Updated the WiFi Auto re-connection logic.
+
+NOTE: After Auto recovery of External FLASH memory user won't be able to get the benefits of below features.
+
+1.Can't perform the Rollback until next successful OTA.
+2.Can't perform the Forced Rollback next successful OTA.
+3.Loose the Previous spectral features configurations until server sends previous configurations.
+
+
+
+
+-------------------------------------------------------------------END OF IDE+ Firmware Release ---------------------------------------------------------------------------------
+
+
+
 # This file tell about all the Firmware Release of IDE+
 #################################################################################################################################################################################
 Date: 7 August 2019
