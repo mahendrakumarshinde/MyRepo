@@ -536,6 +536,13 @@ bool IUFSFlash::checkConfig(uint32_t address)
     }
     return false;
 }
+// To clear Internal flash of 2k
+void IUFSFlash::clearInternalFlash(uint32_t address)
+{
+    stm32l4_flash_unlock();
+    stm32l4_flash_erase(address, 2048);
+    stm32l4_flash_lock();
+}
 /* =============================================================================
     IUSPIFlash - Flash accessible via SPI
 ============================================================================= */

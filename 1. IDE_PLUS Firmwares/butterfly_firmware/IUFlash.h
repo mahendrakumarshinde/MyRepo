@@ -106,6 +106,7 @@ class IUFSFlash : public IUFlash
         void writeInternalFlash(uint8_t type, uint32_t address, uint8_t dataLength, const uint8_t* data);
         String readInternalFlash(uint32_t address);
         bool checkConfig(uint32_t address);
+        void clearInternalFlash(uint32_t address);
 };
 
 template <size_t capacity>
