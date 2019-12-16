@@ -2,7 +2,7 @@
 #define BOOTLOADERCODES_H
 
 
-const char BOOTLOADER2_VERSION[8] = "1.0.0";
+const char BOOTLOADER2_VERSION[8] = "2.0.0";
 
 // OTA Firmware Path deteails
 
