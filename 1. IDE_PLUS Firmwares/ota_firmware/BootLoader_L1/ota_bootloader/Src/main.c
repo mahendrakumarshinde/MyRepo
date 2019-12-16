@@ -50,7 +50,7 @@ uint32_t all_flags[32] ;
 
 /*****************************************************************************/
 //Bootloader Firmware Version
-const char BOOTLOADER1_VERSION[8] = "1.0.0";
+const char BOOTLOADER1_VERSION[8] = "2.0.0";
 
 
 /* USER CODE END Includes */
