@@ -114,6 +114,9 @@ bool doOnce = true;
 uint32_t interval = 30000;
 uint32_t lastDone = 0;
 
+/**Flash Check Timer variable**/
+uint32_t flashCheckInterval = 300000;
+uint32_t flashCheckLastDone = 0;
 
 /***** Main operator *****/
 
@@ -161,7 +164,7 @@ void operationStateCallback(Feature *feature) {
 
 static armv7m_timer_t watchdogTimer;
 uint32_t lastActive = 0;
-uint32_t loopTimeout = 60000;  // 1min timeout
+uint32_t loopTimeout = 120000;  // 2min timeout
 uint32_t oneDayTimeout = 86400000;
 
 static void watchdogCallback(void) {
@@ -169,6 +172,8 @@ static void watchdogCallback(void) {
     if (now > oneDayTimeout ||
         (lastActive > 0 && now - lastActive > loopTimeout))
     {
+        DOSFS.end();
+        delay(10);
         STM32.reset();
     }
     if(conductor.getUsageMode() != UsageMode::OTA) {
@@ -391,8 +396,6 @@ void setup()
   digitalWrite(ESP32_IO0,HIGH); // IDE1.5_PORT_CHANGE
   DOSFS.begin();
   #if 1
-    
-    
     iuUSB.begin();
     iuUSB.setOnNewMessageCallback(onNewUSBMessage);
     rgbLed.setup();
@@ -414,6 +417,8 @@ void setup()
         }
         iuI2C.begin();
         iuI2C1.begin();
+        /***Flash Test****/
+        conductor.onBootFlashTest();
         // Interfaces
         if (debugMode) {
             debugPrint(F("\nInitializing interfaces..."));
@@ -607,6 +612,7 @@ void setup()
         delay(5000);
         //configure mqttServer
         conductor.configureMQTTServer("MQTT.conf");
+
         //http configuration
         conductor.configureBoardFromFlash("httpConfig.conf",1);
         // get the previous offset values 
@@ -682,6 +688,11 @@ void loop()
                 debugPrint(F("Sensor:"),false);debugPrint(FFTConfiguration::currentSensor);
             }
         // }
+        if (iuWiFi.isConnected() == true && conductor.flashStatusFlag == true && conductor.getDatetime() > 1570000000.00)
+        {
+            conductor.sendFlashStatusMsg(FLASH_SUCCESS,"Flash Recovery Successfull..Send the configuration");
+            conductor.flashStatusFlag = false;
+        }
         if (iuWiFi.isConnected() == true && sensorStatus == true && conductor.getDatetime() > 1570000000.00)
         {
             conductor.sendSensorStatus();
@@ -753,6 +764,12 @@ void loop()
             }
         }
         if(conductor.getUsageMode() != UsageMode::OTA) { /* Block BLE messages, raw data during OTA download */
+
+            uint32_t current = millis();
+            if (current - flashCheckLastDone > flashCheckInterval) {
+                flashCheckLastDone = current;
+                conductor.periodicFlashTest();
+            }
             // Consume ready segmented message
             char configMessageFromBLE[MESSAGE_LENGTH+1];
             if (conductor.consumeReadySegmentedMessage(configMessageFromBLE)) {

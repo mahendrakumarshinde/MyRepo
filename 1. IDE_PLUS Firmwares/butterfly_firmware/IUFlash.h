@@ -7,8 +7,9 @@
 #include <ArduinoJson.h>
 
 #include <IUDebugger.h>
-
-
+#include "stm32l4_flash.h"
+#define CONFIG_MQTT_FLASH_ADDRESS    (uint32_t)0x080FE800    /* Start address of MQTT Config location*/
+#define CONFIG_HTTP_FLASH_ADDRESS    (uint32_t)0x080FE000    /* Start address of HTTP Config location*/
 class IUFlash
 {
     public:
@@ -47,7 +48,6 @@ class IUFlash
                                     JsonVariant &config) = 0;
         virtual bool updateConfigJson(storedConfig configType, JsonVariant &config) = 0;
         virtual bool validateConfig(storedConfig configType, JsonObject &config, char *validationResultString, char* mac_id, double timestamp, char* messageId) = 0;
-
 
     protected:
         bool m_begun = false;
@@ -102,6 +102,11 @@ class IUFSFlash : public IUFlash
         size_t getConfigFilename(storedConfig configType, char *dest,
                                  size_t len);
         File openConfigFile(storedConfig configType, const char* mode);
+
+        void writeInternalFlash(uint8_t type, uint32_t address, uint8_t dataLength, const uint8_t* data);
+        String readInternalFlash(uint32_t address);
+        bool checkConfig(uint32_t address);
+        void clearInternalFlash(uint32_t address);
 };
 
 template <size_t capacity>

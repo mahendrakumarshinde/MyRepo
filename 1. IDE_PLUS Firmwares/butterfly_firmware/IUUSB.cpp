@@ -42,7 +42,8 @@ bool IUUSB::readCharCustomProtocol()
             (m_bufferIndex == 17 && strncmp(m_buffer, "IUGET_MQTT_CONFIG", 17) == 0)||
             (m_bufferIndex == 16 && strncmp(m_buffer, "IUGET_TCP_CONFIG", 16) == 0) ||
             (m_bufferIndex == 16 && strncmp(m_buffer, "IUGET_FFT_CONFIG", 16) == 0) ||
-            (m_bufferIndex == 17 && strncmp(m_buffer, "IUGET_DEVICE_CONF", 17)== 0)  )    
+            (m_bufferIndex == 17 && strncmp(m_buffer, "IUGET_DEVICE_CONF", 17)== 0) ||
+            (m_bufferIndex == 17 && strncmp(m_buffer, "IUSET_ERASE_FLASH", 17)== 0) )    
         {
             m_buffer[m_bufferIndex++] = 0;
             messageIsComplete = true;

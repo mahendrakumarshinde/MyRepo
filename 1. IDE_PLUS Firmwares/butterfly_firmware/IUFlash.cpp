@@ -485,7 +485,66 @@ File IUFSFlash::openConfigFile(storedConfig configType,
     return DOSFS.open(filepath, mode);
 }
 
+/***Read Write Internal Flag***/
 
+String IUFSFlash::readInternalFlash(uint32_t address)
+{
+    uint8_t type;
+    uint8_t length;
+    uint8_t result[255];
+    char resultConfig[255];
+    stm32l4_flash_unlock();
+    memset(result,'\0',sizeof(result));
+    type = *(uint8_t*)(address );
+    length = *(uint8_t*)(address + 1);
+    delay(1000);
+    if(length < 255 && length > 0 )
+    {
+        for (int i = 0 ; i < length; i++){
+            result[i] = *(uint8_t*)(address + i + 2);
+        }
+    }
+    sprintf(resultConfig,"%s",(char*)result);
+    stm32l4_flash_lock();
+    return resultConfig;
+}
+/*Internal flash configuration packet format*/
+/*--|Precense| Size |<--Mqtt or Http config...expected that length is MAX of 255Bytes>|*/
+/*--|   01   |  FF  |<---------------------Mqtt/http config json--------------------->|*/
+void IUFSFlash::writeInternalFlash(uint8_t type, uint32_t address, uint8_t dataLength, const uint8_t* data)
+{
+  uint8_t dataSize;
+  char allData[255];
+  dataSize = sizeof(type)+sizeof(dataLength)+dataLength;
+  stm32l4_flash_unlock();
+  stm32l4_flash_erase(address, 2048);
+  allData[0] = type;
+  allData[1] = dataLength;
+  sprintf(&allData[2],"%s",data);
+  debugPrint(allData);
+  stm32l4_flash_program(address, (const uint8_t*)allData,dataSize);
+  stm32l4_flash_lock();
+}
+
+bool IUFSFlash::checkConfig(uint32_t address)
+{
+    uint8_t presence;
+    stm32l4_flash_unlock();
+    presence = *(uint8_t*)(address );
+    stm32l4_flash_lock();
+    if(presence == 0x01)
+    {
+        return true;
+    }
+    return false;
+}
+// To clear Internal flash of 2k
+void IUFSFlash::clearInternalFlash(uint32_t address)
+{
+    stm32l4_flash_unlock();
+    stm32l4_flash_erase(address, 2048);
+    stm32l4_flash_lock();
+}
 /* =============================================================================
     IUSPIFlash - Flash accessible via SPI
 ============================================================================= */
