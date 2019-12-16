@@ -49,6 +49,8 @@
 #define FFW_ADDRESS     (uint32_t)0x08036000    /* Start address of Facotry Firmware */
 #define MFW_ADDRESS     (uint32_t)0x08060000    /* Start address of Main Firmware */
 #define FLAG_ADDRESS    (uint32_t)0x080FF800    /* Start address of FLAG location*/
+// #define CONFIG_MQTT_FLASH_ADDRESS    (uint32_t)0x080FE800    /* Start address of MQTT Config location*/
+// #define CONFIG_HTTP_FLASH_ADDRESS    (uint32_t)0x080FE000    /* Start address of HTTP Config location*/
 
 #define OTA_MAX_VALIDATION_RETRY    2
 

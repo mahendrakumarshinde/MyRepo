@@ -508,7 +508,9 @@ String IUFSFlash::readInternalFlash(uint32_t address)
     stm32l4_flash_lock();
     return resultConfig;
 }
-
+/*Internal flash configuration packet format*/
+/*--|Precense| Size |<--Mqtt or Http config...expected that length is MAX of 255Bytes>|*/
+/*--|   01   |  FF  |<---------------------Mqtt/http config json--------------------->|*/
 void IUFSFlash::writeInternalFlash(uint8_t type, uint32_t address, uint8_t dataLength, const uint8_t* data)
 {
   uint8_t dataSize;

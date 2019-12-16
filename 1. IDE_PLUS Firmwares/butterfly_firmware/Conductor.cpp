@@ -1088,7 +1088,7 @@ void Conductor::readForceOtaConfig()
     m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
     m_mqttUserName = MQTT_DEFAULT_USERNAME;
     m_mqttPassword = MQTT_DEFAULT_ASSWORD;
-    flashStatusFlag = true;
+    // flashStatusFlag = true;
     //m_accountid = "XXXAdmin";
   }
   else if(iuFlash.checkConfig(CONFIG_MQTT_FLASH_ADDRESS) && !root.success()){
