@@ -43,7 +43,11 @@ bool IUUSB::readCharCustomProtocol()
             (m_bufferIndex == 16 && strncmp(m_buffer, "IUGET_TCP_CONFIG", 16) == 0) ||
             (m_bufferIndex == 16 && strncmp(m_buffer, "IUGET_FFT_CONFIG", 16) == 0) ||
             (m_bufferIndex == 17 && strncmp(m_buffer, "IUGET_DEVICE_CONF", 17)== 0) ||
-            (m_bufferIndex == 17 && strncmp(m_buffer, "IUSET_ERASE_FLASH", 17)== 0) )    
+            (m_bufferIndex == 19 && strncmp(m_buffer, "IUGET_OTAFLAG_VALUE", 19)== 0) ||
+            (m_bufferIndex == 16 && strncmp(m_buffer, "IUSET_OTAFLAG_00", 16)== 0) || 
+            (m_bufferIndex == 16 && strncmp(m_buffer, "IUSET_OTAFLAG_01", 16)== 0) || 
+            (m_bufferIndex == 16 && strncmp(m_buffer, "IUSET_OTAFLAG_02", 16)== 0) ||         
+            (m_bufferIndex == 21 && strncmp(m_buffer, "IUSET_ERASE_EXT_FLASH", 21)== 0) )    
         {
             m_buffer[m_bufferIndex++] = 0;
             messageIsComplete = true;

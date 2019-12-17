@@ -1993,7 +1993,7 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     }
                     
                 }
-                if (strcmp(buff, "IUSET_ERASE_FLASH") == 0)
+                if (strcmp(buff, "IUSET_ERASE_EXT_FLASH") == 0)
                 {
                     debugPrint("Formating Flash Please wait");
                     ledManager.overrideColor(RGB_RED);
@@ -2003,6 +2003,71 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     debugPrint("Format Successfully");
                     delay(2000);
                     STM32.reset();
+                }
+                if (strcmp(buff, "IUGET_OTAFLAG_VALUE") == 0)
+                {
+                    iuUSB.port->println("OTA FLAG VALUES:");
+                    iuOta.readOtaFlag();
+                    iuUSB.port->print("[0-OTA_STATUS]: ");
+                    iuUSB.port->println(iuOta.getOtaFlagValue(OTA_STATUS_FLAG_LOC));
+                    iuUSB.port->print("[1-OTA_RETRY]: ");
+                    iuUSB.port->println(iuOta.getOtaFlagValue(OTA_RETRY_FLAG_LOC));
+                    iuUSB.port->print("[2-OTA_VALIDITY_RETRY]: ");
+                    iuUSB.port->println(iuOta.getOtaFlagValue(OTA_VLDN_RETRY_FLAG_LOC));
+                }
+                if (strcmp(buff, "IUSET_OTAFLAG_00") == 0)
+                {
+                    uint32_t cmdStrTime = millis();
+                    uint8_t value = 0xFF;
+                    while(iuUSB.port->available() > 0)
+                    {
+                        value = iuUSB.port->parseInt();
+                        iuUSB.port->print("Value:");
+                        iuUSB.port->println(value);
+                        if((millis() - cmdStrTime) > 7000)
+                            value = 0xFF;
+                        if(value >= 0)
+                            break;
+                    }
+                    if(value >= 0 && value < 10 )
+                        iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,value);
+                    delay(100);
+                }
+               if (strcmp(buff, "IUSET_OTAFLAG_01") == 0)
+                {
+                    uint32_t cmdStrTime = millis();
+                    uint8_t value = 0xFF;
+                    while(iuUSB.port->available() > 0)
+                    {
+                        value = iuUSB.port->parseInt();
+                        iuUSB.port->print("Value:");
+                        iuUSB.port->println(value);
+                        if((millis() - cmdStrTime) > 7000)
+                            value = 0xFF;
+                        if(value >= 0)
+                            break;
+                    }
+                    if(value >= 0 && value < 4 )
+                        iuOta.updateOtaFlag(OTA_RETRY_FLAG_LOC,value);
+                    delay(100);
+                }
+               if (strcmp(buff, "IUSET_OTAFLAG_02") == 0)
+                {
+                    uint32_t cmdStrTime = millis();
+                    uint8_t value = 0xFF;
+                    while(iuUSB.port->available() > 0)
+                    {
+                        value = iuUSB.port->parseInt();
+                        iuUSB.port->print("Value:");
+                        iuUSB.port->println(value);
+                        if((millis() - cmdStrTime) > 7000)
+                            value = 0xFF;
+                        if(value >= 0)
+                            break;
+                    }
+                    if(value >= 0 && value < 4 )
+                        iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,value);
+                    delay(100);
                 }
                 break;
             case UsageMode::CUSTOM:
@@ -4762,21 +4827,6 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
     {
         ValidationFile->println(F("   Validation [MQTT]-Default Port: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Default Port: Fail !")); }
-    }
-
-    ValidationFile->print(F(" - MQTT DEFAULT USERNAME:"));
-    ValidationFile->println(MQTT_DEFAULT_USERNAME);
-    if(strcmp(MQTT_DEFAULT_USERNAME,"ispl"))
-    {
-        ValidationFile->println(F("   Validation [MQTT]-Default Username: Fail !"));
-        if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Default Username: Fail !")); }
-    }
-    ValidationFile->print(F(" - MQTT DEFAULT PASSOWRD:"));
-    ValidationFile->println(MQTT_DEFAULT_ASSWORD);
-    if(strcmp(MQTT_DEFAULT_ASSWORD,"indicus"))
-    {
-        ValidationFile->println(F("   Validation [MQTT]-Default Password: Fail !"));
-        if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Default Password: Fail !")); }
     }
 
     // 2. Check MQTT update from config file stored in ext. flash
