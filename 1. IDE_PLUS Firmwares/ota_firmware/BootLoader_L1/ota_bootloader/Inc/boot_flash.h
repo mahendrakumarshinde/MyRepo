@@ -9,6 +9,9 @@
 #define FLASH_BL2_START_ADDRESS ((uint32_t)0x08010000u)
 #define FLASH_APP_END_ADDRESS   ((uint32_t)FLASH_BANK1_END-0x10u) /**< Leave a little extra space at the end. */
 
+#define CONFIG_MQTT_FLASH_ADDRESS    ((uint32_t)0x080FE800u)    /* Start address of MQTT Config location*/
+#define CONFIG_HTTP_FLASH_ADDRESS    ((uint32_t)0x080FE000u)    /* Start address of HTTP Config location*/
+
 //#define FLAG_ADDRESS     (uint32_t)0x08060000u    /* Start address of application space in flash */
 #define FLAG_ADDRESS     (uint32_t)0x080FF800u    /* Start address of application space in flash */
 //#define FLAG_END_ADDRESS     (uint32_t)0x08060FFFu    /* End address of application space (addr. of last byte) */

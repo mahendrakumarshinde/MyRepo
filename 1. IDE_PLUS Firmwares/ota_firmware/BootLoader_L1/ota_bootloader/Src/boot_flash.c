@@ -92,44 +92,67 @@ void Bootloader_Init(void)
     HAL_FLASH_Lock();
 }
 
+//uint8_t Flag_Erase_All(void)
+//{
+//    uint32_t NbrOfPages = 0;
+//    uint32_t PageError  = 0;
+//    FLASH_EraseInitTypeDef  pEraseInit;
+//    HAL_StatusTypeDef       status = HAL_OK;
+//
+//    HAL_FLASH_Unlock();
+//
+//    /* Get the number of pages to erase */
+//    NbrOfPages = (FLASH_BASE + FLASH_SIZE - FLAG_ADDRESS /*CONFIG_HTTP_FLASH_ADDRESS*/) / FLASH_PAGE_SIZE;//stm32l496rg number of pages = 512
+//   // NbrOfPages= 511;
+//
+//    if(NbrOfPages > FLASH_PAGE_NBPERBANK)
+//    {
+//        pEraseInit.Banks = FLASH_BANK_1;
+//        pEraseInit.NbPages = NbrOfPages % FLASH_PAGE_NBPERBANK;
+//        pEraseInit.Page = FLASH_PAGE_NBPERBANK - pEraseInit.NbPages;
+//        pEraseInit.TypeErase = FLASH_TYPEERASE_PAGES;
+//        status = HAL_FLASHEx_Erase(&pEraseInit, &PageError);
+//        NbrOfPages = FLASH_PAGE_NBPERBANK;
+//    }
+//
+//    if(status == HAL_OK)
+//    {
+//        pEraseInit.Banks = FLASH_BANK_2;
+//        pEraseInit.NbPages = 1;
+//        pEraseInit.Page = FLASH_PAGE_NBPERBANK - pEraseInit.NbPages;
+//        pEraseInit.Page = 511;
+//        pEraseInit.TypeErase = FLASH_TYPEERASE_PAGES;
+//        status = HAL_FLASHEx_Erase(&pEraseInit, &PageError);
+//        //status = HAL_FLASHEx_Erase(&pEraseInit, PageError);
+//    }
+//
+//    HAL_FLASH_Lock();
+//
+//    return (status == HAL_OK) ? BL_OK : BL_ERASE_ERROR;
+//}
+
+
+
 uint8_t Flag_Erase_All(void)
 {
-    uint32_t NbrOfPages = 0;
+	// Erase the FLAG ADDRESS
+
     uint32_t PageError  = 0;
     FLASH_EraseInitTypeDef  pEraseInit;
     HAL_StatusTypeDef       status = HAL_OK;
-
     HAL_FLASH_Unlock();
-
-    /* Get the number of pages to erase */
-    NbrOfPages = (FLASH_BASE + FLASH_SIZE - FLAG_ADDRESS) / FLASH_PAGE_SIZE;//stm32l496rg number of pages = 512
-   // NbrOfPages= 511;
-
-    if(NbrOfPages > FLASH_PAGE_NBPERBANK)
-    {
-        pEraseInit.Banks = FLASH_BANK_1;
-        pEraseInit.NbPages = NbrOfPages % FLASH_PAGE_NBPERBANK;
-        pEraseInit.Page = FLASH_PAGE_NBPERBANK - pEraseInit.NbPages;
-        pEraseInit.TypeErase = FLASH_TYPEERASE_PAGES;
-        status = HAL_FLASHEx_Erase(&pEraseInit, &PageError);
-        NbrOfPages = FLASH_PAGE_NBPERBANK;
-    }
-
-    if(status == HAL_OK)
-    {
-        pEraseInit.Banks = FLASH_BANK_2;
-        pEraseInit.NbPages = 4;
-        pEraseInit.Page = FLASH_PAGE_NBPERBANK - pEraseInit.NbPages;
-        pEraseInit.Page = 508;
-        pEraseInit.TypeErase = FLASH_TYPEERASE_PAGES;
-        status = HAL_FLASHEx_Erase(&pEraseInit, &PageError);
-        //status = HAL_FLASHEx_Erase(&pEraseInit, PageError);
-    }
-
+    pEraseInit.Banks = FLASH_BANK_2;
+    pEraseInit.NbPages = 1;
+    // pEraseInit.Page = FLASH_PAGE_NBPERBANK - pEraseInit.NbPages;
+    pEraseInit.Page = 511;
+    pEraseInit.TypeErase = FLASH_TYPEERASE_PAGES;
+    status = HAL_FLASHEx_Erase(&pEraseInit, &PageError);
     HAL_FLASH_Lock();
 
     return (status == HAL_OK) ? BL_OK : BL_ERASE_ERROR;
+
 }
+
 
 void Bootloader_FlashBegin(void)
 {

@@ -140,7 +140,7 @@ uint8_t FlagAddr;
   uart_transmit_str((uint8_t*)BOOTLOADER1_VERSION);
   uart_transmit_str((uint8_t*)"\r\n=================================\n\r\n\r");
   //uart_transmit_str((uint8_t*)"Waiting for the input.............. \n\r");
-
+  //erase_flag();
   //---------------------------------Test code-----------------------------------------//
 //  Bootloader_Init();
 //  Flag_Erase_All();
