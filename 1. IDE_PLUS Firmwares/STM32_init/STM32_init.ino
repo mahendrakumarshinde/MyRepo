@@ -1,7 +1,7 @@
-/**
- * 
- */
-
+/*
+  Infinite Uptime STMInit Module Firmware
+  Update 17-12-2019
+*/
 #include <Arduino.h>
 
 #ifdef _VARIANT_BUTTERFLY_STM32L433CC_

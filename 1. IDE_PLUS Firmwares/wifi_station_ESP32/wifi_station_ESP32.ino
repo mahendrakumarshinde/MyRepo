@@ -1,7 +1,6 @@
 /*
-  Infinite Uptime BLE Module Firmware
-
-  Update 2018-03-01
+  Infinite Uptime WiFi Module Firmware
+  Update 17-12-2019
 */
 
 #include "Conductor.h"
