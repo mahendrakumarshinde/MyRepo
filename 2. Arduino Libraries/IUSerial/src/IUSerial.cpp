@@ -341,6 +341,8 @@ void IUSerial::sendLongMSPCommand(MSPCommand::command cmd,
     {
         debugPrint("Sending Long MSP Command #", false);
         debugPrint((uint8_t) cmd);
+        debugPrint("MSP message length: ", false);
+        debugPrint((uint16_t) cmdSize);
         debugPrint("MSP message is: ", false);
         for (uint16_t i = 0; i < cmdSize; i++)
         {
@@ -410,7 +412,7 @@ void IUSerial::streamLiveMSPMessage(char c)
     {
         debugPrint(c, false);
     }
-    m_actualLiveMspCmdSize += mspChecksumAndSend(c);;
+    m_actualLiveMspCmdSize += mspChecksumAndSend(c);
 }
 
 /**
@@ -447,6 +449,7 @@ bool IUSerial::endLiveMSPCommand()
  */
 size_t IUSerial::sendMspCommandHeader(uint16_t cmdSize, MSPCommand::command cmd)
 {
+#if 1  //  ESP32_PORT_TRUE  
     m_mspChecksumOut = 0;
     size_t n = 0;
     n += port->write('$');
@@ -456,6 +459,7 @@ size_t IUSerial::sendMspCommandHeader(uint16_t cmdSize, MSPCommand::command cmd)
     n += mspChecksumAndSend((uint8_t) cmdSize);
     n += mspChecksumAndSend((uint8_t) cmd);
     return n;
+#endif   
 }
 
 /**
@@ -463,7 +467,9 @@ size_t IUSerial::sendMspCommandHeader(uint16_t cmdSize, MSPCommand::command cmd)
  */
 size_t IUSerial::sendMspCommandTail()
 {
+#if 1  //  ESP32_PORT_TRUE 
     return port->write(m_mspChecksumOut);
+#endif
 }
 
 /**
@@ -471,8 +477,10 @@ size_t IUSerial::sendMspCommandTail()
  */
 size_t IUSerial::mspChecksumAndSend(uint8_t b)
 {
+#if 1  //  ESP32_PORT_TRUE 
     m_mspChecksumOut ^= b;
     return port->write(b);
+#endif
 }
 
 

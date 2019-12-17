@@ -86,6 +86,7 @@ class IUSerial
         virtual void mspSendIPAddress(MSPCommand::command cmd, IPAddress ip);
         virtual MacAddress mspReadMacAddress();
         virtual IPAddress mspReadIPAddress();
+        uint16_t mspGetDataSize() { return m_mspDataSize;}
 
     protected:
         /***** Communication *****/

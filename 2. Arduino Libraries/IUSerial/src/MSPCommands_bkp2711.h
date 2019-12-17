@@ -128,14 +128,11 @@ namespace MSPCommand
         OTA_PACKET_NAK,
         OTA_STM_DNLD_OK,
         OTA_ESP_DNLD_OK,
-        OTA_STM_DNLD_STATUS,
-        OTA_ESP_DNLD_STATUS,
+        OTA_STM_DNLD_STS,
+        OTA_ESP_DNLD_STS,
 
         // Config update (Host - Wifi)
-        CONFIG_ACK,
-	SEND_SENSOR_STATUS
-	// ESP32 MSP Commands
-	//ESP_DEBUG_TO_STM_HOST
+        CONFIG_ACK
     };
 }
 
