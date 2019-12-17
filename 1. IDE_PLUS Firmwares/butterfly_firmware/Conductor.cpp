@@ -2231,7 +2231,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             otaFwdnldTmout = millis();
             waitingDnldStrart = false;
             sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR,buff);
-            if(!strcmp(String(iuOta.getOtaRca(OTA_WIFI_DISCONNECT)).c_str(),buff))
+ //           if(!strcmp(String(iuOta.getOtaRca(OTA_WIFI_DISCONNECT)).c_str(),buff))
             {
                 for(int i = 0 ; i < 15; i++) {
                     ledManager.overrideColor(RGB_RED);
