@@ -3373,7 +3373,7 @@ void Conductor::streamFeatures()
         if (FeatureStates::isISRActive != true && FeatureStates::isISRDisabled){   
                 FeatureStates::isFeatureStreamComplete = true;   // publication completed
                 FeatureStates::isISRActive = true;
-                debugPrint("Published to WiFi Complete !!!");
+                //debugPrint("Published to WiFi Complete !!!");
             }
     }
    #if 0
