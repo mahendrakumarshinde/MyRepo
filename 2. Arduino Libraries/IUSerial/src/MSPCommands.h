@@ -133,6 +133,8 @@ namespace MSPCommand
 
         // Config update (Host - Wifi)
         CONFIG_ACK,
+	GET_DEVICE_CONFIG,
+	SEND_FLASH_STATUS,
 	SEND_SENSOR_STATUS
 	// ESP32 MSP Commands
 	//ESP_DEBUG_TO_STM_HOST
