@@ -718,10 +718,6 @@ void loop()
             // Acquire data from sensors
             //conductor.acquireData(false);
             conductor.acquireTemperatureData();
-            // acquire the audio sensor data
-            //conductor.beginDataAcquisition();
-            // stop audio data acquition
-            //conductor.endDataAcquisition(); 
             // Compute features depending on operation mode
             conductor.computeFeatures();
             // Stream features

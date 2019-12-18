@@ -903,24 +903,27 @@ void Conductor::processMessageFromMQTT(const char* topic, const char* payload,
     }
     else if (strncmp(&subTopic[1], "config", 6) == 0)
     {
-        if (length > UART_TX_FIFO_SIZE)
-        {
-            // Command is longer than TX buffer, send it while taking care to not
-            // overflow the buffer. Timeout parameter is in microseconds.
-            hostSerial.sendLongMSPCommand(
-                MSPCommand::CONFIG_FORWARD_CONFIG, 300000, payload, length);
+        if(otaInProgress == false) {
+            if (length > UART_TX_FIFO_SIZE)
+            {
+                // Command is longer than TX buffer, send it while taking care to not
+                // overflow the buffer. Timeout parameter is in microseconds.
+                hostSerial.sendLongMSPCommand(
+                    MSPCommand::CONFIG_FORWARD_CONFIG, 300000, payload, length);
+            }
+            else
+            {
+                hostSerial.sendMSPCommand(MSPCommand::CONFIG_FORWARD_CONFIG, payload,
+                                        length);
+            }
         }
-        else
-        {
-            hostSerial.sendMSPCommand(MSPCommand::CONFIG_FORWARD_CONFIG, payload,
-                                      length);
-        }
-
     }
     else if (strncmp(&subTopic[1], "command", 7) == 0)
     {
-        hostSerial.sendMSPCommand(MSPCommand::CONFIG_FORWARD_CMD,
-                                  payload, length);
+        if(otaInProgress == false) {
+            hostSerial.sendMSPCommand(MSPCommand::CONFIG_FORWARD_CMD,
+                                    payload, length);
+        }
     }
     else if (strncmp(&subTopic[1], "legacy", 6) == 0)
     {
@@ -932,8 +935,10 @@ void Conductor::processMessageFromMQTT(const char* topic, const char* payload,
         }
         else
         {
-            hostSerial.sendMSPCommand(MSPCommand::CONFIG_FORWARD_LEGACY_CMD,
-                                      payload, length);
+            if(otaInProgress == false) {
+                hostSerial.sendMSPCommand(MSPCommand::CONFIG_FORWARD_LEGACY_CMD,
+                                        payload, length);
+            }
         }
     }
     else if (strncmp(&subTopic[1], "post_url", 8) == 0)
@@ -946,7 +951,6 @@ void Conductor::processMessageFromMQTT(const char* topic, const char* payload,
         }
     }
 }
-
 
 /* =============================================================================
     Data posting / publication
