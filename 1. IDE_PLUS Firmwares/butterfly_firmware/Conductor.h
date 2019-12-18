@@ -192,6 +192,7 @@ class Conductor
         void endDataAcquisition();
         bool resetDataAcquisition();
         void acquireData(bool inCallback);
+        void acquireAudioData(bool inCallback);
         void acquireTemperatureAudioData();
         void computeFeatures();
         void streamFeatures();

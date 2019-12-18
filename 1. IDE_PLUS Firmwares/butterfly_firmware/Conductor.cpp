@@ -3327,6 +3327,19 @@ void Conductor::acquireData(bool inCallback)
 }
 
 /**
+ * @brief capture only Audio sensor data
+ * 
+ * @param inCallback 
+ */
+void Conductor::acquireAudioData(bool inCallback){
+  for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
+        if ( strcmp("MIC", Sensor::instances[i]->getName())==0 )
+        {
+            Sensor::instances[i]->acquireData(inCallback,true);
+        }
+    }  
+}
+/**
  * Data acquisition function
  *
  * Method formerly benchmarked for (Temperature and Audio).
