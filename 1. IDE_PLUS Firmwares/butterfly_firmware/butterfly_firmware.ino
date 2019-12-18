@@ -247,7 +247,8 @@ void dataAcquisitionCallback()
         startT = micros();
     }
     
-    conductor.acquireData(true);
+    //conductor.acquireData(true);
+    conductor.acquireAudioData(true);
     
     if (asyncDebugMode) {
         debugPrint(micros() - startT);
@@ -524,7 +525,7 @@ void setup()
         if (debugMode) {
             debugPrint(F("\nSetting up default feature configuration..."));
         }
-        //conductor.setCallback(dataAcquisitionCallback);
+        conductor.setCallback(dataAcquisitionCallback);
         setUpComputerSources();
         populateFeatureGroups();
         if (debugMode) {
@@ -717,6 +718,10 @@ void loop()
             // Acquire data from sensors
             //conductor.acquireData(false);
             conductor.acquireTemperatureAudioData();
+            // acquire the audio sensor data
+            //conductor.beginDataAcquisition();
+            // stop audio data acquition
+            //conductor.endDataAcquisition(); 
             // Compute features depending on operation mode
             conductor.computeFeatures();
             // Stream features
