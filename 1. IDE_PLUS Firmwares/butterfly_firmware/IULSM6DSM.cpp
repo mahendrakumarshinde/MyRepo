@@ -15,16 +15,14 @@ IULSM6DSM::IULSM6DSM(IUI2C *iuI2C, const char* name,
                      FeatureTemplate<q15_t> *accelerationZ,
                      FeatureTemplate<q15_t> *tiltX,
                      FeatureTemplate<q15_t> *tiltY,
-                     FeatureTemplate<q15_t> *tiltZ,
-                     FeatureTemplate<float> *temperature) :
-    HighFreqSensor(name, 7, accelerationX, accelerationY, accelerationZ, tiltX,
-                   tiltY, tiltZ, temperature),
+                     FeatureTemplate<q15_t> *tiltZ) :
+    HighFreqSensor(name, 6, accelerationX, accelerationY, accelerationZ, tiltX,
+                   tiltY, tiltZ),
     m_scale(defaultScale),
     m_gyroScale(defaultGyroScale),
     m_odr(defaultODR),
     m_readCallback(i2cReadCallback),
-    m_readingData(false),
-    m_temperature(30.0)
+    m_readingData(false)
 {
     m_iuI2C = iuI2C;
     for (uint8_t i = 0; i < 3; ++i)
@@ -44,14 +42,17 @@ IULSM6DSM::IULSM6DSM(IUI2C *iuI2C, const char* name,
  */
 void IULSM6DSM::setupHardware()
 {
+    // if (!m_iuI2C->checkComponentWhoAmI("LSM6DSM ACC", ADDRESS, WHO_AM_I, I_AM))
     if (!m_iuI2C->checkComponentWhoAmI("LSM6DSM ACC", ADDRESS, WHO_AM_I, I_AM))
     {
         if (debugMode)
         {
             debugPrint(F("LSM6DSM ERROR"));
         }
+        lsmPresence = false;
         return;
     }
+    lsmPresence = true;
     softReset();
 
     /* CTRL3_C Data output configuration: Noting to do
@@ -314,6 +315,7 @@ void IULSM6DSM::readData()
         if (asyncDebugMode) {
             debugPrint("Skip accel read");
         }
+        
     } else if (m_iuI2C->readBytes(ADDRESS, OUT_TEMP_L, 14, &m_rawBytes[0],
                m_readCallback)) {
         m_readingData = true;
@@ -364,7 +366,7 @@ void IULSM6DSM::processData(uint8_t wireStatus)
         m_gyroData[i] = m_rawGyroData[i] + m_gyroBias[i];
         m_destinations[i + 3]->addValue(m_gyroData[i]);
     }
-    m_destinations[6]->addValue(m_temperature + m_temperatureOffset);
+ //   m_destinations[6]->addValue(m_temperature + m_temperatureOffset);
     m_readingData = false;
 }
 

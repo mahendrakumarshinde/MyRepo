@@ -82,6 +82,7 @@ class IULSM6DSM : public HighFreqSensor
         static const uint16_t defaultSamplingRate = 3330; // Hz
         uint16_t m_samplingRate = defaultSamplingRate;
         float ambientTemperature = 25.0;
+        bool lsmPresence = false;
         /***** Constructors and destructors *****/
         IULSM6DSM(IUI2C *iuI2C, const char* name,
                   void (*i2cReadCallback)(uint8_t wireStatus),
@@ -90,8 +91,7 @@ class IULSM6DSM : public HighFreqSensor
                   FeatureTemplate<q15_t> *accelerationZ,
                   FeatureTemplate<q15_t> *tiltX,
                   FeatureTemplate<q15_t> *tiltY,
-                  FeatureTemplate<q15_t> *tiltZ,
-                  FeatureTemplate<float> *temperature);
+                  FeatureTemplate<q15_t> *tiltZ);
         virtual ~IULSM6DSM() {}
         /***** Hardware & power management *****/
         virtual void setupHardware();
@@ -118,7 +118,6 @@ class IULSM6DSM : public HighFreqSensor
         float* getData(HardwareSerial *port);
         /***** Debugging *****/
         virtual void exposeCalibration();
-
     protected:
         /***** Core *****/
         IUI2C *m_iuI2C;

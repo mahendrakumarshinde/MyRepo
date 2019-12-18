@@ -632,7 +632,7 @@ void AudioDBComputer::m_specializedCompute()
     if(result >= audioHigherCutoff){    //Higher Cutoff
       result = audioHigherCutoff  + random(1,4) ;
     }
-   
+    dBresult = result;
     m_destinations[0]->addValue(result );
     if (featureDebugMode) {
         debugPrint(millis(), false);

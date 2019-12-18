@@ -15,7 +15,8 @@
 
 #include "SegmentedMessage.h"
 #define MAX_SEGMENTED_MESSAGES 5
-
+#define FLASH_ERROR 1
+#define FLASH_SUCCESS 0
 /* =============================================================================
     Operation Mode
 ============================================================================= */
@@ -62,7 +63,8 @@ namespace UsageMode
                            OPERATION       = 2,
                            OPERATION_BIS   = 3,
                            CUSTOM          = 4,
-                           COUNT           = 5};
+                           OTA             = 5,
+                           COUNT           = 6};
     // Related default config
     const AcquisitionMode::option acquisitionModeDetails[COUNT] =
     {
@@ -101,6 +103,13 @@ class Conductor
                                   AUTO     = 1,
                                   PERIODIC = 2,
                                   COUNT    = 3};
+        enum SensorStatusCode : uint8_t {LSM_SET = 0,
+                                        KNX_SET = 1,
+                                        LSM_ABS = 2,
+                                        KNX_ABS = 3,
+                                        LSM_DEFAULT = 4,
+                                        SEN_ABS = 5
+                                        };
         static const uint32_t defaultAutoSleepDelay = 60000;
         static const uint32_t defaultSleepDuration = 10000;
         static const uint32_t defaultCycleTime = 20000;
@@ -176,12 +185,15 @@ class Conductor
         void changeAcquisitionMode(AcquisitionMode::option mode);
         void updateStreamingMode();
         void changeUsageMode(UsageMode::option usage);
+        UsageMode::option getUsageMode() { return m_usageMode ;}
         /***** Operations *****/
         void setCallback(void (*callback)()) { m_callback = callback; };
         bool beginDataAcquisition();
         void endDataAcquisition();
         bool resetDataAcquisition();
         void acquireData(bool inCallback);
+        void acquireAudioData(bool inCallback);
+        void acquireTemperatureData();
         void computeFeatures();
         void streamFeatures();
         void sendAccelRawData(uint8_t axisIdx);
@@ -233,9 +245,32 @@ class Conductor
         void prepareRawDataPacketAndSend(char axis);       // to send to ESP
         int httpStatusCodeX, httpStatusCodeY, httpStatusCodeZ;         
         bool XSentToWifi, YsentToWifi, ZsentToWifi;     // TODO optimize using bit vector
+        uint32_t RawDataTimeout = 0;
         double rawDataRecordedAt, lastPacketSentToESP;
         IUMessageFormat::rawDataPacket rawData;
+
+        //Send Sensor error codes
+        void setSensorStatus(SensorStatusCode errorCode);
+        void sendSensorStatus();
         
+        void otaChkFwdnldTmout();
+        uint32_t firmwareValidation();
+        uint8_t firmwareConfigValidation(File *ValidationFile);
+        uint8_t firmwareDeviceValidation(File *ValidationFile);
+        uint8_t firmwareWifiValidation(File *ValidationFile);
+        void sendOtaStatusMsg(MSPCommand::command type, char *msg, const char *errMsg);
+        void readOtaConfig();
+        void readForceOtaConfig();
+        void getOtaStatus();
+        void sendOtaStatus();
+        void otaFWValidation();
+        static const uint32_t fwDnldStartTmout = 60000;
+        uint32_t otaFwdnldTmout = 0;
+        bool waitingDnldStrart = false;
+        void sendFlashStatusMsg(int flashStatus, char *deviceStatus);
+        bool flashStatusFlag = false;
+        void periodicFlashTest();
+        void onBootFlashTest();
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
@@ -286,6 +321,26 @@ class Conductor
         bool computed_first_fingerprint_timestamp = false;
         SegmentedMessage segmentedMessages[MAX_SEGMENTED_MESSAGES]; // atmost MAX_SEGMENTED_MESSAGES can be captured in interleaved manner
         
+        char status[50];
+        SensorStatusCode statusCode;
+        char m_otaStmUri[512];
+        char m_otaEspUri[512];
+        char stmHash[34];
+        char espHash[34];
+        char m_type1[8];
+        char m_type2[8];
+        char m_otaMsgId[32];
+        char m_otaMsgType[16];
+        char m_otaFwVer[16];
+        char m_rlbkMsgId[32];
+        char m_rlbkFwVer[16];
+        char fwBinFileName[32];
+        MacAddress m_rlbkDevId;
+        bool m_rlbkDowngrade = false;
+        bool otaSendMsg = false;
+        bool doOnceFWValid;
+        int FWValidCnt = 0;
+        char FW_Valid_State = 0;
 };
 
 

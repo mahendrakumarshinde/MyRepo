@@ -1,8 +1,8 @@
-# Infinite Uptime IDE firmware repository #
+# Infinite Uptime vEdge firmware repository #
 
 This repository contains several firmware versions, depending on the functionnalities and the board (see folder list below).
 
-**Before anything, please refer to the [Wiki](https://github.com/infinite-uptime/productivity/wiki).**
+**Before anything, please refer to the previous IDE+ product details [Wiki](https://github.com/infinite-uptime/productivity/wiki).**
 
 
 ## Repository content ##

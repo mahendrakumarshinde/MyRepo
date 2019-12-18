@@ -1,11 +1,14 @@
 #include "IUFlash.h"
 #include "FFTConfiguration.h"
-
+#include "InstancesDragonfly.h"
 /* =============================================================================
     IUFSFlash - Flash with file system
 ============================================================================= */
 
 char IUFSFlash::CONFIG_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iuconfig";
+char IUFSFlash::IUFWBACKUP_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iuBackupFirmware";
+char IUFSFlash::IUFWTMPIMG_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN]  = "/iuTempFirmware";
+char IUFSFlash::IUFWROLLBACK_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iuRollbackFirmware";
 char IUFSFlash::CONFIG_EXTENSION[IUFSFlash::CONFIG_EXTENSION_LEN] = ".conf";
 
 char IUFSFlash::FNAME_WIFI0[6] = "wifi0";
@@ -21,6 +24,8 @@ char IUFSFlash::FNAME_RAW_DATA_ENDPOINT[13] = "fft_endpoint";
 char IUFSFlash::FNAME_MQTT_SERVER[12] = "mqtt_server";
 char IUFSFlash::FNAME_MQTT_CREDS[11] = "mqtt_creds";
 char IUFSFlash::FNAME_FFT[4] = "fft";
+char IUFSFlash::FNAME_OTA[4] = "ota";
+char IUFSFlash::FNAME_FORCE_OTA[10] = "force_ota";
 /***** Core *****/
 
 void IUFSFlash::begin()
@@ -40,6 +45,36 @@ void IUFSFlash::begin()
         if (!m_begun && setupDebugMode)
         {
             debugPrint("Unable to find or create the config directory");
+        }
+    }
+    m_otaDir = DOSFS.exists(IUFWBACKUP_SUBDIR);
+    if (!m_otaDir)
+    {
+        DOSFS.mkdir(IUFWBACKUP_SUBDIR);
+        m_otaDir = DOSFS.exists(IUFWBACKUP_SUBDIR);
+        if (!m_otaDir && setupDebugMode)
+        {
+            debugPrint("Unable to find/create the ota_mainbkup directory");
+        }
+    }
+    m_otaDir = DOSFS.exists(IUFWTMPIMG_SUBDIR);
+    if (!m_otaDir)
+    {
+        DOSFS.mkdir(IUFWTMPIMG_SUBDIR);
+        m_otaDir = DOSFS.exists(IUFWTMPIMG_SUBDIR);
+        if (!m_otaDir && setupDebugMode)
+        {
+            debugPrint("Unable to find or create the ota_mainimage directory");
+        }
+    }
+    m_otaDir = DOSFS.exists(IUFWROLLBACK_SUBDIR);
+    if (!m_otaDir)
+    {
+        DOSFS.mkdir(IUFWROLLBACK_SUBDIR);
+        m_otaDir = DOSFS.exists(IUFWROLLBACK_SUBDIR);
+        if (!m_otaDir && setupDebugMode)
+        {
+            debugPrint("Unable to find or create the ota_rollback directory");
         }
     }
 }
@@ -139,7 +174,8 @@ bool IUFSFlash::updateConfigJson(storedConfig configType, JsonVariant &config)
     int charCount;
     strcpy(storedConfigJsonString, "");
     charCount = readConfig(configType, storedConfigJsonString, storedConfigMaxLength);    
-    storedConfigJsonString[charCount] = '\0';
+    if (charCount == 0) { strcpy(storedConfigJsonString, "{}"); }
+    //storedConfigJsonString[charCount] = '\0'; //DOES NOT WORK, json is created as {}, however no fields can be added in this json
     JsonObject& storedConfigJson = storedConfigJsonBuffer.parse(storedConfigJsonString);
     for(auto kv:(JsonObject&)config) {
         storedConfigJson[kv.key] = kv.value;
@@ -245,16 +281,52 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
             if(config.containsKey("samplingRate")) {
                 uint16_t samplingRate = config["samplingRate"];
                 // Validation for samplingRate
-                bool validSamplingRate = true;
-                for(int i=0; i<FFTConfiguration::samplingRateConfigurations - 1; ++i) {
+                bool validLSMSamplingRate = true;
+                bool validKionixSamplingRate = true;
+                //bool validSensor = true;
+                for(int i=0; i<FFTConfiguration::LSMsamplingRateOption - 1; ++i) {
                     if( samplingRate < FFTConfiguration::samplingRates[0] || 
-                        samplingRate > FFTConfiguration::samplingRates[FFTConfiguration::samplingRateConfigurations - 1] || 
+                        samplingRate > FFTConfiguration::samplingRates[FFTConfiguration::LSMsamplingRateOption - 1] || 
                         (FFTConfiguration::samplingRates[i] < samplingRate &&
                          samplingRate < FFTConfiguration::samplingRates[i+1]) ) {
-                           validSamplingRate = false;
+                           validLSMSamplingRate = false;
                        }
                 }
-                if (!validSamplingRate) {
+                for(int i=0; i<FFTConfiguration::KNXsamplingRateOption - 1; ++i) {
+                    if( samplingRate < FFTConfiguration::samplingRates2[0] || 
+                        samplingRate > FFTConfiguration::samplingRates2[FFTConfiguration::KNXsamplingRateOption - 1] || 
+                        (FFTConfiguration::samplingRates2[i] < samplingRate &&
+                         samplingRate < FFTConfiguration::samplingRates2[i+1]) ) {
+                             validKionixSamplingRate = false;
+                       }
+                }
+                if(!iuAccelerometer.lsmPresence && validLSMSamplingRate) {
+                     validConfig = false;
+                     errorMessages.add("LSM not Present");
+                }
+                if(!iuAccelerometerKX222.kionixPresence && validKionixSamplingRate) {
+                     validConfig = false;
+                     errorMessages.add("Kionix not Present");
+                }
+                // if(config.containsKey("sensor") && validKionixSamplingRate) {
+                //         uint16_t sensor = config["sensor"];
+                //         if (sensor != FFTConfiguration::kionixSensor){
+                //             validSensor = false;
+                //         }
+                //         else{
+                //             validSensor = true;
+                //         }    
+                // }
+                // if(config.containsKey("sensor") && validLSMSamplingRate) {
+                //         uint16_t sensor = config["sensor"];
+                //         if (sensor != FFTConfiguration::lsmSensor){
+                //             validSensor = false;
+                //         }
+                //         else{
+                //             validSensor = true;
+                //         }    
+                // }
+                if (!validLSMSamplingRate && !validKionixSamplingRate) {
                         validConfig = false;
                         errorMessages.add("Invalid samplingRate");
                 } else if (samplingRate == 416) {  // Temporary workaround
@@ -262,7 +334,11 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                     errorMessages.add("Sampling rate not supported");
                 } else if (FFTConfiguration::currentSamplingRate == samplingRate) {
                     sameSamplingRate = true;
-                }
+                } 
+                // else if (!validSensor){
+                //     validConfig = false;
+                //     errorMessages.add("Invalid Sensor Selection");
+                // }
             } else {
                 validConfig = false;
                 errorMessages.add("Key missing: samplingRate"); 
@@ -292,6 +368,7 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                 validConfig = false;
                 errorMessages.add("Key missing: blockSize"); 
             }
+            
 
             // If the received config matches the current config, report an error
             if(sameBlockSize && sameSamplingRate) {
@@ -364,6 +441,12 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
         case CFG_FFT:
             fname = FNAME_FFT;
             break;
+        case CFG_OTA:
+            fname = FNAME_OTA;
+            break;
+        case CFG_FORCE_OTA:
+            fname = FNAME_FORCE_OTA;
+            break;
         default:
             if (debugMode)
             {
@@ -402,7 +485,66 @@ File IUFSFlash::openConfigFile(storedConfig configType,
     return DOSFS.open(filepath, mode);
 }
 
+/***Read Write Internal Flag***/
 
+String IUFSFlash::readInternalFlash(uint32_t address)
+{
+    uint8_t type;
+    uint8_t length;
+    uint8_t result[255];
+    char resultConfig[255];
+    stm32l4_flash_unlock();
+    memset(result,'\0',sizeof(result));
+    type = *(uint8_t*)(address );
+    length = *(uint8_t*)(address + 1);
+    delay(1000);
+    if(length < 255 && length > 0 )
+    {
+        for (int i = 0 ; i < length; i++){
+            result[i] = *(uint8_t*)(address + i + 2);
+        }
+    }
+    sprintf(resultConfig,"%s",(char*)result);
+    stm32l4_flash_lock();
+    return resultConfig;
+}
+/*Internal flash configuration packet format*/
+/*--|Precense| Size |<--Mqtt or Http config...expected that length is MAX of 255Bytes>|*/
+/*--|   01   |  FF  |<---------------------Mqtt/http config json--------------------->|*/
+void IUFSFlash::writeInternalFlash(uint8_t type, uint32_t address, uint8_t dataLength, const uint8_t* data)
+{
+  uint8_t dataSize;
+  char allData[255];
+  dataSize = sizeof(type)+sizeof(dataLength)+dataLength;
+  stm32l4_flash_unlock();
+  stm32l4_flash_erase(address, 2048);
+  allData[0] = type;
+  allData[1] = dataLength;
+  sprintf(&allData[2],"%s",data);
+  debugPrint(allData);
+  stm32l4_flash_program(address, (const uint8_t*)allData,dataSize);
+  stm32l4_flash_lock();
+}
+
+bool IUFSFlash::checkConfig(uint32_t address)
+{
+    uint8_t presence;
+    stm32l4_flash_unlock();
+    presence = *(uint8_t*)(address );
+    stm32l4_flash_lock();
+    if(presence == 0x01)
+    {
+        return true;
+    }
+    return false;
+}
+// To clear Internal flash of 2k
+void IUFSFlash::clearInternalFlash(uint32_t address)
+{
+    stm32l4_flash_unlock();
+    stm32l4_flash_erase(address, 2048);
+    stm32l4_flash_lock();
+}
 /* =============================================================================
     IUSPIFlash - Flash accessible via SPI
 ============================================================================= */

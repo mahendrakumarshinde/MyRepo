@@ -20,11 +20,15 @@
 
 namespace FFTConfiguration {
     // The number of possible configurations for samplingRate and blockSize
-    const int samplingRateConfigurations = 4;
+    // const int samplingRateConfigurations = 4;
+    //const int samplingRateConfigurations = 6;
+    const int LSMsamplingRateOption = 4 ;
+    const int KNXsamplingRateOption = 3 ;
     const int blockSizeConfigurations = 5;
 
     // Arrays which keep track of available configurations
-    const int samplingRates[samplingRateConfigurations] = { 416, 833, 1660, 3330 };
+    const int samplingRates[LSMsamplingRateOption] = { 416, 833, 1660, 3330 };
+    const int samplingRates2[KNXsamplingRateOption] = { 6400, 12800, 25600};
     const int blockSizes[blockSizeConfigurations] = { 256, 512, 1024, 2048, 4096 };
 
     // Default parameter values
@@ -40,6 +44,9 @@ namespace FFTConfiguration {
     extern int currentLowCutOffFrequency;
     extern int currentHighCutOffFrequency;
     extern float currentMinAgitation;
+    extern bool currentSensor;   //if currenSensor=0 LSM is selected else kionix is selected
+    const bool lsmSensor = 0; 
+    const bool kionixSensor = 1;
 }
 
 #endif // FFT_CONFIGURATION_H

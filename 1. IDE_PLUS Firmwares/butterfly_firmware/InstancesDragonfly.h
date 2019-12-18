@@ -35,7 +35,10 @@
 #include "IUICS43432.h"
 #include "IULSM6DSM.h"
 #include "IUMAX31865.h"
-
+#include "IUTMP116.h"
+#include "IUKX222.h"
+#include "IUkx224reg.h"
+#include "IUOTA.h"
 /***** Managers and helpers *****/
 #include "LedManager.h"
 
@@ -81,7 +84,10 @@ extern char iuWiFiBuffer[2048];   //500
 extern char iuEthernetBuffer[2048];
 
 extern Usr2Eth iuEthernet;
-
+/* =============================================================================
+    OTA
+============================================================================= */
+extern IUOTA iuOta;
 /* =============================================================================
     Flash storage
 ============================================================================= */
@@ -115,9 +121,9 @@ extern FeatureTemplate<float> batteryLoad;
 /***** Accelerometer Features *****/
 
 // Sensor data
-extern __attribute__((section(".noinit2"))) q15_t accelerationXValues[8192];      // 1024 
-extern __attribute__((section(".noinit2"))) q15_t accelerationYValues[8192];
-extern __attribute__((section(".noinit2"))) q15_t accelerationZValues[8192];
+extern __attribute__((section(".noinit2"))) q15_t accelerationXValues[8192/2];      // 1024 
+extern __attribute__((section(".noinit2"))) q15_t accelerationYValues[8192/2];
+extern __attribute__((section(".noinit2"))) q15_t accelerationZValues[8192/2];
 extern FeatureTemplate<q15_t> accelerationX;
 extern FeatureTemplate<q15_t> accelerationY;
 extern FeatureTemplate<q15_t> accelerationZ;
@@ -194,8 +200,8 @@ extern __attribute__((section(".noinit2"))) float temperatureAValues[2];
 extern FeatureTemplate<float> temperatureA;
 extern __attribute__((section(".noinit2"))) float temperatureBValues[2];
 extern FeatureTemplate<float> temperatureB;
-// Temperaute measured on the LSM6DSM
-extern __attribute__((section(".noinit2"))) float allTemperatureValues[1024];
+// Temperaute measured on the TMP116
+extern __attribute__((section(".noinit2"))) float allTemperatureValues[2];
 extern FeatureTemplate<float> allTemperatures;
 extern __attribute__((section(".noinit2"))) float temperatureValues[2];
 extern FeatureTemplate<float> temperature;
@@ -238,6 +244,12 @@ extern IUMAX31865 iuRTDSensorB;
 
 void LSM6DSMAccelReadCallback(uint8_t wireStatus);
 extern IULSM6DSM iuAccelerometer;
+
+void KX222AccelReadCallback();
+extern IUKX222 iuAccelerometerKX222;
+
+void TMP116TempReadCallback(uint8_t wireStatus);
+extern IUTMP116 iuTemp;
 
 #if defined(WITH_CAM_M8Q) || defined(WITH_MAX_M8Q)
     extern IUCAMM8Q iuGNSS;

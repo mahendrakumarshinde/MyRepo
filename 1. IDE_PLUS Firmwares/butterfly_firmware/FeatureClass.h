@@ -164,8 +164,7 @@ class Feature
         /***** Debugging *****/
         virtual void exposeConfig();
         virtual void exposeCounters();
-
-
+        //uint8_t ISRcount;
     protected:
         /***** Instance registry *****/
         uint8_t m_instanceIdx;

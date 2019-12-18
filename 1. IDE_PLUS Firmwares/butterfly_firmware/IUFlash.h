@@ -7,8 +7,9 @@
 #include <ArduinoJson.h>
 
 #include <IUDebugger.h>
-
-
+#include "stm32l4_flash.h"
+#define CONFIG_MQTT_FLASH_ADDRESS    (uint32_t)0x080FE800    /* Start address of MQTT Config location*/
+#define CONFIG_HTTP_FLASH_ADDRESS    (uint32_t)0x080FE000    /* Start address of HTTP Config location*/
 class IUFlash
 {
     public:
@@ -26,6 +27,8 @@ class IUFlash
                                      CFG_MQTT_SERVER,
                                      CFG_MQTT_CREDS,
                                      CFG_FFT,
+                                     CFG_OTA,
+                                     CFG_FORCE_OTA, // Forced OTA request
                                      CFG_COUNT};
         /***** Core *****/
         IUFlash() {}
@@ -46,9 +49,9 @@ class IUFlash
         virtual bool updateConfigJson(storedConfig configType, JsonVariant &config) = 0;
         virtual bool validateConfig(storedConfig configType, JsonObject &config, char *validationResultString, char* mac_id, double timestamp, char* messageId) = 0;
 
-
     protected:
         bool m_begun = false;
+        bool m_otaDir = false;
 };
 
 
@@ -56,8 +59,11 @@ class IUFSFlash : public IUFlash
 {
     public:
         /***** Preset values and default settings *****/
-        static const uint8_t CONFIG_SUBDIR_LEN = 10;
+        static const uint8_t CONFIG_SUBDIR_LEN = 24;
         static char CONFIG_SUBDIR[CONFIG_SUBDIR_LEN];
+        static char IUFWBACKUP_SUBDIR[CONFIG_SUBDIR_LEN];
+        static char IUFWTMPIMG_SUBDIR[CONFIG_SUBDIR_LEN];
+        static char IUFWROLLBACK_SUBDIR[CONFIG_SUBDIR_LEN];
         static const uint8_t CONFIG_EXTENSION_LEN = 6;
         static char CONFIG_EXTENSION[CONFIG_EXTENSION_LEN];
         static char FNAME_WIFI0[6];
@@ -73,6 +79,8 @@ class IUFSFlash : public IUFlash
         static char FNAME_MQTT_SERVER[12];
         static char FNAME_MQTT_CREDS[11];
         static char FNAME_FFT[4];
+        static char FNAME_OTA[4];
+        static char FNAME_FORCE_OTA[10];        
         static const uint8_t MAX_FULL_CONFIG_FPATH_LEN = 28;
         /***** Core *****/
         IUFSFlash() : IUFlash() {}
@@ -94,6 +102,11 @@ class IUFSFlash : public IUFlash
         size_t getConfigFilename(storedConfig configType, char *dest,
                                  size_t len);
         File openConfigFile(storedConfig configType, const char* mode);
+
+        void writeInternalFlash(uint8_t type, uint32_t address, uint8_t dataLength, const uint8_t* data);
+        String readInternalFlash(uint32_t address);
+        bool checkConfig(uint32_t address);
+        void clearInternalFlash(uint32_t address);
 };
 
 template <size_t capacity>
