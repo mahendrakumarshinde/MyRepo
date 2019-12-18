@@ -717,7 +717,7 @@ void loop()
             iuWiFi.manageAutoSleep();
             // Acquire data from sensors
             //conductor.acquireData(false);
-            conductor.acquireTemperatureAudioData();
+            conductor.acquireTemperatureData();
             // acquire the audio sensor data
             //conductor.beginDataAcquisition();
             // stop audio data acquition
