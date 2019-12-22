@@ -559,7 +559,20 @@ void setup()
         }
         uint16_t callbackRate = iuI2S.getCallbackRate();
         for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
-            Sensor::instances[i]->setupHardware();
+            if(FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor){
+                if (strcmp("ACX", Sensor::instances[i]->getName())==0){
+                    NULL;
+                }else{
+                    Sensor::instances[i]->setupHardware();
+                }
+            }
+            if(FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor){
+                if (strcmp("ACC", Sensor::instances[i]->getName())==0){
+                    NULL;
+                }else{
+                    Sensor::instances[i]->setupHardware();
+                }
+            }
             if (Sensor::instances[i]->isHighFrequency()) {
                 Sensor::instances[i]->setCallbackRate(callbackRate);
             }

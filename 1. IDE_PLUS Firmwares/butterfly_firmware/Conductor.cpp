@@ -3891,11 +3891,11 @@ bool Conductor::setFFTParams() {
         else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (iuAccelerometerKX222.kionixPresence))
         {
             debugPrint(F("KIONIX Present & KIONIX set"));
-            iuAccelerometerKX222.updateSamplingRate(FFTConfiguration::currentSamplingRate); // will set the ODR for the sensor
+            iuAccelerometerKX222.setSamplingRate(FFTConfiguration::currentSamplingRate); // will set the ODR for the sensor
             setSensorStatus(SensorStatusCode::KNX_SET);
         }else if((FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor) && (!iuAccelerometer.lsmPresence) && (iuAccelerometerKX222.kionixPresence)){
             debugPrint(F("LSM absent & KIONIX set"));
-            iuAccelerometerKX222.updateSamplingRate(iuAccelerometerKX222.defaultSamplingRate);
+            iuAccelerometerKX222.setSamplingRate(iuAccelerometerKX222.defaultSamplingRate);
             FFTConfiguration::currentSamplingRate = iuAccelerometerKX222.defaultSamplingRate;
             FFTConfiguration::currentSensor = FFTConfiguration::kionixSensor;
             FFTConfiguration::currentBlockSize = iuAccelerometerKX222.DEFAULT_BLOCK_SIZE;
