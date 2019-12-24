@@ -320,7 +320,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
             
             //Serial.println(ack_config);
-            if(iuWiFi.isWorking()){
+            if(iuWiFi.isConnected()){
                 iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config);
             }else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
             {       debugPrint("Sending Fetures ACK over Ethernet");
@@ -355,7 +355,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
             
             //Serial.println(ack_config);
-            if(iuWiFi.isWorking()){
+            if(iuWiFi.isConnected()){
                  iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config);
             }else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
             {       debugPrint("Sending Fingerpritns Threshold ACK over Ethernet");
@@ -446,7 +446,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             char ack_config[150];
             snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
 
-            if(iuWiFi.isWorking()){
+            if(iuWiFi.isConnected()){
                  iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config); 
             }
             else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
@@ -511,9 +511,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
           snprintf(httpConfig_ack, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
             
           debugPrint(F("httpConfig ACK :"));debugPrint(httpConfig_ack);
-          if (iuWiFi.isWorking())
-          {
-              iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HTTP_CONFIG_ACK, httpConfig_ack);
+          if (iuWiFi.isConnected() )
+          {   iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HTTP_CONFIG_ACK, httpConfig_ack);
           
           }else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
           {     
@@ -2069,7 +2068,23 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                         iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,value);
                     delay(100);
                 }
+                if (strcmp(buff, "IUGET_WIFI_TXPWR") == 0) {
+                    iuWiFi.sendMSPCommand(MSPCommand::WIFI_GET_TX_POWER);
+                    
+                }
+                // Set the WiFI TX Power
+                if(buff[0] == '4' && buff[1]=='0' && buff[2] == '0' && buff[3]== '-')   // 400-[0-9]
+                {    //iuWiFi.sendMSPCommand(MSPCommand::WIFI_SET_TX_POWER);
+                    uint8_t mode = processWiFiRadioModes(buff);
+                    if(loopDebugMode){
+                        debugPrint("SET MODE :",false);
+                        debugPrint(mode);
+                    }
+                }
+                
+
                 break;
+                
             case UsageMode::CUSTOM:
                 if (strcmp(buff, "IUEND_DATA") == 0) {
                     iuUSB.port->println(END_CONFIRM);
@@ -2273,8 +2288,10 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
     switch (iuWiFi.getMspCommand()) {
         case MSPCommand::ESP_DEBUG_TO_STM_HOST:
             if (loopDebugMode) {
+                debugPrint("RESPONSE from ESP32 :",false);
                 debugPrint(buff);
             }
+            Serial.println(buff);
             break;
         case MSPCommand::OTA_STM_DNLD_STATUS:
             if (loopDebugMode) { debugPrint(F("STM FW Download Completed !")); }
@@ -2483,6 +2500,12 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
 #endif
             break;
         }
+        case MSPCommand::WIFI_GET_TX_POWER:
+            if (loopDebugMode) {
+                debugPrint("TX power from ESP32  :",false);
+                debugPrint(buff);
+            }
+            break;
         case MSPCommand::WIFI_ALERT_CONNECTED:
             if (loopDebugMode) { debugPrint(F("WIFI-CONNECTED;")); }
             if (isBLEConnected()) {
@@ -5410,4 +5433,20 @@ void Conductor::sendFlashStatusMsg(int flashStatus, char *deviceStatus)
     snprintf(falshStatusResponse, 256, "{ \"flashStatus\":{\"mac\":\"%s\",\"flash_status\":\"%s\",\"device_status\":\"%s\",\"timestamp\":%.2f}}",
         m_macAddress.toString().c_str(),falshStatusCode, deviceStatus ,timeStamp);
     iuWiFi.sendMSPCommand(MSPCommand::SEND_FLASH_STATUS,falshStatusResponse);
+}
+
+/**
+ * @brief 
+ * 
+ * @param buff : Input data buffer 
+ * @return uint8_t  : return the radioMode from 0 - 11
+ */
+uint8_t Conductor::processWiFiRadioModes(char* buff){
+
+    // 400-[0-9] int idx(0), th1(0), th2(0), th3(0);
+    int cmd(0), radioMode(0);
+    sscanf(buff, "%d-%d", &cmd, &radioMode);
+
+    iuWiFi.sendMSPCommand(MSPCommand::WIFI_SET_TX_POWER,buff);
+    return radioMode;
 }
