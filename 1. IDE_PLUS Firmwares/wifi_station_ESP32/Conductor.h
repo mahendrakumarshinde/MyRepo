@@ -34,6 +34,7 @@ extern IUTimeHelper timeHelper;
 #define OTA_INVALID_MAIN_FW_SIZE    1004
 #define OTA_INVALID_WIFI_FW_SIZE    1005
 
+#define MAX_HTTP_INIT_RETRY     3
 
 #define MAX_MAIN_FW_SIZE        634880 // 0x9B000‬ // 620 KB
 #define MAX_WIFI_FW_SIZE        1572864 // 0x180000‬ // 1.5 MB
@@ -175,6 +176,7 @@ class Conductor
         uint32_t pktWaitTimeStr = 0;
         bool otaInProgress = false;
         bool waitingForPktAck = false;
+        bool otaStsDataSent = false;
 };
 
 #endif // CONDUCTOR_H

@@ -769,6 +769,23 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 debugPrint(F("OTA configuration received: "), false);
                 subConfig.printTo(Serial); debugPrint("");
             }
+            if(doOnceFWValid == true)
+            { // Don't accept new OTA request during Validation of Last OTA
+                if(loopDebugMode) {
+                    debugPrint(F("Sending OTA_FDW_ABORT, Last OTA in Progress.."));
+                }
+                sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_INVALID_MQTT)).c_str());
+                delay(1000);
+                return true;
+            }
+            memset(m_type1,'\0',sizeof(m_type1));
+            memset(m_type2,'\0',sizeof(m_type2));
+            memset(m_otaStmUri,'\0',sizeof(m_otaStmUri));
+            memset(m_otaEspUri,'\0',sizeof(m_otaEspUri));
+            memset(stmHash,'\0',sizeof(stmHash));
+            memset(espHash,'\0',sizeof(espHash));
+            memset(m_otaMsgId,'\0',sizeof(m_otaMsgId));
+            memset(m_otaFwVer,'\0',sizeof(m_otaFwVer));
             strcpy(m_otaMsgId,(const char*)root["messageId"]);
             strcpy(m_otaFwVer,(const char*)root["fwVersion"]);
     //     String test1 = root["otaConfig"]["supportedDeviceTypes"];
@@ -898,6 +915,13 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 debugPrint(F("OTA Forced Rollback Request received: "), false);
                 subConfig.printTo(Serial); debugPrint("");
             }
+            if(doOnceFWValid == true)
+            { // Don't accept new OTA request during Validation of Last OTA
+                if(loopDebugMode) {
+                    debugPrint(F("Sending OTA_FUG_ABORT, Last OTA in Progress.."));
+                }
+                return true;
+            }
             strcpy(m_rlbkMsgId,(const char*)root["messageId"]);
             debugPrint("MessageId:",false);
             debugPrint(m_rlbkMsgId);
@@ -949,7 +973,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                     {
                         if(loopDebugMode) 
                             debugPrint("Missing Backup FW file(s) Forced rollback failed.");
-                    }    
+                    }
                 }
             }
         }
@@ -2296,15 +2320,20 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             otaFwdnldTmout = millis();
             waitingDnldStrart = false;
             sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR,buff);
- //           if(!strcmp(String(iuOta.getOtaRca(OTA_WIFI_DISCONNECT)).c_str(),buff))
+            if(!strcmp(String(iuOta.getOtaRca(OTA_WIFI_DISCONNECT)).c_str(),buff))
             {
-                for(int i = 0 ; i < 15; i++) {
-                    ledManager.overrideColor(RGB_RED);
-                    delay(200);
-                    ledManager.stopColorOverride();
-                    delay(200);
-                }
-            }                
+                /* Store WiFi disconnection status, to send message to server when WiFi connection is
+                   available. */
+                otaSendMsg = true;
+                iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_DOWNLOAD_FAILED);
+                delay(100);           
+            }
+            for(int i = 0 ; i < 15; i++) {
+                ledManager.overrideColor(RGB_RED);
+                delay(200);
+                ledManager.stopColorOverride();
+                delay(200);
+            }
             iuWiFi.m_setLastConfirmedPublication();
             changeUsageMode(UsageMode::OPERATION);
             delay(100); 
@@ -2356,6 +2385,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             } 
             if(hashCheck == true) {
                 if (loopDebugMode) { debugPrint(F("OTA File Write Success, Sending OTA-FDW-SUCCESS")); }
+                ledManager.overrideColor(RGB_PURPLE);
                 sendOtaStatusMsg(MSPCommand::OTA_FDW_SUCCESS,OTA_DOWNLOAD_OK,OTA_RESPONE_OK);
                 doOnceFWValid = false;
                 FW_Valid_State = 0;
@@ -5087,43 +5117,47 @@ uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
  */
 void Conductor::getOtaStatus()
 {
-    conductor.readOtaConfig();
-    conductor.readForceOtaConfig();
+    readOtaConfig();
+    readForceOtaConfig();
     iuOta.readOtaFlag();
     uint8_t otaStatus = iuOta.getOtaFlagValue(OTA_STATUS_FLAG_LOC);
     if (setupDebugMode) {
         debugPrint("Main FW:OTA Status Code: ",false);
         debugPrint(otaStatus);
     }
-    conductor.otaSendMsg = false;
+    otaSendMsg = false;
     switch(otaStatus)
     {
         case OTA_FW_VALIDATION_SUCCESS:
             if (setupDebugMode) debugPrint("Main FW:OTA Validation Success...");
             break;                  // Alrady validated FW, continue running it.
-        case OTA_FW_UPGRADW_SUCCESS:
+        case OTA_FW_UPGRADE_SUCCESS:
             if (setupDebugMode) debugPrint("Main FW:OTA Upgrade Success, Doing validation..");
             doOnceFWValid = true;   // New FW upgraded, perform validation
             break;
         case OTA_FW_UPGRADE_FAILED:
             if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Upgrade retry ");
-            conductor.otaSendMsg = true;
+            otaSendMsg = true;
             break;
         case OTA_FW_INTERNAL_ROLLBACK:
             if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Internal Rollback ");
-            conductor.otaSendMsg = true;
+            otaSendMsg = true;
             break;
         case OTA_FW_FORCED_ROLLBACK: // Reset, as L2 shall perform Upgrade,Rollback or Forced Rollback
             if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Forced Rollback ");
-            conductor.otaSendMsg = true;
+            otaSendMsg = true;
             break;
         case OTA_FW_FILE_CHKSUM_ERROR:
             if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! File Checksum Failed ");
-            conductor.otaSendMsg = true;
+            otaSendMsg = true;
             break;
         case OTA_FW_FILE_SYS_ERROR:
             if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Missing or Invalid File(s) ");
-            conductor.otaSendMsg = true;
+            otaSendMsg = true;
+            break;
+        case OTA_FW_DOWNLOAD_FAILED:
+            if (setupDebugMode) debugPrint("FW OTA download Failed ! WiFi Disconnection ! ");
+            otaSendMsg = true;
             break;
         default:
             if (setupDebugMode) debugPrint("Main FW:Unknown OTA Status code !",false);
@@ -5151,34 +5185,40 @@ void Conductor::sendOtaStatus()
         {
             case OTA_FW_UPGRADE_FAILED:
                 if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Upgrade retry ");
-                conductor.sendOtaStatusMsg(MSPCommand::OTA_FUG_ABORT,OTA_UPGRADE_ERR,String(iuOta.getOtaRca(OTA_UPGRADE_FAIL)).c_str());
+                sendOtaStatusMsg(MSPCommand::OTA_FUG_ABORT,OTA_UPGRADE_ERR,String(iuOta.getOtaRca(OTA_UPGRADE_FAIL)).c_str());
                 delay(1000);
                 break;
             case OTA_FW_INTERNAL_ROLLBACK:
                 if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Internal Rollback ");
-                conductor.sendOtaStatusMsg(MSPCommand::OTA_FUG_ABORT,OTA_UPGRADE_ERR,String(iuOta.getOtaRca(OTA_INT_RLBK_FAIL)).c_str());
+                sendOtaStatusMsg(MSPCommand::OTA_FUG_ABORT,OTA_UPGRADE_ERR,String(iuOta.getOtaRca(OTA_INT_RLBK_FAIL)).c_str());
                 delay(1000);
                 break;
             case OTA_FW_FORCED_ROLLBACK: // Reset, as L2 shall perform Upgrade,Rollback or Forced Rollback
                 if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Forced Rollback ");
-                conductor.sendOtaStatusMsg(MSPCommand::OTA_FUG_ABORT,OTA_UPGRADE_ERR,String(iuOta.getOtaRca(OTA_FORCED_RLBK_FAIL)).c_str());
+                sendOtaStatusMsg(MSPCommand::OTA_FUG_ABORT,OTA_UPGRADE_ERR,String(iuOta.getOtaRca(OTA_FORCED_RLBK_FAIL)).c_str());
                 delay(1000);
                 break;
             case OTA_FW_FILE_CHKSUM_ERROR:
                 if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! File Checksum Failed ");
-                conductor.sendOtaStatusMsg(MSPCommand::OTA_FUG_ABORT,OTA_UPGRADE_ERR,String(iuOta.getOtaRca(OTA_CHECKSUM_FAIL)).c_str());
+                sendOtaStatusMsg(MSPCommand::OTA_FUG_ABORT,OTA_UPGRADE_ERR,String(iuOta.getOtaRca(OTA_CHECKSUM_FAIL)).c_str());
                 delay(1000);
                 break;
             case OTA_FW_FILE_SYS_ERROR:
                 if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Missing or Invalid File(s) ");
-                conductor.sendOtaStatusMsg(MSPCommand::OTA_FUG_ABORT,OTA_UPGRADE_ERR,String(iuOta.getOtaRca(OTA_FILE_MISSING)).c_str());
+                sendOtaStatusMsg(MSPCommand::OTA_FUG_ABORT,OTA_UPGRADE_ERR,String(iuOta.getOtaRca(OTA_FILE_MISSING)).c_str());
+                delay(1000);
+                break;
+            case OTA_FW_DOWNLOAD_FAILED:
+                /* Send this message in case WiFi Disconnection during last OTA FW Download */
+                if (setupDebugMode) debugPrint("FW OTA download Failed ! WiFi Disconnected for last FW download. ");
+                sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_UPGRADE_ERR,String(iuOta.getOtaRca(OTA_WIFI_DISCONNECT)).c_str());
                 delay(1000);
                 break;
             default:
                 if (setupDebugMode) debugPrint("Main FW:Unknown OTA Status code !",false);
                 break;
         }
-        conductor.otaSendMsg = false;
+        otaSendMsg = false;
         /* Send Error message only once. Not to send on every bootup */
         iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_VALIDATION_SUCCESS);
     }
@@ -5255,7 +5295,6 @@ void Conductor::otaFWValidation()
             }
             else if(ret == OTA_VALIDATION_SUCCESS)
             {
-                doOnceFWValid = false;
                 FW_Valid_State = 0;
                 ledManager.overrideColor(RGB_PURPLE);
                 /* Copy FW binaries, MD5 from rollback to Backup folder */
@@ -5272,6 +5311,7 @@ void Conductor::otaFWValidation()
                 conductor.sendOtaStatusMsg(MSPCommand::OTA_FUG_SUCCESS,OTA_UPGRADE_OK,OTA_RESPONE_OK);
                 iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_VALIDATION_SUCCESS);
                 /*  Initialize OTA FW Validation retry count */
+                doOnceFWValid = false;
                 iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);
                 if (loopDebugMode) debugPrint("OTA FW Validation Successful. Rebooting device....");
                 delay(2000);

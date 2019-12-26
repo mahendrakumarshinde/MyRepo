@@ -81,11 +81,13 @@
 #define OTA_FW_VALIDATION_SUCCESS   0  // OTA FW Validation Success, continue with new OTA FW
 #define OTA_FW_DOWNLOAD_SUCCESS     1  // OTA FW Download Success, Bootloader L2 shall perform Upgrade to new FW
 #define OTA_FW_UPGRADE_FAILED       2  // OTA FW Upgrade Failed, Bootloader L2 shall perform retry, internal rollback
-#define OTA_FW_UPGRADW_SUCCESS      3  // OTA FW Upgrade Success, New FW shall perform validation
+#define OTA_FW_UPGRADE_SUCCESS      3  // OTA FW Upgrade Success, New FW shall perform validation
 #define OTA_FW_INTERNAL_ROLLBACK    4  // OTA FW Validation failed,Bootloader L2 shall perform internal rollback
 #define OTA_FW_FORCED_ROLLBACK      5  // OTA FW Forced rollback,Bootloader L2 shall perform Forced rollback
 #define OTA_FW_FILE_CHKSUM_ERROR    6  // OTA FW File checksum failed, OTA can not be performed.
 #define OTA_FW_FILE_SYS_ERROR       7  // OTA FW File system error, OTA can not be performed.
+//#define OTA_FW_FACTORY_FW         8  // OTA FW Facotry Firmware case handling
+#define OTA_FW_DOWNLOAD_FAILED      9 // OTA FW Download failed. Send status message to Server
 class IUOTA
 {
     public:
