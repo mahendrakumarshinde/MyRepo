@@ -177,6 +177,8 @@ class Conductor
         bool otaInProgress = false;
         bool waitingForPktAck = false;
         bool otaStsDataSent = false;
+        bool otaInitTimeoutFlag = false;
+        uint32_t otaInitTimeout = 0;
 };
 
 #endif // CONDUCTOR_H

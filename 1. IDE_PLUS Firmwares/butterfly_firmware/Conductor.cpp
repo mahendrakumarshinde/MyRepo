@@ -755,8 +755,6 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 
     subConfig = root["messageType"];
     if (subConfig.success()) {
-//        double otaInitTimeStamp = conductor.getDatetime();
-//        char otaResponse[256];
         String msgType = root["messageType"];
         strcpy(m_otaMsgType,msgType.c_str());
         if(loopDebugMode) {
@@ -764,18 +762,18 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             debugPrint(m_otaMsgType);
         }
         if(!(strcmp((const char *)m_otaMsgType,(const char *)"initiateota")))
-        {    
+        {
+            otaInitTimeoutFlag = false;
             if(loopDebugMode) {
+                debugPrint(F("OTA InitReq Wait Timeout cleared.."));
                 debugPrint(F("OTA configuration received: "), false);
                 subConfig.printTo(Serial); debugPrint("");
             }
             if(doOnceFWValid == true)
             { // Don't accept new OTA request during Validation of Last OTA
                 if(loopDebugMode) {
-                    debugPrint(F("Sending OTA_FDW_ABORT, Last OTA in Progress.."));
+                    debugPrint(F("Last OTA in Progress.. Unable to process OTA Request"));
                 }
-                sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_INVALID_MQTT)).c_str());
-                delay(1000);
                 return true;
             }
             memset(m_type1,'\0',sizeof(m_type1));
@@ -871,8 +869,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                     if(loopDebugMode) 
                         debugPrint("Saved OTA configuration to file");
                 }
-                if (loopDebugMode) { debugPrint(F("Switching Device mode:OPERATION -> OTA")); }
-                changeUsageMode(UsageMode::OTA);
+                //if (loopDebugMode) { debugPrint(F("Switching Device mode:OPERATION -> OTA")); }
+                //changeUsageMode(UsageMode::OTA);
                 if(loopDebugMode) {
                     debugPrint(F("Changed Device mode: OTA"));
                 }
@@ -907,18 +905,22 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                     debugPrint(F("Sending OTA_FDW_ABORT"));
                 }
                 sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_INVALID_MQTT)).c_str());
+                changeUsageMode(UsageMode::OPERATION);
+                delay(10);
             }
         }
         if(!(strcmp((const char *)m_otaMsgType,(const char *)"ota-rollback")))
-        {    
+        {
             if(loopDebugMode) {
                 debugPrint(F("OTA Forced Rollback Request received: "), false);
                 subConfig.printTo(Serial); debugPrint("");
             }
+            changeUsageMode(UsageMode::OPERATION);
+            otaInitTimeoutFlag = false; 
             if(doOnceFWValid == true)
             { // Don't accept new OTA request during Validation of Last OTA
                 if(loopDebugMode) {
-                    debugPrint(F("Sending OTA_FUG_ABORT, Last OTA in Progress.."));
+                    debugPrint(F("Last OTA in Progress.. Unable to process OTA Request"));
                 }
                 return true;
             }
@@ -2300,6 +2302,27 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 debugPrint(buff);
             }
             break;
+        case MSPCommand::OTA_INIT_REQUEST:
+            if(doOnceFWValid == true)
+            { // Don't accept new OTA request during Validation of Last OTA
+                if(loopDebugMode) {
+                    debugPrint(F("Last OTA in Progress.. Unable to process OTA Request"));
+                }
+            }
+            else
+            {
+                if (loopDebugMode) {
+                    debugPrint(F("OTA Init Request Received"));
+                    debugPrint(F("Switching Device mode:OPERATION -> OTA"));
+                }   
+                changeUsageMode(UsageMode::OTA);
+                delay(100);
+                /* OTA Get MQTT message request timer. In case of timeout switch back to OPERATION MODE */
+                otaInitWaitTimeout = millis();
+                otaInitTimeoutFlag = true;
+            }          
+            delay(10);            
+            break;
         case MSPCommand::OTA_STM_DNLD_STATUS:
             if (loopDebugMode) { debugPrint(F("STM FW Download Completed !")); }
             strcpy(fwBinFileName, vEdge_Wifi_FW_BIN);
@@ -2320,14 +2343,6 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             otaFwdnldTmout = millis();
             waitingDnldStrart = false;
             sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR,buff);
-            if(!strcmp(String(iuOta.getOtaRca(OTA_WIFI_DISCONNECT)).c_str(),buff))
-            {
-                /* Store WiFi disconnection status, to send message to server when WiFi connection is
-                   available. */
-                otaSendMsg = true;
-                iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_DOWNLOAD_FAILED);
-                delay(100);           
-            }
             for(int i = 0 ; i < 15; i++) {
                 ledManager.overrideColor(RGB_RED);
                 delay(200);
@@ -4728,6 +4743,15 @@ void Conductor::otaChkFwdnldTmout()
             }
         }
     }
+    if(otaInitTimeoutFlag == true) {
+        if((now - otaInitWaitTimeout) > 3000)
+        {
+            otaInitTimeoutFlag = false;
+            if (loopDebugMode) { debugPrint("OTA - Get MQTT Message timeout ! "); }
+            conductor.sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_DOWNLOAD_TMOUT)).c_str());
+            conductor.changeUsageMode(UsageMode::OPERATION);
+        }
+    }
 }
 
 /**
@@ -5155,13 +5179,41 @@ void Conductor::getOtaStatus()
             if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Missing or Invalid File(s) ");
             otaSendMsg = true;
             break;
-        case OTA_FW_DOWNLOAD_FAILED:
-            if (setupDebugMode) debugPrint("FW OTA download Failed ! WiFi Disconnection ! ");
+        default:
+            if (setupDebugMode) debugPrint("Main FW:Unknown OTA Status code !",false);
+            break;
+    }
+
+    otaStatus = iuOta.getOtaFlagValue(OTA_PEND_STATUS_MSG_LOC);
+    if (setupDebugMode) {
+        debugPrint("Main FW:OTA Pending Status Code: ",false);
+        debugPrint(otaStatus);
+    }
+    switch(otaStatus)
+    {
+        case OTA_FW_DNLD_FAIL_PENDING:
+            /* Send this message in case WiFi Disconnection during last OTA FW Download */
+            if (setupDebugMode) debugPrint("FW OTA download Failed ! Message pending. ");
+            otaSendMsg = true;
+            break;
+        case OTA_FW_UPGRD_OK_PENDING:
+            /* Send this message in case WiFi Disconnection during last OTA FW Download */
+            if (setupDebugMode) debugPrint("FW OTA Upgrade Ok ! Message pending. ");
+            otaSendMsg = true;
+            break;
+        // case OTA_FW_DNLD_OK_PENDING:
+        //     /* Send this message in case WiFi Disconnection during last OTA FW Download */
+        //     if (setupDebugMode) debugPrint("FW OTA Upgrade Ok ! Message pending. ");
+        //     otaSendMsg = true;
+        //     break;
+        case OTA_FW_UPGRD_FAIL_PENDING:
+            /* Send this message in case WiFi Disconnection during last OTA FW Download */
+            if (setupDebugMode) debugPrint("FW OTA Upgrade Fail ! Message pending. ");
             otaSendMsg = true;
             break;
         default:
             if (setupDebugMode) debugPrint("Main FW:Unknown OTA Status code !",false);
-            break;
+            break;            
     }
 }
 
@@ -5208,19 +5260,50 @@ void Conductor::sendOtaStatus()
                 sendOtaStatusMsg(MSPCommand::OTA_FUG_ABORT,OTA_UPGRADE_ERR,String(iuOta.getOtaRca(OTA_FILE_MISSING)).c_str());
                 delay(1000);
                 break;
-            case OTA_FW_DOWNLOAD_FAILED:
-                /* Send this message in case WiFi Disconnection during last OTA FW Download */
-                if (setupDebugMode) debugPrint("FW OTA download Failed ! WiFi Disconnected for last FW download. ");
-                sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_UPGRADE_ERR,String(iuOta.getOtaRca(OTA_WIFI_DISCONNECT)).c_str());
-                delay(1000);
-                break;
             default:
                 if (setupDebugMode) debugPrint("Main FW:Unknown OTA Status code !",false);
                 break;
         }
+
+        otaStatus = iuOta.getOtaFlagValue(OTA_PEND_STATUS_MSG_LOC);
+        if (setupDebugMode) {
+            debugPrint("Main FW:OTA Status Code: ",false);
+            debugPrint(otaStatus);
+        }
+        switch(otaStatus)
+        {
+            case OTA_FW_DNLD_FAIL_PENDING:
+                /* Send this message in case WiFi Disconnection during last OTA FW Download */
+                if (setupDebugMode) debugPrint("FW OTA download Failed ! WiFi Disconnected for last FW download. ");
+                sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR,String(iuOta.getOtaRca(OTA_WIFI_DISCONNECT)).c_str());
+                delay(1000);
+                break;
+            case OTA_FW_UPGRD_OK_PENDING:
+                /* Send this message in case WiFi Disconnection during last OTA FW Download */
+                if (setupDebugMode) debugPrint("FW OTA Upgrade Ok ");
+                sendOtaStatusMsg(MSPCommand::OTA_FUG_SUCCESS,OTA_UPGRADE_OK,OTA_RESPONE_OK);
+                delay(1000);
+                break;
+            // case OTA_FW_DNLD_OK_PENDING:
+            //     /* Send this message in case WiFi Disconnection during last OTA FW Download */
+            //     if (setupDebugMode) debugPrint("FW OTA Download Ok ");
+            //     sendOtaStatusMsg(MSPCommand::OTA_FDW_SUCCESS,OTA_DOWNLOAD_OK,OTA_RESPONE_OK);
+            //     delay(1000);
+            //     break;
+            case OTA_FW_UPGRD_FAIL_PENDING:
+                /* Send this message in case WiFi Disconnection during last OTA FW Download */
+                if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ");
+                sendOtaStatusMsg(MSPCommand::OTA_FUG_ABORT,OTA_UPGRADE_ERR,(char *)iuOta.getOtaRca(OTA_VALIDATION_FAILED).c_str());
+                delay(1000);
+                break;
+            default:
+                if (setupDebugMode) debugPrint("Main FW:Unknown OTA Status code !",false);
+                break;            
+        }
         otaSendMsg = false;
         /* Send Error message only once. Not to send on every bootup */
         iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_VALIDATION_SUCCESS);
+        iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,OTA_FW_VALIDATION_SUCCESS);
     }
 }
 
@@ -5233,10 +5316,33 @@ void Conductor::sendOtaStatus()
 void Conductor::sendOtaStatusMsg(MSPCommand::command type, char *msg, const char *errMsg)
 {
     char otaResponse[256];
-    double otaInitTimeStamp = conductor.getDatetime();            
-    snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
-    m_otaMsgId,m_macAddress.toString().c_str(), OTA_DEVICE_TYPE,msg, errMsg ,otaInitTimeStamp);
-    iuOta.otaSendResponse(type, otaResponse);  // Checksum failed
+    double otaInitTimeStamp = conductor.getDatetime(); 
+    if(iuWiFi.isConnected()) {           
+        snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
+        m_otaMsgId,m_macAddress.toString().c_str(), OTA_DEVICE_TYPE,msg, errMsg ,otaInitTimeStamp);
+        iuOta.otaSendResponse(type, otaResponse);  // Checksum failed
+    }
+    else
+    {
+        if(MSPCommand::OTA_FDW_ABORT == type)
+        {
+            iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,OTA_FW_DNLD_FAIL_PENDING);
+        }
+        // else if(MSPCommand::OTA_FDW_SUCCESS == type)
+        // {
+        //     iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,OTA_FW_DNLD_OK_PENDING);
+        // }
+        else if(MSPCommand::OTA_FUG_ABORT == type)
+        {
+            iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,OTA_FW_UPGRD_FAIL_PENDING);
+        }
+        else if(MSPCommand::OTA_FUG_SUCCESS == type)
+        {
+            iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,OTA_FW_UPGRD_OK_PENDING);
+        }
+        otaSendMsg = true;
+        delay(10); 
+    }
 }
 
 /**
@@ -5353,6 +5459,8 @@ void Conductor::onBootFlashTest()
         if(strcmp(fileContent.c_str(),"SUCCESS")==0){
             debugPrint("File Read Success");
         }else{
+            debugPrint("File Content:", false);
+            debugPrint(fileContent);
             debugPrint("File Read Failed...Formating Flash Please wait");
             ledManager.overrideColor(RGB_RED);
             DOSFS.format();

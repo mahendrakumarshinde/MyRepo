@@ -59,6 +59,8 @@
 #define OTA_RETRY_FLAG_LOC      1  // (0x080FF804)
 #define OTA_VLDN_RETRY_FLAG_LOC 2  // (0x080FF808)
 
+#define OTA_PEND_STATUS_MSG_LOC 4  // (0x080FF808)
+
 #define OTA_DEVICE_TYPE         "vEdge"
 #define OTA_RESPONE_OK          "OTA-RCA-0000"
 #define OTA_REQ_ACK             "OTA-INIT-ACK"
@@ -87,7 +89,13 @@
 #define OTA_FW_FILE_CHKSUM_ERROR    6  // OTA FW File checksum failed, OTA can not be performed.
 #define OTA_FW_FILE_SYS_ERROR       7  // OTA FW File system error, OTA can not be performed.
 //#define OTA_FW_FACTORY_FW         8  // OTA FW Facotry Firmware case handling
-#define OTA_FW_DOWNLOAD_FAILED      9 // OTA FW Download failed. Send status message to Server
+
+
+#define OTA_FW_DNLD_FAIL_PENDING    1  // OTA FW Download failed. Send status message to Server
+#define OTA_FW_DNLD_OK_PENDING      2  // OTA FW Download success. Send status message to Server
+#define OTA_FW_UPGRD_FAIL_PENDING   3  // OTA FW Upgrade failed. Send status message to Server
+#define OTA_FW_UPGRD_OK_PENDING     4  // OTA FW Upgrade success. Send status message to Server
+
 class IUOTA
 {
     public:
@@ -95,7 +103,6 @@ class IUOTA
         IUOTA() {}
         ~IUOTA() {}
 
-        void otaFileDownload();
         bool otaFwBinWrite(char *folderName,char *fileName, char *buff, uint16_t size);
         bool otaMD5Write(char *folderName,char *fileName, char *md5);
         bool otaFwBinRead(char *folderName,char *fileName);//), char *readBuff, uint16_t *readSize);
