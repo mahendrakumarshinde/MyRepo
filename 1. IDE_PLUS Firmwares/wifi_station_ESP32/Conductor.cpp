@@ -1439,8 +1439,7 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
                     //sprintf(percent,"Main_FW:%03d %%",(((((fwdnldLen-contentLen)*100)/fwdnldLen))));
                     percent[20] = '\0';
                     char otaSts[128];
-                    snprintf(otaSts, 128, "{\"messageId\":\"%s\",\"deviceId\":\"%s\",\"type\":\"%s\",\"status\":\"%s\"}",
-                        "ABCD","94:54:93:4A:6E:6E", "vEdge",percent);
+                    snprintf(otaSts, 128, "{\"deviceId\":\"%s\",\"type\":\"%s\",\"status\":\"%s\"}",m_bleMAC.toString().c_str(), "vEdge",percent);
                     mqttHelper.publish(OTA_TOPIC,otaSts);
                     delay(1);
                 }
@@ -1494,8 +1493,7 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
                         char percent[24];
                         char otaSts[128];
                         strcpy(percent,"Main FW DNLD: 100 %");
-                        snprintf(otaSts, 128, "{\"messageId\":\"%s\",\"deviceId\":\"%s\",\"type\":\"%s\",\"status\":\"%s\"}",
-                            "ABCD","94:54:93:4A:6E:6E", "vEdge",percent);
+                        snprintf(otaSts, 128, "{\"deviceId\":\"%s\",\"type\":\"%s\",\"status\":\"%s\"}",m_bleMAC.toString().c_str(), "vEdge",percent);
                         mqttHelper.publish(OTA_TOPIC,otaSts);
                         fwdnldLen = 0;
                         totlen = 0;
@@ -1509,8 +1507,7 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
                         char percent[24];
                         char otaSts[128];
                         strcpy(percent,"WiFi FW DNLD: 100 %");
-                        snprintf(otaSts, 128, "{\"messageId\":\"%s\",\"deviceId\":\"%s\",\"type\":\"%s\",\"status\":\"%s\"}",
-                            "ABCD","94:54:93:4A:6E:6E", "vEdge",percent);
+                        snprintf(otaSts, 128, "{\"deviceId\":\"%s\",\"type\":\"%s\",\"status\":\"%s\"}",m_bleMAC.toString().c_str(), "vEdge",percent);
                         mqttHelper.publish(OTA_TOPIC,otaSts);
                         fwdnldLen = 0;
                         totlen = 0;
