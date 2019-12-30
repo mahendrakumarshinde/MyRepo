@@ -152,7 +152,6 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         case MSPCommand::OTA_ESP_DNLD_OK:
             break;
         case MSPCommand::OTA_FDW_SUCCESS:
-            delay(10);
             mqttHelper.publish(OTA_TOPIC,buffer);
 //            otaInProgress = false; // Temp. Only after Download+Upgrade+Validation this shall be set to false
             waitingForPktAck = false;
@@ -1440,7 +1439,7 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
                     percent[20] = '\0';
                     char otaSts[128];
                     snprintf(otaSts, 128, "{\"deviceId\":\"%s\",\"type\":\"%s\",\"status\":\"%s\"}",m_bleMAC.toString().c_str(), "vEdge",percent);
-                    mqttHelper.publish(OTA_TOPIC,otaSts);
+                    mqttHelper.publish(OTA_P_TOPIC,otaSts);
                     delay(1);
                 }
                 else if(otaMod10Per != 0 && otaStsDataSent == true)
@@ -1494,7 +1493,7 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
                         char otaSts[128];
                         strcpy(percent,"Main FW DNLD: 100 %");
                         snprintf(otaSts, 128, "{\"deviceId\":\"%s\",\"type\":\"%s\",\"status\":\"%s\"}",m_bleMAC.toString().c_str(), "vEdge",percent);
-                        mqttHelper.publish(OTA_TOPIC,otaSts);
+                        mqttHelper.publish(OTA_P_TOPIC,otaSts);
                         fwdnldLen = 0;
                         totlen = 0;
                         waitingForPktAck = false;
@@ -1508,7 +1507,7 @@ bool Conductor:: otaDnldFw(bool otaDnldProgress)
                         char otaSts[128];
                         strcpy(percent,"WiFi FW DNLD: 100 %");
                         snprintf(otaSts, 128, "{\"deviceId\":\"%s\",\"type\":\"%s\",\"status\":\"%s\"}",m_bleMAC.toString().c_str(), "vEdge",percent);
-                        mqttHelper.publish(OTA_TOPIC,otaSts);
+                        mqttHelper.publish(OTA_P_TOPIC,otaSts);
                         fwdnldLen = 0;
                         totlen = 0;
                         waitingForPktAck = false;

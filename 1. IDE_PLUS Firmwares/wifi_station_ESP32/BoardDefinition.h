@@ -80,6 +80,7 @@ const char CUSTOMER_PLACEHOLDER[CUSTOMER_PLACEHOLDER_LENGTH] = "XXXAdmin";
 //    const char RAW_DATA_TOPIC[RAW_DATA_TOPIC_LENGTH] = "iu_raw_data_test";
 #else
     const uint8_t OTA_TOPIC_LENGTH = 20;
+    const uint8_t OTA_P_TOPIC_LENGTH = 22;
     const uint8_t FEATURE_TOPIC_LENGTH = 15;
     const uint8_t DIAGNOSTIC_TOPIC_LENGTH = 9;
     const uint8_t CHECKSUM_TOPIC_LENGTH = 15;
@@ -91,6 +92,7 @@ const char CUSTOMER_PLACEHOLDER[CUSTOMER_PLACEHOLDER_LENGTH] = "XXXAdmin";
     
 //    const uint8_t RAW_DATA_TOPIC_LENGTH = 12;
     const char OTA_TOPIC[OTA_TOPIC_LENGTH] = "ide_plus/ota/status";
+    const char OTA_P_TOPIC[OTA_P_TOPIC_LENGTH] = "ide_plus/ota/progress";
     const char FEATURE_TOPIC[FEATURE_TOPIC_LENGTH] = "iu_device_data";
     const char DIAGNOSTIC_TOPIC[DIAGNOSTIC_TOPIC_LENGTH] = "iu_error";
     const char CHECKSUM_TOPIC[CHECKSUM_TOPIC_LENGTH] = "config_confirm";

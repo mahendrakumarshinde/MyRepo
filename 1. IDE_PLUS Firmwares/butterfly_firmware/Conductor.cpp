@@ -2409,6 +2409,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_DOWNLOAD_SUCCESS);
                 iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);
                 delay(1000);
+                if (loopDebugMode) { debugPrint(F("OTA FW hash Success, Sending OTA-FUG-START")); }
                 sendOtaStatusMsg(MSPCommand::OTA_FUG_START,OTA_UPGRADE_START,OTA_RESPONE_OK);
                 delay(1000);
                 if (loopDebugMode) { debugPrint(F("Rebooting device for FW Upgrade......")); }
@@ -5322,33 +5323,38 @@ void Conductor::sendOtaStatusMsg(MSPCommand::command type, char *msg, const char
 {
     char otaResponse[256];
     double otaInitTimeStamp = conductor.getDatetime(); 
-    if(iuWiFi.isConnected()) {           
+    if(MSPCommand::OTA_FDW_SUCCESS == type || MSPCommand::OTA_FUG_START == type)
+    {
+        if (loopDebugMode) { debugPrint(F("Sending OTA Status Message")); }   
         snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
         m_otaMsgId,m_macAddress.toString().c_str(), OTA_DEVICE_TYPE,msg, errMsg ,otaInitTimeStamp);
         iuOta.otaSendResponse(type, otaResponse);  // Checksum failed
     }
-    else
-    {
-        if(MSPCommand::OTA_FDW_ABORT == type)
-        {
-            iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,OTA_FW_DNLD_FAIL_PENDING);
+    else {
+        if(iuWiFi.isConnected()) {
+            if (loopDebugMode) { debugPrint(F("WiFi Conntected, Sending OTA Status Message")); }   
+            snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
+            m_otaMsgId,m_macAddress.toString().c_str(), OTA_DEVICE_TYPE,msg, errMsg ,otaInitTimeStamp);
+            iuOta.otaSendResponse(type, otaResponse);  // Checksum failed
         }
-        // else if(MSPCommand::OTA_FDW_SUCCESS == type)
-        // {
-        //     iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,OTA_FW_DNLD_OK_PENDING);
-        // }
-        else if(MSPCommand::OTA_FUG_ABORT == type)
+        else
         {
-            iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,OTA_FW_UPGRD_FAIL_PENDING);
+            if(MSPCommand::OTA_FDW_ABORT == type)
+            {
+                iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,OTA_FW_DNLD_FAIL_PENDING);
+            }
+            else if(MSPCommand::OTA_FUG_ABORT == type)
+            {
+                iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,OTA_FW_UPGRD_FAIL_PENDING);
+            }
+            else if(MSPCommand::OTA_FUG_SUCCESS == type)
+            {
+                iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,OTA_FW_UPGRD_OK_PENDING);
+            }
+            otaSendMsg = true;
+            delay(10); 
         }
-        else if(MSPCommand::OTA_FUG_SUCCESS == type)
-        {
-            iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,OTA_FW_UPGRD_OK_PENDING);
-        }
-        otaSendMsg = true;
-        delay(10); 
     }
-    delay(1); 
 }
 
 /**
