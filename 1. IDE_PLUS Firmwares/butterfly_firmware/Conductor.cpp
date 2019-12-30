@@ -757,10 +757,6 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     if (subConfig.success()) {
         String msgType = root["messageType"];
         strcpy(m_otaMsgType,msgType.c_str());
-        if(loopDebugMode) {
-            debugPrint(F("OTA Message type: "), false);
-            debugPrint(m_otaMsgType);
-        }
         if(!(strcmp((const char *)m_otaMsgType,(const char *)"initiateota")))
         {
             otaInitTimeoutFlag = false;

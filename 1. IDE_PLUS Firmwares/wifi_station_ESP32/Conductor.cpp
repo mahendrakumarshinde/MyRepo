@@ -956,7 +956,7 @@ void Conductor::processMessageFromMQTT(const char* topic, const char* payload,
                         // Command is longer than TX buffer, send it while taking care to not
                     // overflow the buffer. Timeout parameter is in microseconds.
                     hostSerial.sendLongMSPCommand(
-                        MSPCommand::CONFIG_FORWARD_CONFIG, 300000, payload, length);
+                        MSPCommand::CONFIG_FORWARD_CONFIG, 3000000, payload, length);
                 }
             }
             else
