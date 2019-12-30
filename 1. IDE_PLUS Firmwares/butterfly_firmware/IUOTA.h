@@ -59,7 +59,7 @@
 #define OTA_RETRY_FLAG_LOC      1  // (0x080FF804)
 #define OTA_VLDN_RETRY_FLAG_LOC 2  // (0x080FF808)
 
-#define OTA_PEND_STATUS_MSG_LOC 4  // (0x080FF808)
+#define OTA_PEND_STATUS_MSG_LOC 3  // (0x080FF80C)
 
 #define OTA_DEVICE_TYPE         "vEdge"
 #define OTA_RESPONE_OK          "OTA-RCA-0000"

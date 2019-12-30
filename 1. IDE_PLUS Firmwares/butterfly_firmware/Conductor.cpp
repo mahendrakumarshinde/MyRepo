@@ -2040,6 +2040,8 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuUSB.port->println(iuOta.getOtaFlagValue(OTA_RETRY_FLAG_LOC));
                     iuUSB.port->print("[2-OTA_VALIDITY_RETRY]: ");
                     iuUSB.port->println(iuOta.getOtaFlagValue(OTA_VLDN_RETRY_FLAG_LOC));
+                    iuUSB.port->print("[3-OTA_PEND_MSG_STS]: ");
+                    iuUSB.port->println(iuOta.getOtaFlagValue(OTA_PEND_STATUS_MSG_LOC));
                 }
                 if (strcmp(buff, "IUSET_OTAFLAG_00") == 0)
                 {
@@ -5265,6 +5267,10 @@ void Conductor::sendOtaStatus()
                 break;
         }
 
+        otaSendMsg = false;
+        /* Send Error message only once. Not to send on every bootup */
+        iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_VALIDATION_SUCCESS);
+
         otaStatus = iuOta.getOtaFlagValue(OTA_PEND_STATUS_MSG_LOC);
         if (setupDebugMode) {
             debugPrint("Main FW:OTA Status Code: ",false);
@@ -5302,7 +5308,6 @@ void Conductor::sendOtaStatus()
         }
         otaSendMsg = false;
         /* Send Error message only once. Not to send on every bootup */
-        iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_VALIDATION_SUCCESS);
         iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,OTA_FW_VALIDATION_SUCCESS);
     }
 }
@@ -5343,6 +5348,7 @@ void Conductor::sendOtaStatusMsg(MSPCommand::command type, char *msg, const char
         otaSendMsg = true;
         delay(10); 
     }
+    delay(1); 
 }
 
 /**
