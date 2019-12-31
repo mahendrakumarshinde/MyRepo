@@ -901,6 +901,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                     debugPrint(F("Sending OTA_FDW_ABORT"));
                 }
                 sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_INVALID_MQTT)).c_str());
+                if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
+                iuWiFi.m_setLastConfirmedPublication();
                 changeUsageMode(UsageMode::OPERATION);
                 delay(10);
             }
@@ -911,6 +913,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 debugPrint(F("OTA Forced Rollback Request received: "), false);
                 subConfig.printTo(Serial); debugPrint("");
             }
+            if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
+            iuWiFi.m_setLastConfirmedPublication();
             changeUsageMode(UsageMode::OPERATION);
             otaInitTimeoutFlag = false; 
             if(doOnceFWValid == true)
@@ -2314,12 +2318,12 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                     debugPrint(F("Switching Device mode:OPERATION -> OTA"));
                 }   
                 changeUsageMode(UsageMode::OTA);
-                delay(100);
+                delay(1);
                 /* OTA Get MQTT message request timer. In case of timeout switch back to OPERATION MODE */
                 otaInitWaitTimeout = millis();
                 otaInitTimeoutFlag = true;
             }          
-            delay(10);            
+            delay(1);            
             break;
         case MSPCommand::OTA_STM_DNLD_STATUS:
             if (loopDebugMode) { debugPrint(F("STM FW Download Completed !")); }
@@ -2347,6 +2351,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 ledManager.stopColorOverride();
                 delay(200);
             }
+            if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
             iuWiFi.m_setLastConfirmedPublication();
             changeUsageMode(UsageMode::OPERATION);
             delay(100); 
@@ -4733,6 +4738,7 @@ void Conductor::otaChkFwdnldTmout()
                 delay(200);
             }
             sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_DOWNLOAD_TMOUT)).c_str());
+            if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
             iuWiFi.m_setLastConfirmedPublication();  // Download Timeout , No response
             changeUsageMode(UsageMode::OPERATION);
             delay(100);
@@ -4748,6 +4754,8 @@ void Conductor::otaChkFwdnldTmout()
             otaInitTimeoutFlag = false;
             if (loopDebugMode) { debugPrint("OTA - Get MQTT Message timeout ! "); }
             conductor.sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_DOWNLOAD_TMOUT)).c_str());
+            if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
+            iuWiFi.m_setLastConfirmedPublication();
             conductor.changeUsageMode(UsageMode::OPERATION);
         }
     }
