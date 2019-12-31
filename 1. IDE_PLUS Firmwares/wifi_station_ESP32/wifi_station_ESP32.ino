@@ -10,7 +10,7 @@
 #include "soc/rtc_cntl_reg.h"
 
 Conductor conductor;
-
+uint32_t lastDone = 0;
 /* =============================================================================
     MQTT callbacks
 ============================================================================= */
@@ -57,7 +57,7 @@ void onNewHostMessageFromHost(IUSerial *iuSerial) {
 ============================================================================= */
 
 void setup()
-{
+{   
     hostSerial.begin();
     hostSerial.setOnNewMessageCallback(onNewHostMessageFromHost);
     if (debugMode) {
@@ -82,6 +82,7 @@ void setup()
     #endif
     WiFi.mode(WIFI_STA);
     WiFi.begin();
+    
 }
 
 /**
@@ -113,8 +114,20 @@ void loop()
     conductor.checkWiFiDisconnectionTimeout();
     conductor.checkOtaPacketTimeout();
     if(WiFi.isConnected() == false)
-    {
+    {   
         conductor.autoReconncetWifi();
     } 
+    uint32_t now = millis();
+    if (now - lastDone > 3000 )
+    {
+         lastDone = now;
+        if(uint64_t(conductor.getBleMAC() ) == 0) {    
+            hostSerial.sendMSPCommand(MSPCommand::ASK_BLE_MAC);
+            delay(10);
+            hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);
+            delay(10);
+            hostSerial.sendMSPCommand(MSPCommand::GET_RAW_DATA_ENDPOINT_INFO); 
+        }  
+    }
     delay(1);
 }

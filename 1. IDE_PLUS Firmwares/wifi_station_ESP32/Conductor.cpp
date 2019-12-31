@@ -694,10 +694,10 @@ bool Conductor::getConfigFromMainBoard()
 {
     uint32_t startTime = millis();
     uint32_t current = startTime;
-    while (uint64_t(m_bleMAC) == 0)
+    while (uint64_t(m_bleMAC) == 0 && (millis() - startTime) < 10000 )
     {
         if (current - startTime > hostResponseTimeout)
-        {
+        {   
             if (debugMode)
             {
                 debugPrint("Host didn't respond");
@@ -706,9 +706,11 @@ bool Conductor::getConfigFromMainBoard()
         }
         delay(500);
         hostSerial.sendMSPCommand(MSPCommand::ASK_BLE_MAC);
+        delay(10);
         hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);
+        delay(10);
         hostSerial.sendMSPCommand(MSPCommand::GET_RAW_DATA_ENDPOINT_INFO); 
-        
+         
         // get the IDE Firmware Version from Host
         //hostSerial.sendMSPCommand(MSPCommand::ASK_HOST_FIRMWARE_VERSION);
         m_lastMQTTInfoRequest = current;
@@ -889,7 +891,7 @@ void Conductor::checkWiFiDisconnectionTimeout()
         {
             debugPrint("Exceeded disconnection time-out");
         }
-        ESP.restart(); // Resetting ESP32 if not connected to WiFi (every 100 Sec.) // ESP32_PORT_TRUE
+       ESP.restart(); // Resetting ESP32 if not connected to WiFi (every 100 Sec.) // ESP32_PORT_TRUE
     }
 }
 
@@ -1187,6 +1189,7 @@ void Conductor::updateWiFiStatus()
     if (WiFi.isConnected() && mqttHelper.client.connected())
     {
         hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_CONNECTED);
+
     }
     else
     {
