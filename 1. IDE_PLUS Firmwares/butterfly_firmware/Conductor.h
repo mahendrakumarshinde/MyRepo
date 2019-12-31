@@ -338,9 +338,11 @@ class Conductor
         MacAddress m_rlbkDevId;
         bool m_rlbkDowngrade = false;
         bool otaSendMsg = false;
-        bool doOnceFWValid;
+        bool doOnceFWValid = false;
         int FWValidCnt = 0;
         char FW_Valid_State = 0;
+        uint32_t otaInitWaitTimeout = 0;
+        bool otaInitTimeoutFlag = false;
 };
 
 

@@ -20,15 +20,6 @@ extern bool stm32l4_flash_program(uint32_t address, const uint8_t *data, uint32_
 }
 
 /**
- * Set device mode = OTA
- */
-void IUOTA::otaFileDownload()
-{
-    conductor.changeUsageMode(UsageMode::OTA);
-}
-
-
-/**
  * Write OTA FW binary MD5 in to external flash as .MD5
  */
 bool IUOTA::otaMD5Write(char *folderName,char *fileName, char *md5)

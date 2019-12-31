@@ -27,10 +27,10 @@ IUBMD350 iuBluetooth(&Serial3, iuBluetoothBuffer, 500,
 char iuWiFiBuffer[2048] = "";
 #ifdef USE_EXTERNAL_WIFI
     IUSerial iuWiFi(&Serial1, iuWiFiBuffer, 2048, IUSerial::MS_PROTOCOL, 115200,
-                    ';', 250);
+                    ';', 1000);
 #else
     IUESP8285 iuWiFi(&Serial1, iuWiFiBuffer, 2048, IUSerial::MS_PROTOCOL,
-                     115200, ';', 250);
+                     115200, ';', 1000);
 #endif
     IUOTA iuOta = IUOTA();
 
