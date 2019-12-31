@@ -2288,10 +2288,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
     switch (iuWiFi.getMspCommand()) {
         case MSPCommand::ESP_DEBUG_TO_STM_HOST:
             if (loopDebugMode) {
-                debugPrint("RESPONSE from ESP32 :",false);
                 debugPrint(buff);
             }
-            Serial.println(buff);
             break;
         case MSPCommand::OTA_STM_DNLD_STATUS:
             if (loopDebugMode) { debugPrint(F("STM FW Download Completed !")); }

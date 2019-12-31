@@ -306,9 +306,9 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 default:
                     break;
             }
-            currentTXpower = WiFi.getTxPower();
-            snprintf(esp_radio,50,"ESP32 TX PWR : %d,%d,%d,%d",cmd,radioMode,modeSet,currentTXpower);
-            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, esp_radio);
+            // currentTXpower = WiFi.getTxPower();
+            // snprintf(esp_radio,50,"ESP32 TX PWR : %d,%d,%d,%d",cmd,radioMode,modeSet,currentTXpower);
+            // hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, esp_radio);
             
             break;
             }
