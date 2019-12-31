@@ -256,6 +256,69 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         case MSPCommand::WIFI_DISCONNECT:
             disconnectWifi();
             break;
+        /****** WiFI Radio Control *****/
+        case MSPCommand::WIFI_GET_TX_POWER:
+            wifi_power_t txpower;
+            txpower  =  WiFi.getTxPower();
+            char esp_radio[50];
+            snprintf(esp_radio,50,"ESP32 Current TX PWR : %d",txpower);
+            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, esp_radio);
+            mqttHelper.publish(DIAGNOSTIC_TOPIC,esp_radio);
+            break;
+        case MSPCommand::WIFI_SET_TX_POWER:
+            {
+            int cmd(0), radioMode(0);
+            int modeSet,currentTXpower;
+            sscanf(buffer, "%d-%d", &cmd, &radioMode);
+            char esp_radio[50];
+            switch (radioMode)
+            {
+                case 0:
+                    modeSet = WiFi.setTxPower(WIFI_POWER_19_5dBm);
+                    break;
+                case 1:
+                    modeSet = WiFi.setTxPower(WIFI_POWER_19dBm);
+                    break;
+                case 2:
+                    modeSet = WiFi.setTxPower(WIFI_POWER_18_5dBm);
+                    break;
+                case 3:
+                    modeSet = WiFi.setTxPower(WIFI_POWER_17dBm);
+                    break;
+                case 4:
+                    modeSet = WiFi.setTxPower(WIFI_POWER_15dBm);
+                    break;
+                case 5:
+                    modeSet = WiFi.setTxPower(WIFI_POWER_13dBm);
+                    break;
+                case 6:
+                    modeSet = WiFi.setTxPower(WIFI_POWER_11dBm);
+                    break;
+                case 7:
+                    modeSet = WiFi.setTxPower(WIFI_POWER_8_5dBm);
+                    break;
+                case 8:
+                    modeSet = WiFi.setTxPower(WIFI_POWER_7dBm);
+                    break;
+                case 9:
+                    modeSet = WiFi.setTxPower(WIFI_POWER_5dBm);
+                    break;
+                case 10:
+                    modeSet = WiFi.setTxPower(WIFI_POWER_2dBm);
+                    break;
+                case 11:
+                    modeSet = WiFi.setTxPower(WIFI_POWER_MINUS_1dBm);
+                    break;
+    
+                default:
+                    break;
+            }
+            // currentTXpower = WiFi.getTxPower();
+            // snprintf(esp_radio,50,"ESP32 TX PWR : %d,%d,%d,%d",cmd,radioMode,modeSet,currentTXpower);
+            // hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, esp_radio);
+            
+            break;
+            }
 
         /***** Data publication *****/
         // Implemented in Host Firmware v1.1.3
@@ -638,10 +701,10 @@ bool Conductor::getConfigFromMainBoard()
 {
     uint32_t startTime = millis();
     uint32_t current = startTime;
-    while (uint64_t(m_bleMAC) == 0 && (millis() - startTime) < 10000)
+    while (uint64_t(m_bleMAC) == 0 && (millis() - startTime) < 10000 )
     {
         if (current - startTime > hostResponseTimeout)
-        {
+        {   
             if (debugMode)
             {
                 debugPrint("Host didn't respond");
@@ -654,7 +717,7 @@ bool Conductor::getConfigFromMainBoard()
         hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);
         delay(10);
         hostSerial.sendMSPCommand(MSPCommand::GET_RAW_DATA_ENDPOINT_INFO); 
-        
+         
         // get the IDE Firmware Version from Host
         //hostSerial.sendMSPCommand(MSPCommand::ASK_HOST_FIRMWARE_VERSION);
         m_lastMQTTInfoRequest = current;
@@ -846,7 +909,7 @@ void Conductor::checkWiFiDisconnectionTimeout()
         {
             debugPrint("Exceeded disconnection time-out");
         }
-        ESP.restart(); // Resetting ESP32 if not connected to WiFi (every 100 Sec.) // ESP32_PORT_TRUE
+       ESP.restart(); // Resetting ESP32 if not connected to WiFi (every 100 Sec.) // ESP32_PORT_TRUE
     }
 }
 
@@ -1174,6 +1237,7 @@ void Conductor::updateWiFiStatus()
     if (WiFi.isConnected() && mqttHelper.client.connected())
     {
         hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_CONNECTED);
+
     }
     else
     {

@@ -229,7 +229,7 @@ class Conductor
 
         bool setSensorConfig(char* filename);
         bool setEthernetConfig(char* filename);
-
+        uint8_t processWiFiRadioModes(char* buff);
         /***** HTTP raw data sending 
          * problems encountered: 
          * 1. Raw buffers are of datatype char, need to handle copying memory
