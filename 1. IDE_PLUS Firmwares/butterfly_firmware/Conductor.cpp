@@ -5220,6 +5220,7 @@ void Conductor::getOtaStatus()
     switch(otaStatus)
     {
         case OTA_FW_DNLD_FAIL_PENDING:
+            strcpy(WiFiDisconnect_OTAErr,"OTA-RCA-0003");
             /* Send this message in case WiFi Disconnection during last OTA FW Download */
             if (setupDebugMode) debugPrint("FW OTA download Failed ! Message pending. ");
             otaSendMsg = true;
@@ -5307,7 +5308,7 @@ void Conductor::sendOtaStatus()
             case OTA_FW_DNLD_FAIL_PENDING:
                 /* Send this message in case WiFi Disconnection during last OTA FW Download */
                 if (setupDebugMode) debugPrint("FW OTA download Failed ! WiFi Disconnected for last FW download. ");
-                sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR,String(iuOta.getOtaRca(OTA_WIFI_DISCONNECT)).c_str());
+                sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR,WiFiDisconnect_OTAErr);
                 delay(1000);
                 break;
             case OTA_FW_UPGRD_OK_PENDING:
@@ -5364,8 +5365,13 @@ void Conductor::sendOtaStatusMsg(MSPCommand::command type, char *msg, const char
         }
         else
         {
+            if (loopDebugMode) {
+                debugPrint(F("WiFi Not Conntected, Storing OTA Status Message:"));
+                debugPrint(type);
+            }
             if(MSPCommand::OTA_FDW_ABORT == type)
             {
+                strcpy(WiFiDisconnect_OTAErr,errMsg);
                 iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,OTA_FW_DNLD_FAIL_PENDING);
             }
             else if(MSPCommand::OTA_FUG_ABORT == type)

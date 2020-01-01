@@ -343,6 +343,7 @@ class Conductor
         char FW_Valid_State = 0;
         uint32_t otaInitWaitTimeout = 0;
         bool otaInitTimeoutFlag = false;
+        char WiFiDisconnect_OTAErr[16];
 };
 
 
