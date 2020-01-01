@@ -37,10 +37,8 @@ bool IUKX222::checkWHO_AM_I()
 		if (c != IUKX222_WHO_AM_I_WIA_ID){
 			retry--;
 		}
-		kionixPresence = true;
 		return true;
 	}
-	kionixPresence = false;
 	return false;
 }
 
@@ -144,9 +142,11 @@ void IUKX222::setupHardware()
 	operate(false);
 	if(!checkWHO_AM_I() || !sanityCheck()){
 		debugPrint("Kionix KX222 Error");
+		kionixPresence = false;
 		return;
 	} else {
 		debugPrint("Kionix KX222 Found");
+		kionixPresence = true;
 	}
 	softReset();
 
