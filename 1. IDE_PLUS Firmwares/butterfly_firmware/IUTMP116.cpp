@@ -108,7 +108,7 @@ void IUTMP116::setPowerMode(PowerMode::option pMode)
         case PowerMode::REGULAR:                      // AVG  0: no_avg (15.5ms), 1: 8 avg(125ms), 2: 32 avg(500ms), 3: 64 avg(1000ms)
         case PowerMode::LOW_1:
         case PowerMode::LOW_2:
-            setWorkingMode( CONTINOUS_CONVERSION1, CONV_4, AVG_0 );
+            setWorkingMode( CONTINOUS_CONVERSION1, CONV_4, AVG_0 ); 
             break;
         case PowerMode::SLEEP:
         case PowerMode::DEEP_SLEEP:
@@ -142,7 +142,6 @@ void IUTMP116::setWorkingMode(uint8_t mod, uint8_t conv, uint8_t avg)
     data[2] = (uint8_t)( config_value & 0xFF);
 
     config_value = (data[1]) << 8 | data[2];
-    
     if (!m_iuI2C1->writeWord(ADDRESS, CFGR, config_value))
     {
         if (asyncDebugMode) {
@@ -222,7 +221,9 @@ void IUTMP116::processTemperatureData(uint8_t wireStatus)
     m_temperature = 0.00;
     iTemp = ( (int16_t) (m_rawBytes[0] << 8) | m_rawBytes[1]);
     m_temperature = (iTemp * TEMP_COEFFICIENT);
-    m_destinations[0]->addValue(m_temperature);
+    // TODO : Apply Temperature Algorithm here.
+     m_temperature = m_temperature -  quadraticTemperatureCoorection(m_temperature);
+     m_destinations[0]->addValue(m_temperature);
 }
 
 /**
@@ -260,4 +261,65 @@ float IUTMP116::getData(HardwareSerial *port)
     {
         return m_temperature;        
     }
+}
+
+/*
+Linear-> (-0.11356094436553277) x + (8.340067532958916)
+
+Quadratic -> (-0.000703201760759331) x^2 + (-0.03676297298757314) x + (6.469553023053652)
+
+Cubic -> params: (-1.2353858157606742e-05) x^3 + (0.001307898233064794) x^2 + (-0.13881873878918416) x + (8.074500101831555)
+
+Quartic -> params: (-3.077936514743978e-06) x^4 + (0.000650987627860888) x^3 + (-0.04968278164742072) x^2 + (1.5083763886028987) x + (-10.736161400887005)
+
+Quintic -> params: (-4.1418566896899394e-08) x^5 + (8.129792039345673e-06) x^4 + -0.0005168360615951368 x^3 + (0.008647487003413851) x^2 + (0.11705963338766216) x + (1.9054682507634597)
+
+*/
+
+
+float IUTMP116::linearTemperatureCorrection(float m_temperature){
+    //float inputTemperature;
+    float outputFactor=0;
+
+     outputFactor = (-0.11356094436553277) * m_temperature + (8.340067532958916);
+
+return outputFactor; 
+}
+
+float IUTMP116::quadraticTemperatureCoorection(float m_temperature){
+    //float inputTemperature;
+    float outputFactor=0;
+
+    outputFactor = (-0.000703201760759331)*pow(m_temperature,2) + (-0.03676297298757314)*m_temperature + (6.469553023053652);
+    
+return outputFactor;
+}
+
+float IUTMP116::cubicTemperatureCorrection(float m_temperature){
+    //float inputTemperature;
+    float outputFactor=0;
+
+    outputFactor = (-1.2353858157606742e-05)*pow(m_temperature,3) + (0.001307898233064794)*pow(m_temperature,2) + (-0.13881873878918416)*m_temperature + (8.074500101831555);
+
+return outputFactor;
+
+}
+
+float IUTMP116::quarticTemperatureCorrection(float m_temperature){
+    //float inputTemperature;
+    float outputFactor=0;
+
+    outputFactor = (-3.077936514743978e-06)*pow(m_temperature,4) + (0.000650987627860888)*pow(m_temperature,3) + (-0.04968278164742072)*pow(m_temperature,2) + (1.5083763886028987)*m_temperature + (-10.736161400887005);
+
+return outputFactor;
+
+}
+
+float IUTMP116::quinticTemperatureCorrection(float m_temperature){
+    //float inputTemperature;
+    float outputFactor=0;
+
+    outputFactor = (-4.1418566896899394e-08)*pow(m_temperature,5) + (8.129792039345673e-06)*pow(m_temperature,4)+ (-0.0005168360615951368) *pow(m_temperature,3) + (0.008647487003413851)*pow(m_temperature,2) + (0.11705963338766216)*m_temperature + (1.9054682507634597);
+
+return outputFactor;
 }
