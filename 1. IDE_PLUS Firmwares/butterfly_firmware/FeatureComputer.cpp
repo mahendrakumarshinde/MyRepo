@@ -6,7 +6,7 @@
 
 extern float audioHigherCutoff;
 extern int m_audioOffset;
-
+ bool computationDone = false;
 /* =============================================================================
     Feature Computer Base Class
 ============================================================================= */
@@ -169,6 +169,9 @@ bool FeatureComputer::compute()
     // Acknowledge the computed sections for each source
     for (uint8_t i = 0; i < m_sourceCount; ++i ) {
         m_sources[i]->acknowledge(this, m_sectionCount[i]);
+        if(m_id == 41){
+            computationDone = true;
+        }
     }
     return true;
 }

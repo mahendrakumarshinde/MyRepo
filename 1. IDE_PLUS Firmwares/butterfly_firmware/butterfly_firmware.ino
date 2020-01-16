@@ -732,15 +732,26 @@ void loop()
             //conductor.acquireData(false);
             conductor.acquireTemperatureData();
             // Compute features depending on operation mode
+             if( (!FeatureStates::isISRActive)  ){ 
             conductor.computeFeatures();
             // Stream features
             conductor.streamFeatures();
+             }
             // Firmware Serial Execution 
             if (FeatureStates::isISRActive)
             {   
                 //Serial.println("attachInterrupt Again !!!!");
                 //Feature::ISRcount = 0;
                 //FeatureStates::isrCount=0;
+                FeatureStates::isISRDisabled = false;
+                FeatureStates::isISRActive = false;
+                computationDone = false;
+                for (size_t i = 0; i < Feature::instanceCount; i++)
+                {
+                    if ( (strcmp (Feature::instances[i]->getName(),"A0X") == 0) || (strcmp (Feature::instances[i]->getName(),"A0Y") == 0) || (strcmp (Feature::instances[i]->getName(),"A0Z") == 0 ) ){
+                        Feature::instances[i]->reset();
+                    } 
+                }
                 if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
                 {
                     attachInterrupt(digitalPinToInterrupt(IULSM6DSM::INT1_PIN), dataAcquisitionISR, RISING);
@@ -749,8 +760,6 @@ void loop()
                 {
                     attachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN),dataAcquisitionISR,RISING);
                 }
-                FeatureStates::isISRDisabled = false;
-                FeatureStates::isISRActive = false;
                 // Serial.println("ISR Enabled !!!");
                 
             }
