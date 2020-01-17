@@ -728,14 +728,15 @@ void loop()
             /* Block Data acquistion, computation, streaming during OTA download */
             // Manage WiFi autosleep
             iuWiFi.manageAutoSleep();
-            // Acquire data from sensors
             //conductor.acquireData(false);
-            conductor.acquireTemperatureData();
             // Compute features depending on operation mode
              if( (!FeatureStates::isISRActive)  ){ 
-            conductor.computeFeatures();
-            // Stream features
-            conductor.streamFeatures();
+                // Acquire Temperature data from sensor
+                conductor.acquireTemperatureData();
+                // Compute Features
+                conductor.computeFeatures();
+                // Stream features
+                conductor.streamFeatures();
              }
             // Firmware Serial Execution 
             if (FeatureStates::isISRActive)
@@ -746,11 +747,9 @@ void loop()
                 FeatureStates::isISRDisabled = false;
                 FeatureStates::isISRActive = false;
                 computationDone = false;
-                for (size_t i = 0; i < Feature::instanceCount; i++)
-                {
-                    if ( (strcmp (Feature::instances[i]->getName(),"A0X") == 0) || (strcmp (Feature::instances[i]->getName(),"A0Y") == 0) || (strcmp (Feature::instances[i]->getName(),"A0Z") == 0 ) ){
-                        Feature::instances[i]->reset();
-                    } 
+                // Reset Destination Buffers
+                for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
+                    Sensor::instances[i]->resetDestinations();
                 }
                 if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
                 {
