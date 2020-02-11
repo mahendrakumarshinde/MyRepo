@@ -130,10 +130,18 @@ namespace MSPCommand
         OTA_ESP_DNLD_OK,
         OTA_STM_DNLD_STATUS,
         OTA_ESP_DNLD_STATUS,
-        //Sensor error code
-        SEND_SENSOR_STATUS,
-        //Flash Status code
+        OTA_CONFIRM_FUG_START,
+        OTA_CONFIRM_FDW_ABORT,
+        OTA_CONFIRM_FDW_SUCCESS,
+        OTA_CONFIRM_FUG_ABORT,
+        OTA_CONFIRM_FUG_SUCCESS,
         SEND_FLASH_STATUS,
+        SEND_SENSOR_STATUS,
+        GET_DEVICE_CONFIG,
+        WIFI_GET_TX_POWER,
+        WIFI_SET_TX_POWER,
+        OTA_INIT_REQUEST,
+	GET_ESP_RSSI,
         // Config update (Host - Wifi)
         CONFIG_ACK
 	// ESP32 MSP Commands
