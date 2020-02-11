@@ -103,6 +103,17 @@ float AUDIO_DB_SCALING = 1.0;
 float AUDIO_DB_OFFSET = 0.0;
 float audioHigherCutoff = 160.0;
 
+
+/**
+ * @brief 
+ * WiFi RSSI thresholds
+ *  reference url :https://support.randomsolutions.nl/827069-Best-dBm-Values-for-Wifi
+ */
+
+int WEAK_SIGNAL_STRENGTH_TH = -70;
+int FAIR_SIGNAL_STRENGTH_TH = -60;
+int GOOD_SIGNAL_STRENGTH_TH = -50;
+int EXCELLENT_SIGNAL_STRENGTH_TH = -40;
 /* =============================================================================
     Main global variables
 ============================================================================= */
@@ -765,6 +776,28 @@ void loop()
             lastDone = now;
             /* === Place your code to excute at fixed interval here ===*/
             conductor.streamMCUUInfo(iuWiFi.port);
+            iuWiFi.sendMSPCommand(MSPCommand::GET_ESP_RSSI);
+
+            if(iuWiFi.current_rssi < WEAK_SIGNAL_STRENGTH_TH ){
+                 ledManager.overrideColor(RGB_PURPLE);
+                 delay(3000);
+                 ledManager.stopColorOverride();
+                 if(loopDebugMode){
+                    debugPrint("Current WiFi RSSI : ",false);
+                    debugPrint(iuWiFi.current_rssi,true);
+                }
+            }
+            else
+            {
+                if (loopDebugMode)
+                {
+                    debugPrint("Current WiFi RSSI is :");
+                    debugPrint(iuWiFi.current_rssi,true);
+                }
+
+            }
+
+
             /*======*/
             //    Serial.println("Usage Mode:" + String(conductor.getUsageMode()));
         }

@@ -256,6 +256,9 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         case MSPCommand::WIFI_DISCONNECT:
             disconnectWifi();
             break;
+        case MSPCommand::GET_ESP_RSSI:
+            hostSerial.sendMSPCommand(MSPCommand::GET_ESP_RSSI,String(WiFi.RSSI()).c_str() );
+            break;
         /****** WiFI Radio Control *****/
         case MSPCommand::WIFI_GET_TX_POWER:
             wifi_power_t txpower;

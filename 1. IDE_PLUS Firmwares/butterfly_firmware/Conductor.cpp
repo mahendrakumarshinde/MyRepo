@@ -2628,6 +2628,13 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 sendingQueue.confirmSuccessfullSend(idx);
             }
             break;
+        case MSPCommand::GET_ESP_RSSI:
+            iuWiFi.current_rssi = atoi(&buff[0]);
+            if (loopDebugMode) {
+                debugPrint(F("RECEIVED WIFI RSSI : "), false);
+                debugPrint(iuWiFi.current_rssi);
+            }
+            break;
         case MSPCommand::GET_RAW_DATA_ENDPOINT_INFO:
             // TODO: Implement
             { 
@@ -4099,7 +4106,7 @@ void Conductor::setConductorMacAddress() {
                     debugPrint("BLE MAC ID IN RETRY : ",false);
                     debugPrint(BLE_MAC_Address);
                 }                    
-                if(mac_Response < 0 && ( BLE_MAC_Address[0] != '0')){
+                if(mac_Response < 0 && ( BLE_MAC_Address[0] != '9')){
                     if(debugMode){
                         debugPrint("Found the BLE MAC ADDRESS");
                     }
