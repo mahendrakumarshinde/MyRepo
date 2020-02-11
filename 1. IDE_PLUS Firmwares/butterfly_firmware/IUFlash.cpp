@@ -514,15 +514,22 @@ String IUFSFlash::readInternalFlash(uint32_t address)
 void IUFSFlash::writeInternalFlash(uint8_t type, uint32_t address, uint8_t dataLength, const uint8_t* data)
 {
   uint8_t dataSize;
-  char allData[255];
+  char allData[2048];
   dataSize = sizeof(type)+sizeof(dataLength)+dataLength;
   stm32l4_flash_unlock();
   stm32l4_flash_erase(address, 2048);
   allData[0] = type;
   allData[1] = dataLength;
   sprintf(&allData[2],"%s",data);
-  debugPrint(allData);
-  stm32l4_flash_program(address, (const uint8_t*)allData,dataSize);
+
+  for(int i=dataSize;i<sizeof(allData);i++){
+    allData[i]=0xFF;
+  }
+  if(loopDebugMode){
+    debugPrint(allData);
+  }
+
+  stm32l4_flash_program(address, (const uint8_t*)allData,sizeof(allData));
   stm32l4_flash_lock();
 }
 
