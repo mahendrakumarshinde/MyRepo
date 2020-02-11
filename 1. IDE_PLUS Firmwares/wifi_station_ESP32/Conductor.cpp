@@ -1334,7 +1334,7 @@ void Conductor::debugPrintWifiInfo()
      */
     strcpy(destination, "{\"ide-firmware-version\":\"");
     strcat(destination, HOST_VERSION);
-    strcat(destination, "\",\"wifi-firmware-version\":");
+    strcat(destination, "\",\"wifi-firmware-version\":\"");
     strcat(destination, WIFI_VERSION);
     strcat(destination, "\",\"wifi_mac\":\"");
     strcat(destination, m_wifiMAC.toString().c_str());

@@ -2509,6 +2509,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             char deviceInfo[64];
             sprintf(deviceInfo,"%s-%d-%d",FIRMWARE_VERSION,FFTConfiguration::currentSamplingRate,FFTConfiguration::currentBlockSize);
             iuWiFi.sendMSPCommand(MSPCommand::GET_DEVICE_CONFIG,deviceInfo);
+            iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HOST_FIRMWARE_VERSION,FIRMWARE_VERSION);
             break;
         case MSPCommand::ASK_HOST_SAMPLING_RATE:        
             if (loopDebugMode){ debugPrint(F("ASK_HOST_SAMPLING_RATE")); }
