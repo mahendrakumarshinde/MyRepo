@@ -640,7 +640,28 @@ void setup()
         //http configuration
         conductor.configureBoardFromFlash("httpConfig.conf",1);
         // get the previous offset values 
-        conductor.setSensorConfig("sensorConfig.conf"); 
+        //conductor.setSensorConfig("sensorConfig.conf"); 
+        if(DOSFS.exists("sensorConfig.conf")){
+            conductor.setSensorConfig("sensorConfig.conf"); 
+        }else
+        {
+            if (debugMode)
+            {
+                debugPrint("File does not exists,skip sensorConfig");
+            }
+            
+        }
+        // Fingerprints config and appy 
+        if(DOSFS.exists("finterprints.conf") ){
+            // NOTE: Seems Heap overflow happens (here is the culprit), using Static memory allocation instead of Dynamic allocation
+            JsonObject& fingerprintsConfig = iuDiagnosticEngine.configureFingerPrintsFromFlash("finterprints.conf",1);
+            fingerprintsConfig.printTo(conductor.availableFingerprints);  
+        }else
+        {
+            if(debugMode){
+                debugPrint("Fingerprints.conf does not exists");
+            }
+        }
         // delay(500);
         // iuWiFi.hardReset();
         // delay(1000);
