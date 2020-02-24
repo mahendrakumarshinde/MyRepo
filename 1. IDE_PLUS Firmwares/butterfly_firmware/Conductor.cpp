@@ -423,6 +423,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             {
                 debugPrint("Writing to fingerptins.conf ...");
                 fingerprints.print(jsonChar);
+                availableFingerprints = jsonChar;
                 fingerprints.close();
                 dataWritten = true;
             }
