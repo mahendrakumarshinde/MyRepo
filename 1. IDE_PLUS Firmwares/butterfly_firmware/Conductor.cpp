@@ -374,7 +374,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     if (subConfig.success()) {
         //configureAllFeatures(subConfig);
         bool dataWritten = false;
-        iuFlash.writeInternalFlash(1,CONFIG_MQTT_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
+        // iuFlash.writeInternalFlash(1,CONFIG_MQTT_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
         if (saveToFlash) {
             //DOSFS.begin();
             File mqttFile = DOSFS.open("MQTT.conf", "w");
@@ -423,6 +423,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             {
                 debugPrint("Writing to fingerptins.conf ...");
                 fingerprints.print(jsonChar);
+                availableFingerprints = jsonChar;
                 fingerprints.close();
                 dataWritten = true;
             }
@@ -468,7 +469,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     if (subConfig.success()) {
         //configureAllFeatures(subConfig);
         bool dataWritten = false;
-        iuFlash.writeInternalFlash(1,CONFIG_HTTP_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
+        // iuFlash.writeInternalFlash(1,CONFIG_HTTP_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
         if (saveToFlash) {
             //DOSFS.begin();
             File httpFile = DOSFS.open("httpConfig.conf", "w");
@@ -1120,7 +1121,7 @@ void Conductor::readForceOtaConfig()
         String mqttConfig = iuFlash.readInternalFlash(CONFIG_MQTT_FLASH_ADDRESS);
         debugPrint(mqttConfig);
         JsonObject &config = jsonBuffer.parseObject(mqttConfig);
-        if(config.success() && strncmp(mqttConfig.c_str(),"{\"mqtt\"",7)==0)
+        if(config.success())
         {
             debugPrint("Mqtt Config Found");
             String mqttServerIP = config["mqtt"]["mqttServerIP"];
@@ -1237,7 +1238,7 @@ bool Conductor::configureBoardFromFlash(String filename,bool isSet){
         debugPrint(httpConfig);
         JsonObject &config = jsonBuffer.parseObject(httpConfig);
         JsonObject& config2 = config["httpConfig"];
-        if(config.success() && strncmp(httpConfig.c_str(),"{\"httpConfig\"",13)==0)
+        if(config.success())
         {
             debugPrint("Http Config Found");
             static const char* host = config2["host"];
@@ -2509,6 +2510,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             char deviceInfo[64];
             sprintf(deviceInfo,"%s-%d-%d",FIRMWARE_VERSION,FFTConfiguration::currentSamplingRate,FFTConfiguration::currentBlockSize);
             iuWiFi.sendMSPCommand(MSPCommand::GET_DEVICE_CONFIG,deviceInfo);
+            iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HOST_FIRMWARE_VERSION,FIRMWARE_VERSION);
             break;
         case MSPCommand::ASK_HOST_SAMPLING_RATE:        
             if (loopDebugMode){ debugPrint(F("ASK_HOST_SAMPLING_RATE")); }
@@ -2628,6 +2630,13 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 sendingQueue.confirmSuccessfullSend(idx);
             }
             break;
+        case MSPCommand::GET_ESP_RSSI:
+            iuWiFi.current_rssi = atoi(&buff[0]);
+            if (loopDebugMode) {
+                debugPrint(F("RECEIVED WIFI RSSI : "), false);
+                debugPrint(iuWiFi.current_rssi);
+            }
+            break;
         case MSPCommand::GET_RAW_DATA_ENDPOINT_INFO:
             // TODO: Implement
             { 
@@ -2643,7 +2652,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                      StaticJsonBuffer<1024> jsonBuffer;
                     JsonObject &config = jsonBuffer.parseObject(httpConfig);
                     JsonObject& config2 = config["httpConfig"];
-                    if(config.success() && strncmp(httpConfig.c_str(),"{\"httpConfig\"",13)==0)
+                    if(config.success())
                     {
                         debugPrint("Http Config Found");
                         static const char* host = config2["host"];
@@ -2706,7 +2715,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 debugPrint(mqttConfig);
                 StaticJsonBuffer<512> jsonBuffer;
                 JsonObject &config = jsonBuffer.parseObject(mqttConfig);
-                if(config.success() && strncmp(mqttConfig.c_str(),"{\"mqtt\"",7)==0)
+                if(config.success())
                 {
                 debugPrint("Mqtt Config Found");
                 String mqttServerIP = config["mqtt"]["mqttServerIP"];
@@ -4099,7 +4108,7 @@ void Conductor::setConductorMacAddress() {
                     debugPrint("BLE MAC ID IN RETRY : ",false);
                     debugPrint(BLE_MAC_Address);
                 }                    
-                if(mac_Response < 0 && ( BLE_MAC_Address[0] != '0')){
+                if(mac_Response < 0 && ( BLE_MAC_Address[0] != '9')){
                     if(debugMode){
                         debugPrint("Found the BLE MAC ADDRESS");
                     }
