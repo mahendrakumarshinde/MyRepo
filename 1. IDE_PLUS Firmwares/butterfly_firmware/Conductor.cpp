@@ -3527,7 +3527,7 @@ void Conductor::streamFeatures()
 //            &sendingQueue, IUSerial::MS_PROTOCOL, m_macAddress,
 //            ledManager.getOperationState(), batteryLoad, timestamp,
 //            true);
-        if (FeatureStates::isISRActive != true && FeatureStates::isISRDisabled){   
+        if (FeatureStates::isISRActive != true && FeatureStates::isISRDisabled && computationDone == true){   
                 FeatureStates::isFeatureStreamComplete = true;   // publication completed
                 FeatureStates::isISRActive = true;
                 //debugPrint("Published to WiFi Complete !!!");

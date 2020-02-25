@@ -760,19 +760,29 @@ void loop()
             /* Block Data acquistion, computation, streaming during OTA download */
             // Manage WiFi autosleep
             iuWiFi.manageAutoSleep();
-            // Acquire data from sensors
             //conductor.acquireData(false);
-            conductor.acquireTemperatureData();
             // Compute features depending on operation mode
-            conductor.computeFeatures();
-            // Stream features
-            conductor.streamFeatures();
+             if( (!FeatureStates::isISRActive)  ){ 
+                // Acquire Temperature data from sensor
+                conductor.acquireTemperatureData();
+                // Compute Features
+                conductor.computeFeatures();
+                // Stream features
+                conductor.streamFeatures();
+             }
             // Firmware Serial Execution 
             if (FeatureStates::isISRActive)
             {   
                 //Serial.println("attachInterrupt Again !!!!");
                 //Feature::ISRcount = 0;
                 //FeatureStates::isrCount=0;
+                FeatureStates::isISRDisabled = false;
+                FeatureStates::isISRActive = false;
+                computationDone = false;
+                // Reset Destination Buffers
+                for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
+                    Sensor::instances[i]->resetDestinations();
+                }
                 if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
                 {
                     attachInterrupt(digitalPinToInterrupt(IULSM6DSM::INT1_PIN), dataAcquisitionISR, RISING);
@@ -781,8 +791,6 @@ void loop()
                 {
                     attachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN),dataAcquisitionISR,RISING);
                 }
-                FeatureStates::isISRDisabled = false;
-                FeatureStates::isISRActive = false;
                 // Serial.println("ISR Enabled !!!");
                 
             }

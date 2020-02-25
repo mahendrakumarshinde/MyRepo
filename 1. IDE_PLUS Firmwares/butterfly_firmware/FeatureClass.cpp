@@ -197,7 +197,7 @@ void Feature::incrementFillingIndex()
             m_acknowledged[m_recordIndex][j] = false;              // ack[0:63][0],qck[0:63][1],ack[0:63][2]
         }                                                           
         
-        if(strcmp(getName(),"A0Z") == 0 && m_recordIndex == 31 /* && m_totalSize >= 4096 && m_fillingIndex >= 4096 */ ){
+        if(strcmp(getName(),"A0Z") == 0 && (m_recordIndex == FFTConfiguration::currentBlockSize/getSectionSize() -1) /* && m_totalSize >= 4096 && m_fillingIndex >= 4096 */ ){
                 // isrCount++;
                 // Serial.print("ISR count : ");Serial.println(isrCount);
                 //if(isrCount == 10){ 
@@ -213,7 +213,7 @@ void Feature::incrementFillingIndex()
                     //isr_detached_startTime = micros();
                     FeatureStates::isISRActive = false;
                     FeatureStates::isISRDisabled = true;
-                   // isrFlag = true;
+                    // isrFlag = true;
                     //isrCount = 0;
                     // Serial.println("ISR Disabled !!!");
                     

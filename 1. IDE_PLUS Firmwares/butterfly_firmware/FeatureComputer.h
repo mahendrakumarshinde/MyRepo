@@ -12,6 +12,7 @@
  *==============================================================================*/
 
 extern float motorScalingFactor ;
+extern  bool computationDone;
 
 //extern char FingerprintMessage[500];
 /* =============================================================================
