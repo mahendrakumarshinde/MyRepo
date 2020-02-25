@@ -821,7 +821,7 @@ String espComm:: espGetMD5Hash()
             if (cnt <= 0)
 		    {
                 // ESP_SERIAL.flush();
-                for (int i = START_OF_MD5_RESP; i < (index-MD5_RESP_TAIL_LEN); i++)
+                for (uint8_t i = START_OF_MD5_RESP; i < (index-MD5_RESP_TAIL_LEN); i++)
                 {
                     char tempHash[2];
                     if(hash[i] == 0xDB && hash[i+1] == 0xDC){

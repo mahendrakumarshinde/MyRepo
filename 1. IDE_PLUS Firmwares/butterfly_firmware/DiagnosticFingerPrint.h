@@ -67,6 +67,8 @@
   const char* generateJSONPayload(JsonObject &config, float* values);
 
   const char* mergeJOSN(JsonObject& dest, JsonObject& src);
+  float getRMS( const q15_t *amplitudes, uint16_t lower_index,uint16_t upper_index);
+  
   static int m_SampleingFrequency;
   static int m_smapleSize;
   static int m_fftLength; 

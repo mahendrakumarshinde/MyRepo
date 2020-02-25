@@ -103,6 +103,17 @@ float AUDIO_DB_SCALING = 1.0;
 float AUDIO_DB_OFFSET = 0.0;
 float audioHigherCutoff = 160.0;
 
+
+/**
+ * @brief 
+ * WiFi RSSI thresholds
+ *  reference url :https://support.randomsolutions.nl/827069-Best-dBm-Values-for-Wifi
+ */
+
+int WEAK_SIGNAL_STRENGTH_TH = -70;
+int FAIR_SIGNAL_STRENGTH_TH = -60;
+int GOOD_SIGNAL_STRENGTH_TH = -50;
+int EXCELLENT_SIGNAL_STRENGTH_TH = -40;
 /* =============================================================================
     Main global variables
 ============================================================================= */
@@ -559,7 +570,20 @@ void setup()
         }
         uint16_t callbackRate = iuI2S.getCallbackRate();
         for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
-            Sensor::instances[i]->setupHardware();
+            if(FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor){
+                if (strcmp("ACX", Sensor::instances[i]->getName())==0){
+                    NULL;
+                }else{
+                    Sensor::instances[i]->setupHardware();
+                }
+            }
+            if(FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor){
+                if (strcmp("ACC", Sensor::instances[i]->getName())==0){
+                    NULL;
+                }else{
+                    Sensor::instances[i]->setupHardware();
+                }
+            }
             if (Sensor::instances[i]->isHighFrequency()) {
                 Sensor::instances[i]->setCallbackRate(callbackRate);
             }
@@ -616,7 +640,28 @@ void setup()
         //http configuration
         conductor.configureBoardFromFlash("httpConfig.conf",1);
         // get the previous offset values 
-        conductor.setSensorConfig("sensorConfig.conf"); 
+        //conductor.setSensorConfig("sensorConfig.conf"); 
+        if(DOSFS.exists("sensorConfig.conf")){
+            conductor.setSensorConfig("sensorConfig.conf"); 
+        }else
+        {
+            if (debugMode)
+            {
+                debugPrint("File does not exists,skip sensorConfig");
+            }
+            
+        }
+        // Fingerprints config and appy 
+        if(DOSFS.exists("finterprints.conf") ){
+            // NOTE: Seems Heap overflow happens (here is the culprit), using Static memory allocation instead of Dynamic allocation
+            JsonObject& fingerprintsConfig = iuDiagnosticEngine.configureFingerPrintsFromFlash("finterprints.conf",1);
+            fingerprintsConfig.printTo(conductor.availableFingerprints);  
+        }else
+        {
+            if(debugMode){
+                debugPrint("Fingerprints.conf does not exists");
+            }
+        }
         // delay(500);
         // iuWiFi.hardReset();
         // delay(1000);
@@ -715,19 +760,29 @@ void loop()
             /* Block Data acquistion, computation, streaming during OTA download */
             // Manage WiFi autosleep
             iuWiFi.manageAutoSleep();
-            // Acquire data from sensors
             //conductor.acquireData(false);
-            conductor.acquireTemperatureData();
             // Compute features depending on operation mode
-            conductor.computeFeatures();
-            // Stream features
-            conductor.streamFeatures();
+             if( (!FeatureStates::isISRActive)  ){ 
+                // Acquire Temperature data from sensor
+                conductor.acquireTemperatureData();
+                // Compute Features
+                conductor.computeFeatures();
+                // Stream features
+                conductor.streamFeatures();
+             }
             // Firmware Serial Execution 
             if (FeatureStates::isISRActive)
             {   
                 //Serial.println("attachInterrupt Again !!!!");
                 //Feature::ISRcount = 0;
                 //FeatureStates::isrCount=0;
+                FeatureStates::isISRDisabled = false;
+                FeatureStates::isISRActive = false;
+                computationDone = false;
+                // Reset Destination Buffers
+                for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
+                    Sensor::instances[i]->resetDestinations();
+                }
                 if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
                 {
                     attachInterrupt(digitalPinToInterrupt(IULSM6DSM::INT1_PIN), dataAcquisitionISR, RISING);
@@ -736,8 +791,6 @@ void loop()
                 {
                     attachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN),dataAcquisitionISR,RISING);
                 }
-                FeatureStates::isISRDisabled = false;
-                FeatureStates::isISRActive = false;
                 // Serial.println("ISR Enabled !!!");
                 
             }
@@ -752,6 +805,28 @@ void loop()
             lastDone = now;
             /* === Place your code to excute at fixed interval here ===*/
             conductor.streamMCUUInfo(iuWiFi.port);
+            iuWiFi.sendMSPCommand(MSPCommand::GET_ESP_RSSI);
+
+            if(iuWiFi.current_rssi < WEAK_SIGNAL_STRENGTH_TH ){
+                 ledManager.overrideColor(RGB_PURPLE);
+                 delay(3000);
+                 ledManager.stopColorOverride();
+                 if(loopDebugMode){
+                    debugPrint("Current WiFi RSSI : ",false);
+                    debugPrint(iuWiFi.current_rssi,true);
+                }
+            }
+            else
+            {
+                if (loopDebugMode)
+                {
+                    debugPrint("Current WiFi RSSI is :");
+                    debugPrint(iuWiFi.current_rssi,true);
+                }
+
+            }
+
+
             /*======*/
             //    Serial.println("Usage Mode:" + String(conductor.getUsageMode()));
         }

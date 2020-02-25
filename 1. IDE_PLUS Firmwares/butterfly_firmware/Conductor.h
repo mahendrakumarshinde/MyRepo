@@ -132,7 +132,7 @@ class Conductor
         uint32_t m_connectionTimeout = 150000;   // 2 min 30s
         //timer ISR period
         uint16_t timerISRPeriod = 300; // default 3.3KHz
-
+        String availableFingerprints;
         /***** Core *****/
         Conductor() {};
         Conductor(MacAddress macAddress) : m_macAddress(macAddress) { }
@@ -229,7 +229,7 @@ class Conductor
 
         bool setSensorConfig(char* filename);
         bool setEthernetConfig(char* filename);
-
+        uint8_t processWiFiRadioModes(char* buff);
         /***** HTTP raw data sending 
          * problems encountered: 
          * 1. Raw buffers are of datatype char, need to handle copying memory
@@ -338,9 +338,12 @@ class Conductor
         MacAddress m_rlbkDevId;
         bool m_rlbkDowngrade = false;
         bool otaSendMsg = false;
-        bool doOnceFWValid;
+        bool doOnceFWValid = false;
         int FWValidCnt = 0;
         char FW_Valid_State = 0;
+        uint32_t otaInitWaitTimeout = 0;
+        bool otaInitTimeoutFlag = false;
+        char WiFiDisconnect_OTAErr[16];
 };
 
 

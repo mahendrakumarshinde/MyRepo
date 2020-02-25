@@ -63,6 +63,14 @@ class IUTMP116 : public LowFreqSensor
 	uint16_t ReadConfigReg();
     void sendData(HardwareSerial *port);
     float getData(HardwareSerial *port);
+    
+    // Temperature Compensation Formula
+    // 1. Linear
+    float linearTemperatureCorrection(float m_temperature);
+    float quadraticTemperatureCoorection(float m_temperature);
+    float cubicTemperatureCorrection(float m_temperature);
+    float quarticTemperatureCorrection(float m_temperature);
+    float quinticTemperatureCorrection(float m_temperature);  
 
 	protected:
         /***** Core *****/
