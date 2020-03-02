@@ -1,5 +1,6 @@
 #include "IUTMP116.h"
 
+extern float modbusFeaturesDestinations[8];
 /* =============================================================================
     Constructors and destructors
 ============================================================================= */
@@ -224,6 +225,8 @@ void IUTMP116::processTemperatureData(uint8_t wireStatus)
     // TODO : Apply Temperature Algorithm here.
      m_temperature = m_temperature -  quadraticTemperatureCoorection(m_temperature);
      m_destinations[0]->addValue(m_temperature);
+     //Append the Temperature data
+     modbusFeaturesDestinations[5] = m_temperature;
 }
 
 /**
