@@ -89,6 +89,8 @@ public:
 	uint8_t parity_byte;
 	int modbusUpdateInterval = 1000;
 	int lastModbusUpdateTime = 0;
+	uint16_t WIFI_FIRMWARE_VERSION;
+	uint16_t STM_FIRMWARE_VERSION;
 	
 
 protected:

@@ -486,8 +486,8 @@ void IUmodbus:: storeDeviceConfigParameters(){
   m_holdingRegs[DATA_BIT] = m_databit;
   m_holdingRegs[START_STOP_BIT] = m_stopbit;
   m_holdingRegs[PARITY] = parity_byte;
-  m_holdingRegs[FIRMWARE_VERSION_STM32] = 202;
-  m_holdingRegs[FIRMWARE_VERSION_ESP32] = 107;
+  m_holdingRegs[FIRMWARE_VERSION_STM32] = STM_FIRMWARE_VERSION;
+  m_holdingRegs[FIRMWARE_VERSION_ESP32] = WIFI_FIRMWARE_VERSION;
   m_holdingRegs[CURRENT_SAMPLING_RATE] = FFTConfiguration::currentSamplingRate;
   m_holdingRegs[CURRENT_BLOCK_SIZE] = FFTConfiguration::currentBlockSize;
   m_holdingRegs[LOWER_CUTOFF_FREQ] = FFTConfiguration::currentLowCutOffFrequency;
