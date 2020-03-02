@@ -392,9 +392,6 @@ void timerInit(void)
   }
   stm32l4_timer_start(&timerIns, 0);
 }
-
-
-
 /* =============================================================================
     Main execution
 ============================================================================= */
@@ -520,7 +517,7 @@ void setup()
         iuWiFi.setOnNewMessageCallback(onNewWiFiMessage);
         iuWiFi.setOnConnect(onWiFiConnect);
         iuWiFi.setOnDisconnect(onWiFiDisconnect);
-       
+
         if (setupDebugMode) {
             iuI2C.scanDevices();
             debugPrint("Testing New I2C Bus ..............");
@@ -667,6 +664,8 @@ void setup()
         // delay(1000);
         conductor.configureFromFlash(IUFlash::CFG_WIFI0);
         delay(100);
+        conductor.modbusStreamingMode = conductor.configureFromFlash(IUFlash::CFG_MODBUS_SLAVE);
+        
         opStateFeature.setOnNewValueCallback(operationStateCallback);
         ledManager.resetStatus();
         conductor.changeUsageMode(UsageMode::OPERATION);
@@ -769,7 +768,48 @@ void loop()
                 conductor.computeFeatures();
                 // Stream features
                 conductor.streamFeatures();
-             }
+
+               if(conductor.modbusStreamingMode ) { 
+                    // Update Modbus Registers
+                    uint32_t now =millis();
+                    if(now - iuModbusSlave.lastModbusUpdateTime >= iuModbusSlave.modbusUpdateInterval) {    
+                        // for (size_t i = 0; i < sizeof(modbusFeaturesDestinations)/sizeof(float); i++)
+                        // {
+                        //     debugPrint("MODBUS DEBUG >FEATURES : ",false);debugPrint(modbusFeaturesDestinations[i]);
+                        // }
+
+                        float* spectralFeatures = conductor.getFingerprintsforModbus();
+                        
+                        iuModbusSlave.storeDeviceConfigParameters();
+                        iuModbusSlave.updateBLEMACAddress(conductor.getMacAddress());
+                        iuModbusSlave.updateWIFIMACAddress(iuWiFi.getMacAddress());
+                        
+                        iuModbusSlave.updateHoldingRegister(1,OP_STATE,WIFI_RSSI_H,modbusFeaturesDestinations);
+                        iuModbusSlave.updateHoldingRegister(2,FINGERPRINT_KEY_1_L,FINGERPRINT_13_H,spectralFeatures);
+                        
+                        iuModbusSlave.m_holdingRegs[TOTAL_ERRORS]= iuModbusSlave.modbus_update(iuModbusSlave.m_holdingRegs);
+                        
+                        iuModbusSlave.lastModbusUpdateTime = now;
+                        
+                        // debugPrint(" FINGERPRINTS DATA : [ ",false);
+                        // for (size_t i = 0; i < 26; i++)
+                        // {
+                        //     debugPrint(*spectralFeatures,false);debugPrint(";;;",false);
+                        //     spectralFeatures++;
+                        // }
+                        // debugPrint(" ] ");
+                        }
+
+                    }else
+                    {
+                        if (debugMode)
+                        {
+                            //debugPrint("MODBUS DEBUG : Not Configured as a MODBUS SLAVE");
+                        }
+                        
+                    }
+                    
+               }
             // Firmware Serial Execution 
             if (FeatureStates::isISRActive)
             {   

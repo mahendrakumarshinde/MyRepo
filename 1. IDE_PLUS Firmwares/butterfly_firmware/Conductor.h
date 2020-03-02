@@ -133,6 +133,8 @@ class Conductor
         //timer ISR period
         uint16_t timerISRPeriod = 300; // default 3.3KHz
         String availableFingerprints;
+        bool modbusStreamingMode =false;
+        
         /***** Core *****/
         Conductor() {};
         Conductor(MacAddress macAddress) : m_macAddress(macAddress) { }
@@ -271,6 +273,8 @@ class Conductor
         bool flashStatusFlag = false;
         void periodicFlashTest();
         void onBootFlashTest();
+        float* getFingerprintsforModbus();
+        
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/

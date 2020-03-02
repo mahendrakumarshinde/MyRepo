@@ -39,6 +39,8 @@
 #include "IUKX222.h"
 #include "IUkx224reg.h"
 #include "IUOTA.h"
+#include "Modbus_slave.h"
+
 /***** Managers and helpers *****/
 #include "LedManager.h"
 
@@ -84,6 +86,8 @@ extern char iuWiFiBuffer[2048];   //500
 extern char iuEthernetBuffer[2048];
 
 extern Usr2Eth iuEthernet;
+
+extern IUmodbus iuModbusSlave;
 /* =============================================================================
     OTA
 ============================================================================= */

@@ -6,6 +6,7 @@
 #include "DiagnosticFingerPrint.h"
 #include "RawDataState.h"
 
+extern float modbusFeaturesDestinations[8]; 
 /* =============================================================================
  *  Motor Scaling Global Variable
  *  
@@ -767,7 +768,11 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
                 debugPrint(": ", false);
                 debugPrint(integratedRMS1 * resolution);
             }
-          
+           
+           if(m_id == 30 ){ modbusFeaturesDestinations[2] = integratedRMS1*resolution; }
+           if(m_id == 31 ){ modbusFeaturesDestinations[3] = integratedRMS1*resolution; }
+           if(m_id == 32 ){ modbusFeaturesDestinations[4] = integratedRMS1*resolution; }
+           
             //Serial.print(m_destinations[2]->getName());Serial.print("\t");Serial.println(integratedRMS1*resolution);
             
             // 4. 2nd integration in frequency domain

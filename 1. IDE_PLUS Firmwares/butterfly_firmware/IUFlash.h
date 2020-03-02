@@ -28,7 +28,8 @@ class IUFlash
                                      CFG_MQTT_CREDS,
                                      CFG_FFT,
                                      CFG_OTA,
-                                     CFG_FORCE_OTA, // Forced OTA request
+                                     CFG_FORCE_OTA, // Forced OTA request,
+                                     CFG_MODBUS_SLAVE,
                                      CFG_COUNT};
         /***** Core *****/
         IUFlash() {}
@@ -80,7 +81,8 @@ class IUFSFlash : public IUFlash
         static char FNAME_MQTT_CREDS[11];
         static char FNAME_FFT[4];
         static char FNAME_OTA[4];
-        static char FNAME_FORCE_OTA[10];        
+        static char FNAME_FORCE_OTA[10];
+        static char FNAME_MODBUS_SLAVE[12];        
         static const uint8_t MAX_FULL_CONFIG_FPATH_LEN = 28;
         /***** Core *****/
         IUFSFlash() : IUFlash() {}
