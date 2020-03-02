@@ -2176,8 +2176,24 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                         debugPrint(mode);
                     }
                 }
+                if (strcmp(buff,"IUGET_MODBUS_CONFIG") == 0 ){
+                    if(DOSFS.exists("/iuconfig/modbusSlave.conf")){
+                        JsonObject& config = configureJsonFromFlash("/iuconfig/modbusSlave.conf",1);
+                        String jsonChar;
+                        config.printTo(jsonChar);
+                        if (loopDebugMode)
+                        {
+                            debugPrint("Data From : modbusSlave.conf ",true);
+                        }
+                        //debugPrint(jsonChar);
+                        iuUSB.port->println(jsonChar);
+                    }else
+                    {
+                        debugPrint(F("modbusSlave.conf file does not exists."));
+                    }    
                 
-
+                }
+                    
                 break;
                 
             case UsageMode::CUSTOM:
@@ -2560,7 +2576,13 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
         case MSPCommand::RECEIVE_WIFI_FV:{
             if (loopDebugMode) { debugPrint(F("RECEIVE_WIFI_FV")); }
             strncpy(iuWiFi.espFirmwareVersion, buff, 6);
+            byte firstDigit = atoi(&buff[0]); 
+            byte secondDigit = atoi(&buff[2]);
+            byte thirdDigit = atoi(&buff[4]);
+            iuModbusSlave.WIFI_FIRMWARE_VERSION = (firstDigit*100) + (secondDigit*10) + thirdDigit; 
             iuWiFi.espFirmwareVersionReceived = true;
+            debugPrint("WIFI VERSION : ",false);debugPrint(iuModbusSlave.WIFI_FIRMWARE_VERSION );
+        
             }
         break;
         case MSPCommand::ASK_BLE_MAC:
@@ -2569,14 +2591,22 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             break;
 	      case MSPCommand::ASK_HOST_FIRMWARE_VERSION:
             if (loopDebugMode){ debugPrint(F("ASK_HOST_FIRMWARE_VERSION")); }
-            iuWiFi.sendHostFirmwareVersion(FIRMWARE_VERSION);               
+            iuWiFi.sendHostFirmwareVersion(FIRMWARE_VERSION);
             break;
     	case MSPCommand::GET_DEVICE_CONFIG:
+            {
             if (loopDebugMode){ debugPrint(F("GET_DEVICE_CONFIG")); }
             char deviceInfo[64];
             sprintf(deviceInfo,"%s-%d-%d",FIRMWARE_VERSION,FFTConfiguration::currentSamplingRate,FFTConfiguration::currentBlockSize);
             iuWiFi.sendMSPCommand(MSPCommand::GET_DEVICE_CONFIG,deviceInfo);
             iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HOST_FIRMWARE_VERSION,FIRMWARE_VERSION);
+            
+            byte firstDigit = atoi(&FIRMWARE_VERSION[0]); 
+            byte secondDigit = atoi(&FIRMWARE_VERSION[2]);
+            byte thirdDigit = atoi(&FIRMWARE_VERSION[4]);
+            iuModbusSlave.STM_FIRMWARE_VERSION = (firstDigit*100) + (secondDigit*10) + thirdDigit;
+            debugPrint("STM VERSION :",false);debugPrint(iuModbusSlave.STM_FIRMWARE_VERSION);               
+            }
             break;
         case MSPCommand::ASK_HOST_SAMPLING_RATE:        
             if (loopDebugMode){ debugPrint(F("ASK_HOST_SAMPLING_RATE")); }
@@ -5710,7 +5740,7 @@ float* Conductor::getFingerprintsforModbus(){
     {
         if (debugMode)
         {
-            debugPrint("Empty Fingerprint data buffer, reset the fingerprint Destination buffer");
+            //debugPrint("Empty Fingerprint data buffer, reset the fingerprint Destination buffer");
         }
         //flush the buffer
         for (size_t i = 0; i < bufferLength; i++)
