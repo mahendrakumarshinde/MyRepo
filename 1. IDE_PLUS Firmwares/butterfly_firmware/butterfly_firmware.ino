@@ -1,6 +1,6 @@
 /*
 Infinite Uptime IDE+ Firmware
-Update 17-12-2019
+Update 03-03-2020
 Type - Standard vEdge Firmware Release
 */
 
@@ -791,14 +791,7 @@ void loop()
                         
                         iuModbusSlave.lastModbusUpdateTime = now;
                         
-                        // debugPrint(" FINGERPRINTS DATA : [ ",false);
-                        // for (size_t i = 0; i < 26; i++)
-                        // {
-                        //     debugPrint(*spectralFeatures,false);debugPrint(";;;",false);
-                        //     spectralFeatures++;
-                        // }
-                        // debugPrint(" ] ");
-                        }
+                      }
 
                     }else
                     {

@@ -10,7 +10,7 @@
 ============================================================================= */
 
 /***** Firmware version *****/
-const char FIRMWARE_VERSION[8] = "2.0.0";
+const char FIRMWARE_VERSION[8] = "2.0.1";
 
 
 /***** Device Type *****/  

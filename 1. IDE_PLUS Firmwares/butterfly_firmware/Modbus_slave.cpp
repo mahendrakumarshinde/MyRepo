@@ -153,7 +153,7 @@ void IUmodbus::begin(uint32_t baudRate, int data_bits, int stop_bits, const char
         {
             config = SERIAL_8O2;
         }
-        debugPrint("MODBUS DEBUGS CONFIGS 2: ",false);debugPrint(config);
+        
     }
     else
     {   debugPrint("MODBUS DEBUG : USING DEFAULT PORT CONFIGS");    
@@ -492,7 +492,7 @@ void IUmodbus:: storeDeviceConfigParameters(){
   m_holdingRegs[CURRENT_BLOCK_SIZE] = FFTConfiguration::currentBlockSize;
   m_holdingRegs[LOWER_CUTOFF_FREQ] = FFTConfiguration::currentLowCutOffFrequency;
   m_holdingRegs[HIGHER_CUTOFF_FREQ] = FFTConfiguration::currentHighCutOffFrequency;
-
+ 
   if (debugMode)
   {
       //debugPrint("MODBUS DEBUG : Updated the device configuration sucessfully");
