@@ -111,6 +111,16 @@ const char MQTT_DEFAULT_ASSWORD[35] =  "indicus";           // IU-Password : nW$
 
 
 /* =============================================================================
+    Default MODBUS RTUS SLAVE configuration values
+============================================================================= */
+
+#define DEFAULT_MODBUS_SLAVEID  51
+#define DEFAULT_MODBUS_BAUD     9600
+ 
+#define DEFAULT_MODBUS_DATABIT  8
+#define DEFAULT_MODBUS_STOPBIT  1
+#define DEFAULT_MODBUS_PARITY   "NONE"
+/* =============================================================================
     Test mode
 
     Comment / Uncomment the "define" lines to toggle / untoggle unit tests.

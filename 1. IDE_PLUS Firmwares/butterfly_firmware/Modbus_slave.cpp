@@ -47,19 +47,29 @@ bool IUmodbus::setupModbusDevice(JsonVariant &config){
             debugPrint("DATA BIT  :",false);debugPrint(m_databit);
             debugPrint("PARITY    :",false);debugPrint(m_parity);
         }
-        begin(m_baud,m_databit,m_stopbit,m_parity);
-        configure(m_id,TOTAL_REGISTER_SIZE+1);
-        conductor.modbusStreamingMode = true;   // Set the Streaming mode as MODBUS
-
+        
     }else
-    {
+    {   
+        debugPrint("MODBUS CONFIG INTERNAL :",false);
+        debugPrint(iuFlash.readInternalFlash(CONFIG_MODBUS_SLAVE_CONFIG_FLASH_ADDRESS) );
+        // USING default modbusSlave configuration
+        m_id =      DEFAULT_MODBUS_SLAVEID;
+        m_baud =    DEFAULT_MODBUS_BAUD;
+        m_databit = DEFAULT_MODBUS_DATABIT;
+        m_stopbit = DEFAULT_MODBUS_STOPBIT;
+        m_parity =  DEFAULT_MODBUS_PARITY;
         if (debugMode)
         {
-            debugPrint("MODBUS CONFIGS NOT AVAILABLE");
+            debugPrint("MODBUS CONFIGS NOT AVAILABLE USING DEFAULT");
         }
         success = false;
         conductor.modbusStreamingMode = false; 
     }
+
+    begin(m_baud,m_databit,m_stopbit,m_parity);
+    configure(m_id,TOTAL_REGISTER_SIZE+1);
+    conductor.modbusStreamingMode = true;   // Set the Streaming mode as MODBUS
+
         
     return success;
 }

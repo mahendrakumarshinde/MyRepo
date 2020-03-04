@@ -1018,6 +1018,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             if(saveToFlash) { 
                 // Check if the config is new, then save to file and reset
                 iuFlash.saveConfigJson(IUFlash::CFG_MODBUS_SLAVE, subConfig);
+                iuFlash.writeInternalFlash(1,CONFIG_MODBUS_SLAVE_CONFIG_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
+
                 if(loopDebugMode) debugPrint("Saved modbusSlave configuration to file");
                 
                 // Apply the latest modbus Configuration 
@@ -1038,7 +1040,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             }
         } else {
             if(loopDebugMode) debugPrint("Received invalid modbusSlave configuration");
-
+            // Appy default configurations
+            checkforModbusSlaveConfigurations();
             // Acknowledge incorrect configuration, send the errors on /ide_plus/command_response topic
             // If streaming mode is BLE, send an acknowledgement on BLE as well
             iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
@@ -5788,4 +5791,51 @@ float* Conductor::getFingerprintsforModbus(){
     #endif
  }
    return modbusFingerprintDestinationBuffer;    
+}
+
+bool Conductor::checkforModbusSlaveConfigurations(){
+
+    // check if configurations are present in the internal flash storage of STM32
+    bool validJson = false;
+    bool success = true;
+    
+    if (iuFlash.checkConfig(CONFIG_MODBUS_SLAVE_CONFIG_FLASH_ADDRESS) && ! DOSFS.exists("/iuconfig/modbusSlave.conf") )
+    {
+        // Read the configurations
+        String config = iuFlash.readInternalFlash(CONFIG_MODBUS_SLAVE_CONFIG_FLASH_ADDRESS);
+        if(debugMode){
+            debugPrint("MODBUS DEBUG : INTERNAL CONFIG # ",false);
+            debugPrint("Intarnal Flash content #:");
+            debugPrint(config);
+        }
+        char* modbusConfiguration =(char*)config.c_str();
+
+        validJson =  processConfiguration(modbusConfiguration,true);
+        free(modbusConfiguration);
+    }else if (DOSFS.exists("/iuconfig/modbusSlave.conf"))
+    {
+        configureFromFlash(IUFlash::CFG_MODBUS_SLAVE);
+    }else if(!validJson){
+        // Configs not available in Internal Flash then apply default MODBUS Slave configurations
+        iuModbusSlave.m_id =      DEFAULT_MODBUS_SLAVEID;
+        iuModbusSlave.m_baud =    DEFAULT_MODBUS_BAUD;
+        iuModbusSlave.m_databit = DEFAULT_MODBUS_DATABIT;
+        iuModbusSlave.m_stopbit = DEFAULT_MODBUS_STOPBIT;
+        iuModbusSlave.m_parity =  DEFAULT_MODBUS_PARITY;
+        //LOAD THE CONFIGS
+        iuModbusSlave.begin(iuModbusSlave.m_baud,iuModbusSlave.m_databit,iuModbusSlave.m_stopbit,iuModbusSlave.m_parity);
+        iuModbusSlave.configure(iuModbusSlave.m_id,TOTAL_REGISTER_SIZE+1);
+        modbusStreamingMode = true;   // Set the Streaming mode as MODBUS
+        if(debugMode){
+            debugPrint("MODBUS DEBUG : DEFAULT CONFIGS APPLIED");
+            debugPrint("SLAVE ID  : ",false);debugPrint(iuModbusSlave.m_id);
+            debugPrint("BAUD RATE :",false);debugPrint(iuModbusSlave.m_baud);
+            debugPrint("DATA BIT  :",false);debugPrint(iuModbusSlave.m_databit);
+            debugPrint("PARITY    :",false);debugPrint(iuModbusSlave.m_parity);
+        }
+        success = false;
+    }
+    
+
+return success;
 }

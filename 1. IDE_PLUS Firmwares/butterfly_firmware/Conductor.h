@@ -274,6 +274,7 @@ class Conductor
         void periodicFlashTest();
         void onBootFlashTest();
         float* getFingerprintsforModbus();
+        bool checkforModbusSlaveConfigurations();
         
     protected:
         MacAddress m_macAddress;
