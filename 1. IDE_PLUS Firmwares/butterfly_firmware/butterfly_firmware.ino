@@ -665,6 +665,12 @@ void setup()
         conductor.configureFromFlash(IUFlash::CFG_WIFI0);
         delay(100);
         conductor.modbusStreamingMode = conductor.configureFromFlash(IUFlash::CFG_MODBUS_SLAVE);
+        if (conductor.modbusStreamingMode != true)
+        {
+            // checked the internal flash if configuration are available
+            conductor.checkforModbusSlaveConfigurations();
+            conductor.modbusStreamingMode = true;
+        }
         
         opStateFeature.setOnNewValueCallback(operationStateCallback);
         ledManager.resetStatus();
