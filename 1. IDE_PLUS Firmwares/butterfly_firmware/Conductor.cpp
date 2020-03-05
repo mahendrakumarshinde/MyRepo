@@ -1298,9 +1298,9 @@ bool Conductor::configureBoardFromFlash(String filename,bool isSet){
   JsonObject& root2 = root["httpConfig"];
   if (!root.success() && !iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS)){
     debugPrint(F("Failed to read httpConf.conf file, using default configuration"));
-    m_httpHost = "13.232.122.10";
-    m_httpPort = 8080;
-    m_httpPath = "/iu-web/rawaccelerationdata";
+    m_httpHost = "15.206.97.181";
+    m_httpPort = 8100;
+    m_httpPath = "/http_dump_v2";
    
   }else if(iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS) && !root.success()){
       String httpConfig = iuFlash.readInternalFlash(CONFIG_HTTP_FLASH_ADDRESS);
@@ -1352,9 +1352,9 @@ bool Conductor::configureBoardFromFlash(String filename,bool isSet){
                 }
             }else{
                 debugPrint(F("Failed to read httpConf.conf file, using default configuration"));
-                m_httpHost = "13.232.122.10";
-                m_httpPort = 8080;
-                m_httpPath = "/iu-web/rawaccelerationdata";
+                m_httpHost = "15.206.97.181";
+                m_httpPort = 8100;
+                m_httpPath = "/http_dump_v2";
             }
         }
  else {
@@ -2780,15 +2780,15 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                         }
                     }else{
                         debugPrint(F("Failed to read httpConf.conf file, using default configuration"));
-                        m_httpHost = "13.232.122.10";
-                        m_httpPort = 8080;
-                        m_httpPath = "/iu-web/rawaccelerationdata";
+                        m_httpHost = "15.206.97.181";
+                        m_httpPort = 8100;
+                        m_httpPath = "/http_dump_v2";
                     }
               }  
               else{
-                m_httpHost = "13.232.122.10";                                       //"ideplus-dot-infinite-uptime-1232.appspot.com";
-                m_httpPort =  8080;                                                        //80;
-                m_httpPath = "/iu-web/rawaccelerationdata";           //"/raw_data?mac="; 
+                m_httpHost = "15.206.97.181";                                       //"ideplus-dot-infinite-uptime-1232.appspot.com";
+                m_httpPort =  8100;                                                        //80;
+                m_httpPath = "/http_dump_v2";           //"/raw_data?mac="; 
                 }
                 iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_HOST,m_httpHost); 
                 iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_PORT,String(m_httpPort).c_str()); 
@@ -5037,8 +5037,8 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
     // 2. Check MQTT update from config file stored in ext. flash
     conductor.configureMQTTServer("MQTT.conf");
     // 3. Check default parameter setting changed to read from config file ?
-    if(m_mqttServerIp == IPAddress(13,233,38,155) && m_mqttServerPort == 1883 &&
-      (strcmp(m_mqttUserName,"ispl") == 0) && (strcmp(m_mqttPassword,"indicus") == 0))
+    if(m_mqttServerIp == IPAddress(15,206,193,195) && m_mqttServerPort == 1883 &&
+      (strcmp(m_mqttUserName,"iuprod") == 0) && (strcmp(m_mqttPassword,"iuprod") == 0))
     {
         ValidationFile->println(F("   Validation [MQTT]-Read Config File: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Read Config File: Fail !")); }
@@ -5053,21 +5053,21 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
         ValidationFile->println(F("   Validation [HTTP]-Read Config File: Fail !"));
         ValidationFile->print(F(" - HTTP DEFAULT HOST IP:"));
         ValidationFile->println(m_httpHost);
-        if(strcmp(m_httpHost,"13.232.122.10"))
+        if(strcmp(m_httpHost,"15.206.97.181"))
         {
             ValidationFile->println(F("   Validation [HTTP]-Default HOST IP: Fail !"));
             if(loopDebugMode){ debugPrint(F("Validation [HTTP]-Default HOST IP: Fail !")); }
         }
         ValidationFile->print(F(" - HTTP DEFAULT HOST PORT:"));
         ValidationFile->println(m_httpPort);
-        if(m_httpPort != 8080)
+        if(m_httpPort != 8100)
         {
             ValidationFile->println(F("   Validation [HTTP]-Default HOST PORT: Fail !"));
             if(loopDebugMode){ debugPrint(F("Validation [HTTP]-Default HOST PORT: Fail !")); }    
         }
         ValidationFile->print(F(" - HTTP DEFAULT HOST END POINT:"));
         ValidationFile->println(m_httpPath);
-        if(strcmp(m_httpPath,"/iu-web/rawaccelerationdata"))
+        if(strcmp(m_httpPath,"/http_dump_v2"))
         {
             ValidationFile->println(F("   Validation [HTTP]-Default HOST END Point: Fail !"));
             if(loopDebugMode){ debugPrint(F("Validation [HTTP]-Default HOST END Point: Fail !")); }
@@ -5088,7 +5088,7 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
     }
     ValidationFile->print(F(" - FFT DEFAULT BLOCK SIZE:"));
     ValidationFile->println(FFTConfiguration::DEFAULT_BLOCK_SIZE);
-    if(FFTConfiguration::DEFAULT_BLOCK_SIZE != 512)
+    if(FFTConfiguration::DEFAULT_BLOCK_SIZE != 4096)
     {
         ValidationFile->println(F("   Validation [FFT]-Default Block Size: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [FFT]-Default Block Size: Fail !")); }
