@@ -3982,6 +3982,10 @@ void Conductor::sendDiagnosticFingerPrints() {
                 char sendFingerprints[500 + messageLength];
                 
                 ready_to_publish_to_modbus = true;
+                    
+                float* spectralFeatures = conductor.getFingerprintsforModbus();
+                iuModbusSlave.updateHoldingRegister(modbusGroups::MODBUS_STREAMING_SPECTRAL_FEATURES,FINGERPRINT_KEY_1_L,FINGERPRINT_13_H,spectralFeatures);
+
                 snprintf(FingerPrintResult, 150 + messageLength, "{\"macID\":\"%s\",\"timestamp\": %lf,\"state\":\"%d\",\"accountId\":\"%s\",\"fingerprints\": %s }", m_macAddress.toString().c_str(),fingerprint_timestamp,ledManager.getOperationState(),"XXXAdmin",fingerprintData);
                     
                 // if(loopDebugMode) {

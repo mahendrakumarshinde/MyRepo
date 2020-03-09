@@ -435,7 +435,7 @@ void setup()
         iuBluetooth.setupHardware();
         debugPrint(" Is BLE Chip Available?:",false);
         debugPrint(iuBluetooth.isBLEAvailable);
-        
+        iuEthernet.ble_chip_status = iuBluetooth.isBLEAvailable;
         if(iuBluetooth.isBLEAvailable){
             iuBluetooth.setOnNewMessageCallback(onNewBLEMessage);
             
@@ -784,19 +784,12 @@ void loop()
                         // {
                         //     debugPrint("MODBUS DEBUG >FEATURES : ",false);debugPrint(modbusFeaturesDestinations[i]);
                         // }
-                        // if(conductor.ready_to_publish_to_modbus == true) {
-                            
-                           float* spectralFeatures = conductor.getFingerprintsforModbus();
-                        // }  
+                          
                         iuModbusSlave.storeDeviceConfigParameters();
                         iuModbusSlave.updateBLEMACAddress(conductor.getMacAddress());
                         iuModbusSlave.updateWIFIMACAddress(iuWiFi.getMacAddress());
 
                         iuModbusSlave.updateHoldingRegister(modbusGroups::MODBUS_STREAMING_FEATURES ,OP_STATE,WIFI_RSSI_H,modbusFeaturesDestinations);
-                        if(conductor.ready_to_publish_to_modbus == true) {
-                        
-                            iuModbusSlave.updateHoldingRegister(modbusGroups::MODBUS_STREAMING_SPECTRAL_FEATURES,FINGERPRINT_KEY_1_L,FINGERPRINT_13_H,spectralFeatures);
-                        }
                         iuModbusSlave.m_holdingRegs[TOTAL_ERRORS]= iuModbusSlave.modbus_update(iuModbusSlave.m_holdingRegs);
                         conductor.ready_to_publish_to_modbus = false;
                         iuModbusSlave.lastModbusUpdateTime = now;
