@@ -609,3 +609,34 @@ switch (groupNo)
     }
 
 }
+
+uint8_t IUmodbus::clearHoldingRegister(int groupNo, int startAddress, int endAddress){
+
+
+switch (groupNo)
+  {
+    case  modbusGroups::MODBUS_STREAMING_FEATURES:
+        for (int index = startAddress; index <= endAddress; index = index + 2)
+        {
+
+            m_holdingRegs[index] = 0x00;     // L_BYTE
+            m_holdingRegs[index + 1] =0x00; // H_BYTE
+            
+        }
+        // statements
+        break;
+    case modbusGroups::MODBUS_STREAMING_SPECTRAL_FEATURES:
+        for (int index = startAddress; index <= endAddress; index = index + 2)
+        {
+            m_holdingRegs[index] = 0x00;     // L_BYTE
+            m_holdingRegs[index + 1] = 0x00; // H_BYTE
+            
+        }
+        break;
+           
+    default:
+        debugPrint("MODBUS DEBUG : Invalid Group No to cleared");
+        break;
+    }
+
+}
