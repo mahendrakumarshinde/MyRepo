@@ -187,12 +187,12 @@ void Usr2Eth::Retry(uint16_t NumofRetrys, uint16_t RetryDelays)
  */
 bool Usr2Eth::SetAT()
 {
- 
+  static uint8_t chip_retryCount = 0;
   //_Serial->print(F("+++"));
   port->write("+++");
   //debugPrint("+++",true);
   while (_readSerial().indexOf("a") == 0)
-  {
+  { 
     //_Serial->print(F("a"));
     port->write("a");
     _buffer = _readSerial(100);
@@ -201,6 +201,26 @@ bool Usr2Eth::SetAT()
   if (_buffer.indexOf("+ok") == -1 )
   {
     //debugPrint("SetAT Failed:",true);
+    chip_retryCount++;
+    // NOTE : Below line of statement executes only when BLE hardware and Ethernet SetAT command retry count exceeds 
+    // which means device might be having some hardware issue with the BLE or Ethernet module , please check
+    if( ble_chip_status == false && chip_retryCount >= 20){     // NOTE : chip_retryCount tracks the retrycount of SetAT() functions
+       if(debugMode){ 
+          debugPrint("BLE and Ethernet Module not found, RESET the Device #");
+       }
+      chip_retryCount = 0;
+      // HARDWARE FAULT LED INDICATION
+      for (size_t i = 0; i < 3; i++)
+      {
+        ledManager.overrideColor(RGB_RED);
+        delay(1000);
+        ledManager.overrideColor(RGB_PURPLE);
+        delay(1000);
+      }
+      ledManager.stopColorOverride();
+      delay(10);
+      STM32.reset();
+    }
     m_enterATMode = true;
     return  true;
   }
@@ -1606,7 +1626,7 @@ String Usr2Eth::getServerConfiguration(){
   }
   if(m_exitATMode == false && m_enterATMode == false){
     //debugPrint("Entering into AT Mode");
-    while( SetAT() != 0 );
+    while( SetAT() != 0 ); // NOTE : Added the 30 Sec timeout if no response then reset the device and break 
   } 
    //configure the network for DHCP
   String ip = NetworkConfig();

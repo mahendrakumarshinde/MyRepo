@@ -117,11 +117,13 @@ class Usr2Eth : public IUSerial,public Component
    uint32_t m_ConnectionTimeout=  60000;
    uint32_t m_httpTimeout = 10000;
    uint32_t m_lastDone = 0;
-
+   
    bool responseIsNotAvailabel = false;
    bool m_exitATMode = false;  
    bool m_enterATMode = false;
    bool m_jsonTimeout = false;
+   bool ble_chip_status = false;
+    
 };
 
 #endif
