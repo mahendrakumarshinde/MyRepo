@@ -2730,7 +2730,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             }
             break;
         case MSPCommand::GET_ESP_RSSI:
-            iuWiFi.current_rssi = atoi(&buff[0]);
+            iuWiFi.current_rssi = atof(&buff[0]);
             if (loopDebugMode) {
                 debugPrint(F("RECEIVED WIFI RSSI : "), false);
                 debugPrint(iuWiFi.current_rssi);
@@ -3981,6 +3981,7 @@ void Conductor::sendDiagnosticFingerPrints() {
                 char FingerPrintResult[150 + messageLength];
                 char sendFingerprints[500 + messageLength];
                 
+                ready_to_publish_to_modbus = true;
                 snprintf(FingerPrintResult, 150 + messageLength, "{\"macID\":\"%s\",\"timestamp\": %lf,\"state\":\"%d\",\"accountId\":\"%s\",\"fingerprints\": %s }", m_macAddress.toString().c_str(),fingerprint_timestamp,ledManager.getOperationState(),"XXXAdmin",fingerprintData);
                     
                 // if(loopDebugMode) {
@@ -4034,6 +4035,7 @@ void Conductor::sendDiagnosticFingerPrints() {
     }
     else {        
         //debugPrint(F("Fingerprints have not been configured."), true);
+        ready_to_publish_to_modbus = false;    
     }   
 }
 
@@ -5739,7 +5741,7 @@ float* Conductor::getFingerprintsforModbus(){
     static float modbusFingerprintDestinationBuffer[26];
     uint8_t bufferLength = sizeof(modbusFingerprintDestinationBuffer)/sizeof(float);
 
-    if (strlen(fingerprintData)<5)
+    if (strlen(fingerprintData)<5 || ready_to_publish_to_modbus == false  )
     {
         if (debugMode)
         {

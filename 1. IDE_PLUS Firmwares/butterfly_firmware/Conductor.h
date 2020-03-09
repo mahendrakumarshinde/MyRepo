@@ -134,6 +134,7 @@ class Conductor
         uint16_t timerISRPeriod = 300; // default 3.3KHz
         String availableFingerprints;
         bool modbusStreamingMode =false;
+        bool ready_to_publish_to_modbus = false;
         
         /***** Core *****/
         Conductor() {};
