@@ -79,6 +79,7 @@ public:
 	void updateWIFIMACAddress(MacAddress macid);
 	uint16_t updateFloatValues(float value);
 	uint8_t updateHoldingRegister(int groupNo, int startAddress, int endAddress,float* features);	
+	uint8_t clearHoldingRegister(int groupNo, int startAddress, int endAddress);
 
 	unsigned int m_holdingRegs[TOTAL_REGISTER_SIZE + 1];
 	uint8_t m_id ;

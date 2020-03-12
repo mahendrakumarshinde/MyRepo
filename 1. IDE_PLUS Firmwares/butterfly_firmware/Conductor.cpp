@@ -2730,7 +2730,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             }
             break;
         case MSPCommand::GET_ESP_RSSI:
-            iuWiFi.current_rssi = atoi(&buff[0]);
+            iuWiFi.current_rssi = atof(&buff[0]);
             if (loopDebugMode) {
                 debugPrint(F("RECEIVED WIFI RSSI : "), false);
                 debugPrint(iuWiFi.current_rssi);
@@ -3981,6 +3981,11 @@ void Conductor::sendDiagnosticFingerPrints() {
                 char FingerPrintResult[150 + messageLength];
                 char sendFingerprints[500 + messageLength];
                 
+                ready_to_publish_to_modbus = true;
+                    
+                float* spectralFeatures = conductor.getFingerprintsforModbus();
+                iuModbusSlave.updateHoldingRegister(modbusGroups::MODBUS_STREAMING_SPECTRAL_FEATURES,FINGERPRINT_KEY_1_L,FINGERPRINT_13_H,spectralFeatures);
+
                 snprintf(FingerPrintResult, 150 + messageLength, "{\"macID\":\"%s\",\"timestamp\": %lf,\"state\":\"%d\",\"accountId\":\"%s\",\"fingerprints\": %s }", m_macAddress.toString().c_str(),fingerprint_timestamp,ledManager.getOperationState(),"XXXAdmin",fingerprintData);
                     
                 // if(loopDebugMode) {
@@ -4034,6 +4039,9 @@ void Conductor::sendDiagnosticFingerPrints() {
     }
     else {        
         //debugPrint(F("Fingerprints have not been configured."), true);
+        //getFingerprintsforModbus(); // Only to flush the fingerprint buffer used for modbus
+        ready_to_publish_to_modbus = false;
+        iuModbusSlave.clearHoldingRegister(modbusGroups::MODBUS_STREAMING_SPECTRAL_FEATURES,FINGERPRINT_KEY_1_L,FINGERPRINT_13_H);
     }   
 }
 
@@ -5739,7 +5747,7 @@ float* Conductor::getFingerprintsforModbus(){
     static float modbusFingerprintDestinationBuffer[26];
     uint8_t bufferLength = sizeof(modbusFingerprintDestinationBuffer)/sizeof(float);
 
-    if (strlen(fingerprintData)<5)
+    if (strlen(fingerprintData)<5 || ready_to_publish_to_modbus == false  )
     {
         if (debugMode)
         {

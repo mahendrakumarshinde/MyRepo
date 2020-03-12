@@ -129,8 +129,37 @@ void IUBMD350::softReset()
     digitalWrite(m_resetPin, LOW); // reset BMD-350
     delay(1000); // wait a while
     digitalWrite(m_resetPin, HIGH); // restart BMD-350
+    blePowerStatus = true;
 }
-
+/**
+ * @brief 
+ * BLE ON and OFF fuction pass used to turn on/off the BLE module
+ * @param button 
+ * @return true 
+ * @return false 
+ */
+bool IUBMD350::bleButton(bool button)
+{
+    
+    // Configure pins and port
+    pinMode(m_atCmdPin, OUTPUT);
+    pinMode(m_resetPin, OUTPUT);
+    begin();
+    if(button == true)
+    {
+        digitalWrite(m_resetPin, HIGH); //BLE ON
+        debugPrint("BLE turn ON",true);
+        delay(1000);
+        return blePowerStatus = true;
+    }
+    else if (button == false)
+    {
+        digitalWrite(m_resetPin, LOW); //ble OFF
+        debugPrint("BLE turn OFF",true);
+        delay(1000);
+        return blePowerStatus = false;
+    }
+}
 /**
  * Manage component power modes
  */
@@ -283,7 +312,8 @@ void IUBMD350::doFullConfig()
     enterATCommandInterface();
     queryDeviceName();
     if(isBLEAvailable == true){
-        configureBeacon(m_beaconEnabled, m_beaconAdInterval);
+        //configureBeacon(m_beaconEnabled, m_beaconAdInterval);
+        configureBeacon(false, m_beaconAdInterval); //beacon off during setup on at last
         configureUARTPassthrough();
         setPowerMode(PowerMode::REGULAR);
         exitATCommandInterface();
@@ -469,8 +499,14 @@ void IUBMD350::configureBeacon(bool enabled, uint16_t adInterval)
     m_beaconEnabled = enabled;
     m_beaconAdInterval = adInterval;
     // enable / disable Beacon
-    if (enabled) { cmd = "ben 01"; }
-    else { cmd = "ben 00"; }
+    if (enabled) { 
+        debugPrint("beacon enable",false);
+        cmd = "ben 01"; 
+    }
+    else { 
+        debugPrint("beacon disable",false);
+        cmd = "ben 00"; 
+    }
     
     int retries = 5;
     char current_attempt[5];
@@ -553,7 +589,16 @@ void IUBMD350::setBeaconUUID(char *UUID, char *major, char *minor)
         debugPrint("Failed to configure BLE beacon UUID");
     }
 }
-
+void IUBMD350::bleBeaconSetting(bool BeaconSet)
+{
+    // Configure BLE beacon ON and OFF for resolving ble stuck issue
+    pinMode(m_atCmdPin, OUTPUT);
+    pinMode(m_resetPin, OUTPUT);
+    begin();
+    enterATCommandInterface();
+    configureBeacon(BeaconSet, m_beaconAdInterval);
+    exitATCommandInterface();
+}
 
 /***** Tx Powers *****/
 

@@ -25,6 +25,7 @@ class IUBMD350 : public IUSerial, public Component
         static const bool UART_ENABLED = true;
         static const bool UART_FLOW_CONTROL = false;
         static const bool UART_PARITY = false;
+        bool blePowerStatus = false;
         // Beacon default configuration
         static const bool defaultBeaconEnabled = true;
         // Ad Interval valid values range from 50ms to 4000ms
@@ -50,6 +51,7 @@ class IUBMD350 : public IUSerial, public Component
         /***** Hardware and power management *****/
         virtual void setupHardware();
         void softReset();
+        bool bleButton(bool); // use for ble ON and OFF by passing true to ON and false to OFF
         virtual void setPowerMode(PowerMode::option pMode);
         /***** Bluetooth throughput control *****/
         void resetTxBuffer();
@@ -70,6 +72,7 @@ class IUBMD350 : public IUSerial, public Component
         Set Password AT Command (1 to 19 byte alphanumeric): at$password */
         // Beacon and UART Passthrough
         void configureUARTPassthrough();
+        void bleBeaconSetting(bool BeaconSet); //Beacon on and off
         void configureBeacon(bool enabled, uint16_t adInterval);
         void setBeaconUUID(char *UUID, char *major, char *minor);
         // Tx Powers
