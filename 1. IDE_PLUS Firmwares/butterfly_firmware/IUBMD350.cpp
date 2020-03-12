@@ -112,11 +112,10 @@ void IUBMD350::bleTransmit()
  */
 void IUBMD350::setupHardware()
 {
-    
+    begin();
     // Configure pins and port
     pinMode(m_atCmdPin, OUTPUT);
     pinMode(m_resetPin, OUTPUT);
-    begin();
     doFullConfig();
 }
 
@@ -128,11 +127,17 @@ void IUBMD350::setupHardware()
 void IUBMD350::softReset()
 {
     digitalWrite(m_resetPin, LOW); // reset BMD-350
-    delay(500); // wait a while
+    delay(1000); // wait a while
     digitalWrite(m_resetPin, HIGH); // restart BMD-350
     blePowerStatus = true;
 }
-/*BLE ON and OFF fuction pass true and false make ble ON and OFF resp*/
+/**
+ * @brief 
+ * BLE ON and OFF fuction pass used to turn on/off the BLE module
+ * @param button 
+ * @return true 
+ * @return false 
+ */
 bool IUBMD350::bleButton(bool button)
 {
     
@@ -144,14 +149,14 @@ bool IUBMD350::bleButton(bool button)
     {
         digitalWrite(m_resetPin, HIGH); //BLE ON
         debugPrint("BLE turn ON",true);
-        delay(500);
+        delay(1000);
         return blePowerStatus = true;
     }
     else if (button == false)
     {
         digitalWrite(m_resetPin, LOW); //ble OFF
         debugPrint("BLE turn OFF",true);
-        delay(500);
+        delay(1000);
         return blePowerStatus = false;
     }
 }
@@ -209,7 +214,7 @@ void IUBMD350::enterATCommandInterface(uint8_t retry)
     digitalWrite(m_atCmdPin, LOW);
     delay(10);
     softReset();
-    delay(1500); // Wait for power cycle to complete
+    delay(3000); // Wait for power cycle to complete
     m_ATCmdEnabled = true;
     if (setupDebugMode) {
         debugPrint(F("Entered AT Command Interface mode"));
@@ -227,7 +232,7 @@ void IUBMD350::exitATCommandInterface()
     digitalWrite(m_atCmdPin, HIGH);
     delay(10);
     softReset();
-    delay(1500); // Wait for power cycle to complete
+    delay(3000); // Wait for power cycle to complete
     m_ATCmdEnabled = false;
     if (setupDebugMode) {
         debugPrint(F("Exited AT Command Interface mode"));

@@ -697,6 +697,7 @@ void setup()
                
         // Timer Init
         //timerInit();
+        // Turn ON BLE module and the BLE beacon
         iuBluetooth.bleButton(true);
         iuBluetooth.bleBeaconSetting(true);
         
