@@ -10,6 +10,7 @@
 #include "stm32l4_flash.h"
 #define CONFIG_MQTT_FLASH_ADDRESS    (uint32_t)0x080FE800    /* Start address of MQTT Config location*/
 #define CONFIG_HTTP_FLASH_ADDRESS    (uint32_t)0x080FE000    /* Start address of HTTP Config location*/
+#define CONFIG_MODBUS_SLAVE_CONFIG_FLASH_ADDRESS    (uint32_t)0x80FD800    /* Start address of MODBUS slave Config location*/
 class IUFlash
 {
     public:
@@ -28,7 +29,8 @@ class IUFlash
                                      CFG_MQTT_CREDS,
                                      CFG_FFT,
                                      CFG_OTA,
-                                     CFG_FORCE_OTA, // Forced OTA request
+                                     CFG_FORCE_OTA, // Forced OTA request,
+                                     CFG_MODBUS_SLAVE,
                                      CFG_COUNT};
         /***** Core *****/
         IUFlash() {}
@@ -80,7 +82,8 @@ class IUFSFlash : public IUFlash
         static char FNAME_MQTT_CREDS[11];
         static char FNAME_FFT[4];
         static char FNAME_OTA[4];
-        static char FNAME_FORCE_OTA[10];        
+        static char FNAME_FORCE_OTA[10];
+        static char FNAME_MODBUS_SLAVE[12];        
         static const uint8_t MAX_FULL_CONFIG_FPATH_LEN = 28;
         /***** Core *****/
         IUFSFlash() : IUFlash() {}

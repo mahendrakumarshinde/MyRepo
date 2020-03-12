@@ -96,7 +96,16 @@ void Sensor::expose()
     #endif
 }
 
-
+/**
+ * Shows all the destinations and resets all Destinations.
+ */
+void Sensor::resetDestinations()
+{
+    for (uint8_t i = 0; i < m_destinationCount; ++i)
+    {
+        m_destinations[i]->reset();
+    }
+}
 /* =============================================================================
     Driven Sensor
 ============================================================================= */

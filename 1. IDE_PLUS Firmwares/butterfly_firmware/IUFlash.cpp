@@ -26,6 +26,7 @@ char IUFSFlash::FNAME_MQTT_CREDS[11] = "mqtt_creds";
 char IUFSFlash::FNAME_FFT[4] = "fft";
 char IUFSFlash::FNAME_OTA[4] = "ota";
 char IUFSFlash::FNAME_FORCE_OTA[10] = "force_ota";
+char IUFSFlash::FNAME_MODBUS_SLAVE[12] = "modbusSlave";
 /***** Core *****/
 
 void IUFSFlash::begin()
@@ -377,6 +378,59 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
             }
             break;
         }
+        case CFG_MODBUS_SLAVE: {
+            // Configuration is valid only if all the parameters are present in the 
+            // and All are within their acceptable range of values
+            validConfig = true;
+
+            // Indicate the type of validation
+            validationResult["messageType"] = "modbusSlave-config-ack";
+
+            // If the received config matches the current config, report an error
+            bool sameModbusConfigs = false;
+            
+            //Validation for samplingRate field
+            if(config.containsKey("baudrate") && config.containsKey("databit") && config.containsKey("stopbit") && 
+                config.containsKey("parity") &&  config.containsKey("slaveid")  ) {
+
+                uint8_t m_id = config["slaveid"].as<uint16_t>();
+                uint32_t m_baud =  config["baudrate"].as<uint32_t>();
+                uint8_t m_databit = config["databit"].as<uint8_t>();
+                uint8_t m_stopbit = config["stopbit"].as<uint8_t>();
+                const char* m_parity = config["parity"];
+                if(debugMode){
+                    debugPrint("MODBUS DEBUG : ",false);debugPrint(m_databit);
+                    debugPrint("MODBUS DEBUG : ",false);debugPrint(m_stopbit);
+                    debugPrint("MODBUS DEBUG : ",false);debugPrint(m_parity);    
+                }
+                if (m_id < 1 || m_id >127){   
+                    validConfig = false;
+                    errorMessages.add("Invalid slaveid");
+                }if ((m_baud < 1200 || m_baud > 115200)){   // Note : Modbus Serial configuration only works between 1200 and 115200bps, complete list is available in app to configure   
+                    validConfig = false;
+                    errorMessages.add("Invalid baudrate");
+                }if (m_databit < 7 || m_databit > 8){     
+                    validConfig = false;
+                    errorMessages.add("Invalid databit");
+                }if (m_stopbit  < 1 || m_stopbit > 2){     
+                    validConfig = false;
+                    errorMessages.add("Invalid stopbit");
+                }if (strncmp(m_parity, "NONE", 4) == 0 || strncmp(m_parity, "EVEN", 4) == 0 || strncmp(m_parity, "ODD", 3) == 0 ){  
+                        debugPrint("Valid parity");   
+                    }else
+                    {
+                        validConfig = false;
+                        errorMessages.add("Invalid parity");
+                    }
+                    
+                
+            } else {
+                validConfig = false;
+                errorMessages.add("Key missing: modbusSlaveConfig"); 
+            }
+         
+           break;
+        }
     }
 
     // Construct the validationResult
@@ -447,6 +501,9 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
         case CFG_FORCE_OTA:
             fname = FNAME_FORCE_OTA;
             break;
+        case CFG_MODBUS_SLAVE:
+            fname = FNAME_MODBUS_SLAVE;
+            break;
         default:
             if (debugMode)
             {
@@ -514,15 +571,22 @@ String IUFSFlash::readInternalFlash(uint32_t address)
 void IUFSFlash::writeInternalFlash(uint8_t type, uint32_t address, uint8_t dataLength, const uint8_t* data)
 {
   uint8_t dataSize;
-  char allData[255];
+  char allData[2048];
   dataSize = sizeof(type)+sizeof(dataLength)+dataLength;
   stm32l4_flash_unlock();
   stm32l4_flash_erase(address, 2048);
   allData[0] = type;
   allData[1] = dataLength;
   sprintf(&allData[2],"%s",data);
-  debugPrint(allData);
-  stm32l4_flash_program(address, (const uint8_t*)allData,dataSize);
+
+  for(int i=dataSize;i<sizeof(allData);i++){
+    allData[i]=0xFF;
+  }
+  if(loopDebugMode){
+    debugPrint(allData);
+  }
+
+  stm32l4_flash_program(address, (const uint8_t*)allData,sizeof(allData));
   stm32l4_flash_lock();
 }
 

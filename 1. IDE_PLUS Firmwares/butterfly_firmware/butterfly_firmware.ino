@@ -1,6 +1,6 @@
 /*
 Infinite Uptime IDE+ Firmware
-Update 17-12-2019
+Update 12-03-2020
 Type - Standard vEdge Firmware Release
 */
 
@@ -103,6 +103,17 @@ float AUDIO_DB_SCALING = 1.0;
 float AUDIO_DB_OFFSET = 0.0;
 float audioHigherCutoff = 160.0;
 
+
+/**
+ * @brief 
+ * WiFi RSSI thresholds
+ *  reference url :https://support.randomsolutions.nl/827069-Best-dBm-Values-for-Wifi
+ */
+
+int WEAK_SIGNAL_STRENGTH_TH = -70;
+int FAIR_SIGNAL_STRENGTH_TH = -60;
+int GOOD_SIGNAL_STRENGTH_TH = -50;
+int EXCELLENT_SIGNAL_STRENGTH_TH = -40;
 /* =============================================================================
     Main global variables
 ============================================================================= */
@@ -381,16 +392,15 @@ void timerInit(void)
   }
   stm32l4_timer_start(&timerIns, 0);
 }
-
-
-
 /* =============================================================================
     Main execution
 ============================================================================= */
 
 void setup()
 {   
-  
+  iuBluetooth.bleBeaconSetting(false); // ble beacon off; function use to ble beacon ON/OFF by passing true/false resp.
+  iuBluetooth.bleButton(false); //ble off
+
   pinMode(ESP32_IO0,OUTPUT);
 //   pinMode(A3,OUTPUT);  // ISR (ODR checked from pin 50)
   digitalWrite(ESP32_IO0,HIGH); // IDE1.5_PORT_CHANGE
@@ -410,8 +420,9 @@ void setup()
     #else
         armv7m_timer_create(&watchdogTimer, (armv7m_timer_callback_t)watchdogCallback);
         armv7m_timer_start(&watchdogTimer, 1000);
+        
         if (debugMode) {
-            delay(5000);
+            delay(2000);
             debugPrint(F("Start - Mem: "), false);
             debugPrint(String(freeMemory(), DEC));
         }
@@ -425,9 +436,10 @@ void setup()
         }
         // BLE SETUP BEGIN
         iuBluetooth.setupHardware();
+        iuBluetooth.bleButton(false); //ble off
         debugPrint(" Is BLE Chip Available?:",false);
         debugPrint(iuBluetooth.isBLEAvailable);
-        
+        iuEthernet.ble_chip_status = iuBluetooth.isBLEAvailable;
         if(iuBluetooth.isBLEAvailable){
             iuBluetooth.setOnNewMessageCallback(onNewBLEMessage);
             
@@ -436,6 +448,7 @@ void setup()
              // set the BLE address for conductor
             conductor.setConductorMacAddress();          
         }
+        iuBluetooth.bleButton(false);
         if(!iuBluetooth.isBLEAvailable) {   // BLE Hardware is Not available
             // Read the configurations over httpClient
             String availableOnpremConfigs = iuEthernet.getServerConfiguration();
@@ -452,38 +465,32 @@ void setup()
                 debugPrint("__________________Init Ethernet Config__________________________",true);
                if( availableOnpremConfigs[0] == '{'){
                 // Write configuration to file
-                File storeConfig = DOSFS.open("relayAgentConfig.conf","w");
-                if(storeConfig){
-                    if(debugMode){
-                        debugPrint("Writing configuration into File");
-                    }    
-                    storeConfig.print(availableOnpremConfigs);
-                    storeConfig.close();
-                    isDataWriteComplete = true;
-                }else
-                {
-                    if (debugMode)
-                    {
-                        debugPrint("Failed to Write into File");
+                    File storeConfig = DOSFS.open("relayAgentConfig.conf","w");
+                    if(storeConfig){
+                        if(debugMode){
+                            debugPrint("Writing configuration into File");
+                        }    
+                        storeConfig.print(availableOnpremConfigs);
+                        storeConfig.close();
+                        isDataWriteComplete = true;
                     }
-                    
-                }
+                    else if (debugMode){
+                            debugPrint("Failed to Write into File");
+                    }
                }
-
-                if(isDataWriteComplete == true || iuEthernet.responseIsNotAvailabel ){
+               iuBluetooth.bleButton(false);
+               if(isDataWriteComplete == true || iuEthernet.responseIsNotAvailabel ){
                     debugPrint("Content From File:");
                     conductor.setEthernetConfig("relayAgentConfig.conf");       // Handle file not available condition     
-                    
                     debugPrint("Setting up the Ethernet hardware");
                     iuEthernet.setupHardware();
-                    
                     iuEthernet.setOnNewMessageCallback(onNewEthernetMessage);
                 }
                 if (!iuBluetooth.isBLEAvailable)
                 {  // set the BLE address for conductor
                     conductor.setConductorMacAddress();
                 }
-                
+                iuBluetooth.bleButton(false);
                 //armv7m_timer_create(&ethernetStatusTimer, (armv7m_timer_callback_t)ethernetStatusCallback);
                 //armv7m_timer_start(&ethernetStatusTimer, 30000);   // 30 sec
         
@@ -498,18 +505,16 @@ void setup()
         {
             debugPrint("BLE Chip is Available, BLE init Complete");
         }
-       
-        //       // httpConfig message read timerCallback
+        // httpConfig message read timerCallback
         // armv7m_timer_create(&httpConfigTimer, (armv7m_timer_callback_t)httpConfigCallback);
         // armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min Timer 180000
-
-
+        
         // WIFI SETUP BEGIN
         iuWiFi.setupHardware();
         iuWiFi.setOnNewMessageCallback(onNewWiFiMessage);
         iuWiFi.setOnConnect(onWiFiConnect);
         iuWiFi.setOnDisconnect(onWiFiDisconnect);
-       
+
         if (setupDebugMode) {
             iuI2C.scanDevices();
             debugPrint("Testing New I2C Bus ..............");
@@ -629,12 +634,41 @@ void setup()
         //http configuration
         conductor.configureBoardFromFlash("httpConfig.conf",1);
         // get the previous offset values 
-        conductor.setSensorConfig("sensorConfig.conf"); 
+        //conductor.setSensorConfig("sensorConfig.conf"); 
+        if(DOSFS.exists("sensorConfig.conf")){
+            conductor.setSensorConfig("sensorConfig.conf"); 
+        }else
+        {
+            if (debugMode)
+            {
+                debugPrint("File does not exists,skip sensorConfig");
+            }
+            
+        }
+        // Fingerprints config and appy 
+        if(DOSFS.exists("finterprints.conf") ){
+            // NOTE: Seems Heap overflow happens (here is the culprit), using Static memory allocation instead of Dynamic allocation
+            JsonObject& fingerprintsConfig = iuDiagnosticEngine.configureFingerPrintsFromFlash("finterprints.conf",1);
+            fingerprintsConfig.printTo(conductor.availableFingerprints);  
+        }else
+        {
+            if(debugMode){
+                debugPrint("Fingerprints.conf does not exists");
+            }
+        }
         // delay(500);
         // iuWiFi.hardReset();
         // delay(1000);
         conductor.configureFromFlash(IUFlash::CFG_WIFI0);
         delay(100);
+        conductor.modbusStreamingMode = conductor.configureFromFlash(IUFlash::CFG_MODBUS_SLAVE);
+        if (conductor.modbusStreamingMode != true)
+        {
+            // checked the internal flash if configuration are available
+            conductor.checkforModbusSlaveConfigurations();
+            conductor.modbusStreamingMode = true;
+        }
+        
         opStateFeature.setOnNewValueCallback(operationStateCallback);
         ledManager.resetStatus();
         conductor.changeUsageMode(UsageMode::OPERATION);
@@ -660,9 +694,12 @@ void setup()
         conductor.setThresholdsFromFile();
         // Get OTA status flag and take appropraite action    
         conductor.getOtaStatus();
-    
+               
         // Timer Init
         //timerInit();
+        // Turn ON BLE module and the BLE beacon
+        iuBluetooth.bleButton(true);
+        iuBluetooth.bleBeaconSetting(true);
         
     #endif
  #endif   
@@ -728,19 +765,60 @@ void loop()
             /* Block Data acquistion, computation, streaming during OTA download */
             // Manage WiFi autosleep
             iuWiFi.manageAutoSleep();
-            // Acquire data from sensors
             //conductor.acquireData(false);
-            conductor.acquireTemperatureData();
             // Compute features depending on operation mode
-            conductor.computeFeatures();
-            // Stream features
-            conductor.streamFeatures();
+             if( (!FeatureStates::isISRActive)  ){ 
+                // Acquire Temperature data from sensor
+                conductor.acquireTemperatureData();
+                // Compute Features
+                conductor.computeFeatures();
+                // Stream features
+                conductor.streamFeatures();
+
+                                
+               if(conductor.modbusStreamingMode ) { 
+                    // Update Modbus Registers
+                    uint32_t now =millis();
+                    if(now - iuModbusSlave.lastModbusUpdateTime >= iuModbusSlave.modbusUpdateInterval) {    
+                        // for (size_t i = 0; i < sizeof(modbusFeaturesDestinations)/sizeof(float); i++)
+                        // {
+                        //     debugPrint("MODBUS DEBUG >FEATURES : ",false);debugPrint(modbusFeaturesDestinations[i]);
+                        // }
+                          
+                        iuModbusSlave.storeDeviceConfigParameters();
+                        iuModbusSlave.updateBLEMACAddress(conductor.getMacAddress());
+                        iuModbusSlave.updateWIFIMACAddress(iuWiFi.getMacAddress());
+
+                        iuModbusSlave.updateHoldingRegister(modbusGroups::MODBUS_STREAMING_FEATURES ,OP_STATE,WIFI_RSSI_H,modbusFeaturesDestinations);
+                        iuModbusSlave.m_holdingRegs[TOTAL_ERRORS]= iuModbusSlave.modbus_update(iuModbusSlave.m_holdingRegs);
+                        conductor.ready_to_publish_to_modbus = false;
+                        iuModbusSlave.lastModbusUpdateTime = now;
+                        
+                       }
+
+                    }else
+                    {
+                        if (debugMode)
+                        {
+                            //debugPrint("MODBUS DEBUG : Not Configured as a MODBUS SLAVE");
+                        }
+                        
+                    }
+                    
+               }
             // Firmware Serial Execution 
             if (FeatureStates::isISRActive)
             {   
                 //Serial.println("attachInterrupt Again !!!!");
                 //Feature::ISRcount = 0;
                 //FeatureStates::isrCount=0;
+                FeatureStates::isISRDisabled = false;
+                FeatureStates::isISRActive = false;
+                computationDone = false;
+                // Reset Destination Buffers
+                for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
+                    Sensor::instances[i]->resetDestinations();
+                }
                 if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
                 {
                     attachInterrupt(digitalPinToInterrupt(IULSM6DSM::INT1_PIN), dataAcquisitionISR, RISING);
@@ -749,8 +827,6 @@ void loop()
                 {
                     attachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN),dataAcquisitionISR,RISING);
                 }
-                FeatureStates::isISRDisabled = false;
-                FeatureStates::isISRActive = false;
                 // Serial.println("ISR Enabled !!!");
                 
             }
@@ -765,6 +841,28 @@ void loop()
             lastDone = now;
             /* === Place your code to excute at fixed interval here ===*/
             conductor.streamMCUUInfo(iuWiFi.port);
+            iuWiFi.sendMSPCommand(MSPCommand::GET_ESP_RSSI);
+
+            if(iuWiFi.current_rssi < WEAK_SIGNAL_STRENGTH_TH ){
+                 ledManager.overrideColor(RGB_PURPLE);
+                 delay(3000);
+                 ledManager.stopColorOverride();
+                 if(loopDebugMode){
+                    debugPrint("Current WiFi RSSI : ",false);
+                    debugPrint(iuWiFi.current_rssi,true);
+                }
+            }
+            else
+            {
+                if (loopDebugMode)
+                {
+                    debugPrint("Current WiFi RSSI is :");
+                    debugPrint(iuWiFi.current_rssi,true);
+                }
+
+            }
+
+
             /*======*/
             //    Serial.println("Usage Mode:" + String(conductor.getUsageMode()));
         }

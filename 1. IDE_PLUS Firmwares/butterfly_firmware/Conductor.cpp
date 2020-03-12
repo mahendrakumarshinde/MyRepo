@@ -13,6 +13,9 @@ const char* fingerprints_X;
 const char* fingerprints_Y;
 const char* fingerprints_Z;
 
+// Modbus Streaming Features buffer
+float modbusFeaturesDestinations[8];
+
 int m_temperatureOffset;
 int m_audioOffset;
         
@@ -132,6 +135,10 @@ bool Conductor::configureFromFlash(IUFlash::storedConfig configType)
             case IUFlash::CFG_WIFI4:
                 iuWiFi.configure(config);
                 break;
+            case IUFlash::CFG_MODBUS_SLAVE:
+                debugPrint("CONFIGURING THE MODBUS SLAVE");
+                iuModbusSlave.setupModbusDevice(config);
+                break;
             default:
                 if (debugMode) {
                     debugPrint("Unhandled config type: ", false);
@@ -144,7 +151,12 @@ bool Conductor::configureFromFlash(IUFlash::storedConfig configType)
     if (debugMode && success) {
         debugPrint("Successfully loaded config type #", false);
         debugPrint((uint8_t) configType);
+    }else if(debugMode && ! success)
+    {
+        debugPrint("Configs not Found #",false);
+        debugPrint((uint8_t) configType);
     }
+    
     return success;
 }
 
@@ -374,7 +386,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     if (subConfig.success()) {
         //configureAllFeatures(subConfig);
         bool dataWritten = false;
-        iuFlash.writeInternalFlash(1,CONFIG_MQTT_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
+        // iuFlash.writeInternalFlash(1,CONFIG_MQTT_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
         if (saveToFlash) {
             //DOSFS.begin();
             File mqttFile = DOSFS.open("MQTT.conf", "w");
@@ -423,6 +435,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             {
                 debugPrint("Writing to fingerptins.conf ...");
                 fingerprints.print(jsonChar);
+                availableFingerprints = jsonChar;
                 fingerprints.close();
                 dataWritten = true;
             }
@@ -468,7 +481,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     if (subConfig.success()) {
         //configureAllFeatures(subConfig);
         bool dataWritten = false;
-        iuFlash.writeInternalFlash(1,CONFIG_HTTP_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
+        // iuFlash.writeInternalFlash(1,CONFIG_HTTP_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
         if (saveToFlash) {
             //DOSFS.begin();
             File httpFile = DOSFS.open("httpConfig.conf", "w");
@@ -747,7 +760,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             // Acknowledge incorrect configuration, send the errors on /ide_plus/command_response topic
             // If streaming mode is BLE, send an acknowledgement on BLE as well
             iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
-            if(m_streamingMode == StreamingMode::BLE && isBLEConnected()) { iuBluetooth.write("FFT_CFG_FAILURE;"); delay(100); }
+            if(StreamingMode::BLE && isBLEConnected()) { iuBluetooth.write("FFT_CFG_FAILURE;"); delay(100); }
         }
     } // If json is incorrect, it will result in parsing error in jsonBuffer.parseObject(json) which will cause the processConfiguration call to return
     
@@ -979,6 +992,63 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             }
         }
     }
+
+    // Modbus Configuration 
+    // modbusSlaveConfig configuration
+    // Message is always saved to file, after which STM resets
+    subConfig = root["modbusSlaveConfig"];
+    if (subConfig.success()) {
+        // Validate if the received parameters are correct
+        if(loopDebugMode) {
+            debugPrint("modbusSlave configuration received: ", false);
+            subConfig.printTo(Serial); debugPrint("");
+        }
+        bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_MODBUS_SLAVE, subConfig, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime(), messageId);
+        if(loopDebugMode) { 
+            debugPrint("Validation: ", false);
+            debugPrint(validationResultString); 
+            debugPrint("modbusSlave configuration validation result: ", false); 
+            debugPrint(validConfiguration);
+        }
+            
+        if(validConfiguration) {
+            if(loopDebugMode) debugPrint("Received valid modbusSlave configuration");
+        
+            // Save the valid configuration to file 
+            if(saveToFlash) { 
+                // Check if the config is new, then save to file and reset
+                iuFlash.saveConfigJson(IUFlash::CFG_MODBUS_SLAVE, subConfig);
+                iuFlash.writeInternalFlash(1,CONFIG_MODBUS_SLAVE_CONFIG_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
+
+                if(loopDebugMode) debugPrint("Saved modbusSlave configuration to file");
+                
+                // Apply the latest modbus Configuration 
+                if(loopDebugMode) debugPrint("Apply the current modbusSlave configuration from file");
+                iuModbusSlave.setupModbusDevice(subConfig);
+
+                // Acknowledge that configuration has been saved successfully on /ide_plus/command_response/ topic
+                // If streaming mode is BLE, send an acknowledgement on BLE as well
+                // NOTE: MSPCommand CONFIG_ACK added to Arduino/libraries/IUSerial/src/MSPCommands.h
+                iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
+                if(StreamingMode::BLE && isBLEConnected()) { iuBluetooth.write("RECEIVED-MODBUS-SLAVE-CONFIGS;"); delay(100); }
+
+                // Restart STM, setFFTParams will configure FFT parameters in setup()
+                delay(3000);  // wait for MQTT message to be published
+                DOSFS.end();
+                delay(10);
+                
+            }
+        } else {
+            if(loopDebugMode) debugPrint("Received invalid modbusSlave configuration");
+            // Appy default configurations
+            checkforModbusSlaveConfigurations();
+            // Acknowledge incorrect configuration, send the errors on /ide_plus/command_response topic
+            // If streaming mode is BLE, send an acknowledgement on BLE as well
+            iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
+            if(StreamingMode::BLE && isBLEConnected()) { debugPrint("FAILED MODBUS CONFIGS"); iuBluetooth.write("FAILED-MODBUS-SLAVE-CONFIGS;"); delay(100); }
+        }
+        
+    } // If json is incorrect, it will result in parsing error in jsonBuffer.parseObject(json) which will cause the processConfiguration call to return
     return true;
 }
 
@@ -1120,7 +1190,7 @@ void Conductor::readForceOtaConfig()
         String mqttConfig = iuFlash.readInternalFlash(CONFIG_MQTT_FLASH_ADDRESS);
         debugPrint(mqttConfig);
         JsonObject &config = jsonBuffer.parseObject(mqttConfig);
-        if(config.success() && strncmp(mqttConfig.c_str(),"{\"mqtt\"",7)==0)
+        if(config.success())
         {
             debugPrint("Mqtt Config Found");
             String mqttServerIP = config["mqtt"]["mqttServerIP"];
@@ -1228,16 +1298,16 @@ bool Conductor::configureBoardFromFlash(String filename,bool isSet){
   JsonObject& root2 = root["httpConfig"];
   if (!root.success() && !iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS)){
     debugPrint(F("Failed to read httpConf.conf file, using default configuration"));
-    m_httpHost = "13.232.122.10";
-    m_httpPort = 8080;
-    m_httpPath = "/iu-web/rawaccelerationdata";
+    m_httpHost = "15.206.97.181";
+    m_httpPort = 8100;
+    m_httpPath = "/http_dump_v2";
    
   }else if(iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS) && !root.success()){
       String httpConfig = iuFlash.readInternalFlash(CONFIG_HTTP_FLASH_ADDRESS);
         debugPrint(httpConfig);
         JsonObject &config = jsonBuffer.parseObject(httpConfig);
         JsonObject& config2 = config["httpConfig"];
-        if(config.success() && strncmp(httpConfig.c_str(),"{\"httpConfig\"",13)==0)
+        if(config.success())
         {
             debugPrint("Http Config Found");
             static const char* host = config2["host"];
@@ -1282,9 +1352,9 @@ bool Conductor::configureBoardFromFlash(String filename,bool isSet){
                 }
             }else{
                 debugPrint(F("Failed to read httpConf.conf file, using default configuration"));
-                m_httpHost = "13.232.122.10";
-                m_httpPort = 8080;
-                m_httpPath = "/iu-web/rawaccelerationdata";
+                m_httpHost = "15.206.97.181";
+                m_httpPort = 8100;
+                m_httpPath = "/http_dump_v2";
             }
         }
  else {
@@ -2109,8 +2179,24 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                         debugPrint(mode);
                     }
                 }
+                if (strcmp(buff,"IUGET_MODBUS_CONFIG") == 0 ){
+                    if(DOSFS.exists("/iuconfig/modbusSlave.conf")){
+                        JsonObject& config = configureJsonFromFlash("/iuconfig/modbusSlave.conf",1);
+                        String jsonChar;
+                        config.printTo(jsonChar);
+                        if (loopDebugMode)
+                        {
+                            debugPrint("Data From : modbusSlave.conf ",true);
+                        }
+                        //debugPrint(jsonChar);
+                        iuUSB.port->println(jsonChar);
+                    }else
+                    {
+                        debugPrint(F("modbusSlave.conf file does not exists."));
+                    }    
                 
-
+                }
+                    
                 break;
                 
             case UsageMode::CUSTOM:
@@ -2493,7 +2579,13 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
         case MSPCommand::RECEIVE_WIFI_FV:{
             if (loopDebugMode) { debugPrint(F("RECEIVE_WIFI_FV")); }
             strncpy(iuWiFi.espFirmwareVersion, buff, 6);
+            byte firstDigit = atoi(&buff[0]); 
+            byte secondDigit = atoi(&buff[2]);
+            byte thirdDigit = atoi(&buff[4]);
+            iuModbusSlave.WIFI_FIRMWARE_VERSION = (firstDigit*100) + (secondDigit*10) + thirdDigit; 
             iuWiFi.espFirmwareVersionReceived = true;
+            debugPrint("WIFI VERSION : ",false);debugPrint(iuModbusSlave.WIFI_FIRMWARE_VERSION );
+        
             }
         break;
         case MSPCommand::ASK_BLE_MAC:
@@ -2502,13 +2594,22 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             break;
 	      case MSPCommand::ASK_HOST_FIRMWARE_VERSION:
             if (loopDebugMode){ debugPrint(F("ASK_HOST_FIRMWARE_VERSION")); }
-            iuWiFi.sendHostFirmwareVersion(FIRMWARE_VERSION);               
+            iuWiFi.sendHostFirmwareVersion(FIRMWARE_VERSION);
             break;
     	case MSPCommand::GET_DEVICE_CONFIG:
+            {
             if (loopDebugMode){ debugPrint(F("GET_DEVICE_CONFIG")); }
             char deviceInfo[64];
             sprintf(deviceInfo,"%s-%d-%d",FIRMWARE_VERSION,FFTConfiguration::currentSamplingRate,FFTConfiguration::currentBlockSize);
             iuWiFi.sendMSPCommand(MSPCommand::GET_DEVICE_CONFIG,deviceInfo);
+            iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HOST_FIRMWARE_VERSION,FIRMWARE_VERSION);
+            
+            byte firstDigit = atoi(&FIRMWARE_VERSION[0]); 
+            byte secondDigit = atoi(&FIRMWARE_VERSION[2]);
+            byte thirdDigit = atoi(&FIRMWARE_VERSION[4]);
+            iuModbusSlave.STM_FIRMWARE_VERSION = (firstDigit*100) + (secondDigit*10) + thirdDigit;
+            debugPrint("STM VERSION :",false);debugPrint(iuModbusSlave.STM_FIRMWARE_VERSION);               
+            }
             break;
         case MSPCommand::ASK_HOST_SAMPLING_RATE:        
             if (loopDebugMode){ debugPrint(F("ASK_HOST_SAMPLING_RATE")); }
@@ -2628,6 +2729,15 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 sendingQueue.confirmSuccessfullSend(idx);
             }
             break;
+        case MSPCommand::GET_ESP_RSSI:
+            iuWiFi.current_rssi = atof(&buff[0]);
+            if (loopDebugMode) {
+                debugPrint(F("RECEIVED WIFI RSSI : "), false);
+                debugPrint(iuWiFi.current_rssi);
+            }
+            //Append current RSSI
+            modbusFeaturesDestinations[7] = iuWiFi.current_rssi;
+            break;
         case MSPCommand::GET_RAW_DATA_ENDPOINT_INFO:
             // TODO: Implement
             { 
@@ -2643,7 +2753,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                      StaticJsonBuffer<1024> jsonBuffer;
                     JsonObject &config = jsonBuffer.parseObject(httpConfig);
                     JsonObject& config2 = config["httpConfig"];
-                    if(config.success() && strncmp(httpConfig.c_str(),"{\"httpConfig\"",13)==0)
+                    if(config.success())
                     {
                         debugPrint("Http Config Found");
                         static const char* host = config2["host"];
@@ -2670,15 +2780,15 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                         }
                     }else{
                         debugPrint(F("Failed to read httpConf.conf file, using default configuration"));
-                        m_httpHost = "13.232.122.10";
-                        m_httpPort = 8080;
-                        m_httpPath = "/iu-web/rawaccelerationdata";
+                        m_httpHost = "15.206.97.181";
+                        m_httpPort = 8100;
+                        m_httpPath = "/http_dump_v2";
                     }
               }  
               else{
-                m_httpHost = "13.232.122.10";                                       //"ideplus-dot-infinite-uptime-1232.appspot.com";
-                m_httpPort =  8080;                                                        //80;
-                m_httpPath = "/iu-web/rawaccelerationdata";           //"/raw_data?mac="; 
+                m_httpHost = "15.206.97.181";                                       //"ideplus-dot-infinite-uptime-1232.appspot.com";
+                m_httpPort =  8100;                                                        //80;
+                m_httpPath = "/http_dump_v2";           //"/raw_data?mac="; 
                 }
                 iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_HOST,m_httpHost); 
                 iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_PORT,String(m_httpPort).c_str()); 
@@ -2706,7 +2816,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 debugPrint(mqttConfig);
                 StaticJsonBuffer<512> jsonBuffer;
                 JsonObject &config = jsonBuffer.parseObject(mqttConfig);
-                if(config.success() && strncmp(mqttConfig.c_str(),"{\"mqtt\"",7)==0)
+                if(config.success())
                 {
                 debugPrint("Mqtt Config Found");
                 String mqttServerIP = config["mqtt"]["mqttServerIP"];
@@ -3518,7 +3628,7 @@ void Conductor::streamFeatures()
 //            &sendingQueue, IUSerial::MS_PROTOCOL, m_macAddress,
 //            ledManager.getOperationState(), batteryLoad, timestamp,
 //            true);
-        if (FeatureStates::isISRActive != true && FeatureStates::isISRDisabled){   
+        if (FeatureStates::isISRActive != true && FeatureStates::isISRDisabled && computationDone == true){   
                 FeatureStates::isFeatureStreamComplete = true;   // publication completed
                 FeatureStates::isISRActive = true;
                 //debugPrint("Published to WiFi Complete !!!");
@@ -3871,6 +3981,11 @@ void Conductor::sendDiagnosticFingerPrints() {
                 char FingerPrintResult[150 + messageLength];
                 char sendFingerprints[500 + messageLength];
                 
+                ready_to_publish_to_modbus = true;
+                    
+                float* spectralFeatures = conductor.getFingerprintsforModbus();
+                iuModbusSlave.updateHoldingRegister(modbusGroups::MODBUS_STREAMING_SPECTRAL_FEATURES,FINGERPRINT_KEY_1_L,FINGERPRINT_13_H,spectralFeatures);
+
                 snprintf(FingerPrintResult, 150 + messageLength, "{\"macID\":\"%s\",\"timestamp\": %lf,\"state\":\"%d\",\"accountId\":\"%s\",\"fingerprints\": %s }", m_macAddress.toString().c_str(),fingerprint_timestamp,ledManager.getOperationState(),"XXXAdmin",fingerprintData);
                     
                 // if(loopDebugMode) {
@@ -3924,6 +4039,9 @@ void Conductor::sendDiagnosticFingerPrints() {
     }
     else {        
         //debugPrint(F("Fingerprints have not been configured."), true);
+        //getFingerprintsforModbus(); // Only to flush the fingerprint buffer used for modbus
+        ready_to_publish_to_modbus = false;
+        iuModbusSlave.clearHoldingRegister(modbusGroups::MODBUS_STREAMING_SPECTRAL_FEATURES,FINGERPRINT_KEY_1_L,FINGERPRINT_13_H);
     }   
 }
 
@@ -4099,7 +4217,7 @@ void Conductor::setConductorMacAddress() {
                     debugPrint("BLE MAC ID IN RETRY : ",false);
                     debugPrint(BLE_MAC_Address);
                 }                    
-                if(mac_Response < 0 && ( BLE_MAC_Address[0] != '0')){
+                if(mac_Response < 0 && ( BLE_MAC_Address[0] != '9')){
                     if(debugMode){
                         debugPrint("Found the BLE MAC ADDRESS");
                     }
@@ -4927,8 +5045,8 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
     // 2. Check MQTT update from config file stored in ext. flash
     conductor.configureMQTTServer("MQTT.conf");
     // 3. Check default parameter setting changed to read from config file ?
-    if(m_mqttServerIp == IPAddress(13,233,38,155) && m_mqttServerPort == 1883 &&
-      (strcmp(m_mqttUserName,"ispl") == 0) && (strcmp(m_mqttPassword,"indicus") == 0))
+    if(m_mqttServerIp == IPAddress(15,206,193,195) && m_mqttServerPort == 1883 &&
+      (strcmp(m_mqttUserName,"iuprod") == 0) && (strcmp(m_mqttPassword,"iuprod") == 0))
     {
         ValidationFile->println(F("   Validation [MQTT]-Read Config File: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Read Config File: Fail !")); }
@@ -4943,21 +5061,21 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
         ValidationFile->println(F("   Validation [HTTP]-Read Config File: Fail !"));
         ValidationFile->print(F(" - HTTP DEFAULT HOST IP:"));
         ValidationFile->println(m_httpHost);
-        if(strcmp(m_httpHost,"13.232.122.10"))
+        if(strcmp(m_httpHost,"15.206.97.181"))
         {
             ValidationFile->println(F("   Validation [HTTP]-Default HOST IP: Fail !"));
             if(loopDebugMode){ debugPrint(F("Validation [HTTP]-Default HOST IP: Fail !")); }
         }
         ValidationFile->print(F(" - HTTP DEFAULT HOST PORT:"));
         ValidationFile->println(m_httpPort);
-        if(m_httpPort != 8080)
+        if(m_httpPort != 8100)
         {
             ValidationFile->println(F("   Validation [HTTP]-Default HOST PORT: Fail !"));
             if(loopDebugMode){ debugPrint(F("Validation [HTTP]-Default HOST PORT: Fail !")); }    
         }
         ValidationFile->print(F(" - HTTP DEFAULT HOST END POINT:"));
         ValidationFile->println(m_httpPath);
-        if(strcmp(m_httpPath,"/iu-web/rawaccelerationdata"))
+        if(strcmp(m_httpPath,"/http_dump_v2"))
         {
             ValidationFile->println(F("   Validation [HTTP]-Default HOST END Point: Fail !"));
             if(loopDebugMode){ debugPrint(F("Validation [HTTP]-Default HOST END Point: Fail !")); }
@@ -4978,7 +5096,7 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
     }
     ValidationFile->print(F(" - FFT DEFAULT BLOCK SIZE:"));
     ValidationFile->println(FFTConfiguration::DEFAULT_BLOCK_SIZE);
-    if(FFTConfiguration::DEFAULT_BLOCK_SIZE != 512)
+    if(FFTConfiguration::DEFAULT_BLOCK_SIZE != 4096)
     {
         ValidationFile->println(F("   Validation [FFT]-Default Block Size: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [FFT]-Default Block Size: Fail !")); }
@@ -5617,4 +5735,115 @@ uint8_t Conductor::processWiFiRadioModes(char* buff){
 
     iuWiFi.sendMSPCommand(MSPCommand::WIFI_SET_TX_POWER,buff);
     return radioMode;
+}
+
+/**
+ * @brief This method reads the computated fingerprint JSON and extract all the keys and values and zero padd empty buffer elements
+ * 
+ * @return float* returns the fingerprints output data with [key1,value1,key2,value2,....keyN,valueN> format.
+ */
+float* Conductor::getFingerprintsforModbus(){
+    
+    static float modbusFingerprintDestinationBuffer[26];
+    uint8_t bufferLength = sizeof(modbusFingerprintDestinationBuffer)/sizeof(float);
+
+    if (strlen(fingerprintData)<5 || ready_to_publish_to_modbus == false  )
+    {
+        if (debugMode)
+        {
+            //debugPrint("Empty Fingerprint data buffer, reset the fingerprint Destination buffer");
+        }
+        //flush the buffer
+        for (size_t i = 0; i < bufferLength; i++)
+        {
+            modbusFingerprintDestinationBuffer[i]= 0;
+        }
+        
+    }else
+    {  
+         DynamicJsonBuffer object;
+         JsonObject& root = object.parseObject(fingerprintData);
+        
+        int i = 0;    
+        for (auto jsonKeyValue : root) {
+
+             //debugPrint("count :",false);debugPrint(i);   
+             int key = atoi(jsonKeyValue.key);
+             float value = jsonKeyValue.value.as<float>();                   
+             //debugPrint("KEY :",false);debugPrint(key); 
+             
+             modbusFingerprintDestinationBuffer[i] = (float)key;
+             modbusFingerprintDestinationBuffer[i+1] = value;
+             i = i + 2;
+        }
+      //debugPrint("i Count : ",false);debugPrint(i);
+      if(i > 0 && i < bufferLength ){
+        for (size_t index = bufferLength - 1; index >= i; --index) 
+        {   
+            modbusFingerprintDestinationBuffer[index] = 0.0;
+        }
+      }else
+      {
+          //debugPrint("MODBUS DEBUG : Fingerprints Buffer are completely filled or negative index");
+      }
+     // Enable in case want to see the data elements
+   #if 0
+   if(loopDebugMode){ 
+        debugPrint("MODBUS DEBUG : FINGERPRINTS DATA: [ ",false);
+        for (size_t i = 0; i < bufferLength; i= i+1)
+        {   
+            debugPrint(modbusFingerprintDestinationBuffer[i],false);debugPrint("->",false);
+        }
+        debugPrint(" ]");
+     }
+    #endif
+ }
+   return modbusFingerprintDestinationBuffer;    
+}
+
+bool Conductor::checkforModbusSlaveConfigurations(){
+
+    // check if configurations are present in the internal flash storage of STM32
+    bool validJson = false;
+    bool success = true;
+    
+    if (iuFlash.checkConfig(CONFIG_MODBUS_SLAVE_CONFIG_FLASH_ADDRESS) && ! DOSFS.exists("/iuconfig/modbusSlave.conf") )
+    {
+        // Read the configurations
+        String config = iuFlash.readInternalFlash(CONFIG_MODBUS_SLAVE_CONFIG_FLASH_ADDRESS);
+        if(debugMode){
+            debugPrint("MODBUS DEBUG : INTERNAL CONFIG # ",false);
+            debugPrint("Intarnal Flash content #:");
+            debugPrint(config);
+        }
+        char* modbusConfiguration =(char*)config.c_str();
+
+        validJson =  processConfiguration(modbusConfiguration,true);
+        free(modbusConfiguration);
+    }else if (DOSFS.exists("/iuconfig/modbusSlave.conf"))
+    {
+        configureFromFlash(IUFlash::CFG_MODBUS_SLAVE);
+    }else if(!validJson){
+        // Configs not available in Internal Flash then apply default MODBUS Slave configurations
+        iuModbusSlave.m_id =      DEFAULT_MODBUS_SLAVEID;
+        iuModbusSlave.m_baud =    DEFAULT_MODBUS_BAUD;
+        iuModbusSlave.m_databit = DEFAULT_MODBUS_DATABIT;
+        iuModbusSlave.m_stopbit = DEFAULT_MODBUS_STOPBIT;
+        iuModbusSlave.m_parity =  DEFAULT_MODBUS_PARITY;
+        //LOAD THE CONFIGS
+        iuModbusSlave.begin(iuModbusSlave.m_baud,iuModbusSlave.m_databit,iuModbusSlave.m_stopbit,iuModbusSlave.m_parity);
+        iuModbusSlave.configure(iuModbusSlave.m_id,TOTAL_REGISTER_SIZE+1);
+        modbusStreamingMode = true;   // Set the Streaming mode as MODBUS
+        if(debugMode){
+            debugPrint("MODBUS DEBUG : DEFAULT CONFIGS APPLIED");
+            debugPrint("SLAVE ID  : ",false);debugPrint(iuModbusSlave.m_id);
+            debugPrint("BAUD RATE :",false);debugPrint(iuModbusSlave.m_baud);
+            debugPrint("DATA BIT  :",false);debugPrint(iuModbusSlave.m_databit);
+            debugPrint("PARITY    :",false);debugPrint(iuModbusSlave.m_parity);
+        }
+        success = false;
+    }
+    
+
+return success;
 }

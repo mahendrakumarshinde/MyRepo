@@ -1,12 +1,13 @@
 #include "FeatureComputer.h"
 
+extern float modbusFeaturesDestinations[8];
 /* =============================================================================
     Audio Scaling Global Variable
 ===============================================================================*/
 
 extern float audioHigherCutoff;
 extern int m_audioOffset;
-
+ bool computationDone = false;
 /* =============================================================================
     Feature Computer Base Class
 ============================================================================= */
@@ -169,6 +170,9 @@ bool FeatureComputer::compute()
     // Acknowledge the computed sections for each source
     for (uint8_t i = 0; i < m_sourceCount; ++i ) {
         m_sources[i]->acknowledge(this, m_sectionCount[i]);
+        if(m_id == 41){
+            computationDone = true;
+        }
     }
     return true;
 }
@@ -357,6 +361,8 @@ void FeatureStateComputer::m_specializedCompute()
         debugPrint(newState);
     }
     m_destinations[0]->addValue(newState);
+    //Append the new Operation State
+    modbusFeaturesDestinations[0]= newState;
 }
 
 
@@ -480,6 +486,9 @@ void SectionSumComputer::m_specializedCompute()
             total = sqrt(total);
         }
         m_destinations[i]->addValue(total);
+        //Append the Signal Energy
+        modbusFeaturesDestinations[1] = total * m_sources[i]->getResolution();
+        
         if (featureDebugMode) {
             debugPrint(millis(), false);
             debugPrint(" -> ", false);
@@ -634,6 +643,9 @@ void AudioDBComputer::m_specializedCompute()
     }
     dBresult = result;
     m_destinations[0]->addValue(result );
+    //Append Audio result
+    modbusFeaturesDestinations[6] = result* m_sources[0]->getResolution();
+    
     if (featureDebugMode) {
         debugPrint(millis(), false);
         debugPrint(" -> ", false);

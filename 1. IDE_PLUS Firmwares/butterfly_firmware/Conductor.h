@@ -132,7 +132,10 @@ class Conductor
         uint32_t m_connectionTimeout = 150000;   // 2 min 30s
         //timer ISR period
         uint16_t timerISRPeriod = 300; // default 3.3KHz
-
+        String availableFingerprints;
+        bool modbusStreamingMode =false;
+        bool ready_to_publish_to_modbus = false;
+        
         /***** Core *****/
         Conductor() {};
         Conductor(MacAddress macAddress) : m_macAddress(macAddress) { }
@@ -271,6 +274,9 @@ class Conductor
         bool flashStatusFlag = false;
         void periodicFlashTest();
         void onBootFlashTest();
+        float* getFingerprintsforModbus();
+        bool checkforModbusSlaveConfigurations();
+        
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
@@ -310,9 +316,9 @@ class Conductor
         const char* m_mqttUserName = MQTT_DEFAULT_USERNAME;
         const char* m_mqttPassword = MQTT_DEFAULT_ASSWORD;
         //httpendpoint configuration
-        const char* m_httpHost  = "13.232.122.10";
-        uint16_t  m_httpPort  = 8080;
-        const char* m_httpPath = "/iu-web/rawaccelerationdata";
+        const char* m_httpHost  = "15.206.97.181";
+        uint16_t  m_httpPort  = 8100;
+        const char* m_httpPath = "/http_dump_v2";
         const char* m_httpUsername = "infinite_uptime";
         const char* m_httpPassword ;
         const char* m_httpOauth ;

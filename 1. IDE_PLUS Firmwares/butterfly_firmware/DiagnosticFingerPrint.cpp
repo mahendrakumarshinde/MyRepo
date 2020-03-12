@@ -128,7 +128,8 @@ JsonObject& DiagnosticEngine::configureFingerPrintsFromFlash(String filename,boo
   //const size_t bufferSize = JSON_ARRAY_SIZE(8) + JSON_OBJECT_SIZE(300) + 60;        // dynamically allociated memory
   const size_t bufferSize = JSON_OBJECT_SIZE(1) + 50*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(50) + 2430;
   
-  DynamicJsonBuffer jsonBuffer(bufferSize);
+  //DynamicJsonBuffer jsonBuffer(bufferSize);
+   StaticJsonBuffer<bufferSize> jsonBuffer;
  // Serial.print("JSON 2 SIZE :");Serial.println(bufferSize);
   // Parse the root object
   JsonObject &root = jsonBuffer.parseObject(myFile);
@@ -248,18 +249,23 @@ char* DiagnosticEngine::m_specializedCompute (int m_direction, const q15_t *m_am
      static int bandValue = 0;
      int i = 0;     
      bool dirFlag_X = false,dirFlag_Y = false,dirFlag_Z = false;
-     float sum = 0;
-     float addition = 0;
-     
+     //float sum = 0;
+     //float addition = 0;
+     float rmsFingerprints = 0;
+
      //q15_t sum=0;
      //q15_t addition = 0;
      static float finngerPrint_result[13]; 
      int XCount = 0; int YCount=0; int ZCount = 0; int KeyCount = 0 ;
-      
-    JsonObject& config = configureFingerPrintsFromFlash("finterprints.conf",true);
-    
+
+    DynamicJsonBuffer jsonBuffer;  
+    //JsonObject& config = configureFingerPrintsFromFlash("finterprints.conf",true);
+    //Serial.print("DEBUG INFO : Availabel Fingerprints : ");Serial.println(conductor.availableFingerprints);
+
+    JsonObject& config = jsonBuffer.parseObject(conductor.availableFingerprints);
     JsonObject& root2 = config["fingerprints"];
     
+
     //String messageId = config["messageId"];
    // Serial.println();
     
@@ -404,22 +410,29 @@ char* DiagnosticEngine::m_specializedCompute (int m_direction, const q15_t *m_am
         // ideally we need to start from lower_index = ceiling(lower_bound/df) to upper_index = floor(upper_bound/df)
         // to ensure we are not losing out any sample in edge case (if lower_bound is a multiple of df),
         // we consider one extra index at lower and bound and select the value only if : lower_bound < df*i < upper_bound
-        float factor = (1000*1.414*m_resolution/scaling);
+        //float factor = (1000*1.414*m_resolution/scaling);
         // 1000 -> convert m/s to mm/s
         // 1.414 -> sqrt(2) for converting to rms
-        for (int i = lower_index-1; i <= upper_index+1; i++) {
-            if((lower_bound <= df*i) && (df*i <= upper_bound)) {
-                addition = (float)m_amplitudes[i] * factor;
-                sum += addition;
-            }
-        }        
+        // for (int i = lower_index-1; i <= upper_index+1; i++) {
+        //     if((lower_bound <= df*i) && (df*i <= upper_bound)) {
+        //         addition = (float)m_amplitudes[i] * factor;
+        //         sum += addition;
+        //     }
+        //}
+        rmsFingerprints = getRMS(m_amplitudes,lower_index,upper_index);
+        //NOTE : Below Ternary conditional operator is used to avoid the empty fingerprint computation, when rms value is zero 
+        //then JSON does not append the zero values in the final JSON merging due to having the similar keys.values with similar Keys and Zero value are ignored.
+        // if computated rms is Zero then we are sending the factor value instead of Zero value. 
+        rmsFingerprints = (rmsFingerprints!=0) ? rmsFingerprints: 1;  
       }
 
       
      //Serial.print("speedXMultiplier or Frequency Value :");Serial.print(sxm);Serial.print(";");Serial.print(bandValue);Serial.print(",");Serial.println();
       
-     
-     finngerPrint_result[i] =  sum ;//((float(sum)/ 128)*0.001197*256/1.414);// /m_resolution;//*m_resolution = 0.001197; //m_fftLength*m_scalingFactor;    // *0.244; // sensor resolution 
+     float factor = (1000*m_resolution/scaling);
+     float result =  rmsFingerprints*factor ;
+     finngerPrint_result[i] =  result ;//((float(sum)/ 128)*0.001197*256/1.414);// /m_resolution;//*m_resolution = 0.001197; //m_fftLength*m_scalingFactor;    // *0.244; // sensor resolution 
+    
     // Serial.print("SUM :");Serial.println(sum);     
       dirFlag_X = false;
       dirFlag_Y = false;
@@ -427,7 +440,8 @@ char* DiagnosticEngine::m_specializedCompute (int m_direction, const q15_t *m_am
       i++;    // next fId 
       
        
-      sum = 0;   
+      //sum = 0;
+      rmsFingerprints = 0;   
     }
   
    const char* tempData;
@@ -480,7 +494,7 @@ char* DiagnosticEngine::m_specializedCompute (int m_direction, const q15_t *m_am
    memset(tempZ, 0, sizeof(tempZ));
 
     fingerprintData = iuFingerprintOutput;     // fingerprints result
-    // debugPrint(F("fingerprintData"), false); debugPrint(F(iuFingerprintOutput), true); 
+    //debugPrint(F("fingerprintData"), false); debugPrint(F(iuFingerprintOutput), true); 
 
     conductor.sendDiagnosticFingerPrints(); // function sends only if time diff is > 512
    }  
@@ -579,3 +593,23 @@ dest.printTo(json);
 //merge(nestedObject, );
 //merge(nestedObject, jsonObjectTwo);
 //}
+
+/**
+ * Return the RMS from RFFT amplitudes
+ */
+float DiagnosticEngine::getRMS(const q15_t *amplitudes, uint16_t lower_index,
+                             uint16_t upper_index)
+{
+    uint32_t rms = 0;
+    // if (!removeDC)
+    // {
+    //     rms += (uint32_t) sq((int32_t) (amplitudes[0]));
+    // }
+    for (uint16_t i = lower_index; i <= upper_index ; ++i)
+    {
+        /* factor 2 because RFFT and we use only half (positive part) of freq
+        spectrum */
+        rms += 2 * (uint32_t) sq((int32_t) (amplitudes[i]));
+    }
+    return (float) sqrt(rms);
+}

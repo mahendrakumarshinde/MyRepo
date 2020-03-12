@@ -1,4 +1,56 @@
 #################################################################################################################################################################################
+Date: 12 March 2020
+Contributed By : Sidramayya Swami,Darshan Mirajkar,Vikas Gaikwad
+Product Name : vEdge
+Firmware Versions :
+		1. vEdge_main(STM32) : 2.1.0
+		2. vEdge_wifi (ESP32): 2.1.0
+		3. Bootloader L1     : 2.0.0
+		4. Bootloader L2     : 2.0.0
+		5. Factory Firmware  : 2.0.0 
+################################################################################################################################################################################
+
+Features
+
+Configurable MODBUS RTU capabilities:
+
+   1.Supported Slave ID : 1 - 127
+   2.Supported Baud Rates : 1200 to 115200 bps
+   3.Parity - ODD,EVEN, NONE
+   4.Stop bit : 1
+   5.Data Length : 8 bit
+
+Features Supported :
+
+   1.Streaming Features data over MODBUS.
+   2.Streaming fingerprints data over MODBUS in key, value pair stored in the register map.
+   3.Updates the Device Specific parameters like Sampling Rate, Block Size, Lower and Higher cutoff frequencies, Firmware version etc.
+   4.Supports Read only Modbus configuration parameters like Slave ID, baud rates, parity, data length etc.
+   5.Supports MODBUS configuration over Mobile Application only(can be configurable over MQTT as well )
+   6.Default device works as Modbus slave with below default configurations :
+        Slave ID : 51
+        Baud Rate : 9600
+        Data bit - 8
+        Stop bit - 1
+        Parity - NONE
+
+Minor Fixes:
+
+    1.Updated the the Flash recovery mechanism to resolved the device hang issue after applying mqtt and http configs first time.
+    2.Updated the BLE MACID validation case.
+    3.Updated the Fingerprint calculations as per v1.1.4(using RMS formula to compute the fingerprints)
+    4.Added the WiFi RSSI indication as per v1.1.4 (Displays the Purple color for 3 sec if RSSI < -70 dbm)
+    5.Removed the multiple file read calls to read the fingerprints configurations.
+    6.Corrected the firmware version JSON format published to iu_error on MQTT connect /reconnect.
+    7.Updated the default MQTT and HTTP endpoint details all vEdge devices will points to IDAP2.0
+
+Limitations : 
+   1. MODBUS RTU device does not support baud rates > 115200.
+   2. Currently does not support Datalenght of 7 bit option.
+   3. Currently does not support Stop bit 2 option.
+   4. No Mechanism to get the current modbus configurations to over Android app or server(mqtt).
+ 
+#################################################################################################################################################################################
 Date: 16 December 2019
 Contributed By : Mahendrakumar Shinde, Darshan Mirajkar,Vikas Gaikwad
 Product Name : vEdge

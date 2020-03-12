@@ -51,6 +51,7 @@ class Sensor : public Component
         virtual void sendData(HardwareSerial *port) { }
         /***** Debugging *****/
         virtual void expose();
+        virtual void resetDestinations();
         virtual void exposeCalibration() {}
 
     protected:
