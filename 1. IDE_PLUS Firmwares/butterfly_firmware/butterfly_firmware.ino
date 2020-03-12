@@ -398,7 +398,9 @@ void timerInit(void)
 
 void setup()
 {   
-  
+  iuBluetooth.bleBeaconSetting(false); // ble beacon off; function use to ble beacon ON/OFF by passing true/false resp.
+  iuBluetooth.bleButton(false); //ble off
+
   pinMode(ESP32_IO0,OUTPUT);
 //   pinMode(A3,OUTPUT);  // ISR (ODR checked from pin 50)
   digitalWrite(ESP32_IO0,HIGH); // IDE1.5_PORT_CHANGE
@@ -418,8 +420,9 @@ void setup()
     #else
         armv7m_timer_create(&watchdogTimer, (armv7m_timer_callback_t)watchdogCallback);
         armv7m_timer_start(&watchdogTimer, 1000);
+        
         if (debugMode) {
-            delay(5000);
+            delay(2000);
             debugPrint(F("Start - Mem: "), false);
             debugPrint(String(freeMemory(), DEC));
         }
@@ -433,6 +436,7 @@ void setup()
         }
         // BLE SETUP BEGIN
         iuBluetooth.setupHardware();
+        iuBluetooth.bleButton(false); //ble off
         debugPrint(" Is BLE Chip Available?:",false);
         debugPrint(iuBluetooth.isBLEAvailable);
         
@@ -444,6 +448,7 @@ void setup()
              // set the BLE address for conductor
             conductor.setConductorMacAddress();          
         }
+        iuBluetooth.bleButton(false);
         if(!iuBluetooth.isBLEAvailable) {   // BLE Hardware is Not available
             // Read the configurations over httpClient
             String availableOnpremConfigs = iuEthernet.getServerConfiguration();
@@ -460,38 +465,32 @@ void setup()
                 debugPrint("__________________Init Ethernet Config__________________________",true);
                if( availableOnpremConfigs[0] == '{'){
                 // Write configuration to file
-                File storeConfig = DOSFS.open("relayAgentConfig.conf","w");
-                if(storeConfig){
-                    if(debugMode){
-                        debugPrint("Writing configuration into File");
-                    }    
-                    storeConfig.print(availableOnpremConfigs);
-                    storeConfig.close();
-                    isDataWriteComplete = true;
-                }else
-                {
-                    if (debugMode)
-                    {
-                        debugPrint("Failed to Write into File");
+                    File storeConfig = DOSFS.open("relayAgentConfig.conf","w");
+                    if(storeConfig){
+                        if(debugMode){
+                            debugPrint("Writing configuration into File");
+                        }    
+                        storeConfig.print(availableOnpremConfigs);
+                        storeConfig.close();
+                        isDataWriteComplete = true;
                     }
-                    
-                }
+                    else if (debugMode){
+                            debugPrint("Failed to Write into File");
+                    }
                }
-
-                if(isDataWriteComplete == true || iuEthernet.responseIsNotAvailabel ){
+               iuBluetooth.bleButton(false);
+               if(isDataWriteComplete == true || iuEthernet.responseIsNotAvailabel ){
                     debugPrint("Content From File:");
                     conductor.setEthernetConfig("relayAgentConfig.conf");       // Handle file not available condition     
-                    
                     debugPrint("Setting up the Ethernet hardware");
                     iuEthernet.setupHardware();
-                    
                     iuEthernet.setOnNewMessageCallback(onNewEthernetMessage);
                 }
                 if (!iuBluetooth.isBLEAvailable)
                 {  // set the BLE address for conductor
                     conductor.setConductorMacAddress();
                 }
-                
+                iuBluetooth.bleButton(false);
                 //armv7m_timer_create(&ethernetStatusTimer, (armv7m_timer_callback_t)ethernetStatusCallback);
                 //armv7m_timer_start(&ethernetStatusTimer, 30000);   // 30 sec
         
@@ -506,12 +505,10 @@ void setup()
         {
             debugPrint("BLE Chip is Available, BLE init Complete");
         }
-       
-        //       // httpConfig message read timerCallback
+        // httpConfig message read timerCallback
         // armv7m_timer_create(&httpConfigTimer, (armv7m_timer_callback_t)httpConfigCallback);
         // armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min Timer 180000
-
-
+        
         // WIFI SETUP BEGIN
         iuWiFi.setupHardware();
         iuWiFi.setOnNewMessageCallback(onNewWiFiMessage);
@@ -697,9 +694,11 @@ void setup()
         conductor.setThresholdsFromFile();
         // Get OTA status flag and take appropraite action    
         conductor.getOtaStatus();
-    
+               
         // Timer Init
         //timerInit();
+        iuBluetooth.bleButton(true);
+        iuBluetooth.bleBeaconSetting(true);
         
     #endif
  #endif   
