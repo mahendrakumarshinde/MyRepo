@@ -114,8 +114,8 @@ const char MQTT_DEFAULT_ASSWORD[35] =  "iuprod";           // IU-Password : nW$P
     Default MODBUS RTUS SLAVE configuration values
 ============================================================================= */
 
-#define DEFAULT_MODBUS_SLAVEID  51
-#define DEFAULT_MODBUS_BAUD     9600
+#define DEFAULT_MODBUS_SLAVEID  99
+#define DEFAULT_MODBUS_BAUD     19200
  
 #define DEFAULT_MODBUS_DATABIT  8
 #define DEFAULT_MODBUS_STOPBIT  1
