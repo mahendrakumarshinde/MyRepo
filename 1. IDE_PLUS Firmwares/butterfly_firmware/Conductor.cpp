@@ -760,7 +760,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             // Acknowledge incorrect configuration, send the errors on /ide_plus/command_response topic
             // If streaming mode is BLE, send an acknowledgement on BLE as well
             iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
-            if(StreamingMode::BLE && isBLEConnected()) { iuBluetooth.write("FFT_CFG_FAILURE;"); delay(100); }
+            //if(StreamingMode::BLE && isBLEConnected()) { iuBluetooth.write("FFT_CFG_FAILURE;"); delay(100); }
         }
     } // If json is incorrect, it will result in parsing error in jsonBuffer.parseObject(json) which will cause the processConfiguration call to return
     
@@ -1601,6 +1601,24 @@ void Conductor::processCommand(char *buff)
                     if (loopDebugMode) {
                         debugPrint(F("Feature group activated: "), false);
                         debugPrint(m_mainFeatureGroup->getName());
+                    }
+                }
+            }
+            else if (strcmp(buff,"GET_MODBUS_CONFIG") == 0)
+            {
+                 if (isBLEConnected())
+                 {
+                    char modbusConfig[30];
+                    if(iuModbusSlave.parity_byte == 0 ){  iuModbusSlave.m_parity = "NONE";} // TODO : Parity data got currupt after one time configured so added extra conditions
+                    if(iuModbusSlave.parity_byte == 1 ){  iuModbusSlave.m_parity = "EVEN";}
+                    if(iuModbusSlave.parity_byte == 2 ){  iuModbusSlave.m_parity = "ODD";}
+
+                    snprintf(modbusConfig, sizeof(modbusConfig)/sizeof(char), "MS-%d,%d,%d,%d,%s-SM;",iuModbusSlave.m_id,iuModbusSlave.m_baud,
+                    iuModbusSlave.m_databit,iuModbusSlave.m_stopbit,iuModbusSlave.m_parity);
+                    iuBluetooth.write(modbusConfig);
+                    if(debugMode){
+                        debugPrint("MODBUS DEBUG : ",false);
+                        debugPrint(modbusConfig);
                     }
                 }
             }
