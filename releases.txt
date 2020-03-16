@@ -26,8 +26,9 @@ Features Supported :
    2.Streaming fingerprints data over MODBUS in key, value pair stored in the register map.
    3.Updates the Device Specific parameters like Sampling Rate, Block Size, Lower and Higher cutoff frequencies, Firmware version etc.
    4.Supports Read only Modbus configuration parameters like Slave ID, baud rates, parity, data length etc.
-   5.Supports MODBUS configuration over Mobile Application only(can be configurable over MQTT as well )
-   6.Default device works as Modbus slave with below default configurations :
+   5.Added the feature to sync the current modbus slave configurations to android app on connect.
+   6.Supports MODBUS configuration over Mobile Application only(can be configurable over MQTT as well )
+   7.Default device works as Modbus slave with below default configurations :
         Slave ID : 51
         Baud Rate : 9600
         Data bit - 8
@@ -48,8 +49,7 @@ Limitations :
    1. MODBUS RTU device does not support baud rates > 115200.
    2. Currently does not support Datalenght of 7 bit option.
    3. Currently does not support Stop bit 2 option.
-   4. No Mechanism to get the current modbus configurations to over Android app or server(mqtt).
- 
+   
 #################################################################################################################################################################################
 Date: 16 December 2019
 Contributed By : Mahendrakumar Shinde, Darshan Mirajkar,Vikas Gaikwad
