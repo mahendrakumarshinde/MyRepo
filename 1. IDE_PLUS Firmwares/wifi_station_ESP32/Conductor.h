@@ -17,7 +17,7 @@
     Instanciation
 ============================================================================= */
 
-extern char hostSerialBuffer[8500];
+extern char hostSerialBuffer[20000];
 extern IUSerial hostSerial;
 
 extern IURawDataHelper accelRawDataHelper;
@@ -147,7 +147,7 @@ class Conductor
         MultiMessageValidator<2> m_mqttServerValidator;
         IPAddress m_mqttServerIP;
         uint16_t m_mqttServerPort;
-        char httpBuffer[8235];              //maximum possible buffer size (when blockSize = 4096)
+        char httpBuffer[16427];              //maximum possible buffer size (when blockSize = 8192) //8235 for BS 5096
         MultiMessageValidator<2> m_mqttCredentialsValidator;
         char m_mqttUsername[IUMQTTHelper::credentialMaxLength];
         char m_mqttPassword[IUMQTTHelper::credentialMaxLength];

@@ -24,12 +24,12 @@ namespace FFTConfiguration {
     //const int samplingRateConfigurations = 6;
     const int LSMsamplingRateOption = 4 ;
     const int KNXsamplingRateOption = 3 ;
-    const int blockSizeConfigurations = 5;
+    const int blockSizeConfigurations = 6;
 
     // Arrays which keep track of available configurations
     const int samplingRates[LSMsamplingRateOption] = { 416, 833, 1660, 3330 };
     const int samplingRates2[KNXsamplingRateOption] = { 6400, 12800, 25600};
-    const int blockSizes[blockSizeConfigurations] = { 256, 512, 1024, 2048, 4096 };
+    const int blockSizes[blockSizeConfigurations] = { 256, 512, 1024, 2048, 4096, 8192 };
 
     // Default parameter values
     const int DEFAULT_SAMPLING_RATE = 3330;

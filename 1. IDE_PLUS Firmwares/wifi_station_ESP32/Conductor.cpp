@@ -7,9 +7,9 @@
     Instanciation
 ============================================================================= */
 
-char hostSerialBuffer[8500];
+char hostSerialBuffer[20000];
 
-IUSerial hostSerial(&Serial, hostSerialBuffer, 8500, IUSerial::MS_PROTOCOL,
+IUSerial hostSerial(&Serial, hostSerialBuffer, 20000, IUSerial::MS_PROTOCOL,
                     115200, ';', 1000);
 
 IURawDataHelper accelRawDataHelper(10000,  // 10s timeout to input all keys
