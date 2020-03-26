@@ -3828,7 +3828,7 @@ void Conductor::rawDataRequest() {
 
     // Indicate the raw data is to be collected
     RawDataState::startRawDataCollection = true;
-    RawDataState::XCollected = false;
+    // RawDataState::XCollected = false;
     RawDataState::YCollected = false;
     RawDataState::ZCollected = false;
     RawDataState::startRawDataTransmission = false;
@@ -3944,17 +3944,17 @@ void Conductor::prepareRawDataPacketAndSend(char axis) {
                 memcpy(rawData.txRawValues, RawDataState::rawAccelerationZ, IUMessageFormat::maxBlockSize * 2);
                 break;
         }
-        iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 3000000,
+        iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 8000000,
                                         (char*) &rawData, sizeof rawData);
     }else{
-        switch(axis) {
-            case 'X':
-                memcpy(rawData.txRawValues, RawDataState::rawAccelerationX, IUMessageFormat::uptoBlockSize4096 * 2);
-                break;
-            case 'Y':
-                memcpy(rawData.txRawValues, RawDataState::rawAccelerationY, IUMessageFormat::uptoBlockSize4096 * 2);
-                break;
-            case 'Z':
+    switch(axis) {
+        //     memcpy(rawData.txRawValues, RawDataState::rawAccelerationX, IUMessageFormat::maxBlockSize * 2);
+        //     break;
+        case 'Y':
+            memcpy(rawData.txRawValues, RawDataState::rawAccelerationY, IUMessageFormat::maxBlockSize * 2);
+            break;
+        case 'Z':
+            memcpy(rawData.txRawValues, RawDataState::rawAccelerationZ, IUMessageFormat::maxBlockSize * 2);
                 memcpy(rawData.txRawValues, RawDataState::rawAccelerationZ, IUMessageFormat::uptoBlockSize4096 * 2);
                 break;
         }
