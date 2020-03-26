@@ -517,13 +517,13 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         logFFTInput(&FFTInput[fft_direction], values, sampleCount);
 
         // Save the raw data 
-        if(m_id == 30 && RawDataState::startRawDataCollection && !RawDataState::XCollected) {
-            memcpy(RawDataState::rawAccelerationX, (q15_t*)values, FFTConfiguration::currentBlockSize * 2);
-            if(loopDebugMode) {
-                debugPrint("Raw data request: collected X");
-            }
-            RawDataState::XCollected = true;
-        }
+        // if(m_id == 30 && RawDataState::startRawDataCollection && !RawDataState::XCollected) {
+        //     memcpy(RawDataState::rawAccelerationX, (q15_t*)values, FFTConfiguration::currentBlockSize * 2);
+        //     if(loopDebugMode) {
+        //         debugPrint("Raw data request: collected X");
+        //     }
+        //     RawDataState::XCollected = true;
+        // }
         if(m_id == 31 && RawDataState::startRawDataCollection && !RawDataState::YCollected) {
             memcpy(RawDataState::rawAccelerationY, (q15_t*)values, FFTConfiguration::currentBlockSize * 2);
             if(loopDebugMode) {
