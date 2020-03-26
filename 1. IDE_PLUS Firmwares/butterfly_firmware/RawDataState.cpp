@@ -7,9 +7,9 @@ namespace RawDataState {
     bool ZCollected = false;
     bool startRawDataTransmission = false;
     bool rawDataTransmissionInProgress = false;
-    char rawAccelerationX[15000];
-    char rawAccelerationY[15000];
-    char rawAccelerationZ[15000];
+    char rawAccelerationX[8208];
+    char rawAccelerationY[8208];
+    char rawAccelerationZ[16400];
 }
 
 namespace FeatureStates {

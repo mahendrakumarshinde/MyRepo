@@ -75,7 +75,7 @@ extern IUUSB iuUSB;
 extern char iuBluetoothBuffer[500]; //1024
 extern IUBMD350 iuBluetooth;
 
-extern char iuWiFiBuffer[2048];   //500
+extern __attribute__((section(".noinit2"))) char iuWiFiBuffer[2048];   //500
 
 #ifdef USE_EXTERNAL_WIFI
     extern IUSerial iuWiFi;
@@ -83,7 +83,7 @@ extern char iuWiFiBuffer[2048];   //500
     extern IUESP8285 iuWiFi;
 #endif
 
-extern char iuEthernetBuffer[2048];
+extern __attribute__((section(".noinit2"))) char iuEthernetBuffer[2048];
 
 extern Usr2Eth iuEthernet;
 
@@ -125,9 +125,9 @@ extern FeatureTemplate<float> batteryLoad;
 /***** Accelerometer Features *****/
 
 // Sensor data
-extern __attribute__((section(".noinit2"))) q15_t accelerationXValues[8192/2];      // 1024 
-extern __attribute__((section(".noinit2"))) q15_t accelerationYValues[8192/2];
-extern __attribute__((section(".noinit2"))) q15_t accelerationZValues[8192/2];
+extern __attribute__((section(".noinit2"))) q15_t accelerationXValues[8192];      // 1024 
+extern __attribute__((section(".noinit2"))) q15_t accelerationYValues[8192];
+extern __attribute__((section(".noinit2"))) q15_t accelerationZValues[8192];
 extern FeatureTemplate<q15_t> accelerationX;
 extern FeatureTemplate<q15_t> accelerationY;
 extern FeatureTemplate<q15_t> accelerationZ;
@@ -271,7 +271,7 @@ extern IUICS43432 iuI2S;
 extern FeatureStateComputer opStateComputer;
 
 // Shared computation space
-extern q15_t allocatedFFTSpace[8192]; // 1024
+extern q15_t allocatedFFTSpace[16384]; // 1024
 
 
 /***** Accelerometer Calibration parameters *****/

@@ -2621,31 +2621,51 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             break;
         case MSPCommand::HTTP_ACK: {
             if (loopDebugMode){ debugPrint(F("HTTP_ACK")); }
-            if (buff[0] == 'X') {
-                httpStatusCodeX = atoi(&buff[1]);
-            } else if (buff[0] == 'Y') {
-                httpStatusCodeY = atoi(&buff[1]);
-            } else if (buff[0] == 'Z') {
-                httpStatusCodeZ = atoi(&buff[1]);
-            }
-            if (loopDebugMode) {
-                debugPrint("HTTP status codes X | Y | Z ",false);
-                debugPrint(httpStatusCodeX, false);debugPrint(" | ", false);
-                debugPrint(httpStatusCodeY, false);debugPrint(" | ", false);
-                debugPrint(httpStatusCodeZ, true);
-            }
-#if 1
-            if(httpStatusCodeX != 200 || (httpStatusCodeX == 200 && httpStatusCodeY != 200 && httpStatusCodeY != 0) || (httpStatusCodeX == 200 && httpStatusCodeY == 200 && httpStatusCodeZ != 200 && httpStatusCodeZ != 0))
-            {
-                debugPrint("HTTP status codes X | Y | Z ",false);
-                debugPrint(httpStatusCodeX, false);debugPrint(" | ", false);
-                debugPrint(httpStatusCodeY, false);debugPrint(" | ", false);
-                debugPrint(httpStatusCodeZ, true);
-                // Abort transmission on failure  // IDE1.5_PORT_CHANGE Change
-                RawDataState::rawDataTransmissionInProgress = false;
-                RawDataState::startRawDataCollection = false;             
-            }
-#endif
+                if(FFTConfiguration::blockSize8192){
+                    if (buff[0] == 'Z') {
+                        httpStatusCodeZ = atoi(&buff[1]);
+                    }
+                    if (loopDebugMode) {
+                        debugPrint("HTTP status codes Z ",false);
+                        debugPrint(httpStatusCodeZ, true);
+                    }
+        #if 1
+                    if(httpStatusCodeZ != 200)
+                    {
+                        debugPrint("HTTP status codes Z ",false);
+                        debugPrint(httpStatusCodeZ, true);
+                        // Abort transmission on failure  // IDE1.5_PORT_CHANGE Change
+                        RawDataState::rawDataTransmissionInProgress = false;
+                        RawDataState::startRawDataCollection = false;             
+                    }
+        #endif
+                }else{
+                    if (buff[0] == 'X') {
+                        httpStatusCodeX = atoi(&buff[1]);
+                    } else if (buff[0] == 'Y') {
+                        httpStatusCodeY = atoi(&buff[1]);
+                    } else if (buff[0] == 'Z') {
+                        httpStatusCodeZ = atoi(&buff[1]);
+                    }
+                    if (loopDebugMode) {
+                        debugPrint("HTTP status codes X | Y | Z ",false);
+                        debugPrint(httpStatusCodeX, false);debugPrint(" | ", false);
+                        debugPrint(httpStatusCodeY, false);debugPrint(" | ", false);
+                        debugPrint(httpStatusCodeZ, true);
+                    }
+        #if 1
+                    if(httpStatusCodeX != 200 || (httpStatusCodeX == 200 && httpStatusCodeY != 200 && httpStatusCodeY != 0) || (httpStatusCodeX == 200 && httpStatusCodeY == 200 && httpStatusCodeZ != 200 && httpStatusCodeZ != 0))
+                    {
+                        debugPrint("HTTP status codes X | Y | Z ",false);
+                        debugPrint(httpStatusCodeX, false);debugPrint(" | ", false);
+                        debugPrint(httpStatusCodeY, false);debugPrint(" | ", false);
+                        debugPrint(httpStatusCodeZ, true);
+                        // Abort transmission on failure  // IDE1.5_PORT_CHANGE Change
+                        RawDataState::rawDataTransmissionInProgress = false;
+                        RawDataState::startRawDataCollection = false;             
+                    }
+        #endif   
+                }
             break;
         }
         case MSPCommand::WIFI_GET_TX_POWER:
@@ -3721,7 +3741,11 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
              m_streamingMode == StreamingMode::WIFI_AND_BLE ) {
        
         int idx = 0;                        // Tracks number of elements filled in txBuffer
-        for (int i =0; i < IUMessageFormat::maxBlockSize; i++) rawData.txRawValues[i] = 0;
+        if(FFTConfiguration::blockSize8192){
+            for (int i =0; i < IUMessageFormat::maxBlockSize; i++) rawData.txRawValues[i] = 0;
+        }else{
+            for (int i =0; i < IUMessageFormat::uptoBlockSize4096; i++) rawData.txRawValues[i] = 0;
+        }
         
         rawData.timestamp = getDatetime();
         rawData.axis = axis[axisIdx];
@@ -3729,8 +3753,13 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
         idx = accelEnergy->sendToBuffer(rawData.txRawValues, 0, FFTConfiguration::currentBlockSize / 128);  
 
         // Although IUMessageFormat::maxBlockSize raw data bytes will be sent to the ESP, the ESP will only HTTP POST currentBlockSize elements
-        iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 3000000,
-                                  (char*) &rawData, sizeof rawData);               
+        if(FFTConfiguration::blockSize8192){
+            iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 3000000,
+                                  (char*) &rawData, sizeof rawData);  
+        }else{
+            iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 3000000,
+                                  (char*) &rawData, sizeof rawData/2+8);    
+        }           
         delay(2800);
 
      }else if(m_streamingMode == StreamingMode::ETHERNET){      // Ethernet Mode
@@ -3779,10 +3808,13 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
 // Copies raw data at current time instant to buffers. These buffers should 
 // be changed later in the optimization pass after v1.1.3
 void Conductor::rawDataRequest() {  
-    
-    memset(RawDataState::rawAccelerationX, 0, IUMessageFormat::maxBlockSize * 2);
-    memset(RawDataState::rawAccelerationY, 0, IUMessageFormat::maxBlockSize * 2);
-    memset(RawDataState::rawAccelerationZ, 0, IUMessageFormat::maxBlockSize * 2);
+    if(FFTConfiguration::blockSize8192){
+        memset(RawDataState::rawAccelerationZ, 0, IUMessageFormat::maxBlockSize * 2);
+    }else{
+        memset(RawDataState::rawAccelerationX, 0, IUMessageFormat::uptoBlockSize4096 * 2);
+        memset(RawDataState::rawAccelerationY, 0, IUMessageFormat::uptoBlockSize4096 * 2);
+        memset(RawDataState::rawAccelerationZ, 0, IUMessageFormat::uptoBlockSize4096 * 2);
+    }
     
     // Feature *accelEnergyX = Feature::getInstanceByName("A0X");
     // Feature *accelEnergyY = Feature::getInstanceByName("A0Y");
@@ -3812,53 +3844,88 @@ void Conductor::rawDataRequest() {
  */
 void Conductor::manageRawDataSending() {
     // Start raw data transmission session
-    if(RawDataState::startRawDataCollection &&
-       RawDataState::XCollected && RawDataState::YCollected && RawDataState::ZCollected &&
-       !RawDataState::rawDataTransmissionInProgress)
-    {
-        if(loopDebugMode) {
-            debugPrint("Raw data request: collected raw data, starting transmission");
-        }
-        RawDataState::rawDataTransmissionInProgress = true;
-        httpStatusCodeX = httpStatusCodeY = httpStatusCodeZ = 0;
-        XSentToWifi = YsentToWifi = ZsentToWifi = false;    
+    if(FFTConfiguration::blockSize8192){
+        if(RawDataState::startRawDataCollection &&
+            RawDataState::ZCollected &&
+            !RawDataState::rawDataTransmissionInProgress)
+            {
+                if(loopDebugMode) {
+                    debugPrint("Raw data request: collected raw data, starting transmission");
+                }
+                RawDataState::rawDataTransmissionInProgress = true;
+                httpStatusCodeZ = 0;
+                ZsentToWifi = false;    
+            }
+    }else{
+        if(RawDataState::startRawDataCollection &&
+            RawDataState::XCollected && RawDataState::YCollected && RawDataState::ZCollected &&
+            !RawDataState::rawDataTransmissionInProgress)
+            {
+                if(loopDebugMode) {
+                    debugPrint("Raw data request: collected raw data, starting transmission");
+                }
+                RawDataState::rawDataTransmissionInProgress = true;
+                httpStatusCodeX = httpStatusCodeY = httpStatusCodeZ = 0;
+                XSentToWifi = YsentToWifi = ZsentToWifi = false;    
+            }
     }
-
+    
     if (RawDataState::rawDataTransmissionInProgress) {
         // double timeSinceLastSentToESP = millis() - lastPacketSentToESP; // use later for retry mechanism
-        if (!XSentToWifi) {
-            prepareRawDataPacketAndSend('X');
-            XSentToWifi = true; 
-            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
-            if(loopDebugMode) {
-                debugPrint("Raw data request: X sent to wifi");
+        if(FFTConfiguration::blockSize8192){
+            if (!ZsentToWifi) {
+                prepareRawDataPacketAndSend('Z');
+                ZsentToWifi = true;
+                RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+                if(loopDebugMode) {
+                    debugPrint("Raw data request: Z sent to wifi");
+                }
+                // lastPacketSentToESP = millis();
             }
-            // lastPacketSentToESP = millis();
-        } else if (httpStatusCodeX == 200 && !YsentToWifi) { 
-            prepareRawDataPacketAndSend('Y');
-            YsentToWifi = true;
-            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
-            if(loopDebugMode) {
-                debugPrint("Raw data request: X delivered, Y sent to wifi");
+            if (httpStatusCodeZ == 200) {
+                // End the transmission session, reset RawDataState::startRawDataCollection and RawDataState::rawDataTransmissionInProgress
+                // Rest of the tracking variables are reset when rawDataRequest() is called
+                if(loopDebugMode) {
+                    debugPrint("Raw data request: Z delivered, ending transmission session");
+                }
+                RawDataState::startRawDataCollection = false;
+                RawDataState::rawDataTransmissionInProgress = false;    
             }
-            // lastPacketSentToESP = millis();
-        } else if (httpStatusCodeY == 200 && !ZsentToWifi) {
-            prepareRawDataPacketAndSend('Z');
-            ZsentToWifi = true;
-            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
-            if(loopDebugMode) {
-                debugPrint("Raw data request: Y delivered, Z sent to wifi");
+        }else{
+            if (!XSentToWifi) {
+                prepareRawDataPacketAndSend('X');
+                XSentToWifi = true; 
+                RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+                if(loopDebugMode) {
+                    debugPrint("Raw data request: X sent to wifi");
+                }
+                // lastPacketSentToESP = millis();
+            } else if (httpStatusCodeX == 200 && !YsentToWifi) { 
+                prepareRawDataPacketAndSend('Y');
+                YsentToWifi = true;
+                RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+                if(loopDebugMode) {
+                    debugPrint("Raw data request: X delivered, Y sent to wifi");
+                }
+                // lastPacketSentToESP = millis();
+            } else if (httpStatusCodeY == 200 && !ZsentToWifi) {
+                prepareRawDataPacketAndSend('Z');
+                ZsentToWifi = true;
+                RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+                if(loopDebugMode) {
+                    debugPrint("Raw data request: Y delivered, Z sent to wifi");
+                }
+                // lastPacketSentToESP = millis();
             }
-            // lastPacketSentToESP = millis();
-        }
-        if (httpStatusCodeX == 200 && httpStatusCodeY == 200 && httpStatusCodeZ == 200) {
-            // End the transmission session, reset RawDataState::startRawDataCollection and RawDataState::rawDataTransmissionInProgress
-            // Rest of the tracking variables are reset when rawDataRequest() is called
-            if(loopDebugMode) {
-                debugPrint("Raw data request: Z delivered, ending transmission session");
+            if (httpStatusCodeX == 200 && httpStatusCodeY == 200 && httpStatusCodeZ == 200) {
+                // End the transmission session, reset RawDataState::startRawDataCollection and RawDataState::rawDataTransmissionInProgress
+                // Rest of the tracking variables are reset when rawDataRequest() is called
+                if(loopDebugMode) {
+                    debugPrint("Raw data request: Z delivered, ending transmission session");
+                }
+                RawDataState::startRawDataCollection = false;
+                RawDataState::rawDataTransmissionInProgress = false;    
             }
-            RawDataState::startRawDataCollection = false;
-            RawDataState::rawDataTransmissionInProgress = false;    
         }
         if((millis() - RawDataTimeout) > 10000)
         { // IDE1.5_PORT_CHANGE -- On timeout of 4 Sec. if no response OK/FAIL then abort transmission
@@ -3871,19 +3938,29 @@ void Conductor::manageRawDataSending() {
 void Conductor::prepareRawDataPacketAndSend(char axis) {
     rawData.axis = axis;
     rawData.timestamp = rawDataRecordedAt;
-    switch(axis) {
-        case 'X':
-            memcpy(rawData.txRawValues, RawDataState::rawAccelerationX, IUMessageFormat::maxBlockSize * 2);
-            break;
-        case 'Y':
-            memcpy(rawData.txRawValues, RawDataState::rawAccelerationY, IUMessageFormat::maxBlockSize * 2);
-            break;
-        case 'Z':
-            memcpy(rawData.txRawValues, RawDataState::rawAccelerationZ, IUMessageFormat::maxBlockSize * 2);
-            break;
-    }
-    iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 3000000,
+    if(FFTConfiguration::blockSize8192){
+        switch(axis) {
+            case 'Z':
+                memcpy(rawData.txRawValues, RawDataState::rawAccelerationZ, IUMessageFormat::maxBlockSize * 2);
+                break;
+        }
+        iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 3000000,
                                         (char*) &rawData, sizeof rawData);
+    }else{
+        switch(axis) {
+            case 'X':
+                memcpy(rawData.txRawValues, RawDataState::rawAccelerationX, IUMessageFormat::uptoBlockSize4096 * 2);
+                break;
+            case 'Y':
+                memcpy(rawData.txRawValues, RawDataState::rawAccelerationY, IUMessageFormat::uptoBlockSize4096 * 2);
+                break;
+            case 'Z':
+                memcpy(rawData.txRawValues, RawDataState::rawAccelerationZ, IUMessageFormat::uptoBlockSize4096 * 2);
+                break;
+        }
+        iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 3000000,
+                                        (char*) &rawData, sizeof rawData/2+8);
+    }
     if (loopDebugMode) {
         debugPrint("Sent ", false);debugPrint(axis,false);debugPrint(" data which was recorded at ",false);
         debugPrint(rawDataRecordedAt);
@@ -4051,6 +4128,12 @@ bool Conductor::setFFTParams() {
     if(config.success()) {
         FFTConfiguration::currentSamplingRate = config["samplingRate"];
         FFTConfiguration::currentBlockSize = config["blockSize"];
+        if(FFTConfiguration::currentBlockSize == IUMessageFormat::maxBlockSize){
+            FFTConfiguration::blockSize8192 = true;
+        }else{
+            FFTConfiguration::blockSize8192 = false;
+        }
+        
         //FFTConfiguration::currentSensor = config["sensor"];
         for (int i=0;i<FFTConfiguration::LSMsamplingRateOption;i++)
         {

@@ -7,4 +7,5 @@ namespace FFTConfiguration {
     int currentHighCutOffFrequency = DEFAULT_HIGH_CUT_OFF_FREQUENCY;
     float currentMinAgitation = DEFAULT_MIN_AGITATION;
     bool currentSensor = lsmSensor;
+    bool blockSize8192 = false;
 }

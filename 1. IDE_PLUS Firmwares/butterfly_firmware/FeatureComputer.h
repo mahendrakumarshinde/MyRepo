@@ -517,26 +517,36 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         logFFTInput(&FFTInput[fft_direction], values, sampleCount);
 
         // Save the raw data 
-        if(m_id == 30 && RawDataState::startRawDataCollection && !RawDataState::XCollected) {
-            memcpy(RawDataState::rawAccelerationX, (q15_t*)values, FFTConfiguration::currentBlockSize * 2);
-            if(loopDebugMode) {
-                debugPrint("Raw data request: collected X");
+        if(FFTConfiguration::blockSize8192){
+            if(m_id == 32 && RawDataState::startRawDataCollection && !RawDataState::ZCollected) {
+                    memcpy(RawDataState::rawAccelerationZ, (q15_t*)values, FFTConfiguration::currentBlockSize * 2);
+                    if(loopDebugMode) {
+                        debugPrint("Raw data request: collected Z");
+                    }
+                    RawDataState::ZCollected = true;
             }
-            RawDataState::XCollected = true;
-        }
-        if(m_id == 31 && RawDataState::startRawDataCollection && !RawDataState::YCollected) {
-            memcpy(RawDataState::rawAccelerationY, (q15_t*)values, FFTConfiguration::currentBlockSize * 2);
-            if(loopDebugMode) {
-                debugPrint("Raw data request: collected Y");
+        }else{
+            if(m_id == 30 && RawDataState::startRawDataCollection && !RawDataState::XCollected) {
+                memcpy(RawDataState::rawAccelerationX, (q15_t*)values, FFTConfiguration::currentBlockSize * 2);
+                if(loopDebugMode) {
+                    debugPrint("Raw data request: collected X");
+                }
+                RawDataState::XCollected = true;
             }
-            RawDataState::YCollected = true;
-        }
-        if(m_id == 32 && RawDataState::startRawDataCollection && !RawDataState::ZCollected) {
-            memcpy(RawDataState::rawAccelerationZ, (q15_t*)values, FFTConfiguration::currentBlockSize * 2);
-            if(loopDebugMode) {
-                debugPrint("Raw data request: collected Z");
+            if(m_id == 31 && RawDataState::startRawDataCollection && !RawDataState::YCollected) {
+                memcpy(RawDataState::rawAccelerationY, (q15_t*)values, FFTConfiguration::currentBlockSize * 2);
+                if(loopDebugMode) {
+                    debugPrint("Raw data request: collected Y");
+                }
+                RawDataState::YCollected = true;
             }
-            RawDataState::ZCollected = true;
+            if(m_id == 32 && RawDataState::startRawDataCollection && !RawDataState::ZCollected) {
+                memcpy(RawDataState::rawAccelerationZ, (q15_t*)values, FFTConfiguration::currentBlockSize * 2);
+                if(loopDebugMode) {
+                    debugPrint("Raw data request: collected Z");
+                }
+                RawDataState::ZCollected = true;
+            }
         }
 
         // 1. Compute FFT and get amplitudes
