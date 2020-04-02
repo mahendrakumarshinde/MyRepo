@@ -31,10 +31,10 @@
 
 /***** Sensors *****/
 #include "IUBattery.h"
-#include "IUCAMM8Q.h"
+// #include "IUCAMM8Q.h"
 #include "IUICS43432.h"
 #include "IULSM6DSM.h"
-#include "IUMAX31865.h"
+// #include "IUMAX31865.h"
 #include "IUTMP116.h"
 #include "IUKX222.h"
 #include "IUkx224reg.h"
@@ -243,8 +243,8 @@ extern FeatureTemplate<float> rtdTemp;
 
 extern IUBattery iuBattery;
 
-extern IUMAX31865 iuRTDSensorA;
-extern IUMAX31865 iuRTDSensorB;
+// extern IUMAX31865 iuRTDSensorA;
+// extern IUMAX31865 iuRTDSensorB;
 
 void LSM6DSMAccelReadCallback(uint8_t wireStatus);
 extern IULSM6DSM iuAccelerometer;
