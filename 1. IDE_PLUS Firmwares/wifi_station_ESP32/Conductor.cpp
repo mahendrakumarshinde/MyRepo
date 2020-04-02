@@ -340,9 +340,12 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                   
             break;
         case MSPCommand::PUBLISH_FEATURE:
+            Serial.print("DEBUG INFO PUBLISHED FEATURE:");Serial.println(buffer);
             if (publishFeature(&buffer[7], bufferLength - 7, buffer, 6)) {
                 iuSerial->sendMSPCommand(MSPCommand::WIFI_CONFIRM_PUBLICATION);
+                Serial.println("CONFIRM PUBLICATIONS");
             }
+            Serial.println("FAILED PUBLICATIONS !!!");
             break;
         case MSPCommand::PUBLISH_FEATURE_WITH_CONFIRMATION:
             // Buffer structure:

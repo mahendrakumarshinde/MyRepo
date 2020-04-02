@@ -1,13 +1,14 @@
 #ifndef IUMQTTHELPER_H
 #define IUMQTTHELPER_H
 
-#include <WiFi.h>
+//#include <WiFi.h>
 #include <PubSubClient.h>
 #include <time.h>
 
 #include <IUDebugger.h>
 #include <MacAddress.h>
 #include "BoardDefinition.h"
+#include <WiFiClientSecure.h>
 
 
 /* =============================================================================
@@ -76,7 +77,9 @@ class IUMQTTHelper
 
     protected:
         /***** Core *****/
-        WiFiClient m_wifiClient;
+        //WiFiClient m_wifiClient;
+        WiFiClientSecure m_wifiClient;
+
         MacAddress m_deviceMAC;
         /***** MQTT server address and credentials *****/
         /***** Settable parameters (addresses, credentials, etc) *****/

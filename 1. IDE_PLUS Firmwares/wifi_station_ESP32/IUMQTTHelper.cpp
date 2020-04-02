@@ -1,5 +1,5 @@
 #include "IUMQTTHelper.h"
-
+#include "IUClientCertificates.h"
 /* =============================================================================
     Preset values and default settings
 ============================================================================= */
@@ -100,6 +100,11 @@ void IUMQTTHelper::reconnect()
     while (!client.connected() && currentTime - startTime < connectionTimeout) {
         if (debugMode) {
             debugPrint("Attempting MQTT connection... ", false);
+        }
+        if(m_serverPort == 8883 || m_serverPort == 8884 ){
+            //m_wifiClient.setCACert(ca_cert);
+            m_wifiClient.setCertificate(client_cert);
+            m_wifiClient.setPrivateKey(client_private_key);
         }
         // Attempt to connect
         if (client.connect(m_deviceMAC.toString().c_str(), m_username,
