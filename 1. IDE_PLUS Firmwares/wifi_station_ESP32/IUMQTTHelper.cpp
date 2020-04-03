@@ -14,8 +14,8 @@ char IUMQTTHelper::DEFAULT_WILL_MESSAGE[44] =
 
 IUMQTTHelper::IUMQTTHelper(IPAddress serverIP, uint16_t serverPort,
                            const char *username, const char *password) :
-    m_wifiClient(),
-    client(m_wifiClient)
+    m_wifiClient(),//m_wifiClientS(),
+    client(m_wifiClient)//,client(m_wifiClientS)
 {
     setServer(serverIP, serverPort);
     if (username != NULL && password != NULL) {
@@ -35,6 +35,21 @@ void IUMQTTHelper::setServer(IPAddress serverIP, uint16_t serverPort)
         client.setServer(m_serverIP, m_serverPort);
     }
 }
+/**
+ * @brief 
+ *  Not yet active
+ * @param serverIP 
+ * @param serverPort 
+ */
+void IUMQTTHelper::setServer(const char* serverIP, uint16_t serverPort)
+{
+    //(const char*)m_serverIP = serverIP;
+    m_serverPort = serverPort;
+    if (serverIP != NULL) {
+        client.setServer(serverIP, m_serverPort);
+    }
+}
+
 
 /**
  *
@@ -101,8 +116,9 @@ void IUMQTTHelper::reconnect()
         if (debugMode) {
             debugPrint("Attempting MQTT connection... ", false);
         }
-        if(m_serverPort == 8883 || m_serverPort == 8884 ){
+        if((m_serverPort == 8883 || m_serverPort == 8884) && TLS_ENABLE == true ){
             //m_wifiClient.setCACert(ca_cert);
+            Serial.print("Connecting to Secure MQTT broker...\n");
             m_wifiClient.setCertificate(client_cert);
             m_wifiClient.setPrivateKey(client_private_key);
         }

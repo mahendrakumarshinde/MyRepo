@@ -92,7 +92,7 @@ void Conductor::deepsleep(uint32_t duration_ms)
  *
  */
 void Conductor::processHostMessage(IUSerial *iuSerial)
-{
+{   
     MSPCommand::command cmd = iuSerial->getMspCommand();
     char *buffer = iuSerial->getBuffer();
     uint16_t bufferLength = iuSerial->getCurrentBufferLength();
@@ -343,9 +343,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             Serial.print("DEBUG INFO PUBLISHED FEATURE:");Serial.println(buffer);
             if (publishFeature(&buffer[7], bufferLength - 7, buffer, 6)) {
                 iuSerial->sendMSPCommand(MSPCommand::WIFI_CONFIRM_PUBLICATION);
-                Serial.println("CONFIRM PUBLICATIONS");
             }
-            Serial.println("FAILED PUBLICATIONS !!!");
             break;
         case MSPCommand::PUBLISH_FEATURE_WITH_CONFIRMATION:
             // Buffer structure:
@@ -394,19 +392,25 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             break;
         case MSPCommand::SET_MQTT_SERVER_IP:
             //hostSerial.write("FROM WIFI SET_MQTT_SERVER_IP :");
-            //hostSerial.write(buffer);
-            if (m_mqttServerValidator.hasTimedOut()) {
-                m_mqttServerValidator.reset();
-            }
-            m_mqttServerIP = iuSerial->mspReadIPAddress();
-            //hostSerial.write("RECEIVED IP :");hostSerial.write(m_mqttServerIP);
+            // hostSerial.write(buffer);
+            // if(strstr(buffer,".com") != NULL ){
+            //        Serial.println("Received MQTT Domain Name ");
+            //        mqttHelper.setServer(buffer,m_mqttServerPort); 
+            // }
+            // else{
+                if (m_mqttServerValidator.hasTimedOut()) {
+                    m_mqttServerValidator.reset();
+                }
+                m_mqttServerIP = iuSerial->mspReadIPAddress();
+                //hostSerial.write("RECEIVED IP :");hostSerial.write(m_mqttServerIP);
+                
+                m_mqttServerValidator.receivedMessage(0);
+                if (m_mqttServerValidator.completed()) {
+                    mqttHelper.setServer(m_mqttServerIP, m_mqttServerPort);
+                    hostSerial.write("RECEIVED MQTT SERVER IP FROM DEVICE ");
             
-            m_mqttServerValidator.receivedMessage(0);
-            if (m_mqttServerValidator.completed()) {
-                mqttHelper.setServer(m_mqttServerIP, m_mqttServerPort);
-                hostSerial.write("RECEIVED MQTT SERVER IP FROM DEVICE ");
-           
-            }
+                }
+            //}
             break;
         case MSPCommand::SET_MQTT_SERVER_PORT:
            
@@ -439,6 +443,12 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 mqttHelper.setCredentials(m_mqttUsername, m_mqttPassword);
             }
             break;
+        case MSPCommand::SET_MQTT_TLS_FLAG:
+             m_tls_enabled = bool(strtol(buffer, NULL, 0));
+             hostSerial.write("TLS Status :");hostSerial.write(m_tls_enabled);
+             hostSerial.write("\n");
+             mqttHelper.TLS_ENABLE = m_tls_enabled;
+            break; 
         /********** Diagnostic Fingerprints Commands **************/    
         case MSPCommand::RECEIVE_DIAGNOSTIC_ACK:
           // Send the Ack to Topic

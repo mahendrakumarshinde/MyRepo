@@ -1,7 +1,7 @@
 #ifndef IUMQTTHELPER_H
 #define IUMQTTHELPER_H
 
-//#include <WiFi.h>
+#include <WiFi.h>
 #include <PubSubClient.h>
 #include <time.h>
 
@@ -44,12 +44,15 @@ class IUMQTTHelper
         // Will definition
         static const uint8_t WILL_QOS = 0;
         static const bool WILL_RETAIN = false;
+        bool TLS_ENABLE = false;
         /***** Core *****/
         IUMQTTHelper(IPAddress serverIP, uint16_t serverPort,
                      const char *username, const char *password);
         IUMQTTHelper() : IUMQTTHelper(IPAddress(), 1883, NULL, NULL) {}
         virtual ~IUMQTTHelper() { }
         void setServer(IPAddress serverIP, uint16_t serverPort);
+        void setServer(const char* serverIP, uint16_t serverPort);
+        
         void setCredentials(const char *username, const char *password);
         void setDeviceMAC(MacAddress deviceMAC);
         void setOnConnectionCallback(void (*callback)())

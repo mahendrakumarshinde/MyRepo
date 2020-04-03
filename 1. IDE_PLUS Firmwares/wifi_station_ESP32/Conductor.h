@@ -147,6 +147,7 @@ class Conductor
         MultiMessageValidator<2> m_mqttServerValidator;
         IPAddress m_mqttServerIP;
         uint16_t m_mqttServerPort;
+        bool m_tls_enabled;
         char httpBuffer[8235];              //maximum possible buffer size (when blockSize = 4096)
         MultiMessageValidator<2> m_mqttCredentialsValidator;
         char m_mqttUsername[IUMQTTHelper::credentialMaxLength];

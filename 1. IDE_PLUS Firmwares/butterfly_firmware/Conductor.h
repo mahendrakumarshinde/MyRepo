@@ -315,6 +315,7 @@ class Conductor
         uint16_t m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
         const char* m_mqttUserName = MQTT_DEFAULT_USERNAME;
         const char* m_mqttPassword = MQTT_DEFAULT_ASSWORD;
+        bool m_tls_enabled = false;
         //httpendpoint configuration
         const char* m_httpHost  = "15.206.97.181";
         uint16_t  m_httpPort  = 8100;
