@@ -16,9 +16,9 @@ namespace RawDataState {
     // sizes of these buffers should be optimized in later releases and 
     // the extra freed up space should be used to create dedicated raw data buffers
     // of datatype q15_t.
-    extern char rawAccelerationX[15000];
-    extern char rawAccelerationY[15000];
-    extern char rawAccelerationZ[15000];
+    extern char rawAccelerationX[8208];
+    extern char rawAccelerationY[8208];
+    extern char rawAccelerationZ[8208];
 }
 
 namespace FeatureStates {

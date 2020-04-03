@@ -3752,7 +3752,7 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
         delay(2800);
 
      }else if(m_streamingMode == StreamingMode::ETHERNET){      // Ethernet Mode
-        uint16_t maxLen = 15000;   //3500
+        uint16_t maxLen = 8208;   //3500
         char txBuffer[maxLen];
         for (uint16_t i =0; i < maxLen; i++) {
             txBuffer[i] = 0;
