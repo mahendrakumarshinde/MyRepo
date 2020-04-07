@@ -69,7 +69,7 @@ extern GPIORGBLed rgbLed;
 
 extern LedManager ledManager;
 
-extern char iuUSBBuffer[4096];    // increase buffer size to 4K
+extern char iuUSBBuffer[2048];    // increase buffer size to 4K
 extern IUUSB iuUSB;
 
 extern char iuBluetoothBuffer[500]; //1024
