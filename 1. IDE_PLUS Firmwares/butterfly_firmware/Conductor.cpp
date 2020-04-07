@@ -1265,12 +1265,12 @@ void Conductor::readForceOtaConfig()
 /*
  * swap credentails
  */
-void Conductor::fastSwap (const char **i, const char **d)
-{
-    const char *t = *d;
-    *d = *i;
-    *i = t;
-}
+// void Conductor::fastSwap (const char **i, const char **d)
+// {
+//     const char *t = *d;
+//     *d = *i;
+//     *i = t;
+// }
 
 /*
  * get the Board Configuration data

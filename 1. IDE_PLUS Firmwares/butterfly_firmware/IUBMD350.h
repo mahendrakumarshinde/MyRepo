@@ -38,7 +38,7 @@ class IUBMD350 : public IUSerial, public Component
                                       DBm30 = 226}; // -30 DB
         static const txPowerOption defaultTxPower = txPowerOption::DBm4;
         /***** Bluetooth throughput control *****/
-        static const uint16_t TX_BUFFER_LENGTH = 12000;
+        static const uint16_t TX_BUFFER_LENGTH = 1024;
         static const uint16_t SERIAL_TX_MAX_AVAILABLE = 64;
         static const uint16_t BLE_MTU_LEN = 20;
         static const uint32_t BLE_TX_DELAY = 25;
