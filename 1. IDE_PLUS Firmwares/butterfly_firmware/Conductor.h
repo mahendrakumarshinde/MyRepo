@@ -125,7 +125,7 @@ class Conductor
         // Default start datetime
         static constexpr double defaultTimestamp = 1524017173.00;
         // Size of Jsn buffr (to parse json)
-        static const uint16_t JSON_BUFFER_SIZE = 1600;
+        static const uint16_t JSON_BUFFER_SIZE = 1024; //Changed from 1600
         // static const uint32_t BLEconnectionTimeout = 60000;
         static const uint32_t BLEconnectionTimeout = 15000;
         static const uint32_t connectedStatusTimeout = 60000;   // 1 min for ETHERNET connectedStatusTimeout
@@ -350,6 +350,7 @@ class Conductor
         uint32_t otaInitWaitTimeout = 0;
         bool otaInitTimeoutFlag = false;
         char WiFiDisconnect_OTAErr[16];
+        char ack_config[200];
 };
 
 

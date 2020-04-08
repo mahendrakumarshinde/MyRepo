@@ -109,7 +109,8 @@ void Conductor::manageSleepCycles()
  */
 bool Conductor::configureFromFlash(IUFlash::storedConfig configType)
 {
-    StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
+    const size_t bufferSize = 600;
+    StaticJsonBuffer<bufferSize> jsonBuffer;
     JsonVariant config = JsonVariant(
             iuFlash.loadConfigJson(configType, jsonBuffer));
     bool success = config.success();
@@ -263,7 +264,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 
     //StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;            // make it dynamic
     //const size_t bufferSize = JSON_ARRAY_SIZE(2) + JSON_OBJECT_SIZE(3) + 60;        // dynamically allociated memory
-    const size_t bufferSize = JSON_OBJECT_SIZE(1) + 41*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(41) + 2430;
+    const size_t bufferSize = JSON_OBJECT_SIZE(2) + 2*JSON_OBJECT_SIZE(4) + 11*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(13) + 1396;
     DynamicJsonBuffer jsonBuffer(bufferSize);
     //Serial.print("JSON 1 SIZE :");Serial.println(bufferSize);
     
@@ -271,7 +272,6 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     String jsonChar;
     root.printTo(jsonChar);
     JsonVariant variant = root;
-    char ack_configEthernet[200];
   
     // variant.prettyPrintTo(Serial);
             
@@ -327,7 +327,6 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             //send ACK on ide_pluse/command_response/
             const char* messageId;
             messageId = root["messageId"]  ;
-            char ack_config[150];
             
             snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
             
@@ -336,11 +335,11 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config);
             }else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
             {       debugPrint("Sending Fetures ACK over Ethernet");
-                    snprintf(ack_configEthernet, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
+                    snprintf(ack_config, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
                       m_macAddress.toString().c_str(),0, 2, m_macAddress.toString().c_str(),messageId);
                    
-                    debugPrint(ack_configEthernet,true);
-                    iuEthernet.write(ack_configEthernet); 
+                    debugPrint(ack_config,true);
+                    iuEthernet.write(ack_config); 
                     iuEthernet.write("\n");
             } 
         }
@@ -363,7 +362,6 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             //send ACK on ide_pluse/command_response/
             const char* messageId;
             messageId = root["messageId"]  ;
-            char ack_config[150];
             snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
             
             //Serial.println(ack_config);
@@ -371,11 +369,11 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                  iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config);
             }else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
             {       debugPrint("Sending Fingerpritns Threshold ACK over Ethernet");
-                    snprintf(ack_configEthernet, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
+                    snprintf(ack_config, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
                       m_macAddress.toString().c_str(),0, 2, m_macAddress.toString().c_str(),messageId);
                    
-                    debugPrint(ack_configEthernet,true);
-                    iuEthernet.write(ack_configEthernet); 
+                    debugPrint(ack_config,true);
+                    iuEthernet.write(ack_config); 
                     iuEthernet.write("\n");
                    
             } 
@@ -456,7 +454,6 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             messageId = config["messageId"]  ;
             
           
-            char ack_config[150];
             snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
 
             if(iuWiFi.isConnected()){
@@ -464,11 +461,11 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             }
             else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
             {       debugPrint("Sending Fingerprints ACK over Ethernet");
-                    snprintf(ack_configEthernet, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
+                    snprintf(ack_config, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
                       m_macAddress.toString().c_str(),0, 2, m_macAddress.toString().c_str(),messageId);
                    
-                    debugPrint(ack_configEthernet,true);
-                    iuEthernet.write(ack_configEthernet); 
+                    debugPrint(ack_config,true);
+                    iuEthernet.write(ack_config); 
                     iuEthernet.write("\n");
                     //iuEthernet.write(ack_config);
             } 
@@ -529,11 +526,11 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
           
           }else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
           {     
-                snprintf(ack_configEthernet, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
+                snprintf(ack_config, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
                       m_macAddress.toString().c_str(),0, 2, m_macAddress.toString().c_str(),messageId);
                    
-                    debugPrint(ack_configEthernet,true);
-                    iuEthernet.write(ack_configEthernet); 
+                    debugPrint(ack_config,true);
+                    iuEthernet.write(ack_config); 
                     iuEthernet.write("\n");
                 //iuEthernet.write(httpConfig_ack);
           }
@@ -1171,8 +1168,8 @@ void Conductor::readForceOtaConfig()
   // Open the configuration file
   File myFile = DOSFS.open(filename,"r");
   
-  
-  StaticJsonBuffer<512> jsonBuffer;
+  const size_t bufferSize = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(4) + 108;
+  StaticJsonBuffer<bufferSize> jsonBuffer;
 
   // Parse the root object
   JsonObject &root = jsonBuffer.parseObject(myFile);
@@ -1289,8 +1286,8 @@ bool Conductor::configureBoardFromFlash(String filename,bool isSet){
   // Open the configuration file
  
   File myFile = DOSFS.open(filename,"r");
-  
-  StaticJsonBuffer<1024> jsonBuffer;
+  const size_t bufferSize = JSON_OBJECT_SIZE(3) + JSON_OBJECT_SIZE(6)+280;
+  StaticJsonBuffer<bufferSize> jsonBuffer;
 
   // Parse the root object
   JsonObject &root = jsonBuffer.parseObject(myFile);
@@ -1416,8 +1413,7 @@ JsonObject& Conductor:: configureJsonFromFlash(String filename,bool isSet){
   
   //StaticJsonBuffer<1024> jsonBuffer;
   //const size_t bufferSize = JSON_ARRAY_SIZE(8) + JSON_OBJECT_SIZE(300) + 60;        // dynamically allociated memory
-  const size_t bufferSize = JSON_OBJECT_SIZE(1) + 45*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(45) + 2430;
-  
+  const size_t bufferSize = JSON_OBJECT_SIZE(2) + 2*JSON_OBJECT_SIZE(4) + 11*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(13) + 1396;
   DynamicJsonBuffer jsonBuffer(bufferSize);
  // Serial.print("JSON 2 SIZE :");Serial.println(bufferSize);
  // Parse the root object
@@ -2768,7 +2764,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
               }else if(iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS)){
                     String httpConfig = iuFlash.readInternalFlash(CONFIG_HTTP_FLASH_ADDRESS);
                     debugPrint(httpConfig);
-                     StaticJsonBuffer<1024> jsonBuffer;
+                    const size_t bufferSize = JSON_OBJECT_SIZE(3) + JSON_OBJECT_SIZE(6) + 280;
+                    StaticJsonBuffer<bufferSize> jsonBuffer;
                     JsonObject &config = jsonBuffer.parseObject(httpConfig);
                     JsonObject& config2 = config["httpConfig"];
                     if(config.success())
@@ -2832,7 +2829,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
               // load default configurations
                 String mqttConfig = iuFlash.readInternalFlash(CONFIG_MQTT_FLASH_ADDRESS);
                 debugPrint(mqttConfig);
-                StaticJsonBuffer<512> jsonBuffer;
+                const size_t bufferSize = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(4) + 108;
+                StaticJsonBuffer<bufferSize> jsonBuffer;
                 JsonObject &config = jsonBuffer.parseObject(mqttConfig);
                 if(config.success())
                 {
@@ -4710,7 +4708,8 @@ void Conductor::sendSegmentedMessageResponse(int messageID) {
 
 void Conductor::setThresholdsFromFile() 
 {
-    StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
+    const size_t bufferSize = 6*JSON_ARRAY_SIZE(3) + 6*JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3) + JSON_OBJECT_SIZE(6) + 272;
+    StaticJsonBuffer<bufferSize> jsonBuffer;
     JsonVariant config = JsonVariant(
             iuFlash.loadConfigJson(IUFlash::CFG_FEATURE, jsonBuffer));
     // config.prettyPrintTo(Serial);
