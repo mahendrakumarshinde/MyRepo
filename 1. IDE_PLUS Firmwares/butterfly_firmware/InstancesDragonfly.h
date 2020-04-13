@@ -214,7 +214,7 @@ extern FeatureTemplate<float> temperature;
 /***** Audio Features *****/
 
 // Sensor data
-extern q15_t audioValues[8192];
+extern q15_t audioValues[4096];
 extern FeatureTemplate<q15_t> audio;
 
 // 2048 sample long features
@@ -222,7 +222,7 @@ extern __attribute__((section(".noinit2"))) float audioDB2048Values[4];
 extern FeatureTemplate<float> audioDB2048;
 
 // 4096 sample long features
-extern __attribute__((section(".noinit2"))) float audioDB4096Values[2];
+extern __attribute__((section(".noinit2"))) float audioDB4096Values[1];
 extern FeatureTemplate<float> audioDB4096;
 
 

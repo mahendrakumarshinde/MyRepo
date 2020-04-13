@@ -187,7 +187,7 @@ FeatureTemplate<float> temperature("TMP", 2, 1, temperatureValues);
 /***** Audio Features *****/
 
 // Sensor data
-q15_t audioValues[8192];
+q15_t audioValues[4096];
 FeatureTemplate<q15_t> audio("SND", 2, 2048, audioValues);
 
 // 2048 sample long features
@@ -195,8 +195,8 @@ __attribute__((section(".noinit2"))) float audioDB2048Values[4];
 FeatureTemplate<float> audioDB2048("S11", 4, 1, audioDB2048Values);
 
 // 4096 sample long features
-__attribute__((section(".noinit2"))) float audioDB4096Values[2];
-FeatureTemplate<float> audioDB4096("S12", 2, 1, audioDB4096Values);
+__attribute__((section(".noinit2"))) float audioDB4096Values[1];
+FeatureTemplate<float> audioDB4096("S12", 1, 1, audioDB4096Values);
 
 
 /***** GNSS Feature *****/
