@@ -208,7 +208,7 @@ class Conductor
         void  streamMCUUInfo(HardwareSerial *port);
         void exposeAllConfigurations();
         // mqtt / http configuration
-        void fastSwap (const char **i, const char **d);
+        // void fastSwap (const char **i, const char **d);
         void configureMQTTServer(String filename);
         bool configureBoardFromFlash(String filename,bool isSet);
         JsonObject& configureJsonFromFlash(String filename,bool isSet);

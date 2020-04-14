@@ -16,8 +16,8 @@ GPIORGBLed rgbLed(25, 26, 38);
     LedManager ledManager(&rgbLed);
 #endif
 
-char iuUSBBuffer[4096] = "";
-IUUSB iuUSB(&Serial, iuUSBBuffer, 4096, IUSerial::CUSTOM_PROTOCOL, 115200,
+char iuUSBBuffer[2048] = "";
+IUUSB iuUSB(&Serial, iuUSBBuffer, 2048, IUSerial::CUSTOM_PROTOCOL, 115200,
             '\n', 1000);
 
 char iuBluetoothBuffer[500] = "";

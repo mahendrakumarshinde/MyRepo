@@ -31,10 +31,10 @@
 
 /***** Sensors *****/
 #include "IUBattery.h"
-#include "IUCAMM8Q.h"
+// #include "IUCAMM8Q.h"
 #include "IUICS43432.h"
 #include "IULSM6DSM.h"
-#include "IUMAX31865.h"
+// #include "IUMAX31865.h"
 #include "IUTMP116.h"
 #include "IUKX222.h"
 #include "IUkx224reg.h"
@@ -69,7 +69,7 @@ extern GPIORGBLed rgbLed;
 
 extern LedManager ledManager;
 
-extern char iuUSBBuffer[4096];    // increase buffer size to 4K
+extern char iuUSBBuffer[2048];    // increase buffer size to 4K
 extern IUUSB iuUSB;
 
 extern char iuBluetoothBuffer[500]; //1024
@@ -243,8 +243,8 @@ extern FeatureTemplate<float> rtdTemp;
 
 extern IUBattery iuBattery;
 
-extern IUMAX31865 iuRTDSensorA;
-extern IUMAX31865 iuRTDSensorB;
+// extern IUMAX31865 iuRTDSensorA;
+// extern IUMAX31865 iuRTDSensorB;
 
 void LSM6DSMAccelReadCallback(uint8_t wireStatus);
 extern IULSM6DSM iuAccelerometer;
