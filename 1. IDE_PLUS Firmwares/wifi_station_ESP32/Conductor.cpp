@@ -7,9 +7,9 @@
     Instanciation
 ============================================================================= */
 
-char hostSerialBuffer[8500];
+char hostSerialBuffer[16427];
 
-IUSerial hostSerial(&Serial, hostSerialBuffer, 8500, IUSerial::MS_PROTOCOL,
+IUSerial hostSerial(&Serial, hostSerialBuffer, 16427, IUSerial::MS_PROTOCOL,
                     115200, ';', 1000);
 
 IURawDataHelper accelRawDataHelper(10000,  // 10s timeout to input all keys
@@ -456,7 +456,11 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             }
 
             // Only X axis timestamp is recorded so that record times can be correlated on server
-            if (rawData->axis == 'X') timestamp = rawData->timestamp;
+            if(HOST_BLOCK_SIZE == IUMessageFormat::maxBlockSize){
+                if (rawData->axis == 'Z') timestamp = rawData->timestamp;
+            }else{
+                if (rawData->axis == 'X') timestamp = rawData->timestamp;
+            }
           
             // This mechanism ensures the ESP sends out only blockSize data points in the POST payload
             // Tried implementing this using structures, but ran into problems. See commented code in 
