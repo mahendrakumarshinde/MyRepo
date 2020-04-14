@@ -46,7 +46,6 @@ namespace FFTConfiguration {
     extern bool currentSensor;   //if currenSensor=0 LSM is selected else kionix is selected
     const bool lsmSensor = 0; 
     const bool kionixSensor = 1;
-    extern bool blockSize8192;
 }
 
 #endif // FFT_CONFIGURATION_H

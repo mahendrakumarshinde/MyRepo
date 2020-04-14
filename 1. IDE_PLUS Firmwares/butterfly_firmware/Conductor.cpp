@@ -3882,7 +3882,7 @@ void Conductor::prepareRawDataPacketAndSend(char axis) {
             memcpy(rawData.txRawValues, RawDataState::rawAccelerationZ, IUMessageFormat::maxBlockSize * 2);
             break;
     }
-    iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 3000000,
+    iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 8000000,
                                         (char*) &rawData, sizeof rawData);
     if (loopDebugMode) {
         debugPrint("Sent ", false);debugPrint(axis,false);debugPrint(" data which was recorded at ",false);

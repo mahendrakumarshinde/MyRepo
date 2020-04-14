@@ -125,9 +125,9 @@ extern FeatureTemplate<float> batteryLoad;
 /***** Accelerometer Features *****/
 
 // Sensor data
-extern __attribute__((section(".noinit2"))) q15_t accelerationXValues[8192/2];      // 1024 
-extern __attribute__((section(".noinit2"))) q15_t accelerationYValues[8192/2];
-extern __attribute__((section(".noinit2"))) q15_t accelerationZValues[8192/2];
+extern __attribute__((section(".noinit2"))) q15_t accelerationXValues[8192];      // 1024 
+extern __attribute__((section(".noinit2"))) q15_t accelerationYValues[8192];
+extern __attribute__((section(".noinit2"))) q15_t accelerationZValues[8192];
 extern FeatureTemplate<q15_t> accelerationX;
 extern FeatureTemplate<q15_t> accelerationY;
 extern FeatureTemplate<q15_t> accelerationZ;
@@ -214,7 +214,7 @@ extern FeatureTemplate<float> temperature;
 /***** Audio Features *****/
 
 // Sensor data
-extern q15_t audioValues[8192];
+extern q15_t audioValues[4096];
 extern FeatureTemplate<q15_t> audio;
 
 // 2048 sample long features
@@ -222,7 +222,7 @@ extern __attribute__((section(".noinit2"))) float audioDB2048Values[4];
 extern FeatureTemplate<float> audioDB2048;
 
 // 4096 sample long features
-extern __attribute__((section(".noinit2"))) float audioDB4096Values[2];
+extern __attribute__((section(".noinit2"))) float audioDB4096Values[1];
 extern FeatureTemplate<float> audioDB4096;
 
 
@@ -271,7 +271,7 @@ extern IUICS43432 iuI2S;
 extern FeatureStateComputer opStateComputer;
 
 // Shared computation space
-extern q15_t allocatedFFTSpace[8192]; // 1024
+extern q15_t allocatedFFTSpace[16384]; // 1024
 
 
 /***** Accelerometer Calibration parameters *****/

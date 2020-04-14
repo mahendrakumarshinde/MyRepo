@@ -456,11 +456,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             }
 
             // Only X axis timestamp is recorded so that record times can be correlated on server
-            if(HOST_BLOCK_SIZE == IUMessageFormat::maxBlockSize){
-                if (rawData->axis == 'Z') timestamp = rawData->timestamp;
-            }else{
-                if (rawData->axis == 'X') timestamp = rawData->timestamp;
-            }
+            if (rawData->axis == 'X') timestamp = rawData->timestamp;
           
             // This mechanism ensures the ESP sends out only blockSize data points in the POST payload
             // Tried implementing this using structures, but ran into problems. See commented code in 
