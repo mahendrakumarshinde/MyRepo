@@ -106,7 +106,7 @@ class IUFSFlash : public IUFlash
                                  size_t len);
         File openConfigFile(storedConfig configType, const char* mode);
 
-        void writeInternalFlash(uint8_t type, uint32_t address, uint8_t dataLength, const uint8_t* data);
+        void writeInternalFlash(uint8_t type, uint32_t address, uint16_t dataLength, const uint8_t* data);
         String readInternalFlash(uint32_t address);
         bool checkConfig(uint32_t address);
         void clearInternalFlash(uint32_t address);

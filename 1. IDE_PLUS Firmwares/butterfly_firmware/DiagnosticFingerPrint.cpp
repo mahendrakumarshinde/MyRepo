@@ -126,8 +126,8 @@ JsonObject& DiagnosticEngine::configureFingerPrintsFromFlash(String filename,boo
   
   //StaticJsonBuffer<1024> jsonBuffer;
   //const size_t bufferSize = JSON_ARRAY_SIZE(8) + JSON_OBJECT_SIZE(300) + 60;        // dynamically allociated memory
-  const size_t bufferSize = JSON_OBJECT_SIZE(1) + 50*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(50) + 2430;
-  
+  // const size_t bufferSize = JSON_OBJECT_SIZE(1) + 50*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(50) + 2430;
+  const size_t bufferSize = JSON_OBJECT_SIZE(2) + 2*JSON_OBJECT_SIZE(4) + 11*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(13) + 1396;
   //DynamicJsonBuffer jsonBuffer(bufferSize);
    StaticJsonBuffer<bufferSize> jsonBuffer;
  // Serial.print("JSON 2 SIZE :");Serial.println(bufferSize);
@@ -136,7 +136,7 @@ JsonObject& DiagnosticEngine::configureFingerPrintsFromFlash(String filename,boo
   //JsonObject& root2 = root["fingerprints"];
   
   if (!root.success()){
-    // debugPrint(F("Failed to read fingerprints.conf file, using default configuration"));
+    //  debugPrint(F("Failed to read fingerprints.conf file, using default configuration"));
    
   }
  else {
@@ -553,7 +553,7 @@ return keys;
 const char* DiagnosticEngine::generateJSONPayload(JsonObject &config, float* values){
 
    DynamicJsonBuffer  jsonBuffer(2000);
-    
+  
    JsonObject& root = jsonBuffer.createObject();
    JsonObject& fingerprintJson = jsonBuffer.createObject();
      
