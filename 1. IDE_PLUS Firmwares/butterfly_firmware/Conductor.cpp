@@ -1289,8 +1289,8 @@ bool Conductor::configureBoardFromFlash(String filename,bool isSet){
   // Open the configuration file
  
   File myFile = DOSFS.open(filename,"r");
-  
-  StaticJsonBuffer<1024> jsonBuffer;
+  const size_t bufferSize = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(6) + 510;
+  StaticJsonBuffer<bufferSize> jsonBuffer;
 
   // Parse the root object
   JsonObject &root = jsonBuffer.parseObject(myFile);
@@ -2768,7 +2768,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
               }else if(iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS)){
                     String httpConfig = iuFlash.readInternalFlash(CONFIG_HTTP_FLASH_ADDRESS);
                     debugPrint(httpConfig);
-                     StaticJsonBuffer<1024> jsonBuffer;
+                    const size_t bufferSize = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(6) + 510;
+                    StaticJsonBuffer<bufferSize> jsonBuffer;
                     JsonObject &config = jsonBuffer.parseObject(httpConfig);
                     JsonObject& config2 = config["httpConfig"];
                     if(config.success())

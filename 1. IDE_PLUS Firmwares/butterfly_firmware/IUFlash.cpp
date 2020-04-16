@@ -546,7 +546,7 @@ File IUFSFlash::openConfigFile(storedConfig configType,
 
 String IUFSFlash::readInternalFlash(uint32_t address)
 {
-    uint16_t MaxConfigLenth = 510;
+    uint16_t MaxConfigLenth = 512;
     uint8_t type;
     uint16_t length;
     uint8_t result[MaxConfigLenth];
@@ -554,7 +554,7 @@ String IUFSFlash::readInternalFlash(uint32_t address)
     stm32l4_flash_unlock();
     memset(result,'\0',sizeof(result));
     type = *(uint8_t*)(address );
-    length = *(uint8_t*)(address + 1) + *(uint8_t*)(address + 2) - 1;
+    length = *(uint8_t*)(address + 1) + *(uint8_t*)(address + 2);
     delay(1000);
     if(length < MaxConfigLenth && length > 0 )
     {
@@ -580,7 +580,7 @@ void IUFSFlash::writeInternalFlash(uint8_t type, uint32_t address, uint16_t data
   allData[0] = type;
   if(dataLength <= maxDataperByte){
     allData[1] = dataLength;
-    allData[2] = 1;
+    allData[2] = 0;
   }else{
     allData[1] = maxDataperByte;
     allData[2] = dataLength - maxDataperByte;
