@@ -28,6 +28,7 @@ class IUFlash
                                      CFG_MQTT_SERVER,
                                      CFG_MQTT_CREDS,
                                      CFG_FFT,
+                                     CFG_HTTP,
                                      CFG_OTA,
                                      CFG_FORCE_OTA, // Forced OTA request,
                                      CFG_MODBUS_SLAVE,

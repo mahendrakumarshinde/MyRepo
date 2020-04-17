@@ -478,73 +478,89 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     if (subConfig.success()) {
         //configureAllFeatures(subConfig);
         bool dataWritten = false;
-        // iuFlash.writeInternalFlash(1,CONFIG_HTTP_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
-        if (saveToFlash) {
-            //DOSFS.begin();
-            File httpFile = DOSFS.open("httpConfig.conf", "w");
-            if (httpFile)
-            {
-                
-                if (loopDebugMode) {
-                 debugPrint(F("Writting into file: "), true);
-                }
-                httpFile.print(jsonChar);
-                httpFile.close();
-                dataWritten = true;
-            }
-            else if (loopDebugMode) {
-                 debugPrint("Failed to write into file: httpConfig.conf ");
-                
-            }  
-        
+        bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_HTTP, root, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime(), messageId);
+        if(loopDebugMode) { 
+            debugPrint("Validation: ", false);
+            debugPrint(validationResultString); 
+            debugPrint("HTTP configuration validation result: ", false); 
+            debugPrint(validConfiguration);
         }
-        if(dataWritten == true){
-            iuFlash.writeInternalFlash(1,CONFIG_HTTP_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
-          //configureBoardFromFlash("httpConfig.conf",dataWritten);
-          JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
-
-        const char* messageId = config["messageId"];
-        const char*  host = config["httpConfig"]["host"].as<char*>();
-        int port = config["httpConfig"]["port"].as<int>();
-        const char* httpPath = config["httpConfig"]["path"].as<char*>();
-        //    debugPrint("Host :",false);debugPrint(host);
-        //    debugPrint("Port :",false);debugPrint(port);
-        //    debugPrint("Path :",false);debugPrint(httpPath);
-
-          //Serial.print("File Content :");Serial.println(jsonChar);
-          //Serial.print("http details :");Serial.print(m_httpHost);Serial.print(",");Serial.print(m_httpPort);Serial.print(",");Serial.print(m_httpPath);Serial.println("/***********/");
-          //iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_HOST,m_httpHost); 
-          //iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_PORT,String(m_httpPort).c_str()); 
-          //iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_ROUTE,m_httpPath); 
-
-          char httpConfig_ack[150];
-          snprintf(httpConfig_ack, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+        if(validConfiguration){
+            // iuFlash.writeInternalFlash(1,CONFIG_HTTP_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
+            if (saveToFlash) {
+                //DOSFS.begin();
+                File httpFile = DOSFS.open("httpConfig.conf", "w");
+                if (httpFile)
+                {
+                    
+                    if (loopDebugMode) {
+                    debugPrint(F("Writting into file: "), true);
+                    }
+                    httpFile.print(jsonChar);
+                    httpFile.close();
+                    dataWritten = true;
+                }
+                else if (loopDebugMode) {
+                    debugPrint("Failed to write into file: httpConfig.conf ");
+                    
+                }  
             
-          debugPrint(F("httpConfig ACK :"));debugPrint(httpConfig_ack);
-          if (iuWiFi.isConnected() )
-          {   iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HTTP_CONFIG_ACK, httpConfig_ack);
-          
-          }else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
-          {     
-                snprintf(ack_config, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
-                      m_macAddress.toString().c_str(),0, 2, m_macAddress.toString().c_str(),messageId);
-                   
-                    debugPrint(ack_config,true);
-                    iuEthernet.write(ack_config); 
-                    iuEthernet.write("\n");
-                //iuEthernet.write(httpConfig_ack);
-          }
-          
-          
-          
-          //stm reset
-          delay(10);
-          if(strcmp( host, m_httpHost) != 0  || port != m_httpPort || strcmp(httpPath, m_httpPath) != 0 ){
-                DOSFS.end();
-                delay(10);
-                STM32.reset();
-          }
-          
+            }
+            if(dataWritten == true){
+                iuFlash.writeInternalFlash(1,CONFIG_HTTP_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
+            //configureBoardFromFlash("httpConfig.conf",dataWritten);
+            JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
+
+            const char* messageId = config["messageId"];
+            const char*  host = config["httpConfig"]["host"].as<char*>();
+            int port = config["httpConfig"]["port"].as<int>();
+            const char* httpPath = config["httpConfig"]["path"].as<char*>();
+            //    debugPrint("Host :",false);debugPrint(host);
+            //    debugPrint("Port :",false);debugPrint(port);
+            //    debugPrint("Path :",false);debugPrint(httpPath);
+
+            //Serial.print("File Content :");Serial.println(jsonChar);
+            //Serial.print("http details :");Serial.print(m_httpHost);Serial.print(",");Serial.print(m_httpPort);Serial.print(",");Serial.print(m_httpPath);Serial.println("/***********/");
+            //iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_HOST,m_httpHost); 
+            //iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_PORT,String(m_httpPort).c_str()); 
+            //iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_ROUTE,m_httpPath); 
+
+            // char httpConfig_ack[150];
+            // snprintf(httpConfig_ack, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+                
+            // debugPrint(F("httpConfig ACK :"));debugPrint(httpConfig_ack);
+            if (iuWiFi.isConnected() )
+            {   
+                iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HTTP_CONFIG_ACK, validationResultString);
+            
+            }else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
+            {     
+                    snprintf(ack_config, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
+                        m_macAddress.toString().c_str(),0, 2, m_macAddress.toString().c_str(),messageId);
+                    
+                        debugPrint(ack_config,true);
+                        iuEthernet.write(ack_config); 
+                        iuEthernet.write("\n");
+                    //iuEthernet.write(httpConfig_ack);
+            }
+            
+            
+            
+            //stm reset
+            delay(10);
+            if(strcmp( host, m_httpHost) != 0  || port != m_httpPort || strcmp(httpPath, m_httpPath) != 0 ){
+                    DOSFS.end();
+                    delay(10);
+                    STM32.reset();
+            }
+            
+            }
+        }else{
+            if (iuWiFi.isConnected() )
+            {   
+                iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HTTP_CONFIG_ACK, validationResultString);
+            
+            }
         }
         
     } 
