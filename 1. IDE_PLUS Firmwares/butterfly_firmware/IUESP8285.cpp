@@ -286,31 +286,85 @@ void IUESP8285::saveConfigToFlash(IUFlash *iuFlashPtr,
 
 bool IUESP8285::configure(JsonVariant &config)
 {
-    bool success = true;  // success if at least "ssid" and "psk" found
-    const char *value;
-//    value = config.get<const char*>("ssid");
-    value = config["ssid"];
-    if (value) { setSSID(value, strlen(value)); }
-    else { success = false; }
-//    value = config.get<const char*>("psk");
-    value = config["psk"];
-    if (value) { setPassword(value, strlen(value)); }
-    else { success = false; }
-//    value = config.get<const char*>("static");
-    value = config["static"];
-    if (value) { setStaticIP(value, strlen(value)); }
-//    value = config.get<const char*>("gateway");
-    value = config["gateway"];
-    if (value) { setGateway(value, strlen(value)); }
-//    value = config.get<const char*>("subnet");
-    value = config["subnet"];
-    if (value) { setSubnetMask(value, strlen(value)); }
-    // Send to WiFi module (consistency check is done inside send functions)
-    m_credentialSent = false;
-    sendWiFiCredentials();
-    sendStaticConfig();
+    bool success = true;
+    const char* AuthType = config["auth_type"];
+    const char* tempSSID = config["ssid"];
+    const char* tempPassword = config ["password"];
+
+    if(debugMode) {
+        debugPrint("SSID :", false); debugPrint(m_ssid);
+        debugPrint("Password : ",false);debugPrint(m_psk);
+    }
+    
+    if(strncmp(AuthType, "NONE", 4) == 0)
+    {
+        //TO DO Implement
+    }
+    else if(strncmp(AuthType, "WPA-PSK", 7) == 0)
+    {
+        setSSID(tempSSID,strlen(tempSSID));
+        setPassword(tempPassword,strlen(tempPassword));
+        sendWiFiCredentials();
+    }
+    else if(strncmp(AuthType, "EAP-PEAP", 8) == 0)
+    {
+        //TO DO Implement
+    }
+    else if(strncmp(AuthType, "EAP-TLS", 7) == 0)
+    {
+        //TO DO Implement
+    }
+    else if(strncmp(AuthType, "STATIC-NONE", 11) == 0)
+    {
+        //TO DO Implement
+    }
+    else if(strncmp(AuthType, "STATIC-WPA-PSK", 15) == 0)
+    {
+        //TO DO Implement
+    }
+    else if(strncmp(AuthType, "STATIC-EAP-PEAP", 16) == 0)
+    {
+        //TO DO Implement
+    }
+    else if(strncmp(AuthType, "STATIC-EAP-TLS", 14) == 0)
+    {
+        //TO DO Implement
+    }
+    else
+    {
+        success = false;
+    }
     return success;
-};
+    
+}
+
+// bool IUESP8285::configure(JsonVariant &config)
+// {
+//     bool success = true;  // success if at least "ssid" and "psk" found
+//     const char *value;
+// //    value = config.get<const char*>("ssid");
+//     value = config["ssid"];
+//     if (value) { setSSID(value, strlen(value)); }
+//     else { success = false; }
+// //    value = config.get<const char*>("psk");
+//     value = config["password"];
+//     if (value) { setPassword(value, strlen(value)); }
+//     else { success = false; }
+// //    value = config.get<const char*>("static");
+//     value = config["static"];
+//     if (value) { setStaticIP(value, strlen(value)); }
+// //    value = config.get<const char*>("gateway");
+//     value = config["gateway"];
+//     if (value) { setGateway(value, strlen(value)); }
+// //    value = config.get<const char*>("subnet");
+//     value = config["subnet"];
+//     if (value) { setSubnetMask(value, strlen(value)); }
+//     // Send to WiFi module (consistency check is done inside send functions)
+//     m_credentialSent = false;
+//     sendWiFiCredentials();
+//     sendStaticConfig();
+//     return success;
+// };
 
 void IUESP8285::setSSID(const char *ssid, uint8_t length)
 {
@@ -448,81 +502,81 @@ void IUESP8285::processUserMessage(char *buff, IUFlash *iuFlashPtr)
         }
         connect();
     }
-    else if (strncmp(buff, "WIFI-SSID-", 10) == 0)
-    {
-        uint16_t len = strlen(buff);
-        if (strcmp(&buff[len - 10], "-DISS-IFIW") != 0)
-        {
-            if (debugMode)
-            {
-                debugPrint("Unparsable SSID");
-            }
-            return;
-        }
-        setSSID(&buff[10], len - 20);
-        sendWiFiCredentials();
-        saveConfigToFlash(iuFlashPtr);
-    }
-    else if (strncmp(buff, "WIFI-PW-", 8) == 0)
-    {
-        uint16_t len = strlen(buff);
-        if (strcmp(&buff[len - 8], "-WP-IFIW") != 0)
-        {
-            if (debugMode)
-            {
-                debugPrint("Unparsable password");
-            }
-            return;
-        }
-        setPassword(&buff[8], len - 16);
-        sendWiFiCredentials();
-        saveConfigToFlash(iuFlashPtr);
-    }
-    else if (strncmp(buff, "WIFI-IP-", 8) == 0)
-    {
-        uint16_t len = strlen(buff);
-        if (strcmp(&buff[len - 8], "-PI-IFIW") != 0 ||
-            !setStaticIP(&buff[8], len - 16))
-        {
-            if (debugMode)
-            {
-                debugPrint("Unparsable Static IP");
-            }
-            return;
-        }
-        sendStaticConfig();
-        saveConfigToFlash(iuFlashPtr);
-    }
-    else if (strncmp(buff, "WIFI-GTW-", 9) == 0)
-    {
-        uint16_t len = strlen(buff);
-        if (strcmp(&buff[len - 9], "-WTG-IFIW") != 0 ||
-            !setGateway(&buff[9], len - 18))
-        {
-            if (debugMode)
-            {
-                debugPrint("Unparsable Gateway IP");
-            }
-            return;
-        }
-        sendStaticConfig();
-        saveConfigToFlash(iuFlashPtr);
-    }
-    else if (strncmp(buff, "WIFI-SM-", 8) == 0)
-    {
-        uint16_t len = strlen(buff);
-        if (strcmp(&buff[len - 8], "-MS-IFIW") != 0 ||
-            !setSubnetMask(&buff[8], len - 16))
-        {
-            if (debugMode)
-            {
-                debugPrint("Unparsable Subnet Mask IP");
-            }
-            return;
-        }
-        sendStaticConfig();
-        saveConfigToFlash(iuFlashPtr);
-    }
+    // else if (strncmp(buff, "WIFI-SSID-", 10) == 0)
+    // {
+    //     uint16_t len = strlen(buff);
+    //     if (strcmp(&buff[len - 10], "-DISS-IFIW") != 0)
+    //     {
+    //         if (debugMode)
+    //         {
+    //             debugPrint("Unparsable SSID");
+    //         }
+    //         return;
+    //     }
+    //     setSSID(&buff[10], len - 20);
+    //     sendWiFiCredentials();
+    //     saveConfigToFlash(iuFlashPtr);
+    // }
+    // else if (strncmp(buff, "WIFI-PW-", 8) == 0)
+    // {
+    //     uint16_t len = strlen(buff);
+    //     if (strcmp(&buff[len - 8], "-WP-IFIW") != 0)
+    //     {
+    //         if (debugMode)
+    //         {
+    //             debugPrint("Unparsable password");
+    //         }
+    //         return;
+    //     }
+    //     setPassword(&buff[8], len - 16);
+    //     sendWiFiCredentials();
+    //     saveConfigToFlash(iuFlashPtr);
+    // }
+    // else if (strncmp(buff, "WIFI-IP-", 8) == 0)
+    // {
+    //     uint16_t len = strlen(buff);
+    //     if (strcmp(&buff[len - 8], "-PI-IFIW") != 0 ||
+    //         !setStaticIP(&buff[8], len - 16))
+    //     {
+    //         if (debugMode)
+    //         {
+    //             debugPrint("Unparsable Static IP");
+    //         }
+    //         return;
+    //     }
+    //     sendStaticConfig();
+    //     saveConfigToFlash(iuFlashPtr);
+    // }
+    // else if (strncmp(buff, "WIFI-GTW-", 9) == 0)
+    // {
+    //     uint16_t len = strlen(buff);
+    //     if (strcmp(&buff[len - 9], "-WTG-IFIW") != 0 ||
+    //         !setGateway(&buff[9], len - 18))
+    //     {
+    //         if (debugMode)
+    //         {
+    //             debugPrint("Unparsable Gateway IP");
+    //         }
+    //         return;
+    //     }
+    //     sendStaticConfig();
+    //     saveConfigToFlash(iuFlashPtr);
+    // }
+    // else if (strncmp(buff, "WIFI-SM-", 8) == 0)
+    // {
+    //     uint16_t len = strlen(buff);
+    //     if (strcmp(&buff[len - 8], "-MS-IFIW") != 0 ||
+    //         !setSubnetMask(&buff[8], len - 16))
+    //     {
+    //         if (debugMode)
+    //         {
+    //             debugPrint("Unparsable Subnet Mask IP");
+    //         }
+    //         return;
+    //     }
+    //     sendStaticConfig();
+    //     saveConfigToFlash(iuFlashPtr);
+    // }
 }
 
 
