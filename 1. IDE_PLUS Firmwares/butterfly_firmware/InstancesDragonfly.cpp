@@ -188,7 +188,7 @@ FeatureTemplate<float> temperature("TMP", 2, 1, temperatureValues);
 
 // Sensor data
 q15_t audioValues[4096];
-FeatureTemplate<q15_t> audio("SND", 2, 2048, audioValues);
+FeatureTemplate<q15_t> audio("SND", 1, 4096, audioValues);
 
 // 2048 sample long features
 __attribute__((section(".noinit2"))) float audioDB2048Values[4];
