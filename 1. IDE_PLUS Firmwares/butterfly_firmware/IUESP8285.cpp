@@ -289,22 +289,26 @@ bool IUESP8285::configure(JsonVariant &config)
     bool success = true;
     const char* AuthType = config["auth_type"];
     const char* tempSSID = config["ssid"];
-    const char* tempPassword = config ["password"];
+    const char* tempPassword = config["password"];
+    const char* tempStaticIP = config["static"];
+    const char* tempGatewayIP = config["gateway"];
+    const char* tempSubnetIP = config["subnet"];
 
     if(debugMode) {
         debugPrint("SSID :", false); debugPrint(m_ssid);
         debugPrint("Password : ",false);debugPrint(m_psk);
+        debugPrint("AuthType : ",false);debugPrint(AuthType);
     }
-    
+
     if(strncmp(AuthType, "NONE", 4) == 0)
     {
-        //TO DO Implement
+       setSSID(tempSSID,strlen(tempSSID));
+       setPassword(NULL,NULL);
     }
     else if(strncmp(AuthType, "WPA-PSK", 7) == 0)
     {
         setSSID(tempSSID,strlen(tempSSID));
         setPassword(tempPassword,strlen(tempPassword));
-        sendWiFiCredentials();
     }
     else if(strncmp(AuthType, "EAP-PEAP", 8) == 0)
     {
@@ -316,7 +320,11 @@ bool IUESP8285::configure(JsonVariant &config)
     }
     else if(strncmp(AuthType, "STATIC-NONE", 11) == 0)
     {
-        //TO DO Implement
+        setSSID(tempSSID,strlen(tempSSID));
+        setPassword(NULL,NULL);
+        setStaticIP(tempStaticIP,strlen(tempStaticIP));
+        setGateway(tempGatewayIP,strlen(tempGatewayIP));
+        setSubnetMask(tempSubnetIP,strlen(tempSubnetIP));
     }
     else if(strncmp(AuthType, "STATIC-WPA-PSK", 15) == 0)
     {
@@ -334,6 +342,8 @@ bool IUESP8285::configure(JsonVariant &config)
     {
         success = false;
     }
+    sendWiFiCredentials();
+    sendStaticConfig();
     return success;
     
 }

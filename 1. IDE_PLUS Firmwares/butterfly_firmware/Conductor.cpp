@@ -129,12 +129,12 @@ bool Conductor::configureFromFlash(IUFlash::storedConfig configType)
                 activateFeature(&opStateFeature);
                 break;
             case IUFlash::CFG_WIFI0:
-                iuWiFi.configure(config);
-                    break;
             case IUFlash::CFG_WIFI1:
             case IUFlash::CFG_WIFI2:
             case IUFlash::CFG_WIFI3:
             case IUFlash::CFG_WIFI4:
+                iuWiFi.configure(config);
+                        break;
             case IUFlash::CFG_MODBUS_SLAVE:
                 debugPrint("CONFIGURING THE MODBUS SLAVE");
                 iuModbusSlave.setupModbusDevice(config);
@@ -1049,20 +1049,32 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
         
     } // If json is incorrect, it will result in parsing error in jsonBuffer.parseObject(json) which will cause the processConfiguration call to return
-    subConfig = root["ssid"];
+    subConfig = root["auth_type"];
     if (subConfig.success()) {
         //configureAllFeatures(subConfig);
+        bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_WIFI0, variant, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime(), messageId);
+        if(loopDebugMode) { 
+            debugPrint("Validation: ", false);
+            debugPrint(validationResultString); 
+            debugPrint("FFT configuration validation result: ", false); 
+            debugPrint(validConfiguration);
+        }
         bool dataWritten = false;
-        if (saveToFlash) {
-            iuFlash.saveConfigJson(IUFlash::CFG_WIFI0, variant);
-            debugPrint(F("Writing into wifi0 file"));
-            dataWritten = true;
-        
+        if(validConfiguration){
+            if (saveToFlash) {
+                iuFlash.saveConfigJson(IUFlash::CFG_WIFI0, variant);
+                debugPrint(F("Writing into wifi0 file"));
+                dataWritten = true;
+                iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
+            }
+            if(dataWritten == true){
+                iuWiFi.configure(variant);
+            }
+        }else {
+            if(loopDebugMode) debugPrint("Received invalid FFT configuration");
+            iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
         }
-        if(dataWritten == true){
-            iuWiFi.configure(variant);
-        }
-        
+
     }
     
     return true;
