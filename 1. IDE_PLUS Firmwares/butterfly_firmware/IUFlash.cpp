@@ -438,10 +438,6 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
             // Indicate the type of validation
             validationResult["messageType"] = "wifi-config-ack";
 
-            // If the received config matches the current config, report an error
-            bool sameBlockSize = false;
-            bool sameSamplingRate = false;
-
             //Validation for Auth Type field
             if(config.containsKey("auth_type")) {
                 const char* AuthType = config["auth_type"];
