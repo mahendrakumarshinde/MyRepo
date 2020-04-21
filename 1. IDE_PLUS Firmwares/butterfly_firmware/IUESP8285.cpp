@@ -290,6 +290,7 @@ bool IUESP8285::configure(JsonVariant &config)
     const char* AuthType = config["auth_type"];
     const char* tempSSID = config["ssid"];
     const char* tempPassword = config["password"];
+    const char* temoUsername = config["username"];
     const char* tempStaticIP = config["static"];
     const char* tempGatewayIP = config["gateway"];
     const char* tempSubnetIP = config["subnet"];
@@ -302,8 +303,8 @@ bool IUESP8285::configure(JsonVariant &config)
 
     if(strncmp(AuthType, "NONE", 4) == 0)
     {
-       setSSID(tempSSID,strlen(tempSSID));
-       setPassword(NULL,NULL);
+        setSSID(tempSSID,strlen(tempSSID));
+        setPassword(NULL,NULL);
     }
     else if(strncmp(AuthType, "WPA-PSK", 7) == 0)
     {
@@ -326,11 +327,11 @@ bool IUESP8285::configure(JsonVariant &config)
         setGateway(tempGatewayIP,strlen(tempGatewayIP));
         setSubnetMask(tempSubnetIP,strlen(tempSubnetIP));
     }
-    else if(strncmp(AuthType, "STATIC-WPA-PSK", 15) == 0)
+    else if(strncmp(AuthType, "STATIC-WPA-PSK", 14) == 0)
     {
         //TO DO Implement
     }
-    else if(strncmp(AuthType, "STATIC-EAP-PEAP", 16) == 0)
+    else if(strncmp(AuthType, "STATIC-EAP-PEAP", 15) == 0)
     {
         //TO DO Implement
     }
