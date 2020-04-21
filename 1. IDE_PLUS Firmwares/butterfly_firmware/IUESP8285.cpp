@@ -290,7 +290,7 @@ bool IUESP8285::configure(JsonVariant &config)
     const char* AuthType = config["auth_type"];
     const char* tempSSID = config["ssid"];
     const char* tempPassword = config["password"];
-    const char* temoUsername = config["username"];
+    const char* tempUsername = config["username"];
     const char* tempStaticIP = config["static"];
     const char* tempGatewayIP = config["gateway"];
     const char* tempSubnetIP = config["subnet"];
@@ -405,6 +405,21 @@ void IUESP8285::setPassword(const char *psk, uint8_t length)
     strncpy(m_psk, psk, charCount);
     for (uint8_t i = charCount; i < wifiCredentialLength; ++i) {
         m_psk[i] = 0;
+    }
+    m_credentialValidator.receivedMessage(1);
+    m_credentialSent = false;
+}
+
+void IUESP8285::setUsername(const char *username, uint8_t length)
+{
+    if (m_credentialValidator.hasTimedOut())
+    {
+        m_credentialValidator.reset();
+    }
+    uint8_t charCount = min(wifiCredentialLength, length);
+    strncpy(m_username, username, charCount);
+    for (uint8_t i = charCount; i < wifiCredentialLength; ++i) {
+        m_username[i] = 0;
     }
     m_credentialValidator.receivedMessage(1);
     m_credentialSent = false;

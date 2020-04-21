@@ -1056,7 +1056,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         if(loopDebugMode) { 
             debugPrint("Validation: ", false);
             debugPrint(validationResultString); 
-            debugPrint("FFT configuration validation result: ", false); 
+            debugPrint("WiFi configuration validation result: ", false); 
             debugPrint(validConfiguration);
         }
         bool dataWritten = false;
@@ -1071,7 +1071,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 iuWiFi.configure(variant);
             }
         }else {
-            if(loopDebugMode) debugPrint("Received invalid FFT configuration");
+            if(loopDebugMode) debugPrint("Received invalid WiFi configuration");
             iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
         }
 

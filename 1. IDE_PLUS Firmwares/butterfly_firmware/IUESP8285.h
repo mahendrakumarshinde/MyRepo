@@ -82,6 +82,7 @@ class IUESP8285 : public IUSerial, public Component
         bool setGateway(const char *gatewayIP, uint8_t len);
         void setSubnetMask(IPAddress subnetIP);
         bool setSubnetMask(const char *subnetIP, uint8_t len);
+        void setUsername(const char *username, uint8_t length);
         /***** User Inbound communication *****/
         void processUserMessage(char *buff, IUFlash *iuFlashPtr);
         /***** Guest Inbound communication *****/
@@ -122,6 +123,7 @@ class IUESP8285 : public IUSerial, public Component
         /***** Configuring the WiFi *****/
         char m_ssid[wifiCredentialLength];
         char m_psk[wifiCredentialLength];
+        char m_username[wifiCredentialLength];
         MultiMessageValidator<2> m_credentialValidator;
         bool m_credentialSent = false;
         bool m_credentialReceptionConfirmed = false;
