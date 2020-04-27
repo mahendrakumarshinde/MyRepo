@@ -83,6 +83,7 @@ class IUESP8285 : public IUSerial, public Component
         void setSubnetMask(IPAddress subnetIP);
         bool setSubnetMask(const char *subnetIP, uint8_t len);
         void setUsername(const char *username, uint8_t length);
+        void setAuthType(const char *authtype, uint8_t length);
         /***** User Inbound communication *****/
         void processUserMessage(char *buff, IUFlash *iuFlashPtr);
         /***** Guest Inbound communication *****/
@@ -124,6 +125,7 @@ class IUESP8285 : public IUSerial, public Component
         char m_ssid[wifiCredentialLength];
         char m_psk[wifiCredentialLength];
         char m_username[wifiCredentialLength];
+        char m_authtype[wifiCredentialLength];
         MultiMessageValidator<2> m_credentialValidator;
         bool m_credentialSent = false;
         bool m_credentialReceptionConfirmed = false;

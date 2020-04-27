@@ -229,6 +229,10 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         case MSPCommand::WIFI_RECEIVE_PASSWORD:
             receiveNewCredentials(NULL, buffer);
             break;
+        case MSPCommand::WIFI_RECEIVE_AUTH_TYPE:       //wifi Auth type  todo Implement
+            strcpy(m_wifiAuthType,buffer);
+            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, m_wifiAuthType);
+            break;
         case MSPCommand::WIFI_FORGET_CREDENTIALS:
             forgetWiFiCredentials();
             disconnectWifi();
@@ -756,7 +760,13 @@ void Conductor::disconnectWifi(bool wifiOff)
         WiFi.disconnect(wifiOff);
     }
 }
-
+String Conductor :: IpAddress2String(const IPAddress& ipAddress)
+{
+  return String(ipAddress[0]) + String(".") +\
+  String(ipAddress[1]) + String(".") +\
+  String(ipAddress[2]) + String(".") +\
+  String(ipAddress[3])  ; 
+}
 /**
  * Attempt to connect or reconnect to the WiFi
  *
@@ -793,6 +803,7 @@ bool Conductor::reconnect(bool forceNewCredentials)
             // ESP.eraseConfig();  // ESP32_PORT_TRUE
             disconnectWifi();
             delay(1000);  // Wait for effective disconnection
+            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "Disconnect wifi : ");
         }
     }
     uint32_t current = millis();
@@ -814,9 +825,27 @@ bool Conductor::reconnect(bool forceNewCredentials)
         if (uint32_t(m_staticIp) > 0 && uint32_t(m_gateway) > 0 &&
             uint32_t(m_subnetMask) > 0)
         {
-            WiFi.config(m_staticIp, m_gateway, m_subnetMask);
+            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "Applying WiFi Static Config : ");
+            bool wifistatus = WiFi.config(m_staticIp, m_gateway, m_subnetMask);
+            String tempstaticip = IpAddress2String(m_staticIp);
+            String tempstaticgateway = IpAddress2String(m_gateway);
+            String tempstaticsubnet = IpAddress2String(m_subnetMask);
+            
+
+            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, tempstaticip.c_str());
+            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, tempstaticgateway.c_str());
+            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, tempstaticsubnet.c_str());
+            
+            if(wifistatus==true){
+                        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"True" );
+            }
+            else {
+                 hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"False" );
+            }
         }
         WiFi.begin(m_userSSID, m_userPassword);
+        String localip = IpAddress2String(WiFi.localIP());
+        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, localip.c_str());
         m_lastConnectionAttempt = current;
         wifiConnected = (waitForConnectResult() == WL_CONNECTED);
         if (debugMode && wifiConnected) {

@@ -453,10 +453,13 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                 }else if(strncmp(AuthType, "WPA-PSK", 7) == 0){
                     if(!ssid) { errorMessages.add("SSID Not found"); validConfig = false; }
                     if(!password){ errorMessages.add("Password Not found"); validConfig = false; }
-                }else if(strncmp(AuthType, "EAP-PEAP", 8) == 0 || strncmp(AuthType, "EAP-TLS", 7) == 0  ){
+                }else if(strncmp(AuthType, "EAP-PEAP", 8) == 0){
                     if(!ssid) { errorMessages.add("SSID Not found"); validConfig = false; }
                     if(!password){ errorMessages.add("Password Not found"); validConfig = false; }
                     if(!username){ errorMessages.add("Username Not found"); validConfig = false; }
+                }else if(strncmp(AuthType, "EAP-TLS", 7) == 0){
+                    if(!ssid) { errorMessages.add("SSID Not found"); validConfig = false; }
+                    if(!password){ errorMessages.add("Password Not found"); validConfig = false; }
                 }else if(strncmp(AuthType, "STATIC-NONE", 11) == 0){
                     if(!ssid){ errorMessages.add("SSID Not found"); validConfig = false; }
                     if(!staticIP){ errorMessages.add("Static IP Not found"); validConfig = false; }

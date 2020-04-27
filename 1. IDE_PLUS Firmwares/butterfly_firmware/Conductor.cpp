@@ -2450,6 +2450,9 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             if (loopDebugMode) {
                 debugPrint(buff);
             }
+             Serial.print("Debug from ESP : ");
+            Serial.write(buff);
+            Serial.println();
             break;
         case MSPCommand::OTA_INIT_REQUEST:
             if(doOnceFWValid == true)
