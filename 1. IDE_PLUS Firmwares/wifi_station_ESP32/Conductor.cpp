@@ -232,6 +232,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         case MSPCommand::WIFI_RECEIVE_AUTH_TYPE:       //wifi Auth type  todo Implement
             strcpy(m_wifiAuthType,buffer);
             hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, m_wifiAuthType);
+            delay(1);
             break;
         case MSPCommand::WIFI_FORGET_CREDENTIALS:
             forgetWiFiCredentials();
@@ -822,8 +823,9 @@ bool Conductor::reconnect(bool forceNewCredentials)
             }
             return false;
         }
-        if (uint32_t(m_staticIp) > 0 && uint32_t(m_gateway) > 0 &&
-            uint32_t(m_subnetMask) > 0)
+        // if (uint32_t(m_staticIp) > 0 && uint32_t(m_gateway) > 0 &&
+        //     uint32_t(m_subnetMask) > 0)
+        if(strcmp(m_wifiAuthType,"STATIC-WPA-PSK")==0)
         {
             hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "Applying WiFi Static Config : ");
             bool wifistatus = WiFi.config(m_staticIp, m_gateway, m_subnetMask);
@@ -860,6 +862,15 @@ bool Conductor::reconnect(bool forceNewCredentials)
     return wifiConnected;
 }
 
+void Conductor::connectToWiFi(){
+    if (strcmp(m_wifiAuthType,"STATIC-WPA-PSK")==0)
+            {
+                WiFi.config(m_staticIp,m_gateway,m_subnetMask);
+                hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"Static Config Loading");
+            }
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(m_userSSID,m_userPassword);
+}
 /**
  * Wait for WiFi connection to reach a result
  *
@@ -1298,9 +1309,16 @@ void Conductor::autoReconncetWifi()
     uint32_t now = millis();
     if (now - m_lastWifiStatusCheck > (wifiStatusUpdateDelay))
     {
+        // if (uint32_t(m_staticIp) > 0 && uint32_t(m_gateway) > 0 &&
+        //     uint32_t(m_subnetMask) > 0)
+        if(strcmp(m_wifiAuthType,"STATIC-WPA-PSK")==0)
+            {
+                WiFi.config(m_staticIp,m_gateway,m_subnetMask);
+                hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"Static Config Loading Auto reconnect");
+            }
         WiFi.mode(WIFI_STA);
-        WiFi.begin();
-        m_lastWifiStatusCheck = now;
+        WiFi.begin(m_userSSID,m_userPassword);
+       m_lastWifiStatusCheck = now;
     }
 }
 

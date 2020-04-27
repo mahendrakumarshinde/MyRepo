@@ -120,6 +120,7 @@ class Conductor
         void checkOtaPacketTimeout();
         String getOtaRca(int error);
         bool configStatus = false;
+        void connectToWiFi();
     protected:
         /***** Config from Host *****/      
         char HOST_FIRMWARE_VERSION[8];      //filled when the ESP starts or when it connects to MQTT broker
@@ -180,7 +181,7 @@ class Conductor
         bool otaStsDataSent = false;
         bool otaInitTimeoutFlag = false;
         uint32_t otaInitTimeout = 0;
-        char* m_wifiAuthType;
+        char m_wifiAuthType[wifiCredentialLength];
 };
 
 #endif // CONDUCTOR_H

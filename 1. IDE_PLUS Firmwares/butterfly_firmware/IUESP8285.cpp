@@ -295,22 +295,19 @@ bool IUESP8285::configure(JsonVariant &config)
     const char* tempGatewayIP = config["gateway"];
     const char* tempSubnetIP = config["subnet"];
 
-    if(debugMode) {
-        debugPrint("SSID :", false); debugPrint(m_ssid);
-        debugPrint("Password : ",false);debugPrint(m_psk);
-        debugPrint("AuthType : ",false);debugPrint(AuthType);
-    }
-     setAuthType(AuthType,strlen(AuthType));
+
     if(strncmp(AuthType, "NONE", 4) == 0)
     {
         setSSID(tempSSID,strlen(tempSSID));
         setPassword(NULL,NULL);
+        clearStaticIPBuffers();
       //  setAuthType(AuthType,strlen(AuthType));
     }
     else if(strncmp(AuthType, "WPA-PSK", 7) == 0)
     {
         setSSID(tempSSID,strlen(tempSSID));
         setPassword(tempPassword,strlen(tempPassword));
+        clearStaticIPBuffers();
        // setAuthType(AuthType,strlen(AuthType));
     }
     else if(strncmp(AuthType, "EAP-PEAP", 8) == 0)
@@ -342,6 +339,7 @@ bool IUESP8285::configure(JsonVariant &config)
         setStaticIP(tempStaticIP,strlen(tempStaticIP));
         setGateway(tempGatewayIP,strlen(tempGatewayIP));
         setSubnetMask(tempSubnetIP,strlen(tempSubnetIP));
+        debugPrint("Static Ip Config");
        // setAuthType(AuthType,strlen(AuthType));
     }
     else if(strncmp(AuthType, "STATIC-EAP-PEAP", 15) == 0)
@@ -368,6 +366,15 @@ bool IUESP8285::configure(JsonVariant &config)
     {
         success = false;
     }
+    if(debugMode) {
+        debugPrint("SSID :", false); debugPrint(m_ssid);
+        debugPrint("Password : ",false);debugPrint(m_psk);
+        debugPrint("SSID :", false); debugPrint(m_ssid);
+        debugPrint("IP : ",false);debugPrint(m_staticIP);
+        debugPrint("Subnet : ",false);debugPrint(m_staticSubnet);
+        debugPrint("gateway : ",false);debugPrint(m_staticGateway);
+    }
+    setAuthType(AuthType,strlen(AuthType));
     sendWiFiCredentials();
     sendStaticConfig();
     return success;
@@ -460,7 +467,7 @@ void IUESP8285::setAuthType(const char *authtype, uint8_t length)
     for (uint8_t i = charCount; i < wifiCredentialLength; ++i) {
         m_authtype[i] = 0;
     }
-    m_credentialValidator.receivedMessage(1);
+    m_credentialValidator.receivedMessage(0);
     m_credentialSent = false;
 }
 void IUESP8285::setStaticIP(IPAddress staticIP)
@@ -490,7 +497,14 @@ bool IUESP8285::setStaticIP(const char *staticIP, uint8_t len)
     }
     return success;
 }
+void IUESP8285::clearStaticIPBuffers(){
+    for(int i=0;i<wifiCredentialLength;i++){
+        m_staticIP[i] = '\0';
+        m_staticGateway[i] = '\0';
+        m_staticSubnet[i] = '\0';
+    }
 
+}
 void IUESP8285::setGateway(IPAddress gatewayIP)
 {
     if (m_staticConfigValidator.hasTimedOut()) {

@@ -154,6 +154,7 @@ class IUESP8285 : public IUSerial, public Component
         /***** Callbacks *****/
         void (*m_onConnect)() = NULL;
         void (*m_onDisconnect)() = NULL;
+        void clearStaticIPBuffers();
 };
 
 #endif // IUESP8285_H

@@ -2912,6 +2912,9 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
         //    Serial.print("Buffer:");Serial.println(buff);
             
             break;
+        case MSPCommand::ASK_WIFI_CONFIG:
+            configureFromFlash(IUFlash::CFG_WIFI0);
+            break;
         case MSPCommand::SET_PENDING_HTTP_CONFIG:
             {
              //Serial.print("HTTP Pending Response ..............................................:");
