@@ -823,31 +823,9 @@ bool Conductor::reconnect(bool forceNewCredentials)
             }
             return false;
         }
-        // if (uint32_t(m_staticIp) > 0 && uint32_t(m_gateway) > 0 &&
-        //     uint32_t(m_subnetMask) > 0)
-        if(strncmp(m_wifiAuthType, "STATIC-NONE", 11) == 0 || strncmp(m_wifiAuthType, "STATIC-WPA-PSK", 14) == 0)
-        {
-           // hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "Applying WiFi Static Config : ");
-           WiFi.config(m_staticIp, m_gateway, m_subnetMask);
-            // String tempstaticip = IpAddress2String(m_staticIp);
-            // String tempstaticgateway = IpAddress2String(m_gateway);
-            // String tempstaticsubnet = IpAddress2String(m_subnetMask);
-            
 
-            // hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, tempstaticip.c_str());
-            // hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, tempstaticgateway.c_str());
-            // hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, tempstaticsubnet.c_str());
-            
-            // if(wifistatus==true){
-            //             hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"True" );
-            // }
-            // else {
-            //      hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"False" );
-            // }
-        }
-        WiFi.begin(m_userSSID, m_userPassword);
-       // String localip = IpAddress2String(WiFi.localIP());
-        //hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, localip.c_str());
+        connectToWiFi();
+
         m_lastConnectionAttempt = current;
         wifiConnected = (waitForConnectResult() == WL_CONNECTED);
         if (debugMode && wifiConnected) {
@@ -863,13 +841,53 @@ bool Conductor::reconnect(bool forceNewCredentials)
 }
 
 void Conductor::connectToWiFi(){
-    if (strncmp(m_wifiAuthType, "STATIC-NONE", 11) == 0 || strncmp(m_wifiAuthType, "STATIC-WPA-PSK", 14) == 0)
-            {
-                WiFi.config(m_staticIp,m_gateway,m_subnetMask);
-               // hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"Static Config Loading");
-            }
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(m_userSSID,m_userPassword);
+
+    if (WiFi.getMode() != WIFI_STA)
+    {
+        WiFi.mode(WIFI_STA);
+    }
+
+    if(strncmp(m_wifiAuthType, "NONE", 4)==0)
+    {
+        WiFi.begin(m_userSSID);
+    }
+    else if(strncmp(m_wifiAuthType, "WPA-PSK", 7) == 0)
+    {
+        WiFi.begin(m_userSSID, m_userPassword);
+    }
+    else if(strncmp(m_wifiAuthType, "STATIC-NONE", 11) == 0 )
+    {
+        WiFi.config(m_staticIp, m_gateway, m_subnetMask);
+        delay(200);
+        WiFi.begin(m_userSSID);
+    }
+    else if(strncmp(m_wifiAuthType, "STATIC-WPA-PSK", 14) == 0)
+    {
+        WiFi.config(m_staticIp, m_gateway, m_subnetMask);
+        delay(200);
+        WiFi.begin(m_userSSID, m_userPassword);
+    }
+    else if(strncmp(m_wifiAuthType, "EAP-PEAP", 8) == 0)
+    {
+        // TODO Implemenet
+    }
+    else if(strncmp(m_wifiAuthType, "EAP-TLS", 7) == 0)
+    {
+        // TODO Implement
+    }
+    else if(strncmp(m_wifiAuthType, "STATIC-EAP-PEAP", 15) == 0)
+    {
+        // TODO Implement
+    }
+    else if(strncmp(m_wifiAuthType, "STATIC-EAP-TLS", 14) == 0)
+    {
+        // TODO Implement
+    }
+    else
+    {
+        WiFi.begin();   // Connects with Internal storage credentials
+    }
+    
 }
 /**
  * Wait for WiFi connection to reach a result
@@ -1309,16 +1327,8 @@ void Conductor::autoReconncetWifi()
     uint32_t now = millis();
     if (now - m_lastWifiStatusCheck > (wifiStatusUpdateDelay))
     {
-        // if (uint32_t(m_staticIp) > 0 && uint32_t(m_gateway) > 0 &&
-        //     uint32_t(m_subnetMask) > 0)
-        if(strncmp(m_wifiAuthType, "STATIC-NONE", 11) == 0 || strncmp(m_wifiAuthType, "STATIC-WPA-PSK", 14) == 0)
-            {
-                WiFi.config(m_staticIp,m_gateway,m_subnetMask);
-               // hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"Static Config Loading Auto reconnect");
-            }
-        WiFi.mode(WIFI_STA);
-        WiFi.begin(m_userSSID,m_userPassword);
-       m_lastWifiStatusCheck = now;
+        connectToWiFi();
+        m_lastWifiStatusCheck = now;
     }
 }
 

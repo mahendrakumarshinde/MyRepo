@@ -295,33 +295,28 @@ bool IUESP8285::configure(JsonVariant &config)
     const char* tempGatewayIP = config["gateway"];
     const char* tempSubnetIP = config["subnet"];
 
+    setAuthType(AuthType,strlen(AuthType));
 
     if(strncmp(AuthType, "NONE", 4) == 0)
     {
         setSSID(tempSSID,strlen(tempSSID));
         setPassword(NULL,NULL);
-       // clearStaticIPBuffers();
-      //  setAuthType(AuthType,strlen(AuthType));
     }
     else if(strncmp(AuthType, "WPA-PSK", 7) == 0)
     {
         setSSID(tempSSID,strlen(tempSSID));
         setPassword(tempPassword,strlen(tempPassword));
-        //clearStaticIPBuffers();
-       // setAuthType(AuthType,strlen(AuthType));
     }
     else if(strncmp(AuthType, "EAP-PEAP", 8) == 0)
     {
         setSSID(tempSSID,strlen(tempSSID));
         setPassword(tempPassword,strlen(tempPassword));
         setUsername(tempUsername,strlen(tempUsername));
-      //  setAuthType(AuthType,strlen(AuthType));
     }
     else if(strncmp(AuthType, "EAP-TLS", 7) == 0)
     {
         setSSID(tempSSID,strlen(tempSSID));
         setPassword(tempPassword,strlen(tempPassword));
-       // setAuthType(AuthType,strlen(AuthType));
     }
     else if(strncmp(AuthType, "STATIC-NONE", 11) == 0)               //to be functional
     {
@@ -330,7 +325,6 @@ bool IUESP8285::configure(JsonVariant &config)
         setStaticIP(tempStaticIP,strlen(tempStaticIP));
         setGateway(tempGatewayIP,strlen(tempGatewayIP));
         setSubnetMask(tempSubnetIP,strlen(tempSubnetIP));
-      //  setAuthType(AuthType,strlen(AuthType));
     }
     else if(strncmp(AuthType, "STATIC-WPA-PSK", 14) == 0)            //to be functional
     {
@@ -339,8 +333,6 @@ bool IUESP8285::configure(JsonVariant &config)
         setStaticIP(tempStaticIP,strlen(tempStaticIP));
         setGateway(tempGatewayIP,strlen(tempGatewayIP));
         setSubnetMask(tempSubnetIP,strlen(tempSubnetIP));
-        debugPrint("Static Ip Config");
-       // setAuthType(AuthType,strlen(AuthType));
     }
     else if(strncmp(AuthType, "STATIC-EAP-PEAP", 15) == 0)
     {
@@ -350,7 +342,6 @@ bool IUESP8285::configure(JsonVariant &config)
         setStaticIP(tempStaticIP,strlen(tempStaticIP));
         setGateway(tempGatewayIP,strlen(tempGatewayIP));
         setSubnetMask(tempSubnetIP,strlen(tempSubnetIP));
-      //  setAuthType(AuthType,strlen(AuthType));
     }
     else if(strncmp(AuthType, "STATIC-EAP-TLS", 14) == 0)
     {
@@ -360,21 +351,22 @@ bool IUESP8285::configure(JsonVariant &config)
         setStaticIP(tempStaticIP,strlen(tempStaticIP));
         setGateway(tempGatewayIP,strlen(tempGatewayIP));
         setSubnetMask(tempSubnetIP,strlen(tempSubnetIP));
-      //  setAuthType(AuthType,strlen(AuthType));
     }
     else
     {
         success = false;
     }
     if(debugMode) {
-        debugPrint("SSID :", false); debugPrint(m_ssid);
-        debugPrint("Password : ",false);debugPrint(m_psk);
-        debugPrint("SSID :", false); debugPrint(m_ssid);
-        debugPrint("IP : ",false);debugPrint(m_staticIP);
-        debugPrint("Subnet : ",false);debugPrint(m_staticSubnet);
-        debugPrint("gateway : ",false);debugPrint(m_staticGateway);
+        debugPrint(F("SSID      : "),false); debugPrint(m_ssid);
+        debugPrint(F("SSID      : "),false); debugPrint(m_ssid);
+        debugPrint(F("Password  : "),false);debugPrint(m_psk);
+        debugPrint(F("Username  : "),false); debugPrint(m_username);
+        debugPrint(F("Static IP : "),false);debugPrint(m_staticIP);
+        debugPrint(F("Subnet    : "),false);debugPrint(m_staticSubnet);
+        debugPrint(F("Gateway   : "),false);debugPrint(m_staticGateway);
+        debugPrint(F("Auth Type : "),false);debugPrint(m_wifiAuthType);
     }
-    setAuthType(AuthType,strlen(AuthType));
+
     sendWiFiCredentials();
     sendStaticConfig();
     return success;
@@ -463,9 +455,9 @@ void IUESP8285::setAuthType(const char *authtype, uint8_t length)
         m_credentialValidator.reset();
     }
     uint8_t charCount = min(wifiCredentialLength, length);
-    strncpy(m_authtype, authtype, charCount);
+    strncpy(m_wifiAuthType, authtype, charCount);
     for (uint8_t i = charCount; i < wifiCredentialLength; ++i) {
-        m_authtype[i] = 0;
+        m_wifiAuthType[i] = 0;
     }
     m_credentialValidator.receivedMessage(0);
     m_credentialSent = false;
@@ -755,7 +747,7 @@ void IUESP8285::sendWiFiCredentials()
     if (m_credentialValidator.completed() && !m_credentialSent)
     {
         if (loopDebugMode) { debugPrint(F("Sending WiFi Credentials")); }
-        sendMSPCommand(MSPCommand::WIFI_RECEIVE_AUTH_TYPE, m_authtype);
+        sendMSPCommand(MSPCommand::WIFI_RECEIVE_AUTH_TYPE, m_wifiAuthType);
         sendMSPCommand(MSPCommand::WIFI_RECEIVE_SSID, m_ssid);
         sendMSPCommand(MSPCommand::WIFI_RECEIVE_PASSWORD, m_psk);
         

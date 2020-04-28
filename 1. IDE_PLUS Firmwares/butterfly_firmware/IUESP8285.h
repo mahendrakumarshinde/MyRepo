@@ -125,7 +125,7 @@ class IUESP8285 : public IUSerial, public Component
         char m_ssid[wifiCredentialLength];
         char m_psk[wifiCredentialLength];
         char m_username[wifiCredentialLength];
-        char m_authtype[wifiCredentialLength];
+        char m_wifiAuthType[wifiCredentialLength];
         MultiMessageValidator<2> m_credentialValidator;
         bool m_credentialSent = false;
         bool m_credentialReceptionConfirmed = false;

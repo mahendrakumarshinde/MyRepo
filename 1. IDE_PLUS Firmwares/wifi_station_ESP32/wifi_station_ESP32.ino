@@ -80,10 +80,8 @@ void setup()
     #if IUDEBUG_ANY == 1
         conductor.reconnect(true);
     #endif
-    // WiFi.mode(WIFI_STA);
-    // WiFi.begin();
+    
     hostSerial.sendMSPCommand(MSPCommand::ASK_WIFI_CONFIG);
-    delay(400);
     conductor.connectToWiFi();
     
 }
