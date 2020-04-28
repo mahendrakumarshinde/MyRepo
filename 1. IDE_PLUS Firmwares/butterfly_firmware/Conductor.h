@@ -276,6 +276,7 @@ class Conductor
         void onBootFlashTest();
         float* getFingerprintsforModbus();
         bool checkforModbusSlaveConfigurations();
+        void checkforWiFiConfigurations();
         
     protected:
         MacAddress m_macAddress;

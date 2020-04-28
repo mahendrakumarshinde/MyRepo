@@ -1063,6 +1063,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         if(validConfiguration){
             if (saveToFlash) {
                 iuFlash.saveConfigJson(IUFlash::CFG_WIFI0, variant);
+                iuFlash.writeInternalFlash(1,CONFIG_WIFI_CONFIG_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
                 debugPrint(F("Writing into wifi0 file"));
                 dataWritten = true;
                 iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
@@ -5899,4 +5900,29 @@ bool Conductor::checkforModbusSlaveConfigurations(){
     
 
 return success;
+}
+
+void Conductor::checkforWiFiConfigurations(){
+
+    // check if configurations are present in the internal flash storage of STM32
+    bool validJson = false;
+    bool success = true;
+    
+    if (iuFlash.checkConfig(CONFIG_WIFI_CONFIG_FLASH_ADDRESS) && ! DOSFS.exists("/iuconfig/wifi0.conf") )
+    {
+        // Read the configurations
+        String config = iuFlash.readInternalFlash(CONFIG_WIFI_CONFIG_FLASH_ADDRESS);
+        if(debugMode){
+            debugPrint("WIFI DEBUG : INTERNAL CONFIG # ",false);
+            debugPrint("Intarnal Flash content #:");
+            debugPrint(config);
+        }
+        char* wifiConfiguration =(char*)config.c_str();
+
+        validJson =  processConfiguration(wifiConfiguration,true);
+        free(wifiConfiguration);
+    }else if (DOSFS.exists("/iuconfig/wifi0.conf"))
+    {
+        configureFromFlash(IUFlash::CFG_WIFI0);
+    }
 }

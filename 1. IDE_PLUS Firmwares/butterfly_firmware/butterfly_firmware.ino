@@ -659,7 +659,7 @@ void setup()
         // delay(500);
         // iuWiFi.hardReset();
         // delay(1000);
-        conductor.configureFromFlash(IUFlash::CFG_WIFI0);
+        conductor.checkforWiFiConfigurations();
         delay(100);
         conductor.modbusStreamingMode = conductor.configureFromFlash(IUFlash::CFG_MODBUS_SLAVE);
         if (conductor.modbusStreamingMode != true)
