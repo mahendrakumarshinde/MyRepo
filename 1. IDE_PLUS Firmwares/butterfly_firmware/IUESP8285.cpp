@@ -347,7 +347,7 @@ bool IUESP8285::configure(JsonVariant &config)
     {
         setSSID(tempSSID,strlen(tempSSID));
         setPassword(tempPassword,strlen(tempPassword));
-        setUsername(tempUsername,strlen(tempUsername));
+       // setUsername(tempUsername,strlen(tempUsername));
         setStaticIP(tempStaticIP,strlen(tempStaticIP));
         setGateway(tempGatewayIP,strlen(tempGatewayIP));
         setSubnetMask(tempSubnetIP,strlen(tempSubnetIP));
