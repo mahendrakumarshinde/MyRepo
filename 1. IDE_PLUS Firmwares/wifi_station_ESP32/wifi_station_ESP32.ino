@@ -83,7 +83,7 @@ void setup()
     // WiFi.mode(WIFI_STA);
     // WiFi.begin();
     hostSerial.sendMSPCommand(MSPCommand::ASK_WIFI_CONFIG);
-    delay(500);
+    delay(400);
     conductor.connectToWiFi();
     
 }

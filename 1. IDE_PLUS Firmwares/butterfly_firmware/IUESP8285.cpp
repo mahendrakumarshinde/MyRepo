@@ -300,14 +300,14 @@ bool IUESP8285::configure(JsonVariant &config)
     {
         setSSID(tempSSID,strlen(tempSSID));
         setPassword(NULL,NULL);
-        clearStaticIPBuffers();
+       // clearStaticIPBuffers();
       //  setAuthType(AuthType,strlen(AuthType));
     }
     else if(strncmp(AuthType, "WPA-PSK", 7) == 0)
     {
         setSSID(tempSSID,strlen(tempSSID));
         setPassword(tempPassword,strlen(tempPassword));
-        clearStaticIPBuffers();
+        //clearStaticIPBuffers();
        // setAuthType(AuthType,strlen(AuthType));
     }
     else if(strncmp(AuthType, "EAP-PEAP", 8) == 0)
@@ -497,14 +497,14 @@ bool IUESP8285::setStaticIP(const char *staticIP, uint8_t len)
     }
     return success;
 }
-void IUESP8285::clearStaticIPBuffers(){
-    for(int i=0;i<wifiCredentialLength;i++){
-        m_staticIP[i] = '\0';
-        m_staticGateway[i] = '\0';
-        m_staticSubnet[i] = '\0';
-    }
+// void IUESP8285::clearStaticIPBuffers(){
+//     for(int i=0;i<wifiCredentialLength;i++){
+//         m_staticIP[i] = '\0';
+//         m_staticGateway[i] = '\0';
+//         m_staticSubnet[i] = '\0';
+//     }
 
-}
+//}
 void IUESP8285::setGateway(IPAddress gatewayIP)
 {
     if (m_staticConfigValidator.hasTimedOut()) {
