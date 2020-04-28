@@ -471,10 +471,16 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                     if(!staticIP){ errorMessages.add("Static IP Not found"); validConfig = false; }
                     if(!gateway){ errorMessages.add("Gateway IP Not found"); validConfig = false; }
                     if(!subnet){ errorMessages.add("Subnet Not found"); validConfig = false; }
-                }else if(strncmp(AuthType, "STATIC-EAP-PEAP", 15) == 0 || strncmp(AuthType, "STATIC-EAP-TLS", 14) == 0 ){
+                }else if(strncmp(AuthType, "STATIC-EAP-PEAP", 15) == 0){
                     if(!ssid){ errorMessages.add("SSID Not found"); validConfig = false; }
                     if(!password){ errorMessages.add("Password Not found"); validConfig = false; }
                     if(!username){ errorMessages.add("Username Not found"); validConfig = false; }
+                    if(!staticIP){ errorMessages.add("Static IP Not found"); validConfig = false; }
+                    if(!gateway){ errorMessages.add("Gateway IP Not found"); validConfig = false; }
+                    if(!subnet){ errorMessages.add("Subnet Not found"); validConfig = false; }
+                }else if(strncmp(AuthType, "STATIC-EAP-TLS", 14) == 0 ){
+                    if(!ssid){ errorMessages.add("SSID Not found"); validConfig = false; }
+                    if(!password){ errorMessages.add("Password Not found"); validConfig = false; }
                     if(!staticIP){ errorMessages.add("Static IP Not found"); validConfig = false; }
                     if(!gateway){ errorMessages.add("Gateway IP Not found"); validConfig = false; }
                     if(!subnet){ errorMessages.add("Subnet Not found"); validConfig = false; }
