@@ -48,14 +48,22 @@ void IUESPFlash::begin(){
     if (!SPIFFS.begin() )
     {   
         Serial.println("Failed to Start SPIFFS");
-            
         if (debugMode)
         {   
             debugPrint("Failed to start SPIFFS (SPIFFS.begin returned false)");
         }
         m_begun = false;
+        if(SPIFFS.begin(true)){    // Mount the File system if not mounted default
+            m_begun = true;
+            Serial.println("Forcefully mounted filesystem");
+        }else
+        {
+            Serial.println("SPIFFS Not able to Mount Forcefully");
+        }
+        
+
     }else
-    {
+    { 
         m_begun = true;
         Serial.println("begin() - CONFIG_SUBDIR exists");
     }
