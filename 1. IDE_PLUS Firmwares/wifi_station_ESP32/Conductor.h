@@ -6,11 +6,14 @@
 #include <IUSerial.h>
 #include <MacAddress.h>
 #include <IUMessage.h>
+#include <MD5.h>
 #include "IUMQTTHelper.h"
 #include "IURawDataHelper.h"
 #include "IUTimeHelper.h"
 #include "MultiMessageValidator.h"
 #include "Utilities.h"
+//#include "SPIFFS.h"
+#include "IUESPFlash.h"
 
 
 /* =============================================================================
@@ -26,6 +29,7 @@ extern IUMQTTHelper mqttHelper;
 
 extern IUTimeHelper timeHelper;
 
+extern IUESPFlash iuWiFiFlash;
 
 #define OTA_STM_PKT_ACK_TMOUT       1000
 #define OTA_DATA_READ_TIMOUT        1001
@@ -33,6 +37,31 @@ extern IUTimeHelper timeHelper;
 #define OTA_WIFI_DISCONNECT         1003
 #define OTA_INVALID_MAIN_FW_SIZE    1004
 #define OTA_INVALID_WIFI_FW_SIZE    1005
+
+// Certificate download error Codes
+#define CERT_DOWNLOAD_COMPLETE              2000
+#define CERT_UPGRADE_COMPLETE               2001
+#define CERT_DOWNLOAD_FAILED                2003
+#define CERT_FILES_NOT_PRESENT              2004
+#define CERT_INVALID_CONFIG_JSON            2005
+#define CERT_INVALID_KEY_CHECKSUM           2006
+#define CERT_INVALID_CRT_CHECKSUM           2007
+#define CERT_INVALID_ROOTCA_CHECKSUM        2008
+#define CERT_DOWNLOAD_CRT_FAILED            2009
+#define CERT_DOWNLOAD_KEY_FAILED            2010
+#define CERT_DOWNLOAD_ROOTCA_FAILED         2011
+#define CERT_CRT_FILE_NOT_PRESENT           2012
+#define CERT_KEY_FILE_NOT_PRESENT           2013
+#define CERT_ROOTCA_FILE_NOT_PRESENT        2014
+#define CERT_CONFIG_JSON_FILE_NOT_PRESENT   2015
+#define CERT_STATIC_URL_FILE_NOT_PRESENT    2016
+#define CERT_FILESYSTEM_READ_WRITE_FAILED   2017
+#define CERT_UPGRADE_START                  2018
+#define CERT_UPGRADE_FAILED                 2019
+#define CERT_NEW_CERT_NOT_AVAILBLE          2020
+#define CERT_SAME_UPGRADE_CONFIG_RECEIVED   2021
+
+#define MQTT_CONNECTION_ATTEMPT_FAILED      2022
 
 #define MAX_HTTP_INIT_RETRY     3
 
@@ -70,6 +99,9 @@ class Conductor
         static const uint32_t otaPktAckTimeout = 30000;  // ms
         static const uint32_t otaPktReadTimeout = 50000; //ms;
         static const uint32_t otaHttpTimeout = 60000; //ms;
+        static const uint8_t maxMqttClientConnectionCount = 5;
+        static const uint8_t maxMqttCertificateDownloadCount = 5;
+        static const uint32_t downloadInitRetryTimeout  = 30000;   //ms
         /***** Core *****/
         Conductor();
         virtual ~Conductor() {}
@@ -90,9 +122,13 @@ class Conductor
         bool getConfigFromMainBoard();
         /***** Wifi connection and status *****/
         void disconnectWifi(bool wifiOff=true);
+        void disconnectMQTT();
         bool reconnect(bool forceNewCredentials=false);
         uint8_t waitForConnectResult();
         void checkWiFiDisconnectionTimeout();
+        /***** Mqtt Connection and status, timeouts ******/
+        void checkMqttDisconnectionTimeout();
+        void mqttSecureConnect();
         /***** MQTT *****/
         void loopMQTT();
         void processMessageFromMQTT(const char* topic, const char* payload,
@@ -109,6 +145,7 @@ class Conductor
         void publishWifiInfo();
         void publishWifiInfoCycle();
         void updateWiFiStatus();
+        void updateMQTTStatus();
         void updateWiFiStatusCycle();
         void autoReconncetWifi();
         /***** Debugging *****/
@@ -117,8 +154,41 @@ class Conductor
         void getDeviceFirmwareVersion(char* destination,char* HOST_VERSION, const char* WIFI_VERSION);
         bool otaDnldFw(bool otaDnldProgress);
         void checkOtaPacketTimeout();
-        String getOtaRca(int error);
+        String getRca(int error);
+        /****** Certificate download managment ******/
+        bool getDeviceCertificates(IUESPFlash::storedConfig configType, const char* type,const char* url);
+        bool writeCertificatesToFlash(IUESPFlash::storedConfig configType,long fileSize,const char* type);
+        void readCertificatesFromFlash(IUESPFlash::storedConfig configType,const char* type);
+        int download_tls_ssl_certificates();
+        char* getConfigChecksum(IUESPFlash::storedConfig configType);
+        void updateDiagnosticEndpoint(char* diagnosticEndpoint,int length);
+        void configureDiagnosticEndpointFromFlash(IUESPFlash::storedConfig configType);
+        void publishedDiagnosticMessage(char* buffer,int bufferLength);
+        void resetDownloadInitTimer();
+        char mqtt_client_cert[2048];
+        char mqtt_client_key[2048];
+        char ssl_rootca_cert[2048];
+        char certDownloadResponse[2400];    // stores the cert download json (Actual  -2299)
+        char diagnosticEndpointHost[MAX_HOST_LENGTH]; //= "http://192.168.0.2:1234/rawaccelerationdata";   // Default diagnostic endpoints
+        int  diagnosticEndpointPort;
+        char diagnosticEndpointRoute[MAX_ROUTE_LENGTH];
         bool configStatus = false;
+        bool certificateDownloadInProgress=false;
+        bool certificateDownloadInitInProgress = false;
+        bool certDownloadInitAck = false;
+        bool newMqttcertificateAvailable = false;
+        bool newMqttPrivateKeyAvailable = false;
+        bool newRootCACertificateAvailable = false;
+        bool downloadInitTimer = true;
+        bool downloadAborted = false;
+        uint32_t downloadInitLastTimeSync;
+        uint8_t certificateDownloadStatus = 0;
+        uint8_t newDownloadConnectonAttempt = 0;
+
+        // Config handler
+        static const uint8_t CONFIG_TYPE_COUNT = 5;
+        static IUESPFlash::storedConfig CONFIG_TYPES[CONFIG_TYPE_COUNT];
+        
     protected:
         /***** Config from Host *****/      
         char HOST_FIRMWARE_VERSION[8];      //filled when the ESP starts or when it connects to MQTT broker
@@ -131,6 +201,9 @@ class Conductor
         /***** Wifi connection *****/
         uint32_t m_lastConnectionAttempt;
         uint32_t m_disconnectionTimerStart;
+        /***** MQTT connection *****/
+        uint32_t m_lastConnectionAttemptMqtt;
+        uint32_t m_disconnectionMqttTimerStart;
         /***** WiFi credentials and config *****/
         MultiMessageValidator<2> m_credentialValidator;
         char m_userSSID[wifiCredentialLength];
