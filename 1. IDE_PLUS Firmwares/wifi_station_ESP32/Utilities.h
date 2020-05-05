@@ -10,6 +10,7 @@
 
 #include "IUSerial.h" // ESP32_PORT_TRUE Debug changes
 #include "MSPCommands.h" // ESP32_PORT_TRUE Debug changes
+#include <base64.h>
 extern IUSerial hostSerial; // ESP32_PORT_TRUE Debug changes
 
 #define WIFICLIENT_MAX_PACKET_SIZE 1460
@@ -20,8 +21,9 @@ extern IUSerial hostSerial; // ESP32_PORT_TRUE Debug changes
 namespace HttpContentType {
     static char* applicationJSON = "json\r\n";
     static char* octetStream = "octet-stream\r\n";
+    static char* textPlain  = "plain\r\n";
 }
-#if 0 // ESP32_PORT_TRUE
+#if 1 // ESP32_PORT_TRUE
 /**
  * Sends an HTTP GET request - HTTPS is used if fingerprint is given.
  *
@@ -34,6 +36,10 @@ inline int httpGetRequest(const char *url, char* responseBody,
                           uint16_t maxResponseLength,
                           const char *httpsFingerprint=NULL)
 {
+    String username = "9454934A27ED";
+    String password = "DE72A4394549"; 
+    String auth = base64::encode(username + ":" + password);
+    
     if (WiFi.status() != WL_CONNECTED)
     {
         if (debugMode)
@@ -45,11 +51,12 @@ inline int httpGetRequest(const char *url, char* responseBody,
     HTTPClient http;
     if (httpsFingerprint)
     {
-        http.begin(String(url), String(httpsFingerprint));
+        //http.begin(String(url), String(httpsFingerprint));
     }
     else
     {
         http.begin(String(url));
+        http.addHeader("Authorization", "Basic " + auth);
     }
     int httpCode = http.GET();
     if (httpCode > 0)
@@ -79,6 +86,9 @@ inline int httpGetRequest(const char *url, char* responseBody,
 inline String httpGET(const char *url,uint16_t maxResponseLength,
                           const char *httpsFingerprint=NULL)
 {
+   String username = "9454934A27ED";
+   String password = "DE72A4394549"; 
+   String auth = base64::encode(username + ":" + password);
    String responseBody;
    
     if (WiFi.status() != WL_CONNECTED)
@@ -97,6 +107,7 @@ inline String httpGET(const char *url,uint16_t maxResponseLength,
     else
     {
         http.begin(String(url));
+        http.addHeader("Authorization", "Basic " + auth);
     }
     int httpCode = http.GET();
     if (httpCode > 0)
@@ -188,6 +199,11 @@ inline int httpPostBigRequest(
     size_t chunkSize=WIFICLIENT_MAX_PACKET_SIZE,
     uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT + 3000)
 {
+    
+    String username = "9454934A27ED";
+    String password = "DE72A4394549"; 
+    String auth = base64::encode(username + ":" + password);
+
     if (WiFi.status() != WL_CONNECTED)
     {
         if (debugMode)
@@ -196,16 +212,25 @@ inline int httpPostBigRequest(
         }
          return 404; // 0
     }
+    char type[12];
+    if (strncmp(contentType,"plain",5) == 0){
+        strncpy(type,"text",12);}
+    else
+    {
+        strncpy(type,"application",12); 
+    }
     
     // create the request and headers
     String request = "POST " + String(endpointURL) + " HTTP/1.1\r\n" +
         "Host: " + String(endpointHost) + "\r\n" +
         "Accept: application/json" + "\r\n" +
-        "Content-Type: application/" + contentType +
+        "Content-Type:" + type + "/" + contentType +
+        "Authorization: Basic " + auth +"\r\n" +
         "Content-Length: " + String(payloadLength) + "\r\n\r\n";
     // Use WiFiClient class to create TCP connections
     WiFiClient client;
     int connectResult = client.connect(endpointHost, endpointPort);
+    //Serial.print("ConnectionStatus : ");Serial.println(connectResult);
     if (connectResult == 0)
     {
         if (debugMode)
@@ -219,7 +244,6 @@ inline int httpPostBigRequest(
         }
         return 505; //connectResult;  // 0 means no connection
     }
-
     // This will send the request and headers to the server
     client.print(request);
     // now we need to chunk the payload into 1000 byte chunks
@@ -299,6 +323,7 @@ inline int httpPostBigRequest(
         }
     }
     return HTTPC_ERROR_CONNECTION_LOST;  // -5
+    
 }
 
 
