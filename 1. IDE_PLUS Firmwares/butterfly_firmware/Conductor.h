@@ -135,6 +135,7 @@ class Conductor
         String availableFingerprints;
         bool modbusStreamingMode =false;
         bool ready_to_publish_to_modbus = false;
+        bool certDownloadInProgress = false;
         
         /***** Core *****/
         Conductor() {};
@@ -351,6 +352,12 @@ class Conductor
         uint32_t otaInitWaitTimeout = 0;
         bool otaInitTimeoutFlag = false;
         char WiFiDisconnect_OTAErr[16];
+
+        // Certificates buffers
+        char m_certType[15];
+        char m_keyType[15];
+        char m_certHash[34];
+        char m_keyHash[34];
 };
 
 
