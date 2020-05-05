@@ -1,5 +1,13 @@
 #include "IUMQTTHelper.h"
 #include "IUClientCertificates.h"
+
+#include "IUSerial.h" // ESP32_PORT_TRUE Debug changes
+#include "MSPCommands.h" // ESP32_PORT_TRUE Debug changes
+#include "Conductor.h"
+
+extern Conductor conductor; 
+extern IUSerial hostSerial; // ESP32_PORT_TRUE Debug changes
+
 /* =============================================================================
     Preset values and default settings
 ============================================================================= */
@@ -119,13 +127,16 @@ void IUMQTTHelper::reconnect()
         if((m_serverPort == 8883 || m_serverPort == 8884) && TLS_ENABLE == true ){
             //m_wifiClient.setCACert(ca_cert);
             Serial.print("Connecting to Secure MQTT broker...\n");
-            m_wifiClient.setCertificate(client_cert);
-            m_wifiClient.setPrivateKey(client_private_key);
+            // m_wifiClient.setCertificate(client_cert);
+            // m_wifiClient.setPrivateKey(client_private_key);
+            m_wifiClient.setCertificate(conductor.mqtt_client_cert );
+            m_wifiClient.setPrivateKey(conductor.mqtt_client_key);
         }
         // Attempt to connect
         if (client.connect(m_deviceMAC.toString().c_str(), m_username,
                            m_password, DIAGNOSTIC_TOPIC, WILL_QOS, WILL_RETAIN,
                            m_willMessage)) {
+            mqttConnected = 0;
             if (debugMode) {
                 debugPrint("Success");
             }
@@ -133,10 +144,19 @@ void IUMQTTHelper::reconnect()
                 m_onConnectionCallback();
             }
         } else {
+            mqttConnected = mqttConnected + 1;
+                      
+            Serial.println("MQTT - Connection Failed");
+            if(WiFi.isConnected()){
+                //hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_CONNECTED);
+                Serial.println("WIFI CLIENT CONNECTED");
+            }
             if (debugMode) {
                 debugPrint("Failed");
             }
             delay(connectionRetryDelay);
+            Serial.print("COUNT  : ");Serial.println(mqttConnected);
+            break;
         }
     }
 }
