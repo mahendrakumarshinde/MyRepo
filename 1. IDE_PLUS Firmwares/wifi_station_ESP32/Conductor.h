@@ -145,7 +145,8 @@ class Conductor
         uint32_t m_lastWifiInfoPublication;
         /***** Settable parameters (addresses, credentials, etc) *****/
         MultiMessageValidator<2> m_mqttServerValidator;
-        IPAddress m_mqttServerIP;
+        // IPAddress m_mqttServerIP;
+        char m_mqttServerIP[IUMQTTHelper::credentialMaxLength];
         uint16_t m_mqttServerPort;
         char httpBuffer[8235];              //maximum possible buffer size (when blockSize = 4096)
         MultiMessageValidator<2> m_mqttCredentialsValidator;

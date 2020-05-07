@@ -12,7 +12,7 @@ char IUMQTTHelper::DEFAULT_WILL_MESSAGE[44] =
     Core
 ============================================================================= */
 
-IUMQTTHelper::IUMQTTHelper(IPAddress serverIP, uint16_t serverPort,
+IUMQTTHelper::IUMQTTHelper(const char * serverIP, uint16_t serverPort,
                            const char *username, const char *password) :
     m_wifiClient(),
     client(m_wifiClient)
@@ -27,9 +27,10 @@ IUMQTTHelper::IUMQTTHelper(IPAddress serverIP, uint16_t serverPort,
 /**
  *
  */
-void IUMQTTHelper::setServer(IPAddress serverIP, uint16_t serverPort)
+void IUMQTTHelper::setServer(const char * serverIP, uint16_t serverPort)
 {
-    m_serverIP = serverIP;
+    // m_serverIP = serverIP;
+    strcpy(m_serverIP,serverIP);
     m_serverPort = serverPort;
     if (uint32_t(m_serverIP) > 0) {
         client.setServer(m_serverIP, m_serverPort);

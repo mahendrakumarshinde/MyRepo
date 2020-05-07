@@ -35,7 +35,7 @@ Conductor::Conductor() :
     m_lastWifiStatusUpdate(0),
     m_lastWifiStatusCheck(0),
     m_lastWifiInfoPublication(0),
-    m_mqttServerIP(IPAddress())
+    m_mqttServerIP()
 {
     m_featurePostPort = DATA_DEFAULT_ENDPOINT_PORT;
     m_diagnosticPostPort = DATA_DEFAULT_ENDPOINT_PORT;
@@ -395,7 +395,8 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             if (m_mqttServerValidator.hasTimedOut()) {
                 m_mqttServerValidator.reset();
             }
-            m_mqttServerIP = iuSerial->mspReadIPAddress();
+            // m_mqttServerIP = iuSerial->mspReadIPAddress();
+            strncpy(m_mqttServerIP, buffer, IUMQTTHelper::credentialMaxLength);
             //hostSerial.write("RECEIVED IP :");hostSerial.write(m_mqttServerIP);
             
             m_mqttServerValidator.receivedMessage(0);

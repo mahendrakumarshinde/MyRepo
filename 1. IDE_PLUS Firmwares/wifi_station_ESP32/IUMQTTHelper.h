@@ -44,11 +44,11 @@ class IUMQTTHelper
         static const uint8_t WILL_QOS = 0;
         static const bool WILL_RETAIN = false;
         /***** Core *****/
-        IUMQTTHelper(IPAddress serverIP, uint16_t serverPort,
+        IUMQTTHelper(const char * serverIP, uint16_t serverPort,
                      const char *username, const char *password);
-        IUMQTTHelper() : IUMQTTHelper(IPAddress(), 1883, NULL, NULL) {}
+        IUMQTTHelper() : IUMQTTHelper("IPAddress()", 1883, NULL, NULL) {}
         virtual ~IUMQTTHelper() { }
-        void setServer(IPAddress serverIP, uint16_t serverPort);
+        void setServer(const char * serverIP, uint16_t serverPort);
         void setCredentials(const char *username, const char *password);
         void setDeviceMAC(MacAddress deviceMAC);
         void setOnConnectionCallback(void (*callback)())
@@ -80,7 +80,7 @@ class IUMQTTHelper
         MacAddress m_deviceMAC;
         /***** MQTT server address and credentials *****/
         /***** Settable parameters (addresses, credentials, etc) *****/
-        IPAddress m_serverIP;
+        char m_serverIP[credentialMaxLength];
         uint16_t m_serverPort;
         char m_username[credentialMaxLength];
         char m_password[credentialMaxLength];

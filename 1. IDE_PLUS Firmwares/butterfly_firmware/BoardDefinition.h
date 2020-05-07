@@ -102,7 +102,8 @@ namespace IU_VERSION {
 // US-WEST1-A server
 //IPAddress MQTT_DEFAULT_SERVER_IP(35, 197, 32, 136);
 // ASIA-SOUTH1-A (Mumbai) server
-const IPAddress MQTT_DEFAULT_SERVER_IP(15,206,193,195);      //  IU-Default : 35, 200, 183, 103     ,Indicus -Testing IP   : 115,112,92,146  , Indicus-India IP [Production]  : 13,233,38,155
+// const IPAddress MQTT_DEFAULT_SERVER_IP(15,206,193,195);      //  IU-Default : 35, 200, 183, 103     ,Indicus -Testing IP   : 115,112,92,146  , Indicus-India IP [Production]  : 13,233,38,155
+const char MQTT_DEFAULT_SERVER_IP[50] = "broker.hivemq.com";
 const uint16_t MQTT_DEFAULT_SERVER_PORT = 1883;             //  IU-Default : 1883                  ,Indicus -Testing Port : 41883           , Indicus-India Port[Production] : 1883
 
 const uint8_t MQTT_CREDENTIALS_MAX_LENGTH = 25;

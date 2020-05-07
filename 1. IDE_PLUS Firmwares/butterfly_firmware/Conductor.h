@@ -311,7 +311,7 @@ class Conductor
         UsageMode::option m_usageMode = UsageMode::COUNT;
         AcquisitionMode::option m_acquisitionMode = AcquisitionMode::NONE;
         StreamingMode::option m_streamingMode = StreamingMode::NONE;
-        IPAddress m_mqttServerIp = MQTT_DEFAULT_SERVER_IP;
+        const char* m_mqttServerIp = MQTT_DEFAULT_SERVER_IP;
         uint16_t m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
         const char* m_mqttUserName = MQTT_DEFAULT_USERNAME;
         const char* m_mqttPassword = MQTT_DEFAULT_ASSWORD;
