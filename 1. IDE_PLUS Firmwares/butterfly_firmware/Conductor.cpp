@@ -6,6 +6,7 @@
 #include "IUOTA.h"
 #include <MemoryFree.h>
 #include "stm32l4_iap.h"
+#include "IUBMD350.h"
 
 extern IUOTA iuOta;
 const char* fingerprintData;
@@ -3764,7 +3765,7 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
     if (m_streamingMode == StreamingMode::BLE)
     {
         iuBluetooth.write("REC,");
-        iuBluetooth.write(m_macAddress.toString().c_str());
+        iuBluetooth.write(m_macAddress.toString().c_str());                  
         iuBluetooth.write(',');
         iuBluetooth.write(axis[axisIdx]);
         accelEnergy->stream(&iuBluetooth, 4);
@@ -4248,13 +4249,27 @@ void Conductor::printConductorMac() {
     debugPrint("BLE MAC ADDRESS SET IN CONDUCTOR : ",false); debugPrint(m_macAddress.toString());
 }
 
+void Conductor::removeChar(char * New_BLE_MAC_Address, int charToRemove){ 
+
+  int j, n = strlen(New_BLE_MAC_Address); 
+  for (int i=j=0; i<n; i++) 
+  if (New_BLE_MAC_Address[i] != charToRemove) 
+    New_BLE_MAC_Address[j++] = New_BLE_MAC_Address[i]; 
+  New_BLE_MAC_Address[j] = '\0'; 
+}
+
 void Conductor::setConductorMacAddress() {
     if(iuBluetooth.isBLEAvailable){
         iuBluetooth.enterATCommandInterface();
         char BLE_MAC_Address[20];
+        char New_BLE_MAC_Address[13];
         uint8_t retryCount = 3;
         int mac_Response = iuBluetooth.sendATCommand("mac?", BLE_MAC_Address, 20);
         debugPrint("BLE MAC ID:",false);debugPrint(BLE_MAC_Address,true);
+        strncpy(New_BLE_MAC_Address, BLE_MAC_Address + 6,11);
+        removeChar(New_BLE_MAC_Address, ':');
+        iuBluetooth.setDeviceName(New_BLE_MAC_Address);
+        iuBluetooth.queryDeviceName();
         //debugPrint("SET MAC RESPONSE :",false);
         //debugPrint(mac_Response);
         if( mac_Response < 0 || (BLE_MAC_Address[0] == '0' && BLE_MAC_Address[1] == '0' ) ){

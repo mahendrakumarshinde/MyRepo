@@ -277,6 +277,7 @@ class Conductor
         float* getFingerprintsforModbus();
         bool checkforModbusSlaveConfigurations();
         void checkforWiFiConfigurations();
+        void removeChar(char * New_BLE_MAC_Address, int charToRemove);
         
     protected:
         MacAddress m_macAddress;
