@@ -124,7 +124,6 @@ void loop()
     conductor.checkWiFiDisconnectionTimeout();
     conductor.checkMqttDisconnectionTimeout();
     conductor.checkOtaPacketTimeout();
-    conductor.publishRSSI(lastDone,10000);
     if(WiFi.isConnected() == false)         // Need Auto reconnect for MQTT broker
     {   
         conductor.autoReconncetWifi();
@@ -133,6 +132,7 @@ void loop()
     if (now - lastDone > 5000 )
     {   
         //conductor.setBasicHTTPAutherization();
+        conductor.publishRSSI(lastDone,30000);
         conductor.resetDownloadInitTimer(60,5000);  // (sec,looptimeout)
         lastDone = now;
         if(uint64_t(conductor.getBleMAC() ) == 0) { 
