@@ -126,9 +126,6 @@ void IUMQTTHelper::reconnect()
         }
         if((m_serverPort == 8883 || m_serverPort == 8884) && TLS_ENABLE == true ){
             //m_wifiClient.setCACert(ca_cert);
-            Serial.print("Connecting to Secure MQTT broker...\n");
-            // m_wifiClient.setCertificate(client_cert);
-            // m_wifiClient.setPrivateKey(client_private_key);
             m_wifiClient.setCertificate(conductor.mqtt_client_cert );
             m_wifiClient.setPrivateKey(conductor.mqtt_client_key);
         }
@@ -144,7 +141,7 @@ void IUMQTTHelper::reconnect()
                 m_onConnectionCallback();
             }
         } else {
-            mqttConnected = mqttConnected + 1;
+            mqttConnected++;
                       
             Serial.println("MQTT - Connection Failed");
             if(WiFi.isConnected()){
