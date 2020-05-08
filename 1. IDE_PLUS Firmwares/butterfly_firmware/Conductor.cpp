@@ -2760,7 +2760,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             certDownloadInProgress = false;
             m_certDownloadStarted = false;
             m_getDownloadConfig = false;
-            
+            m_downloadSuccess = false;
+            m_upgradeSuccess = false;
             sendOtaStatusMsg(MSPCommand::CERT_DOWNLOAD_ABORT,CERT_DOWNLOAD_ERR,buff);
             for(int i = 0 ; i < 20; i++) {
                 ledManager.overrideColor(RGB_RED);
@@ -2784,6 +2785,9 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             certDownloadInProgress = false;
             m_certDownloadStarted = false;
             m_getDownloadConfig = false;
+            m_downloadSuccess = true;
+            m_upgradeSuccess = false;
+            m_downloadSuccessStartTime = millis();
             sendOtaStatusMsg(MSPCommand::CERT_DOWNLOAD_SUCCESS,CERT_DOWNLOAD_COMPLETE,buff);
              //TODO : Add Visuals
             for(int i = 0 ; i < 10; i++) {
@@ -2814,7 +2818,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 certDownloadInProgress = false;
                 m_certDownloadStarted = false;
                 m_getDownloadConfig = false;
-            
+                m_downloadSuccess = false;
+                m_upgradeSuccess = false;
             break;
         case MSPCommand::CERT_UPGRADE_SUCCESS:
             if (loopDebugMode)
@@ -2825,6 +2830,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
              certDownloadInProgress = false;
              m_certDownloadStarted = false;
              m_getDownloadConfig = false;
+             m_downloadSuccess = false;
+             m_upgradeSuccess = true;
             // TODO : Add Visuals
              // Show Visuals min 15 sec
             for(int i = 0 ; i < 20; i++) {
@@ -2867,6 +2874,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             certDownloadInProgress = false;
             m_certDownloadStarted = false;
             m_getDownloadConfig = false;
+            m_downloadSuccess = false;
+            m_upgradeSuccess = false;
             certDownloadInitWaitTimeout = 0;
             if(debugMode){
                 debugPrint("All Secure MQTT Connection Attempt Failed,Can't connect to broker, re-configure the mqtt details ");
@@ -3009,6 +3018,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             if (isBLEConnected()) {
                 iuBluetooth.write("MQTT-CONNECTED;");
             }
+            m_mqttConnected = true;
             // if(conductor.getUsageMode() == UsageMode::OTA) {
             //     if (loopDebugMode) { debugPrint(F("OTA DNLD MODE or Certificates Upgrade Mode")); }
             //     ledManager.stopColorOverride();
@@ -3024,6 +3034,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                     debugPrint(F("OTA In Progress - MQTT-DISCONNECTED"));
                     debugPrint(F("Sending OTA-ERR-FDW-ABORT"));
                 }
+
+            m_mqttConnected = false;
             #if 0
                 for(int i = 0 ; i < 15; i++) {
                     ledManager.overrideColor(RGB_RED);
@@ -5273,6 +5285,30 @@ void Conductor::otaChkFwdnldTmout()
         }
         
     }
+    // if upgrade success response is not received before timeout , switch to Operation Mode
+    if (m_downloadSuccess == true && m_upgradeSuccess == false)
+    {
+        if ( (now - m_downloadSuccessStartTime ) > 60*1000 )
+        {
+            certDownloadInProgress = false;
+            m_downloadSuccess = false;
+            if (iuWiFi.isConnected() || m_mqttConnected == true)
+            {
+                // Certificate Upgrade went Successful
+                sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_SUCCESS,CERT_UPGRADE_COMPLETE,"CERT-RCA-0000");
+            }else
+            {
+                sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_ABORT,CERT_UPGRADE_ERR,"CERT-RCA-0013");
+            }
+            if (loopDebugMode)
+            {
+                debugPrint("CERT - Download Request Timeout, Upgrade Status not received ");
+            }
+            if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA/CERT -> OPERATION")); }
+            iuWiFi.m_setLastConfirmedPublication();
+            conductor.changeUsageMode(UsageMode::OPERATION);
+        }
+    }    
     
 }
 

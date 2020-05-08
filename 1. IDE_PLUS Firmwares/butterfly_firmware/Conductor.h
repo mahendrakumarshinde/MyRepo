@@ -357,8 +357,12 @@ class Conductor
         char WiFiDisconnect_OTAErr[16];
 
         uint32_t certDownloadInitWaitTimeout =0;
+        uint32_t m_downloadSuccessStartTime = 0;
         bool m_getDownloadConfig = false;
         bool m_certDownloadStarted  = false;
+        bool m_downloadSuccess = false;
+        bool m_upgradeSuccess = false;
+        bool m_mqttConnected = false;
         // Certificates buffers
         char m_certType[15];
         char m_keyType[15];
