@@ -1049,6 +1049,60 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
         
     } // If json is incorrect, it will result in parsing error in jsonBuffer.parseObject(json) which will cause the processConfiguration call to return
+    
+    //Certificates download URL Configuration
+    subConfig = root["certUrl"];
+    if (subConfig.success()) {
+        if (loopDebugMode){  debugPrint("Certificate Download Url:",false);
+         subConfig.printTo(Serial); debugPrint("");
+         }
+        const char* url = root["certUrl"]["url"];
+        const char* messageId = root["messageId"]  ;
+        // Send URL to ESP32
+        iuWiFi.sendMSPCommand(MSPCommand::SET_CERT_CONFIG_URL,jsonChar.c_str());
+        char ack_config[70];
+        snprintf(ack_config, 70, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+            
+        if(iuWiFi.isConnected() )
+        {  
+             if(loopDebugMode){debugPrint("Response : ",false);debugPrint(ack_config);}
+             iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,ack_config );
+        }
+        if(StreamingMode::BLE && isBLEConnected()){// Send ACK to BLE
+            if(loopDebugMode){ debugPrint("Common URL Config SUCCESS");}
+            iuBluetooth.write("CERT-URL-SUCCESS;");
+        }else
+        { if(loopDebugMode){ debugPrint("URL Config Failed");}
+            iuBluetooth.write("CERT-URL-FAILED;");
+        }
+    }
+    // Configure Diagnostic URL in ESP32
+    subConfig = root["diagnosticUrl"];
+    if (subConfig.success()) {
+        if (loopDebugMode){  debugPrint("Diagnostic Url:",false);
+         subConfig.printTo(Serial); debugPrint("");
+         }
+        const char* url = root["diagnosticUrl"]["url"];
+        const char* messageId = root["messageId"]  ;
+        // Send URL to ESP32
+        iuWiFi.sendMSPCommand(MSPCommand::SET_DIAGNOSTIC_URL,jsonChar.c_str());
+        char ack_config[70];
+        snprintf(ack_config, 70, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+            
+        if(iuWiFi.isConnected() )
+        {  
+             if(loopDebugMode){debugPrint("Response : ",false);debugPrint(ack_config);}
+             iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,ack_config );
+        }
+        if(StreamingMode::BLE && isBLEConnected()){// Send ACK to BLE
+            if(loopDebugMode){ debugPrint("Diagnostic URL Config SUCCESS");}
+            iuBluetooth.write("DIAGNOSTIC-URL-SUCCESS;");
+        }else
+        { if(loopDebugMode){ debugPrint("Diagnostic URL Config Failed");}
+            iuBluetooth.write("DIAGNOSTIC-URL-FAILED;");
+        }
+    }
+    
     return true;
 }
 
@@ -1183,6 +1237,7 @@ void Conductor::readForceOtaConfig()
     m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
     m_mqttUserName = MQTT_DEFAULT_USERNAME;
     m_mqttPassword = MQTT_DEFAULT_ASSWORD;
+    m_tls_enabled = false;
     // flashStatusFlag = true;
     //m_accountid = "XXXAdmin";
   }
@@ -1201,6 +1256,7 @@ void Conductor::readForceOtaConfig()
             m_mqttServerPort = mqttport;
             m_mqttUserName = config["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
             m_mqttPassword = config["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
+            m_tls_enabled = config["mqtt"]["tls"];
             m_accountId = config["accountid"];
             File mqttFile = DOSFS.open("MQTT.conf","w");
             if(mqttFile)
@@ -1222,6 +1278,8 @@ void Conductor::readForceOtaConfig()
                 debugPrint(m_mqttUserName);
                 debugPrint(F("Mqtt Password :"),false);
                 debugPrint(m_mqttPassword);
+                debugPrint(F("TLS ENABLE:"),false);
+                debugPrint(m_tls_enabled);
                 debugPrint(F("Account ID :"));
                 debugPrint(m_accountId);
             }   
@@ -1231,6 +1289,7 @@ void Conductor::readForceOtaConfig()
             m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
             m_mqttUserName = MQTT_DEFAULT_USERNAME;
             m_mqttPassword = MQTT_DEFAULT_ASSWORD;
+            m_tls_enabled = false;
         }
   }
  else {
@@ -1242,6 +1301,7 @@ void Conductor::readForceOtaConfig()
   m_mqttServerPort = mqttport;
   m_mqttUserName = root["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
   m_mqttPassword = root["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
+  m_tls_enabled = root["mqtt"]["tls"];
   m_accountId = root["accountid"];
   
   iuWiFi.hardReset();
@@ -1254,6 +1314,8 @@ void Conductor::readForceOtaConfig()
         debugPrint(m_mqttUserName);
         debugPrint(F("Mqtt Password :"),false);
         debugPrint(m_mqttPassword);
+        debugPrint(F("TLS ENABLE:"),false);
+        debugPrint(m_tls_enabled);
         debugPrint(F("Account ID :"));
         debugPrint(m_accountId);
   }   
@@ -1750,7 +1812,17 @@ void Conductor::processCommand(char *buff)
                 FeatureStates::isISRDisabled = true;
                 debugPrint(F("ISR-DISABLE form USB !!!"));
             }
-            break;    
+            break;  
+        case 'C':
+            // CERT-UPGRADE-MQTT-SSL - Command to trigger mqtt and ssl cert Upgrade
+            if(strcmp(buff,"CERT-UPGRADE-MQTT-SSL") == 0){
+                if (debugMode)
+                {
+                    debugPrint("Certificate Upgrade Command :",false);
+                    debugPrint(buff);
+                }
+                iuWiFi.sendMSPCommand(MSPCommand::CERT_UPGRADE_TRIGGER);
+            }
             
         default:
             break;
@@ -2019,16 +2091,24 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                 {
                     iuUSB.port->print("DEVICE_ID : ");
                     iuUSB.port->println(m_macAddress);
+                    iuWiFi.sendMSPCommand(MSPCommand::MQTT_DISCONNECT);
                 }
                 if (strcmp(buff, "IUGET_FIRMWARE_VERSION") == 0)
                 {
                     iuUSB.port->print("FIRMWARE_VERSION : ");
                     iuUSB.port->println(FIRMWARE_VERSION);
+                    iuWiFi.sendMSPCommand(MSPCommand::MQTT_CONNECT);
                 }
                 if (strcmp(buff, "IUGET_DEVICE_TYPE") == 0)
                 {
                     iuUSB.port->print("DEVICE_TYPE : ");
                     iuUSB.port->println(DEVICE_TYPE);
+                    iuWiFi.sendMSPCommand(MSPCommand::READ_CERTS);
+                }
+                if (strcmp(buff,"REMOVE_CERT_FILES") == 0)
+                {
+                    debugPrint("Deleting Certificate from ESP32");
+                    iuWiFi.sendMSPCommand(MSPCommand::DELETE_CERT_FILES);
                 }
                 if (strcmp(buff, "IUGET_HTTP_CONFIG") == 0)
                 {
@@ -2586,6 +2666,233 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 delay(100);         
             }
             break;
+        //Certificate management MSP Command
+        
+        case MSPCommand::GET_CERT_COMMOM_URL:
+             iuWiFi.sendMSPCommand(MSPCommand::SET_CERT_CONFIG_URL);
+            break;
+        case MSPCommand::ESP32_FLASH_FILE_WRITE_FAILED:
+            if (loopDebugMode)
+            {
+                debugPrint("ESP32 File Write Failed");
+            }
+            break;
+        case MSPCommand::ESP32_FLASH_FILE_READ_FAILED:
+            if (loopDebugMode)
+            {
+                debugPrint("ESP32 File Read Failed");
+            }
+            break;
+        case MSPCommand::CERT_DOWNLOAD_INIT:
+            if(doOnceFWValid == true || certDownloadInProgress == true)
+            { // Don't accept new OTA request during Validation of Last OTA
+                if(loopDebugMode) {
+                    debugPrint(F("Last Cert Download In-Progress.. Unable to process Certificates Download Init Request"));
+                }
+            }
+            else
+            {
+                if (loopDebugMode) {
+                    debugPrint(F("Certificate Download Init Request Received"));
+                    debugPrint(F("Switching Device mode:OPERATION -> OTA/Certificate Download"));
+                    debugPrint(buff);
+                }
+                certDownloadInProgress = true; 
+                certDownloadInitWaitTimeout = millis();  
+                changeUsageMode(UsageMode::OTA);
+                delay(1);
+                /* OTA Get MQTT message request timer. In case of timeout switch back to OPERATION MODE */
+                //otaInitWaitTimeout = millis();
+                //otaInitTimeoutFlag = true;
+                //iuWiFi.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_INIT_ACK); // send init Ack
+                sendOtaStatusMsg(MSPCommand::CERT_DOWNLOAD_INIT_ACK,CERT_DOWNLOAD_ACK, String(iuOta.getOtaRca(CERT_DOWNLOAD_INIT_REQ_ACK)).c_str());
+                delay(10);
+                //iuWiFi.sendMSPCommand(MSPCommand::GET_CERT_DOWNLOAD_CONFIG);
+                //delay(10);
+                // sendOtaStatusMsg(MSPCommand::DOWNLOAD_TLS_SSL_START,CERT_DOWNLOAD_STARTED, String(iuOta.getOtaRca(CERT_DOWNLOAD_START)).c_str());
+                // //iuWiFi.sendMSPCommand(MSPCommand::DOWNLOAD_TLS_SSL_START);  // Start Download CERT_DOWNLOAD_START
+                // delay(10);
+                // otaFwdnldTmout = millis();
+                // waitingDnldStrart = false;
+                // otaInitTimeoutFlag = false;
+                // ledManager.stopColorOverride();
+                // ledManager.showStatus(&STATUS_OTA_DOWNLOAD);
+
+            }          
+            delay(1);            
+            break;
+        case MSPCommand::GET_CERT_DOWNLOAD_CONFIG:
+            if (debugMode)
+            {
+                debugPrint("Received the Command to get the cert config json ");
+            }
+            m_getDownloadConfig = true;
+            iuWiFi.sendMSPCommand(MSPCommand::GET_CERT_DOWNLOAD_CONFIG);
+            break;    
+        case MSPCommand::DOWNLOAD_TLS_SSL_START:
+            if (debugMode)
+            {
+                debugPrint("Downloading of TLS SSL EAP cert Initiated");
+            }
+            m_certDownloadStarted = true;
+            otaFwdnldTmout = millis();
+            waitingDnldStrart = false;
+            otaInitTimeoutFlag = false;
+            certDownloadInProgress = false;
+            m_certDownloadStarted = false;
+            m_getDownloadConfig = false;
+            sendOtaStatusMsg(MSPCommand::DOWNLOAD_TLS_SSL_START,CERT_DOWNLOAD_STARTED, String(iuOta.getOtaRca(CERT_DOWNLOAD_START)).c_str());
+            delay(10);
+            // Certificates Download start Visuals
+            ledManager.stopColorOverride();
+            ledManager.showStatus(&STATUS_OTA_DOWNLOAD); 
+            break;
+        case MSPCommand::CERT_DOWNLOAD_ABORT:
+             // TODO : add Visuals
+            
+            if (loopDebugMode) {
+                debugPrint(F("Certificate File Download Aborted"));
+                debugPrint(buff);
+            } 
+            delay(1);
+            otaFwdnldTmout = millis();
+            waitingDnldStrart = false;
+            certDownloadInProgress = false;
+            m_certDownloadStarted = false;
+            m_getDownloadConfig = false;
+            m_downloadSuccess = false;
+            m_upgradeSuccess = false;
+            sendOtaStatusMsg(MSPCommand::CERT_DOWNLOAD_ABORT,CERT_DOWNLOAD_ERR,buff);
+            for(int i = 0 ; i < 20; i++) {
+                ledManager.overrideColor(RGB_RED);
+                delay(200);
+                ledManager.stopColorOverride();
+                delay(200);
+            }
+            if (loopDebugMode) { debugPrint(F("Switching Device mode:CERT DOWNLOAD Mode -> OPERATION")); }
+            iuWiFi.m_setLastConfirmedPublication();
+            changeUsageMode(UsageMode::OPERATION);
+            delay(100); 
+            
+            break;
+        case MSPCommand::CERT_DOWNLOAD_SUCCESS:
+             if(loopDebugMode){
+                debugPrint("Certificate Download Success");
+                debugPrint(buff);
+             }
+            otaInitTimeoutFlag = false;
+            waitingDnldStrart = false;
+            certDownloadInProgress = false;
+            m_certDownloadStarted = false;
+            m_getDownloadConfig = false;
+            m_downloadSuccess = true;
+            m_upgradeSuccess = false;
+            m_downloadSuccessStartTime = millis();
+            sendOtaStatusMsg(MSPCommand::CERT_DOWNLOAD_SUCCESS,CERT_DOWNLOAD_COMPLETE,buff);
+             //TODO : Add Visuals
+            for(int i = 0 ; i < 10; i++) {
+                ledManager.overrideColor(RGB_GREEN);
+                delay(100);
+                ledManager.stopColorOverride();
+                delay(100);
+            }
+            // if (loopDebugMode) { debugPrint(F("Switching Device mode:CERT DOWNLOAD Mode -> OPERATION")); }
+            //  iuWiFi.m_setLastConfirmedPublication();
+            //  changeUsageMode(UsageMode::OPERATION);
+            
+            break;
+        case MSPCommand::CERT_UPGRADE_INIT:
+             if(loopDebugMode){
+                 debugPrint("Certificates Upgrade Init");
+             }
+             sendOtaStatusMsg(MSPCommand::CERT_DOWNLOAD_INIT,CERT_UPGRADE_STARTED,buff);
+            break;
+        case MSPCommand::CERT_UPGRADE_ABORT:
+             sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_ABORT,CERT_UPGRADE_ERR,buff);
+            if (loopDebugMode) { 
+                debugPrint("Certificates Upgrade Failed");
+                debugPrint(F("Switching Device mode:CERT DOWNLOAD -> OPERATION")); }
+                iuWiFi.m_setLastConfirmedPublication();
+                changeUsageMode(UsageMode::OPERATION);
+                delay(100);
+                certDownloadInProgress = false;
+                m_certDownloadStarted = false;
+                m_getDownloadConfig = false;
+                m_downloadSuccess = false;
+                m_upgradeSuccess = false;
+            break;
+        case MSPCommand::CERT_UPGRADE_SUCCESS:
+            if (loopDebugMode)
+             {
+                 debugPrint("Certificates Upgrade Success");
+             }
+             sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_SUCCESS,CERT_UPGRADE_COMPLETE,buff);
+             certDownloadInProgress = false;
+             m_certDownloadStarted = false;
+             m_getDownloadConfig = false;
+             m_downloadSuccess = false;
+             m_upgradeSuccess = true;
+            // TODO : Add Visuals
+             // Show Visuals min 15 sec
+            for(int i = 0 ; i < 20; i++) {
+                ledManager.overrideColor(RGB_GREEN);
+                delay(200);
+                ledManager.stopColorOverride();
+                delay(200);
+            }
+            if (loopDebugMode) { debugPrint(F("Switching Device mode:CERT DOWNLOAD Mode -> OPERATION")); }
+             iuWiFi.m_setLastConfirmedPublication();
+             changeUsageMode(UsageMode::OPERATION);
+             delay(100);
+             break;
+        case MSPCommand::CERT_INVALID_STATIC_URL:
+            if (loopDebugMode)
+            {
+                debugPrint("Received Invalid Common HTTP Endpoint");
+            }
+            break;
+        case MSPCommand::DELETE_CERT_FILES:
+            if (debugMode)
+            {
+                debugPrint("message:",false);
+                debugPrint(buff);
+            }
+            break;
+        case MSPCommand::CERT_NO_DOWNLOAD_AVAILABLE:
+            if (debugMode)
+            {
+                debugPrint("New Certificate Download Request not available");
+            }
+                       
+            sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_ABORT,CERT_UPGRADE_ERR,buff);
+            if (loopDebugMode) { debugPrint(F("Switching Device mode:CERT DOWNLOAD Mode -> OPERATION")); }
+            iuWiFi.m_setLastConfirmedPublication();
+            changeUsageMode(UsageMode::OPERATION);
+            delay(100);
+            break;
+        case MSPCommand::ALL_MQTT_CONNECT_ATTEMPT_FAILED:
+            certDownloadInProgress = false;
+            m_certDownloadStarted = false;
+            m_getDownloadConfig = false;
+            m_downloadSuccess = false;
+            m_upgradeSuccess = false;
+            certDownloadInitWaitTimeout = 0;
+            if(debugMode){
+                debugPrint("All Secure MQTT Connection Attempt Failed,Can't connect to broker, re-configure the mqtt details ");
+            }
+            sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_ABORT,CERT_UPGRADE_ERR,buff);
+            // Show Visuals min 15 sec
+            for(int i = 0 ; i < 40; i++) {
+                ledManager.overrideColor(RGB_CYAN);
+                delay(200);
+                ledManager.stopColorOverride();
+                delay(200);
+            }
+            if (loopDebugMode) { debugPrint(F("Switching Device mode:CERT DOWNLOAD Mode -> OPERATION")); }
+            iuWiFi.m_setLastConfirmedPublication();
+            changeUsageMode(UsageMode::OPERATION);
+            
+            break;
         // MSP Status messages
         case MSPCommand::MSP_INVALID_CHECKSUM:
       //      Serial.println("Invalid Checksum");
@@ -2677,11 +2984,11 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             if (isBLEConnected()) {
                 iuBluetooth.write("WIFI-CONNECTED;");
             }
-            if(conductor.getUsageMode() == UsageMode::OTA) {
-                if (loopDebugMode) { debugPrint(F("OTA DNLD MODE")); }
-                ledManager.stopColorOverride();
-                ledManager.showStatus(&STATUS_OTA_DOWNLOAD);
-            }
+            // if(conductor.getUsageMode() == UsageMode::OTA) {
+            //     if (loopDebugMode) { debugPrint(F("OTA DNLD MODE")); }
+            //     ledManager.stopColorOverride();
+            //     ledManager.showStatus(&STATUS_OTA_DOWNLOAD);
+            // }
             break;
         case MSPCommand::WIFI_ALERT_DISCONNECTED:
             if (isBLEConnected()) {
@@ -2704,6 +3011,45 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 iuWiFi.m_setLastConfirmedPublication();
                 changeUsageMode(UsageMode::OPERATION);
                 delay(100);
+            }
+            break;
+        case MSPCommand::MQTT_ALERT_CONNECTED:
+            if (loopDebugMode) { debugPrint(F("MQTT-CONNECTED;")); }
+            if (isBLEConnected()) {
+                iuBluetooth.write("MQTT-CONNECTED;");
+            }
+            m_mqttConnected = true;
+            // if(conductor.getUsageMode() == UsageMode::OTA) {
+            //     if (loopDebugMode) { debugPrint(F("OTA DNLD MODE or Certificates Upgrade Mode")); }
+            //     ledManager.stopColorOverride();
+            //     ledManager.showStatus(&STATUS_OTA_DOWNLOAD);
+            // }
+            break;
+        case MSPCommand::MQTT_ALERT_DISCONNECTED:
+            if (isBLEConnected()) {
+                iuBluetooth.write("MQTT-DISCONNECTED;");
+            }
+            if(conductor.getUsageMode() == UsageMode::OTA) {
+                if (loopDebugMode) { 
+                    debugPrint(F("OTA In Progress - MQTT-DISCONNECTED"));
+                    debugPrint(F("Sending OTA-ERR-FDW-ABORT"));
+                }
+
+            m_mqttConnected = false;
+            #if 0
+                for(int i = 0 ; i < 15; i++) {
+                    ledManager.overrideColor(RGB_RED);
+                    delay(200);
+                    ledManager.stopColorOverride();
+                    delay(200);
+                }
+                // In case connection with MQTT broker Disconnected/ESP Reset durig OTA, switch to OPERTATION Mode ??
+                sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_MQTT_DISCONNECT)).c_str());
+                if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
+                iuWiFi.m_setLastConfirmedPublication();
+                changeUsageMode(UsageMode::OPERATION);
+                delay(100);
+            #endif
             }
             break;
         case MSPCommand::WIFI_ALERT_NO_SAVED_CREDENTIALS:
@@ -2824,6 +3170,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             m_mqttServerPort = config["mqtt"]["port"];
             m_mqttUserName = config["mqtt"]["username"];
             m_mqttPassword = config["mqtt"]["password"];
+            m_tls_enabled = config["mqtt"]["tls"];
             m_accountId = config["accountid"];
             //Serial.print("Account ID. 1... :");Serial.println(m_accountId);
             //Serial.println("MQTT DEtails :"); Serial.print("IP:");Serial.println(m_mqttServerIp);Serial.print("PORT:");Serial.println(m_mqttServerPort);
@@ -2845,6 +3192,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 m_mqttServerPort = mqttport;
                 m_mqttUserName = config["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
                 m_mqttPassword = config["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
+                m_tls_enabled = config["mqtt"]["tls"];
                 m_accountId = config["accountid"];
                 }
                 else{
@@ -2852,6 +3200,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
                 m_mqttUserName = MQTT_DEFAULT_USERNAME;
                 m_mqttPassword = MQTT_DEFAULT_ASSWORD;
+                m_tls_enabled = false;
                 }
             }
            
@@ -2865,6 +3214,9 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                                   m_mqttUserName);// MQTT_DEFAULT_USERNAME);
             iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_PASSWORD,
                                   m_mqttPassword); //MQTT_DEFAULT_ASSWORD);
+            iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_TLS_FLAG,
+                                 String(m_tls_enabled).c_str()); 
+                                  
            break;
           }
          //case MSPCommand::SEND_FINGERPRINT_ACK:
@@ -3694,11 +4046,11 @@ void Conductor::streamFeatures()
     sendingQueue.maintain();
     
     if (FeatureStates::isISRActive != true && FeatureStates::isISRDisabled){   
-                Serial.print("Streaming Data : ");
-                Serial.println(nodeToSend->buffer);
+                //Serial.print("Streaming Data : ");
+               // Serial.println(nodeToSend->buffer);
                 FeatureStates::isFeatureStreamComplete = true;   // publication completed
                 FeatureStates::isISRActive = true;
-                Serial.println("Published to WiFi Complete !!!");
+                //Serial.println("Published to WiFi Complete !!!");
             }
 
     #endif 
@@ -4915,6 +5267,48 @@ void Conductor::otaChkFwdnldTmout()
             conductor.changeUsageMode(UsageMode::OPERATION);
         }
     }
+    // Certificates Init Timeout 
+    if (certDownloadInProgress == true )
+    {
+        if ( ((now - certDownloadInitWaitTimeout ) > 60*1000 ) && m_certDownloadStarted != true && m_getDownloadConfig != true)
+        {
+            certDownloadInProgress = false;
+            if (loopDebugMode)
+            {
+                debugPrint("CERT - Init Request Timeout, not received next command");
+            }
+            if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA/CERT -> OPERATION")); }
+            iuWiFi.m_setLastConfirmedPublication();
+            conductor.changeUsageMode(UsageMode::OPERATION);
+        
+        }
+        
+    }
+    // if upgrade success response is not received before timeout , switch to Operation Mode
+    if (m_downloadSuccess == true && m_upgradeSuccess == false)
+    {
+        if ( (now - m_downloadSuccessStartTime ) > 60*1000 )
+        {
+            certDownloadInProgress = false;
+            m_downloadSuccess = false;
+            if (iuWiFi.isConnected() || m_mqttConnected == true)
+            {
+                // Certificate Upgrade went Successful
+                sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_SUCCESS,CERT_UPGRADE_COMPLETE,"CERT-RCA-0000");
+            }else
+            {
+                sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_ABORT,CERT_UPGRADE_ERR,"CERT-RCA-0013");
+            }
+            if (loopDebugMode)
+            {
+                debugPrint("CERT - Download Request Timeout, Upgrade Status not received ");
+            }
+            if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA/CERT -> OPERATION")); }
+            iuWiFi.m_setLastConfirmedPublication();
+            conductor.changeUsageMode(UsageMode::OPERATION);
+        }
+    }    
+    
 }
 
 /**
@@ -5053,7 +5447,7 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
     }
     ValidationFile->print(F(" - MQTT DEFAULT SERVER PORT:"));
     ValidationFile->println(MQTT_DEFAULT_SERVER_PORT);
-    if(MQTT_DEFAULT_SERVER_PORT != 1883)
+    if(MQTT_DEFAULT_SERVER_PORT != 8883)
     {
         ValidationFile->println(F("   Validation [MQTT]-Default Port: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Default Port: Fail !")); }
@@ -5063,7 +5457,7 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
     conductor.configureMQTTServer("MQTT.conf");
     // 3. Check default parameter setting changed to read from config file ?
     if(strcmp(m_mqttServerIp,"15.206.193.195") == 0 && m_mqttServerPort == 1883 &&
-      (strcmp(m_mqttUserName,"iuprod") == 0) && (strcmp(m_mqttPassword,"iuprod") == 0))
+      (strcmp(m_mqttUserName,"") == 0) && (strcmp(m_mqttPassword,"") == 0))
     {
         ValidationFile->println(F("   Validation [MQTT]-Read Config File: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Read Config File: Fail !")); }
@@ -5484,7 +5878,11 @@ void Conductor::sendOtaStatusMsg(MSPCommand::command type, char *msg, const char
 {
     char otaResponse[256];
     double otaInitTimeStamp = conductor.getDatetime(); 
-    if(MSPCommand::OTA_FDW_SUCCESS == type || MSPCommand::OTA_FUG_START == type)
+    if(MSPCommand::OTA_FDW_SUCCESS == type || MSPCommand::OTA_FUG_START == type || MSPCommand::CERT_DOWNLOAD_SUCCESS == type ||
+                                              MSPCommand::CERT_UPGRADE_SUCCESS == type || MSPCommand::CERT_UPGRADE_ABORT == type    ||
+                                              MSPCommand::CERT_DOWNLOAD_ABORT == type  || MSPCommand::ALL_MQTT_CONNECT_ATTEMPT_FAILED == type ||
+                                              MSPCommand::CERT_DOWNLOAD_INIT == type   || MSPCommand::CERT_DOWNLOAD_INIT_ACK == type ||
+                                              MSPCommand::DOWNLOAD_TLS_SSL_START == type  )
     {
         if (loopDebugMode) { debugPrint(F("Sending OTA Status Message")); }   
         snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
@@ -5493,7 +5891,7 @@ void Conductor::sendOtaStatusMsg(MSPCommand::command type, char *msg, const char
     }
     else {
         if(iuWiFi.isConnected()) {
-            if (loopDebugMode) { debugPrint(F("WiFi Conntected, Sending OTA Status Message")); }   
+            if (loopDebugMode) { debugPrint(F("WiFi Conntected, Sending OTA | Cert Status Message")); }   
             snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
             m_otaMsgId,m_macAddress.toString().c_str(), OTA_DEVICE_TYPE,msg, errMsg ,otaInitTimeStamp);
             iuOta.otaSendResponse(type, otaResponse);  // Checksum failed
@@ -5863,4 +6261,55 @@ bool Conductor::checkforModbusSlaveConfigurations(){
     
 
 return success;
+}
+
+
+/**
+ * @brief This method takes device mac id as a username without colon and password wiil be reverse of macId
+ * 
+ * @param macId - bleMacID
+ * @return const char* - return the base64 encoded string
+ */
+const char* Conductor::setBasicHTTPAutherization(){
+
+    char username[20]; 
+    //memcpy(username,m_macAddress.toString().c_str(), 20);
+    snprintf(username,20,"%s",m_macAddress.toString().c_str());
+    
+    removeCharacterFromString(username,':');
+
+    Serial.print("USERNAME  :");Serial.println(username);
+    // reverse the string as password
+    uint8_t length =strlen(username); 
+    //Serial.print("LENGTH :");Serial.println(length);
+
+    char password[length];
+    String psw ;
+    // reverse the string 
+    for (size_t i = length; i >0 ; i--)
+    {
+        //password[i] = username[length-i];
+        //Serial.print(password[i]);
+        psw.concat(username[i]);
+    }
+    Serial.print("PSW :");Serial.println(psw);
+    
+    // String auth;
+    // auth.concat(username) + auth.concat(':') + auth.concat(psw);
+
+    // //String auth = rbase64.encode(username  + password);
+    // Serial.print("AUTH : ");Serial.println(auth);
+   
+    return  "success";  //auth.c_str();
+}
+
+void Conductor :: removeCharacterFromString(char* inputString, int charToRemove){
+    Serial.print("INPUT STRING : ");Serial.println(inputString);
+    size_t j,count = strlen(inputString);
+    for (size_t i =j= 0; i < count; i++)
+        if (inputString[i] != charToRemove)
+            inputString[j++] = inputString[i];
+        
+    inputString[j] = '\0';
+    
 }

@@ -1,4 +1,12 @@
 #include "IUMQTTHelper.h"
+#include "IUClientCertificates.h"
+
+#include "IUSerial.h" // ESP32_PORT_TRUE Debug changes
+#include "MSPCommands.h" // ESP32_PORT_TRUE Debug changes
+#include "Conductor.h"
+
+extern Conductor conductor; 
+extern IUSerial hostSerial; // ESP32_PORT_TRUE Debug changes
 
 /* =============================================================================
     Preset values and default settings
@@ -14,8 +22,8 @@ char IUMQTTHelper::DEFAULT_WILL_MESSAGE[44] =
 
 IUMQTTHelper::IUMQTTHelper(const char * serverIP, uint16_t serverPort,
                            const char *username, const char *password) :
-    m_wifiClient(),
-    client(m_wifiClient)
+    m_wifiClient(),//m_wifiClientS(),
+    client(m_wifiClient)//,client(m_wifiClientS)
 {
     setServer(serverIP, serverPort);
     if (username != NULL && password != NULL) {
@@ -36,6 +44,21 @@ void IUMQTTHelper::setServer(const char * serverIP, uint16_t serverPort)
         client.setServer(m_serverIP, m_serverPort);
     }
 }
+/**
+ * @brief 
+ *  Not yet active
+ * @param serverIP 
+ * @param serverPort 
+ */
+void IUMQTTHelper::setServer(const char* serverIP, uint16_t serverPort)
+{
+    //(const char*)m_serverIP = serverIP;
+    m_serverPort = serverPort;
+    if (serverIP != NULL) {
+        client.setServer(serverIP, m_serverPort);
+    }
+}
+
 
 /**
  *
@@ -102,10 +125,16 @@ void IUMQTTHelper::reconnect()
         if (debugMode) {
             debugPrint("Attempting MQTT connection... ", false);
         }
+        if((m_serverPort == 8883 || m_serverPort == 8884) && TLS_ENABLE == true ){
+            //m_wifiClient.setCACert(ca_cert);
+            m_wifiClient.setCertificate(conductor.mqtt_client_cert );
+            m_wifiClient.setPrivateKey(conductor.mqtt_client_key);
+        }
         // Attempt to connect
         if (client.connect(m_deviceMAC.toString().c_str(), m_username,
                            m_password, DIAGNOSTIC_TOPIC, WILL_QOS, WILL_RETAIN,
                            m_willMessage)) {
+            mqttConnected = 0;
             if (debugMode) {
                 debugPrint("Success");
             }
@@ -113,10 +142,19 @@ void IUMQTTHelper::reconnect()
                 m_onConnectionCallback();
             }
         } else {
+            mqttConnected++;
+                      
+            Serial.println("MQTT - Connection Failed");
+            if(WiFi.isConnected()){
+                //hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_CONNECTED);
+                Serial.println("WIFI CLIENT CONNECTED");
+            }
             if (debugMode) {
                 debugPrint("Failed");
             }
             delay(connectionRetryDelay);
+            Serial.print("COUNT  : ");Serial.println(mqttConnected);
+            break;
         }
     }
 }

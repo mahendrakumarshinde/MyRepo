@@ -8,7 +8,8 @@
 #include <rom/rtc.h>
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
-
+//#include "IUESPFlash.h"
+//#include "SPIFFS.h"
 Conductor conductor;
 uint32_t lastDone = 0;
 /* =============================================================================
@@ -21,7 +22,7 @@ uint32_t lastDone = 0;
  * See conductor.processMessageFromMQTT
  */
 void mqttNewMessageCallback(char* topic, byte* payload, unsigned int length) // ESP32_PORT_TRUE
-{
+{   Serial.println("ESP32 DEBUG : Received new mqtt message from server");
     conductor.processMessageFromMQTT(topic, (char*) payload, length);
 }
 
@@ -38,7 +39,8 @@ void onMQTTConnection()
 }
 
 void getAllConfig()
-{
+{   
+    Serial.println("MQTT setOnConnectionCallback");
     mqttHelper.onConnection();
     conductor.publishDiagnostic("connected", 10);
     hostSerial.sendMSPCommand(MSPCommand::GET_DEVICE_CONFIG);
@@ -75,14 +77,19 @@ void setup()
     // Prepare to receive MQTT messages
     mqttHelper.client.setCallback(mqttNewMessageCallback);
     // mqttHelper.setOnConnectionCallback(onMQTTConnection);
-    mqttHelper.setOnConnectionCallback(getAllConfig);
+    mqttHelper.setOnConnectionCallback(getAllConfig);           // Once the MQTT client connected 
     delay(100);
     #if IUDEBUG_ANY == 1
         conductor.reconnect(true);
     #endif
     WiFi.mode(WIFI_STA);
     WiFi.begin();
-    
+     
+    iuWiFiFlash.begin();
+    //Configure the Diagnostic HTTP/HTTPS Endpoint
+    conductor.configureDiagnosticEndpointFromFlash(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT);
+
+
 }
 
 /**
@@ -104,24 +111,31 @@ void loop()
         // from IU server
         timeHelper.updateTimeReferenceFromNTP();
         /***** MQTT Connection / message reception loop *****/
-        conductor.loopMQTT();
+        // if(!mqttHelper.client.connected()){
+        //      conductor.loopMQTT();
+        // }
         conductor.publishWifiInfoCycle();
         // Publish raw data (HTTP POST request)
 //        accelRawDataHelper.publishIfReady(conductor.getBleMAC());
         
     }
+    conductor.mqttSecureConnect();
     conductor.updateWiFiStatusCycle();
     conductor.checkWiFiDisconnectionTimeout();
+    conductor.checkMqttDisconnectionTimeout();
     conductor.checkOtaPacketTimeout();
-    if(WiFi.isConnected() == false)
+    if(WiFi.isConnected() == false)         // Need Auto reconnect for MQTT broker
     {   
         conductor.autoReconncetWifi();
     } 
     uint32_t now = millis();
-    if (now - lastDone > 3000 )
-    {
-         lastDone = now;
-        if(uint64_t(conductor.getBleMAC() ) == 0) {    
+    if (now - lastDone > 5000 )
+    {   
+        //conductor.setBasicHTTPAutherization();
+        conductor.publishRSSI(lastDone,30000);
+        conductor.resetDownloadInitTimer(60,5000);  // (sec,looptimeout)
+        lastDone = now;
+        if(uint64_t(conductor.getBleMAC() ) == 0) { 
             hostSerial.sendMSPCommand(MSPCommand::ASK_BLE_MAC);
             delay(10);
             hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);

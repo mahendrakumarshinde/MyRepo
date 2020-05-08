@@ -37,6 +37,12 @@
 #define  OTA_INT_RLBK_FAIL      8
 #define  OTA_FORCED_RLBK_FAIL   9
 #define  OTA_FILE_MISSING       10
+#define  OTA_MQTT_DISCONNECT    11
+
+
+#define CERT_DOWNLOAD_INIT_REQ_ACK      12
+#define CERT_DOWNLOAD_START             13
+
 
 #define OTA_VALIDATION_SUCCESS  0
 #define OTA_VALIDATION_RETRY    1
@@ -72,6 +78,18 @@
 #define OTA_UPGRADE_START       "OTA-FUG-START"
 #define OTA_UPGRADE_ERR         "OTA-ERR-FUG-ABORT"
 #define OTA_UPGRADE_OK          "OTA-FUG-SUCCESS"
+
+/**** CERTS MACROS *****/
+#define CERT_RESPONE_OK          "CERT-RCA-0000"
+#define CERT_DOWNLOAD_ACK        "CERT-DW-INIT"
+#define CERT_DOWNLOAD_STARTED     "CERT-DW-START"
+#define CERT_UPGRADE_STARTED      "CERT-UG-START"
+#define CERT_DOWNLOAD_COMPLETE    "CERT-DW-SUCCESS"
+#define CERT_UPGRADE_COMPLETE     "CERT-UG-SUCCESS"
+
+#define CERT_DOWNLOAD_ERR        "CERT-ERR-DW-ABORT"
+#define CERT_UPGRADE_ERR         "CERT-ERR-UG-ABORT"
+
 
 
 #define vEdge_Main_FW_BIN           "vEdge_main.bin"
