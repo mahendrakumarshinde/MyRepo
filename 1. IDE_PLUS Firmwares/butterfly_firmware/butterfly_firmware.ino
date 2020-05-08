@@ -121,7 +121,7 @@ int EXCELLENT_SIGNAL_STRENGTH_TH = -40;
 /***** Debbugging variables *****/
 
 bool doOnce = true;
-uint32_t interval = 30000;
+uint32_t interval = 10000;
 uint32_t lastDone = 0;
 
 /**Flash Check Timer variable**/
@@ -764,7 +764,7 @@ void loop()
         if(conductor.getUsageMode() != UsageMode::OTA) {
             /* Block Data acquistion, computation, streaming during OTA download */
             // Manage WiFi autosleep
-            iuWiFi.manageAutoSleep();
+            //iuWiFi.manageAutoSleep();
             //conductor.acquireData(false);
             // Compute features depending on operation mode
              if( (!FeatureStates::isISRActive)  ){ 
@@ -840,8 +840,9 @@ void loop()
         if (now - lastDone > interval) {
             lastDone = now;
             /* === Place your code to excute at fixed interval here ===*/
+            //conductor.setBasicHTTPAutherization();
             conductor.streamMCUUInfo(iuWiFi.port);
-            iuWiFi.sendMSPCommand(MSPCommand::GET_ESP_RSSI);
+            //iuWiFi.sendMSPCommand(MSPCommand::GET_ESP_RSSI);
 
             if(iuWiFi.current_rssi < WEAK_SIGNAL_STRENGTH_TH ){
                  ledManager.overrideColor(RGB_PURPLE);
@@ -856,7 +857,7 @@ void loop()
             {
                 if (loopDebugMode)
                 {
-                    debugPrint("Current WiFi RSSI is :");
+                    debugPrint("Current WiFi RSSI is :",false);
                     debugPrint(iuWiFi.current_rssi,true);
                 }
 

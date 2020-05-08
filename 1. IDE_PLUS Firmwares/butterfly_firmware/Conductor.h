@@ -277,6 +277,9 @@ class Conductor
         void onBootFlashTest();
         float* getFingerprintsforModbus();
         bool checkforModbusSlaveConfigurations();
+        /***** Autherization ***********/
+        const char* setBasicHTTPAutherization();
+        void removeCharacterFromString(char* inputString, int charToRemove);
         
     protected:
         MacAddress m_macAddress;
@@ -353,6 +356,9 @@ class Conductor
         bool otaInitTimeoutFlag = false;
         char WiFiDisconnect_OTAErr[16];
 
+        uint32_t certDownloadInitWaitTimeout =0;
+        bool m_getDownloadConfig = false;
+        bool m_certDownloadStarted  = false;
         // Certificates buffers
         char m_certType[15];
         char m_keyType[15];
