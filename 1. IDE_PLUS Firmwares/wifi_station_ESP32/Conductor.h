@@ -99,8 +99,8 @@ class Conductor
         static const uint32_t otaPktAckTimeout = 30000;  // ms
         static const uint32_t otaPktReadTimeout = 50000; //ms;
         static const uint32_t otaHttpTimeout = 60000; //ms;
-        static const uint8_t maxMqttClientConnectionCount = 3;
-        static const uint8_t maxMqttCertificateDownloadCount = 2;
+        static const uint8_t maxMqttClientConnectionCount = 5;
+        static const uint8_t maxMqttCertificateDownloadCount = 3;
         static const uint32_t downloadInitRetryTimeout  = 30*1000;   //ms
         /***** Core *****/
         Conductor();

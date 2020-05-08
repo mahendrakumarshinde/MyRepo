@@ -251,7 +251,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         case MSPCommand::CERT_UPGRADE_ABORT:
             Serial.print("CERT UPGRADE Failed/ABORTED :");Serial.println(buffer);
             publishedDiagnosticMessage(buffer,bufferLength);
-            if(newDownloadConnectonAttempt >= maxMqttCertificateDownloadCount){ 
+            if(newDownloadConnectonAttempt > maxMqttCertificateDownloadCount){ 
                 downloadInitTimer = false;
                 upgradeReceived = false; }else{
                      downloadInitTimer = true;
@@ -285,7 +285,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             break;
             
         case MSPCommand::ALL_MQTT_CONNECT_ATTEMPT_FAILED:
-            Serial.print("CERT DOWNLOAD Success : ");Serial.println(buffer);
+            Serial.print("All Connection Attempt Failed : ");Serial.println(buffer);
             // TODO :Send to Diagnostic endpoint if mqtt not connected
             publishedDiagnosticMessage(buffer,bufferLength);
             break;
@@ -2244,8 +2244,6 @@ void Conductor::mqttSecureConnect(){
                     {
                         // first connection attempt,upgrade Init
                         Serial.println("Upgrader Init.......");
-                        //hostSerial.sendMSPCommand(MSPCommand::CERT_UPGRADE_INIT,String(getRca(CERT_UPGRADE_START)).c_str());
-                        delay(1);
                     }
                     // Retry 3 time connection then download new certificates
                     Serial.println("\nESP32 DEBUG : Connection Attempt Start");
@@ -2253,8 +2251,6 @@ void Conductor::mqttSecureConnect(){
                     //mqttHelper.client.loop();
                     Serial.print("\nESP32 DEBUG : Connection Count :");
                     Serial.println(mqttHelper.mqttConnected);
-                    Serial.print("\nESP32 DEBUG : Download Init ACK  Flag : ");
-                    Serial.println(certDownloadInitAck);
                     
                     // Upgrade Success and updatet the status
                     if ((certificateDownloadStatus == 1 && ( mqttHelper.mqttConnected <= 5 && mqttHelper.client.connected())) || upgradeReceived ==true)
@@ -2265,15 +2261,8 @@ void Conductor::mqttSecureConnect(){
                         upgradeReceived = false;
                         certificateDownloadStatus = 0;
                     }
-                    // if (certificateDownloadStatus == 1 && ( mqttHelper.mqttConnected >= 5 && !mqttHelper.client.connected() ))
-                    // {
-                    //     Serial.println("\nESP32 DEBUG : Certificate Upgrade Failed");
-                    //     // Send Upgrade Status 
-                    //     hostSerial.sendMSPCommand(MSPCommand::CERT_UPGRADE_ABORT,String(getRca(CERT_UPGRADE_FAILED)).c_str());
-                    //     certificateDownloadStatus = 0;
-                    // }
                     //Retry attempt overflow
-                    if (mqttHelper.mqttConnected >= maxMqttClientConnectionCount )
+                    if (mqttHelper.mqttConnected > maxMqttClientConnectionCount )
                     {   
                         newDownloadConnectonAttempt++;
                         mqttHelper.mqttConnected = 0;
@@ -2281,23 +2270,19 @@ void Conductor::mqttSecureConnect(){
                         Serial.println(newDownloadConnectonAttempt);
                         // re-initiate the certifiates download process
                         
-                        if (newDownloadConnectonAttempt >= maxMqttCertificateDownloadCount)
+                        if (newDownloadConnectonAttempt > maxMqttCertificateDownloadCount)
                         {
                             // TODO : All Retry failed , might be http link broken cannot download certs
                             // Send status to http diagnostic endpoint and show Visuals
                             Serial.println("\nESP32 DEBUG : ALL MQTT Connection Attemps FAILED ************");
                             hostSerial.sendMSPCommand(MSPCommand::ALL_MQTT_CONNECT_ATTEMPT_FAILED,String(getRca(MQTT_CONNECTION_ATTEMPT_FAILED)).c_str());
-                            //newDownloadConnectonAttempt = 0;    
-                            //mqttHelper.mqttConnected = 0;
                             downloadInitLastTimeSync = millis();
                             upgradeReceived = false;
                             downloadInitTimer  = false;
                             Serial.println("\nESP32 DEBUG : Wait till new Connection timout init.");
                             
                         }else {
-                            //certificateDownloadInitInProgress = true;
                             Serial.println("\nESP32 DEBUG : Download Init trigger.......");
-                            //certDownloadInitAck = false;
                             upgradeReceived = false;
                             downloadInitTimer = false;
                             hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_INIT);
@@ -2311,26 +2296,20 @@ void Conductor::mqttSecureConnect(){
                      Serial.println("\nESP32 DEBUG : Files not available to Initiate Certificates Download");
                      hostSerial.sendMSPCommand(MSPCommand::ESP32_FLASH_FILE_READ_FAILED);
                      delay(10);
-                     //certDownloadInitAck = false;
                      upgradeReceived = false;
                      downloadInitTimer = false;
                      hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_INIT);
-                     //hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_INIT,String(getRca(MQTT_CONNECTION_ATTEMPT_FAILED)).c_str());
-                     //certificateDownloadInitInProgress = true;
-                    //delay(10); 
-                    //return ;
-                    
-                 }
+                }
                  
                  
              }
           }else
           { 
               // Certificate Download In-progress or all certificates download and connection attempt failed
-             if (newDownloadConnectonAttempt >= 3)
-             {  Serial.println("\nESP32 DEBUG : CERT DOWNLOAD ALL Attempt failed, re-downloading the certificates");
-                 hostSerial.sendMSPCommand(MSPCommand::ALL_MQTT_CONNECT_ATTEMPT_FAILED,String(getRca(MQTT_CONNECTION_ATTEMPT_FAILED)).c_str());
-             }
+            //  if (newDownloadConnectonAttempt >= maxMqttCertificateDownloadCount)
+            //  {  Serial.println("\nESP32 DEBUG : CERT DOWNLOAD ALL Attempt failed, re-downloading the certificates");
+            //      hostSerial.sendMSPCommand(MSPCommand::ALL_MQTT_CONNECT_ATTEMPT_FAILED,String(getRca(MQTT_CONNECTION_ATTEMPT_FAILED)).c_str());
+            //  }
              
           }
            
@@ -2618,7 +2597,7 @@ int Conductor::download_tls_ssl_certificates(){
                     bool success = config.success();
                     Serial.print("CONFIG JSON :");
                     config.prettyPrintTo(Serial);
-                    TRACE();
+                    //TRACE();
                     if (success)
                     {   
                         Serial.println("Valid JSON Present");
@@ -2811,7 +2790,8 @@ void Conductor::resetDownloadInitTimer(uint16_t downloadTriggerTime,uint16_t loo
     static int tickCounter;
     downloadTriggerTime = (downloadTriggerTime*1000)/loopTimeout;           // 10*1000/5000     
     
-    if (downloadInitTimer == false && newDownloadConnectonAttempt >= maxMqttCertificateDownloadCount)
+    if (( downloadInitTimer == false && (newDownloadConnectonAttempt > maxMqttCertificateDownloadCount ) )     )
+          
     {
         // increment the timer tick
         tickCounter += 1;           // increment by every  5sec 
