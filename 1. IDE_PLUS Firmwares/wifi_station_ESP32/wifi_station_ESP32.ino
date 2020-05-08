@@ -22,7 +22,7 @@ uint32_t lastDone = 0;
  * See conductor.processMessageFromMQTT
  */
 void mqttNewMessageCallback(char* topic, byte* payload, unsigned int length) // ESP32_PORT_TRUE
-{
+{   Serial.println("ESP32 DEBUG : Received new mqtt message from server");
     conductor.processMessageFromMQTT(topic, (char*) payload, length);
 }
 
@@ -124,23 +124,18 @@ void loop()
     conductor.checkWiFiDisconnectionTimeout();
     conductor.checkMqttDisconnectionTimeout();
     conductor.checkOtaPacketTimeout();
-    conductor.resetDownloadInitTimer();
+    conductor.publishRSSI(lastDone,10000);
     if(WiFi.isConnected() == false)         // Need Auto reconnect for MQTT broker
     {   
         conductor.autoReconncetWifi();
     } 
     uint32_t now = millis();
     if (now - lastDone > 5000 )
-    {   //char buff[1024];
-         //iuWiFiFlash.listAllAvailableFiles(IUESPFlash::CONFIG_SUBDIR);
-    //     delay(10);
-    //     iuWiFiFlash.readFile(IUESPFlash::CFG_STATIC_CERT_ENDPOINT,buff,1024);
-    //     delay(10);
-    //     iuWiFiFlash.readFile(IUESPFlash::CFG_CERT_UPGRADE_CONFIG,buff,1024);
- 
+    {   
+        //conductor.setBasicHTTPAutherization();
+        conductor.resetDownloadInitTimer(60,5000);  // (sec,looptimeout)
         lastDone = now;
         if(uint64_t(conductor.getBleMAC() ) == 0) { 
-            Serial.println("GET THE MQTT CONN INFO");   
             hostSerial.sendMSPCommand(MSPCommand::ASK_BLE_MAC);
             delay(10);
             hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);
