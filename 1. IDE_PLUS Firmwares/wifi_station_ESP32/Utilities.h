@@ -34,8 +34,9 @@ namespace HttpContentType {
  */
 inline int httpGetRequest(const char *url, char* responseBody,
                           uint16_t maxResponseLength,
-                          const char *httpsFingerprint=NULL)
+                          const char *httpsFingerprint=NULL/*,const char* auth=NULL*/)
 {
+    
     String username = "9454934A27ED";
     String password = "DE72A4394549"; 
     String auth = base64::encode(username + ":" + password);
@@ -86,9 +87,6 @@ inline int httpGetRequest(const char *url, char* responseBody,
 inline String httpGET(const char *url,uint16_t maxResponseLength,
                           const char *httpsFingerprint=NULL)
 {
-   String username = "9454934A27ED";
-   String password = "DE72A4394549"; 
-   String auth = base64::encode(username + ":" + password);
    String responseBody;
    
     if (WiFi.status() != WL_CONNECTED)
@@ -107,7 +105,6 @@ inline String httpGET(const char *url,uint16_t maxResponseLength,
     else
     {
         http.begin(String(url));
-        http.addHeader("Authorization", "Basic " + auth);
     }
     int httpCode = http.GET();
     if (httpCode > 0)
@@ -196,6 +193,7 @@ inline int httpPostBigRequest(
     const char *endpointHost, const char *endpointURL,
     uint16_t endpointPort, uint8_t *payload, uint16_t payloadLength,
     char* contentType = HttpContentType::applicationJSON,
+    /*const char* auth = NULL,*/
     size_t chunkSize=WIFICLIENT_MAX_PACKET_SIZE,
     uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT + 3000)
 {
