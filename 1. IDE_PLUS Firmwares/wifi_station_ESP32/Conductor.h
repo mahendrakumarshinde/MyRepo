@@ -99,9 +99,9 @@ class Conductor
         static const uint32_t otaPktAckTimeout = 30000;  // ms
         static const uint32_t otaPktReadTimeout = 50000; //ms;
         static const uint32_t otaHttpTimeout = 60000; //ms;
-        static const uint8_t maxMqttClientConnectionCount = 5;
-        static const uint8_t maxMqttCertificateDownloadCount = 5;
-        static const uint32_t downloadInitRetryTimeout  = 30000;   //ms
+        static const uint8_t maxMqttClientConnectionCount = 3;
+        static const uint8_t maxMqttCertificateDownloadCount = 2;
+        static const uint32_t downloadInitRetryTimeout  = 30*1000;   //ms
         /***** Core *****/
         Conductor();
         virtual ~Conductor() {}
@@ -133,6 +133,9 @@ class Conductor
         void loopMQTT();
         void processMessageFromMQTT(const char* topic, const char* payload,
                                     uint16_t length);
+        /***** Autherization ***********/
+        const char* setBasicHTTPAutherization();
+        void removeCharacterFromString(char* inputString, int charToRemove);
         /***** Data posting / publication *****/
         bool publishDiagnostic(const char *rawMsg, const uint16_t msgLength,
                                const char *diagnosticType=NULL,
@@ -148,6 +151,7 @@ class Conductor
         void updateMQTTStatus();
         void updateWiFiStatusCycle();
         void autoReconncetWifi();
+        void publishRSSI(int lastPublishedTime=0,int publishedTimeout=30000);   // 30Sec
         /***** Debugging *****/
         void debugPrintWifiInfo();
         /***** get Device Firmware Versions ******/
@@ -164,7 +168,7 @@ class Conductor
         void updateDiagnosticEndpoint(char* diagnosticEndpoint,int length);
         void configureDiagnosticEndpointFromFlash(IUESPFlash::storedConfig configType);
         void publishedDiagnosticMessage(char* buffer,int bufferLength);
-        void resetDownloadInitTimer();
+        void resetDownloadInitTimer(uint16_t downloadTriggerTime,uint16_t loopTimeout);    //(sec,ms)
         char mqtt_client_cert[2048];
         char mqtt_client_key[2048];
         char ssl_rootca_cert[2048];
@@ -181,10 +185,11 @@ class Conductor
         bool newRootCACertificateAvailable = false;
         bool downloadInitTimer = true;
         bool downloadAborted = false;
+        bool upgradeReceived = false;
         uint32_t downloadInitLastTimeSync;
         uint8_t certificateDownloadStatus = 0;
         uint8_t newDownloadConnectonAttempt = 0;
-
+        bool m_statementEntry = true;
         // Config handler
         static const uint8_t CONFIG_TYPE_COUNT = 5;
         static IUESPFlash::storedConfig CONFIG_TYPES[CONFIG_TYPE_COUNT];

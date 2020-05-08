@@ -1,6 +1,7 @@
 #include "Conductor.h"
 #include "Utilities.h"
 #include <ArduinoTrace.h>
+#include <base64.h>
 
 #define UART_TX_FIFO_SIZE 0x80
 #define OTA_PACKET_SIZE 1024
@@ -242,13 +243,19 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             
         case MSPCommand::CERT_UPGRADE_SUCCESS:
             Serial.print("CERT UPGRADE Success :");Serial.println(buffer);
-            publishedDiagnosticMessage(buffer,bufferLength);
+            //mqttHelper.publish(CERT_STATUS_TOPIC,buffer);
+            upgradeReceived = false;
             downloadInitTimer = true;
+            publishedDiagnosticMessage(buffer,bufferLength);
             break;
         case MSPCommand::CERT_UPGRADE_ABORT:
             Serial.print("CERT UPGRADE Failed/ABORTED :");Serial.println(buffer);
             publishedDiagnosticMessage(buffer,bufferLength);
-            downloadInitTimer = true;
+            if(newDownloadConnectonAttempt >= maxMqttCertificateDownloadCount){ 
+                downloadInitTimer = false;
+                upgradeReceived = false; }else{
+                     downloadInitTimer = true;
+           }
             break;
         case MSPCommand::CERT_DOWNLOAD_ABORT:
             Serial.print("CERT DOWNLOAD ABORTED :");Serial.println(buffer);
@@ -257,6 +264,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             otaInitTimeoutFlag = false;
             publishedDiagnosticMessage(buffer,bufferLength);
             //delay(10);
+            upgradeReceived = false;
             downloadInitTimer = true;
             break;
                     
@@ -283,6 +291,8 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             break;
         case MSPCommand::CERT_UPGRADE_TRIGGER:
             Serial.println("RECEIVED THE CERT UPGRADE COMMAND, Init Download process");
+            upgradeReceived = true;
+            downloadInitTimer = false;
             iuSerial->sendMSPCommand(MSPCommand::CERT_DOWNLOAD_INIT);
             break;
         case MSPCommand::ASK_WIFI_FV:
@@ -387,9 +397,9 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             disconnectMQTT();
             break;
         
-        case MSPCommand::GET_ESP_RSSI:
-            hostSerial.sendMSPCommand(MSPCommand::GET_ESP_RSSI,String(WiFi.RSSI()).c_str() );
-            break;
+        // case MSPCommand::GET_ESP_RSSI:
+        //     hostSerial.sendMSPCommand(MSPCommand::GET_ESP_RSSI,String(WiFi.RSSI()).c_str() );
+        //     break;
         /****** WiFI Radio Control *****/
         case MSPCommand::WIFI_GET_TX_POWER:
             wifi_power_t txpower;
@@ -531,7 +541,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 if (m_mqttServerValidator.hasTimedOut()) {
                     m_mqttServerValidator.reset();
                 }
-                m_mqttServerIP = iuSerial->mspReadIPAddress();
+               m_mqttServerIP = iuSerial->mspReadIPAddress();
                 //hostSerial.write("RECEIVED IP :");hostSerial.write(m_mqttServerIP);
                 
                 m_mqttServerValidator.receivedMessage(0);
@@ -1373,6 +1383,7 @@ void Conductor::checkMqttDisconnectionTimeout()
         // reconnect mqtt client
         //loopMQTT();
     }
+    mqttHelper.client.loop();
 }
 /* =============================================================================
     MQTT
@@ -1468,12 +1479,10 @@ void Conductor::processMessageFromMQTT(const char* topic, const char* payload,
                 Serial.println(payload);
 
                 Ptr = strstr(payload,"fwBinaries");
-                cert = strstr(payload,"certsTypes");
-
-                if(Ptr != NULL || cert != NULL) {
+                
+                if(Ptr != NULL ) {
                     Ptr = strstr(payload,"initiateota");
-                    cert = strstr(payload,"initiatecerts");
-                    if(Ptr != NULL || cert != NULL)
+                    if(Ptr != NULL )
                         otaReqReceived = true;
                 }
                 if(otaReqReceived)
@@ -2209,8 +2218,8 @@ void Conductor::mqttSecureConnect(){
    
     //static uint8_t newDownloadConnectonAttempt;
     uint32_t now = millis();
-    if(!mqttHelper.client.connected() && (now - m_disconnectionMqttTimerStart > 2000 ) && WiFi.isConnected() ){
-          if( certificateDownloadInProgress == false && certDownloadInitAck == false && downloadInitTimer == true){
+    if(!mqttHelper.client.connected() && (now - m_disconnectionMqttTimerStart > 3000 ) && WiFi.isConnected() || upgradeReceived == true){
+          if( certificateDownloadInProgress == false && certDownloadInitAck == false && downloadInitTimer == true ){
              Serial.println("\nESP32 DEBUG : mqtt Loop Disconnect Timeout, reconnect");
              Serial.print("\nESP32 DEBUG : certificateDownloadInProgress : ");Serial.println(certificateDownloadInitInProgress);
              Serial.print("\nESP32 DEBUG : certDownloadInitAck : ");Serial.println(certDownloadInitAck);
@@ -2231,7 +2240,7 @@ void Conductor::mqttSecureConnect(){
                     iuWiFiFlash.readFile(IUESPFlash::CFG_MQTT_CLIENT0,mqtt_client_cert,certSize);
                     delay(10);
                     iuWiFiFlash.readFile(IUESPFlash::CFG_MQTT_KEY0,mqtt_client_key,keySize);
-                    if (certificateDownloadStatus == 1 && ( mqttHelper.mqttConnected == 0 && !mqttHelper.client.connected()))
+                    if ((certificateDownloadStatus == 1 && ( mqttHelper.mqttConnected == 0 && !mqttHelper.client.connected())) || upgradeReceived ==true )
                     {
                         // first connection attempt,upgrade Init
                         Serial.println("Upgrader Init.......");
@@ -2241,55 +2250,58 @@ void Conductor::mqttSecureConnect(){
                     // Retry 3 time connection then download new certificates
                     Serial.println("\nESP32 DEBUG : Connection Attempt Start");
                     mqttHelper.reconnect();  
+                    //mqttHelper.client.loop();
                     Serial.print("\nESP32 DEBUG : Connection Count :");
                     Serial.println(mqttHelper.mqttConnected);
                     Serial.print("\nESP32 DEBUG : Download Init ACK  Flag : ");
                     Serial.println(certDownloadInitAck);
                     
                     // Upgrade Success and updatet the status
-                    if (certificateDownloadStatus == 1 && ( mqttHelper.mqttConnected <= 5 && mqttHelper.client.connected() ))
+                    if ((certificateDownloadStatus == 1 && ( mqttHelper.mqttConnected <= 5 && mqttHelper.client.connected())) || upgradeReceived ==true)
                     {
                         Serial.println("\nESP32 DEBUG : Certificate Upgrade Success");
                         // Send Upgrade Status 
                         hostSerial.sendMSPCommand(MSPCommand::CERT_UPGRADE_SUCCESS,String(getRca(CERT_UPGRADE_COMPLETE)).c_str());
+                        upgradeReceived = false;
                         certificateDownloadStatus = 0;
                     }
-                    if (certificateDownloadStatus == 1 && ( mqttHelper.mqttConnected >= 5 && !mqttHelper.client.connected() ))
-                    {
-                        Serial.println("\nESP32 DEBUG : Certificate Upgrade Failed");
-                        // Send Upgrade Status 
-                        hostSerial.sendMSPCommand(MSPCommand::CERT_UPGRADE_ABORT,String(getRca(CERT_UPGRADE_FAILED)).c_str());
-                        certificateDownloadStatus = 0;
-                    }
-                    
+                    // if (certificateDownloadStatus == 1 && ( mqttHelper.mqttConnected >= 5 && !mqttHelper.client.connected() ))
+                    // {
+                    //     Serial.println("\nESP32 DEBUG : Certificate Upgrade Failed");
+                    //     // Send Upgrade Status 
+                    //     hostSerial.sendMSPCommand(MSPCommand::CERT_UPGRADE_ABORT,String(getRca(CERT_UPGRADE_FAILED)).c_str());
+                    //     certificateDownloadStatus = 0;
+                    // }
                     //Retry attempt overflow
-                    if (mqttHelper.mqttConnected >= 5 )
+                    if (mqttHelper.mqttConnected >= maxMqttClientConnectionCount )
                     {   
                         newDownloadConnectonAttempt++;
+                        mqttHelper.mqttConnected = 0;
                         Serial.print("\nESP32 DEBUG : ClientConnnection Attempt :");
                         Serial.println(newDownloadConnectonAttempt);
                         // re-initiate the certifiates download process
                         
-                        if (newDownloadConnectonAttempt >= 3)
+                        if (newDownloadConnectonAttempt >= maxMqttCertificateDownloadCount)
                         {
                             // TODO : All Retry failed , might be http link broken cannot download certs
                             // Send status to http diagnostic endpoint and show Visuals
                             Serial.println("\nESP32 DEBUG : ALL MQTT Connection Attemps FAILED ************");
                             hostSerial.sendMSPCommand(MSPCommand::ALL_MQTT_CONNECT_ATTEMPT_FAILED,String(getRca(MQTT_CONNECTION_ATTEMPT_FAILED)).c_str());
-                            newDownloadConnectonAttempt = 0;    
+                            //newDownloadConnectonAttempt = 0;    
+                            //mqttHelper.mqttConnected = 0;
                             downloadInitLastTimeSync = millis();
+                            upgradeReceived = false;
                             downloadInitTimer  = false;
                             Serial.println("\nESP32 DEBUG : Wait till new Connection timout init.");
-                            ///return ;
-                        }
-                        mqttHelper.mqttConnected = 0;
-                        //certificateDownloadInitInProgress = true;
-                        Serial.println("\nESP32 DEBUG : Download Init trigger.......");
-                        //certDownloadInitAck = false;
-                        downloadInitTimer = false;
-                        hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_INIT);
-                        //delay(10);
-                        //return ;
+                            
+                        }else {
+                            //certificateDownloadInitInProgress = true;
+                            Serial.println("\nESP32 DEBUG : Download Init trigger.......");
+                            //certDownloadInitAck = false;
+                            upgradeReceived = false;
+                            downloadInitTimer = false;
+                            hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_INIT);
+                        }    
                     }
                     
                  }else
@@ -2300,6 +2312,7 @@ void Conductor::mqttSecureConnect(){
                      hostSerial.sendMSPCommand(MSPCommand::ESP32_FLASH_FILE_READ_FAILED);
                      delay(10);
                      //certDownloadInitAck = false;
+                     upgradeReceived = false;
                      downloadInitTimer = false;
                      hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_INIT);
                      //hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_INIT,String(getRca(MQTT_CONNECTION_ATTEMPT_FAILED)).c_str());
@@ -2794,13 +2807,27 @@ char* Conductor::getConfigChecksum(IUESPFlash::storedConfig configType)
 }
 
 
-void Conductor::resetDownloadInitTimer(){
-    uint32_t now = millis();
-    if ((now - downloadInitLastTimeSync > downloadInitRetryTimeout) ) //&& newDownloadConnectonAttempt >= 3 )
+void Conductor::resetDownloadInitTimer(uint16_t downloadTriggerTime,uint16_t loopTimeout){       
+    static int tickCounter;
+    downloadTriggerTime = (downloadTriggerTime*1000)/loopTimeout;           // 10*1000/5000     
+    
+    if (downloadInitTimer == false && newDownloadConnectonAttempt >= maxMqttCertificateDownloadCount)
     {
-        downloadInitTimer = true;   // Reset timer to Init Download
-        //newDownloadConnectonAttempt = 0;
-        //Serial.println("ALL DOWNLOAD Attempt over, reconfigure the MQTT server");
+        // increment the timer tick
+        tickCounter += 1;           // increment by every  5sec 
+    
+        if (tickCounter >= downloadTriggerTime)
+        {
+            downloadInitTimer = true;           // Re-Initiate the Certificate Download process 
+            newDownloadConnectonAttempt = 0;
+            tickCounter = 0;
+            if (debugMode)
+            {
+                debugPrint("ESP32 DEBUG : Timer Overflow, Re-Initiating Certificate Downloading.");
+            }
+            
+        }
+        
     }
     
 }
@@ -2912,4 +2939,69 @@ void Conductor::publishedDiagnosticMessage(char* buffer,int bufferLength){
         Serial.print("Diagnostic POST Status  : ");
         Serial.println(status);
      }
+}
+/**
+ * @brief Published the RSSI 
+ * 
+ * @param lastPublishedTime 
+ */
+void Conductor::publishRSSI(int lastPublishedTime,int publishedTimeout){
+    uint32_t now = millis();
+    uint32_t current = now;
+    if (now - lastPublishedTime > publishedTimeout )   // 30 sec
+    {
+        hostSerial.sendMSPCommand(MSPCommand::GET_ESP_RSSI,String(WiFi.RSSI()).c_str() );
+        Serial.println("Published RSSI");
+    }
+}
+
+/**
+ * @brief This method takes device mac id as a username without colon and password wiil be reverse of macId
+ * 
+ * @param macId - bleMacID
+ * @return const char* - return the base64 encoded string
+ */
+const char* Conductor::setBasicHTTPAutherization(){
+
+    char username[20]; 
+    //memcpy(username,getBleMAC().toString().c_str(), 20);
+    snprintf(username,20,"%s",getBleMAC().toString().c_str());
+    
+    removeCharacterFromString(username,':');
+
+    for (size_t i = 0; i < 18; i++)
+    {
+        Serial.print(username[i]);
+    }
+    
+    Serial.print("USERNAME  :");Serial.println(username);
+    // reverse the string as password
+    uint8_t length =strlen(username); 
+    Serial.print("Size of : ");Serial.println(username);
+    char password[length];
+
+    // reverse the string 
+    for (size_t i = 0; i <length -1; i++)
+    {
+        password[i] = username[length-i];
+        Serial.print(password[i]);
+    }
+    snprintf(password,length,"%s",password);
+    Serial.print("Password : ");Serial.println(password); 
+
+    String auth = base64::encode(String(username) + ":" + String(password));
+    Serial.print("AUTH : ");Serial.println(auth);
+   
+    return auth.c_str();
+}
+
+void Conductor :: removeCharacterFromString(char* inputString, int charToRemove){
+    Serial.print("INPUT STRING : ");Serial.println(inputString);
+    size_t j,count = strlen(inputString);
+    for (size_t i =j= 0; i < count; i++){
+        if (inputString[i] != charToRemove)
+            inputString[j++] = inputString[i];
+        
+        inputString[j] = '\0';
+    }
 }
