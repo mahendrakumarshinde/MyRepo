@@ -59,9 +59,9 @@ const char CUSTOMER_PLACEHOLDER[CUSTOMER_PLACEHOLDER_LENGTH] = "XXXAdmin";
     Diagnostic HTTP/HTTPS Endpoints
 ============================================================================= */
 
-const char DIAGNOSTIC_DEFAULT_ENDPOINT_HOST[MAX_HOST_LENGTH] = "http://192.168.0.2";
-const char DIAGNOSTIC_DEFAULT_ENDPOINT_PATH[MAX_ROUTE_LENGTH] = "/rawaccelerationdata";
-const uint16_t DIAGNOSTIC_DEFAULT_ENDPOINT_PORT = 1234;
+const char DIAGNOSTIC_DEFAULT_ENDPOINT_HOST[MAX_HOST_LENGTH] = "13.235.210.250";
+const char DIAGNOSTIC_DEFAULT_ENDPOINT_PATH[MAX_ROUTE_LENGTH] = "/certificates/download-status";
+const uint16_t DIAGNOSTIC_DEFAULT_ENDPOINT_PORT = 8000;
 
 /* =============================================================================
     PubSub topic names
