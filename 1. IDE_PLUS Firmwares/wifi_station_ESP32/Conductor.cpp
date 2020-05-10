@@ -1,6 +1,6 @@
 #include "Conductor.h"
 #include "Utilities.h"
-#include <ArduinoTrace.h>
+// #include <ArduinoTrace.h>
 #include <base64.h>
 
 #define UART_TX_FIFO_SIZE 0x80
