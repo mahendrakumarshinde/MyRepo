@@ -10,7 +10,7 @@
 
 #include "IUSerial.h" // ESP32_PORT_TRUE Debug changes
 #include "MSPCommands.h" // ESP32_PORT_TRUE Debug changes
-#include <base64.h>
+//#include <base64.h>
 extern IUSerial hostSerial; // ESP32_PORT_TRUE Debug changes
 
 #define WIFICLIENT_MAX_PACKET_SIZE 1460
@@ -34,13 +34,13 @@ namespace HttpContentType {
  */
 inline int httpGetRequest(const char *url, char* responseBody,
                           uint16_t maxResponseLength,
-                          const char *httpsFingerprint=NULL/*,const char* auth=NULL*/)
+                          String auth = "",
+                          const char *httpsFingerprint=NULL)
 {
     
-    String username = "9454934A27ED";
-    String password = "DE72A4394549"; 
-    String auth = base64::encode(username + ":" + password);
     
+    Serial.print("GET RECEIVED AUTH : ");
+    Serial.println(auth);
     if (WiFi.status() != WL_CONNECTED)
     {
         if (debugMode)
@@ -192,16 +192,15 @@ inline int httpPostJsonRequest(const char *url, char *payload,
 inline int httpPostBigRequest(
     const char *endpointHost, const char *endpointURL,
     uint16_t endpointPort, uint8_t *payload, uint16_t payloadLength,
+    String auth ="",
     char* contentType = HttpContentType::applicationJSON,
-    /*const char* auth = NULL,*/
     size_t chunkSize=WIFICLIENT_MAX_PACKET_SIZE,
     uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT + 3000)
 {
     
-    String username = "9454934A27ED";
-    String password = "DE72A4394549"; 
-    String auth = base64::encode(username + ":" + password);
-
+    Serial.print(" POST RECEIVED AUTH : ");
+    Serial.println(auth);
+    
     if (WiFi.status() != WL_CONNECTED)
     {
         if (debugMode)
@@ -226,6 +225,7 @@ inline int httpPostBigRequest(
         "Authorization: Basic " + auth +"\r\n" +
         "Content-Length: " + String(payloadLength) + "\r\n\r\n";
     // Use WiFiClient class to create TCP connections
+    Serial.print("Request 1: ");Serial.println(request);
     WiFiClient client;
     int connectResult = client.connect(endpointHost, endpointPort);
     //Serial.print("ConnectionStatus : ");Serial.println(connectResult);
