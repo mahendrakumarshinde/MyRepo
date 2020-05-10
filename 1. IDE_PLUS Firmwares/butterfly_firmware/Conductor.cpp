@@ -7,6 +7,7 @@
 #include <MemoryFree.h>
 #include "stm32l4_iap.h"
 
+
 extern IUOTA iuOta;
 const char* fingerprintData;
 const char* fingerprints_X;
@@ -1102,7 +1103,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             iuBluetooth.write("DIAGNOSTIC-URL-FAILED;");
         }
     }
-    
+
     return true;
 }
 
@@ -6264,44 +6265,43 @@ bool Conductor::checkforModbusSlaveConfigurations(){
 return success;
 }
 
-
+#if 0  // Testing Code 
 /**
  * @brief This method takes device mac id as a username without colon and password wiil be reverse of macId
  * 
  * @param macId - bleMacID
  * @return const char* - return the base64 encoded string
  */
-const char* Conductor::setBasicHTTPAutherization(){
+void Conductor::setBasicHTTPAutherization(const char* authToken){
 
     char username[20]; 
-    //memcpy(username,m_macAddress.toString().c_str(), 20);
     snprintf(username,20,"%s",m_macAddress.toString().c_str());
-    
     removeCharacterFromString(username,':');
-
-    Serial.print("USERNAME  :");Serial.println(username);
+    debugPrint("USERNAME  :",false);
+    debugPrint(username);
     // reverse the string as password
     uint8_t length =strlen(username); 
-    //Serial.print("LENGTH :");Serial.println(length);
-
+    Serial.print("LENGTH :");Serial.println(length);
     char password[length];
-    String psw ;
-    // reverse the string 
-    for (size_t i = length; i >0 ; i--)
-    {
-        //password[i] = username[length-i];
-        //Serial.print(password[i]);
-        psw.concat(username[i]);
-    }
-    Serial.print("PSW :");Serial.println(psw);
+    char psw[length];
+    strcpy(password,username);
+    getPassword(password,psw);
     
-    // String auth;
-    // auth.concat(username) + auth.concat(':') + auth.concat(psw);
+    //strncpy(psw,&password[1],12); 
+    //snprintf(psw,12,"%s",(const char*)password); 
+    debugPrint("\nPASSWORD NEW: ",false);
+    debugPrint(password);
+    
+    String data = String(username)  + ":" + String(password);
+    
 
-    // //String auth = rbase64.encode(username  + password);
-    // Serial.print("AUTH : ");Serial.println(auth);
+    debugPrint("DATA : ",false);
+    debugPrint(data);
+    
+    // authToken = rbase64.encode(data.c_str());
+    // debugPrint("AUTH : ",false);debugPrint(authToken);
    
-    return  "success";  //auth.c_str();
+    //return  ; 
 }
 
 void Conductor :: removeCharacterFromString(char* inputString, int charToRemove){
@@ -6314,3 +6314,21 @@ void Conductor :: removeCharacterFromString(char* inputString, int charToRemove)
     inputString[j] = '\0';
     
 }
+
+void Conductor :: getPassword(char* username,char* password){
+    int count = strlen(username);
+    int n=count-1;
+    for(int i=0;i<(count/2);i++){
+       //Using temp to store the char value at index i so 
+        //you can swap it in later for char value at index n
+        char temp = username[i];    
+        username[i] = username[n];
+        username[n] = temp;
+        n = n-1;
+
+    }
+    //strcpy(password,username);
+    debugPrint("PASSWORD  : ",false);
+    debugPrint(username);
+}
+#endif

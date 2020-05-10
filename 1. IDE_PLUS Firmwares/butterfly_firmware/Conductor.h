@@ -278,9 +278,10 @@ class Conductor
         float* getFingerprintsforModbus();
         bool checkforModbusSlaveConfigurations();
         /***** Autherization ***********/
-        const char* setBasicHTTPAutherization();
-        void removeCharacterFromString(char* inputString, int charToRemove);
-        
+        // void setBasicHTTPAutherization(const char* authToken);
+        // void removeCharacterFromString(char* inputString, int charToRemove);
+        // void getPassword(char* username,char* password);
+        // char* reverseConstString(char const* str); 
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
