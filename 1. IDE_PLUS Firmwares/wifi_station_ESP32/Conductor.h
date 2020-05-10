@@ -134,8 +134,9 @@ class Conductor
         void processMessageFromMQTT(const char* topic, const char* payload,
                                     uint16_t length);
         /***** Autherization ***********/
-        const char* setBasicHTTPAutherization();
+        String setBasicHTTPAutherization();
         void removeCharacterFromString(char* inputString, int charToRemove);
+        void reverseString(char* username);
         /***** Data posting / publication *****/
         bool publishDiagnostic(const char *rawMsg, const uint16_t msgLength,
                                const char *diagnosticType=NULL,
@@ -151,7 +152,7 @@ class Conductor
         void updateMQTTStatus();
         void updateWiFiStatusCycle();
         void autoReconncetWifi();
-        void publishRSSI(int lastPublishedTime=0,int publishedTimeout=30000);   // 30Sec
+        void publishRSSI();   // 30Sec
         /***** Debugging *****/
         void debugPrintWifiInfo();
         /***** get Device Firmware Versions ******/
@@ -193,7 +194,6 @@ class Conductor
         // Config handler
         static const uint8_t CONFIG_TYPE_COUNT = 5;
         static IUESPFlash::storedConfig CONFIG_TYPES[CONFIG_TYPE_COUNT];
-        
     protected:
         /***** Config from Host *****/      
         char HOST_FIRMWARE_VERSION[8];      //filled when the ESP starts or when it connects to MQTT broker

@@ -644,7 +644,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             
             int httpStatusCode = httpPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_endpointRoute,
                                             accelRawDataHelper.m_endpointPort, (uint8_t*) &httpBuffer, 
-                                            httpBufferPointer, HttpContentType::octetStream);            
+                                            httpBufferPointer,"", HttpContentType::octetStream);            
 
             // send HTTP status code back to the MCU
             char httpAckBuffer[1 + 4];      // axis + 3 digit HTTP status code + null terminator
@@ -742,7 +742,9 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 Serial.println("\nESP32 DEBUG: GET the Certificates Download Config");
                 //String certDownloadResponse =  httpGET(staticURL,0,NULL);         
                 //char certDownloadResponse[2048];    // Store the config json response
-                int httpCode = httpGetRequest(staticURL,certDownloadResponse,sizeof(certDownloadResponse),NULL); 
+                delay(100);
+                String auth = setBasicHTTPAutherization();
+                int httpCode = httpGetRequest(staticURL,certDownloadResponse,sizeof(certDownloadResponse),auth); 
                 //Serial.println(certDownloadResponse);
                 //sscanf(certDownloadResponse, "%d", &httpCode); 
                 int16_t responseLength = sizeof(certDownloadResponse);
@@ -866,7 +868,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                         downloadAborted = true;
                     }
                     downloadAborted = true;
-                    hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT);
+                    //hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT);
                     Serial.println("\nESP32 DEBUG :STOP CERT Download Mode");
 
                 }
@@ -878,11 +880,12 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 if(! WiFi.isConnected() || !success ) {
                     
                     if(!success) {
-                        Serial.println("\nESP32 DEBUG : Invalid Static URL Config JSON Response");
+                        Serial.println("\nESP32 DEBUG : Invalid Static URL Config JSON Response or File Not available");
+                        hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT,String(getRca(CERT_STATIC_URL_FILE_NOT_PRESENT)).c_str() );
                     }else{ Serial.println("\nESP32 DEBUG : Wifi client disconnected ");}
 
                 }
-                hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT);               // Exit from the Download Mode , Need to Descide Action ??? 
+                //hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT);               // Exit from the Download Mode , Need to Descide Action ??? 
                 downloadAborted = true;                    
             }
             break;
@@ -2206,9 +2209,13 @@ String Conductor::getRca(int error)
         case CERT_UPGRADE_FAILED:
             return F("CERT-RCA-0013");
         case CERT_NEW_CERT_NOT_AVAILBLE:
-            return F("CERT-RCA-0014"); 
+            return F("CERT-RCA-0042"); 
         case CERT_SAME_UPGRADE_CONFIG_RECEIVED:
-            return F("CERT-RCA-0015"); 
+            return F("CERT-RCA-0043"); 
+        case CERT_STATIC_URL_FILE_NOT_PRESENT:
+            return F("CERT-RCA-0044");
+        case HTTP_CODE_UNAUTHORIZED:
+            return F("CERT-RCA-0045");
         default:
             if(certificateDownloadInProgress){ return F("CERT-RCA-2222");}else{ return F("OTA-RCA-1111"); }
     }
@@ -2910,12 +2917,13 @@ void Conductor::publishedDiagnosticMessage(char* buffer,int bufferLength){
     // Serial.print("http payload:");
     // Serial.println(message);
     // Serial.println();
-    
+    String auth = setBasicHTTPAutherization();
     if(mqttHelper.client.connected()){
          mqttHelper.publish(CERT_STATUS_TOPIC,buffer);
      }else
      {
-        int status =  httpPostBigRequest(diagnosticEndpointHost,diagnosticEndpointRoute,diagnosticEndpointPort,(uint8_t*) message,bufferLength,HttpContentType::textPlain);
+        int status =  httpPostBigRequest(diagnosticEndpointHost,diagnosticEndpointRoute,diagnosticEndpointPort,(uint8_t*) message,
+                                            bufferLength,auth, HttpContentType::textPlain );
         Serial.print("Diagnostic POST Status  : ");
         Serial.println(status);
      }
@@ -2923,16 +2931,12 @@ void Conductor::publishedDiagnosticMessage(char* buffer,int bufferLength){
 /**
  * @brief Published the RSSI 
  * 
- * @param lastPublishedTime 
+ * @param publishedTimeout - Sec
  */
-void Conductor::publishRSSI(int lastPublishedTime,int publishedTimeout){
-    uint32_t now = millis();
-    uint32_t current = now;
-    if (now - lastPublishedTime > publishedTimeout )   // 30 sec
-    {
+void Conductor::publishRSSI(){
         hostSerial.sendMSPCommand(MSPCommand::GET_ESP_RSSI,String(WiFi.RSSI()).c_str() );
-        Serial.println("Published RSSI");
-    }
+        Serial.print("Published RSSI");
+        Serial.println(WiFi.RSSI());
 }
 
 /**
@@ -2941,47 +2945,54 @@ void Conductor::publishRSSI(int lastPublishedTime,int publishedTimeout){
  * @param macId - bleMacID
  * @return const char* - return the base64 encoded string
  */
-const char* Conductor::setBasicHTTPAutherization(){
+String Conductor::setBasicHTTPAutherization(){
 
     char username[20]; 
-    //memcpy(username,getBleMAC().toString().c_str(), 20);
     snprintf(username,20,"%s",getBleMAC().toString().c_str());
-    
     removeCharacterFromString(username,':');
-
-    for (size_t i = 0; i < 18; i++)
-    {
-        Serial.print(username[i]);
-    }
-    
-    Serial.print("USERNAME  :");Serial.println(username);
+    //Serial.print("USERNAME  :");Serial.println(username);
     // reverse the string as password
     uint8_t length =strlen(username); 
-    Serial.print("Size of : ");Serial.println(username);
+    //Serial.print("LENGTH :");Serial.println(length);
     char password[length];
-
-    // reverse the string 
-    for (size_t i = 0; i <length -1; i++)
-    {
-        password[i] = username[length-i];
-        Serial.print(password[i]);
-    }
-    snprintf(password,length,"%s",password);
-    Serial.print("Password : ");Serial.println(password); 
+    char psw[length];
+    strcpy(password,username);
+    reverseString(password);
+    
+    //Serial.print("NEW PASSWORD : ");
+    //Serial.println(password);
 
     String auth = base64::encode(String(username) + ":" + String(password));
-    Serial.print("AUTH : ");Serial.println(auth);
-   
-    return auth.c_str();
+    //Serial.print("AUTH : ");Serial.println(auth);
+    
+    return auth;
 }
 
 void Conductor :: removeCharacterFromString(char* inputString, int charToRemove){
-    Serial.print("INPUT STRING : ");Serial.println(inputString);
+    //Serial.print("INPUT STRING : ");Serial.println(inputString);
     size_t j,count = strlen(inputString);
-    for (size_t i =j= 0; i < count; i++){
+    for (size_t i =j= 0; i < count; i++)
         if (inputString[i] != charToRemove)
             inputString[j++] = inputString[i];
         
-        inputString[j] = '\0';
+    inputString[j] = '\0';
+    
+}
+void Conductor :: reverseString(char* username){
+    int count = strlen(username);
+    int n=count-1;
+    for(int i=0;i<(count/2);i++){
+       //Using temp to store the char value at index i so 
+        //you can swap it in later for char value at index n
+        char temp = username[i];    
+        username[i] = username[n];
+        username[n] = temp;
+        n = n-1;
+
+    }
+    if (debugMode)
+    {
+        debugPrint("PASSWORD  : ",false);
+        debugPrint(username);
     }
 }
