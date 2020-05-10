@@ -840,7 +840,6 @@ void loop()
         if (now - lastDone > interval) {
             lastDone = now;
             /* === Place your code to excute at fixed interval here ===*/
-            //conductor.setBasicHTTPAutherization();
             conductor.streamMCUUInfo(iuWiFi.port);
             //iuWiFi.sendMSPCommand(MSPCommand::GET_ESP_RSSI);
 
