@@ -91,7 +91,7 @@ class Conductor
         // Delay between 2 connection attemps
         static const uint32_t reconnectionInterval = 1000;  // ms
         //ESP32 will deep-sleep after being disconnected for more than:
-        static const uint32_t disconnectionTimeout = 100000;  // ms
+        static const uint32_t disconnectionTimeout = 120000;  // ms
         // Cyclic publication
         static const uint32_t wifiStatusUpdateDelay = 5000;  // ms
         static const uint32_t wifiInfoPublicationDelay = 300000;  // ms
@@ -170,6 +170,9 @@ class Conductor
         void configureDiagnosticEndpointFromFlash(IUESPFlash::storedConfig configType);
         void publishedDiagnosticMessage(char* buffer,int bufferLength);
         void resetDownloadInitTimer(uint16_t downloadTriggerTime,uint16_t loopTimeout);    //(sec,ms)
+        /******* Validation ********/
+        void messageValidation(char* json);
+        /***************************/
         char mqtt_client_cert[2048];
         char mqtt_client_key[2048];
         char ssl_rootca_cert[2048];
@@ -184,6 +187,8 @@ class Conductor
         bool newMqttcertificateAvailable = false;
         bool newMqttPrivateKeyAvailable = false;
         bool newRootCACertificateAvailable = false;
+        bool newEapCertificateAvailable = false;
+        bool newEapPrivateKeyAvailable = false;
         bool downloadInitTimer = true;
         bool downloadAborted = false;
         bool upgradeReceived = false;
