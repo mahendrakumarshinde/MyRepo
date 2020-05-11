@@ -764,7 +764,7 @@ void loop()
         if(conductor.getUsageMode() != UsageMode::OTA) {
             /* Block Data acquistion, computation, streaming during OTA download */
             // Manage WiFi autosleep
-            //iuWiFi.manageAutoSleep();
+            iuWiFi.manageAutoSleep();
             //conductor.acquireData(false);
             // Compute features depending on operation mode
              if( (!FeatureStates::isISRActive)  ){ 
