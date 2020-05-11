@@ -5272,7 +5272,7 @@ void Conductor::otaChkFwdnldTmout()
     // Certificates Init Timeout 
     if (certDownloadInProgress == true )
     {
-        if ( ((now - certDownloadInitWaitTimeout ) > 60*1000 ) && m_certDownloadStarted != true && m_getDownloadConfig != true)
+        if ( ((now - certDownloadInitWaitTimeout ) > m_certDownloadInitTimeout ) && m_certDownloadStarted != true && m_getDownloadConfig != true)
         {
             certDownloadInProgress = false;
             if (loopDebugMode)
@@ -5289,7 +5289,7 @@ void Conductor::otaChkFwdnldTmout()
     // if upgrade success response is not received before timeout , switch to Operation Mode
     if (m_downloadSuccess == true && m_upgradeSuccess == false)
     {
-        if ( (now - m_downloadSuccessStartTime ) > 60*1000 )
+        if ( (now - m_downloadSuccessStartTime ) > m_upgradeMessageTimeout )
         {
             certDownloadInProgress = false;
             m_downloadSuccess = false;
