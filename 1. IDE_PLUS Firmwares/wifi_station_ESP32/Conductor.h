@@ -170,6 +170,7 @@ class Conductor
         void configureDiagnosticEndpointFromFlash(IUESPFlash::storedConfig configType);
         void publishedDiagnosticMessage(char* buffer,int bufferLength);
         void resetDownloadInitTimer(uint16_t downloadTriggerTime,uint16_t loopTimeout);    //(sec,ms)
+        int downloadCertificates(const char* type,const char* url,const char* hash,uint8_t index,uint8_t certToUpdate);
         /******* Validation ********/
         void messageValidation(char* json);
         /***************************/
@@ -192,12 +193,14 @@ class Conductor
         bool downloadInitTimer = true;
         bool downloadAborted = false;
         bool upgradeReceived = false;
+        bool initialFileDownload = false;
         uint32_t downloadInitLastTimeSync;
         uint8_t certificateDownloadStatus = 0;
         uint8_t newDownloadConnectonAttempt = 0;
+        uint8_t activeCertificates = 0;
         bool m_statementEntry = true;
         // Config handler
-        static const uint8_t CONFIG_TYPE_COUNT = 5;
+        static const uint8_t CONFIG_TYPE_COUNT = 10;
         static IUESPFlash::storedConfig CONFIG_TYPES[CONFIG_TYPE_COUNT];
     protected:
         /***** Config from Host *****/      
