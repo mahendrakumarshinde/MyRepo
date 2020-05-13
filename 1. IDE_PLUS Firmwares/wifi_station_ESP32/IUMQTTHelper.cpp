@@ -117,8 +117,8 @@ void IUMQTTHelper::reconnect()
         }
         if((m_serverPort == 8883 || m_serverPort == 8884) && TLS_ENABLE == true ){
             // m_wifiClient.setCACert(client_ca);
-            m_wifiClient.setCertificate(client_cert );
-            m_wifiClient.setPrivateKey(client_private_key);
+            m_wifiClient.setCertificate(conductor.mqtt_client_cert );
+            m_wifiClient.setPrivateKey(conductor.mqtt_client_key);
         }
         // Attempt to connect
         if (client.connect(m_deviceMAC.toString().c_str(), m_username,
