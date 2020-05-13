@@ -143,16 +143,16 @@ void IUMQTTHelper::reconnect()
         } else {
             mqttConnected++;
                       
-            Serial.println("MQTT - Connection Failed");
-            if(WiFi.isConnected()){
-                //hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_CONNECTED);
-                Serial.println("WIFI CLIENT CONNECTED");
-            }
+            //Serial.println("MQTT - Connection Failed");
+            // if(WiFi.isConnected()){
+            //     //hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_CONNECTED);
+            //     Serial.println("WIFI CLIENT CONNECTED");
+            // }
             if (debugMode) {
                 debugPrint("Failed");
             }
             delay(connectionRetryDelay);
-            Serial.print("COUNT  : ");Serial.println(mqttConnected);
+            //Serial.print("COUNT  : ");Serial.println(mqttConnected);
             break;
         }
     }

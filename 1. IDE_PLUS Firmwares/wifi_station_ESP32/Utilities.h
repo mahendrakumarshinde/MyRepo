@@ -223,7 +223,6 @@ inline int httpPostBigRequest(
     // Use WiFiClient class to create TCP connections
     WiFiClient client;
     int connectResult = client.connect(endpointHost, endpointPort);
-    //Serial.print("ConnectionStatus : ");Serial.println(connectResult);
     if (connectResult == 0)
     {
         if (debugMode)
