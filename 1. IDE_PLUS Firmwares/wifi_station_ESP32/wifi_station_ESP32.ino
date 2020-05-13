@@ -22,7 +22,7 @@ uint32_t lastDone = 0;
  * See conductor.processMessageFromMQTT
  */
 void mqttNewMessageCallback(char* topic, byte* payload, unsigned int length) // ESP32_PORT_TRUE
-{   Serial.println("ESP32 DEBUG : Received new mqtt message from server");
+{   
     conductor.processMessageFromMQTT(topic, (char*) payload, length);
 }
 
@@ -40,7 +40,6 @@ void onMQTTConnection()
 
 void getAllConfig()
 {   
-    Serial.println("MQTT setOnConnectionCallback");
     mqttHelper.onConnection();
     conductor.publishDiagnostic("connected", 10);
     hostSerial.sendMSPCommand(MSPCommand::GET_DEVICE_CONFIG);
@@ -88,7 +87,7 @@ void setup()
     iuWiFiFlash.begin();
     //Configure the Diagnostic HTTP/HTTPS Endpoint
     conductor.configureDiagnosticEndpointFromFlash(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT);
-
+    conductor.activeCertificates = iuWiFiFlash.readMemory(ADDRESS);
 
 }
 
@@ -132,13 +131,17 @@ void loop()
     static uint8_t rssiPublishedCounter;
     if (now - lastDone > 5000 )
     {   
+        //iuWiFiFlash.listAllAvailableFiles(IUESPFlash::CONFIG_SUBDIR);
+        Serial.print("EEPROM Value :");
+        Serial.println(iuWiFiFlash.readMemory(ADDRESS));
+
         rssiPublishedCounter++ ;
-        if (rssiPublishedCounter >= 6)  // 6 * 500 = 30 Sec
+        if (rssiPublishedCounter >= 6)
         {
             conductor.publishRSSI();
             rssiPublishedCounter = 0;
         }
-        conductor.resetDownloadInitTimer(60,5000);  // (sec,looptimeout)
+        conductor.resetDownloadInitTimer(60,5000);
         lastDone = now;
         if(uint64_t(conductor.getBleMAC() ) == 0) { 
             hostSerial.sendMSPCommand(MSPCommand::ASK_BLE_MAC);
