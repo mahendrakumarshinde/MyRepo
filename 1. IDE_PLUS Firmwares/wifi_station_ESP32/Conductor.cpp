@@ -840,6 +840,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 iuWiFiFlash.removeFile(CONFIG_TYPES[i]);
                 delay(1);
             }
+            iuWiFiFlash.updateValue(ADDRESS,0);
             hostSerial.sendMSPCommand(MSPCommand::DELETE_CERT_FILES,"succefully Deleted");
             break;
         case MSPCommand::READ_CERTS:
@@ -2138,7 +2139,7 @@ void Conductor::mqttSecureConnect(){
                  {
                     Serial.println("ESP32 DEBUG : APPYING THE CERTIFICATES*********");
                     int certSize,keySize;
-                   if( upgradeReceived  && (activeCertificates == 1 && initialFileDownload == false)){
+                   if( upgradeReceived  && (activeCertificates == 1 && initialFileDownload == false) ){
                         Serial.println("Using Client 1 Certificates");
                         certSize = iuWiFiFlash.getFileSize(IUESPFlash::CFG_MQTT_CLIENT1);
                         keySize  = iuWiFiFlash.getFileSize(IUESPFlash::CFG_MQTT_KEY1);
@@ -2172,12 +2173,12 @@ void Conductor::mqttSecureConnect(){
                         hostSerial.sendMSPCommand(MSPCommand::CERT_UPGRADE_SUCCESS,String(getRca(CERT_UPGRADE_COMPLETE)).c_str());
                         // Rollback downloadCertificates
                         if(upgradeReceived && activeCertificates == 1){
-                            Serial.println("Certificates Upgrade Success....");
+                            Serial.println("Client 1 Upgrade Success....");
                             // backup the older  certificates and use the latest.
                             // raname the files or overwrite it. make sure after devicereset it should use new certs
                             activeCertificates = iuWiFiFlash.updateValue(ADDRESS,1);  // client1 in Use after Reset
                         }else {
-                            Serial.println("Using Client 0 .....");
+                            Serial.println("\nClient 0 Upgrade Success.....");
                             activeCertificates = iuWiFiFlash.updateValue(ADDRESS,0); // Clinet 0 in use 
                         }
                         upgradeReceived = false;
@@ -2520,7 +2521,7 @@ int Conductor::download_tls_ssl_certificates(){
                             // Note : upgradeReceived flage is set only for dev testing , can ne removed later (only in this statments not in nested if)
                             int res = downloadCertificates(type,url,hash,index,certToUpdate);
                             Serial.print("Output : ");Serial.println(res);
-                            if(res != 1){ break;}   //exit from for loop
+                            if(res != 1){  return 0 ; /*break;*/}   //exit from for loop
                             
                         }   // for loop
                         
