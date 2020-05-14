@@ -49,7 +49,7 @@ class IUMQTTHelper
         /***** Core *****/
         IUMQTTHelper(const char * serverIP, uint16_t serverPort,
                      const char *username, const char *password);
-        IUMQTTHelper() : IUMQTTHelper("15.206.193.195", 1883, "iuprod", "iuprod") {}
+        IUMQTTHelper() : IUMQTTHelper("3.6.220.46", 8883, "", "") {}
         virtual ~IUMQTTHelper() { }
         void setServer(const char * serverIP, uint16_t serverPort);
         void setCredentials(const char *username, const char *password);

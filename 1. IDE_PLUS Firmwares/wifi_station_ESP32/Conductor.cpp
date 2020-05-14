@@ -547,18 +547,12 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 //mqttHelper.publish(FINGERPRINT_DATA_PUBLISH_TOPIC, "RAW PORT...");
             break;
         case MSPCommand::SET_MQTT_SERVER_IP:
-            //hostSerial.write("FROM WIFI SET_MQTT_SERVER_IP :");
-            //hostSerial.write(buffer);
+
             if (m_mqttServerValidator.hasTimedOut()) {
                 m_mqttServerValidator.reset();
             }
-            // m_mqttServerIP = iuSerial->mspReadIPAddress();
             strncpy(m_mqttServerIP, buffer, IUMQTTHelper::credentialMaxLength);
-                m_mqttServerValidator.receivedMessage(0);
-                if (m_mqttServerValidator.completed()) {
-                    mqttHelper.setServer(m_mqttServerIP, m_mqttServerPort);
-                    hostSerial.write("RECEIVED MQTT SERVER IP FROM DEVICE ");
-            
+
             m_mqttServerValidator.receivedMessage(0);
             if (m_mqttServerValidator.completed()) {
                 mqttHelper.setServer(m_mqttServerIP, m_mqttServerPort);

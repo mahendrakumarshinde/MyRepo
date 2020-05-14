@@ -5421,14 +5421,14 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
     // 1. Check default parameter setting
     ValidationFile->print(F(" - MQTT DEFAULT SERVER IP:"));
     ValidationFile->println(MQTT_DEFAULT_SERVER_IP);
-    if(strcmp(MQTT_DEFAULT_SERVER_IP,"15.206.193.195") != 0)
+    if(strcmp(MQTT_DEFAULT_SERVER_IP,"3.6.220.46") != 0)
     {
         ValidationFile->println(F("   Validation [MQTT]-Default IP Add: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Default IP Add: Fail !")); }
     }
     ValidationFile->print(F(" - MQTT DEFAULT SERVER PORT:"));
     ValidationFile->println(MQTT_DEFAULT_SERVER_PORT);
-    if(MQTT_DEFAULT_SERVER_PORT != 1883)
+    if(MQTT_DEFAULT_SERVER_PORT != 8883)
     {
         ValidationFile->println(F("   Validation [MQTT]-Default Port: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Default Port: Fail !")); }
@@ -5437,8 +5437,8 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
     // 2. Check MQTT update from config file stored in ext. flash
     conductor.configureMQTTServer("MQTT.conf");
     // 3. Check default parameter setting changed to read from config file ?
-    if(strcmp(m_mqttServerIp,"15.206.193.195") == 0 && m_mqttServerPort == 1883 &&
-      (strcmp(m_mqttUserName,"iuprod") == 0) && (strcmp(m_mqttPassword,"iuprod") == 0))
+    if(strcmp(m_mqttServerIp,"3.6.220.46") == 0 && m_mqttServerPort == 8883 &&
+      (strcmp(m_mqttUserName,"") == 0) && (strcmp(m_mqttPassword,"") == 0))
     {
         ValidationFile->println(F("   Validation [MQTT]-Read Config File: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Read Config File: Fail !")); }

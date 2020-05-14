@@ -38,13 +38,6 @@ inline int httpGetRequest(const char *url, char* responseBody,
                           const char *httpsFingerprint=NULL)
 {
     
-<<<<<<< HEAD
-    String username = "9454934A6E4E";
-    String password = "E4E6A4394549"; 
-    String auth = base64::encode(username + ":" + password);
-=======
->>>>>>> 79d9516d18b00c93d21e5e9024bb1e36401bbbcd
-    
     if (WiFi.status() != WL_CONNECTED)
     {
         if (debugMode)
@@ -201,15 +194,7 @@ inline int httpPostBigRequest(
     size_t chunkSize=WIFICLIENT_MAX_PACKET_SIZE,
     uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT + 3000)
 {
-    
-<<<<<<< HEAD
-    String username = "9454934A6E4E";
-    String password = "E4E6A4394549"; 
-    String auth = base64::encode(username + ":" + password);
-
-=======
-    
->>>>>>> 79d9516d18b00c93d21e5e9024bb1e36401bbbcd
+     
     if (WiFi.status() != WL_CONNECTED)
     {
         if (debugMode)
