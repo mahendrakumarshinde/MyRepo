@@ -7,7 +7,7 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <IUDebugger.h>
-
+#include <WiFiClientSecure.h>
 #include "IUSerial.h" // ESP32_PORT_TRUE Debug changes
 #include "MSPCommands.h" // ESP32_PORT_TRUE Debug changes
 //#include <base64.h>
@@ -220,6 +220,8 @@ inline int httpPostBigRequest(
         "Content-Length: " + String(payloadLength) + "\r\n\r\n";
     // Use WiFiClient class to create TCP connections
     WiFiClient client;
+    //WiFiClientSecure client;
+    //client.setCACert(conductor1.ssl_rootca_cert); 
     int connectResult = client.connect(endpointHost, endpointPort);
     if (connectResult == 0)
     {
