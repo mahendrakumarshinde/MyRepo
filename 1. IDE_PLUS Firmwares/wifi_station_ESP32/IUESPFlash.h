@@ -100,9 +100,10 @@ class IUESPFlash
            return EEPROM.read(address); }
         void writeValue(int const address,int value){
             EEPROM.write(address,value); 
-            EEPROM.commit(); }
+            bool res = EEPROM.commit();
+        }
         int updateValue(int const address,int value){
-            EEPROM.write(address,value);
+            writeValue(address,value);
             return EEPROM.read(address);
         }
 
