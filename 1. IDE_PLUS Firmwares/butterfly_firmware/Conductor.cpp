@@ -5447,7 +5447,7 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
     }
     ValidationFile->print(F(" - MQTT DEFAULT SERVER PORT:"));
     ValidationFile->println(MQTT_DEFAULT_SERVER_PORT);
-    if(MQTT_DEFAULT_SERVER_PORT != 8883)
+    if(MQTT_DEFAULT_SERVER_PORT != 1883)
     {
         ValidationFile->println(F("   Validation [MQTT]-Default Port: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Default Port: Fail !")); }
@@ -5457,7 +5457,7 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
     conductor.configureMQTTServer("MQTT.conf");
     // 3. Check default parameter setting changed to read from config file ?
     if(strcmp(m_mqttServerIp,"15.206.193.195") == 0 && m_mqttServerPort == 1883 &&
-      (strcmp(m_mqttUserName,"") == 0) && (strcmp(m_mqttPassword,"") == 0))
+      (strcmp(m_mqttUserName,"iuprod") == 0) && (strcmp(m_mqttPassword,"iuprod") == 0))
     {
         ValidationFile->println(F("   Validation [MQTT]-Read Config File: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Read Config File: Fail !")); }
