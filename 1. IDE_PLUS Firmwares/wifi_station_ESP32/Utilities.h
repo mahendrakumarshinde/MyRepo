@@ -10,7 +10,7 @@
 
 #include "IUSerial.h" // ESP32_PORT_TRUE Debug changes
 #include "MSPCommands.h" // ESP32_PORT_TRUE Debug changes
-#include <base64.h>
+//#include <base64.h>
 extern IUSerial hostSerial; // ESP32_PORT_TRUE Debug changes
 
 #define WIFICLIENT_MAX_PACKET_SIZE 1460
@@ -34,12 +34,16 @@ namespace HttpContentType {
  */
 inline int httpGetRequest(const char *url, char* responseBody,
                           uint16_t maxResponseLength,
-                          const char *httpsFingerprint=NULL/*,const char* auth=NULL*/)
+                          String auth = "",
+                          const char *httpsFingerprint=NULL)
 {
     
+<<<<<<< HEAD
     String username = "9454934A6E4E";
     String password = "E4E6A4394549"; 
     String auth = base64::encode(username + ":" + password);
+=======
+>>>>>>> 79d9516d18b00c93d21e5e9024bb1e36401bbbcd
     
     if (WiFi.status() != WL_CONNECTED)
     {
@@ -192,16 +196,20 @@ inline int httpPostJsonRequest(const char *url, char *payload,
 inline int httpPostBigRequest(
     const char *endpointHost, const char *endpointURL,
     uint16_t endpointPort, uint8_t *payload, uint16_t payloadLength,
+    String auth ="",
     char* contentType = HttpContentType::applicationJSON,
-    /*const char* auth = NULL,*/
     size_t chunkSize=WIFICLIENT_MAX_PACKET_SIZE,
     uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT + 3000)
 {
     
+<<<<<<< HEAD
     String username = "9454934A6E4E";
     String password = "E4E6A4394549"; 
     String auth = base64::encode(username + ":" + password);
 
+=======
+    
+>>>>>>> 79d9516d18b00c93d21e5e9024bb1e36401bbbcd
     if (WiFi.status() != WL_CONNECTED)
     {
         if (debugMode)
@@ -228,7 +236,6 @@ inline int httpPostBigRequest(
     // Use WiFiClient class to create TCP connections
     WiFiClient client;
     int connectResult = client.connect(endpointHost, endpointPort);
-    //Serial.print("ConnectionStatus : ");Serial.println(connectResult);
     if (connectResult == 0)
     {
         if (debugMode)

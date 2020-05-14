@@ -7,6 +7,7 @@
 #include <MemoryFree.h>
 #include "stm32l4_iap.h"
 
+
 extern IUOTA iuOta;
 const char* fingerprintData;
 const char* fingerprints_X;
@@ -795,7 +796,6 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             strcpy(m_otaMsgId,(const char*)root["messageId"]);
             strcpy(m_otaFwVer,(const char*)root["fwVersion"]);
     //     String test1 = root["otaConfig"]["supportedDeviceTypes"];
-        //    Serial.println(test1);
             if(loopDebugMode) {
                 debugPrint(F("OTA Message ID: "), false);
                 debugPrint(m_otaMsgId);
@@ -1102,7 +1102,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             iuBluetooth.write("DIAGNOSTIC-URL-FAILED;");
         }
     }
-    
+
     return true;
 }
 
@@ -1481,7 +1481,6 @@ JsonObject& Conductor:: configureJsonFromFlash(String filename,bool isSet){
   const size_t bufferSize = JSON_OBJECT_SIZE(1) + 45*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(45) + 2430;
   
   DynamicJsonBuffer jsonBuffer(bufferSize);
- // Serial.print("JSON 2 SIZE :");Serial.println(bufferSize);
  // Parse the root object
   JsonObject &root = jsonBuffer.parseObject(myFile);
   //JsonObject& root2 = root["fingerprints"];
@@ -1492,7 +1491,6 @@ JsonObject& Conductor:: configureJsonFromFlash(String filename,bool isSet){
   }
  else {
   // close file
- // Serial.println("Closing the fingerprints.conf file.....");
   myFile.close();
 
  }
@@ -1613,7 +1611,6 @@ void Conductor::processCommand(char *buff)
 {
     IPAddress tempAddress;
     size_t buffLen = strlen(buff);
-   // Serial.println(buff);
     
     switch(buff[0]) {
         case 'A': // ping device
@@ -1879,7 +1876,6 @@ void Conductor::processUserCommandForWiFi(char *buff,
 void Conductor::processLegacyCommand(char *buff)
 {
     // TODO Command protocol redefinition required
-    //Serial.print("Leagacy CMD Input :");Serial.println(buff);
     switch (buff[0]) {
         case '0': // Set Thresholds
             if (buff[4] == '-' && buff[9] == '-' && buff[14] == '-') {
@@ -2058,10 +2054,8 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                 }
                 if (strcmp(buff, "IUGET_DATA") == 0) {
                   iuUSB.port->write(START_CONFIRM);
-                  //Serial.println("START CUSTOM.....1");
                   changeUsageMode(UsageMode::CUSTOM);   // switch to CUSTOM usage mode
-                  //Serial.println("START CUSTOM.....2");
-                }
+                 }
                 if(strcmp(buff,"IUGET_TCP_CONFIG") == 0) {
                     debugPrint("CMD RECEIVED Successfully");
                     if(DOSFS.exists("relayAgentConfig.conf")){
@@ -2300,7 +2294,6 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
             case UsageMode::CUSTOM:
                 if (strcmp(buff, "IUEND_DATA") == 0) {
                     iuUSB.port->println(END_CONFIRM);
-                    //Serial.println("End CUSTOM ....");
                     changeUsageMode(UsageMode::OPERATION);    //back to Operation Mode
                    return; 
                 }  
@@ -2556,7 +2549,6 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             delay(100); 
             break;
         case MSPCommand::OTA_ESP_DNLD_STATUS:
-//            Serial.println(F("STM,ESP FW Download Completed !")); 
             if (loopDebugMode) { debugPrint(F("ESP FW Download Completed !")); }
             iuWiFi.sendMSPCommand(MSPCommand::OTA_ESP_DNLD_OK);
             otaFwdnldTmout = millis();
@@ -2895,7 +2887,6 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             break;
         // MSP Status messages
         case MSPCommand::MSP_INVALID_CHECKSUM:
-      //      Serial.println("Invalid Checksum");
             if (loopDebugMode) { debugPrint(F("MSP_INVALID_CHECKSUM")); }
             break;
         case MSPCommand::MSP_TOO_LONG:
@@ -3172,9 +3163,6 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             m_mqttPassword = config["mqtt"]["password"];
             m_tls_enabled = config["mqtt"]["tls"];
             m_accountId = config["accountid"];
-            //Serial.print("Account ID. 1... :");Serial.println(m_accountId);
-            //Serial.println("MQTT DEtails :"); Serial.print("IP:");Serial.println(m_mqttServerIp);Serial.print("PORT:");Serial.println(m_mqttServerPort);
-            //Serial.print("USERNAME :");Serial.println(m_mqttUserName); Serial.print("PASSWORD:");Serial.println(m_mqttPassword);
             if(m_mqttUserName == NULL || m_mqttPassword == NULL || m_mqttServerPort == NULL){
               // load default configurations
                 String mqttConfig = iuFlash.readInternalFlash(CONFIG_MQTT_FLASH_ADDRESS);
@@ -3241,7 +3229,6 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
              JsonObject& pendingConfigObject = jsonBuffer.parseObject(buff); 
              size_t msgLen = strlen(buff);
 
-             //Serial.print("Size of buff : ");Serial.println(msgLen);
              char fingerprintAlarm[1500];
              char featuresThreshold[1500]; 
              char fingerprintFeatures[1500];
@@ -3740,7 +3727,6 @@ void Conductor::changeUsageMode(UsageMode::option usage)
  */
 bool Conductor::beginDataAcquisition()
 {   
-    //Serial.println("BBBBBBBBBBBBBB");
     if (m_inDataAcquistion) {
         return true; // Already in data acquisition
     }
@@ -3837,7 +3823,6 @@ void Conductor::acquireData(bool inCallback)
             aucostic = iuI2S.getData();                               // raw audio data 
             acceleration = iuAccelerometer.getData(iuUSB.port);       // raw accel data
 
-            //Serial.print("Audio :");Serial.println(aucostic);
             snprintf(rawData,50,"%04.3f,%04.3f,%04.3f,%.3f",acceleration[0],acceleration[1],acceleration[2],aucostic);
             
             String payload = "";
@@ -3847,11 +3832,8 @@ void Conductor::acquireData(bool inCallback)
             payload += rawData;
             payload += "#";
             
-            //Serial.println(payload);
             iuUSB.port->write(payload.c_str());
             
-            //Serial.print(features[0],4);Serial.print(",");Serial.print(features[1],4);Serial.print(",");Serial.println(features[2],4);
-            //Serial.print("Data:");Serial.println(rawAccel);
         }
                 
             force = true;
@@ -5132,8 +5114,7 @@ bool Conductor::setSensorConfig(char* filename){
             debugPrint(m_audioOffset);
         }    
         //variant.prettyPrintTo(Serial);
-        //Serial.println("READING FROM STARTUP COMPLETE...");   
-
+        
         return true;
     }
 }
@@ -5270,7 +5251,7 @@ void Conductor::otaChkFwdnldTmout()
     // Certificates Init Timeout 
     if (certDownloadInProgress == true )
     {
-        if ( ((now - certDownloadInitWaitTimeout ) > 60*1000 ) && m_certDownloadStarted != true && m_getDownloadConfig != true)
+        if ( ((now - certDownloadInitWaitTimeout ) > m_certDownloadInitTimeout ) && m_certDownloadStarted != true && m_getDownloadConfig != true)
         {
             certDownloadInProgress = false;
             if (loopDebugMode)
@@ -5287,7 +5268,7 @@ void Conductor::otaChkFwdnldTmout()
     // if upgrade success response is not received before timeout , switch to Operation Mode
     if (m_downloadSuccess == true && m_upgradeSuccess == false)
     {
-        if ( (now - m_downloadSuccessStartTime ) > 60*1000 )
+        if ( (now - m_downloadSuccessStartTime ) > m_upgradeMessageTimeout )
         {
             certDownloadInProgress = false;
             m_downloadSuccess = false;
@@ -6263,44 +6244,43 @@ bool Conductor::checkforModbusSlaveConfigurations(){
 return success;
 }
 
-
+#if 0  // Testing Code 
 /**
  * @brief This method takes device mac id as a username without colon and password wiil be reverse of macId
  * 
  * @param macId - bleMacID
  * @return const char* - return the base64 encoded string
  */
-const char* Conductor::setBasicHTTPAutherization(){
+void Conductor::setBasicHTTPAutherization(const char* authToken){
 
     char username[20]; 
-    //memcpy(username,m_macAddress.toString().c_str(), 20);
     snprintf(username,20,"%s",m_macAddress.toString().c_str());
-    
     removeCharacterFromString(username,':');
-
-    Serial.print("USERNAME  :");Serial.println(username);
+    debugPrint("USERNAME  :",false);
+    debugPrint(username);
     // reverse the string as password
     uint8_t length =strlen(username); 
-    //Serial.print("LENGTH :");Serial.println(length);
-
+    Serial.print("LENGTH :");Serial.println(length);
     char password[length];
-    String psw ;
-    // reverse the string 
-    for (size_t i = length; i >0 ; i--)
-    {
-        //password[i] = username[length-i];
-        //Serial.print(password[i]);
-        psw.concat(username[i]);
-    }
-    Serial.print("PSW :");Serial.println(psw);
+    char psw[length];
+    strcpy(password,username);
+    getPassword(password,psw);
     
-    // String auth;
-    // auth.concat(username) + auth.concat(':') + auth.concat(psw);
+    //strncpy(psw,&password[1],12); 
+    //snprintf(psw,12,"%s",(const char*)password); 
+    debugPrint("\nPASSWORD NEW: ",false);
+    debugPrint(password);
+    
+    String data = String(username)  + ":" + String(password);
+    
 
-    // //String auth = rbase64.encode(username  + password);
-    // Serial.print("AUTH : ");Serial.println(auth);
+    debugPrint("DATA : ",false);
+    debugPrint(data);
+    
+    // authToken = rbase64.encode(data.c_str());
+    // debugPrint("AUTH : ",false);debugPrint(authToken);
    
-    return  "success";  //auth.c_str();
+    //return  ; 
 }
 
 void Conductor :: removeCharacterFromString(char* inputString, int charToRemove){
@@ -6313,3 +6293,21 @@ void Conductor :: removeCharacterFromString(char* inputString, int charToRemove)
     inputString[j] = '\0';
     
 }
+
+void Conductor :: getPassword(char* username,char* password){
+    int count = strlen(username);
+    int n=count-1;
+    for(int i=0;i<(count/2);i++){
+       //Using temp to store the char value at index i so 
+        //you can swap it in later for char value at index n
+        char temp = username[i];    
+        username[i] = username[n];
+        username[n] = temp;
+        n = n-1;
+
+    }
+    //strcpy(password,username);
+    debugPrint("PASSWORD  : ",false);
+    debugPrint(username);
+}
+#endif

@@ -130,6 +130,8 @@ class Conductor
         static const uint32_t BLEconnectionTimeout = 15000;
         static const uint32_t connectedStatusTimeout = 60000;   // 1 min for ETHERNET connectedStatusTimeout
         uint32_t m_connectionTimeout = 150000;   // 2 min 30s
+        uint32_t m_upgradeMessageTimeout = 30*1000;
+        uint32_t m_certDownloadInitTimeout = 60*1000;
         //timer ISR period
         uint16_t timerISRPeriod = 300; // default 3.3KHz
         String availableFingerprints;
@@ -278,9 +280,10 @@ class Conductor
         float* getFingerprintsforModbus();
         bool checkforModbusSlaveConfigurations();
         /***** Autherization ***********/
-        const char* setBasicHTTPAutherization();
-        void removeCharacterFromString(char* inputString, int charToRemove);
-        
+        // void setBasicHTTPAutherization(const char* authToken);
+        // void removeCharacterFromString(char* inputString, int charToRemove);
+        // void getPassword(char* username,char* password);
+        // char* reverseConstString(char const* str); 
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/

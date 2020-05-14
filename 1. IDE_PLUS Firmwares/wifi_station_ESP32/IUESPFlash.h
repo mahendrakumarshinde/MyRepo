@@ -8,12 +8,15 @@
 #include <ArduinoJson.h>
 #include <Arduino.h>
 #include <IUDebugger.h>
+#include <EEPROM.h>
 /**
  * A class to perform the file IO operations 
  * The class is typically instanciated with an empty payload, that is then
  * 
  *
  * */
+#define MEMORY_SIZE 1   // Using 1byte from 512 bytes 
+#define ADDRESS     0   // address to read write
 class IUESPFlash
 {
     public:
@@ -90,8 +93,18 @@ class IUESPFlash
         size_t getConfigFilename(storedConfig configType, char *dest,
                                  size_t len);
         //File openConfigFile(storedConfig configType, const char* mode);
-
-
+        /**** ESP32 EEPROM Read Write Functions ****/
+        void eepromBegin(int SIZE){
+            EEPROM.begin(SIZE); }
+        int readMemory(int const address){ 
+           return EEPROM.read(address); }
+        void writeValue(int const address,int value){
+            EEPROM.write(address,value); 
+            EEPROM.commit(); }
+        int updateValue(int const address,int value){
+            EEPROM.write(address,value);
+            return EEPROM.read(address);
+        }
 
     protected:
         

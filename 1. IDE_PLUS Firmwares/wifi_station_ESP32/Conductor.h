@@ -91,7 +91,7 @@ class Conductor
         // Delay between 2 connection attemps
         static const uint32_t reconnectionInterval = 1000;  // ms
         //ESP32 will deep-sleep after being disconnected for more than:
-        static const uint32_t disconnectionTimeout = 100000;  // ms
+        static const uint32_t disconnectionTimeout = 120000;  // ms
         // Cyclic publication
         static const uint32_t wifiStatusUpdateDelay = 5000;  // ms
         static const uint32_t wifiInfoPublicationDelay = 300000;  // ms
@@ -134,8 +134,9 @@ class Conductor
         void processMessageFromMQTT(const char* topic, const char* payload,
                                     uint16_t length);
         /***** Autherization ***********/
-        const char* setBasicHTTPAutherization();
+        String setBasicHTTPAutherization();
         void removeCharacterFromString(char* inputString, int charToRemove);
+        void reverseString(char* username);
         /***** Data posting / publication *****/
         bool publishDiagnostic(const char *rawMsg, const uint16_t msgLength,
                                const char *diagnosticType=NULL,
@@ -151,7 +152,7 @@ class Conductor
         void updateMQTTStatus();
         void updateWiFiStatusCycle();
         void autoReconncetWifi();
-        void publishRSSI(int lastPublishedTime=0,int publishedTimeout=30000);   // 30Sec
+        void publishRSSI();   // 30Sec
         /***** Debugging *****/
         void debugPrintWifiInfo();
         /***** get Device Firmware Versions ******/
@@ -169,6 +170,10 @@ class Conductor
         void configureDiagnosticEndpointFromFlash(IUESPFlash::storedConfig configType);
         void publishedDiagnosticMessage(char* buffer,int bufferLength);
         void resetDownloadInitTimer(uint16_t downloadTriggerTime,uint16_t loopTimeout);    //(sec,ms)
+        int downloadCertificates(const char* type,const char* url,const char* hash,uint8_t index,uint8_t certToUpdate);
+        /******* Validation ********/
+        void messageValidation(char* json);
+        /***************************/
         char mqtt_client_cert[2048];
         char mqtt_client_key[2048];
         char ssl_rootca_cert[2048];
@@ -183,17 +188,20 @@ class Conductor
         bool newMqttcertificateAvailable = false;
         bool newMqttPrivateKeyAvailable = false;
         bool newRootCACertificateAvailable = false;
+        bool newEapCertificateAvailable = false;
+        bool newEapPrivateKeyAvailable = false;
         bool downloadInitTimer = true;
         bool downloadAborted = false;
         bool upgradeReceived = false;
+        bool initialFileDownload = false;
         uint32_t downloadInitLastTimeSync;
         uint8_t certificateDownloadStatus = 0;
         uint8_t newDownloadConnectonAttempt = 0;
+        uint8_t activeCertificates = 0;
         bool m_statementEntry = true;
         // Config handler
-        static const uint8_t CONFIG_TYPE_COUNT = 5;
+        static const uint8_t CONFIG_TYPE_COUNT = 10;
         static IUESPFlash::storedConfig CONFIG_TYPES[CONFIG_TYPE_COUNT];
-        
     protected:
         /***** Config from Host *****/      
         char HOST_FIRMWARE_VERSION[8];      //filled when the ESP starts or when it connects to MQTT broker
