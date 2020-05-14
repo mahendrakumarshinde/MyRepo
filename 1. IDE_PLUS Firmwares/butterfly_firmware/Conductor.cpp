@@ -1248,11 +1248,11 @@ void Conductor::readForceOtaConfig()
         if(config.success())
         {
             debugPrint("Mqtt Config Found");
-            String mqttServerIP = config["mqtt"]["mqttServerIP"];
+            m_mqttServerIp = config["mqtt"]["mqttServerIP"];
 
             int mqttport = config["mqtt"]["port"];
             //debugPrint("INside MQTT.conf .......");
-            m_mqttServerIp.fromString(mqttServerIP);//mqttServerIP;
+            // m_mqttServerIp.fromString(mqttServerIP);//mqttServerIP;
             m_mqttServerPort = mqttport;
             m_mqttUserName = config["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
             m_mqttPassword = config["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
@@ -1294,10 +1294,10 @@ void Conductor::readForceOtaConfig()
   }
  else {
   
-  String mqttServerIP = root["mqtt"]["mqttServerIP"];
+  m_mqttServerIp = root["mqtt"]["mqttServerIP"];
   int mqttport = root["mqtt"]["port"];
    //debugPrint("INside MQTT.conf .......");
-  m_mqttServerIp.fromString(mqttServerIP);//mqttServerIP;
+//   m_mqttServerIp.fromString(mqttServerIP);//mqttServerIP;
   m_mqttServerPort = mqttport;
   m_mqttUserName = root["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
   m_mqttPassword = root["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
@@ -1726,8 +1726,9 @@ void Conductor::processCommand(char *buff)
         }
         case 'S':
             if (strncmp(buff, "SET-MQTT-IP-", 12) == 0) {
-                if (tempAddress.fromString(&buff[12])) {
-                    m_mqttServerIp = tempAddress;     // temp adress ?
+                // if (tempAddress.fromString(&buff[12])) {
+                    m_mqttServerIp = &buff[12];     // temp adress ?
+                    //Serial.print("mqtt ip :");Serial.println(m_mqttServerIp);
                     iuWiFi.hardReset();
                     if (m_streamingMode == StreamingMode::BLE ||
                         m_streamingMode == StreamingMode::WIFI_AND_BLE)
@@ -1739,7 +1740,8 @@ void Conductor::processCommand(char *buff)
                         }
                         iuBluetooth.write("SET-MQTT-OK;");
                     }
-                }
+                     //Serial.print("MQTT IP Address :");Serial.println(m_mqttServerIp);
+                // }
             }
         case '3':  // Collect acceleration raw data
             if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
@@ -3155,8 +3157,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             {
             JsonObject& config = configureJsonFromFlash("MQTT.conf",1);
 
-            //m_mqttServerIp = config["mqtt"]["mqttServerIP"];
-            //m_mqttServerPort = config["mqtt"]["port"];
+            m_mqttServerIp = config["mqtt"]["mqttServerIP"];
+            m_mqttServerPort = config["mqtt"]["port"];
             m_mqttUserName = config["mqtt"]["username"];
             m_mqttPassword = config["mqtt"]["password"];
             m_tls_enabled = config["mqtt"]["tls"];
@@ -3170,11 +3172,11 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 if(config.success())
                 {
                 debugPrint("Mqtt Config Found");
-                String mqttServerIP = config["mqtt"]["mqttServerIP"];
+                m_mqttServerIp = config["mqtt"]["mqttServerIP"];
 
                 int mqttport = config["mqtt"]["port"];
                 //debugPrint("INside MQTT.conf .......");
-                m_mqttServerIp.fromString(mqttServerIP);//mqttServerIP;
+                // m_mqttServerIp.fromString(mqttServerIP);//mqttServerIP;
                 m_mqttServerPort = mqttport;
                 m_mqttUserName = config["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
                 m_mqttPassword = config["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
@@ -3190,8 +3192,9 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 }
             }
            
-            
-            iuWiFi.mspSendIPAddress(MSPCommand::SET_MQTT_SERVER_IP,
+            //Serial.print("UserName :");Serial.println(m_mqttUserName);
+            //Serial.print("Password 1 :");Serial.println(m_mqttPassword);
+            iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_SERVER_IP,
                                     m_mqttServerIp);
             iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_SERVER_PORT,
                                   String(m_mqttServerPort).c_str());
@@ -5418,7 +5421,7 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
     // 1. Check default parameter setting
     ValidationFile->print(F(" - MQTT DEFAULT SERVER IP:"));
     ValidationFile->println(MQTT_DEFAULT_SERVER_IP);
-    if(MQTT_DEFAULT_SERVER_IP != IPAddress(3,6,220,46))
+    if(strcmp(MQTT_DEFAULT_SERVER_IP,"3.6.220.46") != 0)
     {
         ValidationFile->println(F("   Validation [MQTT]-Default IP Add: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Default IP Add: Fail !")); }
@@ -5434,7 +5437,7 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
     // 2. Check MQTT update from config file stored in ext. flash
     conductor.configureMQTTServer("MQTT.conf");
     // 3. Check default parameter setting changed to read from config file ?
-    if(m_mqttServerIp == IPAddress(15,206,193,195) && m_mqttServerPort == 1883 &&
+    if(strcmp(m_mqttServerIp,"3.6.220.46") == 0 && m_mqttServerPort == 8883 &&
       (strcmp(m_mqttUserName,"") == 0) && (strcmp(m_mqttPassword,"") == 0))
     {
         ValidationFile->println(F("   Validation [MQTT]-Read Config File: Fail !"));

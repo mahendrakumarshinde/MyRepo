@@ -1,6 +1,6 @@
 #include "Conductor.h"
 #include "Utilities.h"
-#include <ArduinoTrace.h>
+// #include <ArduinoTrace.h>
 #include <base64.h>
 
 #define UART_TX_FIFO_SIZE 0x80
@@ -67,7 +67,7 @@ Conductor::Conductor() :
     m_lastWifiStatusUpdate(0),
     m_lastWifiStatusCheck(0),
     m_lastWifiInfoPublication(0),
-    m_mqttServerIP(IPAddress())
+    m_mqttServerIP()
 {
     m_featurePostPort = DATA_DEFAULT_ENDPOINT_PORT;
     m_diagnosticPostPort = DATA_DEFAULT_ENDPOINT_PORT;
@@ -547,12 +547,12 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 //mqttHelper.publish(FINGERPRINT_DATA_PUBLISH_TOPIC, "RAW PORT...");
             break;
         case MSPCommand::SET_MQTT_SERVER_IP:
+
             if (m_mqttServerValidator.hasTimedOut()) {
                 m_mqttServerValidator.reset();
             }
-            m_mqttServerIP = iuSerial->mspReadIPAddress();
-            //hostSerial.write("RECEIVED IP :");hostSerial.write(m_mqttServerIP);
-            
+            strncpy(m_mqttServerIP, buffer, IUMQTTHelper::credentialMaxLength);
+
             m_mqttServerValidator.receivedMessage(0);
             if (m_mqttServerValidator.completed()) {
                 mqttHelper.setServer(m_mqttServerIP, m_mqttServerPort);

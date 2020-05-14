@@ -38,7 +38,6 @@ inline int httpGetRequest(const char *url, char* responseBody,
                           const char *httpsFingerprint=NULL)
 {
     
-    
     if (WiFi.status() != WL_CONNECTED)
     {
         if (debugMode)
@@ -195,8 +194,7 @@ inline int httpPostBigRequest(
     size_t chunkSize=WIFICLIENT_MAX_PACKET_SIZE,
     uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT + 3000)
 {
-    
-    
+     
     if (WiFi.status() != WL_CONNECTED)
     {
         if (debugMode)
