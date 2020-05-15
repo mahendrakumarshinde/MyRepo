@@ -85,6 +85,8 @@ void setup()
     WiFi.begin();
      
     iuWiFiFlash.begin();
+    // Set the common url json if file not present
+    conductor.setCommonHttpEndpoint();
     //Configure the Diagnostic HTTP/HTTPS Endpoint
     conductor.configureDiagnosticEndpointFromFlash(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT);
     conductor.activeCertificates = iuWiFiFlash.readMemory(ADDRESS);
@@ -149,7 +151,7 @@ void loop()
             hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);
             delay(10);
             hostSerial.sendMSPCommand(MSPCommand::GET_RAW_DATA_ENDPOINT_INFO); 
-        }  
+        }
     }
     delay(1);
 }

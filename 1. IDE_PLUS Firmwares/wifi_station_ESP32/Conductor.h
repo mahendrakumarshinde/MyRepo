@@ -167,6 +167,7 @@ class Conductor
         int download_tls_ssl_certificates();
         char* getConfigChecksum(IUESPFlash::storedConfig configType);
         void updateDiagnosticEndpoint(char* diagnosticEndpoint,int length);
+        bool setCommonHttpEndpoint();
         void configureDiagnosticEndpointFromFlash(IUESPFlash::storedConfig configType);
         void publishedDiagnosticMessage(char* buffer,int bufferLength);
         void resetDownloadInitTimer(uint16_t downloadTriggerTime,uint16_t loopTimeout);    //(sec,ms)
@@ -177,8 +178,10 @@ class Conductor
         char mqtt_client_cert[2048];
         char mqtt_client_key[2048];
         char ssl_rootca_cert[2048];
+        char eap_client_cert[2048];
+        char eap_client_key[2048];
         char certDownloadResponse[2400];    // stores the cert download json (Actual  -2299)
-        char diagnosticEndpointHost[MAX_HOST_LENGTH]; //= "http://192.168.0.2:1234/rawaccelerationdata";   // Default diagnostic endpoints
+        char diagnosticEndpointHost[MAX_HOST_LENGTH];
         int  diagnosticEndpointPort;
         char diagnosticEndpointRoute[MAX_ROUTE_LENGTH];
         bool configStatus = false;
@@ -199,6 +202,7 @@ class Conductor
         uint8_t newDownloadConnectonAttempt = 0;
         uint8_t activeCertificates = 0;
         bool m_statementEntry = true;
+        bool commomEndpointsuccess = false;
         // Config handler
         static const uint8_t CONFIG_TYPE_COUNT = 10;
         static IUESPFlash::storedConfig CONFIG_TYPES[CONFIG_TYPE_COUNT];

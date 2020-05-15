@@ -680,7 +680,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         case MSPCommand::DOWNLOAD_TLS_SSL_START:
                 certificateDownloadInitInProgress = true;
                 certificateDownloadInProgress = true;
-                if(downloadAborted  == false && (newMqttcertificateAvailable == true || newEapPrivateKeyAvailable == true || 
+                if(downloadAborted  == false && (newEapCertificateAvailable == true || newEapPrivateKeyAvailable == true || 
                     newMqttcertificateAvailable == true || newMqttPrivateKeyAvailable == true || newRootCACertificateAvailable == true || upgradeReceived) ){
                     // Note : upgradeReceived flage is optional here, in upgrade new cert are having different checksum above all  flags will alreay set to true
                     // added temp for testing upgrade    
@@ -688,10 +688,6 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                     publishedDiagnosticMessage(buffer,bufferLength);
                     certificateDownloadStatus = download_tls_ssl_certificates();
                     if(certificateDownloadStatus == 1){
-                        for (size_t i = 0; i < CONFIG_TYPE_COUNT; i++)
-                        {                        
-                            iuWiFiFlash.getFileSize(CONFIG_TYPES[i]);
-                        }
                         hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_SUCCESS, String(getRca(CERT_DOWNLOAD_COMPLETE)).c_str());
                         if(activeCertificates == 1){
                             if(initialFileDownload){
@@ -733,6 +729,9 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             if(written && buffer != NULL){
                 // Serial.println("\nESP32 DEBUG : static url config type success"); 
                  //downloadInitTimer = true;  
+                 if(debugMode){
+                     debugPrint("HTTP Common Endpoint configured successfully");
+                 }
             }else
             {
                 // Failed to write to Flash File system, or Empty Buffer received 
@@ -753,13 +752,17 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             StaticJsonBuffer<512> jsonBuffer;
             JsonVariant config = JsonVariant(iuWiFiFlash.loadConfigJson(IUESPFlash::CFG_STATIC_CERT_ENDPOINT,jsonBuffer));
             bool success = config.success();
-            // Serial.print("COMMON URL JSON :");
-            // config.prettyPrintTo(Serial);
+            Serial.print("COMMON URL JSON :");
+            config.prettyPrintTo(Serial);
             
             if( success && WiFi.isConnected() ){
                 
-                const char* staticURL = config["certUrl"]["url"];
+                const char* url = config["certUrl"]["url"] ;  
+                String commonUrl = url ;
+                commonUrl +=  m_bleMAC.toString();  // append mac id
+                const char* staticURL = commonUrl.c_str();
                 //Serial.println("\nESP32 DEBUG: GET the Certificates Download Config");
+                Serial.print("STATIC URL : ");Serial.println(staticURL);
                 String auth = setBasicHTTPAutherization();
                 int httpCode = httpGetRequest(staticURL,certDownloadResponse,sizeof(certDownloadResponse),auth); 
                 int16_t responseLength = sizeof(certDownloadResponse);
@@ -840,6 +843,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 iuWiFiFlash.removeFile(CONFIG_TYPES[i]);
                 delay(1);
             }
+            iuWiFiFlash.removeFile(IUESPFlash::CFG_STATIC_CERT_ENDPOINT);
             iuWiFiFlash.updateValue(ADDRESS,0);
             hostSerial.sendMSPCommand(MSPCommand::DELETE_CERT_FILES,"succefully Deleted");
             break;
@@ -2139,7 +2143,7 @@ void Conductor::mqttSecureConnect(){
                  {
                     Serial.println("ESP32 DEBUG : APPYING THE CERTIFICATES*********");
                     int certSize,keySize;
-                   if( upgradeReceived  && (activeCertificates == 1 && initialFileDownload == false) ){
+                   if( upgradeReceived  && (activeCertificates == 1 && initialFileDownload == false) || activeCertificates == 1 ){
                         Serial.println("Using Client 1 Certificates");
                         certSize = iuWiFiFlash.getFileSize(IUESPFlash::CFG_MQTT_CLIENT1);
                         keySize  = iuWiFiFlash.getFileSize(IUESPFlash::CFG_MQTT_KEY1);
@@ -2493,8 +2497,8 @@ int Conductor::download_tls_ssl_certificates(){
                     int configTypeCount = config["certificates"].size();
                     bool success = config.success();
                     Serial.print("Arry Size : ");Serial.println(configTypeCount);
-                    // Serial.print("CONFIG JSON :");
-                    // config.prettyPrintTo(Serial);
+                    Serial.print("CONFIG JSON :");
+                    config.prettyPrintTo(Serial);
                     uint8_t certToUpdate;
                     if(activeCertificates != 0){ 
                         // if(initialFileDownload){
@@ -2543,7 +2547,7 @@ int Conductor::download_tls_ssl_certificates(){
                     //Serial.println(" getCert.conf file not Present");
                     delay(1);    
                     //hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT,".cert and .key not Present, ABORTED");
-                    hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT, String(getRca(CERT_ROOTCA_FILE_NOT_PRESENT)).c_str());
+                    hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT, String(getRca(CERT_CONFIG_JSON_FILE_NOT_PRESENT)).c_str());
                     downloadAborted = true;
                     upgradeReceived = false;
                     return 0;    
@@ -2776,6 +2780,7 @@ void Conductor:: messageValidation(char* json){
      JsonVariant configJson = JsonVariant(JsonBuffer.parseObject(json));
      bool validJson = configJson.success();
      uint8_t configTypeCount = configJson["certificates"].size();
+     Serial.print("configType Count :");Serial.println(configTypeCount);
     // Note : below 4 files are mandatory except EAP
     if(validJson && WiFi.isConnected() ){       // JOSN for Checksum Validation
         //Validate the Response message
@@ -2874,7 +2879,7 @@ int Conductor::downloadCertificates(const char* type,const char* url,const char*
 
     bool downloadSuccess = false;
     char* checksum ;
-    Serial.print("CERT TYPE : ");Serial.println(CERT_TYPES[index]);
+    //Serial.print("CERT TYPE : ");Serial.println(CERT_TYPES[index]);
     // Individual file download is disabled now , rebuilt it                         
     if (( strcmp(type,CERT_TYPES[index]) == 0 ||  upgradeReceived == true) )
     {
@@ -2926,4 +2931,51 @@ int Conductor::downloadCertificates(const char* type,const char* url,const char*
         }
     }
     return 1;
+}
+
+
+bool Conductor:: setCommonHttpEndpoint(){
+
+    bool configAvailable = iuWiFiFlash.isFilePresent(IUESPFlash::CFG_STATIC_CERT_ENDPOINT);
+    if (configAvailable)
+    {   
+        if(debugMode){
+            debugPrint("HTTP Common Endpoint present.");
+        }
+        Serial.println("Common endpoint file is present");
+        return true;
+    }else
+    {   // Construct the JSON 
+        // {"certUrl":{"url":"http://13.235.210.250:8000/certificates?deviceIdentifier=94:54:93:4A:27:ED"},"messageId":"cEgxwaPKJRCRloSNYW0xk3GFp"}
+        Serial.println("Constructing STATIC URL JSON ");
+        // StaticJsonBuffer<256> JsonBuffer;
+        // JsonObject& root = JsonBuffer.createObject(); 
+        // root["cert"]["url"] = CERT_CONFIG_DEFAULT_ENDPOINT_HOST + String(":") + CERT_CONFIG_DEFAULT_ENDPOINT_PORT + CERT_CONFIG_DEFAULT_ENDPOINT_PATH 
+        //                         +  "94:54:93:4A:27:ED" ;
+        // root["messageId"] = "123456789";
+        // root.prettyPrintTo(Serial);
+       // Serial.print("MAC ID :");Serial.println(getBleMAC().toString().c_str());
+        //if(uint64_t(m_bleMAC) > 0) {
+            String commonEndpoint = String(CERT_CONFIG_DEFAULT_ENDPOINT_HOST) + String(":") + 
+                                    String(CERT_CONFIG_DEFAULT_ENDPOINT_PORT) +
+                                    String(CERT_CONFIG_DEFAULT_ENDPOINT_PATH); //+
+                                    //getBleMAC().toString().c_str();
+            
+            String  messageId = "123456789";
+            hostSerial.sendMSPCommand(MSPCommand::SET_CERT_DOWNLOAD_MSGID,messageId.c_str());
+            Serial.print("COMMON ENDPOINT : ");Serial.println(commonEndpoint);
+            char config[256];
+            snprintf(config, 256, "{\"certUrl\":{\"url\":\"%s\"}, \"messageId\":\"%s\"}",commonEndpoint.c_str(),messageId );
+            Serial.print("COMMON JSON : ");
+            Serial.println(config);
+
+            bool writeSuccess = iuWiFiFlash.writeFile(IUESPFlash::CFG_STATIC_CERT_ENDPOINT,config,sizeof(config));
+        
+            Serial.print("Write Success : ");Serial.println(writeSuccess);
+
+            return true;
+        }
+    return false;
+        
+    
 }
