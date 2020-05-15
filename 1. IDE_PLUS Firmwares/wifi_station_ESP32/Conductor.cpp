@@ -762,7 +762,6 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 commonUrl +=  m_bleMAC.toString();  // append mac id
                 const char* staticURL = commonUrl.c_str();
                 //Serial.println("\nESP32 DEBUG: GET the Certificates Download Config");
-                Serial.print("STATIC URL : ");Serial.println(staticURL);
                 String auth = setBasicHTTPAutherization();
                 int httpCode = httpGetRequest(staticURL,certDownloadResponse,sizeof(certDownloadResponse),auth); 
                 int16_t responseLength = sizeof(certDownloadResponse);
@@ -2947,7 +2946,7 @@ bool Conductor:: setCommonHttpEndpoint(){
     }else
     {   // Construct the JSON 
         // {"certUrl":{"url":"http://13.235.210.250:8000/certificates?deviceIdentifier=94:54:93:4A:27:ED"},"messageId":"cEgxwaPKJRCRloSNYW0xk3GFp"}
-        Serial.println("Constructing STATIC URL JSON ");
+        //Serial.println("Constructing STATIC URL JSON ");
         // StaticJsonBuffer<256> JsonBuffer;
         // JsonObject& root = JsonBuffer.createObject(); 
         // root["cert"]["url"] = CERT_CONFIG_DEFAULT_ENDPOINT_HOST + String(":") + CERT_CONFIG_DEFAULT_ENDPOINT_PORT + CERT_CONFIG_DEFAULT_ENDPOINT_PATH 
@@ -2963,11 +2962,11 @@ bool Conductor:: setCommonHttpEndpoint(){
             
             String  messageId = "123456789";
             hostSerial.sendMSPCommand(MSPCommand::SET_CERT_DOWNLOAD_MSGID,messageId.c_str());
-            Serial.print("COMMON ENDPOINT : ");Serial.println(commonEndpoint);
+            //Serial.print("COMMON ENDPOINT : ");Serial.println(commonEndpoint);
             char config[256];
             snprintf(config, 256, "{\"certUrl\":{\"url\":\"%s\"}, \"messageId\":\"%s\"}",commonEndpoint.c_str(),messageId );
-            Serial.print("COMMON JSON : ");
-            Serial.println(config);
+            //Serial.print("COMMON JSON : ");
+            //Serial.println(config);
 
             bool writeSuccess = iuWiFiFlash.writeFile(IUESPFlash::CFG_STATIC_CERT_ENDPOINT,config,sizeof(config));
         
