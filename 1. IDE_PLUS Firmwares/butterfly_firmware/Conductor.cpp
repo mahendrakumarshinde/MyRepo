@@ -1057,7 +1057,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
          subConfig.printTo(Serial); debugPrint("");
          }
         const char* url = root["certUrl"]["url"];
-        const char* messageId = root["messageId"]  ;
+        const char* messageId = root["messageId"];
+        strcpy(m_otaMsgId,messageId);
         // Send URL to ESP32
         iuWiFi.sendMSPCommand(MSPCommand::SET_CERT_CONFIG_URL,jsonChar.c_str());
         char ack_config[70];
@@ -1071,10 +1072,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         if(StreamingMode::BLE && isBLEConnected()){// Send ACK to BLE
             if(loopDebugMode){ debugPrint("Common URL Config SUCCESS");}
             iuBluetooth.write("CERT-URL-SUCCESS;");
-        }else
-        { if(loopDebugMode){ debugPrint("URL Config Failed");}
-            iuBluetooth.write("CERT-URL-FAILED;");
         }
+        debugPrint("Common Endpoint Config Success");
     }
     // Configure Diagnostic URL in ESP32
     subConfig = root["diagnosticUrl"];
@@ -1097,11 +1096,9 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         if(StreamingMode::BLE && isBLEConnected()){// Send ACK to BLE
             if(loopDebugMode){ debugPrint("Diagnostic URL Config SUCCESS");}
             iuBluetooth.write("DIAGNOSTIC-URL-SUCCESS;");
-        }else
-        { if(loopDebugMode){ debugPrint("Diagnostic URL Config Failed");}
-            iuBluetooth.write("DIAGNOSTIC-URL-FAILED;");
         }
-    }
+        debugPrint("Diagnostic Endpoint Config Success"); 
+     }
 
     return true;
 }
@@ -2085,19 +2082,16 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                 {
                     iuUSB.port->print("DEVICE_ID : ");
                     iuUSB.port->println(m_macAddress);
-                    iuWiFi.sendMSPCommand(MSPCommand::MQTT_DISCONNECT);
                 }
                 if (strcmp(buff, "IUGET_FIRMWARE_VERSION") == 0)
                 {
                     iuUSB.port->print("FIRMWARE_VERSION : ");
                     iuUSB.port->println(FIRMWARE_VERSION);
-                    iuWiFi.sendMSPCommand(MSPCommand::MQTT_CONNECT);
                 }
                 if (strcmp(buff, "IUGET_DEVICE_TYPE") == 0)
                 {
                     iuUSB.port->print("DEVICE_TYPE : ");
                     iuUSB.port->println(DEVICE_TYPE);
-                    iuWiFi.sendMSPCommand(MSPCommand::READ_CERTS);
                 }
                 if (strcmp(buff,"REMOVE_CERT_FILES") == 0)
                 {
@@ -2771,7 +2765,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
              if(loopDebugMode){
                 debugPrint("Certificate Download Success");
                 debugPrint(buff);
-             }
+            }
             otaInitTimeoutFlag = false;
             waitingDnldStrart = false;
             certDownloadInProgress = false;
@@ -2812,6 +2806,12 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 m_getDownloadConfig = false;
                 m_downloadSuccess = false;
                 m_upgradeSuccess = false;
+            for(int i = 0 ; i < 20; i++) {
+                ledManager.overrideColor(RGB_RED);
+                delay(200);
+                ledManager.stopColorOverride();
+                delay(200);
+            }
             break;
         case MSPCommand::CERT_UPGRADE_SUCCESS:
             if (loopDebugMode)
@@ -2884,6 +2884,12 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             iuWiFi.m_setLastConfirmedPublication();
             changeUsageMode(UsageMode::OPERATION);
             
+            break;
+        case MSPCommand::SET_CERT_DOWNLOAD_MSGID:
+            if(loopDebugMode){ debugPrint("Received Certificate Download MessageId");}
+            strcpy(m_otaMsgId,buff);
+            debugPrint("CERT MESG ID : ",false);
+            debugPrint(m_otaMsgId);
             break;
         // MSP Status messages
         case MSPCommand::MSP_INVALID_CHECKSUM:
@@ -3010,11 +3016,11 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 iuBluetooth.write("MQTT-CONNECTED;");
             }
             m_mqttConnected = true;
-            // if(conductor.getUsageMode() == UsageMode::OTA) {
-            //     if (loopDebugMode) { debugPrint(F("OTA DNLD MODE or Certificates Upgrade Mode")); }
-            //     ledManager.stopColorOverride();
-            //     ledManager.showStatus(&STATUS_OTA_DOWNLOAD);
-            // }
+            if(conductor.getUsageMode() == UsageMode::OTA) {         // NOTE : Need to analyze the Impact on OTA 
+                if (loopDebugMode) { debugPrint(F("OTA DNLD MODE or Certificates Upgrade Mode")); }
+                ledManager.stopColorOverride();
+                ledManager.showStatus(&STATUS_OTA_DOWNLOAD);
+            }
             break;
         case MSPCommand::MQTT_ALERT_DISCONNECTED:
             if (isBLEConnected()) {
@@ -3033,7 +3039,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                     delay(200);
                     ledManager.stopColorOverride();
                     delay(200);
-                }
+                }                     //// NOTE : Not required during ota, already handled in wifi alert disconnection
                 // In case connection with MQTT broker Disconnected/ESP Reset durig OTA, switch to OPERTATION Mode ??
                 sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_MQTT_DISCONNECT)).c_str());
                 if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
