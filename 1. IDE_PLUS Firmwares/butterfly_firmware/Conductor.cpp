@@ -2748,7 +2748,9 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             m_getDownloadConfig = false;
             m_downloadSuccess = false;
             m_upgradeSuccess = false;
+            ledManager.overrideColor(RGB_ORANGE);
             sendOtaStatusMsg(MSPCommand::CERT_DOWNLOAD_ABORT,CERT_DOWNLOAD_ERR,buff);
+            delay(1000);
             for(int i = 0 ; i < 20; i++) {
                 ledManager.overrideColor(RGB_RED);
                 delay(200);
@@ -2774,7 +2776,9 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             m_downloadSuccess = true;
             m_upgradeSuccess = false;
             m_downloadSuccessStartTime = millis();
+            ledManager.overrideColor(RGB_BLUE); 
             sendOtaStatusMsg(MSPCommand::CERT_DOWNLOAD_SUCCESS,CERT_DOWNLOAD_COMPLETE,buff);
+            delay(1000);
              //TODO : Add Visuals
             for(int i = 0 ; i < 10; i++) {
                 ledManager.overrideColor(RGB_GREEN);
@@ -2806,6 +2810,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 m_getDownloadConfig = false;
                 m_downloadSuccess = false;
                 m_upgradeSuccess = false;
+            ledManager.overrideColor(RGB_ORANGE);
+            delay(1000);
             for(int i = 0 ; i < 20; i++) {
                 ledManager.overrideColor(RGB_RED);
                 delay(200);
@@ -2818,12 +2824,15 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
              {
                  debugPrint("Certificates Upgrade Success");
              }
+
+            ledManager.overrideColor(RGB_PURPLE);
              sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_SUCCESS,CERT_UPGRADE_COMPLETE,buff);
              certDownloadInProgress = false;
              m_certDownloadStarted = false;
              m_getDownloadConfig = false;
              m_downloadSuccess = false;
              m_upgradeSuccess = true;
+             delay(1000);
             // TODO : Add Visuals
              // Show Visuals min 15 sec
             for(int i = 0 ; i < 20; i++) {
