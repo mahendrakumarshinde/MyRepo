@@ -64,6 +64,14 @@ const char DIAGNOSTIC_DEFAULT_ENDPOINT_PATH[MAX_ROUTE_LENGTH] = "/certificates/d
 const uint16_t DIAGNOSTIC_DEFAULT_ENDPOINT_PORT = 8000;
 
 /* =============================================================================
+    certificates Config  HTTP/HTTPS Endpoints
+============================================================================= */
+
+const char CERT_CONFIG_DEFAULT_ENDPOINT_HOST[MAX_HOST_LENGTH] = "http://13.235.210.250";
+const char CERT_CONFIG_DEFAULT_ENDPOINT_PATH[MAX_ROUTE_LENGTH] = "/certificates?deviceIdentifier=";
+const uint16_t CERT_CONFIG_DEFAULT_ENDPOINT_PORT = 8000;
+
+/* =============================================================================
     PubSub topic names
 ============================================================================= */
 
