@@ -377,6 +377,11 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         case MSPCommand::WIFI_RECEIVE_PASSWORD:
             receiveNewCredentials(NULL, buffer);
             break;
+        case MSPCommand::WIFI_RECEIVE_AUTH_TYPE:       
+            strcpy(m_wifiAuthType,buffer);
+            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, m_wifiAuthType);
+            delay(1);
+            break;
         case MSPCommand::WIFI_FORGET_CREDENTIALS:
             forgetWiFiCredentials();
             disconnectWifi();
@@ -1086,7 +1091,13 @@ void Conductor::disconnectWifi(bool wifiOff)
         WiFi.disconnect(wifiOff);
     }
 }
-
+String Conductor :: IpAddress2String(const IPAddress& ipAddress)
+{
+  return String(ipAddress[0]) + String(".") +\
+  String(ipAddress[1]) + String(".") +\
+  String(ipAddress[2]) + String(".") +\
+  String(ipAddress[3])  ; 
+}
 /**
  * Disconnect the clients 
  *
@@ -1139,6 +1150,7 @@ bool Conductor::reconnect(bool forceNewCredentials)
             // ESP.eraseConfig();  // ESP32_PORT_TRUE
             disconnectWifi();
             delay(1000);  // Wait for effective disconnection
+            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, "Disconnect wifi : ");
         }
     }
     uint32_t current = millis();
@@ -1157,12 +1169,9 @@ bool Conductor::reconnect(bool forceNewCredentials)
             }
             return false;
         }
-        if (uint32_t(m_staticIp) > 0 && uint32_t(m_gateway) > 0 &&
-            uint32_t(m_subnetMask) > 0)
-        {
-            WiFi.config(m_staticIp, m_gateway, m_subnetMask);
-        }
-        WiFi.begin(m_userSSID, m_userPassword);
+
+        connectToWiFi();
+
         m_lastConnectionAttempt = current;
         wifiConnected = (waitForConnectResult() == WL_CONNECTED);
         if (debugMode && wifiConnected) {
@@ -1177,6 +1186,55 @@ bool Conductor::reconnect(bool forceNewCredentials)
     return wifiConnected;
 }
 
+void Conductor::connectToWiFi(){
+
+    if (WiFi.getMode() != WIFI_STA)
+    {
+        WiFi.mode(WIFI_STA);
+    }
+
+    if(strncmp(m_wifiAuthType, "NONE", 4)==0)
+    {
+        WiFi.begin(m_userSSID);
+    }
+    else if(strncmp(m_wifiAuthType, "WPA-PSK", 7) == 0)
+    {
+        WiFi.begin(m_userSSID, m_userPassword);
+    }
+    else if(strncmp(m_wifiAuthType, "STATIC-NONE", 11) == 0 )
+    {
+        WiFi.config(m_staticIp, m_gateway, m_subnetMask);
+        delay(200);
+        WiFi.begin(m_userSSID);
+    }
+    else if(strncmp(m_wifiAuthType, "STATIC-WPA-PSK", 14) == 0)
+    {
+        WiFi.config(m_staticIp, m_gateway, m_subnetMask);
+        delay(200);
+        WiFi.begin(m_userSSID, m_userPassword);
+    }
+    else if(strncmp(m_wifiAuthType, "EAP-PEAP", 8) == 0)
+    {
+        // TODO Implemenet
+    }
+    else if(strncmp(m_wifiAuthType, "EAP-TLS", 7) == 0)
+    {
+        // TODO Implement
+    }
+    else if(strncmp(m_wifiAuthType, "STATIC-EAP-PEAP", 15) == 0)
+    {
+        // TODO Implement
+    }
+    else if(strncmp(m_wifiAuthType, "STATIC-EAP-TLS", 14) == 0)
+    {
+        // TODO Implement
+    }
+    else
+    {
+        WiFi.begin();   // Connects with Internal storage credentials
+    }
+    
+}
 /**
  * Wait for WiFi connection to reach a result
  *
@@ -1674,10 +1732,8 @@ void Conductor::autoReconncetWifi()
 {
     uint32_t now = millis();
     if (now - m_lastWifiStatusCheck > (wifiStatusUpdateDelay))
-    {   
-        Serial.println("WIFI RE-CONNECTING");
-        WiFi.mode(WIFI_STA);
-        WiFi.begin();
+    {
+        connectToWiFi();
         m_lastWifiStatusCheck = now;
     }
 }

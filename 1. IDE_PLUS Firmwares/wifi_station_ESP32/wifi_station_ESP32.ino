@@ -81,8 +81,6 @@ void setup()
     #if IUDEBUG_ANY == 1
         conductor.reconnect(true);
     #endif
-    WiFi.mode(WIFI_STA);
-    WiFi.begin();
      
     iuWiFiFlash.begin();
     // Set the common url json if file not present
@@ -91,6 +89,10 @@ void setup()
     conductor.configureDiagnosticEndpointFromFlash(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT);
     conductor.activeCertificates = iuWiFiFlash.readMemory(ADDRESS);
 
+    
+    hostSerial.sendMSPCommand(MSPCommand::ASK_WIFI_CONFIG);
+    conductor.connectToWiFi();
+    
 }
 
 /**

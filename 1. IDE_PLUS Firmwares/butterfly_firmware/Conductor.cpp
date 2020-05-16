@@ -6,6 +6,7 @@
 #include "IUOTA.h"
 #include <MemoryFree.h>
 #include "stm32l4_iap.h"
+#include "IUBMD350.h"
 
 
 extern IUOTA iuOta;
@@ -135,7 +136,7 @@ bool Conductor::configureFromFlash(IUFlash::storedConfig configType)
             case IUFlash::CFG_WIFI3:
             case IUFlash::CFG_WIFI4:
                 iuWiFi.configure(config);
-                break;
+                        break;
             case IUFlash::CFG_MODBUS_SLAVE:
                 debugPrint("CONFIGURING THE MODBUS SLAVE");
                 iuModbusSlave.setupModbusDevice(config);
@@ -1100,6 +1101,35 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         debugPrint("Diagnostic Endpoint Config Success"); 
      }
 
+    subConfig = root["auth_type"];
+    if (subConfig.success()) {
+        //configureAllFeatures(subConfig);
+        bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_WIFI0, variant, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime(), messageId);
+        if(loopDebugMode) { 
+            debugPrint("Validation: ", false);
+            debugPrint(validationResultString); 
+            debugPrint("WiFi configuration validation result: ", false); 
+            debugPrint(validConfiguration);
+        }
+        bool dataWritten = false;
+        if(validConfiguration){
+            if (saveToFlash) {
+                iuFlash.saveConfigJson(IUFlash::CFG_WIFI0, variant);
+                iuFlash.writeInternalFlash(1,CONFIG_WIFI_CONFIG_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
+                debugPrint(F("Writing into wifi0 file"));
+                dataWritten = true;
+                iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
+            }
+            if(dataWritten == true){
+                iuWiFi.configure(variant);
+            }
+        }else {
+            if(loopDebugMode) debugPrint("Received invalid WiFi configuration");
+            iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
+        }
+
+    }
+    
     return true;
 }
 
@@ -1348,8 +1378,8 @@ bool Conductor::configureBoardFromFlash(String filename,bool isSet){
   // Open the configuration file
  
   File myFile = DOSFS.open(filename,"r");
-  
-  StaticJsonBuffer<1024> jsonBuffer;
+  const size_t bufferSize = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(6) + 510;
+  StaticJsonBuffer<bufferSize> jsonBuffer;
 
   // Parse the root object
   JsonObject &root = jsonBuffer.parseObject(myFile);
@@ -2489,6 +2519,9 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             if (loopDebugMode) {
                 debugPrint(buff);
             }
+            //  Serial.print("Debug from ESP : ");
+            // Serial.write(buff);
+            // Serial.println();
             break;
         case MSPCommand::OTA_INIT_REQUEST:
             if(doOnceFWValid == true)
@@ -3120,7 +3153,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
               }else if(iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS)){
                     String httpConfig = iuFlash.readInternalFlash(CONFIG_HTTP_FLASH_ADDRESS);
                     debugPrint(httpConfig);
-                     StaticJsonBuffer<1024> jsonBuffer;
+                    const size_t bufferSize = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(6) + 510;
+                    StaticJsonBuffer<bufferSize> jsonBuffer;
                     JsonObject &config = jsonBuffer.parseObject(httpConfig);
                     JsonObject& config2 = config["httpConfig"];
                     if(config.success())
@@ -3234,6 +3268,9 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
         //    Serial.println("RECEIVED ACK FROM SEND_RAW_DATA COMMAND...");
         //    Serial.print("Buffer:");Serial.println(buff);
             
+            break;
+        case MSPCommand::ASK_WIFI_CONFIG:
+            configureFromFlash(IUFlash::CFG_WIFI0);
             break;
         case MSPCommand::SET_PENDING_HTTP_CONFIG:
             {
@@ -4076,7 +4113,7 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
     if (m_streamingMode == StreamingMode::BLE)
     {
         iuBluetooth.write("REC,");
-        iuBluetooth.write(m_macAddress.toString().c_str());
+        iuBluetooth.write(m_macAddress.toString().c_str());                  
         iuBluetooth.write(',');
         iuBluetooth.write(axis[axisIdx]);
         accelEnergy->stream(&iuBluetooth, 4);
@@ -4560,13 +4597,27 @@ void Conductor::printConductorMac() {
     debugPrint("BLE MAC ADDRESS SET IN CONDUCTOR : ",false); debugPrint(m_macAddress.toString());
 }
 
+void Conductor::removeChar(char * New_BLE_MAC_Address, int charToRemove){ 
+
+  int j, n = strlen(New_BLE_MAC_Address); 
+  for (int i=j=0; i<n; i++) 
+  if (New_BLE_MAC_Address[i] != charToRemove) 
+    New_BLE_MAC_Address[j++] = New_BLE_MAC_Address[i]; 
+  New_BLE_MAC_Address[j] = '\0'; 
+}
+
 void Conductor::setConductorMacAddress() {
     if(iuBluetooth.isBLEAvailable){
         iuBluetooth.enterATCommandInterface();
         char BLE_MAC_Address[20];
+        char New_BLE_MAC_Address[13];
         uint8_t retryCount = 3;
         int mac_Response = iuBluetooth.sendATCommand("mac?", BLE_MAC_Address, 20);
         debugPrint("BLE MAC ID:",false);debugPrint(BLE_MAC_Address,true);
+        strncpy(New_BLE_MAC_Address, BLE_MAC_Address + 6,11);
+        removeChar(New_BLE_MAC_Address, ':');
+        iuBluetooth.setDeviceName(New_BLE_MAC_Address);
+        iuBluetooth.queryDeviceName();
         //debugPrint("SET MAC RESPONSE :",false);
         //debugPrint(mac_Response);
         if( mac_Response < 0 || (BLE_MAC_Address[0] == '0' && BLE_MAC_Address[1] == '0' ) ){
@@ -6259,70 +6310,27 @@ bool Conductor::checkforModbusSlaveConfigurations(){
 return success;
 }
 
-#if 0  // Testing Code 
-/**
- * @brief This method takes device mac id as a username without colon and password wiil be reverse of macId
- * 
- * @param macId - bleMacID
- * @return const char* - return the base64 encoded string
- */
-void Conductor::setBasicHTTPAutherization(const char* authToken){
+void Conductor::checkforWiFiConfigurations(){
 
-    char username[20]; 
-    snprintf(username,20,"%s",m_macAddress.toString().c_str());
-    removeCharacterFromString(username,':');
-    debugPrint("USERNAME  :",false);
-    debugPrint(username);
-    // reverse the string as password
-    uint8_t length =strlen(username); 
-    Serial.print("LENGTH :");Serial.println(length);
-    char password[length];
-    char psw[length];
-    strcpy(password,username);
-    getPassword(password,psw);
+    // check if configurations are present in the internal flash storage of STM32
+    bool validJson = false;
+    bool success = true;
     
-    //strncpy(psw,&password[1],12); 
-    //snprintf(psw,12,"%s",(const char*)password); 
-    debugPrint("\nPASSWORD NEW: ",false);
-    debugPrint(password);
-    
-    String data = String(username)  + ":" + String(password);
-    
+    if (iuFlash.checkConfig(CONFIG_WIFI_CONFIG_FLASH_ADDRESS) && ! DOSFS.exists("/iuconfig/wifi0.conf") )
+    {
+        // Read the configurations
+        String config = iuFlash.readInternalFlash(CONFIG_WIFI_CONFIG_FLASH_ADDRESS);
+        if(debugMode){
+            debugPrint("WIFI DEBUG : INTERNAL CONFIG # ",false);
+            debugPrint("Intarnal Flash content #:");
+            debugPrint(config);
+        }
+        char* wifiConfiguration =(char*)config.c_str();
 
-    debugPrint("DATA : ",false);
-    debugPrint(data);
-    
-    // authToken = rbase64.encode(data.c_str());
-    // debugPrint("AUTH : ",false);debugPrint(authToken);
-   
-    //return  ; 
-}
-
-void Conductor :: removeCharacterFromString(char* inputString, int charToRemove){
-    Serial.print("INPUT STRING : ");Serial.println(inputString);
-    size_t j,count = strlen(inputString);
-    for (size_t i =j= 0; i < count; i++)
-        if (inputString[i] != charToRemove)
-            inputString[j++] = inputString[i];
-        
-    inputString[j] = '\0';
-    
-}
-
-void Conductor :: getPassword(char* username,char* password){
-    int count = strlen(username);
-    int n=count-1;
-    for(int i=0;i<(count/2);i++){
-       //Using temp to store the char value at index i so 
-        //you can swap it in later for char value at index n
-        char temp = username[i];    
-        username[i] = username[n];
-        username[n] = temp;
-        n = n-1;
-
+        validJson =  processConfiguration(wifiConfiguration,true);
+        free(wifiConfiguration);
+    }else if (DOSFS.exists("/iuconfig/wifi0.conf"))
+    {
+        configureFromFlash(IUFlash::CFG_WIFI0);
     }
-    //strcpy(password,username);
-    debugPrint("PASSWORD  : ",false);
-    debugPrint(username);
 }
-#endif

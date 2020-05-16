@@ -74,6 +74,7 @@ extern IUESPFlash iuWiFiFlash;
 class Conductor
 {
     public:
+        String IpAddress2String(const IPAddress& ipAddress);
         /***** Public constants *****/
         // Max expected length of WiFi SSID or password
         static const uint8_t wifiCredentialLength = 64;
@@ -206,6 +207,7 @@ class Conductor
         // Config handler
         static const uint8_t CONFIG_TYPE_COUNT = 10;
         static IUESPFlash::storedConfig CONFIG_TYPES[CONFIG_TYPE_COUNT];
+        void connectToWiFi();
     protected:
         /***** Config from Host *****/      
         char HOST_FIRMWARE_VERSION[8];      //filled when the ESP starts or when it connects to MQTT broker
@@ -271,6 +273,7 @@ class Conductor
         bool otaStsDataSent = false;
         bool otaInitTimeoutFlag = false;
         uint32_t otaInitTimeout = 0;
+        char m_wifiAuthType[wifiCredentialLength];
 };
 
 #endif // CONDUCTOR_H

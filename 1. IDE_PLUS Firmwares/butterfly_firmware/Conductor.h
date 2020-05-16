@@ -279,11 +279,9 @@ class Conductor
         void onBootFlashTest();
         float* getFingerprintsforModbus();
         bool checkforModbusSlaveConfigurations();
-        /***** Autherization ***********/
-        // void setBasicHTTPAutherization(const char* authToken);
-        // void removeCharacterFromString(char* inputString, int charToRemove);
-        // void getPassword(char* username,char* password);
-        // char* reverseConstString(char const* str); 
+        void checkforWiFiConfigurations();
+        void removeChar(char * New_BLE_MAC_Address, int charToRemove);
+        
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
