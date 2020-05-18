@@ -431,6 +431,76 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
          
            break;
         }
+        case CFG_WIFI0: {
+
+            validConfig = true;
+
+            // Indicate the type of validation
+            validationResult["messageType"] = "wifi-config-ack";
+
+            //Validation for Auth Type field
+            if(config.containsKey("auth_type")) {
+                const char* AuthType = config["auth_type"];
+                bool ssid = config.containsKey("ssid");
+                bool password = config.containsKey("password");
+                bool username = config.containsKey("username");
+                bool staticIP = config.containsKey("static");
+                bool gateway = config.containsKey("gateway");
+                bool subnet = config.containsKey("subnet");
+                bool dns1 = config.containsKey("dns1");
+                bool dns2 = config.containsKey("dns2");
+ 
+                if (strncmp(AuthType, "NONE", 4) == 0){ 
+                    if(!ssid) { errorMessages.add("SSID Not found"); validConfig = false; }
+                }else if(strncmp(AuthType, "WPA-PSK", 7) == 0){
+                    if(!ssid) { errorMessages.add("SSID Not found"); validConfig = false; }
+                    if(!password){ errorMessages.add("Password Not found"); validConfig = false; }
+                }else if(strncmp(AuthType, "EAP-PEAP", 8) == 0){
+                    if(!ssid) { errorMessages.add("SSID Not found"); validConfig = false; }
+                    if(!password){ errorMessages.add("Password Not found"); validConfig = false; }
+                    if(!username){ errorMessages.add("Username Not found"); validConfig = false; }
+                }else if(strncmp(AuthType, "EAP-TLS", 7) == 0){
+                    if(!ssid) { errorMessages.add("SSID Not found"); validConfig = false; }
+                    if(!password){ errorMessages.add("Password Not found"); validConfig = false; }
+                }else if(strncmp(AuthType, "STATIC-NONE", 11) == 0){
+                    if(!ssid){ errorMessages.add("SSID Not found"); validConfig = false; }
+                    if(!staticIP){ errorMessages.add("Static IP Not found"); validConfig = false; }
+                    if(!gateway){ errorMessages.add("Gateway IP Not found"); validConfig = false; }
+                    if(!subnet){ errorMessages.add("Subnet Not found"); validConfig = false; }
+                    if(!dns1){ errorMessages.add("DNS 1 Not found"); validConfig = false; }
+                    if(!dns2){ errorMessages.add("DNS 2 Not found"); validConfig = false; }
+                }else if(strncmp(AuthType, "STATIC-WPA-PSK", 14) == 0){
+                    if(!ssid){ errorMessages.add("SSID Not found"); validConfig = false; }
+                    if(!password){ errorMessages.add("Password Not found"); validConfig = false; }
+                    if(!staticIP){ errorMessages.add("Static IP Not found"); validConfig = false; }
+                    if(!gateway){ errorMessages.add("Gateway IP Not found"); validConfig = false; }
+                    if(!subnet){ errorMessages.add("Subnet Not found"); validConfig = false; }
+                    if(!dns1){ errorMessages.add("DNS 1 Not found"); validConfig = false; }
+                    if(!dns2){ errorMessages.add("DNS 2 Not found"); validConfig = false; }
+                }else if(strncmp(AuthType, "STATIC-EAP-PEAP", 15) == 0){
+                    if(!ssid){ errorMessages.add("SSID Not found"); validConfig = false; }
+                    if(!password){ errorMessages.add("Password Not found"); validConfig = false; }
+                    if(!username){ errorMessages.add("Username Not found"); validConfig = false; }
+                    if(!staticIP){ errorMessages.add("Static IP Not found"); validConfig = false; }
+                    if(!gateway){ errorMessages.add("Gateway IP Not found"); validConfig = false; }
+                    if(!subnet){ errorMessages.add("Subnet Not found"); validConfig = false; }
+                    if(!dns1){ errorMessages.add("DNS 1 Not found"); validConfig = false; }
+                    if(!dns2){ errorMessages.add("DNS 2 Not found"); validConfig = false; }
+                }else if(strncmp(AuthType, "STATIC-EAP-TLS", 14) == 0 ){
+                    if(!ssid){ errorMessages.add("SSID Not found"); validConfig = false; }
+                    if(!password){ errorMessages.add("Password Not found"); validConfig = false; }
+                    if(!staticIP){ errorMessages.add("Static IP Not found"); validConfig = false; }
+                    if(!gateway){ errorMessages.add("Gateway IP Not found"); validConfig = false; }
+                    if(!subnet){ errorMessages.add("Subnet Not found"); validConfig = false; }
+                    if(!dns1){ errorMessages.add("DNS 1 Not found"); validConfig = false; }
+                    if(!dns2){ errorMessages.add("DNS 2 Not found"); validConfig = false; }
+                }else{
+                    errorMessages.add("Invalid Authentication Type");
+                    validConfig = false;
+                }
+            }
+           break; 
+        }
     }
 
     // Construct the validationResult
@@ -546,19 +616,20 @@ File IUFSFlash::openConfigFile(storedConfig configType,
 
 String IUFSFlash::readInternalFlash(uint32_t address)
 {
+    uint16_t MaxConfigLenth = 512;
     uint8_t type;
-    uint8_t length;
-    uint8_t result[255];
-    char resultConfig[255];
+    uint16_t length;
+    uint8_t result[MaxConfigLenth];
+    char resultConfig[MaxConfigLenth];
     stm32l4_flash_unlock();
     memset(result,'\0',sizeof(result));
     type = *(uint8_t*)(address );
-    length = *(uint8_t*)(address + 1);
+    length = *(uint8_t*)(address + 1) + *(uint8_t*)(address + 2);
     delay(1000);
-    if(length < 255 && length > 0 )
+    if(length < MaxConfigLenth && length > 0 )
     {
         for (int i = 0 ; i < length; i++){
-            result[i] = *(uint8_t*)(address + i + 2);
+            result[i] = *(uint8_t*)(address + i + 3);
         }
     }
     sprintf(resultConfig,"%s",(char*)result);
@@ -566,25 +637,35 @@ String IUFSFlash::readInternalFlash(uint32_t address)
     return resultConfig;
 }
 /*Internal flash configuration packet format*/
-/*--|Precense| Size |<--Mqtt or Http config...expected that length is MAX of 255Bytes>|*/
-/*--|   01   |  FF  |<---------------------Mqtt/http config json--------------------->|*/
-void IUFSFlash::writeInternalFlash(uint8_t type, uint32_t address, uint8_t dataLength, const uint8_t* data)
+/*--|Precense| Size 16-bit |<--Mqtt or Http config...expected that length is MAX of 510 Bytes>|*/
+/*--|   01   |  FF  |  FF  |<---------------------Mqtt/http config json--------------------->|*/
+void IUFSFlash::writeInternalFlash(uint8_t type, uint32_t address, uint16_t dataLength, const uint8_t* data)
 {
-  uint8_t dataSize;
+  const uint8_t maxDataperByte = 255;
+  uint16_t dataSize;
   char allData[2048];
   dataSize = sizeof(type)+sizeof(dataLength)+dataLength;
   stm32l4_flash_unlock();
   stm32l4_flash_erase(address, 2048);
   allData[0] = type;
-  allData[1] = dataLength;
-  sprintf(&allData[2],"%s",data);
-
-  for(int i=dataSize;i<sizeof(allData);i++){
-    allData[i]=0xFF;
+  if(dataLength <= maxDataperByte){
+    allData[1] = dataLength;
+    allData[2] = 0;
+  }else{
+    allData[1] = maxDataperByte;
+    allData[2] = dataLength - maxDataperByte;
   }
-  if(loopDebugMode){
-    debugPrint(allData);
+  sprintf(&allData[3],"%s",data);
+  for(int i=dataSize;i < 4;i++){
+    allData[i] = 0x00;   // Fill next 4 bytes with 00
   }
+  for(int i=dataSize + 4;i<sizeof(allData);i++){
+    allData[i] = 0xFF;   // Fill remaining data with FF
+  }
+    if(loopDebugMode){
+        debugPrint("Data : ",false);debugPrint((char*)data);
+        debugPrint("All Data : ",false);debugPrint(allData); //debugPrint may not work if length is grater than 255 because NULL in next Byte
+    }   
 
   stm32l4_flash_program(address, (const uint8_t*)allData,sizeof(allData));
   stm32l4_flash_lock();

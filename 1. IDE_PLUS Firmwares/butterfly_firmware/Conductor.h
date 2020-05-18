@@ -130,11 +130,14 @@ class Conductor
         static const uint32_t BLEconnectionTimeout = 15000;
         static const uint32_t connectedStatusTimeout = 60000;   // 1 min for ETHERNET connectedStatusTimeout
         uint32_t m_connectionTimeout = 150000;   // 2 min 30s
+        uint32_t m_upgradeMessageTimeout = 30*1000;
+        uint32_t m_certDownloadInitTimeout = 60*1000;
         //timer ISR period
         uint16_t timerISRPeriod = 300; // default 3.3KHz
         String availableFingerprints;
         bool modbusStreamingMode =false;
         bool ready_to_publish_to_modbus = false;
+        bool certDownloadInProgress = false;
         
         /***** Core *****/
         Conductor() {};
@@ -276,6 +279,8 @@ class Conductor
         void onBootFlashTest();
         float* getFingerprintsforModbus();
         bool checkforModbusSlaveConfigurations();
+        void checkforWiFiConfigurations();
+        void removeChar(char * New_BLE_MAC_Address, int charToRemove);
         
     protected:
         MacAddress m_macAddress;
@@ -311,10 +316,11 @@ class Conductor
         UsageMode::option m_usageMode = UsageMode::COUNT;
         AcquisitionMode::option m_acquisitionMode = AcquisitionMode::NONE;
         StreamingMode::option m_streamingMode = StreamingMode::NONE;
-        IPAddress m_mqttServerIp = MQTT_DEFAULT_SERVER_IP;
+        const char* m_mqttServerIp = MQTT_DEFAULT_SERVER_IP;
         uint16_t m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
         const char* m_mqttUserName = MQTT_DEFAULT_USERNAME;
         const char* m_mqttPassword = MQTT_DEFAULT_ASSWORD;
+        bool m_tls_enabled = false;
         //httpendpoint configuration
         const char* m_httpHost  = "15.206.97.181";
         uint16_t  m_httpPort  = 8100;
@@ -350,6 +356,19 @@ class Conductor
         uint32_t otaInitWaitTimeout = 0;
         bool otaInitTimeoutFlag = false;
         char WiFiDisconnect_OTAErr[16];
+
+        uint32_t certDownloadInitWaitTimeout =0;
+        uint32_t m_downloadSuccessStartTime = 0;
+        bool m_getDownloadConfig = false;
+        bool m_certDownloadStarted  = false;
+        bool m_downloadSuccess = false;
+        bool m_upgradeSuccess = false;
+        bool m_mqttConnected = false;
+        // Certificates buffers
+        char m_certType[15];
+        char m_keyType[15];
+        char m_certHash[34];
+        char m_keyHash[34];
 };
 
 

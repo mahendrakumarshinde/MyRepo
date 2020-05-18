@@ -427,6 +427,30 @@ bool IUOTA::otaSendResponse(MSPCommand::command resp, const char *otaResponse)
         case MSPCommand::OTA_FUG_ABORT:
             iuWiFi.sendMSPCommand(MSPCommand::OTA_FUG_ABORT,otaResponse);
             break;
+        case MSPCommand::TLS_INIT_ACK:
+            iuWiFi.sendMSPCommand(MSPCommand::TLS_INIT_ACK,otaResponse);
+            break;
+        case MSPCommand::CERT_DOWNLOAD_INIT_ACK:
+             iuWiFi.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_INIT_ACK,otaResponse);
+             break;
+        case MSPCommand::DOWNLOAD_TLS_SSL_START:
+            iuWiFi.sendMSPCommand(MSPCommand::DOWNLOAD_TLS_SSL_START,otaResponse);
+            break;
+        case MSPCommand::CERT_DOWNLOAD_SUCCESS:
+            iuWiFi.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_SUCCESS,otaResponse);
+            break;    
+        case MSPCommand::CERT_DOWNLOAD_ABORT:
+            iuWiFi.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT,otaResponse);
+            break;
+        case MSPCommand::CERT_UPGRADE_SUCCESS:
+            iuWiFi.sendMSPCommand(MSPCommand::CERT_UPGRADE_SUCCESS,otaResponse);
+            break;
+        case MSPCommand::CERT_UPGRADE_ABORT:
+            iuWiFi.sendMSPCommand(MSPCommand::CERT_UPGRADE_ABORT,otaResponse);
+            break;
+        case MSPCommand::ALL_MQTT_CONNECT_ATTEMPT_FAILED:
+            iuWiFi.sendMSPCommand(MSPCommand::ALL_MQTT_CONNECT_ATTEMPT_FAILED,otaResponse);
+            break;
         default:
             iuWiFi.sendMSPCommand(MSPCommand::OTA_PACKET_ACK);
             break;
@@ -437,7 +461,8 @@ bool IUOTA::otaSendResponse(MSPCommand::command resp, const char *otaResponse)
  * Get RCA Reason code based on HTTP error code value
  * @param error int
  * @return String
- * OTA-RCA-0001 to OTA-RCA-0010 - Used at STM code for sending OTA Failure reason code
+ * OTA-RCA-0001 to OTA-RCA-0011 - Used at STM code for sending OTA Failure reason code
+ * CERT-RCA-0000 to CERT-RCA-0041 -used at ESP code for sending CERT error, reason code
  */
 String IUOTA::getOtaRca(int error)
 {
@@ -464,6 +489,12 @@ String IUOTA::getOtaRca(int error)
         return F("OTA-RCA-0009");
     case OTA_FILE_MISSING:
         return F("OTA-RCA-0010");
+    case OTA_MQTT_DISCONNECT:
+        return F("OTA-RCA-0011");
+    case CERT_DOWNLOAD_INIT_REQ_ACK:
+        return F("CERT-RCA-0042");
+    case CERT_DOWNLOAD_START:
+        return F("CERT-RCA-0043");
     default:
         return F("OTA-RCA-1111");
     }

@@ -82,6 +82,13 @@ class IUESP8285 : public IUSerial, public Component
         bool setGateway(const char *gatewayIP, uint8_t len);
         void setSubnetMask(IPAddress subnetIP);
         bool setSubnetMask(const char *subnetIP, uint8_t len);
+        void setUsername(const char *username, uint8_t length);
+        void setAuthType(const char *authtype, uint8_t length);
+        void setDns1(IPAddress dns1);
+        bool setDns1(const char *dns1, uint8_t len);
+        void setDns2(IPAddress dns2);
+        bool setDns2(const char *dns2, uint8_t len);
+
         /***** User Inbound communication *****/
         void processUserMessage(char *buff, IUFlash *iuFlashPtr);
         /***** Guest Inbound communication *****/
@@ -122,12 +129,16 @@ class IUESP8285 : public IUSerial, public Component
         /***** Configuring the WiFi *****/
         char m_ssid[wifiCredentialLength];
         char m_psk[wifiCredentialLength];
+        char m_username[wifiCredentialLength];
+        char m_wifiAuthType[wifiCredentialLength];
         MultiMessageValidator<2> m_credentialValidator;
         bool m_credentialSent = false;
         bool m_credentialReceptionConfirmed = false;
         IPAddress m_staticIP;
         IPAddress m_staticGateway;
         IPAddress m_staticSubnet;
+        IPAddress m_dns1;
+        IPAddress m_dns2;
         bool m_staticConfigSent = false;
         bool m_staticConfigReceptionConfirmed = false;
         MultiMessageValidator<3> m_staticConfigValidator;
@@ -150,6 +161,7 @@ class IUESP8285 : public IUSerial, public Component
         /***** Callbacks *****/
         void (*m_onConnect)() = NULL;
         void (*m_onDisconnect)() = NULL;
+        void clearStaticIPBuffers();
 };
 
 #endif // IUESP8285_H
