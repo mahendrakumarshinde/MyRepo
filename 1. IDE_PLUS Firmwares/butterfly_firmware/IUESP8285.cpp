@@ -287,7 +287,7 @@ void IUESP8285::saveConfigToFlash(IUFlash *iuFlashPtr,
 bool IUESP8285::configure(JsonVariant &config)
 {
     bool success = true;
-    const char* AuthType = config["auth_type"];
+    const char* tempAuthType = config["auth_type"];
     const char* tempSSID = config["ssid"];
     const char* tempPassword = config["password"];
     const char* tempUsername = config["username"];
@@ -297,30 +297,30 @@ bool IUESP8285::configure(JsonVariant &config)
     const char* tempDns1 = config["dns1"];
     const char* tempDns2 = config["dns2"];
 
-    setAuthType(AuthType,strlen(AuthType));
+    setAuthType(tempAuthType,strlen(tempAuthType));
 
-    if(strncmp(AuthType, "NONE", 4) == 0)
+    if(strncmp(m_wifiAuthType, "NONE", 4) == 0)
     {
         setSSID(tempSSID,strlen(tempSSID));
         setPassword(NULL,NULL);
     }
-    else if(strncmp(AuthType, "WPA-PSK", 7) == 0)
+    else if(strncmp(m_wifiAuthType, "WPA-PSK", 7) == 0)
     {
         setSSID(tempSSID,strlen(tempSSID));
         setPassword(tempPassword,strlen(tempPassword));
     }
-    else if(strncmp(AuthType, "EAP-PEAP", 8) == 0)
+    else if(strncmp(m_wifiAuthType, "EAP-PEAP", 8) == 0)
     {
         setSSID(tempSSID,strlen(tempSSID));
         setPassword(tempPassword,strlen(tempPassword));
         setUsername(tempUsername,strlen(tempUsername));
     }
-    else if(strncmp(AuthType, "EAP-TLS", 7) == 0)
+    else if(strncmp(m_wifiAuthType, "EAP-TLS", 7) == 0)
     {
         setSSID(tempSSID,strlen(tempSSID));
         setPassword(tempPassword,strlen(tempPassword));
     }
-    else if(strncmp(AuthType, "STATIC-NONE", 11) == 0)               //to be functional
+    else if(strncmp(m_wifiAuthType, "STATIC-NONE", 11) == 0)               //to be functional
     {
         setSSID(tempSSID,strlen(tempSSID));
         setPassword(NULL,NULL);
@@ -330,7 +330,7 @@ bool IUESP8285::configure(JsonVariant &config)
         setDns1(tempDns1,strlen(tempDns1));
         setDns2(tempDns2,strlen(tempDns2));
     }
-    else if(strncmp(AuthType, "STATIC-WPA-PSK", 14) == 0)            //to be functional
+    else if(strncmp(m_wifiAuthType, "STATIC-WPA-PSK", 14) == 0)            //to be functional
     {
         setSSID(tempSSID,strlen(tempSSID));
         setPassword(tempPassword,strlen(tempPassword));
@@ -340,7 +340,7 @@ bool IUESP8285::configure(JsonVariant &config)
         setDns1(tempDns1,strlen(tempDns1));
         setDns2(tempDns2,strlen(tempDns2));
     }
-    else if(strncmp(AuthType, "STATIC-EAP-PEAP", 15) == 0)
+    else if(strncmp(m_wifiAuthType, "STATIC-EAP-PEAP", 15) == 0)
     {
         setSSID(tempSSID,strlen(tempSSID));
         setPassword(tempPassword,strlen(tempPassword));
@@ -351,7 +351,7 @@ bool IUESP8285::configure(JsonVariant &config)
         setDns1(tempDns1,strlen(tempDns1));
         setDns2(tempDns2,strlen(tempDns2));
     }
-    else if(strncmp(AuthType, "STATIC-EAP-TLS", 14) == 0)
+    else if(strncmp(m_wifiAuthType, "STATIC-EAP-TLS", 14) == 0)
     {
         setSSID(tempSSID,strlen(tempSSID));
         setPassword(tempPassword,strlen(tempPassword));

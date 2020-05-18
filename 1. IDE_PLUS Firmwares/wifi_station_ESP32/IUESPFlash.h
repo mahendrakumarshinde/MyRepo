@@ -34,6 +34,7 @@ class IUESPFlash
                                      CFG_STATIC_CERT_ENDPOINT,
                                      CFG_CERT_UPGRADE_CONFIG,
                                      CFG_DIAGNOSTIC_ENDPOINT,
+                                     CFG_WIFI,
                                      CFG_COUNT};
         
         /***** Preset values and default settings *****/
@@ -55,6 +56,7 @@ class IUESPFlash
         static char FNAME_UPGRADE_CONFIG[12];           // store the cert download json message
         static char FNAME_STATIC_URL[12];      // store the common url
         static char FNAME_DIAGNOSTIC_ENDPOINT[12];
+        static char FNAME_WIFI_CONFIG[12];
 
         static char FNAME_EAP_CLIENT0_KEY[12];
         static char FNAME_EAP_CLIENT0_CRT[12];

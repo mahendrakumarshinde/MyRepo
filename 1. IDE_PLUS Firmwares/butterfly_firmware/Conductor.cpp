@@ -1121,6 +1121,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
             }
             if(dataWritten == true){
+                iuWiFi.sendMSPCommand(MSPCommand::ASK_WIFI_CONFIG,jsonChar.c_str());
                 iuWiFi.configure(variant);
             }
         }else {
@@ -3270,10 +3271,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
         //    Serial.println("RECEIVED ACK FROM SEND_RAW_DATA COMMAND...");
         //    Serial.print("Buffer:");Serial.println(buff);
             
-            break;
-        case MSPCommand::ASK_WIFI_CONFIG:
-            configureFromFlash(IUFlash::CFG_WIFI0);
-            break;
+        //     break;
         case MSPCommand::SET_PENDING_HTTP_CONFIG:
             {
              //Serial.print("HTTP Pending Response ..............................................:");

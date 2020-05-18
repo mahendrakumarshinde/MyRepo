@@ -43,8 +43,6 @@ void getAllConfig()
     mqttHelper.onConnection();
     conductor.publishDiagnostic("connected", 10);
     hostSerial.sendMSPCommand(MSPCommand::GET_DEVICE_CONFIG);
-    delay(10);
-    hostSerial.sendMSPCommand(MSPCommand::ASK_WIFI_CONFIG);
     
 }
 /* =============================================================================
@@ -83,7 +81,6 @@ void setup()
     #if IUDEBUG_ANY == 1
         conductor.reconnect(true);
     #endif
-
      
     iuWiFiFlash.begin();
     // Set the common url json if file not present
@@ -91,8 +88,9 @@ void setup()
     //Configure the Diagnostic HTTP/HTTPS Endpoint
     conductor.configureDiagnosticEndpointFromFlash(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT);
     conductor.activeCertificates = iuWiFiFlash.readMemory(ADDRESS);
-    conductor.connectToWiFi();
-    
+
+    conductor.setWiFiConfig();
+    conductor.connectToWiFi();   
 }
 
 /**
