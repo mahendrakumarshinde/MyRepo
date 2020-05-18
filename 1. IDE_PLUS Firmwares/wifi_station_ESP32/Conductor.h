@@ -231,6 +231,8 @@ class Conductor
         IPAddress m_staticIp;
         IPAddress m_gateway;
         IPAddress m_subnetMask;
+        IPAddress m_dns1;
+        IPAddress m_dns2;
         /***** Cyclic Update *****/
         uint32_t m_lastWifiStatusUpdate;
         uint32_t m_lastWifiStatusCheck;

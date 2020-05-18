@@ -447,6 +447,8 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                 bool staticIP = config.containsKey("static");
                 bool gateway = config.containsKey("gateway");
                 bool subnet = config.containsKey("subnet");
+                bool dns1 = config.containsKey("dns1");
+                bool dns2 = config.containsKey("dns2");
  
                 if (strncmp(AuthType, "NONE", 4) == 0){ 
                     if(!ssid) { errorMessages.add("SSID Not found"); validConfig = false; }
@@ -465,12 +467,16 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                     if(!staticIP){ errorMessages.add("Static IP Not found"); validConfig = false; }
                     if(!gateway){ errorMessages.add("Gateway IP Not found"); validConfig = false; }
                     if(!subnet){ errorMessages.add("Subnet Not found"); validConfig = false; }
+                    if(!dns1){ errorMessages.add("DNS 1 Not found"); validConfig = false; }
+                    if(!dns2){ errorMessages.add("DNS 2 Not found"); validConfig = false; }
                 }else if(strncmp(AuthType, "STATIC-WPA-PSK", 14) == 0){
                     if(!ssid){ errorMessages.add("SSID Not found"); validConfig = false; }
                     if(!password){ errorMessages.add("Password Not found"); validConfig = false; }
                     if(!staticIP){ errorMessages.add("Static IP Not found"); validConfig = false; }
                     if(!gateway){ errorMessages.add("Gateway IP Not found"); validConfig = false; }
                     if(!subnet){ errorMessages.add("Subnet Not found"); validConfig = false; }
+                    if(!dns1){ errorMessages.add("DNS 1 Not found"); validConfig = false; }
+                    if(!dns2){ errorMessages.add("DNS 2 Not found"); validConfig = false; }
                 }else if(strncmp(AuthType, "STATIC-EAP-PEAP", 15) == 0){
                     if(!ssid){ errorMessages.add("SSID Not found"); validConfig = false; }
                     if(!password){ errorMessages.add("Password Not found"); validConfig = false; }
@@ -478,12 +484,16 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                     if(!staticIP){ errorMessages.add("Static IP Not found"); validConfig = false; }
                     if(!gateway){ errorMessages.add("Gateway IP Not found"); validConfig = false; }
                     if(!subnet){ errorMessages.add("Subnet Not found"); validConfig = false; }
+                    if(!dns1){ errorMessages.add("DNS 1 Not found"); validConfig = false; }
+                    if(!dns2){ errorMessages.add("DNS 2 Not found"); validConfig = false; }
                 }else if(strncmp(AuthType, "STATIC-EAP-TLS", 14) == 0 ){
                     if(!ssid){ errorMessages.add("SSID Not found"); validConfig = false; }
                     if(!password){ errorMessages.add("Password Not found"); validConfig = false; }
                     if(!staticIP){ errorMessages.add("Static IP Not found"); validConfig = false; }
                     if(!gateway){ errorMessages.add("Gateway IP Not found"); validConfig = false; }
                     if(!subnet){ errorMessages.add("Subnet Not found"); validConfig = false; }
+                    if(!dns1){ errorMessages.add("DNS 1 Not found"); validConfig = false; }
+                    if(!dns2){ errorMessages.add("DNS 2 Not found"); validConfig = false; }
                 }else{
                     errorMessages.add("Invalid Authentication Type");
                     validConfig = false;

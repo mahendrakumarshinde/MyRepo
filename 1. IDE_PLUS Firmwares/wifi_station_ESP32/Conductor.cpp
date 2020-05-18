@@ -389,6 +389,8 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         case MSPCommand::WIFI_RECEIVE_STATIC_IP:
         case MSPCommand::WIFI_RECEIVE_GATEWAY:
         case MSPCommand::WIFI_RECEIVE_SUBNET:
+        case MSPCommand::WIFI_RECEIVE_DNS1:
+        case MSPCommand::WIFI_RECEIVE_DNS2:
             receiveNewStaticConfig(
                 iuSerial->mspReadIPAddress(),
                 (uint8_t) cmd - (uint8_t) MSPCommand::WIFI_RECEIVE_STATIC_IP);
@@ -1000,6 +1002,8 @@ void Conductor::forgetWiFiStaticConfig()
     m_staticIp = IPAddress();
     m_gateway = IPAddress();
     m_subnetMask = IPAddress();
+    m_dns1 = IPAddress();
+    m_dns2 = IPAddress();
 }
 
 /**
@@ -1018,6 +1022,8 @@ void Conductor::receiveNewStaticConfig(IPAddress ip, uint8_t idx)
     if (idx == 0) { m_staticIp = hostSerial.mspReadIPAddress(); }
     else if (idx == 1) { m_gateway = hostSerial.mspReadIPAddress(); }
     else if (idx == 2) { m_subnetMask = hostSerial.mspReadIPAddress(); }
+    else if (idx == 3) { m_dns1 = hostSerial.mspReadIPAddress(); }
+    else if (idx == 4) { m_dns2 = hostSerial.mspReadIPAddress(); }
     else { return; }
     m_staticConfigValidator.receivedMessage(idx);
     if (m_staticConfigValidator.completed())
@@ -1203,13 +1209,13 @@ void Conductor::connectToWiFi(){
     }
     else if(strncmp(m_wifiAuthType, "STATIC-NONE", 11) == 0 )
     {
-        WiFi.config(m_staticIp, m_gateway, m_subnetMask);
+        WiFi.config(m_staticIp, m_gateway, m_subnetMask, m_dns1, m_dns2);
         delay(200);
         WiFi.begin(m_userSSID);
     }
     else if(strncmp(m_wifiAuthType, "STATIC-WPA-PSK", 14) == 0)
     {
-        WiFi.config(m_staticIp, m_gateway, m_subnetMask);
+        WiFi.config(m_staticIp, m_gateway, m_subnetMask, m_dns1, m_dns2);
         delay(200);
         WiFi.begin(m_userSSID, m_userPassword);
     }

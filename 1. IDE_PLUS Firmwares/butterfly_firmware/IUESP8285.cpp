@@ -294,6 +294,8 @@ bool IUESP8285::configure(JsonVariant &config)
     const char* tempStaticIP = config["static"];
     const char* tempGatewayIP = config["gateway"];
     const char* tempSubnetIP = config["subnet"];
+    const char* tempDns1 = config["dns1"];
+    const char* tempDns2 = config["dns2"];
 
     setAuthType(AuthType,strlen(AuthType));
 
@@ -325,6 +327,8 @@ bool IUESP8285::configure(JsonVariant &config)
         setStaticIP(tempStaticIP,strlen(tempStaticIP));
         setGateway(tempGatewayIP,strlen(tempGatewayIP));
         setSubnetMask(tempSubnetIP,strlen(tempSubnetIP));
+        setDns1(tempDns1,strlen(tempDns1));
+        setDns2(tempDns2,strlen(tempDns2));
     }
     else if(strncmp(AuthType, "STATIC-WPA-PSK", 14) == 0)            //to be functional
     {
@@ -333,6 +337,8 @@ bool IUESP8285::configure(JsonVariant &config)
         setStaticIP(tempStaticIP,strlen(tempStaticIP));
         setGateway(tempGatewayIP,strlen(tempGatewayIP));
         setSubnetMask(tempSubnetIP,strlen(tempSubnetIP));
+        setDns1(tempDns1,strlen(tempDns1));
+        setDns2(tempDns2,strlen(tempDns2));
     }
     else if(strncmp(AuthType, "STATIC-EAP-PEAP", 15) == 0)
     {
@@ -342,6 +348,8 @@ bool IUESP8285::configure(JsonVariant &config)
         setStaticIP(tempStaticIP,strlen(tempStaticIP));
         setGateway(tempGatewayIP,strlen(tempGatewayIP));
         setSubnetMask(tempSubnetIP,strlen(tempSubnetIP));
+        setDns1(tempDns1,strlen(tempDns1));
+        setDns2(tempDns2,strlen(tempDns2));
     }
     else if(strncmp(AuthType, "STATIC-EAP-TLS", 14) == 0)
     {
@@ -351,6 +359,8 @@ bool IUESP8285::configure(JsonVariant &config)
         setStaticIP(tempStaticIP,strlen(tempStaticIP));
         setGateway(tempGatewayIP,strlen(tempGatewayIP));
         setSubnetMask(tempSubnetIP,strlen(tempSubnetIP));
+        setDns1(tempDns1,strlen(tempDns1));
+        setDns2(tempDns2,strlen(tempDns2));
     }
     else
     {
@@ -358,13 +368,14 @@ bool IUESP8285::configure(JsonVariant &config)
     }
     if(debugMode) {
         debugPrint(F("SSID      : "),false); debugPrint(m_ssid);
-        debugPrint(F("SSID      : "),false); debugPrint(m_ssid);
         debugPrint(F("Password  : "),false);debugPrint(m_psk);
         debugPrint(F("Username  : "),false); debugPrint(m_username);
         debugPrint(F("Static IP : "),false);debugPrint(m_staticIP);
         debugPrint(F("Subnet    : "),false);debugPrint(m_staticSubnet);
         debugPrint(F("Gateway   : "),false);debugPrint(m_staticGateway);
         debugPrint(F("Auth Type : "),false);debugPrint(m_wifiAuthType);
+        debugPrint(F("DNS 1      : "),false); debugPrint(m_dns1);
+        debugPrint(F("DNS 2     : "),false); debugPrint(m_dns2);
     }
 
     sendWiFiCredentials();
@@ -547,6 +558,57 @@ bool IUESP8285::setSubnetMask(const char *subnetIP, uint8_t len)
     return success;
 }
 
+void IUESP8285::setDns1(IPAddress dns1)
+{
+    if (m_staticConfigValidator.hasTimedOut()) {
+        m_staticConfigValidator.reset();
+    }
+    m_dns1 = dns1;
+    m_staticConfigValidator.receivedMessage(0);
+    m_staticConfigSent = false;
+}
+
+bool IUESP8285::setDns1(const char *dns1, uint8_t len)
+{
+    IPAddress tempAddress;
+    char tempArr[len];
+    for (uint8_t i = 0; i < len; ++i) {
+        tempArr[i] = dns1[i];
+    }
+    // Make sure the sub string is null terminated.
+    tempArr[len] = 0;
+    bool success = tempAddress.fromString(tempArr);
+    if (success) {
+        setDns1(tempAddress);
+    }
+    return success;
+}
+
+void IUESP8285::setDns2(IPAddress dns2)
+{
+    if (m_staticConfigValidator.hasTimedOut()) {
+        m_staticConfigValidator.reset();
+    }
+    m_dns2 = dns2;
+    m_staticConfigValidator.receivedMessage(0);
+    m_staticConfigSent = false;
+}
+
+bool IUESP8285::setDns2(const char *dns2, uint8_t len)
+{
+    IPAddress tempAddress;
+    char tempArr[len];
+    for (uint8_t i = 0; i < len; ++i) {
+        tempArr[i] = dns2[i];
+    }
+    // Make sure the sub string is null terminated.
+    tempArr[len] = 0;
+    bool success = tempAddress.fromString(tempArr);
+    if (success) {
+        setDns2(tempAddress);
+    }
+    return success;
+}
 
 /* =============================================================================
     User Inbound communication
@@ -789,6 +851,8 @@ void IUESP8285::sendStaticConfig()
         mspSendIPAddress(MSPCommand::WIFI_RECEIVE_STATIC_IP, m_staticIP);
         mspSendIPAddress(MSPCommand::WIFI_RECEIVE_GATEWAY, m_staticGateway);
         mspSendIPAddress(MSPCommand::WIFI_RECEIVE_SUBNET, m_staticSubnet);
+        mspSendIPAddress(MSPCommand::WIFI_RECEIVE_DNS1, m_dns1);
+        mspSendIPAddress(MSPCommand::WIFI_RECEIVE_DNS2, m_dns2);
         m_staticConfigSent = true;
         m_staticConfigReceptionConfirmed = false;
         m_displayConnectAttemptStart = millis();
