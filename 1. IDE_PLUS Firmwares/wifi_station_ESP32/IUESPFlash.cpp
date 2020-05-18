@@ -35,6 +35,7 @@ char IUESPFlash::FNAME_EAP_CLIENT1_KEY[12] = "eapClient1";
 char IUESPFlash::FNAME_STATIC_URL[12] = "staticUrl";
 char IUESPFlash::FNAME_UPGRADE_CONFIG[12] = "getCert";
 char IUESPFlash::FNAME_DIAGNOSTIC_ENDPOINT[12] = "diagnosURL";
+char IUESPFlash::FNAME_WIFI_CONFIG[12] = "wifi0";
 
 
 
@@ -331,6 +332,10 @@ size_t IUESPFlash::getConfigFilename(storedConfig configType, char *dest,
             break;
         case CFG_DIAGNOSTIC_ENDPOINT:
             fname = FNAME_DIAGNOSTIC_ENDPOINT;
+            strcpy(FILE_EXTENSION,CONFIG_EXTENSION);
+            break;
+        case CFG_WIFI:
+            fname = FNAME_WIFI_CONFIG;
             strcpy(FILE_EXTENSION,CONFIG_EXTENSION);
             break;
         default:

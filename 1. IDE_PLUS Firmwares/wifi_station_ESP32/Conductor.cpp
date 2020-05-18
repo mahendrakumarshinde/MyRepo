@@ -236,6 +236,9 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         case MSPCommand::SET_DIAGNOSTIC_URL:
             updateDiagnosticEndpoint(buffer,bufferLength);
             break;
+        case MSPCommand::ASK_WIFI_CONFIG:
+            updateWiFiConfig(buffer,bufferLength);
+            break;
         case MSPCommand::CERT_DOWNLOAD_INIT_ACK:
             {
                 //Serial.print("CERT DOWNLOAD INIT ACK :");Serial.println(buffer);
@@ -2756,7 +2759,46 @@ void Conductor::updateDiagnosticEndpoint(char* diagnosticEndpoint,int length){
     
 }
 
-       
+void Conductor::updateWiFiConfig(char* config,int length){
+    // Update the file with the latest Diagnostic http/https endpoint
+    bool success = iuWiFiFlash.writeFile(IUESPFlash::CFG_WIFI,config,length);
+    if (success)
+    {
+        if (debugMode)
+        {
+           debugPrint("Config Json :");
+           debugPrint(config);
+        }
+    }
+}
+
+void Conductor::setWiFiConfig(){
+    StaticJsonBuffer<512> JsonBuffer;
+    JsonVariant config = JsonVariant(iuWiFiFlash.loadConfigJson(IUESPFlash::CFG_WIFI,JsonBuffer));
+    bool validConfig = config.success();
+    config.prettyPrintTo(Serial);
+    if (validConfig)
+    {
+        const char* AuthType = config["auth_type"];
+        const char* tempSSID = config["ssid"];
+        const char* tempPassword = config["password"];
+        const char* tempUsername = config["username"];
+        const char* tempStaticIP = config["static"];
+        const char* tempGatewayIP = config["gateway"];
+        const char* tempSubnetIP = config["subnet"];
+        const char* tempdns1 = config["dns1"];
+        const char* tempdns2 = config["dns2"];
+
+        strcpy(m_wifiAuthType, AuthType); 
+        strcpy(m_userSSID, tempSSID);
+        strcpy(m_userPassword, tempPassword);
+        m_staticIp.fromString(tempStaticIP);
+        m_gateway.fromString(tempGatewayIP);
+        m_subnetMask.fromString(tempSubnetIP);
+        m_dns1.fromString(tempdns1);
+        m_dns2.fromString(tempdns2);
+    }
+}     
 void Conductor::configureDiagnosticEndpointFromFlash(IUESPFlash::storedConfig configType){
         // Update the URL variable
         StaticJsonBuffer<512> JsonBuffer;
