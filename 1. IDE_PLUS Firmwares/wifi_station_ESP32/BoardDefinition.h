@@ -72,6 +72,11 @@ const char CERT_CONFIG_DEFAULT_ENDPOINT_PATH[MAX_ROUTE_LENGTH] = "/certificates?
 const uint16_t CERT_CONFIG_DEFAULT_ENDPOINT_PORT = 8000;
 
 /* =============================================================================
+    certificates Download/Upgrade Default MessageID
+============================================================================= */
+const char CERT_DOWNLOAD_DEFAULT_MESSAGEID[100] = "0123456789_cert_default_messageid";
+
+/* =============================================================================
     PubSub topic names
 ============================================================================= */
 
