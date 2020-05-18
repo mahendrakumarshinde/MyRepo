@@ -847,7 +847,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 iuWiFiFlash.removeFile(CONFIG_TYPES[i]);
                 delay(1);
             }
-            iuWiFiFlash.removeFile(IUESPFlash::CFG_STATIC_CERT_ENDPOINT);
+            //iuWiFiFlash.removeFile(IUESPFlash::CFG_STATIC_CERT_ENDPOINT);
             iuWiFiFlash.updateValue(ADDRESS,0);
             hostSerial.sendMSPCommand(MSPCommand::DELETE_CERT_FILES,"succefully Deleted");
             break;
@@ -2776,7 +2776,7 @@ void Conductor::setWiFiConfig(){
     StaticJsonBuffer<512> JsonBuffer;
     JsonVariant config = JsonVariant(iuWiFiFlash.loadConfigJson(IUESPFlash::CFG_WIFI,JsonBuffer));
     bool validConfig = config.success();
-    config.prettyPrintTo(Serial);
+    //config.prettyPrintTo(Serial);
     if (validConfig)
     {
         const char* AuthType = config["auth_type"];
@@ -2811,7 +2811,7 @@ void Conductor::configureDiagnosticEndpointFromFlash(IUESPFlash::storedConfig co
             int port = config["diagnosticUrl"]["port"].as<int>();
             const char* path = config["diagnosticUrl"]["path"].as<char*>();
 
-            Serial.print("Diagnostic URL Configured from Flash :");
+            //Serial.print("Diagnostic URL Configured from Flash :");
             
             strncpy(diagnosticEndpointHost, host, MAX_HOST_LENGTH); 
             strncpy(diagnosticEndpointRoute, path, MAX_ROUTE_LENGTH);
@@ -2822,7 +2822,7 @@ void Conductor::configureDiagnosticEndpointFromFlash(IUESPFlash::storedConfig co
 
         }else
         {
-            Serial.print("Invalid JOSN Format received for Diagnostic endpoint, use default");
+            //Serial.print("Invalid JOSN Format received for Diagnostic endpoint, use default");
             strncpy(diagnosticEndpointHost, DIAGNOSTIC_DEFAULT_ENDPOINT_HOST, MAX_HOST_LENGTH); 
             strncpy(diagnosticEndpointRoute, DIAGNOSTIC_DEFAULT_ENDPOINT_PATH, MAX_ROUTE_LENGTH);
             diagnosticEndpointPort = DIAGNOSTIC_DEFAULT_ENDPOINT_PORT;
@@ -2846,8 +2846,8 @@ void Conductor::publishedDiagnosticMessage(char* buffer,int bufferLength){
      {
         int status =  httpPostBigRequest(diagnosticEndpointHost,diagnosticEndpointRoute,diagnosticEndpointPort,(uint8_t*) message,
                                             bufferLength,auth, HttpContentType::textPlain );
-        Serial.print("Diagnostic POST Status  : ");
-        Serial.println(status);
+        // Serial.print("Diagnostic POST Status  : ");
+        // Serial.println(status);
      }
 }
 /**
