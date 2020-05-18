@@ -841,7 +841,7 @@ void loop()
             lastDone = now;
             /* === Place your code to excute at fixed interval here ===*/
             conductor.streamMCUUInfo(iuWiFi.port);
-            iuWiFi.sendMSPCommand(MSPCommand::GET_ESP_RSSI);
+            //iuWiFi.sendMSPCommand(MSPCommand::GET_ESP_RSSI);
 
             if(iuWiFi.current_rssi < WEAK_SIGNAL_STRENGTH_TH ){
                  ledManager.overrideColor(RGB_PURPLE);
@@ -856,7 +856,7 @@ void loop()
             {
                 if (loopDebugMode)
                 {
-                    debugPrint("Current WiFi RSSI is :");
+                    debugPrint("Current WiFi RSSI is :",false);
                     debugPrint(iuWiFi.current_rssi,true);
                 }
 

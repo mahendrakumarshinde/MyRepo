@@ -479,8 +479,6 @@ void IUESP8285::setStaticIP(IPAddress staticIP)
         m_staticConfigValidator.reset();
     }
     m_staticIP = staticIP;
-    Serial.println("IP :");
-        Serial.println(m_staticIP);
     m_staticConfigValidator.receivedMessage(0);
     m_staticConfigSent = false;
 }
@@ -530,8 +528,6 @@ bool IUESP8285::setGateway(const char *gatewayIP, uint8_t len)
     bool success = tempAddress.fromString(tempArr);
     if (success) {
         setGateway(tempAddress);
-         Serial.println("Gateway :");
-        Serial.println(tempAddress);
     }
     return success;
 }
@@ -558,8 +554,6 @@ bool IUESP8285::setSubnetMask(const char *subnetIP, uint8_t len)
     bool success = tempAddress.fromString(tempArr);
     if (success) {
         setSubnetMask(tempAddress);
-         Serial.println("Subnet :");
-        Serial.println(tempAddress);
     }
     return success;
 }
@@ -758,11 +752,28 @@ bool IUESP8285::processChipMessage()
             if (loopDebugMode) { debugPrint("WIFI_ALERT_CONNECTED"); }
             m_awakeTimerStart = millis();
             m_lastConnectedStatusTime = m_awakeTimerStart;
-            m_setConnectedStatus(true);
+            //m_setConnectedStatus(true);         // uncommented temporarily
             m_working = false;
             break;
         case MSPCommand::WIFI_ALERT_DISCONNECTED:
             if (loopDebugMode) { debugPrint("WIFI_ALERT_DISCONNECTED"); }
+            m_setConnectedStatus(false);
+            if (millis() - m_displayConnectAttemptStart >
+                displayConnectAttemptTimeout)
+            {
+                m_working = false;
+                m_displayConnectAttemptStart = 0;
+            }
+            break;
+        case MSPCommand::MQTT_ALERT_CONNECTED:
+            if (loopDebugMode) { debugPrint("MQTT_ALERT_CONNECTED"); }
+            m_awakeTimerStart = millis();
+            m_lastConnectedStatusTime = m_awakeTimerStart;
+            m_setConnectedStatus(true);
+            m_working = false;
+            break;
+        case MSPCommand::MQTT_ALERT_DISCONNECTED:
+            if (loopDebugMode) { debugPrint("MQTT_ALERT_DISCONNECTED"); }
             m_setConnectedStatus(false);
             if (millis() - m_displayConnectAttemptStart >
                 displayConnectAttemptTimeout)
@@ -865,6 +876,8 @@ void IUESP8285::forgetStaticConfig()
 void IUESP8285::connect()
 {
     sendMSPCommand(MSPCommand::WIFI_CONNECT);
+    delay(10);
+    sendMSPCommand(MSPCommand::MQTT_CONNECT);
     m_displayConnectAttemptStart = millis();
     m_working = true;
 }
@@ -875,5 +888,7 @@ void IUESP8285::connect()
 void IUESP8285::disconnect()
 {
     sendMSPCommand(MSPCommand::WIFI_DISCONNECT);
+    delay(10);
+    sendMSPCommand(MSPCommand::MQTT_DISCONNECT);
     m_working = true;
 }

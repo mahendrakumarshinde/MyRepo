@@ -55,6 +55,21 @@ const char DIAGNOSTIC_DEFAULT_ENDPOINT_ROUTE[26] = "/mailbox/diagnostics?mac=";
 const uint8_t CUSTOMER_PLACEHOLDER_LENGTH = 9;
 const char CUSTOMER_PLACEHOLDER[CUSTOMER_PLACEHOLDER_LENGTH] = "XXXAdmin";
 
+/* =============================================================================
+    Diagnostic HTTP/HTTPS Endpoints
+============================================================================= */
+
+const char DIAGNOSTIC_DEFAULT_ENDPOINT_HOST[MAX_HOST_LENGTH] = "13.235.210.250";
+const char DIAGNOSTIC_DEFAULT_ENDPOINT_PATH[MAX_ROUTE_LENGTH] = "/certificates/download-status";
+const uint16_t DIAGNOSTIC_DEFAULT_ENDPOINT_PORT = 8000;
+
+/* =============================================================================
+    certificates Config  HTTP/HTTPS Endpoints
+============================================================================= */
+
+const char CERT_CONFIG_DEFAULT_ENDPOINT_HOST[MAX_HOST_LENGTH] = "http://13.235.210.250";
+const char CERT_CONFIG_DEFAULT_ENDPOINT_PATH[MAX_ROUTE_LENGTH] = "/certificates?deviceIdentifier=";
+const uint16_t CERT_CONFIG_DEFAULT_ENDPOINT_PORT = 8000;
 
 /* =============================================================================
     PubSub topic names
@@ -78,6 +93,7 @@ const char CUSTOMER_PLACEHOLDER[CUSTOMER_PLACEHOLDER_LENGTH] = "XXXAdmin";
     const char LOG_TOPIC[LOG_TOPIC_LENGTH] = "ide_logs_test";
 //    const char RAW_DATA_TOPIC[RAW_DATA_TOPIC_LENGTH] = "iu_raw_data_test";
 #else
+    const uint8_t CERT_TOPIC_LENGTH = 21;
     const uint8_t OTA_TOPIC_LENGTH = 20;
     const uint8_t OTA_P_TOPIC_LENGTH = 22;
     const uint8_t FEATURE_TOPIC_LENGTH = 15;
@@ -89,7 +105,8 @@ const char CUSTOMER_PLACEHOLDER[CUSTOMER_PLACEHOLDER_LENGTH] = "XXXAdmin";
     const uint8_t FINGERPRINT_ACK_TOPIC_LENGTH = 27;  // not in use
     const uint8_t COMMAND_RESPONSE_TOPIC_LENGTH = 27;
     
-//    const uint8_t RAW_DATA_TOPIC_LENGTH = 12;
+//   const uint8_t RAW_DATA_TOPIC_LENGTH = 12;
+    const char CERT_STATUS_TOPIC[CERT_TOPIC_LENGTH] = "ide_plus/cert/status";
     const char OTA_TOPIC[OTA_TOPIC_LENGTH] = "ide_plus/ota/status";
     const char OTA_P_TOPIC[OTA_P_TOPIC_LENGTH] = "ide_plus/ota/progress";
     const char FEATURE_TOPIC[FEATURE_TOPIC_LENGTH] = "iu_device_data";

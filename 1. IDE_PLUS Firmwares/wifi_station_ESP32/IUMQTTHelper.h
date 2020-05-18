@@ -8,6 +8,7 @@
 #include <IUDebugger.h>
 #include <MacAddress.h>
 #include "BoardDefinition.h"
+#include <WiFiClientSecure.h>
 
 
 /* =============================================================================
@@ -43,12 +44,14 @@ class IUMQTTHelper
         // Will definition
         static const uint8_t WILL_QOS = 0;
         static const bool WILL_RETAIN = false;
+        bool TLS_ENABLE = false;
+        uint8_t mqttConnected = 0;
         /***** Core *****/
-        IUMQTTHelper(IPAddress serverIP, uint16_t serverPort,
+        IUMQTTHelper(const char * serverIP, uint16_t serverPort,
                      const char *username, const char *password);
-        IUMQTTHelper() : IUMQTTHelper(IPAddress(), 1883, NULL, NULL) {}
+        IUMQTTHelper() : IUMQTTHelper("3.6.220.46", 8883, "", "") {}
         virtual ~IUMQTTHelper() { }
-        void setServer(IPAddress serverIP, uint16_t serverPort);
+        void setServer(const char * serverIP, uint16_t serverPort);
         void setCredentials(const char *username, const char *password);
         void setDeviceMAC(MacAddress deviceMAC);
         void setOnConnectionCallback(void (*callback)())
@@ -76,11 +79,13 @@ class IUMQTTHelper
 
     protected:
         /***** Core *****/
-        WiFiClient m_wifiClient;
+        //WiFiClient m_wifiClient;
+        WiFiClientSecure m_wifiClient;
+
         MacAddress m_deviceMAC;
         /***** MQTT server address and credentials *****/
         /***** Settable parameters (addresses, credentials, etc) *****/
-        IPAddress m_serverIP;
+        char m_serverIP[credentialMaxLength];
         uint16_t m_serverPort;
         char m_username[credentialMaxLength];
         char m_password[credentialMaxLength];
