@@ -90,7 +90,6 @@ void setup()
     conductor.activeCertificates = iuWiFiFlash.readMemory(ADDRESS);
 
     conductor.setWiFiConfig();
-    conductor.connectToWiFi();   
 }
 
 /**
@@ -144,6 +143,9 @@ void loop()
             hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);
             delay(10);
             hostSerial.sendMSPCommand(MSPCommand::GET_RAW_DATA_ENDPOINT_INFO); 
+        }
+        if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_WIFI)){
+            hostSerial.sendMSPCommand(MSPCommand::ASK_WIFI_CONFIG);
         }
     }
     delay(1);

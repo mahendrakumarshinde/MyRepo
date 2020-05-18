@@ -1121,7 +1121,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
             }
             if(dataWritten == true){
-                iuWiFi.sendMSPCommand(MSPCommand::ASK_WIFI_CONFIG,jsonChar.c_str());
+                iuWiFi.sendMSPCommand(MSPCommand::SEND_WIFI_CONFIG,jsonChar.c_str());
                 iuWiFi.configure(variant);
             }
         }else {
@@ -3092,6 +3092,15 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 changeUsageMode(UsageMode::OPERATION);
                 delay(100);
             #endif
+            }
+            break;
+        case MSPCommand::ASK_WIFI_CONFIG:
+            if (DOSFS.exists("/iuconfig/wifi0.conf"))
+            {
+                JsonObject& config = configureJsonFromFlash("/iuconfig/wifi0.conf",1);
+                String jsonChar;
+                config.printTo(jsonChar);
+                iuWiFi.sendMSPCommand(MSPCommand::SEND_WIFI_CONFIG,jsonChar.c_str());
             }
             break;
         case MSPCommand::WIFI_ALERT_NO_SAVED_CREDENTIALS:

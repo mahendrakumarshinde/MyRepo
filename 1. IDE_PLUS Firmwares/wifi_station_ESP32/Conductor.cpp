@@ -236,7 +236,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         case MSPCommand::SET_DIAGNOSTIC_URL:
             updateDiagnosticEndpoint(buffer,bufferLength);
             break;
-        case MSPCommand::ASK_WIFI_CONFIG:
+        case MSPCommand::SEND_WIFI_CONFIG:
             updateWiFiConfig(buffer,bufferLength);
             break;
         case MSPCommand::CERT_DOWNLOAD_INIT_ACK:
@@ -2798,6 +2798,7 @@ void Conductor::setWiFiConfig(){
         m_dns1.fromString(tempdns1);
         m_dns2.fromString(tempdns2);
     }
+    connectToWiFi();   
 }     
 void Conductor::configureDiagnosticEndpointFromFlash(IUESPFlash::storedConfig configType){
         // Update the URL variable
