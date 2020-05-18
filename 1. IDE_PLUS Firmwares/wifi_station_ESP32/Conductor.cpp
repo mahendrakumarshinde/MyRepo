@@ -41,14 +41,6 @@ IUESPFlash::storedConfig Conductor::CONFIG_TYPES[Conductor::CONFIG_TYPE_COUNT] =
     
     };
 
-// namespace CERT_TYPES {
-//     static char* EAP_TLS_CERT    = "EAP-TLS-CERT";
-//     static char* EAP_TLS_KEY     = "EAP-TLS-KEY";
-//     static char* MQTT_TLS_CERT   = "MQTT-TLS-CERT";
-//     static char* MQTT_TLS_KEY    = "MQTT-TLS-KEY";
-//     static char* SSL_ROOTCA_CERT = "SSL";
-// }
-
 const char* CERT_TYPES[5] = { "EAP-TLS-CERT",
                               "EAP-TLS-KEY",
                               "MQTT-TLS-CERT",
@@ -245,28 +237,29 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             updateDiagnosticEndpoint(buffer,bufferLength);
             break;
         case MSPCommand::CERT_DOWNLOAD_INIT_ACK:
-            Serial.print("CERT DOWNLOAD INIT ACK :");Serial.println(buffer);
-            publishedDiagnosticMessage(buffer,bufferLength);
-            certDownloadInitAck = true;
-            downloadInitTimer = false;
-            // trigger the config downloading
-            hostSerial.sendMSPCommand(MSPCommand::GET_CERT_DOWNLOAD_CONFIG);
-            
+            {
+                //Serial.print("CERT DOWNLOAD INIT ACK :");Serial.println(buffer);
+                publishedDiagnosticMessage(buffer,bufferLength);
+                certDownloadInitAck = true;
+                downloadInitTimer = false;
+                // trigger the config downloading can send the messageID 
+                hostSerial.sendMSPCommand(MSPCommand::GET_CERT_DOWNLOAD_CONFIG);
             break;
+            }
         case MSPCommand::CERT_UPGRADE_INIT:
-            Serial.print("CERT UPGRADE INIT :");Serial.println(buffer);
+            //Serial.print("CERT UPGRADE INIT :");Serial.println(buffer);
             publishedDiagnosticMessage(buffer,bufferLength);          
             break;
             
         case MSPCommand::CERT_UPGRADE_SUCCESS:
-            Serial.print("CERT UPGRADE Success :");Serial.println(buffer);
+            //Serial.print("CERT UPGRADE Success :");Serial.println(buffer);
             //mqttHelper.publish(CERT_STATUS_TOPIC,buffer);
             upgradeReceived = false;
             downloadInitTimer = true;
             publishedDiagnosticMessage(buffer,bufferLength);
             break;
         case MSPCommand::CERT_UPGRADE_ABORT:
-            Serial.print("CERT UPGRADE Failed/ABORTED :");Serial.println(buffer);
+            //Serial.print("CERT UPGRADE Failed/ABORTED :");Serial.println(buffer);
             publishedDiagnosticMessage(buffer,bufferLength);
             if(newDownloadConnectonAttempt > maxMqttCertificateDownloadCount){ 
                 downloadInitTimer = false;
@@ -276,7 +269,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
            }
             break;
         case MSPCommand::CERT_DOWNLOAD_ABORT:
-            Serial.print("CERT DOWNLOAD ABORTED :");Serial.println(buffer);
+            //Serial.print("CERT DOWNLOAD ABORTED :");Serial.println(buffer);
             otaInProgress = false;
             waitingForPktAck = false;
             otaInitTimeoutFlag = false;
@@ -287,7 +280,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             break;
                     
         case MSPCommand::CERT_DOWNLOAD_SUCCESS:
-             Serial.print("CERT DOWNLOAD Success : ");Serial.println(buffer);
+             //Serial.print("CERT DOWNLOAD Success : ");Serial.println(buffer);
              otaInProgress = false;
              waitingForPktAck = false;
              otaInitTimeoutFlag = false;
@@ -298,20 +291,20 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
              break;
             
         case MSPCommand::CERT_NO_DOWNLOAD_AVAILABLE:
-            Serial.print("NO DOWNLOAD AVAILABLE :");Serial.println(buffer);
+            //Serial.print("NO DOWNLOAD AVAILABLE :");Serial.println(buffer);
             publishedDiagnosticMessage(buffer,bufferLength);
             break;
             
         case MSPCommand::ALL_MQTT_CONNECT_ATTEMPT_FAILED:
-            Serial.print("All Connection Attempt Failed : ");Serial.println(buffer);
+            //Serial.print("All Connection Attempt Failed : ");Serial.println(buffer);
             // TODO :Send to Diagnostic endpoint if mqtt not connected
             publishedDiagnosticMessage(buffer,bufferLength);
             break;
         case MSPCommand::CERT_UPGRADE_TRIGGER:
-            Serial.println("RECEIVED THE CERT UPGRADE COMMAND, Init Download process");
+            //Serial.println("RECEIVED THE CERT UPGRADE COMMAND, Init Download process");
             upgradeReceived = true;
             downloadInitTimer = false;
-            iuSerial->sendMSPCommand(MSPCommand::CERT_DOWNLOAD_INIT);
+            iuSerial->sendMSPCommand(MSPCommand::CERT_DOWNLOAD_INIT,CERT_DOWNLOAD_DEFAULT_MESSAGEID);
             break;
         case MSPCommand::ASK_WIFI_FV:
             iuSerial->sendMSPCommand(MSPCommand::RECEIVE_WIFI_FV, FIRMWARE_VERSION);
@@ -691,25 +684,25 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                     newMqttcertificateAvailable == true || newMqttPrivateKeyAvailable == true || newRootCACertificateAvailable == true || upgradeReceived) ){
                     // Note : upgradeReceived flage is optional here, in upgrade new cert are having different checksum above all  flags will alreay set to true
                     // added temp for testing upgrade    
-                    Serial.println("\nESP32 DEBUG : DOWNLOADING STARTED ....");
+                    //Serial.println("\nESP32 DEBUG : DOWNLOADING STARTED ....");
                     publishedDiagnosticMessage(buffer,bufferLength);
                     certificateDownloadStatus = download_tls_ssl_certificates();
                     if(certificateDownloadStatus == 1){
                         hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_SUCCESS, String(getRca(CERT_DOWNLOAD_COMPLETE)).c_str());
                         if(activeCertificates == 1){
                             if(initialFileDownload){
-                                Serial.println("Initial File Download , Updated Value ");
+                                //Serial.println("Initial File Download , Updated Value ");
                                 initialFileDownload = false;
                             }
                            activeCertificates = iuWiFiFlash.updateValue(ADDRESS,0);
                         }else{
                            activeCertificates = iuWiFiFlash.updateValue(ADDRESS,1);
                         }
-                        Serial.println("\nESP32 DEBUG : DOWNLOADING SUCCESSFULLY COMPLETED....");
+                        //Serial.println("\nESP32 DEBUG : DOWNLOADING SUCCESSFULLY COMPLETED....");
                     }
                 }else
                 {
-                    Serial.println("\nESP32 DEBUG : No Need to Update the Certificates");
+                    //Serial.println("\nESP32 DEBUG : No Need to Update the Certificates");
                     hostSerial.sendMSPCommand(MSPCommand::CERT_NO_DOWNLOAD_AVAILABLE, String(getRca(CERT_NEW_CERT_NOT_AVAILBLE)).c_str());
                 }
                    
@@ -722,7 +715,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 newMqttcertificateAvailable = false;  
                 newMqttPrivateKeyAvailable = false;
                 newRootCACertificateAvailable = false;
-                Serial.println("\nESP32 DEBUG : ALL FLAGS RESET ....");    
+                //Serial.println("\nESP32 DEBUG : ALL FLAGS RESET ....");    
                 
             break;
         case MSPCommand::UPGRADE_TLS_SSL_START:
@@ -759,8 +752,8 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             StaticJsonBuffer<512> jsonBuffer;
             JsonVariant config = JsonVariant(iuWiFiFlash.loadConfigJson(IUESPFlash::CFG_STATIC_CERT_ENDPOINT,jsonBuffer));
             bool success = config.success();
-            Serial.print("COMMON URL JSON :");
-            config.prettyPrintTo(Serial);
+            // Serial.print("COMMON URL JSON :");
+            // config.prettyPrintTo(Serial);
             
             if( success && WiFi.isConnected() ){
                 
@@ -788,7 +781,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                                     // Failed to write to Flash File system 
                                     // TODO : Publish status to diagnostic endpoint
                                     hostSerial.sendMSPCommand(MSPCommand::ESP32_FLASH_FILE_WRITE_FAILED);
-                                    Serial.println("\nESP32 DEBUG : ESP32_FLASH_FILE_WRITE_FAILED");
+                                    //Serial.println("\nESP32 DEBUG : ESP32_FLASH_FILE_WRITE_FAILED");
                                     delay(1); 
                                     //hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT);
                                     hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT,String(getRca(CERT_FILESYSTEM_READ_WRITE_FAILED)).c_str());
@@ -796,7 +789,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                                     upgradeReceived = false;
                                 }else
                                 {
-                                    Serial.println("\nESP32 DEBUG : Config JOSN File  Upgrade completed ---------");
+                                    //Serial.println("\nESP32 DEBUG : Config JOSN File  Upgrade completed ---------");
                                     hostSerial.sendMSPCommand(MSPCommand::DOWNLOAD_TLS_SSL_START);
                                     downloadAborted = false;
                                     
@@ -811,7 +804,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                     // TODO : Get the http error code based on above httpCode 
                     if(httpCode != HTTP_CODE_OK) {
                         // Send the HTTP Faliure Code with RCA
-                        Serial.print("\nESP32 DEBUG : HTTP Failed : "); Serial.println(httpCode);
+                        //Serial.print("\nESP32 DEBUG : HTTP Failed : "); Serial.println(httpCode);
                         certificateDownloadInProgress =true;    // Set to send the RCA
                         hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT,String(getRca(httpCode)).c_str());
                         certificateDownloadInProgress = false;
@@ -821,7 +814,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                     downloadAborted = true;
                     upgradeReceived = false;
                     //hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT);
-                    Serial.println("\nESP32 DEBUG :STOP CERT Download Mode");
+                    //Serial.println("\nESP32 DEBUG :STOP CERT Download Mode");
 
                 }
                 
@@ -832,9 +825,11 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 if(! WiFi.isConnected() || !success ) {
                     
                     if(!success) {
-                        Serial.println("\nESP32 DEBUG : Invalid Static URL Config JSON Response or File Not available");
+                        //Serial.println("\nESP32 DEBUG : Invalid Static URL Config JSON Response or File Not available");
                         hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT,String(getRca(CERT_STATIC_URL_FILE_NOT_PRESENT)).c_str() );
-                    }else{ Serial.println("\nESP32 DEBUG : Wifi client disconnected ");}
+                    }else{ 
+                        //Serial.println("\nESP32 DEBUG : Wifi client disconnected ");
+                    }
 
                 }
                 downloadAborted = true;
@@ -942,7 +937,6 @@ void Conductor::forceWiFiConfig(const char *userSSID, const char *userPSK,
     m_staticConfigValidator.receivedMessage(1);
     m_staticConfigValidator.receivedMessage(2);
     m_disconnectionTimerStart = millis();  // Reset Disconnection timer
-    Serial.println("Forced WiFi Config");
 }
 
 /**
@@ -986,7 +980,6 @@ void Conductor::receiveNewCredentials(char *newSSID, char *newPSK)
         hostSerial.sendMSPCommand(MSPCommand::WIFI_CONFIRM_NEW_CREDENTIALS,
                                   info.c_str());
         // Reset disconnection timer before reconnection attempt
-        Serial.println("Received New WiFi Credentials");
         m_disconnectionTimerStart = millis();
         m_disconnectionMqttTimerStart = millis();
         reconnect(true);
@@ -1315,7 +1308,6 @@ void Conductor::checkWiFiDisconnectionTimeout()
     if (WiFi.isConnected() /*&& mqttHelper.client.connected()*/)
     {
         m_disconnectionTimerStart = now;
-        //Serial.println("\nSet the m_disconnectionTimerStart");
     }
     else if (now - m_disconnectionTimerStart > disconnectionTimeout)
     {
@@ -1323,8 +1315,7 @@ void Conductor::checkWiFiDisconnectionTimeout()
         {
             debugPrint("Exceeded disconnection time-out");
         }
-       Serial.println("Exceeded disconnection time-out");
-       ESP.restart(); // Resetting ESP32 if not connected to WiFi (every 100 Sec.) // ESP32_PORT_TRUE
+        ESP.restart(); // Resetting ESP32 if not connected to WiFi (every 100 Sec.) // ESP32_PORT_TRUE
     }
 }
 
@@ -1692,12 +1683,12 @@ void Conductor::updateWiFiStatus()
     if (WiFi.isConnected() /*&& mqttHelper.client.connected()*/)
     {
         hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_CONNECTED);
-        Serial.println("\nWIFI CONNECTED");
+        //Serial.println("\nWIFI CONNECTED");
     }
     else
     {
         hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_DISCONNECTED);
-        Serial.println("WIFI DISCONECTED");
+        //Serial.println("WIFI DISCONECTED");
     }
 }
 /**
@@ -1709,12 +1700,12 @@ void Conductor::updateMQTTStatus()
     if (mqttHelper.client.connected())
     {
         hostSerial.sendMSPCommand(MSPCommand::MQTT_ALERT_CONNECTED);
-        Serial.println("MQTT CONNECTED");
+        //Serial.println("MQTT CONNECTED");
     }
     else
     {
         hostSerial.sendMSPCommand(MSPCommand::MQTT_ALERT_DISCONNECTED);
-        Serial.println("MQTT DISCONNECTED");
+        //Serial.println("MQTT DISCONNECTED");
     }
 }
 /**
@@ -2202,17 +2193,17 @@ void Conductor::mqttSecureConnect(){
                  if (iuWiFiFlash.isFilePresent(IUESPFlash::CFG_MQTT_CLIENT0) && iuWiFiFlash.isFilePresent(IUESPFlash::CFG_MQTT_KEY0) ||
                      iuWiFiFlash.isFilePresent(IUESPFlash::CFG_MQTT_CLIENT1) && iuWiFiFlash.isFilePresent(IUESPFlash::CFG_MQTT_KEY1) )
                  {
-                    Serial.println("ESP32 DEBUG : APPYING THE CERTIFICATES*********");
+                    //Serial.println("ESP32 DEBUG : APPYING THE CERTIFICATES*********");
                     int certSize,keySize;
                    if( upgradeReceived  && (activeCertificates == 1 && initialFileDownload == false) || activeCertificates == 1 ){
-                        Serial.println("Using Client 1 Certificates");
+                        //Serial.println("Using Client 1 Certificates");
                         certSize = iuWiFiFlash.getFileSize(IUESPFlash::CFG_MQTT_CLIENT1);
                         keySize  = iuWiFiFlash.getFileSize(IUESPFlash::CFG_MQTT_KEY1);
                         iuWiFiFlash.readFile(IUESPFlash::CFG_MQTT_CLIENT1,mqtt_client_cert,certSize);
                         delay(1);
                         iuWiFiFlash.readFile(IUESPFlash::CFG_MQTT_KEY1,mqtt_client_key,keySize);
                    }else{
-                        Serial.println("Using Client 0 Certificates");
+                        //Serial.println("Using Client 0 Certificates");
                         certSize = iuWiFiFlash.getFileSize(IUESPFlash::CFG_MQTT_CLIENT0);
                         keySize  = iuWiFiFlash.getFileSize(IUESPFlash::CFG_MQTT_KEY0);
                         iuWiFiFlash.readFile(IUESPFlash::CFG_MQTT_CLIENT0,mqtt_client_cert,certSize);
@@ -2223,15 +2214,16 @@ void Conductor::mqttSecureConnect(){
                     if ((certificateDownloadStatus == 1 && ( mqttHelper.mqttConnected == 0 && !mqttHelper.client.connected())) || upgradeReceived == true )
                     {
                         // first connection attempt,upgrade Init
-                        Serial.println("Upgrader Init.......");
+                        //Serial.println("Upgrader Init.......");
                     }
                     // Retry 3 time connection then download new certificates
                     mqttHelper.reconnect();  
                     //mqttHelper.client.loop();
-                    Serial.print("\nESP32 DEBUG : Connection Count :");
-                    Serial.println(mqttHelper.mqttConnected);
+                    // Serial.print("\nESP32 DEBUG : Connection Count :");
+                    // Serial.println(mqttHelper.mqttConnected);
                     
                     // Upgrade Success and updatet the status
+                    #if 0
                     if ((certificateDownloadStatus == 1 && ( mqttHelper.mqttConnected <= 5 && mqttHelper.client.connected())) || upgradeReceived ==true)
                     {
                         // Send Upgrade Status 
@@ -2249,29 +2241,32 @@ void Conductor::mqttSecureConnect(){
                         upgradeReceived = false;
                         certificateDownloadStatus = 0;
                     }
+                    #endif
+                    upgradeSuccess();
+                    upgradeFailed();
                     //Retry attempt overflow
                     if (mqttHelper.mqttConnected > maxMqttClientConnectionCount )
                     {   
                         newDownloadConnectonAttempt++;
                         mqttHelper.mqttConnected = 0;
-                        Serial.print("\nESP32 DEBUG : ClientConnnection Attempt :");
-                        Serial.println(newDownloadConnectonAttempt);
+                        // Serial.print("\nESP32 DEBUG : ClientConnnection Attempt :");
+                        // Serial.println(newDownloadConnectonAttempt);
                         // re-initiate the certifiates download process
                         if (newDownloadConnectonAttempt > maxMqttCertificateDownloadCount)
                         {
                             // TODO : All Retry failed , might be http link broken cannot download certs
                             // Send status to http diagnostic endpoint and show Visuals
-                            Serial.println("\nESP32 DEBUG : ALL MQTT Connection Attemps FAILED ************");
+                            //Serial.println("\nESP32 DEBUG : ALL MQTT Connection Attemps FAILED ************");
                             hostSerial.sendMSPCommand(MSPCommand::ALL_MQTT_CONNECT_ATTEMPT_FAILED,String(getRca(MQTT_CONNECTION_ATTEMPT_FAILED)).c_str());
                             downloadInitLastTimeSync = millis();
                             upgradeReceived = false;
                             downloadInitTimer  = false;
                             
                         }else {
-                            Serial.println("\nESP32 DEBUG : Download Init trigger.......");
+                            //Serial.println("\nESP32 DEBUG : Download Init trigger.......");
                             upgradeReceived = false;
                             downloadInitTimer = false;
-                            hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_INIT);
+                            hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_INIT,CERT_DOWNLOAD_DEFAULT_MESSAGEID);
                         }    
                     }
                     
@@ -2279,14 +2274,14 @@ void Conductor::mqttSecureConnect(){
                  {
                      // TODO : .crt and .key files not Present
                      // Show Visuals
-                     Serial.println("\nESP32 DEBUG : Files not available to Initiate Certificates Download");
+                     //Serial.println("\nESP32 DEBUG : Files not available to Initiate Certificates Download");
                      hostSerial.sendMSPCommand(MSPCommand::ESP32_FLASH_FILE_READ_FAILED);
                      delay(10);
                      upgradeReceived = false;
                      downloadInitTimer = false;
                      initialFileDownload = true;
                      activeCertificates = iuWiFiFlash.updateValue(ADDRESS,1);   // Update for first attempt only
-                     hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_INIT);
+                     hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_INIT,CERT_DOWNLOAD_DEFAULT_MESSAGEID);
                 }
                  
                  
@@ -2304,6 +2299,46 @@ void Conductor::mqttSecureConnect(){
         }
         
         
+}
+
+void Conductor::upgradeSuccess(){
+    if ((certificateDownloadStatus == 1 && ( mqttHelper.mqttConnected <= 5 && mqttHelper.client.connected())) && upgradeReceived ==true)
+    {
+        // Send Upgrade Status 
+        hostSerial.sendMSPCommand(MSPCommand::CERT_UPGRADE_SUCCESS,String(getRca(CERT_UPGRADE_COMPLETE)).c_str());
+        // Rollback downloadCertificates
+        if(upgradeReceived && activeCertificates == 1){
+            //Serial.println("Client 1 Upgrade Success....");
+            // backup the older  certificates and use the latest.
+            // raname the files or overwrite it. make sure after devicereset it should use new certs
+            activeCertificates = iuWiFiFlash.updateValue(ADDRESS,1);  // client1 in Use after Reset
+        }else {
+            //Serial.println("\nClient 0 Upgrade Success.....");
+            activeCertificates = iuWiFiFlash.updateValue(ADDRESS,0); // Clinet 0 in use 
+        }
+        upgradeReceived = false;
+        certificateDownloadStatus = 0;
+    }
+}
+
+void Conductor::upgradeFailed(){
+    if ((certificateDownloadStatus == 1 && ( mqttHelper.mqttConnected > 5 && !mqttHelper.client.connected())) && upgradeReceived == true)
+    {
+        // Send Upgrade Status 
+        hostSerial.sendMSPCommand(MSPCommand::CERT_UPGRADE_ABORT,String(getRca(CERT_UPGRADE_FAILED)).c_str());
+        // Rollback downloadCertificates
+        if(activeCertificates == 1){
+            //Serial.println("Client 1 Upgrade Failed Use previous Client 0 Certificates....");
+            // backup the older  certificates and use the latest.
+            // raname the files or overwrite it. make sure after devicereset it should use new certs
+            activeCertificates = iuWiFiFlash.updateValue(ADDRESS,0);  // client1 in Use after Reset
+        }else {
+            //Serial.println("\nClient 0 Upgrade Failed Use previous Client1 Certificates.....");
+            activeCertificates = iuWiFiFlash.updateValue(ADDRESS,1); // Clinet 0 in use 
+        }
+        upgradeReceived = false;
+        certificateDownloadStatus = 0;
+    }
 }
 // Certificate managment selection
 //String filepath = "/eap_client.crt"; // bin file name with a slash in front.
@@ -2487,12 +2522,13 @@ bool Conductor::getDeviceCertificates(IUESPFlash::storedConfig configType, const
                         }
                         //fwdnldLen = contentLen;
                         //Write the content to files
+                        //Serial.print("Content Len : ");Serial.println(contentLen);
                         writeCertificatesToFlash(configType,contentLen,type);
                     }
                     else
                     {
                         // sprintf(TestStr,"HTTP FAIL:%d",httpCode);
-                        Serial.println("ESP32 DEBUG : httpCode != 200 OK");
+                        //Serial.println("ESP32 DEBUG : httpCode != 200 OK");
                         hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT,String(getRca(httpCode)).c_str());
                         downloadAborted = true;
                         upgradeReceived = false;
@@ -2502,7 +2538,7 @@ bool Conductor::getDeviceCertificates(IUESPFlash::storedConfig configType, const
                 else
                 {   
                     // TODO : Handle http error code
-                    Serial.println("ESP32 DEBUG : httpCode < 0");
+                    //Serial.println("ESP32 DEBUG : httpCode < 0 1");
                     hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT,String(getRca(httpCode)).c_str());         
                     http_ota.end();
                     downloadAborted =true;
@@ -2515,7 +2551,7 @@ bool Conductor::getDeviceCertificates(IUESPFlash::storedConfig configType, const
                 waitingForPktAck = false;
                 http_ota.end();
                 delay(2000);
-                Serial.println("ESP32 DEBUG : HTTP URL BEGIN Failed");
+                //Serial.println("ESP32 DEBUG : HTTP URL BEGIN Failed");
                 if(http_init_retry == MAX_HTTP_INIT_RETRY)
                 { 
                     delay(1);
@@ -2527,7 +2563,7 @@ bool Conductor::getDeviceCertificates(IUESPFlash::storedConfig configType, const
     else
     {
         // FW Download was initiated... but failed due to WiFi disconnect
-        Serial.println("getDeviceCertificates : Wifi Disconnected");
+        //Serial.println("getDeviceCertificates : Wifi Disconnected");
         hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT,String(getRca(OTA_WIFI_DISCONNECT)).c_str());
         http_ota.end();
         downloadAborted = true;
@@ -2557,9 +2593,9 @@ int Conductor::download_tls_ssl_certificates(){
                     JsonVariant config = root;
                     int configTypeCount = config["certificates"].size();
                     bool success = config.success();
-                    Serial.print("Arry Size : ");Serial.println(configTypeCount);
-                    Serial.print("CONFIG JSON :");
-                    config.prettyPrintTo(Serial);
+                    //Serial.print("Arry Size : ");Serial.println(configTypeCount);
+                    //Serial.print("CONFIG JSON :");
+                    //config.prettyPrintTo(Serial);
                     uint8_t certToUpdate;
                     if(activeCertificates != 0){ 
                         // if(initialFileDownload){
@@ -2580,12 +2616,12 @@ int Conductor::download_tls_ssl_certificates(){
                             const char* type = config["certificates"][index]["type"];
                             const char* url = config["certificates"][index]["url"];
                             const char* hash = config["certificates"][index]["hash"];
-                            Serial.println(type);
+                            //Serial.println(type);
                             bool downloadSuccess = false;
                             char* checksum ;
                             // Note : upgradeReceived flage is set only for dev testing , can ne removed later (only in this statments not in nested if)
                             int res = downloadCertificates(type,url,hash,index,certToUpdate);
-                            Serial.print("Output : ");Serial.println(res);
+                            //Serial.print("Output : ");Serial.println(res);
                             if(res != 1){  return 0 ; /*break;*/}   //exit from for loop
                             
                         }   // for loop
@@ -2593,7 +2629,7 @@ int Conductor::download_tls_ssl_certificates(){
                     }else
                     {
                         // TODO : send the status message
-                        Serial.println("Invalid JSON message configuration");
+                        //Serial.println("Invalid JSON message configuration");
                         //hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT,"Invalid JOSN configuration");
                         hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT, String(getRca(CERT_INVALID_CONFIG_JSON)).c_str());
                         downloadAborted = true;
@@ -2841,8 +2877,8 @@ void Conductor:: messageValidation(char* json){
      JsonVariant configJson = JsonVariant(JsonBuffer.parseObject(json));
      bool validJson = configJson.success();
      uint8_t configTypeCount = configJson["certificates"].size();
-     Serial.print("configType Count :");Serial.println(configTypeCount);
-    // Note : below 4 files are mandatory except EAP
+     const char* messageID = configJson["messageId"];
+     // Note : below 4 files are mandatory except EAP
     if(validJson && WiFi.isConnected() ){       // JOSN for Checksum Validation
         //Validate the Response message
         if (iuWiFiFlash.isFilePresent(IUESPFlash::CFG_CERT_UPGRADE_CONFIG) && 
@@ -2852,6 +2888,8 @@ void Conductor:: messageValidation(char* json){
              iuWiFiFlash.isFilePresent(IUESPFlash::CFG_EAP_CLIENT0) || 
              iuWiFiFlash.isFilePresent(IUESPFlash::CFG_EAP_KEY0) )
         {   
+            // Update Certificates Download messageID
+            hostSerial.sendMSPCommand(MSPCommand::SET_CERT_DOWNLOAD_MSGID,messageID);
             uint8_t result[CONFIG_TYPE_COUNT]; // 10 , max use 5
             for (size_t i = 0; i < configTypeCount; i++)
             {
@@ -2866,14 +2904,14 @@ void Conductor:: messageValidation(char* json){
                 // TODO : Send the status message Similar certificates already available
                 // abort downloading
                 /* code */
-                Serial.println("Similar Checksum of all the files, Do not initiate downloading.....");
+                //Serial.println("Similar Checksum of all the files, Do not initiate downloading.....");
                 newEapCertificateAvailable = false;
                 newEapPrivateKeyAvailable = false;
                 newMqttcertificateAvailable = false;  // false
                 newMqttPrivateKeyAvailable = false;
                 newRootCACertificateAvailable = false;
                 // Abort Download
-                Serial.println("\nABORTED Download and Sending Status message....");
+                //Serial.println("\nABORTED Download and Sending Status message....");
                 //Send the Status message
                 //TODO : Temp Change 
                 if(upgradeReceived){
@@ -2911,7 +2949,7 @@ void Conductor:: messageValidation(char* json){
                     // Failed to write to Flash File system 
                     // TODO : Publish status to diagnostic endpoint
                     hostSerial.sendMSPCommand(MSPCommand::ESP32_FLASH_FILE_WRITE_FAILED);
-                    Serial.println("ESP32 DEBUG : ESP32_FLASH_FILE_WRITE_FAILED");
+                    //Serial.println("ESP32 DEBUG : ESP32_FLASH_FILE_WRITE_FAILED");
                     delay(1);
                     hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT);
                     downloadAborted = true;
@@ -2924,12 +2962,12 @@ void Conductor:: messageValidation(char* json){
                     newMqttcertificateAvailable = true;  
                     newMqttPrivateKeyAvailable  = true;
                     newRootCACertificateAvailable = true;
-                    Serial.println("succefully  written the config JOSN to File First time.");
+                    //Serial.println("succefully  written the config JOSN to File First time.");
             }
         }
     }else
     {
-        Serial.println("Received Invalid JSON");
+        //Serial.println("Received Invalid JSON");
         hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT, String(getRca(CERT_INVALID_CONFIG_JSON)).c_str());
         downloadAborted = true;
     }
@@ -2945,19 +2983,19 @@ int Conductor::downloadCertificates(const char* type,const char* url,const char*
     if (( strcmp(type,CERT_TYPES[index]) == 0 ||  upgradeReceived == true) )
     {
         // Download the rootCA.crt and store
-        Serial.println("\ndownloading initiated.");
+        //Serial.println("\ndownloading initiated.");
         if(upgradeReceived && certToUpdate == 1){
-            Serial.println("Updating Client 1 Files.");
+            //Serial.println("Updating Client 1 Files.");
              downloadSuccess = getDeviceCertificates(CONFIG_TYPES[index+5],type,url); // Upgrade client 1
         }else{
-            Serial.println("Updating Client 0 Files.");
+            //Serial.println("Updating Client 0 Files.");
             downloadSuccess = getDeviceCertificates(CONFIG_TYPES[index],type,url);  // Upgrade Cleint 0
         }
         if (downloadSuccess)
         {
             // File Download and stored success
             // Read the certificates and print
-            Serial.println("downloadSuccess!!!");
+            //Serial.println("downloadSuccess!!!");
             //readCertificatesFromFlash(IUESPFlash::CFG_HTTPS_ROOTCA0,type);
             //delay(10);
             if(upgradeReceived && certToUpdate == 1){
@@ -2968,13 +3006,13 @@ int Conductor::downloadCertificates(const char* type,const char* url,const char*
             if (strcmp(hash,checksum) == 0)
             {
                 // TODO : .CERT DOWNLOAD Success
-                Serial.println("VALIDATION Success");
+                //Serial.println("VALIDATION Success");
                 //hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_SUCCESS,".rootCA VALIDATED");
             }else
             {
                 // TODO : Invalid Checksum abort Upgrade
-                Serial.print("INVALID CHECKSUM ");
-                Serial.println(checksum);
+                // Serial.print("INVALID CHECKSUM ");
+                // Serial.println(checksum);
                 hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT, String(getRca(CERT_INVALID_CRT_CHECKSUM)).c_str());
                 downloadAborted = true;
                 upgradeReceived = false;
@@ -2984,7 +3022,7 @@ int Conductor::downloadCertificates(const char* type,const char* url,const char*
         }else
         {   
             // TODO :
-            Serial.println("File Download Failed");
+            //Serial.println("File Download Failed");
             hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT, String(getRca(CERT_DOWNLOAD_FAILED)).c_str());
             downloadAborted = true;
             upgradeReceived = false;
@@ -3003,7 +3041,7 @@ bool Conductor:: setCommonHttpEndpoint(){
         if(debugMode){
             debugPrint("HTTP Common Endpoint present.");
         }
-        Serial.println("Common endpoint file is present");
+        //Serial.println("Common endpoint file is present");
         return true;
     }else
     {   // Construct the JSON 
@@ -3032,8 +3070,7 @@ bool Conductor:: setCommonHttpEndpoint(){
 
             bool writeSuccess = iuWiFiFlash.writeFile(IUESPFlash::CFG_STATIC_CERT_ENDPOINT,config,sizeof(config));
         
-            Serial.print("Write Success : ");Serial.println(writeSuccess);
-
+            
             return true;
         }
     return false;

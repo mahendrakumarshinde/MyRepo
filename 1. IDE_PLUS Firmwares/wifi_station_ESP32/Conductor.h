@@ -130,6 +130,8 @@ class Conductor
         /***** Mqtt Connection and status, timeouts ******/
         void checkMqttDisconnectionTimeout();
         void mqttSecureConnect();
+        void upgradeSuccess();
+        void upgradeFailed();
         /***** MQTT *****/
         void loopMQTT();
         void processMessageFromMQTT(const char* topic, const char* payload,
