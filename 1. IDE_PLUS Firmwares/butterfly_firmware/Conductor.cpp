@@ -2717,6 +2717,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                     debugPrint(buff);
                 }
                 certDownloadInProgress = true; 
+                strcpy(m_otaMsgId,buff);
                 certDownloadInitWaitTimeout = millis();  
                 changeUsageMode(UsageMode::OTA);
                 delay(1);
@@ -2745,6 +2746,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             {
                 debugPrint("Received the Command to get the cert config json ");
             }
+            strcpy(m_otaMsgId,buff);
             m_getDownloadConfig = true;
             iuWiFi.sendMSPCommand(MSPCommand::GET_CERT_DOWNLOAD_CONFIG);
             break;    
