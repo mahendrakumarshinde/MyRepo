@@ -91,8 +91,6 @@ void setup()
     //Configure the Diagnostic HTTP/HTTPS Endpoint
     conductor.configureDiagnosticEndpointFromFlash(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT);
     conductor.activeCertificates = iuWiFiFlash.readMemory(ADDRESS);
-
-   
     conductor.connectToWiFi();
     
 }
@@ -107,29 +105,22 @@ void loop()
     if(!conductor.configStatus){
         getAllConfig();
     }
-    hostSerial.readMessages();  // Read and process messages from host
-    if (conductor.reconnect()) {  // If Wifi is connected
+    hostSerial.readMessages();  
+    if (conductor.reconnect()) {  
         if (!timeHelper.active()) {
             timeHelper.begin();
         }
         // Update time reference from NTP server if not yet received
         // from IU server
         timeHelper.updateTimeReferenceFromNTP();
-        /***** MQTT Connection / message reception loop *****/
-        // if(!mqttHelper.client.connected()){
-        //      conductor.loopMQTT();
-        // }
         conductor.publishWifiInfoCycle();
-        // Publish raw data (HTTP POST request)
-//        accelRawDataHelper.publishIfReady(conductor.getBleMAC());
-        
     }
     conductor.mqttSecureConnect();
     conductor.updateWiFiStatusCycle();
     conductor.checkWiFiDisconnectionTimeout();
     conductor.checkMqttDisconnectionTimeout();
     conductor.checkOtaPacketTimeout();
-    if(WiFi.isConnected() == false)         // Need Auto reconnect for MQTT broker
+    if(WiFi.isConnected() == false)         
     {   
         conductor.autoReconncetWifi();
     } 
@@ -138,8 +129,8 @@ void loop()
     if (now - lastDone > 5000 )
     {   
         //iuWiFiFlash.listAllAvailableFiles(IUESPFlash::CONFIG_SUBDIR);
-        Serial.print("EEPROM Value :");
-        Serial.println(iuWiFiFlash.readMemory(ADDRESS));
+        //Serial.print("EEPROM Value :");
+        //Serial.println(iuWiFiFlash.readMemory(ADDRESS));
 
         rssiPublishedCounter++ ;
         if (rssiPublishedCounter >= 6)
