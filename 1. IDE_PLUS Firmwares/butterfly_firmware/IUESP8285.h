@@ -84,6 +84,11 @@ class IUESP8285 : public IUSerial, public Component
         bool setSubnetMask(const char *subnetIP, uint8_t len);
         void setUsername(const char *username, uint8_t length);
         void setAuthType(const char *authtype, uint8_t length);
+        void setDns1(IPAddress dns1);
+        bool setDns1(const char *dns1, uint8_t len);
+        void setDns2(IPAddress dns2);
+        bool setDns2(const char *dns2, uint8_t len);
+
         /***** User Inbound communication *****/
         void processUserMessage(char *buff, IUFlash *iuFlashPtr);
         /***** Guest Inbound communication *****/
@@ -132,6 +137,8 @@ class IUESP8285 : public IUSerial, public Component
         IPAddress m_staticIP;
         IPAddress m_staticGateway;
         IPAddress m_staticSubnet;
+        IPAddress m_dns1;
+        IPAddress m_dns2;
         bool m_staticConfigSent = false;
         bool m_staticConfigReceptionConfirmed = false;
         MultiMessageValidator<3> m_staticConfigValidator;

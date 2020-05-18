@@ -42,6 +42,8 @@ void getAllConfig()
     mqttHelper.onConnection();
     conductor.publishDiagnostic("connected", 10);
     hostSerial.sendMSPCommand(MSPCommand::GET_DEVICE_CONFIG);
+    delay(10);
+    hostSerial.sendMSPCommand(MSPCommand::ASK_WIFI_CONFIG);
     
 }
 /* =============================================================================
@@ -80,8 +82,7 @@ void setup()
     #if IUDEBUG_ANY == 1
         conductor.reconnect(true);
     #endif
-    
-    hostSerial.sendMSPCommand(MSPCommand::ASK_WIFI_CONFIG);
+
     conductor.connectToWiFi();
     
 }
