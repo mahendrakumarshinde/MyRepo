@@ -23,6 +23,17 @@
 class IUESP8285 : public IUSerial, public Component
 {
     public:
+    enum staticIP : uint8_t {STATIC_IP,
+                        GATEWAY_IP,
+                        SUBNET_IP,
+                        DNS1_IP,
+                        DNS2_IP,
+                        IP_COUNT};
+    enum credentials : uint8_t {AUTH_TYPE,
+                        SSID,
+                        PASSWORD,
+                        USERNAME,
+                        CRED_COUNT};
         /***** Preset values and default settings *****/
         static const uint8_t ESP32_ENABLE_PIN = A2;  // IDE1.5_PORT_CHANGE
         // Max expected length of WiFi SSID or password
@@ -74,21 +85,9 @@ class IUESP8285 : public IUSerial, public Component
                 IUFlash::storedConfig configType=STORED_CFG_TYPE);
         /***** Network Configuration *****/
         bool configure(JsonVariant &config);
-        void setSSID(const char *ssid, uint8_t length);
-        void setPassword(const char *psk, uint8_t length);
-        void setStaticIP(IPAddress staticIP);
-        bool setStaticIP(const char *staticIP, uint8_t len);
-        void setGateway(IPAddress gatewayIP);
-        bool setGateway(const char *gatewayIP, uint8_t len);
-        void setSubnetMask(IPAddress subnetIP);
-        bool setSubnetMask(const char *subnetIP, uint8_t len);
-        void setUsername(const char *username, uint8_t length);
-        void setAuthType(const char *authtype, uint8_t length);
-        void setDns1(IPAddress dns1);
-        bool setDns1(const char *dns1, uint8_t len);
-        void setDns2(IPAddress dns2);
-        bool setDns2(const char *dns2, uint8_t len);
-
+        void setWiFiConfig(credentials type, const char *config, uint8_t length);
+        void setStaticIP(staticIP type, IPAddress IP);
+        bool setStaticIP(staticIP type, const char *IP, uint8_t len);
         /***** User Inbound communication *****/
         void processUserMessage(char *buff, IUFlash *iuFlashPtr);
         /***** Guest Inbound communication *****/
@@ -131,7 +130,7 @@ class IUESP8285 : public IUSerial, public Component
         char m_psk[wifiCredentialLength];
         char m_username[wifiCredentialLength];
         char m_wifiAuthType[wifiCredentialLength];
-        MultiMessageValidator<2> m_credentialValidator;
+        MultiMessageValidator<credentials::CRED_COUNT> m_credentialValidator;
         bool m_credentialSent = false;
         bool m_credentialReceptionConfirmed = false;
         IPAddress m_staticIP;
@@ -141,7 +140,7 @@ class IUESP8285 : public IUSerial, public Component
         IPAddress m_dns2;
         bool m_staticConfigSent = false;
         bool m_staticConfigReceptionConfirmed = false;
-        MultiMessageValidator<3> m_staticConfigValidator;
+        MultiMessageValidator<staticIP::IP_COUNT> m_staticConfigValidator;
         /***** Connection and auto-sleep *****/
         bool m_on = true;
         bool m_connected = false;
