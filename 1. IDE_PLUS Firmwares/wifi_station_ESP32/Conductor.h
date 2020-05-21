@@ -231,6 +231,7 @@ class Conductor
         MultiMessageValidator<2> m_credentialValidator;
         char m_userSSID[wifiCredentialLength];
         char m_userPassword[wifiCredentialLength];
+        char m_username[wifiCredentialLength];
         MultiMessageValidator<3> m_staticConfigValidator;
         IPAddress m_staticIp;
         IPAddress m_gateway;

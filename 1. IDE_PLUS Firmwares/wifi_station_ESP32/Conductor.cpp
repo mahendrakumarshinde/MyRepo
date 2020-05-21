@@ -2774,7 +2774,7 @@ void Conductor::updateWiFiConfig(char* config,int length){
 
 void Conductor::setWiFiConfig(){
     StaticJsonBuffer<512> JsonBuffer;
-    JsonVariant config = JsonVariant(iuWiFiFlash.loadConfigJson(IUESPFlash::CFG_WIFI,JsonBuffer));
+    JsonObject& config = iuWiFiFlash.loadConfigJson(IUESPFlash::CFG_WIFI,JsonBuffer);
     bool validConfig = config.success();
     config.prettyPrintTo(Serial);
     if (validConfig)
@@ -2789,14 +2789,15 @@ void Conductor::setWiFiConfig(){
         const char* tempdns1 = config["dns1"];
         const char* tempdns2 = config["dns2"];
 
-        strcpy(m_wifiAuthType, AuthType); 
-        strcpy(m_userSSID, tempSSID);
-        strcpy(m_userPassword, tempPassword);
-        m_staticIp.fromString(tempStaticIP);
-        m_gateway.fromString(tempGatewayIP);
-        m_subnetMask.fromString(tempSubnetIP);
-        m_dns1.fromString(tempdns1);
-        m_dns2.fromString(tempdns2);
+        if(config.containsKey("auth_type")){strcpy(m_wifiAuthType, AuthType); }
+        if(config.containsKey("ssid")){strcpy(m_userSSID, tempSSID); }
+        if(config.containsKey("password")){strcpy(m_userPassword, tempPassword); }
+        if(config.containsKey("username")){strcpy(m_username, tempUsername);}
+        if(config.containsKey("static")){m_staticIp.fromString(tempStaticIP); }
+        if(config.containsKey("gateway")){m_gateway.fromString(tempGatewayIP); }
+        if(config.containsKey("subnet")){m_subnetMask.fromString(tempSubnetIP); }
+        if(config.containsKey("dns1")){m_dns1.fromString(tempdns1); }
+        if(config.containsKey("dns2")){m_dns2.fromString(tempdns2); }
     }
     connectToWiFi();   
 }     
