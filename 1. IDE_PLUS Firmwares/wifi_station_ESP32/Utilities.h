@@ -10,7 +10,6 @@
 #include <WiFiClientSecure.h>
 #include "IUSerial.h" // ESP32_PORT_TRUE Debug changes
 #include "MSPCommands.h" // ESP32_PORT_TRUE Debug changes
-//#include <base64.h>
 extern IUSerial hostSerial; // ESP32_PORT_TRUE Debug changes
 
 #define WIFICLIENT_MAX_PACKET_SIZE 1460
@@ -190,6 +189,7 @@ inline int httpPostBigRequest(
     const char *endpointHost, const char *endpointURL,
     uint16_t endpointPort, uint8_t *payload, uint16_t payloadLength,
     String auth ="",
+    char* ssl_rootCA = NULL,
     char* contentType = HttpContentType::applicationJSON,
     size_t chunkSize=WIFICLIENT_MAX_PACKET_SIZE,
     uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT + 3000)
@@ -220,8 +220,172 @@ inline int httpPostBigRequest(
         "Content-Length: " + String(payloadLength) + "\r\n\r\n";
     // Use WiFiClient class to create TCP connections
     WiFiClient client;
-    //WiFiClientSecure client;
-    //client.setCACert(conductor1.ssl_rootca_cert); 
+// Runtime Polymorphism to chose between the object    
+//     bool useHttp = ssl_rootCA == NULL ? 1 : 0;
+//     Serial.print("HTTP ? : ");Serial.println(useHttp);
+   
+//     dynamic_cast< WiFiClientSecure > client = (useHttp) ? new WiFiClient() : new WiFiClientSecure();
+   
+//    if(!useHttp){
+//        client.setCACert(ssl_rootCA);
+//        Serial.println("rootCA SET");
+//    }
+    
+    //Serial.println(request);
+    int connectResult = client.connect(endpointHost, endpointPort);
+    if (connectResult == 0)
+    {
+        if (debugMode)
+        {
+            debugPrint("Couldn't connect to host: ", false);
+            debugPrint(endpointHost, false);
+            debugPrint(":", false);
+            debugPrint(endpointPort);
+            debugPrint("\nHEADERS:");
+            debugPrint(request);
+        }
+        return 505; //connectResult;  // 0 means no connection
+    }
+    // This will send the request and headers to the server
+    client.print(request);
+    // now we need to chunk the payload into 1000 byte chunks
+    size_t cIndex;
+    size_t retSize;
+    if(payloadLength > chunkSize) {
+    for (cIndex = 0; cIndex < payloadLength - chunkSize;
+         cIndex = cIndex + chunkSize)
+    {
+        retSize = client.write(&payload[cIndex], chunkSize);
+        if(retSize != chunkSize)
+        {
+            if (client.connected() || (client.available() > 0))
+            {
+                client.stop();
+            }
+            return HTTPC_ERROR_SEND_PAYLOAD_FAILED;  // -3
+        }
+    }
+    retSize = client.write(&payload[cIndex], payloadLength - cIndex);
+    if(retSize != payloadLength - cIndex)
+    {
+        if (client.connected() || (client.available() > 0))
+        {
+            client.stop();
+        }
+        return HTTPC_ERROR_SEND_PAYLOAD_FAILED;  // -3
+    }
+    }
+    else if(payloadLength < chunkSize && payloadLength > 0)
+    {
+        retSize = client.write(&payload[0], payloadLength);
+        if(retSize != payloadLength)
+        {
+            if (client.connected() || (client.available() > 0))
+            {
+                client.stop();
+            }
+
+            return HTTPC_ERROR_SEND_PAYLOAD_FAILED;  // -3
+        }       
+    }
+    // Handle response
+    uint32_t lastDataTime = millis();
+    int returnCode;
+    while(client.connected() || client.available())
+    {
+        size_t len = client.available();
+        if(len > 0)
+        {
+            String headerLine = client.readStringUntil('\n');
+            headerLine.trim(); // remove \r
+            lastDataTime = millis();
+
+            if(headerLine.startsWith("HTTP/1.")) {
+                returnCode = headerLine.substring(
+                    9, headerLine.indexOf(' ', 9)).toInt();
+            }
+            if(headerLine == "")
+            {
+                if(returnCode)
+                {
+                     return returnCode;
+                }
+                else
+                {
+                    return HTTPC_ERROR_NO_HTTP_SERVER;  // -7
+                }
+            }
+        }
+        else
+        {
+            if((millis() - lastDataTime) > tcpTimeout) {
+                return HTTPC_ERROR_READ_TIMEOUT;  // -11
+            }
+            delay(0);
+        }
+    }
+    return HTTPC_ERROR_CONNECTION_LOST;  // -5
+    
+}
+
+
+
+/**
+ * Sends an HTTP POST request with a "Big" payload
+ *
+ * "Big" means that its size is above the max packet size which is
+ * around 3KB (2920 bytes in my experience).
+ *
+ * @param endpointHost
+ * @param endpointURL
+ * @param payload
+ * @param payloadLength
+ * @param chunkSize should at most WIFICLIENT_MAX_PACKET_SIZE
+ *  (= HTTP_TCP_BUFFER_SIZE), currently 1460 bytes.
+ * @param tcpTimeout
+ * @return the HTTP code, or 0 if connection couldn't be established,
+ * or a negative number for HTTPClient errors (see HTTPC_ERROR in
+ * ESP8266HTTPClient.h)
+ */
+inline int httpsPostBigRequest(
+    const char *endpointHost, const char *endpointURL,
+    uint16_t endpointPort, uint8_t *payload, uint16_t payloadLength,
+    String auth ="",
+    char* ssl_rootCA = NULL,
+    char* contentType = HttpContentType::applicationJSON,
+    size_t chunkSize=WIFICLIENT_MAX_PACKET_SIZE,
+    uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT + 10000)
+{
+     
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        if (debugMode)
+        {
+            debugPrint("WiFi disconnected: POST request failed");
+        }
+         return 404; // 0
+    }
+    char type[12];
+    if (strncmp(contentType,"plain",5) == 0){
+        strncpy(type,"text",12);}
+    else
+    {
+        strncpy(type,"application",12); 
+    }
+    
+    // create the request and headers
+    String request = "POST " + String(endpointURL) + " HTTP/1.1\r\n" +
+        "Host: " + String(endpointHost) + "\r\n" +
+        "Accept: application/json" + "\r\n" +
+        "Content-Type:" + type + "/" + contentType +
+        "Authorization: Basic " + auth +"\r\n" +
+        "Content-Length: " + String(payloadLength) + "\r\n\r\n";
+    // Use WiFiClient class to create TCP connections
+    //WiFiClient client;
+    WiFiClientSecure client;
+    if(ssl_rootCA != NULL){
+        client.setCACert(ssl_rootCA);
+    }
     int connectResult = client.connect(endpointHost, endpointPort);
     if (connectResult == 0)
     {
