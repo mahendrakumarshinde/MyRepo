@@ -611,7 +611,16 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
            break; 
         case MSPCommand::SEND_RAW_DATA:
           {
-            IUMessageFormat::rawDataPacket* rawData = (IUMessageFormat::rawDataPacket*) buffer;
+            memset(eap_client_cert,0x00,2048);
+            //Apply the rootCA cert
+            if(activeCertificates == 0){
+                //Serial.println("\nUsing ROOTCA 0");
+                iuWiFiFlash.readFile(IUESPFlash::CFG_HTTPS_ROOTCA0,ssl_rootca_cert,sizeof(ssl_rootca_cert));
+            }else
+            {   //Serial.println("\nUsing rootCA 1");
+                iuWiFiFlash.readFile(IUESPFlash::CFG_HTTPS_ROOTCA1,ssl_rootca_cert,sizeof(ssl_rootca_cert));
+            }
+           IUMessageFormat::rawDataPacket* rawData = (IUMessageFormat::rawDataPacket*) buffer;
             char ack_config[150];
 
             if (accelRawDataHelper.inputHasTimedOut()) {
@@ -652,9 +661,9 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
 
             iuSerial->sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION, &rawData->axis, 1);
             
-            int httpStatusCode = httpPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_endpointRoute,
+            int httpStatusCode = httpsPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_endpointRoute,
                                             accelRawDataHelper.m_endpointPort, (uint8_t*) &httpBuffer, 
-                                            httpBufferPointer,"", HttpContentType::octetStream);            
+                                            httpBufferPointer,"", ssl_rootca_cert, HttpContentType::octetStream);            
 
             // send HTTP status code back to the MCU
             char httpAckBuffer[1 + 4];      // axis + 3 digit HTTP status code + null terminator
@@ -2333,7 +2342,6 @@ void Conductor::upgradeFailed(){
         if(activeCertificates == 1){
             //Serial.println("Client 1 Upgrade Failed Use previous Client 0 Certificates....");
             // backup the older  certificates and use the latest.
-            // raname the files or overwrite it. make sure after devicereset it should use new certs
             activeCertificates = iuWiFiFlash.updateValue(ADDRESS,0);  // client1 in Use after Reset
         }else {
             //Serial.println("\nClient 0 Upgrade Failed Use previous Client1 Certificates.....");
@@ -2845,9 +2853,9 @@ void Conductor::publishedDiagnosticMessage(char* buffer,int bufferLength){
      }else
      {
         int status =  httpPostBigRequest(diagnosticEndpointHost,diagnosticEndpointRoute,diagnosticEndpointPort,(uint8_t*) message,
-                                            bufferLength,auth, HttpContentType::textPlain );
-        // Serial.print("Diagnostic POST Status  : ");
-        // Serial.println(status);
+                                            bufferLength,auth, NULL,HttpContentType::textPlain );
+        //Serial.print("Diagnostic POST Status  : ");
+        //Serial.println(status);
      }
 }
 /**
