@@ -238,6 +238,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             break;
         case MSPCommand::SEND_WIFI_CONFIG:
             updateWiFiConfig(buffer,bufferLength);
+            setWiFiConfig();
             break;
         case MSPCommand::CERT_DOWNLOAD_INIT_ACK:
             {
@@ -952,6 +953,7 @@ void Conductor::forgetWiFiCredentials()
     {
         m_userSSID[i] = 0;
         m_userPassword[i] = 0;
+        m_username[i] = 0;
     }
 }
 
@@ -2779,7 +2781,7 @@ void Conductor::setWiFiConfig(){
     config.prettyPrintTo(Serial);
     if (validConfig)
     {
-        const char* AuthType = config["auth_type"];
+        const char* tempAuthType = config["auth_type"];
         const char* tempSSID = config["ssid"];
         const char* tempPassword = config["password"];
         const char* tempUsername = config["username"];
@@ -2788,8 +2790,9 @@ void Conductor::setWiFiConfig(){
         const char* tempSubnetIP = config["subnet"];
         const char* tempdns1 = config["dns1"];
         const char* tempdns2 = config["dns2"];
-
-        if(config.containsKey("auth_type")){strcpy(m_wifiAuthType, AuthType); }
+        forgetWiFiCredentials();
+        forgetWiFiStaticConfig();
+        if(config.containsKey("auth_type")){strcpy(m_wifiAuthType, tempAuthType); }
         if(config.containsKey("ssid")){strcpy(m_userSSID, tempSSID); }
         if(config.containsKey("password")){strcpy(m_userPassword, tempPassword); }
         if(config.containsKey("username")){strcpy(m_username, tempUsername);}
