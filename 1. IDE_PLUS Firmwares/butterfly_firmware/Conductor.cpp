@@ -2872,6 +2872,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
              iuWiFi.m_setLastConfirmedPublication();
              changeUsageMode(UsageMode::OPERATION);
              delay(100);
+             iuWiFi.softReset();
              break;
         case MSPCommand::CERT_INVALID_STATIC_URL:
             if (loopDebugMode)
@@ -4260,10 +4261,13 @@ void Conductor::manageRawDataSending() {
             RawDataState::startRawDataCollection = false;
             RawDataState::rawDataTransmissionInProgress = false;    
         }
-        if((millis() - RawDataTimeout) > 10000)
+        if((millis() - RawDataTimeout) > 15000)
         { // IDE1.5_PORT_CHANGE -- On timeout of 4 Sec. if no response OK/FAIL then abort transmission
             RawDataState::startRawDataCollection = false;
             RawDataState::rawDataTransmissionInProgress = false;              
+            if(loopDebugMode){
+                debugPrint("RawDataTimeout Exceeded,transmission Aborted");
+            }
         }
     }
 }
