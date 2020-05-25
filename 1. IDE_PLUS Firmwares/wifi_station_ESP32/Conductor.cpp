@@ -236,8 +236,9 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         case MSPCommand::SET_DIAGNOSTIC_URL:
             updateDiagnosticEndpoint(buffer,bufferLength);
             break;
-        case MSPCommand::ASK_WIFI_CONFIG:
+        case MSPCommand::SEND_WIFI_CONFIG:
             updateWiFiConfig(buffer,bufferLength);
+            setWiFiConfig();
             break;
         case MSPCommand::CERT_DOWNLOAD_INIT_ACK:
             {
@@ -952,6 +953,7 @@ void Conductor::forgetWiFiCredentials()
     {
         m_userSSID[i] = 0;
         m_userPassword[i] = 0;
+        m_username[i] = 0;
     }
 }
 
@@ -2774,12 +2776,12 @@ void Conductor::updateWiFiConfig(char* config,int length){
 
 void Conductor::setWiFiConfig(){
     StaticJsonBuffer<512> JsonBuffer;
-    JsonVariant config = JsonVariant(iuWiFiFlash.loadConfigJson(IUESPFlash::CFG_WIFI,JsonBuffer));
+    JsonObject& config = iuWiFiFlash.loadConfigJson(IUESPFlash::CFG_WIFI,JsonBuffer);
     bool validConfig = config.success();
-    //config.prettyPrintTo(Serial);
+    // config.prettyPrintTo(Serial);
     if (validConfig)
     {
-        const char* AuthType = config["auth_type"];
+        const char* tempAuthType = config["auth_type"];
         const char* tempSSID = config["ssid"];
         const char* tempPassword = config["password"];
         const char* tempUsername = config["username"];
@@ -2788,23 +2790,26 @@ void Conductor::setWiFiConfig(){
         const char* tempSubnetIP = config["subnet"];
         const char* tempdns1 = config["dns1"];
         const char* tempdns2 = config["dns2"];
-
-        strcpy(m_wifiAuthType, AuthType); 
-        strcpy(m_userSSID, tempSSID);
-        strcpy(m_userPassword, tempPassword);
-        m_staticIp.fromString(tempStaticIP);
-        m_gateway.fromString(tempGatewayIP);
-        m_subnetMask.fromString(tempSubnetIP);
-        m_dns1.fromString(tempdns1);
-        m_dns2.fromString(tempdns2);
+        forgetWiFiCredentials();
+        forgetWiFiStaticConfig();
+        if(config.containsKey("auth_type")){strcpy(m_wifiAuthType, tempAuthType); }
+        if(config.containsKey("ssid")){strcpy(m_userSSID, tempSSID); }
+        if(config.containsKey("password")){strcpy(m_userPassword, tempPassword); }
+        if(config.containsKey("username")){strcpy(m_username, tempUsername);}
+        if(config.containsKey("static")){m_staticIp.fromString(tempStaticIP); }
+        if(config.containsKey("gateway")){m_gateway.fromString(tempGatewayIP); }
+        if(config.containsKey("subnet")){m_subnetMask.fromString(tempSubnetIP); }
+        if(config.containsKey("dns1")){m_dns1.fromString(tempdns1); }
+        if(config.containsKey("dns2")){m_dns2.fromString(tempdns2); }
     }
+    connectToWiFi();   
 }     
 void Conductor::configureDiagnosticEndpointFromFlash(IUESPFlash::storedConfig configType){
         // Update the URL variable
         StaticJsonBuffer<512> JsonBuffer;
         JsonVariant config = JsonVariant(iuWiFiFlash.loadConfigJson(configType,JsonBuffer));
         bool validConfig = config.success();
-        config.prettyPrintTo(Serial);
+        // config.prettyPrintTo(Serial);
         if (validConfig)
         {
             const char* host = config["diagnosticUrl"]["host"].as<char*>();
