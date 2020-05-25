@@ -2778,7 +2778,7 @@ void Conductor::setWiFiConfig(){
     StaticJsonBuffer<512> JsonBuffer;
     JsonObject& config = iuWiFiFlash.loadConfigJson(IUESPFlash::CFG_WIFI,JsonBuffer);
     bool validConfig = config.success();
-    config.prettyPrintTo(Serial);
+    // config.prettyPrintTo(Serial);
     if (validConfig)
     {
         const char* tempAuthType = config["auth_type"];
@@ -2809,7 +2809,7 @@ void Conductor::configureDiagnosticEndpointFromFlash(IUESPFlash::storedConfig co
         StaticJsonBuffer<512> JsonBuffer;
         JsonVariant config = JsonVariant(iuWiFiFlash.loadConfigJson(configType,JsonBuffer));
         bool validConfig = config.success();
-        config.prettyPrintTo(Serial);
+        // config.prettyPrintTo(Serial);
         if (validConfig)
         {
             const char* host = config["diagnosticUrl"]["host"].as<char*>();
