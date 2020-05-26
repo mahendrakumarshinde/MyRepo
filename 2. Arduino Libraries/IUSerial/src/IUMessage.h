@@ -17,7 +17,9 @@ namespace IUMessageFormat
      * timestamp when the values were copied from Feature buffer. Note that this timestamp
      * does NOT equal the time when this data was collected by the sensor.  
     */
-    const int maxBlockSize = 4096;      // current max block size = 4096. Change this if block size is increased in future. 
+    // const int uptoBlockSize4096 = 4096;
+    // const int maxBlockSize = 4096; 
+    const int maxBlockSize = 8192;      // current max block size = 4096. Change this if block size is increased in future. 
     struct rawDataPacket {
         double timestamp;
         char axis;

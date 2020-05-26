@@ -111,7 +111,8 @@ void Conductor::manageSleepCycles()
  */
 bool Conductor::configureFromFlash(IUFlash::storedConfig configType)
 {
-    StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
+    const size_t bufferSize = 600;
+    StaticJsonBuffer<bufferSize> jsonBuffer;
     JsonVariant config = JsonVariant(
             iuFlash.loadConfigJson(configType, jsonBuffer));
     bool success = config.success();
@@ -265,7 +266,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 
     //StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;            // make it dynamic
     //const size_t bufferSize = JSON_ARRAY_SIZE(2) + JSON_OBJECT_SIZE(3) + 60;        // dynamically allociated memory
-    const size_t bufferSize = JSON_OBJECT_SIZE(1) + 41*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(41) + 2430;
+    const size_t bufferSize = JSON_OBJECT_SIZE(2) + 2*JSON_OBJECT_SIZE(4) + 11*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(13) + 1396;
     DynamicJsonBuffer jsonBuffer(bufferSize);
     //Serial.print("JSON 1 SIZE :");Serial.println(bufferSize);
     
@@ -273,7 +274,6 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     String jsonChar;
     root.printTo(jsonChar);
     JsonVariant variant = root;
-    char ack_configEthernet[200];
   
     // variant.prettyPrintTo(Serial);
             
@@ -329,7 +329,6 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             //send ACK on ide_pluse/command_response/
             const char* messageId;
             messageId = root["messageId"]  ;
-            char ack_config[150];
             
             snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
             
@@ -338,11 +337,11 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config);
             }else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
             {       debugPrint("Sending Fetures ACK over Ethernet");
-                    snprintf(ack_configEthernet, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
+                    snprintf(ack_config, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
                       m_macAddress.toString().c_str(),0, 2, m_macAddress.toString().c_str(),messageId);
                    
-                    debugPrint(ack_configEthernet,true);
-                    iuEthernet.write(ack_configEthernet); 
+                    debugPrint(ack_config,true);
+                    iuEthernet.write(ack_config); 
                     iuEthernet.write("\n");
             } 
         }
@@ -365,7 +364,6 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             //send ACK on ide_pluse/command_response/
             const char* messageId;
             messageId = root["messageId"]  ;
-            char ack_config[150];
             snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
             
             //Serial.println(ack_config);
@@ -373,11 +371,11 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                  iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config);
             }else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
             {       debugPrint("Sending Fingerpritns Threshold ACK over Ethernet");
-                    snprintf(ack_configEthernet, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
+                    snprintf(ack_config, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
                       m_macAddress.toString().c_str(),0, 2, m_macAddress.toString().c_str(),messageId);
                    
-                    debugPrint(ack_configEthernet,true);
-                    iuEthernet.write(ack_configEthernet); 
+                    debugPrint(ack_config,true);
+                    iuEthernet.write(ack_config); 
                     iuEthernet.write("\n");
                    
             } 
@@ -458,7 +456,6 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             messageId = config["messageId"]  ;
             
           
-            char ack_config[150];
             snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
 
             if(iuWiFi.isConnected()){
@@ -466,11 +463,11 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             }
             else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
             {       debugPrint("Sending Fingerprints ACK over Ethernet");
-                    snprintf(ack_configEthernet, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
+                    snprintf(ack_config, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
                       m_macAddress.toString().c_str(),0, 2, m_macAddress.toString().c_str(),messageId);
                    
-                    debugPrint(ack_configEthernet,true);
-                    iuEthernet.write(ack_configEthernet); 
+                    debugPrint(ack_config,true);
+                    iuEthernet.write(ack_config); 
                     iuEthernet.write("\n");
                     //iuEthernet.write(ack_config);
             } 
@@ -483,73 +480,89 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     if (subConfig.success()) {
         //configureAllFeatures(subConfig);
         bool dataWritten = false;
-        // iuFlash.writeInternalFlash(1,CONFIG_HTTP_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
-        if (saveToFlash) {
-            //DOSFS.begin();
-            File httpFile = DOSFS.open("httpConfig.conf", "w");
-            if (httpFile)
-            {
-                
-                if (loopDebugMode) {
-                 debugPrint(F("Writting into file: "), true);
-                }
-                httpFile.print(jsonChar);
-                httpFile.close();
-                dataWritten = true;
-            }
-            else if (loopDebugMode) {
-                 debugPrint("Failed to write into file: httpConfig.conf ");
-                
-            }  
-        
+        bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_HTTP, root, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime(), messageId);
+        if(loopDebugMode) { 
+            debugPrint("Validation: ", false);
+            debugPrint(validationResultString); 
+            debugPrint("HTTP configuration validation result: ", false); 
+            debugPrint(validConfiguration);
         }
-        if(dataWritten == true){
-            iuFlash.writeInternalFlash(1,CONFIG_HTTP_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
-          //configureBoardFromFlash("httpConfig.conf",dataWritten);
-          JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
-
-        const char* messageId = config["messageId"];
-        const char*  host = config["httpConfig"]["host"].as<char*>();
-        int port = config["httpConfig"]["port"].as<int>();
-        const char* httpPath = config["httpConfig"]["path"].as<char*>();
-        //    debugPrint("Host :",false);debugPrint(host);
-        //    debugPrint("Port :",false);debugPrint(port);
-        //    debugPrint("Path :",false);debugPrint(httpPath);
-
-          //Serial.print("File Content :");Serial.println(jsonChar);
-          //Serial.print("http details :");Serial.print(m_httpHost);Serial.print(",");Serial.print(m_httpPort);Serial.print(",");Serial.print(m_httpPath);Serial.println("/***********/");
-          //iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_HOST,m_httpHost); 
-          //iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_PORT,String(m_httpPort).c_str()); 
-          //iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_ROUTE,m_httpPath); 
-
-          char httpConfig_ack[150];
-          snprintf(httpConfig_ack, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+        if(validConfiguration){
+            // iuFlash.writeInternalFlash(1,CONFIG_HTTP_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
+            if (saveToFlash) {
+                //DOSFS.begin();
+                File httpFile = DOSFS.open("httpConfig.conf", "w");
+                if (httpFile)
+                {
+                    
+                    if (loopDebugMode) {
+                    debugPrint(F("Writting into file: "), true);
+                    }
+                    httpFile.print(jsonChar);
+                    httpFile.close();
+                    dataWritten = true;
+                }
+                else if (loopDebugMode) {
+                    debugPrint("Failed to write into file: httpConfig.conf ");
+                    
+                }  
             
-          debugPrint(F("httpConfig ACK :"));debugPrint(httpConfig_ack);
-          if (iuWiFi.isConnected() )
-          {   iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HTTP_CONFIG_ACK, httpConfig_ack);
-          
-          }else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
-          {     
-                snprintf(ack_configEthernet, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
-                      m_macAddress.toString().c_str(),0, 2, m_macAddress.toString().c_str(),messageId);
-                   
-                    debugPrint(ack_configEthernet,true);
-                    iuEthernet.write(ack_configEthernet); 
-                    iuEthernet.write("\n");
-                //iuEthernet.write(httpConfig_ack);
-          }
-          
-          
-          
-          //stm reset
-          delay(10);
-          if(strcmp( host, m_httpHost) != 0  || port != m_httpPort || strcmp(httpPath, m_httpPath) != 0 ){
-                DOSFS.end();
-                delay(10);
-                STM32.reset();
-          }
-          
+            }
+            if(dataWritten == true){
+                iuFlash.writeInternalFlash(1,CONFIG_HTTP_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
+            //configureBoardFromFlash("httpConfig.conf",dataWritten);
+            JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
+
+            const char* messageId = config["messageId"];
+            const char*  host = config["httpConfig"]["host"].as<char*>();
+            int port = config["httpConfig"]["port"].as<int>();
+            const char* httpPath = config["httpConfig"]["path"].as<char*>();
+            //    debugPrint("Host :",false);debugPrint(host);
+            //    debugPrint("Port :",false);debugPrint(port);
+            //    debugPrint("Path :",false);debugPrint(httpPath);
+
+            //Serial.print("File Content :");Serial.println(jsonChar);
+            //Serial.print("http details :");Serial.print(m_httpHost);Serial.print(",");Serial.print(m_httpPort);Serial.print(",");Serial.print(m_httpPath);Serial.println("/***********/");
+            //iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_HOST,m_httpHost); 
+            //iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_PORT,String(m_httpPort).c_str()); 
+            //iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_ROUTE,m_httpPath); 
+
+            // char httpConfig_ack[150];
+            // snprintf(httpConfig_ack, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+                
+            // debugPrint(F("httpConfig ACK :"));debugPrint(httpConfig_ack);
+            if (iuWiFi.isConnected() )
+            {   
+                iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HTTP_CONFIG_ACK, validationResultString);
+            
+            }else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
+            {     
+                    snprintf(ack_config, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
+                        m_macAddress.toString().c_str(),0, 2, m_macAddress.toString().c_str(),messageId);
+                    
+                        debugPrint(ack_config,true);
+                        iuEthernet.write(ack_config); 
+                        iuEthernet.write("\n");
+                    //iuEthernet.write(httpConfig_ack);
+            }
+            
+            
+            
+            //stm reset
+            delay(10);
+            if(strcmp( host, m_httpHost) != 0  || port != m_httpPort || strcmp(httpPath, m_httpPath) != 0 ){
+                    DOSFS.end();
+                    delay(10);
+                    STM32.reset();
+            }
+            
+            }
+        }else{
+            if (iuWiFi.isConnected() )
+            {   
+                iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HTTP_CONFIG_ACK, validationResultString);
+            
+            }
         }
         
     } 
@@ -1253,8 +1266,8 @@ void Conductor::readForceOtaConfig()
   // Open the configuration file
   File myFile = DOSFS.open(filename,"r");
   
-  
-  StaticJsonBuffer<512> jsonBuffer;
+  const size_t bufferSize = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(4) + 108;
+  StaticJsonBuffer<bufferSize> jsonBuffer;
 
   // Parse the root object
   JsonObject &root = jsonBuffer.parseObject(myFile);
@@ -1346,12 +1359,12 @@ void Conductor::readForceOtaConfig()
 /*
  * swap credentails
  */
-void Conductor::fastSwap (const char **i, const char **d)
-{
-    const char *t = *d;
-    *d = *i;
-    *i = t;
-}
+// void Conductor::fastSwap (const char **i, const char **d)
+// {
+//     const char *t = *d;
+//     *d = *i;
+//     *i = t;
+// }
 
 /*
  * get the Board Configuration data
@@ -1497,8 +1510,7 @@ JsonObject& Conductor:: configureJsonFromFlash(String filename,bool isSet){
   
   //StaticJsonBuffer<1024> jsonBuffer;
   //const size_t bufferSize = JSON_ARRAY_SIZE(8) + JSON_OBJECT_SIZE(300) + 60;        // dynamically allociated memory
-  const size_t bufferSize = JSON_OBJECT_SIZE(1) + 45*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(45) + 2430;
-  
+  const size_t bufferSize = JSON_OBJECT_SIZE(2) + 2*JSON_OBJECT_SIZE(4) + 11*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(13) + 1396;
   DynamicJsonBuffer jsonBuffer(bufferSize);
  // Parse the root object
   JsonObject &root = jsonBuffer.parseObject(myFile);
@@ -3221,7 +3233,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
               // load default configurations
                 String mqttConfig = iuFlash.readInternalFlash(CONFIG_MQTT_FLASH_ADDRESS);
                 debugPrint(mqttConfig);
-                StaticJsonBuffer<512> jsonBuffer;
+                const size_t bufferSize = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(4) + 108;
+                StaticJsonBuffer<bufferSize> jsonBuffer;
                 JsonObject &config = jsonBuffer.parseObject(mqttConfig);
                 if(config.success())
                 {
@@ -4135,7 +4148,7 @@ void Conductor::sendAccelRawData(uint8_t axisIdx)
         delay(2800);
 
      }else if(m_streamingMode == StreamingMode::ETHERNET){      // Ethernet Mode
-        uint16_t maxLen = 15000;   //3500
+        uint16_t maxLen = 16400;   //3500
         char txBuffer[maxLen];
         for (uint16_t i =0; i < maxLen; i++) {
             txBuffer[i] = 0;
@@ -4286,7 +4299,7 @@ void Conductor::prepareRawDataPacketAndSend(char axis) {
             memcpy(rawData.txRawValues, RawDataState::rawAccelerationZ, IUMessageFormat::maxBlockSize * 2);
             break;
     }
-    iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 3000000,
+    iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 8000000,
                                         (char*) &rawData, sizeof rawData);
     if (loopDebugMode) {
         debugPrint("Sent ", false);debugPrint(axis,false);debugPrint(" data which was recorded at ",false);
@@ -5110,7 +5123,8 @@ void Conductor::sendSegmentedMessageResponse(int messageID) {
 
 void Conductor::setThresholdsFromFile() 
 {
-    StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
+    const size_t bufferSize = 6*JSON_ARRAY_SIZE(3) + 6*JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3) + JSON_OBJECT_SIZE(6) + 272;
+    StaticJsonBuffer<bufferSize> jsonBuffer;
     JsonVariant config = JsonVariant(
             iuFlash.loadConfigJson(IUFlash::CFG_FEATURE, jsonBuffer));
     // config.prettyPrintTo(Serial);
