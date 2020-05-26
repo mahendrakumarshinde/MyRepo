@@ -188,15 +188,15 @@ FeatureTemplate<float> temperature("TMP", 2, 1, temperatureValues);
 
 // Sensor data
 q15_t audioValues[4096];
-FeatureTemplate<q15_t> audio("SND", 4, 1024, audioValues);
+FeatureTemplate<q15_t> audio("SND", 2, 2048, audioValues);
 
 // 2048 sample long features
-__attribute__((section(".noinit2"))) float audioDB2048Values[2];
-FeatureTemplate<float> audioDB2048("S11", 2, 1, audioDB2048Values);
+__attribute__((section(".noinit2"))) float audioDB2048Values[4];
+FeatureTemplate<float> audioDB2048("S11", 4, 1, audioDB2048Values);
 
 // 4096 sample long features
-__attribute__((section(".noinit2"))) float audioDB4096Values[4];
-FeatureTemplate<float> audioDB4096("S12", 4, 1, audioDB4096Values);
+__attribute__((section(".noinit2"))) float audioDB4096Values[2];
+FeatureTemplate<float> audioDB4096("S12", 2, 1, audioDB4096Values);
 
 
 /***** GNSS Feature *****/
@@ -368,8 +368,8 @@ void setUpComputerSources()
     accelFFTComputerY.addSource(&accelerationY, FFTConfiguration::DEFAULT_BLOCK_SIZE / 128);   
     accelFFTComputerZ.addSource(&accelerationZ, FFTConfiguration::DEFAULT_BLOCK_SIZE / 128);
     // Audio DB
-    audioDB2048Computer.addSource(&audio, 2);
-    audioDB4096Computer.addSource(&audio, 4);
+    audioDB2048Computer.addSource(&audio, 1);
+    audioDB4096Computer.addSource(&audio, 2);
 }
 
 
