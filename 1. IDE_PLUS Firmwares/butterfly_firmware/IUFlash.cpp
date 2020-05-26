@@ -440,6 +440,76 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
          
            break;
         }
+        case CFG_WIFI0: {
+
+            validConfig = true;
+
+            // Indicate the type of validation
+            validationResult["messageType"] = "wifi-config-ack";
+
+            //Validation for Auth Type field
+            if(config.containsKey("auth_type")) {
+                const char* AuthType = config["auth_type"];
+                bool ssid = config.containsKey("ssid");
+                bool password = config.containsKey("password");
+                bool username = config.containsKey("username");
+                bool staticIP = config.containsKey("static");
+                bool gateway = config.containsKey("gateway");
+                bool subnet = config.containsKey("subnet");
+                bool dns1 = config.containsKey("dns1");
+                bool dns2 = config.containsKey("dns2");
+ 
+                if (strncmp(AuthType, "NONE", 4) == 0){ 
+                    if(!ssid) { errorMessages.add("SSID Not found"); validConfig = false; }
+                }else if(strncmp(AuthType, "WPA-PSK", 7) == 0){
+                    if(!ssid) { errorMessages.add("SSID Not found"); validConfig = false; }
+                    if(!password){ errorMessages.add("Password Not found"); validConfig = false; }
+                }else if(strncmp(AuthType, "EAP-PEAP", 8) == 0){
+                    if(!ssid) { errorMessages.add("SSID Not found"); validConfig = false; }
+                    if(!password){ errorMessages.add("Password Not found"); validConfig = false; }
+                    if(!username){ errorMessages.add("Username Not found"); validConfig = false; }
+                }else if(strncmp(AuthType, "EAP-TLS", 7) == 0){
+                    if(!ssid) { errorMessages.add("SSID Not found"); validConfig = false; }
+                    if(!password){ errorMessages.add("Password Not found"); validConfig = false; }
+                }else if(strncmp(AuthType, "STATIC-NONE", 11) == 0){
+                    if(!ssid){ errorMessages.add("SSID Not found"); validConfig = false; }
+                    if(!staticIP){ errorMessages.add("Static IP Not found"); validConfig = false; }
+                    if(!gateway){ errorMessages.add("Gateway IP Not found"); validConfig = false; }
+                    if(!subnet){ errorMessages.add("Subnet Not found"); validConfig = false; }
+                    if(!dns1){ errorMessages.add("DNS 1 Not found"); validConfig = false; }
+                    if(!dns2){ errorMessages.add("DNS 2 Not found"); validConfig = false; }
+                }else if(strncmp(AuthType, "STATIC-WPA-PSK", 14) == 0){
+                    if(!ssid){ errorMessages.add("SSID Not found"); validConfig = false; }
+                    if(!password){ errorMessages.add("Password Not found"); validConfig = false; }
+                    if(!staticIP){ errorMessages.add("Static IP Not found"); validConfig = false; }
+                    if(!gateway){ errorMessages.add("Gateway IP Not found"); validConfig = false; }
+                    if(!subnet){ errorMessages.add("Subnet Not found"); validConfig = false; }
+                    if(!dns1){ errorMessages.add("DNS 1 Not found"); validConfig = false; }
+                    if(!dns2){ errorMessages.add("DNS 2 Not found"); validConfig = false; }
+                }else if(strncmp(AuthType, "STATIC-EAP-PEAP", 15) == 0){
+                    if(!ssid){ errorMessages.add("SSID Not found"); validConfig = false; }
+                    if(!password){ errorMessages.add("Password Not found"); validConfig = false; }
+                    if(!username){ errorMessages.add("Username Not found"); validConfig = false; }
+                    if(!staticIP){ errorMessages.add("Static IP Not found"); validConfig = false; }
+                    if(!gateway){ errorMessages.add("Gateway IP Not found"); validConfig = false; }
+                    if(!subnet){ errorMessages.add("Subnet Not found"); validConfig = false; }
+                    if(!dns1){ errorMessages.add("DNS 1 Not found"); validConfig = false; }
+                    if(!dns2){ errorMessages.add("DNS 2 Not found"); validConfig = false; }
+                }else if(strncmp(AuthType, "STATIC-EAP-TLS", 14) == 0 ){
+                    if(!ssid){ errorMessages.add("SSID Not found"); validConfig = false; }
+                    if(!password){ errorMessages.add("Password Not found"); validConfig = false; }
+                    if(!staticIP){ errorMessages.add("Static IP Not found"); validConfig = false; }
+                    if(!gateway){ errorMessages.add("Gateway IP Not found"); validConfig = false; }
+                    if(!subnet){ errorMessages.add("Subnet Not found"); validConfig = false; }
+                    if(!dns1){ errorMessages.add("DNS 1 Not found"); validConfig = false; }
+                    if(!dns2){ errorMessages.add("DNS 2 Not found"); validConfig = false; }
+                }else{
+                    errorMessages.add("Invalid Authentication Type");
+                    validConfig = false;
+                }
+            }
+           break; 
+        }
     }
 
     // Construct the validationResult

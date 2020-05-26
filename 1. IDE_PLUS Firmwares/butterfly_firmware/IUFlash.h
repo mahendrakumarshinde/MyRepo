@@ -11,6 +11,8 @@
 #define CONFIG_MQTT_FLASH_ADDRESS    (uint32_t)0x080FE800    /* Start address of MQTT Config location*/
 #define CONFIG_HTTP_FLASH_ADDRESS    (uint32_t)0x080FE000    /* Start address of HTTP Config location*/
 #define CONFIG_MODBUS_SLAVE_CONFIG_FLASH_ADDRESS    (uint32_t)0x80FD800    /* Start address of MODBUS slave Config location*/
+#define CONFIG_WIFI_CONFIG_FLASH_ADDRESS    (uint32_t)0x80FD000    /* Start address of MODBUS slave Config location*/
+
 class IUFlash
 {
     public:
