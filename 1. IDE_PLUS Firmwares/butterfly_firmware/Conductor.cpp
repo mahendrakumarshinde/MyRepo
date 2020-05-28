@@ -2062,7 +2062,10 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     }
                 }
                 break;
-            case UsageMode::OPERATION:
+            case UsageMode::OPERATION:  
+                if (strcmp(buff, "READ_CERT_URL") == 0) {
+                    iuWiFi.sendMSPCommand(MSPCommand::READ_CERTS);
+                }
                 if (strcmp(buff, "IUCAL_START") == 0) {
                     iuUSB.port->println(START_CONFIRM);
                     changeUsageMode(UsageMode::CALIBRATION);
@@ -4419,7 +4422,7 @@ void Conductor::sendDiagnosticFingerPrints() {
                         
                 }else if(m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE)//iuWiFi.isAvailable() && iuWiFi.isWorking())   
                 {   /* FingerPrintResult send over Wifi only */
-                    debugPrint("Wifi connected, ....",true);
+                    //debugPrint("Wifi connected, ....",true);
                     if(RawDataState::rawDataTransmissionInProgress == false)
                     { 
                         iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );    
@@ -5342,10 +5345,27 @@ void Conductor::otaChkFwdnldTmout()
             if (iuWiFi.isConnected() || m_mqttConnected == true)
             {
                 // Certificate Upgrade went Successful
+                ledManager.overrideColor(RGB_PURPLE);
                 sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_SUCCESS,CERT_UPGRADE_COMPLETE,"CERT-RCA-0000");
+                // TODO : Add Visuals
+                // Show Visuals min 15 sec
+                for(int i = 0 ; i < 20; i++) {
+                    ledManager.overrideColor(RGB_GREEN);
+                    delay(200);
+                    ledManager.stopColorOverride();
+                    delay(200);
+                }
+                iuWiFi.softReset();
             }else
             {
+                ledManager.overrideColor(RGB_ORANGE);
                 sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_ABORT,CERT_UPGRADE_ERR,"CERT-RCA-0013");
+                for(int i = 0 ; i < 20; i++) {
+                    ledManager.overrideColor(RGB_RED);
+                    delay(200);
+                    ledManager.stopColorOverride();
+                    delay(200);
+                }
             }
             if (loopDebugMode)
             {
