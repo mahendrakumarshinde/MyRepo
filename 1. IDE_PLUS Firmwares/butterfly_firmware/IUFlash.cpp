@@ -203,7 +203,7 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
     StaticJsonBuffer<400> validationResultBuffer;
     JsonObject& validationResult = validationResultBuffer.createObject();
     JsonArray& errorMessages = validationResult.createNestedArray("errorMessages");
-
+    
     switch(configType) {
         case CFG_DEVICE: {
             // Configuration is valid if there is atleast one correct key           
@@ -375,6 +375,15 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
             if(sameBlockSize && sameSamplingRate) {
                 validConfig = false;
                 errorMessages.add("Same configuration received");
+            }
+            break;
+        }
+        case CFG_HTTP:{
+            validConfig = true;
+            validationResult["messageType"] = "http-config-ack";
+            if( config.measureLength() >= 511 ){
+                validConfig = false;
+                errorMessages.add("Http config length more");
             }
             break;
         }

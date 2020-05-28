@@ -18,83 +18,83 @@ int DiagnosticEngine::m_SampleingFrequency = FFTConfiguration::DEFAULT_SAMPLING_
 int DiagnosticEngine::m_smapleSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
 int DiagnosticEngine::m_fftLength = FFTConfiguration::DEFAULT_BLOCK_SIZE / 2;
 
-bool DiagnosticEngine::isDiagnosticConfigAvailable() {
+// bool DiagnosticEngine::isDiagnosticConfigAvailable() {
 
 
-    if( true ){
+//     if( true ){
 
-      m_configAvailable = true;
+//       m_configAvailable = true;
       
-      return m_configAvailable;
-    }
-    else {            // Diagnostic Configuration not present 
+//       return m_configAvailable;
+//     }
+//     else {            // Diagnostic Configuration not present 
 
-      return m_configAvailable;
-    }
+//       return m_configAvailable;
+//     }
     
-}
+// }
 
 
-/*
- * Function Name : setDiagnosticFingerPrint
- * @conditionCode - Represent the feature codes like velocity /Acceleration along the selected axis for n-diagnostic feature.
- * @parameterId - each Velocity and accelration axis assigned the ids in the received message.
- * @speed - combination of speed X constant (constant as per feature/diagnostic finger print configured
- * @band - allowable band to compute the data in Step function.
- * @ amplitudes - type q15 
- * return bool on sucess
- * 
- */
+// /*
+//  * Function Name : setDiagnosticFingerPrint
+//  * @conditionCode - Represent the feature codes like velocity /Acceleration along the selected axis for n-diagnostic feature.
+//  * @parameterId - each Velocity and accelration axis assigned the ids in the received message.
+//  * @speed - combination of speed X constant (constant as per feature/diagnostic finger print configured
+//  * @band - allowable band to compute the data in Step function.
+//  * @ amplitudes - type q15 
+//  * return bool on sucess
+//  * 
+//  */
 
-void DiagnosticEngine :: setDiagnosticFingerPrint( char* conditionCode,uint8_t parameterId, float speed, uint8_t band,size_t sampleCount, q15_t *amplitudes  ){
+// void DiagnosticEngine :: setDiagnosticFingerPrint( char* conditionCode,uint8_t parameterId, float speed, uint8_t band,size_t sampleCount, q15_t *amplitudes  ){
 
 
-      // ConditionCode - FV<featureNo>  --> Apply on Velocity  (m/s) 
-      //               - FA<featureNo>  --> Apply on Acceleration (m/s2)
+//       // ConditionCode - FV<featureNo>  --> Apply on Velocity  (m/s) 
+//       //               - FA<featureNo>  --> Apply on Acceleration (m/s2)
 
-     /* Serial.print("Pre-processing DIagnostic Finger Print  :\n");
-      Serial.print("Condition Code :");Serial.println(conditionCode);//Serial.print("\t\n");
-      Serial.print("Parameter ID :");Serial.println(parameterId);//Serial.print("\t\n");
-      Serial.print("Speed :"); Serial.println(speed);
-      Serial.print("Band :");Serial.println(band);
-      Serial.print("Amplitude Count :");Serial.println(sampleCount);
+//      /* Serial.print("Pre-processing DIagnostic Finger Print  :\n");
+//       Serial.print("Condition Code :");Serial.println(conditionCode);//Serial.print("\t\n");
+//       Serial.print("Parameter ID :");Serial.println(parameterId);//Serial.print("\t\n");
+//       Serial.print("Speed :"); Serial.println(speed);
+//       Serial.print("Band :");Serial.println(band);
+//       Serial.print("Amplitude Count :");Serial.println(sampleCount);
       
-      Serial.print("[");
-      for (int i =0 ;i<sampleCount; ++i) {
+//       Serial.print("[");
+//       for (int i =0 ;i<sampleCount; ++i) {
 
-        Serial.print( amplitudes[i] );Serial.print(",");     // converting q15 to float 
-      }
-      Serial.println("]");
+//         Serial.print( amplitudes[i] );Serial.print(",");     // converting q15 to float 
+//       }
+//       Serial.println("]");
   
-  Serial.println("Data Pre-processing Done ...");
-  */
-}
+//   Serial.println("Data Pre-processing Done ...");
+//   */
+// }
 
-void DiagnosticEngine :: setDiagnosticFingerPrint( char* conditionCode,uint8_t parameterId, float speed, uint8_t band  ){
+// void DiagnosticEngine :: setDiagnosticFingerPrint( char* conditionCode,uint8_t parameterId, float speed, uint8_t band  ){
 
 
-      // ConditionCode - FV<featureNo>  --> Apply on Velocity  (m/s) 
-      //               - FA<featureNo>  --> Apply on Acceleration (m/s2)
+//       // ConditionCode - FV<featureNo>  --> Apply on Velocity  (m/s) 
+//       //               - FA<featureNo>  --> Apply on Acceleration (m/s2)
 
-   /*   Serial.print("Received Diagnostic Config MSG :");
-      Serial.print(conditionCode);
-      Serial.print("\t");
-      Serial.print(parameterId);
-      Serial.print("\t");
-      Serial.print(speed);Serial.print("\t\t\t");
-      Serial.println(band);
+//    /*   Serial.print("Received Diagnostic Config MSG :");
+//       Serial.print(conditionCode);
+//       Serial.print("\t");
+//       Serial.print(parameterId);
+//       Serial.print("\t");
+//       Serial.print(speed);Serial.print("\t\t\t");
+//       Serial.println(band);
 
-     */ 
+//      */ 
     
 
   
-}
+// }
 
 
 
-float* DiagnosticEngine:: readCurrentDiagnosticFingerPrintData(bool m_mode,float idx, float idy, float idz){
+// float* DiagnosticEngine:: readCurrentDiagnosticFingerPrintData(bool m_mode,float idx, float idy, float idz){
   
-}
+// }
 
 //void DiagnosticEngine::configureAllfingerprints(JsonVariant &config){
 //
@@ -126,8 +126,8 @@ JsonObject& DiagnosticEngine::configureFingerPrintsFromFlash(String filename,boo
   
   //StaticJsonBuffer<1024> jsonBuffer;
   //const size_t bufferSize = JSON_ARRAY_SIZE(8) + JSON_OBJECT_SIZE(300) + 60;        // dynamically allociated memory
-  const size_t bufferSize = JSON_OBJECT_SIZE(1) + 50*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(50) + 2430;
-  
+  // const size_t bufferSize = JSON_OBJECT_SIZE(1) + 50*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(50) + 2430;
+  const size_t bufferSize = JSON_OBJECT_SIZE(2) + 2*JSON_OBJECT_SIZE(4) + 11*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(13) + 1396;
   //DynamicJsonBuffer jsonBuffer(bufferSize);
    StaticJsonBuffer<bufferSize> jsonBuffer;
  // Serial.print("JSON 2 SIZE :");Serial.println(bufferSize);
@@ -136,7 +136,7 @@ JsonObject& DiagnosticEngine::configureFingerPrintsFromFlash(String filename,boo
   //JsonObject& root2 = root["fingerprints"];
   
   if (!root.success()){
-    // debugPrint(F("Failed to read fingerprints.conf file, using default configuration"));
+    //  debugPrint(F("Failed to read fingerprints.conf file, using default configuration"));
    
   }
  else {
@@ -537,12 +537,12 @@ return keys;
  *  send diagnostic computation resilts to pub-sub
  *   
  */
-void DiagnosticEngine::publishFingerprintComputation(float* X_fingerprintResult,float* Y_fingerprintResult,float* Z_fingerprintResult){
+// void DiagnosticEngine::publishFingerprintComputation(float* X_fingerprintResult,float* Y_fingerprintResult,float* Z_fingerprintResult){
 
 
- //sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS, X_fingerprintResult);     // send mspCommand to publish data
+//  //sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS, X_fingerprintResult);     // send mspCommand to publish data
 
-}
+// }
 
 
 /*
@@ -553,7 +553,7 @@ void DiagnosticEngine::publishFingerprintComputation(float* X_fingerprintResult,
 const char* DiagnosticEngine::generateJSONPayload(JsonObject &config, float* values){
 
    DynamicJsonBuffer  jsonBuffer(2000);
-    
+  
    JsonObject& root = jsonBuffer.createObject();
    JsonObject& fingerprintJson = jsonBuffer.createObject();
      

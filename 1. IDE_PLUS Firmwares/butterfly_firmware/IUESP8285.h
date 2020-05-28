@@ -116,8 +116,8 @@ class IUESP8285 : public IUSerial, public Component
         void forgetStaticConfig();
         void connect();
         void disconnect();
-        void publishRawData(char *rawData)
-            { sendMSPCommand(MSPCommand::PUBLISH_RAW_DATA, rawData); }
+        // void publishRawData(char *rawData)
+        //     { sendMSPCommand(MSPCommand::PUBLISH_RAW_DATA, rawData); }
         void publishFeature(char *features)
             { sendMSPCommand(MSPCommand::PUBLISH_FEATURE, features); }
         void publishDiagnostic(char *diagnotic)

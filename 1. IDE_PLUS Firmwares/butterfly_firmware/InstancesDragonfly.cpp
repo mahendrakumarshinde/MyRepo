@@ -16,8 +16,8 @@ GPIORGBLed rgbLed(25, 26, 38);
     LedManager ledManager(&rgbLed);
 #endif
 
-char iuUSBBuffer[4096] = "";
-IUUSB iuUSB(&Serial, iuUSBBuffer, 4096, IUSerial::CUSTOM_PROTOCOL, 115200,
+char iuUSBBuffer[2048] = "";
+IUUSB iuUSB(&Serial, iuUSBBuffer, 2048, IUSerial::CUSTOM_PROTOCOL, 115200,
             '\n', 1000);
 
 char iuBluetoothBuffer[500] = "";
@@ -79,12 +79,12 @@ FeatureTemplate<float> batteryLoad("BAT", 2, 1, batteryLoadValues);
 /***** Accelerometer Features *****/
 
 // Sensor data
- __attribute__((section(".noinit2"))) q15_t accelerationXValues[8192/2];     // 1024
- __attribute__((section(".noinit2"))) q15_t accelerationYValues[8192/2];
- __attribute__((section(".noinit2"))) q15_t accelerationZValues[8192/2];
-FeatureTemplate<q15_t> accelerationX("A0X", 64/2 , 128, accelerationXValues); // 8, 128
-FeatureTemplate<q15_t> accelerationY("A0Y", 64/2 , 128, accelerationYValues);
-FeatureTemplate<q15_t> accelerationZ("A0Z", 64/2 , 128, accelerationZValues);
+ __attribute__((section(".noinit2"))) q15_t accelerationXValues[8192];     // 1024
+ __attribute__((section(".noinit2"))) q15_t accelerationYValues[8192];
+ __attribute__((section(".noinit2"))) q15_t accelerationZValues[8192];
+FeatureTemplate<q15_t> accelerationX("A0X", 64 , 128, accelerationXValues); // 8, 128
+FeatureTemplate<q15_t> accelerationY("A0Y", 64 , 128, accelerationYValues);
+FeatureTemplate<q15_t> accelerationZ("A0Z", 64 , 128, accelerationZValues);
 
 
 // 128 sample long accel features
@@ -187,7 +187,7 @@ FeatureTemplate<float> temperature("TMP", 2, 1, temperatureValues);
 /***** Audio Features *****/
 
 // Sensor data
-q15_t audioValues[8192];
+q15_t audioValues[4096];
 FeatureTemplate<q15_t> audio("SND", 2, 2048, audioValues);
 
 // 2048 sample long features
@@ -262,7 +262,7 @@ FeatureStateComputer opStateComputer(1, &opStateFeature);
 
 
 // Shared computation space
-q15_t allocatedFFTSpace[8192];    // 1024
+q15_t allocatedFFTSpace[16384];    // 1024
 
 
 // Note that computer_id 0 is reserved to designate an absence of computer.

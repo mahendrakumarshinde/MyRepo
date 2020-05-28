@@ -9,9 +9,9 @@
     Instanciation
 ============================================================================= */
 
-char hostSerialBuffer[8500];
+char hostSerialBuffer[16427];
 
-IUSerial hostSerial(&Serial, hostSerialBuffer, 8500, IUSerial::MS_PROTOCOL,
+IUSerial hostSerial(&Serial, hostSerialBuffer, 16427, IUSerial::MS_PROTOCOL,
                     115200, ';', 1000);
 
 IURawDataHelper accelRawDataHelper(10000,  // 10s timeout to input all keys
@@ -857,9 +857,11 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 iuWiFiFlash.removeFile(CONFIG_TYPES[i]);
                 delay(1);
             }
-            //iuWiFiFlash.removeFile(IUESPFlash::CFG_STATIC_CERT_ENDPOINT);
+            iuWiFiFlash.removeFile(IUESPFlash::CFG_STATIC_CERT_ENDPOINT);
+            iuWiFiFlash.removeFile(IUESPFlash::CFG_WIFI);
             iuWiFiFlash.updateValue(ADDRESS,0);
-            hostSerial.sendMSPCommand(MSPCommand::DELETE_CERT_FILES,"succefully Deleted");
+            hostSerial.sendMSPCommand(MSPCommand::DELETE_CERT_FILES,"succefully Deleted, Rebooting ESP");
+            ESP.restart();
             break;
         case MSPCommand::READ_CERTS:
             {
