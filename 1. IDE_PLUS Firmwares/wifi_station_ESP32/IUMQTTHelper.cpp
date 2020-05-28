@@ -115,8 +115,10 @@ void IUMQTTHelper::reconnect()
         if (debugMode) {
             debugPrint("Attempting MQTT connection... ", false);
         }
+        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Attempting MQTT Connection");
         if((m_serverPort == 8883 || m_serverPort == 8884) && TLS_ENABLE == true ){
             // m_wifiClient.setCACert(client_ca);
+            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Setting the MQTT TLS Certificates");
             m_wifiClient.setCertificate(conductor.mqtt_client_cert );
             m_wifiClient.setPrivateKey(conductor.mqtt_client_key);
         }
@@ -133,17 +135,10 @@ void IUMQTTHelper::reconnect()
             }
         } else {
             mqttConnected++;
-                      
-            //Serial.println("MQTT - Connection Failed");
-            // if(WiFi.isConnected()){
-            //     //hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_CONNECTED);
-            //     Serial.println("WIFI CLIENT CONNECTED");
-            // }
             if (debugMode) {
                 debugPrint("Failed");
             }
             delay(connectionRetryDelay);
-            //Serial.print("COUNT  : ");Serial.println(mqttConnected);
             break;
         }
     }
