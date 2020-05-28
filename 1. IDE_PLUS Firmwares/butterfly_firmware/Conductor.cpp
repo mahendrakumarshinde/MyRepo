@@ -2063,9 +2063,6 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                 }
                 break;
             case UsageMode::OPERATION:  
-                if (strcmp(buff, "READ_CERT_URL") == 0) {
-                    iuWiFi.sendMSPCommand(MSPCommand::READ_CERTS);
-                }
                 if (strcmp(buff, "IUCAL_START") == 0) {
                     iuUSB.port->println(START_CONFIRM);
                     changeUsageMode(UsageMode::CALIBRATION);
