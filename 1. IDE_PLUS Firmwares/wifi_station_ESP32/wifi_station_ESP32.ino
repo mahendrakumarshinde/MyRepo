@@ -59,6 +59,7 @@ void onNewHostMessageFromHost(IUSerial *iuSerial) {
 
 void setup()
 {   
+    setCpuFrequencyMhz(240);
     hostSerial.begin();
     hostSerial.setOnNewMessageCallback(onNewHostMessageFromHost);
     if (debugMode) {

@@ -282,6 +282,7 @@ class Conductor
         void checkforWiFiConfigurations();
         void removeChar(char * New_BLE_MAC_Address, int charToRemove);
         void setDefaultMQTT();
+        void setDefaultHTTP();
         
     protected:
         MacAddress m_macAddress;
@@ -321,15 +322,16 @@ class Conductor
         uint16_t m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
         const char* m_mqttUserName = MQTT_DEFAULT_USERNAME;
         const char* m_mqttPassword = MQTT_DEFAULT_ASSWORD;
-        bool m_tls_enabled = true;
+        bool m_tls_enabled = MQTT_DEFAULT_TLS_FLAG;
         //httpendpoint configuration
-        const char* m_httpHost  = "15.206.97.181";
-        uint16_t  m_httpPort  = 8100;
-        const char* m_httpPath = "/http_dump_v2";
-        const char* m_httpUsername = "infinite_uptime";
-        const char* m_httpPassword ;
-        const char* m_httpOauth ;
+        const char* m_httpHost  = HTTP_DEFAULT_HOST;
+        uint16_t  m_httpPort  = HTTP_DEFAULT_PORT;
+        const char* m_httpPath = HTTP_DEFAULT_PATH;
+        const char* m_httpUsername = HTTP_DEFAULT_USERNAME;
+        const char* m_httpPassword = HTTP_DEFAULT_PASSWORD;
+        const char* m_httpOauth = HTTP_DEFAULT_OUTH;
         const char* m_accountId;
+        bool httpOtaValidation = false;
         double last_fingerprint_timestamp = 0;
         bool computed_first_fingerprint_timestamp = false;
         SegmentedMessage segmentedMessages[MAX_SEGMENTED_MESSAGES]; // atmost MAX_SEGMENTED_MESSAGES can be captured in interleaved manner
