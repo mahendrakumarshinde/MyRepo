@@ -550,10 +550,12 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             
             //stm reset
             delay(10);
-            if(strcmp( host, m_httpHost) != 0  || port != m_httpPort || strcmp(httpPath, m_httpPath) != 0 ){
-                    DOSFS.end();
-                    delay(10);
-                    STM32.reset();
+            if(!httpOtaValidation){
+                if(strcmp( host, m_httpHost) != 0  || port != m_httpPort || strcmp(httpPath, m_httpPath) != 0 ){
+                        DOSFS.end();
+                        delay(10);
+                        STM32.reset();
+                }
             }
             
             }
@@ -1392,10 +1394,8 @@ bool Conductor::configureBoardFromFlash(String filename,bool isSet){
   JsonObject& root2 = root["httpConfig"];
   if (!root.success() && !iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS)){
     debugPrint(F("Failed to read httpConf.conf file, using default configuration"));
-    m_httpHost = "15.206.97.181";
-    m_httpPort = 8100;
-    m_httpPath = "/http_dump_v2";
-   
+    setDefaultHTTP();
+
   }else if(iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS) && !root.success()){
       String httpConfig = iuFlash.readInternalFlash(CONFIG_HTTP_FLASH_ADDRESS);
         debugPrint(httpConfig);
@@ -1446,9 +1446,7 @@ bool Conductor::configureBoardFromFlash(String filename,bool isSet){
                 }
             }else{
                 debugPrint(F("Failed to read httpConf.conf file, using default configuration"));
-                m_httpHost = "15.206.97.181";
-                m_httpPort = 8100;
-                m_httpPath = "/http_dump_v2";
+                setDefaultHTTP();
             }
         }
  else {
@@ -2127,10 +2125,59 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuUSB.port->print("DEVICE_TYPE : ");
                     iuUSB.port->println(DEVICE_TYPE);
                 }
-                if (strcmp(buff,"REMOVE_CERT_FILES") == 0)
+                if (strcmp(buff,"REMOVE_ESP_FILES") == 0)
                 {
-                    debugPrint("Deleting Certificate from ESP32");
+                    debugPrint("Deleting Files from ESP32");
                     iuWiFi.sendMSPCommand(MSPCommand::DELETE_CERT_FILES);
+                    DOSFS.remove("iuconfig/wifi0.conf");
+                }
+                if (strcmp(buff,"IUGET_WIFI_CONFIG") == 0)
+                {
+                    if (DOSFS.exists("iuconfig/wifi0.conf")){
+                    const char* ssid;
+                    const char* authType;
+                    const char* staticIP;
+                    const char* gatewayIP;
+                   
+                    JsonObject& config = configureJsonFromFlash("iuconfig/wifi0.conf",1);
+                    ssid = config["ssid"];
+                    authType = config["auth_type"];
+                    staticIP = config["static"];
+                    gatewayIP = config["gateway"];
+
+
+                    iuUSB.port->println("*****WIFI_CONFIG*****");
+                    iuUSB.port->print("SSID : ");
+                    iuUSB.port->println(ssid);
+                    iuUSB.port->print("AUTH_TYPE : ");
+                    iuUSB.port->println(authType);
+                    iuUSB.port->print("STATIC_IP : ");
+                    iuUSB.port->println(staticIP);
+                    iuUSB.port->print("GATEWAY_IP : ");
+                    iuUSB.port->println(gatewayIP);
+                    }else{
+                    debugPrint(F("iuconfig/wifi0.conf file does not exists"));
+                  }
+                }
+                if (strcmp(buff,"IUSET_ERASE_INT_FLASH") == 0)
+                {
+                    if(iuFlash.checkConfig(CONFIG_MQTT_FLASH_ADDRESS)){
+                        iuFlash.clearInternalFlash(CONFIG_MQTT_FLASH_ADDRESS);
+                        debugPrint(F("MQTT config removed form internal Flash"));
+                    }
+                    if(iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS)){
+                        iuFlash.clearInternalFlash(CONFIG_HTTP_FLASH_ADDRESS);
+                        debugPrint(F("HTTP config removed form internal Flash"));
+                    }
+                    if(iuFlash.checkConfig(CONFIG_MODBUS_SLAVE_CONFIG_FLASH_ADDRESS)){
+                        iuFlash.clearInternalFlash(CONFIG_MODBUS_SLAVE_CONFIG_FLASH_ADDRESS);
+                        debugPrint(F("MODBUS Slave config removed form internal Flash"));
+                    }
+                    if(iuFlash.checkConfig(CONFIG_WIFI_CONFIG_FLASH_ADDRESS)){
+                        iuFlash.clearInternalFlash(CONFIG_WIFI_CONFIG_FLASH_ADDRESS);
+                        debugPrint(F("WIFI config removed form internal Flash"));
+                    }
+
                 }
                 if (strcmp(buff, "IUGET_HTTP_CONFIG") == 0)
                 {
@@ -2163,11 +2210,15 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     const char* _serverPort;
                     const char* _UserName;
                     const char* _Password;
+                    const char* _tls;
+
                     JsonObject& config = configureJsonFromFlash("MQTT.conf",1);
                     _serverIP = config["mqtt"]["mqttServerIP"];
                     _serverPort = config["mqtt"]["port"];
                     _UserName = config["mqtt"]["username"];
                     _Password = config["mqtt"]["password"];
+                    _tls = config["mqtt"]["tls"];
+
 
                     iuUSB.port->println("*****MQTT_CONFIG*****");
                     iuUSB.port->print("MQTT_SERVER_IP : ");
@@ -2178,6 +2229,8 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuUSB.port->println(_UserName);
                     iuUSB.port->print("MQTT_PASSWORD : ");
                     iuUSB.port->println(_Password);
+                    iuUSB.port->print("MQTT_TLS : ");
+                    iuUSB.port->println(_tls);
                   }else{
                     debugPrint(F("MQTT.conf file does not exists"));
                   }
@@ -3200,15 +3253,11 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                         }
                     }else{
                         debugPrint(F("Failed to read httpConf.conf file, using default configuration"));
-                        m_httpHost = "15.206.97.181";
-                        m_httpPort = 8100;
-                        m_httpPath = "/http_dump_v2";
+                        setDefaultHTTP();
                     }
               }  
               else{
-                m_httpHost = "15.206.97.181";                                       //"ideplus-dot-infinite-uptime-1232.appspot.com";
-                m_httpPort =  8100;                                                        //80;
-                m_httpPath = "/http_dump_v2";           //"/raw_data?mac="; 
+                    setDefaultHTTP();
                 }
                 iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_HOST,m_httpHost); 
                 iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_PORT,String(m_httpPort).c_str()); 
@@ -5502,7 +5551,7 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
     // 1. Check default parameter setting
     ValidationFile->print(F(" - MQTT DEFAULT SERVER IP:"));
     ValidationFile->println(MQTT_DEFAULT_SERVER_IP);
-    if(strcmp(MQTT_DEFAULT_SERVER_IP,"3.6.220.46") != 0)
+    if(strcmp(MQTT_DEFAULT_SERVER_IP,"mqtt.uat.infinite-uptime.com") != 0)
     {
         ValidationFile->println(F("   Validation [MQTT]-Default IP Add: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Default IP Add: Fail !")); }
@@ -5518,7 +5567,7 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
     // 2. Check MQTT update from config file stored in ext. flash
     conductor.configureMQTTServer("MQTT.conf");
     // 3. Check default parameter setting changed to read from config file ?
-    if(strcmp(m_mqttServerIp,"3.6.220.46") == 0 && m_mqttServerPort == 8883 &&
+    if(strcmp(m_mqttServerIp,"mqtt.uat.infinite-uptime.com") == 0 && m_mqttServerPort == 8883 &&
       (strcmp(m_mqttUserName,"") == 0) && (strcmp(m_mqttPassword,"") == 0))
     {
         ValidationFile->println(F("   Validation [MQTT]-Read Config File: Fail !"));
@@ -5534,21 +5583,21 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
         ValidationFile->println(F("   Validation [HTTP]-Read Config File: Fail !"));
         ValidationFile->print(F(" - HTTP DEFAULT HOST IP:"));
         ValidationFile->println(m_httpHost);
-        if(strcmp(m_httpHost,"15.206.97.181"))
+        if(strcmp(m_httpHost,"sandbox-api-idap.infinite-uptime.com"))
         {
             ValidationFile->println(F("   Validation [HTTP]-Default HOST IP: Fail !"));
             if(loopDebugMode){ debugPrint(F("Validation [HTTP]-Default HOST IP: Fail !")); }
         }
         ValidationFile->print(F(" - HTTP DEFAULT HOST PORT:"));
         ValidationFile->println(m_httpPort);
-        if(m_httpPort != 8100)
+        if(m_httpPort != 443)
         {
             ValidationFile->println(F("   Validation [HTTP]-Default HOST PORT: Fail !"));
             if(loopDebugMode){ debugPrint(F("Validation [HTTP]-Default HOST PORT: Fail !")); }    
         }
         ValidationFile->print(F(" - HTTP DEFAULT HOST END POINT:"));
         ValidationFile->println(m_httpPath);
-        if(strcmp(m_httpPath,"/http_dump_v2"))
+        if(strcmp(m_httpPath,"/api/2.0/datalink/http_dump_v2"))
         {
             ValidationFile->println(F("   Validation [HTTP]-Default HOST END Point: Fail !"));
             if(loopDebugMode){ debugPrint(F("Validation [HTTP]-Default HOST END Point: Fail !")); }
@@ -6057,6 +6106,32 @@ void Conductor::otaFWValidation()
                 /*  Initialize OTA FW Validation retry count */
                 doOnceFWValid = false;
                 iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);
+                if(DOSFS.exists("MQTT.conf")){
+                    JsonObject& config = configureJsonFromFlash("MQTT.conf",1);
+                    if(config.success()){
+                        int serverPort = config["mqtt"]["port"];
+                        if(serverPort != 8883 && serverPort != 8884){
+                            char mqttConfig[510];
+                            sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\",\"tls\":%d}}",MQTT_DEFAULT_SERVER_IP,MQTT_DEFAULT_SERVER_PORT,MQTT_DEFAULT_USERNAME,MQTT_DEFAULT_ASSWORD,MQTT_DEFAULT_TLS_FLAG);
+                            debugPrint("Loading Default Secure MQTT Config : ",false);debugPrint(mqttConfig);
+                            processConfiguration(mqttConfig,true);
+                        }
+                    }
+                }
+                if(DOSFS.exists("httpConfig.conf")){
+                    JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
+                    config.prettyPrintTo(Serial);
+                    if(config.success()){
+                        int httpPort = config["httpConfig"]["port"];
+                        if(httpPort != 443){
+                            char httpConfig[510];
+                            sprintf(httpConfig,"{\"httpConfig\":{\"host\":\"%s\",\"port\":%d,\"path\":\"%s\",\"username\":\"%s\",\"password\":\"%s\",\"oauth\":\"%s\"}}",HTTP_DEFAULT_HOST,HTTP_DEFAULT_PORT,HTTP_DEFAULT_PATH,HTTP_DEFAULT_USERNAME,HTTP_DEFAULT_PASSWORD,HTTP_DEFAULT_OUTH);
+                            debugPrint("Loading Default Secure Http Config : ",false);debugPrint(httpConfig);
+                            httpOtaValidation = true; // To avoid Reboot
+                            processConfiguration(httpConfig,true);
+                        }
+                    }
+                }
                 if (loopDebugMode) debugPrint("OTA FW Validation Successful. Rebooting device....");
                 delay(2000);
                 DOSFS.end();
@@ -6356,4 +6431,13 @@ void Conductor::setDefaultMQTT(){
     strncpy((char *)m_mqttUserName,MQTT_DEFAULT_USERNAME,strlen(MQTT_DEFAULT_USERNAME));
     strncpy((char *)m_mqttPassword,MQTT_DEFAULT_ASSWORD,strlen(MQTT_DEFAULT_ASSWORD));
     m_tls_enabled = true;
+}
+
+void Conductor::setDefaultHTTP(){
+    strncpy((char*)m_httpHost,HTTP_DEFAULT_HOST,strlen(HTTP_DEFAULT_HOST));
+    m_httpPort = HTTP_DEFAULT_PORT;
+    strncpy((char*)m_httpPath,HTTP_DEFAULT_PATH,strlen(HTTP_DEFAULT_PATH));
+    strncpy((char*)m_httpUsername,HTTP_DEFAULT_USERNAME,strlen(HTTP_DEFAULT_USERNAME));
+    strncpy((char*)m_httpPassword,HTTP_DEFAULT_PASSWORD,strlen(HTTP_DEFAULT_PASSWORD));
+    strncpy((char*)m_httpOauth,HTTP_DEFAULT_OUTH,strlen(HTTP_DEFAULT_OUTH));
 }
