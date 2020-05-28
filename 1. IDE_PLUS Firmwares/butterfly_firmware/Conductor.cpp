@@ -6120,7 +6120,6 @@ void Conductor::otaFWValidation()
                 }
                 if(DOSFS.exists("httpConfig.conf")){
                     JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
-                    config.prettyPrintTo(Serial);
                     if(config.success()){
                         int httpPort = config["httpConfig"]["port"];
                         if(httpPort != 443){
