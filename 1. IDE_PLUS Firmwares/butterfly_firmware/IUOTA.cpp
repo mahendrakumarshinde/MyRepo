@@ -524,6 +524,7 @@ void IUOTA:: readOtaFlag(void)
  */
 void IUOTA::updateOtaFlag(uint8_t flag_addr , uint8_t flag_data)
 {
+    uint8_t retry = 2;
     if(loopDebugMode) {
         debugPrint("Updating flag:",false);
         debugPrint(flag_addr,false);
@@ -534,11 +535,12 @@ void IUOTA::updateOtaFlag(uint8_t flag_addr , uint8_t flag_data)
     readOtaFlag();
     OtaStatusFlag[flag_addr_temp] = flag_data;
     
-    stm32l4_flash_unlock();
-    stm32l4_flash_erase((uint32_t)FLAG_ADDRESS, 2048);
-    delay(1000);
     // DEBUG_SERIAL.println("Flash Erased...");
-    stm32l4_flash_program((uint32_t)FLAG_ADDRESS, OtaStatusFlag, 128);
-    delay(1000);
-    stm32l4_flash_lock();
+
+    for(int i=0;i<retry;i++){
+        stm32l4_flash_unlock();
+        stm32l4_flash_erase((uint32_t)FLAG_ADDRESS, 2048);
+        stm32l4_flash_program((uint32_t)FLAG_ADDRESS, OtaStatusFlag, sizeof(OtaStatusFlag));
+        stm32l4_flash_lock();
+    }
 }
