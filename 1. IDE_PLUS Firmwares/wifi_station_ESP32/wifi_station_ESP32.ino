@@ -8,7 +8,8 @@
 #include <rom/rtc.h>
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
-
+//#include "IUESPFlash.h"
+//#include "SPIFFS.h"
 Conductor conductor;
 uint32_t lastDone = 0;
 /* =============================================================================
@@ -21,7 +22,7 @@ uint32_t lastDone = 0;
  * See conductor.processMessageFromMQTT
  */
 void mqttNewMessageCallback(char* topic, byte* payload, unsigned int length) // ESP32_PORT_TRUE
-{
+{   
     conductor.processMessageFromMQTT(topic, (char*) payload, length);
 }
 
@@ -38,7 +39,7 @@ void onMQTTConnection()
 }
 
 void getAllConfig()
-{
+{   
     mqttHelper.onConnection();
     conductor.publishDiagnostic("connected", 10);
     hostSerial.sendMSPCommand(MSPCommand::GET_DEVICE_CONFIG);
@@ -58,6 +59,7 @@ void onNewHostMessageFromHost(IUSerial *iuSerial) {
 
 void setup()
 {   
+    setCpuFrequencyMhz(240);
     hostSerial.begin();
     hostSerial.setOnNewMessageCallback(onNewHostMessageFromHost);
     if (debugMode) {
@@ -75,14 +77,20 @@ void setup()
     // Prepare to receive MQTT messages
     mqttHelper.client.setCallback(mqttNewMessageCallback);
     // mqttHelper.setOnConnectionCallback(onMQTTConnection);
-    mqttHelper.setOnConnectionCallback(getAllConfig);
+    mqttHelper.setOnConnectionCallback(getAllConfig);           // Once the MQTT client connected 
     delay(100);
     #if IUDEBUG_ANY == 1
         conductor.reconnect(true);
     #endif
-    WiFi.mode(WIFI_STA);
-    WiFi.begin();
-    
+     
+    iuWiFiFlash.begin();
+    // Set the common url json if file not present
+    conductor.setCommonHttpEndpoint();
+    //Configure the Diagnostic HTTP/HTTPS Endpoint
+    conductor.configureDiagnosticEndpointFromFlash(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT);
+    conductor.activeCertificates = iuWiFiFlash.readMemory(ADDRESS);
+
+    conductor.setWiFiConfig();
 }
 
 /**
@@ -95,39 +103,51 @@ void loop()
     if(!conductor.configStatus){
         getAllConfig();
     }
-    hostSerial.readMessages();  // Read and process messages from host
-    if (conductor.reconnect()) {  // If Wifi is connected
+    hostSerial.readMessages();  
+    if (conductor.reconnect()) {  
         if (!timeHelper.active()) {
             timeHelper.begin();
         }
         // Update time reference from NTP server if not yet received
         // from IU server
         timeHelper.updateTimeReferenceFromNTP();
-        /***** MQTT Connection / message reception loop *****/
-        conductor.loopMQTT();
         conductor.publishWifiInfoCycle();
-        // Publish raw data (HTTP POST request)
-//        accelRawDataHelper.publishIfReady(conductor.getBleMAC());
-        
     }
+    conductor.mqttSecureConnect();
     conductor.updateWiFiStatusCycle();
     conductor.checkWiFiDisconnectionTimeout();
+    conductor.checkMqttDisconnectionTimeout();
     conductor.checkOtaPacketTimeout();
-    if(WiFi.isConnected() == false)
+    if(WiFi.isConnected() == false)         
     {   
         conductor.autoReconncetWifi();
     } 
     uint32_t now = millis();
-    if (now - lastDone > 3000 )
-    {
-         lastDone = now;
-        if(uint64_t(conductor.getBleMAC() ) == 0) {    
+    static uint8_t rssiPublishedCounter;
+    if (now - lastDone > 5000 )
+    {   
+        //iuWiFiFlash.listAllAvailableFiles(IUESPFlash::CONFIG_SUBDIR);
+        //Serial.print("EEPROM Value :");
+        //Serial.println(iuWiFiFlash.readMemory(ADDRESS));
+
+        rssiPublishedCounter++ ;
+        if (rssiPublishedCounter >= 6)
+        {
+            conductor.publishRSSI();
+            rssiPublishedCounter = 0;
+        }
+        conductor.resetDownloadInitTimer(60,5000);
+        lastDone = now;
+        if(uint64_t(conductor.getBleMAC() ) == 0) { 
             hostSerial.sendMSPCommand(MSPCommand::ASK_BLE_MAC);
             delay(10);
             hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);
             delay(10);
             hostSerial.sendMSPCommand(MSPCommand::GET_RAW_DATA_ENDPOINT_INFO); 
-        }  
+        }
+        if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_WIFI)){
+            hostSerial.sendMSPCommand(MSPCommand::ASK_WIFI_CONFIG);
+        }
     }
     delay(1);
 }

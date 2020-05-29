@@ -125,16 +125,22 @@ class Conductor
         // Default start datetime
         static constexpr double defaultTimestamp = 1524017173.00;
         // Size of Jsn buffr (to parse json)
-        static const uint16_t JSON_BUFFER_SIZE = 1600;
+        static const uint16_t JSON_BUFFER_SIZE = 1024; //Changed from 1600
         // static const uint32_t BLEconnectionTimeout = 60000;
         static const uint32_t BLEconnectionTimeout = 15000;
         static const uint32_t connectedStatusTimeout = 60000;   // 1 min for ETHERNET connectedStatusTimeout
         uint32_t m_connectionTimeout = 150000;   // 2 min 30s
+        uint32_t m_upgradeMessageTimeout = 30*1000;
+        uint32_t m_certDownloadInitTimeout = 60*1000;
+        // Modbus Connection Timeouts 
+        const uint16_t modbusConnectionTimeout = 5000;   // ms 
+        uint32_t lastUpdated = 0;
         //timer ISR period
         uint16_t timerISRPeriod = 300; // default 3.3KHz
         String availableFingerprints;
         bool modbusStreamingMode =false;
         bool ready_to_publish_to_modbus = false;
+        bool certDownloadInProgress = false;
         
         /***** Core *****/
         Conductor() {};
@@ -208,7 +214,7 @@ class Conductor
         void  streamMCUUInfo(HardwareSerial *port);
         void exposeAllConfigurations();
         // mqtt / http configuration
-        void fastSwap (const char **i, const char **d);
+        // void fastSwap (const char **i, const char **d);
         void configureMQTTServer(String filename);
         bool configureBoardFromFlash(String filename,bool isSet);
         JsonObject& configureJsonFromFlash(String filename,bool isSet);
@@ -276,6 +282,11 @@ class Conductor
         void onBootFlashTest();
         float* getFingerprintsforModbus();
         bool checkforModbusSlaveConfigurations();
+        bool updateModbusStatus();
+        void checkforWiFiConfigurations();
+        void removeChar(char * New_BLE_MAC_Address, int charToRemove);
+        void setDefaultMQTT();
+        void setDefaultHTTP();
         
     protected:
         MacAddress m_macAddress;
@@ -311,18 +322,20 @@ class Conductor
         UsageMode::option m_usageMode = UsageMode::COUNT;
         AcquisitionMode::option m_acquisitionMode = AcquisitionMode::NONE;
         StreamingMode::option m_streamingMode = StreamingMode::NONE;
-        IPAddress m_mqttServerIp = MQTT_DEFAULT_SERVER_IP;
+        const char* m_mqttServerIp = MQTT_DEFAULT_SERVER_IP;
         uint16_t m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
         const char* m_mqttUserName = MQTT_DEFAULT_USERNAME;
         const char* m_mqttPassword = MQTT_DEFAULT_ASSWORD;
+        bool m_tls_enabled = MQTT_DEFAULT_TLS_FLAG;
         //httpendpoint configuration
-        const char* m_httpHost  = "15.206.97.181";
-        uint16_t  m_httpPort  = 8100;
-        const char* m_httpPath = "/http_dump_v2";
-        const char* m_httpUsername = "infinite_uptime";
-        const char* m_httpPassword ;
-        const char* m_httpOauth ;
+        const char* m_httpHost  = HTTP_DEFAULT_HOST;
+        uint16_t  m_httpPort  = HTTP_DEFAULT_PORT;
+        const char* m_httpPath = HTTP_DEFAULT_PATH;
+        const char* m_httpUsername = HTTP_DEFAULT_USERNAME;
+        const char* m_httpPassword = HTTP_DEFAULT_PASSWORD;
+        const char* m_httpOauth = HTTP_DEFAULT_OUTH;
         const char* m_accountId;
+        bool httpOtaValidation = false;
         double last_fingerprint_timestamp = 0;
         bool computed_first_fingerprint_timestamp = false;
         SegmentedMessage segmentedMessages[MAX_SEGMENTED_MESSAGES]; // atmost MAX_SEGMENTED_MESSAGES can be captured in interleaved manner
@@ -350,6 +363,19 @@ class Conductor
         uint32_t otaInitWaitTimeout = 0;
         bool otaInitTimeoutFlag = false;
         char WiFiDisconnect_OTAErr[16];
+        char ack_config[200];
+        uint32_t certDownloadInitWaitTimeout =0;
+        uint32_t m_downloadSuccessStartTime = 0;
+        bool m_getDownloadConfig = false;
+        bool m_certDownloadStarted  = false;
+        bool m_downloadSuccess = false;
+        bool m_upgradeSuccess = false;
+        bool m_mqttConnected = false;
+        // Certificates buffers
+        char m_certType[15];
+        char m_keyType[15];
+        char m_certHash[34];
+        char m_keyHash[34];
 };
 
 

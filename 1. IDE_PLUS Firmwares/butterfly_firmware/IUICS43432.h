@@ -35,7 +35,7 @@ class IUICS43432 : public HighFreqSensor
         // Clock rate of audio device in Hz
         static const uint16_t clockRate = 48000;
         // sampling rate in Hz (can be downclocked from clockRate)
-        static const uint16_t defaultSamplingRate = 8000;
+        static const uint16_t defaultSamplingRate = 4000;
         static const uint8_t bitsPerAudioSample = 32;
         static const uint16_t audioSampleSize = (I2S_BUFFER_SIZE * 8) \
             / (bitsPerAudioSample); // stereo recording

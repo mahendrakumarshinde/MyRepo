@@ -92,7 +92,7 @@ public:
 	int lastModbusUpdateTime = 0;
 	uint16_t WIFI_FIRMWARE_VERSION;
 	uint16_t STM_FIRMWARE_VERSION;
-	
+	bool modbusConnectionStatus = false;
 
 protected:
 	HardwareSerial *m_port;

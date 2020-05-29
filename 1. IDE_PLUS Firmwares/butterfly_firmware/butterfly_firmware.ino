@@ -659,7 +659,7 @@ void setup()
         // delay(500);
         // iuWiFi.hardReset();
         // delay(1000);
-        conductor.configureFromFlash(IUFlash::CFG_WIFI0);
+        conductor.checkforWiFiConfigurations();
         delay(100);
         conductor.modbusStreamingMode = conductor.configureFromFlash(IUFlash::CFG_MODBUS_SLAVE);
         if (conductor.modbusStreamingMode != true)
@@ -775,7 +775,7 @@ void loop()
                 // Stream features
                 conductor.streamFeatures();
 
-                                
+
                if(conductor.modbusStreamingMode ) { 
                     // Update Modbus Registers
                     uint32_t now =millis();
@@ -784,7 +784,7 @@ void loop()
                         // {
                         //     debugPrint("MODBUS DEBUG >FEATURES : ",false);debugPrint(modbusFeaturesDestinations[i]);
                         // }
-                          
+                        
                         iuModbusSlave.storeDeviceConfigParameters();
                         iuModbusSlave.updateBLEMACAddress(conductor.getMacAddress());
                         iuModbusSlave.updateWIFIMACAddress(iuWiFi.getMacAddress());
@@ -793,8 +793,14 @@ void loop()
                         iuModbusSlave.m_holdingRegs[TOTAL_ERRORS]= iuModbusSlave.modbus_update(iuModbusSlave.m_holdingRegs);
                         conductor.ready_to_publish_to_modbus = false;
                         iuModbusSlave.lastModbusUpdateTime = now;
-                        
+                       
                        }
+                        // Send Modbus connection Status
+                        uint32_t nowTime = millis();
+                        if(nowTime - conductor.lastUpdated >= conductor.modbusConnectionTimeout){
+                            conductor.lastUpdated = nowTime;
+                            conductor.updateModbusStatus();
+                        }
 
                     }else
                     {
@@ -841,7 +847,7 @@ void loop()
             lastDone = now;
             /* === Place your code to excute at fixed interval here ===*/
             conductor.streamMCUUInfo(iuWiFi.port);
-            iuWiFi.sendMSPCommand(MSPCommand::GET_ESP_RSSI);
+            //iuWiFi.sendMSPCommand(MSPCommand::GET_ESP_RSSI);
 
             if(iuWiFi.current_rssi < WEAK_SIGNAL_STRENGTH_TH ){
                  ledManager.overrideColor(RGB_PURPLE);
@@ -856,7 +862,7 @@ void loop()
             {
                 if (loopDebugMode)
                 {
-                    debugPrint("Current WiFi RSSI is :");
+                    debugPrint("Current WiFi RSSI is :",false);
                     debugPrint(iuWiFi.current_rssi,true);
                 }
 
