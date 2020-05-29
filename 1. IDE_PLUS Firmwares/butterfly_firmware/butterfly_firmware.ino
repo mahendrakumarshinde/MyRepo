@@ -1,6 +1,6 @@
 /*
-Infinite Uptime IDE+ Firmware
-Update 12-03-2020
+Infinite Uptime vEdge Firmware
+Update 29-05-2020
 Type - Standard vEdge Firmware Release
 */
 
