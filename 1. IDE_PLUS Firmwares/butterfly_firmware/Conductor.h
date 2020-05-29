@@ -132,6 +132,9 @@ class Conductor
         uint32_t m_connectionTimeout = 150000;   // 2 min 30s
         uint32_t m_upgradeMessageTimeout = 30*1000;
         uint32_t m_certDownloadInitTimeout = 60*1000;
+        // Modbus Connection Timeouts 
+        const uint16_t modbusConnectionTimeout = 5000;   // ms 
+        uint32_t lastUpdated = 0;
         //timer ISR period
         uint16_t timerISRPeriod = 300; // default 3.3KHz
         String availableFingerprints;
@@ -279,6 +282,7 @@ class Conductor
         void onBootFlashTest();
         float* getFingerprintsforModbus();
         bool checkforModbusSlaveConfigurations();
+        bool updateModbusStatus();
         void checkforWiFiConfigurations();
         void removeChar(char * New_BLE_MAC_Address, int charToRemove);
         void setDefaultMQTT();

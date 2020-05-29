@@ -775,7 +775,7 @@ void loop()
                 // Stream features
                 conductor.streamFeatures();
 
-                                
+
                if(conductor.modbusStreamingMode ) { 
                     // Update Modbus Registers
                     uint32_t now =millis();
@@ -784,7 +784,7 @@ void loop()
                         // {
                         //     debugPrint("MODBUS DEBUG >FEATURES : ",false);debugPrint(modbusFeaturesDestinations[i]);
                         // }
-                          
+                        
                         iuModbusSlave.storeDeviceConfigParameters();
                         iuModbusSlave.updateBLEMACAddress(conductor.getMacAddress());
                         iuModbusSlave.updateWIFIMACAddress(iuWiFi.getMacAddress());
@@ -794,6 +794,12 @@ void loop()
                         conductor.ready_to_publish_to_modbus = false;
                         iuModbusSlave.lastModbusUpdateTime = now;
                         
+                        // Send Modbus connection Status
+                        uint32_t nowTime = millis();
+                        if(nowTime - conductor.lastUpdated >= conductor.modbusConnectionTimeout){
+                            conductor.lastUpdated = nowTime;
+                            conductor.updateModbusStatus();
+                        }
                        }
 
                     }else

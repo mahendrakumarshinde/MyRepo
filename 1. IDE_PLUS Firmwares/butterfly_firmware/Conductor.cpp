@@ -6457,3 +6457,29 @@ void Conductor::setDefaultHTTP(){
     strncpy((char*)m_httpPassword,HTTP_DEFAULT_PASSWORD,strlen(HTTP_DEFAULT_PASSWORD));
     strncpy((char*)m_httpOauth,HTTP_DEFAULT_OUTH,strlen(HTTP_DEFAULT_OUTH));
 }
+
+bool Conductor::updateModbusStatus(){
+
+    bool connected = false;
+    if(iuModbusSlave.modbusConnectionStatus == true){
+            if(debugMode){
+                debugPrint("MODBUS DEBUG : MODBUS CONNECTED");
+            }
+        if(StreamingMode::BLE && isBLEConnected()){    
+            iuBluetooth.write("MODBUS-CONNECTED;");
+        }
+        connected = true;
+    }
+    else
+    {
+        if(debugMode){
+            debugPrint("MODBUS DEBUG : MODBUS DISCONNECTED");
+        }
+        if(StreamingMode::BLE && isBLEConnected()){    
+            iuBluetooth.write("MODBUS-DISCONNECTED;");
+        }
+        connected = false;
+    }
+    
+    return connected;
+}
