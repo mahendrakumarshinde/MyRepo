@@ -793,14 +793,14 @@ void loop()
                         iuModbusSlave.m_holdingRegs[TOTAL_ERRORS]= iuModbusSlave.modbus_update(iuModbusSlave.m_holdingRegs);
                         conductor.ready_to_publish_to_modbus = false;
                         iuModbusSlave.lastModbusUpdateTime = now;
-                        
+                       
+                       }
                         // Send Modbus connection Status
                         uint32_t nowTime = millis();
                         if(nowTime - conductor.lastUpdated >= conductor.modbusConnectionTimeout){
                             conductor.lastUpdated = nowTime;
                             conductor.updateModbusStatus();
                         }
-                       }
 
                     }else
                     {
