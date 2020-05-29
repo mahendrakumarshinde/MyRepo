@@ -181,7 +181,12 @@ unsigned int IUmodbus::modbus_update(unsigned int *holdingRegs)
 {
     unsigned char buffer = 0;
     unsigned char overflow = 0;
-
+    if(!m_port->available()){
+        modbusConnectionStatus = false;
+        if(debugMode){
+            //debugPrint("MODBUS DEBUG : NO Query from Master");
+        }
+    }
     while (m_port->available())
     {
         // The maximum number of bytes is limited to the Serial4 buffer size of 128 bytes
@@ -194,7 +199,6 @@ unsigned int IUmodbus::modbus_update(unsigned int *holdingRegs)
             if (buffer == BUFFER_SIZE)
                 overflow = 1;
             frame[buffer] = m_port->read();
-            //  Serial.print(frame[buffer]);
             buffer++;
         }
         delayMicroseconds(T1_5); // inter character time out
@@ -327,7 +331,7 @@ unsigned int IUmodbus::modbus_update(unsigned int *holdingRegs)
     }
     else if (buffer > 0 && buffer < 8)
         errorCount++; // corrupted packet
-
+        
     return errorCount;
 }
 
@@ -346,6 +350,7 @@ void IUmodbus::exceptionResponse(unsigned char exception)
         frame[4] = crc16 & 0xFF;
         sendPacket(5); // exception response is always 5 bytes ID, function + 0x80, exception code, 2 bytes crc
     }
+    modbusConnectionStatus = false;
 }
 /**
  * check validation for slaveID and all configurable parameter while merging
@@ -428,11 +433,10 @@ void IUmodbus::sendPacket(unsigned char bufferSize)
     for (unsigned char i = 0; i < bufferSize; i++)
     {
         m_port->write(frame[i]);
-        //debugPrint("Frame Data : ",false); debugPrint(frame[i]);
     }
 
     m_port->flush();
-
+    modbusConnectionStatus = true;
     // allow a frame delay to indicate end of transmission
     delayMicroseconds(T3_5);
 
