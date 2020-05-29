@@ -87,7 +87,7 @@ void IUMQTTHelper::setDeviceMAC(MacAddress deviceMAC)
  */
 bool IUMQTTHelper::hasConnectionInformations()
 {
-    return (uint32_t(m_serverIP) > 0 && m_username != NULL && m_password != NULL);
+    return (m_serverIP != NULL && m_serverPort > 0 );
 }
 
 /**
