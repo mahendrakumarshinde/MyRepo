@@ -10,7 +10,7 @@
 ============================================================================= */
 
 /***** Firmware version *****/
-const char FIRMWARE_VERSION[8] = "2.1.0";
+const char FIRMWARE_VERSION[8] = "3.0.0";
 
 
 /***** Device Type *****/  
@@ -95,19 +95,31 @@ namespace IU_VERSION {
 
 
 /* =============================================================================
-    Default configuration values
+    Default MQTT configuration values
 ============================================================================= */
 
 /***** MQTT server and credentials *****/
 // US-WEST1-A server
 //IPAddress MQTT_DEFAULT_SERVER_IP(35, 197, 32, 136);
 // ASIA-SOUTH1-A (Mumbai) server
-const IPAddress MQTT_DEFAULT_SERVER_IP(15,206,193,195);      //  IU-Default : 35, 200, 183, 103     ,Indicus -Testing IP   : 115,112,92,146  , Indicus-India IP [Production]  : 13,233,38,155
-const uint16_t MQTT_DEFAULT_SERVER_PORT = 1883;             //  IU-Default : 1883                  ,Indicus -Testing Port : 41883           , Indicus-India Port[Production] : 1883
+const char MQTT_DEFAULT_SERVER_IP[50] = "mqtt.uat.infinite-uptime.com";
+const uint16_t MQTT_DEFAULT_SERVER_PORT = 8883;             //  IU-Default : 1883                  ,Indicus -Testing Port : 1883           , Indicus-India Port[Production] : 1883
 
 const uint8_t MQTT_CREDENTIALS_MAX_LENGTH = 25;
-const char MQTT_DEFAULT_USERNAME[35] =  "iuprod";             // IU-Username : ide_plus              ,Inducus Username Testing : guest        , Indicus-India Username[Production] : ispl
-const char MQTT_DEFAULT_ASSWORD[35] =  "iuprod";           // IU-Password : nW$Pg81o@EJD          ,Password                 :cnxmq2016     , Indicus-India Password[Production] : indicus
+const char MQTT_DEFAULT_USERNAME[35] =  "";             // IU-Username : ide_plus              ,Inducus Username Testing : guest        , Indicus-India Username[Production] : ispl
+const char MQTT_DEFAULT_ASSWORD[35] =  "";           // IU-Password : nW$Pg81o@EJD          ,Password                 :cnxmq2016     , Indicus-India Password[Production] : indicus
+const bool MQTT_DEFAULT_TLS_FLAG = true;
+
+
+/* =============================================================================
+    Default HTTP configuration values
+============================================================================= */
+const char HTTP_DEFAULT_HOST[50] = "sandbox-api-idap.infinite-uptime.com";
+const uint16_t HTTP_DEFAULT_PORT = 443;
+const char HTTP_DEFAULT_PATH[256] = "/api/2.0/datalink/http_dump_v2";
+const char HTTP_DEFAULT_USERNAME[35] =  "";
+const char HTTP_DEFAULT_PASSWORD[35] =  "";
+const char HTTP_DEFAULT_OUTH[35] = ""; 
 
 
 /* =============================================================================

@@ -286,143 +286,219 @@ void IUESP8285::saveConfigToFlash(IUFlash *iuFlashPtr,
 
 bool IUESP8285::configure(JsonVariant &config)
 {
-    bool success = true;  // success if at least "ssid" and "psk" found
-    const char *value;
-//    value = config.get<const char*>("ssid");
-    value = config["ssid"];
-    if (value) { setSSID(value, strlen(value)); }
-    else { success = false; }
-//    value = config.get<const char*>("psk");
-    value = config["psk"];
-    if (value) { setPassword(value, strlen(value)); }
-    else { success = false; }
-//    value = config.get<const char*>("static");
-    value = config["static"];
-    if (value) { setStaticIP(value, strlen(value)); }
-//    value = config.get<const char*>("gateway");
-    value = config["gateway"];
-    if (value) { setGateway(value, strlen(value)); }
-//    value = config.get<const char*>("subnet");
-    value = config["subnet"];
-    if (value) { setSubnetMask(value, strlen(value)); }
-    // Send to WiFi module (consistency check is done inside send functions)
-    m_credentialSent = false;
+    bool success = true;
+    const char* tempAuthType = config["auth_type"];
+    const char* tempSSID = config["ssid"];
+    const char* tempPassword = config["password"];
+    const char* tempUsername = config["username"];
+    const char* tempStaticIP = config["static"];
+    const char* tempGatewayIP = config["gateway"];
+    const char* tempSubnetIP = config["subnet"];
+    const char* tempDns1 = config["dns1"];
+    const char* tempDns2 = config["dns2"];
+
+    setWiFiConfig(credentials::AUTH_TYPE, tempAuthType,strlen(tempAuthType));
+    if(strncmp(m_wifiAuthType, "NONE", 4) == 0)
+    {
+        setWiFiConfig(credentials::SSID, tempSSID,strlen(tempSSID));
+        setWiFiConfig(credentials::PASSWORD, NULL,NULL);
+        setWiFiConfig(credentials::USERNAME, NULL,NULL);
+    }
+    else if(strncmp(m_wifiAuthType, "WPA-PSK", 7) == 0)
+    {
+        setWiFiConfig(credentials::SSID, tempSSID,strlen(tempSSID));
+        setWiFiConfig(credentials::PASSWORD, tempPassword,strlen(tempPassword));
+        setWiFiConfig(credentials::USERNAME, NULL,NULL);
+    }
+    else if(strncmp(m_wifiAuthType, "EAP-PEAP", 8) == 0)
+    {
+        setWiFiConfig(credentials::SSID, tempSSID,strlen(tempSSID));
+        setWiFiConfig(credentials::PASSWORD, tempPassword,strlen(tempPassword));
+        setWiFiConfig(credentials::USERNAME, tempUsername,strlen(tempUsername));
+    }
+    else if(strncmp(m_wifiAuthType, "EAP-TLS", 7) == 0)
+    {
+        setWiFiConfig(credentials::SSID, tempSSID,strlen(tempSSID));
+        setWiFiConfig(credentials::PASSWORD, tempPassword,strlen(tempPassword));
+    }
+    else if(strncmp(m_wifiAuthType, "STATIC-NONE", 11) == 0)               //to be functional
+    {
+        setWiFiConfig(credentials::SSID, tempSSID,strlen(tempSSID));
+        setWiFiConfig(credentials::PASSWORD, NULL,NULL);
+        setWiFiConfig(credentials::USERNAME, NULL,NULL);
+        setStaticIP(staticIP::STATIC_IP,tempStaticIP,strlen(tempStaticIP));
+        setStaticIP(staticIP::GATEWAY_IP,tempGatewayIP,strlen(tempGatewayIP));
+        setStaticIP(staticIP::SUBNET_IP,tempSubnetIP,strlen(tempSubnetIP));
+        setStaticIP(staticIP::DNS1_IP,tempDns1,strlen(tempDns1));
+        setStaticIP(staticIP::DNS2_IP,tempDns2,strlen(tempDns2));
+    }
+    else if(strncmp(m_wifiAuthType, "STATIC-WPA-PSK", 14) == 0)            //to be functional
+    {
+        setWiFiConfig(credentials::SSID, tempSSID,strlen(tempSSID));
+        setWiFiConfig(credentials::PASSWORD, tempPassword,strlen(tempPassword));
+        setWiFiConfig(credentials::USERNAME, NULL,NULL);
+        setStaticIP(staticIP::STATIC_IP,tempStaticIP,strlen(tempStaticIP));
+        setStaticIP(staticIP::GATEWAY_IP,tempGatewayIP,strlen(tempGatewayIP));
+        setStaticIP(staticIP::SUBNET_IP,tempSubnetIP,strlen(tempSubnetIP));
+        setStaticIP(staticIP::DNS1_IP,tempDns1,strlen(tempDns1));
+        setStaticIP(staticIP::DNS2_IP,tempDns2,strlen(tempDns2));
+    }
+    else if(strncmp(m_wifiAuthType, "STATIC-EAP-PEAP", 15) == 0)
+    {
+        setWiFiConfig(credentials::SSID, tempSSID,strlen(tempSSID));
+        setWiFiConfig(credentials::PASSWORD, tempPassword,strlen(tempPassword));
+        setWiFiConfig(credentials::USERNAME, tempUsername,strlen(tempUsername));
+        setStaticIP(staticIP::STATIC_IP,tempStaticIP,strlen(tempStaticIP));
+        setStaticIP(staticIP::GATEWAY_IP,tempGatewayIP,strlen(tempGatewayIP));
+        setStaticIP(staticIP::SUBNET_IP,tempSubnetIP,strlen(tempSubnetIP));
+        setStaticIP(staticIP::DNS1_IP,tempDns1,strlen(tempDns1));
+        setStaticIP(staticIP::DNS2_IP,tempDns2,strlen(tempDns2));
+    }
+    else if(strncmp(m_wifiAuthType, "STATIC-EAP-TLS", 14) == 0)
+    {
+        setWiFiConfig(credentials::SSID, tempSSID,strlen(tempSSID));
+        setWiFiConfig(credentials::PASSWORD, tempPassword,strlen(tempPassword));
+       // setWiFiConfig(credentials::USERNAME, tempUsername,strlen(tempUsername));
+        setStaticIP(staticIP::STATIC_IP,tempStaticIP,strlen(tempStaticIP));
+        setStaticIP(staticIP::GATEWAY_IP,tempGatewayIP,strlen(tempGatewayIP));
+        setStaticIP(staticIP::SUBNET_IP,tempSubnetIP,strlen(tempSubnetIP));
+        setStaticIP(staticIP::DNS1_IP,tempDns1,strlen(tempDns1));
+        setStaticIP(staticIP::DNS2_IP,tempDns2,strlen(tempDns2));
+    }
+    else
+    {
+        success = false;
+    }
+    if(debugMode) {
+        debugPrint(F("SSID      : "),false); debugPrint(m_ssid);
+        debugPrint(F("Password  : "),false); debugPrint(m_psk);
+        debugPrint(F("Username  : "),false); debugPrint(m_username);
+        debugPrint(F("Static IP : "),false); debugPrint(m_staticIP);
+        debugPrint(F("Subnet    : "),false); debugPrint(m_staticSubnet);
+        debugPrint(F("Gateway   : "),false); debugPrint(m_staticGateway);
+        debugPrint(F("Auth Type : "),false); debugPrint(m_wifiAuthType);
+        debugPrint(F("DNS 1     : "),false); debugPrint(m_dns1);
+        debugPrint(F("DNS 2     : "),false); debugPrint(m_dns2);
+    }
+
     sendWiFiCredentials();
     sendStaticConfig();
     return success;
-};
+    
+}
 
-void IUESP8285::setSSID(const char *ssid, uint8_t length)
+// bool IUESP8285::configure(JsonVariant &config)
+// {
+//     bool success = true;  // success if at least "ssid" and "psk" found
+//     const char *value;
+// //    value = config.get<const char*>("ssid");
+//     value = config["ssid"];
+//     if (value) { setSSID(value, strlen(value)); }
+//     else { success = false; }
+// //    value = config.get<const char*>("psk");
+//     value = config["password"];
+//     if (value) { setPassword(value, strlen(value)); }
+//     else { success = false; }
+// //    value = config.get<const char*>("static");
+//     value = config["static"];
+//     if (value) { setStaticIP(value, strlen(value)); }
+// //    value = config.get<const char*>("gateway");
+//     value = config["gateway"];
+//     if (value) { setGateway(value, strlen(value)); }
+// //    value = config.get<const char*>("subnet");
+//     value = config["subnet"];
+//     if (value) { setSubnetMask(value, strlen(value)); }
+//     // Send to WiFi module (consistency check is done inside send functions)
+//     m_credentialSent = false;
+//     sendWiFiCredentials();
+//     sendStaticConfig();
+//     return success;
+// };
+
+void IUESP8285::setWiFiConfig(credentials type, const char *config, uint8_t length)
 {
     if (m_credentialValidator.hasTimedOut())
     {
         m_credentialValidator.reset();
     }
-    for (uint8_t i = 0; i < wifiCredentialLength; i++) {
-        m_psk[i] = 0;
-    }
     uint8_t charCount = min(wifiCredentialLength, length);
-    strncpy(m_ssid, ssid, charCount);
-    for (uint8_t i = charCount; i < wifiCredentialLength; ++i) {
-        m_ssid[i] = 0;
-    }
-    m_credentialValidator.receivedMessage(0);
-    m_credentialSent = false;
-}
-
-void IUESP8285::setPassword(const char *psk, uint8_t length)
-{
-    if (m_credentialValidator.hasTimedOut())
+    switch (type)
     {
-        m_credentialValidator.reset();
+    case AUTH_TYPE:
+        strncpy(m_wifiAuthType, config, charCount);
+        for (uint8_t i = charCount; i < wifiCredentialLength; ++i) {
+            m_wifiAuthType[i] = 0;
+        }
+        break;
+    case SSID:
+        strncpy(m_ssid, config, charCount);
+        for (uint8_t i = charCount; i < wifiCredentialLength; ++i) {
+            m_ssid[i] = 0;
+        }
+        break;   
+    case PASSWORD:
+        strncpy(m_psk, config, charCount);
+        for (uint8_t i = charCount; i < wifiCredentialLength; ++i) {
+            m_psk[i] = 0;
+        }
+        break;
+    case USERNAME:
+        strncpy(m_username, config, charCount);
+        for (uint8_t i = charCount; i < wifiCredentialLength; ++i) {
+            m_username[i] = 0;
+        }
+        break;
+    default:
+        break;
     }
-    uint8_t charCount = min(wifiCredentialLength, length);
-    strncpy(m_psk, psk, charCount);
-    for (uint8_t i = charCount; i < wifiCredentialLength; ++i) {
-        m_psk[i] = 0;
-    }
-    m_credentialValidator.receivedMessage(1);
+    m_credentialValidator.receivedMessage(type);
     m_credentialSent = false;
 }
 
-void IUESP8285::setStaticIP(IPAddress staticIP)
+void IUESP8285::setStaticIP(staticIP type, IPAddress IP)
 {
     if (m_staticConfigValidator.hasTimedOut()) {
         m_staticConfigValidator.reset();
     }
-    m_staticIP = staticIP;
-    m_staticConfigValidator.receivedMessage(0);
+    switch (type)
+    {
+    case STATIC_IP:
+        m_staticIP = IP;
+        break;
+    case GATEWAY_IP:
+        m_staticGateway = IP;
+        break;
+    case SUBNET_IP:
+        m_staticSubnet = IP;
+        break;
+    case DNS1_IP:
+        m_dns1 = IP;
+        break;
+    case DNS2_IP:
+        m_dns2 = IP;
+        break;
+    default:
+        break;
+    }
+    m_staticConfigValidator.receivedMessage(type);
     m_staticConfigSent = false;
 }
 
-bool IUESP8285::setStaticIP(const char *staticIP, uint8_t len)
+bool IUESP8285::setStaticIP(staticIP type, const char *IP, uint8_t len)
 {
     IPAddress tempAddress;
     char tempArr[len];
     for (uint8_t i = 0; i < len; ++i) {
-        tempArr[i] = staticIP[i];
+        tempArr[i] = IP[i];
     }
     // Make sure the sub string is null terminated.
-    tempArr[len - 1] = 0;
+    tempArr[len] = 0;
     bool success = tempAddress.fromString(tempArr);
     if (success) {
-        setStaticIP(tempAddress);
+        setStaticIP(type, tempAddress);
     }
     return success;
 }
-
-void IUESP8285::setGateway(IPAddress gatewayIP)
-{
-    if (m_staticConfigValidator.hasTimedOut()) {
-        m_staticConfigValidator.reset();
-    }
-    m_staticGateway = gatewayIP;
-    m_staticConfigValidator.receivedMessage(1);
-    m_staticConfigSent = false;
-}
-
-bool IUESP8285::setGateway(const char *gatewayIP, uint8_t len)
-{
-    IPAddress tempAddress;
-    char tempArr[len];
-    for (uint8_t i = 0; i < len; ++i) {
-        tempArr[i] = gatewayIP[i];
-    }
-    // Make sure the sub string is null terminated.
-    tempArr[len - 1] = 0;
-    bool success = tempAddress.fromString(tempArr);
-    if (success) {
-        setGateway(tempAddress);
-    }
-    return success;
-}
-
-void IUESP8285::setSubnetMask(IPAddress subnetIP)
-{
-    if (m_staticConfigValidator.hasTimedOut()) {
-        m_staticConfigValidator.reset();
-    }
-    m_staticSubnet = subnetIP;
-    m_staticConfigValidator.receivedMessage(2);
-    m_staticConfigSent = false;
-}
-
-bool IUESP8285::setSubnetMask(const char *subnetIP, uint8_t len)
-{
-    IPAddress tempAddress;
-    char tempArr[len];
-    for (uint8_t i = 0; i < len; ++i) {
-        tempArr[i] = subnetIP[i];
-    }
-    // Make sure the sub string is null terminated.
-    tempArr[len - 1] = 0;
-    bool success = tempAddress.fromString(tempArr);
-    if (success) {
-        setSubnetMask(tempAddress);
-    }
-    return success;
-}
-
 
 /* =============================================================================
     User Inbound communication
@@ -448,81 +524,81 @@ void IUESP8285::processUserMessage(char *buff, IUFlash *iuFlashPtr)
         }
         connect();
     }
-    else if (strncmp(buff, "WIFI-SSID-", 10) == 0)
-    {
-        uint16_t len = strlen(buff);
-        if (strcmp(&buff[len - 10], "-DISS-IFIW") != 0)
-        {
-            if (debugMode)
-            {
-                debugPrint("Unparsable SSID");
-            }
-            return;
-        }
-        setSSID(&buff[10], len - 20);
-        sendWiFiCredentials();
-        saveConfigToFlash(iuFlashPtr);
-    }
-    else if (strncmp(buff, "WIFI-PW-", 8) == 0)
-    {
-        uint16_t len = strlen(buff);
-        if (strcmp(&buff[len - 8], "-WP-IFIW") != 0)
-        {
-            if (debugMode)
-            {
-                debugPrint("Unparsable password");
-            }
-            return;
-        }
-        setPassword(&buff[8], len - 16);
-        sendWiFiCredentials();
-        saveConfigToFlash(iuFlashPtr);
-    }
-    else if (strncmp(buff, "WIFI-IP-", 8) == 0)
-    {
-        uint16_t len = strlen(buff);
-        if (strcmp(&buff[len - 8], "-PI-IFIW") != 0 ||
-            !setStaticIP(&buff[8], len - 16))
-        {
-            if (debugMode)
-            {
-                debugPrint("Unparsable Static IP");
-            }
-            return;
-        }
-        sendStaticConfig();
-        saveConfigToFlash(iuFlashPtr);
-    }
-    else if (strncmp(buff, "WIFI-GTW-", 9) == 0)
-    {
-        uint16_t len = strlen(buff);
-        if (strcmp(&buff[len - 9], "-WTG-IFIW") != 0 ||
-            !setGateway(&buff[9], len - 18))
-        {
-            if (debugMode)
-            {
-                debugPrint("Unparsable Gateway IP");
-            }
-            return;
-        }
-        sendStaticConfig();
-        saveConfigToFlash(iuFlashPtr);
-    }
-    else if (strncmp(buff, "WIFI-SM-", 8) == 0)
-    {
-        uint16_t len = strlen(buff);
-        if (strcmp(&buff[len - 8], "-MS-IFIW") != 0 ||
-            !setSubnetMask(&buff[8], len - 16))
-        {
-            if (debugMode)
-            {
-                debugPrint("Unparsable Subnet Mask IP");
-            }
-            return;
-        }
-        sendStaticConfig();
-        saveConfigToFlash(iuFlashPtr);
-    }
+    // else if (strncmp(buff, "WIFI-SSID-", 10) == 0)
+    // {
+    //     uint16_t len = strlen(buff);
+    //     if (strcmp(&buff[len - 10], "-DISS-IFIW") != 0)
+    //     {
+    //         if (debugMode)
+    //         {
+    //             debugPrint("Unparsable SSID");
+    //         }
+    //         return;
+    //     }
+    //     setSSID(&buff[10], len - 20);
+    //     sendWiFiCredentials();
+    //     saveConfigToFlash(iuFlashPtr);
+    // }
+    // else if (strncmp(buff, "WIFI-PW-", 8) == 0)
+    // {
+    //     uint16_t len = strlen(buff);
+    //     if (strcmp(&buff[len - 8], "-WP-IFIW") != 0)
+    //     {
+    //         if (debugMode)
+    //         {
+    //             debugPrint("Unparsable password");
+    //         }
+    //         return;
+    //     }
+    //     setPassword(&buff[8], len - 16);
+    //     sendWiFiCredentials();
+    //     saveConfigToFlash(iuFlashPtr);
+    // }
+    // else if (strncmp(buff, "WIFI-IP-", 8) == 0)
+    // {
+    //     uint16_t len = strlen(buff);
+    //     if (strcmp(&buff[len - 8], "-PI-IFIW") != 0 ||
+    //         !setStaticIP(&buff[8], len - 16))
+    //     {
+    //         if (debugMode)
+    //         {
+    //             debugPrint("Unparsable Static IP");
+    //         }
+    //         return;
+    //     }
+    //     sendStaticConfig();
+    //     saveConfigToFlash(iuFlashPtr);
+    // }
+    // else if (strncmp(buff, "WIFI-GTW-", 9) == 0)
+    // {
+    //     uint16_t len = strlen(buff);
+    //     if (strcmp(&buff[len - 9], "-WTG-IFIW") != 0 ||
+    //         !setGateway(&buff[9], len - 18))
+    //     {
+    //         if (debugMode)
+    //         {
+    //             debugPrint("Unparsable Gateway IP");
+    //         }
+    //         return;
+    //     }
+    //     sendStaticConfig();
+    //     saveConfigToFlash(iuFlashPtr);
+    // }
+    // else if (strncmp(buff, "WIFI-SM-", 8) == 0)
+    // {
+    //     uint16_t len = strlen(buff);
+    //     if (strcmp(&buff[len - 8], "-MS-IFIW") != 0 ||
+    //         !setSubnetMask(&buff[8], len - 16))
+    //     {
+    //         if (debugMode)
+    //         {
+    //             debugPrint("Unparsable Subnet Mask IP");
+    //         }
+    //         return;
+    //     }
+    //     sendStaticConfig();
+    //     saveConfigToFlash(iuFlashPtr);
+    // }
 }
 
 
@@ -566,11 +642,28 @@ bool IUESP8285::processChipMessage()
             if (loopDebugMode) { debugPrint("WIFI_ALERT_CONNECTED"); }
             m_awakeTimerStart = millis();
             m_lastConnectedStatusTime = m_awakeTimerStart;
-            m_setConnectedStatus(true);
+            //m_setConnectedStatus(true);         // uncommented temporarily
             m_working = false;
             break;
         case MSPCommand::WIFI_ALERT_DISCONNECTED:
             if (loopDebugMode) { debugPrint("WIFI_ALERT_DISCONNECTED"); }
+            m_setConnectedStatus(false);
+            if (millis() - m_displayConnectAttemptStart >
+                displayConnectAttemptTimeout)
+            {
+                m_working = false;
+                m_displayConnectAttemptStart = 0;
+            }
+            break;
+        case MSPCommand::MQTT_ALERT_CONNECTED:
+            if (loopDebugMode) { debugPrint("MQTT_ALERT_CONNECTED"); }
+            m_awakeTimerStart = millis();
+            m_lastConnectedStatusTime = m_awakeTimerStart;
+            m_setConnectedStatus(true);
+            m_working = false;
+            break;
+        case MSPCommand::MQTT_ALERT_DISCONNECTED:
+            if (loopDebugMode) { debugPrint("MQTT_ALERT_DISCONNECTED"); }
             m_setConnectedStatus(false);
             if (millis() - m_displayConnectAttemptStart >
                 displayConnectAttemptTimeout)
@@ -617,8 +710,10 @@ void IUESP8285::sendWiFiCredentials()
     if (m_credentialValidator.completed() && !m_credentialSent)
     {
         if (loopDebugMode) { debugPrint(F("Sending WiFi Credentials")); }
+        sendMSPCommand(MSPCommand::WIFI_RECEIVE_AUTH_TYPE, m_wifiAuthType);
         sendMSPCommand(MSPCommand::WIFI_RECEIVE_SSID, m_ssid);
         sendMSPCommand(MSPCommand::WIFI_RECEIVE_PASSWORD, m_psk);
+        // sendMSPCommand(MSPCommand::WIFI_RECEIVE_USERNAME, m_username);
         m_credentialSent = true;
         m_credentialReceptionConfirmed = false;
         m_displayConnectAttemptStart = millis();
@@ -646,6 +741,8 @@ void IUESP8285::sendStaticConfig()
         mspSendIPAddress(MSPCommand::WIFI_RECEIVE_STATIC_IP, m_staticIP);
         mspSendIPAddress(MSPCommand::WIFI_RECEIVE_GATEWAY, m_staticGateway);
         mspSendIPAddress(MSPCommand::WIFI_RECEIVE_SUBNET, m_staticSubnet);
+        mspSendIPAddress(MSPCommand::WIFI_RECEIVE_DNS1, m_dns1);
+        mspSendIPAddress(MSPCommand::WIFI_RECEIVE_DNS2, m_dns2);
         m_staticConfigSent = true;
         m_staticConfigReceptionConfirmed = false;
         m_displayConnectAttemptStart = millis();
@@ -669,6 +766,8 @@ void IUESP8285::forgetStaticConfig()
 void IUESP8285::connect()
 {
     sendMSPCommand(MSPCommand::WIFI_CONNECT);
+    delay(10);
+    sendMSPCommand(MSPCommand::MQTT_CONNECT);
     m_displayConnectAttemptStart = millis();
     m_working = true;
 }
@@ -679,5 +778,7 @@ void IUESP8285::connect()
 void IUESP8285::disconnect()
 {
     sendMSPCommand(MSPCommand::WIFI_DISCONNECT);
+    delay(10);
+    sendMSPCommand(MSPCommand::MQTT_DISCONNECT);
     m_working = true;
 }

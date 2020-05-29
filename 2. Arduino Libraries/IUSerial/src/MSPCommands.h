@@ -26,6 +26,9 @@ namespace MSPCommand
         PUBLISH_DEVICE_DETAILS_MQTT,
 	/* ****** Firmware Version Commands Host to Wifi ******/
 	// Wifi Config
+        ASK_WIFI_CONFIG,
+        SEND_WIFI_CONFIG,
+        WIFI_RECEIVE_AUTH_TYPE,
         WIFI_RECEIVE_SSID,  // Send WiFi SSID
         WIFI_RECEIVE_PASSWORD,  // Send WiFi Password
         WIFI_FORGET_CREDENTIALS,  // Forget saved WiFi credentials
@@ -33,6 +36,10 @@ namespace MSPCommand
         WIFI_RECEIVE_GATEWAY,  // Send Gateway (for Static IP)
         WIFI_RECEIVE_SUBNET,  // Send Subnet (for Static IP)
         WIFI_FORGET_STATIC_CONFIG,  // Forget static IP, gateway & subnet
+        WIFI_RECEIVE_DNS1, 
+        WIFI_RECEIVE_DNS2,
+        
+        
         // Wifi commands
         WIFI_SOFT_RESET,  // WiFi Soft Reset
         WIFI_CONNECT,  // Connect WiFi using saved credentials
@@ -142,6 +149,36 @@ namespace MSPCommand
         WIFI_SET_TX_POWER,
         OTA_INIT_REQUEST,
 	GET_ESP_RSSI,
+        SET_TLS_CERT_URI,
+        SET_TLS_KEY_URI,
+        TLS_INIT_ACK,
+        SET_DIAGNOSTIC_URL,
+        CERT_DOWNLOAD_INIT_ACK,
+        GET_CERT_DOWNLOAD_CONFIG,
+        CERT_UPGRADE_INIT,
+        CERT_UPGRADE_SUCCESS,
+        CERT_UPGRADE_ABORT,
+        CERT_DOWNLOAD_ABORT,
+        CERT_DOWNLOAD_SUCCESS,
+        CERT_NO_DOWNLOAD_AVAILABLE,
+        ALL_MQTT_CONNECT_ATTEMPT_FAILED,
+        CERT_UPGRADE_TRIGGER,
+        CERT_DOWNLOAD_INIT,
+        MQTT_CONNECT,
+        MQTT_DISCONNECT,
+        SET_MQTT_TLS_FLAG,
+        UPGRADE_TLS_SSL_START,
+        DOWNLOAD_TLS_SSL_START,
+        SET_CERT_CONFIG_URL,
+        CERT_INVALID_STATIC_URL,
+        ESP32_FLASH_FILE_WRITE_FAILED,
+        ESP32_FLASH_FILE_READ_FAILED,
+        DELETE_CERT_FILES,
+        READ_CERTS,
+        MQTT_ALERT_CONNECTED,
+        MQTT_ALERT_DISCONNECTED,
+        GET_CERT_COMMOM_URL,
+        SET_CERT_DOWNLOAD_MSGID,
         // Config update (Host - Wifi)
         CONFIG_ACK
 	// ESP32 MSP Commands

@@ -1,4 +1,62 @@
 #################################################################################################################################################################################
+Date: 29 May 2020
+Contributed By : Sidramayya Swami,Darshan Mirajkar,Vikas Gaikwad
+Product Name : vEdge
+Release Name : vEdgeSecurity(MQTTS/HTTPS/NetworkAuthentication Types) and LOR3200 and Memory Optimization 
+Firmware Versions :
+		1. vEdge_main(STM32) : 3.0.0
+		2. vEdge_wifi (ESP32): 3.0.0
+		3. Bootloader L1     : 2.0.0
+		4. Bootloader L2     : 2.0.0
+		5. Factory Firmware  : 2.0.0 
+################################################################################################################################################################################
+
+vEdge MQTT and Network Security release
+Features
+
+vEdge Secure
+   - Provision to configure the common http endpoint from Android app, USB.
+   - Provision to configure the diagnostic http endpoint to published the diagnostic messages in case mqtt is not connected.
+   - Implemented basic username , password based http authentication.
+   - Build the Certificate Downloading mechanism for MQTT TLS , EAP TLS, SSL(https)
+   - Certificate Upgrade mechanism is build.
+   - Certificate checksum validation and config message validation is build.
+   - Build the certificate switching mechanism (update the alternate certificates ).
+   - Added the support of multiple error codes, reason codes, and status messages like ota.
+   - MQTT and WIFI connection status are separated.
+   - Added the new BLE command and ACK messages.
+   - Enabled the HTTPS connection for RAW Data Transmission.
+   - Handled the OTA migration cases for Non-Secure to Secure firmware release.
+   - Replaced the Default HTTPS and MQTT non-secure endpoints with Secure endpoints and secure server.
+LOR3200
+   - Added support for LOR 3200.
+   - WIPE the unused firmware source files.
+   - Memory Footprint of STM32 is optimized for new feature additions.
+Enahancement
+   - BLE Advertising name updated.
+   - Added WiFi Config to ESP32 Internal Flash memory
+   - Added Domain name support to MQTT Server
+   - Added IP Support to MQTT Server
+   - Changed message format of WiFi configuration to JSON.
+   - Added WiFi Connection Based on Network Authentication type.
+   - Added Validation for WiFi Configuration.
+   - Added Validation for HTTPS Configuration.
+   - Added WiFi configuration to Flash recovery.
+   - Added WiFiConfig Commands.
+   - Added support for ESP32 internal and STM32 Internal Flash Erase USB Commands.
+   - Added the mechanism to update the MODBUS Connection , Disconnection status over BLE.
+
+Limitations :
+
+   - Audio running with 4000 Hz Sampling Rate.
+   - Secure Firmware release consumes more network bandwidth compare to non-secure communication (Due to TLS and HTTPS overhead)
+
+Future Enhancement :
+
+   - Reduce the device boot-up time.
+
+   
+#################################################################################################################################################################################
 Date: 12 March 2020
 Contributed By : Sidramayya Swami,Darshan Mirajkar,Vikas Gaikwad
 Product Name : vEdge

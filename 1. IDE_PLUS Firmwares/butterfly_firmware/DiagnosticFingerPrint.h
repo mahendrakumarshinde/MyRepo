@@ -37,18 +37,18 @@
 
   public:
 
-    void setDiagnosticFingerPrint( char* conditionCode,uint8_t parameterId, float speed, uint8_t band, size_t sampleCount,q15_t *amplitudes );
-    void setDiagnosticFingerPrint( char* conditionCode,uint8_t parameterId, float speed, uint8_t band  );
+    // void setDiagnosticFingerPrint( char* conditionCode,uint8_t parameterId, float speed, uint8_t band, size_t sampleCount,q15_t *amplitudes );
+    // void setDiagnosticFingerPrint( char* conditionCode,uint8_t parameterId, float speed, uint8_t band  );
     //void setDiagnosticFingerPrint( char* conditionCode,uint8_t parameterId, float speed, uint8_t band  );
     
     //char* getDiagnosticResult(char* conditionCode);
 
-    float* readCurrentDiagnosticFingerPrintData(bool m_mode,float idx, float idy, float idz);
+    // float* readCurrentDiagnosticFingerPrintData(bool m_mode,float idx, float idy, float idz);
     // char* getDiagnosticFingerPrint();           // return the configured diagnostic parameters
 
 
-    bool isDiagnosticConfigAvailable();         // true /false
-    char*  readDiagnosticConfiguration();      // string
+    // bool isDiagnosticConfigAvailable();         // true /false
+    // char*  readDiagnosticConfiguration();      // string
     // void configureAllfingerprints(JsonVariant &config);       // apply values on real time data.
     
     
@@ -63,7 +63,7 @@
     float higherCutoff(float  m_speedMultiplier,int m_bandValue, float m_freqResolution );//{ return m_speedMultiplier + m_speedMultiplier*band/100}; // get higher cutoff in frequency domain
 
     const char* getFingerprintKeys(JsonObject &config);
-    void publishFingerprintComputation(float* X_fingerprintResult,float* Y_fingerprintResult,float* Z_fingerprintResult);
+    // void publishFingerprintComputation(float* X_fingerprintResult,float* Y_fingerprintResult,float* Z_fingerprintResult);
     const char* generateJSONPayload(JsonObject &config, float* values);
 
     const char* mergeJOSN(JsonObject& dest, JsonObject& src);
