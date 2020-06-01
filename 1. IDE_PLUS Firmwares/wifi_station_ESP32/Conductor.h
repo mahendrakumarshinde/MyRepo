@@ -100,7 +100,7 @@ class Conductor
         static const uint32_t otaPktAckTimeout = 30000;  // ms
         static const uint32_t otaPktReadTimeout = 50000; //ms;
         static const uint32_t otaHttpTimeout = 60000; //ms;
-        static const uint8_t maxMqttClientConnectionCount = 5;
+        static const uint8_t maxMqttClientConnectionCount = 10;
         static const uint8_t maxMqttCertificateDownloadCount = 3;
         static const uint32_t downloadInitRetryTimeout  = 30*1000;   //ms
         /***** Core *****/
@@ -212,6 +212,7 @@ class Conductor
         void connectToWiFi();
         void updateWiFiConfig(char* config,int length);
         void setWiFiConfig();
+        void sendWiFiConfig();
     protected:
         /***** Config from Host *****/      
         char HOST_FIRMWARE_VERSION[8];      //filled when the ESP starts or when it connects to MQTT broker

@@ -672,6 +672,7 @@ void setup()
         opStateFeature.setOnNewValueCallback(operationStateCallback);
         ledManager.resetStatus();
         conductor.changeUsageMode(UsageMode::OPERATION);
+        iuWiFi.softReset();
         /* code uncommented */
         if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor && iuAccelerometer.lsmPresence)
         {

@@ -91,6 +91,7 @@ void setup()
     conductor.activeCertificates = iuWiFiFlash.readMemory(ADDRESS);
 
     conductor.setWiFiConfig();
+    conductor.sendWiFiConfig();
 }
 
 /**

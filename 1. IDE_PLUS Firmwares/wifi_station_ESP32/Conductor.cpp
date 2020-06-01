@@ -2799,6 +2799,14 @@ void Conductor::setWiFiConfig(){
         if(config.containsKey("dns2")){m_dns2.fromString(tempdns2); }
     }
     connectToWiFi();   
+}
+void Conductor::sendWiFiConfig(){
+    
+    hostSerial.mspSendMacAddress(MSPCommand::RECEIVE_WIFI_MAC,m_wifiMAC);
+    hostSerial.sendMSPCommand(MSPCommand::RECEIVE_WIFI_FV,FIRMWARE_VERSION);
+    if(debugMode){
+        debugPrint("Sendig the WiFi MAC and Firmware Version to STM32");
+    }
 }     
 void Conductor::configureDiagnosticEndpointFromFlash(IUESPFlash::storedConfig configType){
         // Update the URL variable
