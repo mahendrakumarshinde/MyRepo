@@ -4366,7 +4366,7 @@ void Conductor::prepareRawDataPacketAndSend(char axis) {
             memcpy(rawData.txRawValues, RawDataState::rawAccelerationZ, IUMessageFormat::maxBlockSize * 2);
             break;
     }
-    iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 8000000,
+    iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 10000000,
                                         (char*) &rawData, sizeof rawData);
     if (loopDebugMode) {
         debugPrint("Sent ", false);debugPrint(axis,false);debugPrint(" data which was recorded at ",false);
@@ -4692,7 +4692,7 @@ void Conductor::setConductorMacAddress() {
         iuBluetooth.enterATCommandInterface();
         char BLE_MAC_Address[20];
         char New_BLE_MAC_Address[13];
-        uint8_t retryCount = 3;
+        uint8_t retryCount = 5;
         int mac_Response = iuBluetooth.sendATCommand("mac?", BLE_MAC_Address, 20);
         debugPrint("BLE MAC ID:",false);debugPrint(BLE_MAC_Address,true);
         strncpy(New_BLE_MAC_Address, BLE_MAC_Address + 6,11);
@@ -4720,7 +4720,9 @@ void Conductor::setConductorMacAddress() {
                         debugPrint("Found the BLE MAC ADDRESS");
                     }
                     break;
-                 }
+                 }     
+                iuBluetooth.softReset();
+                delay(500);
                 if(i>=2){
                     // RESET the Device   
                     if(debugMode){
