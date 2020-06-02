@@ -44,7 +44,7 @@ class IUMQTTHelper
         // Will definition
         static const uint8_t WILL_QOS = 0;
         static const bool WILL_RETAIN = false;
-        bool TLS_ENABLE = false;
+        // bool TLS_ENABLE = false;
         uint8_t mqttConnected = 0;
         /***** Core *****/
         IUMQTTHelper(const char * serverIP, uint16_t serverPort,

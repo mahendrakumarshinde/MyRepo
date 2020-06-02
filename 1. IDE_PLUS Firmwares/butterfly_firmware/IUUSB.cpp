@@ -46,7 +46,8 @@ bool IUUSB::readCharCustomProtocol()
             (m_bufferIndex == 19 && strncmp(m_buffer, "IUGET_OTAFLAG_VALUE", 19)== 0) ||
             (m_bufferIndex == 16 && strncmp(m_buffer, "IUSET_OTAFLAG_00", 16)== 0) || 
             (m_bufferIndex == 16 && strncmp(m_buffer, "IUSET_OTAFLAG_01", 16)== 0) || 
-            (m_bufferIndex == 16 && strncmp(m_buffer, "IUSET_OTAFLAG_02", 16)== 0) ||         
+            (m_bufferIndex == 16 && strncmp(m_buffer, "IUSET_OTAFLAG_02", 16)== 0) ||
+            (m_bufferIndex == 16 && strncmp(m_buffer, "IUSET_OTAFLAG_03", 16)== 0) ||         
             (m_bufferIndex == 21 && strncmp(m_buffer, "IUSET_ERASE_EXT_FLASH", 21)== 0) ||
             (m_bufferIndex == 16 && strncmp(m_buffer, "IUGET_WIFI_TXPWR", 16)== 0) ||
             (m_bufferIndex == 19 && strncmp(m_buffer, "IUGET_MODBUS_CONFIG", 19)== 0) ||
