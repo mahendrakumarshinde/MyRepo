@@ -5418,12 +5418,13 @@ void Conductor::otaChkFwdnldTmout()
     // if upgrade success response is not received before timeout , switch to Operation Mode
     if (m_downloadSuccess == true && m_upgradeSuccess == false)
     {
-        if ( (now - m_downloadSuccessStartTime ) > m_upgradeMessageTimeout )
+        if ( (now - m_downloadSuccessStartTime ) > 5000 )
         {
-            certDownloadInProgress = false;
-            m_downloadSuccess = false;
             if (iuWiFi.isConnected() || m_mqttConnected == true)
-            {
+            {   
+                certDownloadInProgress = false;
+                m_downloadSuccess = false;
+                m_downloadSuccessStartTime = 0;
                 // Certificate Upgrade went Successful
                 ledManager.overrideColor(RGB_PURPLE);
                 sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_SUCCESS,CERT_UPGRADE_COMPLETE,"CERT-RCA-0000");
@@ -5435,20 +5436,33 @@ void Conductor::otaChkFwdnldTmout()
                     ledManager.stopColorOverride();
                     delay(200);
                 }
+                if (loopDebugMode)
+                {
+                    debugPrint("CERT - Upgrade Success");
+                }
+                if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA/CERT -> OPERATION")); }
+                iuWiFi.m_setLastConfirmedPublication();
+                conductor.changeUsageMode(UsageMode::OPERATION);
                 if(!otaSendMsg){
-                    iuWiFi.softReset();
+                    iuWiFi.hardReset();
                 }
-            }else
-            {
-                ledManager.overrideColor(RGB_ORANGE);
-                sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_ABORT,CERT_UPGRADE_ERR,"CERT-RCA-0013");
-                for(int i = 0 ; i < 20; i++) {
-                    ledManager.overrideColor(RGB_RED);
-                    delay(200);
-                    ledManager.stopColorOverride();
-                    delay(200);
-                }
+            
             }
+                
+        }
+        if((now - m_downloadSuccessStartTime ) > m_upgradeMessageTimeout && m_mqttConnected == false )
+        {
+            certDownloadInProgress = false;
+            m_downloadSuccess = false;
+            ledManager.overrideColor(RGB_ORANGE);
+            sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_ABORT,CERT_UPGRADE_ERR,"CERT-RCA-0013");
+            for(int i = 0 ; i < 20; i++) {
+                ledManager.overrideColor(RGB_RED);
+                delay(200);
+                ledManager.stopColorOverride();
+                delay(200);
+            }
+            
             if (loopDebugMode)
             {
                 debugPrint("CERT - Download Request Timeout, Upgrade Status not received ");
@@ -5456,11 +5470,13 @@ void Conductor::otaChkFwdnldTmout()
             if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA/CERT -> OPERATION")); }
             iuWiFi.m_setLastConfirmedPublication();
             conductor.changeUsageMode(UsageMode::OPERATION);
+            if(!otaSendMsg){
+                iuWiFi.hardReset();
+            }
         }
     }    
     
 }
-
 /**
  * @brief 
  * This function does the FW validation after OTA process downloads new FW.
@@ -6016,7 +6032,7 @@ void Conductor::sendOtaStatus()
         /* Send Error message only once. Not to send on every bootup */
         iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,OTA_FW_VALIDATION_SUCCESS);
         delay(3000);
-        iuWiFi.softReset();
+        iuWiFi.hardReset();
     }
 }
 
