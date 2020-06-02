@@ -289,6 +289,8 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
              waitingForPktAck = false;
              otaInitTimeoutFlag = false;
              downloadInitTimer = true;
+             certificateDownloadInProgress = false;
+             certDownloadInitAck = false;
              publishedDiagnosticMessage(buffer,bufferLength);
              delay(10);
              
@@ -594,12 +596,12 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 mqttHelper.setCredentials(m_mqttUsername, m_mqttPassword);
             }
             break;
-        case MSPCommand::SET_MQTT_TLS_FLAG:
-             m_tls_enabled = bool(strtol(buffer, NULL, 0));
-            //  hostSerial.write("TLS Status :");hostSerial.write(m_tls_enabled);
-            //  hostSerial.write("\n");
-             mqttHelper.TLS_ENABLE = m_tls_enabled;
-            break; 
+        // case MSPCommand::SET_MQTT_TLS_FLAG:
+        //      m_tls_enabled = bool(strtol(buffer, NULL, 0));
+        //     //  hostSerial.write("TLS Status :");hostSerial.write(m_tls_enabled);
+        //     //  hostSerial.write("\n");
+        //      mqttHelper.TLS_ENABLE = m_tls_enabled;
+        //     break; 
         /********** Diagnostic Fingerprints Commands **************/    
         case MSPCommand::RECEIVE_DIAGNOSTIC_ACK:
           // Send the Ack to Topic
@@ -1054,7 +1056,7 @@ bool Conductor::getConfigFromMainBoard()
 {
     uint32_t startTime = millis();
     uint32_t current = startTime;
-    while (uint64_t(m_bleMAC) == 0 && (millis() - startTime) < 10000 )
+    while (uint64_t(m_bleMAC) == 0 && (millis() - startTime) < 2000 )
     {
         if (current - startTime > hostResponseTimeout)
         {   

@@ -1268,7 +1268,7 @@ void Conductor::readForceOtaConfig()
   // Open the configuration file
   File myFile = DOSFS.open(filename,"r");
   
-  const size_t bufferSize = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(4) + 108;
+  const size_t bufferSize = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(4) + 208;
   StaticJsonBuffer<bufferSize> jsonBuffer;
 
   // Parse the root object
@@ -1295,7 +1295,7 @@ void Conductor::readForceOtaConfig()
             m_mqttServerPort = mqttport;
             m_mqttUserName = config["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
             m_mqttPassword = config["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
-            m_tls_enabled = config["mqtt"]["tls"];
+            // m_tls_enabled = config["mqtt"]["tls"];
             m_accountId = config["accountid"];
             File mqttFile = DOSFS.open("MQTT.conf","w");
             if(mqttFile)
@@ -1317,8 +1317,8 @@ void Conductor::readForceOtaConfig()
                 debugPrint(m_mqttUserName);
                 debugPrint(F("Mqtt Password :"),false);
                 debugPrint(m_mqttPassword);
-                debugPrint(F("TLS ENABLE:"),false);
-                debugPrint(m_tls_enabled);
+                // debugPrint(F("TLS ENABLE:"),false);
+                // debugPrint(m_tls_enabled);
                 debugPrint(F("Account ID :"));
                 debugPrint(m_accountId);
             }   
@@ -1335,7 +1335,7 @@ void Conductor::readForceOtaConfig()
   m_mqttServerPort = mqttport;
   m_mqttUserName = root["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
   m_mqttPassword = root["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
-  m_tls_enabled = root["mqtt"]["tls"];
+//   m_tls_enabled = root["mqtt"]["tls"];
   m_accountId = root["accountid"];
   
   iuWiFi.hardReset();
@@ -1348,8 +1348,8 @@ void Conductor::readForceOtaConfig()
         debugPrint(m_mqttUserName);
         debugPrint(F("Mqtt Password :"),false);
         debugPrint(m_mqttPassword);
-        debugPrint(F("TLS ENABLE:"),false);
-        debugPrint(m_tls_enabled);
+        // debugPrint(F("TLS ENABLE:"),false);
+        // debugPrint(m_tls_enabled);
         debugPrint(F("Account ID :"));
         debugPrint(m_accountId);
   }   
@@ -2210,14 +2210,14 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     const char* _serverPort;
                     const char* _UserName;
                     const char* _Password;
-                    const char* _tls;
+                    // const char* _tls;
 
                     JsonObject& config = configureJsonFromFlash("MQTT.conf",1);
                     _serverIP = config["mqtt"]["mqttServerIP"];
                     _serverPort = config["mqtt"]["port"];
                     _UserName = config["mqtt"]["username"];
                     _Password = config["mqtt"]["password"];
-                    _tls = config["mqtt"]["tls"];
+                    // _tls = config["mqtt"]["tls"];
 
 
                     iuUSB.port->println("*****MQTT_CONFIG*****");
@@ -2229,8 +2229,8 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuUSB.port->println(_UserName);
                     iuUSB.port->print("MQTT_PASSWORD : ");
                     iuUSB.port->println(_Password);
-                    iuUSB.port->print("MQTT_TLS : ");
-                    iuUSB.port->println(_tls);
+                    // iuUSB.port->print("MQTT_TLS : ");
+                    // iuUSB.port->println(_tls);
                   }else{
                     debugPrint(F("MQTT.conf file does not exists"));
                   }
@@ -2337,6 +2337,24 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     }
                     if(value >= 0 && value < 4 )
                         iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,value);
+                    delay(100);
+                }
+                if (strcmp(buff, "IUSET_OTAFLAG_03") == 0)
+                {
+                    uint32_t cmdStrTime = millis();
+                    uint8_t value = 0xFF;
+                    while(iuUSB.port->available() > 0)
+                    {
+                        value = iuUSB.port->parseInt();
+                        iuUSB.port->print("Value:");
+                        iuUSB.port->println(value);
+                        if((millis() - cmdStrTime) > 7000)
+                            value = 0xFF;
+                        if(value >= 0)
+                            break;
+                    }
+                    if(value >= 0 && value <= 4 )
+                        iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,value);
                     delay(100);
                 }
                 if (strcmp(buff, "IUGET_WIFI_TXPWR") == 0) {
@@ -3275,7 +3293,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 m_mqttServerPort = config["mqtt"]["port"];
                 m_mqttUserName = config["mqtt"]["username"];
                 m_mqttPassword = config["mqtt"]["password"];
-                m_tls_enabled = config["mqtt"]["tls"];
+                // m_tls_enabled = config["mqtt"]["tls"];
                 m_accountId = config["accountid"];
             }
             if(m_mqttUserName == NULL || m_mqttPassword == NULL || m_mqttServerPort == NULL){
@@ -3296,7 +3314,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 m_mqttServerPort = mqttport;
                 m_mqttUserName = config["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
                 m_mqttPassword = config["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
-                m_tls_enabled = config["mqtt"]["tls"];
+                // m_tls_enabled = config["mqtt"]["tls"];
                 m_accountId = config["accountid"];
                 }
                 else{
@@ -3314,8 +3332,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                                   m_mqttUserName);// MQTT_DEFAULT_USERNAME);
             iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_PASSWORD,
                                   m_mqttPassword); //MQTT_DEFAULT_ASSWORD);
-            iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_TLS_FLAG,
-                                 String(m_tls_enabled).c_str()); 
+            // iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_TLS_FLAG,
+            //                      String(m_tls_enabled).c_str()); 
                                   
            break;
           }
@@ -5415,7 +5433,9 @@ void Conductor::otaChkFwdnldTmout()
                     ledManager.stopColorOverride();
                     delay(200);
                 }
-                iuWiFi.softReset();
+                if(!otaSendMsg){
+                    iuWiFi.softReset();
+                }
             }else
             {
                 ledManager.overrideColor(RGB_ORANGE);
@@ -5993,6 +6013,8 @@ void Conductor::sendOtaStatus()
         otaSendMsg = false;
         /* Send Error message only once. Not to send on every bootup */
         iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,OTA_FW_VALIDATION_SUCCESS);
+        delay(3000);
+        iuWiFi.softReset();
     }
 }
 
@@ -6129,7 +6151,7 @@ void Conductor::otaFWValidation()
                         int serverPort = config["mqtt"]["port"];
                         if(serverPort != 8883 && serverPort != 8884){
                             char mqttConfig[510];
-                            sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\",\"tls\":%d}}",MQTT_DEFAULT_SERVER_IP,MQTT_DEFAULT_SERVER_PORT,MQTT_DEFAULT_USERNAME,MQTT_DEFAULT_ASSWORD,MQTT_DEFAULT_TLS_FLAG);
+                            sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\"}}",MQTT_DEFAULT_SERVER_IP,MQTT_DEFAULT_SERVER_PORT,MQTT_DEFAULT_USERNAME,MQTT_DEFAULT_ASSWORD);
                             debugPrint("Loading Default Secure MQTT Config : ",false);debugPrint(mqttConfig);
                             processConfiguration(mqttConfig,true);
                         }
@@ -6446,7 +6468,7 @@ void Conductor::setDefaultMQTT(){
     m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
     strncpy((char *)m_mqttUserName,MQTT_DEFAULT_USERNAME,strlen(MQTT_DEFAULT_USERNAME));
     strncpy((char *)m_mqttPassword,MQTT_DEFAULT_ASSWORD,strlen(MQTT_DEFAULT_ASSWORD));
-    m_tls_enabled = true;
+    // m_tls_enabled = true;
 }
 
 void Conductor::setDefaultHTTP(){

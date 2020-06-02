@@ -70,7 +70,7 @@ void setup()
                                   testGateway, testSubnet);
         conductor.setBleMAC(hostMacAddress);
     #else
-        // conductor.getConfigFromMainBoard();
+        conductor.getConfigFromMainBoard();
     #endif
     // If this point is reached, tell host that WiFi is waking up
     hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_AWAKE);

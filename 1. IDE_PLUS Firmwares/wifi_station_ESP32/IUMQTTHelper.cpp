@@ -116,7 +116,7 @@ void IUMQTTHelper::reconnect()
             debugPrint("Attempting MQTT connection... ", false);
         }
         hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Attempting MQTT Connection");
-        if((m_serverPort == 8883 || m_serverPort == 8884) && TLS_ENABLE == true ){
+        if((m_serverPort == 8883 || m_serverPort == 8884)/* && TLS_ENABLE == true */){
             // m_wifiClient.setCACert(client_ca);
             hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Setting the MQTT TLS Certificates");
             m_wifiClient.setCertificate(conductor.mqtt_client_cert );
@@ -127,12 +127,13 @@ void IUMQTTHelper::reconnect()
                            m_password, DIAGNOSTIC_TOPIC, WILL_QOS, WILL_RETAIN,
                            m_willMessage)) {
             mqttConnected = 0;
+            onConnection();
             if (debugMode) {
                 debugPrint("Success");
             }
-            if (m_onConnectionCallback) {
-                m_onConnectionCallback();
-            }
+            // if (m_onConnectionCallback) {
+            //     m_onConnectionCallback();
+            // }
         } else {
             mqttConnected++;
             if (debugMode) {
