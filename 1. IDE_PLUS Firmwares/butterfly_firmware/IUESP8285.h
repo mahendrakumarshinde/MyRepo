@@ -59,6 +59,8 @@ class IUESP8285 : public IUSerial, public Component
         char espFirmwareVersion[6];
         bool espFirmwareVersionReceived = false;
         int current_rssi = 0;
+         /**** Confirm Publication Timeout ****/
+        uint32_t m_lastConfirmedPublication = 0;
         /***** Core *****/
         IUESP8285(HardwareSerial *serialPort, char *charBuffer,
                   uint16_t bufferSize, PROTOCOL_OPTIONS protocol, uint32_t rate,
@@ -152,7 +154,6 @@ class IUESP8285 : public IUSerial, public Component
         uint32_t m_autoSleepDuration = defaultAutoSleepDuration;
         uint32_t m_lastResponseTime = 0;
         uint32_t m_lastConnectedStatusTime = 0;
-        uint32_t m_lastConfirmedPublication = 0;
         /***** Informative variables *****/
         MacAddress m_macAddress;
         bool m_working = false;

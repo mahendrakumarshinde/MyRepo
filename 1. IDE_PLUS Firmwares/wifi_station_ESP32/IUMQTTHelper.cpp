@@ -20,15 +20,15 @@ char IUMQTTHelper::DEFAULT_WILL_MESSAGE[44] =
     Core
 ============================================================================= */
 
-IUMQTTHelper::IUMQTTHelper(const char * serverIP, uint16_t serverPort,
-                           const char *username, const char *password) :
+IUMQTTHelper::IUMQTTHelper(/*const char * serverIP, uint16_t serverPort,
+                           const char *username, const char *password*/) :
     m_wifiClient(),//m_wifiClientS(),
     client(m_wifiClient)//,client(m_wifiClientS)
 {
-    setServer(serverIP, serverPort);
-    if (username != NULL && password != NULL) {
-        setCredentials(username, password);
-    }
+    // setServer(serverIP, serverPort);
+    // if (username != NULL && password != NULL) {
+    //     setCredentials(username, password);
+    // }
     strncpy(m_willMessage, DEFAULT_WILL_MESSAGE, willMessageMaxLength);
 }
 
@@ -116,7 +116,7 @@ void IUMQTTHelper::reconnect()
             debugPrint("Attempting MQTT connection... ", false);
         }
         hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Attempting MQTT Connection");
-        if((m_serverPort == 8883 || m_serverPort == 8884) && TLS_ENABLE == true ){
+        if((m_serverPort == 8883 || m_serverPort == 8884)/* && TLS_ENABLE == true */){
             // m_wifiClient.setCACert(client_ca);
             hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Setting the MQTT TLS Certificates");
             m_wifiClient.setCertificate(conductor.mqtt_client_cert );
@@ -127,12 +127,13 @@ void IUMQTTHelper::reconnect()
                            m_password, DIAGNOSTIC_TOPIC, WILL_QOS, WILL_RETAIN,
                            m_willMessage)) {
             mqttConnected = 0;
+            onConnection();
             if (debugMode) {
                 debugPrint("Success");
             }
-            if (m_onConnectionCallback) {
-                m_onConnectionCallback();
-            }
+            // if (m_onConnectionCallback) {
+            //     m_onConnectionCallback();
+            // }
         } else {
             mqttConnected++;
             if (debugMode) {

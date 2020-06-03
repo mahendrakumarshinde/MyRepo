@@ -255,6 +255,7 @@ class Conductor
         int httpStatusCodeX, httpStatusCodeY, httpStatusCodeZ;         
         bool XSentToWifi, YsentToWifi, ZsentToWifi;     // TODO optimize using bit vector
         uint32_t RawDataTimeout = 0;
+        uint32_t RawDataTotalTimeout = 0;
         double rawDataRecordedAt, lastPacketSentToESP;
         IUMessageFormat::rawDataPacket rawData;
 
@@ -326,7 +327,7 @@ class Conductor
         uint16_t m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
         const char* m_mqttUserName = MQTT_DEFAULT_USERNAME;
         const char* m_mqttPassword = MQTT_DEFAULT_ASSWORD;
-        bool m_tls_enabled = MQTT_DEFAULT_TLS_FLAG;
+        // bool m_tls_enabled = MQTT_DEFAULT_TLS_FLAG;
         //httpendpoint configuration
         const char* m_httpHost  = HTTP_DEFAULT_HOST;
         uint16_t  m_httpPort  = HTTP_DEFAULT_PORT;

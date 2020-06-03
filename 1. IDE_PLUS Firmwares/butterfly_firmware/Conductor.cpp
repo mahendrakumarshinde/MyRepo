@@ -1268,7 +1268,7 @@ void Conductor::readForceOtaConfig()
   // Open the configuration file
   File myFile = DOSFS.open(filename,"r");
   
-  const size_t bufferSize = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(4) + 108;
+  const size_t bufferSize = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(4) + 208;
   StaticJsonBuffer<bufferSize> jsonBuffer;
 
   // Parse the root object
@@ -1295,7 +1295,7 @@ void Conductor::readForceOtaConfig()
             m_mqttServerPort = mqttport;
             m_mqttUserName = config["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
             m_mqttPassword = config["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
-            m_tls_enabled = config["mqtt"]["tls"];
+            // m_tls_enabled = config["mqtt"]["tls"];
             m_accountId = config["accountid"];
             File mqttFile = DOSFS.open("MQTT.conf","w");
             if(mqttFile)
@@ -1317,8 +1317,8 @@ void Conductor::readForceOtaConfig()
                 debugPrint(m_mqttUserName);
                 debugPrint(F("Mqtt Password :"),false);
                 debugPrint(m_mqttPassword);
-                debugPrint(F("TLS ENABLE:"),false);
-                debugPrint(m_tls_enabled);
+                // debugPrint(F("TLS ENABLE:"),false);
+                // debugPrint(m_tls_enabled);
                 debugPrint(F("Account ID :"));
                 debugPrint(m_accountId);
             }   
@@ -1335,7 +1335,7 @@ void Conductor::readForceOtaConfig()
   m_mqttServerPort = mqttport;
   m_mqttUserName = root["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
   m_mqttPassword = root["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
-  m_tls_enabled = root["mqtt"]["tls"];
+//   m_tls_enabled = root["mqtt"]["tls"];
   m_accountId = root["accountid"];
   
   iuWiFi.hardReset();
@@ -1348,8 +1348,8 @@ void Conductor::readForceOtaConfig()
         debugPrint(m_mqttUserName);
         debugPrint(F("Mqtt Password :"),false);
         debugPrint(m_mqttPassword);
-        debugPrint(F("TLS ENABLE:"),false);
-        debugPrint(m_tls_enabled);
+        // debugPrint(F("TLS ENABLE:"),false);
+        // debugPrint(m_tls_enabled);
         debugPrint(F("Account ID :"));
         debugPrint(m_accountId);
   }   
@@ -1847,6 +1847,7 @@ void Conductor::processCommand(char *buff)
                     debugPrint("Certificate Upgrade Command :",false);
                     debugPrint(buff);
                 }
+                m_mqttConnected = false;
                 iuWiFi.sendMSPCommand(MSPCommand::CERT_UPGRADE_TRIGGER);
             }
             
@@ -2210,14 +2211,14 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     const char* _serverPort;
                     const char* _UserName;
                     const char* _Password;
-                    const char* _tls;
+                    // const char* _tls;
 
                     JsonObject& config = configureJsonFromFlash("MQTT.conf",1);
                     _serverIP = config["mqtt"]["mqttServerIP"];
                     _serverPort = config["mqtt"]["port"];
                     _UserName = config["mqtt"]["username"];
                     _Password = config["mqtt"]["password"];
-                    _tls = config["mqtt"]["tls"];
+                    // _tls = config["mqtt"]["tls"];
 
 
                     iuUSB.port->println("*****MQTT_CONFIG*****");
@@ -2229,8 +2230,8 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuUSB.port->println(_UserName);
                     iuUSB.port->print("MQTT_PASSWORD : ");
                     iuUSB.port->println(_Password);
-                    iuUSB.port->print("MQTT_TLS : ");
-                    iuUSB.port->println(_tls);
+                    // iuUSB.port->print("MQTT_TLS : ");
+                    // iuUSB.port->println(_tls);
                   }else{
                     debugPrint(F("MQTT.conf file does not exists"));
                   }
@@ -2337,6 +2338,24 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     }
                     if(value >= 0 && value < 4 )
                         iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,value);
+                    delay(100);
+                }
+                if (strcmp(buff, "IUSET_OTAFLAG_03") == 0)
+                {
+                    uint32_t cmdStrTime = millis();
+                    uint8_t value = 0xFF;
+                    while(iuUSB.port->available() > 0)
+                    {
+                        value = iuUSB.port->parseInt();
+                        iuUSB.port->print("Value:");
+                        iuUSB.port->println(value);
+                        if((millis() - cmdStrTime) > 7000)
+                            value = 0xFF;
+                        if(value >= 0)
+                            break;
+                    }
+                    if(value >= 0 && value <= 4 )
+                        iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,value);
                     delay(100);
                 }
                 if (strcmp(buff, "IUGET_WIFI_TXPWR") == 0) {
@@ -3275,7 +3294,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 m_mqttServerPort = config["mqtt"]["port"];
                 m_mqttUserName = config["mqtt"]["username"];
                 m_mqttPassword = config["mqtt"]["password"];
-                m_tls_enabled = config["mqtt"]["tls"];
+                // m_tls_enabled = config["mqtt"]["tls"];
                 m_accountId = config["accountid"];
             }
             if(m_mqttUserName == NULL || m_mqttPassword == NULL || m_mqttServerPort == NULL){
@@ -3296,7 +3315,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 m_mqttServerPort = mqttport;
                 m_mqttUserName = config["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
                 m_mqttPassword = config["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
-                m_tls_enabled = config["mqtt"]["tls"];
+                // m_tls_enabled = config["mqtt"]["tls"];
                 m_accountId = config["accountid"];
                 }
                 else{
@@ -3314,8 +3333,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                                   m_mqttUserName);// MQTT_DEFAULT_USERNAME);
             iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_PASSWORD,
                                   m_mqttPassword); //MQTT_DEFAULT_ASSWORD);
-            iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_TLS_FLAG,
-                                 String(m_tls_enabled).c_str()); 
+            // iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_TLS_FLAG,
+            //                      String(m_tls_enabled).c_str()); 
                                   
            break;
           }
@@ -4271,7 +4290,8 @@ void Conductor::rawDataRequest() {
 /**
  * Should be called every loop iteration. If session is in progress, sends stored axis data to the ESP then waits untill
  * HTTP 200 is received for that axis. Does not proceed to next axis if HTTP 200 is not received.
- * TODO : Implement a retry mechanism.
+ * Implemented a retry mechanism. If Any axis not received the response it will retry after 5s.
+ * Retry count = 20000 / 5000; 
  */
 void Conductor::manageRawDataSending() {
     // Start raw data transmission session
@@ -4293,6 +4313,8 @@ void Conductor::manageRawDataSending() {
             prepareRawDataPacketAndSend('X');
             XSentToWifi = true; 
             RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+            RawDataTotalTimeout = millis();
+            iuWiFi.m_lastConfirmedPublication = millis();
             if(loopDebugMode) {
                 debugPrint("Raw data request: X sent to wifi");
             }
@@ -4301,6 +4323,8 @@ void Conductor::manageRawDataSending() {
             prepareRawDataPacketAndSend('Y');
             YsentToWifi = true;
             RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+            RawDataTotalTimeout = millis();
+            iuWiFi.m_lastConfirmedPublication = millis();
             if(loopDebugMode) {
                 debugPrint("Raw data request: X delivered, Y sent to wifi");
             }
@@ -4309,10 +4333,33 @@ void Conductor::manageRawDataSending() {
             prepareRawDataPacketAndSend('Z');
             ZsentToWifi = true;
             RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+            RawDataTotalTimeout = millis();
+            iuWiFi.m_lastConfirmedPublication = millis();
             if(loopDebugMode) {
                 debugPrint("Raw data request: Y delivered, Z sent to wifi");
             }
             // lastPacketSentToESP = millis();
+        } else if((millis() - RawDataTimeout) > 5000 && XSentToWifi && httpStatusCodeX != 200){
+            prepareRawDataPacketAndSend('X');
+            XSentToWifi = true;
+            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+            if(loopDebugMode) {
+                debugPrint("Raw data request: Resending X, X sent to wifi");
+            }
+        } else if((millis() - RawDataTimeout) > 5000 && XSentToWifi && httpStatusCodeX == 200 && httpStatusCodeY != 200 ){
+            prepareRawDataPacketAndSend('Y');
+            YsentToWifi = true;
+            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+            if(loopDebugMode) {
+                debugPrint("Raw data request: Resending Y, Y sent to wifi");
+            }
+        } else if((millis() - RawDataTimeout) > 5000 && XSentToWifi && YsentToWifi && httpStatusCodeX == 200 && httpStatusCodeY == 200 && httpStatusCodeZ != 200 ){
+            prepareRawDataPacketAndSend('Z');
+            ZsentToWifi = true;
+            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+            if(loopDebugMode) {
+                debugPrint("Raw data request: Resending Z, Z sent to wifi");
+            }
         }
         if (httpStatusCodeX == 200 && httpStatusCodeY == 200 && httpStatusCodeZ == 200) {
             // End the transmission session, reset RawDataState::startRawDataCollection and RawDataState::rawDataTransmissionInProgress
@@ -4323,7 +4370,7 @@ void Conductor::manageRawDataSending() {
             RawDataState::startRawDataCollection = false;
             RawDataState::rawDataTransmissionInProgress = false;    
         }
-        if((millis() - RawDataTimeout) > 15000)
+        if((millis() - RawDataTotalTimeout) > 20000)
         { // IDE1.5_PORT_CHANGE -- On timeout of 4 Sec. if no response OK/FAIL then abort transmission
             RawDataState::startRawDataCollection = false;
             RawDataState::rawDataTransmissionInProgress = false;              
@@ -4348,7 +4395,7 @@ void Conductor::prepareRawDataPacketAndSend(char axis) {
             memcpy(rawData.txRawValues, RawDataState::rawAccelerationZ, IUMessageFormat::maxBlockSize * 2);
             break;
     }
-    iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 8000000,
+    iuWiFi.sendLongMSPCommand(MSPCommand::SEND_RAW_DATA, 10000000,
                                         (char*) &rawData, sizeof rawData);
     if (loopDebugMode) {
         debugPrint("Sent ", false);debugPrint(axis,false);debugPrint(" data which was recorded at ",false);
@@ -4674,7 +4721,7 @@ void Conductor::setConductorMacAddress() {
         iuBluetooth.enterATCommandInterface();
         char BLE_MAC_Address[20];
         char New_BLE_MAC_Address[13];
-        uint8_t retryCount = 3;
+        uint8_t retryCount = 5;
         int mac_Response = iuBluetooth.sendATCommand("mac?", BLE_MAC_Address, 20);
         debugPrint("BLE MAC ID:",false);debugPrint(BLE_MAC_Address,true);
         strncpy(New_BLE_MAC_Address, BLE_MAC_Address + 6,11);
@@ -4683,7 +4730,7 @@ void Conductor::setConductorMacAddress() {
         iuBluetooth.queryDeviceName();
         //debugPrint("SET MAC RESPONSE :",false);
         //debugPrint(mac_Response);
-        if( mac_Response < 0 || (BLE_MAC_Address[0] == '0' && BLE_MAC_Address[1] == '0' ) ){
+        if( mac_Response < 0 || (BLE_MAC_Address[0] != '9' /*&& BLE_MAC_Address[1] == '0' */) ){
             
             // Retry to get BLE MAC
             for (size_t i = 0; i < retryCount; i++)
@@ -4697,12 +4744,17 @@ void Conductor::setConductorMacAddress() {
                     debugPrint("BLE MAC ID IN RETRY : ",false);
                     debugPrint(BLE_MAC_Address);
                 }                    
-                if(mac_Response < 0 && ( BLE_MAC_Address[0] != '9')){
+                if(mac_Response > 0 && ( BLE_MAC_Address[0] == '9')){
                     if(debugMode){
                         debugPrint("Found the BLE MAC ADDRESS");
                     }
                     break;
-                 }
+                 }     
+                iuBluetooth.softReset();
+                if(debugMode){
+                        debugPrint("BLE Soft Reset");
+                }
+                delay(500);
                 if(i>=2){
                     // RESET the Device   
                     if(debugMode){
@@ -5398,12 +5450,13 @@ void Conductor::otaChkFwdnldTmout()
     // if upgrade success response is not received before timeout , switch to Operation Mode
     if (m_downloadSuccess == true && m_upgradeSuccess == false)
     {
-        if ( (now - m_downloadSuccessStartTime ) > m_upgradeMessageTimeout )
+        if ( (now - m_downloadSuccessStartTime ) > 5000 )
         {
-            certDownloadInProgress = false;
-            m_downloadSuccess = false;
             if (iuWiFi.isConnected() || m_mqttConnected == true)
-            {
+            {   
+                certDownloadInProgress = false;
+                m_downloadSuccess = false;
+                // m_downloadSuccessStartTime = millis();
                 // Certificate Upgrade went Successful
                 ledManager.overrideColor(RGB_PURPLE);
                 sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_SUCCESS,CERT_UPGRADE_COMPLETE,"CERT-RCA-0000");
@@ -5415,18 +5468,33 @@ void Conductor::otaChkFwdnldTmout()
                     ledManager.stopColorOverride();
                     delay(200);
                 }
-                iuWiFi.softReset();
-            }else
-            {
-                ledManager.overrideColor(RGB_ORANGE);
-                sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_ABORT,CERT_UPGRADE_ERR,"CERT-RCA-0013");
-                for(int i = 0 ; i < 20; i++) {
-                    ledManager.overrideColor(RGB_RED);
-                    delay(200);
-                    ledManager.stopColorOverride();
-                    delay(200);
+                if (loopDebugMode)
+                {
+                    debugPrint("CERT - Upgrade Success");
                 }
+                if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA/CERT -> OPERATION")); }
+                iuWiFi.m_setLastConfirmedPublication();
+                conductor.changeUsageMode(UsageMode::OPERATION);
+                if(!otaSendMsg){
+                    iuWiFi.hardReset();
+                }
+            
             }
+                
+        }
+        if((now - m_downloadSuccessStartTime ) > m_upgradeMessageTimeout && m_mqttConnected == false )
+        {
+            certDownloadInProgress = false;
+            m_downloadSuccess = false;
+            ledManager.overrideColor(RGB_ORANGE);
+            sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_ABORT,CERT_UPGRADE_ERR,"CERT-RCA-0013");
+            for(int i = 0 ; i < 20; i++) {
+                ledManager.overrideColor(RGB_RED);
+                delay(200);
+                ledManager.stopColorOverride();
+                delay(200);
+            }
+            
             if (loopDebugMode)
             {
                 debugPrint("CERT - Download Request Timeout, Upgrade Status not received ");
@@ -5434,11 +5502,13 @@ void Conductor::otaChkFwdnldTmout()
             if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA/CERT -> OPERATION")); }
             iuWiFi.m_setLastConfirmedPublication();
             conductor.changeUsageMode(UsageMode::OPERATION);
+            if(!otaSendMsg){
+                iuWiFi.hardReset();
+            }
         }
     }    
     
 }
-
 /**
  * @brief 
  * This function does the FW validation after OTA process downloads new FW.
@@ -5993,6 +6063,8 @@ void Conductor::sendOtaStatus()
         otaSendMsg = false;
         /* Send Error message only once. Not to send on every bootup */
         iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,OTA_FW_VALIDATION_SUCCESS);
+        delay(3000);
+        iuWiFi.hardReset();
     }
 }
 
@@ -6129,7 +6201,7 @@ void Conductor::otaFWValidation()
                         int serverPort = config["mqtt"]["port"];
                         if(serverPort != 8883 && serverPort != 8884){
                             char mqttConfig[510];
-                            sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\",\"tls\":%d}}",MQTT_DEFAULT_SERVER_IP,MQTT_DEFAULT_SERVER_PORT,MQTT_DEFAULT_USERNAME,MQTT_DEFAULT_ASSWORD,MQTT_DEFAULT_TLS_FLAG);
+                            sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\"}}",MQTT_DEFAULT_SERVER_IP,MQTT_DEFAULT_SERVER_PORT,MQTT_DEFAULT_USERNAME,MQTT_DEFAULT_ASSWORD);
                             debugPrint("Loading Default Secure MQTT Config : ",false);debugPrint(mqttConfig);
                             processConfiguration(mqttConfig,true);
                         }
@@ -6446,7 +6518,7 @@ void Conductor::setDefaultMQTT(){
     m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
     strncpy((char *)m_mqttUserName,MQTT_DEFAULT_USERNAME,strlen(MQTT_DEFAULT_USERNAME));
     strncpy((char *)m_mqttPassword,MQTT_DEFAULT_ASSWORD,strlen(MQTT_DEFAULT_ASSWORD));
-    m_tls_enabled = true;
+    // m_tls_enabled = true;
 }
 
 void Conductor::setDefaultHTTP(){
