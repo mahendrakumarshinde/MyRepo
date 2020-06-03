@@ -1735,7 +1735,6 @@ void Conductor::updateWiFiStatusCycle()
     if (now - m_lastWifiStatusUpdate > wifiStatusUpdateDelay)
     {
         updateWiFiStatus();
-        delay(100);
         updateMQTTStatus();
         m_lastWifiStatusUpdate = now;
     }

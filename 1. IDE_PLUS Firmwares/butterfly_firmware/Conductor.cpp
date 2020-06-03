@@ -4341,7 +4341,7 @@ void Conductor::manageRawDataSending() {
             RawDataState::startRawDataCollection = false;
             RawDataState::rawDataTransmissionInProgress = false;    
         }
-        if((millis() - RawDataTimeout) > 15000)
+        if((millis() - RawDataTimeout) > 20000)
         { // IDE1.5_PORT_CHANGE -- On timeout of 4 Sec. if no response OK/FAIL then abort transmission
             RawDataState::startRawDataCollection = false;
             RawDataState::rawDataTransmissionInProgress = false;              
@@ -4722,6 +4722,9 @@ void Conductor::setConductorMacAddress() {
                     break;
                  }     
                 iuBluetooth.softReset();
+                if(debugMode){
+                        debugPrint("BLE Soft Reset");
+                }
                 delay(500);
                 if(i>=2){
                     // RESET the Device   
@@ -5424,7 +5427,7 @@ void Conductor::otaChkFwdnldTmout()
             {   
                 certDownloadInProgress = false;
                 m_downloadSuccess = false;
-                m_downloadSuccessStartTime = 0;
+                // m_downloadSuccessStartTime = millis();
                 // Certificate Upgrade went Successful
                 ledManager.overrideColor(RGB_PURPLE);
                 sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_SUCCESS,CERT_UPGRADE_COMPLETE,"CERT-RCA-0000");
