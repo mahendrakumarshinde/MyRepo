@@ -4289,7 +4289,8 @@ void Conductor::rawDataRequest() {
 /**
  * Should be called every loop iteration. If session is in progress, sends stored axis data to the ESP then waits untill
  * HTTP 200 is received for that axis. Does not proceed to next axis if HTTP 200 is not received.
- * TODO : Implement a retry mechanism.
+ * Implemented a retry mechanism. If Any axis not received the response it will retry after 5s.
+ * Retry count = 20000 / 5000; 
  */
 void Conductor::manageRawDataSending() {
     // Start raw data transmission session
@@ -4311,6 +4312,8 @@ void Conductor::manageRawDataSending() {
             prepareRawDataPacketAndSend('X');
             XSentToWifi = true; 
             RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+            RawDataTotalTimeout = millis();
+            iuWiFi.m_lastConfirmedPublication = millis();
             if(loopDebugMode) {
                 debugPrint("Raw data request: X sent to wifi");
             }
@@ -4319,6 +4322,8 @@ void Conductor::manageRawDataSending() {
             prepareRawDataPacketAndSend('Y');
             YsentToWifi = true;
             RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+            RawDataTotalTimeout = millis();
+            iuWiFi.m_lastConfirmedPublication = millis();
             if(loopDebugMode) {
                 debugPrint("Raw data request: X delivered, Y sent to wifi");
             }
@@ -4327,10 +4332,33 @@ void Conductor::manageRawDataSending() {
             prepareRawDataPacketAndSend('Z');
             ZsentToWifi = true;
             RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+            RawDataTotalTimeout = millis();
+            iuWiFi.m_lastConfirmedPublication = millis();
             if(loopDebugMode) {
                 debugPrint("Raw data request: Y delivered, Z sent to wifi");
             }
             // lastPacketSentToESP = millis();
+        } else if((millis() - RawDataTimeout) > 5000 && XSentToWifi && httpStatusCodeX != 200){
+            prepareRawDataPacketAndSend('X');
+            XSentToWifi = true;
+            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+            if(loopDebugMode) {
+                debugPrint("Raw data request: Resending X, X sent to wifi");
+            }
+        } else if((millis() - RawDataTimeout) > 5000 && XSentToWifi && httpStatusCodeX == 200 && httpStatusCodeY != 200 ){
+            prepareRawDataPacketAndSend('Y');
+            YsentToWifi = true;
+            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+            if(loopDebugMode) {
+                debugPrint("Raw data request: Resending Y, Y sent to wifi");
+            }
+        } else if((millis() - RawDataTimeout) > 5000 && XSentToWifi && YsentToWifi && httpStatusCodeX == 200 && httpStatusCodeY == 200 && httpStatusCodeZ != 200 ){
+            prepareRawDataPacketAndSend('Z');
+            ZsentToWifi = true;
+            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+            if(loopDebugMode) {
+                debugPrint("Raw data request: Resending Z, Z sent to wifi");
+            }
         }
         if (httpStatusCodeX == 200 && httpStatusCodeY == 200 && httpStatusCodeZ == 200) {
             // End the transmission session, reset RawDataState::startRawDataCollection and RawDataState::rawDataTransmissionInProgress
@@ -4341,7 +4369,7 @@ void Conductor::manageRawDataSending() {
             RawDataState::startRawDataCollection = false;
             RawDataState::rawDataTransmissionInProgress = false;    
         }
-        if((millis() - RawDataTimeout) > 20000)
+        if((millis() - RawDataTotalTimeout) > 20000)
         { // IDE1.5_PORT_CHANGE -- On timeout of 4 Sec. if no response OK/FAIL then abort transmission
             RawDataState::startRawDataCollection = false;
             RawDataState::rawDataTransmissionInProgress = false;              
@@ -4701,7 +4729,7 @@ void Conductor::setConductorMacAddress() {
         iuBluetooth.queryDeviceName();
         //debugPrint("SET MAC RESPONSE :",false);
         //debugPrint(mac_Response);
-        if( mac_Response < 0 || (BLE_MAC_Address[0] == '0' && BLE_MAC_Address[1] == '0' ) ){
+        if( mac_Response < 0 || (BLE_MAC_Address[0] != '9' /*&& BLE_MAC_Address[1] == '0' */) ){
             
             // Retry to get BLE MAC
             for (size_t i = 0; i < retryCount; i++)
@@ -4715,7 +4743,7 @@ void Conductor::setConductorMacAddress() {
                     debugPrint("BLE MAC ID IN RETRY : ",false);
                     debugPrint(BLE_MAC_Address);
                 }                    
-                if(mac_Response < 0 && ( BLE_MAC_Address[0] != '9')){
+                if(mac_Response > 0 && ( BLE_MAC_Address[0] == '9')){
                     if(debugMode){
                         debugPrint("Found the BLE MAC ADDRESS");
                     }
