@@ -1847,6 +1847,7 @@ void Conductor::processCommand(char *buff)
                     debugPrint("Certificate Upgrade Command :",false);
                     debugPrint(buff);
                 }
+                m_mqttConnected = false;
                 iuWiFi.sendMSPCommand(MSPCommand::CERT_UPGRADE_TRIGGER);
             }
             
