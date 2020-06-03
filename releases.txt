@@ -45,12 +45,14 @@ Enahancement
    - Added WiFiConfig Commands.
    - Added support for ESP32 internal and STM32 Internal Flash Erase USB Commands.
    - Added the mechanism to update the MODBUS Connection , Disconnection status over BLE.
-
+   - Added Retry mechanism to send the FFT raw data over https.
+   - Updated the logic to handled the invalid BLE MAC ID response (ex. 00:00:00:00:00:00)
 Limitations :
 
    - Audio running with 4000 Hz Sampling Rate.
    - Secure Firmware release consumes more network bandwidth compare to non-secure communication (Due to TLS and HTTPS overhead)
-
+   - No Backward compatibility possible with this binaries.(won't work for firmware version < 3.0.0 )
+   - No Rollback Possible once firmware upgrade from 2.1.0 to 3.0.0
 Future Enhancement :
 
    - Reduce the device boot-up time.
