@@ -20,15 +20,15 @@ char IUMQTTHelper::DEFAULT_WILL_MESSAGE[44] =
     Core
 ============================================================================= */
 
-IUMQTTHelper::IUMQTTHelper(const char * serverIP, uint16_t serverPort,
-                           const char *username, const char *password) :
+IUMQTTHelper::IUMQTTHelper(/*const char * serverIP, uint16_t serverPort,
+                           const char *username, const char *password*/) :
     m_wifiClient(),//m_wifiClientS(),
     client(m_wifiClient)//,client(m_wifiClientS)
 {
-    setServer(serverIP, serverPort);
-    if (username != NULL && password != NULL) {
-        setCredentials(username, password);
-    }
+    // setServer(serverIP, serverPort);
+    // if (username != NULL && password != NULL) {
+    //     setCredentials(username, password);
+    // }
     strncpy(m_willMessage, DEFAULT_WILL_MESSAGE, willMessageMaxLength);
 }
 
