@@ -2944,9 +2944,13 @@ void Conductor:: messageValidation(char* json){
             // Update Certificates Download messageID
             hostSerial.sendMSPCommand(MSPCommand::SET_CERT_DOWNLOAD_MSGID,messageID);
             uint8_t result[CONFIG_TYPE_COUNT]; // 10 , max use 5
+            uint8_t index = 0;
+            if( activeCertificates == 1 ){
+                index = 5;
+            }
             for (size_t i = 0; i < configTypeCount; i++)
             {
-                result[i] =  strcmp(getConfigChecksum(CONFIG_TYPES[i]), (const char* ) configJson["certificates"][i]["hash"] );
+                result[i] =  strcmp(getConfigChecksum(CONFIG_TYPES[i + index]), (const char* ) configJson["certificates"][i]["hash"] );
                 // Serial.println(result[i]);
             }
             
