@@ -1137,6 +1137,9 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             }
             if(dataWritten == true){
                 iuWiFi.sendMSPCommand(MSPCommand::SEND_WIFI_CONFIG,jsonChar.c_str());
+                if(iuWiFi.getPowerMode() != PowerMode::REGULAR){
+                    iuWiFi.setPowerMode(PowerMode::REGULAR);
+                }
                 iuWiFi.configure(variant);
             }
         }else {
