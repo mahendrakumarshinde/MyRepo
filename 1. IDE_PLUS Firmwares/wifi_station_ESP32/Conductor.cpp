@@ -248,6 +248,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 downloadInitTimer = false;
                 // trigger the config downloading can send the messageID 
                 hostSerial.sendMSPCommand(MSPCommand::GET_CERT_DOWNLOAD_CONFIG);
+                Serial.println("NEXT Command SENT...");
             break;
             }
         case MSPCommand::CERT_UPGRADE_INIT:
@@ -722,10 +723,11 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 }
                    
                 delay(200);
+                downloadInitTimer = true;
                 certDownloadInitAck = false;
                 certificateDownloadInProgress = false;
                 certificateDownloadInitInProgress = false;
-                newMqttcertificateAvailable = false;
+                newEapCertificateAvailable = false;
                 newEapPrivateKeyAvailable = false;
                 newMqttcertificateAvailable = false;  
                 newMqttPrivateKeyAvailable = false;
@@ -774,14 +776,14 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 
                 const char* url = config["certUrl"]["url"] ;  
                 String commonUrl = url ;
-                commonUrl +=  m_bleMAC.toString();  // append mac id
+                //commonUrl +=m_bleMAC.toString();  // append mac id //"94:54:93:4A:53:52"; 
                 const char* staticURL = commonUrl.c_str();
                 //Serial.println("\nESP32 DEBUG: GET the Certificates Download Config");
                 String auth = setBasicHTTPAutherization();
+                Serial.print("URL : ");Serial.println(staticURL);
                 int httpCode = httpGetRequest(staticURL,certDownloadResponse,sizeof(certDownloadResponse),auth); 
                 int16_t responseLength = sizeof(certDownloadResponse);
-                //Serial.print("\nHTTP CODE : ");Serial.println(httpCode);
-
+                Serial.print("\nHTTP CODE : ");Serial.println(httpCode);
                 if( responseLength >0 && httpCode == HTTP_CODE_OK  ) {
                     char jsonResponse[responseLength+1];
                     strcpy(jsonResponse,certDownloadResponse);
@@ -859,8 +861,8 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 iuWiFiFlash.removeFile(CONFIG_TYPES[i]);
                 delay(1);
             }
-            iuWiFiFlash.removeFile(IUESPFlash::CFG_STATIC_CERT_ENDPOINT);
-            iuWiFiFlash.removeFile(IUESPFlash::CFG_WIFI);
+            //iuWiFiFlash.removeFile(IUESPFlash::CFG_STATIC_CERT_ENDPOINT);
+            //iuWiFiFlash.removeFile(IUESPFlash::CFG_WIFI);
             iuWiFiFlash.updateValue(ADDRESS,0);
             hostSerial.sendMSPCommand(MSPCommand::DELETE_CERT_FILES,"succefully Deleted, Rebooting ESP");
             ESP.restart();
@@ -1358,7 +1360,7 @@ void Conductor::checkMqttDisconnectionTimeout()
        certDownloadInitAck = false;
        downloadInitTimer = true;
 
-       newMqttcertificateAvailable = false;
+       newEapCertificateAvailable = false;
        newEapPrivateKeyAvailable = false;
        newMqttcertificateAvailable = false;
        newMqttPrivateKeyAvailable = false;
@@ -2536,6 +2538,7 @@ bool Conductor::getDeviceCertificates(IUESPFlash::storedConfig configType, const
                         downloadAborted = true;
                         upgradeReceived = false;
                         http_ota.end();
+                        return false;
                     }
                 } 
                 else
@@ -2546,6 +2549,7 @@ bool Conductor::getDeviceCertificates(IUESPFlash::storedConfig configType, const
                     http_ota.end();
                     downloadAborted =true;
                     upgradeReceived = false;
+                    return false;
                 }
             }
             else
@@ -2596,10 +2600,14 @@ int Conductor::download_tls_ssl_certificates(){
                     JsonVariant config = root;
                     int configTypeCount = config["certificates"].size();
                     bool success = config.success();
-                    //Serial.print("Arry Size : ");Serial.println(configTypeCount);
+                    Serial.print("Arry Size : ");Serial.println(configTypeCount);
                     // Serial.print("CONFIG JSON :");
                     // config.prettyPrintTo(Serial);
                     uint8_t certToUpdate;
+                    int number = 0 ;
+                    if(configTypeCount == 3){
+                        number = 2;
+                    }
                     if(activeCertificates != 0){ 
                         // if(initialFileDownload){
                         //     Serial.println("Initial File Download , Updated Value ");
@@ -2619,11 +2627,12 @@ int Conductor::download_tls_ssl_certificates(){
                             const char* type = config["certificates"][index]["type"];
                             const char* url = config["certificates"][index]["url"];
                             const char* hash = config["certificates"][index]["hash"];
-                            //Serial.println(type);
+                            Serial.print("TYPE : "); Serial.println(type);
+                            Serial.print("URL : ");Serial.println(url);
                             bool downloadSuccess = false;
                             char* checksum ;
                             // Note : upgradeReceived flage is set only for dev testing , can ne removed later (only in this statments not in nested if)
-                            int res = downloadCertificates(type,url,hash,index,certToUpdate);
+                            int res = downloadCertificates(type,url,hash,index + number,certToUpdate);
                             //Serial.print("Output : ");Serial.println(res);
                             if(res != 1){  return 0 ; /*break;*/}   //exit from for loop
                             
@@ -2632,7 +2641,7 @@ int Conductor::download_tls_ssl_certificates(){
                     }else
                     {
                         // TODO : send the status message
-                        //Serial.println("Invalid JSON message configuration");
+                        Serial.println("Invalid JSON message configuration");
                         //hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT,"Invalid JOSN configuration");
                         hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT, String(getRca(CERT_INVALID_CONFIG_JSON)).c_str());
                         downloadAborted = true;
@@ -2928,6 +2937,8 @@ void Conductor:: messageValidation(char* json){
      //StaticJsonBuffer<2048> jsonBuffer;
      DynamicJsonBuffer JsonBuffer;
      JsonVariant configJson = JsonVariant(JsonBuffer.parseObject(json));
+     Serial.println("Message Validation : ");
+     configJson.prettyPrintTo(Serial);
      bool validJson = configJson.success();
      uint8_t configTypeCount = configJson["certificates"].size();
      const char* messageID = configJson["messageId"];
@@ -2944,9 +2955,20 @@ void Conductor:: messageValidation(char* json){
             // Update Certificates Download messageID
             hostSerial.sendMSPCommand(MSPCommand::SET_CERT_DOWNLOAD_MSGID,messageID);
             uint8_t result[CONFIG_TYPE_COUNT]; // 10 , max use 5
+            uint8_t index = 0;
+            if(activeCertificates == 0 && configTypeCount == 3 ){
+                index = 2;
+            }else if(activeCertificates == 0 && configTypeCount == 5 ){
+                index = 0;  
+            }else if(activeCertificates == 1 && configTypeCount == 3 ){
+                  index = 7;  
+            }else if(activeCertificates == 1 && configTypeCount == 5)
+            {
+                index = 5;
+            }
             for (size_t i = 0; i < configTypeCount; i++)
             {
-                result[i] =  strcmp(getConfigChecksum(CONFIG_TYPES[i]), (const char* ) configJson["certificates"][i]["hash"] );
+                result[i] =  strcmp(getConfigChecksum(CONFIG_TYPES[i + index]), (const char* ) configJson["certificates"][i]["hash"] );
                 // Serial.println(result[i]);
             }
             
@@ -3010,7 +3032,7 @@ void Conductor:: messageValidation(char* json){
             }else
             {       if(configTypeCount > 3){
                         // EaP Certificates available for download
-                        newMqttcertificateAvailable = true;
+                        newEapCertificateAvailable = true;
                         newEapPrivateKeyAvailable = true;
                     }    
                     newMqttcertificateAvailable = true;  
@@ -3021,7 +3043,7 @@ void Conductor:: messageValidation(char* json){
         }
     }else
     {
-        //Serial.println("Received Invalid JSON");
+        Serial.println("Received Invalid JSON in msg Validation");
         hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT, String(getRca(CERT_INVALID_CONFIG_JSON)).c_str());
         downloadAborted = true;
     }
@@ -3032,24 +3054,24 @@ int Conductor::downloadCertificates(const char* type,const char* url,const char*
 
     bool downloadSuccess = false;
     char* checksum ;
-    //Serial.print("CERT TYPE : ");Serial.println(CERT_TYPES[index]);
+    Serial.print("CERT TYPE : ");Serial.println(CERT_TYPES[index]);
     // Individual file download is disabled now , rebuilt it                         
     if (( strcmp(type,CERT_TYPES[index]) == 0 ||  upgradeReceived == true) )
     {
         // Download the rootCA.crt and store
-        //Serial.println("\ndownloading initiated.");
+        Serial.println("\ndownloading initiated.");
         if(upgradeReceived && certToUpdate == 1){
-            //Serial.println("Updating Client 1 Files.");
+            Serial.println("Updating Client 1 Files.");
              downloadSuccess = getDeviceCertificates(CONFIG_TYPES[index+5],type,url); // Upgrade client 1
         }else{
-            //Serial.println("Updating Client 0 Files.");
+            Serial.println("Updating Client 0 Files.");
             downloadSuccess = getDeviceCertificates(CONFIG_TYPES[index],type,url);  // Upgrade Cleint 0
         }
         if (downloadSuccess)
         {
             // File Download and stored success
             // Read the certificates and print
-            //Serial.println("downloadSuccess!!!");
+            Serial.println("downloadSuccess!!!");
             //readCertificatesFromFlash(IUESPFlash::CFG_HTTPS_ROOTCA0,type);
             //delay(10);
             if(upgradeReceived && certToUpdate == 1){
@@ -3060,12 +3082,12 @@ int Conductor::downloadCertificates(const char* type,const char* url,const char*
             if (strcmp(hash,checksum) == 0)
             {
                 // TODO : .CERT DOWNLOAD Success
-                //Serial.println("VALIDATION Success");
+                Serial.println("VALIDATION Success");
                 //hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_SUCCESS,".rootCA VALIDATED");
             }else
             {
                 // TODO : Invalid Checksum abort Upgrade
-                // Serial.print("INVALID CHECKSUM ");
+                 Serial.print("INVALID CHECKSUM ");
                 // Serial.println(checksum);
                 hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT, String(getRca(CERT_INVALID_CRT_CHECKSUM)).c_str());
                 downloadAborted = true;
