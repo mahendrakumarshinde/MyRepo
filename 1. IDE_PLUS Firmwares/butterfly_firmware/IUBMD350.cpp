@@ -117,6 +117,16 @@ void IUBMD350::setupHardware()
     pinMode(m_atCmdPin, OUTPUT);
     pinMode(m_resetPin, OUTPUT);
     doFullConfig();
+    enterATCommandInterface();
+    if(setupDebugMode){
+        char BMDVersion[20],bootVersion[20],protocolversion[20],hardwareinfo[20];
+        getBMDwareInfo(BMDVersion,bootVersion,protocolversion,hardwareinfo,20,20,20,20);
+        debugPrint("BMDVersion : ",false);debugPrint(BMDVersion);
+        debugPrint("bootVersion : ",false);debugPrint(bootVersion);
+        debugPrint("protocolVersion : ",false);debugPrint(protocolversion);
+        debugPrint("hardwareInfo :",false);debugPrint(hardwareinfo); 
+        exitATCommandInterface();
+    }
 }
 
 /**
