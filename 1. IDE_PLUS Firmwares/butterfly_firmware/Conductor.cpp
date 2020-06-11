@@ -2717,6 +2717,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             {
                 if (loopDebugMode) { debugPrint(F("OTA File Write Failed, Sending OTA-ERR-FDW-ABORT")); }
                 waitingDnldStrart = false;
+                certDownloadInProgress = false;
                 sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_CHECKSUM_FAIL)).c_str());
                 for(int i = 0 ; i < 15; i++) {
                     ledManager.overrideColor(RGB_RED);
@@ -2779,7 +2780,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             }
             break;
         case MSPCommand::CERT_DOWNLOAD_INIT:
-            if(doOnceFWValid == true || certDownloadInProgress == true)
+            if(certDownloadInProgress == true)
             { // Don't accept new OTA request during Validation of Last OTA
                 if(loopDebugMode) {
                     debugPrint(F("Last Cert Download In-Progress.. Unable to process Certificates Download Init Request"));
@@ -2836,7 +2837,6 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             waitingDnldStrart = false;
             otaInitTimeoutFlag = false;
             certDownloadInProgress = false;
-            m_certDownloadStarted = false;
             m_getDownloadConfig = false;
             sendOtaStatusMsg(MSPCommand::DOWNLOAD_TLS_SSL_START,CERT_DOWNLOAD_STARTED, String(iuOta.getOtaRca(CERT_DOWNLOAD_START)).c_str());
             delay(10);
@@ -3109,6 +3109,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             // }
             break;
         case MSPCommand::WIFI_ALERT_DISCONNECTED:
+            certDownloadInProgress = false;
             if (isBLEConnected()) {
                 iuBluetooth.write("WIFI-DISCONNECTED;");
             }
@@ -5432,7 +5433,7 @@ void Conductor::otaChkFwdnldTmout()
     }
     // Certificates Init Timeout 
     if (certDownloadInProgress == true )
-    {
+    {   
         if ( ((now - certDownloadInitWaitTimeout ) > m_certDownloadInitTimeout ) && m_certDownloadStarted != true && m_getDownloadConfig != true)
         {
             certDownloadInProgress = false;
