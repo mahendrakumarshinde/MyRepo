@@ -237,7 +237,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             updateDiagnosticEndpoint(buffer,bufferLength);
             break;
         case MSPCommand::SEND_WIFI_CONFIG:
-            updateWiFiConfig(buffer,bufferLength);
+            updateWiFiConfig(buffer,bufferLength-1);  // Removed extra byte
             setWiFiConfig();
             break;
         case MSPCommand::CERT_DOWNLOAD_INIT_ACK:
@@ -887,6 +887,9 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 Serial.println("static config READ COMPLETED");
                 break;
             }
+      case MSPCommand::SEND_WIFI_HASH:
+            strcpy(wifiHash,buffer);
+            break;
       case MSPCommand::GET_PENDING_HTTP_CONFIG:
           // Get all the pending configuration messages over http
           

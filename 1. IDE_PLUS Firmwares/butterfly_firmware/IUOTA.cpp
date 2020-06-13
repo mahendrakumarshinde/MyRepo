@@ -270,31 +270,31 @@ bool IUOTA::otaGetMD5(char *folderName,char *fileName, char *md5HashRet)
     String md5hash = "";
     File fwFile;
     snprintf(filepath, 40, "%s/%s", folderName, fileName);
-    if (debugMode) {
-        debugPrint(F("Get MD5 of file:"),false);
-        debugPrint(filepath);
-    }
+    // if (debugMode) {
+    //     debugPrint(F("Get MD5 of file:"),false);
+    //     debugPrint(filepath);
+    // }
     if(DOSFS.exists(filepath))
     {
         fwFile = DOSFS.open(filepath,"r");
         if(fwFile)
         {        
             fileSize = fwFile.size();
-            if (debugMode) {
-                debugPrint(F("File Size:"),false);
-                debugPrint(fileSize);
-            }
+            // if (debugMode) {
+            //     debugPrint(F("File Size:"),false);
+            //     debugPrint(fileSize);
+            // }
             if(fileSize > 0)
             {
                 md5hash = file_md5(fwFile);
-                if (debugMode) {
-                    debugPrint(F("File Name:"),false);
-                    debugPrint(fileName,false);
-                    debugPrint(F(" of size:"),false);
-                    debugPrint(fileSize);
-                    debugPrint(F("MD5 Hash :"),false);
-                    debugPrint(md5hash);
-                }
+                // if (debugMode) {
+                //     debugPrint(F("File Name:"),false);
+                //     debugPrint(fileName,false);
+                //     debugPrint(F(" of size:"),false);
+                //     debugPrint(fileSize);
+                //     debugPrint(F("MD5 Hash :"),false);
+                //     debugPrint(md5hash);
+                // }
                 strcpy(md5HashRet,md5hash.c_str());
             }
             fwFile.close();

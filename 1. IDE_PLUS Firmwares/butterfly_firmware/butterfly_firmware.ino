@@ -800,6 +800,7 @@ void loop()
                         if(nowTime - conductor.lastUpdated >= conductor.modbusConnectionTimeout){
                             conductor.lastUpdated = nowTime;
                             conductor.updateModbusStatus();
+                            conductor.updateWiFiHash();
                         }
 
                     }else

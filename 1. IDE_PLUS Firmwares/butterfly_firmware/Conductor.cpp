@@ -6558,3 +6558,10 @@ bool Conductor::updateModbusStatus(){
     
     return connected;
 }
+
+void Conductor::updateWiFiHash()
+{
+    char wifiHash[34];  
+    iuOta.otaGetMD5(IUFSFlash::CONFIG_SUBDIR,"wifi0.conf",wifiHash);
+    iuWiFi.sendMSPCommand(MSPCommand::SEND_WIFI_HASH,wifiHash);
+}

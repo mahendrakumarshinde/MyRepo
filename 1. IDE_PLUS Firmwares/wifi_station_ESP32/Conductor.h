@@ -213,6 +213,7 @@ class Conductor
         void updateWiFiConfig(char* config,int length);
         void setWiFiConfig();
         void sendWiFiConfig();
+        char wifiHash[34];
     protected:
         /***** Config from Host *****/      
         char HOST_FIRMWARE_VERSION[8];      //filled when the ESP starts or when it connects to MQTT broker

@@ -146,7 +146,7 @@ void loop()
             delay(10);
             hostSerial.sendMSPCommand(MSPCommand::GET_RAW_DATA_ENDPOINT_INFO); 
         }
-        if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_WIFI)){
+        if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_WIFI) || strcmp(conductor.wifiHash,conductor.getConfigChecksum(IUESPFlash::CFG_WIFI)) != 0){
             hostSerial.sendMSPCommand(MSPCommand::ASK_WIFI_CONFIG);
         }
     }

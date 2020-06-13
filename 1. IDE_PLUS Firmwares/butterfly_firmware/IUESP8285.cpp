@@ -515,6 +515,9 @@ void IUESP8285::processUserMessage(char *buff, IUFlash *iuFlashPtr)
     }
     else if (strncmp(buff, "WIFI-USE-SAVED", 15) == 0)
     {
+        if(getPowerMode() != PowerMode::REGULAR){
+                setPowerMode(PowerMode::REGULAR);
+            }
         if (debugMode)
         {
             debugPrint("Current WiFi info: ", false);
