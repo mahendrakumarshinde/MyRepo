@@ -141,6 +141,7 @@ class Conductor
         bool modbusStreamingMode =false;
         bool ready_to_publish_to_modbus = false;
         bool certDownloadInProgress = false;
+        bool certDownloadMode = false;
         
         /***** Core *****/
         Conductor() {};

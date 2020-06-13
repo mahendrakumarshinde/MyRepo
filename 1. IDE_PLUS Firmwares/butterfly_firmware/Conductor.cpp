@@ -2780,6 +2780,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             }
             break;
         case MSPCommand::CERT_DOWNLOAD_INIT:
+            certDownloadMode = true;
             if(certDownloadInProgress == true)
             { // Don't accept new OTA request during Validation of Last OTA
                 if(loopDebugMode) {
@@ -3114,7 +3115,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 iuBluetooth.write("WIFI-DISCONNECTED;");
             }
             if(conductor.getUsageMode() == UsageMode::OTA) {
-                if (loopDebugMode) { 
+                if (loopDebugMode && !certDownloadMode) { 
                     debugPrint(F("OTA In Progress - WIFI-DISCONNECTED"));
                     debugPrint(F("Sending OTA-ERR-FDW-ABORT"));
                 }
@@ -3124,9 +3125,12 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                     ledManager.stopColorOverride();
                     delay(200);
                 }
-                // In case WiFi Disconnect/ESP Reset durig OTA, switch to OPERTATION Mode ??
-                sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_WIFI_DISCONNECT)).c_str());
+                if(!certDownloadMode){
+                     // In case WiFi Disconnect/ESP Reset durig OTA, switch to OPERTATION Mode ??
+                    sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_WIFI_DISCONNECT)).c_str());
+                }
                 if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
+                certDownloadMode = false;
                 iuWiFi.m_setLastConfirmedPublication();
                 changeUsageMode(UsageMode::OPERATION);
                 delay(100);
@@ -3149,7 +3153,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 iuBluetooth.write("MQTT-DISCONNECTED;");
             }
             if(conductor.getUsageMode() == UsageMode::OTA) {
-                if (loopDebugMode) { 
+                if (loopDebugMode && !certDownloadMode) { 
                     debugPrint(F("OTA In Progress - MQTT-DISCONNECTED"));
                     debugPrint(F("Sending OTA-ERR-FDW-ABORT"));
                 }
@@ -3323,7 +3327,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                     setDefaultMQTT();
                 }
             }
-           
+            delay(100);
             //Serial.print("UserName :");Serial.println(m_mqttUserName);
             //Serial.print("Password 1 :");Serial.println(m_mqttPassword);
             iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_SERVER_IP,
@@ -4315,7 +4319,7 @@ void Conductor::manageRawDataSending() {
             XSentToWifi = true; 
             RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
             RawDataTotalTimeout = millis();
-            iuWiFi.m_lastConfirmedPublication = millis();
+            iuWiFi.m_setLastConfirmedPublication();
             if(loopDebugMode) {
                 debugPrint("Raw data request: X sent to wifi");
             }
@@ -4325,7 +4329,7 @@ void Conductor::manageRawDataSending() {
             YsentToWifi = true;
             RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
             RawDataTotalTimeout = millis();
-            iuWiFi.m_lastConfirmedPublication = millis();
+            iuWiFi.m_setLastConfirmedPublication();
             if(loopDebugMode) {
                 debugPrint("Raw data request: X delivered, Y sent to wifi");
             }
@@ -4335,7 +4339,7 @@ void Conductor::manageRawDataSending() {
             ZsentToWifi = true;
             RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
             RawDataTotalTimeout = millis();
-            iuWiFi.m_lastConfirmedPublication = millis();
+            iuWiFi.m_setLastConfirmedPublication();
             if(loopDebugMode) {
                 debugPrint("Raw data request: Y delivered, Z sent to wifi");
             }
@@ -5441,6 +5445,7 @@ void Conductor::otaChkFwdnldTmout()
             {
                 debugPrint("CERT - Init Request Timeout, not received next command");
             }
+            certDownloadMode = false;
             if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA/CERT -> OPERATION")); }
             iuWiFi.m_setLastConfirmedPublication();
             conductor.changeUsageMode(UsageMode::OPERATION);
@@ -5473,13 +5478,13 @@ void Conductor::otaChkFwdnldTmout()
                 {
                     debugPrint("CERT - Upgrade Success");
                 }
+                certDownloadMode = false;
                 if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA/CERT -> OPERATION")); }
                 iuWiFi.m_setLastConfirmedPublication();
                 conductor.changeUsageMode(UsageMode::OPERATION);
-                if(!otaSendMsg){
-                    iuWiFi.hardReset();
-                }
-            
+
+                iuWiFi.hardReset();
+
             }
                 
         }
@@ -5500,6 +5505,7 @@ void Conductor::otaChkFwdnldTmout()
             {
                 debugPrint("CERT - Download Request Timeout, Upgrade Status not received ");
             }
+            certDownloadMode = false;
             if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA/CERT -> OPERATION")); }
             iuWiFi.m_setLastConfirmedPublication();
             conductor.changeUsageMode(UsageMode::OPERATION);
@@ -5982,7 +5988,7 @@ void Conductor::getOtaStatus()
  */
 void Conductor::sendOtaStatus()
 {
-    if((iuWiFi.isConnected()) && (otaSendMsg == true)) 
+    if((iuWiFi.isConnected()) && (otaSendMsg == true) && conductor.getDatetime() > 1590000000.00 && iuWiFi.getConnectionStatus()) 
     {
         iuOta.readOtaFlag();
         uint8_t otaStatus = iuOta.getOtaFlagValue(OTA_STATUS_FLAG_LOC);
@@ -6064,8 +6070,6 @@ void Conductor::sendOtaStatus()
         otaSendMsg = false;
         /* Send Error message only once. Not to send on every bootup */
         iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,OTA_FW_VALIDATION_SUCCESS);
-        delay(3000);
-        iuWiFi.hardReset();
     }
 }
 
