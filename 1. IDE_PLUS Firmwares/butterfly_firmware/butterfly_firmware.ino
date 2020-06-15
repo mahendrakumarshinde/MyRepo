@@ -435,7 +435,7 @@ void setup()
         }
         // BLE SETUP BEGIN
         iuBluetooth.setupHardware();
-        iuBluetooth.bleButton(false); //ble off
+        //iuBluetooth.bleButton(false); //ble off
         debugPrint(" Is BLE Chip Available?:",false);
         debugPrint(iuBluetooth.isBLEAvailable);
         iuEthernet.ble_chip_status = iuBluetooth.isBLEAvailable;
@@ -447,7 +447,7 @@ void setup()
              // set the BLE address for conductor
             conductor.setConductorMacAddress();          
         }
-        iuBluetooth.bleButton(false);
+        //iuBluetooth.bleButton(false);
         if(!iuBluetooth.isBLEAvailable) {   // BLE Hardware is Not available
             // Read the configurations over httpClient
             String availableOnpremConfigs = iuEthernet.getServerConfiguration();
@@ -477,7 +477,7 @@ void setup()
                             debugPrint("Failed to Write into File");
                     }
                }
-               iuBluetooth.bleButton(false);
+               //iuBluetooth.bleButton(false);
                if(isDataWriteComplete == true || iuEthernet.responseIsNotAvailabel ){
                     debugPrint("Content From File:");
                     conductor.setEthernetConfig("relayAgentConfig.conf");       // Handle file not available condition     
