@@ -398,8 +398,7 @@ void timerInit(void)
 
 void setup()
 {   
-  iuBluetooth.bleBeaconSetting(false); // ble beacon off; function use to ble beacon ON/OFF by passing true/false resp.
-  iuBluetooth.bleButton(false); //ble off
+   iuBluetooth.bleButton(false); //ble force turn off
 
   pinMode(ESP32_IO0,OUTPUT);
 //   pinMode(A3,OUTPUT);  // ISR (ODR checked from pin 50)
@@ -801,6 +800,7 @@ void loop()
                         if(nowTime - conductor.lastUpdated >= conductor.modbusConnectionTimeout){
                             conductor.lastUpdated = nowTime;
                             conductor.updateModbusStatus();
+                            conductor.updateWiFiHash();
                         }
 
                     }else

@@ -290,6 +290,7 @@ class Conductor
         void removeChar(char * New_BLE_MAC_Address, int charToRemove);
         void setDefaultMQTT();
         void setDefaultHTTP();
+        void updateWiFiHash();
         
     protected:
         MacAddress m_macAddress;
