@@ -5446,7 +5446,6 @@ void Conductor::otaChkFwdnldTmout()
         {
             sendOtaStatusMsg(MSPCommand::CERT_DOWNLOAD_INIT_ACK,CERT_DOWNLOAD_ACK, String(iuOta.getOtaRca(CERT_DOWNLOAD_INIT_REQ_ACK)).c_str());
             sendCertInitAck = true;
-            debugPrint("CERT_DOWNLOAD_INIT_ACK Sendign again.....");
         }
         if ( ((now - certDownloadInitWaitTimeout ) > m_certDownloadInitTimeout ) && m_certDownloadStarted != true && m_getDownloadConfig != true && sendCertInitAck == true)
         {
