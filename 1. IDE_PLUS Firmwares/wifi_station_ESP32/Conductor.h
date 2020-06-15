@@ -92,7 +92,7 @@ class Conductor
         // Delay between 2 connection attemps
         static const uint32_t reconnectionInterval = 1000;  // ms
         //ESP32 will deep-sleep after being disconnected for more than:
-        static const uint32_t disconnectionTimeout = 120000;  // ms
+        static const uint32_t disconnectionTimeout = 120*1000;  // ms
         // Cyclic publication
         static const uint32_t wifiStatusUpdateDelay = 5000;  // ms
         static const uint32_t wifiInfoPublicationDelay = 300000;  // ms
@@ -100,7 +100,7 @@ class Conductor
         static const uint32_t otaPktAckTimeout = 30000;  // ms
         static const uint32_t otaPktReadTimeout = 50000; //ms;
         static const uint32_t otaHttpTimeout = 60000; //ms;
-        static const uint8_t maxMqttClientConnectionCount = 10;
+        static const uint8_t maxMqttClientConnectionCount = 5;
         static const uint8_t maxMqttCertificateDownloadCount = 3;
         static const uint32_t downloadInitRetryTimeout  = 30*1000;   //ms
         /***** Core *****/
@@ -132,6 +132,7 @@ class Conductor
         void mqttSecureConnect();
         void upgradeSuccess();
         void upgradeFailed();
+        void resetMqttConnectionFlags();
         /***** MQTT *****/
         void loopMQTT();
         void processMessageFromMQTT(const char* topic, const char* payload,
@@ -170,7 +171,7 @@ class Conductor
         int download_tls_ssl_certificates();
         char* getConfigChecksum(IUESPFlash::storedConfig configType);
         void updateDiagnosticEndpoint(char* diagnosticEndpoint,int length);
-        bool setCommonHttpEndpoint();
+        bool setCertificateManagerHttpEndpoint();
         void configureDiagnosticEndpointFromFlash(IUESPFlash::storedConfig configType);
         void publishedDiagnosticMessage(char* buffer,int bufferLength);
         void resetDownloadInitTimer(uint16_t downloadTriggerTime,uint16_t loopTimeout);    //(sec,ms)
@@ -183,10 +184,13 @@ class Conductor
         char ssl_rootca_cert[2048];
         char eap_client_cert[2048];
         char eap_client_key[2048];
-        char certDownloadResponse[2400];    // stores the cert download json (Actual  -2299)
+        char certDownloadResponse[3000];    // stores the cert download json (Actual  -2299)
         char diagnosticEndpointHost[MAX_HOST_LENGTH];
         int  diagnosticEndpointPort;
         char diagnosticEndpointRoute[MAX_ROUTE_LENGTH];
+        char certificateDownloadEndpointHost[MAX_HOST_LENGTH];
+        int  certificateDownloadEndpointPort;
+        char certificateDownloadEndpointRoute[MAX_ROUTE_LENGTH];
         bool configStatus = false;
         bool certificateDownloadInProgress=false;
         bool certificateDownloadInitInProgress = false;

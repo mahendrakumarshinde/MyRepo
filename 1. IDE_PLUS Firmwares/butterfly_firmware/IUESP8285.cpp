@@ -20,6 +20,7 @@ void IUESP8285::m_setConnectedStatus(bool status)
 {
     if (!m_connected && status) {
         // Reset last publication confirmation timer on establishing connection.
+        m_wifiConfirmPublication = false;
         m_lastConfirmedPublication = millis();
     }
     bool useCallbacks = (m_connected != status);
@@ -42,6 +43,7 @@ bool IUESP8285::arePublicationsFailing()
     if (!m_connected) {
         return false;  // No connection, so no publication
     }
+    m_wifiConfirmPublication = false;
     return (millis() - m_lastConfirmedPublication > confirmPublicationTimeout);
 }
 
@@ -692,6 +694,7 @@ bool IUESP8285::processChipMessage()
             break;
         case MSPCommand::WIFI_CONFIRM_PUBLICATION:
             if (loopDebugMode) { debugPrint("WIFI_CONFIRM_PUBLICATION"); }
+            m_wifiConfirmPublication = true;
             m_lastConfirmedPublication = millis();
             break;
         default:
