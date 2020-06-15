@@ -85,7 +85,7 @@ void setup()
      
     iuWiFiFlash.begin();
     // Set the common url json if file not present
-    conductor.setCommonHttpEndpoint();
+    conductor.setCertificateManagerHttpEndpoint();
     //Configure the Diagnostic HTTP/HTTPS Endpoint
     conductor.configureDiagnosticEndpointFromFlash(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT);
     conductor.activeCertificates = iuWiFiFlash.readMemory(ADDRESS);
@@ -137,7 +137,7 @@ void loop()
             conductor.publishRSSI();
             rssiPublishedCounter = 0;
         }
-        conductor.resetDownloadInitTimer(60,5000);
+        conductor.resetDownloadInitTimer(10,5000);
         lastDone = now;
         if(uint64_t(conductor.getBleMAC() ) == 0) { 
             hostSerial.sendMSPCommand(MSPCommand::ASK_BLE_MAC);
