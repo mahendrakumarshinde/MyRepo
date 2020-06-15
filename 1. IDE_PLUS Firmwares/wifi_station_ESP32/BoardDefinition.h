@@ -59,7 +59,7 @@ const char CUSTOMER_PLACEHOLDER[CUSTOMER_PLACEHOLDER_LENGTH] = "XXXAdmin";
     Diagnostic HTTP/HTTPS Endpoints
 ============================================================================= */
 
-const char DIAGNOSTIC_DEFAULT_ENDPOINT_HOST[MAX_HOST_LENGTH] = "13.235.210.250";
+const char DIAGNOSTIC_DEFAULT_ENDPOINT_HOST[MAX_HOST_LENGTH] = "15.206.97.181";
 const char DIAGNOSTIC_DEFAULT_ENDPOINT_PATH[MAX_ROUTE_LENGTH] = "/certificates/download-status";
 const uint16_t DIAGNOSTIC_DEFAULT_ENDPOINT_PORT = 8000;
 
@@ -67,7 +67,7 @@ const uint16_t DIAGNOSTIC_DEFAULT_ENDPOINT_PORT = 8000;
     certificates Config  HTTP/HTTPS Endpoints
 ============================================================================= */
 
-const char CERT_CONFIG_DEFAULT_ENDPOINT_HOST[MAX_HOST_LENGTH] = "http://13.235.210.250";
+const char CERT_CONFIG_DEFAULT_ENDPOINT_HOST[MAX_HOST_LENGTH] = "http://15.206.97.181";
 const char CERT_CONFIG_DEFAULT_ENDPOINT_PATH[MAX_ROUTE_LENGTH] = "/certificates?deviceIdentifier=";
 const uint16_t CERT_CONFIG_DEFAULT_ENDPOINT_PORT = 8000;
 
