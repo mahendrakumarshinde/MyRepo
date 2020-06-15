@@ -2796,6 +2796,7 @@ void Conductor::setWiFiConfig(){
         const char* tempAuthType = config["auth_type"];
         const char* tempSSID = config["ssid"];
         const char* tempPassword = config["password"];
+        const char* tempPasswordOld = config["psk"];
         const char* tempUsername = config["username"];
         const char* tempStaticIP = config["static"];
         const char* tempGatewayIP = config["gateway"];
@@ -2807,6 +2808,7 @@ void Conductor::setWiFiConfig(){
         if(config.containsKey("auth_type")){strcpy(m_wifiAuthType, tempAuthType); }
         if(config.containsKey("ssid")){strcpy(m_userSSID, tempSSID); }
         if(config.containsKey("password")){strcpy(m_userPassword, tempPassword); }
+        if(config.containsKey("psk")){strcpy(m_userPassword,tempPasswordOld); strcpy(m_wifiAuthType, "WPA-PSK");};
         if(config.containsKey("username")){strcpy(m_username, tempUsername);}
         if(config.containsKey("static")){m_staticIp.fromString(tempStaticIP); }
         if(config.containsKey("gateway")){m_gateway.fromString(tempGatewayIP); }
