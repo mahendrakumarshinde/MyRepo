@@ -49,7 +49,7 @@ class IUMQTTHelper
         /***** Core *****/
         IUMQTTHelper(/*const char * serverIP, uint16_t serverPort,
                      const char *username, const char *password*/);
-        // IUMQTTHelper() : IUMQTTHelper("mqtt.uat.infinite-uptime.com", 8883, "", "") {}
+        // IUMQTTHelper() : IUMQTTHelper("mqtt.infinite-uptime.com", 8883, "", "") {}
         virtual ~IUMQTTHelper() { }
         void setServer(const char * serverIP, uint16_t serverPort);
         void setCredentials(const char *username, const char *password);
