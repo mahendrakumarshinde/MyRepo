@@ -4762,11 +4762,6 @@ void Conductor::setConductorMacAddress() {
                     }
                     break;
                  }     
-                iuBluetooth.softReset();
-                if(debugMode){
-                        debugPrint("BLE Soft Reset");
-                }
-                delay(500);
                 if(i>=2){
                     // RESET the Device   
                     if(debugMode){
