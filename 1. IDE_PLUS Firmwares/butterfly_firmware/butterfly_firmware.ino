@@ -398,8 +398,7 @@ void timerInit(void)
 
 void setup()
 {   
-  iuBluetooth.bleBeaconSetting(false); // ble beacon off; function use to ble beacon ON/OFF by passing true/false resp.
-  iuBluetooth.bleButton(false); //ble off
+   iuBluetooth.bleButton(false); //ble force turn off
 
   pinMode(ESP32_IO0,OUTPUT);
 //   pinMode(A3,OUTPUT);  // ISR (ODR checked from pin 50)
@@ -436,7 +435,7 @@ void setup()
         }
         // BLE SETUP BEGIN
         iuBluetooth.setupHardware();
-        iuBluetooth.bleButton(false); //ble off
+        //iuBluetooth.bleButton(false); //ble off
         debugPrint(" Is BLE Chip Available?:",false);
         debugPrint(iuBluetooth.isBLEAvailable);
         iuEthernet.ble_chip_status = iuBluetooth.isBLEAvailable;
@@ -448,7 +447,7 @@ void setup()
              // set the BLE address for conductor
             conductor.setConductorMacAddress();          
         }
-        iuBluetooth.bleButton(false);
+        //iuBluetooth.bleButton(false);
         if(!iuBluetooth.isBLEAvailable) {   // BLE Hardware is Not available
             // Read the configurations over httpClient
             String availableOnpremConfigs = iuEthernet.getServerConfiguration();
@@ -478,7 +477,7 @@ void setup()
                             debugPrint("Failed to Write into File");
                     }
                }
-               iuBluetooth.bleButton(false);
+               //iuBluetooth.bleButton(false);
                if(isDataWriteComplete == true || iuEthernet.responseIsNotAvailabel ){
                     debugPrint("Content From File:");
                     conductor.setEthernetConfig("relayAgentConfig.conf");       // Handle file not available condition     
@@ -739,12 +738,12 @@ void loop()
                 debugPrint(F("Sensor:"),false);debugPrint(FFTConfiguration::currentSensor);
             }
         // }
-        if (iuWiFi.isConnected() == true && conductor.flashStatusFlag == true && conductor.getDatetime() > 1570000000.00)
+        if (iuWiFi.isConnected() == true && conductor.flashStatusFlag == true && conductor.getDatetime() > 1590000000.00 && iuWiFi.getConnectionStatus())
         {
             conductor.sendFlashStatusMsg(FLASH_SUCCESS,"Flash Recovery Successfull..Send the configuration");
             conductor.flashStatusFlag = false;
         }
-        if (iuWiFi.isConnected() == true && sensorStatus == true && conductor.getDatetime() > 1570000000.00)
+        if (iuWiFi.isConnected() == true && sensorStatus == true && conductor.getDatetime() > 1590000000.00 && iuWiFi.getConnectionStatus())
         {
             conductor.sendSensorStatus();
             sensorStatus = false;
@@ -801,6 +800,7 @@ void loop()
                         if(nowTime - conductor.lastUpdated >= conductor.modbusConnectionTimeout){
                             conductor.lastUpdated = nowTime;
                             conductor.updateModbusStatus();
+                            conductor.updateWiFiHash();
                         }
 
                     }else

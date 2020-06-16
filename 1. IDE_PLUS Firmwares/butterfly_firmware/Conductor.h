@@ -132,6 +132,7 @@ class Conductor
         uint32_t m_connectionTimeout = 150000;   // 2 min 30s
         uint32_t m_upgradeMessageTimeout = 30*1000;
         uint32_t m_certDownloadInitTimeout = 60*1000;
+        uint32_t m_certDownloadConfigTimeout = 30*1000;
         // Modbus Connection Timeouts 
         const uint16_t modbusConnectionTimeout = 5000;   // ms 
         uint32_t lastUpdated = 0;
@@ -141,7 +142,8 @@ class Conductor
         bool modbusStreamingMode =false;
         bool ready_to_publish_to_modbus = false;
         bool certDownloadInProgress = false;
-        
+        bool certDownloadMode = false;
+        bool sendCertInitAck = false;
         /***** Core *****/
         Conductor() {};
         Conductor(MacAddress macAddress) : m_macAddress(macAddress) { }
@@ -288,6 +290,7 @@ class Conductor
         void removeChar(char * New_BLE_MAC_Address, int charToRemove);
         void setDefaultMQTT();
         void setDefaultHTTP();
+        void updateWiFiHash();
         
     protected:
         MacAddress m_macAddress;
@@ -366,6 +369,7 @@ class Conductor
         char WiFiDisconnect_OTAErr[16];
         char ack_config[200];
         uint32_t certDownloadInitWaitTimeout =0;
+        uint32_t certDownloadConfigTimeout = 0;
         uint32_t m_downloadSuccessStartTime = 0;
         bool m_getDownloadConfig = false;
         bool m_certDownloadStarted  = false;

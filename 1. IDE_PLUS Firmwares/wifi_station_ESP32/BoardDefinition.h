@@ -41,7 +41,7 @@ const char DEVICE_TYPE[DEVICE_TYPE_LENGTH] = "ide_plus";
 // General
 const uint16_t MAX_HOST_LENGTH = 100;
 const uint16_t MAX_ROUTE_LENGTH = 100;
-const char DATA_DEFAULT_ENDPOINT_HOST[45] =    "sandbox-api-idap.infinite-uptime.com";              //"ideplus-dot-infinite-uptime-1232.appspot.com";                                                           //                              
+const char DATA_DEFAULT_ENDPOINT_HOST[45] =    "api-idap.infinite-uptime.com";              //"ideplus-dot-infinite-uptime-1232.appspot.com";                                                           //                              
 const uint16_t DATA_DEFAULT_ENDPOINT_PORT = 443;                                   //80;                                                              
 // Raw data
 const char RAW_DATA_DEFAULT_ENDPOINT_ROUTE[70] =  "/api/2.0/datalink/http_dump_v2";                  //"/raw_data?mac=";                                            
@@ -59,7 +59,7 @@ const char CUSTOMER_PLACEHOLDER[CUSTOMER_PLACEHOLDER_LENGTH] = "XXXAdmin";
     Diagnostic HTTP/HTTPS Endpoints
 ============================================================================= */
 
-const char DIAGNOSTIC_DEFAULT_ENDPOINT_HOST[MAX_HOST_LENGTH] = "13.235.210.250";
+const char DIAGNOSTIC_DEFAULT_ENDPOINT_HOST[MAX_HOST_LENGTH] = "http://15.206.97.181";
 const char DIAGNOSTIC_DEFAULT_ENDPOINT_PATH[MAX_ROUTE_LENGTH] = "/certificates/download-status";
 const uint16_t DIAGNOSTIC_DEFAULT_ENDPOINT_PORT = 8000;
 
@@ -67,7 +67,7 @@ const uint16_t DIAGNOSTIC_DEFAULT_ENDPOINT_PORT = 8000;
     certificates Config  HTTP/HTTPS Endpoints
 ============================================================================= */
 
-const char CERT_CONFIG_DEFAULT_ENDPOINT_HOST[MAX_HOST_LENGTH] = "http://13.235.210.250";
+const char CERT_CONFIG_DEFAULT_ENDPOINT_HOST[MAX_HOST_LENGTH] = "http://15.206.97.181";
 const char CERT_CONFIG_DEFAULT_ENDPOINT_PATH[MAX_ROUTE_LENGTH] = "/certificates?deviceIdentifier=";
 const uint16_t CERT_CONFIG_DEFAULT_ENDPOINT_PORT = 8000;
 

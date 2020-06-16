@@ -117,6 +117,16 @@ void IUBMD350::setupHardware()
     pinMode(m_atCmdPin, OUTPUT);
     pinMode(m_resetPin, OUTPUT);
     doFullConfig();
+    enterATCommandInterface();
+    if(setupDebugMode){
+        char BMDVersion[20],bootVersion[20],protocolversion[20],hardwareinfo[20];
+        getBMDwareInfo(BMDVersion,bootVersion,protocolversion,hardwareinfo,20,20,20,20);
+        debugPrint("BMDVersion : ",false);debugPrint(BMDVersion);
+        debugPrint("bootVersion : ",false);debugPrint(bootVersion);
+        debugPrint("protocolVersion : ",false);debugPrint(protocolversion);
+        debugPrint("hardwareInfo :",false);debugPrint(hardwareinfo); 
+        exitATCommandInterface();
+    }
 }
 
 /**
@@ -139,24 +149,20 @@ void IUBMD350::softReset()
  * @return false 
  */
 bool IUBMD350::bleButton(bool button)
-{
-    
+{ 
     // Configure pins and port
     pinMode(m_atCmdPin, OUTPUT);
     pinMode(m_resetPin, OUTPUT);
-    begin();
     if(button == true)
     {
         digitalWrite(m_resetPin, HIGH); //BLE ON
         debugPrint("BLE turn ON",true);
-        delay(1000);
         return blePowerStatus = true;
     }
     else if (button == false)
     {
         digitalWrite(m_resetPin, LOW); //ble OFF
         debugPrint("BLE turn OFF",true);
-        delay(1000);
         return blePowerStatus = false;
     }
 }
@@ -589,12 +595,13 @@ void IUBMD350::setBeaconUUID(char *UUID, char *major, char *minor)
         debugPrint("Failed to configure BLE beacon UUID");
     }
 }
+
 void IUBMD350::bleBeaconSetting(bool BeaconSet)
 {
     // Configure BLE beacon ON and OFF for resolving ble stuck issue
-    pinMode(m_atCmdPin, OUTPUT);
-    pinMode(m_resetPin, OUTPUT);
-    begin();
+    // pinMode(m_atCmdPin, OUTPUT);
+    // pinMode(m_resetPin, OUTPUT);
+    // begin();
     enterATCommandInterface();
     configureBeacon(BeaconSet, m_beaconAdInterval);
     exitATCommandInterface();

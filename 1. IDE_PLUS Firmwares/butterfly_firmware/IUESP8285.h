@@ -59,8 +59,6 @@ class IUESP8285 : public IUSerial, public Component
         char espFirmwareVersion[6];
         bool espFirmwareVersionReceived = false;
         int current_rssi = 0;
-         /**** Confirm Publication Timeout ****/
-        uint32_t m_lastConfirmedPublication = 0;
         /***** Core *****/
         IUESP8285(HardwareSerial *serialPort, char *charBuffer,
                   uint16_t bufferSize, PROTOCOL_OPTIONS protocol, uint32_t rate,
@@ -126,7 +124,10 @@ class IUESP8285 : public IUSerial, public Component
             { sendMSPCommand(MSPCommand::PUBLISH_DIAGNOSTIC, diagnotic); }
         // Reset last publication confirmation timer on establishing connection.
         void m_setLastConfirmedPublication(void) { m_lastConfirmedPublication = millis();} 
+        bool getConnectionStatus(){return m_wifiConfirmPublication;}
     private:
+        /**** Confirm Publication Timeout ****/
+        uint32_t m_lastConfirmedPublication = 0;
         /***** Configuring the WiFi *****/
         char m_ssid[wifiCredentialLength];
         char m_psk[wifiCredentialLength];
@@ -148,6 +149,7 @@ class IUESP8285 : public IUSerial, public Component
         bool m_connected = false;
         void m_setConnectedStatus(bool status);
         bool m_sleeping = false;
+        bool m_wifiConfirmPublication = false;
         uint32_t m_awakeTimerStart = 0;
         uint32_t m_sleepTimerStart = 0;
         uint32_t m_autoSleepDelay = defaultAutoSleepDelay;

@@ -216,17 +216,20 @@ void IUTMP116::processTemperatureData(uint8_t wireStatus)
             debugPrint(micros(), false);
             debugPrint(F(" Temperature processing read error "), false);
             debugPrint(wireStatus);
+            debugPrint("Applying Default temperature value ");
         }
-        return;
+        m_defaultTemperature = 56;
+        //return;
     }
+    
     m_temperature = 0.00;
     iTemp = ( (int16_t) (m_rawBytes[0] << 8) | m_rawBytes[1]);
     m_temperature = (iTemp * TEMP_COEFFICIENT);
     // TODO : Apply Temperature Algorithm here.
      m_temperature = m_temperature -  quadraticTemperatureCoorection(m_temperature);
-     m_destinations[0]->addValue(m_temperature);
+     m_destinations[0]->addValue(m_temperature + m_defaultTemperature);
      //Append the Temperature data
-     modbusFeaturesDestinations[5] = m_temperature;
+     modbusFeaturesDestinations[5] = m_temperature + m_defaultTemperature;
 }
 
 /**
