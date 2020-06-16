@@ -862,6 +862,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 delay(1);
             }
             iuWiFiFlash.removeFile(IUESPFlash::CFG_STATIC_CERT_ENDPOINT);
+            iuWiFiFlash.removeFile(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT);
             iuWiFiFlash.removeFile(IUESPFlash::CFG_WIFI);
             iuWiFiFlash.updateValue(ADDRESS,0);
             hostSerial.sendMSPCommand(MSPCommand::DELETE_CERT_FILES,"succefully Deleted, Rebooting ESP");
@@ -2733,7 +2734,7 @@ void Conductor::updateDiagnosticEndpoint(char* diagnosticEndpoint,int length){
         StaticJsonBuffer<512> JsonBuffer;
         JsonVariant config = JsonVariant(iuWiFiFlash.loadConfigJson(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT,JsonBuffer));
         bool validConfig = config.success();
-        config.prettyPrintTo(Serial);
+        //config.prettyPrintTo(Serial);
         if (validConfig)
         {
             const char* host = config["diagnosticUrl"]["host"].as<char*>();
@@ -2871,9 +2872,18 @@ void Conductor::publishedDiagnosticMessage(char* buffer,int bufferLength){
      }else
      { 
         String auth = setBasicHTTPAutherization();
-        int status =  httpPostBigRequest(diagnosticEndpointHost,diagnosticEndpointRoute,diagnosticEndpointPort,(uint8_t*) message,
+        uint8_t startIndex = 0;
+        if(diagnosticEndpointHost[0] == 'h' && diagnosticEndpointHost[1] == 't' && diagnosticEndpointHost[2] == 't' && diagnosticEndpointHost[3] == 'p'){
+            startIndex = 7;
+            if(diagnosticEndpointHost[4] == 's'){    // https 
+                startIndex = 8;
+            }
+        }
+        //Serial.print("HOST :");Serial.println(&diagnosticEndpointHost[startIndex]);
+        int status =  httpPostBigRequest(&diagnosticEndpointHost[startIndex],diagnosticEndpointRoute,diagnosticEndpointPort,(uint8_t*) message,
                                             bufferLength,auth, NULL,HttpContentType::textPlain );
-        //Serial.print("Diagnostic POST Status  : ");
+
+        //Serial.print("Diagnostic POST Status : ");
         //Serial.println(status);
      }
 }
