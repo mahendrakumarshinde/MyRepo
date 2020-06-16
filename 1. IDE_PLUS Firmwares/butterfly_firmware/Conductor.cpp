@@ -1099,7 +1099,6 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         if (loopDebugMode){  debugPrint("Diagnostic Url:",false);
          subConfig.printTo(Serial); debugPrint("");
          }
-        const char* url = root["diagnosticUrl"]["url"];
         const char* messageId = root["messageId"]  ;
         // Send URL to ESP32
         iuWiFi.sendMSPCommand(MSPCommand::SET_DIAGNOSTIC_URL,jsonChar.c_str());
