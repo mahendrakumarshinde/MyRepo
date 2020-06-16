@@ -59,7 +59,7 @@ const char CUSTOMER_PLACEHOLDER[CUSTOMER_PLACEHOLDER_LENGTH] = "XXXAdmin";
     Diagnostic HTTP/HTTPS Endpoints
 ============================================================================= */
 
-const char DIAGNOSTIC_DEFAULT_ENDPOINT_HOST[MAX_HOST_LENGTH] = "15.206.97.181";
+const char DIAGNOSTIC_DEFAULT_ENDPOINT_HOST[MAX_HOST_LENGTH] = "http://15.206.97.181";
 const char DIAGNOSTIC_DEFAULT_ENDPOINT_PATH[MAX_ROUTE_LENGTH] = "/certificates/download-status";
 const uint16_t DIAGNOSTIC_DEFAULT_ENDPOINT_PORT = 8000;
 
