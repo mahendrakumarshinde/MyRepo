@@ -47,6 +47,17 @@ Enahancement
    - Added the mechanism to update the MODBUS Connection , Disconnection status over BLE.
    - Added Retry mechanism to send the FFT raw data over https.
    - Updated the logic to handled the invalid BLE MAC ID response (ex. 00:00:00:00:00:00)
+   - Added support to handled the combination of certificates like set of 3 and set of 5 certificates Downloading from certificate manager.
+   - Added the mechanism to sync the wifi configuration in STM32 and ESP32 with periodic HASH verification ( every 5 Sec)
+   
+BugFixes : 
+   - OTA Upgrade successful message missing fixed added
+   - BLE mac_response not available on device boot fixed
+   - Compatibility of wifi config for v2.1.0 added
+   - Wifi Authentication type switching from STATIC-NONE to NONE and NONE - STATIC-NONE fixed is added.
+   - MQTT reconnection logic is updated to perform the reconnection attempts.
+   - Added the fixed to address the diagnostic status api without http:// or https:// header.
+
 Limitations :
 
    - Audio running with 4000 Hz Sampling Rate.
