@@ -664,7 +664,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             httpBufferPointer += rawValuesSize;
 
             iuSerial->sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION, &rawData->axis, 1);
-            
+
             int httpStatusCode = httpsPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_endpointRoute,
                                             accelRawDataHelper.m_endpointPort, (uint8_t*) &httpBuffer, 
                                             httpBufferPointer,"", ssl_rootca_cert, HttpContentType::octetStream);            
@@ -710,9 +710,9 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                                 //Serial.println("Initial File Download , Updated Value ");
                                 initialFileDownload = false;
                             }
-                           activeCertificates = iuWiFiFlash.updateValue(ADDRESS,0);
+                           activeCertificates = iuWiFiFlash.updateValue(CERT_ADDRESS,0);
                         }else{
-                           activeCertificates = iuWiFiFlash.updateValue(ADDRESS,1);
+                           activeCertificates = iuWiFiFlash.updateValue(CERT_ADDRESS,1);
                         }
                         //Serial.println("\nESP32 DEBUG : DOWNLOADING SUCCESSFULLY COMPLETED....");
                     }
@@ -864,7 +864,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             iuWiFiFlash.removeFile(IUESPFlash::CFG_STATIC_CERT_ENDPOINT);
             iuWiFiFlash.removeFile(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT);
             iuWiFiFlash.removeFile(IUESPFlash::CFG_WIFI);
-            iuWiFiFlash.updateValue(ADDRESS,0);
+            iuWiFiFlash.updateValue(CERT_ADDRESS,0);
             hostSerial.sendMSPCommand(MSPCommand::DELETE_CERT_FILES,"succefully Deleted, Rebooting ESP");
             ESP.restart();
             break;
@@ -1375,6 +1375,12 @@ void Conductor::checkMqttDisconnectionTimeout()
        //Serial.println("Exceeded mqtt disconnection time-out");
        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Exceeded MQTT disconnction timeout");
         // reconnect mqtt client
+       if(espResetCount <= espResetAttempt && espResetCount > 0 && WiFi.isConnected()) 
+        {
+            espResetCount--;
+            espResetCount = iuWiFiFlash.updateValue(ESP_RESET_ADDRESS,espResetCount);
+            ESP.restart();
+        }
         //loopMQTT();
     }
     mqttHelper.client.loop();
@@ -2273,6 +2279,7 @@ void Conductor::mqttSecureConnect(){
                             //Serial.println("\nESP32 DEBUG : Download Init trigger.......");
                             upgradeReceived = false;
                             downloadInitTimer = false;
+                            espResetCount = iuWiFiFlash.updateValue(ESP_RESET_ADDRESS,espResetAttempt);
                             hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_INIT,CERT_DOWNLOAD_DEFAULT_MESSAGEID);
                         }    
                     }
@@ -2287,7 +2294,8 @@ void Conductor::mqttSecureConnect(){
                      upgradeReceived = false;
                      downloadInitTimer = false;
                      initialFileDownload = true;
-                     activeCertificates = iuWiFiFlash.updateValue(ADDRESS,1);   // Update for first attempt only
+                     activeCertificates = iuWiFiFlash.updateValue(CERT_ADDRESS,1);   // Update for first attempt only
+                     espResetCount = iuWiFiFlash.updateValue(ESP_RESET_ADDRESS,espResetAttempt);
                      hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_INIT,CERT_DOWNLOAD_DEFAULT_MESSAGEID);
                 }
                  
@@ -2316,11 +2324,11 @@ void Conductor::upgradeSuccess(){
             //Serial.println("Client 1 Upgrade Success....");
             // backup the older  certificates and use the latest.
             // raname the files or overwrite it. make sure after devicereset it should use new certs
-            activeCertificates = iuWiFiFlash.updateValue(ADDRESS,1);  // client1 in Use after Reset
+            activeCertificates = iuWiFiFlash.updateValue(CERT_ADDRESS,1);  // client1 in Use after Reset
             hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Upgrade Success,Updated Flag with Value : 1");
         }else {
             //Serial.println("\nClient 0 Upgrade Success.....");
-            activeCertificates = iuWiFiFlash.updateValue(ADDRESS,0); // Clinet 0 in use 
+            activeCertificates = iuWiFiFlash.updateValue(CERT_ADDRESS,0); // Clinet 0 in use 
             hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Upgrade Success,Updated Flag with Value : 0");
         }
         // Send Upgrade Status 
@@ -2337,11 +2345,11 @@ void Conductor::upgradeFailed(){
         if(activeCertificates == 1){
             //Serial.println("Client 1 Upgrade Failed Use previous Client 0 Certificates....");
             // backup the older  certificates and use the latest.
-            activeCertificates = iuWiFiFlash.updateValue(ADDRESS,0);  // client1 in Use after Reset
+            activeCertificates = iuWiFiFlash.updateValue(CERT_ADDRESS,0);  // client1 in Use after Reset
             hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Upgrade Failed,Updated Flag with Value : 0");
         }else {
             //Serial.println("\nClient 0 Upgrade Failed Use previous Client1 Certificates.....");
-            activeCertificates = iuWiFiFlash.updateValue(ADDRESS,1); // Clinet 0 in use 
+            activeCertificates = iuWiFiFlash.updateValue(CERT_ADDRESS,1); // Clinet 0 in use 
             hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Upgrade Failed,Updated Flag with Value : 1");
         }
         // Send Upgrade Status 
@@ -2616,7 +2624,7 @@ int Conductor::download_tls_ssl_certificates(){
                     if(activeCertificates != 0){ 
                         // if(initialFileDownload){
                         //     Serial.println("Initial File Download , Updated Value ");
-                        //     activeCertificates = iuWiFiFlash.updateValue(ADDRESS,0);
+                        //     activeCertificates = iuWiFiFlash.updateValue(CERT_ADDRESS,0);
                         //     //initialFileDownload = false;
                         // }
                         certToUpdate = 0;

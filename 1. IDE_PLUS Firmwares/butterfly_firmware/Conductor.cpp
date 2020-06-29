@@ -2892,15 +2892,15 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             m_upgradeSuccess = false;
             m_downloadSuccessStartTime = millis();
             ledManager.overrideColor(RGB_BLUE); 
-            sendOtaStatusMsg(MSPCommand::CERT_DOWNLOAD_SUCCESS,CERT_DOWNLOAD_COMPLETE,buff);
             delay(1000);
-             //TODO : Add Visuals
+            //  TODO : Add Visuals
             for(int i = 0 ; i < 10; i++) {
                 ledManager.overrideColor(RGB_GREEN);
                 delay(100);
                 ledManager.stopColorOverride();
                 delay(100);
-            }
+            }            
+            sendOtaStatusMsg(MSPCommand::CERT_DOWNLOAD_SUCCESS,CERT_DOWNLOAD_COMPLETE,buff);
             // if (loopDebugMode) { debugPrint(F("Switching Device mode:CERT DOWNLOAD Mode -> OPERATION")); }
             //  iuWiFi.m_setLastConfirmedPublication();
             //  changeUsageMode(UsageMode::OPERATION);

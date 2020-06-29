@@ -208,6 +208,8 @@ class Conductor
         uint8_t certificateDownloadStatus = 0;
         uint8_t newDownloadConnectonAttempt = 0;
         uint8_t activeCertificates = 0;
+        uint8_t espResetCount = 2;
+        uint8_t espResetAttempt = 2;
         bool m_statementEntry = true;
         bool commomEndpointsuccess = false;
         // Config handler
