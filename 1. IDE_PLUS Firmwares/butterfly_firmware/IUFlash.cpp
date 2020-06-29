@@ -654,8 +654,7 @@ void IUFSFlash::writeInternalFlash(uint8_t type, uint32_t address, uint16_t data
   uint16_t dataSize;
   char allData[2048];
   dataSize = sizeof(type)+sizeof(dataLength)+dataLength;
-  stm32l4_flash_unlock();
-  stm32l4_flash_erase(address, 2048);
+
   allData[0] = type;
   if(dataLength <= maxDataperByte){
     allData[1] = dataLength;
@@ -675,9 +674,12 @@ void IUFSFlash::writeInternalFlash(uint8_t type, uint32_t address, uint16_t data
         debugPrint("Data : ",false);debugPrint((char*)data);
         debugPrint("All Data : ",false);debugPrint(allData); //debugPrint may not work if length is grater than 255 because NULL in next Byte
     }   
-
-  stm32l4_flash_program(address, (const uint8_t*)allData,sizeof(allData));
-  stm32l4_flash_lock();
+  for(int i=0; i<2 ;i++){  
+    stm32l4_flash_unlock();
+    stm32l4_flash_erase(address, 2048);
+    stm32l4_flash_program(address, (const uint8_t*)allData,sizeof(allData));
+    stm32l4_flash_lock();
+  }
 }
 
 bool IUFSFlash::checkConfig(uint32_t address)
