@@ -800,7 +800,6 @@ void loop()
                         if(nowTime - conductor.lastUpdated >= conductor.modbusConnectionTimeout){
                             conductor.lastUpdated = nowTime;
                             conductor.updateModbusStatus();
-                            conductor.updateWiFiHash();
                         }
 
                     }else
@@ -849,7 +848,7 @@ void loop()
             /* === Place your code to excute at fixed interval here ===*/
             conductor.streamMCUUInfo(iuWiFi.port);
             //iuWiFi.sendMSPCommand(MSPCommand::GET_ESP_RSSI);
-
+            conductor.updateWiFiHash();
             if(iuWiFi.current_rssi < WEAK_SIGNAL_STRENGTH_TH ){
                  ledManager.overrideColor(RGB_PURPLE);
                  delay(3000);

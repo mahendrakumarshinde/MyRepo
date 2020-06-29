@@ -130,11 +130,13 @@ void loop()
         //iuWiFiFlash.listAllAvailableFiles(IUESPFlash::CONFIG_SUBDIR);
         //Serial.print("EEPROM Value :");
         //Serial.println(iuWiFiFlash.readMemory(CERT_ADDRESS));
-
         rssiPublishedCounter++ ;
         if (rssiPublishedCounter >= 6)
         {
             conductor.publishRSSI();
+            if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_WIFI) || strcmp(conductor.wifiHash,conductor.getConfigChecksum(IUESPFlash::CFG_WIFI)) != 0){
+                hostSerial.sendMSPCommand(MSPCommand::ASK_WIFI_CONFIG);
+            }
             rssiPublishedCounter = 0;
         }
         conductor.resetDownloadInitTimer(10,5000);
@@ -146,9 +148,7 @@ void loop()
             delay(10);
             hostSerial.sendMSPCommand(MSPCommand::GET_RAW_DATA_ENDPOINT_INFO); 
         }
-        if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_WIFI) || strcmp(conductor.wifiHash,conductor.getConfigChecksum(IUESPFlash::CFG_WIFI)) != 0){
-            hostSerial.sendMSPCommand(MSPCommand::ASK_WIFI_CONFIG);
-        }
+        
     }
     delay(1);
 }

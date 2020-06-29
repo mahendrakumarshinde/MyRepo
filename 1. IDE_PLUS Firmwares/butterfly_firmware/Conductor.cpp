@@ -517,9 +517,10 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             const char*  host = config["httpConfig"]["host"].as<char*>();
             int port = config["httpConfig"]["port"].as<int>();
             const char* httpPath = config["httpConfig"]["path"].as<char*>();
-            //    debugPrint("Host :",false);debugPrint(host);
-            //    debugPrint("Port :",false);debugPrint(port);
-            //    debugPrint("Path :",false);debugPrint(httpPath);
+            // debugPrint("Active httpConfigs : ");
+            // debugPrint("Host :",false);debugPrint(m_httpHost);
+            // debugPrint("Port :",false);debugPrint(m_httpPort);
+            // debugPrint("Path :",false);debugPrint(m_httpPath);
 
             //Serial.print("File Content :");Serial.println(jsonChar);
             //Serial.print("http details :");Serial.print(m_httpHost);Serial.print(",");Serial.print(m_httpPort);Serial.print(",");Serial.print(m_httpPath);Serial.println("/***********/");
@@ -555,7 +556,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                         DOSFS.end();
                         delay(10);
                         STM32.reset();
-                }
+                }   
             }
             
             }
@@ -2936,6 +2937,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 ledManager.stopColorOverride();
                 delay(200);
             }
+            iuWiFi.hardReset();
             break;
         case MSPCommand::CERT_UPGRADE_SUCCESS:
             if (loopDebugMode)
@@ -2963,7 +2965,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
              iuWiFi.m_setLastConfirmedPublication();
              changeUsageMode(UsageMode::OPERATION);
              delay(100);
-             iuWiFi.softReset();
+             iuWiFi.hardReset();
              break;
         case MSPCommand::CERT_INVALID_STATIC_URL:
             if (loopDebugMode)
