@@ -15,8 +15,9 @@
  * 
  *
  * */
-#define MEMORY_SIZE 1   // Using 1byte from 512 bytes 
-#define ADDRESS     0   // address to read write
+#define MEMORY_SIZE         4   // Using 1byte from 512 bytes 
+#define CERT_ADDRESS        0   // address to read write
+#define ESP_RESET_ADDRESS   2   // address to store ESP restart count
 class IUESPFlash
 {
     public:
