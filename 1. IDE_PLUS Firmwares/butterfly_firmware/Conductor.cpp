@@ -2121,7 +2121,7 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     }
                 }    
 
-                 if (strcmp(buff, "IUGET_DEVICEID") == 0)
+                if (strcmp(buff, "IUGET_DEVICEID") == 0)
                 {
                     iuUSB.port->print("DEVICE_ID : ");
                     iuUSB.port->println(m_macAddress);
@@ -2295,6 +2295,9 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuUSB.port->println(iuOta.getOtaFlagValue(OTA_VLDN_RETRY_FLAG_LOC));
                     iuUSB.port->print("[3-OTA_PEND_MSG_STS]: ");
                     iuUSB.port->println(iuOta.getOtaFlagValue(OTA_PEND_STATUS_MSG_LOC));
+                }
+                if (strcmp(buff, "IUGET_CERT_CONFIG") == 0) {
+                    iuWiFi.sendMSPCommand(MSPCommand::GET_CERT_CONFIG);
                 }
                 if (strcmp(buff, "IUSET_OTAFLAG_00") == 0)
                 {
@@ -2892,15 +2895,15 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             m_upgradeSuccess = false;
             m_downloadSuccessStartTime = millis();
             ledManager.overrideColor(RGB_BLUE); 
-            sendOtaStatusMsg(MSPCommand::CERT_DOWNLOAD_SUCCESS,CERT_DOWNLOAD_COMPLETE,buff);
             delay(1000);
-             //TODO : Add Visuals
+            //  TODO : Add Visuals
             for(int i = 0 ; i < 10; i++) {
                 ledManager.overrideColor(RGB_GREEN);
                 delay(100);
                 ledManager.stopColorOverride();
                 delay(100);
-            }
+            }            
+            sendOtaStatusMsg(MSPCommand::CERT_DOWNLOAD_SUCCESS,CERT_DOWNLOAD_COMPLETE,buff);
             // if (loopDebugMode) { debugPrint(F("Switching Device mode:CERT DOWNLOAD Mode -> OPERATION")); }
             //  iuWiFi.m_setLastConfirmedPublication();
             //  changeUsageMode(UsageMode::OPERATION);
@@ -2974,6 +2977,12 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 debugPrint("message:",false);
                 debugPrint(buff);
             }
+            break;
+        case MSPCommand::SEND_CERT_DWL_CFG:
+            iuUSB.port->println(buff);
+            break;
+        case MSPCommand::SEND_CERT_DIG_CFG:
+            iuUSB.port->println(buff);
             break;
         case MSPCommand::CERT_NO_DOWNLOAD_AVAILABLE:
             if (debugMode)
