@@ -868,6 +868,32 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             hostSerial.sendMSPCommand(MSPCommand::DELETE_CERT_FILES,"succefully Deleted, Rebooting ESP");
             ESP.restart();
             break;
+        case MSPCommand::GET_CERT_CONFIG:
+        {
+            StaticJsonBuffer<512> JsonBuffer;
+            JsonObject& certConfig = iuWiFiFlash.loadConfigJson(IUESPFlash::CFG_STATIC_CERT_ENDPOINT,JsonBuffer);
+            bool validConfig = certConfig.success();
+            String certConfigChar;
+            certConfig.printTo(certConfigChar);
+            char certUrlConfig[256];
+            sprintf(certUrlConfig,"%s%s","CERT URL CONFIG : ",certConfigChar.c_str());
+            //config.prettyPrintTo(Serial);
+            if (validConfig)
+            {
+                hostSerial.sendMSPCommand(MSPCommand::SEND_CERT_DWL_CFG,certUrlConfig);
+            }
+            JsonObject& diagConfig = iuWiFiFlash.loadConfigJson(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT,JsonBuffer);
+            validConfig = diagConfig.success();
+            String diagConfigChar;
+            diagConfig.printTo(diagConfigChar);
+            char diagUrlConfig[256];
+            sprintf(diagUrlConfig,"%s%s","DIAGNOSTIC URL CONFIG : ",diagConfigChar.c_str());
+            if (validConfig)
+            {
+                hostSerial.sendMSPCommand(MSPCommand::SEND_CERT_DIG_CFG,diagUrlConfig);
+            }
+            break;
+        }
         case MSPCommand::READ_CERTS:
             {
                 int size1 = iuWiFiFlash.getFileSize(IUESPFlash::CFG_MQTT_CLIENT0);
@@ -2817,7 +2843,7 @@ void Conductor::setWiFiConfig(){
         if(config.containsKey("auth_type")){strcpy(m_wifiAuthType, tempAuthType); }
         if(config.containsKey("ssid")){strcpy(m_userSSID, tempSSID); }
         if(config.containsKey("password")){strcpy(m_userPassword, tempPassword); }
-        if(config.containsKey("psk")){strcpy(m_userPassword,tempPasswordOld); strcpy(m_wifiAuthType, "WPA-PSK");};
+        if(config.containsKey("psk")){strcpy(m_userPassword,tempPasswordOld); strcpy(m_wifiAuthType, "WPA-PSK");}
         if(config.containsKey("username")){strcpy(m_username, tempUsername);}
         if(config.containsKey("static")){m_staticIp.fromString(tempStaticIP); }
         if(config.containsKey("gateway")){m_gateway.fromString(tempGatewayIP); }
