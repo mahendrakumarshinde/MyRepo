@@ -88,8 +88,8 @@ void setup()
     conductor.setCertificateManagerHttpEndpoint();
     //Configure the Diagnostic HTTP/HTTPS Endpoint
     conductor.configureDiagnosticEndpointFromFlash(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT);
-    conductor.activeCertificates = iuWiFiFlash.readMemory(ADDRESS);
-
+    conductor.activeCertificates = iuWiFiFlash.readMemory(CERT_ADDRESS);
+    conductor.espResetCount = iuWiFiFlash.readMemory(ESP_RESET_ADDRESS);
     conductor.setWiFiConfig();
     conductor.sendWiFiConfig();
 }
@@ -129,8 +129,7 @@ void loop()
     {   
         //iuWiFiFlash.listAllAvailableFiles(IUESPFlash::CONFIG_SUBDIR);
         //Serial.print("EEPROM Value :");
-        //Serial.println(iuWiFiFlash.readMemory(ADDRESS));
-       
+        //Serial.println(iuWiFiFlash.readMemory(CERT_ADDRESS));
         rssiPublishedCounter++ ;
         if (rssiPublishedCounter >= 6)
         {
