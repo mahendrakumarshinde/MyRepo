@@ -2723,6 +2723,7 @@ char* Conductor::getConfigChecksum(IUESPFlash::storedConfig configType)
     char *md5str = MD5::make_digest(md5hash, 16);
     //free memory
     free(md5hash);
+    free(md5str);
     return md5str;
 }
 
