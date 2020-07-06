@@ -555,7 +555,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 if(strcmp( host, m_httpHost) != 0  || port != m_httpPort || strcmp(httpPath, m_httpPath) != 0 ){
                         DOSFS.end();
                         delay(10);
-                        STM32.reset();
+                        //STM32.reset();
+                        iuWiFi.hardReset();
                 }   
             }
             
