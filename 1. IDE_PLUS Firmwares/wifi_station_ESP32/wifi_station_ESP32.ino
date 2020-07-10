@@ -1,6 +1,6 @@
 /*
   Infinite Uptime WiFi Module Firmware
-  Update 29-05-2020
+  Update 29-06-2020
 */
 
 #include "Conductor.h"
@@ -88,8 +88,8 @@ void setup()
     conductor.setCertificateManagerHttpEndpoint();
     //Configure the Diagnostic HTTP/HTTPS Endpoint
     conductor.configureDiagnosticEndpointFromFlash(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT);
-    conductor.activeCertificates = iuWiFiFlash.readMemory(ADDRESS);
-
+    conductor.activeCertificates = iuWiFiFlash.readMemory(CERT_ADDRESS);
+    conductor.espResetCount = iuWiFiFlash.readMemory(ESP_RESET_ADDRESS);
     conductor.setWiFiConfig();
     conductor.sendWiFiConfig();
 }
@@ -129,12 +129,14 @@ void loop()
     {   
         //iuWiFiFlash.listAllAvailableFiles(IUESPFlash::CONFIG_SUBDIR);
         //Serial.print("EEPROM Value :");
-        //Serial.println(iuWiFiFlash.readMemory(ADDRESS));
-
+        //Serial.println(iuWiFiFlash.readMemory(CERT_ADDRESS));
         rssiPublishedCounter++ ;
         if (rssiPublishedCounter >= 6)
         {
             conductor.publishRSSI();
+            if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_WIFI) || strcmp(conductor.wifiHash,conductor.getConfigChecksum(IUESPFlash::CFG_WIFI)) != 0){
+                hostSerial.sendMSPCommand(MSPCommand::ASK_WIFI_CONFIG);
+            }
             rssiPublishedCounter = 0;
         }
         conductor.resetDownloadInitTimer(10,5000);
@@ -146,9 +148,7 @@ void loop()
             delay(10);
             hostSerial.sendMSPCommand(MSPCommand::GET_RAW_DATA_ENDPOINT_INFO); 
         }
-        if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_WIFI) || strcmp(conductor.wifiHash,conductor.getConfigChecksum(IUESPFlash::CFG_WIFI)) != 0){
-            hostSerial.sendMSPCommand(MSPCommand::ASK_WIFI_CONFIG);
-        }
+        
     }
     delay(1);
 }

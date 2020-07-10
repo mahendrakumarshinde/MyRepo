@@ -1,4 +1,27 @@
 #################################################################################################################################################################################
+Date: 29 JUNE 2020
+Contributed By : Darshan Mirajkar,Vikas Gaikwad
+Product Name : vEdge
+Release Name : vEdgeSecurity(MQTTS/HTTPS/NetworkAuthentication Types) bug fixes 
+Firmware Versions :
+		1. vEdge_main(STM32) : 3.0.1
+		2. vEdge_wifi (ESP32): 3.0.1
+		3. Bootloader L1     : 2.0.0
+		4. Bootloader L2     : 2.0.0
+		5. Factory Firmware  : 2.0.0 
+################################################################################################################################################################################
+
+BugFixes : 
+      1. Resolved the issue of missing Periodic FFT due to https client connection refused in runtime.
+
+Enahancement :
+      1. Enhanced the MQTT re-connection logic.
+      2. Added USB Command to get certificate configs.
+      3. Increased ESP32 EEPROM Size to 4 Bytes to handled the  mqtt disconnection issue.
+
+
+
+#################################################################################################################################################################################
 Date: 29 May 2020
 Contributed By : Sidramayya Swami,Darshan Mirajkar,Vikas Gaikwad
 Product Name : vEdge
