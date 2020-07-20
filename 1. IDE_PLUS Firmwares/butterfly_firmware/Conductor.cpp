@@ -1840,7 +1840,7 @@ void Conductor::processCommand(char *buff)
                 }
                 else
                 {
-                    detachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN));
+                    detachInterrupt(digitalPinToInterrupt(IUKX134::INT1_PIN));
                 }
                 FeatureStates::isISRActive = false;
                 FeatureStates::isISRDisabled = true;
@@ -2040,13 +2040,16 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     {
                         switch (result[7] - '0') {
                             case 0:
-                                iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_8G);
+                                iuAccelerometerKX134.setScale(iuAccelerometerKX134.FSR_8G);
                                 break;
                             case 1:
-                                iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_16G);
+                                iuAccelerometerKX134.setScale(iuAccelerometerKX134.FSR_16G);
                                 break;
                             case 2:
-                                iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_32G);
+                                iuAccelerometerKX134.setScale(iuAccelerometerKX134.FSR_32G);
+                                break;
+                            case 3:
+                                iuAccelerometerKX134.setScale(iuAccelerometerKX134.FSR_64G);    
                                 break;
                         }
                     }
@@ -2081,7 +2084,7 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     }
                     else
                     {
-                        iuAccelerometerKX222.setSamplingRate(samplingRate);
+                        iuAccelerometerKX134.setSamplingRate(samplingRate);
                     }
                 }
                 break;
@@ -2436,13 +2439,16 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     {
                         switch (result[7] - '0') {
                             case 0:
-                                iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_8G);
+                                iuAccelerometerKX134.setScale(iuAccelerometerKX134.FSR_8G);
                                 break;
                             case 1:
-                                iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_16G);
+                                iuAccelerometerKX134.setScale(iuAccelerometerKX134.FSR_16G);
                                 break;
                             case 2:
-                                iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_32G);
+                                iuAccelerometerKX134.setScale(iuAccelerometerKX134.FSR_32G);
+                                break;
+                            case 3:
+                                iuAccelerometerKX134.setScale(iuAccelerometerKX134.FSR_64G);
                                 break;
                         }
                     }
@@ -2477,7 +2483,7 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     }
                     else
                     {
-                        iuAccelerometerKX222.setSamplingRate(samplingRate);
+                        iuAccelerometerKX134.setSamplingRate(samplingRate);
                     }
                 }
                 break;
@@ -3838,7 +3844,7 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             }
             else
             {
-                iuAccelerometerKX222.resetScale();
+                iuAccelerometerKX134.resetScale();
             }
             msg = "operation";
             break;
@@ -3851,7 +3857,7 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             }
             else
             {
-                iuAccelerometerKX222.resetScale();
+                iuAccelerometerKX134.resetScale();
             }
             msg = "custom";
             break;        
@@ -4612,19 +4618,19 @@ bool Conductor::setFFTParams() {
             iuAccelerometer.setSamplingRate(FFTConfiguration::currentSamplingRate);
             setSensorStatus(SensorStatusCode::LSM_SET);
         }
-        else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (iuAccelerometerKX222.kionixPresence))
+        else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (iuAccelerometerKX134.kionixPresence))
         {
             debugPrint(F("KIONIX Present & KIONIX set"));
-            iuAccelerometerKX222.setSamplingRate(FFTConfiguration::currentSamplingRate); // will set the ODR for the sensor
+            iuAccelerometerKX134.setSamplingRate(FFTConfiguration::currentSamplingRate); // will set the ODR for the sensor
             setSensorStatus(SensorStatusCode::KNX_SET);
-        }else if((FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor) && (!iuAccelerometer.lsmPresence) && (iuAccelerometerKX222.kionixPresence)){
+        }else if((FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor) && (!iuAccelerometer.lsmPresence) && (iuAccelerometerKX134.kionixPresence)){
             debugPrint(F("LSM absent & KIONIX set"));
-            iuAccelerometerKX222.setSamplingRate(iuAccelerometerKX222.defaultSamplingRate);
-            FFTConfiguration::currentSamplingRate = iuAccelerometerKX222.defaultSamplingRate;
+            iuAccelerometerKX134.setSamplingRate(iuAccelerometerKX134.defaultSamplingRate);
+            FFTConfiguration::currentSamplingRate = iuAccelerometerKX134.defaultSamplingRate;
             FFTConfiguration::currentSensor = FFTConfiguration::kionixSensor;
-            FFTConfiguration::currentBlockSize = iuAccelerometerKX222.DEFAULT_BLOCK_SIZE;
+            FFTConfiguration::currentBlockSize = iuAccelerometerKX134.DEFAULT_BLOCK_SIZE;
             setSensorStatus(SensorStatusCode::LSM_ABS);
-        }else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (!iuAccelerometerKX222.kionixPresence) && (iuAccelerometer.lsmPresence)){
+        }else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (!iuAccelerometerKX134.kionixPresence) && (iuAccelerometer.lsmPresence)){
             debugPrint(F("KIONIX Absent & LSM set"));
             iuAccelerometer.setSamplingRate(iuAccelerometer.defaultSamplingRate);
             FFTConfiguration::currentSamplingRate = iuAccelerometer.defaultSamplingRate;
@@ -5871,20 +5877,20 @@ uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
             }
         }
     }
-    else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (iuAccelerometerKX222.kionixPresence))
+    else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (iuAccelerometerKX134.kionixPresence))
     {
-        if(iuAccelerometerKX222.checkWHO_AM_I() == false)
+        if(iuAccelerometerKX134.checkWHO_AM_I() == false)
         {
-            ValidationFile->println(F("   Validation [KX222]-Read ID: Fail !"));
-            if(loopDebugMode){ debugPrint(F("Validation [KX222]-Read ID: Fail")); }
+            ValidationFile->println(F("   Validation [KX134]-Read ID: Fail !"));
+            if(loopDebugMode){ debugPrint(F("Validation [KX134]-Read ID: Fail")); }
             otaRtryValidation++;
         }
         else
         {
-            ValidationFile->print(F("KX222 WIA ID: 0x"));
-            ValidationFile->println(IUKX222_WHO_AM_I_WIA_ID,HEX);
-            ValidationFile->println(F("   Validation [KX222]-Read Add: Ok"));
-            if(loopDebugMode){ debugPrint(F("Validation [KX222]-Read Add: Ok")); }
+            ValidationFile->print(F("KX134 WIA ID: 0x"));
+            ValidationFile->println(KX134_1211_WHO_AM_I_WAI_ID,HEX);
+            ValidationFile->println(F("   Validation [KX134]-Read Add: Ok"));
+            if(loopDebugMode){ debugPrint(F("Validation [KX134]-Read Add: Ok")); }
         }
     }
 

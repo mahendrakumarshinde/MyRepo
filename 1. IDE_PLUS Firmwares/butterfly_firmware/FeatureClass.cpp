@@ -1,7 +1,7 @@
 #include "FeatureClass.h"
 #include "IULSM6DSM.h"
 #include "RawDataState.h"
-#include "IUKX222.h"
+#include "IUKX134.h"
 #include "FFTConfiguration.h"
 //#include "FeatureGroup.h"
 /* =============================================================================
@@ -208,7 +208,7 @@ void Feature::incrementFillingIndex()
                     }
                     else
                     {
-                        detachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN));
+                        detachInterrupt(digitalPinToInterrupt(IUKX134::INT1_PIN));
                     }
                     //isr_detached_startTime = micros();
                     FeatureStates::isISRActive = false;

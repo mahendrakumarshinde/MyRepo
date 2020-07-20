@@ -1,10 +1,10 @@
-#ifndef IUKX222_H
-#define IUKX222_H
+#ifndef IUKX134_H
+#define IUKX134_H
 #include <SPI.h>
 #include "FeatureUtilities.h"
 #include "Sensor.h"
 
-class IUKX222 : public HighFreqSensor
+class IUKX134 : public HighFreqSensor
 {
 public:
 
@@ -34,8 +34,9 @@ public:
 
     enum ScaleOption { FSR_8G = (0x00 << 3),
                         FSR_16G = (0x01 << 3),
-                        FSR_32G = (0x02 << 3) };
-    IUKX222(SPIClass *spiPtr, uint8_t csPin, SPISettings settings,const char* name,
+                        FSR_32G = (0x02 << 3),
+                        FSR_64G = (0x03 << 3) };
+    IUKX134(SPIClass *spiPtr, uint8_t csPin, SPISettings settings,const char* name,
                     void (*SPIReadCallback)(),
                     FeatureTemplate<q15_t> *accelerationX,
                     FeatureTemplate<q15_t> *accelerationY,
@@ -47,7 +48,7 @@ public:
 
     static const OdrSetting defaultODR = ODR_3200Hz;
 
-    static const LpfSetting defaultLPF = LPF_AVG16;
+    static const LpfSetting defaultLPF = LPF_AVG8;
 
     static const uint16_t defaultSamplingRate = 6400; // Hz
     uint16_t m_samplingRate = defaultSamplingRate;
@@ -132,4 +133,4 @@ protected:
     uint8_t retryCount = 3;
 
 };
-#endif 
+#endif

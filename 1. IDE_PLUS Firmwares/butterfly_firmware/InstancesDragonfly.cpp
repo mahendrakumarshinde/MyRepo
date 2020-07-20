@@ -229,12 +229,12 @@ IULSM6DSM iuAccelerometer(&iuI2C, "ACC", LSM6DSMAccelReadCallback,
                           &accelerationX, &accelerationY, &accelerationZ,
                           &tiltX, &tiltY, &tiltZ);
 
-void KX222AccelReadCallback()
+void KX134AccelReadCallback()
 {
-    iuAccelerometerKX222.processData();
+    iuAccelerometerKX134.processData();
 }
-IUKX222 iuAccelerometerKX222(&SPI1, 43, SPISettings(10000000,MSBFIRST,SPI_MODE0), "ACX", 
-                            KX222AccelReadCallback, &accelerationX, &accelerationY, &accelerationZ);
+IUKX134 iuAccelerometerKX134(&SPI1, 43, SPISettings(10000000,MSBFIRST,SPI_MODE0), "ACX", 
+                            KX134AccelReadCallback, &accelerationX, &accelerationY, &accelerationZ);
 
 void TMP116TempReadCallback(uint8_t wireStatus)
 {
