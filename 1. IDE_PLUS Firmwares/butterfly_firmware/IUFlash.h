@@ -34,9 +34,8 @@ class IUFlash
                                      CFG_OTA,
                                      CFG_FORCE_OTA, // Forced OTA request,
                                      CFG_MODBUS_SLAVE,
-                                     CFG_COUNT,
                                      CFG_DIG,
-                                     CFG_DIG1}; 
+                                     CFG_COUNT}; 
         /***** Core *****/
         IUFlash() {}
         virtual ~IUFlash() {}
@@ -72,7 +71,7 @@ class IUFSFlash : public IUFlash
         static char IUFWBACKUP_SUBDIR[CONFIG_SUBDIR_LEN];
         static char IUFWTMPIMG_SUBDIR[CONFIG_SUBDIR_LEN];
         static char IUFWROLLBACK_SUBDIR[CONFIG_SUBDIR_LEN];
-        static char IUDIG_SUBDIR[CONFIG_SUBDIR_LEN];
+        static char RULE_SUBDIR[CONFIG_SUBDIR_LEN];
         static const uint8_t CONFIG_EXTENSION_LEN = 6;
         static char CONFIG_EXTENSION[CONFIG_EXTENSION_LEN];
         static char FNAME_WIFI0[6];

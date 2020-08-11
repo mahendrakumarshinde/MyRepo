@@ -9,7 +9,7 @@ char IUFSFlash::CONFIG_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iuconfig";
 char IUFSFlash::IUFWBACKUP_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iuBackupFirmware";
 char IUFSFlash::IUFWTMPIMG_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN]  = "/iuTempFirmware";
 char IUFSFlash::IUFWROLLBACK_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iuRollbackFirmware";
-char IUFSFlash::IUDIG_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iurule";
+char IUFSFlash::RULE_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iuRule";
 char IUFSFlash::CONFIG_EXTENSION[IUFSFlash::CONFIG_EXTENSION_LEN] = ".conf";
 
 char IUFSFlash::FNAME_WIFI0[6] = "wifi0";
@@ -29,7 +29,6 @@ char IUFSFlash::FNAME_OTA[4] = "ota";
 char IUFSFlash::FNAME_FORCE_OTA[10] = "force_ota";
 char IUFSFlash::FNAME_MODBUS_SLAVE[12] = "modbusSlave";
 char IUFSFlash::FNAME_DIG[11] = "diagnostic";
-char IUFSFlash::FNAME_DIG1[12] = "diagnostic1";
 /***** Core *****/
 
 void IUFSFlash::begin()
@@ -81,10 +80,10 @@ void IUFSFlash::begin()
             debugPrint("Unable to find or create the ota_rollback directory");
         }
     }
-    m_digDir = DOSFS.exists(IUDIG_SUBDIR);
+    m_digDir = DOSFS.exists(RULE_SUBDIR);
     if(!m_digDir){
-        DOSFS.mkdir(IUDIG_SUBDIR);
-        m_digDir = DOSFS.exists(IUDIG_SUBDIR);
+        DOSFS.mkdir(RULE_SUBDIR);
+        m_digDir = DOSFS.exists(RULE_SUBDIR);
         if (!m_digDir && setupDebugMode)
         {
             debugPrint("Unable to find or create the iuRule directory");
@@ -599,9 +598,6 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
         case CFG_DIG:
             fname = FNAME_DIG;
             break;
-        case CFG_DIG1:
-            fname = FNAME_DIG1;
-            break;
         default:
             if (debugMode)
             {
@@ -614,11 +610,12 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
     {
         return 0;
     }
-    if(fname == FNAME_DIG || fname == FNAME_DIG1 ){
-        return snprintf(dest, len, "%s/%s%s", IUDIG_SUBDIR, fname,
+    if(fname == FNAME_DIG /*|| fname == FNAME_FEATURE*/ ){
+        return snprintf(dest, len, "%s/%s%s", RULE_SUBDIR, fname,
                     CONFIG_EXTENSION);
     }
-    else { return snprintf(dest, len, "%s/%s%s", CONFIG_SUBDIR, fname,
+    else { 
+        return snprintf(dest, len, "%s/%s%s", CONFIG_SUBDIR, fname,
                     CONFIG_EXTENSION);
     }
 }

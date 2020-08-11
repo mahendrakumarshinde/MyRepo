@@ -1158,16 +1158,20 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             subConfig.printTo(Serial); debugPrint("");
         }
         bool dataWritten = false;
-        if(saveToFlash){
-            if(subConfig =="DIG"){
+        if (saveToFlash)
+        {
+            if (subConfig == "DIG")
+            {
                 iuFlash.saveConfigJson(IUFlash::CFG_DIG, variant);
                 dataWritten = true;
                 debugPrint("configs saved successfully ");
-        }else if (subConfig == "DIG1"){
-                iuFlash.saveConfigJson(IUFlash::CFG_DIG1, variant);
-                dataWritten = true;
-                debugPrint("configs1 saved successfully ");
             }
+            // else if (subConfig == "FEATURE")
+            // {
+            //     iuFlash.saveConfigJson(IUFlash::CFG_FEATURE, variant);
+            //     dataWritten = true;
+            //     debugPrint("configs saved successfully ");
+            // }
         }
     }else {
         if(loopDebugMode) debugPrint("Invalid trigger config ");
