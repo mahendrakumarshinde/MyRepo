@@ -1177,14 +1177,18 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         if(loopDebugMode) debugPrint("Invalid trigger config ");
     }
     subConfig = root["DESC"];
-    if(subConfig.success()){
-        
-       // char* desc[] = {"{\"DESC\":{\"UNBAL\":{\"ID\":[1],\"FA\":\"12345678901234567890\",\"RR\":\"12345678901234567890\",\"CMSG\":\"12345678901234567890\"},\"BPFO\":{\"ID\":[2],\"FA\":\"12345678901234567890\",\"RR\":\"12345678901234567890\",\"CMSG\":\"12345678901234567890\"},\"MISALG\":{\"ID\":[3],\"FA\":\"12345678901234567890\",\"RR\":\"12345678901234567890\",\"CMSG\":\"12345678901234567890\"}}}"};
-        //JsonObject& desc_root = jsonBuffer.parseObject(desc);
-        //const char value1 = subConfig["DESC"]["UNBAL"]["FA"].as< const char* >();
-        //debugPrint(value1);
-        createJson(variant);
-    }
+        if(subConfig.success()){
+            bool dataWritten = false;
+            if (saveToFlash)
+                {
+                iuFlash.saveConfigJson(IUFlash::CFG_DESC, variant);
+                dataWritten = true;
+                debugPrint("digDescription saved successfully ");
+            }
+            else{
+                debugPrint("digDescription not saved ");
+            }
+        }
     
     return true;
 }

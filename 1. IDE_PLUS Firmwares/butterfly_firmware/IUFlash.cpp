@@ -29,6 +29,7 @@ char IUFSFlash::FNAME_OTA[4] = "ota";
 char IUFSFlash::FNAME_FORCE_OTA[10] = "force_ota";
 char IUFSFlash::FNAME_MODBUS_SLAVE[12] = "modbusSlave";
 char IUFSFlash::FNAME_DIG[11] = "diagnostic";
+char IUFSFlash::FNAME_DESC[15] ="digDescription";
 /***** Core *****/
 
 void IUFSFlash::begin()
@@ -598,6 +599,9 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
         case CFG_DIG:
             fname = FNAME_DIG;
             break;
+        case CFG_DESC:
+            fname = FNAME_DESC;
+            break;
         default:
             if (debugMode)
             {
@@ -610,7 +614,7 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
     {
         return 0;
     }
-    if(fname == FNAME_DIG /*|| fname == FNAME_FEATURE*/ ){
+    if(fname == FNAME_DIG || fname == FNAME_DESC ){
         return snprintf(dest, len, "%s/%s%s", RULE_SUBDIR, fname,
                     CONFIG_EXTENSION);
     }

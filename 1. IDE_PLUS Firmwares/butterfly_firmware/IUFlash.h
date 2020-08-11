@@ -35,6 +35,7 @@ class IUFlash
                                      CFG_FORCE_OTA, // Forced OTA request,
                                      CFG_MODBUS_SLAVE,
                                      CFG_DIG,
+                                     CFG_DESC,
                                      CFG_COUNT}; 
         /***** Core *****/
         IUFlash() {}
@@ -93,6 +94,7 @@ class IUFSFlash : public IUFlash
         static const uint8_t MAX_FULL_CONFIG_FPATH_LEN = 28;
         static char FNAME_DIG[11];
         static char FNAME_DIG1[12];
+        static char FNAME_DESC[15];
         /***** Core *****/
         IUFSFlash() : IUFlash() {}
         ~IUFSFlash() {}
