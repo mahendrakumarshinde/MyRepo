@@ -206,6 +206,7 @@ class Conductor
         void acquireAudioData(bool inCallback);
         void acquireTemperatureData();
         void computeFeatures();
+        void computeTriggers();
         void streamFeatures();
         void sendAccelRawData(uint8_t axisIdx);
         void periodicSendAccelRawData();

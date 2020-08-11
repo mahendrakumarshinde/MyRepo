@@ -115,7 +115,7 @@ bool Conductor::configureFromFlash(IUFlash::storedConfig configType)
     StaticJsonBuffer<bufferSize> jsonBuffer;
     JsonVariant config = JsonVariant(
             iuFlash.loadConfigJson(configType, jsonBuffer));
-    bool success = config.success();
+   bool success = config.success();
     if (success) {
         switch (configType) {
             case IUFlash::CFG_DEVICE:
@@ -142,6 +142,11 @@ bool Conductor::configureFromFlash(IUFlash::storedConfig configType)
                 debugPrint("CONFIGURING THE MODBUS SLAVE");
                 iuModbusSlave.setupModbusDevice(config);
                 break;
+            // case IUFlash::CFG_DIG:
+            //     availableDiagnosticConfig = config;
+            //     availableDiagnosticConfig.printTo(Serial);
+            //     debugPrint("Loaded DIG config successfully");
+            //     break;
             default:
                 if (debugMode) {
                     debugPrint("Unhandled config type: ", false);
@@ -1151,7 +1156,38 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
 
     }
-    
+    // store the diagnosticConfigurations 
+    subConfig = root["CONFIG"];
+    if (subConfig.success()) {
+        const char* msgType = root["MSGTYPE"];
+
+        if(strcmp(msgType,"DIG") == 0 ){
+            if (loopDebugMode){  debugPrint("Update Diagnostic Config:",false);
+            }
+            //availableDiagnosticConfig = variant;
+            //variant.printTo(Serial); debugPrint("");
+            bool res = iuFlash.saveConfigJson(IUFlash::CFG_DIG, variant);
+            debugPrint("Write status : ",false); debugPrint(res);
+            //debugPrint("Read Config : ", false);
+            //iuFlash.readConfig(IUFlash::CFG_DIG,)
+        }
+    }
+    // TEMP : store the feature output JOSN  
+    subConfig = root["FRES"];
+    if (subConfig.success()) {
+        const char* msgType = root["MSGTYPE"];
+
+        if(strcmp(msgType,"FRES") == 0 ){
+            if (loopDebugMode){  debugPrint("Update Feature outputs :",false);
+            }
+            //availableDiagnosticConfig = variant;
+            //variant.printTo(Serial); debugPrint("");
+            bool res = iuFlash.saveConfigJson(IUFlash::CFG_FOUT, variant);
+            debugPrint("Write status : ",false); debugPrint(res);
+            //debugPrint("Read Config : ", false);
+            //iuFlash.readConfig(IUFlash::CFG_DIG,)
+        }
+    }
     return true;
 }
 
@@ -4192,6 +4228,15 @@ void Conductor::streamFeatures()
     #endif 
 }
 
+/**
+ * @brief Compute all the diagnostic triggers
+ * 
+ */
+void Conductor::computeTriggers(){
+    // read the dig config 
+    //configureFromFlash(IUFlash::CFG_DIG);
+    iuTrigger.m_specializedCompute();
+}
 /**
  * Send the acceleration raw data.
  *
