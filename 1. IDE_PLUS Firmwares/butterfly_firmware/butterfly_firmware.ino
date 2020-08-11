@@ -774,8 +774,7 @@ void loop()
                 conductor.computeFeatures();
                 // Stream features
                 conductor.streamFeatures();
-
-
+                
                if(conductor.modbusStreamingMode ) { 
                     // Update Modbus Registers
                     uint32_t now =millis();
@@ -800,6 +799,9 @@ void loop()
                         if(nowTime - conductor.lastUpdated >= conductor.modbusConnectionTimeout){
                             conductor.lastUpdated = nowTime;
                             conductor.updateModbusStatus();
+                            conductor.computeTriggers();
+                            debugPrint(F("Available - Mem: "), false);
+                            debugPrint(String(freeMemory(), DEC));
                         }
 
                     }else
