@@ -121,7 +121,7 @@ int EXCELLENT_SIGNAL_STRENGTH_TH = -40;
 /***** Debbugging variables *****/
 
 bool doOnce = true;
-uint32_t interval = 30000;
+uint32_t interval = 5000;
 uint32_t lastDone = 0;
 
 /**Flash Check Timer variable**/
@@ -845,6 +845,7 @@ void loop()
         uint32_t now = millis();
         if (now - lastDone > interval) {
             lastDone = now;
+            conductor.diagnosticStateTrack();
             /* === Place your code to excute at fixed interval here ===*/
             conductor.streamMCUUInfo(iuWiFi.port);
             //iuWiFi.sendMSPCommand(MSPCommand::GET_ESP_RSSI);

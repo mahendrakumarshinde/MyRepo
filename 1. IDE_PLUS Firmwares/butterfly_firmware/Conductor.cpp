@@ -1151,7 +1151,22 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
 
     }
-    
+    subConfig = root["UNBAL"];
+    if (subConfig.success()) {
+        //configureAllFeatures(subConfig);
+        bool dataWritten = false;
+            if (saveToFlash) {
+                File digFile = DOSFS.open("/iuRule/diginp.conf","w");
+                if(digFile)
+                {
+                    digFile.print(jsonChar);
+                    digFile.flush();
+                    debugPrint("diginp.conf File write Success");
+                    digFile.close();
+                }
+                dataWritten = true;
+            }
+    }
     return true;
 }
 
@@ -6604,4 +6619,91 @@ void Conductor::updateWiFiHash()
     char wifiHash[34];  
     iuOta.otaGetMD5(IUFSFlash::CONFIG_SUBDIR,"wifi0.conf",wifiHash);
     iuWiFi.sendMSPCommand(MSPCommand::SEND_WIFI_HASH,wifiHash);
+}
+
+void Conductor::diagnosticStateTrack()
+{
+    JsonObject &root = configureJsonFromFlash("/iuRule/diginp.conf", 1); // Expected input { "UNBAL": 1, "MISALIG": 1, "BPFO": 1, ...} 
+    bool state[10];
+    uint16_t MINSPN[10] = {40,50,45,40,50,25,30,25,40,30}; //in Seconds
+    uint16_t ALRREP[10] = {60,60,50,40,50,30,30,60,40,40};
+    uint16_t MINGAP[10] = {20,30,20,20,25,15,15,15,20,15};
+    
+
+    int i = 0;
+    if(getDatetime() > 1590000000)  // Waiting for TimeSync to Avoid False Trigger
+    {
+        // uint32_t now = millis();
+        for (auto iterate : root)
+        {
+            debugPrint("____________________________________");
+            state[i] = (iterate.value.as<bool>());
+            if (state[i])
+            {
+                if (first_active_flag[i] == false)
+                {
+                    debugPrint(iterate.key, false);
+                    debugPrint(" : Activated ");
+                    first_active[i] = getDatetime();
+                    last_active[i] = getDatetime();
+                    first_active_flag[i] = true;
+                    last_active_flag[i] = true;
+                    reset_alert_flag[i] = false;
+                }
+
+                if ((getDatetime() - first_active[i] > MINSPN[i]) && last_alert_flag[i] == false && first_active_flag[i])
+                {
+                    last_alert_flag[i] = true;
+                    last_alert[i] = getDatetime();
+                    debugPrint(iterate.key, false);
+                    debugPrint(" : ALERT");
+                }
+                
+                if(getDatetime() - last_alert[i] > ALRREP[i] && last_alert_flag[i])
+                {
+                    last_alert[i] = getDatetime();
+                    debugPrint(iterate.key, false);
+                    debugPrint(" : ALERT REP");
+                }
+                last_active_flag[i] = true;
+                debugPrint(iterate.key, false);
+                debugPrint(" : ", false);
+                debugPrint(state[i]);
+                debugPrint("MIN SPAN : ",false);debugPrint(MINSPN[i]);
+                debugPrint("ALERT REP : ",false);debugPrint(ALRREP[i]);
+                debugPrint("MIN GAP : ",false);debugPrint(MINGAP[i]);
+                debugPrint("Total Active Time : ", false);debugPrint((getDatetime() - first_active[i]));
+                debugPrint("Calc Rep Time : ", false);debugPrint(getDatetime() - last_alert[i]);
+                debugPrint("____________________________________");
+            }
+            else{
+                if(last_active_flag[i]){
+                    last_active[i] = getDatetime();
+                    last_active_flag[i] = false;
+                }
+                if((getDatetime() - last_active[i] < MINGAP[i]) && last_active_flag[i] == false && reset_alert_flag[i] == false)
+                {
+                   last_active[i] = getDatetime();
+                   reset_alert_flag[i] = true;
+                }else if((getDatetime() - last_active[i] > MINGAP[i]) && last_active_flag[i] == false && reset_alert_flag[i] == true){
+                    first_active_flag[i] = false;
+                    last_active_flag[i] = false;
+                    last_alert_flag[i] = false;
+                    debugPrint(iterate.key, false);
+                    debugPrint(" : Reset Alert");
+                    reset_alert_flag[i] = false;
+                }
+                debugPrint(iterate.key, false);
+                debugPrint(" : ", false);
+                debugPrint(state[i]);
+                debugPrint("MIN SPAN : ",false);debugPrint(MINSPN[i]);
+                debugPrint("ALERT REP : ",false);debugPrint(ALRREP[i]);
+                debugPrint("MIN GAP : ",false);debugPrint(MINGAP[i]);
+                debugPrint("Current Min Gap : ", false);debugPrint(getDatetime() - last_active[i]);
+                debugPrint("Total De-Active Time : ", false);debugPrint(getDatetime() - last_active[i]);
+                debugPrint("____________________________________");
+            }
+            ++i;
+        }
+    }
 }

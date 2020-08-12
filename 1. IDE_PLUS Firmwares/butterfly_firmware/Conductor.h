@@ -291,6 +291,7 @@ class Conductor
         void setDefaultMQTT();
         void setDefaultHTTP();
         void updateWiFiHash();
+        void diagnosticStateTrack();
         
     protected:
         MacAddress m_macAddress;
@@ -381,6 +382,14 @@ class Conductor
         char m_keyType[15];
         char m_certHash[34];
         char m_keyHash[34];
+        static const uint8_t maxDiagnosticStates = 10;
+        uint32_t last_active[maxDiagnosticStates];
+        uint32_t first_active[maxDiagnosticStates];
+        uint32_t last_alert[maxDiagnosticStates];
+        bool first_active_flag[maxDiagnosticStates];
+        bool last_active_flag[maxDiagnosticStates];
+        bool last_alert_flag[maxDiagnosticStates];
+        bool reset_alert_flag[maxDiagnosticStates];
 };
 
 
