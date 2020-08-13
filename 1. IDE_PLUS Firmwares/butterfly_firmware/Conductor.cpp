@@ -1166,16 +1166,11 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 dataWritten = true;
                 debugPrint("configs saved successfully ");
             }
-            // else if (subConfig == "FEATURE")
-            // {
-            //     iuFlash.saveConfigJson(IUFlash::CFG_FEATURE, variant);
-            //     dataWritten = true;
-            //     debugPrint("configs saved successfully ");
-            // }
         }
-    }else {
-        if(loopDebugMode) debugPrint("Invalid trigger config ");
+        else {if(loopDebugMode) debugPrint("Triggers config not saved ");}
+    
     }
+
     subConfig = root["DESC"];
         if(subConfig.success()){
             bool dataWritten = false;
@@ -1184,6 +1179,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 iuFlash.saveConfigJson(IUFlash::CFG_DESC, variant);
                 dataWritten = true;
                 debugPrint("digDescription saved successfully ");
+                createJson();
             }
             else{
                 debugPrint("digDescription not saved ");
@@ -1192,42 +1188,31 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     
     return true;
 }
-//{"DIGRES":{"UBAL":{"FTR":[],"DESC":{}},"BPFO":{"FTR":[],"DESC":{}},"MISL":{"FTR":[],"DESC":{}}}}
 
-void Conductor::createJson(JsonObject& descJson ){
+void Conductor::createJson( ){
+
+    JsonObject& descJson = conductor.configureJsonFromFlash("/iurule/digDescription.conf",1);
 
     StaticJsonBuffer<1500> outputJSONbuffer;
-    char JSONmessageBuffer[500];
     JsonObject& outputJSON = outputJSONbuffer.createObject();
     JsonObject& DIGRES = outputJSON.createNestedObject("DIGRES");
-    
     char* ActiveDiagnostic[] = {"UNBAL","BPFO","MISALG","BPFI1","BPFI2","BPFI3","BPFI4","BPFI5","BPFI6","BPFI7"};
     char* firingtrigger[][2] = {{"TR1","TR3" },{"TR4","TR3"},{"TR2","TR3"}};
     int numberofActiveDig = sizeof(ActiveDiagnostic)/sizeof(char*);
     if(loopDebugMode) {
         debugPrint(numberofActiveDig);
-        //ftrconfig.printTo(Serial);
     }
     for (int dig=0; dig<sizeof(ActiveDiagnostic)/sizeof(char*); dig++ ){
-    
          JsonObject& diagnostic = DIGRES.createNestedObject(ActiveDiagnostic[dig]);
          JsonArray& ftr = diagnostic.createNestedArray("FTR");
-         
          JsonObject& desc = diagnostic.createNestedObject("DESC");
          desc["FA"] = descJson["DESC"][ActiveDiagnostic[dig]]["FA"].as< const char* >();
          desc["RR"] = descJson["DESC"][ActiveDiagnostic[dig]]["RR"].as< const char* >();
          desc["CMSG"] = descJson["DESC"][ActiveDiagnostic[dig]]["CMSG"].as< const char* >();
-         
         }
-        outputJSON.printTo(Serial); debugPrint("");
-        streamDig(outputJSON , 4);
-                  
+
+    outputJSON.printTo(Serial); debugPrint("");
 } 
-
-void Conductor:: streamDig(JsonObject& streamDigtJson, int NumOfDiginJSON){
-    
-
-}
 
 /*
  * Read the OTA Configutation details

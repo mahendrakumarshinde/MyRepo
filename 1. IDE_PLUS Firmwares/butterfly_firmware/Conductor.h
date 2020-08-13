@@ -291,8 +291,7 @@ class Conductor
         void setDefaultMQTT();
         void setDefaultHTTP();
         void updateWiFiHash();
-        void createJson(JsonObject& descJson);
-        void streamDig(JsonObject& streamDigtJson, int NumOfDiginJSON = 4);
+        void createJson( );
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
