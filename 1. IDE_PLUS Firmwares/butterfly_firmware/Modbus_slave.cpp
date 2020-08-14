@@ -5,9 +5,10 @@
 extern Conductor conductor;
 
 
-IUmodbus::IUmodbus(HardwareSerial *SelectSerial, uint8_t Tx_pin)
+IUmodbus::IUmodbus(HardwareSerial *SelectSerial, uint8_t Tx_pin, uint8_t Tx1_pin)
 {
-    TxEnablePin = Tx_pin;
+    TxEnablePin = Tx_pin;                            //Tx_pin = RE -active low enable
+    TxEnable1pin = Tx1_pin;                          //Tx1_pin = DE -active high enable
     m_port = SelectSerial;
     if(setupDebugMode){
         debugPrint("DEBUG INIT");
@@ -364,8 +365,11 @@ void IUmodbus::configure(uint8_t _slaveID, unsigned int _holdingRegsSize)
     if (_TxEnablePin > 1)
     { // pin 0 & pin 1 are reserved for RX/TX. To disable set txenpin < 2
         TxEnablePin = _TxEnablePin;
+        
         pinMode(TxEnablePin, OUTPUT);
-        digitalWrite(TxEnablePin, LOW);
+        pinMode(TxEnable1pin, OUTPUT);
+        digitalWrite(TxEnablePin, LOW);     //RE=0,DE=0 read enable (RE- enable,DE-disable )
+        digitalWrite(TxEnable1pin, LOW);
     }
 
     // Modbus states that a baud rate higher than 19200 must use a fixed 750 us
@@ -428,8 +432,11 @@ unsigned int IUmodbus::calculateCRC(byte bufferSize)
 
 void IUmodbus::sendPacket(unsigned char bufferSize)
 {
-    if (TxEnablePin > 1)
-        digitalWrite(TxEnablePin, HIGH);
+    if (TxEnablePin > 1){
+        digitalWrite(TxEnablePin, HIGH);         //RE=1,DE=1 write enable (RE- disable,DE-enable )
+        digitalWrite(TxEnable1pin, HIGH);
+    }
+        
     for (unsigned char i = 0; i < bufferSize; i++)
     {
         m_port->write(frame[i]);
@@ -441,7 +448,8 @@ void IUmodbus::sendPacket(unsigned char bufferSize)
     delayMicroseconds(T3_5);
 
     if (TxEnablePin > 1)
-        digitalWrite(TxEnablePin, LOW);
+        digitalWrite(TxEnablePin, LOW);      //RE=0,DE=0 read enable (RE- enable,DE-disable )
+        digitalWrite(TxEnable1pin, LOW);
 }
 
 //REPLACE SERIAL to Debug print 
