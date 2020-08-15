@@ -1151,22 +1151,24 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
 
     }
-    subConfig = root["UNBAL"];
-    if (subConfig.success()) {
-        //configureAllFeatures(subConfig);
-        bool dataWritten = false;
-            if (saveToFlash) {
-                File digFile = DOSFS.open("/iuRule/diginp.conf","w");
-                if(digFile)
-                {
-                    digFile.print(jsonChar);
-                    digFile.flush();
-                    debugPrint("diginp.conf File write Success");
-                    digFile.close();
-                }
-                dataWritten = true;
-            }
-    }
+    // subConfig = root["UNBAL"];
+    // if (subConfig.success()) {
+    //     //configureAllFeatures(subConfig);
+    //     bool dataWritten = false;
+    //         if (saveToFlash) {
+    //             File digFile = DOSFS.open("/iuRule/diginp.conf","w");
+    //             if(digFile)
+    //             {
+    //                 digFile.print(jsonChar);
+    //                 digFile.flush();
+    //                 debugPrint("diginp.conf File write Success");
+    //                 digFile.close();
+    //                 clearDiagStateBuffers();
+    //                 clearDiagResultArray();
+    //             }
+    //             dataWritten = true;
+    //         }
+    // }
     return true;
 }
 
@@ -6623,87 +6625,169 @@ void Conductor::updateWiFiHash()
 
 void Conductor::diagnosticStateTrack()
 {
+        // uint16_t m_minSpan[maxDiagnosticStates] = {50,40,50};
+        // uint16_t m_aleartRepeat[maxDiagnosticStates] = {60,50,60};
+        // uint16_t m_maxGap[maxDiagnosticStates] = {30,25,30};
+    getAlertPolicyTime();
     JsonObject &root = configureJsonFromFlash("/iuRule/diginp.conf", 1); // Expected input { "UNBAL": 1, "MISALIG": 1, "BPFO": 1, ...} 
     bool state[10];
-    uint16_t MINSPN[10] = {40,50,45,40,50,25,30,25,40,30}; //in Seconds
-    uint16_t ALRREP[10] = {60,60,50,40,50,30,30,60,40,40};
-    uint16_t MINGAP[10] = {20,30,20,20,25,15,15,15,20,15};
-    
-
-    int i = 0;
+    bool exposeDebugPrints = true;
+    int index = 0;
+    int resultIndex = 0;
     if(getDatetime() > 1590000000)  // Waiting for TimeSync to Avoid False Trigger
     {
         // uint32_t now = millis();
         for (auto iterate : root)
         {
-            debugPrint("____________________________________");
-            state[i] = (iterate.value.as<bool>());
-            if (state[i])
+            if(exposeDebugPrints){
+                debugPrint("____________________________________");
+            }
+            state[index] = (iterate.value.as<bool>());
+            if (state[index])
             {
-                if (first_active_flag[i] == false)
+                if (first_active_flag[index] == false)
                 {
-                    debugPrint(iterate.key, false);
-                    debugPrint(" : Activated ");
-                    first_active[i] = getDatetime();
-                    last_active[i] = getDatetime();
-                    first_active_flag[i] = true;
-                    last_active_flag[i] = true;
-                    reset_alert_flag[i] = false;
+                    if (exposeDebugPrints)
+                    {
+                        debugPrint(iterate.key, false);
+                        debugPrint(" : Activated ");
+                    }
+                    first_active[index] = getDatetime();
+                    last_active[index] = getDatetime();
+                    first_active_flag[index] = true;
+                    last_active_flag[index] = true;
+                    reset_alert_flag[index] = false;
                 }
 
-                if ((getDatetime() - first_active[i] > MINSPN[i]) && last_alert_flag[i] == false && first_active_flag[i])
+                if ((getDatetime() - first_active[index] > m_minSpan[index]) && last_alert_flag[index] == false && first_active_flag[index])
                 {
-                    last_alert_flag[i] = true;
-                    last_alert[i] = getDatetime();
-                    debugPrint(iterate.key, false);
-                    debugPrint(" : ALERT");
+                    last_alert_flag[index] = true;
+                    last_alert[index] = getDatetime();
+                    diagAlertResults[resultIndex]=iterate.key;
+                    if (exposeDebugPrints)
+                    {
+                        debugPrint(iterate.key, false);
+                        debugPrint(" : ALERT");
+                        debugPrint(diagAlertResults[resultIndex]);
+                    }
+                   ++ resultIndex;
                 }
                 
-                if(getDatetime() - last_alert[i] > ALRREP[i] && last_alert_flag[i])
+                if(getDatetime() - last_alert[index] > m_aleartRepeat[index] && last_alert_flag[index])
                 {
-                    last_alert[i] = getDatetime();
-                    debugPrint(iterate.key, false);
-                    debugPrint(" : ALERT REP");
+                    last_alert[index] = getDatetime();
+                    diagAlertResults[resultIndex]=iterate.key;
+                    if (exposeDebugPrints)
+                    {
+                        debugPrint(iterate.key, false);
+                        debugPrint(" : ALERT REP");
+                        debugPrint(diagAlertResults[resultIndex]);
+                    }
+                    ++resultIndex;
                 }
-                last_active_flag[i] = true;
-                debugPrint(iterate.key, false);
-                debugPrint(" : ", false);
-                debugPrint(state[i]);
-                debugPrint("MIN SPAN : ",false);debugPrint(MINSPN[i]);
-                debugPrint("ALERT REP : ",false);debugPrint(ALRREP[i]);
-                debugPrint("MIN GAP : ",false);debugPrint(MINGAP[i]);
-                debugPrint("Total Active Time : ", false);debugPrint((getDatetime() - first_active[i]));
-                debugPrint("Calc Rep Time : ", false);debugPrint(getDatetime() - last_alert[i]);
-                debugPrint("____________________________________");
+                last_active_flag[index] = true;
+                if (exposeDebugPrints)
+                {
+                    debugPrint(iterate.key, false);
+                    debugPrint(" : ", false);
+                    debugPrint(state[index]);
+                    debugPrint("MIN SPAN : ", false);
+                    debugPrint(m_minSpan[index]);
+                    debugPrint("ALERT REP : ", false);
+                    debugPrint(m_aleartRepeat[index]);
+                    debugPrint("MIN GAP : ", false);
+                    debugPrint(m_maxGap[index]);
+                    debugPrint("Total Active Time : ", false);
+                    debugPrint((getDatetime() - first_active[index]));
+                    debugPrint("Calc Rep Time : ", false);
+                    debugPrint(getDatetime() - last_alert[index]);
+                    debugPrint("____________________________________");
+                }
             }
             else{
-                if(last_active_flag[i]){
-                    last_active[i] = getDatetime();
-                    last_active_flag[i] = false;
+                if(last_active_flag[index]){
+                    last_active[index] = getDatetime();
+                    last_active_flag[index] = false;
                 }
-                if((getDatetime() - last_active[i] < MINGAP[i]) && last_active_flag[i] == false && reset_alert_flag[i] == false)
+                if((getDatetime() - last_active[index] < m_maxGap[index]) && last_active_flag[index] == false && reset_alert_flag[index] == false)
                 {
-                   last_active[i] = getDatetime();
-                   reset_alert_flag[i] = true;
-                }else if((getDatetime() - last_active[i] > MINGAP[i]) && last_active_flag[i] == false && reset_alert_flag[i] == true){
-                    first_active_flag[i] = false;
-                    last_active_flag[i] = false;
-                    last_alert_flag[i] = false;
-                    debugPrint(iterate.key, false);
-                    debugPrint(" : Reset Alert");
-                    reset_alert_flag[i] = false;
+                   last_active[index] = getDatetime();
+                   reset_alert_flag[index] = true;
+                }else if((getDatetime() - last_active[index] > m_maxGap[index]) && last_active_flag[index] == false && reset_alert_flag[index] == true){
+                    first_active_flag[index] = false;
+                    last_active_flag[index] = false;
+                    last_alert_flag[index] = false;
+                    reset_alert_flag[index] = false;
+                    if (exposeDebugPrints)
+                    {
+                        debugPrint(iterate.key, false);
+                        debugPrint(" : Reset Alert");
+                    }
                 }
-                debugPrint(iterate.key, false);
-                debugPrint(" : ", false);
-                debugPrint(state[i]);
-                debugPrint("MIN SPAN : ",false);debugPrint(MINSPN[i]);
-                debugPrint("ALERT REP : ",false);debugPrint(ALRREP[i]);
-                debugPrint("MIN GAP : ",false);debugPrint(MINGAP[i]);
-                debugPrint("Current Min Gap : ", false);debugPrint(getDatetime() - last_active[i]);
-                debugPrint("Total De-Active Time : ", false);debugPrint(getDatetime() - last_active[i]);
-                debugPrint("____________________________________");
+                if (exposeDebugPrints)
+                {
+                    debugPrint(iterate.key, false);
+                    debugPrint(" : ", false);
+                    debugPrint(state[index]);
+                    debugPrint("MIN SPAN : ", false);
+                    debugPrint(m_minSpan[index]);
+                    debugPrint("ALERT REP : ", false);
+                    debugPrint(m_aleartRepeat[index]);
+                    debugPrint("MIN GAP : ", false);
+                    debugPrint(m_maxGap[index]);
+                    debugPrint("Current Min Gap : ", false);
+                    debugPrint(getDatetime() - last_active[index]);
+                    debugPrint("Total De-Active Time : ", false);
+                    debugPrint(getDatetime() - last_active[index]);
+                    debugPrint("____________________________________");
+                }
             }
-            ++i;
+            ++index;
         }
+        
+        debugPrint("Result Array : ",false);
+        for(int i=0;i<maxDiagnosticStates;i++){
+            debugPrint(diagAlertResults[i],false);
+            debugPrint(",",false);
+        }
+        debugPrint("");
+        clearDiagResultArray();
     }
+}
+
+
+void Conductor::getAlertPolicyTime()
+{
+    JsonObject &diag = configureJsonFromFlash("/iuRule/diagnostic.conf", 1);
+    size_t totalDiagnostics = diag["CONFIG"]["DIG"]["ID"].size();
+
+    debugPrint("Total No. Of Duiagnostics = ",false);
+    debugPrint(totalDiagnostics);
+
+    for(int i = 0; i < totalDiagnostics; i++){
+        m_minSpan[i] = diag["CONFIG"]["DIG"]["ALTP"]["MINSPN"][i];
+        m_aleartRepeat[i] = diag["CONFIG"]["DIG"]["ALTP"]["ALRREP"][i];
+        m_maxGap[i] = diag["CONFIG"]["DIG"]["ALTP"]["MAXGAP"][i];
+    }
+
+    // for(int i = 0; i < totalDiagnostics; i++){
+    //     debugPrint("MIN SPAN : ", false);debugPrint(m_minSpan[i]);
+    //     debugPrint("ALR REP : ", false);debugPrint(m_aleartRepeat[i]);
+    //     debugPrint("MAX GAP : ", false);debugPrint(m_maxGap[i]);
+    // }
+}
+
+void Conductor::clearDiagStateBuffers()
+{
+    memset(last_active,'\0',sizeof(last_active));
+    memset(first_active,'\0',sizeof(first_active));
+    memset(last_alert,'\0',sizeof(last_alert));
+    memset(first_active_flag,'\0',sizeof(first_active_flag));
+    memset(last_active_flag,'\0',sizeof(last_active_flag));
+    memset(last_alert_flag,'\0',sizeof(last_alert_flag));
+    memset(reset_alert_flag,'\0',sizeof(reset_alert_flag));
+}
+
+void Conductor::clearDiagResultArray(){
+    memset(diagAlertResults,'\0',sizeof(diagAlertResults));
 }

@@ -292,6 +292,9 @@ class Conductor
         void setDefaultHTTP();
         void updateWiFiHash();
         void diagnosticStateTrack();
+        void getAlertPolicyTime();
+        void clearDiagStateBuffers();
+        void clearDiagResultArray();
         
     protected:
         MacAddress m_macAddress;
@@ -382,7 +385,7 @@ class Conductor
         char m_keyType[15];
         char m_certHash[34];
         char m_keyHash[34];
-        static const uint8_t maxDiagnosticStates = 10;
+        static const uint8_t maxDiagnosticStates = 50;
         uint32_t last_active[maxDiagnosticStates];
         uint32_t first_active[maxDiagnosticStates];
         uint32_t last_alert[maxDiagnosticStates];
@@ -390,6 +393,10 @@ class Conductor
         bool last_active_flag[maxDiagnosticStates];
         bool last_alert_flag[maxDiagnosticStates];
         bool reset_alert_flag[maxDiagnosticStates];
+        uint16_t m_minSpan[maxDiagnosticStates];
+        uint16_t m_aleartRepeat[maxDiagnosticStates];
+        uint16_t m_maxGap[maxDiagnosticStates];
+        String diagAlertResults[maxDiagnosticStates];
 };
 
 
