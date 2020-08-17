@@ -135,6 +135,10 @@ class Conductor
         uint32_t m_certDownloadConfigTimeout = 30*1000;
         // Modbus Connection Timeouts 
         const uint16_t modbusConnectionTimeout = 5000;   // ms 
+        // Diagnostic Rule Engine published buffers
+        static const uint32_t DIG_PUBLISHED_BUFFER_SIZE = 1500;
+        char m_diagnosticPublishedBuffer[DIG_PUBLISHED_BUFFER_SIZE+70]; // 70 bytes for MACID, TIMESTMP, DIGRES
+        char m_diagnosticResult[DIG_PUBLISHED_BUFFER_SIZE];
         uint32_t lastUpdated = 0;
         //timer ISR period
         uint16_t timerISRPeriod = 300; // default 3.3KHz
@@ -206,6 +210,12 @@ class Conductor
         void acquireAudioData(bool inCallback);
         void acquireTemperatureData();
         void computeFeatures();
+        /**** Diagnostic Rule Engine ******/
+        void computeTriggers();
+        void streamReportableDiagnostics();
+        void constructPayload(const char* dId,JsonObject& desc);
+        void addFTR(const char* dId,JsonArray& FTR );
+        /*********************************/
         void streamFeatures();
         void sendAccelRawData(uint8_t axisIdx);
         void periodicSendAccelRawData();
