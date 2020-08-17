@@ -800,6 +800,7 @@ void loop()
                             conductor.lastUpdated = nowTime;
                             conductor.updateModbusStatus();
                             conductor.computeTriggers();
+                            conductor.streamReportableDiagnostics();
                             debugPrint(F("Available - Mem: "), false);
                             debugPrint(String(freeMemory(), DEC));
                         }
