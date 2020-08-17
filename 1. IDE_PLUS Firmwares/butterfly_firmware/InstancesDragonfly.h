@@ -44,6 +44,9 @@
 /***** Managers and helpers *****/
 #include "LedManager.h"
 
+/**** Diagnostic Rule Engine ******/
+#include "IUTriggerEngine.h"
+
 #ifdef COMPONENTTEST
     // Interfaces
     #include "ComponentTest/CMP_IUBMD350.h"
@@ -88,6 +91,9 @@ extern char iuEthernetBuffer[2048];
 extern Usr2Eth iuEthernet;
 
 extern IUmodbus iuModbusSlave;
+
+extern IUTriggerComputer iuTrigger;
+extern IUDiagnosticNotifier iuDigNotifier;
 /* =============================================================================
     OTA
 ============================================================================= */

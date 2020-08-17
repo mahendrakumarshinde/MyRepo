@@ -27,6 +27,8 @@ char IUFSFlash::FNAME_FFT[4] = "fft";
 char IUFSFlash::FNAME_OTA[4] = "ota";
 char IUFSFlash::FNAME_FORCE_OTA[10] = "force_ota";
 char IUFSFlash::FNAME_MODBUS_SLAVE[12] = "modbusSlave";
+char IUFSFlash::FNAME_DIAGNOSTIC_CONFG[12] = "diagnostic";
+char IUFSFlash::FNAME_FOUT[12] = "fout";
 /***** Core *****/
 
 void IUFSFlash::begin()
@@ -582,6 +584,12 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
             break;
         case CFG_MODBUS_SLAVE:
             fname = FNAME_MODBUS_SLAVE;
+            break;
+        case CFG_DIG:
+            fname = FNAME_DIAGNOSTIC_CONFG;
+            break;
+        case CFG_FOUT:
+            fname = FNAME_FOUT;
             break;
         default:
             if (debugMode)
