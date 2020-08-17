@@ -6631,7 +6631,7 @@ void Conductor::diagnosticStateTrack()
     getAlertPolicyTime();
     JsonObject &root = configureJsonFromFlash("/iuRule/diginp.conf", 1); // Expected input { "UNBAL": 1, "MISALIG": 1, "BPFO": 1, ...} 
     bool state[10];
-    bool exposeDebugPrints = true;
+    bool exposeDebugPrints = false;  // Enable this flag to get debugPrints
     int index = 0;
     int resultIndex = 0;
     if(getDatetime() > 1590000000)  // Waiting for TimeSync to Avoid False Trigger
@@ -6751,7 +6751,7 @@ void Conductor::diagnosticStateTrack()
             debugPrint(",",false);
         }
         debugPrint("");
-        clearDiagResultArray();
+        clearDiagResultArray(); // In actual condition. Need to call this method after Publishing Alert Results 
     }
 }
 
