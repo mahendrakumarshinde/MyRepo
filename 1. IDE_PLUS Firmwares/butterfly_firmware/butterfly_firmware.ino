@@ -121,7 +121,7 @@ int EXCELLENT_SIGNAL_STRENGTH_TH = -40;
 /***** Debbugging variables *****/
 
 bool doOnce = true;
-uint32_t interval = 5000;
+uint32_t interval = 30000;
 uint32_t lastDone = 0;
 
 /**Flash Check Timer variable**/

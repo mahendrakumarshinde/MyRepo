@@ -6630,7 +6630,7 @@ void Conductor::diagnosticStateTrack()
         // uint16_t m_maxGap[maxDiagnosticStates] = {30,25,30};
     getAlertPolicyTime();
     JsonObject &root = configureJsonFromFlash("/iuRule/diginp.conf", 1); // Expected input { "UNBAL": 1, "MISALIG": 1, "BPFO": 1, ...} 
-    bool state[10];
+    bool state[maxDiagnosticStates];
     bool exposeDebugPrints = false;  // Enable this flag to get debugPrints
     int index = 0;
     int resultIndex = 0;
