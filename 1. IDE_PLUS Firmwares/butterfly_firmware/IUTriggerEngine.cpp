@@ -23,6 +23,12 @@ IUTriggerComputer::~IUTriggerComputer()
     }
 }
 
+uint8_t IUTriggerComputer::getActiveDigContainerlength(){
+    return m_activeDiagnosticLenght;
+}
+uint8_t IUTriggerComputer::getreportableDigContainerLength(){
+   return m_reportableDiagnosticLength;
+}
 // bool IUTriggerComputer::computeTriggerState(float result,float threshold,const char* comparator){
 
 //       if (result > threshold)
@@ -93,12 +99,17 @@ void IUTriggerComputer::maintainAllTriggers(uint8_t digCount,uint8_t trgCount, b
  * @brief compute the triggers
  * 
  */
-void IUTriggerComputer:: m_specializedCompute() {
+JsonVariant IUTriggerComputer:: m_specializedCompute() {
 
     
-    float featureOutput[2];
-    float fout[2];          // allow  max two features can be compared
+    //float fout[2];          // allow  max two features can be compared
     JsonObject &m_digObject =  conductor.configureJsonFromFlash("/iuconfig/diagnostic.conf",true);
+    
+    // Diagnostic output Json 
+    StaticJsonBuffer<1024> diagnosticJsonBuffer;
+    JsonObject& diagnosticJson = diagnosticJsonBuffer.createObject();
+    JsonObject& DIG = diagnosticJson.createNestedObject("DIG");    
+        
     // validate the entries available in trigger and diagnostic configs 
     // NB : All the Keys should have a same length of the list 
     bool validFlag = validateDigConfigs(m_digObject); 
@@ -114,9 +125,9 @@ void IUTriggerComputer:: m_specializedCompute() {
         StaticJsonBuffer<400> triggerResultsBuffer;
         JsonObject& triggerResult = triggerResultsBuffer.createObject();
         JsonArray& triggers = triggerResult.createNestedArray("FTR");
-    
+        
         uint8_t TRG_SIZE = m_digObject["CONFIG"]["TRG"]["FID1"].size();
-        uint8_t DIG_SIZE = m_digObject["CONFIG"]["DIG"]["ID"].size();
+        uint8_t DIG_SIZE = m_digObject["CONFIG"]["DIG"]["DID"].size();
         
         debugPrint("TRG_SIZE : ",false);debugPrint(TRG_SIZE);
         for (size_t i = 0; i < TRG_SIZE; i++)   
@@ -130,13 +141,6 @@ void IUTriggerComputer:: m_specializedCompute() {
                 m_operator    = m_digObject["CONFIG"]["TRG"]["OPTR"][i][j];
                 m_comparator  = m_digObject["CONFIG"]["TRG"]["COMP"][i][j];
                 m_threshold  = m_digObject["CONFIG"]["TRG"]["TRH"][i][j]; 
-                
-                // debugPrint("Feature Names :",false);
-                // debugPrint(m_feature[0],false);debugPrint(",",false);debugPrint(m_feature[1]);
-                // debugPrint("OPTR :",false);debugPrint(m_operator);//debugPrint(",",false);debugPrint(m_operand[0],false);
-                // debugPrint("TRH :",false); debugPrint(m_threshold);
-                // debugPrint("COMP : ",false);debugPrint(m_comparator);
-                
                 // process 1
                 // Get the Feature values from feature output JSON
                 comparatorId = getCompartorId(m_comparator);
@@ -148,8 +152,6 @@ void IUTriggerComputer:: m_specializedCompute() {
                     // get comparator Id
                     getFeatures(m_feature[0],m_feature[1],fout);
                     optFeature = true;
-                    //debugPrint("Fout[0]:",false);debugPrint(fout[0]);
-                    //debugPrint("Fout[1]:",false);debugPrint(fout[1]);
                 }
                 float res = getTriggerOutput(fout[0],fout[1],m_operator,optFeature);
                 m_tstate =  computeTriggerState(res,m_threshold,comparatorId);
@@ -169,6 +171,8 @@ void IUTriggerComputer:: m_specializedCompute() {
             }
             debugPrint("........................................");
         }
+        debugPrint("\n FTR Result :");
+        triggerResult.printTo(Serial);
         // process 4 
         //compute active diagnostics and DIG state
         // Logic : MAND & FTR  = 1 <active> ,0 <inactive>
@@ -220,9 +224,13 @@ void IUTriggerComputer:: m_specializedCompute() {
 
             debugPrint(" DIG STATE : ",false);
             debugPrint(m_diagnosticState);
-            const char* DIG_NAME = m_digObject["CONFIG"]["DIG"]["ID"][i].as<const char*>();
+            const char* DIG_NAME = m_digObject["CONFIG"]["DIG"]["DID"][i].as<const char*>();
+            // DISABLED container storage 
             updateActiveDiagnosticList(DIG_NAME);
             
+            // ADD KEY and State to Diagnostic JSON  { "DIG1":1,"DIG2":0}
+            DIG.set(DIG_NAME,m_diagnosticState);
+
             // RESET variables
             indexCount = 0;
             atleastOneFiringTriggerActive = false;
@@ -231,21 +239,62 @@ void IUTriggerComputer:: m_specializedCompute() {
             debugPrint("*******************************************");
         }
 
-        debugPrint("Active Diagnostic List : ");
+        //diagnosticJson.printTo(Serial);
+        #if 0
+        StaticJsonBuffer<1500> reportableJsonBUffer;
+        JsonObject& reportableJson = reportableJsonBUffer.createObject();
+        JsonObject& DIGRES = reportableJson.createNestedObject("DIGRES");
+        debugPrint("Reportable List : ");
         listDiagnosticContainer(STACK::ACTIVE_DIG);
-        // TODO : Add Code for Reportable Diagnostic
-        
-        debugPrint("Reportable Diagnostic List :");    
-        pushToStack(STACK::REPORTABLE_DIG,"Vikas");
-        pushToStack(STACK::REPORTABLE_DIG,"Darshan");
-        pushToStack(STACK::REPORTABLE_DIG,"Swami");
+        int alen = getActiveDigContainerlength();
+        debugPrint("R LEN Before : ",false);debugPrint(alen);
+        const char* dId;
+        for (size_t i = 0; i < alen; i++)
+        {
+        //Node *temp;
+        //temp = activeDIGContainer;
+        // while (activeDIGContainer != 0)
+        // {
+            dId = iuDigNotifier.getDiagnosticName(STACK::ACTIVE_DIG);
+            //dId = iuTrigger.popFromStack(STACK::ACTIVE_DIG);
+            debugPrint("dID : ",false);debugPrint(dId);
+            // construct the RDIG JSON 
+            JsonObject& diagnostic = DIGRES.createNestedObject(dId);
+            JsonArray& ftr = diagnostic.createNestedArray("FTR");
+            JsonObject& desc = diagnostic.createNestedObject("DESC");
+            //addFTR(dId.c_str(),ftr);
+            //m_reportableDiagnosticLength--;
+            //DIGRES.set(dId,1);
+            //ftr.add(i);
+            //conductor.constructPayload(dId,desc);
+            
+            m_activeDiagnosticLenght--;
+            
+        }
+        reportableJson.printTo(Serial); 
+        int alen1 = getActiveDigContainerlength();
+        debugPrint("\nR LEN After : ",false);debugPrint(alen1);
+        #endif
+        // TODO : Add Code for Reportable Diagnostic 
+        // Created dumy stack of reportable diagnostic for Testing
 
-        listDiagnosticContainer(STACK::REPORTABLE_DIG);
-        debugPrint("Flush STACK NO : 2");
-        flushPreviousDiagnosticList(STACK::REPORTABLE_DIG);
+        //debugPrint("Reportable Diagnostic List :");    
+        // pushToStack(STACK::REPORTABLE_DIG,"UNBAL");
+        // pushToStack(STACK::REPORTABLE_DIG,"BPFO");
+        // pushToStack(STACK::REPORTABLE_DIG,"MISALIG");
+        // pushToStack(STACK::REPORTABLE_DIG,"RDIG1");
+        // pushToStack(STACK::REPORTABLE_DIG,"RDIG2");
+        // pushToStack(STACK::REPORTABLE_DIG,"BPFI1");
+        // pushToStack(STACK::REPORTABLE_DIG,"BPFI2");
+        // pushToStack(STACK::REPORTABLE_DIG,"BPFI3");
+        
+        //listDiagnosticContainer(STACK::REPORTABLE_DIG);
+        //debugPrint("Flush STACK NO : 2");
+        //flushPreviousDiagnosticList(STACK::REPORTABLE_DIG);
 
     }
     
+    return (JsonVariant) diagnosticJson;
     
 }
 
@@ -258,7 +307,7 @@ void IUTriggerComputer::updateActiveDiagnosticList(const char*  m_digName){
     if(m_diagnosticState){
         pushToStack(STACK::ACTIVE_DIG, m_digName);    
     }else
-    {
+    {   pushToStack(STACK::REPORTABLE_DIG, m_digName);
         if (loopDebugMode)
         {
             debugPrint("DIG Inactive :",false);
@@ -274,14 +323,18 @@ void IUTriggerComputer::pushToStack(uint8_t cId ,const char* name){
     if(cId == 0) {
         newNode->link = activeDIGContainer;
         activeDIGContainer = newNode;
+        m_activeDiagnosticLenght++;
     }else
     {
         newNode->link = reportableDIGContainer;
         reportableDIGContainer = newNode;
+        m_reportableDiagnosticLength++;
     }
 }
-void IUTriggerComputer::popFromStack(uint8_t cId){
+
+const char* IUTriggerComputer::popFromStack(uint8_t cId){
     Node *temp;
+    const char* value;
     if(cId == 0){
         temp = activeDIGContainer;
         if (activeDIGContainer == 0)
@@ -289,24 +342,27 @@ void IUTriggerComputer::popFromStack(uint8_t cId){
             debugPrint("Active DIG Container is Empty");
         }else
         {
-            // debugPrint("Popped Item is  :",false);
-            // debugPrint(activeDIGContainer->digName);
+            debugPrint("Popped Item is  :",false);
+            value = activeDIGContainer->digName;
             activeDIGContainer = activeDIGContainer->link;
             free(temp);
+            m_activeDiagnosticLenght--;
         }
     }else{
         temp = reportableDIGContainer;
         if (reportableDIGContainer == 0)
         {
-            debugPrint("Active DIG Container is Empty");
+            debugPrint("Reportable DIG Container is Empty");
         }else
         {
-            // debugPrint("Popped Item is  :",false);
-            // debugPrint(reportableDIGContainer->digName);
+            //debugPrint("Popped Item is  :",false);
+            value = reportableDIGContainer->digName;
             reportableDIGContainer = reportableDIGContainer->link;
             free(temp);
+            m_reportableDiagnosticLength--;
         }
     }
+    return value;
 }
 /**
  * @brief Prints all the active stck items
@@ -325,7 +381,7 @@ void IUTriggerComputer::listDiagnosticContainer(uint8_t cId){
         {
             while (temp != 0)
             {
-                //debugPrint("Active DIG Stack Item : ");
+                //debugPrint("Active DIG Stack Item : ",false);
                 debugPrint(temp->digName);
                 temp = temp->link;
             }
@@ -340,7 +396,7 @@ void IUTriggerComputer::listDiagnosticContainer(uint8_t cId){
         {
               while (temp != 0)
             {
-                //debugPrint("Reportable Stack Item : ");
+                debugPrint("Reportable Stack Item : ",false);
                 debugPrint(temp->digName);
                 temp = temp->link;
             }
@@ -363,7 +419,7 @@ void IUTriggerComputer::flushPreviousDiagnosticList(uint8_t cId){
             // delete pop() the complete stack (container)
             while (activeDIGContainer != 0)
             {
-                popFromStack(cId);
+              diagnosticId = popFromStack(cId);
             }
         }
     }else
@@ -470,16 +526,30 @@ void IUTriggerComputer::getFeatures(const char* feature1,const char* feature2,fl
 bool IUTriggerComputer::validateDigConfigs(JsonObject &config){
     
      if( config.success() ) {
+         // TODO : Add DIG Size validation check here 
+
         const char* msgType = config["MSGTYPE"];
         const int Tsize = config["CONFIG"]["TRG"].size();
+        uint8_t TRG_LEN = config["CONFIG"]["TRG"]["FID1"].size();
         uint8_t Tlen = config["CONFIG"]["TRG"]["FID1"][0].size();
+        uint8_t DIG_LEN = config["CONFIG"]["DIG"]["DID"].size();
         uint8_t indexSize[Tsize];
         bool validTriggerSize = false;
         debugPrint("Tsize :",false); debugPrint(Tsize);
         debugPrint("Tlen : ",false); debugPrint(Tlen);
+        debugPrint("TRG_LEN :",false); debugPrint(TRG_LEN);
+        debugPrint("DIG_LEN :",false);  debugPrint(DIG_LEN);
         // validate the Trigger paraemters 
-        char* type[] = { "FID1","FID2","OPTR","COMP","TRH","MAND"};
+        char* type[] = { "TID","FID1","FID2","OPTR","COMP","TRH","MAND"};
         uint8_t temp;
+        if (DIG_LEN != TRG_LEN)
+        {   
+            validTriggerSize = false;
+            if(loopDebugMode){
+                debugPrint("Mismatched size of TRG and DIG configs");
+            }    
+            return validTriggerSize;
+        }
         for (size_t i = 0; i <Tsize ; i++)
         {
            indexSize[i] =  config["CONFIG"]["TRG"][type[i]].size();
@@ -532,5 +602,42 @@ IUDiagnosticStateComputer::~IUDiagnosticStateComputer()
     {
         debugPrint("Destructor IUDiagnosticStateComputer !");
     }
+    
+}
+
+
+
+/**
+ * @brief Diagnostic fault Notifier methods
+ * 
+ */
+IUDiagnosticNotifier::IUDiagnosticNotifier(/* args */)
+{
+}
+
+IUDiagnosticNotifier::~IUDiagnosticNotifier()
+{
+}
+
+const char* IUDiagnosticNotifier::getDiagnosticName(uint8_t cId){
+    
+    if(cId == 0){
+       digName =  popFromStack(STACK::ACTIVE_DIG);
+    }else{
+           digName =  popFromStack(STACK::REPORTABLE_DIG);
+    }
+    if(loopDebugMode){
+        debugPrint("RDIG NAME :", false);
+        debugPrint(digName);
+    }   
+    return digName;
+}
+/**
+ * @brief Read the Reportable Diagnostic Container to construct the 
+ * Diagnostic output JsonObject
+ * 
+ */
+void IUDiagnosticNotifier::constructMessage(){
+
     
 }

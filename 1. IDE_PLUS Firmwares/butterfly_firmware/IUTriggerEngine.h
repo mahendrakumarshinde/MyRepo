@@ -57,6 +57,7 @@ class IUTriggerComputer
         const char* m_comparator;
         const char* m_feature[2];
         float m_threshold;
+        float fout[2];
         bool m_diagnosticState = false;
         
     public:
@@ -68,7 +69,10 @@ class IUTriggerComputer
         uint8_t m_activeDiagnosticList[MAX_DIAGNOSTIC_LEN];
         uint8_t m_inactiveDiagnosticList[MAX_DIAGNOSTIC_LEN];
         uint8_t m_firingTriggers[MAX_TRIGGERS_LEN];
+        uint8_t m_activeDiagnosticLenght = 0;
+        uint8_t m_reportableDiagnosticLength = 0;
         bool atleastOneFiringTriggerActive = false;
+        const char* diagnosticId;
         /*** Constructor ****/
         IUTriggerComputer();
         /*** Destructor ****/
@@ -76,7 +80,9 @@ class IUTriggerComputer
 
         /** Operands *****/
         // Implemented template function below
-
+        /*** get container size ****/
+        uint8_t getActiveDigContainerlength();
+        uint8_t getreportableDigContainerLength();
         // Get Trigger Status
         //bool computeTriggerState(float result,float threshold,const char* comparator);
         char* getActiveTriggers(char* dName);
@@ -92,7 +98,7 @@ class IUTriggerComputer
         void maintainInactiveTriggers(uint8_t digId,uint8_t index, uint8_t subindex, bool trgState);
         void maintainAllTriggers(uint8_t digCount,uint8_t trgCount,bool trgstate);
         /****  compute ****/
-        virtual void m_specializedCompute();
+        virtual JsonVariant m_specializedCompute();
         void getActiveDiagnostic(JsonObject& digObj);
         void updateActiveDiagnosticList(const char*  m_digName);
         /**** Reset ****/
@@ -100,7 +106,7 @@ class IUTriggerComputer
 
         //bool (IUFlash::storedConfig configType);
         void pushToStack(uint8_t cId,const char* name);
-        void popFromStack(uint8_t cId);
+        const char* popFromStack(uint8_t cId);
         void flushPreviousDiagnosticList(uint8_t cId);
         void listDiagnosticContainer(uint8_t cId);
         //IUTriggerComputer *top = NULL;
@@ -116,7 +122,35 @@ public:
     ~IUDiagnosticStateComputer();
 
     void getReportableDiagnostic();
+
 };
+
+/**
+ * @brief class IUDiagnosticNotifier
+ * manages the publication of the reportable diagnostic list 
+ * support the message segmentation with message acknowledment
+ * max N no of diagnostic alert can be published in a single o/p JsonObject 
+ * 
+ */
+class IUDiagnosticNotifier:public IUTriggerComputer
+{
+private:
+    /* data */
+    uint8_t DEFAULT_BATCH_SIZE = 5;
+    const char* digName;
+public:
+    /**** Constructor *****/
+    IUDiagnosticNotifier(/* args */);
+    /**** Destructor *****/
+    ~IUDiagnosticNotifier();
+    const char* getDiagnosticName(uint8_t cId);
+    void constructMessage();
+    void publishedNotification();
+    
+
+};
+
+
 
 /**
  * @brief Get the Trigger Output object
