@@ -64,7 +64,7 @@ IUmodbus iuModbusSlave(&Serial4,NULL);
     IU Diagnostic Rule Engine 
 ===============================================================================*/
 IUTriggerComputer iuTrigger;
-
+IUDiagnosticNotifier iuDigNotifier;
 /* =============================================================================
     Features
 ============================================================================= */

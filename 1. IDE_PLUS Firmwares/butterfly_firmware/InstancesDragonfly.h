@@ -93,6 +93,7 @@ extern Usr2Eth iuEthernet;
 extern IUmodbus iuModbusSlave;
 
 extern IUTriggerComputer iuTrigger;
+extern IUDiagnosticNotifier iuDigNotifier;
 /* =============================================================================
     OTA
 ============================================================================= */
