@@ -301,10 +301,12 @@ class Conductor
         void setDefaultMQTT();
         void setDefaultHTTP();
         void updateWiFiHash();
-        void diagnosticStateTrack();
+        void diagnosticStateTrack(JsonVariant &digList);
         void getAlertPolicyTime();
         void clearDiagStateBuffers();
         void clearDiagResultArray();
+        int getTotalDigCount(const char* diagName);
+        int getActiveDigCount(const char* diagName);
         
     protected:
         MacAddress m_macAddress;
@@ -395,7 +397,7 @@ class Conductor
         char m_keyType[15];
         char m_certHash[34];
         char m_keyHash[34];
-        static const uint8_t maxDiagnosticStates = 50;
+        static const uint8_t maxDiagnosticStates = 10;
         uint32_t last_active[maxDiagnosticStates];
         uint32_t first_active[maxDiagnosticStates];
         uint32_t last_alert[maxDiagnosticStates];
@@ -406,6 +408,8 @@ class Conductor
         uint16_t m_minSpan[maxDiagnosticStates];
         uint16_t m_aleartRepeat[maxDiagnosticStates];
         uint16_t m_maxGap[maxDiagnosticStates];
+        uint16_t m_totalDigCount[maxDiagnosticStates];
+        uint16_t m_activeDigCount[maxDiagnosticStates];
         String diagAlertResults[maxDiagnosticStates];
 };
 

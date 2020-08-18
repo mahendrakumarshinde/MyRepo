@@ -339,10 +339,10 @@ const char* IUTriggerComputer::popFromStack(uint8_t cId){
         temp = activeDIGContainer;
         if (activeDIGContainer == 0)
         {
-            debugPrint("Active DIG Container is Empty");
+            debugPrint("\nActive DIG Container is Empty");
         }else
         {
-            debugPrint("Popped Item is  :",false);
+            debugPrint("\nPopped Item is  :",false);
             value = activeDIGContainer->digName;
             activeDIGContainer = activeDIGContainer->link;
             free(temp);
@@ -352,10 +352,10 @@ const char* IUTriggerComputer::popFromStack(uint8_t cId){
         temp = reportableDIGContainer;
         if (reportableDIGContainer == 0)
         {
-            debugPrint("Reportable DIG Container is Empty");
+            debugPrint("\nReportable DIG Container is Empty");
         }else
         {
-            //debugPrint("Popped Item is  :",false);
+            //debugPrint("\nPopped Item is  :",false);
             value = reportableDIGContainer->digName;
             reportableDIGContainer = reportableDIGContainer->link;
             free(temp);

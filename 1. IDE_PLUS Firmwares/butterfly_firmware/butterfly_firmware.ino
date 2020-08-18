@@ -700,7 +700,7 @@ void setup()
         // Turn ON BLE module and the BLE beacon
         iuBluetooth.bleButton(true);
         iuBluetooth.bleBeaconSetting(true);
-        
+        conductor.getAlertPolicyTime();
     #endif
  #endif   
 }
@@ -774,7 +774,13 @@ void loop()
                 conductor.computeFeatures();
                 // Stream features
                 conductor.streamFeatures();
-                
+                // Diagnostic Features
+                conductor.computeTriggers();
+                // Stream Diagnostic Features
+                conductor.streamReportableDiagnostics();
+                // Serial.print("\nAvailable - Mem: ");
+                // Serial.println(freeMemory(), DEC);
+                                    
                if(conductor.modbusStreamingMode ) { 
                     // Update Modbus Registers
                     uint32_t now =millis();
@@ -799,8 +805,8 @@ void loop()
                         if(nowTime - conductor.lastUpdated >= conductor.modbusConnectionTimeout){
                             conductor.lastUpdated = nowTime;
                             conductor.updateModbusStatus();
-                            conductor.computeTriggers();
-                            conductor.streamReportableDiagnostics();
+                             //conductor.computeTriggers();
+                             //conductor.streamReportableDiagnostics();
                             debugPrint(F("Available - Mem: "), false);
                             debugPrint(String(freeMemory(), DEC));
                         }
