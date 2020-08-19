@@ -774,13 +774,19 @@ void loop()
                 conductor.computeFeatures();
                 // Stream features
                 conductor.streamFeatures();
-                // Diagnostic Features
-                conductor.computeTriggers();
-                // Stream Diagnostic Features
-                conductor.streamReportableDiagnostics();
-                // Serial.print("\nAvailable - Mem: ");
-                // Serial.println(freeMemory(), DEC);
-                                    
+                // Executing Diagnostic every 1 sec
+                uint32_t nowT = millis();
+                if(nowT - conductor.digLastExecuted >= 1000){
+                    conductor.digLastExecuted = nowT;
+                    // Diagnostic Features
+                    conductor.computeTriggers();
+                    // Stream Diagnostic Features
+                    conductor.streamReportableDiagnostics();
+                    Serial.print("\nAvailable - Mem: ");
+                    Serial.println(freeMemory(), DEC);
+                  
+                }
+                                   
                if(conductor.modbusStreamingMode ) { 
                     // Update Modbus Registers
                     uint32_t now =millis();
