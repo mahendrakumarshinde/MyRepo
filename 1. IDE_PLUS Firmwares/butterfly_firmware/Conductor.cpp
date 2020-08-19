@@ -1174,6 +1174,9 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             getAlertPolicyTime();
             //debugPrint("Read Config : ", false);
             //iuFlash.readConfig(IUFlash::CFG_DIG,)
+            if(loopDebugMode) debugPrint("Received DIG configuration");
+            iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, "{DIG_ACK: 123456789}");
+            
         }
     }
     // TEMP : store the feature output JOSN  
@@ -4238,59 +4241,77 @@ void Conductor::streamFeatures()
  */
 void Conductor::computeTriggers(){
     // read the dig config 
-    JsonVariant dig =  iuTrigger.m_specializedCompute();
-    debugPrint("Return of m_specializedCompute : ",false);
-    //dig.printTo(Serial);
-    diagnosticStateTrack(dig);
-    //iuTrigger.listDiagnosticContainer(STACK::REPORTABLE_DIG);
-   
+    iuTrigger.m_specializedCompute();
+    debugPrint("Return of m_specializedCompute : ",true);
+    for (size_t i = 0; i < iuTrigger.DIG_COUNT ; i++)
+    {
+        debugPrint(iuTrigger.RDIG_LIST[i]);
+    }
+    debugPrint("DIG COUNT :",false);
+    debugPrint(iuTrigger.DIG_COUNT);
+    
+    diagnosticStateTrack(iuTrigger.RDIG_LIST,iuTrigger.DIG_COUNT );
+    
 }
 void Conductor::streamReportableDiagnostics(){
-    int rlen = iuTrigger.getreportableDigContainerLength();
-    int alen = iuTrigger.getActiveDigContainerlength();
-    debugPrint("\nReportable DIG Lenght :",false);
-    debugPrint(rlen);
-    debugPrint("\nActive DIG Lenght :",false);
-    debugPrint(alen);
-    const char* dId;
-    if(rlen > 0 ){
-        StaticJsonBuffer<2500> reportableJsonBUffer;        // Note  : can store upto 15 DIG of (10 DIG, 10 FTR) memory upto 2500/2  
-        JsonObject& reportableJson = reportableJsonBUffer.createObject();
-        iuTrigger.listDiagnosticContainer(STACK::ACTIVE_DIG);
-        iuTrigger.listDiagnosticContainer(STACK::REPORTABLE_DIG);
-        // char* digNames [] = {"RDIG1","RDIG2","RDIG3","RDIG4","RDIG5","RDIG6","RDIG7","RDIG8","RDIG9","RDIG10"
-        //                       "RDIG11","RDIG12","RDIG13","RDIG14","RDIG15"};
-        // int dlen = sizeof(digNames)/sizeof(digNames[0]);
-        //debugPrint("D LEN : ",false);debugPrint(dlen);
-        for (size_t i = 0; i < rlen; i++)
-        {
-        
-            dId = iuDigNotifier.getDiagnosticName(STACK::REPORTABLE_DIG);
-            //dId = diagAlertResults[i].c_str();
-            debugPrint("dID : ",false);debugPrint(dId);
-            // construct the RDIG JSON 
-            JsonObject& diagnostic = reportableJson.createNestedObject(dId);
-            JsonArray& ftr = diagnostic.createNestedArray("FTR");
-            addFTR(dId,ftr);
-            iuTrigger.m_reportableDiagnosticLength--;
-            //iuTrigger.m_activeDiagnosticLenght--;
+   if(m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE){
+    
+        int rlen = iuTrigger.getreportableDigContainerLength();
+        int alen = iuTrigger.getActiveDigContainerlength();
+        debugPrint("\nReportable DIG Lenght :",false);
+        debugPrint(rlen);
+        debugPrint("\nActive DIG Lenght :",false);
+        debugPrint(alen);
+        const char* dId;
+        if(alen > 0 || alen <= 0 ){
+            //StaticJsonBuffer<3000> reportableJsonBUffer;        // Note  : can store upto 15 DIG of (10 DIG, 10 FTR) memory upto 2500/2  
+            DynamicJsonBuffer reportableJsonBUffer;
+            JsonObject& reportableJson = reportableJsonBUffer.createObject();
+            iuTrigger.listDiagnosticContainer(STACK::ACTIVE_DIG);
+            iuTrigger.listDiagnosticContainer(STACK::REPORTABLE_DIG);
+            // char* digNames [] = {"RDIG1","RDIG2","RDIG3","RDIG4","RDIG5","RDIG6","RDIG7","RDIG8","RDIG9","RDIG10"
+            //                       "RDIG11","RDIG12","RDIG13","RDIG14","RDIG15"};
+            // int dlen = sizeof(digNames)/sizeof(digNames[0]);
+            // debugPrint("D LEN : ",false);debugPrint(dlen);
+            for (size_t i = 0; i < iuTrigger.DIG_COUNT; i++)
+            {
             
-        }
-    //reportableJson.printTo(Serial); debugPrint("");
-    reportableJson.printTo(m_diagnosticResult,DIG_PUBLISHED_BUFFER_SIZE);
+                //dId = iuDigNotifier.getDiagnosticName(STACK::ACTIVE_DIG);
+                //dId = diagAlertResults[i].c_str();
+                //dId = iuTrigger.RDIG_LIST[i].c_str();
+                dId = diagAlertResults[i].c_str();
+                debugPrint("dID : ",false);debugPrint(dId);
+                if(dId != NULL){
+                    // construct the RDIG JSON 
+                    JsonObject& diagnostic = reportableJson.createNestedObject(dId);
+                    JsonArray& ftr = diagnostic.createNestedArray("FTR");
+                    addFTR(dId,ftr);
+                    //iuTrigger.m_reportableDiagnosticLength--;
+                    iuTrigger.m_activeDiagnosticLenght--;
+                }
+            }
+        if(diagAlertResults[0] != "\0"){
+            //reportableJson.printTo(Serial); debugPrint("");
+            reportableJson.printTo(m_diagnosticResult,DIG_PUBLISHED_BUFFER_SIZE);
 
-    uint16_t msglen = strlen(m_diagnosticResult);//.length();
-    // debugPrint("DIG result  :",false);debugPrint(m_diagnosticResult);
-    // debugPrint("DMSG LEN : ",false);debugPrint(msglen);
-    snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"DIGRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
-    debugPrint("O/P Buffer : ",false);
-    debugPrint(m_diagnosticPublishedBuffer);
-    debugPrint("BUFF LEN :",false);
-    debugPrint(strlen(m_diagnosticPublishedBuffer));
-    // Published to MQTT 
-    iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,m_diagnosticPublishedBuffer);
-    iuTrigger.flushPreviousDiagnosticList(STACK::REPORTABLE_DIG);
+            uint16_t msglen = strlen(m_diagnosticResult);//.length();
+            // debugPrint("DIG result  :",false);debugPrint(m_diagnosticResult);
+            // debugPrint("DMSG LEN : ",false);debugPrint(msglen);
+            snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"DIGRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
+            debugPrint("O/P Buffer : ",false);
+            debugPrint(m_diagnosticPublishedBuffer);
+            debugPrint("BUFF LEN :",false);
+            debugPrint(strlen(m_diagnosticPublishedBuffer));
+            // Published to MQTT 
+            iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,m_diagnosticPublishedBuffer);
+          }
+        iuTrigger.flushPreviousDiagnosticList(STACK::REPORTABLE_DIG);
+        iuTrigger.flushPreviousDiagnosticList(STACK::ACTIVE_DIG);
+        }
     }
+    iuTrigger.DIG_COUNT = 0;
+    clearDiagResultArray();
+        
 }
 
 void Conductor::constructPayload(const char* dId,JsonObject& desc ){
@@ -6739,6 +6760,7 @@ void Conductor::updateWiFiHash()
     iuWiFi.sendMSPCommand(MSPCommand::SEND_WIFI_HASH,wifiHash);
 }
 
+#if 0
 void Conductor::diagnosticStateTrack(JsonVariant &digList)
 {
         // uint16_t m_minSpan[maxDiagnosticStates] = {50,40,50};
@@ -6889,7 +6911,129 @@ void Conductor::diagnosticStateTrack(JsonVariant &digList)
         clearDiagResultArray(); // In actual condition. Need to call this method after Publishing Alert Results 
     }
 }
+#endif
 
+void Conductor::diagnosticStateTrack(String *diagInput, int totalConfiguredDiag)
+{
+    int resultIndex = 0;
+    bool exposeDebugPrints = true;  // Enable this flag to get debugPrints    int resultIndex = 0;
+    if(getDatetime() > 1590000000)  // Waiting for TimeSync to Avoid False Trigger
+    {
+        // uint32_t now = millis();
+        for (int index = 0; index< totalConfiguredDiag;index++)
+        {
+            if(exposeDebugPrints){
+                debugPrint("____________________________________");
+            }
+            // state[index] = (iterate.value.as<bool>());
+            if (diagInput[index].endsWith("1"))
+            {   
+                diagInput[index].remove(diagInput[index].length() - 1);
+                if (first_active_flag[index] == false)
+                {
+                    if (exposeDebugPrints)
+                    {
+                        debugPrint(diagInput[index], false);
+                        debugPrint(" : Activated ");
+                    }
+                    first_active[index] = getDatetime();
+                    last_active[index] = getDatetime();
+                    first_active_flag[index] = true;
+                    last_active_flag[index] = true;
+                    reset_alert_flag[index] = false;
+                }
+                if ((getDatetime() - first_active[index] > m_minSpan[index]) && last_alert_flag[index] == false && first_active_flag[index])
+                {
+                    last_alert_flag[index] = true;
+                    last_alert[index] = getDatetime();
+                    diagAlertResults[resultIndex]=diagInput[index];
+                    if (exposeDebugPrints)
+                    {
+                        debugPrint(diagInput[index], false);
+                        debugPrint(" : ALERT");
+                        debugPrint(diagAlertResults[resultIndex]);
+                    }
+                   ++ resultIndex;
+                }
+                if(getDatetime() - last_alert[index] > m_aleartRepeat[index] && last_alert_flag[index])
+                {
+                    last_alert[index] = getDatetime();
+                    diagAlertResults[resultIndex]=diagInput[index];
+                    if (exposeDebugPrints)
+                    {
+                        debugPrint(diagInput[index], false);
+                        debugPrint(" : ALERT REP");
+                        debugPrint(diagAlertResults[resultIndex]);
+                    }
+                    ++resultIndex;
+                }
+                last_active_flag[index] = true;
+                if (exposeDebugPrints)
+                {
+                    debugPrint(diagInput[index], false);
+                    debugPrint(" : ", false);
+                    debugPrint("1");
+                    debugPrint("MIN SPAN : ", false);
+                    debugPrint(m_minSpan[index]);
+                    debugPrint("ALERT REP : ", false);
+                    debugPrint(m_aleartRepeat[index]);
+                    debugPrint("MAX GAP : ", false);
+                    debugPrint(m_maxGap[index]);
+                    debugPrint("Total Active Time : ", false);
+                    debugPrint((getDatetime() - first_active[index]));
+                    debugPrint("Calc Rep Time : ", false);
+                    debugPrint(getDatetime() - last_alert[index]);
+                    debugPrint("____________________________________");
+                }
+            }
+            else if (diagInput[index].endsWith("0")){
+                diagInput[index].remove(diagInput[index].length() - 1);
+                if(last_active_flag[index]){
+                    last_active[index] = getDatetime();
+                    last_active_flag[index] = false;
+                }
+                if((getDatetime() - last_active[index] < m_maxGap[index]) && last_active_flag[index] == false && reset_alert_flag[index] == false)
+                {
+                   last_active[index] = getDatetime();
+                   reset_alert_flag[index] = true;
+                }else if((getDatetime() - last_active[index] > m_maxGap[index]) && last_active_flag[index] == false && reset_alert_flag[index] == true){
+                    first_active_flag[index] = false;
+                    last_active_flag[index] = false;
+                    last_alert_flag[index] = false;
+                    reset_alert_flag[index] = false;
+                    if (exposeDebugPrints)
+                    {
+                        debugPrint(diagInput[index], false);
+                        debugPrint(" : Reset Alert");
+                    }
+                }
+                if (exposeDebugPrints)
+                {
+                    debugPrint(diagInput[index], false);
+                    debugPrint(" : ", false);
+                    debugPrint("0");
+                    debugPrint("MIN SPAN : ", false);
+                    debugPrint(m_minSpan[index]);
+                    debugPrint("ALERT REP : ", false);
+                    debugPrint(m_aleartRepeat[index]);
+                    debugPrint("MAX GAP : ", false);
+                    debugPrint(m_maxGap[index]);
+                    debugPrint("Current Min Gap : ", false);
+                    debugPrint(getDatetime() - last_active[index]);
+                    debugPrint("Total De-Active Time : ", false);
+                    debugPrint(getDatetime() - last_active[index]);
+                    debugPrint("____________________________________");
+                }
+            }
+        }        debugPrint("Result Array : ",false);
+        for(int i=0;i<maxDiagnosticStates;i++){
+            debugPrint(diagAlertResults[i],false);
+            debugPrint(",",false);
+        }
+        debugPrint("");
+        //clearDiagResultArray(); // In actual condition. Need to call this method after Publishing Alert Results 
+    }
+}
 
 void Conductor::getAlertPolicyTime()
 {

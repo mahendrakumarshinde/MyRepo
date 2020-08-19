@@ -140,6 +140,7 @@ class Conductor
         char m_diagnosticPublishedBuffer[DIG_PUBLISHED_BUFFER_SIZE+70]; // 70 bytes for MACID, TIMESTMP, DIGRES
         char m_diagnosticResult[DIG_PUBLISHED_BUFFER_SIZE];
         uint32_t lastUpdated = 0;
+        uint32_t digLastExecuted = 0;
         //timer ISR period
         uint16_t timerISRPeriod = 300; // default 3.3KHz
         String availableFingerprints;
@@ -301,7 +302,7 @@ class Conductor
         void setDefaultMQTT();
         void setDefaultHTTP();
         void updateWiFiHash();
-        void diagnosticStateTrack(JsonVariant &digList);
+        void diagnosticStateTrack(String *diagInput, int totalConfiguredDiag);
         void getAlertPolicyTime();
         void clearDiagStateBuffers();
         void clearDiagResultArray();
