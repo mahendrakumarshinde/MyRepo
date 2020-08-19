@@ -62,8 +62,8 @@ class IUTriggerComputer
         
     public:
         /*** Variables *****/
-        static const uint8_t MAX_TRIGGERS_LEN  = 50; 
-        static const uint8_t MAX_DIAGNOSTIC_LEN  = 50; 
+        static const uint8_t MAX_TRIGGERS_LEN  = 10; 
+        static const uint8_t MAX_DIAGNOSTIC_LEN  = 10; 
         uint8_t m_activeTriggerList[MAX_TRIGGERS_LEN];
         uint8_t m_inactiveTriggerList[MAX_TRIGGERS_LEN];
         uint8_t m_activeDiagnosticList[MAX_DIAGNOSTIC_LEN];
@@ -73,6 +73,8 @@ class IUTriggerComputer
         uint8_t m_reportableDiagnosticLength = 0;
         bool atleastOneFiringTriggerActive = false;
         const char* diagnosticId;
+        String RDIG_LIST[MAX_DIAGNOSTIC_LEN];
+        int DIG_COUNT;
         /*** Constructor ****/
         IUTriggerComputer();
         /*** Destructor ****/
@@ -98,7 +100,7 @@ class IUTriggerComputer
         void maintainInactiveTriggers(uint8_t digId,uint8_t index, uint8_t subindex, bool trgState);
         void maintainAllTriggers(uint8_t digCount,uint8_t trgCount,bool trgstate);
         /****  compute ****/
-        virtual JsonVariant m_specializedCompute();
+        virtual void m_specializedCompute();
         void getActiveDiagnostic(JsonObject& digObj);
         void updateActiveDiagnosticList(const char*  m_digName);
         /**** Reset ****/

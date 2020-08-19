@@ -99,16 +99,16 @@ void IUTriggerComputer::maintainAllTriggers(uint8_t digCount,uint8_t trgCount, b
  * @brief compute the triggers
  * 
  */
-JsonVariant IUTriggerComputer:: m_specializedCompute() {
+void IUTriggerComputer:: m_specializedCompute() {
 
     
     //float fout[2];          // allow  max two features can be compared
     JsonObject &m_digObject =  conductor.configureJsonFromFlash("/iuconfig/diagnostic.conf",true);
     
     // Diagnostic output Json 
-    StaticJsonBuffer<1024> diagnosticJsonBuffer;
-    JsonObject& diagnosticJson = diagnosticJsonBuffer.createObject();
-    JsonObject& DIG = diagnosticJson.createNestedObject("DIG");    
+    // StaticJsonBuffer<1024> diagnosticJsonBuffer;         // USING CUSTOM MES FORMAT <DID><STATE>
+    // JsonObject& diagnosticJson = diagnosticJsonBuffer.createObject();
+    // JsonObject& DIG = diagnosticJson.createNestedObject("DIG");    
         
     // validate the entries available in trigger and diagnostic configs 
     // NB : All the Keys should have a same length of the list 
@@ -224,12 +224,16 @@ JsonVariant IUTriggerComputer:: m_specializedCompute() {
 
             debugPrint(" DIG STATE : ",false);
             debugPrint(m_diagnosticState);
-            const char* DIG_NAME = m_digObject["CONFIG"]["DIG"]["DID"][i].as<const char*>();
+            const char* DID = m_digObject["CONFIG"]["DIG"]["DID"][i].as<const char*>();
+            String DIG_NAME = DID + String(m_diagnosticState);
+            RDIG_LIST[i] = DIG_NAME;
+            DIG_COUNT++;
+            Serial.print("DIG_NAME :");Serial.println(DIG_NAME);
             // DISABLED container storage 
-            updateActiveDiagnosticList(DIG_NAME);
+            //updateActiveDiagnosticList(DIG_NAME.c_str());
             
             // ADD KEY and State to Diagnostic JSON  { "DIG1":1,"DIG2":0}
-            DIG.set(DIG_NAME,m_diagnosticState);
+            //DIG.set(DIG_NAME,m_diagnosticState);
 
             // RESET variables
             indexCount = 0;
@@ -294,7 +298,7 @@ JsonVariant IUTriggerComputer:: m_specializedCompute() {
 
     }
     
-    return (JsonVariant) diagnosticJson;
+    //return (JsonVariant) diagnosticJson;
     
 }
 
