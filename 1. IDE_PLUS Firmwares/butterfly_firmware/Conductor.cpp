@@ -2128,6 +2128,11 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuUSB.port->print("DEVICE_ID : ");
                     iuUSB.port->println(m_macAddress);
                 }
+                if(strcmp(buff, "IUGET_WIFI_MACID") ==0)
+                {
+                    iuUSB.port->print("WIFI_MACID : ");
+                    iuUSB.port->println(iuWiFi.getMacAddress());
+                }
                 if (strcmp(buff, "IUGET_FIRMWARE_VERSION") == 0)
                 {
                     iuUSB.port->print("FIRMWARE_VERSION : ");
