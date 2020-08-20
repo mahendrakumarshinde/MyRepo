@@ -292,6 +292,7 @@ class Conductor
         void setDefaultHTTP();
         void updateWiFiHash();
         void createJson( );
+        double getGoogleTime();
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/

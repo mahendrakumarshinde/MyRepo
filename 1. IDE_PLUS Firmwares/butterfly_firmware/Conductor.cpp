@@ -3174,7 +3174,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             }
             break;
         case MSPCommand::WIFI_ALERT_CONNECTED:
-            if (loopDebugMode) { debugPrint(F("WIFI-CONNECTED;")); }
+            if (loopDebugMode) { debugPrint(F("WIFI-CONNECTED;")); getGoogleTime();}
             if (isBLEConnected()) {
                 iuBluetooth.write("WIFI-CONNECTED;");
             }
@@ -3270,7 +3270,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             }
             break;
         case MSPCommand::SET_DATETIME:
-            if (loopDebugMode) { debugPrint(F("SET_DATETIME")); }
+            if (loopDebugMode) { debugPrint(F("SET_DATETIME")); debugPrint("Google_Query_time : "); debugPrint(buff); }
             setRefDatetime(buff);
             break;
         case MSPCommand::CONFIG_FORWARD_CONFIG:
@@ -3728,6 +3728,10 @@ double Conductor::getDatetime()
     return m_refDatetime + (double) (now - m_lastSynchroTime) / 1000.;
 }
 
+double Conductor::getGoogleTime(){
+
+    iuWiFi.sendMSPCommand(MSPCommand::GOOGLE_TIME_QUERY);
+}
 
 /* =============================================================================
     Mode management

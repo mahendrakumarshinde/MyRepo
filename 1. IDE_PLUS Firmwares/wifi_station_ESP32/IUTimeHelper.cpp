@@ -155,6 +155,12 @@ void IUTimeHelper::sendNTPpacket()
     }
 }
 
+void IUTimeHelper::readGoogletime (){
+
+    updateTimeReferenceFromNTP();
+    time_t gtm = getCurrentTime();
+   hostSerial.sendMSPCommand(MSPCommand::SET_DATETIME,String(gtm).c_str());
+}
 /**
  * Read NTP packet coming from the time server
  */
