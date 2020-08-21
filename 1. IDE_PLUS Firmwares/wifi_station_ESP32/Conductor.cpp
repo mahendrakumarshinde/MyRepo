@@ -1484,8 +1484,8 @@ void Conductor::processMessageFromMQTT(const char* topic, const char* payload,
     }
     if (strncmp(&subTopic[1], "time_sync", 9) == 0)
     {
-        //timeHelper.updateTimeReferenceFromIU(payload);
-        //hostSerial.sendMSPCommand(MSPCommand::SET_DATETIME, payload, length);
+        timeHelper.updateTimeReferenceFromIU(payload);
+        hostSerial.sendMSPCommand(MSPCommand::SET_DATETIME, payload, length);
     }
     else if (strncmp(&subTopic[1], "config", 6) == 0)
     {

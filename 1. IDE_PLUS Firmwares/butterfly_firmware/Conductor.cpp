@@ -1157,7 +1157,10 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             debugPrint("Triggers configuration received: ", false);
             subConfig.printTo(Serial); debugPrint("");
         }
+        const char* messageId = root["messageId"]  ;
         bool dataWritten = false;
+        //char ack_config[100];
+        snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"macId\":\"%s\",\"configType\":\"dig_ack\"}", messageId,m_macAddress.toString().c_str());
         if (saveToFlash)
         {
             if (subConfig == "DIG")
@@ -1166,53 +1169,23 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 dataWritten = true;
                 debugPrint("configs saved successfully ");
             }
+            if(iuWiFi.isConnected() )
+            {  
+             if(loopDebugMode){debugPrint("Response : ",false);debugPrint(ack_config);}
+             iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,ack_config );
+            }
+            if(StreamingMode::BLE && isBLEConnected()){// Send ACK to BLE
+            if(loopDebugMode){ debugPrint("Diagnostic Config SUCCESS");}
+            iuBluetooth.write("DIG-CFG-SUCCESS;");
+        }
         }
         else {if(loopDebugMode) debugPrint("Triggers config not saved ");}
     
     }
 
-    subConfig = root["DESC"];
-        if(subConfig.success()){
-            bool dataWritten = false;
-            if (saveToFlash)
-                {
-                iuFlash.saveConfigJson(IUFlash::CFG_DESC, variant);
-                dataWritten = true;
-                debugPrint("digDescription saved successfully ");
-                createJson();
-            }
-            else{
-                debugPrint("digDescription not saved ");
-            }
-        }
-    
     return true;
 }
 
-void Conductor::createJson( ){
-
-    JsonObject& descJson = conductor.configureJsonFromFlash("/iurule/digDescription.conf",1);
-
-    StaticJsonBuffer<1500> outputJSONbuffer;
-    JsonObject& outputJSON = outputJSONbuffer.createObject();
-    JsonObject& DIGRES = outputJSON.createNestedObject("DIGRES");
-    char* ActiveDiagnostic[] = {"UNBAL","BPFO","MISALG","BPFI1","BPFI2","BPFI3","BPFI4","BPFI5","BPFI6","BPFI7"};
-    char* firingtrigger[][2] = {{"TR1","TR3" },{"TR4","TR3"},{"TR2","TR3"}};
-    int numberofActiveDig = sizeof(ActiveDiagnostic)/sizeof(char*);
-    if(loopDebugMode) {
-        debugPrint(numberofActiveDig);
-    }
-    for (int dig=0; dig<sizeof(ActiveDiagnostic)/sizeof(char*); dig++ ){
-         JsonObject& diagnostic = DIGRES.createNestedObject(ActiveDiagnostic[dig]);
-         JsonArray& ftr = diagnostic.createNestedArray("FTR");
-         JsonObject& desc = diagnostic.createNestedObject("DESC");
-         desc["FA"] = descJson["DESC"][ActiveDiagnostic[dig]]["FA"].as< const char* >();
-         desc["RR"] = descJson["DESC"][ActiveDiagnostic[dig]]["RR"].as< const char* >();
-         desc["CMSG"] = descJson["DESC"][ActiveDiagnostic[dig]]["CMSG"].as< const char* >();
-        }
-
-    outputJSON.printTo(Serial); debugPrint("");
-} 
 
 /*
  * Read the OTA Configutation details
@@ -3174,7 +3147,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             }
             break;
         case MSPCommand::WIFI_ALERT_CONNECTED:
-            if (loopDebugMode) { debugPrint(F("WIFI-CONNECTED;")); getGoogleTime();}
+            if (loopDebugMode) { debugPrint(F("WIFI-CONNECTED;")); }
+            if(getDatetime() < 1590000000.00){iuWiFi.sendMSPCommand(MSPCommand::GOOGLE_TIME_QUERY);}
             if (isBLEConnected()) {
                 iuBluetooth.write("WIFI-CONNECTED;");
             }
@@ -3728,10 +3702,6 @@ double Conductor::getDatetime()
     return m_refDatetime + (double) (now - m_lastSynchroTime) / 1000.;
 }
 
-double Conductor::getGoogleTime(){
-
-    iuWiFi.sendMSPCommand(MSPCommand::GOOGLE_TIME_QUERY);
-}
 
 /* =============================================================================
     Mode management
