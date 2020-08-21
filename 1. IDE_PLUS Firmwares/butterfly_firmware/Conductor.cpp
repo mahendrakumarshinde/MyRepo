@@ -296,7 +296,6 @@ void Conductor::periodicSendConfigChecksum()
             String rString;
             resultConfig.prettyPrintTo(rString);
             sprintf(resultArray,"%s%s%s%s%s","{\"DEVICEID\":\"", m_macAddress.toString().c_str(),"\",",rString.c_str(),"}");
-            debugPrint(resultArray);
             iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_CONFIG_CHECKSUM, resultArray);
         }
     }
@@ -1203,14 +1202,29 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 
     }
     subConfig = root["CONFIG_HASH"];
-    if (subConfig.success()) {
+    if (subConfig.success())
+    {
+        const char *messageId = root["messageId"];
+        snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"macId\":\"%s\",\"configType\":\"hash_ack\"}", messageId, m_macAddress.toString().c_str());
         bool dataWritten = false;
-                iuFlash.saveConfigJson(IUFlash::CFG_HASH, variant);
-                debugPrint(F("Writing into configHash file"));
-              
-        }else {
-            if(loopDebugMode) debugPrint("Received invalid Hash configuration");
+        iuFlash.saveConfigJson(IUFlash::CFG_HASH, variant);
+        debugPrint(F("Writing into configHash file"));
+        if (iuWiFi.isConnected())
+        {
+            if (loopDebugMode)
+            {
+                debugPrint("Response : ", false);
+                debugPrint(ack_config);
+            }
+            iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, ack_config);
         }
+    }
+    else
+    {
+        if (loopDebugMode)
+            debugPrint("Received invalid Hash configuration");
+    }
+
     subConfig = root["MSGTYPE"];
     if(subConfig.success()){
         if(loopDebugMode) {
@@ -1219,7 +1233,6 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
         const char* messageId = root["messageId"]  ;
         bool dataWritten = false;
-        //char ack_config[100];
         snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"macId\":\"%s\",\"configType\":\"dig_ack\"}", messageId,m_macAddress.toString().c_str());
         if (saveToFlash)
         {
