@@ -1209,9 +1209,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 debugPrint(F("Writing into configHash file"));
               
         }else {
-            if(loopDebugMode) debugPrint("Received invalid WiFi configuration");
+            if(loopDebugMode) debugPrint("Received invalid Hash configuration");
         }
-        readHashFile = true;
     return true;
 }
 

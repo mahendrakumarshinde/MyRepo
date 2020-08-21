@@ -382,7 +382,6 @@ class Conductor
         char m_keyType[15];
         char m_certHash[34];
         char m_keyHash[34];
-        bool readHashFile = true;
 };
 
 
