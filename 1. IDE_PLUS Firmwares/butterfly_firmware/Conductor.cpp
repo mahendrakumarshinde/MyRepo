@@ -1211,8 +1211,41 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }else {
             if(loopDebugMode) debugPrint("Received invalid Hash configuration");
         }
+    subConfig = root["MSGTYPE"];
+    if(subConfig.success()){
+        if(loopDebugMode) {
+            debugPrint("Triggers configuration received: ", false);
+            subConfig.printTo(Serial); debugPrint("");
+        }
+        const char* messageId = root["messageId"]  ;
+        bool dataWritten = false;
+        //char ack_config[100];
+        snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"macId\":\"%s\",\"configType\":\"dig_ack\"}", messageId,m_macAddress.toString().c_str());
+        if (saveToFlash)
+        {
+            if (subConfig == "DIG")
+            {
+                iuFlash.saveConfigJson(IUFlash::CFG_DIG, variant);
+                dataWritten = true;
+                debugPrint("configs saved successfully ");
+            }
+            if(iuWiFi.isConnected() )
+            {  
+             if(loopDebugMode){debugPrint("Response : ",false);debugPrint(ack_config);}
+             iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,ack_config );
+            }
+            if(StreamingMode::BLE && isBLEConnected()){// Send ACK to BLE
+            if(loopDebugMode){ debugPrint("Diagnostic Config SUCCESS");}
+            iuBluetooth.write("DIG-CFG-SUCCESS;");
+        }
+        }
+        else {if(loopDebugMode) debugPrint("Triggers config not saved ");}
+    
+    }
+
     return true;
 }
+
 
 /*
  * Read the OTA Configutation details
@@ -3175,6 +3208,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             break;
         case MSPCommand::WIFI_ALERT_CONNECTED:
             if (loopDebugMode) { debugPrint(F("WIFI-CONNECTED;")); }
+            if(getDatetime() < 1590000000.00){iuWiFi.sendMSPCommand(MSPCommand::GOOGLE_TIME_QUERY);}
             if (isBLEConnected()) {
                 iuBluetooth.write("WIFI-CONNECTED;");
             }
@@ -3270,7 +3304,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             }
             break;
         case MSPCommand::SET_DATETIME:
-            if (loopDebugMode) { debugPrint(F("SET_DATETIME")); }
+            if (loopDebugMode) { debugPrint(F("SET_DATETIME")); debugPrint("Google_Query_time : "); debugPrint(buff); }
             setRefDatetime(buff);
             break;
         case MSPCommand::CONFIG_FORWARD_CONFIG:
