@@ -25,10 +25,8 @@ char Conductor::START_CONFIRM[11] = "IUOK_START";
 char Conductor::END_CONFIRM[9] = "IUOK_END";
 
 IUFlash::storedConfig Conductor::CONFIG_TYPES[Conductor::CONFIG_TYPE_COUNT] = {
-    IUFlash::CFG_DEVICE,
-    IUFlash::CFG_COMPONENT,
     IUFlash::CFG_FEATURE,
-    IUFlash::CFG_OP_STATE};
+    IUFlash::CFG_DEVICE};
 
 
 /* =============================================================================
@@ -166,16 +164,16 @@ bool Conductor::configureFromFlash(IUFlash::storedConfig configType)
 /**
  *
  */
-void Conductor::sendConfigChecksum(IUFlash::storedConfig configType)
+String Conductor::sendConfigChecksum(IUFlash::storedConfig configType, JsonObject &inputConfig)
 {
     if (!(m_streamingMode == StreamingMode::WIFI ||
           m_streamingMode == StreamingMode::WIFI_AND_BLE)) {
         if (debugMode) {
             debugPrint("Config checksum can only be sent via WiFi.");
         }
-        return;
+        return "error";
     }
-    size_t configMaxLen = 200;
+    size_t configMaxLen = 500;
     char config[configMaxLen];
     strcpy(config, "");
     size_t charCount = 0;
@@ -187,51 +185,74 @@ void Conductor::sendConfigChecksum(IUFlash::storedConfig configType)
     unsigned char* md5hash = MD5::make_hash(config, charCount);
     char *md5str = MD5::make_digest(md5hash, 16);
     size_t md5Len = 33;
-    size_t fullStrLen = md5Len + 44;
-    char fullStr[fullStrLen];
-    for (size_t i = 0; i < fullStrLen; i++) {
-        fullStr[i] = 0;
+    String fullStr;
+    if(strcmp(md5str,GetStoredMD5(configType,inputConfig)) != 0)
+    {
+        switch (configType) {
+            case IUFlash::CFG_DEVICE:
+                fullStr = "device";
+                debugPrint("Config Error");
+                break;
+            // case IUFlash::CFG_COMPONENT:
+            //     break;
+            case IUFlash::CFG_FEATURE:
+                fullStr = "features";
+                debugPrint("Config Error");
+                break;
+            // case IUFlash::CFG_OP_STATE:
+            //     break;
+            default:
+                if (debugMode) {
+                    debugPrint("Unhandled config type: ", false);
+                    debugPrint((uint8_t) configType);
+                }
+                break;
+        }
+        // switch (configType) {
+        //     case IUFlash::CFG_DEVICE:
+        //         written = snprintf(
+        //             fullStr, fullStrLen, "{\"mac\":\"%s\",\"main\":\"%s\"}",
+        //             m_macAddress.toString().c_str(), md5str);
+        //         break;
+        //     case IUFlash::CFG_COMPONENT:
+        //         written = snprintf(
+        //             fullStr, fullStrLen, "{\"mac\":\"%s\",\"components\":\"%s\"}",
+        //             m_macAddress.toString().c_str(), md5str);
+        //         break;
+        //     case IUFlash::CFG_FEATURE:
+        //         written = snprintf(
+        //             fullStr, fullStrLen, "{\"mac\":\"%s\",\"features\":\"%s\"}",
+        //             m_macAddress.toString().c_str(), md5str);
+        //         break;
+        //     case IUFlash::CFG_OP_STATE:
+        //         written = snprintf(
+        //             fullStr, fullStrLen, "{\"mac\":\"%s\",\"opState\":\"%s\"}",
+        //             m_macAddress.toString().c_str(), md5str);
+        //         break;
+        //     default:
+        //         if (debugMode) {
+        //             debugPrint("Unhandled config type: ", false);
+        //             debugPrint((uint8_t) configType);
+        //         }
+        //         break;
+        // }
+        free(md5hash);
+        free(md5str);
+        return fullStr;
     }
-    int written = -1;
-    switch (configType) {
-        case IUFlash::CFG_DEVICE:
-            written = snprintf(
-                fullStr, fullStrLen, "{\"mac\":\"%s\",\"main\":\"%s\"}",
-                m_macAddress.toString().c_str(), md5str);
-            break;
-        case IUFlash::CFG_COMPONENT:
-            written = snprintf(
-                fullStr, fullStrLen, "{\"mac\":\"%s\",\"components\":\"%s\"}",
-                m_macAddress.toString().c_str(), md5str);
-            break;
-        case IUFlash::CFG_FEATURE:
-            written = snprintf(
-                fullStr, fullStrLen, "{\"mac\":\"%s\",\"features\":\"%s\"}",
-                m_macAddress.toString().c_str(), md5str);
-            break;
-        case IUFlash::CFG_OP_STATE:
-            written = snprintf(
-                fullStr, fullStrLen, "{\"mac\":\"%s\",\"opState\":\"%s\"}",
-                m_macAddress.toString().c_str(), md5str);
-            break;
-        default:
-            if (debugMode) {
-                debugPrint("Unhandled config type: ", false);
-                debugPrint((uint8_t) configType);
-            }
-            break;
+    else{
+        return "NULL";
     }
-    if (written > 0 && written < fullStrLen) {
-        // Send checksum
-        iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_CONFIG_CHECKSUM, fullStr,
-                              written);
-    } else if (loopDebugMode) {
-        debugPrint(F("Failed to format config checksum: "), false);
-        debugPrint(fullStr);
-    }
+    // if (written > 0 && written < fullStrLen) {
+    //     // Send checksum
+    //     iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_CONFIG_CHECKSUM, fullStr,
+    //                           written);
+    // } else if (loopDebugMode) {
+    //     debugPrint(F("Failed to format config checksum: "), false);
+    //     debugPrint(fullStr);
+    // }
     //free memory
-    free(md5hash);
-    free(md5str);
+    
 }
 
 /**
@@ -242,11 +263,41 @@ void Conductor::periodicSendConfigChecksum()
     if (m_streamingMode == StreamingMode::WIFI ||
          m_streamingMode == StreamingMode::WIFI_AND_BLE) {
         uint32_t now = millis();
+        int index = 0;
+        String result;
+        bool requestConfig = false;
+        char resultArray[200];        
+
+        StaticJsonBuffer<600> jsonBuffer;
+        JsonObject& inputConfig = iuFlash.loadConfigJson(iuFlash.CFG_HASH, jsonBuffer);
+        JsonObject& resultConfig = jsonBuffer.createObject();
+        // resultConfig["DEVICEID"] = m_macAddress.toString().c_str();
+        JsonArray& configType = resultConfig.createNestedArray("CONFIGTYPE");
         if (now - m_configTimerStart > SEND_CONFIG_CHECKSUM_TIMER) {
-            sendConfigChecksum(CONFIG_TYPES[m_nextConfigToSend]);
-            m_nextConfigToSend++;
-            m_nextConfigToSend %= CONFIG_TYPE_COUNT;
+            for(int i = 0 ; i < CONFIG_TYPE_COUNT; i++){
+                result = sendConfigChecksum(CONFIG_TYPES[i],inputConfig);
+                if(strcmp(result.c_str(),"NULL") !=0)
+                {
+                    configType.add(result);
+                    debugPrint("Invalid Config  :",false);debugPrint(result);
+                    index++;
+                    requestConfig = true;
+                }else{
+                    debugPrint("Valid Config  :",false);debugPrint(result);
+                }
+            }
+            
+            // m_nextConfigToSend++;
+            // m_nextConfigToSend %= CONFIG_TYPE_COUNT;
             m_configTimerStart = now;
+        }
+        if(requestConfig){
+            
+            String rString;
+            resultConfig.prettyPrintTo(rString);
+            sprintf(resultArray,"%s%s%s%s%s","{\"DEVICEID\":\"", m_macAddress.toString().c_str(),"\",",rString.c_str(),"}");
+            debugPrint(resultArray);
+            iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_CONFIG_CHECKSUM, resultArray);
         }
     }
 }
@@ -1151,6 +1202,15 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
 
     }
+    subConfig = root["CONFIG_HASH"];
+    if (subConfig.success()) {
+        bool dataWritten = false;
+                iuFlash.saveConfigJson(IUFlash::CFG_HASH, variant);
+                debugPrint(F("Writing into configHash file"));
+              
+        }else {
+            if(loopDebugMode) debugPrint("Received invalid Hash configuration");
+        }
     subConfig = root["MSGTYPE"];
     if(subConfig.success()){
         if(loopDebugMode) {
@@ -6637,4 +6697,28 @@ void Conductor::updateWiFiHash()
     char wifiHash[34];  
     iuOta.otaGetMD5(IUFSFlash::CONFIG_SUBDIR,"wifi0.conf",wifiHash);
     iuWiFi.sendMSPCommand(MSPCommand::SEND_WIFI_HASH,wifiHash);
+}
+
+char* Conductor::GetStoredMD5(IUFlash::storedConfig configType, JsonObject &inputConfig)
+{
+    char hash[40];
+
+    if(inputConfig.containsKey("CONFIG_HASH"))
+    {
+        switch (configType)
+        {
+        case IUFlash::CFG_DEVICE:
+            strcpy(hash,inputConfig["CONFIG_HASH"]["device"]);
+            break;
+        case IUFlash::CFG_FEATURE:
+            strcpy(hash,inputConfig["CONFIG_HASH"]["features"]);
+            break;
+        default:
+            break;
+        }
+        return hash;
+    }else{
+        return "error";
+    }
+    
 }

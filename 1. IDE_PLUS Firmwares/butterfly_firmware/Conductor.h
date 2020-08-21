@@ -119,7 +119,7 @@ class Conductor
         static char START_CONFIRM[11];
         static char END_CONFIRM[9];
         // Config handler
-        static const uint8_t CONFIG_TYPE_COUNT = 4;
+        static const uint8_t CONFIG_TYPE_COUNT = 2;
         static IUFlash::storedConfig CONFIG_TYPES[CONFIG_TYPE_COUNT];
         static const uint32_t SEND_CONFIG_CHECKSUM_TIMER = 30000;
         // Default start datetime
@@ -161,7 +161,7 @@ class Conductor
         uint32_t getCycleTime() { return m_cycleTime; }
         /***** Local storage (flash) management *****/
         bool configureFromFlash(IUFlash::storedConfig configType);
-        void sendConfigChecksum(IUFlash::storedConfig configType);
+        String sendConfigChecksum(IUFlash::storedConfig configType, JsonObject &inputConfig);
         void periodicSendConfigChecksum();
         void setThresholdsFromFile();
         /***** Serial Reading & command processing*****/
@@ -289,7 +289,8 @@ class Conductor
         void checkforWiFiConfigurations();
         void removeChar(char * New_BLE_MAC_Address, int charToRemove);
         void setDefaultMQTT();
-        void setDefaultHTTP();
+        void updateWiFiHash(); 
+        char* GetStoredMD5(IUFlash::storedConfig configType, JsonObject &inputConfig);
         void updateWiFiHash();
     protected:
         MacAddress m_macAddress;
