@@ -136,11 +136,12 @@ class Conductor
         // Modbus Connection Timeouts 
         const uint16_t modbusConnectionTimeout = 5000;   // ms 
         // Diagnostic Rule Engine published buffers
-        static const uint32_t DIG_PUBLISHED_BUFFER_SIZE = 1500;
+        static const uint32_t DIG_PUBLISHED_BUFFER_SIZE = 2000;
         char m_diagnosticPublishedBuffer[DIG_PUBLISHED_BUFFER_SIZE+70]; // 70 bytes for MACID, TIMESTMP, DIGRES
         char m_diagnosticResult[DIG_PUBLISHED_BUFFER_SIZE];
         uint32_t lastUpdated = 0;
         uint32_t digLastExecuted = 0;
+        uint16_t reportableDIGLength = 0;
         //timer ISR period
         uint16_t timerISRPeriod = 300; // default 3.3KHz
         String availableFingerprints;
@@ -215,7 +216,7 @@ class Conductor
         void computeTriggers();
         void streamReportableDiagnostics();
         void constructPayload(const char* dId,JsonObject& desc);
-        void addFTR(const char* dId,JsonArray& FTR );
+        void addFTR(const char* dId,JsonArray& FTR,uint8_t id );
         /*********************************/
         void streamFeatures();
         void sendAccelRawData(uint8_t axisIdx);
@@ -302,7 +303,8 @@ class Conductor
         void setDefaultMQTT();
         void setDefaultHTTP();
         void updateWiFiHash();
-        void diagnosticStateTrack(String *diagInput, int totalConfiguredDiag);
+        /**** Diagnostic Rule Engine *****/
+        void computeDiagnoticState(String *diagInput, int totalConfiguredDiag);
         void getAlertPolicyTime();
         void clearDiagStateBuffers();
         void clearDiagResultArray();
@@ -412,6 +414,8 @@ class Conductor
         uint16_t m_totalDigCount[maxDiagnosticStates];
         uint16_t m_activeDigCount[maxDiagnosticStates];
         String diagAlertResults[maxDiagnosticStates];
+        uint8_t reportableDIGID[maxDiagnosticStates];
+        uint8_t reportableIndexCounter;
 };
 
 
