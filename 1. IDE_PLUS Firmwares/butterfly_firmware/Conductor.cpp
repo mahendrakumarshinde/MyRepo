@@ -4240,10 +4240,13 @@ void Conductor::streamFeatures()
  * 
  */
 void Conductor::computeTriggers(){
+   if(m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE){
     // read the dig config 
     iuTrigger.m_specializedCompute();
-    computeDiagnoticState(iuTrigger.RDIG_LIST,iuTrigger.DIG_COUNT );
-    
+    if(iuTrigger.DIG_LIST[0] != NULL && iuTrigger.DIG_COUNT != 0) {
+        computeDiagnoticState(iuTrigger.DIG_LIST,iuTrigger.DIG_COUNT );
+    }
+   }
     // iuTrigger.DIG_COUNT = 0;
     // reportableIndexCounter = 0;
     // clearDiagResultArray();
