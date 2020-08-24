@@ -123,6 +123,7 @@ void IUTriggerComputer::maintainAllTriggers(uint8_t digCount,uint8_t trgCount, b
  */
 void IUTriggerComputer:: m_specializedCompute() {
 
+    bool featureFlag = true;
     JsonObject &m_digObject =  conductor.configureJsonFromFlash("/iuconfig/diagnostic.conf",true);
     
     // validate the entries available in trigger and diagnostic configs 
@@ -154,16 +155,32 @@ void IUTriggerComputer:: m_specializedCompute() {
                 m_operator      = m_digObject["CONFIG"]["TRG"]["OPTR"][i][j];
                 m_comparator    = m_digObject["CONFIG"]["TRG"]["COMP"][i][j];
                 m_threshold     = m_digObject["CONFIG"]["TRG"]["TRH"][i][j]; 
+                m_mandState     = m_digObject["CONFIG"]["TRG"]["MAND"][i][j].as<bool>();
+              
+                m_mandFlag[i][j] = m_mandState;     // store the MAND States
+                MAND_SIZE[i] = j+1;       // store the count of MAND Flags
                 // process 1
                 // Get the Feature values from feature output JSON
                 comparatorId = getCompartorId(m_comparator);
                 if(strcmp(m_feature[1],"NULL") == 0 ){
-                    getFeatures(m_feature[0],fout);
+                   featureFlag =  getFeatures(m_feature[0],fout);
                     optFeature = false;
+                    if(featureFlag == false){
+                        if(loopDebugMode){
+                            debugPrint("Invalid FRES JSON");
+                        }
+                        return;
+                    }
                 }else{
                     // get comparator Id
-                    getFeatures(m_feature[0],m_feature[1],fout);
+                   featureFlag = getFeatures(m_feature[0],m_feature[1],fout);
                     optFeature = true;
+                    if(featureFlag == false){
+                        if(loopDebugMode){
+                            debugPrint("Invalid FRES JSON");
+                        }
+                        return;
+                    }
                 }
                 float res = getTriggerOutput(fout[0],fout[1],m_operator,optFeature);
                 m_tstate =  computeTriggerState(res,m_threshold,comparatorId);
@@ -198,10 +215,13 @@ void IUTriggerComputer:: m_specializedCompute() {
         // get active triggers per diagnostic
         for (size_t i = 0; i < TRG_SIZE; i++)
         {
-            uint8_t MAND_SIZE   =  m_digObject["CONFIG"]["TRG"]["MAND"][i].size();
-            for (size_t j = 0; j < MAND_SIZE; j++)
+            //uint8_t MAND_SIZE   =  m_digObject["CONFIG"]["TRG"]["MAND"][i].size();
+            debugPrint("MAND SIZE :",false);
+            debugPrint(MAND_SIZE[i]);
+            for (size_t j = 0; j < MAND_SIZE[i]; j++)
             {        
-                mandTRG  = m_digObject["CONFIG"]["TRG"]["MAND"][i][j].as<bool>(); 
+                //mandTRG  = m_digObject["CONFIG"]["TRG"]["MAND"][i][j].as<bool>(); 
+                mandTRG = m_mandFlag[i][j];
                 if(mandTRG){ 
                     m_activeTriggerList[indexCount] = j;    // store the index of MAND TRG
                     indexCount++; 
@@ -244,7 +264,7 @@ void IUTriggerComputer:: m_specializedCompute() {
             debugPrint(m_diagnosticState);
             const char* DID = m_digObject["CONFIG"]["DIG"]["DID"][i].as<const char*>();
             String DIG_NAME = DID + String(m_diagnosticState);
-            RDIG_LIST[i] = DIG_NAME;
+            DIG_LIST[i] = DIG_NAME;
             DIG_COUNT++;
             
             // DISABLED container storage 
@@ -495,9 +515,10 @@ uint8_t IUTriggerComputer::getCompartorId(const char* comparatorName){
     }
 }
 
-void IUTriggerComputer::getFeatures(const char* feature1,float* dest){
+bool IUTriggerComputer::getFeatures(const char* feature1,float* dest){
     // return the mandatory feature output
     // TODO : Need to remove feature ouptut file and remove the json 
+    bool success = true;
     const size_t bufferSize = 600;          
     StaticJsonBuffer<bufferSize> jsonBuffer;
     JsonObject &featuerObj = iuFlash.loadConfigJson(IUFlash::CFG_FOUT, jsonBuffer);
@@ -514,15 +535,16 @@ void IUTriggerComputer::getFeatures(const char* feature1,float* dest){
         {
             debugPrint("Feature Result , Invalid JSON");
         }
-        
+        success = false;
     }
-    
+    return success;
 }
 
-void IUTriggerComputer::getFeatures(const char* feature1,const char* feature2,float* dest){
+bool IUTriggerComputer::getFeatures(const char* feature1,const char* feature2,float* dest){
     // TODO : remove this once logic once the feature computation are done 
     // NO NEED to read everytime from file 
     // bufferSize will be blocker to allow max no of features 
+    bool success = true;
     const size_t bufferSize = 600;          
     StaticJsonBuffer<bufferSize> jsonBuffer;
     JsonObject &featuerObj = iuFlash.loadConfigJson(IUFlash::CFG_FOUT, jsonBuffer);
@@ -540,7 +562,12 @@ void IUTriggerComputer::getFeatures(const char* feature1,const char* feature2,fl
             // read the feature output value
             dest[1] = subconfig[feature2].as<float>();
         }
+    }else
+    {
+        success = false;
     }
+    
+    return success;
 }
 bool IUTriggerComputer::validateDigConfigs(JsonObject &config){
     

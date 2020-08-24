@@ -47,6 +47,7 @@ class IUTriggerComputer
         const char* m_operator ; 
         const char* m_comparator;
         const char* m_feature[2];
+        bool m_mandState;
         bool m_diagnosticState = false;
         
     public:
@@ -67,7 +68,7 @@ class IUTriggerComputer
         int INACTIVE_TRGCOUNT[MAX_DIAGNOSTIC_LEN];   // store the count of Inactive TRG as per DIG index
         
         bool atleastOneFiringTriggerActive = false;
-        String RDIG_LIST[MAX_DIAGNOSTIC_LEN];
+        String DIG_LIST[MAX_DIAGNOSTIC_LEN];
         String ACTIVE_TRG[MAX_DIAGNOSTIC_LEN];
         String m_activeTRGList;
         String m_inactiveTRGList;
@@ -76,6 +77,8 @@ class IUTriggerComputer
         char* activeTRG[MAX_DIAGNOSTIC_LEN][MAX_TRIGGERS_LEN];
         char* inactiveTRG[MAX_DIAGNOSTIC_LEN][MAX_TRIGGERS_LEN];
         bool m_triggerStates[MAX_DIAGNOSTIC_LEN][MAX_TRIGGERS_LEN];
+        bool m_mandFlag[MAX_DIAGNOSTIC_LEN][MAX_TRIGGERS_LEN];
+        uint8_t MAND_SIZE[MAX_DIAGNOSTIC_LEN];
         //char* activeTRG[MAX_DIAGNOSTIC_LEN][MAX_TRIGGERS_LEN];
         
         /*** Constructor ****/
@@ -93,8 +96,8 @@ class IUTriggerComputer
         char* getInactiveTriggers(char* dName);
         uint8_t getCompartorId(const char* comparatorName);
         /**** Feature *****/
-        void getFeatures(const char* feature1,float* dest);
-        void getFeatures(const char* feature1,const char* feature2,float* dest);
+        bool getFeatures(const char* feature1,float* dest);
+        bool getFeatures(const char* feature1,const char* feature2,float* dest);
         /**** Validation *****/
         bool validateDigConfigs(JsonObject &config);
         /**** Trigger List ****/
