@@ -37,27 +37,16 @@ class Node {
         Node* link;
   };
 
-// struct* Node {
-        
-//          // Linked list 
-//         const char* digName;
-//         struct Node* link;
-//   };
-/**
- * @brief This is a base class mainly consist of methods to perform the trigger computation, trigger state detection
- * and maintain the active trigger list
- * 
- */
-
 class IUTriggerComputer
 {
     private:
         int value;
+        float m_threshold;
+        float fout[2];
+        const char* m_trgId;
         const char* m_operator ; 
         const char* m_comparator;
         const char* m_feature[2];
-        float m_threshold;
-        float fout[2];
         bool m_diagnosticState = false;
         
     public:
@@ -71,10 +60,24 @@ class IUTriggerComputer
         uint8_t m_firingTriggers[MAX_TRIGGERS_LEN];
         uint8_t m_activeDiagnosticLenght = 0;
         uint8_t m_reportableDiagnosticLength = 0;
-        bool atleastOneFiringTriggerActive = false;
-        const char* diagnosticId;
-        String RDIG_LIST[MAX_DIAGNOSTIC_LEN];
         int DIG_COUNT;
+        int m_activeTRGCounter;
+        int m_inactiveTRGCounter;
+        int ACTIVE_TRGCOUNT[MAX_DIAGNOSTIC_LEN];   // store the count of active TRG as per DIG index
+        int INACTIVE_TRGCOUNT[MAX_DIAGNOSTIC_LEN];   // store the count of Inactive TRG as per DIG index
+        
+        bool atleastOneFiringTriggerActive = false;
+        String RDIG_LIST[MAX_DIAGNOSTIC_LEN];
+        String ACTIVE_TRG[MAX_DIAGNOSTIC_LEN];
+        String m_activeTRGList;
+        String m_inactiveTRGList;
+        String m_totalTRGList;
+        const char* diagnosticId;
+        char* activeTRG[MAX_DIAGNOSTIC_LEN][MAX_TRIGGERS_LEN];
+        char* inactiveTRG[MAX_DIAGNOSTIC_LEN][MAX_TRIGGERS_LEN];
+        bool m_triggerStates[MAX_DIAGNOSTIC_LEN][MAX_TRIGGERS_LEN];
+        //char* activeTRG[MAX_DIAGNOSTIC_LEN][MAX_TRIGGERS_LEN];
+        
         /*** Constructor ****/
         IUTriggerComputer();
         /*** Destructor ****/
@@ -86,7 +89,6 @@ class IUTriggerComputer
         uint8_t getActiveDigContainerlength();
         uint8_t getreportableDigContainerLength();
         // Get Trigger Status
-        //bool computeTriggerState(float result,float threshold,const char* comparator);
         char* getActiveTriggers(char* dName);
         char* getInactiveTriggers(char* dName);
         uint8_t getCompartorId(const char* comparatorName);
@@ -96,8 +98,8 @@ class IUTriggerComputer
         /**** Validation *****/
         bool validateDigConfigs(JsonObject &config);
         /**** Trigger List ****/
-        void maintainActiveTriggers(uint8_t digId,uint8_t index, uint8_t subindex, bool trgState);
-        void maintainInactiveTriggers(uint8_t digId,uint8_t index, uint8_t subindex, bool trgState);
+        void maintainActiveTriggers(const char* trgId,uint8_t digIndex,bool trgState);
+        void maintainInactiveTriggers(const char* trgId,uint8_t digIndex,bool trgState);
         void maintainAllTriggers(uint8_t digCount,uint8_t trgCount,bool trgstate);
         /****  compute ****/
         virtual void m_specializedCompute();
@@ -106,12 +108,11 @@ class IUTriggerComputer
         /**** Reset ****/
         void resetBuffer();
 
-        //bool (IUFlash::storedConfig configType);
         void pushToStack(uint8_t cId,const char* name);
         const char* popFromStack(uint8_t cId);
         void flushPreviousDiagnosticList(uint8_t cId);
         void listDiagnosticContainer(uint8_t cId);
-        //IUTriggerComputer *top = NULL;
+ 
 };
 
 
@@ -146,7 +147,6 @@ public:
     /**** Destructor *****/
     ~IUDiagnosticNotifier();
     const char* getDiagnosticName(uint8_t cId);
-    void constructMessage();
     void publishedNotification();
     
 

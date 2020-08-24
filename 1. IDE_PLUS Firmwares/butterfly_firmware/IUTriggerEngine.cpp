@@ -57,9 +57,20 @@ void  IUTriggerComputer::getActiveDiagnostic(JsonObject& digObj){
  * @param index Points to the List Index from the TRG config message 
  * @param subindex points to the actual Trigger Index from the TRG congigurations
  * @param trgState state of the computated trigger
+ * 
+ * output message format : "DIG_ID:TR1,TR2,TR3;"
  */
-void IUTriggerComputer::maintainActiveTriggers(uint8_t digId,uint8_t index, uint8_t subindex, bool trgState){
-
+void IUTriggerComputer::maintainActiveTriggers(const char* trgId,uint8_t digIndex,bool trgState){
+    if (trgState)
+    {   // fill all the active triggerIDs to 2D array
+        activeTRG[digIndex][m_activeTRGCounter] =(char*) trgId; 
+        m_activeTRGCounter++;
+        if (loopDebugMode)
+        {
+            debugPrint("Active Trigger:",false);
+            debugPrint(trgId);
+        }
+    }
 }
 /**
  * @brief 
@@ -69,9 +80,20 @@ void IUTriggerComputer::maintainActiveTriggers(uint8_t digId,uint8_t index, uint
  * @param subindex 
  * @param trgState 
  */
-void IUTriggerComputer::maintainInactiveTriggers(uint8_t digId,uint8_t index, uint8_t subindex, bool trgState){
+void IUTriggerComputer::maintainInactiveTriggers(const char* trgId,uint8_t digIndex,bool trgState){
 
+    if (!trgState)
+    {   // fill all the active triggerIDs to 2D array
+        inactiveTRG[digIndex][m_inactiveTRGCounter] =(char*) trgId; 
+        m_inactiveTRGCounter++;
+        if (loopDebugMode)
+        {
+            debugPrint("Active Trigger:",false);
+            debugPrint(trgId);
+        }
+    }    
 }
+
 /**
  * @brief stores all the active /inactive list of triggers as a JSON List
  * 
@@ -101,17 +123,11 @@ void IUTriggerComputer::maintainAllTriggers(uint8_t digCount,uint8_t trgCount, b
  */
 void IUTriggerComputer:: m_specializedCompute() {
 
-    
-    //float fout[2];          // allow  max two features can be compared
     JsonObject &m_digObject =  conductor.configureJsonFromFlash("/iuconfig/diagnostic.conf",true);
     
-    // Diagnostic output Json 
-    // StaticJsonBuffer<1024> diagnosticJsonBuffer;         // USING CUSTOM MES FORMAT <DID><STATE>
-    // JsonObject& diagnosticJson = diagnosticJsonBuffer.createObject();
-    // JsonObject& DIG = diagnosticJson.createNestedObject("DIG");    
-        
     // validate the entries available in trigger and diagnostic configs 
-    // NB : All the Keys should have a same length of the list 
+    // NB : All the Keys should have a same length of the list
+    // TODO : Future Scope send the ack if validFlag is false 
     bool validFlag = validateDigConfigs(m_digObject); 
     debugPrint("validFlag : ",false);debugPrint(validFlag); 
     if(validFlag){
@@ -119,32 +135,28 @@ void IUTriggerComputer:: m_specializedCompute() {
         bool optFeature = false;
         int comparatorId;
         // Flush the both stack (container)
-        flushPreviousDiagnosticList(STACK::ACTIVE_DIG);
-        flushPreviousDiagnosticList(STACK::REPORTABLE_DIG);
-        // Trigger Ouptput JOSN List
-        StaticJsonBuffer<400> triggerResultsBuffer;
-        JsonObject& triggerResult = triggerResultsBuffer.createObject();
-        JsonArray& triggers = triggerResult.createNestedArray("FTR");
+        // flushPreviousDiagnosticList(STACK::ACTIVE_DIG);
+        // flushPreviousDiagnosticList(STACK::REPORTABLE_DIG);
         
         uint8_t TRG_SIZE = m_digObject["CONFIG"]["TRG"]["FID1"].size();
         uint8_t DIG_SIZE = m_digObject["CONFIG"]["DIG"]["DID"].size();
         
-        debugPrint("TRG_SIZE : ",false);debugPrint(TRG_SIZE);
+        //debugPrint("TRG_SIZE : ",false);debugPrint(TRG_SIZE);
         for (size_t i = 0; i < TRG_SIZE; i++)   
         {   
-            JsonArray& TRG = triggers.createNestedArray();
-                
+            const char*  DIG_ID = m_digObject["CONFIG"]["DIG"]["DID"][i]; 
+            
             for (size_t j = 0; j < m_digObject["CONFIG"]["TRG"]["FID1"][i].size(); j++)
             {   
-                m_feature[0] = m_digObject["CONFIG"]["TRG"]["FID1"][i][j];
-                m_feature[1] = m_digObject["CONFIG"]["TRG"]["FID2"][i][j];
-                m_operator    = m_digObject["CONFIG"]["TRG"]["OPTR"][i][j];
-                m_comparator  = m_digObject["CONFIG"]["TRG"]["COMP"][i][j];
-                m_threshold  = m_digObject["CONFIG"]["TRG"]["TRH"][i][j]; 
+                m_trgId         = m_digObject["CONFIG"]["TRG"]["TID"][i][j];
+                m_feature[0]    = m_digObject["CONFIG"]["TRG"]["FID1"][i][j];
+                m_feature[1]    = m_digObject["CONFIG"]["TRG"]["FID2"][i][j];
+                m_operator      = m_digObject["CONFIG"]["TRG"]["OPTR"][i][j];
+                m_comparator    = m_digObject["CONFIG"]["TRG"]["COMP"][i][j];
+                m_threshold     = m_digObject["CONFIG"]["TRG"]["TRH"][i][j]; 
                 // process 1
                 // Get the Feature values from feature output JSON
                 comparatorId = getCompartorId(m_comparator);
-                //debugPrint("COMP ID :",false);debugPrint(comparatorId);
                 if(strcmp(m_feature[1],"NULL") == 0 ){
                     getFeatures(m_feature[0],fout);
                     optFeature = false;
@@ -161,18 +173,23 @@ void IUTriggerComputer:: m_specializedCompute() {
                      debugPrint("FID2 :",false);debugPrint(m_feature[1],false);debugPrint("->",false);debugPrint(fout[1]);
                      debugPrint("TRG O/P : ",false); debugPrint(res);
                      debugPrint("TRG STATE : ",false);debugPrint(m_tstate);
-                     
                 }
                 // process 2 store active/inactive triggers 
-                // TODO : sort the active and inactive trigger list as per diagnostic(optional)
-                
+                uint8_t DIG_INDEX = i;
+                maintainActiveTriggers(m_trgId,DIG_INDEX,m_tstate);
+                maintainInactiveTriggers(m_trgId,DIG_INDEX,m_tstate);
                 //process 3 manage all active triggers as per diagnostics
-                TRG.add(m_tstate);
+                m_triggerStates[DIG_INDEX][j] = m_tstate;        
             }
+            debugPrint("Active Count : ",false);
+            debugPrint(m_activeTRGCounter);
+            ACTIVE_TRGCOUNT[i] = m_activeTRGCounter;
+            INACTIVE_TRGCOUNT[i] = m_inactiveTRGCounter;
+            m_activeTRGCounter = 0;
+            m_inactiveTRGCounter = 0;
+            
             debugPrint("........................................");
         }
-        debugPrint("\n FTR Result :");
-        triggerResult.printTo(Serial);
         // process 4 
         //compute active diagnostics and DIG state
         // Logic : MAND & FTR  = 1 <active> ,0 <inactive>
@@ -181,14 +198,15 @@ void IUTriggerComputer:: m_specializedCompute() {
         // get active triggers per diagnostic
         for (size_t i = 0; i < TRG_SIZE; i++)
         {
-            for (size_t j = 0; j <m_digObject["CONFIG"]["TRG"]["MAND"][i].size(); j++)
+            uint8_t MAND_SIZE   =  m_digObject["CONFIG"]["TRG"]["MAND"][i].size();
+            for (size_t j = 0; j < MAND_SIZE; j++)
             {        
                 mandTRG  = m_digObject["CONFIG"]["TRG"]["MAND"][i][j].as<bool>(); 
                 if(mandTRG){ 
-                    m_activeTriggerList[indexCount] = j;
+                    m_activeTriggerList[indexCount] = j;    // store the index of MAND TRG
                     indexCount++; 
                 }
-                m_firingTriggers[j] = triggerResult["FTR"][i][j].as<bool>();
+                m_firingTriggers[j] = m_triggerStates[i][j];
                 if(loopDebugMode){
                     debugPrint("\nMAND : ",false);debugPrint(mandTRG,false);debugPrint(" : ",false);
                     debugPrint(" FTR : ",false);debugPrint(m_firingTriggers[j],false);
@@ -208,7 +226,7 @@ void IUTriggerComputer:: m_specializedCompute() {
              // check all Mandatory triggers are firing ?
                 for (size_t id = 0; id < indexCount; id++)
                 {
-                    m_firingTriggers[i] = triggerResult["FTR"][i][m_activeTriggerList[id]].as<bool>();
+                    m_firingTriggers[i] = m_triggerStates[i][m_activeTriggerList[id]];
                     m_diagnosticState = (m_diagnosticState | 1)  &  m_firingTriggers[i];
                     if(loopDebugMode){
                         debugPrint("Active TRG index : ",false);
@@ -228,13 +246,10 @@ void IUTriggerComputer:: m_specializedCompute() {
             String DIG_NAME = DID + String(m_diagnosticState);
             RDIG_LIST[i] = DIG_NAME;
             DIG_COUNT++;
-            Serial.print("DIG_NAME :");Serial.println(DIG_NAME);
+            
             // DISABLED container storage 
             //updateActiveDiagnosticList(DIG_NAME.c_str());
             
-            // ADD KEY and State to Diagnostic JSON  { "DIG1":1,"DIG2":0}
-            //DIG.set(DIG_NAME,m_diagnosticState);
-
             // RESET variables
             indexCount = 0;
             atleastOneFiringTriggerActive = false;
@@ -243,8 +258,7 @@ void IUTriggerComputer:: m_specializedCompute() {
             debugPrint("*******************************************");
         }
 
-        //diagnosticJson.printTo(Serial);
-        #if 0
+       #if 0
         StaticJsonBuffer<1500> reportableJsonBUffer;
         JsonObject& reportableJson = reportableJsonBUffer.createObject();
         JsonObject& DIGRES = reportableJson.createNestedObject("DIGRES");
@@ -483,6 +497,7 @@ uint8_t IUTriggerComputer::getCompartorId(const char* comparatorName){
 
 void IUTriggerComputer::getFeatures(const char* feature1,float* dest){
     // return the mandatory feature output
+    // TODO : Need to remove feature ouptut file and remove the json 
     const size_t bufferSize = 600;          
     StaticJsonBuffer<bufferSize> jsonBuffer;
     JsonObject &featuerObj = iuFlash.loadConfigJson(IUFlash::CFG_FOUT, jsonBuffer);
@@ -530,8 +545,6 @@ void IUTriggerComputer::getFeatures(const char* feature1,const char* feature2,fl
 bool IUTriggerComputer::validateDigConfigs(JsonObject &config){
     
      if( config.success() ) {
-         // TODO : Add DIG Size validation check here 
-
         const char* msgType = config["MSGTYPE"];
         const int Tsize = config["CONFIG"]["TRG"].size();
         uint8_t TRG_LEN = config["CONFIG"]["TRG"]["FID1"].size();
@@ -539,12 +552,14 @@ bool IUTriggerComputer::validateDigConfigs(JsonObject &config){
         uint8_t DIG_LEN = config["CONFIG"]["DIG"]["DID"].size();
         uint8_t indexSize[Tsize];
         bool validTriggerSize = false;
-        debugPrint("Tsize :",false); debugPrint(Tsize);
-        debugPrint("Tlen : ",false); debugPrint(Tlen);
-        debugPrint("TRG_LEN :",false); debugPrint(TRG_LEN);
-        debugPrint("DIG_LEN :",false);  debugPrint(DIG_LEN);
+        if(loopDebugMode){
+            debugPrint("Tsize :",false); debugPrint(Tsize);
+            debugPrint("Tlen : ",false); debugPrint(Tlen);
+            debugPrint("TRG_LEN :",false); debugPrint(TRG_LEN);
+            debugPrint("DIG_LEN :",false);  debugPrint(DIG_LEN);
+        }
         // validate the Trigger paraemters 
-        char* type[] = { "TID","FID1","FID2","OPTR","COMP","TRH","MAND"};
+        char* type[] = { "TID","FID1","FID2","OPTR","COMP","TRH","MAND"};   // TODO : Need to Automate this
         uint8_t temp;
         if (DIG_LEN != TRG_LEN)
         {   
@@ -635,13 +650,4 @@ const char* IUDiagnosticNotifier::getDiagnosticName(uint8_t cId){
         debugPrint(digName);
     }   
     return digName;
-}
-/**
- * @brief Read the Reportable Diagnostic Container to construct the 
- * Diagnostic output JsonObject
- * 
- */
-void IUDiagnosticNotifier::constructMessage(){
-
-    
 }
