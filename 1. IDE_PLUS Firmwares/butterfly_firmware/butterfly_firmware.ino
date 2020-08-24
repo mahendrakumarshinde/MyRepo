@@ -775,9 +775,9 @@ void loop()
                 // Stream features
                 conductor.streamFeatures();
                 // Executing Diagnostic every 1 sec
-                uint32_t nowT = millis();
-                if(nowT - conductor.digLastExecuted >= 1000){
-                    conductor.digLastExecuted = nowT;
+                //uint32_t nowT = millis();
+                //if(nowT - conductor.digLastExecuted >= 1000){
+                    //conductor.digLastExecuted = nowT;
                     // Diagnostic Features
                     conductor.computeTriggers();
                     // Stream Diagnostic Features
@@ -785,7 +785,7 @@ void loop()
                     Serial.print("\nAvailable - Mem: ");
                     Serial.println(freeMemory(), DEC);
                   
-                }
+                //}
                                    
                if(conductor.modbusStreamingMode ) { 
                     // Update Modbus Registers
@@ -813,8 +813,8 @@ void loop()
                             conductor.updateModbusStatus();
                              //conductor.computeTriggers();
                              //conductor.streamReportableDiagnostics();
-                            debugPrint(F("Available - Mem: "), false);
-                            debugPrint(String(freeMemory(), DEC));
+                            // debugPrint(F("Available - Mem: "), false);
+                            // debugPrint(String(freeMemory(), DEC));
                         }
 
                     }else
