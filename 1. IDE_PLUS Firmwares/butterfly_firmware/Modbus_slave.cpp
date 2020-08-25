@@ -5,9 +5,10 @@
 extern Conductor conductor;
 
 
-IUmodbus::IUmodbus(HardwareSerial *SelectSerial, uint8_t Tx_pin)
+IUmodbus::IUmodbus(HardwareSerial *SelectSerial, uint8_t RE_ENABLE_PIN, uint8_t DE_ENABLE_PIN)
 {
-    TxEnablePin = Tx_pin;
+    reEnablePin = RE_ENABLE_PIN;                            //Tx_pin = RE -active low enable
+    deEnablePin = DE_ENABLE_PIN;                          //Tx1_pin = DE -active high enable
     m_port = SelectSerial;
     if(setupDebugMode){
         debugPrint("DEBUG INIT");
@@ -360,12 +361,15 @@ void IUmodbus::configure(uint8_t _slaveID, unsigned int _holdingRegsSize)
     //debugPrint("CONFIGURE : ID :",false);debugPrint(_slaveID);
     setslaveID(_slaveID);
     //debugPrint("CONFIGGURE : setslaveID");
-    uint8_t _TxEnablePin = TxEnablePin;
-    if (_TxEnablePin > 1)
+    uint8_t _REenablePin = reEnablePin;
+    if (_REenablePin > 1)
     { // pin 0 & pin 1 are reserved for RX/TX. To disable set txenpin < 2
-        TxEnablePin = _TxEnablePin;
-        pinMode(TxEnablePin, OUTPUT);
-        digitalWrite(TxEnablePin, LOW);
+        reEnablePin = _REenablePin;
+        
+        pinMode(reEnablePin, OUTPUT);
+        pinMode(deEnablePin, OUTPUT);
+        digitalWrite(reEnablePin, LOW);     //RE=0,DE=0 read enable (RE- enable,DE-disable )
+        digitalWrite(deEnablePin, LOW);
     }
 
     // Modbus states that a baud rate higher than 19200 must use a fixed 750 us
@@ -428,8 +432,11 @@ unsigned int IUmodbus::calculateCRC(byte bufferSize)
 
 void IUmodbus::sendPacket(unsigned char bufferSize)
 {
-    if (TxEnablePin > 1)
-        digitalWrite(TxEnablePin, HIGH);
+    if (reEnablePin > 1){
+        digitalWrite(reEnablePin, HIGH);         //RE=1,DE=1 write enable (RE- disable,DE-enable )
+        digitalWrite(deEnablePin, HIGH);
+    }
+        
     for (unsigned char i = 0; i < bufferSize; i++)
     {
         m_port->write(frame[i]);
@@ -440,8 +447,9 @@ void IUmodbus::sendPacket(unsigned char bufferSize)
     // allow a frame delay to indicate end of transmission
     delayMicroseconds(T3_5);
 
-    if (TxEnablePin > 1)
-        digitalWrite(TxEnablePin, LOW);
+    if (reEnablePin > 1)
+        digitalWrite(reEnablePin, LOW);      //RE=0,DE=0 read enable (RE- enable,DE-disable )
+        digitalWrite(deEnablePin, LOW);
 }
 
 //REPLACE SERIAL to Debug print 
