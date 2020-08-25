@@ -107,7 +107,7 @@ class Conductor
                                         KNX_SET = 1,
                                         LSM_ABS = 2,
                                         KNX_ABS = 3,
-                                        LSM_DEFAULT = 4,
+                                        KNX_DEFAULT = 4,
                                         SEN_ABS = 5
                                         };
         static const uint32_t defaultAutoSleepDelay = 60000;
