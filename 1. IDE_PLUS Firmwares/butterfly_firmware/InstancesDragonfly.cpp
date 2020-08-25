@@ -58,7 +58,7 @@ Usr2Eth iuEthernet(&Serial1, iuEthernetBuffer, 2048, IUSerial::LEGACY_PROTOCOL,
 /* =============================================================================
     Modbus Instance 
 ===============================================================================*/
-IUmodbus iuModbusSlave(&Serial4,14,35);
+IUmodbus iuModbusSlave(&Serial4,30,4);
 
 /* =============================================================================
     Features
