@@ -88,6 +88,7 @@ void IUKX134::setScale(IUKX134::ScaleOption scale)
 			break;
 		case FSR_32G:
 			setResolution(32.0 * 9.80665 / 32768.0);
+			break;
 		case FSR_64G:
 			setResolution(64.0 * 9.80665 / 32768.0);
 			break;
