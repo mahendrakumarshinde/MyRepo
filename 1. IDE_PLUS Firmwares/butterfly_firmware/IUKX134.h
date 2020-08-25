@@ -48,11 +48,11 @@ public:
 
     static const OdrSetting defaultODR = ODR_3200Hz;
 
-    static const LpfSetting defaultLPF = LPF_AVG8;
+    static const LpfSetting defaultLPF = LPF_AVG16;
 
-    static const uint16_t defaultSamplingRate = 6400; // Hz
+    static const uint16_t defaultSamplingRate = 25600; // Hz
     uint16_t m_samplingRate = defaultSamplingRate;
-    const int DEFAULT_BLOCK_SIZE = 4096;
+    const int DEFAULT_BLOCK_SIZE = 8192;
 
     bool kionixPresence = false;
     /// Checking WHO_AM_I
