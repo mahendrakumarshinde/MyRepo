@@ -541,7 +541,7 @@ void setup()
         iuFlash.begin();
         debugPrint(F("Initilizing Kionix and Lsm"));
         iuAccelerometer.setupHardware();
-        iuAccelerometerKX222.setupHardware();
+        iuAccelerometerKX134.setupHardware();
         // Update the configuration of FFT computers from fft.conf
         if(conductor.setFFTParams()) {
             if(setupDebugMode) {
@@ -554,7 +554,7 @@ void setup()
                 debugPrint(": samplingRate = ", false); debugPrint(FFTConfiguration::DEFAULT_SAMPLING_RATE, false);
                 debugPrint(": block size = ", false); debugPrint(FFTConfiguration::DEFAULT_BLOCK_SIZE, false);
             }
-            conductor.setSensorStatus(conductor.SensorStatusCode::LSM_DEFAULT);
+            conductor.setSensorStatus(conductor.SensorStatusCode::KNX_DEFAULT); // TO DO based on hardware identifier
         }
 
         // Sensors
@@ -679,10 +679,10 @@ void setup()
             attachInterrupt(digitalPinToInterrupt(IULSM6DSM::INT1_PIN), dataAcquisitionISR, RISING);
         // debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
         }
-        else if ( FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor && iuAccelerometerKX222.kionixPresence)
+        else if ( FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor && iuAccelerometerKX134.kionixPresence)
         {
-            pinMode(IUKX222::INT1_PIN,INPUT);
-            attachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN),dataAcquisitionISR,RISING);
+            pinMode(IUKX134::INT1_PIN,INPUT);
+            attachInterrupt(digitalPinToInterrupt(IUKX134::INT1_PIN),dataAcquisitionISR,RISING);
         }
         else
         {
@@ -831,7 +831,7 @@ void loop()
                 }
                 else
                 {
-                    attachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN),dataAcquisitionISR,RISING);
+                    attachInterrupt(digitalPinToInterrupt(IUKX134::INT1_PIN),dataAcquisitionISR,RISING);
                 }
                 // Serial.println("ISR Enabled !!!");
                 

@@ -36,8 +36,8 @@
 #include "IULSM6DSM.h"
 // #include "IUMAX31865.h"
 #include "IUTMP116.h"
-#include "IUKX222.h"
-#include "IUkx224reg.h"
+#include "IUKX134.h"
+#include "IUkx134reg.h"
 #include "IUOTA.h"
 #include "Modbus_slave.h"
 
@@ -249,8 +249,8 @@ extern IUBattery iuBattery;
 void LSM6DSMAccelReadCallback(uint8_t wireStatus);
 extern IULSM6DSM iuAccelerometer;
 
-void KX222AccelReadCallback();
-extern IUKX222 iuAccelerometerKX222;
+void KX134AccelReadCallback();
+extern IUKX134 iuAccelerometerKX134;
 
 void TMP116TempReadCallback(uint8_t wireStatus);
 extern IUTMP116 iuTemp;
