@@ -63,7 +63,7 @@ enum
 class IUmodbus //: public IUSerial
 {
 public:
-	IUmodbus(HardwareSerial *SelectSerial, uint8_t REenable, uint8_t DEenable);
+	IUmodbus(HardwareSerial *SelectSerial, uint8_t RE_ENABLE_PIN, uint8_t DE_ENABLE_PIN);
 	bool setupModbusDevice(JsonVariant &config);
 	void setslaveID(uint8_t _slaveID);
 	uint8_t getslaveID(){return slaveID;};
@@ -108,8 +108,8 @@ protected:
 	unsigned char broadcastFlag;
 	uint8_t slaveID;
 	unsigned char function;
-	uint8_t REenablePin;    //RE -Active low enable pin 
-	uint8_t DEenablepin;  //DE -Active high enable pin
+	uint8_t reEnablePin;    //RE -Active low enable pin 
+	uint8_t deEnablePin;  	//DE -Active high enable pin
 	unsigned int errorCount;
 
 };

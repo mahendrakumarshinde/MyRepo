@@ -5,10 +5,10 @@
 extern Conductor conductor;
 
 
-IUmodbus::IUmodbus(HardwareSerial *SelectSerial, uint8_t REenable, uint8_t DEenable)
+IUmodbus::IUmodbus(HardwareSerial *SelectSerial, uint8_t RE_ENABLE_PIN, uint8_t DE_ENABLE_PIN)
 {
-    REenablePin = REenable;                            //Tx_pin = RE -active low enable
-    DEenablepin = DEenable;                          //Tx1_pin = DE -active high enable
+    reEnablePin = RE_ENABLE_PIN;                            //Tx_pin = RE -active low enable
+    deEnablePin = DE_ENABLE_PIN;                          //Tx1_pin = DE -active high enable
     m_port = SelectSerial;
     if(setupDebugMode){
         debugPrint("DEBUG INIT");
@@ -361,15 +361,15 @@ void IUmodbus::configure(uint8_t _slaveID, unsigned int _holdingRegsSize)
     //debugPrint("CONFIGURE : ID :",false);debugPrint(_slaveID);
     setslaveID(_slaveID);
     //debugPrint("CONFIGGURE : setslaveID");
-    uint8_t _REenablePin = REenablePin;
+    uint8_t _REenablePin = reEnablePin;
     if (_REenablePin > 1)
     { // pin 0 & pin 1 are reserved for RX/TX. To disable set txenpin < 2
-        REenablePin = _REenablePin;
+        reEnablePin = _REenablePin;
         
-        pinMode(REenablePin, OUTPUT);
-        pinMode(DEenablepin, OUTPUT);
-        digitalWrite(REenablePin, LOW);     //RE=0,DE=0 read enable (RE- enable,DE-disable )
-        digitalWrite(DEenablepin, LOW);
+        pinMode(reEnablePin, OUTPUT);
+        pinMode(deEnablePin, OUTPUT);
+        digitalWrite(reEnablePin, LOW);     //RE=0,DE=0 read enable (RE- enable,DE-disable )
+        digitalWrite(deEnablePin, LOW);
     }
 
     // Modbus states that a baud rate higher than 19200 must use a fixed 750 us
@@ -432,9 +432,9 @@ unsigned int IUmodbus::calculateCRC(byte bufferSize)
 
 void IUmodbus::sendPacket(unsigned char bufferSize)
 {
-    if (REenablePin > 1){
-        digitalWrite(REenablePin, HIGH);         //RE=1,DE=1 write enable (RE- disable,DE-enable )
-        digitalWrite(DEenablepin, HIGH);
+    if (reEnablePin > 1){
+        digitalWrite(reEnablePin, HIGH);         //RE=1,DE=1 write enable (RE- disable,DE-enable )
+        digitalWrite(deEnablePin, HIGH);
     }
         
     for (unsigned char i = 0; i < bufferSize; i++)
@@ -447,9 +447,9 @@ void IUmodbus::sendPacket(unsigned char bufferSize)
     // allow a frame delay to indicate end of transmission
     delayMicroseconds(T3_5);
 
-    if (REenablePin > 1)
-        digitalWrite(REenablePin, LOW);      //RE=0,DE=0 read enable (RE- enable,DE-disable )
-        digitalWrite(DEenablepin, LOW);
+    if (reEnablePin > 1)
+        digitalWrite(reEnablePin, LOW);      //RE=0,DE=0 read enable (RE- enable,DE-disable )
+        digitalWrite(deEnablePin, LOW);
 }
 
 //REPLACE SERIAL to Debug print 
