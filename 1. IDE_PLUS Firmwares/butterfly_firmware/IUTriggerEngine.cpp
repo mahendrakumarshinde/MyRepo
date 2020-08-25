@@ -204,6 +204,7 @@ void IUTriggerComputer:: m_specializedCompute() {
             INACTIVE_TRGCOUNT[i] = m_inactiveTRGCounter;
             m_activeTRGCounter = 0;
             m_inactiveTRGCounter = 0;
+            featureFlag = true;
             
             debugPrint("........................................");
         }
