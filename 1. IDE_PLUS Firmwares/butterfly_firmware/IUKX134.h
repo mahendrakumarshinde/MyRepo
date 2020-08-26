@@ -46,7 +46,7 @@ public:
 
     static const ScaleOption defaultScale = FSR_8G;
 
-    static const OdrSetting defaultODR = ODR_3200Hz;
+    static const OdrSetting defaultODR = ODR_25600Hz;
 
     static const LpfSetting defaultLPF = LPF_AVG16;
 

@@ -5388,21 +5388,26 @@ void Conductor::setSensorStatus(SensorStatusCode errorCode)
     switch (errorCode)
     {
         case SensorStatusCode::LSM_SET:
+            FFTConfiguration::currentSensor = FFTConfiguration::lsmSensor;
             strcpy(status, "Running with LSM");
             break;
         case SensorStatusCode::KNX_SET:
+            FFTConfiguration::currentSensor = FFTConfiguration::kionixSensor;
             strcpy(status, "Running with Kionix");
             break;
         case SensorStatusCode::LSM_ABS:
+            FFTConfiguration::currentSensor = FFTConfiguration::kionixSensor;
             strcpy(status, "LSM not found, Running with Kionix defaults");
             break;
         case SensorStatusCode::KNX_ABS:
+            FFTConfiguration::currentSensor = FFTConfiguration::lsmSensor;
             strcpy(status, "Kionix not found, Running with LSM defaults");
             break;
         case SensorStatusCode::SEN_ABS:
             strcpy(status, "Sensors not found, Please check the Hardware");
             break;
         case SensorStatusCode::KNX_DEFAULT:
+            FFTConfiguration::currentSensor = FFTConfiguration::kionixSensor;
             strcpy(status, "Configuration not found, Using Kionix defaults");
             break;
     }
