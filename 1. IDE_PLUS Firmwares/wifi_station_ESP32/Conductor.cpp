@@ -519,6 +519,9 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         case MSPCommand::PUBLISH_DIAGNOSTIC:
             publishDiagnostic(buffer, bufferLength);
             break;
+        case MSPCommand::PUBLISH_FIRMWARE_VER:  
+            mqttHelper.publishDiagnostic(buffer);
+            break;
         case MSPCommand::PUBLISH_CONFIG_CHECKSUM:
             mqttHelper.publish(CHECKSUM_TOPIC, buffer);
             break;
