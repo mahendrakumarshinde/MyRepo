@@ -292,7 +292,8 @@ class Conductor
         void setDefaultHTTP();        
         void updateWiFiHash(); 
         char* GetStoredMD5(IUFlash::storedConfig configType, JsonObject &inputConfig);
-        void CreateFeatureGroup(JsonVariant &config);
+        void CreateFeatureGroupjson();
+        bool checkforAxisMapping();
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
@@ -344,7 +345,10 @@ class Conductor
         double last_fingerprint_timestamp = 0;
         bool computed_first_fingerprint_timestamp = false;
         SegmentedMessage segmentedMessages[MAX_SEGMENTED_MESSAGES]; // atmost MAX_SEGMENTED_MESSAGES can be captured in interleaved manner
-        
+        //Axis mapping 
+        const char* m_axis1;
+        const char* m_axis2;
+        const char* m_axis3;
         char status[50];
         SensorStatusCode statusCode;
         char m_otaStmUri[512];
