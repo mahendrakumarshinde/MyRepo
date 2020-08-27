@@ -179,6 +179,12 @@ namespace MSPCommand
         MQTT_ALERT_DISCONNECTED,
         GET_CERT_COMMOM_URL,
         SET_CERT_DOWNLOAD_MSGID,
+        SEND_WIFI_HASH,
+        GET_CERT_CONFIG,
+        SEND_CERT_DWL_CFG,
+        SEND_CERT_DIG_CFG,
+        GOOGLE_TIME_QUERY,
+        PUBLISH_FIRMWARE_VER,
         // Config update (Host - Wifi)
         CONFIG_ACK
 	// ESP32 MSP Commands

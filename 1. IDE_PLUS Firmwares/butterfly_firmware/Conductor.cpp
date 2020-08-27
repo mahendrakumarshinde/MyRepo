@@ -1737,6 +1737,22 @@ void Conductor::processCommand(char *buff)
                     iuBluetooth.write(';');
                 }
             }
+            else if (strcmp(buff, "IUGET_FIRMWARE_VERSION") == 0)
+            {
+                if (iuWiFi.isConnected()) {
+                    char message[128];
+                    strcat(message, "{\"device_id\":\"");
+                    strcat(message, m_macAddress.toString().c_str());
+                    strcat(message, "\",\"wifi_macId\":\"");
+                    strcat(message, iuWiFi.getMacAddress().toString().c_str());
+                    strcat(message, "\",\"mainFirmware_ver\":");
+                    strcat(message, FIRMWARE_VERSION);
+                    strcat(message, ",\"wifiFirmware_ver\":");
+                    strcat(message, iuWiFi.espFirmwareVersion);
+                    strcat(message, "}");
+                    iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_FIRMWARE_VER,message);
+                }
+            }
             break;
         case 'P': 
         {
