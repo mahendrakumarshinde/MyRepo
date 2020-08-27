@@ -1151,8 +1151,46 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
 
     }
-    
+    subConfig = root["axis_mapping"];
+    if(subConfig.success()){
+        bool dataWritten = false;
+        if(loopDebugMode) {
+            debugPrint("axis_mapping received: ", false);
+            subConfig.printTo(Serial); debugPrint("");
+        }
+        if (saveToFlash){
+            iuFlash.saveConfigJson(IUFlash::CFG_AXISMAP, variant);
+            dataWritten = true;
+            debugPrint("configs saved successfully ");
+            CreateFeatureGroup(variant);
+        }
+        else{if(loopDebugMode) debugPrint("axis_mapping not saved ");}
+    }
+
     return true;
+}
+
+void Conductor::CreateFeatureGroup(JsonVariant &config){
+    //JsonObject& config = configureJsonFromFlash("/iurule/axis_mapping.conf",1);
+    const char* axis1 = config["V"];
+    const char* axis2 = config["H"];
+    const char* axis3 = config["A"];
+    //debugPrint("axis_1 :"); 
+    debugPrint(axis1); 
+    //debugPrint("axis_2 :");
+    debugPrint(axis2);
+   // debugPrint("axis_3 :");
+    debugPrint(axis3);
+    config.printTo(Serial);
+    StaticJsonBuffer<500> outputJSONbuffer;
+    JsonObject& root = outputJSONbuffer.createObject();
+    JsonObject& fres = root.createNestedObject("FRES");
+    fres["VRH"] = 12.4;            //VRA,VRV,TMP,SND,VRH
+    fres["VRA"] = 0.23;
+    fres["VRV"] = 0.01;
+    fres["TMP"] = 32.2;
+    fres["SND"] = 60.2;
+    root.printTo(Serial);
 }
 
 /*

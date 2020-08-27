@@ -9,6 +9,7 @@ char IUFSFlash::CONFIG_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iuconfig";
 char IUFSFlash::IUFWBACKUP_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iuBackupFirmware";
 char IUFSFlash::IUFWTMPIMG_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN]  = "/iuTempFirmware";
 char IUFSFlash::IUFWROLLBACK_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iuRollbackFirmware";
+char IUFSFlash::RULE_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iurule";
 char IUFSFlash::CONFIG_EXTENSION[IUFSFlash::CONFIG_EXTENSION_LEN] = ".conf";
 
 char IUFSFlash::FNAME_WIFI0[6] = "wifi0";
@@ -27,6 +28,7 @@ char IUFSFlash::FNAME_FFT[4] = "fft";
 char IUFSFlash::FNAME_OTA[4] = "ota";
 char IUFSFlash::FNAME_FORCE_OTA[10] = "force_ota";
 char IUFSFlash::FNAME_MODBUS_SLAVE[12] = "modbusSlave";
+char IUFSFlash::FNAME_AXISMAP[13] = "axis_mapping";
 /***** Core *****/
 
 void IUFSFlash::begin()
@@ -78,6 +80,16 @@ void IUFSFlash::begin()
             debugPrint("Unable to find or create the ota_rollback directory");
         }
     }
+    m_digDir = DOSFS.exists(RULE_SUBDIR);
+    if(!m_digDir){
+        DOSFS.mkdir(RULE_SUBDIR);
+        m_digDir = DOSFS.exists(RULE_SUBDIR);
+        if (!m_digDir && setupDebugMode)
+        {
+            debugPrint("Unable to find or create the iuRule directory");
+        }
+
+     }
 }
 
 
@@ -583,6 +595,9 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
         case CFG_MODBUS_SLAVE:
             fname = FNAME_MODBUS_SLAVE;
             break;
+        case CFG_AXISMAP:
+            fname = FNAME_AXISMAP;
+            break;
         default:
             if (debugMode)
             {
@@ -595,8 +610,14 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
     {
         return 0;
     }
-    return snprintf(dest, len, "%s/%s%s", CONFIG_SUBDIR, fname,
+    if(fname == FNAME_AXISMAP ){
+        return snprintf(dest, len, "%s/%s%s", RULE_SUBDIR, fname,
                     CONFIG_EXTENSION);
+    }
+    else { 
+        return snprintf(dest, len, "%s/%s%s", CONFIG_SUBDIR, fname,
+                    CONFIG_EXTENSION);
+    }
 }
 
 File IUFSFlash::openConfigFile(storedConfig configType,

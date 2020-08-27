@@ -289,9 +289,10 @@ class Conductor
         void checkforWiFiConfigurations();
         void removeChar(char * New_BLE_MAC_Address, int charToRemove);
         void setDefaultMQTT();
-        void setDefaultHTTP();
-        void updateWiFiHash();
-        
+        void setDefaultHTTP();        
+        void updateWiFiHash(); 
+        char* GetStoredMD5(IUFlash::storedConfig configType, JsonObject &inputConfig);
+        void CreateFeatureGroup(JsonVariant &config);
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
