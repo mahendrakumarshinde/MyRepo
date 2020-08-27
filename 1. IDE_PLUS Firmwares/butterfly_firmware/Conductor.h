@@ -346,9 +346,9 @@ class Conductor
         bool computed_first_fingerprint_timestamp = false;
         SegmentedMessage segmentedMessages[MAX_SEGMENTED_MESSAGES]; // atmost MAX_SEGMENTED_MESSAGES can be captured in interleaved manner
         //Axis mapping 
-        const char* m_axis1;
-        const char* m_axis2;
-        const char* m_axis3;
+        const char* m_Vertical;
+        const char* m_Horizontal;
+        const char* m_Axial;
         char status[50];
         SensorStatusCode statusCode;
         char m_otaStmUri[512];
