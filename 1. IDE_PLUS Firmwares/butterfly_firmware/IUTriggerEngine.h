@@ -49,7 +49,8 @@ class IUTriggerComputer
         const char* m_feature[2];
         bool m_mandState;
         bool m_diagnosticState = false;
-        
+        bool DEBUG_ENABLE_FLAG = false;
+           
     public:
         /*** Variables *****/
         static const uint8_t MAX_TRIGGERS_LEN  = 10; 

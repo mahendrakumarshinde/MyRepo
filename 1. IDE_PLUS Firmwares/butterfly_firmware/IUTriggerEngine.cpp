@@ -29,24 +29,13 @@ uint8_t IUTriggerComputer::getActiveDigContainerlength(){
 uint8_t IUTriggerComputer::getreportableDigContainerLength(){
    return m_reportableDiagnosticLength;
 }
-// bool IUTriggerComputer::computeTriggerState(float result,float threshold,const char* comparator){
-
-//       if (result > threshold)
-//       {
-//           //cout << " Trigger is Active !" << endl;
-//           return 1;
-//       }else
-//       {
-//           return 0;
-//       }
-// }
 /**
  * @brief 
  * 
  * @param digObj 
  */
 void  IUTriggerComputer::getActiveDiagnostic(JsonObject& digObj){
-    
+    // TODO : Not Implemented   
     
 }
 
@@ -65,7 +54,7 @@ void IUTriggerComputer::maintainActiveTriggers(const char* trgId,uint8_t digInde
     {   // fill all the active triggerIDs to 2D array
         activeTRG[digIndex][m_activeTRGCounter] =(char*) trgId; 
         m_activeTRGCounter++;
-        if (loopDebugMode)
+        if (loopDebugMode && DEBUG_ENABLE_FLAG)
         {
             debugPrint("Active Trigger:",false);
             debugPrint(trgId);
@@ -86,7 +75,7 @@ void IUTriggerComputer::maintainInactiveTriggers(const char* trgId,uint8_t digIn
     {   // fill all the active triggerIDs to 2D array
         inactiveTRG[digIndex][m_inactiveTRGCounter] =(char*) trgId; 
         m_inactiveTRGCounter++;
-        if (loopDebugMode)
+        if (loopDebugMode && DEBUG_ENABLE_FLAG)
         {
             debugPrint("Active Trigger:",false);
             debugPrint(trgId);
@@ -130,7 +119,6 @@ void IUTriggerComputer:: m_specializedCompute() {
     // NB : All the Keys should have a same length of the list
     // TODO : Future Scope send the ack if validFlag is false 
     bool validFlag = validateDigConfigs(m_digObject); 
-    debugPrint("validFlag : ",false);debugPrint(validFlag); 
     if(validFlag){
         bool m_tstate = 0;
         bool optFeature = false;
@@ -166,7 +154,7 @@ void IUTriggerComputer:: m_specializedCompute() {
                    featureFlag =  getFeatures(m_feature[0],fout);
                     optFeature = false;
                     if(featureFlag == false){
-                        if(loopDebugMode){
+                        if(loopDebugMode && DEBUG_ENABLE_FLAG){
                             debugPrint("Invalid FRES JSON");
                         }
                         return;
@@ -176,7 +164,7 @@ void IUTriggerComputer:: m_specializedCompute() {
                    featureFlag = getFeatures(m_feature[0],m_feature[1],fout);
                     optFeature = true;
                     if(featureFlag == false){
-                        if(loopDebugMode){
+                        if(loopDebugMode && DEBUG_ENABLE_FLAG){
                             debugPrint("Invalid FRES JSON");
                         }
                         return;
@@ -184,7 +172,7 @@ void IUTriggerComputer:: m_specializedCompute() {
                 }
                 float res = getTriggerOutput(fout[0],fout[1],m_operator,optFeature);
                 m_tstate =  computeTriggerState(res,m_threshold,comparatorId);
-                 if(loopDebugMode){
+                 if(loopDebugMode && DEBUG_ENABLE_FLAG){
                      debugPrint("\nTRG Computation : ",false);
                      debugPrint("\nFID1 :",false);debugPrint(m_feature[0],false);debugPrint("->",false);debugPrint(fout[0]);
                      debugPrint("FID2 :",false);debugPrint(m_feature[1],false);debugPrint("->",false);debugPrint(fout[1]);
@@ -228,7 +216,7 @@ void IUTriggerComputer:: m_specializedCompute() {
                     indexCount++; 
                 }
                 m_firingTriggers[j] = m_triggerStates[i][j];
-                if(loopDebugMode){
+                if(loopDebugMode && DEBUG_ENABLE_FLAG){
                     debugPrint("\nMAND : ",false);debugPrint(mandTRG,false);debugPrint(" : ",false);
                     debugPrint(" FTR : ",false);debugPrint(m_firingTriggers[j],false);
                     debugPrint(" AND :",false);debugPrint(mandTRG & m_firingTriggers[j]);
@@ -249,13 +237,15 @@ void IUTriggerComputer:: m_specializedCompute() {
                 {
                     m_firingTriggers[i] = m_triggerStates[i][m_activeTriggerList[id]];
                     m_diagnosticState = (m_diagnosticState | 1)  &  m_firingTriggers[i];
-                    if(loopDebugMode){
+                    if(loopDebugMode && DEBUG_ENABLE_FLAG){
                         debugPrint("Active TRG index : ",false);
                         debugPrint(m_activeTriggerList[id],false);
                         debugPrint(" FTR Active : ",false);debugPrint(m_firingTriggers[i],true);
                     }
                     if(m_diagnosticState == false){
-                        debugPrint("Not All MAND TRGs are Active, exit loop");
+                        if(loopDebugMode && DEBUG_ENABLE_FLAG){
+                            debugPrint("Not All MAND TRGs are Active, exit loop");
+                        }
                         break;
                     }   
                 }   
@@ -532,7 +522,7 @@ bool IUTriggerComputer::getFeatures(const char* feature1,float* dest){
         }
     }else
     {
-        if (loopDebugMode)
+        if (loopDebugMode && DEBUG_ENABLE_FLAG)
         {
             debugPrint("Feature Result , Invalid JSON");
         }
@@ -580,7 +570,7 @@ bool IUTriggerComputer::validateDigConfigs(JsonObject &config){
         uint8_t DIG_LEN = config["CONFIG"]["DIG"]["DID"].size();
         uint8_t indexSize[Tsize];
         bool validTriggerSize = false;
-        if(loopDebugMode){
+        if(loopDebugMode && DEBUG_ENABLE_FLAG){
             debugPrint("Tsize :",false); debugPrint(Tsize);
             debugPrint("Tlen : ",false); debugPrint(Tlen);
             debugPrint("TRG_LEN :",false); debugPrint(TRG_LEN);
@@ -592,7 +582,7 @@ bool IUTriggerComputer::validateDigConfigs(JsonObject &config){
         if (DIG_LEN != TRG_LEN)
         {   
             validTriggerSize = false;
-            if(loopDebugMode){
+            if(loopDebugMode && DEBUG_ENABLE_FLAG){
                 debugPrint("Mismatched size of TRG and DIG configs");
             }    
             return validTriggerSize;
@@ -611,7 +601,7 @@ bool IUTriggerComputer::validateDigConfigs(JsonObject &config){
                 if (indexSize[0] != indexSize[i])
                 {
                     validTriggerSize = false;
-                    if (loopDebugMode)
+                    if (loopDebugMode && DEBUG_ENABLE_FLAG)
                     {  debugPrint("DiG configs length mismatch"); }
                     return false;
                 }
