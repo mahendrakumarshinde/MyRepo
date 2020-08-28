@@ -279,7 +279,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     String jsonChar;
     root.printTo(jsonChar);
     JsonVariant variant = root;
-  
+    
     // variant.prettyPrintTo(Serial);
             
     char messageId[60];
@@ -1559,7 +1559,7 @@ JsonObject& Conductor:: configureJsonFromFlash(String filename,bool isSet){
   //const size_t bufferSize = JSON_ARRAY_SIZE(8) + JSON_OBJECT_SIZE(300) + 60;        // dynamically allociated memory
   const size_t bufferSize = JSON_OBJECT_SIZE(2) + 2*JSON_OBJECT_SIZE(4) + 11*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(13) + 1396;
   DynamicJsonBuffer jsonBuffer(bufferSize);
- // Parse the root object
+ // Parse the root object 
   JsonObject &root = jsonBuffer.parseObject(myFile);
   //JsonObject& root2 = root["fingerprints"];
   
@@ -4244,72 +4244,45 @@ void Conductor::computeTriggers(){
     // read the dig config 
     iuTrigger.m_specializedCompute();
     if(iuTrigger.DIG_LIST[0] != NULL && iuTrigger.DIG_COUNT != 0) {
-        computeDiagnoticState(iuTrigger.DIG_LIST,iuTrigger.DIG_COUNT );
+      computeDiagnoticState(iuTrigger.DIG_LIST,iuTrigger.DIG_COUNT );
     }
+    // Testing Input 
+    // diagAlertResults[0] = "UNBAL";
+    // diagAlertResults[1] = "MISALIG";
+    // diagAlertResults[2] = "BPFO";
+    // diagAlertResults[3] = "RDIG1";
+    // diagAlertResults[4] = "RDIG2";
+    // diagAlertResults[5] = "RDIG3";
+    
+    // reportableDIGID[0]  = 0; 
+    // reportableDIGID[1]  = 1;
+    // reportableDIGID[2]  = 2;
+    // reportableDIGID[3]  = 3;
+    // reportableDIGID[4]  = 4;
+    // reportableDIGID[5]  = 5;
+    // reportableDIGID[6]  = 6;
+
+    // reportableDIGLength = 6;
+    // reportableIndexCounter = 6;
+
    }
     // iuTrigger.DIG_COUNT = 0;
     // reportableIndexCounter = 0;
     // clearDiagResultArray();
     
-    #if 0
-    debugPrint("DIG_COUNT : ",false);
-    debugPrint(iuTrigger.DIG_COUNT);
-    
-    debugPrint("Reportable DIG size : ",false);
-    debugPrint(reportableDIGLength);
-    
-    debugPrint("Reportable DIG Index Counter :",false);
-    debugPrint(reportableIndexCounter);
-    for (size_t i = 0; i < reportableIndexCounter; i++)
-    {
-        debugPrint("Index : ");
-        debugPrint(reportableDIGID[i]);
-    }
-    
-   for (size_t i = 0; i < iuTrigger.DIG_COUNT; i++)
-   {    
-        int count = iuTrigger.ACTIVE_TRGCOUNT[i];
-        debugPrint("COUNT :",false);
-        debugPrint(count);
-        for (size_t p = 0; p < count; p++)
-        {
-            debugPrint("TRG INDEX : ",false);
-            debugPrint(iuTrigger.activeTRG[i][p]);
-        }
-        debugPrint("@@@@@@@@@@@@@@@@@@@@@@@");
-   }
-
-   // All Trigger States 
-   debugPrint("[",false);
-   for (size_t i = 0; i < iuTrigger.DIG_COUNT; i++)
-   {
-       debugPrint("[",false);
-       for (size_t j = 0; j < 4; j++)
-       {
-           
-           debugPrint(iuTrigger.m_triggerStates[i][j],false);
-           debugPrint(",",false);
-       }
-       debugPrint("],",false);
-   }
-   debugPrint("]");
-   
-   #endif
 }
 
 void Conductor::streamReportableDiagnostics(){
    if(m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE){
+        
+        if(diagAlertResults[0] != NULL && reportableDIGLength > 0){    
             const char* dId;
-            // diagAlertResults[0] = "UNBAL";
-            // diagAlertResults[1] = "MISALIG";
-            // diagAlertResults[2] = "BPFO";
-            // diagAlertResults[3] = "RDIG1";
-             
+    
             DynamicJsonBuffer reportableJsonBUffer;
             JsonObject& reportableJson = reportableJsonBUffer.createObject();
             for (size_t i = 0; i < reportableDIGLength; i++)
             {
-                dId = diagAlertResults[i].c_str();
+                dId = diagAlertResults[i];//.c_str();
                 if(dId != NULL){
                     // construct the RDIG JSON 
                     JsonObject& diagnostic = reportableJson.createNestedObject(dId);
@@ -4331,6 +4304,7 @@ void Conductor::streamReportableDiagnostics(){
                     debugPrint(strlen(m_diagnosticPublishedBuffer));
                 }
             }
+          }
         }
     iuTrigger.DIG_COUNT = 0;
     reportableIndexCounter = 0;
@@ -6927,7 +6901,7 @@ void Conductor::computeDiagnoticState(JsonVariant &digList)
 void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag)
 {
     int resultIndex = 0;
-    bool exposeDebugPrints = false;  // Enable this flag to get debugPrints    int resultIndex = 0;
+    bool exposeDebugPrints = true;  // Enable this flag to get debugPrints    int resultIndex = 0;
     if(getDatetime() > 1590000000)  // Waiting for TimeSync to Avoid False Trigger
     {
         for (int index = 0; index< totalConfiguredDiag;index++)
@@ -6937,7 +6911,7 @@ void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag
             }
             // state[index] = (iterate.value.as<bool>());
             if (diagInput[index].endsWith("1"))
-            {   
+            {
                 diagInput[index].remove(diagInput[index].length() - 1);
                 if (first_active_flag[index] == false)
                 {
@@ -6956,7 +6930,7 @@ void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag
                 {
                     last_alert_flag[index] = true;
                     last_alert[index] = getDatetime();
-                    diagAlertResults[resultIndex]=diagInput[index];
+                    diagAlertResults[resultIndex]=(char*)diagInput[index].c_str();
                     reportableDIGID[reportableIndexCounter] = index;   
                     if (exposeDebugPrints)
                     {
@@ -6970,7 +6944,7 @@ void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag
                 if(getDatetime() - last_alert[index] > m_aleartRepeat[index] && last_alert_flag[index])
                 {
                     last_alert[index] = getDatetime();
-                    diagAlertResults[resultIndex]=diagInput[index];
+                    diagAlertResults[resultIndex]=(char*) diagInput[index].c_str();
                     reportableDIGID[reportableIndexCounter] = index;
                     if (exposeDebugPrints)
                     {

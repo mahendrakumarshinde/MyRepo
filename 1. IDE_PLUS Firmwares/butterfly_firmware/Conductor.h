@@ -413,9 +413,10 @@ class Conductor
         uint16_t m_maxGap[maxDiagnosticStates];
         uint16_t m_totalDigCount[maxDiagnosticStates];
         uint16_t m_activeDigCount[maxDiagnosticStates];
-        String diagAlertResults[maxDiagnosticStates];
         uint8_t reportableDIGID[maxDiagnosticStates];
         uint8_t reportableIndexCounter;
+        char* diagAlertResults[maxDiagnosticStates];
+        
 };
 
 
