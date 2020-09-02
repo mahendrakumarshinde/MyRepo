@@ -113,7 +113,7 @@ void IUTriggerComputer::maintainAllTriggers(uint8_t digCount,uint8_t trgCount, b
 void IUTriggerComputer:: m_specializedCompute() {
 
     bool featureFlag = true;
-    JsonObject &m_digObject =  conductor.configureJsonFromFlash("/iuconfig/diagnostic.conf",true);
+    JsonObject &m_digObject =  conductor.configureJsonFromFlash("/iuRule/diagnostic.conf",true);
     
     // validate the entries available in trigger and diagnostic configs 
     // NB : All the Keys should have a same length of the list
