@@ -8,14 +8,14 @@ class IUKX134 : public HighFreqSensor
 {
 public:
 
-    enum OdrSetting  { ODR_12_5Hz = 0x00,
-                    ODR_25Hz = 0x01,
-                    ODR_50Hz = 0x02,
-                    ODR_100Hz = 0x03,
-                    ODR_200Hz = 0x04,
-                    ODR_400Hz = 0x05,
-                    ODR_800Hz = 0x06,
-                    ODR_1600Hz = 0x07,
+  enum OdrSetting {ODR_12_5Hz = 0x04,
+                    ODR_25Hz = 0x05,
+                    ODR_50Hz = 0x06,
+                    ODR_100Hz = 0x07,
+                    ODR_200Hz = 0x08,
+                    ODR_400Hz = 0x09,
+                    ODR_800Hz = 0x0A,
+                    ODR_1600Hz = 0x0B,
                     ODR_3200Hz = 0x0C,
                     ODR_6400Hz = 0x0D,
                     ODR_12800Hz = 0x0E,
