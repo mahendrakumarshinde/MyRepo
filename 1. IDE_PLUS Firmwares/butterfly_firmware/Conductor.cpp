@@ -4323,25 +4323,6 @@ void Conductor::computeTriggers(){
     if(iuTrigger.DIG_LIST[0] != NULL && iuTrigger.DIG_COUNT != 0) {
       computeDiagnoticState(iuTrigger.DIG_LIST,iuTrigger.DIG_COUNT );
     }
-    // Testing Input 
-    // diagAlertResults[0] = "UNBAL";
-    // diagAlertResults[1] = "MISALIG";
-    // diagAlertResults[2] = "BPFO";
-    // diagAlertResults[3] = "RDIG1";
-    // diagAlertResults[4] = "RDIG2";
-    // diagAlertResults[5] = "RDIG3";
-    
-    // reportableDIGID[0]  = 0; 
-    // reportableDIGID[1]  = 1;
-    // reportableDIGID[2]  = 2;
-    // reportableDIGID[3]  = 3;
-    // reportableDIGID[4]  = 4;
-    // reportableDIGID[5]  = 5;
-    // reportableDIGID[6]  = 6;
-
-    // reportableDIGLength = 6;
-    // reportableIndexCounter = 6;
-
    }
     // iuTrigger.DIG_COUNT = 0;
     // reportableIndexCounter = 0;
@@ -4373,7 +4354,7 @@ void Conductor::streamReportableDiagnostics(){
                 reportableJson.printTo(m_diagnosticResult,DIG_PUBLISHED_BUFFER_SIZE);
                 snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"DIGRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
                 // Published to MQTT 
-                iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,m_diagnosticPublishedBuffer);
+                iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_IU_DIAGNOSTIC,m_diagnosticPublishedBuffer);
                 if(loopDebugMode){
                     debugPrint("O/P Buffer : ",false);
                     debugPrint(m_diagnosticPublishedBuffer);
