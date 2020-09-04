@@ -4616,12 +4616,14 @@ bool Conductor::setFFTParams() {
         {
             debugPrint(F("LSM Present & LSM set"));
             iuAccelerometer.setSamplingRate(FFTConfiguration::currentSamplingRate);
+            FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_LSM;
             setSensorStatus(SensorStatusCode::LSM_SET);
         }
         else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (iuAccelerometerKX134.kionixPresence))
         {
             debugPrint(F("KIONIX Present & KIONIX set"));
             iuAccelerometerKX134.setSamplingRate(FFTConfiguration::currentSamplingRate); // will set the ODR for the sensor
+            FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
             setSensorStatus(SensorStatusCode::KNX_SET);
         }else if((FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor) && (!iuAccelerometer.lsmPresence) && (iuAccelerometerKX134.kionixPresence)){
             debugPrint(F("LSM absent & KIONIX set"));
@@ -4629,6 +4631,7 @@ bool Conductor::setFFTParams() {
             FFTConfiguration::currentSamplingRate = iuAccelerometerKX134.defaultSamplingRate;
             FFTConfiguration::currentSensor = FFTConfiguration::kionixSensor;
             FFTConfiguration::currentBlockSize = iuAccelerometerKX134.DEFAULT_BLOCK_SIZE;
+            FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
             setSensorStatus(SensorStatusCode::LSM_ABS);
         }else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (!iuAccelerometerKX134.kionixPresence) && (iuAccelerometer.lsmPresence)){
             debugPrint(F("KIONIX Absent & LSM set"));
@@ -4636,6 +4639,7 @@ bool Conductor::setFFTParams() {
             FFTConfiguration::currentSamplingRate = iuAccelerometer.defaultSamplingRate;
             FFTConfiguration::currentSensor = FFTConfiguration::lsmSensor;
             FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
+            FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_LSM;
             setSensorStatus(SensorStatusCode::KNX_ABS);
         }
         else{
@@ -4643,7 +4647,7 @@ bool Conductor::setFFTParams() {
             setSensorStatus(SensorStatusCode::SEN_ABS);
         }
         // TODO: The following can be configurable in the future
-        FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY;
+        // FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY;
         FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
         FFTConfiguration::currentMinAgitation = FFTConfiguration::DEFAULT_MIN_AGITATION;
 
