@@ -299,7 +299,7 @@ void Conductor::periodicSendConfigChecksum()
         if(requestConfig){
             
             String rString;
-            resultConfig.prettyPrintTo(rString);
+            resultConfig.printTo(rString);
             sprintf(resultArray,"%s%s%s%s%s","{\"DEVICEID\":\"", m_macAddress.toString().c_str(),"\",",rString.c_str(),"}");
             iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_CONFIG_CHECKSUM, resultArray);
         }
@@ -1241,7 +1241,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 debugPrint("configs saved successfully ");
             }
             clearDiagResultArray();
-            getAlertPolicyTime();
+            setupAlertPolicyTime();
         }
         if(iuWiFi.isConnected() )
         {  
@@ -4370,7 +4370,7 @@ void Conductor::streamReportableDiagnostics(){
 }
 
 void Conductor::constructPayload(const char* dId,JsonObject& desc ){
-
+    // Not in Used
     JsonObject& descJson = configureJsonFromFlash("iuconfig/desc.conf",1);
     desc["FA"] =   1;//descJson["DESC"][dId]["FA"].as< const char* >();
     desc["RR"] =   1;//descJson["DESC"][dId]["RR"].as< const char* >();
@@ -6959,7 +6959,7 @@ void Conductor::computeDiagnoticState(JsonVariant &digList)
 void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag)
 {
     int resultIndex = 0;
-    bool exposeDebugPrints = true;  // Enable this flag to get debugPrints    int resultIndex = 0;
+    bool exposeDebugPrints = false;  // Enable this flag to get debugPrints    int resultIndex = 0;
     if(getDatetime() > 1590000000)  // Waiting for TimeSync to Avoid False Trigger
     {
         for (int index = 0; index< totalConfiguredDiag;index++)
@@ -7071,19 +7071,23 @@ void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag
                     debugPrint("____________________________________");
                 }
             }
-        }        debugPrint("Result Array : ",false);
-        for(int i=0;i<maxDiagnosticStates;i++){
-            debugPrint(diagAlertResults[i],false);
-            debugPrint(",",false);
         }
-        debugPrint("");
+        // Display Reportable Diagnostic list        
+        if(exposeDebugPrints){
+            debugPrint("Result Array : ",false);
+            for(int i=0;i<maxDiagnosticStates;i++){
+                debugPrint(diagAlertResults[i],false);
+                debugPrint(",",false);
+            }
+            debugPrint("");
+        }
         //clearDiagResultArray(); // In actual condition. Need to call this method after Publishing Alert Results 
     }
     reportableDIGLength = resultIndex;  // number of reportable diagnostic
     
 }
 
-void Conductor::getAlertPolicyTime()
+void Conductor::setupAlertPolicyTime()
 {
     JsonObject &diag = configureJsonFromFlash("/iuconfig/diagnostic.conf", 1);
     size_t totalDiagnostics = diag["CONFIG"]["DIG"]["DID"].size();

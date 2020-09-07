@@ -305,7 +305,7 @@ class Conductor
         void updateWiFiHash();
         /**** Diagnostic Rule Engine *****/
         void computeDiagnoticState(String *diagInput, int totalConfiguredDiag);
-        void getAlertPolicyTime();
+        void setupAlertPolicyTime();
         void clearDiagStateBuffers();
         void clearDiagResultArray();
         int getTotalDigCount(const char* diagName);
