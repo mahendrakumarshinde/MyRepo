@@ -1241,7 +1241,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 debugPrint("configs saved successfully ");
             }
             clearDiagResultArray();
-            setupAlertPolicyTime();
+            configureAlertPolicy();
         }
         if(iuWiFi.isConnected() )
         {  
@@ -7087,13 +7087,13 @@ void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag
     
 }
 
-void Conductor::setupAlertPolicyTime()
+void Conductor::configureAlertPolicy()
 {
     JsonObject &diag = configureJsonFromFlash("/iuconfig/diagnostic.conf", 1);
     size_t totalDiagnostics = diag["CONFIG"]["DIG"]["DID"].size();
 
-    debugPrint("\nTotal No. Of Duiagnostics = ",false);
-    debugPrint(totalDiagnostics);
+    // debugPrint("\nTotal No. Of Duiagnostics = ",false);
+    // debugPrint(totalDiagnostics);
 
     for(int i = 0; i < totalDiagnostics; i++){
         m_minSpan[i] =      diag["CONFIG"]["DIG"]["ALTP"]["MINSPN"][i];
