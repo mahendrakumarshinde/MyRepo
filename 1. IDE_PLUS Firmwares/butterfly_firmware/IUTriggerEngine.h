@@ -49,7 +49,7 @@ class IUTriggerComputer
         const char* m_feature[2];
         bool m_mandState;
         bool m_diagnosticState = false;
-        bool DEBUG_ENABLE_FLAG = true;
+        bool DEBUG_ENABLE_FLAG = false;
            
     public:
         /*** Variables *****/
@@ -179,10 +179,10 @@ T getTriggerOutput(T feature1, T feature2,const char* operand,bool optionalFeatu
     if(strcmp(operand,"--") == 0 && strcmp(operand,"NULL") != 0 ){
         result = feature1 - feature2;
         result = abs(result);
-        if(loopDebugMode){
-            debugPrint("Abs. Difference :",false);
-            debugPrint(result);
-        }
+        // if(loopDebugMode){
+        //     debugPrint("Abs. Difference :",false);
+        //     debugPrint(result);
+        // }
     }else {
         switch (operand[0])
         {

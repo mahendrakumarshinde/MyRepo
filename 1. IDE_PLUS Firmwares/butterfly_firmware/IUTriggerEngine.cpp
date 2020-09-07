@@ -129,8 +129,6 @@ void IUTriggerComputer:: m_specializedCompute() {
         
         uint8_t TRG_SIZE = m_digObject["CONFIG"]["TRG"]["FID1"].size();
         uint8_t DIG_SIZE = m_digObject["CONFIG"]["DIG"]["DID"].size();
-        
-        //debugPrint("TRG_SIZE : ",false);debugPrint(TRG_SIZE);
         for (size_t i = 0; i < TRG_SIZE; i++)   
         {   
             const char*  DIG_ID = m_digObject["CONFIG"]["DIG"]["DID"][i]; 
@@ -146,7 +144,7 @@ void IUTriggerComputer:: m_specializedCompute() {
                 m_mandState     = m_digObject["CONFIG"]["TRG"]["MAND"][i][j].as<bool>();
               
                 m_mandFlag[i][j] = m_mandState;     // store the MAND States
-                MAND_SIZE[i] = j+1;       // store the count of MAND Flags
+                MAND_SIZE[i] = j+1;                 // store the count of MAND Flags
                 // process 1
                 // Get the Feature values from feature output JSON
                 comparatorId = getCompartorId(m_comparator);
@@ -186,18 +184,19 @@ void IUTriggerComputer:: m_specializedCompute() {
                 //process 3 manage all active triggers as per diagnostics
                 m_triggerStates[DIG_INDEX][j] = m_tstate;        
             }
-            debugPrint("Active Count : ",false);
-            debugPrint(m_activeTRGCounter);
+            // debugPrint("Active Count : ",false);
+            // debugPrint(m_activeTRGCounter);
             ACTIVE_TRGCOUNT[i] = m_activeTRGCounter;
             INACTIVE_TRGCOUNT[i] = m_inactiveTRGCounter;
             m_activeTRGCounter = 0;
             m_inactiveTRGCounter = 0;
             featureFlag = true;
-            
+           if(loopDebugMode && DEBUG_ENABLE_FLAG){ 
             debugPrint("........................................");
+           }
         }
         // process 4 
-        //compute active diagnostics and DIG state
+        // compute active diagnostics and DIG state
         // Logic : MAND & FTR  = 1 <active> ,0 <inactive>
         bool mandTRG;
         static uint8_t indexCount=0;
@@ -205,8 +204,6 @@ void IUTriggerComputer:: m_specializedCompute() {
         for (size_t i = 0; i < TRG_SIZE; i++)
         {
             //uint8_t MAND_SIZE   =  m_digObject["CONFIG"]["TRG"]["MAND"][i].size();
-            debugPrint("MAND SIZE :",false);
-            debugPrint(MAND_SIZE[i]);
             for (size_t j = 0; j < MAND_SIZE[i]; j++)
             {        
                 //mandTRG  = m_digObject["CONFIG"]["TRG"]["MAND"][i][j].as<bool>(); 
@@ -227,7 +224,6 @@ void IUTriggerComputer:: m_specializedCompute() {
             }
             // check is Diagnostic Active ?
             // Rule 1 : if no mandatory triggers configured but triggers are firing then its Active
-            debugPrint("indexCount : ",false); debugPrint(indexCount); 
             if(indexCount == 0 && atleastOneFiringTriggerActive){
                 m_diagnosticState = true;
             }else {
@@ -251,8 +247,6 @@ void IUTriggerComputer:: m_specializedCompute() {
                 }   
             }
 
-            debugPrint(" DIG STATE : ",false);
-            debugPrint(m_diagnosticState);
             const char* DID = m_digObject["CONFIG"]["DIG"]["DID"][i].as<const char*>();
             String DIG_NAME = DID + String(m_diagnosticState);
             DIG_LIST[i] = DIG_NAME;
@@ -266,7 +260,11 @@ void IUTriggerComputer:: m_specializedCompute() {
             atleastOneFiringTriggerActive = false;
             m_diagnosticState = false;
             resetBuffer();
-            debugPrint("*******************************************");
+            if(loopDebugMode && DEBUG_ENABLE_FLAG){    
+                debugPrint(" DIG STATE : ",false);
+                debugPrint(m_diagnosticState);
+                debugPrint("*******************************************");
+            }
         }
 
        #if 0
@@ -508,7 +506,7 @@ uint8_t IUTriggerComputer::getCompartorId(const char* comparatorName){
 
 bool IUTriggerComputer::getFeatures(const char* feature1,float* dest){
     // return the mandatory feature output
-    // TODO : Need to remove feature ouptut file and remove the json 
+    // TODO : Need to remove feature ouptut file and pass the json in runtime , In Future : Remove Json as well 
     bool success = true;
     const size_t bufferSize = 600;          
     StaticJsonBuffer<bufferSize> jsonBuffer;
