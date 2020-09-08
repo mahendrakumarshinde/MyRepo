@@ -567,7 +567,24 @@ float RFFTAmplitudes::getMainFrequency(q31_t *amplitudes, uint16_t sampleCount,
     return (float) (maxIdx + 1) * df;
 }
 
-
+// Compute rpm
+float RFFTFeatures::computeRPM(q15_t *amplitudes, int m_lowRPMFrequency,int m_highRPMFrequency,float rpm_threshold,float df)
+{   float peakfreq[50]; 
+    float float_FFTamplitudes[50];
+    uint8_t sampleCount = m_highRPMFrequency - m_lowRPMFrequency ; 
+    float maxVal;
+    uint32_t maxIdx=0; 
+    for (uint8_t i = m_lowRPMFrequency; i < m_highRPMFrequency ; i++)
+    {
+        float_FFTamplitudes[i]= ((float) (q15_t) amplitudes[i]/ 32768.0);
+        if(float_FFTamplitudes[i] > rpm_threshold )
+            {
+                peakfreq[i] = float_FFTamplitudes[i];
+            }   
+    }
+    getMax(peakfreq,(uint32_t)sampleCount, &maxVal, &maxIdx);
+    return (float) (maxIdx *df *60) ;
+}
 /*==============================================================================
     Analytics
 ============================================================================= */
