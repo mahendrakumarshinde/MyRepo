@@ -312,6 +312,7 @@ class Conductor
         int getActiveDigCount(const char* diagName);
         
         char* GetStoredMD5(IUFlash::storedConfig configType, JsonObject &inputConfig);
+        uint8_t getm_id(char* did, int totalConfiguredDiag);
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
@@ -417,6 +418,9 @@ class Conductor
         uint8_t reportableDIGID[maxDiagnosticStates];
         uint8_t reportableIndexCounter;
         char* diagAlertResults[maxDiagnosticStates];
+        uint8_t m_id[maxDiagnosticStates];
+        const char* d_id[maxDiagnosticStates];
+        uint8_t reportable_m_id[maxDiagnosticStates];
         
 };
 

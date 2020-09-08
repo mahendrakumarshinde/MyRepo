@@ -6989,12 +6989,14 @@ void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag
                     last_alert_flag[index] = true;
                     last_alert[index] = getDatetime();
                     diagAlertResults[resultIndex]=(char*)diagInput[index].c_str();
+                    reportable_m_id[resultIndex] = getm_id(diagAlertResults[resultIndex],totalConfiguredDiag);
                     reportableDIGID[reportableIndexCounter] = index;   
                     if (exposeDebugPrints)
                     {
                         debugPrint(diagInput[index], false);
                         debugPrint(" : ALERT");
                         debugPrint(diagAlertResults[resultIndex]);
+                        debugPrint(reportable_m_id[resultIndex]);
                     }
                    ++ resultIndex;
                    reportableIndexCounter ++; 
@@ -7003,12 +7005,14 @@ void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag
                 {
                     last_alert[index] = getDatetime();
                     diagAlertResults[resultIndex]=(char*) diagInput[index].c_str();
+                    reportable_m_id[resultIndex] = getm_id(diagAlertResults[resultIndex],totalConfiguredDiag);
                     reportableDIGID[reportableIndexCounter] = index;
                     if (exposeDebugPrints)
                     {
                         debugPrint(diagInput[index], false);
                         debugPrint(" : ALERT REP");
                         debugPrint(diagAlertResults[resultIndex]);
+                        debugPrint(reportable_m_id[resultIndex]);
                     }
                     ++resultIndex;
                     reportableIndexCounter ++;
@@ -7080,6 +7084,12 @@ void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag
                 debugPrint(",",false);
             }
             debugPrint("");
+            debugPrint("Reportable M_id : ,",false);
+            for(int i=0;i<maxDiagnosticStates;i++){
+                debugPrint(reportable_m_id[i],false);
+                debugPrint(",",false);
+            }
+            debugPrint("");
         }
         //clearDiagResultArray(); // In actual condition. Need to call this method after Publishing Alert Results 
     }
@@ -7089,7 +7099,7 @@ void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag
 
 void Conductor::configureAlertPolicy()
 {
-    JsonObject &diag = configureJsonFromFlash("/iuconfig/diagnostic.conf", 1);
+    JsonObject &diag = configureJsonFromFlash("/iuRule/diagnostic.conf", 1);
     size_t totalDiagnostics = diag["CONFIG"]["DIG"]["DID"].size();
 
     // debugPrint("\nTotal No. Of Duiagnostics = ",false);
@@ -7099,6 +7109,8 @@ void Conductor::configureAlertPolicy()
         m_minSpan[i] =      diag["CONFIG"]["DIG"]["ALTP"]["MINSPN"][i];
         m_aleartRepeat[i] = diag["CONFIG"]["DIG"]["ALTP"]["ALRREP"][i];
         m_maxGap[i] =       diag["CONFIG"]["DIG"]["ALTP"]["MAXGAP"][i];
+        m_id[i] = diag["CONFIG"]["DIG"]["MID"][i];
+        d_id[i] = diag["CONFIG"]["DIG"]["DID"][i];
     }
 
     // for(int i = 0; i < totalDiagnostics; i++){
@@ -7117,10 +7129,13 @@ void Conductor::clearDiagStateBuffers()
     memset(last_active_flag,'\0',sizeof(last_active_flag));
     memset(last_alert_flag,'\0',sizeof(last_alert_flag));
     memset(reset_alert_flag,'\0',sizeof(reset_alert_flag));
+    memset(m_id, '\0', sizeof(m_id));
+    memset(d_id, '\0', sizeof(d_id));
 }
 
 void Conductor::clearDiagResultArray(){
     memset(diagAlertResults,'\0',sizeof(diagAlertResults));
+    memset(reportable_m_id, '\0', sizeof(reportable_m_id));
 }
 
 int Conductor::getTotalDigCount(const char* diagName){
@@ -7153,4 +7168,12 @@ char* Conductor::GetStoredMD5(IUFlash::storedConfig configType, JsonObject &inpu
         return "error";
     }
     
+}
+
+uint8_t Conductor::getm_id(char* did,  int totalConfiguredDiag){
+    for(int i = 0 ; i < totalConfiguredDiag ; i++){
+        if(strcmp(did,d_id[i]) == 0){
+            return m_id[i];
+        }
+    }
 }
