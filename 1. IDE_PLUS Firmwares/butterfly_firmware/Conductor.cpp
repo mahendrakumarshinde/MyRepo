@@ -7091,6 +7091,9 @@ void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag
             }
             debugPrint("");
         }
+        //TODO: Copy reportable_m_id array to temp array
+
+
         //clearDiagResultArray(); // In actual condition. Need to call this method after Publishing Alert Results 
     }
     reportableDIGLength = resultIndex;  // number of reportable diagnostic
