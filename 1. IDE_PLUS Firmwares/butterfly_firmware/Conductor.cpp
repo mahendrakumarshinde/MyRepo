@@ -1151,6 +1151,62 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
 
     }
+    // RPM Configs
+    subConfig = root["RPM"];
+    if (subConfig.success()) {
+        if (loopDebugMode){  debugPrint("RPM Configs Received :",false);
+         subConfig.printTo(Serial); debugPrint("");
+         }
+        bool dataWritten = false;
+        if (saveToFlash) {
+            File RPMConfigFile = DOSFS.open("rpm.conf", "w");
+            if (RPMConfigFile)
+            {
+                if (loopDebugMode) {
+                 debugPrint(F("Writting into file: "), true);
+                }
+                RPMConfigFile.print(jsonChar);
+                RPMConfigFile.close();
+                dataWritten = true;
+            }
+            else if (loopDebugMode) {
+                 debugPrint("Failed to write into file: sensorConfig.conf ");
+            }  
+        
+        }
+        if(dataWritten == true){
+            int LOW_RPM  = root["RPM"]["speed"];
+            int HIGH_RPM = root["RPM"]["speedH"]; 
+            const char* messageId = root["messageId"];
+            if(LOW_RPM < FFTConfiguration::currentLowCutOffFrequency){
+                FFTConfiguration::lowRPMFrequency = FFTConfiguration::currentLowCutOffFrequency;
+            }else if (HIGH_RPM > FFTConfiguration::currentHighCutOffFrequency)
+            { 
+                FFTConfiguration::highRPMFrequency = FFTConfiguration::currentHighCutOffFrequency;
+            }else {
+                FFTConfiguration::lowRPMFrequency = LOW_RPM;
+                FFTConfiguration::highRPMFrequency = HIGH_RPM;
+            }
+            debugPrint("SPEED : ",false);debugPrint(LOW_RPM);
+            debugPrint("SPEED H :",false);debugPrint(HIGH_RPM);
+            debugPrint("MSGID : ",false);debugPrint(messageId);
+            strcpy(m_otaMsgId,messageId);
+            char ack_config[70];
+            snprintf(ack_config, 70, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+                
+            if(iuWiFi.isConnected() )
+            {  
+                if(loopDebugMode){debugPrint("Response : ",false);debugPrint(ack_config);}
+                iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,ack_config );
+            }
+            if(StreamingMode::BLE && isBLEConnected()){// Send ACK to BLE
+                if(loopDebugMode){ debugPrint("RPM Config SUCCESS");}
+                iuBluetooth.write("RPM-SUCCESS;");
+            }
+            debugPrint("RPM Config Success");
+        }
+    }
+
     
     return true;
 }
