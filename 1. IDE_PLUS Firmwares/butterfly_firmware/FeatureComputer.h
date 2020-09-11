@@ -707,10 +707,12 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
                 m_highCutFrequency, scaling1, false);
 
             logFFTOutput(&FFTOuput[fft_direction], velFFT,(void*) amplitudes, amplitudeCount, false);
-            float rpm = RFFTFeatures::computeRPM(amplitudes,50,200,1,df);
-            debugPrint("RPM ",false);
-            debugPrint(rpm);
-        
+            float rpm = RFFTFeatures::computeRPM(amplitudes,samplingRate,FFTConfiguration::lowRPMFrequency,
+                            FFTConfiguration::highRPMFrequency,0.3,df);
+            if(loopDebugMode){
+                debugPrint("\nRPM : ",false);
+                debugPrint(rpm);
+            }
           
             /***************************** Applying Diagnostic fingerprints on computated velocity fft amplitude *************************/ 
             //  Serial.print("Axis ID :");Serial.println(direction);

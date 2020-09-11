@@ -568,22 +568,49 @@ float RFFTAmplitudes::getMainFrequency(q31_t *amplitudes, uint16_t sampleCount,
 }
 
 // Compute rpm
-float RFFTFeatures::computeRPM(q15_t *amplitudes, int m_lowRPMFrequency,int m_highRPMFrequency,float rpm_threshold,float df)
-{   float peakfreq[50]; 
-    float float_FFTamplitudes[50];
+float RFFTFeatures::computeRPM(q15_t *amplitudes,int m_lowRPMFrequency,int m_highRPMFrequency,float rpm_threshold,float df)
+{   
+    debugPrint("\n\nlRPM : ",false);debugPrint(m_lowRPMFrequency);
+    debugPrint("hRPM : ",false);debugPrint(m_highRPMFrequency);
+    uint8_t MAX_PEAK_COUNT = 50 ;
+    float peakfreq[MAX_PEAK_COUNT]; 
+    float famplitude;
     uint8_t sampleCount = m_highRPMFrequency - m_lowRPMFrequency ; 
     float maxVal;
     uint32_t maxIdx=0; 
-    for (uint8_t i = m_lowRPMFrequency; i < m_highRPMFrequency ; i++)
+    int count = 0;
+    debugPrint("\n",true);
+    for (uint16_t i = m_lowRPMFrequency; i < m_highRPMFrequency ; i++)
     {
-        float_FFTamplitudes[i]= ((float) (q15_t) amplitudes[i]/ 32768.0);
-        if(float_FFTamplitudes[i] > rpm_threshold )
-            {
-                peakfreq[i] = float_FFTamplitudes[i];
-            }   
+        famplitude = ((float) (q15_t) amplitudes[i]/ 32768.0);
+        famplitude *= 100;
+        debugPrint(famplitude,false);debugPrint(",",false);
+         if((famplitude > rpm_threshold) && (count < MAX_PEAK_COUNT) )
+         {
+                peakfreq[count] = famplitude;
+                count++;
+        }   
     }
-    getMax(peakfreq,(uint32_t)sampleCount, &maxVal, &maxIdx);
-    return (float) (maxIdx *df *60) ;
+    
+    if(count != 0) {
+        // print max peaks 
+        debugPrint("\nPeak_Freq :  [ ",false);
+        for (size_t i = 0; i < count; i++)
+        {
+            debugPrint(peakfreq[i],false);
+            debugPrint(",",false);
+        }
+        debugPrint("]",true);
+        getMax(peakfreq,(uint32_t)sampleCount, &maxVal, &maxIdx);
+        debugPrint("Max idx : ",false);
+        debugPrint(maxIdx,false);debugPrint(",",false);
+        debugPrint(maxVal);
+        debugPrint("df :",false);debugPrint(df);
+        maxIdx += m_lowRPMFrequency;
+        return (float) (maxIdx*df*60) ;
+    }else{
+        return 0;
+    }
 }
 /*==============================================================================
     Analytics
