@@ -7092,7 +7092,11 @@ void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag
             debugPrint("");
         }
         //TODO: Copy reportable_m_id array to temp array
-
+        for(int i=0;i<maxDiagnosticStates;i++){
+            tmp_reportable_m_id[i] = reportable_m_id[i];
+            debugPrint(tmp_reportable_m_id[i],false);
+                debugPrint(",",false);
+        }
 
         //clearDiagResultArray(); // In actual condition. Need to call this method after Publishing Alert Results 
     }

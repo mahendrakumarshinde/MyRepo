@@ -606,6 +606,12 @@ switch (groupNo)
             
         }
         break;
+    case modbusGroups::MODBUS_STREAMING_REPORTABLE_DIAGNOSTIC:
+        for(int index =startAddress; index <= endAddress; index++){
+            m_holdingRegs[index] = int(*features);
+            features++;
+        }
+        break;
            
     default:
         debugPrint("MODBUS DEBUG : Invalid Group No");

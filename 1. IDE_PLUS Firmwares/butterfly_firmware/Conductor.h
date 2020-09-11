@@ -313,6 +313,7 @@ class Conductor
         
         char* GetStoredMD5(IUFlash::storedConfig configType, JsonObject &inputConfig);
         uint8_t getm_id(char* did, int totalConfiguredDiag);
+        float tmp_reportable_m_id[50];
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
