@@ -379,6 +379,17 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
             }
             break;
         }
+        case CFG_RPM: {
+            validConfig = true;
+            validationResult["messageType"] = "rpm-config-ack";
+            int lowRPM = config["RPM"]["speed"];
+            int highRPM = config["RPM"]["speedH"];
+            if(highRPM - lowRPM < 0 ){  // negative difference is not allowed
+                validConfig = false;
+                errorMessages.add("High RPM cannot be less then LOW RPM");
+            }
+            break;
+        }
         case CFG_HTTP:{
             validConfig = true;
             validationResult["messageType"] = "http-config-ack";
