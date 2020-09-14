@@ -4347,6 +4347,8 @@ void Conductor::streamReportableDiagnostics(){
                     JsonArray& ftr = diagnostic.createNestedArray("FTR");
                     // Add Firing Triggers list
                     addFTR(dId,ftr,i);
+                    diagnostic["ALRREP"] = alert_repeat_state[i];
+
                 }
             }
             if(diagAlertResults[0] != NULL){
@@ -6988,6 +6990,7 @@ void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag
                 {
                     last_alert_flag[index] = true;
                     last_alert[index] = getDatetime();
+                    alert_repeat_state[resultIndex] = false;
                     diagAlertResults[resultIndex]=(char*)diagInput[index].c_str();
                     reportableDIGID[reportableIndexCounter] = index;   
                     if (exposeDebugPrints)
@@ -7001,7 +7004,8 @@ void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag
                 }
                 if(getDatetime() - last_alert[index] > m_aleartRepeat[index] && last_alert_flag[index])
                 {
-                    last_alert[index] = getDatetime();
+                    last_alert[index] = getDatetime();                    
+                    alert_repeat_state[resultIndex] = true;
                     diagAlertResults[resultIndex]=(char*) diagInput[index].c_str();
                     reportableDIGID[reportableIndexCounter] = index;
                     if (exposeDebugPrints)
@@ -7089,7 +7093,7 @@ void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag
 
 void Conductor::configureAlertPolicy()
 {
-    JsonObject &diag = configureJsonFromFlash("/iuconfig/diagnostic.conf", 1);
+    JsonObject &diag = configureJsonFromFlash("/iuRule/diagnostic.conf", 1);
     size_t totalDiagnostics = diag["CONFIG"]["DIG"]["DID"].size();
 
     // debugPrint("\nTotal No. Of Duiagnostics = ",false);
@@ -7121,6 +7125,7 @@ void Conductor::clearDiagStateBuffers()
 
 void Conductor::clearDiagResultArray(){
     memset(diagAlertResults,'\0',sizeof(diagAlertResults));
+    memset(alert_repeat_state,'\0',sizeof(alert_repeat_state));
 }
 
 int Conductor::getTotalDigCount(const char* diagName){

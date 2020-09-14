@@ -409,6 +409,7 @@ class Conductor
         bool last_active_flag[maxDiagnosticStates];
         bool last_alert_flag[maxDiagnosticStates];
         bool reset_alert_flag[maxDiagnosticStates];
+        bool alert_repeat_state[maxDiagnosticStates];
         uint16_t m_minSpan[maxDiagnosticStates];
         uint16_t m_aleartRepeat[maxDiagnosticStates];
         uint16_t m_maxGap[maxDiagnosticStates];
