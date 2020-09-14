@@ -217,6 +217,7 @@ class Conductor
         void streamReportableDiagnostics();
         void constructPayload(const char* dId,JsonObject& desc);
         void addFTR(const char* dId,JsonArray& FTR,uint8_t id );
+        void addFTR(JsonArray& FTR,uint8_t id );
         /*********************************/
         void streamFeatures();
         void sendAccelRawData(uint8_t axisIdx);

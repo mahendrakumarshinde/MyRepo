@@ -4332,26 +4332,91 @@ void Conductor::computeTriggers(){
 
 void Conductor::streamReportableDiagnostics(){
    if(m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE){
-        
-        if(diagAlertResults[0] != NULL && reportableDIGLength > 0){    
-            const char* dId;
-    
-            DynamicJsonBuffer reportableJsonBUffer;
-            JsonObject& reportableJson = reportableJsonBUffer.createObject();
-            for (size_t i = 0; i < reportableDIGLength; i++)
+        const char* dId;
+        bool publishDiag = false;
+        bool publishAlert = false;
+        DynamicJsonBuffer reportableJsonBUffer;
+        JsonObject& reportableJson = reportableJsonBUffer.createObject();
+        int publishSelect = 0;
+        uint32_t nowT = millis();
+        if (nowT - conductor.digLastExecuted >= 1000)
+        {
+            conductor.digLastExecuted = nowT;
+            publishSelect = 1;
+            if (diagAlertResults[0] != NULL && reportableDIGLength > 0)
             {
-                dId = diagAlertResults[i];//.c_str();
-                if(dId != NULL){
-                    // construct the RDIG JSON 
-                    JsonObject& diagnostic = reportableJson.createNestedObject(dId);
-                    JsonArray& ftr = diagnostic.createNestedArray("FTR");
-                    // Add Firing Triggers list
-                    addFTR(dId,ftr,i);
-                    diagnostic["ALRREP"] = alert_repeat_state[i];
-
+                publishSelect = 0;
+            }
+        }
+        switch (publishSelect)
+        {
+        case 0:
+            if (diagAlertResults[0] != NULL && reportableDIGLength > 0)
+            {
+                for (size_t i = 0; i < reportableDIGLength; i++)
+                {
+                    dId = diagAlertResults[i]; //.c_str();
+                    if (dId != NULL)
+                    {
+                        // construct the RDIG JSON
+                        JsonObject &diagnostic = reportableJson.createNestedObject(dId);
+                        JsonArray &ftr = diagnostic.createNestedArray("FTR");
+                        // Add Firing Triggers list
+                        addFTR(dId, ftr, i);
+                        diagnostic["ALRREP"] = alert_repeat_state[i];
+                    }
+                }
+                publishDiag = true;
+            }
+            if((diagAlertResults[0] != NULL && publishDiag == true)){
+                //reportableJson.printTo(Serial); debugPrint("");
+                reportableJson.printTo(m_diagnosticResult,DIG_PUBLISHED_BUFFER_SIZE);
+                snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"DIGRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
+                // Published to MQTT 
+                iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,m_diagnosticPublishedBuffer);
+                if(loopDebugMode){
+                    debugPrint("O/P Buffer : ",false);
+                    debugPrint(m_diagnosticPublishedBuffer);
+                    debugPrint("BUFF LEN :",false);
+                    debugPrint(strlen(m_diagnosticPublishedBuffer));
                 }
             }
-            if(diagAlertResults[0] != NULL){
+            break;
+        case 1:
+            if (iuTrigger.DIG_COUNT > 0)
+            {
+                for (int index = 0; index < iuTrigger.DIG_COUNT; index++)
+                {
+                    if (iuTrigger.DIG_STATE[index])
+                    {
+                        dId = (char*)iuTrigger.DIG_LIST[index].c_str(); //.c_str();
+                        if (dId != NULL)
+                        {
+                            // construct the RDIG JSON
+                            JsonObject &diagnostic = reportableJson.createNestedObject(dId);
+                            JsonArray &ftr = diagnostic.createNestedArray("FTR");
+                            // Add Firing Triggers list
+                            addFTR(ftr, index);
+                            diagnostic["DSTATE"] = true;
+                        }
+                    }
+                    else if (!iuTrigger.DIG_STATE[index])
+                    {
+                        dId = (char*)iuTrigger.DIG_LIST[index].c_str(); //.c_str();
+                        if (dId != NULL)
+                        {
+                            // construct the RDIG JSON
+                            JsonObject &diagnostic = reportableJson.createNestedObject(dId);
+                            JsonArray &ftr = diagnostic.createNestedArray("FTR");
+                            // Add Firing Triggers list
+                            addFTR(ftr, index);
+                            diagnostic["DSTATE"] = false;
+                        }
+                    }
+                }
+                publishAlert = true;
+            }
+            if((iuTrigger.DIG_LIST[0] != NULL && publishAlert == true) ){
                 //reportableJson.printTo(Serial); debugPrint("");
                 reportableJson.printTo(m_diagnosticResult,DIG_PUBLISHED_BUFFER_SIZE);
                 snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"DIGRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
@@ -4364,7 +4429,25 @@ void Conductor::streamReportableDiagnostics(){
                     debugPrint(strlen(m_diagnosticPublishedBuffer));
                 }
             }
-          }
+            break;
+        default:
+            break;
+        }
+        
+            // if((diagAlertResults[0] != NULL && publishDiag == true)|| (iuTrigger.DIG_LIST[0] != NULL && publishAlert == true) ){
+            //     //reportableJson.printTo(Serial); debugPrint("");
+            //     reportableJson.printTo(m_diagnosticResult,DIG_PUBLISHED_BUFFER_SIZE);
+            //     snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"DIGRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
+            //     // Published to MQTT 
+            //     iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_IU_DIAGNOSTIC,m_diagnosticPublishedBuffer);
+            //     if(loopDebugMode){
+            //         debugPrint("O/P Buffer : ",false);
+            //         debugPrint(m_diagnosticPublishedBuffer);
+            //         debugPrint("BUFF LEN :",false);
+            //         debugPrint(strlen(m_diagnosticPublishedBuffer));
+            //     }
+            // }
+          
         }
     iuTrigger.DIG_COUNT = 0;
     reportableIndexCounter = 0;
@@ -4384,6 +4467,18 @@ void Conductor::constructPayload(const char* dId,JsonObject& desc ){
 void Conductor::addFTR(const char* dId ,JsonArray& FTR,uint8_t id ){
     // get the list of firing triggers 
     uint8_t dig_Index = reportableDIGID[id];
+    uint8_t ftr_Count = iuTrigger.ACTIVE_TRGCOUNT[dig_Index];   // get DIG Index from DIG NAME 
+    for (size_t tId = 0; tId < ftr_Count; tId++)
+    {
+        char* TRG_ID =  iuTrigger.activeTRG[dig_Index][tId];
+        FTR.add(TRG_ID);
+    }
+}
+
+// Append the Firing Triggers of Reportable Diagnostic
+void Conductor::addFTR(JsonArray& FTR,uint8_t id ){
+    // get the list of firing triggers 
+    uint8_t dig_Index = id;
     uint8_t ftr_Count = iuTrigger.ACTIVE_TRGCOUNT[dig_Index];   // get DIG Index from DIG NAME 
     for (size_t tId = 0; tId < ftr_Count; tId++)
     {
