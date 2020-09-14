@@ -250,6 +250,7 @@ void IUTriggerComputer:: m_specializedCompute() {
             const char* DID = m_digObject["CONFIG"]["DIG"]["DID"][i].as<const char*>();
             String DIG_NAME = DID + String(m_diagnosticState);
             DIG_LIST[i] = DIG_NAME;
+            DIG_STATE[i] = m_diagnosticState;
             DIG_COUNT++;
             
             // DISABLED container storage 

@@ -70,6 +70,7 @@ class IUTriggerComputer
         
         bool atleastOneFiringTriggerActive = false;
         String DIG_LIST[MAX_DIAGNOSTIC_LEN];
+        bool DIG_STATE[MAX_DIAGNOSTIC_LEN];
         String ACTIVE_TRG[MAX_DIAGNOSTIC_LEN];
         String m_activeTRGList;
         String m_inactiveTRGList;
