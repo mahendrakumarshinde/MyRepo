@@ -4387,29 +4387,20 @@ void Conductor::streamReportableDiagnostics(){
             {
                 for (int index = 0; index < iuTrigger.DIG_COUNT; index++)
                 {
-                    if (iuTrigger.DIG_STATE[index])
+                    dId = (char *)iuTrigger.DIG_LIST[index].c_str(); //.c_str();
+                    if (dId != NULL)
                     {
-                        dId = (char*)iuTrigger.DIG_LIST[index].c_str(); //.c_str();
-                        if (dId != NULL)
+                        // construct the RDIG JSON
+                        JsonObject &diagnostic = reportableJson.createNestedObject(dId);
+                        JsonArray &ftr = diagnostic.createNestedArray("FTR");
+                        // Add Firing Triggers list
+                        addFTR(ftr, index);
+                        if (iuTrigger.DIG_STATE[index])
                         {
-                            // construct the RDIG JSON
-                            JsonObject &diagnostic = reportableJson.createNestedObject(dId);
-                            JsonArray &ftr = diagnostic.createNestedArray("FTR");
-                            // Add Firing Triggers list
-                            addFTR(ftr, index);
                             diagnostic["DSTATE"] = true;
                         }
-                    }
-                    else if (!iuTrigger.DIG_STATE[index])
-                    {
-                        dId = (char*)iuTrigger.DIG_LIST[index].c_str(); //.c_str();
-                        if (dId != NULL)
+                        else if (!iuTrigger.DIG_STATE[index])
                         {
-                            // construct the RDIG JSON
-                            JsonObject &diagnostic = reportableJson.createNestedObject(dId);
-                            JsonArray &ftr = diagnostic.createNestedArray("FTR");
-                            // Add Firing Triggers list
-                            addFTR(ftr, index);
                             diagnostic["DSTATE"] = false;
                         }
                     }
