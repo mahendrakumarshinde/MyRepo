@@ -1160,37 +1160,32 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         if (loopDebugMode){  debugPrint("RPM Configs Received :",false);
          subConfig.printTo(Serial); debugPrint("");
          }
-        //bool dataWritten = false;
-        bool validConfiguration = true;
+        bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_RPM, variant, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime(), messageId);
         if (validConfiguration) {
-            iuFlash.saveConfigJson(IUFlash::CFG_RPM,variant);
+            iuFlash.saveConfigJson(IUFlash::CFG_RPM,subConfig);
             if(loopDebugMode){ debugPrint("Saved RPM Configs Successfully");}  
             // Apply RPM Configs
             int LOW_RPM  = root["RPM"]["speed"];
             int HIGH_RPM = root["RPM"]["speedH"]; 
             const char* messageId = root["messageId"];
             
-            if(LOW_RPM < FFTConfiguration::currentLowCutOffFrequency ){
-                FFTConfiguration::lowRPMFrequency = FFTConfiguration::currentLowCutOffFrequency;
-            }else if (HIGH_RPM > FFTConfiguration::currentHighCutOffFrequency)
+            if(LOW_RPM < FFTConfiguration::currentLowCutOffFrequency || LOW_RPM > FFTConfiguration::currentHighCutOffFrequency ){
+                LOW_RPM = FFTConfiguration::currentLowCutOffFrequency;
+            }else if (HIGH_RPM > FFTConfiguration::currentHighCutOffFrequency || HIGH_RPM < FFTConfiguration::currentLowCutOffFrequency)
             { 
-                FFTConfiguration::highRPMFrequency = FFTConfiguration::currentHighCutOffFrequency;
-            }else {
-                FFTConfiguration::lowRPMFrequency = LOW_RPM;
-                FFTConfiguration::highRPMFrequency = HIGH_RPM;
+                HIGH_RPM = FFTConfiguration::currentHighCutOffFrequency;
             }
+            FFTConfiguration::lowRPMFrequency = LOW_RPM;
+            FFTConfiguration::highRPMFrequency = HIGH_RPM;
             if(loopDebugMode){
-                debugPrint("SPEED : ",false);debugPrint(LOW_RPM);
-                debugPrint("SPEED H :",false);debugPrint(HIGH_RPM);
+                debugPrint("SPEED : ",false);debugPrint(FFTConfiguration::lowRPMFrequency);
+                debugPrint("SPEED H :",false);debugPrint(FFTConfiguration::highRPMFrequency);
                 debugPrint("MSGID : ",false);debugPrint(messageId);
             }
-            char ack_config[70];
-            snprintf(ack_config, 70, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
-                
             if(iuWiFi.isConnected() )
             {  
                 if(loopDebugMode){debugPrint("RPM ACK : ",false);debugPrint(ack_config);}
-                iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,ack_config );
+                iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,validationResultString );
             }
             if(StreamingMode::BLE && isBLEConnected()){// Send ACK to BLE
                 if(loopDebugMode){ debugPrint("RPM Config SUCCESS");}
@@ -1198,6 +1193,9 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             }
             DOSFS.end();
             delay(10);
+        }else {
+            if(loopDebugMode) debugPrint("Received invalid RPM configuration");
+            iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
         }
     }
 
@@ -4719,29 +4717,26 @@ bool Conductor::configureRPM(JsonVariant &config){
     bool success = false;    
     if (config.success())
     {
-        int LOW_RPM  = config["RPM"]["speed"];
-        int HIGH_RPM = config["RPM"]["speedH"]; 
+        int LOW_RPM  = config["speed"];
+        int HIGH_RPM = config["speedH"]; 
         const char* messageId = config["messageId"];
-        
+           
         if(loopDebugMode){
             debugPrint("LOW RPM : ",false);
             debugPrint(LOW_RPM);
             debugPrint("HIGH RPM : ",false);
             debugPrint(HIGH_RPM);
         }
-        if(LOW_RPM < FFTConfiguration::currentLowCutOffFrequency ){
-            FFTConfiguration::lowRPMFrequency = FFTConfiguration::currentLowCutOffFrequency;
-            debugPrint("SET 1");
-        }else if (HIGH_RPM > FFTConfiguration::currentHighCutOffFrequency)
+        if(LOW_RPM < FFTConfiguration::currentLowCutOffFrequency || LOW_RPM > FFTConfiguration::currentHighCutOffFrequency ){
+            LOW_RPM = FFTConfiguration::currentLowCutOffFrequency;
+        }else if (HIGH_RPM > FFTConfiguration::currentHighCutOffFrequency || HIGH_RPM < FFTConfiguration::currentLowCutOffFrequency)
         { 
-            debugPrint("SET 2");
-            FFTConfiguration::highRPMFrequency = FFTConfiguration::currentHighCutOffFrequency;
-        }else {
-            debugPrint("SET 3");
-            FFTConfiguration::lowRPMFrequency = LOW_RPM;
-            FFTConfiguration::highRPMFrequency = HIGH_RPM;
+            HIGH_RPM = FFTConfiguration::currentHighCutOffFrequency;
         }
-    }   
+        FFTConfiguration::lowRPMFrequency = LOW_RPM;
+        FFTConfiguration::highRPMFrequency = HIGH_RPM;
+    }
+       
   return success;
 
 }
