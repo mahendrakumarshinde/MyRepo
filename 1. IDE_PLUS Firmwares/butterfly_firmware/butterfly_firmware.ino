@@ -556,6 +556,8 @@ void setup()
             }
             conductor.setSensorStatus(conductor.SensorStatusCode::LSM_DEFAULT);
         }
+        // configure RPM 
+        conductor.configureFromFlash(IUFlash::CFG_RPM);
 
         // Sensors
         if (debugMode) {

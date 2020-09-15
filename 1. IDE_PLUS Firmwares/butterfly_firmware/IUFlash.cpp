@@ -31,6 +31,7 @@ char IUFSFlash::FNAME_MODBUS_SLAVE[12] = "modbusSlave";
 char IUFSFlash::FNAME_FOUT[12] = "fout";
 char IUFSFlash::FNAME_HASH[11] = "configHash";
 char IUFSFlash::FNAME_DIG[11] = "diagnostic";
+char IUFSFlash::FNAME_RPM[12] = "rpm";
 /***** Core *****/
 
 void IUFSFlash::begin()
@@ -392,6 +393,17 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
             }
             break;
         }
+        case CFG_RPM: {
+            validConfig = true;
+            validationResult["messageType"] = "rpm-config-ack";
+            int lowRPM = config["RPM"]["speed"];
+            int highRPM = config["RPM"]["speedH"];
+            if(highRPM - lowRPM < 0 ){  // negative difference is not allowed
+                validConfig = false;
+                errorMessages.add("High RPM cannot be less then LOW RPM");
+            }
+            break;
+        }
         case CFG_HTTP:{
             validConfig = true;
             validationResult["messageType"] = "http-config-ack";
@@ -605,6 +617,8 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
             break;
         case CFG_DIG:
             fname = FNAME_DIG;
+        case CFG_RPM:
+            fname = FNAME_RPM;
             break;
         default:
             if (debugMode)

@@ -145,6 +145,9 @@ bool Conductor::configureFromFlash(IUFlash::storedConfig configType)
             //     availableDiagnosticConfig.printTo(Serial);
             //     debugPrint("Loaded DIG config successfully");
             //     break;
+            case IUFlash::CFG_RPM:
+                configureRPM(config);
+                break;
             default:
                 if (debugMode) {
                     debugPrint("Unhandled config type: ", false);
@@ -1270,6 +1273,52 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
     }
 
+    // RPM Configs
+    subConfig = root["RPM"];
+    if (subConfig.success()) {
+        if (loopDebugMode){  debugPrint("RPM Configs Received :",false);
+         subConfig.printTo(Serial); debugPrint("");
+         }
+        bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_RPM, variant, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime(), messageId);
+        if (validConfiguration) {
+            iuFlash.saveConfigJson(IUFlash::CFG_RPM,subConfig);
+            if(loopDebugMode){ debugPrint("Saved RPM Configs Successfully");}  
+            // Apply RPM Configs
+            int LOW_RPM  = root["RPM"]["speed"];
+            int HIGH_RPM = root["RPM"]["speedH"]; 
+            const char* messageId = root["messageId"];
+            
+            if(LOW_RPM < FFTConfiguration::currentLowCutOffFrequency || LOW_RPM > FFTConfiguration::currentHighCutOffFrequency ){
+                LOW_RPM = FFTConfiguration::currentLowCutOffFrequency;
+            }else if (HIGH_RPM > FFTConfiguration::currentHighCutOffFrequency || HIGH_RPM < FFTConfiguration::currentLowCutOffFrequency)
+            { 
+                HIGH_RPM = FFTConfiguration::currentHighCutOffFrequency;
+            }
+            FFTConfiguration::lowRPMFrequency = LOW_RPM;
+            FFTConfiguration::highRPMFrequency = HIGH_RPM;
+            if(loopDebugMode){
+                debugPrint("SPEED : ",false);debugPrint(FFTConfiguration::lowRPMFrequency);
+                debugPrint("SPEED H :",false);debugPrint(FFTConfiguration::highRPMFrequency);
+                debugPrint("MSGID : ",false);debugPrint(messageId);
+            }
+            if(iuWiFi.isConnected() )
+            {  
+                if(loopDebugMode){debugPrint("RPM ACK : ",false);debugPrint(ack_config);}
+                iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,validationResultString );
+            }
+            if(StreamingMode::BLE && isBLEConnected()){// Send ACK to BLE
+                if(loopDebugMode){ debugPrint("RPM Config SUCCESS");}
+                iuBluetooth.write("RPM-SUCCESS;");
+            }
+            DOSFS.end();
+            delay(10);
+        }else {
+            if(loopDebugMode) debugPrint("Received invalid RPM configuration");
+            iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
+        }
+    }
+
+    
     return true;
 }
 
@@ -4949,6 +4998,34 @@ bool Conductor::setFFTParams() {
         configured = false;
     }
     return configured;
+}
+
+bool Conductor::configureRPM(JsonVariant &config){
+    bool success = false;    
+    if (config.success())
+    {
+        int LOW_RPM  = config["speed"];
+        int HIGH_RPM = config["speedH"]; 
+        const char* messageId = config["messageId"];
+           
+        if(loopDebugMode){
+            debugPrint("LOW RPM : ",false);
+            debugPrint(LOW_RPM);
+            debugPrint("HIGH RPM : ",false);
+            debugPrint(HIGH_RPM);
+        }
+        if(LOW_RPM < FFTConfiguration::currentLowCutOffFrequency || LOW_RPM > FFTConfiguration::currentHighCutOffFrequency ){
+            LOW_RPM = FFTConfiguration::currentLowCutOffFrequency;
+        }else if (HIGH_RPM > FFTConfiguration::currentHighCutOffFrequency || HIGH_RPM < FFTConfiguration::currentLowCutOffFrequency)
+        { 
+            HIGH_RPM = FFTConfiguration::currentHighCutOffFrequency;
+        }
+        FFTConfiguration::lowRPMFrequency = LOW_RPM;
+        FFTConfiguration::highRPMFrequency = HIGH_RPM;
+    }
+       
+  return success;
+
 }
 
 /* =============================================================================

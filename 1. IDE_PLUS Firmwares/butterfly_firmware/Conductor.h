@@ -230,6 +230,7 @@ class Conductor
         void periodicSendAccelRawData();
         void storeData() {}  // TODO => implement
         bool setFFTParams();
+        bool configureRPM(JsonVariant &config);
         /***** Debugging *****/
         void getMCUInfo(char *destination);
         void  streamMCUUInfo(HardwareSerial *port);
