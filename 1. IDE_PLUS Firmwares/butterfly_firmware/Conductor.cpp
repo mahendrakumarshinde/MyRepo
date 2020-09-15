@@ -1161,13 +1161,13 @@ void Conductor::CreateFeatureGroupjson(){
     StaticJsonBuffer<500> outputJSONbuffer;
     JsonObject& root = outputJSONbuffer.createObject();
     JsonObject& fres = root.createNestedObject("FRES");
-
+    fres["A93"] = modbusFeaturesDestinations[1];
     fres["VAX"] = modbusFeaturesDestinations[2];
     fres["VAY"] = modbusFeaturesDestinations[3];
     fres["VAZ"] = modbusFeaturesDestinations[4];
     fres["TMA"] = modbusFeaturesDestinations[5];
     fres["S12"] = modbusFeaturesDestinations[6];
-    root.printTo(Serial);
+    //root.printTo(Serial);
 }
 
 /*
