@@ -784,7 +784,7 @@ void loop()
                 // //     // Diagnostic Features
                       conductor.computeTriggers();
                 // //     // Stream Diagnostic Features
-                     conductor.streamReportableDiagnostics();
+                     conductor.streamDiagnostics();
                 //      Serial.print("\nAvailable - Mem: ");
                 //      Serial.println(freeMemory(), DEC);
                   
@@ -815,7 +815,7 @@ void loop()
                             conductor.lastUpdated = nowTime;
                             conductor.updateModbusStatus();
                              //conductor.computeTriggers();
-                             //conductor.streamReportableDiagnostics();
+                             //conductor.streamDiagnostics();
                              //debugPrint(F("Available - Mem: "), false);
                              //debugPrint(String(freeMemory(), DEC));
                         }

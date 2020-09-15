@@ -4330,26 +4330,85 @@ void Conductor::computeTriggers(){
     
 }
 
-void Conductor::streamReportableDiagnostics(){
+void Conductor::streamDiagnostics(){
    if(m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE){
-        
-        if(diagAlertResults[0] != NULL && reportableDIGLength > 0){    
-            const char* dId;
-    
-            DynamicJsonBuffer reportableJsonBUffer;
-            JsonObject& reportableJson = reportableJsonBUffer.createObject();
-            for (size_t i = 0; i < reportableDIGLength; i++)
+        const char* dId;
+        bool publishDiag = false;
+        bool publishAlert = false;
+        int diagStreamingPeriod = 5000; // in milli seconds
+        DynamicJsonBuffer reportableJsonBUffer;
+        JsonObject& reportableJson = reportableJsonBUffer.createObject();
+        int publishSelect = DiagPublish::ALERT_POLICY;
+        uint32_t nowT = millis();
+        if (nowT - conductor.digLastExecuted >= diagStreamingPeriod)
+        {
+            conductor.digLastExecuted = nowT;
+            publishSelect = DiagPublish::DIAG_STREAM;
+            if (diagAlertResults[0] != NULL && reportableDIGLength > 0)
             {
-                dId = diagAlertResults[i];//.c_str();
-                if(dId != NULL){
-                    // construct the RDIG JSON 
-                    JsonObject& diagnostic = reportableJson.createNestedObject(dId);
-                    JsonArray& ftr = diagnostic.createNestedArray("FTR");
-                    // Add Firing Triggers list
-                    addFTR(dId,ftr,i);
+                publishSelect = DiagPublish::ALERT_POLICY;
+            }
+        }
+        switch (publishSelect)
+        {
+        case DiagPublish::ALERT_POLICY: //Alert Policies
+            if (diagAlertResults[0] != NULL && reportableDIGLength > 0)
+            {
+                for (size_t i = 0; i < reportableDIGLength; i++)
+                {
+                    dId = diagAlertResults[i]; //.c_str();
+                    if (dId != NULL)
+                    {
+                        // construct the RDIG JSON
+                        JsonObject &diagnostic = reportableJson.createNestedObject(dId);
+                        JsonArray &ftr = diagnostic.createNestedArray("FTR");
+                        // Add Firing Triggers list
+                        addFTR(dId, ftr, i);
+                        diagnostic["ALRREP"] = alert_repeat_state[i];
+                    }
+                }
+                publishDiag = true;
+            }
+            if((diagAlertResults[0] != NULL && publishDiag == true)){
+                //reportableJson.printTo(Serial); debugPrint("");
+                reportableJson.printTo(m_diagnosticResult,DIG_PUBLISHED_BUFFER_SIZE);
+                snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"DIGRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
+                // Published to MQTT 
+                iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,m_diagnosticPublishedBuffer);
+                if(loopDebugMode){
+                    debugPrint("O/P Buffer : ",false);
+                    debugPrint(m_diagnosticPublishedBuffer);
+                    debugPrint("BUFF LEN :",false);
+                    debugPrint(strlen(m_diagnosticPublishedBuffer));
                 }
             }
-            if(diagAlertResults[0] != NULL){
+            break;
+        case DiagPublish::DIAG_STREAM: //Streaming Diagnostics
+            if (iuTrigger.DIG_COUNT > 0)
+            {
+                for (int index = 0; index < iuTrigger.DIG_COUNT; index++)
+                {
+                    dId = (char *)iuTrigger.DIG_LIST[index].c_str(); //.c_str();
+                    if (dId != NULL)
+                    {
+                        // construct the RDIG JSON
+                        JsonObject &diagnostic = reportableJson.createNestedObject(dId);
+                        JsonArray &ftr = diagnostic.createNestedArray("FTR");
+                        // Add Firing Triggers list
+                        addFTR(ftr, index);
+                        if (iuTrigger.DIG_STATE[index])
+                        {
+                            diagnostic["DSTATE"] = true;
+                        }
+                        else if (!iuTrigger.DIG_STATE[index])
+                        {
+                            diagnostic["DSTATE"] = false;
+                        }
+                    }
+                }
+                publishAlert = true;
+            }
+            if((iuTrigger.DIG_LIST[0] != NULL && publishAlert == true) ){
                 //reportableJson.printTo(Serial); debugPrint("");
                 reportableJson.printTo(m_diagnosticResult,DIG_PUBLISHED_BUFFER_SIZE);
                 snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"DIGRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
@@ -4362,7 +4421,25 @@ void Conductor::streamReportableDiagnostics(){
                     debugPrint(strlen(m_diagnosticPublishedBuffer));
                 }
             }
-          }
+            break;
+        default:
+            break;
+        }
+        
+            // if((diagAlertResults[0] != NULL && publishDiag == true)|| (iuTrigger.DIG_LIST[0] != NULL && publishAlert == true) ){
+            //     //reportableJson.printTo(Serial); debugPrint("");
+            //     reportableJson.printTo(m_diagnosticResult,DIG_PUBLISHED_BUFFER_SIZE);
+            //     snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"DIGRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
+            //     // Published to MQTT 
+            //     iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_IU_DIAGNOSTIC,m_diagnosticPublishedBuffer);
+            //     if(loopDebugMode){
+            //         debugPrint("O/P Buffer : ",false);
+            //         debugPrint(m_diagnosticPublishedBuffer);
+            //         debugPrint("BUFF LEN :",false);
+            //         debugPrint(strlen(m_diagnosticPublishedBuffer));
+            //     }
+            // }
+          
         }
     iuTrigger.DIG_COUNT = 0;
     reportableIndexCounter = 0;
@@ -4382,6 +4459,18 @@ void Conductor::constructPayload(const char* dId,JsonObject& desc ){
 void Conductor::addFTR(const char* dId ,JsonArray& FTR,uint8_t id ){
     // get the list of firing triggers 
     uint8_t dig_Index = reportableDIGID[id];
+    uint8_t ftr_Count = iuTrigger.ACTIVE_TRGCOUNT[dig_Index];   // get DIG Index from DIG NAME 
+    for (size_t tId = 0; tId < ftr_Count; tId++)
+    {
+        char* TRG_ID =  iuTrigger.activeTRG[dig_Index][tId];
+        FTR.add(TRG_ID);
+    }
+}
+
+// Append the Firing Triggers of Reportable Diagnostic
+void Conductor::addFTR(JsonArray& FTR,uint8_t id ){
+    // get the list of firing triggers 
+    uint8_t dig_Index = id;
     uint8_t ftr_Count = iuTrigger.ACTIVE_TRGCOUNT[dig_Index];   // get DIG Index from DIG NAME 
     for (size_t tId = 0; tId < ftr_Count; tId++)
     {
@@ -6988,6 +7077,7 @@ void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag
                 {
                     last_alert_flag[index] = true;
                     last_alert[index] = getDatetime();
+                    alert_repeat_state[resultIndex] = false;
                     diagAlertResults[resultIndex]=(char*)diagInput[index].c_str();
                     reportableDIGID[reportableIndexCounter] = index;   
                     if (exposeDebugPrints)
@@ -7001,7 +7091,8 @@ void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag
                 }
                 if(getDatetime() - last_alert[index] > m_aleartRepeat[index] && last_alert_flag[index])
                 {
-                    last_alert[index] = getDatetime();
+                    last_alert[index] = getDatetime();                    
+                    alert_repeat_state[resultIndex] = true;
                     diagAlertResults[resultIndex]=(char*) diagInput[index].c_str();
                     reportableDIGID[reportableIndexCounter] = index;
                     if (exposeDebugPrints)
@@ -7089,7 +7180,7 @@ void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag
 
 void Conductor::configureAlertPolicy()
 {
-    JsonObject &diag = configureJsonFromFlash("/iuconfig/diagnostic.conf", 1);
+    JsonObject &diag = configureJsonFromFlash("/iuRule/diagnostic.conf", 1);
     size_t totalDiagnostics = diag["CONFIG"]["DIG"]["DID"].size();
 
     // debugPrint("\nTotal No. Of Duiagnostics = ",false);
@@ -7121,6 +7212,7 @@ void Conductor::clearDiagStateBuffers()
 
 void Conductor::clearDiagResultArray(){
     memset(diagAlertResults,'\0',sizeof(diagAlertResults));
+    memset(alert_repeat_state,'\0',sizeof(alert_repeat_state));
 }
 
 int Conductor::getTotalDigCount(const char* diagName){

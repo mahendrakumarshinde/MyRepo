@@ -110,6 +110,12 @@ class Conductor
                                         LSM_DEFAULT = 4,
                                         SEN_ABS = 5
                                         };
+
+
+        enum DiagPublish : uint8_t {
+                ALERT_POLICY         = 0,
+                DIAG_STREAM          = 1,       // Send over Serial
+                };
         static const uint32_t defaultAutoSleepDelay = 60000;
         static const uint32_t defaultSleepDuration = 10000;
         static const uint32_t defaultCycleTime = 20000;
@@ -214,9 +220,10 @@ class Conductor
         void computeFeatures();
         /**** Diagnostic Rule Engine ******/
         void computeTriggers();
-        void streamReportableDiagnostics();
+        void streamDiagnostics();
         void constructPayload(const char* dId,JsonObject& desc);
         void addFTR(const char* dId,JsonArray& FTR,uint8_t id );
+        void addFTR(JsonArray& FTR,uint8_t id );
         /*********************************/
         void streamFeatures();
         void sendAccelRawData(uint8_t axisIdx);
@@ -409,6 +416,7 @@ class Conductor
         bool last_active_flag[maxDiagnosticStates];
         bool last_alert_flag[maxDiagnosticStates];
         bool reset_alert_flag[maxDiagnosticStates];
+        bool alert_repeat_state[maxDiagnosticStates];
         uint16_t m_minSpan[maxDiagnosticStates];
         uint16_t m_aleartRepeat[maxDiagnosticStates];
         uint16_t m_maxGap[maxDiagnosticStates];
