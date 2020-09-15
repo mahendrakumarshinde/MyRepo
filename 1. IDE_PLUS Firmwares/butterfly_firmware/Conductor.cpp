@@ -4330,7 +4330,7 @@ void Conductor::computeTriggers(){
     
 }
 
-void Conductor::streamReportableDiagnostics(){
+void Conductor::streamDiagnostics(){
    if(m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE){
         const char* dId;
         bool publishDiag = false;
@@ -4338,20 +4338,20 @@ void Conductor::streamReportableDiagnostics(){
         int diagStreamingPeriod = 5000; // in milli seconds
         DynamicJsonBuffer reportableJsonBUffer;
         JsonObject& reportableJson = reportableJsonBUffer.createObject();
-        int publishSelect = 0;
+        int publishSelect = DiagPublish::ALERT_POLICY;
         uint32_t nowT = millis();
         if (nowT - conductor.digLastExecuted >= diagStreamingPeriod)
         {
             conductor.digLastExecuted = nowT;
-            publishSelect = 1;
+            publishSelect = DiagPublish::DIAG_STREAM;
             if (diagAlertResults[0] != NULL && reportableDIGLength > 0)
             {
-                publishSelect = 0;
+                publishSelect = DiagPublish::ALERT_POLICY;
             }
         }
         switch (publishSelect)
         {
-        case 0: //Alert Policies
+        case DiagPublish::ALERT_POLICY: //Alert Policies
             if (diagAlertResults[0] != NULL && reportableDIGLength > 0)
             {
                 for (size_t i = 0; i < reportableDIGLength; i++)
@@ -4383,7 +4383,7 @@ void Conductor::streamReportableDiagnostics(){
                 }
             }
             break;
-        case 1: //Streaming Diagnostics
+        case DiagPublish::DIAG_STREAM: //Streaming Diagnostics
             if (iuTrigger.DIG_COUNT > 0)
             {
                 for (int index = 0; index < iuTrigger.DIG_COUNT; index++)
