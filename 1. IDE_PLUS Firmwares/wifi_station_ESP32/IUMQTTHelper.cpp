@@ -193,7 +193,7 @@ bool IUMQTTHelper::subscribe(const char* topic, bool deviceSpecific)
     {
         snprintf(subscription, subsLength, "%s/%s", DEVICE_TYPE, topic);
     }
-    bool result = client.subscribe(subscription);
+    bool result = client.subscribe(subscription,1);
     if (result && debugMode)
     {
         debugPrint("Subscribed to ", false);

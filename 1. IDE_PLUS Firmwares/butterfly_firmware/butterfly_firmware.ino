@@ -668,7 +668,10 @@ void setup()
             conductor.checkforModbusSlaveConfigurations();
             conductor.modbusStreamingMode = true;
         }
-        
+
+        // IU Diagnostic Rule Engine configurations
+        conductor.configureAlertPolicy();
+       
         opStateFeature.setOnNewValueCallback(operationStateCallback);
         ledManager.resetStatus();
         conductor.changeUsageMode(UsageMode::OPERATION);
@@ -701,7 +704,7 @@ void setup()
         // Turn ON BLE module and the BLE beacon
         iuBluetooth.bleButton(true);
         iuBluetooth.bleBeaconSetting(true);
-        
+
     #endif
  #endif   
 }
@@ -775,8 +778,19 @@ void loop()
                 conductor.computeFeatures();
                 // Stream features
                 conductor.streamFeatures();
-
-
+                // Executing Diagnostic every 1 sec
+                //  uint32_t nowT = millis();
+                //  if(nowT - conductor.digLastExecuted >= 1000){
+                //      conductor.digLastExecuted = nowT;
+                // //     // Diagnostic Features
+                      conductor.computeTriggers();
+                // //     // Stream Diagnostic Features
+                     conductor.streamDiagnostics();
+                //      Serial.print("\nAvailable - Mem: ");
+                //      Serial.println(freeMemory(), DEC);
+                  
+                //  }
+                                   
                if(conductor.modbusStreamingMode ) { 
                     // Update Modbus Registers
                     uint32_t now =millis();
@@ -801,6 +815,10 @@ void loop()
                         if(nowTime - conductor.lastUpdated >= conductor.modbusConnectionTimeout){
                             conductor.lastUpdated = nowTime;
                             conductor.updateModbusStatus();
+                             //conductor.computeTriggers();
+                             //conductor.streamDiagnostics();
+                             //debugPrint(F("Available - Mem: "), false);
+                             //debugPrint(String(freeMemory(), DEC));
                         }
 
                     }else

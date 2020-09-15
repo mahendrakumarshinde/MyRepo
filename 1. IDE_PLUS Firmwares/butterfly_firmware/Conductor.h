@@ -110,6 +110,12 @@ class Conductor
                                         LSM_DEFAULT = 4,
                                         SEN_ABS = 5
                                         };
+
+
+        enum DiagPublish : uint8_t {
+                ALERT_POLICY         = 0,
+                DIAG_STREAM          = 1,       // Send over Serial
+                };
         static const uint32_t defaultAutoSleepDelay = 60000;
         static const uint32_t defaultSleepDuration = 10000;
         static const uint32_t defaultCycleTime = 20000;
@@ -119,7 +125,7 @@ class Conductor
         static char START_CONFIRM[11];
         static char END_CONFIRM[9];
         // Config handler
-        static const uint8_t CONFIG_TYPE_COUNT = 4;
+        static const uint8_t CONFIG_TYPE_COUNT = 2;
         static IUFlash::storedConfig CONFIG_TYPES[CONFIG_TYPE_COUNT];
         static const uint32_t SEND_CONFIG_CHECKSUM_TIMER = 30000;
         // Default start datetime
@@ -135,7 +141,13 @@ class Conductor
         uint32_t m_certDownloadConfigTimeout = 30*1000;
         // Modbus Connection Timeouts 
         const uint16_t modbusConnectionTimeout = 5000;   // ms 
+        // Diagnostic Rule Engine published buffers
+        static const uint32_t DIG_PUBLISHED_BUFFER_SIZE = 2000;
+        char m_diagnosticPublishedBuffer[DIG_PUBLISHED_BUFFER_SIZE+70]; // 70 bytes for MACID, TIMESTMP, DIGRES
+        char m_diagnosticResult[DIG_PUBLISHED_BUFFER_SIZE];
         uint32_t lastUpdated = 0;
+        uint32_t digLastExecuted = 0;
+        uint16_t reportableDIGLength = 0;
         //timer ISR period
         uint16_t timerISRPeriod = 300; // default 3.3KHz
         String availableFingerprints;
@@ -161,7 +173,7 @@ class Conductor
         uint32_t getCycleTime() { return m_cycleTime; }
         /***** Local storage (flash) management *****/
         bool configureFromFlash(IUFlash::storedConfig configType);
-        void sendConfigChecksum(IUFlash::storedConfig configType);
+        String sendConfigChecksum(IUFlash::storedConfig configType, JsonObject &inputConfig);
         void periodicSendConfigChecksum();
         void setThresholdsFromFile();
         /***** Serial Reading & command processing*****/
@@ -206,6 +218,13 @@ class Conductor
         void acquireAudioData(bool inCallback);
         void acquireTemperatureData();
         void computeFeatures();
+        /**** Diagnostic Rule Engine ******/
+        void computeTriggers();
+        void streamDiagnostics();
+        void constructPayload(const char* dId,JsonObject& desc);
+        void addFTR(const char* dId,JsonArray& FTR,uint8_t id );
+        void addFTR(JsonArray& FTR,uint8_t id );
+        /*********************************/
         void streamFeatures();
         void sendAccelRawData(uint8_t axisIdx);
         void periodicSendAccelRawData();
@@ -289,11 +308,18 @@ class Conductor
         void checkforWiFiConfigurations();
         void removeChar(char * New_BLE_MAC_Address, int charToRemove);
         void setDefaultMQTT();
-        void setDefaultHTTP();        
-        void updateWiFiHash(); 
+        void setDefaultHTTP();
+        void updateWiFiHash();
+        /**** Diagnostic Rule Engine *****/
+        void computeDiagnoticState(String *diagInput, int totalConfiguredDiag);
+        void configureAlertPolicy();
+        void clearDiagStateBuffers();
+        void clearDiagResultArray();
+        int getTotalDigCount(const char* diagName);
+        int getActiveDigCount(const char* diagName);
+        
         char* GetStoredMD5(IUFlash::storedConfig configType, JsonObject &inputConfig);
         void CreateFeatureGroupjson();
-        bool checkforAxisMapping();
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
@@ -386,6 +412,24 @@ class Conductor
         char m_keyType[15];
         char m_certHash[34];
         char m_keyHash[34];
+        static const uint8_t maxDiagnosticStates = 10;
+        uint32_t last_active[maxDiagnosticStates];
+        uint32_t first_active[maxDiagnosticStates];
+        uint32_t last_alert[maxDiagnosticStates];
+        bool first_active_flag[maxDiagnosticStates];
+        bool last_active_flag[maxDiagnosticStates];
+        bool last_alert_flag[maxDiagnosticStates];
+        bool reset_alert_flag[maxDiagnosticStates];
+        bool alert_repeat_state[maxDiagnosticStates];
+        uint16_t m_minSpan[maxDiagnosticStates];
+        uint16_t m_aleartRepeat[maxDiagnosticStates];
+        uint16_t m_maxGap[maxDiagnosticStates];
+        uint16_t m_totalDigCount[maxDiagnosticStates];
+        uint16_t m_activeDigCount[maxDiagnosticStates];
+        uint8_t reportableDIGID[maxDiagnosticStates];
+        uint8_t reportableIndexCounter;
+        char* diagAlertResults[maxDiagnosticStates];
+        
 };
 
 

@@ -316,6 +316,9 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         case MSPCommand::ASK_WIFI_FV:
             iuSerial->sendMSPCommand(MSPCommand::RECEIVE_WIFI_FV, FIRMWARE_VERSION);
             break;
+        case MSPCommand::GOOGLE_TIME_QUERY:
+            timeHelper.readGoogletime();
+            break;
         case MSPCommand::CONFIG_ACK:
             // Send the fft configuration update acknowledgement to command response topic
             mqttHelper.publish(COMMAND_RESPONSE_TOPIC,buffer);
@@ -522,7 +525,9 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         case MSPCommand::PUBLISH_CONFIG_CHECKSUM:
             mqttHelper.publish(CHECKSUM_TOPIC, buffer);
             break;
-
+        case MSPCommand::PUBLISH_IU_DIAGNOSTIC:
+            mqttHelper.publish(IU_DIG_RULE_ENGINE_TOPIC,buffer);
+            break;
         /***** Cloud command reception and transmission *****/
         case MSPCommand::HOST_CONFIRM_RECEPTION:
             // TODO Implement
