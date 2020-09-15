@@ -1151,63 +1151,22 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
 
     }
-    subConfig = root["axis_mapping"];
-    if(subConfig.success()){
-        bool dataWritten = false;
-        if(loopDebugMode) {
-            debugPrint("axis_mapping received: ", false);
-            subConfig.printTo(Serial); debugPrint("");
-        }
-        if (saveToFlash){
-            iuFlash.saveConfigJson(IUFlash::CFG_AXISMAP, variant);
-            dataWritten = true;
-            debugPrint("configs saved successfully ");
-            checkforAxisMapping();
-        }
-        else{if(loopDebugMode) debugPrint("axis_mapping not saved ");}
-    }
 
     return true;
 }
 
-bool Conductor::checkforAxisMapping(){
-    JsonObject& config = configureJsonFromFlash("/iurule/axis_mapping.conf",1);
-    const char* Vertical = config["axis_mapping"]["V"];
-    const char* Horizontal = config["axis_mapping"]["H"];
-    const char* Axial = config["axis_mapping"]["A"];
-    m_Vertical = Vertical;
-    m_Horizontal = Horizontal;
-    m_Axial = Axial;
-    if(debugMode){
-        debugPrint("AXIS Mapping From Flash : ");
-        debugPrint("Vertical : ",false);debugPrint(m_Vertical);
-        debugPrint("Horizontal : ",false);debugPrint(m_Horizontal);
-        debugPrint("Axial : ",false);debugPrint(m_Axial);
-    }
-    CreateFeatureGroupjson();
-
-}
 
 void Conductor::CreateFeatureGroupjson(){
    
     StaticJsonBuffer<500> outputJSONbuffer;
     JsonObject& root = outputJSONbuffer.createObject();
     JsonObject& fres = root.createNestedObject("FRES");
-    //Vertical
-    if(strncmp(m_Vertical, "X", 1) == 0){fres["VRV"] = modbusFeaturesDestinations[2];}
-    else if(strncmp(m_Vertical, "Y", 1) == 0){fres["VRV"] = modbusFeaturesDestinations[3];}
-    else if(strncmp(m_Vertical, "Z", 1) == 0){fres["VRV"] = modbusFeaturesDestinations[4];}
-    //Horizontal
-    if(strncmp(m_Horizontal, "X", 1) == 0){fres["VRH"] = modbusFeaturesDestinations[2];}
-    else if(strncmp(m_Horizontal, "Y", 1) == 0){fres["VRH"] = modbusFeaturesDestinations[3];}
-    else if(strncmp(m_Horizontal, "Z", 1) == 0){fres["VRH"] = modbusFeaturesDestinations[4];}
-    //Axial
-    if(strncmp(m_Axial, "X", 1) == 0){fres["VRA"] = modbusFeaturesDestinations[2];}
-    else if(strncmp(m_Axial, "Y", 1) == 0){fres["VRA"] = modbusFeaturesDestinations[3];}
-    else if(strncmp(m_Axial, "Z", 1) == 0){fres["VRA"] = modbusFeaturesDestinations[4];}
-    
-    fres["TMP"] = modbusFeaturesDestinations[5];
-    fres["SND"] = modbusFeaturesDestinations[6];
+
+    fres["VAX"] = modbusFeaturesDestinations[2];
+    fres["VAY"] = modbusFeaturesDestinations[3];
+    fres["VAZ"] = modbusFeaturesDestinations[4];
+    fres["TMA"] = modbusFeaturesDestinations[5];
+    fres["S12"] = modbusFeaturesDestinations[6];
     root.printTo(Serial);
 }
 
