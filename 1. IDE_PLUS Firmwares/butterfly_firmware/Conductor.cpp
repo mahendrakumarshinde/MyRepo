@@ -1206,6 +1206,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
 
     }
+
     subConfig = root["CONFIG_HASH"];
     if (subConfig.success())
     {
@@ -1273,6 +1274,20 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     return true;
 }
 
+
+void Conductor::CreateFeatureGroupjson(){
+   
+    StaticJsonBuffer<500> outputJSONbuffer;
+    JsonObject& root = outputJSONbuffer.createObject();
+    JsonObject& fres = root.createNestedObject("FRES");
+    fres["A93"] = modbusFeaturesDestinations[1];
+    fres["VAX"] = modbusFeaturesDestinations[2];
+    fres["VAY"] = modbusFeaturesDestinations[3];
+    fres["VAZ"] = modbusFeaturesDestinations[4];
+    fres["TMA"] = modbusFeaturesDestinations[5];
+    fres["S12"] = modbusFeaturesDestinations[6];
+    //root.printTo(Serial);
+}
 
 /*
  * Read the OTA Configutation details
@@ -4257,6 +4272,7 @@ void Conductor::streamFeatures()
                 FeatureStates::isFeatureStreamComplete = true;   // publication completed
                 FeatureStates::isISRActive = true;
                 //debugPrint("Published to WiFi Complete !!!");
+                CreateFeatureGroupjson();
             }
     }
    #if 0
