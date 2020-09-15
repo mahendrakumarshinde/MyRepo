@@ -4335,11 +4335,12 @@ void Conductor::streamReportableDiagnostics(){
         const char* dId;
         bool publishDiag = false;
         bool publishAlert = false;
+        int diagStreamingPeriod = 5000; // in milli seconds
         DynamicJsonBuffer reportableJsonBUffer;
         JsonObject& reportableJson = reportableJsonBUffer.createObject();
         int publishSelect = 0;
         uint32_t nowT = millis();
-        if (nowT - conductor.digLastExecuted >= 1000)
+        if (nowT - conductor.digLastExecuted >= diagStreamingPeriod)
         {
             conductor.digLastExecuted = nowT;
             publishSelect = 1;
@@ -4350,7 +4351,7 @@ void Conductor::streamReportableDiagnostics(){
         }
         switch (publishSelect)
         {
-        case 0:
+        case 0: //Alert Policies
             if (diagAlertResults[0] != NULL && reportableDIGLength > 0)
             {
                 for (size_t i = 0; i < reportableDIGLength; i++)
@@ -4382,7 +4383,7 @@ void Conductor::streamReportableDiagnostics(){
                 }
             }
             break;
-        case 1:
+        case 1: //Streaming Diagnostics
             if (iuTrigger.DIG_COUNT > 0)
             {
                 for (int index = 0; index < iuTrigger.DIG_COUNT; index++)
