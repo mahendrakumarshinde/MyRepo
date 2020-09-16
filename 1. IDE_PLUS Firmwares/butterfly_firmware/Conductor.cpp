@@ -1275,18 +1275,21 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 }
 
 
-void Conductor::CreateFeatureGroupjson(){
+JsonObject& Conductor::CreateFeatureGroupjson(){
    
-    StaticJsonBuffer<500> outputJSONbuffer;
+    DynamicJsonBuffer outputJSONbuffer;
     JsonObject& root = outputJSONbuffer.createObject();
     JsonObject& fres = root.createNestedObject("FRES");
+    JsonObject& spectralFeatures = outputJSONbuffer.parseObject(fingerprintData);
+    // JsonVariant variant = root;
     fres["A93"] = modbusFeaturesDestinations[1];
     fres["VAX"] = modbusFeaturesDestinations[2];
     fres["VAY"] = modbusFeaturesDestinations[3];
     fres["VAZ"] = modbusFeaturesDestinations[4];
     fres["TMA"] = modbusFeaturesDestinations[5];
     fres["S12"] = modbusFeaturesDestinations[6];
-    //root.printTo(Serial);
+    mergeJson(fres,spectralFeatures);
+    return root;
 }
 
 /*
@@ -4272,7 +4275,7 @@ void Conductor::streamFeatures()
                 FeatureStates::isFeatureStreamComplete = true;   // publication completed
                 FeatureStates::isISRActive = true;
                 //debugPrint("Published to WiFi Complete !!!");
-                CreateFeatureGroupjson();
+                // CreateFeatureGroupjson();
             }
     }
    #if 0
@@ -7261,4 +7264,10 @@ char* Conductor::GetStoredMD5(IUFlash::storedConfig configType, JsonObject &inpu
         return "error";
     }
     
+}
+
+void Conductor::mergeJson(JsonObject& dest, const JsonObject& src) {
+   for (auto kvp : src) {
+     dest[kvp.key] = kvp.value;
+   }
 }

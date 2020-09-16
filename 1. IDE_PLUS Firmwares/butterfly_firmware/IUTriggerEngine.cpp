@@ -511,7 +511,8 @@ bool IUTriggerComputer::getFeatures(const char* feature1,float* dest){
     bool success = true;
     const size_t bufferSize = 600;          
     StaticJsonBuffer<bufferSize> jsonBuffer;
-    JsonObject &featuerObj = iuFlash.loadConfigJson(IUFlash::CFG_FOUT, jsonBuffer);
+    // JsonObject &featuerObj = iuFlash.loadConfigJson(IUFlash::CFG_FOUT, jsonBuffer);
+    JsonObject &featuerObj = conductor.CreateFeatureGroupjson();
     JsonObject &subconfig = featuerObj["FRES"];
     if (subconfig.success()){
         if (subconfig.containsKey(feature1) ){
@@ -537,7 +538,8 @@ bool IUTriggerComputer::getFeatures(const char* feature1,const char* feature2,fl
     bool success = true;
     const size_t bufferSize = 600;          
     StaticJsonBuffer<bufferSize> jsonBuffer;
-    JsonObject &featuerObj = iuFlash.loadConfigJson(IUFlash::CFG_FOUT, jsonBuffer);
+    // JsonObject &featuerObj = iuFlash.loadConfigJson(IUFlash::CFG_FOUT, jsonBuffer);
+    JsonObject &featuerObj = conductor.CreateFeatureGroupjson();
     JsonObject &subconfig = featuerObj["FRES"];
     if (subconfig.success()){
         //debugPrint("list all computated features: ");

@@ -627,6 +627,7 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
         return snprintf(dest, len, "%s/%s%s", CONFIG_SUBDIR, fname,
                     CONFIG_EXTENSION);
     }
+}
 
 
 File IUFSFlash::openConfigFile(storedConfig configType,

@@ -319,7 +319,8 @@ class Conductor
         int getActiveDigCount(const char* diagName);
         
         char* GetStoredMD5(IUFlash::storedConfig configType, JsonObject &inputConfig);
-        void CreateFeatureGroupjson();
+        JsonObject& CreateFeatureGroupjson();
+        void mergeJson(JsonObject& dest, const JsonObject& src);
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
