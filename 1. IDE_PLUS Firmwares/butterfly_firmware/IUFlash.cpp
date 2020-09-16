@@ -396,8 +396,8 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
         case CFG_RPM: {
             validConfig = true;
             validationResult["messageType"] = "rpm-config-ack";
-            int lowRPM = config["RPM"]["speed"];
-            int highRPM = config["RPM"]["speedH"];
+            int lowRPM = config["CONFIG"]["RPM"]["LOW_RPM"];
+            int highRPM = config["CONFIG"]["RPM"]["HIGH_RPM"];
             if(highRPM - lowRPM < 0 ){  // negative difference is not allowed
                 validConfig = false;
                 errorMessages.add("High RPM cannot be less then LOW RPM");
@@ -617,6 +617,7 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
             break;
         case CFG_DIG:
             fname = FNAME_DIG;
+            break;
         case CFG_RPM:
             fname = FNAME_RPM;
             break;

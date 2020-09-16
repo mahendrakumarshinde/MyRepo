@@ -1228,7 +1228,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
     }
     // store the DIG configurations 
-    subConfig = root["CONFIG"];
+    subConfig = root["CONFIG"]["DIG"];
     if(subConfig.success()){
         if(loopDebugMode) {
             debugPrint("Triggers configuration received: ", false);
@@ -1237,7 +1237,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         const char* messageId = root["messageId"]  ;
         const char* msgType = root["MSGTYPE"];
         snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"macId\":\"%s\",\"configType\":\"dig_ack\"}", messageId,m_macAddress.toString().c_str());
-        
+        //bool isset = false;
         if(strcmp(msgType,"DIG") == 0 ){            
             iuFlash.saveConfigJson(IUFlash::CFG_DIG, variant);
             if(loopDebugMode) {
@@ -1245,6 +1245,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             }
             clearDiagResultArray();
             configureAlertPolicy();
+            //isset = true;
         }
         if(iuWiFi.isConnected() )
         {  
@@ -1274,7 +1275,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     }
 
     // RPM Configs
-    subConfig = root["RPM"];
+    subConfig = root["CONFIG"]["PHASE"];
     if (subConfig.success()) {
         if (loopDebugMode){  debugPrint("RPM Configs Received :",false);
          subConfig.printTo(Serial); debugPrint("");
@@ -1284,14 +1285,20 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             iuFlash.saveConfigJson(IUFlash::CFG_RPM,subConfig);
             if(loopDebugMode){ debugPrint("Saved RPM Configs Successfully");}  
             // Apply RPM Configs
-            int LOW_RPM  = root["RPM"]["speed"];
-            int HIGH_RPM = root["RPM"]["speedH"]; 
+            int LOW_RPM  = root["CONFIG"]["RPM"]["LOW_RPM"];
+            int HIGH_RPM = root["CONFIG"]["RPM"]["HIGH_RPM"]; 
             const char* messageId = root["messageId"];
-            
+            debugPrint("LOW_RPM : ",false);debugPrint(LOW_RPM);
+            debugPrint("HIGH_RPM : ",false);debugPrint(HIGH_RPM);
+
+            debugPrint("LTH :" ,false);debugPrint(FFTConfiguration::currentLowCutOffFrequency);
+            debugPrint("HTH : ",false);debugPrint(FFTConfiguration::currentHighCutOffFrequency);
             if(LOW_RPM < FFTConfiguration::currentLowCutOffFrequency || LOW_RPM > FFTConfiguration::currentHighCutOffFrequency ){
+                debugPrint("SET 1");
                 LOW_RPM = FFTConfiguration::currentLowCutOffFrequency;
-            }else if (HIGH_RPM > FFTConfiguration::currentHighCutOffFrequency || HIGH_RPM < FFTConfiguration::currentLowCutOffFrequency)
-            { 
+            }
+            if (HIGH_RPM > FFTConfiguration::currentHighCutOffFrequency || HIGH_RPM < FFTConfiguration::currentLowCutOffFrequency)
+            {  debugPrint("SET 2");
                 HIGH_RPM = FFTConfiguration::currentHighCutOffFrequency;
             }
             FFTConfiguration::lowRPMFrequency = LOW_RPM;
@@ -1303,7 +1310,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             }
             if(iuWiFi.isConnected() )
             {  
-                if(loopDebugMode){debugPrint("RPM ACK : ",false);debugPrint(ack_config);}
+                if(loopDebugMode){debugPrint("RPM ACK : ",false);debugPrint(validationResultString);}
                 iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,validationResultString );
             }
             if(StreamingMode::BLE && isBLEConnected()){// Send ACK to BLE
@@ -4384,14 +4391,14 @@ void Conductor::streamDiagnostics(){
         const char* dId;
         bool publishDiag = false;
         bool publishAlert = false;
-        int diagStreamingPeriod = 5000; // in milli seconds
+        int diagStreamingPeriod = 2*1000; // in milli seconds
         DynamicJsonBuffer reportableJsonBUffer;
         JsonObject& reportableJson = reportableJsonBUffer.createObject();
         int publishSelect = DiagPublish::ALERT_POLICY;
         uint32_t nowT = millis();
-        if (nowT - conductor.digLastExecuted >= diagStreamingPeriod)
+        if (nowT - lastPublishedTimeout >= diagStreamingPeriod)
         {
-            conductor.digLastExecuted = nowT;
+            lastPublishedTimeout = nowT;
             publishSelect = DiagPublish::DIAG_STREAM;
             if (diagAlertResults[0] != NULL && reportableDIGLength > 0)
             {
@@ -5004,8 +5011,8 @@ bool Conductor::configureRPM(JsonVariant &config){
     bool success = false;    
     if (config.success())
     {
-        int LOW_RPM  = config["speed"];
-        int HIGH_RPM = config["speedH"]; 
+        int LOW_RPM  = config["LOW_RPM"];
+        int HIGH_RPM = config["HIGH_RPM"]; 
         const char* messageId = config["messageId"];
            
         if(loopDebugMode){
@@ -5016,7 +5023,8 @@ bool Conductor::configureRPM(JsonVariant &config){
         }
         if(LOW_RPM < FFTConfiguration::currentLowCutOffFrequency || LOW_RPM > FFTConfiguration::currentHighCutOffFrequency ){
             LOW_RPM = FFTConfiguration::currentLowCutOffFrequency;
-        }else if (HIGH_RPM > FFTConfiguration::currentHighCutOffFrequency || HIGH_RPM < FFTConfiguration::currentLowCutOffFrequency)
+        }
+        if (HIGH_RPM > FFTConfiguration::currentHighCutOffFrequency || HIGH_RPM < FFTConfiguration::currentLowCutOffFrequency)
         { 
             HIGH_RPM = FFTConfiguration::currentHighCutOffFrequency;
         }
