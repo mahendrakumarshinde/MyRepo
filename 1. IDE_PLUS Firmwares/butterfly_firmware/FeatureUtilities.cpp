@@ -570,8 +570,8 @@ float RFFTAmplitudes::getMainFrequency(q31_t *amplitudes, uint16_t sampleCount,
 // Compute rpm
 float RFFTFeatures::computeRPM(q15_t *amplitudes,int m_lowRPMFrequency,int m_highRPMFrequency,float rpm_threshold,float df)
 {   
-    debugPrint("\n\nlRPM : ",false);debugPrint(m_lowRPMFrequency);
-    debugPrint("hRPM : ",false);debugPrint(m_highRPMFrequency);
+    // debugPrint("\n\nlRPM : ",false);debugPrint(m_lowRPMFrequency);
+    // debugPrint("hRPM : ",false);debugPrint(m_highRPMFrequency);
     uint8_t MAX_PEAK_COUNT = 50 ;
     float peakfreq[MAX_PEAK_COUNT]; 
     float val;

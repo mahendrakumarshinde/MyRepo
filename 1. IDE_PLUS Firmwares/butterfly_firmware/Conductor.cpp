@@ -4391,7 +4391,7 @@ void Conductor::streamDiagnostics(){
         const char* dId;
         bool publishDiag = false;
         bool publishAlert = false;
-        int diagStreamingPeriod = 2*1000; // in milli seconds
+        int diagStreamingPeriod = 1*1000; // in milli seconds
         DynamicJsonBuffer reportableJsonBUffer;
         JsonObject& reportableJson = reportableJsonBUffer.createObject();
         int publishSelect = DiagPublish::ALERT_POLICY;
