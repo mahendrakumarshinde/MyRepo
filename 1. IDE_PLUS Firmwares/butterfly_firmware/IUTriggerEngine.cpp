@@ -255,17 +255,17 @@ void IUTriggerComputer:: m_specializedCompute() {
             
             // DISABLED container storage 
             //updateActiveDiagnosticList(DIG_NAME.c_str());
-            
-            // RESET variables
-            indexCount = 0;
-            atleastOneFiringTriggerActive = false;
-            m_diagnosticState = false;
-            resetBuffer();
             if(loopDebugMode && DEBUG_ENABLE_FLAG){    
                 debugPrint(" DIG STATE : ",false);
                 debugPrint(m_diagnosticState);
                 debugPrint("*******************************************");
             }
+            // RESET variables
+            indexCount = 0;
+            atleastOneFiringTriggerActive = false;
+            m_diagnosticState = false;
+            resetBuffer();
+            
         }
 
        #if 0

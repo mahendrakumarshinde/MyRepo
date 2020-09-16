@@ -786,11 +786,11 @@ void loop()
                 // //     // Diagnostic Features
                       conductor.computeTriggers();
                 // //     // Stream Diagnostic Features
-                     conductor.streamDiagnostics();
+                      conductor.streamDiagnostics();
                 //      Serial.print("\nAvailable - Mem: ");
                 //      Serial.println(freeMemory(), DEC);
                   
-                //  }
+                 // }
                                    
                if(conductor.modbusStreamingMode ) { 
                     // Update Modbus Registers

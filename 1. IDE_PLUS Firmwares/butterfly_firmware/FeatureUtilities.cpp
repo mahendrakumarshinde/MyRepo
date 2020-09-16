@@ -574,38 +574,30 @@ float RFFTFeatures::computeRPM(q15_t *amplitudes,int m_lowRPMFrequency,int m_hig
     debugPrint("hRPM : ",false);debugPrint(m_highRPMFrequency);
     uint8_t MAX_PEAK_COUNT = 50 ;
     float peakfreq[MAX_PEAK_COUNT]; 
-    float famplitude;
+    float val;
     uint8_t sampleCount = m_highRPMFrequency - m_lowRPMFrequency ; 
     float maxVal;
     uint32_t maxIdx=0; 
     int count = 0;
-    //debugPrint("\n",true);
     for (uint16_t i = m_lowRPMFrequency; i < m_highRPMFrequency ; i++)
     {
-        famplitude = ((float) (q15_t) amplitudes[i]/ 32768.0);
-        famplitude *= 100;
-        //debugPrint(famplitude,false);debugPrint(",",false);
-         if((famplitude > rpm_threshold) && (count < MAX_PEAK_COUNT) )
-         {
-                peakfreq[count] = famplitude;
-                count++;
+        val = ((float) (q15_t) amplitudes[i]/ 32768.0);
+        val *= 100; // TODO : remve 100 multiplier , temp used to sacel the outputs 
+        if((val > rpm_threshold) && (count < MAX_PEAK_COUNT) )
+        {
+            peakfreq[count] = val;
+            count++;
         }   
     }
     
     if(count != 0) {
-        // print max peaks 
-        // debugPrint("\nPeak_Freq :  [ ",false);
-        // for (size_t i = 0; i < count; i++)
-        // {
-        //     debugPrint(peakfreq[i],false);
-        //     debugPrint(",",false);
-        // }
-        // debugPrint("]",true);
         getMax(peakfreq,(uint32_t)sampleCount, &maxVal, &maxIdx);
-        debugPrint("Max idx : ",false);
-        debugPrint(maxIdx,false);debugPrint(",",false);
-        debugPrint(maxVal);
-        debugPrint("df :",false);debugPrint(df);
+        if(loopDebugMode){
+            debugPrint("Max idx : ",false);
+            debugPrint(maxIdx,false);debugPrint(",",false);
+            debugPrint(maxVal);
+            debugPrint("df :",false);debugPrint(df);
+        }
         maxIdx += m_lowRPMFrequency;
         return (float) (maxIdx*df*60) ;
     }else{

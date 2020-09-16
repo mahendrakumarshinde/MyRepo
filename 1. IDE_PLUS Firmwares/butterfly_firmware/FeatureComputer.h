@@ -707,6 +707,7 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
                 m_highCutFrequency, scaling1, false);
 
             logFFTOutput(&FFTOuput[fft_direction], velFFT,(void*) amplitudes, amplitudeCount, false);
+            // compute RPM on Acceleration Spectrum 
             float rpm = RFFTFeatures::computeRPM(amplitudes,FFTConfiguration::lowRPMFrequency,
                             FFTConfiguration::highRPMFrequency,0.3,df);
             if(loopDebugMode){
