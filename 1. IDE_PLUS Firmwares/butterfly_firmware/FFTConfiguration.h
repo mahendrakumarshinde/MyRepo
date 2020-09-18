@@ -36,6 +36,7 @@ namespace FFTConfiguration {
     const int DEFALUT_LOW_CUT_OFF_FREQUENCY = 10;
     const int DEFAULT_HIGH_CUT_OFF_FREQUENCY = DEFAULT_SAMPLING_RATE / FMAX_FACTOR;  
     const float DEFAULT_MIN_AGITATION = 0.03;
+    const float DEFAULT_RPM_THRESHOLD = 0.3;
     
     // Current configurations
     extern int currentSamplingRate;
@@ -46,6 +47,7 @@ namespace FFTConfiguration {
     extern bool currentSensor;   //if currenSensor=0 LSM is selected else kionix is selected
     extern int lowRPMFrequency;
     extern int highRPMFrequency;
+    extern float defaultRPMThreshold;
     const bool lsmSensor = 0; 
     const bool kionixSensor = 1;
 }
