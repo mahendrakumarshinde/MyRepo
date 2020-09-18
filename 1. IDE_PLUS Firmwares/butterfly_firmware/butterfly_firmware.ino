@@ -556,6 +556,8 @@ void setup()
             }
             conductor.setSensorStatus(conductor.SensorStatusCode::LSM_DEFAULT);
         }
+        // configure RPM 
+        conductor.configureFromFlash(IUFlash::CFG_RPM);
 
         // Sensors
         if (debugMode) {
@@ -784,11 +786,11 @@ void loop()
                 // //     // Diagnostic Features
                       conductor.computeTriggers();
                 // //     // Stream Diagnostic Features
-                     conductor.streamDiagnostics();
+                      conductor.streamDiagnostics();
                 //      Serial.print("\nAvailable - Mem: ");
                 //      Serial.println(freeMemory(), DEC);
                   
-                //  }
+                 // }
                                    
                if(conductor.modbusStreamingMode ) { 
                     // Update Modbus Registers

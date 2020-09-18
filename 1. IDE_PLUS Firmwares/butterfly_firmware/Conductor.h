@@ -147,6 +147,7 @@ class Conductor
         char m_diagnosticResult[DIG_PUBLISHED_BUFFER_SIZE];
         uint32_t lastUpdated = 0;
         uint32_t digLastExecuted = 0;
+        uint32_t lastPublishedTimeout = 0;
         uint16_t reportableDIGLength = 0;
         //timer ISR period
         uint16_t timerISRPeriod = 300; // default 3.3KHz
@@ -230,6 +231,7 @@ class Conductor
         void periodicSendAccelRawData();
         void storeData() {}  // TODO => implement
         bool setFFTParams();
+        bool configureRPM(JsonVariant &config);
         /***** Debugging *****/
         void getMCUInfo(char *destination);
         void  streamMCUUInfo(HardwareSerial *port);
