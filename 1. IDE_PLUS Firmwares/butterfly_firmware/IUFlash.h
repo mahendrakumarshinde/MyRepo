@@ -96,7 +96,7 @@ class IUFSFlash : public IUFlash
         static char FNAME_MODBUS_SLAVE[12];     
         static char FNAME_HASH[11];   
         static char FNAME_DIG[11];
-        static char FNAME_RPM[12]; 
+        static char FNAME_RPM[4]; 
         static const uint8_t MAX_FULL_CONFIG_FPATH_LEN = 28;
         
         /***** Core *****/
