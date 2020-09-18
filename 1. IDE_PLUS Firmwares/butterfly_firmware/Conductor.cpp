@@ -1275,7 +1275,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 }
 
 
-JsonObject& Conductor::CreateFeatureGroupjson(){
+JsonObject& Conductor::createFeatureGroupjson(){
    
     DynamicJsonBuffer outputJSONbuffer;
     JsonObject& root = outputJSONbuffer.createObject();
@@ -4275,7 +4275,7 @@ void Conductor::streamFeatures()
                 FeatureStates::isFeatureStreamComplete = true;   // publication completed
                 FeatureStates::isISRActive = true;
                 //debugPrint("Published to WiFi Complete !!!");
-                // CreateFeatureGroupjson();
+                // createFeatureGroupjson();
             }
     }
    #if 0
