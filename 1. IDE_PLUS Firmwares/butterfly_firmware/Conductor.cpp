@@ -1275,7 +1275,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     }
 
     // RPM Configs
-    subConfig = root["CONFIG"]["PHASE"];
+    subConfig = root["CONFIG"]["RPM"];
     if (subConfig.success()) {
         if (loopDebugMode){  debugPrint("RPM Configs Received :",false);
          subConfig.printTo(Serial); debugPrint("");
@@ -1288,24 +1288,17 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             int LOW_RPM  = root["CONFIG"]["RPM"]["LOW_RPM"];
             int HIGH_RPM = root["CONFIG"]["RPM"]["HIGH_RPM"]; 
             const char* messageId = root["messageId"];
-            debugPrint("LOW_RPM : ",false);debugPrint(LOW_RPM);
-            debugPrint("HIGH_RPM : ",false);debugPrint(HIGH_RPM);
-
-            debugPrint("LTH :" ,false);debugPrint(FFTConfiguration::currentLowCutOffFrequency);
-            debugPrint("HTH : ",false);debugPrint(FFTConfiguration::currentHighCutOffFrequency);
             if(LOW_RPM < FFTConfiguration::currentLowCutOffFrequency || LOW_RPM > FFTConfiguration::currentHighCutOffFrequency ){
-                debugPrint("SET 1");
                 LOW_RPM = FFTConfiguration::currentLowCutOffFrequency;
             }
-            if (HIGH_RPM > FFTConfiguration::currentHighCutOffFrequency || HIGH_RPM < FFTConfiguration::currentLowCutOffFrequency)
-            {  debugPrint("SET 2");
-                HIGH_RPM = FFTConfiguration::currentHighCutOffFrequency;
+            if (HIGH_RPM > FFTConfiguration::currentHighCutOffFrequency || HIGH_RPM < FFTConfiguration::currentLowCutOffFrequency){ 
+                 HIGH_RPM = FFTConfiguration::currentHighCutOffFrequency;
             }
             FFTConfiguration::lowRPMFrequency = LOW_RPM;
             FFTConfiguration::highRPMFrequency = HIGH_RPM;
             if(loopDebugMode){
-                debugPrint("SPEED : ",false);debugPrint(FFTConfiguration::lowRPMFrequency);
-                debugPrint("SPEED H :",false);debugPrint(FFTConfiguration::highRPMFrequency);
+                debugPrint("LOW_RPM : ",false);debugPrint(FFTConfiguration::lowRPMFrequency);
+                debugPrint("HIGH_RPM :",false);debugPrint(FFTConfiguration::highRPMFrequency);
                 debugPrint("MSGID : ",false);debugPrint(messageId);
             }
             if(iuWiFi.isConnected() )
