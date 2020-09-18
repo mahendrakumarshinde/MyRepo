@@ -4350,7 +4350,7 @@ void Conductor::computeTriggers(){
 }
 
 void Conductor::streamDiagnostics(){
-   if(m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE){
+   if((m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE) && getDatetime() > 1590000000.00){
         const char* dId;
         bool publishDiag = false;
         bool publishAlert = false;
