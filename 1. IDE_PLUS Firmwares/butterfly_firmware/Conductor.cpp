@@ -1237,16 +1237,13 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         const char* messageId = root["messageId"]  ;
         const char* msgType = root["MSGTYPE"];
         snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"macId\":\"%s\",\"configType\":\"dig_ack\"}", messageId,m_macAddress.toString().c_str());
-        //bool isset = false;
-        if(strcmp(msgType,"DIG") == 0 ){            
-            iuFlash.saveConfigJson(IUFlash::CFG_DIG, variant);
-            if(loopDebugMode) {
-                debugPrint("configs saved successfully ");
-            }
-            clearDiagResultArray();
-            configureAlertPolicy();
-            //isset = true;
+        iuFlash.saveConfigJson(IUFlash::CFG_DIG, variant);
+        if(loopDebugMode) {
+            debugPrint("configs saved successfully ");
         }
+        clearDiagResultArray();
+        configureAlertPolicy();
+        
         if(iuWiFi.isConnected() )
         {  
          if(loopDebugMode){debugPrint("Response : ",false);debugPrint(ack_config);}
@@ -4975,7 +4972,7 @@ bool Conductor::setFFTParams() {
         FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY;
         FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
         FFTConfiguration::currentMinAgitation = FFTConfiguration::DEFAULT_MIN_AGITATION;
-
+        
         // Change the required sectionCount for all FFT processors 
         // Update the lowCutFrequency and highCutFrequency for each FFTComputerID
         int FFTComputerID = 30;  // FFTComputers X, Y, Z have m_id = 0, 1, 2 correspondingly
@@ -5023,7 +5020,14 @@ bool Conductor::configureRPM(JsonVariant &config){
         }
         FFTConfiguration::lowRPMFrequency = LOW_RPM;
         FFTConfiguration::highRPMFrequency = HIGH_RPM;
-    }
+        success = true;
+    }else
+    {
+        // Apply Default for RPM computation in case rpm.conf not available
+        FFTConfiguration::lowRPMFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY;
+        FFTConfiguration::highRPMFrequency = FFTConfiguration::currentHighCutOffFrequency;
+     }
+    
        
   return success;
 
