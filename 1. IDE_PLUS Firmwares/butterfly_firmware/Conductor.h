@@ -321,6 +321,8 @@ class Conductor
         int getActiveDigCount(const char* diagName);
         
         char* GetStoredMD5(IUFlash::storedConfig configType, JsonObject &inputConfig);
+        JsonObject& createFeatureGroupjson();
+        void mergeJson(JsonObject& dest, const JsonObject& src);
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
@@ -372,7 +374,6 @@ class Conductor
         double last_fingerprint_timestamp = 0;
         bool computed_first_fingerprint_timestamp = false;
         SegmentedMessage segmentedMessages[MAX_SEGMENTED_MESSAGES]; // atmost MAX_SEGMENTED_MESSAGES can be captured in interleaved manner
-        
         char status[50];
         SensorStatusCode statusCode;
         char m_otaStmUri[512];

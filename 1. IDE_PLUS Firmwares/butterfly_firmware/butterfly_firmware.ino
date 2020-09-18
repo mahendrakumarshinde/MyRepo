@@ -661,6 +661,7 @@ void setup()
         // iuWiFi.hardReset();
         // delay(1000);
         conductor.checkforWiFiConfigurations();
+        // conductor.createFeatureGroupjson();
         delay(100);
         conductor.modbusStreamingMode = conductor.configureFromFlash(IUFlash::CFG_MODBUS_SLAVE);
         if (conductor.modbusStreamingMode != true)

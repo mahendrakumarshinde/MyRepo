@@ -1209,6 +1209,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
 
     }
+
     subConfig = root["CONFIG_HASH"];
     if (subConfig.success())
     {
@@ -1319,6 +1320,23 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     return true;
 }
 
+
+JsonObject& Conductor::createFeatureGroupjson(){
+   
+    DynamicJsonBuffer outputJSONbuffer;
+    JsonObject& root = outputJSONbuffer.createObject();
+    JsonObject& fres = root.createNestedObject("FRES");
+    JsonObject& spectralFeatures = outputJSONbuffer.parseObject(fingerprintData);
+    // JsonVariant variant = root;
+    fres["A93"] = modbusFeaturesDestinations[1];
+    fres["VAX"] = modbusFeaturesDestinations[2];
+    fres["VAY"] = modbusFeaturesDestinations[3];
+    fres["VAZ"] = modbusFeaturesDestinations[4];
+    fres["TMA"] = modbusFeaturesDestinations[5];
+    fres["S12"] = modbusFeaturesDestinations[6];
+    mergeJson(fres,spectralFeatures);
+    return root;
+}
 
 /*
  * Read the OTA Configutation details
@@ -4303,6 +4321,7 @@ void Conductor::streamFeatures()
                 FeatureStates::isFeatureStreamComplete = true;   // publication completed
                 FeatureStates::isISRActive = true;
                 //debugPrint("Published to WiFi Complete !!!");
+                // createFeatureGroupjson();
             }
     }
    #if 0
@@ -4377,7 +4396,7 @@ void Conductor::computeTriggers(){
 }
 
 void Conductor::streamDiagnostics(){
-   if(m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE){
+   if((m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE) && getDatetime() > 1590000000.00){
         const char* dId;
         bool publishDiag = false;
         bool publishAlert = false;
@@ -7327,4 +7346,10 @@ char* Conductor::GetStoredMD5(IUFlash::storedConfig configType, JsonObject &inpu
         return "error";
     }
     
+}
+
+void Conductor::mergeJson(JsonObject& dest, const JsonObject& src) {
+   for (auto kvp : src) {
+     dest[kvp.key] = kvp.value;
+   }
 }
