@@ -5915,7 +5915,7 @@ uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
     {
         ValidationFile->println(F("   Validation [TMP]-Read Add: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [TMP]-Read Add: Fail !")); }
-        otaRtryValidation++;
+        // otaRtryValidation++;
     }
 
     ValidationFile->print(F("DEVICE READ Audio Data: "));
