@@ -17,6 +17,7 @@ const char* fingerprints_Z;
 
 // Modbus Streaming Features buffer
 float modbusFeaturesDestinations[8];
+float featuresDestinations[12]; 
 
 int m_temperatureOffset;
 int m_audioOffset;
@@ -1277,18 +1278,26 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 
 JsonObject& Conductor::createFeatureGroupjson(){
    
-    DynamicJsonBuffer outputJSONbuffer;
+    // DynamicJsonBuffer outputJSONbuffer;
+    StaticJsonBuffer<2500> outputJSONbuffer;
     JsonObject& root = outputJSONbuffer.createObject();
     JsonObject& fres = root.createNestedObject("FRES");
     JsonObject& spectralFeatures = outputJSONbuffer.parseObject(fingerprintData);
     // JsonVariant variant = root;
-    fres["A93"] = modbusFeaturesDestinations[1];
-    fres["VAX"] = modbusFeaturesDestinations[2];
-    fres["VAY"] = modbusFeaturesDestinations[3];
-    fres["VAZ"] = modbusFeaturesDestinations[4];
-    fres["TMA"] = modbusFeaturesDestinations[5];
-    fres["S12"] = modbusFeaturesDestinations[6];
+    fres["A93"] = featuresDestinations[0];
+    fres["VAX"] = featuresDestinations[1];
+    fres["VAY"] = featuresDestinations[2];
+    fres["VAZ"] = featuresDestinations[3];
+    fres["A9X"] = featuresDestinations[4];
+    fres["A9Y"] = featuresDestinations[5];
+    fres["A9Z"] = featuresDestinations[6];
+    fres["DAX"] = featuresDestinations[7];
+    fres["DAY"] = featuresDestinations[8];
+    fres["DAZ"] = featuresDestinations[9];
+    fres["TMA"] = featuresDestinations[10];
+    fres["S12"] = featuresDestinations[11];
     mergeJson(fres,spectralFeatures);
+    fres["NULL"] = 0;
     return root;
 }
 
@@ -4354,23 +4363,37 @@ void Conductor::streamDiagnostics(){
         const char* dId;
         bool publishDiag = false;
         bool publishAlert = false;
+        bool publishFres = false;
         int diagStreamingPeriod = 5000; // in milli seconds
+        int fresPublishPeriod = 6000;
         DynamicJsonBuffer reportableJsonBUffer;
         JsonObject& reportableJson = reportableJsonBUffer.createObject();
-        int publishSelect = DiagPublish::ALERT_POLICY;
+        int publishSelect = publish::ALERT_POLICY;
         uint32_t nowT = millis();
         if (nowT - conductor.digLastExecuted >= diagStreamingPeriod)
         {
             conductor.digLastExecuted = nowT;
-            publishSelect = DiagPublish::DIAG_STREAM;
+            publishSelect = publish::STREAM;
+            publishDiag = true;
             if (diagAlertResults[0] != NULL && reportableDIGLength > 0)
             {
-                publishSelect = DiagPublish::ALERT_POLICY;
+                publishSelect = publish::ALERT_POLICY;
+            }
+        }
+
+        if(nowT - conductor.fresLastPublish >= fresPublishPeriod)
+        {
+            conductor.fresLastPublish = nowT;
+            publishSelect = publish::STREAM;
+            publishFres = true;
+            if (diagAlertResults[0] != NULL && reportableDIGLength > 0)
+            {
+                publishSelect = publish::ALERT_POLICY;
             }
         }
         switch (publishSelect)
         {
-        case DiagPublish::ALERT_POLICY: //Alert Policies
+        case publish::ALERT_POLICY: //Alert Policies
             if (diagAlertResults[0] != NULL && reportableDIGLength > 0)
             {
                 for (size_t i = 0; i < reportableDIGLength; i++)
@@ -4386,9 +4409,9 @@ void Conductor::streamDiagnostics(){
                         diagnostic["ALRREP"] = alert_repeat_state[i];
                     }
                 }
-                publishDiag = true;
+                publishAlert = true;
             }
-            if((diagAlertResults[0] != NULL && publishDiag == true)){
+            if((diagAlertResults[0] != NULL && publishAlert == true)){
                 //reportableJson.printTo(Serial); debugPrint("");
                 reportableJson.printTo(m_diagnosticResult,DIG_PUBLISHED_BUFFER_SIZE);
                 snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"DIGRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
@@ -4402,37 +4425,55 @@ void Conductor::streamDiagnostics(){
                 }
             }
             break;
-        case DiagPublish::DIAG_STREAM: //Streaming Diagnostics
-            if (iuTrigger.DIG_COUNT > 0)
-            {
-                for (int index = 0; index < iuTrigger.DIG_COUNT; index++)
+        case publish::STREAM: //Streaming Diagnostics
+            if(publishDiag){
+                if (iuTrigger.DIG_COUNT > 0)
                 {
-                    dId = (char *)iuTrigger.DIG_LIST[index].c_str(); //.c_str();
-                    if (dId != NULL)
+                    for (int index = 0; index < iuTrigger.DIG_COUNT; index++)
                     {
-                        // construct the RDIG JSON
-                        JsonObject &diagnostic = reportableJson.createNestedObject(dId);
-                        JsonArray &ftr = diagnostic.createNestedArray("FTR");
-                        // Add Firing Triggers list
-                        addFTR(ftr, index);
-                        if (iuTrigger.DIG_STATE[index])
+                        dId = (char *)iuTrigger.DIG_LIST[index].c_str(); //.c_str();
+                        if (dId != NULL)
                         {
-                            diagnostic["DSTATE"] = true;
-                        }
-                        else if (!iuTrigger.DIG_STATE[index])
-                        {
-                            diagnostic["DSTATE"] = false;
+                            // construct the RDIG JSON
+                            JsonObject &diagnostic = reportableJson.createNestedObject(dId);
+                            JsonArray &ftr = diagnostic.createNestedArray("FTR");
+                            // Add Firing Triggers list
+                            addFTR(ftr, index);
+                            if (iuTrigger.DIG_STATE[index])
+                            {
+                                diagnostic["DSTATE"] = true;
+                            }
+                            else if (!iuTrigger.DIG_STATE[index])
+                            {
+                                diagnostic["DSTATE"] = false;
+                            }
+                        }else{
+                            publishDiag = false;
                         }
                     }
+                    publishDiag = true;
                 }
-                publishAlert = true;
+                if((iuTrigger.DIG_LIST[0] != NULL && publishDiag == true) ){
+                    //reportableJson.printTo(Serial); debugPrint("");
+                    reportableJson.printTo(m_diagnosticResult,DIG_PUBLISHED_BUFFER_SIZE);
+                    snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"DIGRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
+                    // Published to MQTT 
+                    iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_IU_DIAGNOSTIC,m_diagnosticPublishedBuffer);
+                    if(loopDebugMode){
+                        debugPrint("O/P Buffer : ",false);
+                        debugPrint(m_diagnosticPublishedBuffer);
+                        debugPrint("BUFF LEN :",false);
+                        debugPrint(strlen(m_diagnosticPublishedBuffer));
+                    }
+                }
             }
-            if((iuTrigger.DIG_LIST[0] != NULL && publishAlert == true) ){
+            if(publishFres){
+                JsonObject& fres = createFeatureGroupjson();
                 //reportableJson.printTo(Serial); debugPrint("");
-                reportableJson.printTo(m_diagnosticResult,DIG_PUBLISHED_BUFFER_SIZE);
+                fres.printTo(m_diagnosticResult,DIG_PUBLISHED_BUFFER_SIZE);
                 snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"DIGRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
                 // Published to MQTT 
-                iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_IU_DIAGNOSTIC,m_diagnosticPublishedBuffer);
+                iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_IU_FRES,m_diagnosticPublishedBuffer);
                 if(loopDebugMode){
                     debugPrint("O/P Buffer : ",false);
                     debugPrint(m_diagnosticPublishedBuffer);

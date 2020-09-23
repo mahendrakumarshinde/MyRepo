@@ -112,9 +112,9 @@ class Conductor
                                         };
 
 
-        enum DiagPublish : uint8_t {
-                ALERT_POLICY         = 0,
-                DIAG_STREAM          = 1,       // Send over Serial
+        enum publish : uint8_t {
+                ALERT_POLICY        = 0,
+                STREAM              = 1      // Send over Serial
                 };
         static const uint32_t defaultAutoSleepDelay = 60000;
         static const uint32_t defaultSleepDuration = 10000;
@@ -147,6 +147,7 @@ class Conductor
         char m_diagnosticResult[DIG_PUBLISHED_BUFFER_SIZE];
         uint32_t lastUpdated = 0;
         uint32_t digLastExecuted = 0;
+        uint32_t fresLastPublish = 0;
         uint16_t reportableDIGLength = 0;
         //timer ISR period
         uint16_t timerISRPeriod = 300; // default 3.3KHz
