@@ -1294,7 +1294,7 @@ JsonObject& Conductor::createFeatureGroupjson(){
     fres["DAX"] = featuresDestinations[7];
     fres["DAY"] = featuresDestinations[8];
     fres["DAZ"] = featuresDestinations[9];
-    fres["TMA"] = featuresDestinations[10];
+    fres["TMP"] = featuresDestinations[10];
     fres["S12"] = featuresDestinations[11];
     mergeJson(fres,spectralFeatures);
     fres["NULL"] = 0;
