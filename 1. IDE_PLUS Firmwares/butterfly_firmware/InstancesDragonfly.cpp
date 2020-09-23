@@ -445,6 +445,12 @@ void populateFeatureGroups()
     motorStandardGroup.addFeature(&velRMS512X);
     motorStandardGroup.addFeature(&velRMS512Y);
     motorStandardGroup.addFeature(&velRMS512Z);
+    motorStandardGroup.addFeature(&accelRMS512X);
+    motorStandardGroup.addFeature(&accelRMS512Y);
+    motorStandardGroup.addFeature(&accelRMS512Z);
+    motorStandardGroup.addFeature(&dispRMS512X);
+    motorStandardGroup.addFeature(&dispRMS512Y);
+    motorStandardGroup.addFeature(&dispRMS512Z);
     motorStandardGroup.addFeature(&temperature);
     motorStandardGroup.addFeature(&audioDB4096);
     
