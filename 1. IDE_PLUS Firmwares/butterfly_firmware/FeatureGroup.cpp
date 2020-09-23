@@ -328,7 +328,7 @@ void FeatureGroup::bufferAndStream(
        m_featureBuffer[m_bufferIndex++] = '0';
        m_featureBuffer[m_bufferIndex++] = '0';
        m_featureBuffer[m_bufferIndex++] = i + 49;
-       if(i > 8){
+       if(i >= 9){
            m_featureBuffer[m_bufferIndex - 2] = '1';
            m_featureBuffer[m_bufferIndex - 1] = i + 39;
            //m_bufferIndex++;
