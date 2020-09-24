@@ -1741,7 +1741,23 @@ void Conductor::configureMainOptions(JsonVariant &config)
     if(value.success()){
         m_mainFeatureGroup->setDataSendPeriod(value.as<uint16_t>());
         // NOTE: Older firmware device will not set this parameter even if configJson contains it.
-}
+    }
+    value = config["DDSP"];
+    if(value.success()){
+        diagStreamingPeriod = (uint32_t) (value.as<int>()) * 1000;
+    }
+    value = config["FDSP"];
+    if(value.success()){
+        fresPublishPeriod = (uint32_t) (value.as<int>()) * 1000;
+    }
+    value = config["DIG"];
+    if(value.success()){
+        digStream = (bool) (value.as<bool>());
+    }
+    value = config["FRES"];
+    if(value.success()){
+        fresStream = (bool) (value.as<bool>());
+    }
 }
 
 /**
@@ -4364,8 +4380,6 @@ void Conductor::streamDiagnostics(){
         bool publishDiag = false;
         bool publishAlert = false;
         bool publishFres = false;
-        int diagStreamingPeriod = 5000; // in milli seconds
-        int fresPublishPeriod = 6000;
         DynamicJsonBuffer reportableJsonBUffer;
         JsonObject& reportableJson = reportableJsonBUffer.createObject();
         int publishSelect = publish::ALERT_POLICY;
@@ -4417,16 +4431,16 @@ void Conductor::streamDiagnostics(){
                 snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"DIGRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
                 // Published to MQTT 
                 iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,m_diagnosticPublishedBuffer);
-                if(loopDebugMode){
-                    debugPrint("O/P Buffer : ",false);
-                    debugPrint(m_diagnosticPublishedBuffer);
-                    debugPrint("BUFF LEN :",false);
-                    debugPrint(strlen(m_diagnosticPublishedBuffer));
-                }
+                // if(loopDebugMode){
+                //     debugPrint("O/P Buffer : ",false);
+                //     debugPrint(m_diagnosticPublishedBuffer);
+                //     debugPrint("BUFF LEN :",false);
+                //     debugPrint(strlen(m_diagnosticPublishedBuffer));
+                // }
             }
             break;
         case publish::STREAM: //Streaming Diagnostics
-            if(publishDiag){
+            if(publishDiag && digStream){
                 if (iuTrigger.DIG_COUNT > 0)
                 {
                     for (int index = 0; index < iuTrigger.DIG_COUNT; index++)
@@ -4459,27 +4473,27 @@ void Conductor::streamDiagnostics(){
                     snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"DIGRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
                     // Published to MQTT 
                     iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_IU_DIAGNOSTIC,m_diagnosticPublishedBuffer);
-                    if(loopDebugMode){
-                        debugPrint("O/P Buffer : ",false);
-                        debugPrint(m_diagnosticPublishedBuffer);
-                        debugPrint("BUFF LEN :",false);
-                        debugPrint(strlen(m_diagnosticPublishedBuffer));
-                    }
+                    // if(loopDebugMode){
+                    //     debugPrint("O/P Buffer : ",false);
+                    //     debugPrint(m_diagnosticPublishedBuffer);
+                    //     debugPrint("BUFF LEN :",false);
+                    //     debugPrint(strlen(m_diagnosticPublishedBuffer));
+                    // }
                 }
             }
-            if(publishFres){
+            if(publishFres && fresStream){
                 JsonObject& fres = createFeatureGroupjson()["FRES"];
                 //reportableJson.printTo(Serial); debugPrint("");
                 fres.printTo(m_diagnosticResult,DIG_PUBLISHED_BUFFER_SIZE);
                 snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"FRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
                 // Published to MQTT 
                 iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_IU_FRES,m_diagnosticPublishedBuffer);
-                if(loopDebugMode){
-                    debugPrint("O/P Buffer : ",false);
-                    debugPrint(m_diagnosticPublishedBuffer);
-                    debugPrint("BUFF LEN :",false);
-                    debugPrint(strlen(m_diagnosticPublishedBuffer));
-                }
+                // if(loopDebugMode){
+                //     debugPrint("O/P Buffer : ",false);
+                //     debugPrint(m_diagnosticPublishedBuffer);
+                //     debugPrint("BUFF LEN :",false);
+                //     debugPrint(strlen(m_diagnosticPublishedBuffer));
+                // }
             }
             break;
         default:

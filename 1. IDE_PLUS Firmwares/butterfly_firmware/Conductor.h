@@ -427,6 +427,10 @@ class Conductor
         uint8_t reportableDIGID[maxDiagnosticStates];
         uint8_t reportableIndexCounter;
         char* diagAlertResults[maxDiagnosticStates];
+        uint32_t diagStreamingPeriod = 5000; // in milli seconds
+        uint32_t fresPublishPeriod = 5000;
+        bool digStream = true;
+        bool fresStream = true;
         
 };
 
