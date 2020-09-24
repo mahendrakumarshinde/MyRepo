@@ -4468,10 +4468,10 @@ void Conductor::streamDiagnostics(){
                 }
             }
             if(publishFres){
-                JsonObject& fres = createFeatureGroupjson();
+                JsonObject& fres = createFeatureGroupjson()["FRES"];
                 //reportableJson.printTo(Serial); debugPrint("");
                 fres.printTo(m_diagnosticResult,DIG_PUBLISHED_BUFFER_SIZE);
-                snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"DIGRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
+                snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"FRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
                 // Published to MQTT 
                 iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_IU_FRES,m_diagnosticPublishedBuffer);
                 if(loopDebugMode){
