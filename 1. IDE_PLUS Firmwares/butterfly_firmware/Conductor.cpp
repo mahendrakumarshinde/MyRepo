@@ -2278,6 +2278,14 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuUSB.port->println(FFTConfiguration::currentSamplingRate);
                     iuUSB.port->print("FFT: Block Size: ");
                     iuUSB.port->println(FFTConfiguration::currentBlockSize);
+                    if(FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor){
+                        iuUSB.port->print("FFT: LSMgRange : ");
+                        iuUSB.port->println(FFTConfiguration::currentLSMgRange);
+                    }
+                    if(FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor){
+                        iuUSB.port->print("FFT: KNXgRange : ");
+                        iuUSB.port->println(FFTConfiguration::currentKNXgRange);
+                    }
                 }
                 if (strcmp(buff,"IUGET_DEVICE_CONF") == 0)
                 {
@@ -3861,11 +3869,11 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             configureGroupsForOperation();
             if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
             {
-                iuAccelerometer.resetScale();
+                iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
             }
             else
             {
-                iuAccelerometerKX134.resetScale();
+                iuAccelerometerKX134.setGrange(FFTConfiguration::currentKNXgRange);
             }
             msg = "operation";
             break;
@@ -3874,11 +3882,11 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             //configureGroupsForOperation();
             if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
             {
-                iuAccelerometer.resetScale();
+                iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
             }
             else
             {
-                iuAccelerometerKX134.resetScale();
+                iuAccelerometerKX134.setGrange(FFTConfiguration::currentKNXgRange);
             }
             msg = "custom";
             break;        
@@ -4639,6 +4647,12 @@ bool Conductor::setFFTParams() {
             iuAccelerometer.setSamplingRate(FFTConfiguration::currentSamplingRate);
             FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_LSM;
             setSensorStatus(SensorStatusCode::LSM_SET);
+            if(config.containsKey("grange")){
+                FFTConfiguration::currentLSMgRange = config["grange"];
+            }else{
+                FFTConfiguration::currentLSMgRange = FFTConfiguration::DEFAULT_LSM_G_RANGE;
+            }
+            iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
         }
         else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (iuAccelerometerKX134.kionixPresence))
         {
@@ -4646,14 +4660,25 @@ bool Conductor::setFFTParams() {
             iuAccelerometerKX134.setSamplingRate(FFTConfiguration::currentSamplingRate); // will set the ODR for the sensor
             FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
             setSensorStatus(SensorStatusCode::KNX_SET);
+            if(config.containsKey("grange")){
+                FFTConfiguration::currentKNXgRange = config["grange"];
+            }else{
+                FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_KNX_G_RANGE;
+            }
+            iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
         }else if((FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor) && (!iuAccelerometer.lsmPresence) && (iuAccelerometerKX134.kionixPresence)){
             debugPrint(F("LSM absent & KIONIX set"));
             iuAccelerometerKX134.setSamplingRate(iuAccelerometerKX134.defaultSamplingRate);
             FFTConfiguration::currentSamplingRate = iuAccelerometerKX134.defaultSamplingRate;
             FFTConfiguration::currentSensor = FFTConfiguration::kionixSensor;
-            FFTConfiguration::currentBlockSize = iuAccelerometerKX134.DEFAULT_BLOCK_SIZE;
+            FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
             FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
             setSensorStatus(SensorStatusCode::LSM_ABS);
+            if(config.containsKey("grange")){
+                FFTConfiguration::currentKNXgRange = config["grange"];
+            }else{
+                FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_KNX_G_RANGE;
+            }
         }else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (!iuAccelerometerKX134.kionixPresence) && (iuAccelerometer.lsmPresence)){
             debugPrint(F("KIONIX Absent & LSM set"));
             iuAccelerometer.setSamplingRate(iuAccelerometer.defaultSamplingRate);
@@ -4662,6 +4687,12 @@ bool Conductor::setFFTParams() {
             FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
             FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_LSM;
             setSensorStatus(SensorStatusCode::KNX_ABS);
+            if(config.containsKey("grange")){
+                FFTConfiguration::currentLSMgRange = config["grange"];
+            }else{
+                FFTConfiguration::currentLSMgRange = FFTConfiguration::DEFAULT_LSM_G_RANGE;
+            }
+            iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
         }
         else{
             debugPrint(F("KIONIX, LSM not found"));
@@ -5778,14 +5809,14 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
     ValidationFile->println(F("DEVICE FFT CONFIG CHECK:-"));
     ValidationFile->print(F(" - FFT DEFAULT SAMPLING RATE:"));
     ValidationFile->println(FFTConfiguration::DEFAULT_SAMPLING_RATE);
-    if(FFTConfiguration::DEFAULT_SAMPLING_RATE != 3330)
+    if(FFTConfiguration::DEFAULT_SAMPLING_RATE != 25600)
     {
         ValidationFile->println(F("   Validation [FFT]-Default Sampling Rate: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [FFT]-Default Sampling Rate: Fail !")); }
     }
     ValidationFile->print(F(" - FFT DEFAULT BLOCK SIZE:"));
     ValidationFile->println(FFTConfiguration::DEFAULT_BLOCK_SIZE);
-    if(FFTConfiguration::DEFAULT_BLOCK_SIZE != 4096)
+    if(FFTConfiguration::DEFAULT_BLOCK_SIZE != 8192)
     {
         ValidationFile->println(F("   Validation [FFT]-Default Block Size: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [FFT]-Default Block Size: Fail !")); }
