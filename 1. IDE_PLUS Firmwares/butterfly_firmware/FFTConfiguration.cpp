@@ -7,4 +7,6 @@ namespace FFTConfiguration {
     int currentHighCutOffFrequency = DEFAULT_HIGH_CUT_OFF_FREQUENCY;
     float currentMinAgitation = DEFAULT_MIN_AGITATION;
     bool currentSensor = lsmSensor;
+    int currentLSMgRange = DEFAULT_LSM_G_RANGE;
+    int currentKNXgRange = DEFAULT_KNX_G_RANGE;
 }
