@@ -24,7 +24,7 @@ extern  bool computationDone;
 class FeatureComputer
 {
     public:
-        static const uint8_t maxSourceCount = 10;
+        static const uint8_t maxSourceCount = 15;
         static const uint8_t maxDestinationCount = 5;
         /***** Instance registry *****/
         static const uint8_t MAX_INSTANCE_COUNT = 20;
