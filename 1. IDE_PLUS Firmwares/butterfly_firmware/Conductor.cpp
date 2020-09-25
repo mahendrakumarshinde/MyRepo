@@ -2125,7 +2125,7 @@ void Conductor::processLegacyCommand(char *buff)
                        &fcheck[5]);
                 Feature *feat;
                 opStateComputer.deleteAllSources();
-                for (uint8_t i = 0; i < 6; i++) {
+                for (uint8_t i = 0; i < 12; i++) {
                     feat = m_mainFeatureGroup->getFeature(i);
                     if (feat) {
                         opStateComputer.addSource(feat, 1, fcheck[i] > 0);
@@ -5601,7 +5601,7 @@ void Conductor::sendSegmentedMessageResponse(int messageID) {
 
 void Conductor::setThresholdsFromFile() 
 {
-    const size_t bufferSize = 6*JSON_ARRAY_SIZE(3) + 6*JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3) + JSON_OBJECT_SIZE(6) + 272;
+    const size_t bufferSize = 6*JSON_ARRAY_SIZE(3) + 6*JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3) + JSON_OBJECT_SIZE(6) + 972;
     StaticJsonBuffer<bufferSize> jsonBuffer;
     JsonVariant config = JsonVariant(
             iuFlash.loadConfigJson(IUFlash::CFG_FEATURE, jsonBuffer));
