@@ -96,6 +96,20 @@ void IUKX134::setScale(IUKX134::ScaleOption scale)
 		operate(true);
 }
 
+void IUKX134::setGrange(uint8_t g){
+	if (g == 8){
+		setScale(FSR_8G);
+	}else if(g == 16){
+		setScale(FSR_16G);
+	}else if(g == 32){
+		setScale(FSR_32G);
+	}else if(g == 64){
+		setScale(FSR_64G);
+	}else{
+		debugPrint("Invalid G Range");
+	}
+}
+
 void IUKX134::setSamplingRate(uint16_t samplingRate)
 {
 	m_samplingRate = samplingRate;
@@ -154,7 +168,7 @@ void IUKX134::setupHardware()
 	softReset();
 
 	// set resolution
-	setScale(defaultScale);
+	setScale(m_scale);
 
 	// tilt detection off
 	writeConfig(KX134_1211_CNTL2, 0);
