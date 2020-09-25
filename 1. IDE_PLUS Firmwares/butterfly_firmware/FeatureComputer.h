@@ -6,8 +6,7 @@
 #include "DiagnosticFingerPrint.h"
 #include "RawDataState.h"
 
-extern float modbusFeaturesDestinations[8]; 
-extern float featuresDestinations[12]; 
+extern float modbusFeaturesDestinations[8];
 /* =============================================================================
  *  Motor Scaling Global Variable
  *  
@@ -773,9 +772,9 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
             if(m_id == 30 ){ modbusFeaturesDestinations[2] = integratedRMS1*resolution; }
             if(m_id == 31 ){ modbusFeaturesDestinations[3] = integratedRMS1*resolution; }
             if(m_id == 32 ){ modbusFeaturesDestinations[4] = integratedRMS1*resolution; }
-            if(m_id == 30 ){ featuresDestinations[1] = integratedRMS1*resolution; } //velRMS512X 
-            if(m_id == 31 ){ featuresDestinations[2] = integratedRMS1*resolution; } //velRMS512Y
-            if(m_id == 32 ){ featuresDestinations[3] = integratedRMS1*resolution; } //velRMS512Z
+            if(m_id == 30 ){ featureDestinations::buff[featureDestinations::basicfeatures::velRMS512X] = integratedRMS1*resolution; } //velRMS512X 
+            if(m_id == 31 ){ featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Y] = integratedRMS1*resolution; } //velRMS512Y
+            if(m_id == 32 ){ featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Z] = integratedRMS1*resolution; } //velRMS512Z
             //Serial.print(m_destinations[2]->getName());Serial.print("\t");Serial.println(integratedRMS1*resolution);
             
             // 4. 2nd integration in frequency domain
@@ -793,9 +792,9 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
             m_destinations[3]->addValue(integratedRMS2); 
 
             logFFTOutput(&FFTOuput[fft_direction], dispRMS, (void*) &integratedRMS2, 1, true);
-            if(m_id == 30 ){ featuresDestinations[7] = integratedRMS2*resolution; } //dispRMS512X
-            if(m_id == 31 ){ featuresDestinations[8] = integratedRMS2*resolution; } //dispRMS512Y
-            if(m_id == 32 ){ featuresDestinations[9] = integratedRMS2*resolution; } //dispRMS512Z
+            if(m_id == 30 ){ featureDestinations::buff[featureDestinations::basicfeatures::dispRMS512X] = integratedRMS2*resolution; } //dispRMS512X
+            if(m_id == 31 ){ featureDestinations::buff[featureDestinations::basicfeatures::dispRMS512Y] = integratedRMS2*resolution; } //dispRMS512Y
+            if(m_id == 32 ){ featureDestinations::buff[featureDestinations::basicfeatures::dispRMS512Z] = integratedRMS2*resolution; } //dispRMS512Z
             if (featureDebugMode) {
                 debugPrint(millis(), false);
                 debugPrint(F(" -> "), false);

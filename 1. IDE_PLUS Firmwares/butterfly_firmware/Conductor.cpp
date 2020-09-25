@@ -17,7 +17,6 @@ const char* fingerprints_Z;
 
 // Modbus Streaming Features buffer
 float modbusFeaturesDestinations[8];
-float featuresDestinations[12]; 
 
 int m_temperatureOffset;
 int m_audioOffset;
@@ -1284,18 +1283,18 @@ JsonObject& Conductor::createFeatureGroupjson(){
     JsonObject& fres = root.createNestedObject("FRES");
     JsonObject& spectralFeatures = outputJSONbuffer.parseObject(fingerprintData);
     // JsonVariant variant = root;
-    fres["A93"] = featuresDestinations[0];
-    fres["VAX"] = featuresDestinations[1];
-    fres["VAY"] = featuresDestinations[2];
-    fres["VAZ"] = featuresDestinations[3];
-    fres["A9X"] = featuresDestinations[4];
-    fres["A9Y"] = featuresDestinations[5];
-    fres["A9Z"] = featuresDestinations[6];
-    fres["DAX"] = featuresDestinations[7];
-    fres["DAY"] = featuresDestinations[8];
-    fres["DAZ"] = featuresDestinations[9];
-    fres["TMP"] = featuresDestinations[10];
-    fres["S12"] = featuresDestinations[11];
+    fres["A93"] = featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Total];
+    fres["VAX"] = featureDestinations::buff[featureDestinations::basicfeatures::velRMS512X];
+    fres["VAY"] = featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Y];
+    fres["VAZ"] = featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Z];
+    fres["A9X"] = featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512X];
+    fres["A9Y"] = featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Y];
+    fres["A9Z"] = featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Z];
+    fres["DAX"] = featureDestinations::buff[featureDestinations::basicfeatures::dispRMS512X];
+    fres["DAY"] = featureDestinations::buff[featureDestinations::basicfeatures::dispRMS512Y];
+    fres["DAZ"] = featureDestinations::buff[featureDestinations::basicfeatures::dispRMS512Z];
+    fres["TMP"] = featureDestinations::buff[featureDestinations::basicfeatures::temperature];
+    fres["S12"] = featureDestinations::buff[featureDestinations::basicfeatures::audio];
     mergeJson(fres,spectralFeatures);
     fres["NULL"] = 0;
     return root;

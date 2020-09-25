@@ -1,7 +1,6 @@
 #include "FeatureComputer.h"
 
 extern float modbusFeaturesDestinations[8];
-extern float featuresDestinations[12];
 /* =============================================================================
     Audio Scaling Global Variable
 ===============================================================================*/
@@ -489,10 +488,10 @@ void SectionSumComputer::m_specializedCompute()
         m_destinations[i]->addValue(total);
         //Append the Signal Energy
         modbusFeaturesDestinations[1] = total * m_sources[i]->getResolution();
-        if(m_id == 20){featuresDestinations[4] = total * m_sources[i]->getResolution();}  // accelRMS512X
-        if(m_id == 21){featuresDestinations[5] = total * m_sources[i]->getResolution();}  // accelRMS512Y
-        if(m_id == 22){featuresDestinations[6] = total * m_sources[i]->getResolution();}  // accelRMS512Z
-        if(m_id == 23){featuresDestinations[0] = total * m_sources[i]->getResolution();}  // accelRMS512Total
+        if(m_id == 20){featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512X] = total * m_sources[i]->getResolution();}  // accelRMS512X
+        if(m_id == 21){featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Y] = total * m_sources[i]->getResolution();}  // accelRMS512Y
+        if(m_id == 22){featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Z] = total * m_sources[i]->getResolution();}  // accelRMS512Z
+        if(m_id == 23){featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Total] = total * m_sources[i]->getResolution();}  // accelRMS512Total
         if (featureDebugMode) {
             debugPrint(millis(), false);
             debugPrint(" -> ", false);
@@ -649,7 +648,7 @@ void AudioDBComputer::m_specializedCompute()
     m_destinations[0]->addValue(result );
     //Append Audio result
     modbusFeaturesDestinations[6] = result* m_sources[0]->getResolution();
-    featuresDestinations[11] = result* m_sources[0]->getResolution(); // audio
+    featureDestinations::buff[featureDestinations::basicfeatures::audio] = result* m_sources[0]->getResolution(); // audio
     if (featureDebugMode) {
         debugPrint(millis(), false);
         debugPrint(" -> ", false);
