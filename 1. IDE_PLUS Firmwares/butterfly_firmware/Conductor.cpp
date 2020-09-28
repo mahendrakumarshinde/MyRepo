@@ -7,6 +7,7 @@
 #include <MemoryFree.h>
 #include "stm32l4_iap.h"
 #include "IUBMD350.h"
+#include "AdvanceFeatureComputer.h"
 
 
 extern IUOTA iuOta;
@@ -1153,6 +1154,42 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     }
     
     return true;
+}
+
+
+void Conductor::checkPhaseConfig(){
+
+    JsonObject &Phaseconfig = conductor.configureJsonFromFlash("/iuconfig/phase.conf",1);
+    //debugPrint("Phase config read from flash ");
+    totalIDs = Phaseconfig["CONFIG"]["PHASE"]["IDS"].size();
+
+    for(size_t i = 0; i < totalIDs; i++){
+        m_ids[i] = Phaseconfig["CONFIG"]["PHASE"]["IDS"][i];
+        strcpy(&m_ax1[i],(char*)Phaseconfig["CONFIG"]["PHASE"]["AX1"][i].asString());
+        strcpy(&m_ax2[i],(char*)Phaseconfig["CONFIG"]["PHASE"]["AX2"][i].asString());
+        m_trh[i] = Phaseconfig["CONFIG"]["PHASE"]["TRH"][i];
+    }
+    if (setupDebugMode) {
+    for(size_t i = 0; i < totalIDs; i++){
+        debugPrint("IDS : ", false);debugPrint(m_ids[i]);
+        debugPrint("AX1 : ", false);debugPrint(m_ax1[i]);
+        debugPrint("AX2 : ", false);debugPrint(m_ax2[i]);
+        debugPrint("TRH : ", false);debugPrint(m_trh[i]);
+    }
+  }
+}
+
+void Conductor::computeAdvanceFeature(){
+  
+
+    for(size_t i=0; i < totalIDs; i++){
+         phase_output[i] = phaseAngleComputer.computePhaseDiff(m_ax1[i],m_ax2[i]);
+        debugPrint("Phase difference : ",false);
+        debugPrint(m_ids[i],false);
+        debugPrint(" : ",false);
+        debugPrint(phase_output[i]);
+    }
+
 }
 
 /*

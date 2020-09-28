@@ -291,7 +291,8 @@ class Conductor
         void setDefaultMQTT();
         void setDefaultHTTP();
         void updateWiFiHash();
-        
+        void checkPhaseConfig();
+        void computeAdvanceFeature();
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
@@ -381,6 +382,13 @@ class Conductor
         char m_keyType[15];
         char m_certHash[34];
         char m_keyHash[34];
+        static const uint8_t max_IDs = 10;
+        size_t totalIDs;
+        const char* m_ids[max_IDs];
+        char m_ax1[10];
+        char  m_ax2[10];
+        uint8_t m_trh[max_IDs];
+        float phase_output[max_IDs];
 };
 
 

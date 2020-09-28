@@ -5,7 +5,7 @@
 #include "FeatureUtilities.h"
 #include "DiagnosticFingerPrint.h"
 #include "RawDataState.h"
-
+#include "AdvanceFeatureComputer.h"
 extern float modbusFeaturesDestinations[8]; 
 /* =============================================================================
  *  Motor Scaling Global Variable
@@ -482,6 +482,9 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         float m_minAgitationRMS;
         bool m_calibrationScaling1;  // Scaling factor for 1st derivative RMS
         bool m_calibrationScaling2;  // Scaling factor for 2nd derivative RMS
+        PhaseAngleComputer phaseAngleComputer;
+        //uint16_t freq_index = phaseAngleComputer.getFFTIndex(200,3330/4096);
+        
         virtual void m_specializedCompute()
     {
         // File logging
@@ -507,6 +510,8 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         for (uint8_t i = 0; i < m_destinationCount; ++i) {
             m_destinations[i]->setSamplingRate(samplingRate);
         }
+        //todo freq_index = freq_index*2;  because of real & imag data on different index. (real&imag data on single index in jupyter)
+        uint16_t freq_index = phaseAngleComputer.getFFTIndex(199,0.81);
 
         m_destinations[0]->setResolution(resolution);
         m_destinations[1]->setResolution(1);
@@ -553,7 +558,7 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
                                       amplitudes);
 
         logFFTOutput(&FFTOuput[fft_direction], accFFT, (void*) amplitudes, amplitudeCount, false);
-
+        phaseAngleComputer.getComplexData(m_allocatedFFTSpace[freq_index],m_allocatedFFTSpace[freq_index + 1],m_id);
         // -----------------------Start -------------------------------------------
         //Raw Data
        /* Serial.print("RAW DATA :");Serial.print("[");

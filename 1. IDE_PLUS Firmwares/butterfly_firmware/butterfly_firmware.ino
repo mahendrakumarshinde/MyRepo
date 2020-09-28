@@ -629,7 +629,7 @@ void setup()
         delay(5000);
         //configure mqttServer
         conductor.configureMQTTServer("MQTT.conf");
-
+        conductor.checkPhaseConfig();
         //http configuration
         conductor.configureBoardFromFlash("httpConfig.conf",1);
         // get the previous offset values 
@@ -800,6 +800,7 @@ void loop()
                         if(nowTime - conductor.lastUpdated >= conductor.modbusConnectionTimeout){
                             conductor.lastUpdated = nowTime;
                             conductor.updateModbusStatus();
+                            conductor.computeAdvanceFeature();
                         }
 
                     }else

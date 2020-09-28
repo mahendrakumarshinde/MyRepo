@@ -28,6 +28,7 @@
 #include "FeatureComputer.h"
 #include "FeatureGroup.h"
 #include "CharBufferSendingQueue.h"
+#include "AdvanceFeatureComputer.h"
 
 /***** Sensors *****/
 #include "IUBattery.h"
@@ -88,6 +89,10 @@ extern char iuEthernetBuffer[2048];
 extern Usr2Eth iuEthernet;
 
 extern IUmodbus iuModbusSlave;
+
+extern AdvanceFeatureComputer iuAdvanceFeature;
+
+extern PhaseAngleComputer phaseAngleComputer;
 /* =============================================================================
     OTA
 ============================================================================= */
