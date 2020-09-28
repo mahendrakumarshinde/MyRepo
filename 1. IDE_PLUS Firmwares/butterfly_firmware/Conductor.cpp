@@ -5461,6 +5461,10 @@ void Conductor::setSensorStatus(SensorStatusCode errorCode)
             FFTConfiguration::currentSensor = FFTConfiguration::kionixSensor;
             strcpy(status, "Configuration not found, Using Kionix defaults");
             break;
+        case SensorStatusCode::LSM_DEFAULT:
+            FFTConfiguration::currentSensor = FFTConfiguration::lsmSensor;
+            strcpy(status, "Configuration not found, Using LSM defaults");
+            break;
     }
 }
 
