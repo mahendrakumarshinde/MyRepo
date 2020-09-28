@@ -109,7 +109,8 @@ const char CERT_DOWNLOAD_DEFAULT_MESSAGEID[100] = "0123456789_cert_default_messa
     const uint8_t FINGERPRINT_TOPIC_LENGTH = 31;
     const uint8_t FINGERPRINT_ACK_TOPIC_LENGTH = 27;  // not in use
     const uint8_t COMMAND_RESPONSE_TOPIC_LENGTH = 27;
-    const uint8_t IU_DIG_RULE_ENGINE_TOPIC_LENGTH = 27;    
+    const uint8_t IU_DIG_RULE_ENGINE_TOPIC_LENGTH = 27;  
+    const uint8_t IU_FRES_TOPIC_LENGTH = 27;  
 //   const uint8_t RAW_DATA_TOPIC_LENGTH = 12;
     const char CERT_STATUS_TOPIC[CERT_TOPIC_LENGTH] = "ide_plus/cert/status";
     const char OTA_TOPIC[OTA_TOPIC_LENGTH] = "ide_plus/ota/status";
@@ -123,6 +124,7 @@ const char CERT_DOWNLOAD_DEFAULT_MESSAGEID[100] = "0123456789_cert_default_messa
 // const char FINGERPRINT_ACK[FINGERPRINT_ACK_TOPIC_LENGTH] = "ide_plus/command_response/";                 // not in use
     const char COMMAND_RESPONSE_TOPIC[COMMAND_RESPONSE_TOPIC_LENGTH] = "ide_plus/command_response/";      //// publish ack here
     const char IU_DIG_RULE_ENGINE_TOPIC[IU_DIG_RULE_ENGINE_TOPIC_LENGTH] = "iu_device_data/RDIG";      //// publish IU Rule Engine Data
+    const char IU_FRES[IU_FRES_TOPIC_LENGTH] = "iu_device_data/FRES";      //// publish IU Rule Engine Data
     
 
 #endif  // TEST_TOPICS

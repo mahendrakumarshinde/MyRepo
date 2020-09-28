@@ -528,6 +528,9 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         case MSPCommand::PUBLISH_IU_DIAGNOSTIC:
             mqttHelper.publish(IU_DIG_RULE_ENGINE_TOPIC,buffer);
             break;
+        case MSPCommand::PUBLISH_IU_FRES:
+            mqttHelper.publish(IU_FRES,buffer);
+            break;
         /***** Cloud command reception and transmission *****/
         case MSPCommand::HOST_CONFIRM_RECEPTION:
             // TODO Implement

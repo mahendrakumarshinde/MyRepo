@@ -21,3 +21,7 @@ namespace FeatureStates {
 
 
 }
+
+namespace featureDestinations {
+    float buff[basicfeatures::COUNT];
+}

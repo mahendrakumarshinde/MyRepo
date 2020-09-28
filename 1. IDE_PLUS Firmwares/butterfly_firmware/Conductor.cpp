@@ -1323,18 +1323,26 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 
 JsonObject& Conductor::createFeatureGroupjson(){
    
-    DynamicJsonBuffer outputJSONbuffer;
+    // DynamicJsonBuffer outputJSONbuffer;
+    StaticJsonBuffer<2500> outputJSONbuffer;
     JsonObject& root = outputJSONbuffer.createObject();
     JsonObject& fres = root.createNestedObject("FRES");
     JsonObject& spectralFeatures = outputJSONbuffer.parseObject(fingerprintData);
     // JsonVariant variant = root;
-    fres["A93"] = modbusFeaturesDestinations[1];
-    fres["VAX"] = modbusFeaturesDestinations[2];
-    fres["VAY"] = modbusFeaturesDestinations[3];
-    fres["VAZ"] = modbusFeaturesDestinations[4];
-    fres["TMA"] = modbusFeaturesDestinations[5];
-    fres["S12"] = modbusFeaturesDestinations[6];
+    fres["A93"] = featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Total];
+    fres["VAX"] = featureDestinations::buff[featureDestinations::basicfeatures::velRMS512X];
+    fres["VAY"] = featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Y];
+    fres["VAZ"] = featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Z];
+    fres["A9X"] = featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512X];
+    fres["A9Y"] = featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Y];
+    fres["A9Z"] = featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Z];
+    fres["DAX"] = featureDestinations::buff[featureDestinations::basicfeatures::dispRMS512X];
+    fres["DAY"] = featureDestinations::buff[featureDestinations::basicfeatures::dispRMS512Y];
+    fres["DAZ"] = featureDestinations::buff[featureDestinations::basicfeatures::dispRMS512Z];
+    fres["TMP"] = featureDestinations::buff[featureDestinations::basicfeatures::temperature];
+    fres["S12"] = featureDestinations::buff[featureDestinations::basicfeatures::audio];
     mergeJson(fres,spectralFeatures);
+    fres["NULL"] = 0;
     return root;
 }
 
@@ -1778,7 +1786,23 @@ void Conductor::configureMainOptions(JsonVariant &config)
     if(value.success()){
         m_mainFeatureGroup->setDataSendPeriod(value.as<uint16_t>());
         // NOTE: Older firmware device will not set this parameter even if configJson contains it.
-}
+    }
+    value = config["DDSP"];
+    if(value.success()){
+        diagStreamingPeriod = (uint32_t) (value.as<int>()) * 1000;
+    }
+    value = config["FDSP"];
+    if(value.success()){
+        fresPublishPeriod = (uint32_t) (value.as<int>()) * 1000;
+    }
+    value = config["DIG"];
+    if(value.success()){
+        digStream = (bool) (value.as<bool>());
+    }
+    value = config["FRES"];
+    if(value.success()){
+        fresStream = (bool) (value.as<bool>());
+    }
 }
 
 /**
@@ -2147,7 +2171,7 @@ void Conductor::processLegacyCommand(char *buff)
                        &fcheck[5]);
                 Feature *feat;
                 opStateComputer.deleteAllSources();
-                for (uint8_t i = 0; i < 6; i++) {
+                for (uint8_t i = 0; i < 12; i++) {
                     feat = m_mainFeatureGroup->getFeature(i);
                     if (feat) {
                         opStateComputer.addSource(feat, 1, fcheck[i] > 0);
@@ -4396,27 +4420,39 @@ void Conductor::computeTriggers(){
 }
 
 void Conductor::streamDiagnostics(){
-   if((m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE) && getDatetime() > 1590000000.00){
+   if((m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE) && validTimeStamp()){
         const char* dId;
         bool publishDiag = false;
         bool publishAlert = false;
-        int diagStreamingPeriod = 1*1000; // in milli seconds
+        bool publishFres = false;
         DynamicJsonBuffer reportableJsonBUffer;
         JsonObject& reportableJson = reportableJsonBUffer.createObject();
-        int publishSelect = DiagPublish::ALERT_POLICY;
+        int publishSelect = publish::ALERT_POLICY;
         uint32_t nowT = millis();
         if (nowT - lastPublishedTimeout >= diagStreamingPeriod)
         {
-            lastPublishedTimeout = nowT;
-            publishSelect = DiagPublish::DIAG_STREAM;
+            conductor.digLastExecuted = nowT;
+            publishSelect = publish::STREAM;
+            publishDiag = true;
             if (diagAlertResults[0] != NULL && reportableDIGLength > 0)
             {
-                publishSelect = DiagPublish::ALERT_POLICY;
+                publishSelect = publish::ALERT_POLICY;
+            }
+        }
+
+        if(nowT - conductor.fresLastPublish >= fresPublishPeriod)
+        {
+            conductor.fresLastPublish = nowT;
+            publishSelect = publish::STREAM;
+            publishFres = true;
+            if (diagAlertResults[0] != NULL && reportableDIGLength > 0)
+            {
+                publishSelect = publish::ALERT_POLICY;
             }
         }
         switch (publishSelect)
         {
-        case DiagPublish::ALERT_POLICY: //Alert Policies
+        case publish::ALERT_POLICY: //Alert Policies
             if (diagAlertResults[0] != NULL && reportableDIGLength > 0)
             {
                 for (size_t i = 0; i < reportableDIGLength; i++)
@@ -4432,59 +4468,77 @@ void Conductor::streamDiagnostics(){
                         diagnostic["ALRREP"] = alert_repeat_state[i];
                     }
                 }
-                publishDiag = true;
+                publishAlert = true;
             }
-            if((diagAlertResults[0] != NULL && publishDiag == true)){
+            if((diagAlertResults[0] != NULL && publishAlert == true)){
                 //reportableJson.printTo(Serial); debugPrint("");
                 reportableJson.printTo(m_diagnosticResult,DIG_PUBLISHED_BUFFER_SIZE);
                 snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"DIGRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
                 // Published to MQTT 
                 iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,m_diagnosticPublishedBuffer);
-                if(loopDebugMode){
-                    debugPrint("O/P Buffer : ",false);
-                    debugPrint(m_diagnosticPublishedBuffer);
-                    debugPrint("BUFF LEN :",false);
-                    debugPrint(strlen(m_diagnosticPublishedBuffer));
-                }
+                // if(loopDebugMode){
+                //     debugPrint("O/P Buffer : ",false);
+                //     debugPrint(m_diagnosticPublishedBuffer);
+                //     debugPrint("BUFF LEN :",false);
+                //     debugPrint(strlen(m_diagnosticPublishedBuffer));
+                // }
             }
             break;
-        case DiagPublish::DIAG_STREAM: //Streaming Diagnostics
-            if (iuTrigger.DIG_COUNT > 0)
-            {
-                for (int index = 0; index < iuTrigger.DIG_COUNT; index++)
+        case publish::STREAM: //Streaming Diagnostics
+            if(publishDiag && digStream){
+                if (iuTrigger.DIG_COUNT > 0)
                 {
-                    dId = (char *)iuTrigger.DIG_LIST[index].c_str(); //.c_str();
-                    if (dId != NULL)
+                    for (int index = 0; index < iuTrigger.DIG_COUNT; index++)
                     {
-                        // construct the RDIG JSON
-                        JsonObject &diagnostic = reportableJson.createNestedObject(dId);
-                        JsonArray &ftr = diagnostic.createNestedArray("FTR");
-                        // Add Firing Triggers list
-                        addFTR(ftr, index);
-                        if (iuTrigger.DIG_STATE[index])
+                        dId = (char *)iuTrigger.DIG_LIST[index].c_str(); //.c_str();
+                        if (dId != NULL)
                         {
-                            diagnostic["DSTATE"] = true;
-                        }
-                        else if (!iuTrigger.DIG_STATE[index])
-                        {
-                            diagnostic["DSTATE"] = false;
+                            // construct the RDIG JSON
+                            JsonObject &diagnostic = reportableJson.createNestedObject(dId);
+                            JsonArray &ftr = diagnostic.createNestedArray("FTR");
+                            // Add Firing Triggers list
+                            addFTR(ftr, index);
+                            if (iuTrigger.DIG_STATE[index])
+                            {
+                                diagnostic["DSTATE"] = true;
+                            }
+                            else if (!iuTrigger.DIG_STATE[index])
+                            {
+                                diagnostic["DSTATE"] = false;
+                            }
+                        }else{
+                            publishDiag = false;
                         }
                     }
+                    publishDiag = true;
                 }
-                publishAlert = true;
+                if((iuTrigger.DIG_LIST[0] != NULL && publishDiag == true) ){
+                    //reportableJson.printTo(Serial); debugPrint("");
+                    reportableJson.printTo(m_diagnosticResult,DIG_PUBLISHED_BUFFER_SIZE);
+                    snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"DIGRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
+                    // Published to MQTT 
+                    iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_IU_DIAGNOSTIC,m_diagnosticPublishedBuffer);
+                    // if(loopDebugMode){
+                    //     debugPrint("O/P Buffer : ",false);
+                    //     debugPrint(m_diagnosticPublishedBuffer);
+                    //     debugPrint("BUFF LEN :",false);
+                    //     debugPrint(strlen(m_diagnosticPublishedBuffer));
+                    // }
+                }
             }
-            if((iuTrigger.DIG_LIST[0] != NULL && publishAlert == true) ){
+            if(publishFres && fresStream){
+                JsonObject& fres = createFeatureGroupjson()["FRES"];
                 //reportableJson.printTo(Serial); debugPrint("");
-                reportableJson.printTo(m_diagnosticResult,DIG_PUBLISHED_BUFFER_SIZE);
-                snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"DIGRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
+                fres.printTo(m_diagnosticResult,DIG_PUBLISHED_BUFFER_SIZE);
+                snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"FRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
                 // Published to MQTT 
-                iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_IU_DIAGNOSTIC,m_diagnosticPublishedBuffer);
-                if(loopDebugMode){
-                    debugPrint("O/P Buffer : ",false);
-                    debugPrint(m_diagnosticPublishedBuffer);
-                    debugPrint("BUFF LEN :",false);
-                    debugPrint(strlen(m_diagnosticPublishedBuffer));
-                }
+                iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_IU_FRES,m_diagnosticPublishedBuffer);
+                // if(loopDebugMode){
+                //     debugPrint("O/P Buffer : ",false);
+                //     debugPrint(m_diagnosticPublishedBuffer);
+                //     debugPrint("BUFF LEN :",false);
+                //     debugPrint(strlen(m_diagnosticPublishedBuffer));
+                // }
             }
             break;
         default:
@@ -4900,15 +4954,18 @@ void Conductor::sendDiagnosticFingerPrints() {
                     }
                         
                         
-                }else if(m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE)//iuWiFi.isAvailable() && iuWiFi.isWorking())   
+                }else if(m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE || m_streamingMode == StreamingMode::BLE)//iuWiFi.isAvailable() && iuWiFi.isWorking())   
                 {   /* FingerPrintResult send over Wifi only */
                     //debugPrint("Wifi connected, ....",true);
-                    if(RawDataState::rawDataTransmissionInProgress == false)
-                    { 
+                    if(RawDataState::rawDataTransmissionInProgress == false && iuWiFi.isConnected())
+                    {    
                         iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );    
                     }
+                    if(StreamingMode::BLE && isBLEConnected()){    
+                    iuBluetooth.write("Fingerprints Data : ");
+                    iuBluetooth.write(FingerPrintResult);
+                    }
                 }
-                
             }
             else { // not published as time_diff < 500 ms
                 // if(loopDebugMode) {
@@ -5629,7 +5686,7 @@ void Conductor::sendSegmentedMessageResponse(int messageID) {
 
 void Conductor::setThresholdsFromFile() 
 {
-    const size_t bufferSize = 6*JSON_ARRAY_SIZE(3) + 6*JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3) + JSON_OBJECT_SIZE(6) + 272;
+    const size_t bufferSize = 6*JSON_ARRAY_SIZE(3) + 6*JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3) + JSON_OBJECT_SIZE(6) + 972;
     StaticJsonBuffer<bufferSize> jsonBuffer;
     JsonVariant config = JsonVariant(
             iuFlash.loadConfigJson(IUFlash::CFG_FEATURE, jsonBuffer));
@@ -6412,7 +6469,7 @@ void Conductor::getOtaStatus()
  */
 void Conductor::sendOtaStatus()
 {
-    if((iuWiFi.isConnected()) && (otaSendMsg == true) && conductor.getDatetime() > 1590000000.00 && iuWiFi.getConnectionStatus()) 
+    if((iuWiFi.isConnected()) && (otaSendMsg == true) && validTimeStamp() && iuWiFi.getConnectionStatus()) 
     {
         iuOta.readOtaFlag();
         uint8_t otaStatus = iuOta.getOtaFlagValue(OTA_STATUS_FLAG_LOC);
@@ -6520,7 +6577,7 @@ void Conductor::sendOtaStatusMsg(MSPCommand::command type, char *msg, const char
         iuOta.otaSendResponse(type, otaResponse);  // Checksum failed
     }
     else {
-        if(iuWiFi.isConnected() && conductor.getDatetime() > 1590000000.00 && iuWiFi.getConnectionStatus()) {
+        if(iuWiFi.isConnected() && validTimeStamp() && iuWiFi.getConnectionStatus()) {
             if (loopDebugMode) { debugPrint(F("WiFi Conntected, Sending OTA | Cert Status Message")); }   
             snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
             m_otaMsgId,m_macAddress.toString().c_str(), OTA_DEVICE_TYPE,msg, errMsg ,otaInitTimeStamp);
@@ -7009,7 +7066,7 @@ void Conductor::computeDiagnoticState(JsonVariant &digList)
     bool exposeDebugPrints = true;  // Enable this flag to get debugPrints
     int index = 0;
     int resultIndex = 0;
-    if(getDatetime() > 1590000000)  // Waiting for TimeSync to Avoid False Trigger
+    if(validTimeStamp())  // Waiting for TimeSync to Avoid False Trigger
     {
         // uint32_t now = millis();
         for (auto iterate : root)
@@ -7150,7 +7207,7 @@ void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag
 {
     int resultIndex = 0;
     bool exposeDebugPrints = false;  // Enable this flag to get debugPrints    int resultIndex = 0;
-    if(getDatetime() > 1590000000)  // Waiting for TimeSync to Avoid False Trigger
+    if(validTimeStamp())  // Waiting for TimeSync to Avoid False Trigger
     {
         for (int index = 0; index< totalConfiguredDiag;index++)
         {
@@ -7352,4 +7409,12 @@ void Conductor::mergeJson(JsonObject& dest, const JsonObject& src) {
    for (auto kvp : src) {
      dest[kvp.key] = kvp.value;
    }
+}
+
+bool Conductor::validTimeStamp(){
+    if(getDatetime() > 1600000000.00){
+        return true;
+    }else{
+       return false;
+    }
 }

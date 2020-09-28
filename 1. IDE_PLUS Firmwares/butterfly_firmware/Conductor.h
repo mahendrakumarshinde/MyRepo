@@ -112,9 +112,9 @@ class Conductor
                                         };
 
 
-        enum DiagPublish : uint8_t {
-                ALERT_POLICY         = 0,
-                DIAG_STREAM          = 1,       // Send over Serial
+        enum publish : uint8_t {
+                ALERT_POLICY        = 0,
+                STREAM              = 1      // Send over Serial
                 };
         static const uint32_t defaultAutoSleepDelay = 60000;
         static const uint32_t defaultSleepDuration = 10000;
@@ -148,6 +148,7 @@ class Conductor
         uint32_t lastUpdated = 0;
         uint32_t digLastExecuted = 0;
         uint32_t lastPublishedTimeout = 0;
+        uint32_t fresLastPublish = 0;
         uint16_t reportableDIGLength = 0;
         //timer ISR period
         uint16_t timerISRPeriod = 300; // default 3.3KHz
@@ -323,6 +324,7 @@ class Conductor
         char* GetStoredMD5(IUFlash::storedConfig configType, JsonObject &inputConfig);
         JsonObject& createFeatureGroupjson();
         void mergeJson(JsonObject& dest, const JsonObject& src);
+        bool validTimeStamp();
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
@@ -428,6 +430,10 @@ class Conductor
         uint8_t reportableDIGID[maxDiagnosticStates];
         uint8_t reportableIndexCounter;
         char* diagAlertResults[maxDiagnosticStates];
+        uint32_t diagStreamingPeriod = 5000; // in milli seconds
+        uint32_t fresPublishPeriod = 5000;
+        bool digStream = true;
+        bool fresStream = true;
         
 };
 
