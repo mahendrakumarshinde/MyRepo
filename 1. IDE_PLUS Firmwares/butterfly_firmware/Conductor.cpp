@@ -4665,7 +4665,7 @@ bool Conductor::setFFTParams() {
             }else{
                 FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_KNX_G_RANGE;
             }
-            iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
+            iuAccelerometerKX134.setGrange(FFTConfiguration::currentKNXgRange);
         }else if((FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor) && (!iuAccelerometer.lsmPresence) && (iuAccelerometerKX134.kionixPresence)){
             debugPrint(F("LSM absent & KIONIX set"));
             iuAccelerometerKX134.setSamplingRate(iuAccelerometerKX134.defaultSamplingRate);
