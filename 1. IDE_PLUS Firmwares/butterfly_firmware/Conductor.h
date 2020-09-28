@@ -144,6 +144,7 @@ class Conductor
         bool certDownloadInProgress = false;
         bool certDownloadMode = false;
         bool sendCertInitAck = false;
+        bool requestConfig = false;
         /***** Core *****/
         Conductor() {};
         Conductor(MacAddress macAddress) : m_macAddress(macAddress) { }
@@ -163,7 +164,7 @@ class Conductor
         bool configureFromFlash(IUFlash::storedConfig configType);
         void sendConfigChecksum(IUFlash::storedConfig configType);
         void periodicSendConfigChecksum();
-        void setThresholdsFromFile();
+        bool setThresholdsFromFile();
         /***** Serial Reading & command processing*****/
         bool processConfiguration(char *json, bool saveToFlash);
         void configureMainOptions(JsonVariant &config);
@@ -291,6 +292,7 @@ class Conductor
         void setDefaultMQTT();
         void setDefaultHTTP();
         void updateWiFiHash();
+        void sendConfigRequest(bool status);
         
     protected:
         MacAddress m_macAddress;

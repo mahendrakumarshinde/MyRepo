@@ -5271,12 +5271,13 @@ void Conductor::sendSegmentedMessageResponse(int messageID) {
     }
 }
 
-void Conductor::setThresholdsFromFile() 
+bool Conductor::setThresholdsFromFile() 
 {
     const size_t bufferSize = 6*JSON_ARRAY_SIZE(3) + 6*JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3) + JSON_OBJECT_SIZE(6) + 272;
     StaticJsonBuffer<bufferSize> jsonBuffer;
     JsonVariant config = JsonVariant(
             iuFlash.loadConfigJson(IUFlash::CFG_FEATURE, jsonBuffer));
+    bool configStatus = true;
     // config.prettyPrintTo(Serial);
     if (config.success()) {
         const char* threshold = "TRH";
@@ -5315,11 +5316,14 @@ void Conductor::setThresholdsFromFile()
 
         }
         processLegacyCommand("6000000:1.1.1.1.1.1");            //ensure these features are activated
-        computeFeatures();                                      //compute current state with these thresholds
+        computeFeatures();
+        configStatus = true;                                      //compute current state with these thresholds
     }
     else {
+        configStatus = false;
         debugPrint("Threshold file read was not successful.");
     }
+    return configStatus;
 }
 //set the sensor Configuration
 
@@ -6640,4 +6644,19 @@ void Conductor::updateWiFiHash()
     char wifiHash[34];  
     iuOta.otaGetMD5(IUFSFlash::CONFIG_SUBDIR,"wifi0.conf",wifiHash);
     iuWiFi.sendMSPCommand(MSPCommand::SEND_WIFI_HASH,wifiHash);
+}
+
+void Conductor::sendConfigRequest(bool status)
+{
+    char response[256];
+    double TimeStamp = conductor.getDatetime();
+    char errorCode[12];
+    if(status){
+        strcpy(errorCode,"CFG-ERR-001");
+    }else{
+        strcpy(errorCode,"CFG-ERR-000");
+    }            
+    snprintf(response, 256, "{\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"errorCode\":\"%s\",\"timestamp\":%.2f}",
+    m_macAddress.toString().c_str(), "v2.0", errorCode,TimeStamp);
+    iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,response);
 }
