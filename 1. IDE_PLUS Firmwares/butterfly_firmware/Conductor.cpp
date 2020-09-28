@@ -4429,9 +4429,9 @@ void Conductor::streamDiagnostics(){
         JsonObject& reportableJson = reportableJsonBUffer.createObject();
         int publishSelect = publish::ALERT_POLICY;
         uint32_t nowT = millis();
-        if (nowT - lastPublishedTimeout >= diagStreamingPeriod)
+        if (nowT - digLastPublish >= diagStreamingPeriod)
         {
-            conductor.digLastExecuted = nowT;
+            digLastPublish = nowT;
             publishSelect = publish::STREAM;
             publishDiag = true;
             if (diagAlertResults[0] != NULL && reportableDIGLength > 0)
@@ -4440,9 +4440,9 @@ void Conductor::streamDiagnostics(){
             }
         }
 
-        if(nowT - conductor.fresLastPublish >= fresPublishPeriod)
+        if(nowT - fresLastPublish >= fresPublishPeriod)
         {
-            conductor.fresLastPublish = nowT;
+            fresLastPublish = nowT;
             publishSelect = publish::STREAM;
             publishFres = true;
             if (diagAlertResults[0] != NULL && reportableDIGLength > 0)

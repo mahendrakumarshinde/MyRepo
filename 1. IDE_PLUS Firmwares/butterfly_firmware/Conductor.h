@@ -146,8 +146,7 @@ class Conductor
         char m_diagnosticPublishedBuffer[DIG_PUBLISHED_BUFFER_SIZE+70]; // 70 bytes for MACID, TIMESTMP, DIGRES
         char m_diagnosticResult[DIG_PUBLISHED_BUFFER_SIZE];
         uint32_t lastUpdated = 0;
-        uint32_t digLastExecuted = 0;
-        uint32_t lastPublishedTimeout = 0;
+        uint32_t digLastPublish = 0;
         uint32_t fresLastPublish = 0;
         uint16_t reportableDIGLength = 0;
         //timer ISR period
