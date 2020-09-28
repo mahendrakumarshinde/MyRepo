@@ -591,9 +591,9 @@ float RFFTFeatures::computeRPM(q15_t *amplitudes,int m_lowRPMFrequency,int m_hig
     for (uint16_t i = lower_index; i <= upper_index ; i++)
     {
         val = 2 * (uint32_t) sq((int32_t) (amplitudes[i]) ) ;
-        val = val*factor;
+        val = val*factor*100;
         debugPrint(val,false);debugPrint(",",false);
-        if((val > 0) && (count < MAX_PEAK_COUNT) )
+        if((val > rpm_threshold) && (count < MAX_PEAK_COUNT) ) // amplitude compared with threshold =0.3
         {
             peakfreq[count] = val;
             count++;
@@ -601,13 +601,13 @@ float RFFTFeatures::computeRPM(q15_t *amplitudes,int m_lowRPMFrequency,int m_hig
     }
     debugPrint(" ] ",true);
     if(count != 0) {
-        // debugPrint(" Peak Freq Buffer : [ ",false);
-        // for (size_t i = 0; i < count; i++)
-        // {
-        //     debugPrint(peakfreq[i],false);
-        //     debugPrint(",",false);
-        // }
-        // debugPrint(" ] ",true);
+        debugPrint(" Peak Freq Buffer : [ ",false);
+        for (size_t i = 0; i < count; i++)
+        {
+            debugPrint(peakfreq[i],false);
+            debugPrint(",",false);
+        }
+        debugPrint(" ] ",true);
         debugPrint("\nCOUNT : ",false);debugPrint(count);
         getMax(peakfreq,(uint32_t)count, &maxVal, &maxIdx);
         if(loopDebugMode){
