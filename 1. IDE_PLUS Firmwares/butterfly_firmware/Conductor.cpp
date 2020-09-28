@@ -1183,11 +1183,11 @@ void Conductor::computeAdvanceFeature(){
   
 
     for(size_t i=0; i < totalIDs; i++){
-         phase_output[i] = phaseAngleComputer.computePhaseDiff(m_ax1[i],m_ax2[i]);
+        phaseAngleComputer.phase_output[i] = phaseAngleComputer.computePhaseDiff(m_ax1[i],m_ax2[i]);
         debugPrint("Phase difference : ",false);
         debugPrint(m_ids[i],false);
         debugPrint(" : ",false);
-        debugPrint(phase_output[i]);
+        debugPrint(phaseAngleComputer.phase_output[i]);
     }
 
 }

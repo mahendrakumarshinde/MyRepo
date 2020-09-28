@@ -388,7 +388,7 @@ class Conductor
         char m_ax1[10];
         char  m_ax2[10];
         uint8_t m_trh[max_IDs];
-        float phase_output[max_IDs];
+       // float phase_output[max_IDs];
 };
 
 

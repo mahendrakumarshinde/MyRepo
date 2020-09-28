@@ -28,8 +28,13 @@
 class AdvanceFeatureComputer
 {
    public :
-       
-
+       //getAdvanceFeatureName();  -return feature name
+       //getAdvanceFeatureValue(); - return value based on index
+       //getAdvanceFeatureCount();  //will return total size of buffer or return number of element filled 
+       //addAdvanceFeatureName(); - save/insert feature name
+       //addAdvanceFeatureValue(); -save/insert feature value
+       char* AdvanceFeatureName[20];
+       float AdvanceFeatureValue[20];
    protected:
 
 
@@ -60,7 +65,7 @@ class PhaseAngleComputer : public AdvanceFeatureComputer
         int freq_index ;
         float phase_difference;
         float phase;
-
+        float phase_output[10]; //replace number with variable
     protected :
     
     
