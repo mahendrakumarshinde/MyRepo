@@ -4559,10 +4559,8 @@ void Conductor::sendDiagnosticFingerPrints() {
                     if(StreamingMode::BLE && isBLEConnected()){    
                     iuBluetooth.write("Fingerprints Data : ");
                     iuBluetooth.write(FingerPrintResult);
-        }
+                    }
                 }
-                    
-                
             }
             else { // not published as time_diff < 500 ms
                 // if(loopDebugMode) {
