@@ -4908,15 +4908,18 @@ void Conductor::sendDiagnosticFingerPrints() {
                     }
                         
                         
-                }else if(m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE)//iuWiFi.isAvailable() && iuWiFi.isWorking())   
+                }else if(m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE || m_streamingMode == StreamingMode::BLE)//iuWiFi.isAvailable() && iuWiFi.isWorking())   
                 {   /* FingerPrintResult send over Wifi only */
                     //debugPrint("Wifi connected, ....",true);
-                    if(RawDataState::rawDataTransmissionInProgress == false)
-                    { 
+                    if(RawDataState::rawDataTransmissionInProgress == false && iuWiFi.isConnected())
+                    {    
                         iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );    
                     }
+                    if(StreamingMode::BLE && isBLEConnected()){    
+                    iuBluetooth.write("Fingerprints Data : ");
+                    iuBluetooth.write(FingerPrintResult);
+                    }
                 }
-                
             }
             else { // not published as time_diff < 500 ms
                 // if(loopDebugMode) {
