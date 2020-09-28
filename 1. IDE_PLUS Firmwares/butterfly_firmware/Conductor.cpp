@@ -4374,7 +4374,7 @@ void Conductor::computeTriggers(){
 }
 
 void Conductor::streamDiagnostics(){
-   if((m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE) && getDatetime() > 1590000000.00){
+   if((m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE) && validTimeStamp()){
         const char* dId;
         bool publishDiag = false;
         bool publishAlert = false;
@@ -6384,7 +6384,7 @@ void Conductor::getOtaStatus()
  */
 void Conductor::sendOtaStatus()
 {
-    if((iuWiFi.isConnected()) && (otaSendMsg == true) && conductor.getDatetime() > 1590000000.00 && iuWiFi.getConnectionStatus()) 
+    if((iuWiFi.isConnected()) && (otaSendMsg == true) && validTimeStamp() && iuWiFi.getConnectionStatus()) 
     {
         iuOta.readOtaFlag();
         uint8_t otaStatus = iuOta.getOtaFlagValue(OTA_STATUS_FLAG_LOC);
@@ -6492,7 +6492,7 @@ void Conductor::sendOtaStatusMsg(MSPCommand::command type, char *msg, const char
         iuOta.otaSendResponse(type, otaResponse);  // Checksum failed
     }
     else {
-        if(iuWiFi.isConnected() && conductor.getDatetime() > 1590000000.00 && iuWiFi.getConnectionStatus()) {
+        if(iuWiFi.isConnected() && validTimeStamp() && iuWiFi.getConnectionStatus()) {
             if (loopDebugMode) { debugPrint(F("WiFi Conntected, Sending OTA | Cert Status Message")); }   
             snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
             m_otaMsgId,m_macAddress.toString().c_str(), OTA_DEVICE_TYPE,msg, errMsg ,otaInitTimeStamp);
@@ -6981,7 +6981,7 @@ void Conductor::computeDiagnoticState(JsonVariant &digList)
     bool exposeDebugPrints = true;  // Enable this flag to get debugPrints
     int index = 0;
     int resultIndex = 0;
-    if(getDatetime() > 1590000000)  // Waiting for TimeSync to Avoid False Trigger
+    if(validTimeStamp())  // Waiting for TimeSync to Avoid False Trigger
     {
         // uint32_t now = millis();
         for (auto iterate : root)
@@ -7122,7 +7122,7 @@ void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag
 {
     int resultIndex = 0;
     bool exposeDebugPrints = false;  // Enable this flag to get debugPrints    int resultIndex = 0;
-    if(getDatetime() > 1590000000)  // Waiting for TimeSync to Avoid False Trigger
+    if(validTimeStamp())  // Waiting for TimeSync to Avoid False Trigger
     {
         for (int index = 0; index< totalConfiguredDiag;index++)
         {
@@ -7324,4 +7324,12 @@ void Conductor::mergeJson(JsonObject& dest, const JsonObject& src) {
    for (auto kvp : src) {
      dest[kvp.key] = kvp.value;
    }
+}
+
+bool Conductor::validTimeStamp(){
+    if(getDatetime() > 1600000000.00){
+        return true;
+    }else{
+       return false;
+    }
 }

@@ -742,12 +742,12 @@ void loop()
                 debugPrint(F("Sensor:"),false);debugPrint(FFTConfiguration::currentSensor);
             }
         // }
-        if (iuWiFi.isConnected() == true && conductor.flashStatusFlag == true && conductor.getDatetime() > 1590000000.00 && iuWiFi.getConnectionStatus())
+        if (iuWiFi.isConnected() == true && conductor.flashStatusFlag == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
         {
             conductor.sendFlashStatusMsg(FLASH_SUCCESS,"Flash Recovery Successfull..Send the configuration");
             conductor.flashStatusFlag = false;
         }
-        if (iuWiFi.isConnected() == true && sensorStatus == true && conductor.getDatetime() > 1590000000.00 && iuWiFi.getConnectionStatus())
+        if (iuWiFi.isConnected() == true && sensorStatus == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
         {
             conductor.sendSensorStatus();
             sensorStatus = false;

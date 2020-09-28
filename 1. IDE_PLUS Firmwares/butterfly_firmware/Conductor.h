@@ -322,6 +322,7 @@ class Conductor
         char* GetStoredMD5(IUFlash::storedConfig configType, JsonObject &inputConfig);
         JsonObject& createFeatureGroupjson();
         void mergeJson(JsonObject& dest, const JsonObject& src);
+        bool validTimeStamp();
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
