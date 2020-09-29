@@ -715,8 +715,10 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
             logFFTOutput(&FFTOuput[fft_direction], velFFT,(void*) amplitudes, amplitudeCount, false);
             // compute RPM on Acceleration Spectrum 
             float rpm = RFFTFeatures::computeRPM(amplitudes,FFTConfiguration::lowRPMFrequency,
-                            FFTConfiguration::highRPMFrequency,FFTConfiguration::defaultRPMThreshold,df);
+                            FFTConfiguration::highRPMFrequency,FFTConfiguration::defaultRPMThreshold,df,resolution,scaling1);
             
+            debugPrint("RPM ",false );
+            debugPrint(rpm);
             /***************************** Applying Diagnostic fingerprints on computated velocity fft amplitude *************************/ 
             //  Serial.print("Axis ID :");Serial.println(direction);
            /* Serial.println("Velocity FFT Amplitudes :");
