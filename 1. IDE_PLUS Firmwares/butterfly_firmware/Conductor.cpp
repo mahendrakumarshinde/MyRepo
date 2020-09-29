@@ -4674,7 +4674,8 @@ bool Conductor::setFFTParams() {
             FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
             FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
             setSensorStatus(SensorStatusCode::LSM_ABS);
-            iuAccelerometerKX134.setGrange(FFTConfiguration::DEFAULT_KNX_G_RANGE);
+            FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_KNX_G_RANGE;
+            iuAccelerometerKX134.setGrange(FFTConfiguration::currentKNXgRange);
         }else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (!iuAccelerometerKX134.kionixPresence) && (iuAccelerometer.lsmPresence)){
             debugPrint(F("KIONIX Absent & LSM set"));
             iuAccelerometer.setSamplingRate(iuAccelerometer.defaultSamplingRate);
@@ -4683,7 +4684,8 @@ bool Conductor::setFFTParams() {
             FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
             FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_LSM;
             setSensorStatus(SensorStatusCode::KNX_ABS);
-            iuAccelerometer.setGrange(FFTConfiguration::DEFAULT_LSM_G_RANGE);
+            FFTConfiguration::currentLSMgRange = FFTConfiguration::DEFAULT_LSM_G_RANGE;
+            iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
         }
         else{
             debugPrint(F("KIONIX, LSM not found"));

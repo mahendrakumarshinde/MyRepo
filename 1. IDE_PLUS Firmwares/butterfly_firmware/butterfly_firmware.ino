@@ -560,14 +560,14 @@ void setup()
                 FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
                 FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
                 FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_KNX_G_RANGE;
-                iuAccelerometerKX134.setGrange(FFTConfiguration::DEFAULT_KNX_G_RANGE);
+                iuAccelerometerKX134.setGrange(FFTConfiguration::currentKNXgRange);
             }else if(iuAccelerometer.lsmPresence){
                 conductor.setSensorStatus(conductor.SensorStatusCode::LSM_DEFAULT); // TO DO based on hardware identifier
                 FFTConfiguration::currentSamplingRate = iuAccelerometer.defaultSamplingRate;
                 FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
                 FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_LSM;
-                FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_LSM_G_RANGE;
-                iuAccelerometer.setGrange(FFTConfiguration::DEFAULT_LSM_G_RANGE);
+                FFTConfiguration::currentLSMgRange = FFTConfiguration::DEFAULT_LSM_G_RANGE;
+                iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
             }else{
                 conductor.setSensorStatus(conductor.SensorStatusCode::SEN_ABS);
             }
