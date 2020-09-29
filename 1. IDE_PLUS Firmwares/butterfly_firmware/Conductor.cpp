@@ -5735,7 +5735,7 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
     conductor.configureMQTTServer("MQTT.conf");
     // 3. Check default parameter setting changed to read from config file ?
     if(strcmp(m_mqttServerIp,"mqtt.infinite-uptime.com") == 0 && m_mqttServerPort == 8883 &&
-      (strcmp(m_mqttUserName,"") == 0) && (strcmp(m_mqttPassword,"") == 0))
+      (strcmp(m_mqttUserName,NULL) == 0) && (strcmp(m_mqttPassword,NULL) == 0))
     {
         ValidationFile->println(F("   Validation [MQTT]-Read Config File: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Read Config File: Fail !")); }
@@ -5879,7 +5879,6 @@ uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
     }
     ValidationFile->println(F("DEVICE SENSOR INTERFACE CHECK:-"));
 
-    iuI2C1.scanDevices();
     if ((FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor) && (iuAccelerometer.lsmPresence))
     {
         iuI2C.scanDevices();
@@ -5939,7 +5938,7 @@ uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
         otaRtryValidation++;
     }
 #endif
-
+    // iuI2C1.scanDevices();
     if(iuI2C1.i2c_dev[0] == iuTemp.ADDRESS || iuI2C1.i2c_dev[1] == iuTemp.ADDRESS)
     {
         ValidationFile->print(F("TMP116 I2C1 Device ID: 0x"));
@@ -5951,7 +5950,7 @@ uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
     {
         ValidationFile->println(F("   Validation [TMP]-Read Add: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [TMP]-Read Add: Fail !")); }
-        otaRtryValidation++;
+        // otaRtryValidation++;
     }
 
     ValidationFile->print(F("DEVICE READ Audio Data: "));
