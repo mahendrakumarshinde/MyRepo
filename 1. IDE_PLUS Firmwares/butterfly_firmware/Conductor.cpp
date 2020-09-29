@@ -1152,6 +1152,31 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
 
     }
+    subConfig = root["CONFIG"]["PHASE"];
+    if(subConfig.success()){
+        if(loopDebugMode) {
+            debugPrint("Phase configuration received: ", false);
+            subConfig.printTo(Serial); debugPrint("");
+        }
+        const char* messageId = root["messageId"];
+        snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"macId\":\"%s\",\"configType\":\"phase_ack\"}", messageId,m_macAddress.toString().c_str());
+                   
+        iuFlash.saveConfigJson(IUFlash::CFG_PHASE, variant);
+        if(loopDebugMode) {
+            debugPrint("configs saved successfully ");
+        }
+        if(iuWiFi.isConnected())
+        {  
+         if(loopDebugMode){debugPrint("Response : ",false);debugPrint(ack_config);}
+         iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,ack_config );
+        }
+        if(StreamingMode::BLE && isBLEConnected()){// Send ACK to BLE
+            if(loopDebugMode){ debugPrint("Phase Config SUCCESS");}
+            iuBluetooth.write("PHASE-CFG-SUCCESS;");
+        }
+        checkPhaseConfig();
+        
+    }
     
     return true;
 }
