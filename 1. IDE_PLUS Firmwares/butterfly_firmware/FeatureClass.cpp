@@ -213,11 +213,13 @@ void Feature::incrementFillingIndex()
                     //isr_detached_startTime = micros();
                     FeatureStates::isr_stopTime = micros();
                     FeatureStates::elapsedTime = (FeatureStates::isr_stopTime-FeatureStates::isr_startTime)/1000000;
-                    debugPrint("Elapsed Time in sec : ",false);
-                    debugPrint(FeatureStates::elapsedTime,true);
                     FeatureStates::outputFrequency = round(FFTConfiguration::currentBlockSize/FeatureStates::elapsedTime);
-                    debugPrint("Output Frequency in Hz : ",false);
-                    debugPrint(FeatureStates::outputFrequency,true);
+                    if(loopDebugMode){
+                        debugPrint("Elapsed Time in sec : ",false);
+                        debugPrint(FeatureStates::elapsedTime,true);
+                        debugPrint("Output Frequency in Hz : ",false);
+                        debugPrint(FeatureStates::outputFrequency,true); // calculated freq
+                    }
                     FeatureStates::isISRActive = false;
                     FeatureStates::isISRDisabled = true;
                     // isrFlag = true;
