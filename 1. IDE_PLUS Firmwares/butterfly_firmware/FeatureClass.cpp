@@ -211,6 +211,13 @@ void Feature::incrementFillingIndex()
                         detachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN));
                     }
                     //isr_detached_startTime = micros();
+                    FeatureStates::isr_stopTime = millis();
+                    FeatureStates::elapsedTime = (FeatureStates::isr_stopTime-FeatureStates::isr_startTime)/1000;
+                    debugPrint("Elapsed Time in sec : ",false);
+                    debugPrint(FeatureStates::elapsedTime,true);
+                    FeatureStates::outputFrequency = (FFTConfiguration::currentBlockSize/FeatureStates::elapsedTime);
+                    debugPrint("Output Frequency in Hz : ",false);
+                    debugPrint(FeatureStates::outputFrequency,true);
                     FeatureStates::isISRActive = false;
                     FeatureStates::isISRDisabled = true;
                     // isrFlag = true;

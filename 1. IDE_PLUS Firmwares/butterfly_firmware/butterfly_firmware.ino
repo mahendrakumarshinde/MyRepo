@@ -822,6 +822,7 @@ void loop()
                 FeatureStates::isISRActive = false;
                 computationDone = false;
                 // Reset Destination Buffers
+                FeatureStates::isr_startTime = millis();
                 for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
                     Sensor::instances[i]->resetDestinations();
                 }

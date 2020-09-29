@@ -17,6 +17,10 @@ namespace FeatureStates {
     bool isFeatureStreamComplete = false;
     bool isISRActive = false;
     bool isISRDisabled = false;
+    double isr_startTime;
+    double isr_stopTime ;
+    double elapsedTime;
+    double outputFrequency;
     int isrCount =0;
 
 

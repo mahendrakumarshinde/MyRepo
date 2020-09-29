@@ -26,6 +26,10 @@ namespace FeatureStates {
     extern bool isFeatureStreamComplete;
     extern bool isISRActive;
     extern bool isISRDisabled;
+    extern double isr_startTime;
+    extern double isr_stopTime;
+    extern double elapsedTime;
+    extern double outputFrequency;
     extern int isrCount; 
 }
 
