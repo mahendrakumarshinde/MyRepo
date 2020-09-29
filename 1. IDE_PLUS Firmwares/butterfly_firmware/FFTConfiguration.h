@@ -25,10 +25,14 @@ namespace FFTConfiguration {
     const int LSMsamplingRateOption = 4 ;
     const int KNXsamplingRateOption = 6 ;
     const int blockSizeConfigurations = 6;
+    const int LSMgRangeOption = 4;
+    const int KNXgRangeOption = 4;
     // Arrays which keep track of available configurations
     const int samplingRates[LSMsamplingRateOption] = { 416, 833, 1660, 3330 };
     const int samplingRates2[KNXsamplingRateOption] = { 800, 1600, 3200, 6400, 12800, 25600};
     const int blockSizes[blockSizeConfigurations] = { 256, 512, 1024, 2048, 4096, 8192 };
+    const int LSMgRanges[LSMgRangeOption] = {2, 4, 8, 16 };
+    const int KNXgRanges[KNXgRangeOption] = {8, 16, 32, 64};
 
     // Default parameter values
     const int DEFAULT_SAMPLING_RATE = 25600;
@@ -38,6 +42,8 @@ namespace FFTConfiguration {
     const int DEFALUT_LOW_CUT_OFF_FREQUENCY = 5;
     const int DEFAULT_HIGH_CUT_OFF_FREQUENCY = DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX / FMAX_FACTOR;  
     const float DEFAULT_MIN_AGITATION = 0.03;
+    const int DEFAULT_LSM_G_RANGE = 4;
+    const int DEFAULT_KNX_G_RANGE = 8;
     
     // Current configurations
     extern int currentSamplingRate;
@@ -48,6 +54,8 @@ namespace FFTConfiguration {
     extern bool currentSensor;   //if currenSensor=0 LSM is selected else kionix is selected
     const bool lsmSensor = 0; 
     const bool kionixSensor = 1;
+    extern int currentLSMgRange;
+    extern int currentKNXgRange;
 }
 
 #endif // FFT_CONFIGURATION_H

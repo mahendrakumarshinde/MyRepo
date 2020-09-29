@@ -277,7 +277,8 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
             // If the received config matches the current config, report an error
             bool sameBlockSize = false;
             bool sameSamplingRate = false;
-
+            bool samegRange = false;
+            bool grangepresent = true;
             //Validation for samplingRate field
             if(config.containsKey("samplingRate")) {
                 uint16_t samplingRate = config["samplingRate"];
@@ -301,6 +302,59 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                              validKionixSamplingRate = false;
                        }
                 }
+                if(config.containsKey("grange")){                                           // g range contains key is not cheked while saving the json because without grange also the jason is valid.
+                    uint8_t grange = config["grange"];
+                    uint16_t samplingrate = config["samplingRate"];                                   //same g range received validation check not done.
+                    bool validLSMgRange = true;
+                    bool validKNXgRange = true;
+                    grangepresent = false;
+                    debugPrint("G_range_received in JSON");
+                    if(validLSMSamplingRate){
+                    for (int i = 0; i <FFTConfiguration::LSMgRangeOption - 1; ++i){
+                        if( grange < FFTConfiguration::LSMgRanges[0] || 
+                            grange > FFTConfiguration::LSMgRanges[FFTConfiguration::LSMgRangeOption - 1] || 
+                            (FFTConfiguration::LSMgRanges[i] < grange &&
+                            grange < FFTConfiguration::LSMgRanges[i+1]) ) {
+                            validLSMgRange = false;
+                        }   
+                    }
+                    if(FFTConfiguration::currentLSMgRange == grange ){
+                        samegRange = true;
+                        debugPrint("LSM same gRange received");
+                    }
+                    }
+                    if(validKionixSamplingRate){
+                    for(int i = 0; i<FFTConfiguration::KNXgRangeOption - 1; ++i){
+                        if( grange < FFTConfiguration::KNXgRanges[0] || 
+                            grange > FFTConfiguration::KNXgRanges[FFTConfiguration::KNXgRangeOption - 1] ||
+                            (FFTConfiguration::KNXgRanges[i] < grange &&
+                            grange < FFTConfiguration::KNXgRanges[i+1]) ){
+                                validKNXgRange = false; 
+                            }
+                        }
+                        if(FFTConfiguration::currentKNXgRange == grange ){
+                            samegRange = true;
+                            debugPrint("KNX same gRange received");
+                        }
+
+                    }
+
+                    if (!validLSMgRange && !validKNXgRange) {
+                            validConfig = false;
+                            errorMessages.add("Invalid g Range");
+                    }
+                    else if(validLSMSamplingRate && !validLSMgRange ){
+                        validConfig = false ;
+                        errorMessages.add("Invalid LSM G Range");
+                    }
+                    else if(validKionixSamplingRate && !validKNXgRange){
+                        validConfig = false;
+                        errorMessages.add("Invalid Kionix G Range");
+                    }
+
+                    debugPrint("valid G_range_json");debugPrint(validLSMgRange);
+                }
+                debugPrint("G_range_NOT_received in JSON");
                 if(!iuAccelerometer.lsmPresence && validLSMSamplingRate) {
                      validConfig = false;
                      errorMessages.add("LSM not Present");
@@ -372,7 +426,11 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
             
 
             // If the received config matches the current config, report an error
-            if(sameBlockSize && sameSamplingRate) {
+            if(sameBlockSize && sameSamplingRate && grangepresent) {      //if same SR & BS received and gRange is present then false this condition
+                validConfig = false;
+                errorMessages.add("Same SR & BS received without gRange ");
+            }
+            else if(sameBlockSize && sameSamplingRate && samegRange){
                 validConfig = false;
                 errorMessages.add("Same configuration received");
             }

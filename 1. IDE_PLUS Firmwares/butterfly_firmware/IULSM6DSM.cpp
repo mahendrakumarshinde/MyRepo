@@ -238,6 +238,20 @@ void IULSM6DSM::setResolution(float resolution)
     }
 }
 
+void IULSM6DSM::setGrange(uint8_t g){
+    if(g == 2){
+        setScale(AFS_2G);
+    }else if(g == 4){
+        setScale(AFS_4G);
+    }else if (g == 8){
+        setScale(AFS_8G);
+    }else if(g == 16){
+        setScale(AFS_16G);
+    }else{
+            debugPrint("Invalid G Range");
+    }
+}
+
 /**
  * Set the scale then recompute resolution
  *

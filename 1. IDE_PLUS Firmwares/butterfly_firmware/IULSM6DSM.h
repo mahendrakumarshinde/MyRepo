@@ -103,7 +103,8 @@ class IULSM6DSM : public HighFreqSensor
         /***** Configuration and calibration *****/
         virtual void configure(JsonVariant &config);
         virtual void setResolution(float resolution);
-        void setScale(scaleOption scale);
+        void setScale(scaleOption scale);    
+        void setGrange(uint8_t g);
         scaleOption getScale() { return m_scale; }
         void resetScale() { setScale(defaultScale); }
         void setGyroScale(gyroScaleOption gyroScale);

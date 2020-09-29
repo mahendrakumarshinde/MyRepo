@@ -69,6 +69,7 @@ public:
     ScaleOption getScale() { return m_scale; }
     void resetScale() { setScale(defaultScale); }
     virtual void setResolution(float resolution);
+    void setGrange(uint8_t g);
 
     /// setup sensor sampling rate 12Hz to 25600Hz
     virtual void setSamplingRate(uint16_t samplingRate);
