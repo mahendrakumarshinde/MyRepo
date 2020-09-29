@@ -1781,6 +1781,7 @@ void Conductor::processCommand(char *buff)
                 // }
             }
         case '3':  // Collect acceleration raw data
+       iuWiFi.sendHostSamplingRate(FeatureStates::outputFrequency); // updated freq after GET_FFT
             if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
                 buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
             {
@@ -3060,6 +3061,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             {
             if (loopDebugMode){ debugPrint(F("GET_DEVICE_CONFIG")); }
             char deviceInfo[64];
+            //sprintf(deviceInfo,"%s-%d-%d",FIRMWARE_VERSION,FFTConfiguration::currentSamplingRate,FFTConfiguration::currentBlockSize);
             sprintf(deviceInfo,"%s-%d-%d",FIRMWARE_VERSION,FeatureStates::outputFrequency,FFTConfiguration::currentBlockSize);
             iuWiFi.sendMSPCommand(MSPCommand::GET_DEVICE_CONFIG,deviceInfo);
             iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HOST_FIRMWARE_VERSION,FIRMWARE_VERSION);
@@ -4439,6 +4441,7 @@ void Conductor::periodicSendAccelRawData()
 {
     uint32_t now = millis();
     if (now - m_rawDataPublicationStart > m_rawDataPublicationTimer) {
+       iuWiFi.sendHostSamplingRate(FeatureStates::outputFrequency);
         if (loopDebugMode)
             debugPrint(F("***  Sending Raw Data ***"));
         delay(500);

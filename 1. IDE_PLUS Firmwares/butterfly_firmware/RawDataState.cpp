@@ -20,7 +20,7 @@ namespace FeatureStates {
     double isr_startTime;
     double isr_stopTime ;
     double elapsedTime;
-    double outputFrequency;
+    int outputFrequency;
     int isrCount =0;
 
 

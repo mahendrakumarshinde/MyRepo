@@ -822,10 +822,11 @@ void loop()
                 FeatureStates::isISRActive = false;
                 computationDone = false;
                 // Reset Destination Buffers
-                FeatureStates::isr_startTime = millis();
+                
                 for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
                     Sensor::instances[i]->resetDestinations();
                 }
+                FeatureStates::isr_startTime = micros();
                 if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
                 {
                     attachInterrupt(digitalPinToInterrupt(IULSM6DSM::INT1_PIN), dataAcquisitionISR, RISING);
@@ -834,6 +835,7 @@ void loop()
                 {
                     attachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN),dataAcquisitionISR,RISING);
                 }
+
                 // Serial.println("ISR Enabled !!!");
                 
             }
