@@ -593,7 +593,7 @@ float RFFTFeatures::computeRPM(q15_t *amplitudes,int m_lowRPMFrequency,int m_hig
         val = 2 * (uint32_t) sq((int32_t) (amplitudes[i]) ) ;
         val = val*factor;
         debugPrint(val,false);debugPrint(",",false);
-        if((val > 0.3) && (count < MAX_PEAK_COUNT) )
+        if((val > rpm_threshold) && (count < MAX_PEAK_COUNT) )
         {
             peakfreq[count] = val;
             count++;
