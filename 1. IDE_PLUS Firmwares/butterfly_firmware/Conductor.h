@@ -313,7 +313,8 @@ class Conductor
         
         char* GetStoredMD5(IUFlash::storedConfig configType, JsonObject &inputConfig);
         uint8_t getm_id(char* did, int totalConfiguredDiag);
-        float tmp_reportable_m_id[50];
+        static const uint8_t maxDiagnosticStates = 10;
+        float modbus_reportable_m_id[maxDiagnosticStates];
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
@@ -403,7 +404,7 @@ class Conductor
         char m_keyType[15];
         char m_certHash[34];
         char m_keyHash[34];
-        static const uint8_t maxDiagnosticStates = 10;
+        
         uint32_t last_active[maxDiagnosticStates];
         uint32_t first_active[maxDiagnosticStates];
         uint32_t last_alert[maxDiagnosticStates];

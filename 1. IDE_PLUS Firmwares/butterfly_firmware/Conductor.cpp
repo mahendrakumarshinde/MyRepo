@@ -7093,7 +7093,7 @@ void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag
         }
         //TODO: Copy reportable_m_id array to temp array
         for(int i=0;i<totalConfiguredDiag;i++){
-            tmp_reportable_m_id[i] = reportable_m_id[i];
+            modbus_reportable_m_id[i] = reportable_m_id[i];
         }
 
         //clearDiagResultArray(); // In actual condition. Need to call this method after Publishing Alert Results 
@@ -7105,6 +7105,7 @@ void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag
 void Conductor::configureAlertPolicy()
 {
     JsonObject &diag = configureJsonFromFlash("/iuRule/diagnostic.conf", 1);
+    if(diag.success()){
     size_t totalDiagnostics = diag["CONFIG"]["DIG"]["DID"].size();
 
     // debugPrint("\nTotal No. Of Duiagnostics = ",false);
@@ -7123,6 +7124,10 @@ void Conductor::configureAlertPolicy()
     //     debugPrint("ALR REP : ", false);debugPrint(m_aleartRepeat[i]);
     //     debugPrint("MAX GAP : ", false);debugPrint(m_maxGap[i]);
     // }
+    }
+    else{
+        if(debugMode){debugPrint("failed to read diagnostic conf file ");} 
+    }
 }
 
 void Conductor::clearDiagStateBuffers()

@@ -805,7 +805,7 @@ void loop()
 
                         iuModbusSlave.updateHoldingRegister(modbusGroups::MODBUS_STREAMING_FEATURES ,OP_STATE,WIFI_RSSI_H,modbusFeaturesDestinations);
                         //TODO : UpdateHolding registers for reportable diagnostics
-                        iuModbusSlave.updateHoldingRegister(modbusGroups::MODBUS_STREAMING_REPORTABLE_DIAGNOSTIC,DIG1,DIG51,conductor.tmp_reportable_m_id);
+                        iuModbusSlave.updateHoldingRegister(modbusGroups::MODBUS_STREAMING_REPORTABLE_DIAGNOSTIC,DIG1,DIG51,conductor.modbus_reportable_m_id);
                         iuModbusSlave.m_holdingRegs[TOTAL_ERRORS]= iuModbusSlave.modbus_update(iuModbusSlave.m_holdingRegs);
                         conductor.ready_to_publish_to_modbus = false;
                         iuModbusSlave.lastModbusUpdateTime = now;
