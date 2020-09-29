@@ -7301,12 +7301,14 @@ void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag
                     last_alert[index] = getDatetime();
                     alert_repeat_state[resultIndex] = false;
                     diagAlertResults[resultIndex]=(char*)diagInput[index].c_str();
+                    reportable_m_id[resultIndex] = getm_id(diagAlertResults[resultIndex],totalConfiguredDiag);
                     reportableDIGID[reportableIndexCounter] = index;   
                     if (exposeDebugPrints)
                     {
                         debugPrint(diagInput[index], false);
                         debugPrint(" : ALERT");
                         debugPrint(diagAlertResults[resultIndex]);
+                        debugPrint(reportable_m_id[resultIndex]);
                     }
                    ++ resultIndex;
                    reportableIndexCounter ++; 
@@ -7316,12 +7318,14 @@ void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag
                     last_alert[index] = getDatetime();                    
                     alert_repeat_state[resultIndex] = true;
                     diagAlertResults[resultIndex]=(char*) diagInput[index].c_str();
+                    reportable_m_id[resultIndex] = getm_id(diagAlertResults[resultIndex],totalConfiguredDiag);
                     reportableDIGID[reportableIndexCounter] = index;
                     if (exposeDebugPrints)
                     {
                         debugPrint(diagInput[index], false);
                         debugPrint(" : ALERT REP");
                         debugPrint(diagAlertResults[resultIndex]);
+                        debugPrint(reportable_m_id[resultIndex]);
                     }
                     ++resultIndex;
                     reportableIndexCounter ++;
@@ -7393,7 +7397,18 @@ void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag
                 debugPrint(",",false);
             }
             debugPrint("");
+            debugPrint("Reportable M_id : ,",false);
+            for(int i=0;i<maxDiagnosticStates;i++){
+                debugPrint(reportable_m_id[i],false);
+                debugPrint(",",false);
+            }
+            debugPrint("");
         }
+        //TODO: Copy reportable_m_id array to temp array
+        for(int i=0;i<totalConfiguredDiag;i++){
+            modbus_reportable_m_id[i] = reportable_m_id[i];
+        }
+
         //clearDiagResultArray(); // In actual condition. Need to call this method after Publishing Alert Results 
     }
     reportableDIGLength = resultIndex;  // number of reportable diagnostic
@@ -7403,6 +7418,7 @@ void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag
 void Conductor::configureAlertPolicy()
 {
     JsonObject &diag = configureJsonFromFlash("/iuRule/diagnostic.conf", 1);
+    if(diag.success()){
     size_t totalDiagnostics = diag["CONFIG"]["DIG"]["DID"].size();
 
     // debugPrint("\nTotal No. Of Duiagnostics = ",false);
@@ -7412,6 +7428,8 @@ void Conductor::configureAlertPolicy()
         m_minSpan[i] =      diag["CONFIG"]["DIG"]["ALTP"]["MINSPN"][i];
         m_aleartRepeat[i] = diag["CONFIG"]["DIG"]["ALTP"]["ALRREP"][i];
         m_maxGap[i] =       diag["CONFIG"]["DIG"]["ALTP"]["MAXGAP"][i];
+        m_id[i] = diag["CONFIG"]["DIG"]["MID"][i];
+        d_id[i] = diag["CONFIG"]["DIG"]["DID"][i];
     }
 
     // for(int i = 0; i < totalDiagnostics; i++){
@@ -7419,6 +7437,10 @@ void Conductor::configureAlertPolicy()
     //     debugPrint("ALR REP : ", false);debugPrint(m_aleartRepeat[i]);
     //     debugPrint("MAX GAP : ", false);debugPrint(m_maxGap[i]);
     // }
+    }
+    else{
+        if(debugMode){debugPrint("failed to read diagnostic conf file ");} 
+    }
 }
 
 void Conductor::clearDiagStateBuffers()
@@ -7430,11 +7452,14 @@ void Conductor::clearDiagStateBuffers()
     memset(last_active_flag,'\0',sizeof(last_active_flag));
     memset(last_alert_flag,'\0',sizeof(last_alert_flag));
     memset(reset_alert_flag,'\0',sizeof(reset_alert_flag));
+    memset(m_id, '\0', sizeof(m_id));
+    memset(d_id, '\0', sizeof(d_id));
 }
 
 void Conductor::clearDiagResultArray(){
     memset(diagAlertResults,'\0',sizeof(diagAlertResults));
     memset(alert_repeat_state,'\0',sizeof(alert_repeat_state));
+    memset(reportable_m_id, '\0', sizeof(reportable_m_id));
 }
 
 int Conductor::getTotalDigCount(const char* diagName){
@@ -7480,5 +7505,13 @@ bool Conductor::validTimeStamp(){
         return true;
     }else{
        return false;
+    }
+}
+
+uint8_t Conductor::getm_id(char* did,  int totalConfiguredDiag){
+    for(int i = 0 ; i < totalConfiguredDiag ; i++){
+        if(strcmp(did,d_id[i]) == 0){
+            return m_id[i];
+        }
     }
 }
