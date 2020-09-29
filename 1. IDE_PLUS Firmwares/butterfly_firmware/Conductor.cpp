@@ -1186,6 +1186,7 @@ void Conductor::checkPhaseConfig(){
 
     JsonObject &Phaseconfig = conductor.configureJsonFromFlash("/iuconfig/phase.conf",1);
     //debugPrint("Phase config read from flash ");
+    if(Phaseconfig.success()){
     totalIDs = Phaseconfig["CONFIG"]["PHASE"]["IDS"].size();
 
     for(size_t i = 0; i < totalIDs; i++){
@@ -1202,6 +1203,10 @@ void Conductor::checkPhaseConfig(){
         debugPrint("TRH : ", false);debugPrint(m_trh[i]);
     }
   }
+    }
+    else { 
+        if (setupDebugMode){debugPrint("Failed to read phase.conf file ");}
+    }
 }
 
 void Conductor::computeAdvanceFeature(){
@@ -1209,10 +1214,10 @@ void Conductor::computeAdvanceFeature(){
 
     for(size_t i=0; i < totalIDs; i++){
         phaseAngleComputer.phase_output[i] = phaseAngleComputer.computePhaseDiff(m_ax1[i],m_ax2[i]);
-        debugPrint("Phase difference : ",false);
-        debugPrint(m_ids[i],false);
-        debugPrint(" : ",false);
-        debugPrint(phaseAngleComputer.phase_output[i]);
+        // debugPrint("Phase difference : ",false);
+        // debugPrint(m_ids[i],false);
+        // debugPrint(" : ",false);
+        //debugPrint(phaseAngleComputer.phase_output[i]);
     }
 
 }

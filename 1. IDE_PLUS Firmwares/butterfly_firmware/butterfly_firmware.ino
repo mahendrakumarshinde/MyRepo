@@ -629,11 +629,15 @@ void setup()
         delay(5000);
         //configure mqttServer
         conductor.configureMQTTServer("MQTT.conf");
-        conductor.checkPhaseConfig();
+        
         //http configuration
         conductor.configureBoardFromFlash("httpConfig.conf",1);
         // get the previous offset values 
         //conductor.setSensorConfig("sensorConfig.conf"); 
+
+        //AdvanceFeatures configurations 
+        conductor.checkPhaseConfig();
+        
         if(DOSFS.exists("sensorConfig.conf")){
             conductor.setSensorConfig("sensorConfig.conf"); 
         }else
@@ -775,6 +779,8 @@ void loop()
                 // Stream features
                 conductor.streamFeatures();
 
+                //compute AdvanceFeatures
+                conductor.computeAdvanceFeature();
 
                if(conductor.modbusStreamingMode ) { 
                     // Update Modbus Registers
@@ -800,7 +806,7 @@ void loop()
                         if(nowTime - conductor.lastUpdated >= conductor.modbusConnectionTimeout){
                             conductor.lastUpdated = nowTime;
                             conductor.updateModbusStatus();
-                            conductor.computeAdvanceFeature();
+                            
                         }
 
                     }else

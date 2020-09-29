@@ -385,8 +385,8 @@ class Conductor
         static const uint8_t max_IDs = 10;
         size_t totalIDs;
         const char* m_ids[max_IDs];
-        char m_ax1[10];
-        char  m_ax2[10];
+        char m_ax1[max_IDs];
+        char  m_ax2[max_IDs];
         uint8_t m_trh[max_IDs];
        // float phase_output[max_IDs];
 };

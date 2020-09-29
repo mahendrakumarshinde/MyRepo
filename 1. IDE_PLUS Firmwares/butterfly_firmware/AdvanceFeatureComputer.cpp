@@ -34,8 +34,6 @@ uint16_t PhaseAngleComputer::getFFTIndex(int inputFrequency ,float resolution){
         freq_index = freq_index -1 ;
 
    m_freq_index =freq_index ;
-   debugPrint("FFT_index : ");
-    debugPrint(m_freq_index);
    return m_freq_index;
 }
 /**
@@ -100,7 +98,7 @@ uint8_t PhaseAngleComputer::getQuadrant(float img, float real){
         return POSITIVE_REAL;
   }else if(real < 0.0 && img ==0 ){               //180 (pi)
         return NEGATIVE_REAL;
-  }else {debugPrint("signal lies on the origin "); return 0; }
+  }else { return 0; }
 }
 
 /**
@@ -135,16 +133,16 @@ float PhaseAngleComputer::computePhaseDiff(char axis1 ,char axis2){
         Axis2.rel = axisZ.rel;
         Axis2.img = axisZ.img;
     }
-    debugPrint("axis 1: ",false);
-    debugPrint(axis1);
-    debugPrint("axis 2: ",false);
-    debugPrint(axis2);
+    // debugPrint("axis 1: ",false);
+    // debugPrint(axis1);
+    // debugPrint("axis 2: ",false);
+    // debugPrint(axis2);
     float rel_component = (((Axis1.rel)*(Axis2.rel))+((Axis1.img)*(Axis2.img)))/(pow(Axis2.rel,2)+pow(Axis2.img,2));
     float Img_component = (((Axis2.rel)*(Axis1.img))-((Axis1.rel)*(Axis2.img)))/(pow(Axis2.rel,2)+pow(Axis2.img,2));
-    debugPrint("Division of complex : ",false );
-    debugPrint(rel_component ,false);
-    debugPrint(" i",false);
-    debugPrint(Img_component);
+    // debugPrint("Division of complex : ",false );
+    // debugPrint(rel_component ,false);
+    // debugPrint(" i",false);
+    // debugPrint(Img_component);
     uint8_t Quadrant = getQuadrant(Img_component,rel_component);
     phase_difference = getAngle(Img_component,rel_component, Quadrant);
  
