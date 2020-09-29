@@ -601,13 +601,13 @@ float RFFTFeatures::computeRPM(q15_t *amplitudes,int m_lowRPMFrequency,int m_hig
     }
     debugPrint(" ] ",true);
     if(count != 0) {
-        debugPrint(" Peak Freq Buffer : [ ",false);
-        for (size_t i = 0; i < count; i++)
-        {
-            debugPrint(peakfreq[i],false);
-            debugPrint(",",false);
-        }
-        debugPrint(" ] ",true);
+        // debugPrint(" Peak Freq Buffer : [ ",false);
+        // for (size_t i = 0; i < count; i++)
+        // {
+        //     debugPrint(peakfreq[i],false);
+        //     debugPrint(",",false);
+        // }
+        // debugPrint(" ] ",true);
         debugPrint("\nCOUNT : ",false);debugPrint(count);
         getMax(peakfreq,(uint32_t)count, &maxVal, &maxIdx);
         if(loopDebugMode){
