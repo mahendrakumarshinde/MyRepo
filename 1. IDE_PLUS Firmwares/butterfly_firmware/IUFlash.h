@@ -38,6 +38,7 @@ class IUFlash
                                      CFG_HASH,
                                      CFG_DIG,
                                      CFG_RPM,
+                                     CFG_PHASE,
                                      CFG_COUNT};
         /***** Core *****/
         IUFlash() {}
@@ -97,6 +98,7 @@ class IUFSFlash : public IUFlash
         static char FNAME_HASH[11];   
         static char FNAME_DIG[11];
         static char FNAME_RPM[4]; 
+        static char FNAME_PHASE[6];
         static const uint8_t MAX_FULL_CONFIG_FPATH_LEN = 28;
         
         /***** Core *****/

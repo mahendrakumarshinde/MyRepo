@@ -32,6 +32,7 @@ char IUFSFlash::FNAME_FOUT[12] = "fout";
 char IUFSFlash::FNAME_HASH[11] = "configHash";
 char IUFSFlash::FNAME_DIG[11] = "diagnostic";
 char IUFSFlash::FNAME_RPM[4] = "rpm";
+char IUFSFlash::FNAME_PHASE[6] = "phase";
 /***** Core *****/
 
 void IUFSFlash::begin()
@@ -620,6 +621,9 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
             break;
         case CFG_RPM:
             fname = FNAME_RPM;
+            break;
+        case CFG_PHASE:
+            fname = FNAME_PHASE;
             break;
         default:
             if (debugMode)

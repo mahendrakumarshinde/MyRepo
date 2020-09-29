@@ -7,6 +7,7 @@
 #include <MemoryFree.h>
 #include "stm32l4_iap.h"
 #include "IUBMD350.h"
+#include "AdvanceFeatureComputer.h"
 
 
 extern IUOTA iuOta;
@@ -1255,6 +1256,32 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             iuBluetooth.write("DIG-CFG-SUCCESS;");
         }
     }
+
+    subConfig = root["CONFIG"]["PHASE"];
+    if(subConfig.success()){
+        if(loopDebugMode) {
+            debugPrint("Phase configuration received: ", false);
+            subConfig.printTo(Serial); debugPrint("");
+        }
+        const char* messageId = root["messageId"];
+        snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"macId\":\"%s\",\"configType\":\"phase_ack\"}", messageId,m_macAddress.toString().c_str());
+                   
+        iuFlash.saveConfigJson(IUFlash::CFG_PHASE, variant);
+        if(loopDebugMode) {
+            debugPrint("configs saved successfully ");
+        }
+        if(iuWiFi.isConnected())
+        {  
+         if(loopDebugMode){debugPrint("Response : ",false);debugPrint(ack_config);}
+         iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,ack_config );
+        }
+        if(StreamingMode::BLE && isBLEConnected()){// Send ACK to BLE
+            if(loopDebugMode){ debugPrint("Phase Config SUCCESS");}
+            iuBluetooth.write("PHASE-CFG-SUCCESS;");
+        }
+        checkPhaseConfig();
+        
+    }
     // TEMP : store the feature output JOSN  
     subConfig = root["FRES"];
     if (subConfig.success()) {
@@ -1344,6 +1371,43 @@ JsonObject& Conductor::createFeatureGroupjson(){
     mergeJson(fres,spectralFeatures);
     fres["NULL"] = 0;
     return root;
+}
+
+void Conductor::checkPhaseConfig(){
+
+    JsonObject &Phaseconfig = conductor.configureJsonFromFlash("/iuconfig/phase.conf",1);
+    //debugPrint("Phase config read from flash ");
+    if(Phaseconfig.success()){
+    totalIDs = Phaseconfig["CONFIG"]["PHASE"]["IDS"].size();
+
+    for(size_t i = 0; i < totalIDs; i++){
+        m_ids[i] = Phaseconfig["CONFIG"]["PHASE"]["IDS"][i];
+        strcpy(&m_ax1[i],(char*)Phaseconfig["CONFIG"]["PHASE"]["AX1"][i].asString());
+        strcpy(&m_ax2[i],(char*)Phaseconfig["CONFIG"]["PHASE"]["AX2"][i].asString());
+        m_trh[i] = Phaseconfig["CONFIG"]["PHASE"]["TRH"][i];
+    }
+    if (setupDebugMode) {
+    for(size_t i = 0; i < totalIDs; i++){
+        debugPrint("IDS : ", false);debugPrint(m_ids[i]);
+        debugPrint("AX1 : ", false);debugPrint(m_ax1[i]);
+        debugPrint("AX2 : ", false);debugPrint(m_ax2[i]);
+        debugPrint("TRH : ", false);debugPrint(m_trh[i]);
+    }
+  }
+    }
+    else { 
+        if (setupDebugMode){debugPrint("Failed to read phase.conf file ");}
+    }
+}
+
+void Conductor::computeAdvanceFeature(){
+    for(size_t i=0; i < totalIDs; i++){
+        phaseAngleComputer.phase_output[i] = phaseAngleComputer.computePhaseDiff(m_ax1[i],m_ax2[i]);
+        // debugPrint("Phase difference : ",false);
+        // debugPrint(m_ids[i],false);
+        // debugPrint(" : ",false);
+        //debugPrint(phaseAngleComputer.phase_output[i]);
+    }
 }
 
 /*

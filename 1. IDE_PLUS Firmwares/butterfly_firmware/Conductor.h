@@ -324,6 +324,8 @@ class Conductor
         JsonObject& createFeatureGroupjson();
         void mergeJson(JsonObject& dest, const JsonObject& src);
         bool validTimeStamp();
+        void checkPhaseConfig();
+        void computeAdvanceFeature();
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
@@ -433,7 +435,13 @@ class Conductor
         uint32_t fresPublishPeriod = 5000;
         bool digStream = true;
         bool fresStream = true;
-        
+        static const uint8_t max_IDs = 10;
+        size_t totalIDs;
+        const char* m_ids[max_IDs];
+        char m_ax1[max_IDs];
+        char  m_ax2[max_IDs];
+        uint8_t m_trh[max_IDs];
+       // float phase_output[max_IDs];
 };
 
 

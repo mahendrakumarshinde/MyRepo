@@ -68,7 +68,9 @@ IUDiagnosticNotifier iuDigNotifier;
 /* =============================================================================
     Features
 ============================================================================= */
+AdvanceFeatureComputer iuAdvanceFeature;
 
+PhaseAngleComputer phaseAngleComputer;
 /***** Operation State Monitoring feature *****/
 
 q15_t opStateFeatureValues[2] = {0, 0};

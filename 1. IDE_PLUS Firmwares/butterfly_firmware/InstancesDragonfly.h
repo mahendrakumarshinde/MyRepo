@@ -28,6 +28,7 @@
 #include "FeatureComputer.h"
 #include "FeatureGroup.h"
 #include "CharBufferSendingQueue.h"
+#include "AdvanceFeatureComputer.h"
 
 /***** Sensors *****/
 #include "IUBattery.h"
@@ -94,6 +95,8 @@ extern IUmodbus iuModbusSlave;
 
 extern IUTriggerComputer iuTrigger;
 extern IUDiagnosticNotifier iuDigNotifier;
+extern AdvanceFeatureComputer iuAdvanceFeature;
+extern PhaseAngleComputer phaseAngleComputer;
 /* =============================================================================
     OTA
 ============================================================================= */
