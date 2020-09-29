@@ -707,7 +707,9 @@ void setup()
         
         // debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
         //Resume previous operational state of device
-        conductor.setThresholdsFromFile();
+        if(!conductor.setThresholdsFromFile()){
+            conductor.requestConfig = true;
+        }
         // Get OTA status flag and take appropraite action    
         conductor.getOtaStatus();
                
@@ -763,6 +765,12 @@ void loop()
         {
             conductor.sendSensorStatus();
             sensorStatus = false;
+        }
+        
+        if (iuWiFi.isConnected() == true && conductor.requestConfig == true && conductor.getDatetime() > 1590000000.00 && iuWiFi.getConnectionStatus())
+        {
+            conductor.sendConfigRequest();
+            conductor.requestConfig = false;
         }
         conductor.manageSleepCycles();
         // Receive messages & configurations
