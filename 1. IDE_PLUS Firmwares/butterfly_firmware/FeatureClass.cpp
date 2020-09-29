@@ -216,10 +216,11 @@ void Feature::incrementFillingIndex()
                     FeatureStates::outputFrequency = round(FFTConfiguration::currentBlockSize/FeatureStates::elapsedTime);
                     if(loopDebugMode){
                         debugPrint("Elapsed Time in sec : ",false);
-                        debugPrint(FeatureStates::elapsedTime,true);
+                        debugPrint(FeatureStates::elapsedTime,true);//time
                         debugPrint("Output Frequency in Hz : ",false);
                         debugPrint(FeatureStates::outputFrequency,true); // calculated freq
                     }
+
                     FeatureStates::isISRActive = false;
                     FeatureStates::isISRDisabled = true;
                     // isrFlag = true;
