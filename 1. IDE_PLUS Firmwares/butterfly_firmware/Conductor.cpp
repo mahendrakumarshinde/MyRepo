@@ -6648,7 +6648,7 @@ void Conductor::updateWiFiHash()
 
 void Conductor::sendConfigRequest(bool status)
 {
-    char response[256];
+    char response[128];
     double TimeStamp = conductor.getDatetime();
           
     sprintf(response,"%s%s%s%s","{\"DEVICEID\":\"", m_macAddress.toString().c_str(),"\"",",\"CONFIGTYPE\":\"features\"}");
