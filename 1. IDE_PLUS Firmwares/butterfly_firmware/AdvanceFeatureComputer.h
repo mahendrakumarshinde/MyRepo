@@ -33,8 +33,9 @@ class AdvanceFeatureComputer
        //getAdvanceFeatureCount();  //will return total size of buffer or return number of element filled 
        //addAdvanceFeatureName(); - save/insert feature name
        //addAdvanceFeatureValue(); -save/insert feature value
-       char* AdvanceFeatureName[20];
-       float AdvanceFeatureValue[20];
+       static const uint8_t max_advanceFeature_count = 20;
+       char* AdvanceFeatureName[max_advanceFeature_count];
+       float AdvanceFeatureValue[max_advanceFeature_count];
    protected:
 
 
@@ -65,7 +66,8 @@ class PhaseAngleComputer : public AdvanceFeatureComputer
         int freq_index ;
         float phase_difference;
         float phase;
-        float phase_output[10]; //replace number with variable
+        static const uint8_t total_max_IDs = 10;   //max number of featurename in configs
+        float phase_output[total_max_IDs];   
     protected :
     
     
