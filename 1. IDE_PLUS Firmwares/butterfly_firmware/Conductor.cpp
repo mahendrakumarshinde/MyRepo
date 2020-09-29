@@ -6650,8 +6650,7 @@ void Conductor::sendConfigRequest(bool status)
 {
     char response[256];
     double TimeStamp = conductor.getDatetime();
-    char errorCode[12];
           
-    sprintf(response,"%s%s%s%s%s","{\"DEVICEID\":\"", m_macAddress.toString().c_str(),"\",","features","}");
+    sprintf(response,"%s%s%s%s","{\"DEVICEID\":\"", m_macAddress.toString().c_str(),"\"",",\"CONFIGTYPE\":\"features\"}");
     iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_CONFIG_CHECKSUM, response);
 }
