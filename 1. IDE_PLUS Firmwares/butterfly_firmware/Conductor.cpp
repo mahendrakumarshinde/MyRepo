@@ -6646,7 +6646,7 @@ void Conductor::updateWiFiHash()
     iuWiFi.sendMSPCommand(MSPCommand::SEND_WIFI_HASH,wifiHash);
 }
 
-void Conductor::sendConfigRequest(bool status)
+void Conductor::sendConfigRequest()
 {
     char response[128];
     double TimeStamp = conductor.getDatetime();

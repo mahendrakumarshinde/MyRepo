@@ -753,7 +753,7 @@ void loop()
         
         if (iuWiFi.isConnected() == true && conductor.requestConfig == true && conductor.getDatetime() > 1590000000.00 && iuWiFi.getConnectionStatus())
         {
-            conductor.sendConfigRequest(true);
+            conductor.sendConfigRequest();
             conductor.requestConfig = false;
         }
         conductor.manageSleepCycles();

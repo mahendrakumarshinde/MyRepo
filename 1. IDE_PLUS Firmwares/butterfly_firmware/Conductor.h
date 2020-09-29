@@ -292,7 +292,7 @@ class Conductor
         void setDefaultMQTT();
         void setDefaultHTTP();
         void updateWiFiHash();
-        void sendConfigRequest(bool status);
+        void sendConfigRequest();
         
     protected:
         MacAddress m_macAddress;
