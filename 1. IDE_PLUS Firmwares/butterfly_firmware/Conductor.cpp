@@ -4539,7 +4539,7 @@ void Conductor::streamDiagnostics(){
                 reportableJson.printTo(m_diagnosticResult,DIG_PUBLISHED_BUFFER_SIZE);
                 snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"DIGRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
                 // Published to MQTT 
-                iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,m_diagnosticPublishedBuffer);
+                iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_IU_RDIG,m_diagnosticPublishedBuffer);
                 // if(loopDebugMode){
                 //     debugPrint("O/P Buffer : ",false);
                 //     debugPrint(m_diagnosticPublishedBuffer);
