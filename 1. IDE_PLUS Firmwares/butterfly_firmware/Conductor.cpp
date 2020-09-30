@@ -811,6 +811,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             memset(espHash,'\0',sizeof(espHash));
             memset(m_otaMsgId,'\0',sizeof(m_otaMsgId));
             memset(m_otaFwVer,'\0',sizeof(m_otaFwVer));
+            memset(m_deviceType,'\0',sizeof(m_deviceType));
             strcpy(m_otaMsgId,(const char*)root["messageId"]);
             strcpy(m_deviceType,(const char*)root["supportedDeviceTypes"][0]);
     //     String test1 = root["otaConfig"]["supportedDeviceTypes"];
