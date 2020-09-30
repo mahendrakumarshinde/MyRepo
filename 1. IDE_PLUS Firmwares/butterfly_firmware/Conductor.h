@@ -329,6 +329,7 @@ class Conductor
         bool validTimeStamp();
         void checkPhaseConfig();
         void computeAdvanceFeature();
+        void addAdvanceFeature(JsonObject& destJson, uint8_t index , String* id, float* value);
         static const uint8_t max_IDs = 10;
         String m_phase_ids[max_IDs];
     protected:

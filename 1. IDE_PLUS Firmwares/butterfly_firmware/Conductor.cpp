@@ -1369,10 +1369,7 @@ JsonObject& Conductor::createFeatureGroupjson(){
     fres["TMP"] = featureDestinations::buff[featureDestinations::basicfeatures::temperature];
     fres["S12"] = featureDestinations::buff[featureDestinations::basicfeatures::audio];
     fres["RPM"] = featureDestinations::buff[featureDestinations::basicfeatures::rpm];
-    for(size_t i=0;i<phaseAngleComputer.totalPhaseIds;i++){
-         //debugPrint(m_phase_ids[i]);
-            fres[m_phase_ids[i]] = phaseAngleComputer.phase_output[i];
-        }
+    addAdvanceFeature(fres, phaseAngleComputer.totalPhaseIds, m_phase_ids,phaseAngleComputer.phase_output);
     mergeJson(fres,spectralFeatures);
     fres["NULL"] = 0;
     return root;
@@ -7522,4 +7519,10 @@ uint8_t Conductor::getm_id(char* did,  int totalConfiguredDiag){
             return m_id[i];
         }
     }
+}
+
+void Conductor::addAdvanceFeature(JsonObject& destJson, uint8_t index , String* id, float* value){
+    for(size_t i=0;i<index;i++){
+        destJson[id[i]] = value[i];
+    }        
 }
