@@ -811,14 +811,27 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             memset(espHash,'\0',sizeof(espHash));
             memset(m_otaMsgId,'\0',sizeof(m_otaMsgId));
             memset(m_otaFwVer,'\0',sizeof(m_otaFwVer));
+            memset(m_deviceType,'\0',sizeof(m_deviceType));
             strcpy(m_otaMsgId,(const char*)root["messageId"]);
-            strcpy(m_otaFwVer,(const char*)root["fwVersion"]);
+            strcpy(m_deviceType,(const char*)root["supportedDeviceTypes"][0]);
     //     String test1 = root["otaConfig"]["supportedDeviceTypes"];
             if(loopDebugMode) {
                 debugPrint(F("OTA Message ID: "), false);
                 debugPrint(m_otaMsgId);
                 debugPrint(F("OTA FW Version: "), false);
                 debugPrint(m_otaFwVer);
+            }
+            if(strncmp(m_deviceType,"vEdge 2.0",9)!=0) //Change the device name according to device type
+            {
+                if(loopDebugMode) {
+                    debugPrint(F("Sending OTA_FDW_ABORT, Invalid Firmware"));
+                }
+                sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_INVALID_FIRMWARE)).c_str());
+                if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
+                iuWiFi.m_setLastConfirmedPublication();
+                changeUsageMode(UsageMode::OPERATION);
+                delay(10);
+                return false;
             }
             subConfig = root["fwBinaries"][0];
             String fwType = subConfig["type"];

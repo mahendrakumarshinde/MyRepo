@@ -358,6 +358,7 @@ class Conductor
         char m_otaMsgId[32];
         char m_otaMsgType[16];
         char m_otaFwVer[16];
+        char m_deviceType[16];
         char m_rlbkMsgId[32];
         char m_rlbkFwVer[16];
         char fwBinFileName[32];

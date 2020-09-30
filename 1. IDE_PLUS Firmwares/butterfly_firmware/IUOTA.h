@@ -38,6 +38,7 @@
 #define  OTA_FORCED_RLBK_FAIL   9
 #define  OTA_FILE_MISSING       10
 #define  OTA_MQTT_DISCONNECT    11
+#define  OTA_INVALID_FIRMWARE   44
 
 
 #define CERT_DOWNLOAD_INIT_REQ_ACK      12
