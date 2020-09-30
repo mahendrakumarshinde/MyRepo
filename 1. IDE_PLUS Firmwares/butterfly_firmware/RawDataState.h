@@ -43,7 +43,8 @@ namespace featureDestinations {
                                   dispRMS512X   = 9,
                                   dispRMS512Y   = 10,
                                   dispRMS512Z   = 11,
-                                  COUNT         = 12};
+                                  rpm           =12,
+                                  COUNT         = 13};
     extern float buff[basicfeatures::COUNT];
 }
 #endif // RAW_DATA_STATE_H
