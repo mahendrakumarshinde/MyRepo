@@ -4581,6 +4581,9 @@ void Conductor::streamDiagnostics(){
                     }
                     publishDiag = true;
                 }
+                else{
+                    publishDiag = false;
+                }
                 if((iuTrigger.DIG_LIST[0] != NULL && publishDiag == true) ){
                     //reportableJson.printTo(Serial); debugPrint("");
                     reportableJson.printTo(m_diagnosticResult,DIG_PUBLISHED_BUFFER_SIZE);
