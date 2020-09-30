@@ -831,6 +831,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 iuWiFi.m_setLastConfirmedPublication();
                 changeUsageMode(UsageMode::OPERATION);
                 delay(10);
+                return false;
             }
             subConfig = root["fwBinaries"][0];
             String fwType = subConfig["type"];
