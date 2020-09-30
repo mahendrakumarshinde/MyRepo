@@ -570,10 +570,10 @@ float RFFTAmplitudes::getMainFrequency(q31_t *amplitudes, uint16_t sampleCount,
 // Compute rpm
 float RFFTFeatures::computeRPM(q15_t *amplitudes,int m_lowRPMFrequency,int m_highRPMFrequency,float rpm_threshold,float df,float resolution,float scalingFactor)
 {   
-    debugPrint("\n\nlRPM : ",false);debugPrint(m_lowRPMFrequency);
-    debugPrint("hRPM : ",false);debugPrint(m_highRPMFrequency);
-    uint8_t MAX_PEAK_COUNT = 50 ;
-    float peakfreq[MAX_PEAK_COUNT];                 // store the first top 50 Peaks 
+    // debugPrint("\n\nlRPM : ",false);debugPrint(m_lowRPMFrequency);
+    // debugPrint("hRPM : ",false);debugPrint(m_highRPMFrequency);
+    uint8_t MAX_PEAK_COUNT = 200 ;
+    float peakfreq[MAX_PEAK_COUNT];                 // store the first top 200 Peaks 
     float val,freq(0); 
     float maxVal;
     uint32_t maxIdx=0; 
@@ -581,43 +581,36 @@ float RFFTFeatures::computeRPM(q15_t *amplitudes,int m_lowRPMFrequency,int m_hig
     int lower_index = (int)(m_lowRPMFrequency/df ); // ceiling(lower_bound/df)
     int upper_index = (int)(m_highRPMFrequency/df - 1 ); // floor(upper_bound/df)
     float factor = (1000*resolution/scalingFactor);
-    debugPrint("lower_bound : ",false);debugPrint(lower_index);
-    debugPrint("upper_bound : ",false);debugPrint(upper_index);
-    debugPrint("scalingFactor : ",false);debugPrint(scalingFactor);
-    debugPrint("Factor : ",false);debugPrint(factor);
-    debugPrint("df : ",false);debugPrint(df);
+    
+    // debugPrint("lower_bound : ",false);debugPrint(lower_index);
+    // debugPrint("upper_bound : ",false);debugPrint(upper_index);
+    // debugPrint("scalingFactor : ",false);debugPrint(scalingFactor);
+    // debugPrint("Factor : ",false);debugPrint(factor);
+    // debugPrint("df : ",false);debugPrint(df);
 
-    debugPrint("\n Input Peaks [ ",false);
+    //debugPrint("\n Input Peaks [ ",false);
     for (uint16_t i = lower_index; i <= upper_index ; i++)
     {
         val = 2 * (uint32_t) sq((int32_t) (amplitudes[i]) ) ;
         val = val*factor;
-        debugPrint(val,false);debugPrint(",",false);
+        //debugPrint(val,false);debugPrint(",",false);
         if((val > rpm_threshold) && (count < MAX_PEAK_COUNT) )
         {
             peakfreq[count] = val;
             count++;
         }   
     }
-    debugPrint(" ] ",true);
+    //debugPrint(" ] ",true);
     if(count != 0) {
-        // debugPrint(" Peak Freq Buffer : [ ",false);
-        // for (size_t i = 0; i < count; i++)
-        // {
-        //     debugPrint(peakfreq[i],false);
-        //     debugPrint(",",false);
-        // }
-        // debugPrint(" ] ",true);
-        debugPrint("\nCOUNT : ",false);debugPrint(count);
         getMax(peakfreq,(uint32_t)count, &maxVal, &maxIdx);
+        freq = (maxIdx + lower_index)*df;
         if(loopDebugMode){
             debugPrint("Max idx : ",false);
             debugPrint(maxIdx,false);debugPrint(",",false);
             debugPrint(maxVal);
             debugPrint("df :",false);debugPrint(df);
+            debugPrint("Freq : " ,false);debugPrint(freq);
         }
-        freq = (maxIdx + lower_index)*df;
-        debugPrint("Freq : " ,false);debugPrint(freq);
         return (float) (freq*60) ;
     }else{
         return 0;
