@@ -329,7 +329,8 @@ class Conductor
         bool validTimeStamp();
         void checkPhaseConfig();
         void computeAdvanceFeature();
-        
+        static const uint8_t max_IDs = 10;
+        String m_phase_ids[max_IDs];
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
@@ -439,9 +440,8 @@ class Conductor
         uint32_t fresPublishPeriod = 5000;
         bool digStream = true;
         bool fresStream = true;
-        static const uint8_t max_IDs = 10;
+        
         size_t totalIDs;
-        const char* m_ids[max_IDs];
         char m_ax1[max_IDs];
         char  m_ax2[max_IDs];
         uint8_t m_trh[max_IDs];

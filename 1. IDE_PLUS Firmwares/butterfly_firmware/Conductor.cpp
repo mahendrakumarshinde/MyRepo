@@ -1368,6 +1368,11 @@ JsonObject& Conductor::createFeatureGroupjson(){
     fres["DAZ"] = featureDestinations::buff[featureDestinations::basicfeatures::dispRMS512Z];
     fres["TMP"] = featureDestinations::buff[featureDestinations::basicfeatures::temperature];
     fres["S12"] = featureDestinations::buff[featureDestinations::basicfeatures::audio];
+    fres["RPM"] = featureDestinations::buff[featureDestinations::basicfeatures::rpm];
+    for(size_t i=0;i<phaseAngleComputer.totalPhaseIds;i++){
+         //debugPrint(m_phase_ids[i]);
+            fres[m_phase_ids[i]] = phaseAngleComputer.phase_output[i];
+        }
     mergeJson(fres,spectralFeatures);
     fres["NULL"] = 0;
     return root;
@@ -1379,16 +1384,16 @@ void Conductor::checkPhaseConfig(){
     //debugPrint("Phase config read from flash ");
     if(Phaseconfig.success()){
     totalIDs = Phaseconfig["CONFIG"]["PHASE"]["IDS"].size();
-
+    phaseAngleComputer.totalPhaseIds = totalIDs;
     for(size_t i = 0; i < totalIDs; i++){
-        m_ids[i] = Phaseconfig["CONFIG"]["PHASE"]["IDS"][i];
+        m_phase_ids[i] = Phaseconfig["CONFIG"]["PHASE"]["IDS"][i].asString();
         strcpy(&m_ax1[i],(char*)Phaseconfig["CONFIG"]["PHASE"]["AX1"][i].asString());
         strcpy(&m_ax2[i],(char*)Phaseconfig["CONFIG"]["PHASE"]["AX2"][i].asString());
         m_trh[i] = Phaseconfig["CONFIG"]["PHASE"]["TRH"][i];
     }
     if (setupDebugMode) {
     for(size_t i = 0; i < totalIDs; i++){
-        debugPrint("IDS : ", false);debugPrint(m_ids[i]);
+        debugPrint("IDS : ", false);debugPrint(m_phase_ids[i]);
         debugPrint("AX1 : ", false);debugPrint(m_ax1[i]);
         debugPrint("AX2 : ", false);debugPrint(m_ax2[i]);
         debugPrint("TRH : ", false);debugPrint(m_trh[i]);
@@ -1403,8 +1408,8 @@ void Conductor::checkPhaseConfig(){
 void Conductor::computeAdvanceFeature(){
     for(size_t i=0; i < totalIDs; i++){
         phaseAngleComputer.phase_output[i] = phaseAngleComputer.computePhaseDiff(m_ax1[i],m_ax2[i]);
-        // debugPrint("Phase difference : ",false);
-        // debugPrint(m_ids[i],false);
+       // debugPrint("Phase difference : ",false);
+        //debugPrint(m_phase_ids[i]);
         // debugPrint(" : ",false);
         //debugPrint(phaseAngleComputer.phase_output[i]);
     }

@@ -716,7 +716,7 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
             // compute RPM on Acceleration Spectrum 
             float rpm = RFFTFeatures::computeRPM(amplitudes,FFTConfiguration::lowRPMFrequency,
             FFTConfiguration::highRPMFrequency,FFTConfiguration::defaultRPMThreshold,df,resolution,scaling1);
-            
+            featureDestinations::buff[featureDestinations::basicfeatures::rpm] = rpm;
             debugPrint("RPM ",false );
             debugPrint(rpm);
             /***************************** Applying Diagnostic fingerprints on computated velocity fft amplitude *************************/ 

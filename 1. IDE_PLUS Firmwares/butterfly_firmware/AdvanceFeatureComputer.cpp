@@ -15,6 +15,45 @@ struct phase axisZ;
 struct phase Axis1;
 struct phase Axis2;
 uint16_t m_freq_index;
+/**
+ * @brief Base class for the Advance Feature Computation 
+ * 
+ *  
+ *//*
+bool AdvanceFeatureComputer::addAdvanceFeatureName(const char* advanceFeature){
+
+    if (m_advanceFeatureCount >= max_advanceFeature_count) {
+        if (debugMode) {
+            debugPrint("Maximum AdvanceFeature buffer size is reached : ");
+        }
+        return false;
+    }
+    m_advanceFeatureName[m_advanceFeatureCount] = advanceFeature;
+    debugPrint("advance feature class : ",false);
+    debugPrint(m_advanceFeatureName[m_advanceFeatureCount]);
+    m_advanceFeatureCount++;
+    
+    return true;
+}
+
+bool AdvanceFeatureComputer::addAdvanceFeatureValue(float advanceFeatureValue[]){
+
+   uint8_t arraySize = sizeof(advanceFeatureValue)/sizeof(advanceFeatureValue[0]);
+   //debugPrint("Phase data : ");
+   //debugPrint(arraySize);
+   for(uint8_t i =0;i <= arraySize; i++){
+       m_advanceFeatureValue[i] = advanceFeatureValue[i];
+       //debugPrint(m_advanceFeatureValue[i]);
+   }
+
+    return true;
+}
+
+
+*/
+
+
+
 
 /**
  * @brief The getFFTIndex() function will return the index.Based on this index the FFT coefficient(complex data) will copy  

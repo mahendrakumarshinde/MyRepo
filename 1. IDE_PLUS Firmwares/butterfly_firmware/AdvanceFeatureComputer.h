@@ -28,14 +28,15 @@
 class AdvanceFeatureComputer
 {
    public :
-       //getAdvanceFeatureName();  -return feature name
-       //getAdvanceFeatureValue(); - return value based on index
+       //char* getAdvanceFeatureName(){ return m_advanceFeatureName;}              //  -return feature name
+       //float* getAdvanceFeatureValue() {return m_advanceFeatureValue;}     //- return value based on index
        //getAdvanceFeatureCount();  //will return total size of buffer or return number of element filled 
-       //addAdvanceFeatureName(); - save/insert feature name
-       //addAdvanceFeatureValue(); -save/insert feature value
-       static const uint8_t max_advanceFeature_count = 20;
-       char* AdvanceFeatureName[max_advanceFeature_count];
-       float AdvanceFeatureValue[max_advanceFeature_count];
+       //bool addAdvanceFeatureName(const char* advanceFeature);               //- save/insert feature name
+       //bool addAdvanceFeatureValue(float advanceFeatureValue[]); //-save/insert feature value
+       //uint8_t m_advanceFeatureCount;
+       //static const uint8_t max_advanceFeature_count = 20;
+       //const char* m_advanceFeatureName[max_advanceFeature_count];
+       //float m_advanceFeatureValue[max_advanceFeature_count];
    protected:
 
 
@@ -67,7 +68,8 @@ class PhaseAngleComputer : public AdvanceFeatureComputer
         float phase_difference;
         float phase;
         static const uint8_t total_max_IDs = 10;   //max number of featurename in configs
-        float phase_output[total_max_IDs];   
+        float phase_output[total_max_IDs];
+        size_t totalPhaseIds;   
     protected :
     
     
