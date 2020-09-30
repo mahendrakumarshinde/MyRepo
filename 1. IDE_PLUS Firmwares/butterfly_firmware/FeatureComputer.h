@@ -519,9 +519,6 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         logFFTParams(&FFTInput[fft_direction], samplingRate, sampleCount, df);
         logFFTInput(&FFTInput[fft_direction], values, sampleCount);
 
-        debugPrint("NAME : ",false);
-        debugPrint(m_destinations[0]->getName());
-        
         // Save the raw data 
         if(m_id == 30 && RawDataState::startRawDataCollection && !RawDataState::XCollected) {
             memcpy(RawDataState::rawAccelerationX, (q15_t*)values, FFTConfiguration::currentBlockSize * 2);

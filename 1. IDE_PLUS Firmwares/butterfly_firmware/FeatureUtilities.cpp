@@ -604,13 +604,13 @@ float RFFTFeatures::computeRPM(q15_t *amplitudes,int m_lowRPMFrequency,int m_hig
     if(count != 0) {
         getMax(peakfreq,(uint32_t)count, &maxVal, &maxIdx);
         freq = (maxIdx + lower_index)*df;
-        if(loopDebugMode){
-            debugPrint("Max idx : ",false);
-            debugPrint(maxIdx,false);debugPrint(",",false);
-            debugPrint(maxVal);
-            debugPrint("df :",false);debugPrint(df);
-            debugPrint("Freq : " ,false);debugPrint(freq);
-        }
+        // if(loopDebugMode){
+        //     debugPrint("Max idx : ",false);
+        //     debugPrint(maxIdx,false);debugPrint(",",false);
+        //     debugPrint(maxVal);
+        //     debugPrint("df :",false);debugPrint(df);
+        //     debugPrint("Freq : " ,false);debugPrint(freq);
+        // }
         return (float) (freq*60) ;
     }else{
         return 0;
