@@ -491,6 +491,8 @@ String IUOTA::getOtaRca(int error)
         return F("OTA-RCA-0010");
     case OTA_MQTT_DISCONNECT:
         return F("OTA-RCA-0011");
+    case OTA_INVALID_FIRMWARE:
+        return F("OTA-RCA-0044");
     case CERT_DOWNLOAD_INIT_REQ_ACK:
         return F("CERT-RCA-0042");
     case CERT_DOWNLOAD_START:
