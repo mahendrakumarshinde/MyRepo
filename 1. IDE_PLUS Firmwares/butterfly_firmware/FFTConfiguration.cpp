@@ -9,4 +9,9 @@ namespace FFTConfiguration {
     bool currentSensor = lsmSensor;
     int currentLSMgRange = DEFAULT_LSM_G_RANGE;
     int currentKNXgRange = DEFAULT_KNX_G_RANGE;
+    // RPM Parameters
+    int lowRPMFrequency = DEFALUT_LOW_CUT_OFF_FREQUENCY;
+    int highRPMFrequency = DEFAULT_HIGH_CUT_OFF_FREQUENCY;
+    float defaultRPMThreshold = DEFAULT_RPM_THRESHOLD; 
+    
 }

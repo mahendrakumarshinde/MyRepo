@@ -572,6 +572,8 @@ void setup()
                 conductor.setSensorStatus(conductor.SensorStatusCode::SEN_ABS);
             }
         }
+        // configure RPM 
+        conductor.configureFromFlash(IUFlash::CFG_RPM);
 
         // Sensors
         if (debugMode) {
@@ -645,11 +647,15 @@ void setup()
         delay(5000);
         //configure mqttServer
         conductor.configureMQTTServer("MQTT.conf");
-
+        
         //http configuration
         conductor.configureBoardFromFlash("httpConfig.conf",1);
         // get the previous offset values 
         //conductor.setSensorConfig("sensorConfig.conf"); 
+
+        //AdvanceFeatures configurations 
+        conductor.checkPhaseConfig();
+        
         if(DOSFS.exists("sensorConfig.conf")){
             conductor.setSensorConfig("sensorConfig.conf"); 
         }else
@@ -675,6 +681,7 @@ void setup()
         // iuWiFi.hardReset();
         // delay(1000);
         conductor.checkforWiFiConfigurations();
+        conductor.createFeatureGroupjson();
         delay(100);
         conductor.modbusStreamingMode = conductor.configureFromFlash(IUFlash::CFG_MODBUS_SLAVE);
         if (conductor.modbusStreamingMode != true)
@@ -683,7 +690,10 @@ void setup()
             conductor.checkforModbusSlaveConfigurations();
             conductor.modbusStreamingMode = true;
         }
-        
+
+        // IU Diagnostic Rule Engine configurations
+        conductor.configureAlertPolicy();
+       
         opStateFeature.setOnNewValueCallback(operationStateCallback);
         ledManager.resetStatus();
         conductor.changeUsageMode(UsageMode::OPERATION);
@@ -718,7 +728,7 @@ void setup()
         // Turn ON BLE module and the BLE beacon
         iuBluetooth.bleButton(true);
         iuBluetooth.bleBeaconSetting(true);
-        
+
     #endif
  #endif   
 }
@@ -756,12 +766,12 @@ void loop()
                 debugPrint(F("Sensor:"),false);debugPrint(FFTConfiguration::currentSensor);
             }
         // }
-        if (iuWiFi.isConnected() == true && conductor.flashStatusFlag == true && conductor.getDatetime() > 1590000000.00 && iuWiFi.getConnectionStatus())
+        if (iuWiFi.isConnected() == true && conductor.flashStatusFlag == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
         {
             conductor.sendFlashStatusMsg(FLASH_SUCCESS,"Flash Recovery Successfull..Send the configuration");
             conductor.flashStatusFlag = false;
         }
-        if (iuWiFi.isConnected() == true && sensorStatus == true && conductor.getDatetime() > 1590000000.00 && iuWiFi.getConnectionStatus())
+        if (iuWiFi.isConnected() == true && sensorStatus == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
         {
             conductor.sendSensorStatus();
             sensorStatus = false;
@@ -798,8 +808,21 @@ void loop()
                 conductor.computeFeatures();
                 // Stream features
                 conductor.streamFeatures();
-
-
+                //compute AdvanceFeatures
+                conductor.computeAdvanceFeature();
+                // Executing Diagnostic every 1 sec
+                //  uint32_t nowT = millis();
+                //  if(nowT - conductor.digLastExecuted >= 1000){
+                //      conductor.digLastExecuted = nowT;
+                // //     // Diagnostic Features
+                      conductor.computeTriggers();
+                // //     // Stream Diagnostic Features
+                      conductor.streamDiagnostics();
+                //      Serial.print("\nAvailable - Mem: ");
+                //      Serial.println(freeMemory(), DEC);
+                  
+                 // }
+                                   
                if(conductor.modbusStreamingMode ) { 
                     // Update Modbus Registers
                     uint32_t now =millis();
@@ -814,6 +837,8 @@ void loop()
                         iuModbusSlave.updateWIFIMACAddress(iuWiFi.getMacAddress());
 
                         iuModbusSlave.updateHoldingRegister(modbusGroups::MODBUS_STREAMING_FEATURES ,OP_STATE,WIFI_RSSI_H,modbusFeaturesDestinations);
+                        //TODO : UpdateHolding registers for reportable diagnostics
+                        iuModbusSlave.updateHoldingRegister(modbusGroups::MODBUS_STREAMING_REPORTABLE_DIAGNOSTIC,DIG1,DIG51,conductor.modbus_reportable_m_id);
                         iuModbusSlave.m_holdingRegs[TOTAL_ERRORS]= iuModbusSlave.modbus_update(iuModbusSlave.m_holdingRegs);
                         conductor.ready_to_publish_to_modbus = false;
                         iuModbusSlave.lastModbusUpdateTime = now;

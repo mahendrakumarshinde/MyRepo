@@ -1,5 +1,5 @@
 #include "IUTMP116.h"
-
+#include "RawDataState.h"
 extern float modbusFeaturesDestinations[8];
 /* =============================================================================
     Constructors and destructors
@@ -230,6 +230,7 @@ void IUTMP116::processTemperatureData(uint8_t wireStatus)
      m_destinations[0]->addValue(m_temperature + m_defaultTemperature);
      //Append the Temperature data
      modbusFeaturesDestinations[5] = m_temperature + m_defaultTemperature;
+     featureDestinations::buff[featureDestinations::basicfeatures::temperature] = m_temperature + m_defaultTemperature; // temperature
 }
 
 /**

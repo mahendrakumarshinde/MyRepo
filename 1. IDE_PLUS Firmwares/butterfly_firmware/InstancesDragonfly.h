@@ -28,6 +28,7 @@
 #include "FeatureComputer.h"
 #include "FeatureGroup.h"
 #include "CharBufferSendingQueue.h"
+#include "AdvanceFeatureComputer.h"
 
 /***** Sensors *****/
 #include "IUBattery.h"
@@ -43,6 +44,9 @@
 
 /***** Managers and helpers *****/
 #include "LedManager.h"
+
+/**** Diagnostic Rule Engine ******/
+#include "IUTriggerEngine.h"
 
 #ifdef COMPONENTTEST
     // Interfaces
@@ -88,6 +92,11 @@ extern char iuEthernetBuffer[2048];
 extern Usr2Eth iuEthernet;
 
 extern IUmodbus iuModbusSlave;
+
+extern IUTriggerComputer iuTrigger;
+extern IUDiagnosticNotifier iuDigNotifier;
+extern AdvanceFeatureComputer iuAdvanceFeature;
+extern PhaseAngleComputer phaseAngleComputer;
 /* =============================================================================
     OTA
 ============================================================================= */
@@ -214,7 +223,7 @@ extern FeatureTemplate<float> temperature;
 /***** Audio Features *****/
 
 // Sensor data
-extern q15_t audioValues[4096];
+extern __attribute__((section(".noinit2"))) q15_t audioValues[4096];
 extern FeatureTemplate<q15_t> audio;
 
 // 2048 sample long features

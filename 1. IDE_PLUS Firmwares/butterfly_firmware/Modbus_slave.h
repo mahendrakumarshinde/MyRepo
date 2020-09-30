@@ -49,7 +49,8 @@ namespace modbusGroups {
 	enum option : uint8_t {
         MODBUS_STREAMING_FEATURES = 1,
 		MODBUS_STREAMING_SPECTRAL_FEATURES = 2,
-		COUNT = 2
+		MODBUS_STREAMING_REPORTABLE_DIAGNOSTIC = 3, 
+		COUNT = 3
 	};
 }
 enum 

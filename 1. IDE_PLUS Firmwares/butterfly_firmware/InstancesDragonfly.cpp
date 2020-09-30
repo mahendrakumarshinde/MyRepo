@@ -61,9 +61,16 @@ Usr2Eth iuEthernet(&Serial1, iuEthernetBuffer, 2048, IUSerial::LEGACY_PROTOCOL,
 IUmodbus iuModbusSlave(&Serial4,30,4);
 
 /* =============================================================================
+    IU Diagnostic Rule Engine 
+===============================================================================*/
+IUTriggerComputer iuTrigger;
+IUDiagnosticNotifier iuDigNotifier;
+/* =============================================================================
     Features
 ============================================================================= */
+AdvanceFeatureComputer iuAdvanceFeature;
 
+PhaseAngleComputer phaseAngleComputer;
 /***** Operation State Monitoring feature *****/
 
 q15_t opStateFeatureValues[2] = {0, 0};
@@ -187,7 +194,7 @@ FeatureTemplate<float> temperature("TMP", 2, 1, temperatureValues);
 /***** Audio Features *****/
 
 // Sensor data
-q15_t audioValues[4096];
+__attribute__((section(".noinit2"))) q15_t audioValues[4096];
 FeatureTemplate<q15_t> audio("SND", 2, 2048, audioValues);
 
 // 2048 sample long features
@@ -442,6 +449,12 @@ void populateFeatureGroups()
     motorStandardGroup.addFeature(&velRMS512Z);
     motorStandardGroup.addFeature(&temperature);
     motorStandardGroup.addFeature(&audioDB4096);
+    motorStandardGroup.addFeature(&accelRMS512X);
+    motorStandardGroup.addFeature(&accelRMS512Y);
+    motorStandardGroup.addFeature(&accelRMS512Z);
+    motorStandardGroup.addFeature(&dispRMS512X);
+    motorStandardGroup.addFeature(&dispRMS512Y);
+    motorStandardGroup.addFeature(&dispRMS512Z);
     
     /** Bearing monitoring **/
     bearingZGroup.addFeature(&accelRMS512Total);

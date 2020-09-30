@@ -342,7 +342,7 @@ class FeatureTemplate : public Feature
                          i < (sIdx + 1) * m_sectionSize; ++i) {
                         destination[destIndex++] = ',';
                         strVal = String(((float) m_values[i]) *
-                                        m_resolution, 2);
+                                        m_resolution, 3);
                         strncat(destination, strVal.c_str(), floatLen);
                         destIndex += min((uint16_t) strVal.length(), floatLen);
                     }

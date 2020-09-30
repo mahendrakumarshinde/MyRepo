@@ -23,6 +23,7 @@ class IUTimeHelper
         void updateTimeReferenceFromNTP();
         void updateTimeReferenceFromIU(const char *payload);
         time_t getCurrentTime();
+        void readGoogletime();
 
     protected:
         /***** NTP request *****/

@@ -44,6 +44,7 @@ namespace FFTConfiguration {
     const float DEFAULT_MIN_AGITATION = 0.03;
     const int DEFAULT_LSM_G_RANGE = 4;
     const int DEFAULT_KNX_G_RANGE = 8;
+    const float DEFAULT_RPM_THRESHOLD = 0.3;
     
     // Current configurations
     extern int currentSamplingRate;
@@ -52,6 +53,9 @@ namespace FFTConfiguration {
     extern int currentHighCutOffFrequency;
     extern float currentMinAgitation;
     extern bool currentSensor;   //if currenSensor=0 LSM is selected else kionix is selected
+    extern int lowRPMFrequency;
+    extern int highRPMFrequency;
+    extern float defaultRPMThreshold;
     const bool lsmSensor = 0; 
     const bool kionixSensor = 1;
     extern int currentLSMgRange;

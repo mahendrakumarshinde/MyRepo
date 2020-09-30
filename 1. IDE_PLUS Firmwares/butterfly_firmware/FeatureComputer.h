@@ -5,7 +5,7 @@
 #include "FeatureUtilities.h"
 #include "DiagnosticFingerPrint.h"
 #include "RawDataState.h"
-
+#include "AdvanceFeatureComputer.h"
 extern float modbusFeaturesDestinations[8]; 
 /* =============================================================================
  *  Motor Scaling Global Variable
@@ -23,7 +23,7 @@ extern  bool computationDone;
 class FeatureComputer
 {
     public:
-        static const uint8_t maxSourceCount = 10;
+        static const uint8_t maxSourceCount = 15;
         static const uint8_t maxDestinationCount = 5;
         /***** Instance registry *****/
         static const uint8_t MAX_INSTANCE_COUNT = 20;
@@ -482,6 +482,9 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         float m_minAgitationRMS;
         bool m_calibrationScaling1;  // Scaling factor for 1st derivative RMS
         bool m_calibrationScaling2;  // Scaling factor for 2nd derivative RMS
+        PhaseAngleComputer phaseAngleComputer;
+        //uint16_t freq_index = phaseAngleComputer.getFFTIndex(200,3330/4096);
+        
         virtual void m_specializedCompute()
     {
         // File logging
@@ -507,7 +510,7 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         for (uint8_t i = 0; i < m_destinationCount; ++i) {
             m_destinations[i]->setSamplingRate(samplingRate);
         }
-
+        
         m_destinations[0]->setResolution(resolution);
         m_destinations[1]->setResolution(1);
         m_destinations[2]->setResolution(resolution);
@@ -553,7 +556,25 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
                                       amplitudes);
 
         logFFTOutput(&FFTOuput[fft_direction], accFFT, (void*) amplitudes, amplitudeCount, false);
-
+        
+        // compute RPM on Acceleration Spectrum 
+        float accelRPM = RFFTFeatures::computeRPM(amplitudes,FFTConfiguration::lowRPMFrequency,
+                        FFTConfiguration::highRPMFrequency,0,df, resolution, 1); // accel scalingfactor = 1 
+        
+        //Todo freq_index = freq_index*2;  because of real & imag data on different index. (real&imag data on single index in jupyter)
+        uint16_t freq_index = phaseAngleComputer.getFFTIndex(accelRPM/60,df);
+        phaseAngleComputer.getComplexData(m_allocatedFFTSpace[2*freq_index],m_allocatedFFTSpace[2*freq_index + 1],m_id);
+        #if 0
+        
+        if(m_id == 32){
+        if(loopDebugMode){
+                debugPrint("RPM Freq In ACCEL :",false);
+                debugPrint(accelRPM/60.0);
+                debugPrint("freq_index : ",false);
+                debugPrint(freq_index);
+            }
+        }
+        #endif
         // -----------------------Start -------------------------------------------
         //Raw Data
        /* Serial.print("RAW DATA :");Serial.print("[");
@@ -708,8 +729,16 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
                 m_highCutFrequency, scaling1, false);
 
             logFFTOutput(&FFTOuput[fft_direction], velFFT,(void*) amplitudes, amplitudeCount, false);
-
-          
+            // RPM Computation 
+            if(m_id == 32){
+            // compute RPM on Velocity Spectrum 
+                float velRPM = RFFTFeatures::computeRPM(amplitudes,FFTConfiguration::lowRPMFrequency,
+                FFTConfiguration::highRPMFrequency,0,df,resolution,scaling1);
+                
+                // debugPrint("RPM Freq On velFFT : ",false );
+                // debugPrint(velRPM/60.0);
+                featureDestinations::buff[featureDestinations::basicfeatures::rpm] = velRPM;
+               }
             /***************************** Applying Diagnostic fingerprints on computated velocity fft amplitude *************************/ 
             //  Serial.print("Axis ID :");Serial.println(direction);
            /* Serial.println("Velocity FFT Amplitudes :");
@@ -769,10 +798,12 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
                 debugPrint(integratedRMS1 * resolution);
             }
            
-           if(m_id == 30 ){ modbusFeaturesDestinations[2] = integratedRMS1*resolution; }
-           if(m_id == 31 ){ modbusFeaturesDestinations[3] = integratedRMS1*resolution; }
-           if(m_id == 32 ){ modbusFeaturesDestinations[4] = integratedRMS1*resolution; }
-           
+            if(m_id == 30 ){ modbusFeaturesDestinations[2] = integratedRMS1*resolution; }
+            if(m_id == 31 ){ modbusFeaturesDestinations[3] = integratedRMS1*resolution; }
+            if(m_id == 32 ){ modbusFeaturesDestinations[4] = integratedRMS1*resolution; }
+            if(m_id == 30 ){ featureDestinations::buff[featureDestinations::basicfeatures::velRMS512X] = integratedRMS1*resolution; } //velRMS512X 
+            if(m_id == 31 ){ featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Y] = integratedRMS1*resolution; } //velRMS512Y
+            if(m_id == 32 ){ featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Z] = integratedRMS1*resolution; } //velRMS512Z
             //Serial.print(m_destinations[2]->getName());Serial.print("\t");Serial.println(integratedRMS1*resolution);
             
             // 4. 2nd integration in frequency domain
@@ -790,7 +821,9 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
             m_destinations[3]->addValue(integratedRMS2); 
 
             logFFTOutput(&FFTOuput[fft_direction], dispRMS, (void*) &integratedRMS2, 1, true);
-
+            if(m_id == 30 ){ featureDestinations::buff[featureDestinations::basicfeatures::dispRMS512X] = integratedRMS2*resolution; } //dispRMS512X
+            if(m_id == 31 ){ featureDestinations::buff[featureDestinations::basicfeatures::dispRMS512Y] = integratedRMS2*resolution; } //dispRMS512Y
+            if(m_id == 32 ){ featureDestinations::buff[featureDestinations::basicfeatures::dispRMS512Z] = integratedRMS2*resolution; } //dispRMS512Z
             if (featureDebugMode) {
                 debugPrint(millis(), false);
                 debugPrint(F(" -> "), false);
