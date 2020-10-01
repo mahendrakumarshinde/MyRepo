@@ -1325,6 +1325,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             // Apply RPM Configs
             int LOW_RPM  = root["CONFIG"]["RPM"]["LOW_RPM"];
             int HIGH_RPM = root["CONFIG"]["RPM"]["HIGH_RPM"]; 
+            float RPM_TRH = root["CONFIG"]["RPM"]["RPM_TRH"];
             const char* messageId = root["messageId"];
             if(LOW_RPM < FFTConfiguration::currentLowCutOffFrequency || LOW_RPM > FFTConfiguration::currentHighCutOffFrequency ){
                 LOW_RPM = FFTConfiguration::currentLowCutOffFrequency;
@@ -1332,11 +1333,17 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             if (HIGH_RPM > FFTConfiguration::currentHighCutOffFrequency || HIGH_RPM < FFTConfiguration::currentLowCutOffFrequency){ 
                  HIGH_RPM = FFTConfiguration::currentHighCutOffFrequency;
             }
-            FFTConfiguration::lowRPMFrequency = LOW_RPM;
-            FFTConfiguration::highRPMFrequency = HIGH_RPM;
+            FFTConfiguration::currentLowRPMFrequency = LOW_RPM;
+            FFTConfiguration::currentHighRPMFrequency = HIGH_RPM;
+            if(RPM_TRH < 0 || RPM_TRH == 0){
+                FFTConfiguration::currentRPMThreshold = FFTConfiguration::DEFAULT_RPM_THRESHOLD;
+            }else{
+                FFTConfiguration::currentRPMThreshold = RPM_TRH;
+            }
             if(loopDebugMode){
-                debugPrint("LOW_RPM : ",false);debugPrint(FFTConfiguration::lowRPMFrequency);
-                debugPrint("HIGH_RPM :",false);debugPrint(FFTConfiguration::highRPMFrequency);
+                debugPrint("LOW_RPM : ",false);debugPrint(FFTConfiguration::currentLowRPMFrequency);
+                debugPrint("HIGH_RPM :",false);debugPrint(FFTConfiguration::currentHighRPMFrequency);
+                debugPrint("RPM_TRH : ",false);debugPrint(FFTConfiguration::currentRPMThreshold);
                 debugPrint("MSGID : ",false);debugPrint(messageId);
             }
             if(iuWiFi.isConnected() )
@@ -1416,6 +1423,7 @@ void Conductor::checkPhaseConfig(){
 }
 
 void Conductor::computeAdvanceFeature(){
+    #if 0
     for(size_t i=0; i < totalIDs; i++){
         phaseAngleComputer.phase_output[i] = phaseAngleComputer.computePhaseDiff(m_ax1[i],m_ax2[i]);
        // debugPrint("Phase difference : ",false);
@@ -1423,6 +1431,7 @@ void Conductor::computeAdvanceFeature(){
         // debugPrint(" : ",false);
         //debugPrint(phaseAngleComputer.phase_output[i]);
     }
+    #endif
 }
 
 /*
@@ -5218,7 +5227,8 @@ bool Conductor::configureRPM(JsonVariant &config){
     if (config.success())
     {
         int LOW_RPM  = config["LOW_RPM"];
-        int HIGH_RPM = config["HIGH_RPM"]; 
+        int HIGH_RPM = config["HIGH_RPM"];
+        float RPM_TRH = config["RPM_TRH"]; 
         const char* messageId = config["messageId"];
            
         if(loopDebugMode){
@@ -5226,6 +5236,8 @@ bool Conductor::configureRPM(JsonVariant &config){
             debugPrint(LOW_RPM);
             debugPrint("HIGH RPM : ",false);
             debugPrint(HIGH_RPM);
+            debugPrint("RPM_TRH :",false);
+            debugPrint(RPM_TRH);
         }
         if(LOW_RPM < FFTConfiguration::currentLowCutOffFrequency || LOW_RPM > FFTConfiguration::currentHighCutOffFrequency ){
             LOW_RPM = FFTConfiguration::currentLowCutOffFrequency;
@@ -5234,14 +5246,20 @@ bool Conductor::configureRPM(JsonVariant &config){
         { 
             HIGH_RPM = FFTConfiguration::currentHighCutOffFrequency;
         }
-        FFTConfiguration::lowRPMFrequency = LOW_RPM;
-        FFTConfiguration::highRPMFrequency = HIGH_RPM;
+        FFTConfiguration::currentLowRPMFrequency = LOW_RPM;
+        FFTConfiguration::currentHighRPMFrequency = HIGH_RPM;
+        if(RPM_TRH < 0 || RPM_TRH == 0){
+            FFTConfiguration::currentRPMThreshold = FFTConfiguration::DEFAULT_RPM_THRESHOLD;
+        }else{
+            FFTConfiguration::currentRPMThreshold = RPM_TRH;
+        }
         success = true;
     }else
     {
         // Apply Default for RPM computation in case rpm.conf not available
-        FFTConfiguration::lowRPMFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY;
-        FFTConfiguration::highRPMFrequency = FFTConfiguration::currentHighCutOffFrequency;
+        FFTConfiguration::currentLowRPMFrequency  = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY;
+        FFTConfiguration::currentHighRPMFrequency = FFTConfiguration::currentHighCutOffFrequency;
+        FFTConfiguration::currentRPMThreshold     = FFTConfiguration::DEFAULT_RPM_THRESHOLD;
      }
     
        
