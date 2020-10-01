@@ -760,7 +760,7 @@ void loop()
             sensorStatus = false;
         }
         
-        if (iuWiFi.isConnected() == true && conductor.requestConfig == true && conductor.getDatetime() > 1590000000.00 && iuWiFi.getConnectionStatus())
+        if (iuWiFi.isConnected() == true && conductor.requestConfig == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
         {
             conductor.sendConfigRequest();
             conductor.requestConfig = false;
