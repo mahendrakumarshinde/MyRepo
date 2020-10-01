@@ -5257,7 +5257,7 @@ bool Conductor::configureRPM(JsonVariant &config){
     }else
     {
         // Apply Default for RPM computation in case rpm.conf not available
-        FFTConfiguration::currentLowRPMFrequency  = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY;
+        FFTConfiguration::currentLowRPMFrequency  = FFTConfiguration::currentLowCutOffFrequency;
         FFTConfiguration::currentHighRPMFrequency = FFTConfiguration::currentHighCutOffFrequency;
         FFTConfiguration::currentRPMThreshold     = FFTConfiguration::DEFAULT_RPM_THRESHOLD;
      }
