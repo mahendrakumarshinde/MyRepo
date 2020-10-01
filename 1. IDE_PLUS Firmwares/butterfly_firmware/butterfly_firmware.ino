@@ -556,7 +556,11 @@ void setup()
             }
         }
         // configure RPM 
-        conductor.configureFromFlash(IUFlash::CFG_RPM);
+        if(!conductor.configureFromFlash(IUFlash::CFG_RPM)){
+            FFTConfiguration::currentLowRPMFrequency  = FFTConfiguration::currentLowCutOffFrequency;
+            FFTConfiguration::currentHighRPMFrequency = FFTConfiguration::currentHighCutOffFrequency;
+            FFTConfiguration::currentRPMThreshold     = FFTConfiguration::DEFAULT_RPM_THRESHOLD;
+        }
 
         // Sensors
         if (debugMode) {
