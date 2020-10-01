@@ -53,9 +53,9 @@ namespace FFTConfiguration {
     extern int currentHighCutOffFrequency;
     extern float currentMinAgitation;
     extern bool currentSensor;   //if currenSensor=0 LSM is selected else kionix is selected
-    extern int lowRPMFrequency;
-    extern int highRPMFrequency;
-    extern float defaultRPMThreshold;
+    extern int currentLowRPMFrequency;
+    extern int currentHighRPMFrequency;
+    extern float currentRPMThreshold;
     const bool lsmSensor = 0; 
     const bool kionixSensor = 1;
     extern int currentLSMgRange;
