@@ -5184,7 +5184,50 @@ bool Conductor::setFFTParams() {
             debugPrint(F("KIONIX, LSM not found"));
             setSensorStatus(SensorStatusCode::SEN_ABS);
         }
-        // TODO: The following can be configurable in the future
+        // // TODO: The following can be configurable in the future
+        // // FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY;
+        // FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
+        // FFTConfiguration::currentMinAgitation = FFTConfiguration::DEFAULT_MIN_AGITATION;
+
+        // // Change the required sectionCount for all FFT processors 
+        // // Update the lowCutFrequency and highCutFrequency for each FFTComputerID
+        // int FFTComputerID = 30;  // FFTComputers X, Y, Z have m_id = 0, 1, 2 correspondingly
+        // for (int i=0; i<3; ++i) {
+        //     FeatureComputer::getInstanceById(FFTComputerID + i)->updateSectionCount(FFTConfiguration::currentBlockSize / 128);
+        //     FeatureComputer::getInstanceById(FFTComputerID + i)->updateFrequencyLimits(FFTConfiguration::currentLowCutOffFrequency, FFTConfiguration::currentHighCutOffFrequency);
+        // }        
+
+        // // Update the parameters of the diagnostic engine
+        // DiagnosticEngine::m_SampleingFrequency = FFTConfiguration::currentSamplingRate;
+        // DiagnosticEngine::m_smapleSize = FFTConfiguration::currentBlockSize;
+        // DiagnosticEngine::m_fftLength = FFTConfiguration::currentBlockSize / 2;
+
+        if(setupDebugMode) {
+            config.prettyPrintTo(Serial);
+        }
+        configured = true;
+    } else {
+        if(iuAccelerometerKX134.kionixPresence){
+                conductor.setSensorStatus(conductor.SensorStatusCode::KNX_DEFAULT); // TO DO based on hardware identifier
+                FFTConfiguration::currentSamplingRate = iuAccelerometerKX134.defaultSamplingRate;
+                FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
+                FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
+                FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_KNX_G_RANGE;
+                iuAccelerometerKX134.setGrange(FFTConfiguration::currentKNXgRange);
+            }else if(iuAccelerometer.lsmPresence){
+                conductor.setSensorStatus(conductor.SensorStatusCode::LSM_DEFAULT); // TO DO based on hardware identifier
+                FFTConfiguration::currentSamplingRate = iuAccelerometer.defaultSamplingRate;
+                FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
+                FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_LSM;
+                FFTConfiguration::currentLSMgRange = FFTConfiguration::DEFAULT_LSM_G_RANGE;
+                iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
+            }else{
+                conductor.setSensorStatus(conductor.SensorStatusCode::SEN_ABS);
+            }
+        if(loopDebugMode) debugPrint("Failed to read fft.conf file. Configured with defaults");
+        configured = false;
+    }
+    // TODO: The following can be configurable in the future
         // FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY;
         FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
         FFTConfiguration::currentMinAgitation = FFTConfiguration::DEFAULT_MIN_AGITATION;
@@ -5201,15 +5244,6 @@ bool Conductor::setFFTParams() {
         DiagnosticEngine::m_SampleingFrequency = FFTConfiguration::currentSamplingRate;
         DiagnosticEngine::m_smapleSize = FFTConfiguration::currentBlockSize;
         DiagnosticEngine::m_fftLength = FFTConfiguration::currentBlockSize / 2;
-
-        if(setupDebugMode) {
-            config.prettyPrintTo(Serial);
-        }
-        configured = true;
-    } else {
-        if(loopDebugMode) debugPrint("Failed to read fft.conf file");
-        configured = false;
-    }
     return configured;
 }
 
