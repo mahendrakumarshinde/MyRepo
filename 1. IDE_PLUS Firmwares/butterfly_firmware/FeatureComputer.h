@@ -557,14 +557,14 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
 
         logFFTOutput(&FFTOuput[fft_direction], accFFT, (void*) amplitudes, amplitudeCount, false);
         
+        #if 0
         // compute RPM on Acceleration Spectrum 
-        float accelRPM = RFFTFeatures::computeRPM(amplitudes,FFTConfiguration::lowRPMFrequency,
-                        FFTConfiguration::highRPMFrequency,0,df, resolution, 1); // accel scalingfactor = 1 
+        float accelRPM = RFFTFeatures::computeRPM(amplitudes,FFTConfiguration::currentLowRPMFrequency,
+                        FFTConfiguration::currentHighRPMFrequency,FFTConfiguration::currentRPMThreshold,df, resolution, 1,accFFT); // accel scalingfactor = 1 
         
         //Todo freq_index = freq_index*2;  because of real & imag data on different index. (real&imag data on single index in jupyter)
         uint16_t freq_index = phaseAngleComputer.getFFTIndex(accelRPM/60,df);
         phaseAngleComputer.getComplexData(m_allocatedFFTSpace[2*freq_index],m_allocatedFFTSpace[2*freq_index + 1],m_id);
-        #if 0
         
         if(m_id == 32){
         if(loopDebugMode){
@@ -729,16 +729,18 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
                 m_highCutFrequency, scaling1, false);
 
             logFFTOutput(&FFTOuput[fft_direction], velFFT,(void*) amplitudes, amplitudeCount, false);
+            // debugPrint("Axis : ",false);
+            // debugPrint(m_destinations[0]->getName());
             // RPM Computation 
             if(m_id == 32){
             // compute RPM on Velocity Spectrum 
-                float velRPM = RFFTFeatures::computeRPM(amplitudes,FFTConfiguration::lowRPMFrequency,
-                FFTConfiguration::highRPMFrequency,0,df,resolution,scaling1);
+                float velRPM = RFFTFeatures::computeRPM(amplitudes,FFTConfiguration::currentLowRPMFrequency,
+                FFTConfiguration::currentHighRPMFrequency,FFTConfiguration::currentRPMThreshold,df,resolution,scaling1,velFFT);
                 
                 // debugPrint("RPM Freq On velFFT : ",false );
                 // debugPrint(velRPM/60.0);
                 featureDestinations::buff[featureDestinations::basicfeatures::rpm] = velRPM;
-               }
+            }
             /***************************** Applying Diagnostic fingerprints on computated velocity fft amplitude *************************/ 
             //  Serial.print("Axis ID :");Serial.println(direction);
            /* Serial.println("Velocity FFT Amplitudes :");
