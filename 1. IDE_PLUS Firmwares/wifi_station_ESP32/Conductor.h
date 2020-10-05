@@ -181,7 +181,7 @@ class Conductor
         /***************************/
         char mqtt_client_cert[2048];
         char mqtt_client_key[2048];
-        char ssl_rootca_cert[2048];
+        char ssl_rootca_cert[3072];
         char eap_client_cert[2048];
         char eap_client_key[2048];
         char certDownloadResponse[3000];    // stores the cert download json (Actual  -2299)
