@@ -2437,7 +2437,7 @@ bool Conductor:: writeCertificatesToFlash(IUESPFlash::storedConfig configType,lo
     while(1)
     {
       delay(5);
-      count = stream->readBytes(buf,ReadBlock);
+      count = stream->readBytes(buf,std::min((size_t)len,ReadBlock));
       if(count != 0) 
       {
         loopCnt++;
