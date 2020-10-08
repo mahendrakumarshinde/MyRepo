@@ -137,6 +137,10 @@ void IULSM6DSM::setSamplingRate(uint16_t samplingRate)
     setScale(m_scale);
 }
 
+// void IULSM6DSM::updateSamplingRate(uint16_t samplingRate)
+// {
+//     m_samplingRate = samplingRate;
+// }
 /**
  * Configure the interrupt pins
  */
