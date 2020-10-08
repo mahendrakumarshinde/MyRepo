@@ -402,7 +402,7 @@ void setup()
 
   pinMode(ESP32_IO0,OUTPUT);
 //   pinMode(A3,OUTPUT);  // ISR (ODR checked from pin 50)
-  digitalWrite(ESP32_IO0,HIGH); // IDE1.5_PORT_CHANGE
+  digitalWrite(ESP32_IO0,LOW); // IDE1.5_PORT_CHANGE
   DOSFS.begin();
   #if 1
     iuUSB.begin();
@@ -508,11 +508,11 @@ void setup()
         // armv7m_timer_create(&httpConfigTimer, (armv7m_timer_callback_t)httpConfigCallback);
         // armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min Timer 180000
         
-        // WIFI SETUP BEGIN
-        iuWiFi.setupHardware();
-        iuWiFi.setOnNewMessageCallback(onNewWiFiMessage);
-        iuWiFi.setOnConnect(onWiFiConnect);
-        iuWiFi.setOnDisconnect(onWiFiDisconnect);
+        // // WIFI SETUP BEGIN
+        // iuWiFi.setupHardware();
+        // iuWiFi.setOnNewMessageCallback(onNewWiFiMessage);
+        // iuWiFi.setOnConnect(onWiFiConnect);
+        // iuWiFi.setOnDisconnect(onWiFiDisconnect);
 
         if (setupDebugMode) {
             iuI2C.scanDevices();
@@ -623,7 +623,7 @@ void setup()
         }
         if (setupDebugMode) {
             ledManager.overrideColor(RGB_PURPLE);
-            delay(5000);
+            // delay(5000);
             ledManager.stopColorOverride();
         }
         // } else if (setupDebugMode) {
@@ -631,7 +631,7 @@ void setup()
         delay(5000);
         ledManager.stopColorOverride();
         // }
-        delay(5000);
+        // delay(5000);
         //configure mqttServer
         conductor.configureMQTTServer("MQTT.conf");
         
@@ -684,18 +684,18 @@ void setup()
         opStateFeature.setOnNewValueCallback(operationStateCallback);
         ledManager.resetStatus();
         conductor.changeUsageMode(UsageMode::OPERATION);
-        iuWiFi.softReset();
+        // iuWiFi.softReset();
         /* code uncommented */
         if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor && iuAccelerometer.lsmPresence)
         {
             pinMode(IULSM6DSM::INT1_PIN, INPUT);
-            attachInterrupt(digitalPinToInterrupt(IULSM6DSM::INT1_PIN), dataAcquisitionISR, RISING);
+            // attachInterrupt(digitalPinToInterrupt(IULSM6DSM::INT1_PIN), dataAcquisitionISR, RISING);
         // debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
         }
         else if ( FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor && iuAccelerometerKX134.kionixPresence)
         {
             pinMode(IUKX134::INT1_PIN,INPUT);
-            attachInterrupt(digitalPinToInterrupt(IUKX134::INT1_PIN),dataAcquisitionISR,RISING);
+            // attachInterrupt(digitalPinToInterrupt(IUKX134::INT1_PIN),dataAcquisitionISR,RISING);
         }
         else
         {
@@ -715,7 +715,16 @@ void setup()
         // Turn ON BLE module and the BLE beacon
         iuBluetooth.bleButton(true);
         iuBluetooth.bleBeaconSetting(true);
-
+        // WIFI SETUP BEGIN
+        digitalWrite(ESP32_IO0,HIGH);
+        iuWiFi.setupHardware();
+        iuWiFi.setOnNewMessageCallback(onNewWiFiMessage);
+        iuWiFi.setOnConnect(onWiFiConnect);
+        iuWiFi.setOnDisconnect(onWiFiDisconnect);
+        FeatureStates::isISRActive = true;
+        if(setupDebugMode){
+            debugPrint(F("*********Setup Completed*********"));
+        }
     #endif
  #endif   
 }
@@ -860,9 +869,12 @@ void loop()
                 {
                     attachInterrupt(digitalPinToInterrupt(IULSM6DSM::INT1_PIN), dataAcquisitionISR, RISING);
                 }
-                else
+                else if(FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor)
                 {
                     attachInterrupt(digitalPinToInterrupt(IUKX134::INT1_PIN),dataAcquisitionISR,RISING);
+                }
+                else{
+                    debugPrint(F("No Sensor Found"));
                 }
 
                 // Serial.println("ISR Enabled !!!");
