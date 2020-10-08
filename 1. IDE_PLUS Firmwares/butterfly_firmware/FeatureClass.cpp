@@ -220,18 +220,18 @@ void Feature::incrementFillingIndex()
                     //     debugPrint("Output Frequency in Hz : ",false);
                     //     debugPrint(FeatureStates::outputFrequency,true); // calculated freq
                     // }
-                //     if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
-                //     {
-                //         extern IULSM6DSM iuAccelerometer;
-                //         iuAccelerometer.updateSamplingRate(FeatureStates::outputFrequency);
+                    if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+                    {
+                        extern IULSM6DSM iuAccelerometer;
+                        iuAccelerometer.updateSamplingRate(FeatureStates::outputFrequency);
                         
                         
-                //     }
-                //    else if(FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor)
-                //     {
-                //         extern IUKX134 iuAccelerometerKX134;
-                //         iuAccelerometerKX134.updateSamplingRate(FeatureStates::outputFrequency);
-                //     }
+                    }
+                   else if(FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor)
+                    {
+                        extern IUKX134 iuAccelerometerKX134;
+                        iuAccelerometerKX134.updateSamplingRate(FeatureStates::outputFrequency);
+                    }
 
                     FeatureStates::isISRActive = false;
                     FeatureStates::isISRDisabled = true;

@@ -133,10 +133,10 @@ void IUKX134::setSamplingRate(uint16_t samplingRate)
 	operate(true);
 }
 
-// void IUKX134::updateSamplingRate(uint16_t samplingRate)
-// {
-//     m_samplingRate = samplingRate;
-// }
+void IUKX134::updateSamplingRate(uint16_t samplingRate)
+{
+    m_samplingRate = samplingRate;
+}
 
 void IUKX134::configure(JsonVariant &config)
 {

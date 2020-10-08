@@ -98,7 +98,7 @@ class IULSM6DSM : public HighFreqSensor
         void softReset();
         virtual void setPowerMode(PowerMode::option pMode);
         virtual void setSamplingRate(uint16_t samplingRate);
-        //void updateSamplingRate(uint16_t samplingRate);
+        void updateSamplingRate(uint16_t samplingRate);
         void configureInterrupts();
         void computeBias();
         /***** Configuration and calibration *****/
