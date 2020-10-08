@@ -56,6 +56,7 @@ bool IUUSB::readCharCustomProtocol()
             (m_bufferIndex == 17 && strncmp(m_buffer, "IUGET_WIFI_CONFIG", 17)== 0) ||
             (m_bufferIndex == 17 && strncmp(m_buffer, "IUGET_CERT_CONFIG", 17)== 0) || 
             (m_bufferIndex == 21 && strncmp(m_buffer, "IUSET_ERASE_INT_FLASH", 21)== 0) ||
+            (m_bufferIndex == 9 && strncmp(m_buffer, "FLASH_ESP", 9)== 0) ||
             (m_bufferIndex == 16 && strncmp(m_buffer, "IUGET_WIFI_MACID", 16)== 0) ) 
         {
             m_buffer[m_bufferIndex++] = 0;

@@ -2512,6 +2512,26 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     }
 
                 }
+                /********************FOR DEVELOPMENT PURPOSE ONLY*******************/
+                // This command mainly use to avoid flash all 3 frimwares if changes required only in ESP32 firmware. 
+                // Increase "loopTimeout" from ino to 5min to avoid stm reboot
+                // Hit the command from USB, This keeps ESP32 in Download mode. 
+                // After Flashing ESP32 firmware reboot STM32.
+                if(strcmp(buff, "FLASH_ESP") == 0){
+                    digitalWrite(7,LOW); // IDE1.5_PORT_CHANGE
+                    digitalWrite(IUESP8285::ESP32_ENABLE_PIN, LOW); // IDE1.5_PORT_CHANGE
+                    
+                    delay(100);
+                    digitalWrite(IUESP8285::ESP32_ENABLE_PIN, HIGH);
+                    while(1){
+                        while (Serial1.available()) {
+                            Serial.write(Serial1.read() );
+                        }
+                        while (Serial.available()) {
+                            Serial1.write(Serial.read() );
+                        }
+                    }
+                }
                 if (strcmp(buff, "IUGET_HTTP_CONFIG") == 0)
                 {
                     if (DOSFS.exists("httpConfig.conf")){
