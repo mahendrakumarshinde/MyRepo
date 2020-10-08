@@ -423,7 +423,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             //send ACK on ide_pluse/command_response/
             const char* messageId;
             messageId = root["messageId"]  ;
-            snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+            snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"messageTye\":\"feature-config-ack\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
             
             //Serial.println(ack_config);
             if(iuWiFi.isConnected()){
@@ -515,7 +515,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             messageId = config["messageId"]  ;
             
           
-            snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+            snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"messageType\":\"fingerprint-config-ack\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
 
             if(iuWiFi.isConnected()){
                  iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config); 
@@ -5086,10 +5086,10 @@ void Conductor::sendDiagnosticFingerPrints() {
                 }else if(m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE || m_streamingMode == StreamingMode::BLE)//iuWiFi.isAvailable() && iuWiFi.isWorking())   
                 {   /* FingerPrintResult send over Wifi only */
                     //debugPrint("Wifi connected, ....",true);
-                    if(RawDataState::rawDataTransmissionInProgress == false && iuWiFi.isConnected())
-                    {    
-                        iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );    
-                    }
+                    // if(RawDataState::rawDataTransmissionInProgress == false && iuWiFi.isConnected())
+                    // {    
+                    //     iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );    
+                    // }
                     if(StreamingMode::BLE && isBLEConnected()){    
                     iuBluetooth.write("Fingerprints Data : ");
                     iuBluetooth.write(FingerPrintResult);
