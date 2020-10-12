@@ -641,7 +641,7 @@ void setup()
         //conductor.setSensorConfig("sensorConfig.conf"); 
 
         //AdvanceFeatures configurations 
-        //conductor.checkPhaseConfig();
+        conductor.checkPhaseConfig();
         
         if(DOSFS.exists("sensorConfig.conf")){
             conductor.setSensorConfig("sensorConfig.conf"); 

@@ -557,7 +557,7 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
 
         logFFTOutput(&FFTOuput[fft_direction], accFFT, (void*) amplitudes, amplitudeCount, false);
         
-        #if 0
+        #if 1
         // compute RPM on Acceleration Spectrum 
         float accelRPM = RFFTFeatures::computeRPM(amplitudes,FFTConfiguration::currentLowRPMFrequency,
                         FFTConfiguration::currentHighRPMFrequency,FFTConfiguration::currentRPMThreshold,df, resolution, 1,accFFT); // accel scalingfactor = 1 
@@ -566,14 +566,14 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         uint16_t freq_index = phaseAngleComputer.getFFTIndex(accelRPM/60,df);
         phaseAngleComputer.getComplexData(m_allocatedFFTSpace[2*freq_index],m_allocatedFFTSpace[2*freq_index + 1],m_id);
         
-        if(m_id == 32){
-        if(loopDebugMode){
-                debugPrint("RPM Freq In ACCEL :",false);
-                debugPrint(accelRPM/60.0);
-                debugPrint("freq_index : ",false);
-                debugPrint(freq_index);
-            }
-        }
+        // if(m_id == 32){
+        // if(loopDebugMode){
+        //         debugPrint("RPM Freq In ACCEL :",false);
+        //         debugPrint(accelRPM/60.0);
+        //         debugPrint("freq_index : ",false);
+        //         debugPrint(freq_index);
+        //     }
+        // }
         #endif
         // -----------------------Start -------------------------------------------
         //Raw Data
@@ -729,9 +729,7 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
                 m_highCutFrequency, scaling1, false);
 
             logFFTOutput(&FFTOuput[fft_direction], velFFT,(void*) amplitudes, amplitudeCount, false);
-            // debugPrint("Axis : ",false);
-            // debugPrint(m_destinations[0]->getName());
-            // RPM Computation 
+            // RPM Computation across Z-direction
             if(m_id == 32){
             // compute RPM on Velocity Spectrum 
                 float velRPM = RFFTFeatures::computeRPM(amplitudes,FFTConfiguration::currentLowRPMFrequency,

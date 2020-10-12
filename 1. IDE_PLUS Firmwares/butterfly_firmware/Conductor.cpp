@@ -1423,7 +1423,7 @@ void Conductor::checkPhaseConfig(){
 }
 
 void Conductor::computeAdvanceFeature(){
-    #if 0
+    
     for(size_t i=0; i < totalIDs; i++){
         phaseAngleComputer.phase_output[i] = phaseAngleComputer.computePhaseDiff(m_ax1[i],m_ax2[i]);
        // debugPrint("Phase difference : ",false);
@@ -1431,7 +1431,6 @@ void Conductor::computeAdvanceFeature(){
         // debugPrint(" : ",false);
         //debugPrint(phaseAngleComputer.phase_output[i]);
     }
-    #endif
 }
 
 /*
