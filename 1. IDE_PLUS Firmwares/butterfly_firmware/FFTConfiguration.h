@@ -48,6 +48,7 @@ namespace FFTConfiguration {
     
     // Current configurations
     extern int currentSamplingRate;
+    extern int calculatedSamplingRate;
     extern int currentBlockSize;
     extern int currentLowCutOffFrequency;
     extern int currentHighCutOffFrequency;
