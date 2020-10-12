@@ -73,7 +73,7 @@ public:
 
     /// setup sensor sampling rate 12Hz to 25600Hz
     virtual void setSamplingRate(uint16_t samplingRate);
-    void updateSamplingRate(uint16_t samplingRate){m_samplingRate = samplingRate;};
+    virtual void updateSamplingRate(uint16_t samplingRate){m_samplingRate = samplingRate;HighFreqSensor::setSamplingRate(samplingRate);};
     
 
     /// setup average filter
