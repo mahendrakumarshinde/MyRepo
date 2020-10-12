@@ -629,7 +629,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
            break; 
         case MSPCommand::SEND_RAW_DATA:
           {
-            memset(ssl_rootca_cert,0x00,2048);
+            memset(ssl_rootca_cert,0x00,sizeof(ssl_rootca_cert));
             //Apply the rootCA cert
             if(activeCertificates == 0){
                 //Serial.println("\nUsing ROOTCA 0");
@@ -2437,7 +2437,7 @@ bool Conductor:: writeCertificatesToFlash(IUESPFlash::storedConfig configType,lo
     while(1)
     {
       delay(5);
-      count = stream->readBytes(buf,ReadBlock);
+      count = stream->readBytes(buf,std::min((size_t)len,ReadBlock));
       if(count != 0) 
       {
         loopCnt++;
