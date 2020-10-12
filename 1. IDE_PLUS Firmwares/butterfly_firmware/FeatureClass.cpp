@@ -213,7 +213,7 @@ void Feature::incrementFillingIndex()
                     //isr_detached_startTime = micros();
                     FeatureStates::isr_stopTime = micros();
                     FeatureStates::elapsedTime = (FeatureStates::isr_stopTime-FeatureStates::isr_startTime)/1000000;
-                    FeatureStates::outputFrequency = round(FFTConfiguration::currentBlockSize/FeatureStates::elapsedTime);
+                    FFTConfiguration::calculatedSamplingRate = round(FFTConfiguration::currentBlockSize/FeatureStates::elapsedTime);
                     // if(loopDebugMode){
                     //     debugPrint("Elapsed Time in sec : ",false);
                     //     debugPrint(FeatureStates::elapsedTime,true);//time
@@ -223,14 +223,12 @@ void Feature::incrementFillingIndex()
                     if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
                     {
                         extern IULSM6DSM iuAccelerometer;
-                        iuAccelerometer.updateSamplingRate(FeatureStates::outputFrequency);
-                        
-                        
+                        iuAccelerometer.updateSamplingRate(FFTConfiguration::calculatedSamplingRate);
                     }
                    else if(FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor)
                     {
                         extern IUKX134 iuAccelerometerKX134;
-                        iuAccelerometerKX134.updateSamplingRate(FeatureStates::outputFrequency);
+                        iuAccelerometerKX134.updateSamplingRate(FFTConfiguration::calculatedSamplingRate);
                     }
 
                     FeatureStates::isISRActive = false;
@@ -243,7 +241,6 @@ void Feature::incrementFillingIndex()
                 
                 //FeatureGroup::isFeatureStreamComplete = false;
         }   
-            
         m_recordIndex = (m_recordIndex + 1) % m_sectionCount;       // m_recordIndex++
         newFullSection = true;
         // Clear the data error flag for the next section
