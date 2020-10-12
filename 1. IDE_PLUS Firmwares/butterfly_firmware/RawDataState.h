@@ -29,7 +29,6 @@ namespace FeatureStates {
     extern double isr_startTime;
     extern double isr_stopTime;
     extern double elapsedTime;
-    extern int outputFrequency;
     extern int isrCount; 
 }
 
