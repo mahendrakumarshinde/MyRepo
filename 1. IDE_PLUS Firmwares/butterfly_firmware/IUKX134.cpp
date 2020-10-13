@@ -133,6 +133,8 @@ void IUKX134::setSamplingRate(uint16_t samplingRate)
 	operate(true);
 }
 
+
+
 void IUKX134::configure(JsonVariant &config)
 {
     HighFreqSensor::configure(config);  // General sensor config
