@@ -2648,6 +2648,30 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                 if (strcmp(buff, "IUGET_CERT_CONFIG") == 0) {
                     iuWiFi.sendMSPCommand(MSPCommand::GET_CERT_CONFIG);
                 }
+                if (strcmp(buff, "IUGET_DIG_CONFIG") == 0) {
+                    JsonObject &diag =  configureJsonFromFlash("/iuRule/diagnostic.conf",1);
+                    if(diag.success()){
+                        iuUSB.port->println("*****DIG CONFIG*****");
+                        diag.printTo(*iuUSB.port);
+                        iuUSB.port->println("");
+                    }
+                }
+                if (strcmp(buff, "IUGET_PHASE_CONFIG") == 0) {
+                    JsonObject &phase =  configureJsonFromFlash("/iuconfig/phase.conf",1);
+                    if(phase.success()){
+                        iuUSB.port->println("*****PHASE CONFIG*****");
+                        phase.printTo(*iuUSB.port);
+                        iuUSB.port->println("");
+                    }
+                }
+                if (strcmp(buff, "IUGET_RPM_CONFIG") == 0) {
+                    JsonObject &rpm =  configureJsonFromFlash("/iuconfig/rpm.conf",1);
+                    if(rpm.success()){
+                        iuUSB.port->println("*****RPM CONFIG*****");
+                        rpm.printTo(*iuUSB.port);
+                        iuUSB.port->println("");
+                    }
+                }
                 if (strcmp(buff, "IUSET_OTAFLAG_00") == 0)
                 {
                     uint32_t cmdStrTime = millis();
