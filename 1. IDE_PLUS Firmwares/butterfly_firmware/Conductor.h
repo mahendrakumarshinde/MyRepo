@@ -280,6 +280,7 @@ class Conductor
         void manageRawDataSending();
         // void startRawDataSendingSession();
         void prepareRawDataPacketAndSend(char axis);       // to send to ESP
+        int httpsStatusCodeX, httpsStatusCodeY, httpsStatusCodeZ;   
         int httpStatusCodeX, httpStatusCodeY, httpStatusCodeZ;         
         bool XSentToWifi, YsentToWifi, ZsentToWifi;     // TODO optimize using bit vector
         uint32_t RawDataTimeout = 0;
@@ -381,6 +382,15 @@ class Conductor
         const char* m_httpUsername = HTTP_DEFAULT_USERNAME;
         const char* m_httpPassword = HTTP_DEFAULT_PASSWORD;
         const char* m_httpOauth = HTTP_DEFAULT_OUTH;
+
+        const char* m_httpHost_oem;
+        uint16_t  m_httpPort_oem;
+        const char* m_httpPath_oem;
+        const char* m_httpUsername_oem;
+        const char* m_httpPassword_oem;
+        const char* m_httpOauth_oem;
+        bool httpOEMConfigPresent = false;
+        
         const char* m_accountId;
         bool httpOtaValidation = false;
         double last_fingerprint_timestamp = 0;
