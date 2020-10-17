@@ -103,6 +103,12 @@ class Conductor
         static const uint8_t maxMqttClientConnectionCount = 5;
         static const uint8_t maxMqttCertificateDownloadCount = 3;
         static const uint32_t downloadInitRetryTimeout  = 30*1000;   //ms
+        static const uint32_t HTTPRawDataRetryTimeout = 5000; //ms;
+        static const uint32_t HTTPSRawDataRetryTimeout = 5000; //ms;
+        uint32_t HTTPRawDataTimeout = 0;
+        uint32_t HTTPSRawDataTimeout = 0;
+        uint8_t RawdataHTTPretryCount = 0;
+        uint8_t RawdataHTTPSretryCount = 0;
         /***** Core *****/
         Conductor();
         virtual ~Conductor() {}
