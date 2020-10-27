@@ -3509,34 +3509,34 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 debugPrint(httpsStatusCodeY, false);debugPrint(" | ", false);
                 debugPrint(httpsStatusCodeZ, true);
                 // Abort transmission on failure  // IDE1.5_PORT_CHANGE Change
-                RawDataState::rawDataTransmissionInProgress = false;
-                RawDataState::startRawDataCollection = false;             
+                // RawDataState::rawDataTransmissionInProgress = false;
+                // RawDataState::startRawDataCollection = false;             
             }
 #endif
             break;
         }
-        case MSPCommand::HTTP_ACK: {
-            if (loopDebugMode){ debugPrint(F("HTTP_ACK")); }
+        case MSPCommand::HTTPS_OEM_ACK: {
+            if (loopDebugMode){ debugPrint(F("HTTPS_OEM_ACK")); }
             if (buff[0] == 'X') {
-                httpStatusCodeX = atoi(&buff[1]);
+                httpsOEMStatusCodeX = atoi(&buff[1]);
             } else if (buff[0] == 'Y') {
-                httpStatusCodeY = atoi(&buff[1]);
+                httpsOEMStatusCodeY = atoi(&buff[1]);
             } else if (buff[0] == 'Z') {
-                httpStatusCodeZ = atoi(&buff[1]);
+                httpsOEMStatusCodeZ = atoi(&buff[1]);
             }
             if (loopDebugMode) {
                 debugPrint("HTTP status codes X | Y | Z ",false);
-                debugPrint(httpStatusCodeX, false);debugPrint(" | ", false);
-                debugPrint(httpStatusCodeY, false);debugPrint(" | ", false);
-                debugPrint(httpStatusCodeZ, true);
+                debugPrint(httpsOEMStatusCodeX, false);debugPrint(" | ", false);
+                debugPrint(httpsOEMStatusCodeY, false);debugPrint(" | ", false);
+                debugPrint(httpsOEMStatusCodeZ, true);
             }
 #if 1
-            if(httpStatusCodeX != 200 || (httpStatusCodeX == 200 && httpStatusCodeY != 200 && httpStatusCodeY != 0) || (httpStatusCodeX == 200 && httpStatusCodeY == 200 && httpStatusCodeZ != 200 && httpStatusCodeZ != 0))
+            if(httpsOEMStatusCodeX != 200 || (httpsOEMStatusCodeX == 200 && httpsOEMStatusCodeY != 200 && httpsOEMStatusCodeY != 0) || (httpsOEMStatusCodeX == 200 && httpsOEMStatusCodeY == 200 && httpsOEMStatusCodeZ != 200 && httpsOEMStatusCodeZ != 0))
             {
-                debugPrint("HTTP status codes X | Y | Z ",false);
-                debugPrint(httpStatusCodeX, false);debugPrint(" | ", false);
-                debugPrint(httpStatusCodeY, false);debugPrint(" | ", false);
-                debugPrint(httpStatusCodeZ, true);
+                debugPrint("HTTPS OEM status codes X | Y | Z ",false);
+                debugPrint(httpsOEMStatusCodeX, false);debugPrint(" | ", false);
+                debugPrint(httpsOEMStatusCodeY, false);debugPrint(" | ", false);
+                debugPrint(httpsOEMStatusCodeZ, true);
                 // // Abort transmission on failure  // IDE1.5_PORT_CHANGE Change
                 // RawDataState::rawDataTransmissionInProgress = false;
                 // RawDataState::startRawDataCollection = false;             
@@ -3544,6 +3544,11 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
 #endif
             break;
         }
+        case MSPCommand::SEND_RAW_DATA_NEXT_PKT: {
+                sendNextAxis = bool(strtol(buff, NULL, 0));
+                debugPrint("Send Next Axis : ", false);debugPrint(sendNextAxis);
+            }
+            break;
         case MSPCommand::WIFI_GET_TX_POWER:
             if (loopDebugMode) {
                 debugPrint("TX power from ESP32  :",false);
@@ -4991,7 +4996,8 @@ void Conductor::manageRawDataSending() {
         }
         RawDataState::rawDataTransmissionInProgress = true;
         httpsStatusCodeX = httpsStatusCodeY = httpsStatusCodeZ = 0;
-        httpStatusCodeX = httpStatusCodeY = httpStatusCodeZ = 0;
+        httpsOEMStatusCodeX = httpsOEMStatusCodeY = httpsOEMStatusCodeZ = 0;
+        sendNextAxis = false;
         XSentToWifi = YsentToWifi = ZsentToWifi = false;    
     }
 
@@ -5007,9 +5013,10 @@ void Conductor::manageRawDataSending() {
                 debugPrint("Raw data request: X sent to wifi");
             }
             // lastPacketSentToESP = millis();
-        } else if (httpsStatusCodeX == 200 && !YsentToWifi) { 
+        } else if ((httpsStatusCodeX == 200 || httpsOEMStatusCodeX == 200) && (!YsentToWifi && sendNextAxis)) { 
             prepareRawDataPacketAndSend('Y');
             YsentToWifi = true;
+            sendNextAxis = false;
             RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
             RawDataTotalTimeout = millis();
             iuWiFi.m_setLastConfirmedPublication();
@@ -5017,9 +5024,10 @@ void Conductor::manageRawDataSending() {
                 debugPrint("Raw data request: X delivered, Y sent to wifi");
             }
             // lastPacketSentToESP = millis();
-        } else if (httpsStatusCodeY == 200 && !ZsentToWifi) {
+        } else if ((httpsStatusCodeY == 200 || httpsOEMStatusCodeY == 200) && (!ZsentToWifi && sendNextAxis)) {
             prepareRawDataPacketAndSend('Z');
             ZsentToWifi = true;
+            sendNextAxis = false;
             RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
             RawDataTotalTimeout = millis();
             iuWiFi.m_setLastConfirmedPublication();
@@ -5050,7 +5058,7 @@ void Conductor::manageRawDataSending() {
         //         debugPrint("Raw data request: Resending Z, Z sent to wifi");
         //     }
         // }
-        if (httpsStatusCodeX == 200 && httpsStatusCodeY == 200 && httpsStatusCodeZ == 200) {
+        if ((httpsStatusCodeX == 200 && httpsStatusCodeY == 200 && httpsStatusCodeZ == 200) || (httpsOEMStatusCodeX == 200 && httpsOEMStatusCodeY == 200 && httpsOEMStatusCodeZ == 200) ) {
             // End the transmission session, reset RawDataState::startRawDataCollection and RawDataState::rawDataTransmissionInProgress
             // Rest of the tracking variables are reset when rawDataRequest() is called
             if(loopDebugMode) {

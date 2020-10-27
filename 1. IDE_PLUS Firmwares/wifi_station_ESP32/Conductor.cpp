@@ -696,8 +696,10 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
 
             iuSerial->sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION, &rawData->axis, 1);
             static int httpOEMStatusCode = 0;
+            static int httpStatusCode = 0;
             RawdataHTTPretryCount = 0;
             RawdataHTTPSretryCount = 0;
+            bool sendNextAxis = false;
             if((rawData->axis == 'X' || httpOEMStatusCode == 200) && accelRawDataHelper.httpOEMConfigPresent){
                 while(RawdataHTTPretryCount < 3 ){
                     if((millis() - HTTPRawDataTimeout) > HTTPRawDataRetryTimeout){
@@ -710,7 +712,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                         char httpOEMAckBuffer[1 + 4];      // axis + 3 digit HTTP status code + null terminator
                         httpOEMAckBuffer[0] = rawData->axis;
                         itoa(httpOEMStatusCode, &httpOEMAckBuffer[1], 10);
-                        iuSerial->sendMSPCommand(MSPCommand::HTTP_ACK, httpOEMAckBuffer);
+                        iuSerial->sendMSPCommand(MSPCommand::HTTPS_OEM_ACK, httpOEMAckBuffer);
 
                         // send HTTP status code to MQTT
                         snprintf(ack_config, 150, "{\"messageType\":\"raw-data-oem-ack\",\"mac\":\"%s\",\"httpCode\":\"%d\",\"axis\":\"%c\",\"timestamp\":%.2f}",
@@ -718,35 +720,40 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                         mqttHelper.publish(COMMAND_RESPONSE_TOPIC, ack_config);
                         RawdataHTTPretryCount++;
                         if(httpOEMStatusCode == 200){
+                            sendNextAxis = true;
                             break;
                         }
                     }
                 }
                 
             }
-            while(RawdataHTTPSretryCount < 3 ){
-                if((millis() - HTTPSRawDataTimeout) > HTTPSRawDataRetryTimeout){
-                    HTTPSRawDataTimeout = millis();
-                    int httpStatusCode = httpsPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_endpointRoute,
-                                            accelRawDataHelper.m_endpointPort, (uint8_t*) &httpBuffer, 
-                                            httpBufferPointer,"", ssl_rootca_cert, HttpContentType::octetStream);            
+            if((rawData->axis == 'X' || httpStatusCode == 200)){
+                while(RawdataHTTPSretryCount < 3 ){
+                    if((millis() - HTTPSRawDataTimeout) > HTTPSRawDataRetryTimeout){
+                        HTTPSRawDataTimeout = millis();
+                        httpStatusCode = httpsPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_endpointRoute,
+                                                accelRawDataHelper.m_endpointPort, (uint8_t*) &httpBuffer, 
+                                                httpBufferPointer,"", ssl_rootca_cert, HttpContentType::octetStream);            
 
-                    // send HTTP status code back to the MCU
-                    char httpAckBuffer[1 + 4];      // axis + 3 digit HTTP status code + null terminator
-                    httpAckBuffer[0] = rawData->axis;
-                    itoa(httpStatusCode, &httpAckBuffer[1], 10);
-                    iuSerial->sendMSPCommand(MSPCommand::HTTPS_ACK, httpAckBuffer);
+                        // send HTTP status code back to the MCU
+                        char httpAckBuffer[1 + 4];      // axis + 3 digit HTTP status code + null terminator
+                        httpAckBuffer[0] = rawData->axis;
+                        itoa(httpStatusCode, &httpAckBuffer[1], 10);
+                        iuSerial->sendMSPCommand(MSPCommand::HTTPS_ACK, httpAckBuffer);
 
-                    // send HTTP status code to MQTT
-                    snprintf(ack_config, 150, "{\"messageType\":\"raw-data-ack\",\"mac\":\"%s\",\"httpCode\":\"%d\",\"axis\":\"%c\",\"timestamp\":%.2f}",
-                    m_bleMAC.toString().c_str(),httpStatusCode, rawData->axis, timestamp);
-                    mqttHelper.publish(COMMAND_RESPONSE_TOPIC, ack_config);
-                    RawdataHTTPSretryCount++;
-                    if(httpStatusCode == 200){
-                        break;
+                        // send HTTP status code to MQTT
+                        snprintf(ack_config, 150, "{\"messageType\":\"raw-data-ack\",\"mac\":\"%s\",\"httpCode\":\"%d\",\"axis\":\"%c\",\"timestamp\":%.2f}",
+                        m_bleMAC.toString().c_str(),httpStatusCode, rawData->axis, timestamp);
+                        mqttHelper.publish(COMMAND_RESPONSE_TOPIC, ack_config);
+                        RawdataHTTPSretryCount++;
+                        if(httpStatusCode == 200){
+                            sendNextAxis = true;
+                            break;
+                        }
                     }
                 }
             }
+           iuSerial->sendMSPCommand(MSPCommand::SEND_RAW_DATA_NEXT_PKT, String(sendNextAxis).c_str());
            break;  
           }
         case MSPCommand::RECEIVE_HTTP_CONFIG_ACK:

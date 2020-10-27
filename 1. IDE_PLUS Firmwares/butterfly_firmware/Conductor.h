@@ -281,7 +281,8 @@ class Conductor
         // void startRawDataSendingSession();
         void prepareRawDataPacketAndSend(char axis);       // to send to ESP
         int httpsStatusCodeX, httpsStatusCodeY, httpsStatusCodeZ;   
-        int httpStatusCodeX, httpStatusCodeY, httpStatusCodeZ;         
+        int httpsOEMStatusCodeX, httpsOEMStatusCodeY, httpsOEMStatusCodeZ;   
+        bool sendNextAxis = false;      
         bool XSentToWifi, YsentToWifi, ZsentToWifi;     // TODO optimize using bit vector
         uint32_t RawDataTimeout = 0;
         uint32_t RawDataTotalTimeout = 0;
