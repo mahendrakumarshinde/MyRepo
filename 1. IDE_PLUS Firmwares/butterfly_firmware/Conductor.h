@@ -284,7 +284,7 @@ class Conductor
         int httpsOEMStatusCodeX, httpsOEMStatusCodeY, httpsOEMStatusCodeZ;   
         bool sendNextAxis = false;      
         bool XSentToWifi, YsentToWifi, ZsentToWifi;     // TODO optimize using bit vector
-        uint32_t RawDataTimeout = 0;
+        // uint32_t RawDataTimeout = 0;
         uint32_t RawDataTotalTimeout = 0;
         double rawDataRecordedAt, lastPacketSentToESP;
         IUMessageFormat::rawDataPacket rawData;

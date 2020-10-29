@@ -5006,7 +5006,7 @@ void Conductor::manageRawDataSending() {
         if (!XSentToWifi) {
             prepareRawDataPacketAndSend('X');
             XSentToWifi = true; 
-            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+            // RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
             RawDataTotalTimeout = millis();
             iuWiFi.m_setLastConfirmedPublication();
             if(loopDebugMode) {
@@ -5017,7 +5017,7 @@ void Conductor::manageRawDataSending() {
             prepareRawDataPacketAndSend('Y');
             YsentToWifi = true;
             sendNextAxis = false;
-            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+            // RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
             RawDataTotalTimeout = millis();
             iuWiFi.m_setLastConfirmedPublication();
             if(loopDebugMode) {
@@ -5028,7 +5028,7 @@ void Conductor::manageRawDataSending() {
             prepareRawDataPacketAndSend('Z');
             ZsentToWifi = true;
             sendNextAxis = false;
-            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+            // RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
             RawDataTotalTimeout = millis();
             iuWiFi.m_setLastConfirmedPublication();
             if(loopDebugMode) {
