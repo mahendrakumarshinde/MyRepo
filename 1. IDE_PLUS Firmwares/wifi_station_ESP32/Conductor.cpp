@@ -713,7 +713,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             RawdataHTTPretryCount = 0;
             RawdataHTTPSretryCount = 0;
             bool sendNextAxis = false;
-            if((rawData->axis == 'X' || httpOEMStatusCode == 200) && accelRawDataHelper.httpOEMConfigPresent && oemRootCAPresent){
+            if((rawData->axis == 'X' || httpOEMStatusCode == 200) && accelRawDataHelper.httpsOEMConfigPresent && oemRootCAPresent){
                 while(RawdataHTTPretryCount < 3 ){
                     if((millis() - HTTPRawDataTimeout) > HTTPRawDataRetryTimeout){
                         HTTPRawDataTimeout = millis();
@@ -821,7 +821,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 newMqttcertificateAvailable = false;  
                 newMqttPrivateKeyAvailable = false;
                 newRootCACertificateAvailable = false;
-                if(accelRawDataHelper.httpOEMConfigPresent){
+                if(accelRawDataHelper.httpsOEMConfigPresent){
                         newOEMRootCACertificateAvailable = false;
                     }
                 //Serial.println("\nESP32 DEBUG : ALL FLAGS RESET ....");    
@@ -1491,7 +1491,7 @@ void Conductor::checkMqttDisconnectionTimeout()
        newMqttcertificateAvailable = false;
        newMqttPrivateKeyAvailable = false;
        newRootCACertificateAvailable = false;
-       if(accelRawDataHelper.httpOEMConfigPresent){
+       if(accelRawDataHelper.httpsOEMConfigPresent){
             newOEMRootCACertificateAvailable = false;
         }
        m_disconnectionMqttTimerStart = now;
@@ -2780,7 +2780,7 @@ int Conductor::download_tls_ssl_certificates(){
                             if(res != 1){  return 0 ; /*break;*/}   //exit from for loop
                             
                         }   // for loop
-                        if(root.containsKey("oem-certificates")){
+                        if(root.containsKey("oem-certificates") && accelRawDataHelper.httpsOEMConfigPresent){
                             for (size_t index = 0; index < OEMconfigTypeCount; index++)
                             {
                                 // Download the certificates and store in to files
@@ -3157,7 +3157,7 @@ void Conductor:: messageValidation(char* json){
                 result[i] =  strcmp(getConfigChecksum(CONFIG_TYPES[i + index]), (const char* ) configJson["certificates"][i]["hash"] );
             }
 
-            if(config.containsKey("oem-certificates") && accelRawDataHelper.httpOEMConfigPresent){
+            if(config.containsKey("oem-certificates") && accelRawDataHelper.httpsOEMConfigPresent){
                 if(activeCertificates == 0 && OEMconfigTypeCount > 0 ){
                     index = 5;
                 }else
@@ -3198,7 +3198,7 @@ void Conductor:: messageValidation(char* json){
                 //     hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Ignoring Checksum Comparision for dev. testing");
                 //        //TODO : Check availabel cert and new certs checksum 
                 // }else{ 
-                    if((accelRawDataHelper.httpOEMConfigPresent && oem_result[0] == 0) || (!accelRawDataHelper.httpOEMConfigPresent)){
+                    if((accelRawDataHelper.httpsOEMConfigPresent && oem_result[0] == 0) || (!accelRawDataHelper.httpsOEMConfigPresent)){
                         newOEMRootCACertificateAvailable = false;
                         hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT, String(getRca(CERT_SAME_UPGRADE_CONFIG_RECEIVED)).c_str());
                         downloadAborted =true;  
@@ -3246,7 +3246,7 @@ void Conductor:: messageValidation(char* json){
                     newMqttcertificateAvailable = true;  
                     newMqttPrivateKeyAvailable  = true;
                     newRootCACertificateAvailable = true;
-                    if(accelRawDataHelper.httpOEMConfigPresent){
+                    if(accelRawDataHelper.httpsOEMConfigPresent){
                         newOEMRootCACertificateAvailable = true;
                     }
                     //Serial.println("succefully  written the config JOSN to File First time.");
