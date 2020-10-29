@@ -6280,14 +6280,14 @@ void Conductor::otaChkFwdnldTmout()
     {
         if ( (now - m_downloadSuccessStartTime ) > 5000 )
         {
-            if (iuWiFi.isConnected() || m_mqttConnected == true)
+            if ((iuWiFi.isConnected() && m_upgradeSuccess)|| m_mqttConnected == true)
             {   
                 certDownloadInProgress = false;
                 m_downloadSuccess = false;
                 // m_downloadSuccessStartTime = millis();
                 // Certificate Upgrade went Successful
                 ledManager.overrideColor(RGB_PURPLE);
-                sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_SUCCESS,CERT_UPGRADE_COMPLETE,"CERT-RCA-0000");
+                // sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_SUCCESS,CERT_UPGRADE_COMPLETE,"CERT-RCA-0000");
                 // TODO : Add Visuals
                 // Show Visuals min 15 sec
                 for(int i = 0 ; i < 20; i++) {
