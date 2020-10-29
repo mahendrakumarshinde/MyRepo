@@ -103,6 +103,7 @@ void setup()
 void loop()
 {
     if(!conductor.configStatus){
+        delay(10);
         getAllConfig();
     }
     hostSerial.readMessages();  

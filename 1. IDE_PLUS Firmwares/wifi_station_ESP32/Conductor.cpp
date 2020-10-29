@@ -821,7 +821,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 newRootCACertificateAvailable = false;
                 newOEMRootCACertificateAvailable = false;
                 //Serial.println("\nESP32 DEBUG : ALL FLAGS RESET ....");    
-                
+                ESP.restart();
             break;
         case MSPCommand::UPGRADE_TLS_SSL_START:
              // TODO : Upgrade the Certificate read from the file and Upgrade
@@ -3257,7 +3257,7 @@ int Conductor::downloadCertificates(const char* type,const char* url,const char*
     {
         // Download the rootCA.crt and store
         //Serial.println("\ndownloading initiated.");
-        if(upgradeReceived && certToUpdate == 1){
+        if(/*upgradeReceived &&*/ certToUpdate == 1){
             //Serial.println("Updating Client 1 Files.");
              downloadSuccess = getDeviceCertificates(CONFIG_TYPES[index+6],type,url); // Upgrade client 1
         }else{
@@ -3271,7 +3271,7 @@ int Conductor::downloadCertificates(const char* type,const char* url,const char*
             //Serial.println("downloadSuccess!!!");
             //readCertificatesFromFlash(IUESPFlash::CFG_HTTPS_ROOTCA0,type);
             //delay(10);
-            if(upgradeReceived && certToUpdate == 1){
+            if(/*upgradeReceived &&*/ certToUpdate == 1){
                 checksum = getConfigChecksum(CONFIG_TYPES[index+6]);    //verify client 1
             }else{
                checksum = getConfigChecksum(CONFIG_TYPES[index]);       // verify client0
