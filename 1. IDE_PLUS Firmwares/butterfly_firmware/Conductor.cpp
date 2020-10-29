@@ -3525,7 +3525,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 httpsOEMStatusCodeZ = atoi(&buff[1]);
             }
             if (loopDebugMode) {
-                debugPrint("HTTP status codes X | Y | Z ",false);
+                debugPrint("HTTPS OEM status codes X | Y | Z ",false);
                 debugPrint(httpsOEMStatusCodeX, false);debugPrint(" | ", false);
                 debugPrint(httpsOEMStatusCodeY, false);debugPrint(" | ", false);
                 debugPrint(httpsOEMStatusCodeZ, true);
