@@ -2440,7 +2440,6 @@ void Conductor::mqttSecureConnect(){
 }
 
 void Conductor::upgradeSuccess(){
-    Serial.println("Upgrade R : ");Serial.println(upgradeReceived);
     if ((certificateDownloadStatus == 1 && ( mqttHelper.mqttConnected <= 5 && mqttHelper.client.connected())) /*&& upgradeReceived ==true*/)
     {
         // Rollback downloadCertificates
