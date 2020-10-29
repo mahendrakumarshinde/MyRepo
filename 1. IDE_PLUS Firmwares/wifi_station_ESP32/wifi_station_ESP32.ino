@@ -90,6 +90,10 @@ void setup()
     //Configure the Diagnostic HTTP/HTTPS Endpoint
     conductor.configureDiagnosticEndpointFromFlash(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT);
     conductor.activeCertificates = iuWiFiFlash.readMemory(CERT_ADDRESS);
+    if((conductor.activeCertificates == 0 && iuWiFiFlash.isFilePresent(IUESPFlash::CFG_HTTPS_OEM_ROOTCA0)) ||
+       (conductor.activeCertificates == 1 && iuWiFiFlash.isFilePresent(IUESPFlash::CFG_HTTPS_OEM_ROOTCA1))){
+            conductor.oemRootCAPresent = true;
+    }
     conductor.espResetCount = iuWiFiFlash.readMemory(ESP_RESET_ADDRESS);
     conductor.setWiFiConfig();
     conductor.sendWiFiConfig();

@@ -220,6 +220,7 @@ class Conductor
         uint8_t espResetAttempt = 2;
         bool m_statementEntry = true;
         bool commomEndpointsuccess = false;
+        bool oemRootCAPresent = false;
         // Config handler
         static const uint8_t CONFIG_TYPE_COUNT = 12;
         static IUESPFlash::storedConfig CONFIG_TYPES[CONFIG_TYPE_COUNT];
