@@ -713,7 +713,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             RawdataHTTPretryCount = 0;
             RawdataHTTPSretryCount = 0;
             bool sendNextAxis = false;
-            if((rawData->axis == 'X' || httpOEMStatusCode == 200) && accelRawDataHelper.httpOEMConfigPresent /*&& oemRootCAPresent*/){
+            if((rawData->axis == 'X' || httpOEMStatusCode == 200) && accelRawDataHelper.httpOEMConfigPresent && oemRootCAPresent){
                 while(RawdataHTTPretryCount < 3 ){
                     if((millis() - HTTPRawDataTimeout) > HTTPRawDataRetryTimeout){
                         HTTPRawDataTimeout = millis();
@@ -819,7 +819,9 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 newMqttcertificateAvailable = false;  
                 newMqttPrivateKeyAvailable = false;
                 newRootCACertificateAvailable = false;
-                newOEMRootCACertificateAvailable = false;
+                if(accelRawDataHelper.httpOEMConfigPresent){
+                        newOEMRootCACertificateAvailable = false;
+                    }
                 //Serial.println("\nESP32 DEBUG : ALL FLAGS RESET ....");    
                 ESP.restart();
             break;
@@ -1487,7 +1489,9 @@ void Conductor::checkMqttDisconnectionTimeout()
        newMqttcertificateAvailable = false;
        newMqttPrivateKeyAvailable = false;
        newRootCACertificateAvailable = false;
-       newOEMRootCACertificateAvailable = false;
+       if(accelRawDataHelper.httpOEMConfigPresent){
+            newOEMRootCACertificateAvailable = false;
+        }
        m_disconnectionMqttTimerStart = now;
        //Serial.println("Exceeded mqtt disconnection time-out");
        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Exceeded MQTT disconnction timeout");
@@ -2791,6 +2795,12 @@ int Conductor::download_tls_ssl_certificates(){
                                     return 0; /*break;*/
                                 }             //exit from for loop
                             }
+                        }else{
+                            if(certToUpdate == 0){
+                                iuWiFiFlash.removeFile(IUESPFlash::CFG_HTTPS_OEM_ROOTCA0);
+                            }else{
+                                iuWiFiFlash.removeFile(IUESPFlash::CFG_HTTPS_OEM_ROOTCA1);
+                            }
                         }
                         
                     }else
@@ -3143,7 +3153,7 @@ void Conductor:: messageValidation(char* json){
                 result[i] =  strcmp(getConfigChecksum(CONFIG_TYPES[i + index]), (const char* ) configJson["certificates"][i]["hash"] );
             }
 
-            if(config.containsKey("oem-certificates")){
+            if(config.containsKey("oem-certificates") && accelRawDataHelper.httpOEMConfigPresent){
                 if(activeCertificates == 0 && OEMconfigTypeCount > 0 ){
                     index = 5;
                 }else
@@ -3205,7 +3215,7 @@ void Conductor:: messageValidation(char* json){
                 newMqttcertificateAvailable = true;
                 newMqttPrivateKeyAvailable = true;
             }
-            if(accelRawDataHelper.httpOEMConfigPresent && result[4] != 0){
+            if(result[4] != 0){
                 // new SSL rootCA.crt is available for downloading
                 newRootCACertificateAvailable = true;
             }
