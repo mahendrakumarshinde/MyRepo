@@ -792,6 +792,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                     //Serial.println("\nESP32 DEBUG : DOWNLOADING STARTED ....");
                     publishedDiagnosticMessage(buffer,bufferLength);
                     certificateDownloadStatus = download_tls_ssl_certificates();
+                    iuWiFiFlash.updateValue(CERT_DOWNLOAD_STATUS,certificateDownloadStatus);
                     if(certificateDownloadStatus == 1){
                         hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_SUCCESS, String(getRca(CERT_DOWNLOAD_COMPLETE)).c_str());
                         if(activeCertificates == 1){
@@ -804,6 +805,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                            activeCertificates = iuWiFiFlash.updateValue(CERT_ADDRESS,1);
                         }
                         //Serial.println("\nESP32 DEBUG : DOWNLOADING SUCCESSFULLY COMPLETED....");
+                        ESP.restart();
                     }
                 }else
                 {
@@ -823,7 +825,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                         newOEMRootCACertificateAvailable = false;
                     }
                 //Serial.println("\nESP32 DEBUG : ALL FLAGS RESET ....");    
-                ESP.restart();
+                
             break;
         case MSPCommand::UPGRADE_TLS_SSL_START:
              // TODO : Upgrade the Certificate read from the file and Upgrade
@@ -2438,10 +2440,11 @@ void Conductor::mqttSecureConnect(){
 }
 
 void Conductor::upgradeSuccess(){
-    if ((certificateDownloadStatus == 1 && ( mqttHelper.mqttConnected <= 5 && mqttHelper.client.connected())) && upgradeReceived ==true)
+    Serial.println("Upgrade R : ");Serial.println(upgradeReceived);
+    if ((certificateDownloadStatus == 1 && ( mqttHelper.mqttConnected <= 5 && mqttHelper.client.connected())) /*&& upgradeReceived ==true*/)
     {
         // Rollback downloadCertificates
-        if(upgradeReceived && activeCertificates == 1){
+        if(/*upgradeReceived &&*/ activeCertificates == 1){
             //Serial.println("Client 1 Upgrade Success....");
             // backup the older  certificates and use the latest.
             // raname the files or overwrite it. make sure after devicereset it should use new certs
@@ -2456,6 +2459,7 @@ void Conductor::upgradeSuccess(){
         hostSerial.sendMSPCommand(MSPCommand::CERT_UPGRADE_SUCCESS,String(getRca(CERT_UPGRADE_COMPLETE)).c_str());
         upgradeReceived = false;
         certificateDownloadStatus = 0;
+        iuWiFiFlash.updateValue(CERT_DOWNLOAD_STATUS,certificateDownloadStatus);
     }
 }
 
@@ -2477,6 +2481,7 @@ void Conductor::upgradeFailed(){
         hostSerial.sendMSPCommand(MSPCommand::CERT_UPGRADE_ABORT,String(getRca(CERT_UPGRADE_FAILED)).c_str());
         upgradeReceived = false;
         certificateDownloadStatus = 0;
+        iuWiFiFlash.updateValue(CERT_DOWNLOAD_STATUS,certificateDownloadStatus);
     }
 }
 // Certificate managment selection

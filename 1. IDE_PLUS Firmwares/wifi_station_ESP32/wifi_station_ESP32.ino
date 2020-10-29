@@ -95,6 +95,7 @@ void setup()
             conductor.oemRootCAPresent = true;
     }
     conductor.espResetCount = iuWiFiFlash.readMemory(ESP_RESET_ADDRESS);
+    conductor.certificateDownloadStatus = iuWiFiFlash.readMemory(CERT_DOWNLOAD_STATUS);
     conductor.setWiFiConfig();
     conductor.sendWiFiConfig();
 }
@@ -107,7 +108,7 @@ void setup()
 void loop()
 {
     if(!conductor.configStatus){
-        delay(10);
+        delay(500);
         getAllConfig();
     }
     hostSerial.readMessages();  
