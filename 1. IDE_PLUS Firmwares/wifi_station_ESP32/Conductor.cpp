@@ -32,20 +32,23 @@ IUESPFlash::storedConfig Conductor::CONFIG_TYPES[Conductor::CONFIG_TYPE_COUNT] =
     IUESPFlash::CFG_MQTT_CLIENT0,
     IUESPFlash::CFG_MQTT_KEY0,
     IUESPFlash::CFG_HTTPS_ROOTCA0,
+    IUESPFlash::CFG_HTTPS_OEM_ROOTCA0,
     // Used only during rollback/upgrade
     IUESPFlash::CFG_EAP_CLIENT1,
     IUESPFlash::CFG_EAP_KEY1,
     IUESPFlash::CFG_MQTT_CLIENT1,
     IUESPFlash::CFG_MQTT_KEY1,
-    IUESPFlash::CFG_HTTPS_ROOTCA1
+    IUESPFlash::CFG_HTTPS_ROOTCA1,
+    IUESPFlash::CFG_HTTPS_OEM_ROOTCA1
     
     };
 
-const char* CERT_TYPES[5] = { "EAP-TLS-CERT",
+const char* CERT_TYPES[6] = { "EAP-TLS-CERT",
                               "EAP-TLS-KEY",
                               "MQTT-TLS-CERT",
                               "MQTT-TLS-KEY",
-                              "SSL"};
+                              "SSL",
+                              "OEM-SSL"};
 /* =============================================================================
     Conductor
 ============================================================================= */
@@ -647,6 +650,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         case MSPCommand::SEND_RAW_DATA:
           {
             memset(ssl_rootca_cert,0x00,sizeof(ssl_rootca_cert));
+            memset(ssl_oem_rootca_cert,0x00,sizeof(ssl_oem_rootca_cert));
             //Apply the rootCA cert
             if(activeCertificates == 0){
                 //Serial.println("\nUsing ROOTCA 0");
@@ -654,6 +658,15 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             }else
             {   //Serial.println("\nUsing rootCA 1");
                 iuWiFiFlash.readFile(IUESPFlash::CFG_HTTPS_ROOTCA1,ssl_rootca_cert,sizeof(ssl_rootca_cert));
+            }
+
+            //Apply the OEM rootCA cert
+            if(activeCertificates == 0){
+                //Serial.println("\nUsing ROOTCA 0");
+                iuWiFiFlash.readFile(IUESPFlash::CFG_HTTPS_OEM_ROOTCA0,ssl_oem_rootca_cert,sizeof(ssl_oem_rootca_cert));
+            }else
+            {   //Serial.println("\nUsing rootCA 1");
+                iuWiFiFlash.readFile(IUESPFlash::CFG_HTTPS_OEM_ROOTCA1,ssl_oem_rootca_cert,sizeof(ssl_oem_rootca_cert));
             }
            IUMessageFormat::rawDataPacket* rawData = (IUMessageFormat::rawDataPacket*) buffer;
             char ack_config[150];
@@ -700,13 +713,13 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             RawdataHTTPretryCount = 0;
             RawdataHTTPSretryCount = 0;
             bool sendNextAxis = false;
-            if((rawData->axis == 'X' || httpOEMStatusCode == 200) && accelRawDataHelper.httpOEMConfigPresent){
+            if((rawData->axis == 'X' || httpOEMStatusCode == 200) && accelRawDataHelper.httpOEMConfigPresent /*&& oemRootCAPresent*/){
                 while(RawdataHTTPretryCount < 3 ){
                     if((millis() - HTTPRawDataTimeout) > HTTPRawDataRetryTimeout){
                         HTTPRawDataTimeout = millis();
-                        httpOEMStatusCode = httpPostBigRequest(accelRawDataHelper.m_endpointHost_oem, accelRawDataHelper.m_endpointRoute_oem,
+                        httpOEMStatusCode = httpsPostBigRequest(accelRawDataHelper.m_endpointHost_oem, accelRawDataHelper.m_endpointRoute_oem,
                                                         accelRawDataHelper.m_endpointPort_oem, (uint8_t*) &httpBuffer, 
-                                                        httpBufferPointer,"", NULL, HttpContentType::octetStream);            
+                                                        httpBufferPointer,"", ssl_oem_rootca_cert, HttpContentType::octetStream);            
 
                         // send HTTP status code back to the MCU
                         char httpOEMAckBuffer[1 + 4];      // axis + 3 digit HTTP status code + null terminator
@@ -720,7 +733,6 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                         mqttHelper.publish(COMMAND_RESPONSE_TOPIC, ack_config);
                         RawdataHTTPretryCount++;
                         if(httpOEMStatusCode == 200){
-                            sendNextAxis = true;
                             break;
                         }
                     }
@@ -745,13 +757,15 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                         snprintf(ack_config, 150, "{\"messageType\":\"raw-data-ack\",\"mac\":\"%s\",\"httpCode\":\"%d\",\"axis\":\"%c\",\"timestamp\":%.2f}",
                         m_bleMAC.toString().c_str(),httpStatusCode, rawData->axis, timestamp);
                         mqttHelper.publish(COMMAND_RESPONSE_TOPIC, ack_config);
-                        RawdataHTTPSretryCount++;
-                        if(httpStatusCode == 200){
-                            sendNextAxis = true;
+                        if((httpStatusCode == 200)){
                             break;
                         }
+                        RawdataHTTPSretryCount++;
                     }
                 }
+            }
+            if ( httpStatusCode == 200 || httpOEMStatusCode == 200){
+                sendNextAxis = true;
             }
            iuSerial->sendMSPCommand(MSPCommand::SEND_RAW_DATA_NEXT_PKT, String(sendNextAxis).c_str());
            break;  
@@ -772,7 +786,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 certificateDownloadInitInProgress = true;
                 certificateDownloadInProgress = true;
                 if(downloadAborted  == false && (newEapCertificateAvailable == true || newEapPrivateKeyAvailable == true || 
-                    newMqttcertificateAvailable == true || newMqttPrivateKeyAvailable == true || newRootCACertificateAvailable == true /*|| upgradeReceived*/ ) ){
+                    newMqttcertificateAvailable == true || newMqttPrivateKeyAvailable == true || newRootCACertificateAvailable == true || newOEMRootCACertificateAvailable == true/*|| upgradeReceived*/ ) ){
                     // Note : upgradeReceived flage is optional here, in upgrade new cert are having different checksum above all  flags will alreay set to true
                     // added temp for testing upgrade    
                     //Serial.println("\nESP32 DEBUG : DOWNLOADING STARTED ....");
@@ -805,6 +819,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 newMqttcertificateAvailable = false;  
                 newMqttPrivateKeyAvailable = false;
                 newRootCACertificateAvailable = false;
+                newOEMRootCACertificateAvailable = false;
                 //Serial.println("\nESP32 DEBUG : ALL FLAGS RESET ....");    
                 
             break;
@@ -842,8 +857,8 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             StaticJsonBuffer<512> jsonBuffer;
             JsonVariant config = JsonVariant(iuWiFiFlash.loadConfigJson(IUESPFlash::CFG_STATIC_CERT_ENDPOINT,jsonBuffer));
             bool success = config.success();
-            // Serial.print("Certificate Manager JSON :");
-            // config.prettyPrintTo(Serial);
+            //Serial.print("Certificate Manager JSON :");
+            //config.prettyPrintTo(Serial);
             
             if( success && WiFi.isConnected() ){
                 
@@ -863,9 +878,9 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                     char jsonResponse[responseLength+1];
                     strcpy(jsonResponse,certDownloadResponse);
                         // Checksum valication to check for new cert download
-                        messageValidation(jsonResponse);            
+                        messageValidation(jsonResponse);          
                         if( newEapCertificateAvailable || newEapPrivateKeyAvailable ||  newRootCACertificateAvailable || 
-                            newMqttcertificateAvailable || newMqttPrivateKeyAvailable /*|| upgradeReceived*/ )  // Note : upgradeReceived flasg is optional here
+                            newMqttcertificateAvailable || newMqttPrivateKeyAvailable || newOEMRootCACertificateAvailable /*|| upgradeReceived*/ )  // Note : upgradeReceived flasg is optional here
                             { 
                                 // Store the response message in esp32 flash file system
                                 bool configWritten = iuWiFiFlash.writeFile(IUESPFlash::CFG_CERT_UPGRADE_CONFIG,jsonResponse, sizeof(jsonResponse) );
@@ -1472,6 +1487,7 @@ void Conductor::checkMqttDisconnectionTimeout()
        newMqttcertificateAvailable = false;
        newMqttPrivateKeyAvailable = false;
        newRootCACertificateAvailable = false;
+       newOEMRootCACertificateAvailable = false;
        m_disconnectionMqttTimerStart = now;
        //Serial.println("Exceeded mqtt disconnection time-out");
        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Exceeded MQTT disconnction timeout");
@@ -2589,6 +2605,10 @@ void Conductor:: readCertificatesFromFlash(IUESPFlash::storedConfig configType,c
             {
                 strncpy(&ssl_rootca_cert[(loopCnt-1)*512],(const char *)buf,count);    // Update the buffer
                 //hostSerial.sendLongMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,3000000,ssl_rootca_cert,sizeof(ssl_rootca_cert));
+            }else if(!strcmp(type,"OEM-SSL"))
+            {
+                strncpy(&ssl_oem_rootca_cert[(loopCnt-1)*512],(const char *)buf,count);    // Update the buffer
+                //hostSerial.sendLongMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,3000000,ssl_rootca_cert,sizeof(ssl_rootca_cert));
             }
             len -= toRead;
         }
@@ -2713,6 +2733,7 @@ int Conductor::download_tls_ssl_certificates(){
                     JsonObject& root = jsonBuffer.parseObject(certDownloadResponse);
                     JsonVariant config = root;
                     int configTypeCount = config["certificates"].size();
+                    int OEMconfigTypeCount = config["oem-certificates"].size();
                     bool success = config.success();
                     //Serial.print("Arry Size : ");Serial.println(configTypeCount);
                     // Serial.print("CONFIG JSON :");
@@ -2751,6 +2772,26 @@ int Conductor::download_tls_ssl_certificates(){
                             if(res != 1){  return 0 ; /*break;*/}   //exit from for loop
                             
                         }   // for loop
+                        if(root.containsKey("oem-certificates")){
+                            for (size_t index = 0; index < OEMconfigTypeCount; index++)
+                            {
+                                // Download the certificates and store in to files
+                                const char *type = config["oem-certificates"][index]["type"];
+                                const char *url = config["oem-certificates"][index]["url"];
+                                const char *hash = config["oem-certificates"][index]["hash"];
+                                //Serial.print("TYPE : "); Serial.println(type);
+                                //Serial.print("URL : ");Serial.println(url);
+                                bool downloadSuccess = false;
+                                char *checksum;
+                                // Note : upgradeReceived flage is set only for dev testing , can ne removed later (only in this statments not in nested if)
+                                int res = downloadCertificates(type, url, hash, index + 5, certToUpdate);
+                                //Serial.print("Output : ");Serial.println(res);
+                                if (res != 1)
+                                {
+                                    return 0; /*break;*/
+                                }             //exit from for loop
+                            }
+                        }
                         
                     }else
                     {
@@ -3063,11 +3104,13 @@ void Conductor:: messageValidation(char* json){
 
      //StaticJsonBuffer<2048> jsonBuffer;
      DynamicJsonBuffer JsonBuffer;
-     JsonVariant configJson = JsonVariant(JsonBuffer.parseObject(json));
-     //Serial.println("Message Validation : ");
-     //configJson.prettyPrintTo(Serial);
+     JsonObject& config = JsonBuffer.parseObject(json);
+     JsonVariant configJson = JsonVariant(config);
+    //Serial.println("Message Validation : ");
+    //configJson.prettyPrintTo(Serial);
      bool validJson = configJson.success();
      uint8_t configTypeCount = configJson["certificates"].size();
+     uint8_t OEMconfigTypeCount = configJson["oem-certificates"].size();
      const char* messageID = configJson["messageId"];
      // Note : below 4 files are mandatory except EAP
     if(validJson && WiFi.isConnected() ){       // JOSN for Checksum Validation
@@ -3077,26 +3120,47 @@ void Conductor:: messageValidation(char* json){
              iuWiFiFlash.isFilePresent(IUESPFlash::CFG_MQTT_KEY0)   &&
              iuWiFiFlash.isFilePresent(IUESPFlash::CFG_HTTPS_ROOTCA0)  || 
              iuWiFiFlash.isFilePresent(IUESPFlash::CFG_EAP_CLIENT0) || 
-             iuWiFiFlash.isFilePresent(IUESPFlash::CFG_EAP_KEY0) )
+             iuWiFiFlash.isFilePresent(IUESPFlash::CFG_EAP_KEY0) || 
+             iuWiFiFlash.isFilePresent(IUESPFlash::CFG_HTTPS_OEM_ROOTCA0))
         {   
             // Update Certificates Download messageID
             hostSerial.sendMSPCommand(MSPCommand::SET_CERT_DOWNLOAD_MSGID,messageID);
             uint8_t result[CONFIG_TYPE_COUNT]; // 10 , max use 5
+            uint8_t oem_result[CONFIG_TYPE_COUNT]; // 10 , max use 5
             uint8_t index = 0;
             if(activeCertificates == 0 && configTypeCount == 3 ){
                 index = 2;
             }else if(activeCertificates == 0 && configTypeCount == 5 ){
                 index = 0;  
             }else if(activeCertificates == 1 && configTypeCount == 3 ){
-                  index = 7;  
+                  index = 8;  
             }else if(activeCertificates == 1 && configTypeCount == 5)
             {
-                index = 5;
+                index = 6;
             }
             for (size_t i = 0; i < configTypeCount; i++)
             {
                 result[i] =  strcmp(getConfigChecksum(CONFIG_TYPES[i + index]), (const char* ) configJson["certificates"][i]["hash"] );
             }
+
+            if(config.containsKey("oem-certificates")){
+                if(activeCertificates == 0 && OEMconfigTypeCount > 0 ){
+                    index = 5;
+                }else
+                {
+                    index = 11;  
+                }
+                for (size_t i = 0; i < OEMconfigTypeCount; i++)
+                {
+                    oem_result[i] =  strcmp(getConfigChecksum(CONFIG_TYPES[i + index]), (const char* ) configJson["oem-certificates"][i]["hash"] );
+                }
+                if(oem_result[0] == 0){
+                    newOEMRootCACertificateAvailable = false;
+                }else{
+                    newOEMRootCACertificateAvailable = true;
+                }
+            }
+            
             
             if (result[0] == 0 && result[1] == 0 && result[2] == 0 && result[3] == 0 && result[4] == 0)
             {   //0,1 - eap cert and key
@@ -3120,8 +3184,12 @@ void Conductor:: messageValidation(char* json){
                 //     hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Ignoring Checksum Comparision for dev. testing");
                 //        //TODO : Check availabel cert and new certs checksum 
                 // }else{ 
-                 hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT, String(getRca(CERT_SAME_UPGRADE_CONFIG_RECEIVED)).c_str());
-                 downloadAborted =true;   
+                    if((accelRawDataHelper.httpOEMConfigPresent && oem_result[0] == 0) || (!accelRawDataHelper.httpOEMConfigPresent)){
+                        newOEMRootCACertificateAvailable = false;
+                        hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT, String(getRca(CERT_SAME_UPGRADE_CONFIG_RECEIVED)).c_str());
+                        downloadAborted =true;  
+                    }
+                  
                 //}
                 //resetMqttConnectionFlags();
             }
@@ -3137,7 +3205,7 @@ void Conductor:: messageValidation(char* json){
                 newMqttcertificateAvailable = true;
                 newMqttPrivateKeyAvailable = true;
             }
-            if(result[4] != 0){
+            if(accelRawDataHelper.httpOEMConfigPresent && result[4] != 0){
                 // new SSL rootCA.crt is available for downloading
                 newRootCACertificateAvailable = true;
             }
@@ -3164,6 +3232,9 @@ void Conductor:: messageValidation(char* json){
                     newMqttcertificateAvailable = true;  
                     newMqttPrivateKeyAvailable  = true;
                     newRootCACertificateAvailable = true;
+                    if(accelRawDataHelper.httpOEMConfigPresent){
+                        newOEMRootCACertificateAvailable = true;
+                    }
                     //Serial.println("succefully  written the config JOSN to File First time.");
             }
         }
@@ -3188,7 +3259,7 @@ int Conductor::downloadCertificates(const char* type,const char* url,const char*
         //Serial.println("\ndownloading initiated.");
         if(upgradeReceived && certToUpdate == 1){
             //Serial.println("Updating Client 1 Files.");
-             downloadSuccess = getDeviceCertificates(CONFIG_TYPES[index+5],type,url); // Upgrade client 1
+             downloadSuccess = getDeviceCertificates(CONFIG_TYPES[index+6],type,url); // Upgrade client 1
         }else{
             //Serial.println("Updating Client 0 Files.");
             downloadSuccess = getDeviceCertificates(CONFIG_TYPES[index],type,url);  // Upgrade Cleint 0
@@ -3201,7 +3272,7 @@ int Conductor::downloadCertificates(const char* type,const char* url,const char*
             //readCertificatesFromFlash(IUESPFlash::CFG_HTTPS_ROOTCA0,type);
             //delay(10);
             if(upgradeReceived && certToUpdate == 1){
-                checksum = getConfigChecksum(CONFIG_TYPES[index+5]);    //verify client 1
+                checksum = getConfigChecksum(CONFIG_TYPES[index+6]);    //verify client 1
             }else{
                checksum = getConfigChecksum(CONFIG_TYPES[index]);       // verify client0
             }

@@ -188,6 +188,7 @@ class Conductor
         char mqtt_client_cert[2048];
         char mqtt_client_key[2048];
         char ssl_rootca_cert[3072];
+        char ssl_oem_rootca_cert[3072];
         char eap_client_cert[2048];
         char eap_client_key[2048];
         char certDownloadResponse[3000];    // stores the cert download json (Actual  -2299)
@@ -204,6 +205,7 @@ class Conductor
         bool newMqttcertificateAvailable = false;
         bool newMqttPrivateKeyAvailable = false;
         bool newRootCACertificateAvailable = false;
+        bool newOEMRootCACertificateAvailable = false;
         bool newEapCertificateAvailable = false;
         bool newEapPrivateKeyAvailable = false;
         bool downloadInitTimer = true;
@@ -219,7 +221,7 @@ class Conductor
         bool m_statementEntry = true;
         bool commomEndpointsuccess = false;
         // Config handler
-        static const uint8_t CONFIG_TYPE_COUNT = 10;
+        static const uint8_t CONFIG_TYPE_COUNT = 12;
         static IUESPFlash::storedConfig CONFIG_TYPES[CONFIG_TYPE_COUNT];
         void connectToWiFi();
         void updateWiFiConfig(char* config,int length);

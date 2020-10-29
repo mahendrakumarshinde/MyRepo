@@ -28,6 +28,8 @@ class IUESPFlash
                                      CFG_MQTT_KEY1,
                                      CFG_HTTPS_ROOTCA0,
                                      CFG_HTTPS_ROOTCA1,
+                                     CFG_HTTPS_OEM_ROOTCA0,
+                                     CFG_HTTPS_OEM_ROOTCA1,
                                      CFG_EAP_CLIENT0,
                                      CFG_EAP_CLIENT1,
                                      CFG_EAP_KEY0,
@@ -53,6 +55,8 @@ class IUESPFlash
         static char FNAME_MQTTS_CLIENT1_CRT[12];      // as a backup
         static char FNAME_HTTPS_ROOTCA0_CRT[12];
         static char FNAME_HTTPS_ROOTCA1_CRT[12];      // as a backup
+        static char FNAME_HTTPS_OEM_ROOTCA0_CRT[12];
+        static char FNAME_HTTPS_OEM_ROOTCA1_CRT[12];
         
         static char FNAME_UPGRADE_CONFIG[12];           // store the cert download json message
         static char FNAME_STATIC_URL[12];      // store the common url

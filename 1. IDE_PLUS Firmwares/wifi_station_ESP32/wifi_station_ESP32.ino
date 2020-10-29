@@ -8,7 +8,7 @@
 #include <rom/rtc.h>
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
-//#include "IUESPFlash.h"
+#include "IUESPFlash.h"
 //#include "SPIFFS.h"
 Conductor conductor;
 uint32_t lastDone = 0;
@@ -84,6 +84,7 @@ void setup()
     #endif
      
     iuWiFiFlash.begin();
+    iuWiFiFlash.listAllAvailableFiles("/iuConfig/certs");
     // Set the common url json if file not present
     conductor.setCertificateManagerHttpEndpoint();
     //Configure the Diagnostic HTTP/HTTPS Endpoint
