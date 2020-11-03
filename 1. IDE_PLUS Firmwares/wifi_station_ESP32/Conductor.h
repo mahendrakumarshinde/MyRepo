@@ -191,7 +191,7 @@ class Conductor
         char ssl_oem_rootca_cert[3072];
         char eap_client_cert[2048];
         char eap_client_key[2048];
-        char certDownloadResponse[3000];    // stores the cert download json (Actual  -2299)
+        char certDownloadResponse[4096];    // stores the cert download json (Actual  -2299)
         char diagnosticEndpointHost[MAX_HOST_LENGTH];
         int  diagnosticEndpointPort;
         char diagnosticEndpointRoute[MAX_ROUTE_LENGTH];
