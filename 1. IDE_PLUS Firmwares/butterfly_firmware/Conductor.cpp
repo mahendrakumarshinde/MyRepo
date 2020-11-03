@@ -579,10 +579,10 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             
             bool oemConfig = false;
             bool oemSameConfig = true;
-            if(config.containsKey("http_oem")){
-                const char*  oem_host = config["http_oem"]["host"].as<char*>();
-                int oem_port = config["http_oem"]["port"].as<int>();
-                const char* oem_httpPath = config["http_oem"]["path"].as<char*>();
+            if(config.containsKey("httpOem")){
+                const char*  oem_host = config["httpOem"]["host"].as<char*>();
+                int oem_port = config["httpOem"]["port"].as<int>();
+                const char* oem_httpPath = config["httpOem"]["path"].as<char*>();
                 if(strcmp( oem_host, m_httpHost_oem) != 0  || oem_port != m_httpPort_oem || strcmp(oem_httpPath, m_httpPath_oem) != 0){
                     oemSameConfig = false;
                 }
@@ -1706,13 +1706,13 @@ bool Conductor::configureBoardFromFlash(String filename,bool isSet){
             m_httpPassword = config["httpConfig"]["password"];
             m_httpOauth = config["httpConfig"]["oauth"];
 
-            if(config.containsKey("http_oem")){
-                m_httpHost_oem = config["http_oem"]["host"];
-                m_httpPort_oem = config["http_oem"]["port"];
-                m_httpPath_oem = config["http_oem"]["path"];
-                m_httpUsername_oem = config["http_oem"]["username"];
-                m_httpPassword_oem = config["http_oem"]["password"];
-                m_httpOauth_oem = config["http_oem"]["oauth"];
+            if(config.containsKey("httpOem")){
+                m_httpHost_oem = config["httpOem"]["host"];
+                m_httpPort_oem = config["httpOem"]["port"];
+                m_httpPath_oem = config["httpOem"]["path"];
+                m_httpUsername_oem = config["httpOem"]["username"];
+                m_httpPassword_oem = config["httpOem"]["password"];
+                m_httpOauth_oem = config["httpOem"]["oauth"];
             }
             File httpFile = DOSFS.open("httpConfig.conf","w");
             if(httpFile)
@@ -1757,13 +1757,13 @@ bool Conductor::configureBoardFromFlash(String filename,bool isSet){
         m_httpPassword = root["httpConfig"]["password"];
         m_httpOauth = root["httpConfig"]["oauth"];
 
-        if(root.containsKey("http_oem")){
-            m_httpHost_oem = root["http_oem"]["host"];
-            m_httpPort_oem = root["http_oem"]["port"];
-            m_httpPath_oem = root["http_oem"]["path"];
-            m_httpUsername_oem = root["http_oem"]["username"];
-            m_httpPassword_oem = root["http_oem"]["password"];
-            m_httpOauth_oem = root["http_oem"]["oauth"];
+        if(root.containsKey("httpOem")){
+            m_httpHost_oem = root["httpOem"]["host"];
+            m_httpPort_oem = root["httpOem"]["port"];
+            m_httpPath_oem = root["httpOem"]["path"];
+            m_httpUsername_oem = root["httpOem"]["username"];
+            m_httpPassword_oem = root["httpOem"]["password"];
+            m_httpOauth_oem = root["httpOem"]["oauth"];
         }
 
 if(debugMode){
@@ -2561,10 +2561,10 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                         _httpHost = config["httpConfig"]["host"];
                         _httpPort = config["httpConfig"]["port"];
                         _httpPath = config["httpConfig"]["path"];
-                        if(config.containsKey("http_oem")){
-                            oem_httpHost = config["http_oem"]["host"];
-                            oem_httpPort = config["http_oem"]["port"];
-                            oem_httpPath = config["http_oem"]["path"];
+                        if(config.containsKey("httpOem")){
+                            oem_httpHost = config["httpOem"]["host"];
+                            oem_httpPort = config["httpOem"]["port"];
+                            oem_httpPath = config["httpOem"]["path"];
                         }
 
                     iuUSB.port->println("*****HTTP_CONFIG*****");
@@ -2574,7 +2574,7 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuUSB.port->println(_httpPort);
                     iuUSB.port->print("HTTP_PATH : ");
                     iuUSB.port->println(_httpPath);
-                    if(config.containsKey("http_oem")){
+                    if(config.containsKey("httpOem")){
                         iuUSB.port->println("*****HTTP_OEM_CONFIG*****");
                         iuUSB.port->print("HTTP_HOST : ");
                         iuUSB.port->println(oem_httpHost);
@@ -3707,13 +3707,13 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 m_httpPassword = config["httpConfig"]["password"];
                 m_httpOauth = config["httpConfig"]["oauth"];
 
-                if(config.containsKey("http_oem")){
-                    m_httpHost_oem = config["http_oem"]["host"];
-                    m_httpPort_oem = config["http_oem"]["port"];
-                    m_httpPath_oem = config["http_oem"]["path"];
-                    m_httpUsername_oem = config["http_oem"]["username"];
-                    m_httpPassword_oem = config["http_oem"]["password"];
-                    m_httpOauth_oem = config["http_oem"]["oauth"];
+                if(config.containsKey("httpOem")){
+                    m_httpHost_oem = config["httpOem"]["host"];
+                    m_httpPort_oem = config["httpOem"]["port"];
+                    m_httpPath_oem = config["httpOem"]["path"];
+                    m_httpUsername_oem = config["httpOem"]["username"];
+                    m_httpPassword_oem = config["httpOem"]["password"];
+                    m_httpOauth_oem = config["httpOem"]["oauth"];
                     httpOEMConfigPresent = true;
                 }else{
                     httpOEMConfigPresent = false;
@@ -3735,13 +3735,13 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                         m_httpPassword = config["httpConfig"]["password"];
                         m_httpOauth = config["httpConfig"]["oauth"];
 
-                        if(config.containsKey("http_oem")){
-                            m_httpHost_oem = config["http_oem"]["host"];
-                            m_httpPort_oem = config["http_oem"]["port"];
-                            m_httpPath_oem = config["http_oem"]["path"];
-                            m_httpUsername_oem = config["http_oem"]["username"];
-                            m_httpPassword_oem = config["http_oem"]["password"];
-                            m_httpOauth_oem = config["http_oem"]["oauth"];
+                        if(config.containsKey("httpOem")){
+                            m_httpHost_oem = config["httpOem"]["host"];
+                            m_httpPort_oem = config["httpOem"]["port"];
+                            m_httpPath_oem = config["httpOem"]["path"];
+                            m_httpUsername_oem = config["httpOem"]["username"];
+                            m_httpPassword_oem = config["httpOem"]["password"];
+                            m_httpOauth_oem = config["httpOem"]["oauth"];
                             httpOEMConfigPresent = true;
                         }else{
                             httpOEMConfigPresent = false;
