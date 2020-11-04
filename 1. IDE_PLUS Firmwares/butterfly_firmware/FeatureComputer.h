@@ -487,6 +487,7 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         
         virtual void m_specializedCompute()
     {
+        m_highCutFrequency = FFTConfiguration::calculatedSamplingRate/FMAX_FACTOR;
         // File logging
         fft_direction = m_id % FFTComputerID; 
 
@@ -518,7 +519,7 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
 
         logFFTParams(&FFTInput[fft_direction], samplingRate, sampleCount, df);
         logFFTInput(&FFTInput[fft_direction], values, sampleCount);
-
+        
         // Save the raw data 
         if(m_id == 30 && RawDataState::startRawDataCollection && !RawDataState::XCollected) {
             memcpy(RawDataState::rawAccelerationX, (q15_t*)values, FFTConfiguration::currentBlockSize * 2);
