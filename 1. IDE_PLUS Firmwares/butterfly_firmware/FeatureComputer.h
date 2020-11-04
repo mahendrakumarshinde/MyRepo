@@ -730,13 +730,13 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
 
             logFFTOutput(&FFTOuput[fft_direction], velFFT,(void*) amplitudes, amplitudeCount, false);
             // RPM Computation across Z-direction
-            if(m_id == 32){
             // compute RPM on Velocity Spectrum 
                 float velRPM = RFFTFeatures::computeRPM(amplitudes,FFTConfiguration::currentLowRPMFrequency,
                 FFTConfiguration::currentHighRPMFrequency,FFTConfiguration::currentRPMThreshold,df,resolution,scaling1,velFFT);
                 
                 // debugPrint("RPM Freq On velFFT : ",false );
                 // debugPrint(velRPM/60.0);
+            if(m_id == 32){
                 featureDestinations::buff[featureDestinations::basicfeatures::rpm] = velRPM;
             }
             /***************************** Applying Diagnostic fingerprints on computated velocity fft amplitude *************************/ 
@@ -752,16 +752,16 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
            */           
     
              if(direction == 0) {
-                fingerprintResult_X =  DiagnosticEngine::m_specializedCompute (direction,(const q15_t*)amplitudes,amplitudeCount,resolution,scaling1);  // resolution
+                fingerprintResult_X =  DiagnosticEngine::m_specializedCompute (direction,(const q15_t*)amplitudes,amplitudeCount,resolution,scaling1,velRPM/60);  // resolution
                 // debugPrint("X", false);debugPrint(fingerprintResult_X, true);
              }
              if(direction ==1){
-                fingerprintResult_Y = DiagnosticEngine::m_specializedCompute (direction, (const q15_t*)amplitudes,amplitudeCount,resolution, scaling1);
+                fingerprintResult_Y = DiagnosticEngine::m_specializedCompute (direction, (const q15_t*)amplitudes,amplitudeCount,resolution, scaling1,velRPM/60);
                 // debugPrint("Y", false);debugPrint(fingerprintResult_Y, true);
 
              }
              if(direction == 2){
-                fingerprintResult_Z = DiagnosticEngine::m_specializedCompute (direction, (const q15_t*)amplitudes,amplitudeCount,resolution,scaling1);
+                fingerprintResult_Z = DiagnosticEngine::m_specializedCompute (direction, (const q15_t*)amplitudes,amplitudeCount,resolution,scaling1,velRPM/60);
                 // debugPrint("Z", false);debugPrint(fingerprintResult_Z, true);
              }
             
