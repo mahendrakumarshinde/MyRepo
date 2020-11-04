@@ -2062,6 +2062,17 @@ void Conductor::processCommand(char *buff)
                     iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_FIRMWARE_VER,message);
                 }
             }
+            else if (strcmp(buff, "IUSET_ERASE_EXT_FLASH") == 0)
+                {
+                    debugPrint("Formating Flash Please wait");
+                    ledManager.overrideColor(RGB_RED);
+                    DOSFS.format();
+                    ledManager.overrideColor(RGB_WHITE);
+                    DOSFS.end();
+                    debugPrint("Format Successfully");
+                    delay(2000);
+                    STM32.reset();
+                }
             break;
         case 'P': 
         {
@@ -7144,8 +7155,9 @@ void Conductor::periodicFlashTest()
         }
         else
         {
-            debugPrint("File Read Failed...Rebooting...");
-            conductor.sendFlashStatusMsg(FLASH_ERROR,"Rebooting");
+            debugPrint("File Read Failed...Formating Flash...");
+            conductor.sendFlashStatusMsg(FLASH_ERROR,"Formating Flash...");
+            DOSFS.format();
             delay(3000);
             DOSFS.end();
             delay(10);
@@ -7155,8 +7167,9 @@ void Conductor::periodicFlashTest()
         }
         else
         {
-        debugPrint("File Read Failed...Rebooting...");
-        conductor.sendFlashStatusMsg(FLASH_ERROR,"Rebooting");
+        debugPrint("File Read Failed...Formating Flash...");
+        conductor.sendFlashStatusMsg(FLASH_ERROR,"Formating Flash...");
+        DOSFS.format();
         delay(3000);
         DOSFS.end();
         delay(10);
