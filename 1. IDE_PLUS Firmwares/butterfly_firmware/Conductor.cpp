@@ -325,8 +325,9 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 
     //StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;            // make it dynamic
     //const size_t bufferSize = JSON_ARRAY_SIZE(2) + JSON_OBJECT_SIZE(3) + 60;        // dynamically allociated memory
-    const size_t bufferSize = JSON_OBJECT_SIZE(2) + 2*JSON_OBJECT_SIZE(4) + 11*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(13) + 1396;
-    DynamicJsonBuffer jsonBuffer(bufferSize);
+    // const size_t bufferSize = JSON_OBJECT_SIZE(2) + 2*JSON_OBJECT_SIZE(4) + 11*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(13) + 1396;
+    // DynamicJsonBuffer jsonBuffer(bufferSize);
+    DynamicJsonBuffer jsonBuffer;
     //Serial.print("JSON 1 SIZE :");Serial.println(bufferSize);
     
     JsonObject& root = jsonBuffer.parseObject(json);
@@ -389,7 +390,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             const char* messageId;
             messageId = root["messageId"]  ;
             
-            snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+            snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"messageTye\":\"features-config-ack\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
             
             //Serial.println(ack_config);
             if(iuWiFi.isConnected()){
@@ -423,7 +424,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             //send ACK on ide_pluse/command_response/
             const char* messageId;
             messageId = root["messageId"]  ;
-            snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"messageTye\":\"feature-config-ack\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+            snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"messageTye\":\"thresholds-config-ack\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
             
             //Serial.println(ack_config);
             if(iuWiFi.isConnected()){
