@@ -103,6 +103,12 @@ class Conductor
         static const uint8_t maxMqttClientConnectionCount = 5;
         static const uint8_t maxMqttCertificateDownloadCount = 3;
         static const uint32_t downloadInitRetryTimeout  = 30*1000;   //ms
+        static const uint32_t HTTPRawDataRetryTimeout = 5000; //ms;
+        static const uint32_t HTTPSRawDataRetryTimeout = 5000; //ms;
+        uint32_t HTTPRawDataTimeout = 0;
+        uint32_t HTTPSRawDataTimeout = 0;
+        uint8_t RawdataHTTPretryCount = 0;
+        uint8_t RawdataHTTPSretryCount = 0;
         /***** Core *****/
         Conductor();
         virtual ~Conductor() {}
@@ -182,9 +188,10 @@ class Conductor
         char mqtt_client_cert[2048];
         char mqtt_client_key[2048];
         char ssl_rootca_cert[3072];
+        char ssl_oem_rootca_cert[3072];
         char eap_client_cert[2048];
         char eap_client_key[2048];
-        char certDownloadResponse[3000];    // stores the cert download json (Actual  -2299)
+        char certDownloadResponse[4096];    // stores the cert download json (Actual  -2299)
         char diagnosticEndpointHost[MAX_HOST_LENGTH];
         int  diagnosticEndpointPort;
         char diagnosticEndpointRoute[MAX_ROUTE_LENGTH];
@@ -198,6 +205,7 @@ class Conductor
         bool newMqttcertificateAvailable = false;
         bool newMqttPrivateKeyAvailable = false;
         bool newRootCACertificateAvailable = false;
+        bool newOEMRootCACertificateAvailable = false;
         bool newEapCertificateAvailable = false;
         bool newEapPrivateKeyAvailable = false;
         bool downloadInitTimer = true;
@@ -212,8 +220,9 @@ class Conductor
         uint8_t espResetAttempt = 2;
         bool m_statementEntry = true;
         bool commomEndpointsuccess = false;
+        bool oemRootCAPresent = false;
         // Config handler
-        static const uint8_t CONFIG_TYPE_COUNT = 10;
+        static const uint8_t CONFIG_TYPE_COUNT = 12;
         static IUESPFlash::storedConfig CONFIG_TYPES[CONFIG_TYPE_COUNT];
         void connectToWiFi();
         void updateWiFiConfig(char* config,int length);

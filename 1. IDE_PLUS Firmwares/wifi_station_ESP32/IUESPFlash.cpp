@@ -24,6 +24,8 @@ char IUESPFlash::FNAME_MQTTS_CLIENT1_KEY[12] = "client1";
 char IUESPFlash::FNAME_HTTPS_ROOTCA0_CRT[12] = "rootCA0";
 char IUESPFlash::FNAME_HTTPS_ROOTCA1_CRT[12] = "rootCA1";
 
+char IUESPFlash::FNAME_HTTPS_OEM_ROOTCA0_CRT[12] = "OEMrootCA0";
+char IUESPFlash::FNAME_HTTPS_OEM_ROOTCA1_CRT[12] = "OEMrootCA1";
 
 char IUESPFlash::FNAME_EAP_CLIENT0_CRT[12] = "eapClient0";
 char IUESPFlash::FNAME_EAP_CLIENT0_KEY[12] = "eapClient0";
@@ -304,6 +306,14 @@ size_t IUESPFlash::getConfigFilename(storedConfig configType, char *dest,
             break;
         case CFG_HTTPS_ROOTCA1:
             fname = FNAME_HTTPS_ROOTCA1_CRT;
+            strcpy(FILE_EXTENSION,CERT_EXTENSION);
+            break;
+        case CFG_HTTPS_OEM_ROOTCA0:
+            fname = FNAME_HTTPS_OEM_ROOTCA0_CRT;
+            strcpy(FILE_EXTENSION,CERT_EXTENSION);
+            break;
+        case CFG_HTTPS_OEM_ROOTCA1:
+            fname = FNAME_HTTPS_OEM_ROOTCA1_CRT;
             strcpy(FILE_EXTENSION,CERT_EXTENSION);
             break;
         case CFG_EAP_CLIENT0 :

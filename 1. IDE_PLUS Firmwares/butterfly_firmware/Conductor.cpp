@@ -576,6 +576,19 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             const char*  host = config["httpConfig"]["host"].as<char*>();
             int port = config["httpConfig"]["port"].as<int>();
             const char* httpPath = config["httpConfig"]["path"].as<char*>();
+            
+            bool oemConfig = false;
+            bool oemSameConfig = true;
+            if(config.containsKey("httpOem")){
+                const char*  oem_host = config["httpOem"]["host"].as<char*>();
+                int oem_port = config["httpOem"]["port"].as<int>();
+                const char* oem_httpPath = config["httpOem"]["path"].as<char*>();
+                if(strcmp( oem_host, m_httpHost_oem) != 0  || oem_port != m_httpPort_oem || strcmp(oem_httpPath, m_httpPath_oem) != 0){
+                    oemSameConfig = false;
+                }
+                oemConfig = true;
+            }
+
             // debugPrint("Active httpConfigs : ");
             // debugPrint("Host :",false);debugPrint(m_httpHost);
             // debugPrint("Port :",false);debugPrint(m_httpPort);
@@ -611,7 +624,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             //stm reset
             delay(10);
             if(!httpOtaValidation){
-                if(strcmp( host, m_httpHost) != 0  || port != m_httpPort || strcmp(httpPath, m_httpPath) != 0 ){
+                if((strcmp( host, m_httpHost) != 0  || port != m_httpPort || strcmp(httpPath, m_httpPath) != 0) || oemSameConfig == false ){
                         DOSFS.end();
                         delay(10);
                         //STM32.reset();
@@ -1674,8 +1687,6 @@ bool Conductor::configureBoardFromFlash(String filename,bool isSet){
 
   // Parse the root object
   JsonObject &root = jsonBuffer.parseObject(myFile);
-  
-  JsonObject& root2 = root["httpConfig"];
   if (!root.success() && !iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS)){
     debugPrint(F("Failed to read httpConf.conf file, using default configuration"));
     setDefaultHTTP();
@@ -1684,23 +1695,25 @@ bool Conductor::configureBoardFromFlash(String filename,bool isSet){
       String httpConfig = iuFlash.readInternalFlash(CONFIG_HTTP_FLASH_ADDRESS);
         debugPrint(httpConfig);
         JsonObject &config = jsonBuffer.parseObject(httpConfig);
-        JsonObject& config2 = config["httpConfig"];
         if(config.success())
         {
             debugPrint("Http Config Found");
-            static const char* host = config2["host"];
-            static uint16_t    port = config2["port"];
-            static const char* path = config2["path"];
-            static const char* username = config2["username"];
-            static const char* password = config2["password"];
-            static const char* oauth = config2["oauth"];
 
-            m_httpHost  = host;
-            m_httpPort = port;
-            m_httpPath = path;
-            m_httpUsername = username;
-            m_httpPassword = password;
-            m_httpOauth = oauth;
+            m_httpHost = config["httpConfig"]["host"];
+            m_httpPort = config["httpConfig"]["port"];
+            m_httpPath = config["httpConfig"]["path"];
+            m_httpUsername = config["httpConfig"]["username"];
+            m_httpPassword = config["httpConfig"]["password"];
+            m_httpOauth = config["httpConfig"]["oauth"];
+
+            if(config.containsKey("httpOem")){
+                m_httpHost_oem = config["httpOem"]["host"];
+                m_httpPort_oem = config["httpOem"]["port"];
+                m_httpPath_oem = config["httpOem"]["path"];
+                m_httpUsername_oem = config["httpOem"]["username"];
+                m_httpPassword_oem = config["httpOem"]["password"];
+                m_httpOauth_oem = config["httpOem"]["oauth"];
+            }
             File httpFile = DOSFS.open("httpConfig.conf","w");
             if(httpFile)
             {
@@ -1735,21 +1748,23 @@ bool Conductor::configureBoardFromFlash(String filename,bool isSet){
         }
  else {
 
-  // Read configuration from the file
+        // Read configuration from the file
 
-static const char* host = root2["host"];
-static uint16_t    port = root2["port"];
-static const char* path = root2["path"];
-static const char* username = root2["username"];
-static const char* password = root2["password"];
-static const char* oauth = root2["oauth"];
+        m_httpHost = root["httpConfig"]["host"];
+        m_httpPort = root["httpConfig"]["port"];
+        m_httpPath = root["httpConfig"]["path"];
+        m_httpUsername = root["httpConfig"]["username"];
+        m_httpPassword = root["httpConfig"]["password"];
+        m_httpOauth = root["httpConfig"]["oauth"];
 
-m_httpHost  = host;
-m_httpPort = port;
-m_httpPath = path;
-m_httpUsername = username;
-m_httpPassword = password;
-m_httpOauth = oauth;
+        if(root.containsKey("httpOem")){
+            m_httpHost_oem = root["httpOem"]["host"];
+            m_httpPort_oem = root["httpOem"]["port"];
+            m_httpPath_oem = root["httpOem"]["path"];
+            m_httpUsername_oem = root["httpOem"]["username"];
+            m_httpPassword_oem = root["httpOem"]["password"];
+            m_httpOauth_oem = root["httpOem"]["oauth"];
+        }
 
 if(debugMode){
   debugPrint("FROM configureBoardFromFlash :");
@@ -2534,15 +2549,23 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                 if (strcmp(buff, "IUGET_HTTP_CONFIG") == 0)
                 {
                     if (DOSFS.exists("httpConfig.conf")){
-                    const char* _httpHost;
-                    const char* _httpPort;
-                    const char* _httpPath;
-                   
-                    JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
-                    _httpHost = config["httpConfig"]["host"];
-                    _httpPort = config["httpConfig"]["port"];
-                    _httpPath = config["httpConfig"]["path"];
+                        const char* _httpHost;
+                        const char* _httpPort;
+                        const char* _httpPath;
 
+                        const char* oem_httpHost;
+                        const char* oem_httpPort;
+                        const char* oem_httpPath;
+
+                        JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
+                        _httpHost = config["httpConfig"]["host"];
+                        _httpPort = config["httpConfig"]["port"];
+                        _httpPath = config["httpConfig"]["path"];
+                        if(config.containsKey("httpOem")){
+                            oem_httpHost = config["httpOem"]["host"];
+                            oem_httpPort = config["httpOem"]["port"];
+                            oem_httpPath = config["httpOem"]["path"];
+                        }
 
                     iuUSB.port->println("*****HTTP_CONFIG*****");
                     iuUSB.port->print("HTTP_HOST : ");
@@ -2551,9 +2574,18 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuUSB.port->println(_httpPort);
                     iuUSB.port->print("HTTP_PATH : ");
                     iuUSB.port->println(_httpPath);
-                  }else{
-                      debugPrint(F("httpConfig.conf file does not exists"));
-                  }
+                    if(config.containsKey("httpOem")){
+                        iuUSB.port->println("*****HTTP_OEM_CONFIG*****");
+                        iuUSB.port->print("HTTP_HOST : ");
+                        iuUSB.port->println(oem_httpHost);
+                        iuUSB.port->print("HTTP_PORT : ");
+                        iuUSB.port->println(oem_httpPort);
+                        iuUSB.port->print("HTTP_PATH : ");
+                        iuUSB.port->println(oem_httpPath);
+                    }
+                    }else{
+                        debugPrint(F("httpConfig.conf file does not exists"));
+                    }
                 }
                 if (strcmp(buff, "IUGET_MQTT_CONFIG") == 0)
                 {
@@ -3454,35 +3486,69 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             if (loopDebugMode){ debugPrint(F("ASK_HOST_BLOCK_SIZE")); }
             iuWiFi.sendHostBlockSize(FFTConfiguration::currentBlockSize);
             break;
-        case MSPCommand::HTTP_ACK: {
-            if (loopDebugMode){ debugPrint(F("HTTP_ACK")); }
+        case MSPCommand::HTTPS_ACK: {
+            if (loopDebugMode){ debugPrint(F("HTTPS_ACK")); }
             if (buff[0] == 'X') {
-                httpStatusCodeX = atoi(&buff[1]);
+                httpsStatusCodeX = atoi(&buff[1]);
             } else if (buff[0] == 'Y') {
-                httpStatusCodeY = atoi(&buff[1]);
+                httpsStatusCodeY = atoi(&buff[1]);
             } else if (buff[0] == 'Z') {
-                httpStatusCodeZ = atoi(&buff[1]);
+                httpsStatusCodeZ = atoi(&buff[1]);
             }
             if (loopDebugMode) {
-                debugPrint("HTTP status codes X | Y | Z ",false);
-                debugPrint(httpStatusCodeX, false);debugPrint(" | ", false);
-                debugPrint(httpStatusCodeY, false);debugPrint(" | ", false);
-                debugPrint(httpStatusCodeZ, true);
+                debugPrint("HTTPS status codes X | Y | Z ",false);
+                debugPrint(httpsStatusCodeX, false);debugPrint(" | ", false);
+                debugPrint(httpsStatusCodeY, false);debugPrint(" | ", false);
+                debugPrint(httpsStatusCodeZ, true);
             }
 #if 1
-            if(httpStatusCodeX != 200 || (httpStatusCodeX == 200 && httpStatusCodeY != 200 && httpStatusCodeY != 0) || (httpStatusCodeX == 200 && httpStatusCodeY == 200 && httpStatusCodeZ != 200 && httpStatusCodeZ != 0))
+            if(httpsStatusCodeX != 200 || (httpsStatusCodeX == 200 && httpsStatusCodeY != 200 && httpsStatusCodeY != 0) || (httpsStatusCodeX == 200 && httpsStatusCodeY == 200 && httpsStatusCodeZ != 200 && httpsStatusCodeZ != 0))
             {
-                debugPrint("HTTP status codes X | Y | Z ",false);
-                debugPrint(httpStatusCodeX, false);debugPrint(" | ", false);
-                debugPrint(httpStatusCodeY, false);debugPrint(" | ", false);
-                debugPrint(httpStatusCodeZ, true);
+                debugPrint("HTTPS status codes X | Y | Z ",false);
+                debugPrint(httpsStatusCodeX, false);debugPrint(" | ", false);
+                debugPrint(httpsStatusCodeY, false);debugPrint(" | ", false);
+                debugPrint(httpsStatusCodeZ, true);
                 // Abort transmission on failure  // IDE1.5_PORT_CHANGE Change
-                RawDataState::rawDataTransmissionInProgress = false;
-                RawDataState::startRawDataCollection = false;             
+                // RawDataState::rawDataTransmissionInProgress = false;
+                // RawDataState::startRawDataCollection = false;             
             }
 #endif
             break;
         }
+        case MSPCommand::HTTPS_OEM_ACK: {
+            if (loopDebugMode){ debugPrint(F("HTTPS_OEM_ACK")); }
+            if (buff[0] == 'X') {
+                httpsOEMStatusCodeX = atoi(&buff[1]);
+            } else if (buff[0] == 'Y') {
+                httpsOEMStatusCodeY = atoi(&buff[1]);
+            } else if (buff[0] == 'Z') {
+                httpsOEMStatusCodeZ = atoi(&buff[1]);
+            }
+            if (loopDebugMode) {
+                debugPrint("HTTPS OEM status codes X | Y | Z ",false);
+                debugPrint(httpsOEMStatusCodeX, false);debugPrint(" | ", false);
+                debugPrint(httpsOEMStatusCodeY, false);debugPrint(" | ", false);
+                debugPrint(httpsOEMStatusCodeZ, true);
+            }
+#if 1
+            if(httpsOEMStatusCodeX != 200 || (httpsOEMStatusCodeX == 200 && httpsOEMStatusCodeY != 200 && httpsOEMStatusCodeY != 0) || (httpsOEMStatusCodeX == 200 && httpsOEMStatusCodeY == 200 && httpsOEMStatusCodeZ != 200 && httpsOEMStatusCodeZ != 0))
+            {
+                debugPrint("HTTPS OEM status codes X | Y | Z ",false);
+                debugPrint(httpsOEMStatusCodeX, false);debugPrint(" | ", false);
+                debugPrint(httpsOEMStatusCodeY, false);debugPrint(" | ", false);
+                debugPrint(httpsOEMStatusCodeZ, true);
+                // // Abort transmission on failure  // IDE1.5_PORT_CHANGE Change
+                // RawDataState::rawDataTransmissionInProgress = false;
+                // RawDataState::startRawDataCollection = false;             
+            }
+#endif
+            break;
+        }
+        case MSPCommand::SEND_RAW_DATA_NEXT_PKT: {
+                sendNextAxis = bool(strtol(buff, NULL, 0));
+                debugPrint("Send Next Axis : ", false);debugPrint(sendNextAxis);
+            }
+            break;
         case MSPCommand::WIFI_GET_TX_POWER:
             if (loopDebugMode) {
                 debugPrint("TX power from ESP32  :",false);
@@ -3637,29 +3703,50 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 m_httpHost = config["httpConfig"]["host"];
                 m_httpPath = config["httpConfig"]["path"];
                 m_httpPort = config["httpConfig"]["port"];
+                m_httpUsername = config["httpConfig"]["username"];
+                m_httpPassword = config["httpConfig"]["password"];
+                m_httpOauth = config["httpConfig"]["oauth"];
+
+                if(config.containsKey("httpOem")){
+                    m_httpHost_oem = config["httpOem"]["host"];
+                    m_httpPort_oem = config["httpOem"]["port"];
+                    m_httpPath_oem = config["httpOem"]["path"];
+                    m_httpUsername_oem = config["httpOem"]["username"];
+                    m_httpPassword_oem = config["httpOem"]["password"];
+                    m_httpOauth_oem = config["httpOem"]["oauth"];
+                    httpOEMConfigPresent = true;
+                }else{
+                    httpOEMConfigPresent = false;
+                }
+
               }else if(iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS)){
                     String httpConfig = iuFlash.readInternalFlash(CONFIG_HTTP_FLASH_ADDRESS);
                     debugPrint(httpConfig);
                     const size_t bufferSize = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(6) + 510;
                     StaticJsonBuffer<bufferSize> jsonBuffer;
                     JsonObject &config = jsonBuffer.parseObject(httpConfig);
-                    JsonObject& config2 = config["httpConfig"];
                     if(config.success())
                     {
                         debugPrint("Http Config Found");
-                        static const char* host = config2["host"];
-                        static uint16_t    port = config2["port"];
-                        static const char* path = config2["path"];
-                        static const char* username = config2["username"];
-                        static const char* password = config2["password"];
-                        static const char* oauth = config2["oauth"];
+                        m_httpHost = config["httpConfig"]["host"];
+                        m_httpPort = config["httpConfig"]["port"];
+                        m_httpPath = config["httpConfig"]["path"];
+                        m_httpUsername = config["httpConfig"]["username"];
+                        m_httpPassword = config["httpConfig"]["password"];
+                        m_httpOauth = config["httpConfig"]["oauth"];
 
-                        m_httpHost  = host;
-                        m_httpPort = port;
-                        m_httpPath = path;
-                        m_httpUsername = username;
-                        m_httpPassword = password;
-                        m_httpOauth = oauth;
+                        if(config.containsKey("httpOem")){
+                            m_httpHost_oem = config["httpOem"]["host"];
+                            m_httpPort_oem = config["httpOem"]["port"];
+                            m_httpPath_oem = config["httpOem"]["path"];
+                            m_httpUsername_oem = config["httpOem"]["username"];
+                            m_httpPassword_oem = config["httpOem"]["password"];
+                            m_httpOauth_oem = config["httpOem"]["oauth"];
+                            httpOEMConfigPresent = true;
+                        }else{
+                            httpOEMConfigPresent = false;
+                        }
+
                         File httpFile = DOSFS.open("httpConfig.conf","w");
                         if(httpFile)
                         {
@@ -3680,6 +3767,12 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_HOST,m_httpHost); 
                 iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_PORT,String(m_httpPort).c_str()); 
                 iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_ROUTE,m_httpPath);
+
+
+                iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_HOST_OEM,m_httpHost_oem); 
+                iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_PORT_OEM,String(m_httpPort_oem).c_str()); 
+                iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_ROUTE_OEM,m_httpPath_oem);
+                iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_OEM_STATUS,String(httpOEMConfigPresent).c_str());
                             
                 break;
            }
@@ -4902,7 +4995,9 @@ void Conductor::manageRawDataSending() {
             debugPrint("Raw data request: collected raw data, starting transmission");
         }
         RawDataState::rawDataTransmissionInProgress = true;
-        httpStatusCodeX = httpStatusCodeY = httpStatusCodeZ = 0;
+        httpsStatusCodeX = httpsStatusCodeY = httpsStatusCodeZ = 0;
+        httpsOEMStatusCodeX = httpsOEMStatusCodeY = httpsOEMStatusCodeZ = 0;
+        sendNextAxis = false;
         XSentToWifi = YsentToWifi = ZsentToWifi = false;    
     }
 
@@ -4911,56 +5006,59 @@ void Conductor::manageRawDataSending() {
         if (!XSentToWifi) {
             prepareRawDataPacketAndSend('X');
             XSentToWifi = true; 
-            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+            // RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
             RawDataTotalTimeout = millis();
             iuWiFi.m_setLastConfirmedPublication();
             if(loopDebugMode) {
                 debugPrint("Raw data request: X sent to wifi");
             }
             // lastPacketSentToESP = millis();
-        } else if (httpStatusCodeX == 200 && !YsentToWifi) { 
+        } else if ((httpsStatusCodeX == 200 || httpsOEMStatusCodeX == 200) && (!YsentToWifi && sendNextAxis)) { 
             prepareRawDataPacketAndSend('Y');
             YsentToWifi = true;
-            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+            sendNextAxis = false;
+            // RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
             RawDataTotalTimeout = millis();
             iuWiFi.m_setLastConfirmedPublication();
             if(loopDebugMode) {
                 debugPrint("Raw data request: X delivered, Y sent to wifi");
             }
             // lastPacketSentToESP = millis();
-        } else if (httpStatusCodeY == 200 && !ZsentToWifi) {
+        } else if ((httpsStatusCodeY == 200 || httpsOEMStatusCodeY == 200) && (!ZsentToWifi && sendNextAxis)) {
             prepareRawDataPacketAndSend('Z');
             ZsentToWifi = true;
-            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+            sendNextAxis = false;
+            // RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
             RawDataTotalTimeout = millis();
             iuWiFi.m_setLastConfirmedPublication();
             if(loopDebugMode) {
                 debugPrint("Raw data request: Y delivered, Z sent to wifi");
             }
             // lastPacketSentToESP = millis();
-        } else if((millis() - RawDataTimeout) > 5000 && XSentToWifi && httpStatusCodeX != 200){
-            prepareRawDataPacketAndSend('X');
-            XSentToWifi = true;
-            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
-            if(loopDebugMode) {
-                debugPrint("Raw data request: Resending X, X sent to wifi");
-            }
-        } else if((millis() - RawDataTimeout) > 5000 && XSentToWifi && httpStatusCodeX == 200 && httpStatusCodeY != 200 ){
-            prepareRawDataPacketAndSend('Y');
-            YsentToWifi = true;
-            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
-            if(loopDebugMode) {
-                debugPrint("Raw data request: Resending Y, Y sent to wifi");
-            }
-        } else if((millis() - RawDataTimeout) > 5000 && XSentToWifi && YsentToWifi && httpStatusCodeX == 200 && httpStatusCodeY == 200 && httpStatusCodeZ != 200 ){
-            prepareRawDataPacketAndSend('Z');
-            ZsentToWifi = true;
-            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
-            if(loopDebugMode) {
-                debugPrint("Raw data request: Resending Z, Z sent to wifi");
-            }
-        }
-        if (httpStatusCodeX == 200 && httpStatusCodeY == 200 && httpStatusCodeZ == 200) {
+        } 
+        // else if((millis() - RawDataTimeout) > 8000 && XSentToWifi && httpsStatusCodeX != 200){
+        //     prepareRawDataPacketAndSend('X');
+        //     XSentToWifi = true;
+        //     RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+        //     if(loopDebugMode) {
+        //         debugPrint("Raw data request: Resending X, X sent to wifi");
+        //     }
+        // } else if((millis() - RawDataTimeout) > 8000 && XSentToWifi && httpsStatusCodeX == 200 && httpsStatusCodeY != 200 ){
+        //     prepareRawDataPacketAndSend('Y');
+        //     YsentToWifi = true;
+        //     RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+        //     if(loopDebugMode) {
+        //         debugPrint("Raw data request: Resending Y, Y sent to wifi");
+        //     }
+        // } else if((millis() - RawDataTimeout) > 8000 && XSentToWifi && YsentToWifi && httpsStatusCodeX == 200 && httpsStatusCodeY == 200 && httpsStatusCodeZ != 200 ){
+        //     prepareRawDataPacketAndSend('Z');
+        //     ZsentToWifi = true;
+        //     RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+        //     if(loopDebugMode) {
+        //         debugPrint("Raw data request: Resending Z, Z sent to wifi");
+        //     }
+        // }
+        if ((httpsStatusCodeX == 200 && httpsStatusCodeY == 200 && httpsStatusCodeZ == 200) || (httpsOEMStatusCodeX == 200 && httpsOEMStatusCodeY == 200 && httpsOEMStatusCodeZ == 200) ) {
             // End the transmission session, reset RawDataState::startRawDataCollection and RawDataState::rawDataTransmissionInProgress
             // Rest of the tracking variables are reset when rawDataRequest() is called
             if(loopDebugMode) {
@@ -4969,7 +5067,7 @@ void Conductor::manageRawDataSending() {
             RawDataState::startRawDataCollection = false;
             RawDataState::rawDataTransmissionInProgress = false;    
         }
-        if((millis() - RawDataTotalTimeout) > 20000)
+        if((millis() - RawDataTotalTimeout) > 30000)
         { // IDE1.5_PORT_CHANGE -- On timeout of 4 Sec. if no response OK/FAIL then abort transmission
             RawDataState::startRawDataCollection = false;
             RawDataState::rawDataTransmissionInProgress = false;              
@@ -6182,14 +6280,14 @@ void Conductor::otaChkFwdnldTmout()
     {
         if ( (now - m_downloadSuccessStartTime ) > 5000 )
         {
-            if (iuWiFi.isConnected() || m_mqttConnected == true)
+            if ((iuWiFi.isConnected() && m_upgradeSuccess)|| m_mqttConnected == true)
             {   
                 certDownloadInProgress = false;
                 m_downloadSuccess = false;
                 // m_downloadSuccessStartTime = millis();
                 // Certificate Upgrade went Successful
                 ledManager.overrideColor(RGB_PURPLE);
-                sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_SUCCESS,CERT_UPGRADE_COMPLETE,"CERT-RCA-0000");
+                // sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_SUCCESS,CERT_UPGRADE_COMPLETE,"CERT-RCA-0000");
                 // TODO : Add Visuals
                 // Show Visuals min 15 sec
                 for(int i = 0 ; i < 20; i++) {
