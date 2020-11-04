@@ -29,7 +29,8 @@ namespace FeatureStates {
     extern double isr_startTime;
     extern double isr_stopTime;
     extern double elapsedTime;
-    extern int isrCount; 
+    extern int isrCount;
+    extern int opStateStatusFlag; 
 }
 
 namespace featureDestinations {

@@ -1,4 +1,6 @@
 #include "FeatureUtilities.h"
+#include "FeatureComputer.h"
+#include "RawDataState.h"
 
 
 /*==============================================================================
@@ -574,6 +576,10 @@ float RFFTFeatures::computeRPM(q15_t *amplitudes,int m_lowRPMFrequency,int m_hig
     // debugPrint("\n\nlRPM : ",false);debugPrint(m_lowRPMFrequency);
     // debugPrint("hRPM : ",false);debugPrint(m_highRPMFrequency);
     // debugPrint("RPM_TRH : ",false);debugPrint(rpm_threshold);
+    FeatureStates::isrCount;
+    if(FeatureStates::opStateStatusFlag == 0){ 
+        return 0;
+    }
     uint8_t MAX_PEAK_COUNT = 200 ;
     float peakfreq[MAX_PEAK_COUNT];                 // store the first top 200 Peaks 
     float val,freq(0); 

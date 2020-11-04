@@ -21,6 +21,7 @@ namespace FeatureStates {
     double isr_stopTime ;
     double elapsedTime;
     int isrCount =0;
+    int opStateStatusFlag =0; 
 
 
 }
