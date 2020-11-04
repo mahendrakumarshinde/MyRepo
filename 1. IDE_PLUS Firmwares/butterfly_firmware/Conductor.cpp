@@ -6478,7 +6478,7 @@ uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
         if(loopDebugMode){ debugPrint(F("Validation [DEV]-Free Memory: Fail !")); }      
         ValidationFile->println(F("***************************************************************************************" ));
         ValidationFile->println(F(""));
-        // return OTA_VALIDATION_FAIL;
+        // return OTA_VALIDATION_FAIL;  // Bypass Freememory check because of low memory when we configure Diagnostics.
     }
     if(loopDebugMode){ debugPrint(F("Validation [DEV]-Free Memory: Ok")); }  
     F_SPACE space;
