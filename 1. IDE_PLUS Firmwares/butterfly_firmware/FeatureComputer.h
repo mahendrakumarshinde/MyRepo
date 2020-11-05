@@ -56,6 +56,7 @@ class FeatureComputer
         virtual bool compute();
         /***** Debugging *****/
         virtual void exposeConfig();
+        uint8_t opStateStatusBuffer[maxSourceCount];
 
     protected:
         /***** Instance registry *****/
@@ -737,6 +738,10 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
                 
                 // debugPrint("RPM Freq On velFFT : ",false );
                 // debugPrint(velRPM/60.0);
+                // debugPrint("opstate : ");
+                // debugPrint(FeatureStates::opStateStatusFlag);
+                // debugPrint("rpm : ");
+                // debugPrint(velRPM);
                 featureDestinations::buff[featureDestinations::basicfeatures::rpm] = velRPM;
             }
             /***************************** Applying Diagnostic fingerprints on computated velocity fft amplitude *************************/ 
