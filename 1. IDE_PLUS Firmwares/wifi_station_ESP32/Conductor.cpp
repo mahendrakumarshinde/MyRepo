@@ -669,7 +669,6 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                                             accelRawDataHelper.m_endpointPort, (uint8_t*) &httpBuffer, 
                                             httpBufferPointer,"", ssl_rootca_cert, HttpContentType::octetStream);            
 
-            
             // send HTTP status code back to the MCU
             char httpAckBuffer[1 + 4];      // axis + 3 digit HTTP status code + null terminator
             httpAckBuffer[0] = rawData->axis;
