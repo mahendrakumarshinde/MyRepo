@@ -158,8 +158,6 @@ void IUTMP116::readData()
     m_rawBytes[0] = 0;
     m_rawBytes[1] = 0;
     iuI2C1.releaseReadLock();
-    debugPrint("isSensorPresent : ",false);
-    debugPrint(isSensorPresent);
     if (m_readingData) {
         // previous data reading is not done: flag errors in destinations and
         // skip reading
@@ -169,7 +167,8 @@ void IUTMP116::readData()
         if (debugMode) {
             debugPrint("Skip TMP116 read");
         }
-    } else if (m_iuI2C1->readBytes(ADDRESS, TEMP, 2, &m_rawBytes[0],m_readCallback))
+        isSensorPresent = false;
+    } else if (m_iuI2C1->readBytes(ADDRESS, TEMP, 2, &m_rawBytes[0]))
     {
         m_readingData = true;
         config_reg = ReadConfigReg();
@@ -204,6 +203,7 @@ void IUTMP116::readData()
         {
             debugPrint("Temperature Read Failure");
         }
+        isSensorPresent = false;
     }
    
 
@@ -224,18 +224,20 @@ void IUTMP116::processTemperatureData(uint8_t wireStatus)
             debugPrint(wireStatus);
             debugPrint("Applying Default temperature value ");
         }
-        m_defaultTemperature = 56;
+        m_temperature = 49.53; // Default tepmerture value in case of Sensor Failure
         //return;
+    }else{
+        m_temperature = 0.00;
+        iTemp = ( (int16_t) (m_rawBytes[0] << 8) | m_rawBytes[1]);
+        m_temperature = (iTemp * TEMP_COEFFICIENT);
+        // TODO : Apply Temperature Algorithm here.
+        m_temperature = m_temperature -  quadraticTemperatureCoorection(m_temperature);
     }
     
-    m_temperature = 0.00;
-    iTemp = ( (int16_t) (m_rawBytes[0] << 8) | m_rawBytes[1]);
-    m_temperature = (iTemp * TEMP_COEFFICIENT);
-    // TODO : Apply Temperature Algorithm here.
-     m_temperature = m_temperature -  quadraticTemperatureCoorection(m_temperature);
-     m_destinations[0]->addValue(m_temperature + m_defaultTemperature);
+    
+     m_destinations[0]->addValue(m_temperature);
      //Append the Temperature data
-     modbusFeaturesDestinations[5] = m_temperature + m_defaultTemperature;
+     modbusFeaturesDestinations[5] = m_temperature ;
 }
 
 /**

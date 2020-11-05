@@ -540,7 +540,7 @@ void setup()
 
         iuFlash.begin();
         debugPrint(F("Initilizing Kionix and Lsm"));
-        //iuAccelerometer.setupHardware();
+        iuAccelerometer.setupHardware();
         iuAccelerometerKX222.setupHardware();
         // Update the configuration of FFT computers from fft.conf
         if(conductor.setFFTParams()) {
