@@ -802,8 +802,7 @@ void loop()
                 conductor.acquireTemperatureData();
                 // Compute Features
                 conductor.computeFeatures();
-                // Stream features
-                conductor.streamFeatures();
+                
                 if(computationDone && RawDataState::startRawDataCollection == false ){
                     //compute AdvanceFeatures
                     conductor.computeAdvanceFeature();
@@ -812,6 +811,8 @@ void loop()
                     // Stream Advanced Diagnostic/Reportable
                       conductor.streamDiagnostics();
                 }
+                // Stream features
+                conductor.streamFeatures();
                if(conductor.modbusStreamingMode ) { 
                     // Update Modbus Registers
                     uint32_t now =millis();
