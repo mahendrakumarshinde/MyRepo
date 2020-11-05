@@ -29,6 +29,7 @@ class FeatureComputer
         static const uint8_t MAX_INSTANCE_COUNT = 20;
         static uint8_t instanceCount;
         static FeatureComputer *instances[MAX_INSTANCE_COUNT];
+        uint8_t opStateStatusBuffer[maxSourceCount];
         /***** Core *****/
         FeatureComputer(uint8_t id, uint8_t destinationCount=0,
                         Feature *destination0=NULL, Feature *destination1=NULL,
@@ -56,7 +57,7 @@ class FeatureComputer
         virtual bool compute();
         /***** Debugging *****/
         virtual void exposeConfig();
-        uint8_t opStateStatusBuffer[maxSourceCount];
+        
 
     protected:
         /***** Instance registry *****/
