@@ -7,11 +7,11 @@ extern float modbusFeaturesDestinations[8];
 
 
 IUTMP116::IUTMP116(IUI2C1 *iuI2C1, const char* name,
-                   void (*i2cReadCallback)(uint8_t wireStatus),
+                   /*void (*i2cReadCallback)(uint8_t wireStatus),*/
                    FeatureTemplate<float> *temperature) :
     LowFreqSensor(name, 1, temperature),
-    m_temperature(30.0),
-    m_readCallback(i2cReadCallback)
+    m_temperature(30.0)
+    //m_readCallback(i2cReadCallback)
 {
     m_iuI2C1= iuI2C1;
 }
@@ -36,7 +36,8 @@ void IUTMP116::setupHardware()
             debugPrint("TMPERR");
             debugPrint(deviceId);
         }
-        return;
+        isSensorPresent = false;
+        return ;
     }
     if (setupDebugMode)
     {
@@ -166,7 +167,8 @@ void IUTMP116::readData()
         if (debugMode) {
             debugPrint("Skip TMP116 read");
         }
-    } else if (m_iuI2C1->readBytes(ADDRESS, TEMP, 2, &m_rawBytes[0],m_readCallback))
+        isSensorPresent = false;
+    } else if (m_iuI2C1->readBytes(ADDRESS, TEMP, 2, &m_rawBytes[0]))
     {
         m_readingData = true;
         config_reg = ReadConfigReg();
@@ -195,14 +197,18 @@ void IUTMP116::readData()
         }
     }else
     {
+        //m_readingData = true;
+        //processTemperatureData(true);
         if (debugMode) 
         {
             debugPrint("Temperature Read Failure");
         }
+        isSensorPresent = false;
     }
    
 
     m_readingData = false;
+    processTemperatureData(isSensorPresent);
 }
 /**
  * Process a raw Temperature reading
@@ -211,26 +217,27 @@ void IUTMP116::processTemperatureData(uint8_t wireStatus)
 {
     int iTemp = 0;
     iuI2C1.releaseReadLock();
-    if (wireStatus != 0) {
+    if (wireStatus == 0) {
         if (asyncDebugMode || debugMode) {
             debugPrint(micros(), false);
             debugPrint(F(" Temperature processing read error "), false);
             debugPrint(wireStatus);
             debugPrint("Applying Default temperature value ");
         }
-        m_defaultTemperature = 56;
+        m_temperature = 49.53; // Default tepmerture value in case of Sensor Failure
         //return;
+    }else{
+        m_temperature = 0.00;
+        iTemp = ( (int16_t) (m_rawBytes[0] << 8) | m_rawBytes[1]);
+        m_temperature = (iTemp * TEMP_COEFFICIENT);
+        // TODO : Apply Temperature Algorithm here.
+        m_temperature = m_temperature -  quadraticTemperatureCoorection(m_temperature);
     }
     
-    m_temperature = 0.00;
-    iTemp = ( (int16_t) (m_rawBytes[0] << 8) | m_rawBytes[1]);
-    m_temperature = (iTemp * TEMP_COEFFICIENT);
-    // TODO : Apply Temperature Algorithm here.
-     m_temperature = m_temperature -  quadraticTemperatureCoorection(m_temperature);
-     m_destinations[0]->addValue(m_temperature + m_defaultTemperature);
+    
+     m_destinations[0]->addValue(m_temperature);
      //Append the Temperature data
-     modbusFeaturesDestinations[5] = m_temperature + m_defaultTemperature;
-     featureDestinations::buff[featureDestinations::basicfeatures::temperature] = m_temperature + m_defaultTemperature; // temperature
+     modbusFeaturesDestinations[5] = m_temperature ;
 }
 
 /**
