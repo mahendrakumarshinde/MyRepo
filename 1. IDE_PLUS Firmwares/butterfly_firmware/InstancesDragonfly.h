@@ -252,7 +252,7 @@ extern IULSM6DSM iuAccelerometer;
 void KX222AccelReadCallback();
 extern IUKX222 iuAccelerometerKX222;
 
-void TMP116TempReadCallback(uint8_t wireStatus);
+//void TMP116TempReadCallback(uint8_t wireStatus);
 extern IUTMP116 iuTemp;
 
 #if defined(WITH_CAM_M8Q) || defined(WITH_MAX_M8Q)

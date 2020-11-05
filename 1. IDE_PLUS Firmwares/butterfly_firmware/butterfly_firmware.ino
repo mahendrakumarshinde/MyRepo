@@ -515,10 +515,10 @@ void setup()
         iuWiFi.setOnDisconnect(onWiFiDisconnect);
 
         if (setupDebugMode) {
-            iuI2C.scanDevices();
+            //iuI2C.scanDevices();
             debugPrint("Testing New I2C Bus ..............");
-            iuI2C1.scanDevices();
-            debugPrint("");
+            //iuI2C1.scanDevices();
+            //debugPrint("");
         }
         if (debugMode) {
             debugPrint(F("=> Successfully initialized interfaces - Mem: "),
@@ -540,7 +540,7 @@ void setup()
 
         iuFlash.begin();
         debugPrint(F("Initilizing Kionix and Lsm"));
-        iuAccelerometer.setupHardware();
+        //iuAccelerometer.setupHardware();
         iuAccelerometerKX222.setupHardware();
         // Update the configuration of FFT computers from fft.conf
         if(conductor.setFFTParams()) {

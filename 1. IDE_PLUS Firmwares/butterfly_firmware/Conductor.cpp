@@ -4034,7 +4034,7 @@ void Conductor::acquireTemperatureData()
 {
     for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
         if (strcmp("T10", Sensor::instances[i]->getName())==0 || strcmp("BAT", Sensor::instances[i]->getName())==0)
-        {
+        {   
             Sensor::instances[i]->acquireData();
         }
     }

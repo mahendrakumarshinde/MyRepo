@@ -7,11 +7,11 @@ extern float modbusFeaturesDestinations[8];
 
 
 IUTMP116::IUTMP116(IUI2C1 *iuI2C1, const char* name,
-                   void (*i2cReadCallback)(uint8_t wireStatus),
+                   /*void (*i2cReadCallback)(uint8_t wireStatus),*/
                    FeatureTemplate<float> *temperature) :
     LowFreqSensor(name, 1, temperature),
-    m_temperature(30.0),
-    m_readCallback(i2cReadCallback)
+    m_temperature(30.0)
+    //m_readCallback(i2cReadCallback)
 {
     m_iuI2C1= iuI2C1;
 }
@@ -36,7 +36,8 @@ void IUTMP116::setupHardware()
             debugPrint("TMPERR");
             debugPrint(deviceId);
         }
-        return;
+        isSensorPresent = false;
+        return ;
     }
     if (setupDebugMode)
     {
@@ -157,6 +158,8 @@ void IUTMP116::readData()
     m_rawBytes[0] = 0;
     m_rawBytes[1] = 0;
     iuI2C1.releaseReadLock();
+    debugPrint("isSensorPresent : ",false);
+    debugPrint(isSensorPresent);
     if (m_readingData) {
         // previous data reading is not done: flag errors in destinations and
         // skip reading
@@ -195,6 +198,8 @@ void IUTMP116::readData()
         }
     }else
     {
+        //m_readingData = true;
+        //processTemperatureData(true);
         if (debugMode) 
         {
             debugPrint("Temperature Read Failure");
@@ -203,6 +208,7 @@ void IUTMP116::readData()
    
 
     m_readingData = false;
+    processTemperatureData(isSensorPresent);
 }
 /**
  * Process a raw Temperature reading
@@ -211,7 +217,7 @@ void IUTMP116::processTemperatureData(uint8_t wireStatus)
 {
     int iTemp = 0;
     iuI2C1.releaseReadLock();
-    if (wireStatus != 0) {
+    if (wireStatus == 0) {
         if (asyncDebugMode || debugMode) {
             debugPrint(micros(), false);
             debugPrint(F(" Temperature processing read error "), false);

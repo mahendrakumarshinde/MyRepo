@@ -236,11 +236,11 @@ void KX222AccelReadCallback()
 IUKX222 iuAccelerometerKX222(&SPI1, 43, SPISettings(10000000,MSBFIRST,SPI_MODE0), "ACX", 
                             KX222AccelReadCallback, &accelerationX, &accelerationY, &accelerationZ);
 
-void TMP116TempReadCallback(uint8_t wireStatus)
-{
-     iuTemp.processTemperatureData(wireStatus);
-}
-IUTMP116 iuTemp(&iuI2C1,"T10",TMP116TempReadCallback, &allTemperatures);
+// void TMP116TempReadCallback(uint8_t wireStatus)
+// {
+//      iuTemp.processTemperatureData(wireStatus);
+// }
+IUTMP116 iuTemp(&iuI2C1,"T10",/*TMP116TempReadCallback,*/ &allTemperatures);
 
 #ifdef WITH_CAM_M8Q
     IUCAMM8Q iuGNSS(&Serial2, "GPS", -1);
