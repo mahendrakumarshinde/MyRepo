@@ -739,10 +739,6 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
                 
                 // debugPrint("RPM Freq On velFFT : ",false );
                 // debugPrint(velRPM/60.0);
-                // debugPrint("opstate : ");
-                // debugPrint(FeatureStates::opStateStatusFlag);
-                // debugPrint("rpm : ");
-                // debugPrint(velRPM);
                 featureDestinations::buff[featureDestinations::basicfeatures::rpm] = velRPM;
             }
             /***************************** Applying Diagnostic fingerprints on computated velocity fft amplitude *************************/ 
