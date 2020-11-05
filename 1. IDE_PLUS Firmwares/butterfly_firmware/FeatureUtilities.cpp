@@ -575,7 +575,6 @@ float RFFTFeatures::computeRPM(q15_t *amplitudes,int m_lowRPMFrequency,int m_hig
     // debugPrint("\n\nlRPM : ",false);debugPrint(m_lowRPMFrequency);
     // debugPrint("hRPM : ",false);debugPrint(m_highRPMFrequency);
     // debugPrint("RPM_TRH : ",false);debugPrint(rpm_threshold);
-    FeatureStates::isrCount;
     if(FeatureStates::opStateStatusFlag == 0){ 
         return 0;           //return 0 for device is in ideal condition
     }
