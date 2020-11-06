@@ -61,6 +61,10 @@ namespace MSPCommand
         SET_RAW_DATA_ENDPOINT_HOST,
         SET_RAW_DATA_ENDPOINT_ROUTE,
         SET_RAW_DATA_ENDPOINT_PORT,
+        SET_RAW_DATA_ENDPOINT_HOST_OEM,
+        SET_RAW_DATA_ENDPOINT_ROUTE_OEM,
+        SET_RAW_DATA_ENDPOINT_PORT_OEM,
+        SET_RAW_DATA_ENDPOINT_OEM_STATUS,
 	//SET_HTTP_CLIENT_FLAG,	
         SET_MQTT_SERVER_IP,
         SET_MQTT_SERVER_PORT,
@@ -78,7 +82,10 @@ namespace MSPCommand
         WIFI_RECEIVE_USERNAME,
 
         /***** WiFi to Host commands *****/
-        HTTP_ACK,                       // Used to send back HTTP status code to the MCU
+        HTTPS_ACK,                       // Used to send back HTTP status code to the MCU
+        HTTPS_OEM_ACK,  
+        SEND_RAW_DATA_NEXT_PKT,
+        HTTP_ACK,
         // MAC addresses
         ASK_BLE_MAC,  // Ask BLE MAC Address
         RECEIVE_WIFI_MAC,  // Send WiFi MAC Address

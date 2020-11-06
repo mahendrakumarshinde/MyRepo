@@ -291,6 +291,7 @@ void IUSerial::sendMSPCommand(MSPCommand::command cmd)
 void IUSerial::sendMSPCommand(MSPCommand::command cmd, const char* cmdMsg,
                               uint16_t cmdSize)
 {
+
     if (debugMode)
     {
         debugPrint("Sending MSP Command #", false);
@@ -316,6 +317,7 @@ void IUSerial::sendMSPCommand(MSPCommand::command cmd, const char* cmdMsg,
  */
 void IUSerial::sendMSPCommand(MSPCommand::command cmd, const char* cmdMsg)
 {
+    
     if (cmdMsg != NULL)
     {
         uint16_t cmdSize = (uint16_t) strlen(cmdMsg);
