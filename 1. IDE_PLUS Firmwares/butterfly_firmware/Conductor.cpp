@@ -894,7 +894,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 debugPrint(F("OTA FW Version: "), false);
                 debugPrint(m_otaFwVer);
             }
-            if(strncmp(m_deviceType,"vEdge 2.0",9)!=0) //Change the device name according to device type
+            if(strncmp(m_deviceType,"vEdge 1.6",9)!=0) //Change the device name according to device type
             {
                 if(loopDebugMode) {
                     debugPrint(F("Sending OTA_FDW_ABORT, Invalid Firmware"));
@@ -2178,7 +2178,7 @@ void Conductor::processCommand(char *buff)
                 }
                 else
                 {
-                    detachInterrupt(digitalPinToInterrupt(IUKX134::INT1_PIN));
+                    detachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN));
                 }
                 FeatureStates::isISRActive = false;
                 FeatureStates::isISRDisabled = true;
@@ -2378,16 +2378,13 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     {
                         switch (result[7] - '0') {
                             case 0:
-                                iuAccelerometerKX134.setScale(iuAccelerometerKX134.FSR_8G);
+                                iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_8G);
                                 break;
                             case 1:
-                                iuAccelerometerKX134.setScale(iuAccelerometerKX134.FSR_16G);
+                                iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_16G);
                                 break;
                             case 2:
-                                iuAccelerometerKX134.setScale(iuAccelerometerKX134.FSR_32G);
-                                break;
-                            case 3:
-                                iuAccelerometerKX134.setScale(iuAccelerometerKX134.FSR_64G);    
+                                iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_32G);
                                 break;
                         }
                     }
@@ -2422,7 +2419,7 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     }
                     else
                     {
-                        iuAccelerometerKX134.setSamplingRate(samplingRate);
+                        iuAccelerometerKX222.setSamplingRate(samplingRate);
                     }
                 }
                 break;
@@ -2851,16 +2848,13 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     {
                         switch (result[7] - '0') {
                             case 0:
-                                iuAccelerometerKX134.setScale(iuAccelerometerKX134.FSR_8G);
+                                iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_8G);
                                 break;
                             case 1:
-                                iuAccelerometerKX134.setScale(iuAccelerometerKX134.FSR_16G);
+                                iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_16G);
                                 break;
                             case 2:
-                                iuAccelerometerKX134.setScale(iuAccelerometerKX134.FSR_32G);
-                                break;
-                            case 3:
-                                iuAccelerometerKX134.setScale(iuAccelerometerKX134.FSR_64G);
+                                iuAccelerometerKX222.setScale(iuAccelerometerKX222.FSR_32G);
                                 break;
                         }
                     }
@@ -2895,7 +2889,7 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     }
                     else
                     {
-                        iuAccelerometerKX134.setSamplingRate(samplingRate);
+                        iuAccelerometerKX222.setSamplingRate(samplingRate);
                     }
                 }
                 break;
@@ -4319,7 +4313,7 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             }
             else
             {
-                iuAccelerometerKX134.setGrange(FFTConfiguration::currentKNXgRange);
+                iuAccelerometerKX222.setGrange(FFTConfiguration::currentKNXgRange);
             }
             msg = "operation";
             break;
@@ -4332,7 +4326,7 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             }
             else
             {
-                iuAccelerometerKX134.setGrange(FFTConfiguration::currentKNXgRange);
+                iuAccelerometerKX222.setGrange(FFTConfiguration::currentKNXgRange);
             }
             msg = "custom";
             break;        
@@ -5309,10 +5303,10 @@ bool Conductor::setFFTParams() {
             }
             iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
         }
-        else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (iuAccelerometerKX134.kionixPresence))
+        else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (iuAccelerometerKX222.kionixPresence))
         {
             debugPrint(F("KIONIX Present & KIONIX set"));
-            iuAccelerometerKX134.setSamplingRate(FFTConfiguration::currentSamplingRate); // will set the ODR for the sensor
+            iuAccelerometerKX222.setSamplingRate(FFTConfiguration::currentSamplingRate); // will set the ODR for the sensor
             FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
             setSensorStatus(SensorStatusCode::KNX_SET);
             if(config.containsKey("grange")){
@@ -5320,18 +5314,18 @@ bool Conductor::setFFTParams() {
             }else{
                 FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_KNX_G_RANGE;
             }
-            iuAccelerometerKX134.setGrange(FFTConfiguration::currentKNXgRange);
-        }else if((FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor) && (!iuAccelerometer.lsmPresence) && (iuAccelerometerKX134.kionixPresence)){
+            iuAccelerometerKX222.setGrange(FFTConfiguration::currentKNXgRange);
+        }else if((FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor) && (!iuAccelerometer.lsmPresence) && (iuAccelerometerKX222.kionixPresence)){
             debugPrint(F("LSM absent & KIONIX set"));
-            iuAccelerometerKX134.setSamplingRate(iuAccelerometerKX134.defaultSamplingRate);
-            FFTConfiguration::currentSamplingRate = iuAccelerometerKX134.defaultSamplingRate;
+            iuAccelerometerKX222.setSamplingRate(iuAccelerometerKX222.defaultSamplingRate);
+            FFTConfiguration::currentSamplingRate = iuAccelerometerKX222.defaultSamplingRate;
             FFTConfiguration::currentSensor = FFTConfiguration::kionixSensor;
             FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
             FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
             setSensorStatus(SensorStatusCode::LSM_ABS);
             FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_KNX_G_RANGE;
-            iuAccelerometerKX134.setGrange(FFTConfiguration::currentKNXgRange);
-        }else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (!iuAccelerometerKX134.kionixPresence) && (iuAccelerometer.lsmPresence)){
+            iuAccelerometerKX222.setGrange(FFTConfiguration::currentKNXgRange);
+        }else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (!iuAccelerometerKX222.kionixPresence) && (iuAccelerometer.lsmPresence)){
             debugPrint(F("KIONIX Absent & LSM set"));
             iuAccelerometer.setSamplingRate(iuAccelerometer.defaultSamplingRate);
             FFTConfiguration::currentSamplingRate = iuAccelerometer.defaultSamplingRate;
@@ -5369,13 +5363,13 @@ bool Conductor::setFFTParams() {
         }
         configured = true;
     } else {
-        if(iuAccelerometerKX134.kionixPresence){
+        if(iuAccelerometerKX222.kionixPresence){
                 conductor.setSensorStatus(conductor.SensorStatusCode::KNX_DEFAULT); // TO DO based on hardware identifier
-                FFTConfiguration::currentSamplingRate = iuAccelerometerKX134.defaultSamplingRate;
+                FFTConfiguration::currentSamplingRate = iuAccelerometerKX222.defaultSamplingRate;
                 FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
                 FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
                 FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_KNX_G_RANGE;
-                iuAccelerometerKX134.setGrange(FFTConfiguration::currentKNXgRange);
+                iuAccelerometerKX222.setGrange(FFTConfiguration::currentKNXgRange);
             }else if(iuAccelerometer.lsmPresence){
                 conductor.setSensorStatus(conductor.SensorStatusCode::LSM_DEFAULT); // TO DO based on hardware identifier
                 FFTConfiguration::currentSamplingRate = iuAccelerometer.defaultSamplingRate;
@@ -6667,20 +6661,20 @@ uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
             }
         }
     }
-    else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (iuAccelerometerKX134.kionixPresence))
+    else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (iuAccelerometerKX222.kionixPresence))
     {
-        if(iuAccelerometerKX134.checkWHO_AM_I() == false)
+        if(iuAccelerometerKX222.checkWHO_AM_I() == false)
         {
-            ValidationFile->println(F("   Validation [KX134]-Read ID: Fail !"));
-            if(loopDebugMode){ debugPrint(F("Validation [KX134]-Read ID: Fail")); }
+            ValidationFile->println(F("   Validation [KX222]-Read ID: Fail !"));
+            if(loopDebugMode){ debugPrint(F("Validation [KX222]-Read ID: Fail")); }
             otaRtryValidation++;
         }
         else
         {
-            ValidationFile->print(F("KX134 WIA ID: 0x"));
-            ValidationFile->println(KX134_1211_WHO_AM_I_WAI_ID,HEX);
-            ValidationFile->println(F("   Validation [KX134]-Read Add: Ok"));
-            if(loopDebugMode){ debugPrint(F("Validation [KX134]-Read Add: Ok")); }
+            ValidationFile->print(F("KX222 WIA ID: 0x"));
+            ValidationFile->println(IUKX222_WHO_AM_I_WIA_ID,HEX);
+            ValidationFile->println(F("   Validation [KX222]-Read Add: Ok"));
+            if(loopDebugMode){ debugPrint(F("Validation [KX222]-Read Add: Ok")); }
         }
     }
 

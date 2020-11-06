@@ -541,7 +541,7 @@ void setup()
         iuFlash.begin();
         debugPrint(F("Initilizing Kionix and Lsm"));
         iuAccelerometer.setupHardware();
-        iuAccelerometerKX134.setupHardware();
+        iuAccelerometerKX222.setupHardware();
         // Update the configuration of FFT computers from fft.conf
         if(conductor.setFFTParams()) {
             if(setupDebugMode) {
@@ -692,10 +692,10 @@ void setup()
             // attachInterrupt(digitalPinToInterrupt(IULSM6DSM::INT1_PIN), dataAcquisitionISR, RISING);
         // debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
         }
-        else if ( FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor && iuAccelerometerKX134.kionixPresence)
+        else if ( FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor && iuAccelerometerKX222.kionixPresence)
         {
-            pinMode(IUKX134::INT1_PIN,INPUT);
-            // attachInterrupt(digitalPinToInterrupt(IUKX134::INT1_PIN),dataAcquisitionISR,RISING);
+            pinMode(IUKX222::INT1_PIN,INPUT);
+            // attachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN),dataAcquisitionISR,RISING);
         }
         else
         {
@@ -872,7 +872,7 @@ void loop()
                 }
                 else if(FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor)
                 {
-                    attachInterrupt(digitalPinToInterrupt(IUKX134::INT1_PIN),dataAcquisitionISR,RISING);
+                    attachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN),dataAcquisitionISR,RISING);
                 }
                 else{
                     debugPrint(F("No Sensor Found"));

@@ -238,6 +238,7 @@ void IUTMP116::processTemperatureData(uint8_t wireStatus)
      m_destinations[0]->addValue(m_temperature);
      //Append the Temperature data
      modbusFeaturesDestinations[5] = m_temperature ;
+     featureDestinations::buff[featureDestinations::basicfeatures::temperature] = m_temperature + m_defaultTemperature; // temperature
 }
 
 /**
