@@ -894,7 +894,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 debugPrint(F("OTA FW Version: "), false);
                 debugPrint(m_otaFwVer);
             }
-            if(strncmp(m_deviceType,"vEdge 2.0",9)!=0) //Change the device name according to device type
+            if(strncmp(m_deviceType,"vEdge 1.6",9)!=0) //Change the device name according to device type
             {
                 if(loopDebugMode) {
                     debugPrint(F("Sending OTA_FDW_ABORT, Invalid Firmware"));
