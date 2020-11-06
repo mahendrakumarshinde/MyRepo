@@ -58,7 +58,7 @@ Usr2Eth iuEthernet(&Serial1, iuEthernetBuffer, 2048, IUSerial::LEGACY_PROTOCOL,
 /* =============================================================================
     Modbus Instance 
 ===============================================================================*/
-IUmodbus iuModbusSlave(&Serial4,30,4);
+IUmodbus iuModbusSlave(&Serial4, NULL);
 
 /* =============================================================================
     IU Diagnostic Rule Engine 
