@@ -8,7 +8,7 @@ class IUKX222 : public HighFreqSensor
 {
 public:
 
-    enum OdrSetting  { ODR_12_5Hz = 0x00,
+  enum OdrSetting {ODR_12_5Hz = 0x00,
                     ODR_25Hz = 0x01,
                     ODR_50Hz = 0x02,
                     ODR_100Hz = 0x03,
@@ -45,13 +45,13 @@ public:
 
     static const ScaleOption defaultScale = FSR_8G;
 
-    static const OdrSetting defaultODR = ODR_3200Hz;
+    static const OdrSetting defaultODR = ODR_25600Hz;
 
     static const LpfSetting defaultLPF = LPF_AVG16;
 
-    static const uint16_t defaultSamplingRate = 6400; // Hz
+    static const uint16_t defaultSamplingRate = 25600; // Hz
     uint16_t m_samplingRate = defaultSamplingRate;
-    const int DEFAULT_BLOCK_SIZE = 4096;
+    const int DEFAULT_BLOCK_SIZE = 8192;
 
     bool kionixPresence = false;
     /// Checking WHO_AM_I
@@ -68,10 +68,12 @@ public:
     ScaleOption getScale() { return m_scale; }
     void resetScale() { setScale(defaultScale); }
     virtual void setResolution(float resolution);
+    void setGrange(uint8_t g);
 
     /// setup sensor sampling rate 12Hz to 25600Hz
     virtual void setSamplingRate(uint16_t samplingRate);
-    void updateSamplingRate(uint16_t samplingRate){m_samplingRate = samplingRate;};
+    virtual void updateSamplingRate(uint16_t samplingRate){m_samplingRate = samplingRate;HighFreqSensor::setSamplingRate(samplingRate);};
+    
 
     /// setup average filter
     void avgFilterCntl(LpfSetting lpf);
@@ -132,4 +134,4 @@ protected:
     uint8_t retryCount = 3;
 
 };
-#endif 
+#endif

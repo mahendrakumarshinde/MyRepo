@@ -1,5 +1,5 @@
 #include "IUKX222.h"
-#include "IUkx224reg.h"
+#include "IUkx222reg.h"
 
 IUKX222::IUKX222(SPIClass *spiPtr, uint8_t csPin, SPISettings settings,
 					const char* name,void (*SPIReadCallback)(),
@@ -30,11 +30,11 @@ void IUKX222::SetupSPI()
 
 bool IUKX222::checkWHO_AM_I()
 {
-	uint8_t c = readConfig(IUKX222_WHO_AM_I);
+	uint8_t c = readConfig(KX224_WHO_AM_I);
 	uint8_t retry = retryCount;
 	while(retry >= 0)
 	{
-		if (c != IUKX222_WHO_AM_I_WIA_ID){
+		if (c != KX224_WHO_AM_I_WIA_ID){
 			retry--;
 		}
 		return true;
@@ -93,6 +93,18 @@ void IUKX222::setScale(IUKX222::ScaleOption scale)
 		operate(true);
 }
 
+void IUKX222::setGrange(uint8_t g){
+	if (g == 8){
+		setScale(FSR_8G);
+	}else if(g == 16){
+		setScale(FSR_16G);
+	}else if(g == 32){
+		setScale(FSR_32G);
+	}else{
+		debugPrint("Invalid G Range");
+	}
+}
+
 void IUKX222::setSamplingRate(uint16_t samplingRate)
 {
 	m_samplingRate = samplingRate;
@@ -115,6 +127,8 @@ void IUKX222::setSamplingRate(uint16_t samplingRate)
 	writeConfig(KX224_ODCNTL, uint8_t(m_odr));
 	operate(true);
 }
+
+
 
 void IUKX222::configure(JsonVariant &config)
 {
@@ -151,7 +165,7 @@ void IUKX222::setupHardware()
 	softReset();
 
 	// set resolution
-	setScale(defaultScale);
+	setScale(m_scale);
 
 	// tilt detection off
 	writeConfig(KX224_CNTL2, 0);

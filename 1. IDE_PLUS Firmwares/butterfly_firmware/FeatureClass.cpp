@@ -211,8 +211,39 @@ void Feature::incrementFillingIndex()
                         detachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN));
                     }
                     //isr_detached_startTime = micros();
+                    FeatureStates::isr_stopTime = micros();
+                    if(RawDataState::startRawDataCollection == false){
+                    FeatureStates::elapsedTime = (FeatureStates::isr_stopTime-FeatureStates::isr_startTime)/1000000;
+                    FFTConfiguration::calculatedSamplingRate = round(FFTConfiguration::currentBlockSize/FeatureStates::elapsedTime);
+                    }
+                    // if(loopDebugMode){
+                    //     debugPrint("Elapsed Time in sec : ",false);
+                    //     debugPrint(FeatureStates::elapsedTime,true);//time
+                    //     debugPrint("Output Frequency in Hz : ",false);
+                    //     debugPrint(FFTConfiguration::calculatedSamplingRate,true); // calculated freq
+                    //     //FeatureStates::isr_startTime = ((FeatureStates::isr_startTime)/1000000);
+                    //     debugPrint("Start Time: ",false);
+                    //     debugPrint(FeatureStates::isr_startTime,true);
+                    //     //FeatureStates::isr_stopTime = ((FeatureStates::isr_stopTime)/1000000);
+                    //     debugPrint("Stop Time: ",false);
+                    //     debugPrint(FeatureStates::isr_stopTime,true);
+                    // }
+                    if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+                    {
+                        extern IULSM6DSM iuAccelerometer;
+                        iuAccelerometer.updateSamplingRate(FFTConfiguration::calculatedSamplingRate);
+                    }                    
+                   else if(FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor)
+                    {
+                        extern IUKX222 iuAccelerometerKX222;
+                        iuAccelerometerKX222.updateSamplingRate(FFTConfiguration::calculatedSamplingRate);
+                    }
+
                     FeatureStates::isISRActive = false;
                     FeatureStates::isISRDisabled = true;
+                    FeatureStates::isr_startTime = 0; // Reset the Timers
+                    FeatureStates::isr_stopTime  = 0;
+                    FeatureStates::elapsedTime   = 0;
                     // isrFlag = true;
                     //isrCount = 0;
                     // Serial.println("ISR Disabled !!!");
@@ -221,7 +252,6 @@ void Feature::incrementFillingIndex()
                 
                 //FeatureGroup::isFeatureStreamComplete = false;
         }   
-            
         m_recordIndex = (m_recordIndex + 1) % m_sectionCount;       // m_recordIndex++
         newFullSection = true;
         // Clear the data error flag for the next section

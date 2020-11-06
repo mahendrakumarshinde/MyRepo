@@ -58,12 +58,19 @@ Usr2Eth iuEthernet(&Serial1, iuEthernetBuffer, 2048, IUSerial::LEGACY_PROTOCOL,
 /* =============================================================================
     Modbus Instance 
 ===============================================================================*/
-IUmodbus iuModbusSlave(&Serial4,NULL);
+IUmodbus iuModbusSlave(&Serial4, NULL);
 
+/* =============================================================================
+    IU Diagnostic Rule Engine 
+===============================================================================*/
+IUTriggerComputer iuTrigger;
+IUDiagnosticNotifier iuDigNotifier;
 /* =============================================================================
     Features
 ============================================================================= */
+AdvanceFeatureComputer iuAdvanceFeature;
 
+PhaseAngleComputer phaseAngleComputer;
 /***** Operation State Monitoring feature *****/
 
 q15_t opStateFeatureValues[2] = {0, 0};
@@ -187,7 +194,7 @@ FeatureTemplate<float> temperature("TMP", 2, 1, temperatureValues);
 /***** Audio Features *****/
 
 // Sensor data
-q15_t audioValues[4096];
+__attribute__((section(".noinit2"))) q15_t audioValues[4096];
 FeatureTemplate<q15_t> audio("SND", 2, 2048, audioValues);
 
 // 2048 sample long features
@@ -236,11 +243,11 @@ void KX222AccelReadCallback()
 IUKX222 iuAccelerometerKX222(&SPI1, 43, SPISettings(10000000,MSBFIRST,SPI_MODE0), "ACX", 
                             KX222AccelReadCallback, &accelerationX, &accelerationY, &accelerationZ);
 
-void TMP116TempReadCallback(uint8_t wireStatus)
-{
-     iuTemp.processTemperatureData(wireStatus);
-}
-IUTMP116 iuTemp(&iuI2C1,"T10",TMP116TempReadCallback, &allTemperatures);
+// void TMP116TempReadCallback(uint8_t wireStatus)
+// {
+//      iuTemp.processTemperatureData(wireStatus);
+// }
+IUTMP116 iuTemp(&iuI2C1,"T10",/*TMP116TempReadCallback,*/ &allTemperatures);
 
 #ifdef WITH_CAM_M8Q
     IUCAMM8Q iuGNSS(&Serial2, "GPS", -1);
@@ -442,6 +449,12 @@ void populateFeatureGroups()
     motorStandardGroup.addFeature(&velRMS512Z);
     motorStandardGroup.addFeature(&temperature);
     motorStandardGroup.addFeature(&audioDB4096);
+    // motorStandardGroup.addFeature(&accelRMS512X);    // TODO : Uncomment below feature once the backend is ready
+    // motorStandardGroup.addFeature(&accelRMS512Y);
+    // motorStandardGroup.addFeature(&accelRMS512Z);
+    // motorStandardGroup.addFeature(&dispRMS512X);
+    // motorStandardGroup.addFeature(&dispRMS512Y);
+    // motorStandardGroup.addFeature(&dispRMS512Z);
     
     /** Bearing monitoring **/
     bearingZGroup.addFeature(&accelRMS512Total);

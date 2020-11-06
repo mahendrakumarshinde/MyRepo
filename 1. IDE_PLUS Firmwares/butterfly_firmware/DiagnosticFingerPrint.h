@@ -57,7 +57,7 @@
     
     
     q15_t m_specializedCompute(int m_parameterId, float m_speedMultiplier,uint8_t m_bandValue,q15_t *m_amplitudes);        // compute the diagnostic fingerprints
-    char* m_specializedCompute(int m_direction, const q15_t *m_amplitudes,int amplitudeCount, float m_resolution, float scaling);
+    char* m_specializedCompute(int m_direction, const q15_t *m_amplitudes,int amplitudeCount, float m_resolution, float scaling,float speed);
     
     float lowerCutoff(float m_speedMultiplier,int m_bandValue,float m_freqResolution );//{ return  m_speedMultiplier - m_speedMultiplier*band/100);  // get lower cutoff in frequency domain
     float higherCutoff(float  m_speedMultiplier,int m_bandValue, float m_freqResolution );//{ return m_speedMultiplier + m_speedMultiplier*band/100}; // get higher cutoff in frequency domain

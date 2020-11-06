@@ -1,6 +1,6 @@
 /*
 Infinite Uptime vEdge Firmware
-Update 19-08-2020
+Update 06-11-2020
 Type - Standard vEdge Firmware Release
 */
 
@@ -402,7 +402,7 @@ void setup()
 
   pinMode(ESP32_IO0,OUTPUT);
 //   pinMode(A3,OUTPUT);  // ISR (ODR checked from pin 50)
-  digitalWrite(ESP32_IO0,HIGH); // IDE1.5_PORT_CHANGE
+  digitalWrite(ESP32_IO0,LOW); // IDE1.5_PORT_CHANGE
   DOSFS.begin();
   #if 1
     iuUSB.begin();
@@ -508,17 +508,17 @@ void setup()
         // armv7m_timer_create(&httpConfigTimer, (armv7m_timer_callback_t)httpConfigCallback);
         // armv7m_timer_start(&httpConfigTimer, 180000);   // 3 min Timer 180000
         
-        // WIFI SETUP BEGIN
-        iuWiFi.setupHardware();
-        iuWiFi.setOnNewMessageCallback(onNewWiFiMessage);
-        iuWiFi.setOnConnect(onWiFiConnect);
-        iuWiFi.setOnDisconnect(onWiFiDisconnect);
+        // // WIFI SETUP BEGIN
+        // iuWiFi.setupHardware();
+        // iuWiFi.setOnNewMessageCallback(onNewWiFiMessage);
+        // iuWiFi.setOnConnect(onWiFiConnect);
+        // iuWiFi.setOnDisconnect(onWiFiDisconnect);
 
         if (setupDebugMode) {
-            iuI2C.scanDevices();
+            //iuI2C.scanDevices();
             debugPrint("Testing New I2C Bus ..............");
-            iuI2C1.scanDevices();
-            debugPrint("");
+            //iuI2C1.scanDevices();
+            //debugPrint("");
         }
         if (debugMode) {
             debugPrint(F("=> Successfully initialized interfaces - Mem: "),
@@ -554,7 +554,12 @@ void setup()
                 debugPrint(": samplingRate = ", false); debugPrint(FFTConfiguration::DEFAULT_SAMPLING_RATE, false);
                 debugPrint(": block size = ", false); debugPrint(FFTConfiguration::DEFAULT_BLOCK_SIZE, false);
             }
-            conductor.setSensorStatus(conductor.SensorStatusCode::LSM_DEFAULT);
+        }
+        // configure RPM 
+        if(!conductor.configureFromFlash(IUFlash::CFG_RPM)){
+            FFTConfiguration::currentLowRPMFrequency  = FFTConfiguration::currentLowCutOffFrequency;
+            FFTConfiguration::currentHighRPMFrequency = FFTConfiguration::currentHighCutOffFrequency;
+            FFTConfiguration::currentRPMThreshold     = FFTConfiguration::DEFAULT_RPM_THRESHOLD;
         }
 
         // Sensors
@@ -618,7 +623,7 @@ void setup()
         }
         if (setupDebugMode) {
             ledManager.overrideColor(RGB_PURPLE);
-            delay(5000);
+            // delay(5000);
             ledManager.stopColorOverride();
         }
         // } else if (setupDebugMode) {
@@ -626,14 +631,18 @@ void setup()
         delay(5000);
         ledManager.stopColorOverride();
         // }
-        delay(5000);
+        // delay(5000);
         //configure mqttServer
         conductor.configureMQTTServer("MQTT.conf");
-
+        
         //http configuration
         conductor.configureBoardFromFlash("httpConfig.conf",1);
         // get the previous offset values 
         //conductor.setSensorConfig("sensorConfig.conf"); 
+
+        //AdvanceFeatures configurations 
+        conductor.checkPhaseConfig();
+        
         if(DOSFS.exists("sensorConfig.conf")){
             conductor.setSensorConfig("sensorConfig.conf"); 
         }else
@@ -659,6 +668,7 @@ void setup()
         // iuWiFi.hardReset();
         // delay(1000);
         conductor.checkforWiFiConfigurations();
+        conductor.createFeatureGroupjson();
         delay(100);
         conductor.modbusStreamingMode = conductor.configureFromFlash(IUFlash::CFG_MODBUS_SLAVE);
         if (conductor.modbusStreamingMode != true)
@@ -667,22 +677,25 @@ void setup()
             conductor.checkforModbusSlaveConfigurations();
             conductor.modbusStreamingMode = true;
         }
-        
+
+        // IU Diagnostic Rule Engine configurations
+        conductor.configureAlertPolicy();
+       
         opStateFeature.setOnNewValueCallback(operationStateCallback);
         ledManager.resetStatus();
         conductor.changeUsageMode(UsageMode::OPERATION);
-        iuWiFi.softReset();
+        // iuWiFi.softReset();
         /* code uncommented */
         if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor && iuAccelerometer.lsmPresence)
         {
             pinMode(IULSM6DSM::INT1_PIN, INPUT);
-            attachInterrupt(digitalPinToInterrupt(IULSM6DSM::INT1_PIN), dataAcquisitionISR, RISING);
+            // attachInterrupt(digitalPinToInterrupt(IULSM6DSM::INT1_PIN), dataAcquisitionISR, RISING);
         // debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
         }
         else if ( FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor && iuAccelerometerKX222.kionixPresence)
         {
             pinMode(IUKX222::INT1_PIN,INPUT);
-            attachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN),dataAcquisitionISR,RISING);
+            // attachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN),dataAcquisitionISR,RISING);
         }
         else
         {
@@ -691,7 +704,9 @@ void setup()
         
         // debugPrint(F("ISR PIN:"));debugPrint(IULSM6DSM::INT1_PIN);
         //Resume previous operational state of device
-        conductor.setThresholdsFromFile();
+        if(!conductor.setThresholdsFromFile()){
+            conductor.requestConfig = true;
+        }
         // Get OTA status flag and take appropraite action    
         conductor.getOtaStatus();
                
@@ -700,7 +715,16 @@ void setup()
         // Turn ON BLE module and the BLE beacon
         iuBluetooth.bleButton(true);
         iuBluetooth.bleBeaconSetting(true);
-        
+        // WIFI SETUP BEGIN
+        digitalWrite(ESP32_IO0,HIGH);
+        iuWiFi.setupHardware();
+        iuWiFi.setOnNewMessageCallback(onNewWiFiMessage);
+        iuWiFi.setOnConnect(onWiFiConnect);
+        iuWiFi.setOnDisconnect(onWiFiDisconnect);
+        FeatureStates::isISRActive = true;
+        if(setupDebugMode){
+            debugPrint(F("*********Setup Completed*********"));
+        }
     #endif
  #endif   
 }
@@ -738,15 +762,21 @@ void loop()
                 debugPrint(F("Sensor:"),false);debugPrint(FFTConfiguration::currentSensor);
             }
         // }
-        if (iuWiFi.isConnected() == true && conductor.flashStatusFlag == true && conductor.getDatetime() > 1590000000.00 && iuWiFi.getConnectionStatus())
+        if (iuWiFi.isConnected() == true && conductor.flashStatusFlag == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
         {
             conductor.sendFlashStatusMsg(FLASH_SUCCESS,"Flash Recovery Successfull..Send the configuration");
             conductor.flashStatusFlag = false;
         }
-        if (iuWiFi.isConnected() == true && sensorStatus == true && conductor.getDatetime() > 1590000000.00 && iuWiFi.getConnectionStatus())
+        if (iuWiFi.isConnected() == true && sensorStatus == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
         {
             conductor.sendSensorStatus();
             sensorStatus = false;
+        }
+        
+        if (iuWiFi.isConnected() == true && conductor.requestConfig == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
+        {
+            conductor.sendConfigRequest();
+            conductor.requestConfig = false;
         }
         conductor.manageSleepCycles();
         // Receive messages & configurations
@@ -772,10 +802,17 @@ void loop()
                 conductor.acquireTemperatureData();
                 // Compute Features
                 conductor.computeFeatures();
+                
+                if(computationDone && RawDataState::startRawDataCollection == false ){
+                    //compute AdvanceFeatures
+                    conductor.computeAdvanceFeature();
+                    //compute Advanced Diagnostic Triggers
+                      conductor.computeTriggers();
+                    // Stream Advanced Diagnostic/Reportable
+                      conductor.streamDiagnostics();
+                }
                 // Stream features
                 conductor.streamFeatures();
-
-
                if(conductor.modbusStreamingMode ) { 
                     // Update Modbus Registers
                     uint32_t now =millis();
@@ -790,6 +827,8 @@ void loop()
                         iuModbusSlave.updateWIFIMACAddress(iuWiFi.getMacAddress());
 
                         iuModbusSlave.updateHoldingRegister(modbusGroups::MODBUS_STREAMING_FEATURES ,OP_STATE,WIFI_RSSI_H,modbusFeaturesDestinations);
+                        //TODO : UpdateHolding registers for reportable diagnostics
+                        iuModbusSlave.updateHoldingRegister(modbusGroups::MODBUS_STREAMING_REPORTABLE_DIAGNOSTIC,DIG1,DIG51,conductor.modbus_reportable_m_id);
                         iuModbusSlave.m_holdingRegs[TOTAL_ERRORS]= iuModbusSlave.modbus_update(iuModbusSlave.m_holdingRegs);
                         conductor.ready_to_publish_to_modbus = false;
                         iuModbusSlave.lastModbusUpdateTime = now;
@@ -822,17 +861,23 @@ void loop()
                 FeatureStates::isISRActive = false;
                 computationDone = false;
                 // Reset Destination Buffers
+                
                 for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
                     Sensor::instances[i]->resetDestinations();
                 }
+                FeatureStates::isr_startTime = micros();
                 if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
                 {
                     attachInterrupt(digitalPinToInterrupt(IULSM6DSM::INT1_PIN), dataAcquisitionISR, RISING);
                 }
-                else
+                else if(FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor)
                 {
                     attachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN),dataAcquisitionISR,RISING);
                 }
+                else{
+                    debugPrint(F("No Sensor Found"));
+                }
+
                 // Serial.println("ISR Enabled !!!");
                 
             }

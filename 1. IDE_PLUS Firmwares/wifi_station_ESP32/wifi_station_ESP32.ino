@@ -1,6 +1,6 @@
 /*
   Infinite Uptime WiFi Module Firmware
-  Update 29-06-2020
+  Update 06-11-2020
 */
 
 #include "Conductor.h"
@@ -8,7 +8,7 @@
 #include <rom/rtc.h>
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
-//#include "IUESPFlash.h"
+#include "IUESPFlash.h"
 //#include "SPIFFS.h"
 Conductor conductor;
 uint32_t lastDone = 0;
@@ -84,12 +84,18 @@ void setup()
     #endif
      
     iuWiFiFlash.begin();
+    iuWiFiFlash.listAllAvailableFiles("/iuConfig/certs");
     // Set the common url json if file not present
     conductor.setCertificateManagerHttpEndpoint();
     //Configure the Diagnostic HTTP/HTTPS Endpoint
     conductor.configureDiagnosticEndpointFromFlash(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT);
     conductor.activeCertificates = iuWiFiFlash.readMemory(CERT_ADDRESS);
+    if((conductor.activeCertificates == 0 && iuWiFiFlash.isFilePresent(IUESPFlash::CFG_HTTPS_OEM_ROOTCA0)) ||
+       (conductor.activeCertificates == 1 && iuWiFiFlash.isFilePresent(IUESPFlash::CFG_HTTPS_OEM_ROOTCA1))){
+            conductor.oemRootCAPresent = true;
+    }
     conductor.espResetCount = iuWiFiFlash.readMemory(ESP_RESET_ADDRESS);
+    conductor.certificateDownloadStatus = iuWiFiFlash.readMemory(CERT_DOWNLOAD_STATUS);
     conductor.setWiFiConfig();
     conductor.sendWiFiConfig();
 }
@@ -102,6 +108,7 @@ void setup()
 void loop()
 {
     if(!conductor.configStatus){
+        delay(500);
         getAllConfig();
     }
     hostSerial.readMessages();  

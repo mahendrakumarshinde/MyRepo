@@ -9,6 +9,7 @@ char IUFSFlash::CONFIG_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iuconfig";
 char IUFSFlash::IUFWBACKUP_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iuBackupFirmware";
 char IUFSFlash::IUFWTMPIMG_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN]  = "/iuTempFirmware";
 char IUFSFlash::IUFWROLLBACK_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iuRollbackFirmware";
+char IUFSFlash::RULE_SUBDIR[IUFSFlash::CONFIG_SUBDIR_LEN] = "/iuRule";
 char IUFSFlash::CONFIG_EXTENSION[IUFSFlash::CONFIG_EXTENSION_LEN] = ".conf";
 
 char IUFSFlash::FNAME_WIFI0[6] = "wifi0";
@@ -27,6 +28,11 @@ char IUFSFlash::FNAME_FFT[4] = "fft";
 char IUFSFlash::FNAME_OTA[4] = "ota";
 char IUFSFlash::FNAME_FORCE_OTA[10] = "force_ota";
 char IUFSFlash::FNAME_MODBUS_SLAVE[12] = "modbusSlave";
+char IUFSFlash::FNAME_FOUT[12] = "fout";
+char IUFSFlash::FNAME_HASH[11] = "configHash";
+char IUFSFlash::FNAME_DIG[11] = "diagnostic";
+char IUFSFlash::FNAME_RPM[4] = "rpm";
+char IUFSFlash::FNAME_PHASE[6] = "phase";
 /***** Core *****/
 
 void IUFSFlash::begin()
@@ -77,6 +83,16 @@ void IUFSFlash::begin()
         {
             debugPrint("Unable to find or create the ota_rollback directory");
         }
+    }
+    m_digDir = DOSFS.exists(RULE_SUBDIR);
+    if(!m_digDir){
+        DOSFS.mkdir(RULE_SUBDIR);
+        m_digDir = DOSFS.exists(RULE_SUBDIR);
+        if (!m_digDir && setupDebugMode)
+        {
+            debugPrint("Unable to find or create the iuRule directory");
+        }
+
     }
 }
 
@@ -277,7 +293,8 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
             // If the received config matches the current config, report an error
             bool sameBlockSize = false;
             bool sameSamplingRate = false;
-
+            bool samegRange = false;
+            bool grangepresent = true;
             //Validation for samplingRate field
             if(config.containsKey("samplingRate")) {
                 uint16_t samplingRate = config["samplingRate"];
@@ -301,6 +318,59 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                              validKionixSamplingRate = false;
                        }
                 }
+                if(config.containsKey("grange")){                                           // g range contains key is not cheked while saving the json because without grange also the jason is valid.
+                    uint8_t grange = config["grange"];
+                    uint16_t samplingrate = config["samplingRate"];                                   //same g range received validation check not done.
+                    bool validLSMgRange = true;
+                    bool validKNXgRange = true;
+                    grangepresent = false;
+                    debugPrint("G_range_received in JSON");
+                    if(validLSMSamplingRate){
+                    for (int i = 0; i <FFTConfiguration::LSMgRangeOption - 1; ++i){
+                        if( grange < FFTConfiguration::LSMgRanges[0] || 
+                            grange > FFTConfiguration::LSMgRanges[FFTConfiguration::LSMgRangeOption - 1] || 
+                            (FFTConfiguration::LSMgRanges[i] < grange &&
+                            grange < FFTConfiguration::LSMgRanges[i+1]) ) {
+                            validLSMgRange = false;
+                        }   
+                    }
+                    if(FFTConfiguration::currentLSMgRange == grange ){
+                        samegRange = true;
+                        debugPrint("LSM same gRange received");
+                    }
+                    }
+                    if(validKionixSamplingRate){
+                    for(int i = 0; i<FFTConfiguration::KNXgRangeOption - 1; ++i){
+                        if( grange < FFTConfiguration::KNXgRanges[0] || 
+                            grange > FFTConfiguration::KNXgRanges[FFTConfiguration::KNXgRangeOption - 1] ||
+                            (FFTConfiguration::KNXgRanges[i] < grange &&
+                            grange < FFTConfiguration::KNXgRanges[i+1]) ){
+                                validKNXgRange = false; 
+                            }
+                        }
+                        if(FFTConfiguration::currentKNXgRange == grange ){
+                            samegRange = true;
+                            debugPrint("KNX same gRange received");
+                        }
+
+                    }
+
+                    if (!validLSMgRange && !validKNXgRange) {
+                            validConfig = false;
+                            errorMessages.add("Invalid g Range");
+                    }
+                    else if(validLSMSamplingRate && !validLSMgRange ){
+                        validConfig = false ;
+                        errorMessages.add("Invalid LSM G Range");
+                    }
+                    else if(validKionixSamplingRate && !validKNXgRange){
+                        validConfig = false;
+                        errorMessages.add("Invalid Kionix G Range");
+                    }
+
+                    debugPrint("valid G_range_json");debugPrint(validLSMgRange);
+                }
+                debugPrint("G_range_NOT_received in JSON");
                 if(!iuAccelerometer.lsmPresence && validLSMSamplingRate) {
                      validConfig = false;
                      errorMessages.add("LSM not Present");
@@ -372,9 +442,24 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
             
 
             // If the received config matches the current config, report an error
-            if(sameBlockSize && sameSamplingRate) {
+            if(sameBlockSize && sameSamplingRate && grangepresent) {      //if same SR & BS received and gRange is present then false this condition
+                validConfig = false;
+                errorMessages.add("Same SR & BS received without gRange ");
+            }
+            else if(sameBlockSize && sameSamplingRate && samegRange){
                 validConfig = false;
                 errorMessages.add("Same configuration received");
+            }
+            break;
+        }
+        case CFG_RPM: {
+            validConfig = true;
+            validationResult["messageType"] = "rpm-config-ack";
+            int lowRPM = config["CONFIG"]["RPM"]["LOW_RPM"];
+            int highRPM = config["CONFIG"]["RPM"]["HIGH_RPM"];
+            if(highRPM - lowRPM < 0 ){  // negative difference is not allowed 
+                validConfig = false;
+                errorMessages.add("High RPM cannot be less then LOW RPM");
             }
             break;
         }
@@ -583,6 +668,21 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
         case CFG_MODBUS_SLAVE:
             fname = FNAME_MODBUS_SLAVE;
             break;
+        case CFG_FOUT:
+            fname = FNAME_FOUT;
+            break;
+        case CFG_HASH:
+            fname = FNAME_HASH;
+            break;
+        case CFG_DIG:
+            fname = FNAME_DIG;
+            break;
+        case CFG_RPM:
+            fname = FNAME_RPM;
+            break;
+        case CFG_PHASE:
+            fname = FNAME_PHASE;
+            break;
         default:
             if (debugMode)
             {
@@ -595,8 +695,14 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
     {
         return 0;
     }
-    return snprintf(dest, len, "%s/%s%s", CONFIG_SUBDIR, fname,
+    if(fname == FNAME_DIG ){
+        return snprintf(dest, len, "%s/%s%s", RULE_SUBDIR, fname,
                     CONFIG_EXTENSION);
+    }
+    else { 
+        return snprintf(dest, len, "%s/%s%s", CONFIG_SUBDIR, fname,
+                    CONFIG_EXTENSION);
+    }
 }
 
 File IUFSFlash::openConfigFile(storedConfig configType,
