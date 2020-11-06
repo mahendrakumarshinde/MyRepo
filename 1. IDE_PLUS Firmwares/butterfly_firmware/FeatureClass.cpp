@@ -1,7 +1,7 @@
 #include "FeatureClass.h"
 #include "IULSM6DSM.h"
 #include "RawDataState.h"
-#include "IUKX134.h"
+#include "IUKX222.h"
 #include "FFTConfiguration.h"
 //#include "FeatureGroup.h"
 /* =============================================================================
@@ -208,7 +208,7 @@ void Feature::incrementFillingIndex()
                     }
                     else
                     {
-                        detachInterrupt(digitalPinToInterrupt(IUKX134::INT1_PIN));
+                        detachInterrupt(digitalPinToInterrupt(IUKX222::INT1_PIN));
                     }
                     //isr_detached_startTime = micros();
                     FeatureStates::isr_stopTime = micros();
@@ -235,8 +235,8 @@ void Feature::incrementFillingIndex()
                     }                    
                    else if(FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor)
                     {
-                        extern IUKX134 iuAccelerometerKX134;
-                        iuAccelerometerKX134.updateSamplingRate(FFTConfiguration::calculatedSamplingRate);
+                        extern IUKX222 iuAccelerometerKX222;
+                        iuAccelerometerKX222.updateSamplingRate(FFTConfiguration::calculatedSamplingRate);
                     }
 
                     FeatureStates::isISRActive = false;

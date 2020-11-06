@@ -1,21 +1,21 @@
-#ifndef IUKX134_H
-#define IUKX134_H
+#ifndef IUKX222_H
+#define IUKX222_H
 #include <SPI.h>
 #include "FeatureUtilities.h"
 #include "Sensor.h"
 
-class IUKX134 : public HighFreqSensor
+class IUKX222 : public HighFreqSensor
 {
 public:
 
-  enum OdrSetting {ODR_12_5Hz = 0x04,
-                    ODR_25Hz = 0x05,
-                    ODR_50Hz = 0x06,
-                    ODR_100Hz = 0x07,
-                    ODR_200Hz = 0x08,
-                    ODR_400Hz = 0x09,
-                    ODR_800Hz = 0x0A,
-                    ODR_1600Hz = 0x0B,
+  enum OdrSetting {ODR_12_5Hz = 0x00,
+                    ODR_25Hz = 0x01,
+                    ODR_50Hz = 0x02,
+                    ODR_100Hz = 0x03,
+                    ODR_200Hz = 0x04,
+                    ODR_400Hz = 0x05,
+                    ODR_800Hz = 0x06,
+                    ODR_1600Hz = 0x07,
                     ODR_3200Hz = 0x0C,
                     ODR_6400Hz = 0x0D,
                     ODR_12800Hz = 0x0E,
@@ -34,9 +34,8 @@ public:
 
     enum ScaleOption { FSR_8G = (0x00 << 3),
                         FSR_16G = (0x01 << 3),
-                        FSR_32G = (0x02 << 3),
-                        FSR_64G = (0x03 << 3) };
-    IUKX134(SPIClass *spiPtr, uint8_t csPin, SPISettings settings,const char* name,
+                        FSR_32G = (0x02 << 3) };
+    IUKX222(SPIClass *spiPtr, uint8_t csPin, SPISettings settings,const char* name,
                     void (*SPIReadCallback)(),
                     FeatureTemplate<q15_t> *accelerationX,
                     FeatureTemplate<q15_t> *accelerationY,

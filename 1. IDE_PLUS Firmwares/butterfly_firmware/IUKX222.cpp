@@ -1,7 +1,7 @@
-#include "IUKX134.h"
-#include "IUkx134reg.h"
+#include "IUKX222.h"
+#include "IUkx222reg.h"
 
-IUKX134::IUKX134(SPIClass *spiPtr, uint8_t csPin, SPISettings settings,
+IUKX222::IUKX222(SPIClass *spiPtr, uint8_t csPin, SPISettings settings,
 					const char* name,void (*SPIReadCallback)(),
 					FeatureTemplate<q15_t> *accelerationX,
 					FeatureTemplate<q15_t> *accelerationY,
@@ -20,7 +20,7 @@ m_readCallback(SPIReadCallback)
 		}
 }
 
-void IUKX134::SetupSPI()
+void IUKX222::SetupSPI()
 {
 	pinMode(m_cspin, OUTPUT);
 	digitalWrite(m_cspin, HIGH);
@@ -28,13 +28,13 @@ void IUKX134::SetupSPI()
 	m_spi->beginTransaction(m_spiSettings);
 }
 
-bool IUKX134::checkWHO_AM_I()
+bool IUKX222::checkWHO_AM_I()
 {
-	uint8_t c = readConfig(KX134_1211_WHO_AM_I);
+	uint8_t c = readConfig(KX224_WHO_AM_I);
 	uint8_t retry = retryCount;
 	while(retry >= 0)
 	{
-		if (c != KX134_1211_WHO_AM_I_WAI_ID){
+		if (c != KX224_WHO_AM_I_WIA_ID){
 			retry--;
 		}
 		return true;
@@ -42,42 +42,42 @@ bool IUKX134::checkWHO_AM_I()
 	return false;
 }
 
-void IUKX134::softReset()
+void IUKX222::softReset()
 {
 	uint8_t reg = 0;
-	reg |= KX134_1211_CNTL2_SRST;
-	writeConfig(KX134_1211_CNTL2,reg);
+	reg |= KX224_CNTL2_SRST;
+	writeConfig(KX224_CNTL2,reg);
 	// Wait for reset
 	delay(100);
 }
 
-bool IUKX134::sanityCheck()
+bool IUKX222::sanityCheck()
 {
 	// read COTR register - should be 0x55
-	uint8_t x = readConfig(KX134_1211_COTR);
-	if (x != KX134_1211_COTR_DCSTR_BEFORE)
+	uint8_t x = readConfig(KX224_COTR);
+	if (x != KX224_COTR_DCSTR_BEFORE)
 		return false;
 
-	writeConfig(KX134_1211_CNTL2, KX134_1211_CNTL2_COTC);
+	writeConfig(KX224_CNTL2, KX224_CNTL2_COTC);
 
-	x = readConfig(KX134_1211_COTR);
-	if (x != KX134_1211_COTR_DCSTR_AFTER)
+	x = readConfig(KX224_COTR);
+	if (x != KX224_COTR_DCSTR_AFTER)
 		return false;
 
 	return true;
 }
 
-void IUKX134::setScale(IUKX134::ScaleOption scale)
+void IUKX222::setScale(IUKX222::ScaleOption scale)
 {
 	m_scale = scale;
 	uint8_t reg = 0;
 	operate(false);
 	// CNTL1
-	reg |= KX134_1211_CNTL1_RES;		// high resolution mode ON
-	reg |= KX134_1211_CNTL1_DRDYE;	// DRDY interrupt ON
+	reg |= KX224_CNTL1_RES;		// high resolution mode ON
+	reg |= KX224_CNTL1_DRDYE;	// DRDY interrupt ON
 	reg |= uint8_t(scale);      // range
 	// all other detection options OFF (0)
-	writeConfig(KX134_1211_CNTL1, reg);
+	writeConfig(KX224_CNTL1, reg);
 	switch (scale)
 	{
 		case FSR_8G:
@@ -89,28 +89,23 @@ void IUKX134::setScale(IUKX134::ScaleOption scale)
 		case FSR_32G:
 			setResolution(32.0 * 9.80665 / 32768.0);
 			break;
-		case FSR_64G:
-			setResolution(64.0 * 9.80665 / 32768.0);
-			break;
 	}
 		operate(true);
 }
 
-void IUKX134::setGrange(uint8_t g){
+void IUKX222::setGrange(uint8_t g){
 	if (g == 8){
 		setScale(FSR_8G);
 	}else if(g == 16){
 		setScale(FSR_16G);
 	}else if(g == 32){
 		setScale(FSR_32G);
-	}else if(g == 64){
-		setScale(FSR_64G);
 	}else{
 		debugPrint("Invalid G Range");
 	}
 }
 
-void IUKX134::setSamplingRate(uint16_t samplingRate)
+void IUKX222::setSamplingRate(uint16_t samplingRate)
 {
 	m_samplingRate = samplingRate;
 	HighFreqSensor::setSamplingRate(samplingRate);
@@ -129,13 +124,13 @@ void IUKX134::setSamplingRate(uint16_t samplingRate)
 	else { m_odr = ODR_12_5Hz; }
 	operate(false);
 	// ODCNTL settings configured by user
-	writeConfig(KX134_1211_ODCNTL, uint8_t(m_odr));
+	writeConfig(KX224_ODCNTL, uint8_t(m_odr));
 	operate(true);
 }
 
 
 
-void IUKX134::configure(JsonVariant &config)
+void IUKX222::configure(JsonVariant &config)
 {
     HighFreqSensor::configure(config);  // General sensor config
     JsonVariant value = config["FSR"];  // Full Scale Range
@@ -145,26 +140,26 @@ void IUKX134::configure(JsonVariant &config)
     }
 }
 
-void IUKX134::avgFilterCntl(LpfSetting lpf)
+void IUKX222::avgFilterCntl(LpfSetting lpf)
 {
 	operate(false);
 	// LP_CNTL : averaging filter
 	uint8_t reg = uint8_t(lpf) | (11);
-	writeConfig(KX134_1211_LP_CNTL1, reg);
+	writeConfig(KX224_LP_CNTL, reg);
 	operate(true);
 }
 
-void IUKX134::setupHardware()
+void IUKX222::setupHardware()
 {
 	SetupSPI();
 	// put device into standby mode first
 	operate(false);
 	if(!checkWHO_AM_I() || !sanityCheck()){
-		debugPrint("Kionix KX134 Error");
+		debugPrint("Kionix KX222 Error");
 		kionixPresence = false;
 		return;
 	} else {
-		debugPrint("Kionix KX134 Found");
+		debugPrint("Kionix KX222 Found");
 		kionixPresence = true;
 	}
 	softReset();
@@ -173,51 +168,51 @@ void IUKX134::setupHardware()
 	setScale(m_scale);
 
 	// tilt detection off
-	writeConfig(KX134_1211_CNTL2, 0);
+	writeConfig(KX224_CNTL2, 0);
 
 	// refresh rates for motion detection lowest (off anyway)
-	writeConfig(KX134_1211_CNTL3, 0);
+	writeConfig(KX224_CNTL3, 0);
 
 	// ODCNTL settings configured by user
 	setSamplingRate(m_samplingRate);
 
 	/// INC2 disable motion detection
-	writeConfig(KX134_1211_INC2, 0);
+	writeConfig(KX224_INC2, 0);
 
 	/// INC3 disable motion detection
-	writeConfig(KX134_1211_INC3, 0);
+	writeConfig(KX224_INC3, 0);
 
 	/// INC5 disable motion detection
-	writeConfig(KX134_1211_INC5, 0);
+	writeConfig(KX224_INC5, 0);
 
 	/// INC6 disable motion detection
-	writeConfig(KX134_1211_INC6, 0);
+	writeConfig(KX224_INC6, 0);
 
 	// TDTRC disable tap events reporting
-	writeConfig(KX134_1211_TDTRC, 0);
+	writeConfig(KX224_TDTRC, 0);
 
 	// FFCTNL disable freefall detection
-	writeConfig(KX134_1211_FFCNTL, 0);
+	writeConfig(KX224_FFCNTL, 0);
 
 	// // LP_CNTL : averaging filter
 	avgFilterCntl(defaultLPF);
 
 	// buffer full interrupt
-	writeConfig(KX134_1211_BUF_CNTL1, 0);
+	writeConfig(KX224_BUF_CNTL1, 0);
 	uint8_t reg = 0;
 	// BUF_CNTL2 : buffer configuration
 	reg = 0;
-	reg |= KX134_1211_BUF_CNTL2_BUFE;         // buffer active
-	reg |= KX134_1211_BUF_CNTL2_BRES;         // 16bit samples in buffer
-	reg &= KX134_1211_BUF_CNTL2_BFIE;         // buffer interrupt disabled
-	reg |= KX134_1211_BUF_CNTL2_BM_STREAM; // stream buffer mode
-	writeConfig(KX134_1211_BUF_CNTL2, reg);
+	reg |= KX224_BUF_CNTL2_BUFE;         // buffer active
+	reg |= KX224_BUF_CNTL2_BRES;         // 16bit samples in buffer
+	reg &= KX224_BUF_CNTL2_BFIE;         // buffer interrupt disabled
+	reg |= KX224_BUF_CNTL2_BUF_M_STREAM; // stream buffer mode
+	writeConfig(KX224_BUF_CNTL2, reg);
 
 	// clear buffer
-	writeConfig(KX134_1211_BUF_CLEAR, 0);
+	writeConfig(KX224_BUF_CLEAR, 0);
 
 	// switch off self-test
-	writeConfig(KX134_1211_SELF_TEST, 0);
+	writeConfig(KX224_SELF_TEST, 0);
 
 	// Enable intrrupt on INT1
 	configureInterrupts();
@@ -227,15 +222,15 @@ void IUKX134::setupHardware()
 	setPowerMode(PowerMode::REGULAR);
 }
 
-void IUKX134::configureInterrupts()
+void IUKX222::configureInterrupts()
 {
 	// INC1 interrupts off, SPI 4-wire
-	writeConfig(KX134_1211_INC1, 0x38);
+	writeConfig(KX224_INC1, 0x38);
 	/// INC4 disable motion detection
-	writeConfig(KX134_1211_INC4, 0x10);
+	writeConfig(KX224_INC4, 0x10);
 }
 
-void IUKX134::setPowerMode(PowerMode::option pMode)
+void IUKX222::setPowerMode(PowerMode::option pMode)
 {
     m_powerMode = pMode;
     // TODO Implement
@@ -260,7 +255,7 @@ void IUKX134::setPowerMode(PowerMode::option pMode)
     }
 }
 
-void IUKX134::setResolution(float resolution)
+void IUKX222::setResolution(float resolution)
 {
     m_resolution = resolution;
     for (uint8_t i = 0; i < 3; ++i)
@@ -269,29 +264,29 @@ void IUKX134::setResolution(float resolution)
     }
 }
 
-// Refer http://kionixfs.kionix.com/en/datasheet/KX134-1054-Specifications-Rev-2.0.pdf Ref Pg No. 42
+// Refer http://kionixfs.kionix.com/en/datasheet/KX222-1054-Specifications-Rev-2.0.pdf Ref Pg No. 42
 // It applay for all write registers
-void IUKX134::operate(bool enable)
+void IUKX222::operate(bool enable)
 {
-	uint8_t cntl = readConfig(KX134_1211_CNTL1);
+	uint8_t cntl = readConfig(KX224_CNTL1);
 	if (enable)
-		cntl |= KX134_1211_CNTL1_PC1;
+		cntl |= KX224_CNTL1_PC1;
 	else
-		cntl &= ~KX134_1211_CNTL1_PC1;
-	writeConfig(KX134_1211_CNTL1, cntl);
+		cntl &= ~KX224_CNTL1_PC1;
+	writeConfig(KX224_CNTL1, cntl);
 
 	// wait for transition to take effect
 	delay(20);
 }
 
-void IUKX134::readData()
+void IUKX222::readData()
 {
 	uint16_t bitLow, bitHigh;
 	int16_t acc;
 	// m_spi->beginTransaction(m_spiSettings);
 	digitalWrite(m_cspin, LOW);
 	//Since we're performing a read operation, the most significant bit (bit 7(counting starts from bit 0)) of the register address should be set high.
-	int x = m_spi->transfer(KX134_1211_XOUT_L | 0x80);
+	int x = m_spi->transfer(KX224_XOUT_L | 0x80);
 	//Continue to read registers until we've read the number specified, storing the results to the input buffer.
 	//SPI is full duplex transsmission. Every signle time SPI.transfer can and can only transmit 8 bits. 
 	//the input parameter will be delived to slave, and it's return will be the data that master device and get from the slave device. 
@@ -308,7 +303,7 @@ void IUKX134::readData()
 	m_readCallback();
 }
 
-void IUKX134::processData()
+void IUKX222::processData()
 {
 	for (uint8_t i = 0; i < 3; ++i) {
 		// Accelaration data
@@ -317,7 +312,7 @@ void IUKX134::processData()
 	}
 }
 
-void IUKX134::sendData(HardwareSerial *port)
+void IUKX222::sendData(HardwareSerial *port)
 {
     if (loopDebugMode) {
         // Human readable in the console
@@ -347,7 +342,7 @@ void IUKX134::sendData(HardwareSerial *port)
  * NB: We want to do this in * CUSTOM DATA COLLECTION* mode
  * return the x,y,z acceleration
  */
-float* IUKX134::getData(HardwareSerial *port)
+float* IUKX222::getData(HardwareSerial *port)
 {
     static float destinations[3];
     if (loopDebugMode) {
@@ -376,11 +371,11 @@ float* IUKX134::getData(HardwareSerial *port)
   return destinations;
 }
 
-// uint32_t IUKX134::readSampleBuffer(int16_t buf[])
+// uint32_t IUKX222::readSampleBuffer(int16_t buf[])
 // {
 //   // retrieve the number of bytes currently in the buffer
-//   uint8_t stat1 = readConfig(KX134_1211_BUF_STATUS_1);
-//   uint8_t stat2 = readConfig(KX134_1211_BUF_STATUS_2);
+//   uint8_t stat1 = readConfig(KX224_BUF_STATUS_1);
+//   uint8_t stat2 = readConfig(KX224_BUF_STATUS_2);
 
 //   // mask of the flag bits in BUF_STATUS_2
 //   stat2 &= (7);
@@ -392,7 +387,7 @@ float* IUKX134::getData(HardwareSerial *port)
 //   if (nbytes > 0)
 //   {
 
-//     uint16_t tf = KX134_1211_BUF_READ;
+//     uint16_t tf = KX224_BUF_READ;
 
 //     m_spi->beginTransaction(SPISettings(m_spiclock, MSBFIRST, SPI_MODE0));
 //     digitalWrite(m_cspin, LOW);
@@ -418,7 +413,7 @@ float* IUKX134::getData(HardwareSerial *port)
 //   return nbytes;
 // }
 
-uint8_t IUKX134::readConfig(uint8_t addr)
+uint8_t IUKX222::readConfig(uint8_t addr)
 {
 	// m_spi->beginTransaction(m_spiSettings);
 	digitalWrite(m_cspin, LOW);
@@ -433,7 +428,7 @@ uint8_t IUKX134::readConfig(uint8_t addr)
 	return reg;
 }
 
-void IUKX134::writeConfig(uint8_t addr, uint8_t value)
+void IUKX222::writeConfig(uint8_t addr, uint8_t value)
 {
 	// m_spi->beginTransaction(m_spiSettings);
 	digitalWrite(m_cspin, LOW);
@@ -443,7 +438,7 @@ void IUKX134::writeConfig(uint8_t addr, uint8_t value)
 	// m_spi->endTransaction();
 }
 
-void IUKX134::exposeCalibration()
+void IUKX222::exposeCalibration()
 {
 #ifdef IUDEBUG_ANY
     debugPrint(F("Accelerometer calibration data: "));

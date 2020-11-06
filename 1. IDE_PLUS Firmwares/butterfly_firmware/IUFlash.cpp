@@ -375,7 +375,7 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                      validConfig = false;
                      errorMessages.add("LSM not Present");
                 }
-                if(!iuAccelerometerKX134.kionixPresence && validKionixSamplingRate) {
+                if(!iuAccelerometerKX222.kionixPresence && validKionixSamplingRate) {
                      validConfig = false;
                      errorMessages.add("Kionix not Present");
                 }
