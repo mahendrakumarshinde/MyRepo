@@ -1,4 +1,47 @@
 #################################################################################################################################################################################
+Date: 06 NOVEMBER 2020
+Contributed By : Darshan Mirajkar,Vikas Gaikwad,Sanketa Patil,Sidramayya Swami 
+Product Name : vEdge
+Release Name : Diagnostic Rule Engine and Dual Destination HTTPS endpoint support 
+Firmware Versions :
+		1. vEdge_main(STM32) : 3.0.3
+		2. vEdge_wifi (ESP32): 3.0.3
+		3. Bootloader L1     : 2.0.0
+		4. Bootloader L2     : 2.0.0
+		5. Factory Firmware  : 2.0.0 
+################################################################################################################################################################################
+
+Features and Enhancement : 
+      1.Configurable Diagnostic Rule Engine on edge
+      2.RPM computation on edge across Z-axis
+      3.Added USB command to get the wifi mac ID
+      4.Improved the frequency accuracy on the edge
+      5.Added support to configure the LSM and KX222 g-range from the back-end
+
+         - Configurable g range(LSM : 2, 4, 8, 16 and Kionix KX222 : 8, 16, 32)
+
+      6.Sampling rate For( LSM : 833, 1660, 3330 & Kionix KX222 : 800, 1600, 3200, 6400, 12800, 25600)
+      7.Added MQTT command to get the device firmware version
+      8.Updated the Temperature validation case to avoid the firmware validation during OTA.
+      9.Sending the reportable Diagnostic over the Modbus register
+      10.OTA firmware device type validation is added in the firmware.
+      11.Sending the Spectral Features over BLE
+      12.Resolved the SKF Certificate Download failure issue
+      13.Enabled the Phase Angle Computation on Edge
+      14.Using the calculated sampling frequency for On-board FFT computations
+      15.Updated the topics of diagnostic data streaming and diagnostic alarms and streaming advanced diagnostic data
+      16.Disabled the streaming of spectral(fingerprints) features data over MQTT
+      17.Added support for sending the raw FFT data on the 2 secure (https) endpoints(JIRA IF-166 mentioned below).
+      18.Running RPM is used in Spectral features computations.
+
+BugFixes : 
+   - Resolved JIRA 
+      IUINTERNAL-1318,1319,1406,1409,1344,1190
+      IF-160,164,165,167
+
+Note : This release will work with vEdge v1.6 hardware
+
+#################################################################################################################################################################################
 Date: 19 AUGUST 2020
 Contributed By : Darshan Mirajkar,Vikas Gaikwad
 Product Name : vEdge

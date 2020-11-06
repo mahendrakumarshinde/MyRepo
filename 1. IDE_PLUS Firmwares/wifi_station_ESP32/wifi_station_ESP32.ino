@@ -1,6 +1,6 @@
 /*
   Infinite Uptime WiFi Module Firmware
-  Update 01-10-2020
+  Update 06-11-2020
 */
 
 #include "Conductor.h"
