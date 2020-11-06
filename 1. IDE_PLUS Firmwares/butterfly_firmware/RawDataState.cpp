@@ -17,7 +17,15 @@ namespace FeatureStates {
     bool isFeatureStreamComplete = false;
     bool isISRActive = false;
     bool isISRDisabled = false;
+    double isr_startTime;
+    double isr_stopTime ;
+    double elapsedTime;
     int isrCount =0;
+    int opStateStatusFlag =0; 
 
 
+}
+
+namespace featureDestinations {
+    float buff[basicfeatures::COUNT];
 }

@@ -315,6 +315,7 @@ void FeatureStateComputer::m_specializedCompute()
     q15_t newState = 0;
     q15_t featureState;
     float avg;
+    
     if (featureDebugMode) {
         debugPrint(F("OP state from "), false);
         debugPrint(m_sourceCount, false);
@@ -324,7 +325,7 @@ void FeatureStateComputer::m_specializedCompute()
                 debugPrint(F(", "), false);
             }
             debugPrint(m_sources[i]->getName(), false);
-            if (m_activeOpStateFeatures[i]) {
+            if (m_activeOpStateFeatures[i]) {        
                 debugPrint(F(" (active)"), false);
             } else {
                 debugPrint(F(" (inactive)"), false);
@@ -347,11 +348,29 @@ void FeatureStateComputer::m_specializedCompute()
         } else {
             featureState = 0;
         }
+        opStateStatusBuffer[i] = featureState;
         if (newState < featureState) {
             newState = featureState;
         }
         m_sourceReadyForStateComputation[i] = false;
-        // Indicate that the source section has been consumed for state computation and is ready for next iteration        
+        // Indicate that the source section has been consumed for state computation and is ready for next iteration
+        // debugPrint("featureName : ");
+        // debugPrint(m_sources[i]->getName());
+        // debugPrint(opStateStatusBuffer[i]);
+        // debugPrint(featureState);        
+    }
+    //for(int i=0;i<m_sourceCount;i++){debugPrint(opStateStatusBuffer[i]);debugPrint(",");}
+    FeatureStates::opStateStatusFlag =0;
+   for(int i=0; i<m_sourceCount; i++){
+       if((strcmp(m_sources[i]->getName() ,"S12") ==0||strcmp(m_sources[i]->getName() ,"TMP") ==0)){
+           NULL;
+       }
+       else {
+        //debugPrint("featureName : ");
+        //debugPrint(m_sources[i]->getName());
+           FeatureStates::opStateStatusFlag += opStateStatusBuffer[i];
+        }
+        
     }
     if (featureDebugMode) {
         debugPrint(millis(), false);
@@ -488,7 +507,10 @@ void SectionSumComputer::m_specializedCompute()
         m_destinations[i]->addValue(total);
         //Append the Signal Energy
         modbusFeaturesDestinations[1] = total * m_sources[i]->getResolution();
-        
+        if(m_id == 20){featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512X] = total * m_sources[i]->getResolution();}  // accelRMS512X
+        if(m_id == 21){featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Y] = total * m_sources[i]->getResolution();}  // accelRMS512Y
+        if(m_id == 22){featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Z] = total * m_sources[i]->getResolution();}  // accelRMS512Z
+        if(m_id == 23){featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Total] = total * m_sources[i]->getResolution();}  // accelRMS512Total
         if (featureDebugMode) {
             debugPrint(millis(), false);
             debugPrint(" -> ", false);
@@ -645,7 +667,7 @@ void AudioDBComputer::m_specializedCompute()
     m_destinations[0]->addValue(result );
     //Append Audio result
     modbusFeaturesDestinations[6] = result* m_sources[0]->getResolution();
-    
+    featureDestinations::buff[featureDestinations::basicfeatures::audio] = result* m_sources[0]->getResolution(); // audio
     if (featureDebugMode) {
         debugPrint(millis(), false);
         debugPrint(" -> ", false);

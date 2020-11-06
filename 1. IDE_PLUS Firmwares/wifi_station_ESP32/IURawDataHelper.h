@@ -23,6 +23,11 @@ class IURawDataHelper
         char m_endpointHost[MAX_HOST_LENGTH];
         char m_endpointRoute[MAX_ROUTE_LENGTH];
         uint16_t m_endpointPort;
+
+        char m_endpointHost_oem[MAX_HOST_LENGTH];
+        char m_endpointRoute_oem[MAX_ROUTE_LENGTH];
+        uint16_t m_endpointPort_oem;
+        bool httpsOEMConfigPresent = false;
         /***** Public constants *****/
         static const uint16_t MAX_PAYLOAD_LENGTH = 10000;
         // Expected keys for the JSON creation of keys (at top level).
@@ -39,6 +44,12 @@ class IURawDataHelper
         void setEndpointRoute(char *route)
             { strncpy(m_endpointRoute, route, MAX_ROUTE_LENGTH); }
         void setEndpointPort(uint16_t port) { m_endpointPort = port; }
+        void setOEMEndpointHost(char *host)
+            { strncpy(m_endpointHost_oem, host, MAX_HOST_LENGTH); }
+        void setOEMEndpointRoute(char *route)
+            { strncpy(m_endpointRoute_oem, route, MAX_ROUTE_LENGTH); }
+        void setOEMEndpointPort(uint16_t port) { m_endpointPort_oem = port; }
+        void setOEMEndpointStaus(bool status) { httpsOEMConfigPresent = status; }
         /***** Payload construction *****/
         virtual void resetPayload();
         virtual bool inputHasTimedOut();

@@ -128,9 +128,62 @@ enum
 
    PARITY = 154,                                      //40155
    START_STOP_BIT,
-   FLOW_CONTROL,
+   FLOW_CONTROL,                             // end-156
+
+   //GROUP 5 - Reportable Diagnostics   
+   DIG1 = 200,             //START 40201
+   DIG2,
+   DIG3,
+   DIG4,
+   DIG5,
+   DIG6,
+   DIG7,
+   DIG8,
+   DIG9,
+   DIG10,
+   DIG11,
+   DIG12,
+   DIG13,
+   DIG14,
+   DIG15,
+   DIG16,
+   DIG17,
+   DIG18,
+   DIG19,
+   DIG20,
+   DIG21,
+   DIG22,
+   DIG23,
+   DIG24,
+   DIG25,
+   DIG26,
+   DIG27,
+   DIG28,
+   DIG29,
+   DIG30,
+   DIG31,
+   DIG32,
+   DIG33,
+   DIG34,
+   DIG35,
+   DIG36,
+   DIG37,
+   DIG38,
+   DIG39,
+   DIG40,
+   DIG41,
+   DIG42,
+   DIG43,
+   DIG44,
+   DIG45,
+   DIG46,
+   DIG47,
+   DIG48,
+   DIG49,
+   DIG50,
+   DIG51,              //DIG END -40250
    TOTAL_ERRORS,
-   TOTAL_REGISTER_SIZE,                               // end-458
+   TOTAL_REGISTER_SIZE        //END 252
    
 };
 

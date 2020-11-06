@@ -26,7 +26,29 @@ namespace FeatureStates {
     extern bool isFeatureStreamComplete;
     extern bool isISRActive;
     extern bool isISRDisabled;
-    extern int isrCount; 
+    extern double isr_startTime;
+    extern double isr_stopTime;
+    extern double elapsedTime;
+    extern int isrCount;
+    extern int opStateStatusFlag; 
 }
 
+namespace featureDestinations {
+
+    enum basicfeatures : int {accelRMS512Total     = 0,
+                                  velRMS512X    = 1,
+                                  velRMS512Y    = 2,
+                                  velRMS512Z    = 3,
+                                  temperature   = 4,
+                                  audio         = 5,
+                                  accelRMS512X  = 6,
+                                  accelRMS512Y  = 7,
+                                  accelRMS512Z  = 8,
+                                  dispRMS512X   = 9,
+                                  dispRMS512Y   = 10,
+                                  dispRMS512Z   = 11,
+                                  rpm           =12,
+                                  COUNT         = 13};
+    extern float buff[basicfeatures::COUNT];
+}
 #endif // RAW_DATA_STATE_H

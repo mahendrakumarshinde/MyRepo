@@ -231,7 +231,7 @@ q15_t DiagnosticEngine::m_specializedCompute(int m_parameterId, float m_speedMul
 
 
 
-char* DiagnosticEngine::m_specializedCompute (int m_direction, const q15_t *m_amplitudes,int amplitudeCount, float m_resolution, float scaling)
+char* DiagnosticEngine::m_specializedCompute (int m_direction, const q15_t *m_amplitudes,int amplitudeCount, float m_resolution, float scaling,float speed)
 {
     // read all the available keys and there values
      const char* fingerprintsIdBuffer_X[13]; 
@@ -280,7 +280,8 @@ char* DiagnosticEngine::m_specializedCompute (int m_direction, const q15_t *m_am
          
      if(m_direction == 0 && root3["dir"] =="VX" || root3["dir"] == "AX"){                             // seperate all the directions 
           // VX
-         float  speedX = root3["speed"]; 
+        //  float  speedX = root3["speed"]; 
+         float speedX = speed;
          float multiplierX = root3["mult"];
          float bandX = root3["band"];
          float frequencyX = root3["freq"];
@@ -310,7 +311,8 @@ char* DiagnosticEngine::m_specializedCompute (int m_direction, const q15_t *m_am
        }
        if(m_direction == 1 && root3["dir"] =="VY" || root3["dir"] == "AY"){                             // seperate all the directions 
           // VY
-         float  speedY = root3["speed"]; 
+        //  float  speedY = root3["speed"]; 
+         float  speedY = speed;
          float multiplierY = root3["mult"];
          float bandY = root3["band"];
          float frequencyY = root3["freq"];
@@ -340,7 +342,8 @@ char* DiagnosticEngine::m_specializedCompute (int m_direction, const q15_t *m_am
        }
        if(m_direction == 2 && root3["dir"] =="VZ"  || root3["dir"] == "AZ"){                             // seperate all the directions 
           // VZ
-         float  speedZ     =  root3["speed"]; 
+        //  float  speedZ     =  root3["speed"]; 
+         float speedZ = speed; 
          float multiplierZ =  root3["mult"];
          float bandZ       =  root3["band"];
          float frequencyZ  =  root3["freq"];
@@ -404,7 +407,8 @@ char* DiagnosticEngine::m_specializedCompute (int m_direction, const q15_t *m_am
           upper_bound = FFTConfiguration::currentHighCutOffFrequency;        
         }
      
-        float df = (float)FFTConfiguration::currentSamplingRate / (float)FFTConfiguration::currentBlockSize;
+        //float df = (float)FFTConfiguration::currentSamplingRate / (float)FFTConfiguration::currentBlockSize;
+        float df = FFTConfiguration::calculatedSamplingRate/ (float)FFTConfiguration::currentBlockSize;
         int lower_index = (int)(lower_bound/df + 1); // ceiling(lower_bound/df)
         int upper_index = (int)(upper_bound/df); // floor(upper_bound/df)
         // ideally we need to start from lower_index = ceiling(lower_bound/df) to upper_index = floor(upper_bound/df)

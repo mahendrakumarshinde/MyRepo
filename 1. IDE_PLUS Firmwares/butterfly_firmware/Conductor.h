@@ -107,9 +107,16 @@ class Conductor
                                         KNX_SET = 1,
                                         LSM_ABS = 2,
                                         KNX_ABS = 3,
-                                        LSM_DEFAULT = 4,
-                                        SEN_ABS = 5
+                                        KNX_DEFAULT = 4,
+                                        LSM_DEFAULT = 5,
+                                        SEN_ABS = 6
                                         };
+
+
+        enum publish : uint8_t {
+                ALERT_POLICY        = 0,
+                STREAM              = 1      // Send over Serial
+                };
         static const uint32_t defaultAutoSleepDelay = 60000;
         static const uint32_t defaultSleepDuration = 10000;
         static const uint32_t defaultCycleTime = 20000;
@@ -119,7 +126,7 @@ class Conductor
         static char START_CONFIRM[11];
         static char END_CONFIRM[9];
         // Config handler
-        static const uint8_t CONFIG_TYPE_COUNT = 4;
+        static const uint8_t CONFIG_TYPE_COUNT = 2;
         static IUFlash::storedConfig CONFIG_TYPES[CONFIG_TYPE_COUNT];
         static const uint32_t SEND_CONFIG_CHECKSUM_TIMER = 30000;
         // Default start datetime
@@ -135,7 +142,14 @@ class Conductor
         uint32_t m_certDownloadConfigTimeout = 30*1000;
         // Modbus Connection Timeouts 
         const uint16_t modbusConnectionTimeout = 5000;   // ms 
+        // Diagnostic Rule Engine published buffers
+        static const uint32_t DIG_PUBLISHED_BUFFER_SIZE = 2000;
+        char m_diagnosticPublishedBuffer[DIG_PUBLISHED_BUFFER_SIZE+70]; // 70 bytes for MACID, TIMESTMP, DIGRES
+        char m_diagnosticResult[DIG_PUBLISHED_BUFFER_SIZE];
         uint32_t lastUpdated = 0;
+        uint32_t digLastPublish = 0;
+        uint32_t fresLastPublish = 0;
+        uint16_t reportableDIGLength = 0;
         //timer ISR period
         uint16_t timerISRPeriod = 300; // default 3.3KHz
         String availableFingerprints;
@@ -144,6 +158,10 @@ class Conductor
         bool certDownloadInProgress = false;
         bool certDownloadMode = false;
         bool sendCertInitAck = false;
+        bool requestConfig = false;
+        uint8_t getm_id(char* did, int totalConfiguredDiag);
+        static const uint8_t maxDiagnosticStates = 10;
+        float modbus_reportable_m_id[maxDiagnosticStates];
         /***** Core *****/
         Conductor() {};
         Conductor(MacAddress macAddress) : m_macAddress(macAddress) { }
@@ -161,9 +179,9 @@ class Conductor
         uint32_t getCycleTime() { return m_cycleTime; }
         /***** Local storage (flash) management *****/
         bool configureFromFlash(IUFlash::storedConfig configType);
-        void sendConfigChecksum(IUFlash::storedConfig configType);
+        String sendConfigChecksum(IUFlash::storedConfig configType, JsonObject &inputConfig);
         void periodicSendConfigChecksum();
-        void setThresholdsFromFile();
+        bool setThresholdsFromFile();
         /***** Serial Reading & command processing*****/
         bool processConfiguration(char *json, bool saveToFlash);
         void configureMainOptions(JsonVariant &config);
@@ -206,11 +224,19 @@ class Conductor
         void acquireAudioData(bool inCallback);
         void acquireTemperatureData();
         void computeFeatures();
+        /**** Diagnostic Rule Engine ******/
+        void computeTriggers();
+        void streamDiagnostics();
+        void constructPayload(const char* dId,JsonObject& desc);
+        void addFTR(const char* dId,JsonArray& FTR,uint8_t id );
+        void addFTR(JsonArray& FTR,uint8_t id );
+        /*********************************/
         void streamFeatures();
         void sendAccelRawData(uint8_t axisIdx);
         void periodicSendAccelRawData();
         void storeData() {}  // TODO => implement
         bool setFFTParams();
+        bool configureRPM(JsonVariant &config);
         /***** Debugging *****/
         void getMCUInfo(char *destination);
         void  streamMCUUInfo(HardwareSerial *port);
@@ -254,9 +280,11 @@ class Conductor
         void manageRawDataSending();
         // void startRawDataSendingSession();
         void prepareRawDataPacketAndSend(char axis);       // to send to ESP
-        int httpStatusCodeX, httpStatusCodeY, httpStatusCodeZ;         
+        int httpsStatusCodeX, httpsStatusCodeY, httpsStatusCodeZ;   
+        int httpsOEMStatusCodeX, httpsOEMStatusCodeY, httpsOEMStatusCodeZ;   
+        bool sendNextAxis = false;      
         bool XSentToWifi, YsentToWifi, ZsentToWifi;     // TODO optimize using bit vector
-        uint32_t RawDataTimeout = 0;
+        // uint32_t RawDataTimeout = 0;
         uint32_t RawDataTotalTimeout = 0;
         double rawDataRecordedAt, lastPacketSentToESP;
         IUMessageFormat::rawDataPacket rawData;
@@ -291,7 +319,24 @@ class Conductor
         void setDefaultMQTT();
         void setDefaultHTTP();
         void updateWiFiHash();
+        void sendConfigRequest();
+        /**** Diagnostic Rule Engine *****/
+        void computeDiagnoticState(String *diagInput, int totalConfiguredDiag);
+        void configureAlertPolicy();
+        void clearDiagStateBuffers();
+        void clearDiagResultArray();
+        int getTotalDigCount(const char* diagName);
+        int getActiveDigCount(const char* diagName);
         
+        char* GetStoredMD5(IUFlash::storedConfig configType, JsonObject &inputConfig);
+        JsonObject& createFeatureGroupjson();
+        void mergeJson(JsonObject& dest, const JsonObject& src);
+        bool validTimeStamp();
+        void checkPhaseConfig();
+        void computeAdvanceFeature();
+        void addAdvanceFeature(JsonObject& destJson, uint8_t index , String* id, float* value);
+        static const uint8_t max_IDs = 10;
+        String m_phase_ids[max_IDs];
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
@@ -338,12 +383,20 @@ class Conductor
         const char* m_httpUsername = HTTP_DEFAULT_USERNAME;
         const char* m_httpPassword = HTTP_DEFAULT_PASSWORD;
         const char* m_httpOauth = HTTP_DEFAULT_OUTH;
+
+        const char* m_httpHost_oem;
+        uint16_t  m_httpPort_oem;
+        const char* m_httpPath_oem;
+        const char* m_httpUsername_oem;
+        const char* m_httpPassword_oem;
+        const char* m_httpOauth_oem;
+        bool httpOEMConfigPresent = false;
+        
         const char* m_accountId;
         bool httpOtaValidation = false;
         double last_fingerprint_timestamp = 0;
         bool computed_first_fingerprint_timestamp = false;
         SegmentedMessage segmentedMessages[MAX_SEGMENTED_MESSAGES]; // atmost MAX_SEGMENTED_MESSAGES can be captured in interleaved manner
-        
         char status[50];
         SensorStatusCode statusCode;
         char m_otaStmUri[512];
@@ -355,6 +408,7 @@ class Conductor
         char m_otaMsgId[32];
         char m_otaMsgType[16];
         char m_otaFwVer[16];
+        char m_deviceType[16];
         char m_rlbkMsgId[32];
         char m_rlbkFwVer[16];
         char fwBinFileName[32];
@@ -381,6 +435,37 @@ class Conductor
         char m_keyType[15];
         char m_certHash[34];
         char m_keyHash[34];
+        
+        uint32_t last_active[maxDiagnosticStates];
+        uint32_t first_active[maxDiagnosticStates];
+        uint32_t last_alert[maxDiagnosticStates];
+        bool first_active_flag[maxDiagnosticStates];
+        bool last_active_flag[maxDiagnosticStates];
+        bool last_alert_flag[maxDiagnosticStates];
+        bool reset_alert_flag[maxDiagnosticStates];
+        bool alert_repeat_state[maxDiagnosticStates];
+        uint16_t m_minSpan[maxDiagnosticStates];
+        uint16_t m_aleartRepeat[maxDiagnosticStates];
+        uint16_t m_maxGap[maxDiagnosticStates];
+        uint16_t m_totalDigCount[maxDiagnosticStates];
+        uint16_t m_activeDigCount[maxDiagnosticStates];
+        uint8_t reportableDIGID[maxDiagnosticStates];
+        uint8_t reportableIndexCounter;
+        char* diagAlertResults[maxDiagnosticStates];
+        uint32_t diagStreamingPeriod = 5000; // in milli seconds
+        uint32_t fresPublishPeriod = 5000;
+        bool digStream = true;
+        bool fresStream = true;
+        
+        size_t totalIDs;
+        char m_ax1[max_IDs];
+        char  m_ax2[max_IDs];
+        uint8_t m_trh[max_IDs];
+       // float phase_output[max_IDs];
+        uint8_t m_id[maxDiagnosticStates];
+        const char* d_id[maxDiagnosticStates];
+        uint8_t reportable_m_id[maxDiagnosticStates];
+        
 };
 
 

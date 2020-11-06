@@ -28,6 +28,7 @@
 #include "FeatureComputer.h"
 #include "FeatureGroup.h"
 #include "CharBufferSendingQueue.h"
+#include "AdvanceFeatureComputer.h"
 
 /***** Sensors *****/
 #include "IUBattery.h"
@@ -37,12 +38,15 @@
 // #include "IUMAX31865.h"
 #include "IUTMP116.h"
 #include "IUKX222.h"
-#include "IUkx224reg.h"
+#include "IUkx222reg.h"
 #include "IUOTA.h"
 #include "Modbus_slave.h"
 
 /***** Managers and helpers *****/
 #include "LedManager.h"
+
+/**** Diagnostic Rule Engine ******/
+#include "IUTriggerEngine.h"
 
 #ifdef COMPONENTTEST
     // Interfaces
@@ -88,6 +92,11 @@ extern char iuEthernetBuffer[2048];
 extern Usr2Eth iuEthernet;
 
 extern IUmodbus iuModbusSlave;
+
+extern IUTriggerComputer iuTrigger;
+extern IUDiagnosticNotifier iuDigNotifier;
+extern AdvanceFeatureComputer iuAdvanceFeature;
+extern PhaseAngleComputer phaseAngleComputer;
 /* =============================================================================
     OTA
 ============================================================================= */
@@ -214,7 +223,7 @@ extern FeatureTemplate<float> temperature;
 /***** Audio Features *****/
 
 // Sensor data
-extern q15_t audioValues[4096];
+extern __attribute__((section(".noinit2"))) q15_t audioValues[4096];
 extern FeatureTemplate<q15_t> audio;
 
 // 2048 sample long features
@@ -252,7 +261,7 @@ extern IULSM6DSM iuAccelerometer;
 void KX222AccelReadCallback();
 extern IUKX222 iuAccelerometerKX222;
 
-void TMP116TempReadCallback(uint8_t wireStatus);
+//void TMP116TempReadCallback(uint8_t wireStatus);
 extern IUTMP116 iuTemp;
 
 #if defined(WITH_CAM_M8Q) || defined(WITH_MAX_M8Q)

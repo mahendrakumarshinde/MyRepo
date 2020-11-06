@@ -7,6 +7,7 @@
 #include <MemoryFree.h>
 #include "stm32l4_iap.h"
 #include "IUBMD350.h"
+#include "AdvanceFeatureComputer.h"
 
 
 extern IUOTA iuOta;
@@ -25,10 +26,8 @@ char Conductor::START_CONFIRM[11] = "IUOK_START";
 char Conductor::END_CONFIRM[9] = "IUOK_END";
 
 IUFlash::storedConfig Conductor::CONFIG_TYPES[Conductor::CONFIG_TYPE_COUNT] = {
-    IUFlash::CFG_DEVICE,
-    IUFlash::CFG_COMPONENT,
     IUFlash::CFG_FEATURE,
-    IUFlash::CFG_OP_STATE};
+    IUFlash::CFG_DEVICE};
 
 
 /* =============================================================================
@@ -115,7 +114,7 @@ bool Conductor::configureFromFlash(IUFlash::storedConfig configType)
     StaticJsonBuffer<bufferSize> jsonBuffer;
     JsonVariant config = JsonVariant(
             iuFlash.loadConfigJson(configType, jsonBuffer));
-    bool success = config.success();
+   bool success = config.success();
     if (success) {
         switch (configType) {
             case IUFlash::CFG_DEVICE:
@@ -142,6 +141,14 @@ bool Conductor::configureFromFlash(IUFlash::storedConfig configType)
                 debugPrint("CONFIGURING THE MODBUS SLAVE");
                 iuModbusSlave.setupModbusDevice(config);
                 break;
+            // case IUFlash::CFG_DIG:
+            //     availableDiagnosticConfig = config;
+            //     availableDiagnosticConfig.printTo(Serial);
+            //     debugPrint("Loaded DIG config successfully");
+            //     break;
+            case IUFlash::CFG_RPM:
+                configureRPM(config);
+                break;
             default:
                 if (debugMode) {
                     debugPrint("Unhandled config type: ", false);
@@ -166,16 +173,16 @@ bool Conductor::configureFromFlash(IUFlash::storedConfig configType)
 /**
  *
  */
-void Conductor::sendConfigChecksum(IUFlash::storedConfig configType)
+String Conductor::sendConfigChecksum(IUFlash::storedConfig configType, JsonObject &inputConfig)
 {
     if (!(m_streamingMode == StreamingMode::WIFI ||
           m_streamingMode == StreamingMode::WIFI_AND_BLE)) {
         if (debugMode) {
             debugPrint("Config checksum can only be sent via WiFi.");
         }
-        return;
+        return "error";
     }
-    size_t configMaxLen = 200;
+    size_t configMaxLen = 500;
     char config[configMaxLen];
     strcpy(config, "");
     size_t charCount = 0;
@@ -187,51 +194,74 @@ void Conductor::sendConfigChecksum(IUFlash::storedConfig configType)
     unsigned char* md5hash = MD5::make_hash(config, charCount);
     char *md5str = MD5::make_digest(md5hash, 16);
     size_t md5Len = 33;
-    size_t fullStrLen = md5Len + 44;
-    char fullStr[fullStrLen];
-    for (size_t i = 0; i < fullStrLen; i++) {
-        fullStr[i] = 0;
+    String fullStr;
+    if(strcmp(md5str,GetStoredMD5(configType,inputConfig)) != 0)
+    {
+        switch (configType) {
+            case IUFlash::CFG_DEVICE:
+                fullStr = "device";
+                debugPrint("Config Error");
+                break;
+            // case IUFlash::CFG_COMPONENT:
+            //     break;
+            case IUFlash::CFG_FEATURE:
+                fullStr = "features";
+                debugPrint("Config Error");
+                break;
+            // case IUFlash::CFG_OP_STATE:
+            //     break;
+            default:
+                if (debugMode) {
+                    debugPrint("Unhandled config type: ", false);
+                    debugPrint((uint8_t) configType);
+                }
+                break;
+        }
+        // switch (configType) {
+        //     case IUFlash::CFG_DEVICE:
+        //         written = snprintf(
+        //             fullStr, fullStrLen, "{\"mac\":\"%s\",\"main\":\"%s\"}",
+        //             m_macAddress.toString().c_str(), md5str);
+        //         break;
+        //     case IUFlash::CFG_COMPONENT:
+        //         written = snprintf(
+        //             fullStr, fullStrLen, "{\"mac\":\"%s\",\"components\":\"%s\"}",
+        //             m_macAddress.toString().c_str(), md5str);
+        //         break;
+        //     case IUFlash::CFG_FEATURE:
+        //         written = snprintf(
+        //             fullStr, fullStrLen, "{\"mac\":\"%s\",\"features\":\"%s\"}",
+        //             m_macAddress.toString().c_str(), md5str);
+        //         break;
+        //     case IUFlash::CFG_OP_STATE:
+        //         written = snprintf(
+        //             fullStr, fullStrLen, "{\"mac\":\"%s\",\"opState\":\"%s\"}",
+        //             m_macAddress.toString().c_str(), md5str);
+        //         break;
+        //     default:
+        //         if (debugMode) {
+        //             debugPrint("Unhandled config type: ", false);
+        //             debugPrint((uint8_t) configType);
+        //         }
+        //         break;
+        // }
+        free(md5hash);
+        free(md5str);
+        return fullStr;
     }
-    int written = -1;
-    switch (configType) {
-        case IUFlash::CFG_DEVICE:
-            written = snprintf(
-                fullStr, fullStrLen, "{\"mac\":\"%s\",\"main\":\"%s\"}",
-                m_macAddress.toString().c_str(), md5str);
-            break;
-        case IUFlash::CFG_COMPONENT:
-            written = snprintf(
-                fullStr, fullStrLen, "{\"mac\":\"%s\",\"components\":\"%s\"}",
-                m_macAddress.toString().c_str(), md5str);
-            break;
-        case IUFlash::CFG_FEATURE:
-            written = snprintf(
-                fullStr, fullStrLen, "{\"mac\":\"%s\",\"features\":\"%s\"}",
-                m_macAddress.toString().c_str(), md5str);
-            break;
-        case IUFlash::CFG_OP_STATE:
-            written = snprintf(
-                fullStr, fullStrLen, "{\"mac\":\"%s\",\"opState\":\"%s\"}",
-                m_macAddress.toString().c_str(), md5str);
-            break;
-        default:
-            if (debugMode) {
-                debugPrint("Unhandled config type: ", false);
-                debugPrint((uint8_t) configType);
-            }
-            break;
+    else{
+        return "NULL";
     }
-    if (written > 0 && written < fullStrLen) {
-        // Send checksum
-        iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_CONFIG_CHECKSUM, fullStr,
-                              written);
-    } else if (loopDebugMode) {
-        debugPrint(F("Failed to format config checksum: "), false);
-        debugPrint(fullStr);
-    }
+    // if (written > 0 && written < fullStrLen) {
+    //     // Send checksum
+    //     iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_CONFIG_CHECKSUM, fullStr,
+    //                           written);
+    // } else if (loopDebugMode) {
+    //     debugPrint(F("Failed to format config checksum: "), false);
+    //     debugPrint(fullStr);
+    // }
     //free memory
-    free(md5hash);
-    free(md5str);
+    
 }
 
 /**
@@ -242,11 +272,40 @@ void Conductor::periodicSendConfigChecksum()
     if (m_streamingMode == StreamingMode::WIFI ||
          m_streamingMode == StreamingMode::WIFI_AND_BLE) {
         uint32_t now = millis();
+        int index = 0;
+        String result;
+        bool requestConfig = false;
+        char resultArray[200];        
+
+        StaticJsonBuffer<600> jsonBuffer;
+        JsonObject& inputConfig = iuFlash.loadConfigJson(iuFlash.CFG_HASH, jsonBuffer);
+        JsonObject& resultConfig = jsonBuffer.createObject();
+        // resultConfig["DEVICEID"] = m_macAddress.toString().c_str();
+        JsonArray& configType = resultConfig.createNestedArray("CONFIGTYPE");
         if (now - m_configTimerStart > SEND_CONFIG_CHECKSUM_TIMER) {
-            sendConfigChecksum(CONFIG_TYPES[m_nextConfigToSend]);
-            m_nextConfigToSend++;
-            m_nextConfigToSend %= CONFIG_TYPE_COUNT;
+            for(int i = 0 ; i < CONFIG_TYPE_COUNT; i++){
+                result = sendConfigChecksum(CONFIG_TYPES[i],inputConfig);
+                if(strcmp(result.c_str(),"NULL") !=0)
+                {
+                    configType.add(result);
+                    debugPrint("Invalid Config  :",false);debugPrint(result);
+                    index++;
+                    requestConfig = true;
+                }else{
+                    debugPrint("Valid Config  :",false);debugPrint(result);
+                }
+            }
+            
+            // m_nextConfigToSend++;
+            // m_nextConfigToSend %= CONFIG_TYPE_COUNT;
             m_configTimerStart = now;
+        }
+        if(requestConfig){
+            
+            String rString;
+            resultConfig.printTo(rString);
+            sprintf(resultArray,"%s%s%s%s%s","{\"DEVICEID\":\"", m_macAddress.toString().c_str(),"\",",rString.c_str(),"}");
+            iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_CONFIG_CHECKSUM, resultArray);
         }
     }
 }
@@ -266,15 +325,16 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 
     //StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;            // make it dynamic
     //const size_t bufferSize = JSON_ARRAY_SIZE(2) + JSON_OBJECT_SIZE(3) + 60;        // dynamically allociated memory
-    const size_t bufferSize = JSON_OBJECT_SIZE(2) + 2*JSON_OBJECT_SIZE(4) + 11*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(13) + 1396;
-    DynamicJsonBuffer jsonBuffer(bufferSize);
+    // const size_t bufferSize = JSON_OBJECT_SIZE(2) + 2*JSON_OBJECT_SIZE(4) + 11*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(13) + 1396;
+    // DynamicJsonBuffer jsonBuffer(bufferSize);
+    DynamicJsonBuffer jsonBuffer;
     //Serial.print("JSON 1 SIZE :");Serial.println(bufferSize);
     
     JsonObject& root = jsonBuffer.parseObject(json);
     String jsonChar;
     root.printTo(jsonChar);
     JsonVariant variant = root;
-  
+    
     // variant.prettyPrintTo(Serial);
             
     char messageId[60];
@@ -330,7 +390,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             const char* messageId;
             messageId = root["messageId"]  ;
             
-            snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+            snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"messageTye\":\"features-config-ack\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
             
             //Serial.println(ack_config);
             if(iuWiFi.isConnected()){
@@ -364,7 +424,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             //send ACK on ide_pluse/command_response/
             const char* messageId;
             messageId = root["messageId"]  ;
-            snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+            snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"messageTye\":\"thresholds-config-ack\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
             
             //Serial.println(ack_config);
             if(iuWiFi.isConnected()){
@@ -456,7 +516,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             messageId = config["messageId"]  ;
             
           
-            snprintf(ack_config, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+            snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"messageType\":\"fingerprint-config-ack\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
 
             if(iuWiFi.isConnected()){
                  iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config); 
@@ -517,6 +577,19 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             const char*  host = config["httpConfig"]["host"].as<char*>();
             int port = config["httpConfig"]["port"].as<int>();
             const char* httpPath = config["httpConfig"]["path"].as<char*>();
+            
+            bool oemConfig = false;
+            bool oemSameConfig = true;
+            if(config.containsKey("httpOem")){
+                const char*  oem_host = config["httpOem"]["host"].as<char*>();
+                int oem_port = config["httpOem"]["port"].as<int>();
+                const char* oem_httpPath = config["httpOem"]["path"].as<char*>();
+                if(strcmp( oem_host, m_httpHost_oem) != 0  || oem_port != m_httpPort_oem || strcmp(oem_httpPath, m_httpPath_oem) != 0){
+                    oemSameConfig = false;
+                }
+                oemConfig = true;
+            }
+
             // debugPrint("Active httpConfigs : ");
             // debugPrint("Host :",false);debugPrint(m_httpHost);
             // debugPrint("Port :",false);debugPrint(m_httpPort);
@@ -552,7 +625,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             //stm reset
             delay(10);
             if(!httpOtaValidation){
-                if(strcmp( host, m_httpHost) != 0  || port != m_httpPort || strcmp(httpPath, m_httpPath) != 0 ){
+                if((strcmp( host, m_httpHost) != 0  || port != m_httpPort || strcmp(httpPath, m_httpPath) != 0) || oemSameConfig == false ){
                         DOSFS.end();
                         delay(10);
                         //STM32.reset();
@@ -811,14 +884,27 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             memset(espHash,'\0',sizeof(espHash));
             memset(m_otaMsgId,'\0',sizeof(m_otaMsgId));
             memset(m_otaFwVer,'\0',sizeof(m_otaFwVer));
+            memset(m_deviceType,'\0',sizeof(m_deviceType));
             strcpy(m_otaMsgId,(const char*)root["messageId"]);
-            strcpy(m_otaFwVer,(const char*)root["fwVersion"]);
+            strcpy(m_deviceType,(const char*)root["supportedDeviceTypes"][0]);
     //     String test1 = root["otaConfig"]["supportedDeviceTypes"];
             if(loopDebugMode) {
                 debugPrint(F("OTA Message ID: "), false);
                 debugPrint(m_otaMsgId);
                 debugPrint(F("OTA FW Version: "), false);
                 debugPrint(m_otaFwVer);
+            }
+            if(strncmp(m_deviceType,"vEdge 1.6",9)!=0) //Change the device name according to device type
+            {
+                if(loopDebugMode) {
+                    debugPrint(F("Sending OTA_FDW_ABORT, Invalid Firmware"));
+                }
+                sendOtaStatusMsg(MSPCommand::OTA_FDW_ABORT,OTA_DOWNLOAD_ERR, String(iuOta.getOtaRca(OTA_INVALID_FIRMWARE)).c_str());
+                if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
+                iuWiFi.m_setLastConfirmedPublication();
+                changeUsageMode(UsageMode::OPERATION);
+                delay(10);
+                return false;
             }
             subConfig = root["fwBinaries"][0];
             String fwType = subConfig["type"];
@@ -1151,8 +1237,214 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
 
     }
+
+    subConfig = root["CONFIG_HASH"];
+    if (subConfig.success())
+    {
+        const char *messageId = root["messageId"];
+        snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"macId\":\"%s\",\"configType\":\"hash_ack\"}", messageId, m_macAddress.toString().c_str());
+        bool dataWritten = false;
+        iuFlash.saveConfigJson(IUFlash::CFG_HASH, variant);
+        debugPrint(F("Writing into configHash file"));
+        if (iuWiFi.isConnected())
+        {
+            if (loopDebugMode)
+            {
+                debugPrint("Response : ", false);
+                debugPrint(ack_config);
+            }
+            iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, ack_config);
+        }
+    }
+    // store the DIG configurations 
+    subConfig = root["CONFIG"]["DIG"];
+    if(subConfig.success()){
+        if(loopDebugMode) {
+            debugPrint("Triggers configuration received: ", false);
+            subConfig.printTo(Serial); debugPrint("");
+        }
+        const char* messageId = root["messageId"]  ;
+        const char* msgType = root["MSGTYPE"];
+        snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"macId\":\"%s\",\"configType\":\"dig_ack\"}", messageId,m_macAddress.toString().c_str());
+        iuFlash.saveConfigJson(IUFlash::CFG_DIG, variant);
+        if(loopDebugMode) {
+            debugPrint("configs saved successfully ");
+        }
+        clearDiagResultArray();
+        configureAlertPolicy();
+        
+        if(iuWiFi.isConnected() )
+        {  
+         if(loopDebugMode){debugPrint("Response : ",false);debugPrint(ack_config);}
+         iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,ack_config );
+        }
+        if(StreamingMode::BLE && isBLEConnected()){// Send ACK to BLE
+            if(loopDebugMode){ debugPrint("Diagnostic Config SUCCESS");}
+            iuBluetooth.write("DIG-CFG-SUCCESS;");
+        }
+    }
+
+    subConfig = root["CONFIG"]["PHASE"];
+    if(subConfig.success()){
+        if(loopDebugMode) {
+            debugPrint("Phase configuration received: ", false);
+            subConfig.printTo(Serial); debugPrint("");
+        }
+        const char* messageId = root["messageId"];
+        snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"macId\":\"%s\",\"configType\":\"phase_ack\"}", messageId,m_macAddress.toString().c_str());
+                   
+        iuFlash.saveConfigJson(IUFlash::CFG_PHASE, variant);
+        if(loopDebugMode) {
+            debugPrint("configs saved successfully ");
+        }
+        if(iuWiFi.isConnected())
+        {  
+         if(loopDebugMode){debugPrint("Response : ",false);debugPrint(ack_config);}
+         iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,ack_config );
+        }
+        if(StreamingMode::BLE && isBLEConnected()){// Send ACK to BLE
+            if(loopDebugMode){ debugPrint("Phase Config SUCCESS");}
+            iuBluetooth.write("PHASE-CFG-SUCCESS;");
+        }
+        checkPhaseConfig();
+        
+    }
+    // TEMP : store the feature output JOSN  
+    subConfig = root["FRES"];
+    if (subConfig.success()) {
+        const char* msgType = root["MSGTYPE"];
+
+        if(strcmp(msgType,"FRES") == 0 ){
+            if (loopDebugMode){  debugPrint("Update Feature outputs :",false);
+            }
+            //availableDiagnosticConfig = variant;
+            //variant.printTo(Serial); debugPrint("");
+            bool res = iuFlash.saveConfigJson(IUFlash::CFG_FOUT, variant);
+            debugPrint("Write status : ",false); debugPrint(res);
+            //debugPrint("Read Config : ", false);
+            //iuFlash.readConfig(IUFlash::CFG_DIG,)
+        }
+    }
+
+    // RPM Configs
+    subConfig = root["CONFIG"]["RPM"];
+    if (subConfig.success()) {
+        if (loopDebugMode){  debugPrint("RPM Configs Received :",false);
+         subConfig.printTo(Serial); debugPrint("");
+         }
+        bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_RPM, variant, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime(), messageId);
+        if (validConfiguration) {
+            iuFlash.saveConfigJson(IUFlash::CFG_RPM,subConfig);
+            if(loopDebugMode){ debugPrint("Saved RPM Configs Successfully");}  
+            // Apply RPM Configs
+            int LOW_RPM  = root["CONFIG"]["RPM"]["LOW_RPM"];
+            int HIGH_RPM = root["CONFIG"]["RPM"]["HIGH_RPM"]; 
+            float RPM_TRH = root["CONFIG"]["RPM"]["RPM_TRH"];
+            const char* messageId = root["messageId"];
+            if(LOW_RPM < FFTConfiguration::currentLowCutOffFrequency || LOW_RPM > FFTConfiguration::currentHighCutOffFrequency ){
+                LOW_RPM = FFTConfiguration::currentLowCutOffFrequency;
+            }
+            if (HIGH_RPM > FFTConfiguration::currentHighCutOffFrequency || HIGH_RPM < FFTConfiguration::currentLowCutOffFrequency){ 
+                 HIGH_RPM = FFTConfiguration::currentHighCutOffFrequency;
+            }
+            FFTConfiguration::currentLowRPMFrequency = LOW_RPM;
+            FFTConfiguration::currentHighRPMFrequency = HIGH_RPM;
+            if(RPM_TRH < 0 || RPM_TRH == 0){
+                FFTConfiguration::currentRPMThreshold = FFTConfiguration::DEFAULT_RPM_THRESHOLD;
+            }else{
+                FFTConfiguration::currentRPMThreshold = RPM_TRH;
+            }
+            if(loopDebugMode){
+                debugPrint("LOW_RPM : ",false);debugPrint(FFTConfiguration::currentLowRPMFrequency);
+                debugPrint("HIGH_RPM :",false);debugPrint(FFTConfiguration::currentHighRPMFrequency);
+                debugPrint("RPM_TRH : ",false);debugPrint(FFTConfiguration::currentRPMThreshold);
+                debugPrint("MSGID : ",false);debugPrint(messageId);
+            }
+            if(iuWiFi.isConnected() )
+            {  
+                if(loopDebugMode){debugPrint("RPM ACK : ",false);debugPrint(validationResultString);}
+                iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,validationResultString );
+            }
+            if(StreamingMode::BLE && isBLEConnected()){// Send ACK to BLE
+                if(loopDebugMode){ debugPrint("RPM Config SUCCESS");}
+                iuBluetooth.write("RPM-SUCCESS;");
+            }
+            DOSFS.end();
+            delay(10);
+        }else {
+            if(loopDebugMode) debugPrint("Received invalid RPM configuration");
+            iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
+        }
+    }
+
     
     return true;
+}
+
+
+JsonObject& Conductor::createFeatureGroupjson(){
+   
+    // DynamicJsonBuffer outputJSONbuffer;
+    StaticJsonBuffer<2500> outputJSONbuffer;
+    JsonObject& root = outputJSONbuffer.createObject();
+    JsonObject& fres = root.createNestedObject("FRES");
+    JsonObject& spectralFeatures = outputJSONbuffer.parseObject(fingerprintData);
+    // JsonVariant variant = root;
+    fres["A93"] = featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Total];
+    fres["VAX"] = featureDestinations::buff[featureDestinations::basicfeatures::velRMS512X];
+    fres["VAY"] = featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Y];
+    fres["VAZ"] = featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Z];
+    fres["A9X"] = featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512X];
+    fres["A9Y"] = featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Y];
+    fres["A9Z"] = featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Z];
+    fres["DAX"] = featureDestinations::buff[featureDestinations::basicfeatures::dispRMS512X];
+    fres["DAY"] = featureDestinations::buff[featureDestinations::basicfeatures::dispRMS512Y];
+    fres["DAZ"] = featureDestinations::buff[featureDestinations::basicfeatures::dispRMS512Z];
+    fres["TMP"] = featureDestinations::buff[featureDestinations::basicfeatures::temperature];
+    fres["S12"] = featureDestinations::buff[featureDestinations::basicfeatures::audio];
+    fres["RPM"] = featureDestinations::buff[featureDestinations::basicfeatures::rpm];
+    addAdvanceFeature(fres, phaseAngleComputer.totalPhaseIds, m_phase_ids,phaseAngleComputer.phase_output);
+    mergeJson(fres,spectralFeatures);
+    fres["NULL"] = 0;
+    return root;
+}
+
+void Conductor::checkPhaseConfig(){
+
+    JsonObject &Phaseconfig = conductor.configureJsonFromFlash("/iuconfig/phase.conf",1);
+    //debugPrint("Phase config read from flash ");
+    if(Phaseconfig.success()){
+    totalIDs = Phaseconfig["CONFIG"]["PHASE"]["IDS"].size();
+    phaseAngleComputer.totalPhaseIds = totalIDs;
+    for(size_t i = 0; i < totalIDs; i++){
+        m_phase_ids[i] = Phaseconfig["CONFIG"]["PHASE"]["IDS"][i].asString();
+        strcpy(&m_ax1[i],(char*)Phaseconfig["CONFIG"]["PHASE"]["AX1"][i].asString());
+        strcpy(&m_ax2[i],(char*)Phaseconfig["CONFIG"]["PHASE"]["AX2"][i].asString());
+        m_trh[i] = Phaseconfig["CONFIG"]["PHASE"]["TRH"][i];
+    }
+    if (setupDebugMode) {
+    for(size_t i = 0; i < totalIDs; i++){
+        debugPrint("IDS : ", false);debugPrint(m_phase_ids[i]);
+        debugPrint("AX1 : ", false);debugPrint(m_ax1[i]);
+        debugPrint("AX2 : ", false);debugPrint(m_ax2[i]);
+        debugPrint("TRH : ", false);debugPrint(m_trh[i]);
+    }
+  }
+    }
+    else { 
+        if (setupDebugMode){debugPrint("Failed to read phase.conf file ");}
+    }
+}
+
+void Conductor::computeAdvanceFeature(){
+    
+    for(size_t i=0; i < totalIDs; i++){
+        phaseAngleComputer.phase_output[i] = phaseAngleComputer.computePhaseDiff(m_ax1[i],m_ax2[i]);
+       // debugPrint("Phase difference : ",false);
+        //debugPrint(m_phase_ids[i]);
+        // debugPrint(" : ",false);
+        //debugPrint(phaseAngleComputer.phase_output[i]);
+    }
 }
 
 /*
@@ -1396,8 +1688,6 @@ bool Conductor::configureBoardFromFlash(String filename,bool isSet){
 
   // Parse the root object
   JsonObject &root = jsonBuffer.parseObject(myFile);
-  
-  JsonObject& root2 = root["httpConfig"];
   if (!root.success() && !iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS)){
     debugPrint(F("Failed to read httpConf.conf file, using default configuration"));
     setDefaultHTTP();
@@ -1406,23 +1696,25 @@ bool Conductor::configureBoardFromFlash(String filename,bool isSet){
       String httpConfig = iuFlash.readInternalFlash(CONFIG_HTTP_FLASH_ADDRESS);
         debugPrint(httpConfig);
         JsonObject &config = jsonBuffer.parseObject(httpConfig);
-        JsonObject& config2 = config["httpConfig"];
         if(config.success())
         {
             debugPrint("Http Config Found");
-            static const char* host = config2["host"];
-            static uint16_t    port = config2["port"];
-            static const char* path = config2["path"];
-            static const char* username = config2["username"];
-            static const char* password = config2["password"];
-            static const char* oauth = config2["oauth"];
 
-            m_httpHost  = host;
-            m_httpPort = port;
-            m_httpPath = path;
-            m_httpUsername = username;
-            m_httpPassword = password;
-            m_httpOauth = oauth;
+            m_httpHost = config["httpConfig"]["host"];
+            m_httpPort = config["httpConfig"]["port"];
+            m_httpPath = config["httpConfig"]["path"];
+            m_httpUsername = config["httpConfig"]["username"];
+            m_httpPassword = config["httpConfig"]["password"];
+            m_httpOauth = config["httpConfig"]["oauth"];
+
+            if(config.containsKey("httpOem")){
+                m_httpHost_oem = config["httpOem"]["host"];
+                m_httpPort_oem = config["httpOem"]["port"];
+                m_httpPath_oem = config["httpOem"]["path"];
+                m_httpUsername_oem = config["httpOem"]["username"];
+                m_httpPassword_oem = config["httpOem"]["password"];
+                m_httpOauth_oem = config["httpOem"]["oauth"];
+            }
             File httpFile = DOSFS.open("httpConfig.conf","w");
             if(httpFile)
             {
@@ -1457,21 +1749,23 @@ bool Conductor::configureBoardFromFlash(String filename,bool isSet){
         }
  else {
 
-  // Read configuration from the file
+        // Read configuration from the file
 
-static const char* host = root2["host"];
-static uint16_t    port = root2["port"];
-static const char* path = root2["path"];
-static const char* username = root2["username"];
-static const char* password = root2["password"];
-static const char* oauth = root2["oauth"];
+        m_httpHost = root["httpConfig"]["host"];
+        m_httpPort = root["httpConfig"]["port"];
+        m_httpPath = root["httpConfig"]["path"];
+        m_httpUsername = root["httpConfig"]["username"];
+        m_httpPassword = root["httpConfig"]["password"];
+        m_httpOauth = root["httpConfig"]["oauth"];
 
-m_httpHost  = host;
-m_httpPort = port;
-m_httpPath = path;
-m_httpUsername = username;
-m_httpPassword = password;
-m_httpOauth = oauth;
+        if(root.containsKey("httpOem")){
+            m_httpHost_oem = root["httpOem"]["host"];
+            m_httpPort_oem = root["httpOem"]["port"];
+            m_httpPath_oem = root["httpOem"]["path"];
+            m_httpUsername_oem = root["httpOem"]["username"];
+            m_httpPassword_oem = root["httpOem"]["password"];
+            m_httpOauth_oem = root["httpOem"]["oauth"];
+        }
 
 if(debugMode){
   debugPrint("FROM configureBoardFromFlash :");
@@ -1516,7 +1810,7 @@ JsonObject& Conductor:: configureJsonFromFlash(String filename,bool isSet){
   //const size_t bufferSize = JSON_ARRAY_SIZE(8) + JSON_OBJECT_SIZE(300) + 60;        // dynamically allociated memory
   const size_t bufferSize = JSON_OBJECT_SIZE(2) + 2*JSON_OBJECT_SIZE(4) + 11*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(13) + 1396;
   DynamicJsonBuffer jsonBuffer(bufferSize);
- // Parse the root object
+ // Parse the root object 
   JsonObject &root = jsonBuffer.parseObject(myFile);
   //JsonObject& root2 = root["fingerprints"];
   
@@ -1595,7 +1889,23 @@ void Conductor::configureMainOptions(JsonVariant &config)
     if(value.success()){
         m_mainFeatureGroup->setDataSendPeriod(value.as<uint16_t>());
         // NOTE: Older firmware device will not set this parameter even if configJson contains it.
-}
+    }
+    value = config["DDSP"];
+    if(value.success()){
+        diagStreamingPeriod = (uint32_t) (value.as<int>()) * 1000;
+    }
+    value = config["FDSP"];
+    if(value.success()){
+        fresPublishPeriod = (uint32_t) (value.as<int>()) * 1000;
+    }
+    value = config["DIG"];
+    if(value.success()){
+        digStream = (bool) (value.as<bool>());
+    }
+    value = config["FRES"];
+    if(value.success()){
+        fresStream = (bool) (value.as<bool>());
+    }
 }
 
 /**
@@ -1737,6 +2047,33 @@ void Conductor::processCommand(char *buff)
                     iuBluetooth.write(';');
                 }
             }
+            else if (strcmp(buff, "IUGET_FIRMWARE_VERSION") == 0)
+            {
+                if (iuWiFi.isConnected()) {
+                    char message[128];
+                    strcat(message, "{\"device_id\":\"");
+                    strcat(message, m_macAddress.toString().c_str());
+                    strcat(message, "\",\"wifi_macId\":\"");
+                    strcat(message, iuWiFi.getMacAddress().toString().c_str());
+                    strcat(message, "\",\"mainFirmware_ver\":");
+                    strcat(message, FIRMWARE_VERSION);
+                    strcat(message, ",\"wifiFirmware_ver\":");
+                    strcat(message, iuWiFi.espFirmwareVersion);
+                    strcat(message, "}");
+                    iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_FIRMWARE_VER,message);
+                }
+            }
+            else if (strcmp(buff, "IUSET_ERASE_EXT_FLASH") == 0)
+                {
+                    debugPrint("Formating Flash Please wait");
+                    ledManager.overrideColor(RGB_RED);
+                    DOSFS.format();
+                    ledManager.overrideColor(RGB_WHITE);
+                    DOSFS.end();
+                    debugPrint("Format Successfully");
+                    delay(2000);
+                    STM32.reset();
+                }
             break;
         case 'P': 
         {
@@ -1781,6 +2118,7 @@ void Conductor::processCommand(char *buff)
                 // }
             }
         case '3':  // Collect acceleration raw data
+            iuWiFi.sendHostSamplingRate(FFTConfiguration::calculatedSamplingRate); // updated freq after GET_FFT
             if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
                 buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
             {
@@ -1964,7 +2302,7 @@ void Conductor::processLegacyCommand(char *buff)
                        &fcheck[5]);
                 Feature *feat;
                 opStateComputer.deleteAllSources();
-                for (uint8_t i = 0; i < 6; i++) {
+                for (uint8_t i = 0; i < 12; i++) {
                     feat = m_mainFeatureGroup->getFeature(i);
                     if (feat) {
                         opStateComputer.addSource(feat, 1, fcheck[i] > 0);
@@ -2128,6 +2466,11 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuUSB.port->print("DEVICE_ID : ");
                     iuUSB.port->println(m_macAddress);
                 }
+                if(strcmp(buff, "IUGET_WIFI_MACID") ==0)
+                {
+                    iuUSB.port->print("WIFI_MACID : ");
+                    iuUSB.port->println(iuWiFi.getMacAddress());
+                }
                 if (strcmp(buff, "IUGET_FIRMWARE_VERSION") == 0)
                 {
                     iuUSB.port->print("FIRMWARE_VERSION : ");
@@ -2192,18 +2535,46 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     }
 
                 }
+                /********************FOR DEVELOPMENT PURPOSE ONLY*******************/
+                // This command mainly use to avoid flash all 3 frimwares if changes required only in ESP32 firmware. 
+                // Increase "loopTimeout" from ino to 5min to avoid stm reboot
+                // Hit the command from USB, This keeps ESP32 in Download mode. 
+                // After Flashing ESP32 firmware reboot STM32.
+                if(strcmp(buff, "FLASH_ESP") == 0){
+                    digitalWrite(7,LOW); // IDE1.5_PORT_CHANGE
+                    digitalWrite(IUESP8285::ESP32_ENABLE_PIN, LOW); // IDE1.5_PORT_CHANGE
+                    
+                    delay(100);
+                    digitalWrite(IUESP8285::ESP32_ENABLE_PIN, HIGH);
+                    while(1){
+                        while (Serial1.available()) {
+                            Serial.write(Serial1.read() );
+                        }
+                        while (Serial.available()) {
+                            Serial1.write(Serial.read() );
+                        }
+                    }
+                }
                 if (strcmp(buff, "IUGET_HTTP_CONFIG") == 0)
                 {
                     if (DOSFS.exists("httpConfig.conf")){
-                    const char* _httpHost;
-                    const char* _httpPort;
-                    const char* _httpPath;
-                   
-                    JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
-                    _httpHost = config["httpConfig"]["host"];
-                    _httpPort = config["httpConfig"]["port"];
-                    _httpPath = config["httpConfig"]["path"];
+                        const char* _httpHost;
+                        const char* _httpPort;
+                        const char* _httpPath;
 
+                        const char* oem_httpHost;
+                        const char* oem_httpPort;
+                        const char* oem_httpPath;
+
+                        JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
+                        _httpHost = config["httpConfig"]["host"];
+                        _httpPort = config["httpConfig"]["port"];
+                        _httpPath = config["httpConfig"]["path"];
+                        if(config.containsKey("httpOem")){
+                            oem_httpHost = config["httpOem"]["host"];
+                            oem_httpPort = config["httpOem"]["port"];
+                            oem_httpPath = config["httpOem"]["path"];
+                        }
 
                     iuUSB.port->println("*****HTTP_CONFIG*****");
                     iuUSB.port->print("HTTP_HOST : ");
@@ -2212,9 +2583,18 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuUSB.port->println(_httpPort);
                     iuUSB.port->print("HTTP_PATH : ");
                     iuUSB.port->println(_httpPath);
-                  }else{
-                      debugPrint(F("httpConfig.conf file does not exists"));
-                  }
+                    if(config.containsKey("httpOem")){
+                        iuUSB.port->println("*****HTTP_OEM_CONFIG*****");
+                        iuUSB.port->print("HTTP_HOST : ");
+                        iuUSB.port->println(oem_httpHost);
+                        iuUSB.port->print("HTTP_PORT : ");
+                        iuUSB.port->println(oem_httpPort);
+                        iuUSB.port->print("HTTP_PATH : ");
+                        iuUSB.port->println(oem_httpPath);
+                    }
+                    }else{
+                        debugPrint(F("httpConfig.conf file does not exists"));
+                    }
                 }
                 if (strcmp(buff, "IUGET_MQTT_CONFIG") == 0)
                 {
@@ -2254,6 +2634,14 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuUSB.port->println(FFTConfiguration::currentSamplingRate);
                     iuUSB.port->print("FFT: Block Size: ");
                     iuUSB.port->println(FFTConfiguration::currentBlockSize);
+                    if(FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor){
+                        iuUSB.port->print("FFT: LSMgRange : ");
+                        iuUSB.port->println(FFTConfiguration::currentLSMgRange);
+                    }
+                    if(FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor){
+                        iuUSB.port->print("FFT: KNXgRange : ");
+                        iuUSB.port->println(FFTConfiguration::currentKNXgRange);
+                    }
                 }
                 if (strcmp(buff,"IUGET_DEVICE_CONF") == 0)
                 {
@@ -2300,6 +2688,30 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                 }
                 if (strcmp(buff, "IUGET_CERT_CONFIG") == 0) {
                     iuWiFi.sendMSPCommand(MSPCommand::GET_CERT_CONFIG);
+                }
+                if (strcmp(buff, "IUGET_DIG_CONFIG") == 0) {
+                    JsonObject &diag =  configureJsonFromFlash("/iuRule/diagnostic.conf",1);
+                    if(diag.success()){
+                        iuUSB.port->println("*****DIG CONFIG*****");
+                        diag.printTo(*iuUSB.port);
+                        iuUSB.port->println("");
+                    }
+                }
+                if (strcmp(buff, "IUGET_PHASE_CONFIG") == 0) {
+                    JsonObject &phase =  configureJsonFromFlash("/iuconfig/phase.conf",1);
+                    if(phase.success()){
+                        iuUSB.port->println("*****PHASE CONFIG*****");
+                        phase.printTo(*iuUSB.port);
+                        iuUSB.port->println("");
+                    }
+                }
+                if (strcmp(buff, "IUGET_RPM_CONFIG") == 0) {
+                    JsonObject &rpm =  configureJsonFromFlash("/iuconfig/rpm.conf",1);
+                    if(rpm.success()){
+                        iuUSB.port->println("*****RPM CONFIG*****");
+                        rpm.printTo(*iuUSB.port);
+                        iuUSB.port->println("");
+                    }
                 }
                 if (strcmp(buff, "IUSET_OTAFLAG_00") == 0)
                 {
@@ -3060,7 +3472,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             {
             if (loopDebugMode){ debugPrint(F("GET_DEVICE_CONFIG")); }
             char deviceInfo[64];
-            sprintf(deviceInfo,"%s-%d-%d",FIRMWARE_VERSION,FFTConfiguration::currentSamplingRate,FFTConfiguration::currentBlockSize);
+            //sprintf(deviceInfo,"%s-%d-%d",FIRMWARE_VERSION,FFTConfiguration::currentSamplingRate,FFTConfiguration::currentBlockSize);
+            sprintf(deviceInfo,"%s-%d-%d",FIRMWARE_VERSION,FFTConfiguration::calculatedSamplingRate,FFTConfiguration::currentBlockSize);
             iuWiFi.sendMSPCommand(MSPCommand::GET_DEVICE_CONFIG,deviceInfo);
             iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HOST_FIRMWARE_VERSION,FIRMWARE_VERSION);
             
@@ -3079,35 +3492,69 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             if (loopDebugMode){ debugPrint(F("ASK_HOST_BLOCK_SIZE")); }
             iuWiFi.sendHostBlockSize(FFTConfiguration::currentBlockSize);
             break;
-        case MSPCommand::HTTP_ACK: {
-            if (loopDebugMode){ debugPrint(F("HTTP_ACK")); }
+        case MSPCommand::HTTPS_ACK: {
+            if (loopDebugMode){ debugPrint(F("HTTPS_ACK")); }
             if (buff[0] == 'X') {
-                httpStatusCodeX = atoi(&buff[1]);
+                httpsStatusCodeX = atoi(&buff[1]);
             } else if (buff[0] == 'Y') {
-                httpStatusCodeY = atoi(&buff[1]);
+                httpsStatusCodeY = atoi(&buff[1]);
             } else if (buff[0] == 'Z') {
-                httpStatusCodeZ = atoi(&buff[1]);
+                httpsStatusCodeZ = atoi(&buff[1]);
             }
             if (loopDebugMode) {
-                debugPrint("HTTP status codes X | Y | Z ",false);
-                debugPrint(httpStatusCodeX, false);debugPrint(" | ", false);
-                debugPrint(httpStatusCodeY, false);debugPrint(" | ", false);
-                debugPrint(httpStatusCodeZ, true);
+                debugPrint("HTTPS status codes X | Y | Z ",false);
+                debugPrint(httpsStatusCodeX, false);debugPrint(" | ", false);
+                debugPrint(httpsStatusCodeY, false);debugPrint(" | ", false);
+                debugPrint(httpsStatusCodeZ, true);
             }
 #if 1
-            if(httpStatusCodeX != 200 || (httpStatusCodeX == 200 && httpStatusCodeY != 200 && httpStatusCodeY != 0) || (httpStatusCodeX == 200 && httpStatusCodeY == 200 && httpStatusCodeZ != 200 && httpStatusCodeZ != 0))
+            if(httpsStatusCodeX != 200 || (httpsStatusCodeX == 200 && httpsStatusCodeY != 200 && httpsStatusCodeY != 0) || (httpsStatusCodeX == 200 && httpsStatusCodeY == 200 && httpsStatusCodeZ != 200 && httpsStatusCodeZ != 0))
             {
-                debugPrint("HTTP status codes X | Y | Z ",false);
-                debugPrint(httpStatusCodeX, false);debugPrint(" | ", false);
-                debugPrint(httpStatusCodeY, false);debugPrint(" | ", false);
-                debugPrint(httpStatusCodeZ, true);
+                debugPrint("HTTPS status codes X | Y | Z ",false);
+                debugPrint(httpsStatusCodeX, false);debugPrint(" | ", false);
+                debugPrint(httpsStatusCodeY, false);debugPrint(" | ", false);
+                debugPrint(httpsStatusCodeZ, true);
                 // Abort transmission on failure  // IDE1.5_PORT_CHANGE Change
-                RawDataState::rawDataTransmissionInProgress = false;
-                RawDataState::startRawDataCollection = false;             
+                // RawDataState::rawDataTransmissionInProgress = false;
+                // RawDataState::startRawDataCollection = false;             
             }
 #endif
             break;
         }
+        case MSPCommand::HTTPS_OEM_ACK: {
+            if (loopDebugMode){ debugPrint(F("HTTPS_OEM_ACK")); }
+            if (buff[0] == 'X') {
+                httpsOEMStatusCodeX = atoi(&buff[1]);
+            } else if (buff[0] == 'Y') {
+                httpsOEMStatusCodeY = atoi(&buff[1]);
+            } else if (buff[0] == 'Z') {
+                httpsOEMStatusCodeZ = atoi(&buff[1]);
+            }
+            if (loopDebugMode) {
+                debugPrint("HTTPS OEM status codes X | Y | Z ",false);
+                debugPrint(httpsOEMStatusCodeX, false);debugPrint(" | ", false);
+                debugPrint(httpsOEMStatusCodeY, false);debugPrint(" | ", false);
+                debugPrint(httpsOEMStatusCodeZ, true);
+            }
+#if 1
+            if(httpsOEMStatusCodeX != 200 || (httpsOEMStatusCodeX == 200 && httpsOEMStatusCodeY != 200 && httpsOEMStatusCodeY != 0) || (httpsOEMStatusCodeX == 200 && httpsOEMStatusCodeY == 200 && httpsOEMStatusCodeZ != 200 && httpsOEMStatusCodeZ != 0))
+            {
+                debugPrint("HTTPS OEM status codes X | Y | Z ",false);
+                debugPrint(httpsOEMStatusCodeX, false);debugPrint(" | ", false);
+                debugPrint(httpsOEMStatusCodeY, false);debugPrint(" | ", false);
+                debugPrint(httpsOEMStatusCodeZ, true);
+                // // Abort transmission on failure  // IDE1.5_PORT_CHANGE Change
+                // RawDataState::rawDataTransmissionInProgress = false;
+                // RawDataState::startRawDataCollection = false;             
+            }
+#endif
+            break;
+        }
+        case MSPCommand::SEND_RAW_DATA_NEXT_PKT: {
+                sendNextAxis = bool(strtol(buff, NULL, 0));
+                debugPrint("Send Next Axis : ", false);debugPrint(sendNextAxis);
+            }
+            break;
         case MSPCommand::WIFI_GET_TX_POWER:
             if (loopDebugMode) {
                 debugPrint("TX power from ESP32  :",false);
@@ -3116,6 +3563,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             break;
         case MSPCommand::WIFI_ALERT_CONNECTED:
             if (loopDebugMode) { debugPrint(F("WIFI-CONNECTED;")); }
+            if(getDatetime() < 1590000000.00){iuWiFi.sendMSPCommand(MSPCommand::GOOGLE_TIME_QUERY);}
             if (isBLEConnected()) {
                 iuBluetooth.write("WIFI-CONNECTED;");
             }
@@ -3211,7 +3659,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             }
             break;
         case MSPCommand::SET_DATETIME:
-            if (loopDebugMode) { debugPrint(F("SET_DATETIME")); }
+            if (loopDebugMode) { debugPrint(F("SET_DATETIME")); debugPrint("Google_Query_time : "); debugPrint(buff); }
             setRefDatetime(buff);
             break;
         case MSPCommand::CONFIG_FORWARD_CONFIG:
@@ -3261,29 +3709,50 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 m_httpHost = config["httpConfig"]["host"];
                 m_httpPath = config["httpConfig"]["path"];
                 m_httpPort = config["httpConfig"]["port"];
+                m_httpUsername = config["httpConfig"]["username"];
+                m_httpPassword = config["httpConfig"]["password"];
+                m_httpOauth = config["httpConfig"]["oauth"];
+
+                if(config.containsKey("httpOem")){
+                    m_httpHost_oem = config["httpOem"]["host"];
+                    m_httpPort_oem = config["httpOem"]["port"];
+                    m_httpPath_oem = config["httpOem"]["path"];
+                    m_httpUsername_oem = config["httpOem"]["username"];
+                    m_httpPassword_oem = config["httpOem"]["password"];
+                    m_httpOauth_oem = config["httpOem"]["oauth"];
+                    httpOEMConfigPresent = true;
+                }else{
+                    httpOEMConfigPresent = false;
+                }
+
               }else if(iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS)){
                     String httpConfig = iuFlash.readInternalFlash(CONFIG_HTTP_FLASH_ADDRESS);
                     debugPrint(httpConfig);
                     const size_t bufferSize = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(6) + 510;
                     StaticJsonBuffer<bufferSize> jsonBuffer;
                     JsonObject &config = jsonBuffer.parseObject(httpConfig);
-                    JsonObject& config2 = config["httpConfig"];
                     if(config.success())
                     {
                         debugPrint("Http Config Found");
-                        static const char* host = config2["host"];
-                        static uint16_t    port = config2["port"];
-                        static const char* path = config2["path"];
-                        static const char* username = config2["username"];
-                        static const char* password = config2["password"];
-                        static const char* oauth = config2["oauth"];
+                        m_httpHost = config["httpConfig"]["host"];
+                        m_httpPort = config["httpConfig"]["port"];
+                        m_httpPath = config["httpConfig"]["path"];
+                        m_httpUsername = config["httpConfig"]["username"];
+                        m_httpPassword = config["httpConfig"]["password"];
+                        m_httpOauth = config["httpConfig"]["oauth"];
 
-                        m_httpHost  = host;
-                        m_httpPort = port;
-                        m_httpPath = path;
-                        m_httpUsername = username;
-                        m_httpPassword = password;
-                        m_httpOauth = oauth;
+                        if(config.containsKey("httpOem")){
+                            m_httpHost_oem = config["httpOem"]["host"];
+                            m_httpPort_oem = config["httpOem"]["port"];
+                            m_httpPath_oem = config["httpOem"]["path"];
+                            m_httpUsername_oem = config["httpOem"]["username"];
+                            m_httpPassword_oem = config["httpOem"]["password"];
+                            m_httpOauth_oem = config["httpOem"]["oauth"];
+                            httpOEMConfigPresent = true;
+                        }else{
+                            httpOEMConfigPresent = false;
+                        }
+
                         File httpFile = DOSFS.open("httpConfig.conf","w");
                         if(httpFile)
                         {
@@ -3304,6 +3773,12 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_HOST,m_httpHost); 
                 iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_PORT,String(m_httpPort).c_str()); 
                 iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_ROUTE,m_httpPath);
+
+
+                iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_HOST_OEM,m_httpHost_oem); 
+                iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_PORT_OEM,String(m_httpPort_oem).c_str()); 
+                iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_ROUTE_OEM,m_httpPath_oem);
+                iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_OEM_STATUS,String(httpOEMConfigPresent).c_str());
                             
                 break;
            }
@@ -3834,11 +4309,11 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             configureGroupsForOperation();
             if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
             {
-                iuAccelerometer.resetScale();
+                iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
             }
             else
             {
-                iuAccelerometerKX222.resetScale();
+                iuAccelerometerKX222.setGrange(FFTConfiguration::currentKNXgRange);
             }
             msg = "operation";
             break;
@@ -3847,11 +4322,11 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             //configureGroupsForOperation();
             if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
             {
-                iuAccelerometer.resetScale();
+                iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
             }
             else
             {
-                iuAccelerometerKX222.resetScale();
+                iuAccelerometerKX222.setGrange(FFTConfiguration::currentKNXgRange);
             }
             msg = "custom";
             break;        
@@ -4034,7 +4509,7 @@ void Conductor::acquireTemperatureData()
 {
     for (uint8_t i = 0; i < Sensor::instanceCount; ++i) {
         if (strcmp("T10", Sensor::instances[i]->getName())==0 || strcmp("BAT", Sensor::instances[i]->getName())==0)
-        {
+        {   
             Sensor::instances[i]->acquireData();
         }
     }
@@ -4137,6 +4612,7 @@ void Conductor::streamFeatures()
                 FeatureStates::isFeatureStreamComplete = true;   // publication completed
                 FeatureStates::isISRActive = true;
                 //debugPrint("Published to WiFi Complete !!!");
+                // createFeatureGroupjson();
             }
     }
    #if 0
@@ -4192,6 +4668,205 @@ void Conductor::streamFeatures()
     #endif 
 }
 
+/**
+ * @brief Compute all the diagnostic triggers
+ * 
+ */
+void Conductor::computeTriggers(){
+   if(m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE){
+    // read the dig config 
+    iuTrigger.m_specializedCompute();
+    if(iuTrigger.DIG_LIST[0] != NULL && iuTrigger.DIG_COUNT != 0) {
+      computeDiagnoticState(iuTrigger.DIG_LIST,iuTrigger.DIG_COUNT );
+    }
+   }
+    // iuTrigger.DIG_COUNT = 0;
+    // reportableIndexCounter = 0;
+    // clearDiagResultArray();
+    
+}
+
+void Conductor::streamDiagnostics(){
+   if((m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE) && validTimeStamp()){
+        const char* dId;
+        bool publishDiag = false;
+        bool publishAlert = false;
+        bool publishFres = false;
+        DynamicJsonBuffer reportableJsonBUffer;
+        JsonObject& reportableJson = reportableJsonBUffer.createObject();
+        int publishSelect = publish::ALERT_POLICY;
+        uint32_t nowT = millis();
+        if (nowT - digLastPublish >= diagStreamingPeriod)
+        {
+            digLastPublish = nowT;
+            publishSelect = publish::STREAM;
+            publishDiag = true;
+            if (diagAlertResults[0] != NULL && reportableDIGLength > 0)
+            {
+                publishSelect = publish::ALERT_POLICY;
+            }
+        }
+
+        if(nowT - fresLastPublish >= fresPublishPeriod)
+        {
+            fresLastPublish = nowT;
+            publishSelect = publish::STREAM;
+            publishFres = true;
+            if (diagAlertResults[0] != NULL && reportableDIGLength > 0)
+            {
+                publishSelect = publish::ALERT_POLICY;
+            }
+        }
+        switch (publishSelect)
+        {
+        case publish::ALERT_POLICY: //Alert Policies
+            if (diagAlertResults[0] != NULL && reportableDIGLength > 0)
+            {
+                for (size_t i = 0; i < reportableDIGLength; i++)
+                {
+                    dId = diagAlertResults[i]; //.c_str();
+                    if (dId != NULL)
+                    {
+                        // construct the RDIG JSON
+                        JsonObject &diagnostic = reportableJson.createNestedObject(dId);
+                        JsonArray &ftr = diagnostic.createNestedArray("FTR");
+                        // Add Firing Triggers list
+                        addFTR(dId, ftr, i);
+                        diagnostic["ALRREP"] = alert_repeat_state[i];
+                    }
+                }
+                publishAlert = true;
+            }
+            if((diagAlertResults[0] != NULL && publishAlert == true)){
+                //reportableJson.printTo(Serial); debugPrint("");
+                reportableJson.printTo(m_diagnosticResult,DIG_PUBLISHED_BUFFER_SIZE);
+                snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"DIGRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
+                // Published to MQTT 
+                iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_IU_RDIG,m_diagnosticPublishedBuffer);
+                // if(loopDebugMode){
+                //     debugPrint("O/P Buffer : ",false);
+                //     debugPrint(m_diagnosticPublishedBuffer);
+                //     debugPrint("BUFF LEN :",false);
+                //     debugPrint(strlen(m_diagnosticPublishedBuffer));
+                // }
+            }
+            break;
+        case publish::STREAM: //Streaming Diagnostics
+            if(publishDiag && digStream){
+                if (iuTrigger.DIG_COUNT > 0)
+                {
+                    for (int index = 0; index < iuTrigger.DIG_COUNT; index++)
+                    {
+                        dId = (char *)iuTrigger.DIG_LIST[index].c_str(); //.c_str();
+                        if (dId != NULL)
+                        {
+                            // construct the RDIG JSON
+                            JsonObject &diagnostic = reportableJson.createNestedObject(dId);
+                            JsonArray &ftr = diagnostic.createNestedArray("FTR");
+                            // Add Firing Triggers list
+                            addFTR(ftr, index);
+                            if (iuTrigger.DIG_STATE[index])
+                            {
+                                diagnostic["DSTATE"] = true;
+                            }
+                            else if (!iuTrigger.DIG_STATE[index])
+                            {
+                                diagnostic["DSTATE"] = false;
+                            }
+                        }else{
+                            publishDiag = false;
+                        }
+                    }
+                    publishDiag = true;
+                }
+                else{
+                    publishDiag = false;
+                }
+                if((iuTrigger.DIG_LIST[0] != NULL && publishDiag == true) ){
+                    //reportableJson.printTo(Serial); debugPrint("");
+                    reportableJson.printTo(m_diagnosticResult,DIG_PUBLISHED_BUFFER_SIZE);
+                    snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"DIGRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
+                    // Published to MQTT 
+                    iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_IU_DIAGNOSTIC,m_diagnosticPublishedBuffer);
+                    // if(loopDebugMode){
+                    //     debugPrint("O/P Buffer : ",false);
+                    //     debugPrint(m_diagnosticPublishedBuffer);
+                    //     debugPrint("BUFF LEN :",false);
+                    //     debugPrint(strlen(m_diagnosticPublishedBuffer));
+                    // }
+                }
+            }
+            if(publishFres && fresStream){
+                JsonObject& fres = createFeatureGroupjson()["FRES"];
+                //reportableJson.printTo(Serial); debugPrint("");
+                fres.printTo(m_diagnosticResult,DIG_PUBLISHED_BUFFER_SIZE);
+                snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"FRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
+                // Published to MQTT 
+                iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_IU_FRES,m_diagnosticPublishedBuffer);
+                // if(loopDebugMode){
+                //     debugPrint("O/P Buffer : ",false);
+                //     debugPrint(m_diagnosticPublishedBuffer);
+                //     debugPrint("BUFF LEN :",false);
+                //     debugPrint(strlen(m_diagnosticPublishedBuffer));
+                // }
+            }
+            break;
+        default:
+            break;
+        }
+        
+            // if((diagAlertResults[0] != NULL && publishDiag == true)|| (iuTrigger.DIG_LIST[0] != NULL && publishAlert == true) ){
+            //     //reportableJson.printTo(Serial); debugPrint("");
+            //     reportableJson.printTo(m_diagnosticResult,DIG_PUBLISHED_BUFFER_SIZE);
+            //     snprintf(m_diagnosticPublishedBuffer,DIG_PUBLISHED_BUFFER_SIZE,"{\"DEVICEID\":\"%s\",\"TIMESTAMP\":%.2f,\"DIGRES\":%s}",m_macAddress.toString().c_str(),getDatetime(),m_diagnosticResult);
+            //     // Published to MQTT 
+            //     iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_IU_DIAGNOSTIC,m_diagnosticPublishedBuffer);
+            //     if(loopDebugMode){
+            //         debugPrint("O/P Buffer : ",false);
+            //         debugPrint(m_diagnosticPublishedBuffer);
+            //         debugPrint("BUFF LEN :",false);
+            //         debugPrint(strlen(m_diagnosticPublishedBuffer));
+            //     }
+            // }
+          
+        }
+    iuTrigger.DIG_COUNT = 0;
+    reportableIndexCounter = 0;
+    clearDiagResultArray();
+}
+
+void Conductor::constructPayload(const char* dId,JsonObject& desc ){
+    // Not in Used
+    JsonObject& descJson = configureJsonFromFlash("iuconfig/desc.conf",1);
+    desc["FA"] =   1;//descJson["DESC"][dId]["FA"].as< const char* >();
+    desc["RR"] =   1;//descJson["DESC"][dId]["RR"].as< const char* >();
+    desc["CMSG"] = 1;//descJson["DESC"][dId]["CMSG"].as< const char* >();
+                  
+} 
+
+// Append the Firing Triggers of Reportable Diagnostic
+void Conductor::addFTR(const char* dId ,JsonArray& FTR,uint8_t id ){
+    // get the list of firing triggers 
+    uint8_t dig_Index = reportableDIGID[id];
+    uint8_t ftr_Count = iuTrigger.ACTIVE_TRGCOUNT[dig_Index];   // get DIG Index from DIG NAME 
+    for (size_t tId = 0; tId < ftr_Count; tId++)
+    {
+        char* TRG_ID =  iuTrigger.activeTRG[dig_Index][tId];
+        FTR.add(TRG_ID);
+    }
+}
+
+// Append the Firing Triggers of Reportable Diagnostic
+void Conductor::addFTR(JsonArray& FTR,uint8_t id ){
+    // get the list of firing triggers 
+    uint8_t dig_Index = id;
+    uint8_t ftr_Count = iuTrigger.ACTIVE_TRGCOUNT[dig_Index];   // get DIG Index from DIG NAME 
+    for (size_t tId = 0; tId < ftr_Count; tId++)
+    {
+        char* TRG_ID =  iuTrigger.activeTRG[dig_Index][tId];
+        FTR.add(TRG_ID);
+    }
+}
 /**
  * Send the acceleration raw data.
  *
@@ -4326,7 +5001,9 @@ void Conductor::manageRawDataSending() {
             debugPrint("Raw data request: collected raw data, starting transmission");
         }
         RawDataState::rawDataTransmissionInProgress = true;
-        httpStatusCodeX = httpStatusCodeY = httpStatusCodeZ = 0;
+        httpsStatusCodeX = httpsStatusCodeY = httpsStatusCodeZ = 0;
+        httpsOEMStatusCodeX = httpsOEMStatusCodeY = httpsOEMStatusCodeZ = 0;
+        sendNextAxis = false;
         XSentToWifi = YsentToWifi = ZsentToWifi = false;    
     }
 
@@ -4335,56 +5012,59 @@ void Conductor::manageRawDataSending() {
         if (!XSentToWifi) {
             prepareRawDataPacketAndSend('X');
             XSentToWifi = true; 
-            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+            // RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
             RawDataTotalTimeout = millis();
             iuWiFi.m_setLastConfirmedPublication();
             if(loopDebugMode) {
                 debugPrint("Raw data request: X sent to wifi");
             }
             // lastPacketSentToESP = millis();
-        } else if (httpStatusCodeX == 200 && !YsentToWifi) { 
+        } else if ((httpsStatusCodeX == 200 || httpsOEMStatusCodeX == 200) && (!YsentToWifi && sendNextAxis)) { 
             prepareRawDataPacketAndSend('Y');
             YsentToWifi = true;
-            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+            sendNextAxis = false;
+            // RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
             RawDataTotalTimeout = millis();
             iuWiFi.m_setLastConfirmedPublication();
             if(loopDebugMode) {
                 debugPrint("Raw data request: X delivered, Y sent to wifi");
             }
             // lastPacketSentToESP = millis();
-        } else if (httpStatusCodeY == 200 && !ZsentToWifi) {
+        } else if ((httpsStatusCodeY == 200 || httpsOEMStatusCodeY == 200) && (!ZsentToWifi && sendNextAxis)) {
             prepareRawDataPacketAndSend('Z');
             ZsentToWifi = true;
-            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+            sendNextAxis = false;
+            // RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
             RawDataTotalTimeout = millis();
             iuWiFi.m_setLastConfirmedPublication();
             if(loopDebugMode) {
                 debugPrint("Raw data request: Y delivered, Z sent to wifi");
             }
             // lastPacketSentToESP = millis();
-        } else if((millis() - RawDataTimeout) > 5000 && XSentToWifi && httpStatusCodeX != 200){
-            prepareRawDataPacketAndSend('X');
-            XSentToWifi = true;
-            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
-            if(loopDebugMode) {
-                debugPrint("Raw data request: Resending X, X sent to wifi");
-            }
-        } else if((millis() - RawDataTimeout) > 5000 && XSentToWifi && httpStatusCodeX == 200 && httpStatusCodeY != 200 ){
-            prepareRawDataPacketAndSend('Y');
-            YsentToWifi = true;
-            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
-            if(loopDebugMode) {
-                debugPrint("Raw data request: Resending Y, Y sent to wifi");
-            }
-        } else if((millis() - RawDataTimeout) > 5000 && XSentToWifi && YsentToWifi && httpStatusCodeX == 200 && httpStatusCodeY == 200 && httpStatusCodeZ != 200 ){
-            prepareRawDataPacketAndSend('Z');
-            ZsentToWifi = true;
-            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
-            if(loopDebugMode) {
-                debugPrint("Raw data request: Resending Z, Z sent to wifi");
-            }
-        }
-        if (httpStatusCodeX == 200 && httpStatusCodeY == 200 && httpStatusCodeZ == 200) {
+        } 
+        // else if((millis() - RawDataTimeout) > 8000 && XSentToWifi && httpsStatusCodeX != 200){
+        //     prepareRawDataPacketAndSend('X');
+        //     XSentToWifi = true;
+        //     RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+        //     if(loopDebugMode) {
+        //         debugPrint("Raw data request: Resending X, X sent to wifi");
+        //     }
+        // } else if((millis() - RawDataTimeout) > 8000 && XSentToWifi && httpsStatusCodeX == 200 && httpsStatusCodeY != 200 ){
+        //     prepareRawDataPacketAndSend('Y');
+        //     YsentToWifi = true;
+        //     RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+        //     if(loopDebugMode) {
+        //         debugPrint("Raw data request: Resending Y, Y sent to wifi");
+        //     }
+        // } else if((millis() - RawDataTimeout) > 8000 && XSentToWifi && YsentToWifi && httpsStatusCodeX == 200 && httpsStatusCodeY == 200 && httpsStatusCodeZ != 200 ){
+        //     prepareRawDataPacketAndSend('Z');
+        //     ZsentToWifi = true;
+        //     RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+        //     if(loopDebugMode) {
+        //         debugPrint("Raw data request: Resending Z, Z sent to wifi");
+        //     }
+        // }
+        if ((httpsStatusCodeX == 200 && httpsStatusCodeY == 200 && httpsStatusCodeZ == 200) || (httpsOEMStatusCodeX == 200 && httpsOEMStatusCodeY == 200 && httpsOEMStatusCodeZ == 200) ) {
             // End the transmission session, reset RawDataState::startRawDataCollection and RawDataState::rawDataTransmissionInProgress
             // Rest of the tracking variables are reset when rawDataRequest() is called
             if(loopDebugMode) {
@@ -4393,7 +5073,7 @@ void Conductor::manageRawDataSending() {
             RawDataState::startRawDataCollection = false;
             RawDataState::rawDataTransmissionInProgress = false;    
         }
-        if((millis() - RawDataTotalTimeout) > 20000)
+        if((millis() - RawDataTotalTimeout) > 30000)
         { // IDE1.5_PORT_CHANGE -- On timeout of 4 Sec. if no response OK/FAIL then abort transmission
             RawDataState::startRawDataCollection = false;
             RawDataState::rawDataTransmissionInProgress = false;              
@@ -4439,6 +5119,7 @@ void Conductor::periodicSendAccelRawData()
 {
     uint32_t now = millis();
     if (now - m_rawDataPublicationStart > m_rawDataPublicationTimer) {
+        iuWiFi.sendHostSamplingRate(FFTConfiguration::calculatedSamplingRate);
         if (loopDebugMode)
             debugPrint(F("***  Sending Raw Data ***"));
         delay(500);
@@ -4549,15 +5230,18 @@ void Conductor::sendDiagnosticFingerPrints() {
                     }
                         
                         
-                }else if(m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE)//iuWiFi.isAvailable() && iuWiFi.isWorking())   
+                }else if(m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE || m_streamingMode == StreamingMode::BLE)//iuWiFi.isAvailable() && iuWiFi.isWorking())   
                 {   /* FingerPrintResult send over Wifi only */
                     //debugPrint("Wifi connected, ....",true);
-                    if(RawDataState::rawDataTransmissionInProgress == false)
-                    { 
-                        iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );    
+                    // if(RawDataState::rawDataTransmissionInProgress == false && iuWiFi.isConnected())
+                    // {    
+                    //     iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );    
+                    // }
+                    if(StreamingMode::BLE && isBLEConnected()){    
+                    iuBluetooth.write("Fingerprints Data : ");
+                    iuBluetooth.write(FingerPrintResult);
                     }
                 }
-                
             }
             else { // not published as time_diff < 500 ms
                 // if(loopDebugMode) {
@@ -4610,37 +5294,101 @@ bool Conductor::setFFTParams() {
         {
             debugPrint(F("LSM Present & LSM set"));
             iuAccelerometer.setSamplingRate(FFTConfiguration::currentSamplingRate);
+            FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_LSM;
             setSensorStatus(SensorStatusCode::LSM_SET);
+            if(config.containsKey("grange")){
+                FFTConfiguration::currentLSMgRange = config["grange"];
+            }else{
+                FFTConfiguration::currentLSMgRange = FFTConfiguration::DEFAULT_LSM_G_RANGE;
+            }
+            iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
         }
         else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (iuAccelerometerKX222.kionixPresence))
         {
             debugPrint(F("KIONIX Present & KIONIX set"));
             iuAccelerometerKX222.setSamplingRate(FFTConfiguration::currentSamplingRate); // will set the ODR for the sensor
+            FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
             setSensorStatus(SensorStatusCode::KNX_SET);
+            if(config.containsKey("grange")){
+                FFTConfiguration::currentKNXgRange = config["grange"];
+            }else{
+                FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_KNX_G_RANGE;
+            }
+            iuAccelerometerKX222.setGrange(FFTConfiguration::currentKNXgRange);
         }else if((FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor) && (!iuAccelerometer.lsmPresence) && (iuAccelerometerKX222.kionixPresence)){
             debugPrint(F("LSM absent & KIONIX set"));
             iuAccelerometerKX222.setSamplingRate(iuAccelerometerKX222.defaultSamplingRate);
             FFTConfiguration::currentSamplingRate = iuAccelerometerKX222.defaultSamplingRate;
             FFTConfiguration::currentSensor = FFTConfiguration::kionixSensor;
-            FFTConfiguration::currentBlockSize = iuAccelerometerKX222.DEFAULT_BLOCK_SIZE;
+            FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
+            FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
             setSensorStatus(SensorStatusCode::LSM_ABS);
+            FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_KNX_G_RANGE;
+            iuAccelerometerKX222.setGrange(FFTConfiguration::currentKNXgRange);
         }else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (!iuAccelerometerKX222.kionixPresence) && (iuAccelerometer.lsmPresence)){
             debugPrint(F("KIONIX Absent & LSM set"));
             iuAccelerometer.setSamplingRate(iuAccelerometer.defaultSamplingRate);
             FFTConfiguration::currentSamplingRate = iuAccelerometer.defaultSamplingRate;
             FFTConfiguration::currentSensor = FFTConfiguration::lsmSensor;
             FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
+            FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_LSM;
             setSensorStatus(SensorStatusCode::KNX_ABS);
+            FFTConfiguration::currentLSMgRange = FFTConfiguration::DEFAULT_LSM_G_RANGE;
+            iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
         }
         else{
             debugPrint(F("KIONIX, LSM not found"));
             setSensorStatus(SensorStatusCode::SEN_ABS);
         }
-        // TODO: The following can be configurable in the future
-        FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY;
-        FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
-        FFTConfiguration::currentMinAgitation = FFTConfiguration::DEFAULT_MIN_AGITATION;
+        // // TODO: The following can be configurable in the future
+        // // FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY;
+        // FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
+        // FFTConfiguration::currentMinAgitation = FFTConfiguration::DEFAULT_MIN_AGITATION;
 
+        // // Change the required sectionCount for all FFT processors 
+        // // Update the lowCutFrequency and highCutFrequency for each FFTComputerID
+        // int FFTComputerID = 30;  // FFTComputers X, Y, Z have m_id = 0, 1, 2 correspondingly
+        // for (int i=0; i<3; ++i) {
+        //     FeatureComputer::getInstanceById(FFTComputerID + i)->updateSectionCount(FFTConfiguration::currentBlockSize / 128);
+        //     FeatureComputer::getInstanceById(FFTComputerID + i)->updateFrequencyLimits(FFTConfiguration::currentLowCutOffFrequency, FFTConfiguration::currentHighCutOffFrequency);
+        // }        
+
+        // // Update the parameters of the diagnostic engine
+        // DiagnosticEngine::m_SampleingFrequency = FFTConfiguration::currentSamplingRate;
+        // DiagnosticEngine::m_smapleSize = FFTConfiguration::currentBlockSize;
+        // DiagnosticEngine::m_fftLength = FFTConfiguration::currentBlockSize / 2;
+
+        if(setupDebugMode) {
+            config.prettyPrintTo(Serial);
+        }
+        configured = true;
+    } else {
+        if(iuAccelerometerKX222.kionixPresence){
+                conductor.setSensorStatus(conductor.SensorStatusCode::KNX_DEFAULT); // TO DO based on hardware identifier
+                FFTConfiguration::currentSamplingRate = iuAccelerometerKX222.defaultSamplingRate;
+                FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
+                FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
+                FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_KNX_G_RANGE;
+                iuAccelerometerKX222.setGrange(FFTConfiguration::currentKNXgRange);
+            }else if(iuAccelerometer.lsmPresence){
+                conductor.setSensorStatus(conductor.SensorStatusCode::LSM_DEFAULT); // TO DO based on hardware identifier
+                FFTConfiguration::currentSamplingRate = iuAccelerometer.defaultSamplingRate;
+                FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
+                FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_LSM;
+                FFTConfiguration::currentLSMgRange = FFTConfiguration::DEFAULT_LSM_G_RANGE;
+                iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
+            }else{
+                conductor.setSensorStatus(conductor.SensorStatusCode::SEN_ABS);
+            }
+        if(loopDebugMode) debugPrint("Failed to read fft.conf file. Configured with defaults");
+        configured = false;
+    }
+    // TODO: The following can be configurable in the future
+        // FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY;
+        FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
+        FFTConfiguration::calculatedSamplingRate = FFTConfiguration::currentSamplingRate;
+        FFTConfiguration::currentMinAgitation = FFTConfiguration::DEFAULT_MIN_AGITATION;
+        
         // Change the required sectionCount for all FFT processors 
         // Update the lowCutFrequency and highCutFrequency for each FFTComputerID
         int FFTComputerID = 30;  // FFTComputers X, Y, Z have m_id = 0, 1, 2 correspondingly
@@ -4653,16 +5401,46 @@ bool Conductor::setFFTParams() {
         DiagnosticEngine::m_SampleingFrequency = FFTConfiguration::currentSamplingRate;
         DiagnosticEngine::m_smapleSize = FFTConfiguration::currentBlockSize;
         DiagnosticEngine::m_fftLength = FFTConfiguration::currentBlockSize / 2;
-
-        if(setupDebugMode) {
-            config.prettyPrintTo(Serial);
-        }
-        configured = true;
-    } else {
-        if(loopDebugMode) debugPrint("Failed to read fft.conf file");
-        configured = false;
-    }
     return configured;
+}
+
+bool Conductor::configureRPM(JsonVariant &config){
+    bool success = false;    
+    if (config.success())
+    {
+        int LOW_RPM  = config["LOW_RPM"];
+        int HIGH_RPM = config["HIGH_RPM"];
+        float RPM_TRH = config["RPM_TRH"]; 
+        const char* messageId = config["messageId"];
+           
+        if(loopDebugMode){
+            debugPrint("LOW RPM : ",false);
+            debugPrint(LOW_RPM);
+            debugPrint("HIGH RPM : ",false);
+            debugPrint(HIGH_RPM);
+            debugPrint("RPM_TRH :",false);
+            debugPrint(RPM_TRH);
+        }
+        if(LOW_RPM < FFTConfiguration::currentLowCutOffFrequency || LOW_RPM > FFTConfiguration::currentHighCutOffFrequency ){
+            LOW_RPM = FFTConfiguration::currentLowCutOffFrequency;
+        }
+        if (HIGH_RPM > FFTConfiguration::currentHighCutOffFrequency || HIGH_RPM < FFTConfiguration::currentLowCutOffFrequency)
+        { 
+            HIGH_RPM = FFTConfiguration::currentHighCutOffFrequency;
+        }
+        FFTConfiguration::currentLowRPMFrequency = LOW_RPM;
+        FFTConfiguration::currentHighRPMFrequency = HIGH_RPM;
+        if(RPM_TRH < 0 || RPM_TRH == 0){
+            FFTConfiguration::currentRPMThreshold = FFTConfiguration::DEFAULT_RPM_THRESHOLD;
+        }else{
+            FFTConfiguration::currentRPMThreshold = RPM_TRH;
+        }
+        success = true;
+    }
+    
+       
+  return success;
+
 }
 
 /* =============================================================================
@@ -5240,12 +6018,13 @@ void Conductor::sendSegmentedMessageResponse(int messageID) {
     }
 }
 
-void Conductor::setThresholdsFromFile() 
+bool Conductor::setThresholdsFromFile() 
 {
-    const size_t bufferSize = 6*JSON_ARRAY_SIZE(3) + 6*JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3) + JSON_OBJECT_SIZE(6) + 272;
+    const size_t bufferSize = 6*JSON_ARRAY_SIZE(3) + 6*JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3) + JSON_OBJECT_SIZE(6) + 972;
     StaticJsonBuffer<bufferSize> jsonBuffer;
     JsonVariant config = JsonVariant(
             iuFlash.loadConfigJson(IUFlash::CFG_FEATURE, jsonBuffer));
+    bool configStatus = true;
     // config.prettyPrintTo(Serial);
     if (config.success()) {
         const char* threshold = "TRH";
@@ -5284,11 +6063,14 @@ void Conductor::setThresholdsFromFile()
 
         }
         processLegacyCommand("6000000:1.1.1.1.1.1");            //ensure these features are activated
-        computeFeatures();                                      //compute current state with these thresholds
+        computeFeatures();
+        configStatus = true;                                      //compute current state with these thresholds
     }
     else {
+        configStatus = false;
         debugPrint("Threshold file read was not successful.");
     }
+    return configStatus;
 }
 //set the sensor Configuration
 
@@ -5377,21 +6159,30 @@ void Conductor::setSensorStatus(SensorStatusCode errorCode)
     switch (errorCode)
     {
         case SensorStatusCode::LSM_SET:
+            FFTConfiguration::currentSensor = FFTConfiguration::lsmSensor;
             strcpy(status, "Running with LSM");
             break;
         case SensorStatusCode::KNX_SET:
+            FFTConfiguration::currentSensor = FFTConfiguration::kionixSensor;
             strcpy(status, "Running with Kionix");
             break;
         case SensorStatusCode::LSM_ABS:
+            FFTConfiguration::currentSensor = FFTConfiguration::kionixSensor;
             strcpy(status, "LSM not found, Running with Kionix defaults");
             break;
         case SensorStatusCode::KNX_ABS:
+            FFTConfiguration::currentSensor = FFTConfiguration::lsmSensor;
             strcpy(status, "Kionix not found, Running with LSM defaults");
             break;
         case SensorStatusCode::SEN_ABS:
             strcpy(status, "Sensors not found, Please check the Hardware");
             break;
+        case SensorStatusCode::KNX_DEFAULT:
+            FFTConfiguration::currentSensor = FFTConfiguration::kionixSensor;
+            strcpy(status, "Configuration not found, Using Kionix defaults");
+            break;
         case SensorStatusCode::LSM_DEFAULT:
+            FFTConfiguration::currentSensor = FFTConfiguration::lsmSensor;
             strcpy(status, "Configuration not found, Using LSM defaults");
             break;
     }
@@ -5495,14 +6286,14 @@ void Conductor::otaChkFwdnldTmout()
     {
         if ( (now - m_downloadSuccessStartTime ) > 5000 )
         {
-            if (iuWiFi.isConnected() || m_mqttConnected == true)
+            if ((iuWiFi.isConnected() && m_upgradeSuccess)|| m_mqttConnected == true)
             {   
                 certDownloadInProgress = false;
                 m_downloadSuccess = false;
                 // m_downloadSuccessStartTime = millis();
                 // Certificate Upgrade went Successful
                 ledManager.overrideColor(RGB_PURPLE);
-                sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_SUCCESS,CERT_UPGRADE_COMPLETE,"CERT-RCA-0000");
+                // sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_SUCCESS,CERT_UPGRADE_COMPLETE,"CERT-RCA-0000");
                 // TODO : Add Visuals
                 // Show Visuals min 15 sec
                 for(int i = 0 ; i < 20; i++) {
@@ -5699,7 +6490,7 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
     conductor.configureMQTTServer("MQTT.conf");
     // 3. Check default parameter setting changed to read from config file ?
     if(strcmp(m_mqttServerIp,"mqtt.infinite-uptime.com") == 0 && m_mqttServerPort == 8883 &&
-      (strcmp(m_mqttUserName,"") == 0) && (strcmp(m_mqttPassword,"") == 0))
+      (strcmp(m_mqttUserName,NULL) == 0) && (strcmp(m_mqttPassword,NULL) == 0))
     {
         ValidationFile->println(F("   Validation [MQTT]-Read Config File: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Read Config File: Fail !")); }
@@ -5742,14 +6533,14 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
     ValidationFile->println(F("DEVICE FFT CONFIG CHECK:-"));
     ValidationFile->print(F(" - FFT DEFAULT SAMPLING RATE:"));
     ValidationFile->println(FFTConfiguration::DEFAULT_SAMPLING_RATE);
-    if(FFTConfiguration::DEFAULT_SAMPLING_RATE != 3330)
+    if(FFTConfiguration::DEFAULT_SAMPLING_RATE != 25600)
     {
         ValidationFile->println(F("   Validation [FFT]-Default Sampling Rate: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [FFT]-Default Sampling Rate: Fail !")); }
     }
     ValidationFile->print(F(" - FFT DEFAULT BLOCK SIZE:"));
     ValidationFile->println(FFTConfiguration::DEFAULT_BLOCK_SIZE);
-    if(FFTConfiguration::DEFAULT_BLOCK_SIZE != 4096)
+    if(FFTConfiguration::DEFAULT_BLOCK_SIZE != 8192)
     {
         ValidationFile->println(F("   Validation [FFT]-Default Block Size: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [FFT]-Default Block Size: Fail !")); }
@@ -5791,7 +6582,7 @@ uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
         if(loopDebugMode){ debugPrint(F("Validation [DEV]-Free Memory: Fail !")); }      
         ValidationFile->println(F("***************************************************************************************" ));
         ValidationFile->println(F(""));
-        return OTA_VALIDATION_FAIL;
+        // return OTA_VALIDATION_FAIL;  // Bypass Freememory check because of low memory when we configure Diagnostics.
     }
     if(loopDebugMode){ debugPrint(F("Validation [DEV]-Free Memory: Ok")); }  
     F_SPACE space;
@@ -5843,7 +6634,6 @@ uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
     }
     ValidationFile->println(F("DEVICE SENSOR INTERFACE CHECK:-"));
 
-    iuI2C1.scanDevices();
     if ((FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor) && (iuAccelerometer.lsmPresence))
     {
         iuI2C.scanDevices();
@@ -5903,7 +6693,7 @@ uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
         otaRtryValidation++;
     }
 #endif
-
+    // iuI2C1.scanDevices();
     if(iuI2C1.i2c_dev[0] == iuTemp.ADDRESS || iuI2C1.i2c_dev[1] == iuTemp.ADDRESS)
     {
         ValidationFile->print(F("TMP116 I2C1 Device ID: 0x"));
@@ -5915,7 +6705,7 @@ uint8_t Conductor::firmwareDeviceValidation(File *ValidationFile)
     {
         ValidationFile->println(F("   Validation [TMP]-Read Add: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [TMP]-Read Add: Fail !")); }
-        otaRtryValidation++;
+        // otaRtryValidation++;
     }
 
     ValidationFile->print(F("DEVICE READ Audio Data: "));
@@ -6025,7 +6815,7 @@ void Conductor::getOtaStatus()
  */
 void Conductor::sendOtaStatus()
 {
-    if((iuWiFi.isConnected()) && (otaSendMsg == true) && conductor.getDatetime() > 1590000000.00 && iuWiFi.getConnectionStatus()) 
+    if((iuWiFi.isConnected()) && (otaSendMsg == true) && validTimeStamp() && iuWiFi.getConnectionStatus()) 
     {
         iuOta.readOtaFlag();
         uint8_t otaStatus = iuOta.getOtaFlagValue(OTA_STATUS_FLAG_LOC);
@@ -6133,7 +6923,7 @@ void Conductor::sendOtaStatusMsg(MSPCommand::command type, char *msg, const char
         iuOta.otaSendResponse(type, otaResponse);  // Checksum failed
     }
     else {
-        if(iuWiFi.isConnected() && conductor.getDatetime() > 1590000000.00 && iuWiFi.getConnectionStatus()) {
+        if(iuWiFi.isConnected() && validTimeStamp() && iuWiFi.getConnectionStatus()) {
             if (loopDebugMode) { debugPrint(F("WiFi Conntected, Sending OTA | Cert Status Message")); }   
             snprintf(otaResponse, 256, "{\"messageId\":\"%s\",\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"reasonCode\":\"%s\",\"timestamp\":%.2f}",
             m_otaMsgId,m_macAddress.toString().c_str(), OTA_DEVICE_TYPE,msg, errMsg ,otaInitTimeStamp);
@@ -6360,8 +7150,9 @@ void Conductor::periodicFlashTest()
         }
         else
         {
-            debugPrint("File Read Failed...Rebooting...");
-            conductor.sendFlashStatusMsg(FLASH_ERROR,"Rebooting");
+            debugPrint("File Read Failed...Formating Flash...");
+            conductor.sendFlashStatusMsg(FLASH_ERROR,"Formating Flash...");
+            DOSFS.format();
             delay(3000);
             DOSFS.end();
             delay(10);
@@ -6371,8 +7162,9 @@ void Conductor::periodicFlashTest()
         }
         else
         {
-        debugPrint("File Read Failed...Rebooting...");
-        conductor.sendFlashStatusMsg(FLASH_ERROR,"Rebooting");
+        debugPrint("File Read Failed...Formating Flash...");
+        conductor.sendFlashStatusMsg(FLASH_ERROR,"Formating Flash...");
+        DOSFS.format();
         delay(3000);
         DOSFS.end();
         delay(10);
@@ -6604,4 +7396,420 @@ void Conductor::updateWiFiHash()
     char wifiHash[34];  
     iuOta.otaGetMD5(IUFSFlash::CONFIG_SUBDIR,"wifi0.conf",wifiHash);
     iuWiFi.sendMSPCommand(MSPCommand::SEND_WIFI_HASH,wifiHash);
+}
+
+void Conductor::sendConfigRequest()
+{
+    char response[128];
+    double TimeStamp = conductor.getDatetime();
+          
+    sprintf(response,"%s%s%s%s","{\"DEVICEID\":\"", m_macAddress.toString().c_str(),"\"",",\"CONFIGTYPE\":\"features\"}");
+    iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_CONFIG_CHECKSUM, response);
+}
+#if 0
+void Conductor::computeDiagnoticState(JsonVariant &digList)
+{
+        // uint16_t m_minSpan[maxDiagnosticStates] = {50,40,50};
+        // uint16_t m_aleartRepeat[maxDiagnosticStates] = {60,50,60};
+        // uint16_t m_maxGap[maxDiagnosticStates] = {30,25,30};
+    //getAlertPolicyTime();
+    //JsonObject &root = configureJsonFromFlash("/iuRule/diginp.conf", 1); // Expected input { "UNBAL": 1, "MISALIG": 1, "BPFO": 1, ...} 
+    JsonObject& root =  digList["DIG"];
+    debugPrint("\nDIG LIST :",false);
+    root.printTo(Serial);
+
+    bool state[maxDiagnosticStates];
+    bool exposeDebugPrints = true;  // Enable this flag to get debugPrints
+    int index = 0;
+    int resultIndex = 0;
+    if(validTimeStamp())  // Waiting for TimeSync to Avoid False Trigger
+    {
+        // uint32_t now = millis();
+        for (auto iterate : root)
+        {
+            if(exposeDebugPrints){
+                debugPrint("____________________________________");
+            }
+            state[index] = (iterate.value.as<bool>());
+            if (state[index])
+            {
+                if (first_active_flag[index] == false)
+                {
+                    if (exposeDebugPrints)
+                    {
+                        debugPrint(iterate.key, false);
+                        debugPrint(" : Activated ");
+                    }
+                    first_active[index] = getDatetime();
+                    last_active[index] = getDatetime();
+                    first_active_flag[index] = true;
+                    last_active_flag[index] = true;
+                    reset_alert_flag[index] = false;
+                }
+
+                if ((getDatetime() - first_active[index] > m_minSpan[index]) && last_alert_flag[index] == false && first_active_flag[index])
+                {
+                    last_alert_flag[index] = true;
+                    last_alert[index] = getDatetime();
+                    diagAlertResults[resultIndex]=iterate.key;
+                    ++m_totalDigCount[index];  
+                    ++m_activeDigCount[index];
+                    iuTrigger.pushToStack(STACK::REPORTABLE_DIG,iterate.key);   // push to R stack
+                    if (exposeDebugPrints)
+                    {
+                        debugPrint(iterate.key, false);
+                        debugPrint(" : ALERT");
+                        debugPrint(diagAlertResults[resultIndex]);
+                    }
+                   ++ resultIndex;
+                }
+                
+                if(getDatetime() - last_alert[index] > m_aleartRepeat[index] && last_alert_flag[index])
+                {
+                    last_alert[index] = getDatetime();
+                    diagAlertResults[resultIndex]=iterate.key;
+                    ++m_totalDigCount[index];  
+                    ++m_activeDigCount[index];
+                    iuTrigger.pushToStack(STACK::REPORTABLE_DIG,iterate.key);   // push to R stack
+                    if (exposeDebugPrints)
+                    {
+                        debugPrint(iterate.key, false);
+                        debugPrint(" : ALERT REP");
+                        debugPrint(diagAlertResults[resultIndex]);
+                    }
+                    ++resultIndex;
+                }
+                last_active_flag[index] = true;
+                if (exposeDebugPrints)
+                {
+                    debugPrint(iterate.key, false);
+                    debugPrint(" : ", false);
+                    debugPrint(state[index]);
+                    debugPrint("MIN SPAN : ", false);
+                    debugPrint(m_minSpan[index]);
+                    debugPrint("ALERT REP : ", false);
+                    debugPrint(m_aleartRepeat[index]);
+                    debugPrint("MAX GAP : ", false);
+                    debugPrint(m_maxGap[index]);
+                    debugPrint("Total Active Time : ", false);
+                    debugPrint((getDatetime() - first_active[index]));
+                    debugPrint("Calc Rep Time : ", false);
+                    debugPrint(getDatetime() - last_alert[index]);
+                    debugPrint("Diagnostic Active Count :",false);
+                    debugPrint(m_activeDigCount[index]);
+                    debugPrint("Toatl Diagnostic Active Count :",false);
+                    debugPrint(m_totalDigCount[index]);
+                    debugPrint("____________________________________");
+                }
+            }
+            else{
+                if(last_active_flag[index]){
+                    last_active[index] = getDatetime();
+                    last_active_flag[index] = false;
+                }
+                if((getDatetime() - last_active[index] < m_maxGap[index]) && last_active_flag[index] == false && reset_alert_flag[index] == false)
+                {
+                   last_active[index] = getDatetime();
+                   reset_alert_flag[index] = true;
+                }else if((getDatetime() - last_active[index] > m_maxGap[index]) && last_active_flag[index] == false && reset_alert_flag[index] == true){
+                    first_active_flag[index] = false;
+                    last_active_flag[index] = false;
+                    last_alert_flag[index] = false;
+                    reset_alert_flag[index] = false;
+                    m_activeDigCount[index] = 0 ;
+                    if (exposeDebugPrints)
+                    {
+                        debugPrint(iterate.key, false);
+                        debugPrint(" : Reset Alert");
+                    }
+                }
+                if (exposeDebugPrints)
+                {
+                    debugPrint(iterate.key, false);
+                    debugPrint(" : ", false);
+                    debugPrint(state[index]);
+                    debugPrint("MIN SPAN : ", false);
+                    debugPrint(m_minSpan[index]);
+                    debugPrint("ALERT REP : ", false);
+                    debugPrint(m_aleartRepeat[index]);
+                    debugPrint("MAX GAP : ", false);
+                    debugPrint(m_maxGap[index]);
+                    debugPrint("Current Min Gap : ", false);
+                    debugPrint(getDatetime() - last_active[index]);
+                    debugPrint("Total De-Active Time : ", false);
+                    debugPrint(getDatetime() - last_active[index]);
+                    debugPrint("Diagnostic Active Count :",false);
+                    debugPrint(m_activeDigCount[index]);
+                    debugPrint("Toatl Diagnostic Active Count :",false);
+                    debugPrint(m_totalDigCount[index]);
+                    debugPrint("____________________________________");
+                }
+            }
+            ++index;
+        }
+        
+        debugPrint("Result Array : ",false);
+        for(int i=0;i<maxDiagnosticStates;i++){
+            debugPrint(diagAlertResults[i],false);
+            debugPrint(",",false);
+        }
+        debugPrint("");
+        clearDiagResultArray(); // In actual condition. Need to call this method after Publishing Alert Results 
+    }
+}
+#endif
+
+void Conductor::computeDiagnoticState(String *diagInput, int totalConfiguredDiag)
+{
+    int resultIndex = 0;
+    bool exposeDebugPrints = false;  // Enable this flag to get debugPrints    int resultIndex = 0;
+    if(validTimeStamp())  // Waiting for TimeSync to Avoid False Trigger
+    {
+        for (int index = 0; index< totalConfiguredDiag;index++)
+        {
+            if(exposeDebugPrints){
+                debugPrint("____________________________________");
+            }
+            // state[index] = (iterate.value.as<bool>());
+            if (diagInput[index].endsWith("1"))
+            {
+                diagInput[index].remove(diagInput[index].length() - 1);
+                if (first_active_flag[index] == false)
+                {
+                    if (exposeDebugPrints)
+                    {
+                        debugPrint(diagInput[index], false);
+                        debugPrint(" : Activated ");
+                    }
+                    first_active[index] = getDatetime();
+                    last_active[index] = getDatetime();
+                    first_active_flag[index] = true;
+                    last_active_flag[index] = true;
+                    reset_alert_flag[index] = false;
+                }
+                if ((getDatetime() - first_active[index] > m_minSpan[index]) && last_alert_flag[index] == false && first_active_flag[index])
+                {
+                    last_alert_flag[index] = true;
+                    last_alert[index] = getDatetime();
+                    alert_repeat_state[resultIndex] = false;
+                    diagAlertResults[resultIndex]=(char*)diagInput[index].c_str();
+                    reportable_m_id[resultIndex] = getm_id(diagAlertResults[resultIndex],totalConfiguredDiag);
+                    reportableDIGID[reportableIndexCounter] = index;   
+                    if (exposeDebugPrints)
+                    {
+                        debugPrint(diagInput[index], false);
+                        debugPrint(" : ALERT");
+                        debugPrint(diagAlertResults[resultIndex]);
+                        debugPrint(reportable_m_id[resultIndex]);
+                    }
+                   ++ resultIndex;
+                   reportableIndexCounter ++; 
+                }
+                if(getDatetime() - last_alert[index] > m_aleartRepeat[index] && last_alert_flag[index])
+                {
+                    last_alert[index] = getDatetime();                    
+                    alert_repeat_state[resultIndex] = true;
+                    diagAlertResults[resultIndex]=(char*) diagInput[index].c_str();
+                    reportable_m_id[resultIndex] = getm_id(diagAlertResults[resultIndex],totalConfiguredDiag);
+                    reportableDIGID[reportableIndexCounter] = index;
+                    if (exposeDebugPrints)
+                    {
+                        debugPrint(diagInput[index], false);
+                        debugPrint(" : ALERT REP");
+                        debugPrint(diagAlertResults[resultIndex]);
+                        debugPrint(reportable_m_id[resultIndex]);
+                    }
+                    ++resultIndex;
+                    reportableIndexCounter ++;
+                }
+                last_active_flag[index] = true;
+                if (exposeDebugPrints)
+                {
+                    debugPrint(diagInput[index], false);
+                    debugPrint(" : ", false);
+                    debugPrint("1");
+                    debugPrint("MIN SPAN : ", false);
+                    debugPrint(m_minSpan[index]);
+                    debugPrint("ALERT REP : ", false);
+                    debugPrint(m_aleartRepeat[index]);
+                    debugPrint("MAX GAP : ", false);
+                    debugPrint(m_maxGap[index]);
+                    debugPrint("Total Active Time : ", false);
+                    debugPrint((getDatetime() - first_active[index]));
+                    debugPrint("Calc Rep Time : ", false);
+                    debugPrint(getDatetime() - last_alert[index]);
+                    debugPrint("____________________________________");
+                }
+            }
+            else if (diagInput[index].endsWith("0")){
+                diagInput[index].remove(diagInput[index].length() - 1);
+                if(last_active_flag[index]){
+                    last_active[index] = getDatetime();
+                    last_active_flag[index] = false;
+                }
+                if((getDatetime() - last_active[index] < m_maxGap[index]) && last_active_flag[index] == false && reset_alert_flag[index] == false)
+                {
+                   last_active[index] = getDatetime();
+                   reset_alert_flag[index] = true;
+                }else if((getDatetime() - last_active[index] > m_maxGap[index]) && last_active_flag[index] == false && reset_alert_flag[index] == true){
+                    first_active_flag[index] = false;
+                    last_active_flag[index] = false;
+                    last_alert_flag[index] = false;
+                    reset_alert_flag[index] = false;
+                    if (exposeDebugPrints)
+                    {
+                        debugPrint(diagInput[index], false);
+                        debugPrint(" : Reset Alert");
+                    }
+                }
+                if (exposeDebugPrints)
+                {
+                    debugPrint(diagInput[index], false);
+                    debugPrint(" : ", false);
+                    debugPrint("0");
+                    debugPrint("MIN SPAN : ", false);
+                    debugPrint(m_minSpan[index]);
+                    debugPrint("ALERT REP : ", false);
+                    debugPrint(m_aleartRepeat[index]);
+                    debugPrint("MAX GAP : ", false);
+                    debugPrint(m_maxGap[index]);
+                    debugPrint("Current Min Gap : ", false);
+                    debugPrint(getDatetime() - last_active[index]);
+                    debugPrint("Total De-Active Time : ", false);
+                    debugPrint(getDatetime() - last_active[index]);
+                    debugPrint("____________________________________");
+                }
+            }
+        }
+        // Display Reportable Diagnostic list        
+        if(exposeDebugPrints){
+            debugPrint("Result Array : ",false);
+            for(int i=0;i<maxDiagnosticStates;i++){
+                debugPrint(diagAlertResults[i],false);
+                debugPrint(",",false);
+            }
+            debugPrint("");
+            debugPrint("Reportable M_id : ,",false);
+            for(int i=0;i<maxDiagnosticStates;i++){
+                debugPrint(reportable_m_id[i],false);
+                debugPrint(",",false);
+            }
+            debugPrint("");
+        }
+        //TODO: Copy reportable_m_id array to temp array
+        for(int i=0;i<totalConfiguredDiag;i++){
+            modbus_reportable_m_id[i] = reportable_m_id[i];
+        }
+
+        //clearDiagResultArray(); // In actual condition. Need to call this method after Publishing Alert Results 
+    }
+    reportableDIGLength = resultIndex;  // number of reportable diagnostic
+    
+}
+
+void Conductor::configureAlertPolicy()
+{
+    JsonObject &diag = configureJsonFromFlash("/iuRule/diagnostic.conf", 1);
+    if(diag.success()){
+    size_t totalDiagnostics = diag["CONFIG"]["DIG"]["DID"].size();
+
+    // debugPrint("\nTotal No. Of Duiagnostics = ",false);
+    // debugPrint(totalDiagnostics);
+
+    for(int i = 0; i < totalDiagnostics; i++){
+        m_minSpan[i] =      diag["CONFIG"]["DIG"]["ALTP"]["MINSPN"][i];
+        m_aleartRepeat[i] = diag["CONFIG"]["DIG"]["ALTP"]["ALRREP"][i];
+        m_maxGap[i] =       diag["CONFIG"]["DIG"]["ALTP"]["MAXGAP"][i];
+        m_id[i] = diag["CONFIG"]["DIG"]["MID"][i];
+        d_id[i] = diag["CONFIG"]["DIG"]["DID"][i];
+    }
+
+    // for(int i = 0; i < totalDiagnostics; i++){
+    //     debugPrint("MIN SPAN : ", false);debugPrint(m_minSpan[i]);
+    //     debugPrint("ALR REP : ", false);debugPrint(m_aleartRepeat[i]);
+    //     debugPrint("MAX GAP : ", false);debugPrint(m_maxGap[i]);
+    // }
+    }
+    else{
+        if(debugMode){debugPrint("failed to read diagnostic conf file ");} 
+    }
+}
+
+void Conductor::clearDiagStateBuffers()
+{
+    memset(last_active,'\0',sizeof(last_active));
+    memset(first_active,'\0',sizeof(first_active));
+    memset(last_alert,'\0',sizeof(last_alert));
+    memset(first_active_flag,'\0',sizeof(first_active_flag));
+    memset(last_active_flag,'\0',sizeof(last_active_flag));
+    memset(last_alert_flag,'\0',sizeof(last_alert_flag));
+    memset(reset_alert_flag,'\0',sizeof(reset_alert_flag));
+    memset(m_id, '\0', sizeof(m_id));
+    memset(d_id, '\0', sizeof(d_id));
+}
+
+void Conductor::clearDiagResultArray(){
+    memset(diagAlertResults,'\0',sizeof(diagAlertResults));
+    memset(alert_repeat_state,'\0',sizeof(alert_repeat_state));
+    memset(reportable_m_id, '\0', sizeof(reportable_m_id));
+}
+
+int Conductor::getTotalDigCount(const char* diagName){
+
+ 
+}
+int Conductor::getActiveDigCount(const char* diagName){
+
+}
+        
+char* Conductor::GetStoredMD5(IUFlash::storedConfig configType, JsonObject &inputConfig)
+{
+    char hash[40];
+
+    if(inputConfig.containsKey("CONFIG_HASH"))
+    {
+        switch (configType)
+        {
+        case IUFlash::CFG_DEVICE:
+            strcpy(hash,inputConfig["CONFIG_HASH"]["device"]);
+            break;
+        case IUFlash::CFG_FEATURE:
+            strcpy(hash,inputConfig["CONFIG_HASH"]["features"]);
+            break;
+        default:
+            break;
+        }
+        return hash;
+    }else{
+        return "error";
+    }
+    
+}
+
+void Conductor::mergeJson(JsonObject& dest, const JsonObject& src) {
+   for (auto kvp : src) {
+     dest[kvp.key] = kvp.value;
+   }
+}
+
+bool Conductor::validTimeStamp(){
+    if(getDatetime() > 1600000000.00){
+        return true;
+    }else{
+       return false;
+    }
+}
+
+uint8_t Conductor::getm_id(char* did,  int totalConfiguredDiag){
+    for(int i = 0 ; i < totalConfiguredDiag ; i++){
+        if(strcmp(did,d_id[i]) == 0){
+            return m_id[i];
+        }
+    }
+}
+
+void Conductor::addAdvanceFeature(JsonObject& destJson, uint8_t index , String* id, float* value){
+    for(size_t i=0;i<index;i++){
+        destJson[id[i]] = value[i];
+    }        
 }

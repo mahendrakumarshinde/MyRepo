@@ -98,12 +98,14 @@ class IULSM6DSM : public HighFreqSensor
         void softReset();
         virtual void setPowerMode(PowerMode::option pMode);
         virtual void setSamplingRate(uint16_t samplingRate);
+        virtual void updateSamplingRate(uint16_t samplingRate){m_samplingRate = samplingRate;HighFreqSensor::setSamplingRate(samplingRate);};
         void configureInterrupts();
         void computeBias();
         /***** Configuration and calibration *****/
         virtual void configure(JsonVariant &config);
         virtual void setResolution(float resolution);
-        void setScale(scaleOption scale);
+        void setScale(scaleOption scale);    
+        void setGrange(uint8_t g);
         scaleOption getScale() { return m_scale; }
         void resetScale() { setScale(defaultScale); }
         void setGyroScale(gyroScaleOption gyroScale);

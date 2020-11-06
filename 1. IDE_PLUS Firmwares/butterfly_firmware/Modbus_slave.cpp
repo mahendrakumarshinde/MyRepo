@@ -5,7 +5,7 @@
 extern Conductor conductor;
 
 
-IUmodbus::IUmodbus(HardwareSerial *SelectSerial, uint8_t Tx_pin)
+IUmodbus::IUmodbus(HardwareSerial *SelectSerial,  uint8_t Tx_pin)
 {
     TxEnablePin = Tx_pin;
     m_port = SelectSerial;
@@ -430,6 +430,7 @@ void IUmodbus::sendPacket(unsigned char bufferSize)
 {
     if (TxEnablePin > 1)
         digitalWrite(TxEnablePin, HIGH);
+        
     for (unsigned char i = 0; i < bufferSize; i++)
     {
         m_port->write(frame[i]);
@@ -604,6 +605,12 @@ switch (groupNo)
             m_holdingRegs[index + 1] = constructFloat.reg[1]; // H_BYTE
             features++;
             
+        }
+        break;
+    case modbusGroups::MODBUS_STREAMING_REPORTABLE_DIAGNOSTIC:
+        for(int index =startAddress; index <= endAddress; index++){
+            m_holdingRegs[index] = int(*features);
+            features++;
         }
         break;
            

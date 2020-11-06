@@ -29,8 +29,7 @@ class IUTMP116 : public LowFreqSensor
             	SHUTDOWN,               /*01:Shutdown(SD)*/
             	CONTINOUS_CONVERSION1,  /*10:reads back same as 00*/
             	ONE_SHOT_CONVERSION };  /*11:One-shot conversion (OS)*/
-				                        // One_shot_conversion mode is not working right now.
-
+				                      
 	enum conversion { CONV_0,   /*CONV 0: afap*/
 					  CONV_1,   /*CONV 1: 0.125s*/
 					  CONV_2,   /*CONV 2: 0.250s*/
@@ -45,8 +44,10 @@ class IUTMP116 : public LowFreqSensor
 				   AVG_2,   /*AVG 2: 32 avg(500ms)*/
 				   AVG_3 }; /*AVG 3: 64 avg(1000ms)*/
         
+    // IUTMP116(IUI2C1 *iuI2C1, const char* name,
+    //                 void (*i2cReadCallback)(uint8_t wireStatus),
+    //                 FeatureTemplate<float> *temperature);
     IUTMP116(IUI2C1 *iuI2C1, const char* name,
-                    void (*i2cReadCallback)(uint8_t wireStatus),
                     FeatureTemplate<float> *temperature);
     virtual ~IUTMP116() {}
 
@@ -85,6 +86,7 @@ class IUTMP116 : public LowFreqSensor
         uint16_t config_reg;
         volatile bool m_readingData;
         int m_defaultTemperature = 0;
+        bool  isSensorPresent = true;
 };
 
 #endif
