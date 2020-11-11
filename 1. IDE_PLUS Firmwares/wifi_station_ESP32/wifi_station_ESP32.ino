@@ -84,7 +84,6 @@ void setup()
     #endif
      
     iuWiFiFlash.begin();
-    iuWiFiFlash.listAllAvailableFiles("/iuConfig/certs");
     // Set the common url json if file not present
     conductor.setCertificateManagerHttpEndpoint();
     //Configure the Diagnostic HTTP/HTTPS Endpoint
@@ -108,7 +107,7 @@ void setup()
 void loop()
 {
     if(!conductor.configStatus){
-        delay(500);
+        delay(100);
         getAllConfig();
     }
     hostSerial.readMessages();  
