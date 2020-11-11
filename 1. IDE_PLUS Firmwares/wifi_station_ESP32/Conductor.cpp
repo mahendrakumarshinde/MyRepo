@@ -763,7 +763,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                     }
                 }
             }
-            if ( httpStatusCode == 200 || httpOEMStatusCode == 200){
+            if ( (httpStatusCode == 200 || httpOEMStatusCode == 200) && rawData->axis != 'Z'){
                 sendNextAxis = true;
             }
            iuSerial->sendMSPCommand(MSPCommand::SEND_RAW_DATA_NEXT_PKT, String(sendNextAxis).c_str());

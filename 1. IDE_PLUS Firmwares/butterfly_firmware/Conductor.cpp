@@ -2119,8 +2119,8 @@ void Conductor::processCommand(char *buff)
             }
         case '3':  // Collect acceleration raw data
             iuWiFi.sendHostSamplingRate(FFTConfiguration::calculatedSamplingRate); // updated freq after GET_FFT
-            if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
-                buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
+            if ((buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
+                buff[13] == '0' && buff[15] == '0' && buff[17] == '0') && !RawDataState::rawDataTransmissionInProgress)
             {
                 if (loopDebugMode) {
                     debugPrint("Record mode");
@@ -5117,7 +5117,7 @@ void Conductor::prepareRawDataPacketAndSend(char axis) {
 void Conductor::periodicSendAccelRawData()
 {
     uint32_t now = millis();
-    if (now - m_rawDataPublicationStart > m_rawDataPublicationTimer) {
+    if ((now - m_rawDataPublicationStart > m_rawDataPublicationTimer) && !RawDataState::rawDataTransmissionInProgress) {
         iuWiFi.sendHostSamplingRate(FFTConfiguration::calculatedSamplingRate);
         if (loopDebugMode)
             debugPrint(F("***  Sending Raw Data ***"));
