@@ -362,6 +362,9 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                     }else if(i == 2){
                         HOST_BLOCK_SIZE=atoi(str);
                         i++;
+                    }else if(i == 3){
+                        accelRawDataHelper.setOEMEndpointStaus(bool(atoi(str)));
+                        i++;
                     }
                 
                 }
@@ -582,10 +585,6 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             accelRawDataHelper.setOEMEndpointPort(
                 uint16_t(strtol(buffer, NULL, 0)));
                 //mqttHelper.publish(FINGERPRINT_DATA_PUBLISH_TOPIC, "RAW PORT...");
-            break;
-        case MSPCommand::SET_RAW_DATA_ENDPOINT_OEM_STATUS:
-            accelRawDataHelper.setOEMEndpointStaus(
-                bool(strtol(buffer, NULL, 0)));
             break;
         case MSPCommand::SET_MQTT_SERVER_IP:
            
