@@ -5541,7 +5541,7 @@ void Conductor::setConductorMacAddress() {
         iuBluetooth.queryDeviceName();
         //debugPrint("SET MAC RESPONSE :",false);
         //debugPrint(mac_Response);
-        if( mac_Response < 0 || (BLE_MAC_Address[0] != '9' /*&& BLE_MAC_Address[1] == '0' */) ){
+        if( mac_Response < 0 || (BLE_MAC_Address[0] != '9' || BLE_MAC_Address[0] != '6' /*&& BLE_MAC_Address[1] == '0' */) ){
             
             // Retry to get BLE MAC
             for (size_t i = 0; i < retryCount; i++)
@@ -5555,7 +5555,7 @@ void Conductor::setConductorMacAddress() {
                     debugPrint("BLE MAC ID IN RETRY : ",false);
                     debugPrint(BLE_MAC_Address);
                 }                    
-                if(mac_Response > 0 && ( BLE_MAC_Address[0] == '9')){
+                if(mac_Response > 0 && (( BLE_MAC_Address[0] == '9') || ( BLE_MAC_Address[0] == '6')) ){
                     if(debugMode){
                         debugPrint("Found the BLE MAC ADDRESS");
                     }
