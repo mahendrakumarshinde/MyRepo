@@ -5063,15 +5063,26 @@ void Conductor::manageRawDataSending() {
         //         debugPrint("Raw data request: Resending Z, Z sent to wifi");
         //     }
         // }
-        if ((httpsStatusCodeX == 200 && httpsStatusCodeY == 200 && httpsStatusCodeZ == 200) || (httpsOEMStatusCodeX == 200 && httpsOEMStatusCodeY == 200 && httpsOEMStatusCodeZ == 200) ) {
+        if(httpOEMConfigPresent){
+            if ((httpsStatusCodeX == 200 && httpsStatusCodeY == 200 && httpsStatusCodeZ == 200) && (httpsOEMStatusCodeX == 200 && httpsOEMStatusCodeY == 200 && httpsOEMStatusCodeZ == 200) ) {
             // End the transmission session, reset RawDataState::startRawDataCollection and RawDataState::rawDataTransmissionInProgress
             // Rest of the tracking variables are reset when rawDataRequest() is called
-            if(loopDebugMode) {
-                debugPrint("Raw data request: Z delivered, ending transmission session");
-            }
+                if(loopDebugMode) {
+                    debugPrint("Raw data request: Z delivered, ending transmission session");
+                }
             RawDataState::startRawDataCollection = false;
             RawDataState::rawDataTransmissionInProgress = false;    
+            }
+        }else{
+            if (httpsStatusCodeX == 200 && httpsStatusCodeY == 200 && httpsStatusCodeZ == 200){
+                if(loopDebugMode) {
+                    debugPrint("Raw data request: Z delivered, ending transmission session");
+                }
+                RawDataState::startRawDataCollection = false;
+                RawDataState::rawDataTransmissionInProgress = false;
+            }
         }
+        
         if((millis() - RawDataTotalTimeout) > 30000)
         { // IDE1.5_PORT_CHANGE -- On timeout of 4 Sec. if no response OK/FAIL then abort transmission
             RawDataState::startRawDataCollection = false;
