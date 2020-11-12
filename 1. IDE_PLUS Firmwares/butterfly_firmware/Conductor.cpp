@@ -2119,8 +2119,8 @@ void Conductor::processCommand(char *buff)
             }
         case '3':  // Collect acceleration raw data
             iuWiFi.sendHostSamplingRate(FFTConfiguration::calculatedSamplingRate); // updated freq after GET_FFT
-            if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
-                buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
+            if ((buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
+                buff[13] == '0' && buff[15] == '0' && buff[17] == '0') && !RawDataState::rawDataTransmissionInProgress)
             {
                 if (loopDebugMode) {
                     debugPrint("Record mode");
@@ -3473,7 +3473,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             if (loopDebugMode){ debugPrint(F("GET_DEVICE_CONFIG")); }
             char deviceInfo[64];
             //sprintf(deviceInfo,"%s-%d-%d",FIRMWARE_VERSION,FFTConfiguration::currentSamplingRate,FFTConfiguration::currentBlockSize);
-            sprintf(deviceInfo,"%s-%d-%d",FIRMWARE_VERSION,FFTConfiguration::calculatedSamplingRate,FFTConfiguration::currentBlockSize);
+            sprintf(deviceInfo,"%s-%d-%d-%d",FIRMWARE_VERSION,FFTConfiguration::calculatedSamplingRate,FFTConfiguration::currentBlockSize,httpOEMConfigPresent);
             iuWiFi.sendMSPCommand(MSPCommand::GET_DEVICE_CONFIG,deviceInfo);
             iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HOST_FIRMWARE_VERSION,FIRMWARE_VERSION);
             
@@ -3778,7 +3778,6 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_HOST_OEM,m_httpHost_oem); 
                 iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_PORT_OEM,String(m_httpPort_oem).c_str()); 
                 iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_ROUTE_OEM,m_httpPath_oem);
-                iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_OEM_STATUS,String(httpOEMConfigPresent).c_str());
                             
                 break;
            }
@@ -5064,15 +5063,26 @@ void Conductor::manageRawDataSending() {
         //         debugPrint("Raw data request: Resending Z, Z sent to wifi");
         //     }
         // }
-        if ((httpsStatusCodeX == 200 && httpsStatusCodeY == 200 && httpsStatusCodeZ == 200) || (httpsOEMStatusCodeX == 200 && httpsOEMStatusCodeY == 200 && httpsOEMStatusCodeZ == 200) ) {
+        if(httpOEMConfigPresent){
+            if ((httpsStatusCodeX == 200 && httpsStatusCodeY == 200 && httpsStatusCodeZ == 200) && (httpsOEMStatusCodeX == 200 && httpsOEMStatusCodeY == 200 && httpsOEMStatusCodeZ == 200) ) {
             // End the transmission session, reset RawDataState::startRawDataCollection and RawDataState::rawDataTransmissionInProgress
             // Rest of the tracking variables are reset when rawDataRequest() is called
-            if(loopDebugMode) {
-                debugPrint("Raw data request: Z delivered, ending transmission session");
-            }
+                if(loopDebugMode) {
+                    debugPrint("Raw data request: Z delivered, ending transmission session");
+                }
             RawDataState::startRawDataCollection = false;
             RawDataState::rawDataTransmissionInProgress = false;    
+            }
+        }else{
+            if (httpsStatusCodeX == 200 && httpsStatusCodeY == 200 && httpsStatusCodeZ == 200){
+                if(loopDebugMode) {
+                    debugPrint("Raw data request: Z delivered, ending transmission session");
+                }
+                RawDataState::startRawDataCollection = false;
+                RawDataState::rawDataTransmissionInProgress = false;
+            }
         }
+        
         if((millis() - RawDataTotalTimeout) > 30000)
         { // IDE1.5_PORT_CHANGE -- On timeout of 4 Sec. if no response OK/FAIL then abort transmission
             RawDataState::startRawDataCollection = false;
@@ -5118,7 +5128,7 @@ void Conductor::prepareRawDataPacketAndSend(char axis) {
 void Conductor::periodicSendAccelRawData()
 {
     uint32_t now = millis();
-    if (now - m_rawDataPublicationStart > m_rawDataPublicationTimer) {
+    if ((now - m_rawDataPublicationStart > m_rawDataPublicationTimer) && !RawDataState::rawDataTransmissionInProgress) {
         iuWiFi.sendHostSamplingRate(FFTConfiguration::calculatedSamplingRate);
         if (loopDebugMode)
             debugPrint(F("***  Sending Raw Data ***"));
