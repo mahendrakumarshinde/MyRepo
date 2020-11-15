@@ -2326,6 +2326,10 @@ String Conductor::getRca(int error)
             return F("CERT-RCA-0046");
         case HTTP_CODE_UNAUTHORIZED:
             return F("CERT-RCA-0047");
+        case CERT_OEM_CERT__URL_NOT_PRESENT:
+            return F("CERT-RCA-0048");
+        case CERT_INVALID_CERT_TYPE:
+            return F("CERT-RCA-0049");
         default:
             if(certificateDownloadInProgress){ return F("CERT-RCA-2222");}else{ return F("OTA-RCA-1111"); }
     }
@@ -2746,10 +2750,7 @@ int Conductor::download_tls_ssl_certificates(){
                     // Serial.print("CONFIG JSON :");
                     // config.prettyPrintTo(Serial);
                     uint8_t certToUpdate;
-                    int number = 0 ;
-                    if(configTypeCount == 3){
-                        number = 2;
-                    }
+                    
                     if(activeCertificates != 0){ 
                         // if(initialFileDownload){
                         //     Serial.println("Initial File Download , Updated Value ");
@@ -2774,7 +2775,7 @@ int Conductor::download_tls_ssl_certificates(){
                             bool downloadSuccess = false;
                             char* checksum ;
                             // Note : upgradeReceived flage is set only for dev testing , can ne removed later (only in this statments not in nested if)
-                            int res = downloadCertificates(type,url,hash,index + number,certToUpdate);
+                            int res = downloadCertificates(type,url,hash,certToUpdate);
                             //Serial.print("Output : ");Serial.println(res);
                             if(res != 1){  return 0 ; /*break;*/}   //exit from for loop
                             
@@ -2791,7 +2792,7 @@ int Conductor::download_tls_ssl_certificates(){
                                 bool downloadSuccess = false;
                                 char *checksum;
                                 // Note : upgradeReceived flage is set only for dev testing , can ne removed later (only in this statments not in nested if)
-                                int res = downloadCertificates(type, url, hash, index + 5, certToUpdate);
+                                int res = downloadCertificates(type, url, hash, certToUpdate);
                                 //Serial.print("Output : ");Serial.println(res);
                                 if (res != 1)
                                 {
@@ -3140,38 +3141,25 @@ void Conductor:: messageValidation(char* json){
             hostSerial.sendMSPCommand(MSPCommand::SET_CERT_DOWNLOAD_MSGID,messageID);
             uint8_t result[CONFIG_TYPE_COUNT]; // 10 , max use 5
             uint8_t oem_result[CONFIG_TYPE_COUNT]; // 10 , max use 5
-            uint8_t index = 0;
-            if(activeCertificates == 0 && configTypeCount == 3 ){
-                index = 2;
-            }else if(activeCertificates == 0 && configTypeCount == 5 ){
-                index = 0;  
-            }else if(activeCertificates == 1 && configTypeCount == 3 ){
-                  index = 8;  
-            }else if(activeCertificates == 1 && configTypeCount == 5)
-            {
-                index = 6;
-            }
+
             for (size_t i = 0; i < configTypeCount; i++)
             {
-                result[i] =  strcmp(getConfigChecksum(CONFIG_TYPES[i + index]), (const char* ) configJson["certificates"][i]["hash"] );
+                result[i] =  strcmp(getConfigChecksum(getStoredConfigType(configJson["certificates"][i]["type"], activeCertificates)), (const char* ) configJson["certificates"][i]["hash"] );
             }
 
             if(config.containsKey("oem-certificates") && accelRawDataHelper.httpsOEMConfigPresent){
-                if(activeCertificates == 0 && OEMconfigTypeCount > 0 ){
-                    index = 5;
-                }else
-                {
-                    index = 11;  
-                }
                 for (size_t i = 0; i < OEMconfigTypeCount; i++)
                 {
-                    oem_result[i] =  strcmp(getConfigChecksum(CONFIG_TYPES[i + index]), (const char* ) configJson["oem-certificates"][i]["hash"] );
+                    oem_result[i] =  strcmp(getConfigChecksum(getStoredConfigType(configJson["oem-certificates"][i]["type"], activeCertificates)), (const char* ) configJson["oem-certificates"][i]["hash"] );
                 }
                 if(oem_result[0] == 0){
                     newOEMRootCACertificateAvailable = false;
                 }else{
                     newOEMRootCACertificateAvailable = true;
                 }
+            }else if(accelRawDataHelper.httpsOEMConfigPresent){
+                hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT, String(getRca(CERT_OEM_CERT__URL_NOT_PRESENT)).c_str());
+                downloadAborted =true; 
             }
             
             
@@ -3260,35 +3248,61 @@ void Conductor:: messageValidation(char* json){
     
 }
 
-int Conductor::downloadCertificates(const char* type,const char* url,const char* hash,uint8_t index,uint8_t certToUpdate){
+bool Conductor::validateCertType(const char* type){
+    for(int i = 0;i<sizeof(CERT_TYPES);i++){
+        if(strcmp(type,CERT_TYPES[i]) == 0 ){
+            return true;
+        }
+    }
+    return false;
+}
+
+IUESPFlash::storedConfig Conductor::getStoredConfigType(const char* certType,bool partation){
+    if(partation == 0){
+        if(strcmp(certType,"EAP-TLS-CERT") == 0){
+            return IUESPFlash::CFG_EAP_CLIENT0;
+        }else if(strcmp(certType,"EAP-TLS-KEY") == 0){
+            return IUESPFlash::CFG_EAP_KEY0;
+        }else if(strcmp(certType,"MQTT-TLS-CERT") == 0){
+            return IUESPFlash::CFG_MQTT_CLIENT0;
+        }else if(strcmp(certType,"MQTT-TLS-KEY") == 0){
+            return IUESPFlash::CFG_MQTT_KEY0;
+        }else if(strcmp(certType,"SSL") == 0){
+            return IUESPFlash::CFG_HTTPS_ROOTCA0;
+        }else if(strcmp(certType,"OEM-SSL") == 0){
+            return IUESPFlash::CFG_HTTPS_OEM_ROOTCA0;
+        }
+    }else{
+        if(strcmp(certType,"EAP-TLS-CERT") == 0){
+            return IUESPFlash::CFG_EAP_CLIENT1;
+        }else if(strcmp(certType,"EAP-TLS-KEY") == 0){
+            return IUESPFlash::CFG_EAP_KEY1;
+        }else if(strcmp(certType,"MQTT-TLS-CERT") == 0){
+            return IUESPFlash::CFG_MQTT_CLIENT1;
+        }else if(strcmp(certType,"MQTT-TLS-KEY") == 0){
+            return IUESPFlash::CFG_MQTT_KEY1;
+        }else if(strcmp(certType,"SSL") == 0){
+            return IUESPFlash::CFG_HTTPS_ROOTCA1;
+        }else if(strcmp(certType,"OEM-SSL") == 0){
+            return IUESPFlash::CFG_HTTPS_OEM_ROOTCA1;
+        }
+    }
+}
+int Conductor::downloadCertificates(const char* type,const char* url,const char* hash,uint8_t certToUpdate){
 
     bool downloadSuccess = false;
     char* checksum ;
     //Serial.print("CERT TYPE : ");Serial.println(CERT_TYPES[index]);
-    // Individual file download is disabled now , rebuilt it                         
-    if (( strcmp(type,CERT_TYPES[index]) == 0 ||  upgradeReceived == true) )
+    // Individual file download is disabled now , rebuilt it                    
+    if (validateCertType(type) || upgradeReceived == true) 
     {
-        // Download the rootCA.crt and store
-        //Serial.println("\ndownloading initiated.");
-        if(/*upgradeReceived &&*/ certToUpdate == 1){
-            //Serial.println("Updating Client 1 Files.");
-             downloadSuccess = getDeviceCertificates(CONFIG_TYPES[index+6],type,url); // Upgrade client 1
-        }else{
-            //Serial.println("Updating Client 0 Files.");
-            downloadSuccess = getDeviceCertificates(CONFIG_TYPES[index],type,url);  // Upgrade Cleint 0
-        }
+        downloadSuccess = getDeviceCertificates(getStoredConfigType(type,certToUpdate),type,url); // Upgrade client 1
         if (downloadSuccess)
         {
             // File Download and stored success
             // Read the certificates and print
-            //Serial.println("downloadSuccess!!!");
-            //readCertificatesFromFlash(IUESPFlash::CFG_HTTPS_ROOTCA0,type);
-            //delay(10);
-            if(/*upgradeReceived &&*/ certToUpdate == 1){
-                checksum = getConfigChecksum(CONFIG_TYPES[index+6]);    //verify client 1
-            }else{
-               checksum = getConfigChecksum(CONFIG_TYPES[index]);       // verify client0
-            }
+            checksum = getConfigChecksum(getStoredConfigType(type,certToUpdate));    //verify client 1
+    
             if (strcmp(hash,checksum) == 0)
             {
                 // TODO : .CERT DOWNLOAD Success
@@ -3314,6 +3328,11 @@ int Conductor::downloadCertificates(const char* type,const char* url,const char*
             upgradeReceived = false;
             return 0;
         }
+    }else{
+            hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT, String(getRca(CERT_INVALID_CERT_TYPE)).c_str());
+            downloadAborted = true;
+            upgradeReceived = false;
+            return 0;
     }
     return 1;
 }
