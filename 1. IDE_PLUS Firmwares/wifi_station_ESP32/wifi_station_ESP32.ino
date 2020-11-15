@@ -85,6 +85,9 @@ void setup()
      
     iuWiFiFlash.begin();
     // Set the common url json if file not present
+    conductor.setMQTTConfig();
+    conductor.setHTTPConfig();
+    iuWiFiFlash.listAllAvailableFiles("/iuConfig/certs");
     conductor.setCertificateManagerHttpEndpoint();
     //Configure the Diagnostic HTTP/HTTPS Endpoint
     conductor.configureDiagnosticEndpointFromFlash(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT);
@@ -140,19 +143,21 @@ void loop()
         if (rssiPublishedCounter >= 6)
         {
             conductor.publishRSSI();
-            if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_WIFI) || strcmp(conductor.wifiHash,conductor.getConfigChecksum(IUESPFlash::CFG_WIFI)) != 0){
-                hostSerial.sendMSPCommand(MSPCommand::ASK_WIFI_CONFIG);
-            }
             rssiPublishedCounter = 0;
+        }
+        if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_MQTT) || strcmp(conductor.mqttHash,conductor.getConfigChecksum(IUESPFlash::CFG_MQTT)) != 0){
+            hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);
+        }
+        if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_HTTP) || strcmp(conductor.httpHash,conductor.getConfigChecksum(IUESPFlash::CFG_HTTP)) != 0){
+            hostSerial.sendMSPCommand(MSPCommand::GET_RAW_DATA_ENDPOINT_INFO);
+        }
+        if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_WIFI) || strcmp(conductor.wifiHash,conductor.getConfigChecksum(IUESPFlash::CFG_WIFI)) != 0){
+            hostSerial.sendMSPCommand(MSPCommand::ASK_WIFI_CONFIG);
         }
         conductor.resetDownloadInitTimer(10,5000);
         lastDone = now;
         if(uint64_t(conductor.getBleMAC() ) == 0) { 
             hostSerial.sendMSPCommand(MSPCommand::ASK_BLE_MAC);
-            delay(10);
-            hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);
-            delay(10);
-            hostSerial.sendMSPCommand(MSPCommand::GET_RAW_DATA_ENDPOINT_INFO); 
         }
         
     }
