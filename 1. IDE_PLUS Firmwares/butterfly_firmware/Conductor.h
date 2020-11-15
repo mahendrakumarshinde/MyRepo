@@ -243,7 +243,9 @@ class Conductor
         void exposeAllConfigurations();
         // mqtt / http configuration
         // void fastSwap (const char **i, const char **d);
-        void configureMQTTServer(String filename);
+        void readMQTTendpoints();
+        bool readHTTPendpoints();
+        // void configureMQTTServer(String filename);
         bool configureBoardFromFlash(String filename,bool isSet);
         JsonObject& configureJsonFromFlash(String filename,bool isSet);
         void sendDiagnosticFingerPrints();
@@ -284,7 +286,8 @@ class Conductor
         int httpsOEMStatusCodeX, httpsOEMStatusCodeY, httpsOEMStatusCodeZ;   
         bool sendNextAxis = false;      
         bool XSentToWifi, YsentToWifi, ZsentToWifi;     // TODO optimize using bit vector
-        // uint32_t RawDataTimeout = 0;
+        bool XrecByWifi,YrecByWifi,ZrecByWifi;
+        uint32_t RawDataTimeout = 0;
         uint32_t RawDataTotalTimeout = 0;
         double rawDataRecordedAt, lastPacketSentToESP;
         IUMessageFormat::rawDataPacket rawData;
@@ -319,6 +322,8 @@ class Conductor
         void setDefaultMQTT();
         void setDefaultHTTP();
         void updateWiFiHash();
+        void updateMQTTHash();
+        void updateHTTPHash();
         void sendConfigRequest();
         /**** Diagnostic Rule Engine *****/
         void computeDiagnoticState(String *diagInput, int totalConfiguredDiag);

@@ -225,10 +225,14 @@ class Conductor
         static const uint8_t CONFIG_TYPE_COUNT = 12;
         static IUESPFlash::storedConfig CONFIG_TYPES[CONFIG_TYPE_COUNT];
         void connectToWiFi();
-        void updateWiFiConfig(char* config,int length);
+        void updateConfig(IUESPFlash::storedConfig configType, char* config,int length);
         void setWiFiConfig();
+        void setMQTTConfig();
+        void setHTTPConfig();
         void sendWiFiConfig();
         char wifiHash[34];
+        char mqttHash[34];
+        char httpHash[34];
     protected:
         /***** Config from Host *****/      
         char HOST_FIRMWARE_VERSION[8];      //filled when the ESP starts or when it connects to MQTT broker

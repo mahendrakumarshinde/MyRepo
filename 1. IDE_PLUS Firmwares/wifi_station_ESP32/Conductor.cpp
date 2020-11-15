@@ -240,7 +240,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             updateDiagnosticEndpoint(buffer,bufferLength);
             break;
         case MSPCommand::SEND_WIFI_CONFIG:
-            updateWiFiConfig(buffer,bufferLength-1);  // Removed extra byte
+            updateConfig(IUESPFlash::CFG_WIFI, buffer,bufferLength-1);  // Removed extra byte
             setWiFiConfig();
             break;
         case MSPCommand::CERT_DOWNLOAD_INIT_ACK:
@@ -361,9 +361,6 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                         i++;
                     }else if(i == 2){
                         HOST_BLOCK_SIZE=atoi(str);
-                        i++;
-                    }else if(i == 3){
-                        accelRawDataHelper.setOEMEndpointStaus(bool(atoi(str)));
                         i++;
                     }
                 
@@ -586,6 +583,14 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 uint16_t(strtol(buffer, NULL, 0)));
                 //mqttHelper.publish(FINGERPRINT_DATA_PUBLISH_TOPIC, "RAW PORT...");
             break;
+        case MSPCommand::SEND_HTTP_CONNECTION_INFO:
+            updateConfig(IUESPFlash::CFG_HTTP, buffer,bufferLength-1);
+            setHTTPConfig();
+            break;
+        case MSPCommand::SEND_MQTT_CONNECTION_INFO:
+            updateConfig(IUESPFlash::CFG_MQTT, buffer,bufferLength-1);
+            setMQTTConfig();
+            break;
         case MSPCommand::SET_MQTT_SERVER_IP:
            
             if (m_mqttServerValidator.hasTimedOut()) {
@@ -648,6 +653,8 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
            break; 
         case MSPCommand::SEND_RAW_DATA:
           {
+              Serial.println("");
+              Serial.println("Send Raw Data");
             memset(ssl_rootca_cert,0x00,sizeof(ssl_rootca_cert));
             memset(ssl_oem_rootca_cert,0x00,sizeof(ssl_oem_rootca_cert));
             //Apply the rootCA cert
@@ -957,6 +964,8 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             iuWiFiFlash.removeFile(IUESPFlash::CFG_STATIC_CERT_ENDPOINT);
             iuWiFiFlash.removeFile(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT);
             iuWiFiFlash.removeFile(IUESPFlash::CFG_WIFI);
+            iuWiFiFlash.removeFile(IUESPFlash::CFG_MQTT);
+            iuWiFiFlash.removeFile(IUESPFlash::CFG_HTTP);
             iuWiFiFlash.updateValue(CERT_ADDRESS,0);
             hostSerial.sendMSPCommand(MSPCommand::DELETE_CERT_FILES,"succefully Deleted, Rebooting ESP");
             ESP.restart();
@@ -1011,6 +1020,12 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             }
       case MSPCommand::SEND_WIFI_HASH:
             strcpy(wifiHash,buffer);
+            break;
+      case MSPCommand::SEND_MQTT_HASH:
+            strcpy(mqttHash,buffer);
+            break;
+      case MSPCommand::SEND_HTTP_HASH:
+            strcpy(httpHash,buffer);
             break;
       case MSPCommand::GET_PENDING_HTTP_CONFIG:
           // Get all the pending configuration messages over http
@@ -1193,10 +1208,6 @@ bool Conductor::getConfigFromMainBoard()
         }
         delay(500);
         hostSerial.sendMSPCommand(MSPCommand::ASK_BLE_MAC);
-        delay(10);
-        hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);    //Need to Change the call of this
-        delay(10);
-        hostSerial.sendMSPCommand(MSPCommand::GET_RAW_DATA_ENDPOINT_INFO); 
          
         // get the IDE Firmware Version from Host
         //hostSerial.sendMSPCommand(MSPCommand::ASK_HOST_FIRMWARE_VERSION);
@@ -1531,7 +1542,7 @@ void Conductor::loopMQTT()
     } else {
         uint32_t now = millis();
         if (now - m_lastMQTTInfoRequest > mqttInfoRequestDelay) {
-            hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);
+            setMQTTConfig();
             m_lastMQTTInfoRequest = now;
         }
     }
@@ -2339,8 +2350,8 @@ void Conductor::mqttSecureConnect(){
           if( certificateDownloadInProgress == false && certDownloadInitAck == false && downloadInitTimer == true ){
              if (!mqttHelper.hasConnectionInformations())
              {  
-                 hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);    //Need to Change the call of this
-                 return;
+                setMQTTConfig();
+                return;
              }else
              {
                  //try connecting with available credentials
@@ -2938,9 +2949,8 @@ void Conductor::updateDiagnosticEndpoint(char* diagnosticEndpoint,int length){
     
 }
 
-void Conductor::updateWiFiConfig(char* config,int length){
-    // Update the file with the latest Diagnostic http/https endpoint
-    bool success = iuWiFiFlash.writeFile(IUESPFlash::CFG_WIFI,config,length);
+void Conductor::updateConfig(IUESPFlash::storedConfig configType, char* config,int length){
+    bool success = iuWiFiFlash.writeFile(configType,config,length);
     if (success)
     {
         if (debugMode)
@@ -2949,6 +2959,70 @@ void Conductor::updateWiFiConfig(char* config,int length){
            debugPrint(config);
         }
     }
+}
+
+void Conductor::setMQTTConfig(){
+    if(iuWiFiFlash.isFilePresent(IUESPFlash::CFG_MQTT)){
+        StaticJsonBuffer<512> JsonBuffer;
+        JsonObject& config = iuWiFiFlash.loadConfigJson(IUESPFlash::CFG_MQTT,JsonBuffer);
+        bool validConfig = config.success();
+        //config.prettyPrintTo(Serial);
+        if (validConfig)
+        {
+            strcpy(m_mqttServerIP, config["mqtt"]["mqttServerIP"]);
+            m_mqttServerPort = config["mqtt"]["port"];
+            strcpy(m_mqttUsername, config["mqtt"]["username"]);
+            strcpy(m_mqttPassword, config["mqtt"]["password"]);
+
+            mqttHelper.setServer(m_mqttServerIP, m_mqttServerPort);
+            mqttHelper.setCredentials(m_mqttUsername, m_mqttPassword);
+        }else{
+            hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);
+        }
+    }else{
+        strcpy(m_mqttServerIP, MQTT_DEFAULT_SERVER_IP);
+        m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
+        strcpy(m_mqttUsername, MQTT_DEFAULT_USERNAME);
+        strcpy(m_mqttPassword, MQTT_DEFAULT_PASSWORD);
+
+        mqttHelper.setServer(m_mqttServerIP, m_mqttServerPort);
+        mqttHelper.setCredentials(m_mqttUsername, m_mqttPassword);
+    }
+    
+}
+
+void Conductor::setHTTPConfig(){
+    if(iuWiFiFlash.isFilePresent(IUESPFlash::CFG_HTTP)){
+        StaticJsonBuffer<1024> JsonBuffer;
+        JsonObject& config = iuWiFiFlash.loadConfigJson(IUESPFlash::CFG_HTTP,JsonBuffer);
+        bool validConfig = config.success();
+        //config.prettyPrintTo(Serial);
+        if (validConfig)
+        {
+            strcpy(accelRawDataHelper.m_endpointHost, config["httpConfig"]["host"]);
+            accelRawDataHelper.m_endpointPort = config["httpConfig"]["port"];
+            strcpy(accelRawDataHelper.m_endpointRoute, config["httpConfig"]["path"]);
+
+            if(config.containsKey("httpOem")){
+                accelRawDataHelper.setOEMEndpointStaus(true);
+                strcpy(accelRawDataHelper.m_endpointHost_oem, config["httpOem"]["host"]);
+                accelRawDataHelper.m_endpointPort_oem = config["httpOem"]["port"];
+                strcpy(accelRawDataHelper.m_endpointRoute_oem, config["httpOem"]["path"]);
+            }else{
+                accelRawDataHelper.setOEMEndpointStaus(false);
+            }
+
+        }else{
+            hostSerial.sendMSPCommand(MSPCommand::GET_RAW_DATA_ENDPOINT_INFO);
+        }
+    }else{
+        accelRawDataHelper.setOEMEndpointStaus(false);
+        strcpy(accelRawDataHelper.m_endpointHost, DATA_DEFAULT_ENDPOINT_HOST);
+        accelRawDataHelper.m_endpointPort = DATA_DEFAULT_ENDPOINT_PORT;
+        strcpy(accelRawDataHelper.m_endpointRoute, RAW_DATA_DEFAULT_ENDPOINT_ROUTE);
+
+    }
+    
 }
 
 void Conductor::setWiFiConfig(){
