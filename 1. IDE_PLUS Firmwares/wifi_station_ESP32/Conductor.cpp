@@ -653,8 +653,6 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
            break; 
         case MSPCommand::SEND_RAW_DATA:
           {
-              Serial.println("");
-              Serial.println("Send Raw Data");
             memset(ssl_rootca_cert,0x00,sizeof(ssl_rootca_cert));
             memset(ssl_oem_rootca_cert,0x00,sizeof(ssl_oem_rootca_cert));
             //Apply the rootCA cert

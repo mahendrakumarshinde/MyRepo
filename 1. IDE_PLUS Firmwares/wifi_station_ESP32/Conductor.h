@@ -94,7 +94,7 @@ class Conductor
         //ESP32 will deep-sleep after being disconnected for more than:
         static const uint32_t disconnectionTimeout = 120*1000;  // ms
         // Cyclic publication
-        static const uint32_t wifiStatusUpdateDelay = 5000;  // ms
+        static const uint32_t wifiStatusUpdateDelay = 10000;  // ms
         static const uint32_t wifiInfoPublicationDelay = 300000;  // ms
         // OTA Update in progress, timoue for packet ack from STM
         static const uint32_t otaPktAckTimeout = 30000;  // ms
