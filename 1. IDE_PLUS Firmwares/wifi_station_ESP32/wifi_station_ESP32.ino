@@ -12,6 +12,7 @@
 //#include "SPIFFS.h"
 Conductor conductor;
 uint32_t lastDone = 0;
+uint32_t lastReqHash = 0;
 /* =============================================================================
     MQTT callbacks
 ============================================================================= */
@@ -145,6 +146,16 @@ void loop()
             conductor.publishRSSI();
             rssiPublishedCounter = 0;
         }
+        conductor.resetDownloadInitTimer(10,5000);
+        lastDone = now;
+        if(uint64_t(conductor.getBleMAC() ) == 0) { 
+            hostSerial.sendMSPCommand(MSPCommand::ASK_BLE_MAC);
+        }
+        
+    }
+
+    if (now - lastReqHash > 30000 )
+    {
         if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_MQTT) || strcmp(conductor.mqttHash,conductor.getConfigChecksum(IUESPFlash::CFG_MQTT)) != 0){
             hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);
         }
@@ -154,12 +165,7 @@ void loop()
         if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_WIFI) || strcmp(conductor.wifiHash,conductor.getConfigChecksum(IUESPFlash::CFG_WIFI)) != 0){
             hostSerial.sendMSPCommand(MSPCommand::ASK_WIFI_CONFIG);
         }
-        conductor.resetDownloadInitTimer(10,5000);
-        lastDone = now;
-        if(uint64_t(conductor.getBleMAC() ) == 0) { 
-            hostSerial.sendMSPCommand(MSPCommand::ASK_BLE_MAC);
-        }
-        
+        lastReqHash = now;
     }
     delay(1);
 }
