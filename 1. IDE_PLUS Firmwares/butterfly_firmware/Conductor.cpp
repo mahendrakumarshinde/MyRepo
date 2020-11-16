@@ -4933,6 +4933,7 @@ void Conductor::manageRawDataSending() {
             debugPrint("Raw data request: collected raw data, starting transmission");
         }
         RawDataState::rawDataTransmissionInProgress = true;
+        RawDataTotalTimeout = millis();
         httpsStatusCodeX = httpsStatusCodeY = httpsStatusCodeZ = 0;
         httpsOEMStatusCodeX = httpsOEMStatusCodeY = httpsOEMStatusCodeZ = 0;
         sendNextAxis = false;
@@ -4942,42 +4943,45 @@ void Conductor::manageRawDataSending() {
 
     if (RawDataState::rawDataTransmissionInProgress) {
         if(XrecByWifi){
+            RawDataTotalTimeout = millis();
+            iuWiFi.m_setLastConfirmedPublication();
             XSentToWifi = true;
         } 
         if(YrecByWifi){
+            RawDataTotalTimeout = millis();
+            iuWiFi.m_setLastConfirmedPublication();
             YsentToWifi = true;
         }
         if(ZrecByWifi){
+            RawDataTotalTimeout = millis();
+            iuWiFi.m_setLastConfirmedPublication();
             ZsentToWifi = true;
         }
         // double timeSinceLastSentToESP = millis() - lastPacketSentToESP; // use later for retry mechanism
         if ((millis() - RawDataTimeout) > 8000 && (!XSentToWifi || !XrecByWifi)) {
             prepareRawDataPacketAndSend('X');
             RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
-            RawDataTotalTimeout = millis();
-            iuWiFi.m_setLastConfirmedPublication();
+            
             if(loopDebugMode) {
                 debugPrint("Raw data request: X sent to wifi");
             }
             // lastPacketSentToESP = millis();
-        } else if ((millis() - RawDataTimeout) > 8000 && (httpsStatusCodeX == 200 || httpsOEMStatusCodeX == 200) && ((!YsentToWifi || !YrecByWifi)&& sendNextAxis)) { 
+        } else if (((millis() - RawDataTimeout) > 8000 && !YrecByWifi) || (httpsStatusCodeX == 200 || httpsOEMStatusCodeX == 200) && (!YsentToWifi && sendNextAxis)) { 
             prepareRawDataPacketAndSend('Y');
             
             sendNextAxis = false;
             RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
-            RawDataTotalTimeout = millis();
-            iuWiFi.m_setLastConfirmedPublication();
+            
             if(loopDebugMode) {
                 debugPrint("Raw data request: X delivered, Y sent to wifi");
             }
             // lastPacketSentToESP = millis();
-        } else if ((millis() - RawDataTimeout) > 8000 && (httpsStatusCodeY == 200 || httpsOEMStatusCodeY == 200) && ((!ZsentToWifi || !ZrecByWifi)&& sendNextAxis)) {
+        } else if (((millis() - RawDataTimeout) > 8000 && !ZrecByWifi) || (httpsStatusCodeY == 200 || httpsOEMStatusCodeY == 200) && (!ZsentToWifi && sendNextAxis)) {
             prepareRawDataPacketAndSend('Z');
             
             sendNextAxis = false;
             RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
-            RawDataTotalTimeout = millis();
-            iuWiFi.m_setLastConfirmedPublication();
+            
             if(loopDebugMode) {
                 debugPrint("Raw data request: Y delivered, Z sent to wifi");
             }
