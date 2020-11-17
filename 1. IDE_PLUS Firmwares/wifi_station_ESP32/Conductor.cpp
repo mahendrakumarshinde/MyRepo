@@ -585,7 +585,8 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             break;
         case MSPCommand::SEND_HTTP_CONNECTION_INFO:
             updateConfig(IUESPFlash::CFG_HTTP, buffer,bufferLength-1);
-            setHTTPConfig();
+            delay(100);
+            ESP.restart();
             break;
         case MSPCommand::SEND_MQTT_CONNECTION_INFO:
             updateConfig(IUESPFlash::CFG_MQTT, buffer,bufferLength-1);
