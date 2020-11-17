@@ -570,29 +570,43 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 }  
             
             }
+            if (iuWiFi.isConnected() )
+            {   
+                iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HTTP_CONFIG_ACK, validationResultString);
+            
+            }else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
+            {     
+                    snprintf(ack_config, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
+                        m_macAddress.toString().c_str(),0, 2, m_macAddress.toString().c_str(),messageId);
+                    
+                        debugPrint(ack_config,true);
+                        iuEthernet.write(ack_config); 
+                        iuEthernet.write("\n");
+                    //iuEthernet.write(httpConfig_ack);
+            }
             if(dataWritten == true){
                 iuFlash.writeInternalFlash(1,CONFIG_HTTP_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
-                iuWiFi.sendMSPCommand(MSPCommand::SEND_HTTP_CONNECTION_INFO, jsonChar.c_str());
+                iuWiFi.sendMSPCommand(MSPCommand::SEND_HTTP_CONNECTION_INFO, jsonChar.c_str(), strlen(jsonChar.c_str()));
                 readHTTPendpoints();
             //configureBoardFromFlash("httpConfig.conf",dataWritten);
-            JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
+            // JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
 
-            const char* messageId = config["messageId"];
-            const char*  host = config["httpConfig"]["host"].as<char*>();
-            int port = config["httpConfig"]["port"].as<int>();
-            const char* httpPath = config["httpConfig"]["path"].as<char*>();
+            // const char* messageId = config["messageId"];
+            // const char*  host = config["httpConfig"]["host"].as<char*>();
+            // int port = config["httpConfig"]["port"].as<int>();
+            // const char* httpPath = config["httpConfig"]["path"].as<char*>();
             
-            bool oemConfig = false;
-            bool oemSameConfig = true;
-            if(config.containsKey("httpOem")){
-                const char*  oem_host = config["httpOem"]["host"].as<char*>();
-                int oem_port = config["httpOem"]["port"].as<int>();
-                const char* oem_httpPath = config["httpOem"]["path"].as<char*>();
-                if(strcmp( oem_host, m_httpHost_oem) != 0  || oem_port != m_httpPort_oem || strcmp(oem_httpPath, m_httpPath_oem) != 0){
-                    oemSameConfig = false;
-                }
-                oemConfig = true;
-            }
+            // bool oemConfig = false;
+            // bool oemSameConfig = true;
+            // if(config.containsKey("httpOem")){
+            //     const char*  oem_host = config["httpOem"]["host"].as<char*>();
+            //     int oem_port = config["httpOem"]["port"].as<int>();
+            //     const char* oem_httpPath = config["httpOem"]["path"].as<char*>();
+            //     if(strcmp( oem_host, m_httpHost_oem) != 0  || oem_port != m_httpPort_oem || strcmp(oem_httpPath, m_httpPath_oem) != 0){
+            //         oemSameConfig = false;
+            //     }
+            //     oemConfig = true;
+            // }
 
             // debugPrint("Active httpConfigs : ");
             // debugPrint("Host :",false);debugPrint(m_httpHost);
@@ -609,33 +623,21 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             // snprintf(httpConfig_ack, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
                 
             // debugPrint(F("httpConfig ACK :"));debugPrint(httpConfig_ack);
-            if (iuWiFi.isConnected() )
-            {   
-                iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HTTP_CONFIG_ACK, validationResultString);
             
-            }else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
-            {     
-                    snprintf(ack_config, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
-                        m_macAddress.toString().c_str(),0, 2, m_macAddress.toString().c_str(),messageId);
-                    
-                        debugPrint(ack_config,true);
-                        iuEthernet.write(ack_config); 
-                        iuEthernet.write("\n");
-                    //iuEthernet.write(httpConfig_ack);
-            }
             
             
             
             //stm reset
             delay(10);
-            if(!httpOtaValidation){
-                if((strcmp( host, m_httpHost) != 0  || port != m_httpPort || strcmp(httpPath, m_httpPath) != 0) || oemSameConfig == false ){
-                        DOSFS.end();
-                        delay(10);
-                        //STM32.reset();
-                        iuWiFi.hardReset();
-                }   
-            }
+            // iuWiFi.hardReset();
+            // if(!httpOtaValidation){
+            //     if((strcmp( host, m_httpHost) != 0  || port != m_httpPort || strcmp(httpPath, m_httpPath) != 0) || oemSameConfig == false ){
+            //             DOSFS.end();
+            //             delay(10);
+            //             //STM32.reset();
+            //             iuWiFi.hardReset();
+            //     }   
+            // }
             
             }
         }else{
@@ -3729,14 +3731,17 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 {
                     if (iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS) && ! DOSFS.exists("httpConfig.conf") )
                     {
-                        String config = iuFlash.readInternalFlash(CONFIG_HTTP_FLASH_ADDRESS);
-                        processConfiguration((char *)config.c_str(),1);
+                        String HttpConfig = iuFlash.readInternalFlash(CONFIG_HTTP_FLASH_ADDRESS);
+                        processConfiguration((char *)HttpConfig.c_str(),1);
                     }else if(DOSFS.exists("httpConfig.conf")){
-                        JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
+                        JsonObject& HttpConfig = configureJsonFromFlash("httpConfig.conf",1);
+                        JsonVariant config = JsonVariant(HttpConfig);
                         if(config.success()){
                             String jsonChar;
                             config.printTo(jsonChar);
-                            iuWiFi.sendMSPCommand(MSPCommand::SEND_HTTP_CONNECTION_INFO, jsonChar.c_str());
+                            config.prettyPrintTo(Serial);
+                            debugPrint("JSon Char :",false);debugPrint(jsonChar);
+                            iuWiFi.sendMSPCommand(MSPCommand::SEND_HTTP_CONNECTION_INFO, jsonChar.c_str(), strlen(jsonChar.c_str()));
                         }
                     }else{
                         iuWiFi.sendMSPCommand(MSPCommand::SEND_HTTP_CONNECTION_INFO, "EMPTY");
@@ -4940,54 +4945,40 @@ void Conductor::manageRawDataSending() {
         XSentToWifi = YsentToWifi = ZsentToWifi = false; 
         XrecByWifi = YrecByWifi = ZrecByWifi= false;   
     }
-
     if (RawDataState::rawDataTransmissionInProgress) {
-        if(XrecByWifi){
-            RawDataTotalTimeout = millis();
-            iuWiFi.m_setLastConfirmedPublication();
-            XSentToWifi = true;
-        } 
-        if(YrecByWifi){
-            RawDataTotalTimeout = millis();
-            iuWiFi.m_setLastConfirmedPublication();
-            YsentToWifi = true;
-        }
-        if(ZrecByWifi){
-            RawDataTotalTimeout = millis();
-            iuWiFi.m_setLastConfirmedPublication();
-            ZsentToWifi = true;
-        }
-        // double timeSinceLastSentToESP = millis() - lastPacketSentToESP; // use later for retry mechanism
-        if ((millis() - RawDataTimeout) > 8000 && (!XSentToWifi || !XrecByWifi)) {
+        if (((millis() - RawDataTimeout) > 8000 && !XrecByWifi) || (!XSentToWifi && !XrecByWifi)) {
             prepareRawDataPacketAndSend('X');
+            XSentToWifi = true; 
             RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
-            
+            RawDataTotalTimeout = millis();
+            iuWiFi.m_setLastConfirmedPublication();
             if(loopDebugMode) {
                 debugPrint("Raw data request: X sent to wifi");
             }
             // lastPacketSentToESP = millis();
-        } else if (((millis() - RawDataTimeout) > 8000 && !YrecByWifi) || (httpsStatusCodeX == 200 || httpsOEMStatusCodeX == 200) && (!YsentToWifi && sendNextAxis)) { 
+        } else if (((millis() - RawDataTimeout) > 8000 && !YrecByWifi && (httpsStatusCodeX == 200 || httpsOEMStatusCodeX == 200)) || ((httpsStatusCodeX == 200 || httpsOEMStatusCodeX == 200) && !YsentToWifi && sendNextAxis)) { 
             prepareRawDataPacketAndSend('Y');
-            
+            YsentToWifi = true;
             sendNextAxis = false;
             RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
-            
+            RawDataTotalTimeout = millis();
+            iuWiFi.m_setLastConfirmedPublication();
             if(loopDebugMode) {
                 debugPrint("Raw data request: X delivered, Y sent to wifi");
             }
             // lastPacketSentToESP = millis();
-        } else if (((millis() - RawDataTimeout) > 8000 && !ZrecByWifi) || (httpsStatusCodeY == 200 || httpsOEMStatusCodeY == 200) && (!ZsentToWifi && sendNextAxis)) {
+        } else if (((millis() - RawDataTimeout) > 8000 && !ZrecByWifi && (httpsStatusCodeY == 200 || httpsOEMStatusCodeY == 200)) || ((httpsStatusCodeY == 200 || httpsOEMStatusCodeY == 200) && !ZsentToWifi && sendNextAxis)) {
             prepareRawDataPacketAndSend('Z');
-            
+            ZsentToWifi = true;
             sendNextAxis = false;
             RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
-            
+            RawDataTotalTimeout = millis();
+            iuWiFi.m_setLastConfirmedPublication();
             if(loopDebugMode) {
                 debugPrint("Raw data request: Y delivered, Z sent to wifi");
             }
             // lastPacketSentToESP = millis();
-        }
-            
+        } 
         // else if((millis() - RawDataTimeout) > 8000 && XSentToWifi && httpsStatusCodeX != 200){
         //     prepareRawDataPacketAndSend('X');
         //     XSentToWifi = true;
@@ -5011,7 +5002,9 @@ void Conductor::manageRawDataSending() {
         //     }
         // }
         if(httpOEMConfigPresent){
-            if ((httpsStatusCodeX == 200 && httpsStatusCodeY == 200 && httpsStatusCodeZ == 200) && (httpsOEMStatusCodeX == 200 && httpsOEMStatusCodeY == 200 && httpsOEMStatusCodeZ == 200) ) {
+            if (((httpsStatusCodeX == 200 && httpsStatusCodeY == 200 && httpsStatusCodeZ == 200) && (httpsOEMStatusCodeX == 200 && httpsOEMStatusCodeY == 200 && httpsOEMStatusCodeZ == 200)) ||
+                 ((httpsStatusCodeX == 200 && httpsStatusCodeY == 200 && httpsStatusCodeZ == 200) && (httpsOEMStatusCodeY == 0 && httpsOEMStatusCodeZ == 0)) || 
+                 ((httpsOEMStatusCodeX == 200 && httpsOEMStatusCodeY == 200 && httpsOEMStatusCodeZ == 200) && (httpsStatusCodeY == 0 && httpsStatusCodeZ == 0))){
             // End the transmission session, reset RawDataState::startRawDataCollection and RawDataState::rawDataTransmissionInProgress
             // Rest of the tracking variables are reset when rawDataRequest() is called
                 if(loopDebugMode) {
