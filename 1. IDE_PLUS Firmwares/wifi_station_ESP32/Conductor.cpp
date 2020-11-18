@@ -585,7 +585,11 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             break;
         case MSPCommand::SEND_HTTP_CONNECTION_INFO:
             updateConfig(IUESPFlash::CFG_HTTP, buffer,bufferLength-1);
-            delay(100);
+            delay(50);
+            hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_DISCONNECTED);
+            delay(50);
+            hostSerial.sendMSPCommand(MSPCommand::MQTT_ALERT_DISCONNECTED);
+            delay(50);
             ESP.restart();
             break;
         case MSPCommand::SEND_MQTT_CONNECTION_INFO:
@@ -965,7 +969,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             iuWiFiFlash.removeFile(IUESPFlash::CFG_WIFI);
             iuWiFiFlash.removeFile(IUESPFlash::CFG_MQTT);
             iuWiFiFlash.removeFile(IUESPFlash::CFG_HTTP);
-            iuWiFiFlash.updateValue(CERT_ADDRESS,0);
+            // iuWiFiFlash.updateValue(CERT_ADDRESS,0);
             hostSerial.sendMSPCommand(MSPCommand::DELETE_CERT_FILES,"succefully Deleted, Rebooting ESP");
             ESP.restart();
             break;
@@ -2992,7 +2996,7 @@ void Conductor::setMQTTConfig(){
 
 void Conductor::setHTTPConfig(){
     if(iuWiFiFlash.isFilePresent(IUESPFlash::CFG_HTTP)){
-        StaticJsonBuffer<1024> JsonBuffer;
+        StaticJsonBuffer<512> JsonBuffer;
         JsonObject& config = iuWiFiFlash.loadConfigJson(IUESPFlash::CFG_HTTP,JsonBuffer);
         bool validConfig = config.success();
         //config.prettyPrintTo(Serial);
