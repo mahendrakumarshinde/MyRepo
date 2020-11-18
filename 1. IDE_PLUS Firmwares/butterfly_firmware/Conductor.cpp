@@ -3735,13 +3735,10 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                         processConfiguration((char *)HttpConfig.c_str(),1);
                     }else if(DOSFS.exists("httpConfig.conf")){
                         JsonObject& HttpConfig = configureJsonFromFlash("httpConfig.conf",1);
-                        JsonVariant config = JsonVariant(HttpConfig);
-                        if(config.success()){
-                            String jsonChar;
-                            config.printTo(jsonChar);
-                            config.prettyPrintTo(Serial);
-                            debugPrint("JSon Char :",false);debugPrint(jsonChar);
-                            iuWiFi.sendMSPCommand(MSPCommand::SEND_HTTP_CONNECTION_INFO, jsonChar.c_str(), strlen(jsonChar.c_str()));
+                        if(HttpConfig.success()){
+                            char jsonChar[512];
+                            HttpConfig.printTo((char*)jsonChar, HttpConfig.measureLength() + 1);
+                            processConfiguration((char *)jsonChar,1);
                         }
                     }else{
                         iuWiFi.sendMSPCommand(MSPCommand::SEND_HTTP_CONNECTION_INFO, "EMPTY");
@@ -3760,11 +3757,11 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                     String config = iuFlash.readInternalFlash(CONFIG_WIFI_CONFIG_FLASH_ADDRESS);
                     processConfiguration((char *)config.c_str(),1);
                 }else if(DOSFS.exists("MQTT.conf")){
-                    JsonObject& config = configureJsonFromFlash("MQTT.conf",1);
-                    if(config.success()){
-                        String jsonChar;
-                        config.printTo(jsonChar);
-                        iuWiFi.sendMSPCommand(MSPCommand::SEND_MQTT_CONNECTION_INFO, jsonChar.c_str());
+                    JsonObject& MqttConfig = configureJsonFromFlash("MQTT.conf",1);
+                    if(MqttConfig.success()){
+                        char jsonChar[512];
+                        MqttConfig.printTo((char*)jsonChar, MqttConfig.measureLength() + 1);
+                        processConfiguration((char *)jsonChar,1);
                     }
                 }else{
                     iuWiFi.sendMSPCommand(MSPCommand::SEND_MQTT_CONNECTION_INFO, "EMPTY");
