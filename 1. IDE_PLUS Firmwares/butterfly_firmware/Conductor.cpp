@@ -5373,20 +5373,20 @@ bool Conductor::setFFTParams() {
         }
         configured = true;
     } else {
-        if(iuAccelerometerKX222.kionixPresence){
-                conductor.setSensorStatus(conductor.SensorStatusCode::KNX_DEFAULT); // TO DO based on hardware identifier
-                FFTConfiguration::currentSamplingRate = iuAccelerometerKX222.defaultSamplingRate;
-                FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
-                FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
-                FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_KNX_G_RANGE;
-                iuAccelerometerKX222.setGrange(FFTConfiguration::currentKNXgRange);
-            }else if(iuAccelerometer.lsmPresence){
+        if(iuAccelerometer.lsmPresence){
                 conductor.setSensorStatus(conductor.SensorStatusCode::LSM_DEFAULT); // TO DO based on hardware identifier
                 FFTConfiguration::currentSamplingRate = iuAccelerometer.defaultSamplingRate;
                 FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
                 FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_LSM;
                 FFTConfiguration::currentLSMgRange = FFTConfiguration::DEFAULT_LSM_G_RANGE;
                 iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
+            }else if(iuAccelerometerKX222.kionixPresence){
+                conductor.setSensorStatus(conductor.SensorStatusCode::KNX_DEFAULT); // TO DO based on hardware identifier
+                FFTConfiguration::currentSamplingRate = iuAccelerometerKX222.defaultSamplingRate;
+                FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
+                FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
+                FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_KNX_G_RANGE;
+                iuAccelerometerKX222.setGrange(FFTConfiguration::currentKNXgRange);
             }else{
                 conductor.setSensorStatus(conductor.SensorStatusCode::SEN_ABS);
             }
