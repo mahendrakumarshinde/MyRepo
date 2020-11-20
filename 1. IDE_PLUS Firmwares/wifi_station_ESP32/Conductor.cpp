@@ -969,7 +969,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             iuWiFiFlash.removeFile(IUESPFlash::CFG_WIFI);
             iuWiFiFlash.removeFile(IUESPFlash::CFG_MQTT);
             iuWiFiFlash.removeFile(IUESPFlash::CFG_HTTP);
-            // iuWiFiFlash.updateValue(CERT_ADDRESS,0);
+            iuWiFiFlash.updateValue(CERT_ADDRESS,0);
             hostSerial.sendMSPCommand(MSPCommand::DELETE_CERT_FILES,"succefully Deleted, Rebooting ESP");
             ESP.restart();
             break;
