@@ -2,6 +2,7 @@
 #include "Utilities.h"
 // #include <ArduinoTrace.h>
 #include <base64.h>
+#include <ESP32Ping.h>
 
 #define UART_TX_FIFO_SIZE 0x80
 #define OTA_PACKET_SIZE 1024
@@ -882,7 +883,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             //Serial.print("Certificate Manager JSON :");
             //config.prettyPrintTo(Serial);
             
-            if( success && WiFi.isConnected() ){
+            if( success && WiFi.isConnected() && Ping.ping("www.google.com" , 1)){
                 
                 const char* host = config["certUrl"]["host"].as<char*>() ; 
                 int port = config["certUrl"]["port"].as<int>() ; 
@@ -2361,7 +2362,7 @@ void Conductor::mqttSecureConnect(){
     //static uint8_t newDownloadConnectonAttempt;
     uint32_t now = millis();
     if(!mqttHelper.client.connected() && (now - m_disconnectionMqttTimerStart > 3000 ) && WiFi.isConnected() || upgradeReceived == true){
-          if( certificateDownloadInProgress == false && certDownloadInitAck == false && downloadInitTimer == true ){
+          if( certificateDownloadInProgress == false && certDownloadInitAck == false && downloadInitTimer == true && Ping.ping("www.google.com" , 1)){
              if (!mqttHelper.hasConnectionInformations())
              {  
                 setMQTTConfig();
@@ -3203,7 +3204,7 @@ void Conductor:: messageValidation(char* json){
      uint8_t OEMconfigTypeCount = configJson["oem-certificates"].size();
      const char* messageID = configJson["messageId"];
      // Note : below 4 files are mandatory except EAP
-    if(validJson && WiFi.isConnected() ){       // JOSN for Checksum Validation
+    if(validJson && WiFi.isConnected() && Ping.ping("www.google.com" , 1)){       // JOSN for Checksum Validation
         //Validate the Response message
         if (iuWiFiFlash.isFilePresent(IUESPFlash::CFG_CERT_UPGRADE_CONFIG) && 
              iuWiFiFlash.isFilePresent(IUESPFlash::CFG_MQTT_CLIENT0) && 
