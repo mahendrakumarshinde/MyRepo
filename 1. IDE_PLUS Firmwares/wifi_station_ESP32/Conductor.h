@@ -60,8 +60,7 @@ extern IUESPFlash iuWiFiFlash;
 #define CERT_UPGRADE_FAILED                 2019
 #define CERT_NEW_CERT_NOT_AVAILBLE          2020
 #define CERT_SAME_UPGRADE_CONFIG_RECEIVED   2021
-#define CERT_OEM_CERT__URL_NOT_PRESENT      2023
-#define CERT_INVALID_CERT_TYPE              2024
+#define CERT_INVALID_CERT_TYPE              2023
 
 #define MQTT_CONNECTION_ATTEMPT_FAILED      2022
 

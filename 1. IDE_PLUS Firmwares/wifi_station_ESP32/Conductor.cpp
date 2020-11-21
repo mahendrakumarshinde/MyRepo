@@ -2326,10 +2326,8 @@ String Conductor::getRca(int error)
             return F("CERT-RCA-0046");
         case HTTP_CODE_UNAUTHORIZED:
             return F("CERT-RCA-0047");
-        case CERT_OEM_CERT__URL_NOT_PRESENT:
-            return F("CERT-RCA-0048");
         case CERT_INVALID_CERT_TYPE:
-            return F("CERT-RCA-0049");
+            return F("CERT-RCA-0048");
         default:
             if(certificateDownloadInProgress){ return F("CERT-RCA-2222");}else{ return F("OTA-RCA-1111"); }
     }
@@ -3157,9 +3155,6 @@ void Conductor:: messageValidation(char* json){
                 }else{
                     newOEMRootCACertificateAvailable = true;
                 }
-            }else if(accelRawDataHelper.httpsOEMConfigPresent){
-                hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT, String(getRca(CERT_OEM_CERT__URL_NOT_PRESENT)).c_str());
-                downloadAborted =true; 
             }
             
             
