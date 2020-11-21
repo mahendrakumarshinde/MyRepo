@@ -95,7 +95,7 @@ class Conductor
         //ESP32 will deep-sleep after being disconnected for more than:
         static const uint32_t disconnectionTimeout = 120*1000;  // ms
         // Cyclic publication
-        static const uint32_t wifiStatusUpdateDelay = 5000;  // ms
+        static const uint32_t wifiStatusUpdateDelay = 10000;  // ms
         static const uint32_t wifiInfoPublicationDelay = 300000;  // ms
         // OTA Update in progress, timoue for packet ack from STM
         static const uint32_t otaPktAckTimeout = 30000;  // ms
@@ -226,12 +226,16 @@ class Conductor
         static const uint8_t CONFIG_TYPE_COUNT = 12;
         static IUESPFlash::storedConfig CONFIG_TYPES[CONFIG_TYPE_COUNT];
         void connectToWiFi();
-        void updateWiFiConfig(char* config,int length);
+        void updateConfig(IUESPFlash::storedConfig configType, char* config,int length);
         void setWiFiConfig();
+        void setMQTTConfig();
+        void setHTTPConfig();
         void sendWiFiConfig();
         IUESPFlash::storedConfig getStoredConfigType(const char* certType,bool partation);
         bool validateCertType(const char* type);
         char wifiHash[34];
+        char mqttHash[34];
+        char httpHash[34];
     protected:
         /***** Config from Host *****/      
         char HOST_FIRMWARE_VERSION[8];      //filled when the ESP starts or when it connects to MQTT broker

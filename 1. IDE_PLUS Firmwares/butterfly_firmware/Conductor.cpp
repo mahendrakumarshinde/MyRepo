@@ -468,9 +468,11 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
         if(dataWritten == true){
           iuFlash.writeInternalFlash(1,CONFIG_MQTT_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
-          configureMQTTServer("MQTT.conf");
+          iuWiFi.sendMSPCommand(MSPCommand::SEND_MQTT_CONNECTION_INFO, jsonChar.c_str());
           //send Ack to BLE
           iuBluetooth.write("MQTT-RECEVIED");
+          delay(500);
+          iuWiFi.hardReset();
           // get the latest account id and send to wifi
          /* JsonObject& config = configureJsonFromFlash("MQTT.conf",1);      // get the accountID
           m_accountId = config["accountid"];
@@ -568,27 +570,43 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 }  
             
             }
+            if (iuWiFi.isConnected() )
+            {   
+                iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HTTP_CONFIG_ACK, validationResultString);
+            
+            }else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
+            {     
+                    snprintf(ack_config, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
+                        m_macAddress.toString().c_str(),0, 2, m_macAddress.toString().c_str(),messageId);
+                    
+                        debugPrint(ack_config,true);
+                        iuEthernet.write(ack_config); 
+                        iuEthernet.write("\n");
+                    //iuEthernet.write(httpConfig_ack);
+            }
             if(dataWritten == true){
                 iuFlash.writeInternalFlash(1,CONFIG_HTTP_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
+                iuWiFi.sendMSPCommand(MSPCommand::SEND_HTTP_CONNECTION_INFO, jsonChar.c_str(), strlen(jsonChar.c_str()));
+                readHTTPendpoints();
             //configureBoardFromFlash("httpConfig.conf",dataWritten);
-            JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
+            // JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
 
-            const char* messageId = config["messageId"];
-            const char*  host = config["httpConfig"]["host"].as<char*>();
-            int port = config["httpConfig"]["port"].as<int>();
-            const char* httpPath = config["httpConfig"]["path"].as<char*>();
+            // const char* messageId = config["messageId"];
+            // const char*  host = config["httpConfig"]["host"].as<char*>();
+            // int port = config["httpConfig"]["port"].as<int>();
+            // const char* httpPath = config["httpConfig"]["path"].as<char*>();
             
-            bool oemConfig = false;
-            bool oemSameConfig = true;
-            if(config.containsKey("httpOem")){
-                const char*  oem_host = config["httpOem"]["host"].as<char*>();
-                int oem_port = config["httpOem"]["port"].as<int>();
-                const char* oem_httpPath = config["httpOem"]["path"].as<char*>();
-                if(strcmp( oem_host, m_httpHost_oem) != 0  || oem_port != m_httpPort_oem || strcmp(oem_httpPath, m_httpPath_oem) != 0){
-                    oemSameConfig = false;
-                }
-                oemConfig = true;
-            }
+            // bool oemConfig = false;
+            // bool oemSameConfig = true;
+            // if(config.containsKey("httpOem")){
+            //     const char*  oem_host = config["httpOem"]["host"].as<char*>();
+            //     int oem_port = config["httpOem"]["port"].as<int>();
+            //     const char* oem_httpPath = config["httpOem"]["path"].as<char*>();
+            //     if(strcmp( oem_host, m_httpHost_oem) != 0  || oem_port != m_httpPort_oem || strcmp(oem_httpPath, m_httpPath_oem) != 0){
+            //         oemSameConfig = false;
+            //     }
+            //     oemConfig = true;
+            // }
 
             // debugPrint("Active httpConfigs : ");
             // debugPrint("Host :",false);debugPrint(m_httpHost);
@@ -605,33 +623,21 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             // snprintf(httpConfig_ack, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
                 
             // debugPrint(F("httpConfig ACK :"));debugPrint(httpConfig_ack);
-            if (iuWiFi.isConnected() )
-            {   
-                iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HTTP_CONFIG_ACK, validationResultString);
             
-            }else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
-            {     
-                    snprintf(ack_config, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
-                        m_macAddress.toString().c_str(),0, 2, m_macAddress.toString().c_str(),messageId);
-                    
-                        debugPrint(ack_config,true);
-                        iuEthernet.write(ack_config); 
-                        iuEthernet.write("\n");
-                    //iuEthernet.write(httpConfig_ack);
-            }
             
             
             
             //stm reset
             delay(10);
-            if(!httpOtaValidation){
-                if((strcmp( host, m_httpHost) != 0  || port != m_httpPort || strcmp(httpPath, m_httpPath) != 0) || oemSameConfig == false ){
-                        DOSFS.end();
-                        delay(10);
-                        //STM32.reset();
-                        iuWiFi.hardReset();
-                }   
-            }
+            // iuWiFi.hardReset();
+            // if(!httpOtaValidation){
+            //     if((strcmp( host, m_httpHost) != 0  || port != m_httpPort || strcmp(httpPath, m_httpPath) != 0) || oemSameConfig == false ){
+            //             DOSFS.end();
+            //             delay(10);
+            //             //STM32.reset();
+            //             iuWiFi.hardReset();
+            //     }   
+            // }
             
             }
         }else{
@@ -1561,101 +1567,122 @@ void Conductor::readForceOtaConfig()
  * 
  */
 
- void Conductor::configureMQTTServer(String filename){
-
-  // Open the configuration file
-  File myFile = DOSFS.open(filename,"r");
-  
-  const size_t bufferSize = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(4) + 208;
-  StaticJsonBuffer<bufferSize> jsonBuffer;
-
-  // Parse the root object
-  JsonObject &root = jsonBuffer.parseObject(myFile);
-
-  if (!root.success() && !iuFlash.checkConfig(CONFIG_MQTT_FLASH_ADDRESS)){
-    debugPrint(F("Failed to read MQTT.conf file, using default configuration"));
-    setDefaultMQTT();
-    // flashStatusFlag = true;
-    //m_accountid = "XXXAdmin";
-  }
-  else if(iuFlash.checkConfig(CONFIG_MQTT_FLASH_ADDRESS) && !root.success()){
-        String mqttConfig = iuFlash.readInternalFlash(CONFIG_MQTT_FLASH_ADDRESS);
-        debugPrint(mqttConfig);
-        JsonObject &config = jsonBuffer.parseObject(mqttConfig);
+void Conductor::readMQTTendpoints(){
+    if(DOSFS.exists("MQTT.conf")){
+        JsonObject& config = configureJsonFromFlash("MQTT.conf",1);
         if(config.success())
         {
             debugPrint("Mqtt Config Found");
             m_mqttServerIp = config["mqtt"]["mqttServerIP"];
-
             int mqttport = config["mqtt"]["port"];
-            //debugPrint("INside MQTT.conf .......");
-            // m_mqttServerIp.fromString(mqttServerIP);//mqttServerIP;
             m_mqttServerPort = mqttport;
             m_mqttUserName = config["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
             m_mqttPassword = config["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
-            // m_tls_enabled = config["mqtt"]["tls"];
-            m_accountId = config["accountid"];
-            File mqttFile = DOSFS.open("MQTT.conf","w");
-            if(mqttFile)
-            {
-                mqttFile.print(mqttConfig.c_str());
-                mqttFile.flush();
-                debugPrint("MQTT.conf File write Success");
-                flashStatusFlag = true;
-                mqttFile.close();
-            }
-
-            iuWiFi.hardReset();
-            if (debugMode) {
-                debugPrint(F("MQTT ServerIP :"),false);
-                debugPrint(m_mqttServerIp);
-                debugPrint(F("Mqtt Port :"),false);
-                debugPrint(m_mqttServerPort);
-                debugPrint(F("Mqtt UserName :"),false);
-                debugPrint(m_mqttUserName);
-                debugPrint(F("Mqtt Password :"),false);
-                debugPrint(m_mqttPassword);
-                // debugPrint(F("TLS ENABLE:"),false);
-                // debugPrint(m_tls_enabled);
-                debugPrint(F("Account ID :"));
-                debugPrint(m_accountId);
-            }   
-        }else{
-            setDefaultMQTT();
         }
-  }
- else {
-  
-  m_mqttServerIp = root["mqtt"]["mqttServerIP"];
-  int mqttport = root["mqtt"]["port"];
-   //debugPrint("INside MQTT.conf .......");
-//   m_mqttServerIp.fromString(mqttServerIP);//mqttServerIP;
-  m_mqttServerPort = mqttport;
-  m_mqttUserName = root["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
-  m_mqttPassword = root["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
-//   m_tls_enabled = root["mqtt"]["tls"];
-  m_accountId = root["accountid"];
-  
-  iuWiFi.hardReset();
-  if (debugMode) {
-        debugPrint(F("MQTT ServerIP :"),false);
-        debugPrint(m_mqttServerIp);
-        debugPrint(F("Mqtt Port :"),false);
-        debugPrint(m_mqttServerPort);
-        debugPrint(F("Mqtt UserName :"),false);
-        debugPrint(m_mqttUserName);
-        debugPrint(F("Mqtt Password :"),false);
-        debugPrint(m_mqttPassword);
-        // debugPrint(F("TLS ENABLE:"),false);
-        // debugPrint(m_tls_enabled);
-        debugPrint(F("Account ID :"));
-        debugPrint(m_accountId);
-  }   
- 
- }
-  myFile.close();
-  
+    }else{
+        setDefaultMQTT();
+    }
 }
+/*
+ * Read the MQTT Configutation details
+ * 
+ */
+
+//  void Conductor::configureMQTTServer(String filename){
+
+//   // Open the configuration file
+//   File myFile = DOSFS.open(filename,"r");
+  
+//   const size_t bufferSize = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(4) + 208;
+//   StaticJsonBuffer<bufferSize> jsonBuffer;
+
+//   // Parse the root object
+//   JsonObject &root = jsonBuffer.parseObject(myFile);
+
+//   if (!root.success() && !iuFlash.checkConfig(CONFIG_MQTT_FLASH_ADDRESS)){
+//     debugPrint(F("Failed to read MQTT.conf file, using default configuration"));
+//     setDefaultMQTT();
+//     // flashStatusFlag = true;
+//     //m_accountid = "XXXAdmin";
+//   }
+//   else if(iuFlash.checkConfig(CONFIG_MQTT_FLASH_ADDRESS) && !root.success()){
+//         String mqttConfig = iuFlash.readInternalFlash(CONFIG_MQTT_FLASH_ADDRESS);
+//         debugPrint(mqttConfig);
+//         JsonObject &config = jsonBuffer.parseObject(mqttConfig);
+//         if(config.success())
+//         {
+//             debugPrint("Mqtt Config Found");
+//             m_mqttServerIp = config["mqtt"]["mqttServerIP"];
+
+//             int mqttport = config["mqtt"]["port"];
+//             //debugPrint("INside MQTT.conf .......");
+//             // m_mqttServerIp.fromString(mqttServerIP);//mqttServerIP;
+//             m_mqttServerPort = mqttport;
+//             m_mqttUserName = config["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
+//             m_mqttPassword = config["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
+//             // m_tls_enabled = config["mqtt"]["tls"];
+//             m_accountId = config["accountid"];
+//             File mqttFile = DOSFS.open("MQTT.conf","w");
+//             if(mqttFile)
+//             {
+//                 mqttFile.print(mqttConfig.c_str());
+//                 mqttFile.flush();
+//                 debugPrint("MQTT.conf File write Success");
+//                 flashStatusFlag = true;
+//                 mqttFile.close();
+//             }
+
+//             iuWiFi.hardReset();
+//             if (debugMode) {
+//                 debugPrint(F("MQTT ServerIP :"),false);
+//                 debugPrint(m_mqttServerIp);
+//                 debugPrint(F("Mqtt Port :"),false);
+//                 debugPrint(m_mqttServerPort);
+//                 debugPrint(F("Mqtt UserName :"),false);
+//                 debugPrint(m_mqttUserName);
+//                 debugPrint(F("Mqtt Password :"),false);
+//                 debugPrint(m_mqttPassword);
+//                 // debugPrint(F("TLS ENABLE:"),false);
+//                 // debugPrint(m_tls_enabled);
+//                 debugPrint(F("Account ID :"));
+//                 debugPrint(m_accountId);
+//             }   
+//         }else{
+//             setDefaultMQTT();
+//         }
+//   }
+//  else {
+  
+//   m_mqttServerIp = root["mqtt"]["mqttServerIP"];
+//   int mqttport = root["mqtt"]["port"];
+//    //debugPrint("INside MQTT.conf .......");
+// //   m_mqttServerIp.fromString(mqttServerIP);//mqttServerIP;
+//   m_mqttServerPort = mqttport;
+//   m_mqttUserName = root["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
+//   m_mqttPassword = root["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
+// //   m_tls_enabled = root["mqtt"]["tls"];
+//   m_accountId = root["accountid"];
+  
+//   iuWiFi.hardReset();
+//   if (debugMode) {
+//         debugPrint(F("MQTT ServerIP :"),false);
+//         debugPrint(m_mqttServerIp);
+//         debugPrint(F("Mqtt Port :"),false);
+//         debugPrint(m_mqttServerPort);
+//         debugPrint(F("Mqtt UserName :"),false);
+//         debugPrint(m_mqttUserName);
+//         debugPrint(F("Mqtt Password :"),false);
+//         debugPrint(m_mqttPassword);
+//         // debugPrint(F("TLS ENABLE:"),false);
+//         // debugPrint(m_tls_enabled);
+//         debugPrint(F("Account ID :"));
+//         debugPrint(m_accountId);
+//   }   
+ 
+//  }
+//   myFile.close();
+  
+// }
 /*
  * swap credentails
  */
@@ -1672,41 +1699,18 @@ void Conductor::readForceOtaConfig()
  * Used to configure http endpoint configurations
  */
 
-
-bool Conductor::configureBoardFromFlash(String filename,bool isSet){
-  
-  if(isSet != true){
-
-    return false;
-  }
-  
-  // Open the configuration file
- 
-  File myFile = DOSFS.open(filename,"r");
-  const size_t bufferSize = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(6) + 510;
-  StaticJsonBuffer<bufferSize> jsonBuffer;
-
-  // Parse the root object
-  JsonObject &root = jsonBuffer.parseObject(myFile);
-  if (!root.success() && !iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS)){
-    debugPrint(F("Failed to read httpConf.conf file, using default configuration"));
-    setDefaultHTTP();
-
-  }else if(iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS) && !root.success()){
-      String httpConfig = iuFlash.readInternalFlash(CONFIG_HTTP_FLASH_ADDRESS);
-        debugPrint(httpConfig);
-        JsonObject &config = jsonBuffer.parseObject(httpConfig);
+bool Conductor::readHTTPendpoints(){
+    if(DOSFS.exists("httpConfig.conf")){
+        JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
         if(config.success())
         {
-            debugPrint("Http Config Found");
-
+            debugPrint("HTTP Config Found");
             m_httpHost = config["httpConfig"]["host"];
-            m_httpPort = config["httpConfig"]["port"];
+            int m_httpPort = config["httpConfig"]["port"];
             m_httpPath = config["httpConfig"]["path"];
             m_httpUsername = config["httpConfig"]["username"];
             m_httpPassword = config["httpConfig"]["password"];
             m_httpOauth = config["httpConfig"]["oauth"];
-
             if(config.containsKey("httpOem")){
                 m_httpHost_oem = config["httpOem"]["host"];
                 m_httpPort_oem = config["httpOem"]["port"];
@@ -1714,81 +1718,134 @@ bool Conductor::configureBoardFromFlash(String filename,bool isSet){
                 m_httpUsername_oem = config["httpOem"]["username"];
                 m_httpPassword_oem = config["httpOem"]["password"];
                 m_httpOauth_oem = config["httpOem"]["oauth"];
-            }
-            File httpFile = DOSFS.open("httpConfig.conf","w");
-            if(httpFile)
-            {
-                httpFile.print(httpConfig.c_str());
-                httpFile.flush();
-                debugPrint("httpConfig.conf File write Success");
-                flashStatusFlag = true;
-                httpFile.close();
-            }
-
-            if(debugMode){
-                debugPrint("FROM configureBoardFromFlash :");
-
-                debugPrint(F("Http Host :"),false);
-                debugPrint(m_httpHost);
-                //debugPrint(":");
-                debugPrint(F("Port:"),false);
-                debugPrint(m_httpPort);
-                debugPrint(F("Path :"),false);
-                debugPrint(m_httpPath);
-                debugPrint(F("UserName :"),false);
-                debugPrint(m_httpUsername);
-                debugPrint(F("Password :"),false);
-                debugPrint(m_httpPassword);
-                debugPrint(F("Oauth :"),false);
-                debugPrint(m_httpOauth);
-                }
+                httpOEMConfigPresent = true;
             }else{
-                debugPrint(F("Failed to read httpConf.conf file, using default configuration"));
-                setDefaultHTTP();
+                httpOEMConfigPresent = false;
             }
         }
- else {
-
-        // Read configuration from the file
-
-        m_httpHost = root["httpConfig"]["host"];
-        m_httpPort = root["httpConfig"]["port"];
-        m_httpPath = root["httpConfig"]["path"];
-        m_httpUsername = root["httpConfig"]["username"];
-        m_httpPassword = root["httpConfig"]["password"];
-        m_httpOauth = root["httpConfig"]["oauth"];
-
-        if(root.containsKey("httpOem")){
-            m_httpHost_oem = root["httpOem"]["host"];
-            m_httpPort_oem = root["httpOem"]["port"];
-            m_httpPath_oem = root["httpOem"]["path"];
-            m_httpUsername_oem = root["httpOem"]["username"];
-            m_httpPassword_oem = root["httpOem"]["password"];
-            m_httpOauth_oem = root["httpOem"]["oauth"];
-        }
-
-if(debugMode){
-  debugPrint("FROM configureBoardFromFlash :");
-
-  debugPrint(F("Http Host :"),false);
-  debugPrint(m_httpHost);
-  //debugPrint(":");
-  debugPrint(F("Port:"),false);
-  debugPrint(m_httpPort);
-  debugPrint(F("Path :"),false);
-  debugPrint(m_httpPath);
-  debugPrint(F("UserName :"),false);
-  debugPrint(m_httpUsername);
-  debugPrint(F("Password :"),false);
-  debugPrint(m_httpPassword);
-  debugPrint(F("Oauth :"),false);
-  debugPrint(m_httpOauth);
-  }
+        return true;
+    }else{
+        setDefaultHTTP();
+        httpOEMConfigPresent = false;
+        return false;
+    }
 }
- myFile.close();
+// bool Conductor::configureBoardFromFlash(String filename,bool isSet){
+  
+//   if(isSet != true){
+
+//     return false;
+//   }
+  
+//   // Open the configuration file
  
- return true;
-}
+//   File myFile = DOSFS.open(filename,"r");
+//   const size_t bufferSize = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(6) + 510;
+//   StaticJsonBuffer<bufferSize> jsonBuffer;
+
+//   // Parse the root object
+//   JsonObject &root = jsonBuffer.parseObject(myFile);
+//   if (!root.success() && !iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS)){
+//     debugPrint(F("Failed to read httpConf.conf file, using default configuration"));
+//     setDefaultHTTP();
+
+//   }else if(iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS) && !root.success()){
+//       String httpConfig = iuFlash.readInternalFlash(CONFIG_HTTP_FLASH_ADDRESS);
+//         debugPrint(httpConfig);
+//         JsonObject &config = jsonBuffer.parseObject(httpConfig);
+//         if(config.success())
+//         {
+//             debugPrint("Http Config Found");
+
+//             m_httpHost = config["httpConfig"]["host"];
+//             m_httpPort = config["httpConfig"]["port"];
+//             m_httpPath = config["httpConfig"]["path"];
+//             m_httpUsername = config["httpConfig"]["username"];
+//             m_httpPassword = config["httpConfig"]["password"];
+//             m_httpOauth = config["httpConfig"]["oauth"];
+
+//             if(config.containsKey("httpOem")){
+//                 m_httpHost_oem = config["httpOem"]["host"];
+//                 m_httpPort_oem = config["httpOem"]["port"];
+//                 m_httpPath_oem = config["httpOem"]["path"];
+//                 m_httpUsername_oem = config["httpOem"]["username"];
+//                 m_httpPassword_oem = config["httpOem"]["password"];
+//                 m_httpOauth_oem = config["httpOem"]["oauth"];
+//             }
+//             File httpFile = DOSFS.open("httpConfig.conf","w");
+//             if(httpFile)
+//             {
+//                 httpFile.print(httpConfig.c_str());
+//                 httpFile.flush();
+//                 debugPrint("httpConfig.conf File write Success");
+//                 flashStatusFlag = true;
+//                 httpFile.close();
+//             }
+
+//             if(debugMode){
+//                 debugPrint("FROM configureBoardFromFlash :");
+
+//                 debugPrint(F("Http Host :"),false);
+//                 debugPrint(m_httpHost);
+//                 //debugPrint(":");
+//                 debugPrint(F("Port:"),false);
+//                 debugPrint(m_httpPort);
+//                 debugPrint(F("Path :"),false);
+//                 debugPrint(m_httpPath);
+//                 debugPrint(F("UserName :"),false);
+//                 debugPrint(m_httpUsername);
+//                 debugPrint(F("Password :"),false);
+//                 debugPrint(m_httpPassword);
+//                 debugPrint(F("Oauth :"),false);
+//                 debugPrint(m_httpOauth);
+//                 }
+//             }else{
+//                 debugPrint(F("Failed to read httpConf.conf file, using default configuration"));
+//                 setDefaultHTTP();
+//             }
+//         }
+//  else {
+
+//         // Read configuration from the file
+
+//         m_httpHost = root["httpConfig"]["host"];
+//         m_httpPort = root["httpConfig"]["port"];
+//         m_httpPath = root["httpConfig"]["path"];
+//         m_httpUsername = root["httpConfig"]["username"];
+//         m_httpPassword = root["httpConfig"]["password"];
+//         m_httpOauth = root["httpConfig"]["oauth"];
+
+//         if(root.containsKey("httpOem")){
+//             m_httpHost_oem = root["httpOem"]["host"];
+//             m_httpPort_oem = root["httpOem"]["port"];
+//             m_httpPath_oem = root["httpOem"]["path"];
+//             m_httpUsername_oem = root["httpOem"]["username"];
+//             m_httpPassword_oem = root["httpOem"]["password"];
+//             m_httpOauth_oem = root["httpOem"]["oauth"];
+//         }
+
+// if(debugMode){
+//   debugPrint("FROM configureBoardFromFlash :");
+
+//   debugPrint(F("Http Host :"),false);
+//   debugPrint(m_httpHost);
+//   //debugPrint(":");
+//   debugPrint(F("Port:"),false);
+//   debugPrint(m_httpPort);
+//   debugPrint(F("Path :"),false);
+//   debugPrint(m_httpPath);
+//   debugPrint(F("UserName :"),false);
+//   debugPrint(m_httpUsername);
+//   debugPrint(F("Password :"),false);
+//   debugPrint(m_httpPassword);
+//   debugPrint(F("Oauth :"),false);
+//   debugPrint(m_httpOauth);
+//   }
+// }
+//  myFile.close();
+ 
+//  return true;
+// }
 
 /*
  * configureJsonFromFlash(char* filename,bool isSet)
@@ -2557,76 +2614,36 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                 }
                 if (strcmp(buff, "IUGET_HTTP_CONFIG") == 0)
                 {
-                    if (DOSFS.exists("httpConfig.conf")){
-                        const char* _httpHost;
-                        const char* _httpPort;
-                        const char* _httpPath;
-
-                        const char* oem_httpHost;
-                        const char* oem_httpPort;
-                        const char* oem_httpPath;
-
-                        JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
-                        _httpHost = config["httpConfig"]["host"];
-                        _httpPort = config["httpConfig"]["port"];
-                        _httpPath = config["httpConfig"]["path"];
-                        if(config.containsKey("httpOem")){
-                            oem_httpHost = config["httpOem"]["host"];
-                            oem_httpPort = config["httpOem"]["port"];
-                            oem_httpPath = config["httpOem"]["path"];
-                        }
-
+                    readHTTPendpoints();
                     iuUSB.port->println("*****HTTP_CONFIG*****");
                     iuUSB.port->print("HTTP_HOST : ");
-                    iuUSB.port->println(_httpHost);
+                    iuUSB.port->println(m_httpHost);
                     iuUSB.port->print("HTTP_PORT : ");
-                    iuUSB.port->println(_httpPort);
+                    iuUSB.port->println(m_httpPort);
                     iuUSB.port->print("HTTP_PATH : ");
-                    iuUSB.port->println(_httpPath);
-                    if(config.containsKey("httpOem")){
+                    iuUSB.port->println(m_httpPath);
+                    if(httpOEMConfigPresent){
                         iuUSB.port->println("*****HTTP_OEM_CONFIG*****");
                         iuUSB.port->print("HTTP_HOST : ");
-                        iuUSB.port->println(oem_httpHost);
+                        iuUSB.port->println(m_httpHost_oem);
                         iuUSB.port->print("HTTP_PORT : ");
-                        iuUSB.port->println(oem_httpPort);
+                        iuUSB.port->println(m_httpPort_oem);
                         iuUSB.port->print("HTTP_PATH : ");
-                        iuUSB.port->println(oem_httpPath);
-                    }
-                    }else{
-                        debugPrint(F("httpConfig.conf file does not exists"));
+                        iuUSB.port->println(m_httpPath_oem);
                     }
                 }
                 if (strcmp(buff, "IUGET_MQTT_CONFIG") == 0)
                 {
-                    if  (DOSFS.exists("MQTT.conf")){
-                    const char* _serverIP;
-                    const char* _serverPort;
-                    const char* _UserName;
-                    const char* _Password;
-                    // const char* _tls;
-
-                    JsonObject& config = configureJsonFromFlash("MQTT.conf",1);
-                    _serverIP = config["mqtt"]["mqttServerIP"];
-                    _serverPort = config["mqtt"]["port"];
-                    _UserName = config["mqtt"]["username"];
-                    _Password = config["mqtt"]["password"];
-                    // _tls = config["mqtt"]["tls"];
-
-
+                    readMQTTendpoints();
                     iuUSB.port->println("*****MQTT_CONFIG*****");
                     iuUSB.port->print("MQTT_SERVER_IP : ");
-                    iuUSB.port->println(_serverIP);
+                    iuUSB.port->println(m_mqttServerIp);
                     iuUSB.port->print("MQTT_PORT : ");
-                    iuUSB.port->println(_serverPort);
+                    iuUSB.port->println(m_mqttServerPort);
                     iuUSB.port->print("MQTT_USERNAME : ");
-                    iuUSB.port->println(_UserName);
+                    iuUSB.port->println(m_mqttUserName);
                     iuUSB.port->print("MQTT_PASSWORD : ");
-                    iuUSB.port->println(_Password);
-                    // iuUSB.port->print("MQTT_TLS : ");
-                    // iuUSB.port->println(_tls);
-                  }else{
-                    debugPrint(F("MQTT.conf file does not exists"));
-                  }
+                    iuUSB.port->println(m_mqttPassword);
                   
                 }  
                 if (strcmp(buff, "IUGET_FFT_CONFIG") == 0) {
@@ -3473,7 +3490,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             if (loopDebugMode){ debugPrint(F("GET_DEVICE_CONFIG")); }
             char deviceInfo[64];
             //sprintf(deviceInfo,"%s-%d-%d",FIRMWARE_VERSION,FFTConfiguration::currentSamplingRate,FFTConfiguration::currentBlockSize);
-            sprintf(deviceInfo,"%s-%d-%d-%d",FIRMWARE_VERSION,FFTConfiguration::calculatedSamplingRate,FFTConfiguration::currentBlockSize,httpOEMConfigPresent);
+            sprintf(deviceInfo,"%s-%d-%d",FIRMWARE_VERSION,FFTConfiguration::calculatedSamplingRate,FFTConfiguration::currentBlockSize);
             iuWiFi.sendMSPCommand(MSPCommand::GET_DEVICE_CONFIG,deviceInfo);
             iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HOST_FIRMWARE_VERSION,FIRMWARE_VERSION);
             
@@ -3680,6 +3697,13 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 debugPrint(F("WIFI_CONFIRM_ACTION: "), false);
                 debugPrint(buff);
             }
+            if(strcmp(buff,"X") == 0){
+                XrecByWifi = true;
+            }else if(strcmp(buff,"Y") == 0){
+                YrecByWifi = true;
+            }else if(strcmp(buff,"Z") == 0){
+                ZrecByWifi = true;
+            }
             break;
         case MSPCommand::WIFI_CONFIRM_PUBLICATION:
             idx = (uint8_t) buff[0];
@@ -3703,138 +3727,49 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
         case MSPCommand::GET_RAW_DATA_ENDPOINT_INFO:
             // TODO: Implement
             { 
-              if(DOSFS.exists("httpConfig.conf")) {  
-                JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
-              
-                m_httpHost = config["httpConfig"]["host"];
-                m_httpPath = config["httpConfig"]["path"];
-                m_httpPort = config["httpConfig"]["port"];
-                m_httpUsername = config["httpConfig"]["username"];
-                m_httpPassword = config["httpConfig"]["password"];
-                m_httpOauth = config["httpConfig"]["oauth"];
-
-                if(config.containsKey("httpOem")){
-                    m_httpHost_oem = config["httpOem"]["host"];
-                    m_httpPort_oem = config["httpOem"]["port"];
-                    m_httpPath_oem = config["httpOem"]["path"];
-                    m_httpUsername_oem = config["httpOem"]["username"];
-                    m_httpPassword_oem = config["httpOem"]["password"];
-                    m_httpOauth_oem = config["httpOem"]["oauth"];
-                    httpOEMConfigPresent = true;
-                }else{
-                    httpOEMConfigPresent = false;
-                }
-
-              }else if(iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS)){
-                    String httpConfig = iuFlash.readInternalFlash(CONFIG_HTTP_FLASH_ADDRESS);
-                    debugPrint(httpConfig);
-                    const size_t bufferSize = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(6) + 510;
-                    StaticJsonBuffer<bufferSize> jsonBuffer;
-                    JsonObject &config = jsonBuffer.parseObject(httpConfig);
-                    if(config.success())
+              if (loopDebugMode) { debugPrint(F("GET_RAW_DATA_ENDPOINT_INFO")); }
+                {
+                    if (iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS) && ! DOSFS.exists("httpConfig.conf") )
                     {
-                        debugPrint("Http Config Found");
-                        m_httpHost = config["httpConfig"]["host"];
-                        m_httpPort = config["httpConfig"]["port"];
-                        m_httpPath = config["httpConfig"]["path"];
-                        m_httpUsername = config["httpConfig"]["username"];
-                        m_httpPassword = config["httpConfig"]["password"];
-                        m_httpOauth = config["httpConfig"]["oauth"];
-
-                        if(config.containsKey("httpOem")){
-                            m_httpHost_oem = config["httpOem"]["host"];
-                            m_httpPort_oem = config["httpOem"]["port"];
-                            m_httpPath_oem = config["httpOem"]["path"];
-                            m_httpUsername_oem = config["httpOem"]["username"];
-                            m_httpPassword_oem = config["httpOem"]["password"];
-                            m_httpOauth_oem = config["httpOem"]["oauth"];
-                            httpOEMConfigPresent = true;
-                        }else{
-                            httpOEMConfigPresent = false;
-                        }
-
-                        File httpFile = DOSFS.open("httpConfig.conf","w");
-                        if(httpFile)
-                        {
-                            httpFile.print(httpConfig.c_str());
-                            httpFile.flush();
-                            debugPrint("httpConfig.conf File write Success");
-                            flashStatusFlag = true;
-                            httpFile.close();
+                        String HttpConfig = iuFlash.readInternalFlash(CONFIG_HTTP_FLASH_ADDRESS);
+                        processConfiguration((char *)HttpConfig.c_str(),1);
+                    }else if(DOSFS.exists("httpConfig.conf")){
+                        JsonObject& HttpConfig = configureJsonFromFlash("httpConfig.conf",1);
+                        if(HttpConfig.success()){
+                            char jsonChar[512];
+                            HttpConfig.printTo((char*)jsonChar, HttpConfig.measureLength() + 1);
+                            processConfiguration((char *)jsonChar,1);
                         }
                     }else{
-                        debugPrint(F("Failed to read httpConf.conf file, using default configuration"));
-                        setDefaultHTTP();
+                        iuWiFi.sendMSPCommand(MSPCommand::SEND_HTTP_CONNECTION_INFO, "EMPTY");
                     }
-              }  
-              else{
-                    setDefaultHTTP();
+                    delay(100);
+                    updateHTTPHash();
                 }
-                iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_HOST,m_httpHost); 
-                iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_PORT,String(m_httpPort).c_str()); 
-                iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_ROUTE,m_httpPath);
-
-
-                iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_HOST_OEM,m_httpHost_oem); 
-                iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_PORT_OEM,String(m_httpPort_oem).c_str()); 
-                iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_ROUTE_OEM,m_httpPath_oem);
-                            
                 break;
            }
             
         case MSPCommand::GET_MQTT_CONNECTION_INFO:
             if (loopDebugMode) { debugPrint(F("GET_MQTT_CONNECTION_INFO")); }
             {
-            JsonObject& config = configureJsonFromFlash("MQTT.conf",1);
-            if(config.success()){
-                m_mqttServerIp = config["mqtt"]["mqttServerIP"];
-                m_mqttServerPort = config["mqtt"]["port"];
-                m_mqttUserName = config["mqtt"]["username"];
-                m_mqttPassword = config["mqtt"]["password"];
-                // m_tls_enabled = config["mqtt"]["tls"];
-                m_accountId = config["accountid"];
-            }
-            if(m_mqttUserName == NULL || m_mqttPassword == NULL || m_mqttServerPort == NULL){
-              // load default configurations
-                String mqttConfig = iuFlash.readInternalFlash(CONFIG_MQTT_FLASH_ADDRESS);
-                debugPrint(mqttConfig);
-                const size_t bufferSize = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(4) + 108;
-                StaticJsonBuffer<bufferSize> jsonBuffer;
-                JsonObject &config = jsonBuffer.parseObject(mqttConfig);
-                if(config.success())
+                if (iuFlash.checkConfig(CONFIG_MQTT_FLASH_ADDRESS) && ! DOSFS.exists("MQTT.conf") )
                 {
-                debugPrint("Mqtt Config Found");
-                m_mqttServerIp = config["mqtt"]["mqttServerIP"];
-
-                int mqttport = config["mqtt"]["port"];
-                //debugPrint("INside MQTT.conf .......");
-                // m_mqttServerIp.fromString(mqttServerIP);//mqttServerIP;
-                m_mqttServerPort = mqttport;
-                m_mqttUserName = config["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
-                m_mqttPassword = config["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
-                // m_tls_enabled = config["mqtt"]["tls"];
-                m_accountId = config["accountid"];
+                    String config = iuFlash.readInternalFlash(CONFIG_WIFI_CONFIG_FLASH_ADDRESS);
+                    processConfiguration((char *)config.c_str(),1);
+                }else if(DOSFS.exists("MQTT.conf")){
+                    JsonObject& MqttConfig = configureJsonFromFlash("MQTT.conf",1);
+                    if(MqttConfig.success()){
+                        char jsonChar[512];
+                        MqttConfig.printTo((char*)jsonChar, MqttConfig.measureLength() + 1);
+                        processConfiguration((char *)jsonChar,1);
+                    }
+                }else{
+                    iuWiFi.sendMSPCommand(MSPCommand::SEND_MQTT_CONNECTION_INFO, "EMPTY");
                 }
-                else{
-                    setDefaultMQTT();
-                }
+                delay(100);
+                updateMQTTHash();
             }
-            delay(100);
-            //Serial.print("UserName :");Serial.println(m_mqttUserName);
-            //Serial.print("Password 1 :");Serial.println(m_mqttPassword);
-            iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_SERVER_IP,
-                                    m_mqttServerIp);
-            iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_SERVER_PORT,
-                                  String(m_mqttServerPort).c_str());
-            iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_USERNAME,
-                                  m_mqttUserName);// MQTT_DEFAULT_USERNAME);
-            iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_PASSWORD,
-                                  m_mqttPassword); //MQTT_DEFAULT_ASSWORD);
-            // iuWiFi.sendMSPCommand(MSPCommand::SET_MQTT_TLS_FLAG,
-            //                      String(m_tls_enabled).c_str()); 
-                                  
            break;
-          }
          //case MSPCommand::SEND_FINGERPRINT_ACK:
          //     if (loopDebugMode) { debugPrint(F("Send Diagnostic message Acknowledge to wifi")); }
          //     iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_ACK,
@@ -5000,40 +4935,40 @@ void Conductor::manageRawDataSending() {
             debugPrint("Raw data request: collected raw data, starting transmission");
         }
         RawDataState::rawDataTransmissionInProgress = true;
+        RawDataTotalTimeout = millis();
         httpsStatusCodeX = httpsStatusCodeY = httpsStatusCodeZ = 0;
         httpsOEMStatusCodeX = httpsOEMStatusCodeY = httpsOEMStatusCodeZ = 0;
         sendNextAxis = false;
-        XSentToWifi = YsentToWifi = ZsentToWifi = false;    
+        XSentToWifi = YsentToWifi = ZsentToWifi = false; 
+        XrecByWifi = YrecByWifi = ZrecByWifi= false;   
     }
-
     if (RawDataState::rawDataTransmissionInProgress) {
-        // double timeSinceLastSentToESP = millis() - lastPacketSentToESP; // use later for retry mechanism
-        if (!XSentToWifi) {
+        if (((millis() - RawDataTimeout) > 8000 && !XrecByWifi) || (!XSentToWifi && !XrecByWifi)) {
             prepareRawDataPacketAndSend('X');
             XSentToWifi = true; 
-            // RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
             RawDataTotalTimeout = millis();
             iuWiFi.m_setLastConfirmedPublication();
             if(loopDebugMode) {
                 debugPrint("Raw data request: X sent to wifi");
             }
             // lastPacketSentToESP = millis();
-        } else if ((httpsStatusCodeX == 200 || httpsOEMStatusCodeX == 200) && (!YsentToWifi && sendNextAxis)) { 
+        } else if (((millis() - RawDataTimeout) > 8000 && !YrecByWifi && (httpsStatusCodeX == 200 || httpsOEMStatusCodeX == 200)) || ((httpsStatusCodeX == 200 || httpsOEMStatusCodeX == 200) && !YsentToWifi && sendNextAxis)) { 
             prepareRawDataPacketAndSend('Y');
             YsentToWifi = true;
             sendNextAxis = false;
-            // RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
             RawDataTotalTimeout = millis();
             iuWiFi.m_setLastConfirmedPublication();
             if(loopDebugMode) {
                 debugPrint("Raw data request: X delivered, Y sent to wifi");
             }
             // lastPacketSentToESP = millis();
-        } else if ((httpsStatusCodeY == 200 || httpsOEMStatusCodeY == 200) && (!ZsentToWifi && sendNextAxis)) {
+        } else if (((millis() - RawDataTimeout) > 8000 && !ZrecByWifi && (httpsStatusCodeY == 200 || httpsOEMStatusCodeY == 200)) || ((httpsStatusCodeY == 200 || httpsOEMStatusCodeY == 200) && !ZsentToWifi && sendNextAxis)) {
             prepareRawDataPacketAndSend('Z');
             ZsentToWifi = true;
             sendNextAxis = false;
-            // RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
             RawDataTotalTimeout = millis();
             iuWiFi.m_setLastConfirmedPublication();
             if(loopDebugMode) {
@@ -5064,7 +4999,9 @@ void Conductor::manageRawDataSending() {
         //     }
         // }
         if(httpOEMConfigPresent){
-            if ((httpsStatusCodeX == 200 && httpsStatusCodeY == 200 && httpsStatusCodeZ == 200) && (httpsOEMStatusCodeX == 200 && httpsOEMStatusCodeY == 200 && httpsOEMStatusCodeZ == 200) ) {
+            if (((httpsStatusCodeX == 200 && httpsStatusCodeY == 200 && httpsStatusCodeZ == 200) && (httpsOEMStatusCodeX == 200 && httpsOEMStatusCodeY == 200 && httpsOEMStatusCodeZ == 200)) ||
+                 ((httpsStatusCodeX == 200 && httpsStatusCodeY == 200 && httpsStatusCodeZ == 200) && (httpsOEMStatusCodeY == 0 && httpsOEMStatusCodeZ == 0)) || 
+                 ((httpsOEMStatusCodeX == 200 && httpsOEMStatusCodeY == 200 && httpsOEMStatusCodeZ == 200) && (httpsStatusCodeY == 0 && httpsStatusCodeZ == 0))){
             // End the transmission session, reset RawDataState::startRawDataCollection and RawDataState::rawDataTransmissionInProgress
             // Rest of the tracking variables are reset when rawDataRequest() is called
                 if(loopDebugMode) {
@@ -6497,7 +6434,8 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
     }
 
     // 2. Check MQTT update from config file stored in ext. flash
-    conductor.configureMQTTServer("MQTT.conf");
+    // conductor.configureMQTTServer("MQTT.conf");
+    readMQTTendpoints();
     // 3. Check default parameter setting changed to read from config file ?
     if(strcmp(m_mqttServerIp,"mqtt.infinite-uptime.com") == 0 && m_mqttServerPort == 8883 &&
       (strcmp(m_mqttUserName,NULL) == 0) && (strcmp(m_mqttPassword,NULL) == 0))
@@ -6510,7 +6448,7 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
 
     ValidationFile->println(F("DEVICE HTTP CONFIG CHECK:-"));
     //http configuration
-    if(configureBoardFromFlash("httpConfig.conf",1) == false)
+    if(readHTTPendpoints() == false)
     {
         ValidationFile->println(F("   Validation [HTTP]-Read Config File: Fail !"));
         ValidationFile->print(F(" - HTTP DEFAULT HOST IP:"));
@@ -7359,20 +7297,20 @@ void Conductor::checkforWiFiConfigurations(){
 }
 
 void Conductor::setDefaultMQTT(){
-    strncpy((char *)m_mqttServerIp,MQTT_DEFAULT_SERVER_IP,strlen(MQTT_DEFAULT_SERVER_IP));
+    strcpy((char *)m_mqttServerIp,MQTT_DEFAULT_SERVER_IP);
     m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
-    strncpy((char *)m_mqttUserName,MQTT_DEFAULT_USERNAME,strlen(MQTT_DEFAULT_USERNAME));
-    strncpy((char *)m_mqttPassword,MQTT_DEFAULT_ASSWORD,strlen(MQTT_DEFAULT_ASSWORD));
+    strcpy((char *)m_mqttUserName,MQTT_DEFAULT_USERNAME);
+    strcpy((char *)m_mqttPassword,MQTT_DEFAULT_ASSWORD);
     // m_tls_enabled = true;
 }
 
 void Conductor::setDefaultHTTP(){
-    strncpy((char*)m_httpHost,HTTP_DEFAULT_HOST,strlen(HTTP_DEFAULT_HOST));
+    strcpy((char*)m_httpHost,HTTP_DEFAULT_HOST);
     m_httpPort = HTTP_DEFAULT_PORT;
-    strncpy((char*)m_httpPath,HTTP_DEFAULT_PATH,strlen(HTTP_DEFAULT_PATH));
-    strncpy((char*)m_httpUsername,HTTP_DEFAULT_USERNAME,strlen(HTTP_DEFAULT_USERNAME));
-    strncpy((char*)m_httpPassword,HTTP_DEFAULT_PASSWORD,strlen(HTTP_DEFAULT_PASSWORD));
-    strncpy((char*)m_httpOauth,HTTP_DEFAULT_OUTH,strlen(HTTP_DEFAULT_OUTH));
+    strcpy((char*)m_httpPath,HTTP_DEFAULT_PATH);
+    strcpy((char*)m_httpUsername,HTTP_DEFAULT_USERNAME);
+    strcpy((char*)m_httpPassword,HTTP_DEFAULT_PASSWORD);
+    strcpy((char*)m_httpOauth,HTTP_DEFAULT_OUTH);
 }
 
 bool Conductor::updateModbusStatus(){
@@ -7406,6 +7344,22 @@ void Conductor::updateWiFiHash()
     char wifiHash[34];  
     iuOta.otaGetMD5(IUFSFlash::CONFIG_SUBDIR,"wifi0.conf",wifiHash);
     iuWiFi.sendMSPCommand(MSPCommand::SEND_WIFI_HASH,wifiHash);
+}
+
+void Conductor::updateMQTTHash()
+{
+    char mqttHash[34];  
+    if(iuOta.otaGetMD5("","MQTT.conf",mqttHash)){
+        iuWiFi.sendMSPCommand(MSPCommand::SEND_MQTT_HASH,mqttHash);
+    }
+}
+
+void Conductor::updateHTTPHash()
+{
+    char httpHash[34];  
+    if(iuOta.otaGetMD5("","httpConfig.conf",httpHash)){
+        iuWiFi.sendMSPCommand(MSPCommand::SEND_HTTP_HASH,httpHash);
+    }
 }
 
 void Conductor::sendConfigRequest()

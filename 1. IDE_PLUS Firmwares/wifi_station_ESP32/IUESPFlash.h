@@ -39,6 +39,8 @@ class IUESPFlash
                                      CFG_CERT_UPGRADE_CONFIG,
                                      CFG_DIAGNOSTIC_ENDPOINT,
                                      CFG_WIFI,
+                                     CFG_MQTT,
+                                     CFG_HTTP,
                                      CFG_COUNT};
         
         /***** Preset values and default settings *****/
@@ -63,6 +65,8 @@ class IUESPFlash
         static char FNAME_STATIC_URL[12];      // store the common url
         static char FNAME_DIAGNOSTIC_ENDPOINT[12];
         static char FNAME_WIFI_CONFIG[12];
+        static char FNAME_MQTT_CONFIG[12];
+        static char FNAME_HTTP_CONFIG[12];
 
         static char FNAME_EAP_CLIENT0_KEY[12];
         static char FNAME_EAP_CLIENT0_CRT[12];
