@@ -223,8 +223,8 @@ class Conductor
         bool commomEndpointsuccess = false;
         bool oemRootCAPresent = false;
         // Config handler
-        static const uint8_t CONFIG_TYPE_COUNT = 12;
-        static IUESPFlash::storedConfig CONFIG_TYPES[CONFIG_TYPE_COUNT];
+        const uint8_t CERT_COUNT = 5;
+        const uint8_t OEM_CERT_COUNT = 1;
         void connectToWiFi();
         void updateConfig(IUESPFlash::storedConfig configType, char* config,int length);
         void setWiFiConfig();

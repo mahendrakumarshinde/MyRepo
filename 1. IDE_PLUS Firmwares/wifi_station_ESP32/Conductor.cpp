@@ -27,23 +27,6 @@ IUTimeHelper timeHelper(2390, "time.google.com");
 
 IUESPFlash iuWiFiFlash = IUESPFlash();
 
-IUESPFlash::storedConfig Conductor::CONFIG_TYPES[Conductor::CONFIG_TYPE_COUNT] = {
-    IUESPFlash::CFG_EAP_CLIENT0,
-    IUESPFlash::CFG_EAP_KEY0,
-    IUESPFlash::CFG_MQTT_CLIENT0,
-    IUESPFlash::CFG_MQTT_KEY0,
-    IUESPFlash::CFG_HTTPS_ROOTCA0,
-    IUESPFlash::CFG_HTTPS_OEM_ROOTCA0,
-    // Used only during rollback/upgrade
-    IUESPFlash::CFG_EAP_CLIENT1,
-    IUESPFlash::CFG_EAP_KEY1,
-    IUESPFlash::CFG_MQTT_CLIENT1,
-    IUESPFlash::CFG_MQTT_KEY1,
-    IUESPFlash::CFG_HTTPS_ROOTCA1,
-    IUESPFlash::CFG_HTTPS_OEM_ROOTCA1
-    
-    };
-
 const char* CERT_TYPES[6] = { "EAP-TLS-CERT",
                               "EAP-TLS-KEY",
                               "MQTT-TLS-CERT",
@@ -969,16 +952,10 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
           }
         
         case MSPCommand::DELETE_CERT_FILES:
-            for (size_t i = 0; i < CONFIG_TYPE_COUNT; i++)
-            {            
-                iuWiFiFlash.removeFile(CONFIG_TYPES[i]);
+            for(int i = 0; i < IUESPFlash::CFG_COUNT;i++){
+                iuWiFiFlash.removeFile((IUESPFlash::storedConfig)i);
                 delay(1);
             }
-            iuWiFiFlash.removeFile(IUESPFlash::CFG_STATIC_CERT_ENDPOINT);
-            iuWiFiFlash.removeFile(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT);
-            iuWiFiFlash.removeFile(IUESPFlash::CFG_WIFI);
-            iuWiFiFlash.removeFile(IUESPFlash::CFG_MQTT);
-            iuWiFiFlash.removeFile(IUESPFlash::CFG_HTTP);
             iuWiFiFlash.updateValue(CERT_ADDRESS,0);
             hostSerial.sendMSPCommand(MSPCommand::DELETE_CERT_FILES,"succefully Deleted, Rebooting ESP");
             ESP.restart();
@@ -3216,8 +3193,8 @@ void Conductor:: messageValidation(char* json){
         {   
             // Update Certificates Download messageID
             hostSerial.sendMSPCommand(MSPCommand::SET_CERT_DOWNLOAD_MSGID,messageID);
-            uint8_t result[CONFIG_TYPE_COUNT]; // 10 , max use 5
-            uint8_t oem_result[CONFIG_TYPE_COUNT]; // 10 , max use 5
+            uint8_t result[CERT_COUNT]; // 10 , max use 5
+            uint8_t oem_result[OEM_CERT_COUNT]; // 10 , max use 5
 
             for (size_t i = 0; i < configTypeCount; i++)
             {
