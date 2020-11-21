@@ -88,7 +88,6 @@ void setup()
     // Set the common url json if file not present
     conductor.setMQTTConfig();
     conductor.setHTTPConfig();
-    iuWiFiFlash.listAllAvailableFiles("/iuConfig/certs");
     conductor.setCertificateManagerHttpEndpoint();
     //Configure the Diagnostic HTTP/HTTPS Endpoint
     conductor.configureDiagnosticEndpointFromFlash(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT);

@@ -584,17 +584,26 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 //mqttHelper.publish(FINGERPRINT_DATA_PUBLISH_TOPIC, "RAW PORT...");
             break;
         case MSPCommand::SEND_HTTP_CONNECTION_INFO:
-            updateConfig(IUESPFlash::CFG_HTTP, buffer,bufferLength-1);
-            delay(50);
-            hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_DISCONNECTED);
-            delay(50);
-            hostSerial.sendMSPCommand(MSPCommand::MQTT_ALERT_DISCONNECTED);
-            delay(50);
-            ESP.restart();
+            if(strcmp("EMPTY",buffer) != 0){
+                updateConfig(IUESPFlash::CFG_HTTP, buffer,bufferLength-1);
+                delay(50);
+                hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_DISCONNECTED);
+                delay(50);
+                hostSerial.sendMSPCommand(MSPCommand::MQTT_ALERT_DISCONNECTED);
+                delay(50);
+                ESP.restart();
+            }
             break;
         case MSPCommand::SEND_MQTT_CONNECTION_INFO:
-            updateConfig(IUESPFlash::CFG_MQTT, buffer,bufferLength-1);
-            setMQTTConfig();
+            if(strcmp("EMPTY",buffer) != 0){
+                updateConfig(IUESPFlash::CFG_MQTT, buffer,bufferLength-1);
+                delay(50);
+                hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_DISCONNECTED);
+                delay(50);
+                hostSerial.sendMSPCommand(MSPCommand::MQTT_ALERT_DISCONNECTED);
+                delay(50);
+                ESP.restart();
+            }
             break;
         case MSPCommand::SET_MQTT_SERVER_IP:
            
@@ -2978,19 +2987,15 @@ void Conductor::setMQTTConfig(){
 
             mqttHelper.setServer(m_mqttServerIP, m_mqttServerPort);
             mqttHelper.setCredentials(m_mqttUsername, m_mqttPassword);
-        }else{
-            hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);
         }
     }else{
         strcpy(m_mqttServerIP, MQTT_DEFAULT_SERVER_IP);
         m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
         strcpy(m_mqttUsername, MQTT_DEFAULT_USERNAME);
         strcpy(m_mqttPassword, MQTT_DEFAULT_PASSWORD);
-
         mqttHelper.setServer(m_mqttServerIP, m_mqttServerPort);
         mqttHelper.setCredentials(m_mqttUsername, m_mqttPassword);
     }
-    
 }
 
 void Conductor::setHTTPConfig(){
@@ -3014,17 +3019,13 @@ void Conductor::setHTTPConfig(){
                 accelRawDataHelper.setOEMEndpointStaus(false);
             }
 
-        }else{
-            hostSerial.sendMSPCommand(MSPCommand::GET_RAW_DATA_ENDPOINT_INFO);
         }
     }else{
         accelRawDataHelper.setOEMEndpointStaus(false);
         strcpy(accelRawDataHelper.m_endpointHost, DATA_DEFAULT_ENDPOINT_HOST);
         accelRawDataHelper.m_endpointPort = DATA_DEFAULT_ENDPOINT_PORT;
         strcpy(accelRawDataHelper.m_endpointRoute, RAW_DATA_DEFAULT_ENDPOINT_ROUTE);
-
     }
-    
 }
 
 void Conductor::setWiFiConfig(){

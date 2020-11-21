@@ -468,11 +468,11 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
         if(dataWritten == true){
           iuFlash.writeInternalFlash(1,CONFIG_MQTT_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
-          iuWiFi.sendMSPCommand(MSPCommand::SEND_MQTT_CONNECTION_INFO, jsonChar.c_str());
           //send Ack to BLE
           iuBluetooth.write("MQTT-RECEVIED");
-          delay(500);
-          iuWiFi.hardReset();
+          delay(100);
+          iuWiFi.sendMSPCommand(MSPCommand::SEND_MQTT_CONNECTION_INFO, jsonChar.c_str());
+          readMQTTendpoints();
           // get the latest account id and send to wifi
          /* JsonObject& config = configureJsonFromFlash("MQTT.conf",1);      // get the accountID
           m_accountId = config["accountid"];
@@ -588,57 +588,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 iuFlash.writeInternalFlash(1,CONFIG_HTTP_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
                 iuWiFi.sendMSPCommand(MSPCommand::SEND_HTTP_CONNECTION_INFO, jsonChar.c_str(), strlen(jsonChar.c_str()));
                 readHTTPendpoints();
-            //configureBoardFromFlash("httpConfig.conf",dataWritten);
-            // JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
-
-            // const char* messageId = config["messageId"];
-            // const char*  host = config["httpConfig"]["host"].as<char*>();
-            // int port = config["httpConfig"]["port"].as<int>();
-            // const char* httpPath = config["httpConfig"]["path"].as<char*>();
-            
-            // bool oemConfig = false;
-            // bool oemSameConfig = true;
-            // if(config.containsKey("httpOem")){
-            //     const char*  oem_host = config["httpOem"]["host"].as<char*>();
-            //     int oem_port = config["httpOem"]["port"].as<int>();
-            //     const char* oem_httpPath = config["httpOem"]["path"].as<char*>();
-            //     if(strcmp( oem_host, m_httpHost_oem) != 0  || oem_port != m_httpPort_oem || strcmp(oem_httpPath, m_httpPath_oem) != 0){
-            //         oemSameConfig = false;
-            //     }
-            //     oemConfig = true;
-            // }
-
-            // debugPrint("Active httpConfigs : ");
-            // debugPrint("Host :",false);debugPrint(m_httpHost);
-            // debugPrint("Port :",false);debugPrint(m_httpPort);
-            // debugPrint("Path :",false);debugPrint(m_httpPath);
-
-            //Serial.print("File Content :");Serial.println(jsonChar);
-            //Serial.print("http details :");Serial.print(m_httpHost);Serial.print(",");Serial.print(m_httpPort);Serial.print(",");Serial.print(m_httpPath);Serial.println("/***********/");
-            //iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_HOST,m_httpHost); 
-            //iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_PORT,String(m_httpPort).c_str()); 
-            //iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_ROUTE,m_httpPath); 
-
-            // char httpConfig_ack[150];
-            // snprintf(httpConfig_ack, 150, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
-                
-            // debugPrint(F("httpConfig ACK :"));debugPrint(httpConfig_ack);
-            
-            
-            
-            
-            //stm reset
-            delay(10);
-            // iuWiFi.hardReset();
-            // if(!httpOtaValidation){
-            //     if((strcmp( host, m_httpHost) != 0  || port != m_httpPort || strcmp(httpPath, m_httpPath) != 0) || oemSameConfig == false ){
-            //             DOSFS.end();
-            //             delay(10);
-            //             //STM32.reset();
-            //             iuWiFi.hardReset();
-            //     }   
-            // }
-            
+                delay(10);
             }
         }else{
             if (iuWiFi.isConnected() )
@@ -2540,6 +2490,16 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                 }
                 if (strcmp(buff,"REMOVE_ESP_FILES") == 0)
                 {
+                    if(iuFlash.checkConfig(CONFIG_MQTT_FLASH_ADDRESS)){
+                        iuFlash.clearInternalFlash(CONFIG_MQTT_FLASH_ADDRESS);
+                        debugPrint(F("MQTT config removed form internal Flash"));
+                    }
+                    if(iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS)){
+                        iuFlash.clearInternalFlash(CONFIG_HTTP_FLASH_ADDRESS);
+                        debugPrint(F("HTTP config removed form internal Flash"));
+                    }
+                    DOSFS.remove("MQTT.conf");
+                    DOSFS.remove("httpConfig.conf");
                     debugPrint("Deleting Files from ESP32");
                     iuWiFi.sendMSPCommand(MSPCommand::DELETE_CERT_FILES);
                     DOSFS.remove("iuconfig/wifi0.conf");
