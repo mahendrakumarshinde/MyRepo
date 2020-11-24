@@ -7011,6 +7011,7 @@ void Conductor::otaFWValidation()
                     JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
                     if(config.success()){
                         int httpPort = config["httpConfig"]["port"];
+                        // NOTE: If in future HTTPS port changes then need to update here. This impacts only during the validation
                         if(httpPort != 443){
                             char httpConfig[510];
                             sprintf(httpConfig,"{\"httpConfig\":{\"host\":\"%s\",\"port\":%d,\"path\":\"%s\",\"username\":\"%s\",\"password\":\"%s\",\"oauth\":\"%s\"}}",HTTP_DEFAULT_HOST,HTTP_DEFAULT_PORT,HTTP_DEFAULT_PATH,HTTP_DEFAULT_USERNAME,HTTP_DEFAULT_PASSWORD,HTTP_DEFAULT_OUTH);
