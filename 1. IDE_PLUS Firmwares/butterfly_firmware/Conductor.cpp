@@ -1529,6 +1529,30 @@ void Conductor::readMQTTendpoints(){
             m_mqttUserName = config["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
             m_mqttPassword = config["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
         }
+    }else if(iuFlash.checkConfig(CONFIG_MQTT_FLASH_ADDRESS) && !DOSFS.exists("MQTT.conf")){
+        String mqttConfig = iuFlash.readInternalFlash(CONFIG_MQTT_FLASH_ADDRESS);
+        debugPrint(mqttConfig);
+        const size_t bufferSize = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(4) + 208;
+        StaticJsonBuffer<bufferSize> jsonBuffer;
+        JsonObject &config = jsonBuffer.parseObject(mqttConfig);
+        if(config.success())
+        {
+            debugPrint("Mqtt Config Found, Reading From Internal Flash");
+            m_mqttServerIp = config["mqtt"]["mqttServerIP"];
+            int mqttport = config["mqtt"]["port"];
+            m_mqttServerPort = mqttport;
+            m_mqttUserName = config["mqtt"]["username"];
+            m_mqttPassword = config["mqtt"]["password"];
+            File mqttFile = DOSFS.open("MQTT.conf","w");
+            if(mqttFile)
+            {
+                mqttFile.print(mqttConfig.c_str());
+                mqttFile.flush();
+                debugPrint("MQTT.conf File write Success");
+                flashStatusFlag = true;
+                mqttFile.close();
+            }
+        }
     }else{
         setDefaultMQTT();
     }
@@ -1674,6 +1698,41 @@ bool Conductor::readHTTPendpoints(){
             }
         }
         return true;
+    }else if(iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS) && !DOSFS.exists("httpConfig.conf")){
+        String httpConfig = iuFlash.readInternalFlash(CONFIG_HTTP_FLASH_ADDRESS);
+        debugPrint(httpConfig);
+        const size_t bufferSize = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(6) + 510;
+        StaticJsonBuffer<bufferSize> jsonBuffer;
+        JsonObject &config = jsonBuffer.parseObject(httpConfig);
+        if(config.success())
+        {
+            debugPrint("Http Config Found, reading Http Config from Internal Flash");
+
+            m_httpHost = config["httpConfig"]["host"];
+            m_httpPort = config["httpConfig"]["port"];
+            m_httpPath = config["httpConfig"]["path"];
+            m_httpUsername = config["httpConfig"]["username"];
+            m_httpPassword = config["httpConfig"]["password"];
+            m_httpOauth = config["httpConfig"]["oauth"];
+
+            if(config.containsKey("httpOem")){
+                m_httpHost_oem = config["httpOem"]["host"];
+                m_httpPort_oem = config["httpOem"]["port"];
+                m_httpPath_oem = config["httpOem"]["path"];
+                m_httpUsername_oem = config["httpOem"]["username"];
+                m_httpPassword_oem = config["httpOem"]["password"];
+                m_httpOauth_oem = config["httpOem"]["oauth"];
+            }
+            File httpFile = DOSFS.open("httpConfig.conf","w");
+            if(httpFile)
+            {
+                httpFile.print(httpConfig.c_str());
+                httpFile.flush();
+                debugPrint("httpConfig.conf File write Success");
+                flashStatusFlag = true;
+                httpFile.close();
+            }
+        }
     }else{
         setDefaultHTTP();
         httpOEMConfigPresent = false;
