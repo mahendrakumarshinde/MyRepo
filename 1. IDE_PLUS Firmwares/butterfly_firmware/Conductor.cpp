@@ -1722,6 +1722,7 @@ bool Conductor::readHTTPendpoints(){
                 m_httpUsername_oem = config["httpOem"]["username"];
                 m_httpPassword_oem = config["httpOem"]["password"];
                 m_httpOauth_oem = config["httpOem"]["oauth"];
+                httpOEMConfigPresent = true;
             }
             File httpFile = DOSFS.open("httpConfig.conf","w");
             if(httpFile)
@@ -2549,16 +2550,6 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                 }
                 if (strcmp(buff,"REMOVE_ESP_FILES") == 0)
                 {
-                    if(iuFlash.checkConfig(CONFIG_MQTT_FLASH_ADDRESS)){
-                        iuFlash.clearInternalFlash(CONFIG_MQTT_FLASH_ADDRESS);
-                        debugPrint(F("MQTT config removed form internal Flash"));
-                    }
-                    if(iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS)){
-                        iuFlash.clearInternalFlash(CONFIG_HTTP_FLASH_ADDRESS);
-                        debugPrint(F("HTTP config removed form internal Flash"));
-                    }
-                    DOSFS.remove("MQTT.conf");
-                    DOSFS.remove("httpConfig.conf");
                     debugPrint("Deleting Files from ESP32");
                     iuWiFi.sendMSPCommand(MSPCommand::DELETE_CERT_FILES);
                     DOSFS.remove("iuconfig/wifi0.conf");
