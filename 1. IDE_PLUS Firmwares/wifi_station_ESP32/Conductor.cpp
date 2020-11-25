@@ -2979,7 +2979,7 @@ void Conductor::setMQTTConfig(){
 
 void Conductor::setHTTPConfig(){
     if(iuWiFiFlash.isFilePresent(IUESPFlash::CFG_HTTP)){
-        StaticJsonBuffer<512> JsonBuffer;
+        StaticJsonBuffer<1024> JsonBuffer;
         JsonObject& config = iuWiFiFlash.loadConfigJson(IUESPFlash::CFG_HTTP,JsonBuffer);
         bool validConfig = config.success();
         //config.prettyPrintTo(Serial);
