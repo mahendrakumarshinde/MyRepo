@@ -2119,8 +2119,8 @@ void Conductor::processCommand(char *buff)
             }
         case '3':  // Collect acceleration raw data
             iuWiFi.sendHostSamplingRate(FFTConfiguration::calculatedSamplingRate); // updated freq after GET_FFT
-            if (buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
-                buff[13] == '0' && buff[15] == '0' && buff[17] == '0')
+            if ((buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
+                buff[13] == '0' && buff[15] == '0' && buff[17] == '0') && !RawDataState::rawDataTransmissionInProgress)
             {
                 if (loopDebugMode) {
                     debugPrint("Record mode");
@@ -3473,7 +3473,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             if (loopDebugMode){ debugPrint(F("GET_DEVICE_CONFIG")); }
             char deviceInfo[64];
             //sprintf(deviceInfo,"%s-%d-%d",FIRMWARE_VERSION,FFTConfiguration::currentSamplingRate,FFTConfiguration::currentBlockSize);
-            sprintf(deviceInfo,"%s-%d-%d",FIRMWARE_VERSION,FFTConfiguration::calculatedSamplingRate,FFTConfiguration::currentBlockSize);
+            sprintf(deviceInfo,"%s-%d-%d-%d",FIRMWARE_VERSION,FFTConfiguration::calculatedSamplingRate,FFTConfiguration::currentBlockSize,httpOEMConfigPresent);
             iuWiFi.sendMSPCommand(MSPCommand::GET_DEVICE_CONFIG,deviceInfo);
             iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HOST_FIRMWARE_VERSION,FIRMWARE_VERSION);
             
@@ -3778,7 +3778,6 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_HOST_OEM,m_httpHost_oem); 
                 iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_PORT_OEM,String(m_httpPort_oem).c_str()); 
                 iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_ROUTE_OEM,m_httpPath_oem);
-                iuWiFi.sendMSPCommand(MSPCommand::SET_RAW_DATA_ENDPOINT_OEM_STATUS,String(httpOEMConfigPresent).c_str());
                             
                 break;
            }
@@ -5064,15 +5063,26 @@ void Conductor::manageRawDataSending() {
         //         debugPrint("Raw data request: Resending Z, Z sent to wifi");
         //     }
         // }
-        if ((httpsStatusCodeX == 200 && httpsStatusCodeY == 200 && httpsStatusCodeZ == 200) || (httpsOEMStatusCodeX == 200 && httpsOEMStatusCodeY == 200 && httpsOEMStatusCodeZ == 200) ) {
+        if(httpOEMConfigPresent){
+            if ((httpsStatusCodeX == 200 && httpsStatusCodeY == 200 && httpsStatusCodeZ == 200) && (httpsOEMStatusCodeX == 200 && httpsOEMStatusCodeY == 200 && httpsOEMStatusCodeZ == 200) ) {
             // End the transmission session, reset RawDataState::startRawDataCollection and RawDataState::rawDataTransmissionInProgress
             // Rest of the tracking variables are reset when rawDataRequest() is called
-            if(loopDebugMode) {
-                debugPrint("Raw data request: Z delivered, ending transmission session");
-            }
+                if(loopDebugMode) {
+                    debugPrint("Raw data request: Z delivered, ending transmission session");
+                }
             RawDataState::startRawDataCollection = false;
             RawDataState::rawDataTransmissionInProgress = false;    
+            }
+        }else{
+            if (httpsStatusCodeX == 200 && httpsStatusCodeY == 200 && httpsStatusCodeZ == 200){
+                if(loopDebugMode) {
+                    debugPrint("Raw data request: Z delivered, ending transmission session");
+                }
+                RawDataState::startRawDataCollection = false;
+                RawDataState::rawDataTransmissionInProgress = false;
+            }
         }
+        
         if((millis() - RawDataTotalTimeout) > 30000)
         { // IDE1.5_PORT_CHANGE -- On timeout of 4 Sec. if no response OK/FAIL then abort transmission
             RawDataState::startRawDataCollection = false;
@@ -5118,7 +5128,7 @@ void Conductor::prepareRawDataPacketAndSend(char axis) {
 void Conductor::periodicSendAccelRawData()
 {
     uint32_t now = millis();
-    if (now - m_rawDataPublicationStart > m_rawDataPublicationTimer) {
+    if ((now - m_rawDataPublicationStart > m_rawDataPublicationTimer) && !RawDataState::rawDataTransmissionInProgress) {
         iuWiFi.sendHostSamplingRate(FFTConfiguration::calculatedSamplingRate);
         if (loopDebugMode)
             debugPrint(F("***  Sending Raw Data ***"));
@@ -5363,20 +5373,20 @@ bool Conductor::setFFTParams() {
         }
         configured = true;
     } else {
-        if(iuAccelerometerKX222.kionixPresence){
-                conductor.setSensorStatus(conductor.SensorStatusCode::KNX_DEFAULT); // TO DO based on hardware identifier
-                FFTConfiguration::currentSamplingRate = iuAccelerometerKX222.defaultSamplingRate;
-                FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
-                FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
-                FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_KNX_G_RANGE;
-                iuAccelerometerKX222.setGrange(FFTConfiguration::currentKNXgRange);
-            }else if(iuAccelerometer.lsmPresence){
+        if(iuAccelerometer.lsmPresence){
                 conductor.setSensorStatus(conductor.SensorStatusCode::LSM_DEFAULT); // TO DO based on hardware identifier
                 FFTConfiguration::currentSamplingRate = iuAccelerometer.defaultSamplingRate;
                 FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
                 FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_LSM;
                 FFTConfiguration::currentLSMgRange = FFTConfiguration::DEFAULT_LSM_G_RANGE;
                 iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
+            }else if(iuAccelerometerKX222.kionixPresence){
+                conductor.setSensorStatus(conductor.SensorStatusCode::KNX_DEFAULT); // TO DO based on hardware identifier
+                FFTConfiguration::currentSamplingRate = iuAccelerometerKX222.defaultSamplingRate;
+                FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
+                FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
+                FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_KNX_G_RANGE;
+                iuAccelerometerKX222.setGrange(FFTConfiguration::currentKNXgRange);
             }else{
                 conductor.setSensorStatus(conductor.SensorStatusCode::SEN_ABS);
             }
@@ -5531,7 +5541,7 @@ void Conductor::setConductorMacAddress() {
         iuBluetooth.queryDeviceName();
         //debugPrint("SET MAC RESPONSE :",false);
         //debugPrint(mac_Response);
-        if( mac_Response < 0 || (BLE_MAC_Address[0] != '9' /*&& BLE_MAC_Address[1] == '0' */) ){
+        if( mac_Response < 0 || (BLE_MAC_Address[0] != '9' || BLE_MAC_Address[0] != '6' /*&& BLE_MAC_Address[1] == '0' */) ){
             
             // Retry to get BLE MAC
             for (size_t i = 0; i < retryCount; i++)
@@ -5545,7 +5555,7 @@ void Conductor::setConductorMacAddress() {
                     debugPrint("BLE MAC ID IN RETRY : ",false);
                     debugPrint(BLE_MAC_Address);
                 }                    
-                if(mac_Response > 0 && ( BLE_MAC_Address[0] == '9')){
+                if(mac_Response > 0 && (( BLE_MAC_Address[0] == '9') || ( BLE_MAC_Address[0] == '6')) ){
                     if(debugMode){
                         debugPrint("Found the BLE MAC ADDRESS");
                     }
