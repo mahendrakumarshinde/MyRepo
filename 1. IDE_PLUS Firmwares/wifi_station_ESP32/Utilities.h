@@ -354,7 +354,7 @@ inline int httpsPostBigRequest(
     char* ssl_rootCA = NULL,
     char* contentType = HttpContentType::applicationJSON,
     size_t chunkSize=WIFICLIENT_MAX_PACKET_SIZE,
-    uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT + 10000)
+    uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT + 2000)
 {
      
     if (WiFi.status() != WL_CONNECTED)

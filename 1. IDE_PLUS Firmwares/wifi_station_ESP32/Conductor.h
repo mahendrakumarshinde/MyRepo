@@ -60,6 +60,7 @@ extern IUESPFlash iuWiFiFlash;
 #define CERT_UPGRADE_FAILED                 2019
 #define CERT_NEW_CERT_NOT_AVAILBLE          2020
 #define CERT_SAME_UPGRADE_CONFIG_RECEIVED   2021
+#define CERT_INVALID_CERT_TYPE              2023
 
 #define MQTT_CONNECTION_ATTEMPT_FAILED      2022
 
@@ -94,7 +95,7 @@ class Conductor
         //ESP32 will deep-sleep after being disconnected for more than:
         static const uint32_t disconnectionTimeout = 120*1000;  // ms
         // Cyclic publication
-        static const uint32_t wifiStatusUpdateDelay = 5000;  // ms
+        static const uint32_t wifiStatusUpdateDelay = 10000;  // ms
         static const uint32_t wifiInfoPublicationDelay = 300000;  // ms
         // OTA Update in progress, timoue for packet ack from STM
         static const uint32_t otaPktAckTimeout = 30000;  // ms
@@ -181,7 +182,7 @@ class Conductor
         void configureDiagnosticEndpointFromFlash(IUESPFlash::storedConfig configType);
         void publishedDiagnosticMessage(char* buffer,int bufferLength);
         void resetDownloadInitTimer(uint16_t downloadTriggerTime,uint16_t loopTimeout);    //(sec,ms)
-        int downloadCertificates(const char* type,const char* url,const char* hash,uint8_t index,uint8_t certToUpdate);
+        int downloadCertificates(const char* type,const char* url,const char* hash,uint8_t certToUpdate);
         /******* Validation ********/
         void messageValidation(char* json);
         /***************************/
@@ -222,13 +223,19 @@ class Conductor
         bool commomEndpointsuccess = false;
         bool oemRootCAPresent = false;
         // Config handler
-        static const uint8_t CONFIG_TYPE_COUNT = 12;
-        static IUESPFlash::storedConfig CONFIG_TYPES[CONFIG_TYPE_COUNT];
+        const uint8_t CERT_COUNT = 5;
+        const uint8_t OEM_CERT_COUNT = 1;
         void connectToWiFi();
-        void updateWiFiConfig(char* config,int length);
+        void updateConfig(IUESPFlash::storedConfig configType, char* config,int length);
         void setWiFiConfig();
+        void setMQTTConfig();
+        void setHTTPConfig();
         void sendWiFiConfig();
+        IUESPFlash::storedConfig getStoredConfigType(const char* certType,bool partation);
+        bool validateCertType(const char* type);
         char wifiHash[34];
+        char mqttHash[34];
+        char httpHash[34];
     protected:
         /***** Config from Host *****/      
         char HOST_FIRMWARE_VERSION[8];      //filled when the ESP starts or when it connects to MQTT broker

@@ -56,6 +56,15 @@ const uint8_t CUSTOMER_PLACEHOLDER_LENGTH = 9;
 const char CUSTOMER_PLACEHOLDER[CUSTOMER_PLACEHOLDER_LENGTH] = "XXXAdmin";
 
 /* =============================================================================
+    Default MQTT Endpoints
+============================================================================= */
+const uint8_t MQTT_CREDENTIALS_MAX_LENGTH = 50;
+const char MQTT_DEFAULT_SERVER_IP[MQTT_CREDENTIALS_MAX_LENGTH] = "mqtt.infinite-uptime.com";
+const uint16_t MQTT_DEFAULT_SERVER_PORT = 8883;             
+const char MQTT_DEFAULT_USERNAME[MQTT_CREDENTIALS_MAX_LENGTH] =  "";         
+const char MQTT_DEFAULT_PASSWORD[MQTT_CREDENTIALS_MAX_LENGTH] =  "";         
+const bool MQTT_DEFAULT_TLS_FLAG = true;
+/* =============================================================================
     Diagnostic HTTP/HTTPS Endpoints
 ============================================================================= */
 

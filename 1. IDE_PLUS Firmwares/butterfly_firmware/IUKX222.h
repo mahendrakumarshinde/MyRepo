@@ -4,6 +4,9 @@
 #include "FeatureUtilities.h"
 #include "Sensor.h"
 
+/*
+Please check the ODR sequence from datasheet. ODR sequence of KX222 and KX134 are different.
+*/
 class IUKX222 : public HighFreqSensor
 {
 public:

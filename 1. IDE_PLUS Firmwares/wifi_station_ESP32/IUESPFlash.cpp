@@ -38,6 +38,8 @@ char IUESPFlash::FNAME_STATIC_URL[12] = "staticUrl";
 char IUESPFlash::FNAME_UPGRADE_CONFIG[12] = "getCert";
 char IUESPFlash::FNAME_DIAGNOSTIC_ENDPOINT[12] = "diagnosURL";
 char IUESPFlash::FNAME_WIFI_CONFIG[12] = "wifi0";
+char IUESPFlash::FNAME_MQTT_CONFIG[12] = "MQTT";
+char IUESPFlash::FNAME_HTTP_CONFIG[12] = "httpConfig";
 
 
 
@@ -346,6 +348,14 @@ size_t IUESPFlash::getConfigFilename(storedConfig configType, char *dest,
             break;
         case CFG_WIFI:
             fname = FNAME_WIFI_CONFIG;
+            strcpy(FILE_EXTENSION,CONFIG_EXTENSION);
+            break;
+        case CFG_MQTT:
+            fname = FNAME_MQTT_CONFIG;
+            strcpy(FILE_EXTENSION,CONFIG_EXTENSION);
+            break;
+        case CFG_HTTP:
+            fname = FNAME_HTTP_CONFIG;
             strcpy(FILE_EXTENSION,CONFIG_EXTENSION);
             break;
         default:
