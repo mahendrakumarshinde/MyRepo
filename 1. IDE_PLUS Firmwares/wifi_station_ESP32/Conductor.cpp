@@ -2,6 +2,7 @@
 #include "Utilities.h"
 // #include <ArduinoTrace.h>
 #include <base64.h>
+#include <ESP32Ping.h>
 
 #define UART_TX_FIFO_SIZE 0x80
 #define OTA_PACKET_SIZE 1024
@@ -25,23 +26,6 @@ IUMQTTHelper mqttHelper = IUMQTTHelper();
 IUTimeHelper timeHelper(2390, "time.google.com");
 
 IUESPFlash iuWiFiFlash = IUESPFlash();
-
-IUESPFlash::storedConfig Conductor::CONFIG_TYPES[Conductor::CONFIG_TYPE_COUNT] = {
-    IUESPFlash::CFG_EAP_CLIENT0,
-    IUESPFlash::CFG_EAP_KEY0,
-    IUESPFlash::CFG_MQTT_CLIENT0,
-    IUESPFlash::CFG_MQTT_KEY0,
-    IUESPFlash::CFG_HTTPS_ROOTCA0,
-    IUESPFlash::CFG_HTTPS_OEM_ROOTCA0,
-    // Used only during rollback/upgrade
-    IUESPFlash::CFG_EAP_CLIENT1,
-    IUESPFlash::CFG_EAP_KEY1,
-    IUESPFlash::CFG_MQTT_CLIENT1,
-    IUESPFlash::CFG_MQTT_KEY1,
-    IUESPFlash::CFG_HTTPS_ROOTCA1,
-    IUESPFlash::CFG_HTTPS_OEM_ROOTCA1
-    
-    };
 
 const char* CERT_TYPES[6] = { "EAP-TLS-CERT",
                               "EAP-TLS-KEY",
@@ -240,7 +224,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             updateDiagnosticEndpoint(buffer,bufferLength);
             break;
         case MSPCommand::SEND_WIFI_CONFIG:
-            updateWiFiConfig(buffer,bufferLength-1);  // Removed extra byte
+            updateConfig(IUESPFlash::CFG_WIFI, buffer,bufferLength-1);  // Removed extra byte
             setWiFiConfig();
             break;
         case MSPCommand::CERT_DOWNLOAD_INIT_ACK:
@@ -361,9 +345,6 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                         i++;
                     }else if(i == 2){
                         HOST_BLOCK_SIZE=atoi(str);
-                        i++;
-                    }else if(i == 3){
-                        accelRawDataHelper.setOEMEndpointStaus(bool(atoi(str)));
                         i++;
                     }
                 
@@ -586,6 +567,28 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 uint16_t(strtol(buffer, NULL, 0)));
                 //mqttHelper.publish(FINGERPRINT_DATA_PUBLISH_TOPIC, "RAW PORT...");
             break;
+        case MSPCommand::SEND_HTTP_CONNECTION_INFO:
+            if(strcmp("EMPTY",buffer) != 0){
+                updateConfig(IUESPFlash::CFG_HTTP, buffer,bufferLength-1);
+                delay(50);
+                hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_DISCONNECTED);
+                delay(50);
+                hostSerial.sendMSPCommand(MSPCommand::MQTT_ALERT_DISCONNECTED);
+                delay(50);
+                ESP.restart();
+            }
+            break;
+        case MSPCommand::SEND_MQTT_CONNECTION_INFO:
+            if(strcmp("EMPTY",buffer) != 0){
+                updateConfig(IUESPFlash::CFG_MQTT, buffer,bufferLength-1);
+                delay(50);
+                hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_DISCONNECTED);
+                delay(50);
+                hostSerial.sendMSPCommand(MSPCommand::MQTT_ALERT_DISCONNECTED);
+                delay(50);
+                ESP.restart();
+            }
+            break;
         case MSPCommand::SET_MQTT_SERVER_IP:
            
             if (m_mqttServerValidator.hasTimedOut()) {
@@ -712,6 +715,31 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             RawdataHTTPretryCount = 0;
             RawdataHTTPSretryCount = 0;
             bool sendNextAxis = false;
+            if((rawData->axis == 'X' || httpStatusCode == 200)){
+                while(RawdataHTTPSretryCount < 3 ){
+                    if((millis() - HTTPSRawDataTimeout) > HTTPSRawDataRetryTimeout){
+                        HTTPSRawDataTimeout = millis();
+                        httpStatusCode = httpsPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_endpointRoute,
+                                                accelRawDataHelper.m_endpointPort, (uint8_t*) &httpBuffer, 
+                                                httpBufferPointer,"", ssl_rootca_cert, HttpContentType::octetStream);            
+
+                        // send HTTP status code back to the MCU
+                        char httpAckBuffer[1 + 4];      // axis + 3 digit HTTP status code + null terminator
+                        httpAckBuffer[0] = rawData->axis;
+                        itoa(httpStatusCode, &httpAckBuffer[1], 10);
+                        iuSerial->sendMSPCommand(MSPCommand::HTTPS_ACK, httpAckBuffer);
+
+                        // send HTTP status code to MQTT
+                        snprintf(ack_config, 150, "{\"messageType\":\"raw-data-ack\",\"mac\":\"%s\",\"httpCode\":\"%d\",\"axis\":\"%c\",\"timestamp\":%.2f}",
+                        m_bleMAC.toString().c_str(),httpStatusCode, rawData->axis, timestamp);
+                        mqttHelper.publish(COMMAND_RESPONSE_TOPIC, ack_config);
+                        if((httpStatusCode == 200)){
+                            break;
+                        }
+                        RawdataHTTPSretryCount++;
+                    }
+                }
+            }
             if((rawData->axis == 'X' || httpOEMStatusCode == 200) && accelRawDataHelper.httpsOEMConfigPresent && oemRootCAPresent){
                 while(RawdataHTTPretryCount < 3 ){
                     if((millis() - HTTPRawDataTimeout) > HTTPRawDataRetryTimeout){
@@ -738,31 +766,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 }
                 
             }
-            if((rawData->axis == 'X' || httpStatusCode == 200)){
-                while(RawdataHTTPSretryCount < 3 ){
-                    if((millis() - HTTPSRawDataTimeout) > HTTPSRawDataRetryTimeout){
-                        HTTPSRawDataTimeout = millis();
-                        httpStatusCode = httpsPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_endpointRoute,
-                                                accelRawDataHelper.m_endpointPort, (uint8_t*) &httpBuffer, 
-                                                httpBufferPointer,"", ssl_rootca_cert, HttpContentType::octetStream);            
-
-                        // send HTTP status code back to the MCU
-                        char httpAckBuffer[1 + 4];      // axis + 3 digit HTTP status code + null terminator
-                        httpAckBuffer[0] = rawData->axis;
-                        itoa(httpStatusCode, &httpAckBuffer[1], 10);
-                        iuSerial->sendMSPCommand(MSPCommand::HTTPS_ACK, httpAckBuffer);
-
-                        // send HTTP status code to MQTT
-                        snprintf(ack_config, 150, "{\"messageType\":\"raw-data-ack\",\"mac\":\"%s\",\"httpCode\":\"%d\",\"axis\":\"%c\",\"timestamp\":%.2f}",
-                        m_bleMAC.toString().c_str(),httpStatusCode, rawData->axis, timestamp);
-                        mqttHelper.publish(COMMAND_RESPONSE_TOPIC, ack_config);
-                        if((httpStatusCode == 200)){
-                            break;
-                        }
-                        RawdataHTTPSretryCount++;
-                    }
-                }
-            }
+            
             if ( (httpStatusCode == 200 || httpOEMStatusCode == 200) && rawData->axis != 'Z'){
                 sendNextAxis = true;
             }
@@ -863,7 +867,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             //Serial.print("Certificate Manager JSON :");
             //config.prettyPrintTo(Serial);
             
-            if( success && WiFi.isConnected() ){
+            if( success && WiFi.isConnected() && Ping.ping("www.google.com" , 1)){
                 
                 const char* host = config["certUrl"]["host"].as<char*>() ; 
                 int port = config["certUrl"]["port"].as<int>() ; 
@@ -949,14 +953,10 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
           }
         
         case MSPCommand::DELETE_CERT_FILES:
-            for (size_t i = 0; i < CONFIG_TYPE_COUNT; i++)
-            {            
-                iuWiFiFlash.removeFile(CONFIG_TYPES[i]);
+            for(int i = 0; i < IUESPFlash::CFG_COUNT;i++){
+                iuWiFiFlash.removeFile((IUESPFlash::storedConfig)i);
                 delay(1);
             }
-            iuWiFiFlash.removeFile(IUESPFlash::CFG_STATIC_CERT_ENDPOINT);
-            iuWiFiFlash.removeFile(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT);
-            iuWiFiFlash.removeFile(IUESPFlash::CFG_WIFI);
             iuWiFiFlash.updateValue(CERT_ADDRESS,0);
             hostSerial.sendMSPCommand(MSPCommand::DELETE_CERT_FILES,"succefully Deleted, Rebooting ESP");
             ESP.restart();
@@ -1011,6 +1011,12 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             }
       case MSPCommand::SEND_WIFI_HASH:
             strcpy(wifiHash,buffer);
+            break;
+      case MSPCommand::SEND_MQTT_HASH:
+            strcpy(mqttHash,buffer);
+            break;
+      case MSPCommand::SEND_HTTP_HASH:
+            strcpy(httpHash,buffer);
             break;
       case MSPCommand::GET_PENDING_HTTP_CONFIG:
           // Get all the pending configuration messages over http
@@ -1193,10 +1199,6 @@ bool Conductor::getConfigFromMainBoard()
         }
         delay(500);
         hostSerial.sendMSPCommand(MSPCommand::ASK_BLE_MAC);
-        delay(10);
-        hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);    //Need to Change the call of this
-        delay(10);
-        hostSerial.sendMSPCommand(MSPCommand::GET_RAW_DATA_ENDPOINT_INFO); 
          
         // get the IDE Firmware Version from Host
         //hostSerial.sendMSPCommand(MSPCommand::ASK_HOST_FIRMWARE_VERSION);
@@ -1531,7 +1533,7 @@ void Conductor::loopMQTT()
     } else {
         uint32_t now = millis();
         if (now - m_lastMQTTInfoRequest > mqttInfoRequestDelay) {
-            hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);
+            setMQTTConfig();
             m_lastMQTTInfoRequest = now;
         }
     }
@@ -2326,6 +2328,8 @@ String Conductor::getRca(int error)
             return F("CERT-RCA-0046");
         case HTTP_CODE_UNAUTHORIZED:
             return F("CERT-RCA-0047");
+        case CERT_INVALID_CERT_TYPE:
+            return F("CERT-RCA-0048");
         default:
             if(certificateDownloadInProgress){ return F("CERT-RCA-2222");}else{ return F("OTA-RCA-1111"); }
     }
@@ -2336,11 +2340,11 @@ void Conductor::mqttSecureConnect(){
     //static uint8_t newDownloadConnectonAttempt;
     uint32_t now = millis();
     if(!mqttHelper.client.connected() && (now - m_disconnectionMqttTimerStart > 3000 ) && WiFi.isConnected() || upgradeReceived == true){
-          if( certificateDownloadInProgress == false && certDownloadInitAck == false && downloadInitTimer == true ){
+          if( certificateDownloadInProgress == false && certDownloadInitAck == false && downloadInitTimer == true && Ping.ping("www.google.com" , 1)){
              if (!mqttHelper.hasConnectionInformations())
              {  
-                 hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);    //Need to Change the call of this
-                 return;
+                setMQTTConfig();
+                return;
              }else
              {
                  //try connecting with available credentials
@@ -2746,10 +2750,7 @@ int Conductor::download_tls_ssl_certificates(){
                     // Serial.print("CONFIG JSON :");
                     // config.prettyPrintTo(Serial);
                     uint8_t certToUpdate;
-                    int number = 0 ;
-                    if(configTypeCount == 3){
-                        number = 2;
-                    }
+                    
                     if(activeCertificates != 0){ 
                         // if(initialFileDownload){
                         //     Serial.println("Initial File Download , Updated Value ");
@@ -2774,7 +2775,7 @@ int Conductor::download_tls_ssl_certificates(){
                             bool downloadSuccess = false;
                             char* checksum ;
                             // Note : upgradeReceived flage is set only for dev testing , can ne removed later (only in this statments not in nested if)
-                            int res = downloadCertificates(type,url,hash,index + number,certToUpdate);
+                            int res = downloadCertificates(type,url,hash,certToUpdate);
                             //Serial.print("Output : ");Serial.println(res);
                             if(res != 1){  return 0 ; /*break;*/}   //exit from for loop
                             
@@ -2791,7 +2792,7 @@ int Conductor::download_tls_ssl_certificates(){
                                 bool downloadSuccess = false;
                                 char *checksum;
                                 // Note : upgradeReceived flage is set only for dev testing , can ne removed later (only in this statments not in nested if)
-                                int res = downloadCertificates(type, url, hash, index + 5, certToUpdate);
+                                int res = downloadCertificates(type, url, hash, certToUpdate);
                                 //Serial.print("Output : ");Serial.println(res);
                                 if (res != 1)
                                 {
@@ -2938,9 +2939,8 @@ void Conductor::updateDiagnosticEndpoint(char* diagnosticEndpoint,int length){
     
 }
 
-void Conductor::updateWiFiConfig(char* config,int length){
-    // Update the file with the latest Diagnostic http/https endpoint
-    bool success = iuWiFiFlash.writeFile(IUESPFlash::CFG_WIFI,config,length);
+void Conductor::updateConfig(IUESPFlash::storedConfig configType, char* config,int length){
+    bool success = iuWiFiFlash.writeFile(configType,config,length);
     if (success)
     {
         if (debugMode)
@@ -2948,6 +2948,62 @@ void Conductor::updateWiFiConfig(char* config,int length){
            debugPrint("Config Json :");
            debugPrint(config);
         }
+    }
+}
+
+void Conductor::setMQTTConfig(){
+    if(iuWiFiFlash.isFilePresent(IUESPFlash::CFG_MQTT)){
+        StaticJsonBuffer<512> JsonBuffer;
+        JsonObject& config = iuWiFiFlash.loadConfigJson(IUESPFlash::CFG_MQTT,JsonBuffer);
+        bool validConfig = config.success();
+        //config.prettyPrintTo(Serial);
+        if (validConfig)
+        {
+            strcpy(m_mqttServerIP, config["mqtt"]["mqttServerIP"]);
+            m_mqttServerPort = config["mqtt"]["port"];
+            strcpy(m_mqttUsername, config["mqtt"]["username"]);
+            strcpy(m_mqttPassword, config["mqtt"]["password"]);
+
+            mqttHelper.setServer(m_mqttServerIP, m_mqttServerPort);
+            mqttHelper.setCredentials(m_mqttUsername, m_mqttPassword);
+        }
+    }else{
+        strcpy(m_mqttServerIP, MQTT_DEFAULT_SERVER_IP);
+        m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
+        strcpy(m_mqttUsername, MQTT_DEFAULT_USERNAME);
+        strcpy(m_mqttPassword, MQTT_DEFAULT_PASSWORD);
+        mqttHelper.setServer(m_mqttServerIP, m_mqttServerPort);
+        mqttHelper.setCredentials(m_mqttUsername, m_mqttPassword);
+    }
+}
+
+void Conductor::setHTTPConfig(){
+    if(iuWiFiFlash.isFilePresent(IUESPFlash::CFG_HTTP)){
+        StaticJsonBuffer<1024> JsonBuffer;
+        JsonObject& config = iuWiFiFlash.loadConfigJson(IUESPFlash::CFG_HTTP,JsonBuffer);
+        bool validConfig = config.success();
+        //config.prettyPrintTo(Serial);
+        if (validConfig)
+        {
+            strcpy(accelRawDataHelper.m_endpointHost, config["httpConfig"]["host"]);
+            accelRawDataHelper.m_endpointPort = config["httpConfig"]["port"];
+            strcpy(accelRawDataHelper.m_endpointRoute, config["httpConfig"]["path"]);
+
+            if(config.containsKey("httpOem")){
+                accelRawDataHelper.setOEMEndpointStaus(true);
+                strcpy(accelRawDataHelper.m_endpointHost_oem, config["httpOem"]["host"]);
+                accelRawDataHelper.m_endpointPort_oem = config["httpOem"]["port"];
+                strcpy(accelRawDataHelper.m_endpointRoute_oem, config["httpOem"]["path"]);
+            }else{
+                accelRawDataHelper.setOEMEndpointStaus(false);
+            }
+
+        }
+    }else{
+        accelRawDataHelper.setOEMEndpointStaus(false);
+        strcpy(accelRawDataHelper.m_endpointHost, DATA_DEFAULT_ENDPOINT_HOST);
+        accelRawDataHelper.m_endpointPort = DATA_DEFAULT_ENDPOINT_PORT;
+        strcpy(accelRawDataHelper.m_endpointRoute, RAW_DATA_DEFAULT_ENDPOINT_ROUTE);
     }
 }
 
@@ -3126,7 +3182,7 @@ void Conductor:: messageValidation(char* json){
      uint8_t OEMconfigTypeCount = configJson["oem-certificates"].size();
      const char* messageID = configJson["messageId"];
      // Note : below 4 files are mandatory except EAP
-    if(validJson && WiFi.isConnected() ){       // JOSN for Checksum Validation
+    if(validJson && WiFi.isConnected() && Ping.ping("www.google.com" , 1)){       // JOSN for Checksum Validation
         //Validate the Response message
         if (iuWiFiFlash.isFilePresent(IUESPFlash::CFG_CERT_UPGRADE_CONFIG) && 
              iuWiFiFlash.isFilePresent(IUESPFlash::CFG_MQTT_CLIENT0) && 
@@ -3138,34 +3194,18 @@ void Conductor:: messageValidation(char* json){
         {   
             // Update Certificates Download messageID
             hostSerial.sendMSPCommand(MSPCommand::SET_CERT_DOWNLOAD_MSGID,messageID);
-            uint8_t result[CONFIG_TYPE_COUNT]; // 10 , max use 5
-            uint8_t oem_result[CONFIG_TYPE_COUNT]; // 10 , max use 5
-            uint8_t index = 0;
-            if(activeCertificates == 0 && configTypeCount == 3 ){
-                index = 2;
-            }else if(activeCertificates == 0 && configTypeCount == 5 ){
-                index = 0;  
-            }else if(activeCertificates == 1 && configTypeCount == 3 ){
-                  index = 8;  
-            }else if(activeCertificates == 1 && configTypeCount == 5)
-            {
-                index = 6;
-            }
+            uint8_t result[CERT_COUNT]; // 10 , max use 5
+            uint8_t oem_result[OEM_CERT_COUNT]; // 10 , max use 5
+
             for (size_t i = 0; i < configTypeCount; i++)
             {
-                result[i] =  strcmp(getConfigChecksum(CONFIG_TYPES[i + index]), (const char* ) configJson["certificates"][i]["hash"] );
+                result[i] =  strcmp(getConfigChecksum(getStoredConfigType(configJson["certificates"][i]["type"], activeCertificates)), (const char* ) configJson["certificates"][i]["hash"] );
             }
 
             if(config.containsKey("oem-certificates") && accelRawDataHelper.httpsOEMConfigPresent){
-                if(activeCertificates == 0 && OEMconfigTypeCount > 0 ){
-                    index = 5;
-                }else
-                {
-                    index = 11;  
-                }
                 for (size_t i = 0; i < OEMconfigTypeCount; i++)
                 {
-                    oem_result[i] =  strcmp(getConfigChecksum(CONFIG_TYPES[i + index]), (const char* ) configJson["oem-certificates"][i]["hash"] );
+                    oem_result[i] =  strcmp(getConfigChecksum(getStoredConfigType(configJson["oem-certificates"][i]["type"], activeCertificates)), (const char* ) configJson["oem-certificates"][i]["hash"] );
                 }
                 if(oem_result[0] == 0){
                     newOEMRootCACertificateAvailable = false;
@@ -3260,35 +3300,61 @@ void Conductor:: messageValidation(char* json){
     
 }
 
-int Conductor::downloadCertificates(const char* type,const char* url,const char* hash,uint8_t index,uint8_t certToUpdate){
+bool Conductor::validateCertType(const char* type){
+    for(int i = 0;i<sizeof(CERT_TYPES);i++){
+        if(strcmp(type,CERT_TYPES[i]) == 0 ){
+            return true;
+        }
+    }
+    return false;
+}
+
+IUESPFlash::storedConfig Conductor::getStoredConfigType(const char* certType,bool partation){
+    if(partation == 0){
+        if(strcmp(certType,"EAP-TLS-CERT") == 0){
+            return IUESPFlash::CFG_EAP_CLIENT0;
+        }else if(strcmp(certType,"EAP-TLS-KEY") == 0){
+            return IUESPFlash::CFG_EAP_KEY0;
+        }else if(strcmp(certType,"MQTT-TLS-CERT") == 0){
+            return IUESPFlash::CFG_MQTT_CLIENT0;
+        }else if(strcmp(certType,"MQTT-TLS-KEY") == 0){
+            return IUESPFlash::CFG_MQTT_KEY0;
+        }else if(strcmp(certType,"SSL") == 0){
+            return IUESPFlash::CFG_HTTPS_ROOTCA0;
+        }else if(strcmp(certType,"OEM-SSL") == 0){
+            return IUESPFlash::CFG_HTTPS_OEM_ROOTCA0;
+        }
+    }else{
+        if(strcmp(certType,"EAP-TLS-CERT") == 0){
+            return IUESPFlash::CFG_EAP_CLIENT1;
+        }else if(strcmp(certType,"EAP-TLS-KEY") == 0){
+            return IUESPFlash::CFG_EAP_KEY1;
+        }else if(strcmp(certType,"MQTT-TLS-CERT") == 0){
+            return IUESPFlash::CFG_MQTT_CLIENT1;
+        }else if(strcmp(certType,"MQTT-TLS-KEY") == 0){
+            return IUESPFlash::CFG_MQTT_KEY1;
+        }else if(strcmp(certType,"SSL") == 0){
+            return IUESPFlash::CFG_HTTPS_ROOTCA1;
+        }else if(strcmp(certType,"OEM-SSL") == 0){
+            return IUESPFlash::CFG_HTTPS_OEM_ROOTCA1;
+        }
+    }
+}
+int Conductor::downloadCertificates(const char* type,const char* url,const char* hash,uint8_t certToUpdate){
 
     bool downloadSuccess = false;
     char* checksum ;
     //Serial.print("CERT TYPE : ");Serial.println(CERT_TYPES[index]);
-    // Individual file download is disabled now , rebuilt it                         
-    if (( strcmp(type,CERT_TYPES[index]) == 0 ||  upgradeReceived == true) )
+    // Individual file download is disabled now , rebuilt it                    
+    if (validateCertType(type) || upgradeReceived == true) 
     {
-        // Download the rootCA.crt and store
-        //Serial.println("\ndownloading initiated.");
-        if(/*upgradeReceived &&*/ certToUpdate == 1){
-            //Serial.println("Updating Client 1 Files.");
-             downloadSuccess = getDeviceCertificates(CONFIG_TYPES[index+6],type,url); // Upgrade client 1
-        }else{
-            //Serial.println("Updating Client 0 Files.");
-            downloadSuccess = getDeviceCertificates(CONFIG_TYPES[index],type,url);  // Upgrade Cleint 0
-        }
+        downloadSuccess = getDeviceCertificates(getStoredConfigType(type,certToUpdate),type,url); // Upgrade client 1
         if (downloadSuccess)
         {
             // File Download and stored success
             // Read the certificates and print
-            //Serial.println("downloadSuccess!!!");
-            //readCertificatesFromFlash(IUESPFlash::CFG_HTTPS_ROOTCA0,type);
-            //delay(10);
-            if(/*upgradeReceived &&*/ certToUpdate == 1){
-                checksum = getConfigChecksum(CONFIG_TYPES[index+6]);    //verify client 1
-            }else{
-               checksum = getConfigChecksum(CONFIG_TYPES[index]);       // verify client0
-            }
+            checksum = getConfigChecksum(getStoredConfigType(type,certToUpdate));    //verify client 1
+    
             if (strcmp(hash,checksum) == 0)
             {
                 // TODO : .CERT DOWNLOAD Success
@@ -3314,6 +3380,11 @@ int Conductor::downloadCertificates(const char* type,const char* url,const char*
             upgradeReceived = false;
             return 0;
         }
+    }else{
+            hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_ABORT, String(getRca(CERT_INVALID_CERT_TYPE)).c_str());
+            downloadAborted = true;
+            upgradeReceived = false;
+            return 0;
     }
     return 1;
 }

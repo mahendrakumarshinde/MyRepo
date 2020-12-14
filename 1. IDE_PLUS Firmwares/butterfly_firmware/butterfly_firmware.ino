@@ -1,6 +1,6 @@
 /*
 Infinite Uptime vEdge Firmware
-Update 06-11-2020
+Update 14-12-2020
 Type - Standard vEdge Firmware Release
 */
 
@@ -631,12 +631,9 @@ void setup()
         delay(5000);
         ledManager.stopColorOverride();
         // }
-        // delay(5000);
-        //configure mqttServer
-        conductor.configureMQTTServer("MQTT.conf");
-        
-        //http configuration
-        conductor.configureBoardFromFlash("httpConfig.conf",1);
+        /*Read MQTT and HTTP end points*/
+        conductor.readMQTTendpoints();
+        conductor.readHTTPendpoints();
         // get the previous offset values 
         //conductor.setSensorConfig("sensorConfig.conf"); 
 
@@ -894,6 +891,8 @@ void loop()
             conductor.streamMCUUInfo(iuWiFi.port);
             //iuWiFi.sendMSPCommand(MSPCommand::GET_ESP_RSSI);
             conductor.updateWiFiHash();
+            conductor.updateMQTTHash();
+            conductor.updateHTTPHash();
             if(iuWiFi.current_rssi < WEAK_SIGNAL_STRENGTH_TH ){
                  ledManager.overrideColor(RGB_PURPLE);
                  delay(3000);

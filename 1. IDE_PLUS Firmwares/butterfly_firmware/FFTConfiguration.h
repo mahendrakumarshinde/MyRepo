@@ -37,9 +37,9 @@ namespace FFTConfiguration {
     // Default parameter values
     const int DEFAULT_SAMPLING_RATE = 25600;
     const int DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX = 10;
-    const int DEFALUT_LOW_CUT_OFF_FREQUENCY_LSM = 5;
+    const int DEFALUT_LOW_CUT_OFF_FREQUENCY_LSM = 10;
     const int DEFAULT_BLOCK_SIZE = 8192;
-    const int DEFALUT_LOW_CUT_OFF_FREQUENCY = 5;
+    const int DEFALUT_LOW_CUT_OFF_FREQUENCY = 10;
     const int DEFAULT_HIGH_CUT_OFF_FREQUENCY = DEFAULT_SAMPLING_RATE / FMAX_FACTOR;  
     const float DEFAULT_MIN_AGITATION = 0.03;
     const int DEFAULT_LSM_G_RANGE = 4;
