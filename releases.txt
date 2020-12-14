@@ -1,4 +1,26 @@
 #################################################################################################################################################################################
+Date: 14 DECEMBER 2020
+Contributed By : Darshan Mirajkar,Vikas Gaikwad,Sanketa Patil,Sidramayya Swami 
+Product Name : vEdge
+Release Name : Updates in MQTT,HTTP configs,Certificate download mechanism
+Firmware Versions :
+		1. vEdge_main(STM32) : 3.0.4
+		2. vEdge_wifi (ESP32): 3.0.4
+		3. Bootloader L1     : 2.0.0
+		4. Bootloader L2     : 2.0.0
+		5. Factory Firmware  : 2.0.0 
+################################################################################################################################################################################
+
+Features and Enhancement : 
+	1.Updated the default lower cutoff frequency of LSM6DSM from 5 Hz to 10Hz (lowCutoff = 10Hz)
+	2.Storing MQTT and HTTP Configs in WiFi Flash
+	3.Updated FFT retry Mechanism
+	4.Download Certificates based on certificate type
+	5.Downloads only Available Certificates
+	6.Check Internet connection Using ESP32 Ping
+
+
+#################################################################################################################################################################################
 Date: 06 NOVEMBER 2020
 Contributed By : Darshan Mirajkar,Vikas Gaikwad,Sanketa Patil,Sidramayya Swami 
 Product Name : vEdge
