@@ -4526,7 +4526,7 @@ void Conductor::streamFeatures()
             if (m_streamingMode == StreamingMode::WIFI ||
                 m_streamingMode == StreamingMode::WIFI_AND_BLE || m_streamingMode == StreamingMode::ETHERNET)
             { 
-                if(RawDataState::rawDataTransmissionInProgress == false)
+                if(1)//(RawDataState::rawDataTransmissionInProgress == false)
                 {   
                     FeatureGroup::instances[i]->bufferAndStream(
                     ser1, IUSerial::MS_PROTOCOL, m_macAddress,
