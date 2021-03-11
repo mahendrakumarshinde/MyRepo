@@ -1340,28 +1340,63 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 
 JsonObject& Conductor::createFeatureGroupjson(){
    
+     // uint32_t nowTime = millis();
+
+    // if(nowTime - currTime > 500){
+    //     currTime = nowTime;
+    //     Serial.print("\nFingerprint Json at FRES : ");//,false);
+    //     Serial.println(fingerprintData);
+    // }    
+    // if(m_spectralFeatureBackupComsumed == false){ 
+    //      debugPrint("\nNew Spectral Buffer backup Copy:",false);
+    //      debugPrint(m_spectralFeatureResult);
+
+    // }
     // DynamicJsonBuffer outputJSONbuffer;
     StaticJsonBuffer<2500> outputJSONbuffer;
     JsonObject& root = outputJSONbuffer.createObject();
     JsonObject& fres = root.createNestedObject("FRES");
-    JsonObject& spectralFeatures = outputJSONbuffer.parseObject(fingerprintData);
-    // JsonVariant variant = root;
-    fres["A93"] = featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Total];
-    fres["VAX"] = featureDestinations::buff[featureDestinations::basicfeatures::velRMS512X];
-    fres["VAY"] = featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Y];
-    fres["VAZ"] = featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Z];
-    fres["A9X"] = featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512X];
-    fres["A9Y"] = featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Y];
-    fres["A9Z"] = featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Z];
-    fres["DAX"] = featureDestinations::buff[featureDestinations::basicfeatures::dispRMS512X];
-    fres["DAY"] = featureDestinations::buff[featureDestinations::basicfeatures::dispRMS512Y];
-    fres["DAZ"] = featureDestinations::buff[featureDestinations::basicfeatures::dispRMS512Z];
-    fres["TMP"] = featureDestinations::buff[featureDestinations::basicfeatures::temperature];
-    fres["S12"] = featureDestinations::buff[featureDestinations::basicfeatures::audio];
-    fres["RPM"] = featureDestinations::buff[featureDestinations::basicfeatures::rpm];
-    addAdvanceFeature(fres, phaseAngleComputer.totalPhaseIds, m_phase_ids,phaseAngleComputer.phase_output);
-    mergeJson(fres,spectralFeatures);
-    fres["NULL"] = 0;
+     if(m_spectralFeatureBackupComsumed == false ){
+        JsonObject& spectralFeatures = outputJSONbuffer.parseObject(m_spectralFeatureResult);
+        // JsonVariant variant = root;
+        fres["A93"] = featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Total];
+        fres["VAX"] = featureDestinations::buff[featureDestinations::basicfeatures::velRMS512X];
+        fres["VAY"] = featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Y];
+        fres["VAZ"] = featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Z];
+        fres["A9X"] = featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512X];
+        fres["A9Y"] = featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Y];
+        fres["A9Z"] = featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Z];
+        fres["DAX"] = featureDestinations::buff[featureDestinations::basicfeatures::dispRMS512X];
+        fres["DAY"] = featureDestinations::buff[featureDestinations::basicfeatures::dispRMS512Y];
+        fres["DAZ"] = featureDestinations::buff[featureDestinations::basicfeatures::dispRMS512Z];
+        fres["TMP"] = featureDestinations::buff[featureDestinations::basicfeatures::temperature];
+        fres["S12"] = featureDestinations::buff[featureDestinations::basicfeatures::audio];
+        fres["RPM"] = featureDestinations::buff[featureDestinations::basicfeatures::rpm];
+        addAdvanceFeature(fres, phaseAngleComputer.totalPhaseIds, m_phase_ids,phaseAngleComputer.phase_output);
+        mergeJson(fres,spectralFeatures);
+        fres["NULL"] = 0;
+        m_spectralFeatureBackupComsumed = true;
+    }else
+    {
+        JsonObject& spectralFeatures = outputJSONbuffer.parseObject(m_spectralFeatureResult);
+
+        fres["A93"] = featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Total];
+        fres["VAX"] = featureDestinations::buff[featureDestinations::basicfeatures::velRMS512X];
+        fres["VAY"] = featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Y];
+        fres["VAZ"] = featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Z];
+        fres["A9X"] = featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512X];
+        fres["A9Y"] = featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Y];
+        fres["A9Z"] = featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Z];
+        fres["DAX"] = featureDestinations::buff[featureDestinations::basicfeatures::dispRMS512X];
+        fres["DAY"] = featureDestinations::buff[featureDestinations::basicfeatures::dispRMS512Y];
+        fres["DAZ"] = featureDestinations::buff[featureDestinations::basicfeatures::dispRMS512Z];
+        fres["TMP"] = featureDestinations::buff[featureDestinations::basicfeatures::temperature];
+        fres["S12"] = featureDestinations::buff[featureDestinations::basicfeatures::audio];
+        fres["RPM"] = featureDestinations::buff[featureDestinations::basicfeatures::rpm];
+        addAdvanceFeature(fres, phaseAngleComputer.totalPhaseIds, m_phase_ids,phaseAngleComputer.phase_output);
+        mergeJson(fres,spectralFeatures);
+        fres["NULL"] = 0;
+    }
     return root;
 }
 
@@ -5137,20 +5172,20 @@ void Conductor::sendDiagnosticFingerPrints() {
     double fingerprint_timestamp = getDatetime();
 
     if (strlen(fingerprintData) > 5) {//handle empty fingerprint configuration (fingerprintData will be "{}" with escape characters)
-            bool ready_to_publish = false;
+            spectralFeatures_ready_to_publish = false;
 
             if (computed_first_fingerprint_timestamp == false) {
                 computed_first_fingerprint_timestamp = true;
                 last_fingerprint_timestamp = fingerprint_timestamp; // Set the first fingerprint timestamp
-                ready_to_publish = true;
+                spectralFeatures_ready_to_publish = true;
             }
             else { // first fingerprint already published, check timestamps
                 if((fingerprint_timestamp - last_fingerprint_timestamp) >= 0.500) {
-                    ready_to_publish = true;
+                    spectralFeatures_ready_to_publish = true;
                 }
             }  
             
-            if (ready_to_publish == true) {
+            if (spectralFeatures_ready_to_publish == true) {
                 int messageLength = strlen(fingerprintData); 
                 char FingerPrintResult[150 + messageLength];
                 char sendFingerprints[500 + messageLength];
@@ -5212,7 +5247,16 @@ void Conductor::sendDiagnosticFingerPrints() {
                 //     debugPrint(F("Last fingerprint timestamp: "), false); debugPrint(F(last_fingerprint_timestamp_string), true);
                 //     debugPrint(F("Fingerprint timestamp: "), false); debugPrint(F(fingerprint_timestamp_string), true);
                 // }                
-            }   
+            }  
+            
+            // copy all computed spectral features to backup buffer
+            if(m_spectralFeatureBackupComsumed == true){
+
+                m_spectralFeatureResult = (String)fingerprintData;
+                // debugPrint("Backup Spectral Data : ",false);
+                // debugPrint(m_spectralFeatureResult);
+                m_spectralFeatureBackupComsumed = false;
+            }
     }
     else {        
         //debugPrint(F("Fingerprints have not been configured."), true);
@@ -7234,6 +7278,36 @@ float* Conductor::getFingerprintsforModbus(){
  }
    return modbusFingerprintDestinationBuffer;    
 }
+
+void Conductor::getFingerprintsforFRES(const char* input){
+    DynamicJsonBuffer object;
+    JsonObject& root = object.parseObject(input);
+    //char* spectralFeaturesKeys[10];    
+    int i = 1;    
+    for (auto jsonKeyValue : root) {
+         char* key = (char*)jsonKeyValue.key;
+         float value = jsonKeyValue.value.as<float>();                   
+
+        //  debugPrint("\nKey : ",false);debugPrint(key);
+        //  debugPrint("Value: ",false);debugPrint(value);
+
+         if(i > MAX_SPECTRAL_FEATURE_COUNT){
+             if(debugMode){
+                debugPrint("Spectral Feature Keys Index Out of Bound,Spectral Feature Limit exceeded !!!");   
+             }
+             return;
+         }else
+         {
+             spectralFeaturesKeys[i-1] = key;           //load keys
+             featureDestinations::buff[12+i] = value;   //load values
+            //  debugPrint("Buff Key : ",false);
+            //  debugPrint(spectralFeaturesKeys[i-1]);
+         }          
+         i++;   
+
+    }
+}
+
 
 bool Conductor::checkforModbusSlaveConfigurations(){
 
