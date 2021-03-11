@@ -222,6 +222,7 @@ class Conductor
         bool m_statementEntry = true;
         bool commomEndpointsuccess = false;
         bool oemRootCAPresent = false;
+        bool otaInProgress = false;
         // Config handler
         const uint8_t CERT_COUNT = 5;
         const uint8_t OEM_CERT_COUNT = 1;
@@ -299,7 +300,7 @@ class Conductor
         uint32_t fwdnldLen = 0;
         uint32_t totlen = 0;
         uint32_t pktWaitTimeStr = 0;
-        bool otaInProgress = false;
+        //bool otaInProgress = false;
         bool waitingForPktAck = false;
         bool otaStsDataSent = false;
         bool otaInitTimeoutFlag = false;
