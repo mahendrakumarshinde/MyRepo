@@ -214,7 +214,11 @@ void Feature::incrementFillingIndex()
                     FeatureStates::isr_stopTime = micros();
                     if(RawDataState::startRawDataCollection == false){
                     FeatureStates::elapsedTime = (FeatureStates::isr_stopTime-FeatureStates::isr_startTime)/1000000;
-                    FFTConfiguration::calculatedSamplingRate = round(FFTConfiguration::currentBlockSize/FeatureStates::elapsedTime);
+                    if(FFTConfiguration::currentSamplingRate == 208 || FFTConfiguration::currentSamplingRate == 416 ){ // TODO : Temp. using current SR for FFT computation , ideally we should use the calculated SR.
+                       FFTConfiguration::calculatedSamplingRate = FFTConfiguration::currentSamplingRate;
+                    }else {    
+                       FFTConfiguration::calculatedSamplingRate = round(FFTConfiguration::currentBlockSize/FeatureStates::elapsedTime);
+                    }
                     }
                     // if(loopDebugMode){
                     //     debugPrint("Elapsed Time in sec : ",false);

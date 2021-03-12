@@ -292,7 +292,9 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
 
             // If the received config matches the current config, report an error
             bool sameBlockSize = false;
+            bool notSupportedBlockSize = false;
             bool sameSamplingRate = false;
+            bool notSupportedSamplingRate = false;
             bool samegRange = false;
             bool grangepresent = true;
             //Validation for samplingRate field
@@ -370,7 +372,7 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
 
                     debugPrint("valid G_range_json");debugPrint(validLSMgRange);
                 }
-                debugPrint("G_range_NOT_received in JSON");
+                //debugPrint("G_range_NOT_received in JSON");
                 if(!iuAccelerometer.lsmPresence && validLSMSamplingRate) {
                      validConfig = false;
                      errorMessages.add("LSM not Present");
@@ -400,11 +402,15 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                 if (!validLSMSamplingRate && !validKionixSamplingRate) {
                         validConfig = false;
                         errorMessages.add("Invalid samplingRate");
-                } else if (samplingRate == 416) {  // Temporary workaround
-                    validConfig = false;
-                    errorMessages.add("Sampling rate not supported");
+                // } else if (samplingRate == 416) {  // Temporary workaround
+                //     validConfig = false;
+                //     errorMessages.add("Sampling rate not supported");
                 } else if (FFTConfiguration::currentSamplingRate == samplingRate) {
                     sameSamplingRate = true;
+                }
+                if (samplingRate == 208)
+                {
+                    notSupportedSamplingRate = true;
                 } 
                 // else if (!validSensor){
                 //     validConfig = false;
@@ -434,6 +440,14 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                         errorMessages.add("Invalid blockSize");
                 } else if (FFTConfiguration::currentBlockSize == blockSize) {
                     sameBlockSize = true;
+                }
+                if (notSupportedSamplingRate && blockSize > 4096)
+                {
+                    if(debugMode){
+                        debugPrint("SR:208 and BlockSize : 8192 not supported.");
+                    }
+                    validConfig = false;
+                    errorMessages.add("SR:208 and BlockSize : 8192 not supported");
                 }
             } else {
                 validConfig = false;
