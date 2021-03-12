@@ -220,7 +220,8 @@ void IUBMD350::enterATCommandInterface(uint8_t retry)
     digitalWrite(m_atCmdPin, LOW);
     delay(10);
     softReset();
-    delay(3000); // Wait for power cycle to complete
+    //delay(3000); // Wait for power cycle to complete
+    delay(5000);
     m_ATCmdEnabled = true;
     if (setupDebugMode) {
         debugPrint(F("Entered AT Command Interface mode"));
@@ -238,7 +239,8 @@ void IUBMD350::exitATCommandInterface()
     digitalWrite(m_atCmdPin, HIGH);
     delay(10);
     softReset();
-    delay(3000); // Wait for power cycle to complete
+    //delay(3000); // Wait for power cycle to complete
+    delay(5000);
     m_ATCmdEnabled = false;
     if (setupDebugMode) {
         debugPrint(F("Exited AT Command Interface mode"));
@@ -362,7 +364,8 @@ void IUBMD350::queryDeviceName()
 {
     char response[9];
     
-    int retries = 5;
+    //int retries = 5;
+    int retries = 7;
     char current_attempt[5];
     int respLen;
     for(int i=0; i<retries; i++) {
@@ -376,7 +379,8 @@ void IUBMD350::queryDeviceName()
                 debugPrint("Attempt ", false); debugPrint(itoa(i, current_attempt, 10));
                 debugPrint(F(" - Failed to query device name: no response"));
             }
-            if (i >= 2) // check till 2 retries
+            //if (i >= 2) // check till 2 retries
+            if (i >= 3)
             {   
                 if (setupDebugMode)
                 {
@@ -402,7 +406,8 @@ void IUBMD350::queryDeviceName()
  */
 void IUBMD350::configureUARTPassthrough()
 {
-    int retries = 5;
+    //int retries = 5;
+    int retries = 7;
     char current_attempt[5];
 
     char response[3];
@@ -514,7 +519,8 @@ void IUBMD350::configureBeacon(bool enabled, uint16_t adInterval)
         cmd = "ben 00"; 
     }
     
-    int retries = 5;
+    //int retries = 5;
+    int retries = 7;
     char current_attempt[5];
     for (int i=0; i<retries; i++) {
         sendATCommand(cmd, response, 3);
@@ -620,7 +626,8 @@ void IUBMD350::setTxPowers(txPowerOption txPower)
     m_beaconTxPower = txPower;
     char response[3];
 
-    int retries = 5;
+    //int retries = 5;
+    int retries = 7;
     char current_attempt[5];
 
     // Connected Power

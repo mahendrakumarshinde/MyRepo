@@ -31,6 +31,7 @@ extern IUTimeHelper timeHelper;
 
 extern IUESPFlash iuWiFiFlash;
 
+#define MAX_SSL_CERT_SIZE           6144
 #define OTA_STM_PKT_ACK_TMOUT       1000
 #define OTA_DATA_READ_TIMOUT        1001
 #define OTA_HTTP_INIT_FAIL          1002
@@ -186,10 +187,11 @@ class Conductor
         /******* Validation ********/
         void messageValidation(char* json);
         /***************************/
+        char cert_config[MAX_SSL_CERT_SIZE];
         char mqtt_client_cert[2048];
         char mqtt_client_key[2048];
-        char ssl_rootca_cert[3072];
-        char ssl_oem_rootca_cert[3072];
+        char ssl_rootca_cert[MAX_SSL_CERT_SIZE];
+        char ssl_oem_rootca_cert[MAX_SSL_CERT_SIZE];
         char eap_client_cert[2048];
         char eap_client_key[2048];
         char certDownloadResponse[4096];    // stores the cert download json (Actual  -2299)
@@ -222,6 +224,7 @@ class Conductor
         bool m_statementEntry = true;
         bool commomEndpointsuccess = false;
         bool oemRootCAPresent = false;
+        bool otaInProgress = false;
         // Config handler
         const uint8_t CERT_COUNT = 5;
         const uint8_t OEM_CERT_COUNT = 1;
@@ -299,7 +302,7 @@ class Conductor
         uint32_t fwdnldLen = 0;
         uint32_t totlen = 0;
         uint32_t pktWaitTimeStr = 0;
-        bool otaInProgress = false;
+        //bool otaInProgress = false;
         bool waitingForPktAck = false;
         bool otaStsDataSent = false;
         bool otaInitTimeoutFlag = false;
