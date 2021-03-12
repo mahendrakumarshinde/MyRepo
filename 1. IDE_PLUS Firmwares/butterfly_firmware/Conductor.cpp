@@ -4526,7 +4526,7 @@ void Conductor::streamFeatures()
             if (m_streamingMode == StreamingMode::WIFI ||
                 m_streamingMode == StreamingMode::WIFI_AND_BLE || m_streamingMode == StreamingMode::ETHERNET)
             { 
-                if(RawDataState::rawDataTransmissionInProgress == false)
+                if(1)//(RawDataState::rawDataTransmissionInProgress == false)
                 {   
                     FeatureGroup::instances[i]->bufferAndStream(
                     ser1, IUSerial::MS_PROTOCOL, m_macAddress,
@@ -5233,6 +5233,12 @@ bool Conductor::setFFTParams() {
         {
             if (FFTConfiguration::currentSamplingRate == FFTConfiguration::samplingRates[i])
             {
+                if(FFTConfiguration::currentSamplingRate == 208 && FFTConfiguration::currentBlockSize > 4096){
+                    FFTConfiguration::currentBlockSize = 4096;                    
+                    if(debugMode){
+                        debugPrint("208 and 8192 is not Allowed, Using 4096");
+                    }
+                }
                 FFTConfiguration::currentSensor = FFTConfiguration::lsmSensor;
             }
         }
