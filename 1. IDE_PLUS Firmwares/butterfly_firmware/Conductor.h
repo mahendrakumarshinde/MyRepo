@@ -146,6 +146,11 @@ class Conductor
         static const uint32_t DIG_PUBLISHED_BUFFER_SIZE = 2000;
         char m_diagnosticPublishedBuffer[DIG_PUBLISHED_BUFFER_SIZE+70]; // 70 bytes for MACID, TIMESTMP, DIGRES
         char m_diagnosticResult[DIG_PUBLISHED_BUFFER_SIZE];
+         // Spectral Features buffers and Timeouts
+        bool m_spectralFeatureBackupComsumed = true;
+        static const int MAX_SPECTRAL_FEATURE_COUNT = 10;
+        char* spectralFeaturesKeys[MAX_SPECTRAL_FEATURE_COUNT];
+        String m_spectralFeatureResult;
         uint32_t lastUpdated = 0;
         uint32_t digLastPublish = 0;
         uint32_t fresLastPublish = 0;
@@ -159,9 +164,11 @@ class Conductor
         bool certDownloadMode = false;
         bool sendCertInitAck = false;
         bool requestConfig = false;
+        bool spectralFeatures_ready_to_publish = false;
         uint8_t getm_id(char* did, int totalConfiguredDiag);
         static const uint8_t maxDiagnosticStates = 10;
         float modbus_reportable_m_id[maxDiagnosticStates];
+        uint32_t currTime=0;
         /***** Core *****/
         Conductor() {};
         Conductor(MacAddress macAddress) : m_macAddress(macAddress) { }
@@ -315,6 +322,7 @@ class Conductor
         void periodicFlashTest();
         void onBootFlashTest();
         float* getFingerprintsforModbus();
+        void getFingerprintsforFRES(const char* input);
         bool checkforModbusSlaveConfigurations();
         bool updateModbusStatus();
         void checkforWiFiConfigurations();

@@ -2841,15 +2841,16 @@ char* Conductor::getConfigChecksum(IUESPFlash::storedConfig configType)
 {
     size_t filesize = iuWiFiFlash.getFileSize(configType);
     size_t configMaxLen = filesize;
-    char config[configMaxLen];
-    strcpy(config, "");
+    // char config[configMaxLen];
+    // strcpy(config, "");
+    memset(cert_config,'\0',MAX_SSL_CERT_SIZE);
     size_t charCount = 0;
     if (iuWiFiFlash.available()) {
-        charCount = iuWiFiFlash.readFile(configType, config, configMaxLen);
+        charCount = iuWiFiFlash.readFile(configType, cert_config, configMaxLen);
     }
     // Charcount = 0 if flash is unavailable or file not found => Checksum of
     // empty string will be sent, and that will trigger a config refresh
-    unsigned char* md5hash = MD5::make_hash(config, charCount);
+    unsigned char* md5hash = MD5::make_hash(cert_config, charCount);
     char *md5str = MD5::make_digest(md5hash, 16);
     //free memory
     free(md5hash);

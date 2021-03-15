@@ -50,7 +50,7 @@ class IUESP8285 : public IUSerial, public Component
         // Timeout for no response (only when WiFi is awake)
         static const uint32_t noResponseTimeout = 45000; // ms
         // Timeout for failing to confim feature publication
-        static const uint32_t confirmPublicationTimeout = 40000; // ms
+        static const uint32_t confirmPublicationTimeout = 60000; // ms
         // Default Config type for flash storing
         static const IUFlash::storedConfig STORED_CFG_TYPE = IUFlash::CFG_WIFI0;
         // Size of Json buffer (to parse config json)

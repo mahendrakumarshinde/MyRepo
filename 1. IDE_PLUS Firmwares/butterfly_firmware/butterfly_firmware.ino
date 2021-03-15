@@ -1,6 +1,6 @@
 /*
 Infinite Uptime vEdge Firmware
-Update 14-12-2020
+Update 15-03-2021
 Type - Standard vEdge Firmware Release
 */
 
@@ -767,6 +767,7 @@ void loop()
         if (iuWiFi.isConnected() == true && sensorStatus == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
         {
             conductor.sendSensorStatus();
+            iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HOST_FIRMWARE_VERSION,FIRMWARE_VERSION);
             sensorStatus = false;
         }
         

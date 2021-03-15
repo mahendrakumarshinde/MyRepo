@@ -1,6 +1,6 @@
 /*
   Infinite Uptime WiFi Module Firmware
-  Update 14-12-2020
+  Update 15-03-2021
 */
 
 #include "Conductor.h"
@@ -153,7 +153,7 @@ void loop()
         
     }
 
-    if (now - lastReqHash > 30000 )
+    if (now - lastReqHash > 30000 &&  (conductor.otaInProgress == false && conductor.certificateDownloadInProgress == false )  )
     {
         if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_MQTT) || strcmp(conductor.mqttHash,conductor.getConfigChecksum(IUESPFlash::CFG_MQTT)) != 0){
             hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);
