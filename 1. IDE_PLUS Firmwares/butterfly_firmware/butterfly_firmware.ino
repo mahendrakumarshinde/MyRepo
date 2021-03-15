@@ -1,6 +1,6 @@
 /*
 Infinite Uptime vEdge Firmware
-Update 14-12-2020
+Update 15-03-2021
 Type - Standard vEdge Firmware Release
 */
 

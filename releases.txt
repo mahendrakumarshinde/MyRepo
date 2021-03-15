@@ -1,4 +1,54 @@
 #################################################################################################################################################################################
+Date: 15 MARCH 2021
+Contributed By : Vikas Gaikwad,Sanketa Patil,Sidramayya Swami 
+Product Name : vEdge
+Release Name : Porting firmware vEdge2.1 v3.3.0 to vEdge1.6 3.0.5 
+Firmware Versions :
+		1. vEdge_main(STM32) : 3.0.5
+		2. vEdge_wifi (ESP32): 3.0.5
+		3. Bootloader L1     : 2.0.0
+		4. Bootloader L2     : 2.0.0
+		5. Factory Firmware  : 2.0.0 
+################################################################################################################################################################################
+
+Features Requirements
+
+      1.Enable the 208 Hz and 416 Hz Sampling Rate on LSM
+      2.Allowing Data streaming on GET-FFT
+
+Feature Description
+
+      1.Added support for 208 Hz sampling rate @4096 block size
+      2.Added support for 416 Hz sampling rate up-to 8192 block size
+      3.Handled the validation check for unsupported block size at 208 Hz( 8192 block size is not supported)
+      4.Disable the use of calculated sampling for 208 Hz and 416 Hz sampling rate fft configurations.
+      5.Continuously Data streaming
+
+Issue Resolved
+
+      1.Allowed Data streaming on FFT mode also.
+      2.BLE fix (JIRA - 129)
+      3.Allowing Data streaming during FFT (JIRA-1529,1539)
+      4.Stop sending config hash request to STM during OTA/cert download mode
+      5.Certificate downloading and migrating issue
+      6.Synchronized the fingerprint stream with FRES update mechanism
+      7.Publish Firmware version issue
+
+JIRA No
+
+      IUINTERNAL-1582, IUINTERNAL-1512, IUINTERNAL-1529, IUINTERNAL-1539, IUINTERNAL - 1497
+      IF-182, IF-129, IF-181,IF-189, IF-190,IF-191
+
+TODO
+
+      Permanently fix the BLE stuck issue.
+
+Limitations
+
+      Supported Hardware only v1.5 & v1.6
+
+
+#################################################################################################################################################################################
 Date: 14 DECEMBER 2020
 Contributed By : Darshan Mirajkar,Vikas Gaikwad,Sanketa Patil,Sidramayya Swami 
 Product Name : vEdge
