@@ -489,7 +489,8 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         
         virtual void m_specializedCompute()
     {
-        m_highCutFrequency = FFTConfiguration::calculatedSamplingRate/FMAX_FACTOR;
+        //m_highCutFrequency = FFTConfiguration::calculatedSamplingRate/FMAX_FACTOR;
+        m_highCutFrequency = FFTConfiguration::currentHighCutOffFrequency;
         // File logging
         fft_direction = m_id % FFTComputerID; 
 
