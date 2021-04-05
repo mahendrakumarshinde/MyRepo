@@ -33,6 +33,7 @@ char IUFSFlash::FNAME_HASH[11] = "configHash";
 char IUFSFlash::FNAME_DIG[11] = "diagnostic";
 char IUFSFlash::FNAME_RPM[4] = "rpm";
 char IUFSFlash::FNAME_PHASE[6] = "phase";
+char IUFSFlash::FNAME_FINGERPRINT_STATE[12] = "spectThresh";
 /***** Core *****/
 
 void IUFSFlash::begin()
@@ -697,6 +698,9 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
         case CFG_PHASE:
             fname = FNAME_PHASE;
             break;
+        case CFG_FINGERPRINT_STATE:
+            fname = FNAME_FINGERPRINT_STATE ;
+            break;      
         default:
             if (debugMode)
             {
