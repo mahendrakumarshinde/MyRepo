@@ -437,9 +437,9 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 delay(500);
                 DOSFS.end();
             }
-        else{
-            debugPrint("Failed to save spectThresh.conf file");
-        }
+        // else{
+        //     debugPrint("Failed to save spectThresh.conf file");
+        // }
         }
 
 
