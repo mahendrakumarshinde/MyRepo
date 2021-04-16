@@ -486,7 +486,7 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                 sameLowCutOffFreq = true;
                 validConfig = false;
                 //debugPrint("Same Low Cut Off frequency recieved");
-                errorMessages.add("Same Low Cut Off Frequency recieved");
+                //errorMessages.add("Same Low Cut Off Frequency recieved");
             }
         }           
             if(config.containsKey("highCutOffFreq")){                                       
@@ -510,7 +510,7 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                 sameHighCutOffFreq = true;
                 validConfig = false;
                 //debugPrint("Same High Cut Off frequency recieved");
-                errorMessages.add("Same High Cut Off Frequency recieved");
+                //errorMessages.add("Same High Cut Off Frequency recieved");
             }          
         }   
             if(configHighCutOffFreq - configLowCutOffFreq == 0){
