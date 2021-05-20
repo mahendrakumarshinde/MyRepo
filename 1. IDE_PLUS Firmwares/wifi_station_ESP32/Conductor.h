@@ -225,6 +225,7 @@ class Conductor
         bool commomEndpointsuccess = false;
         bool oemRootCAPresent = false;
         bool otaInProgress = false;
+        bool m_secure = false;
         // Config handler
         const uint8_t CERT_COUNT = 5;
         const uint8_t OEM_CERT_COUNT = 1;

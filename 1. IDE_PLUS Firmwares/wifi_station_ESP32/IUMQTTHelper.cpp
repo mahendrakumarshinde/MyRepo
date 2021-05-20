@@ -22,8 +22,10 @@ char IUMQTTHelper::DEFAULT_WILL_MESSAGE[44] =
 
 IUMQTTHelper::IUMQTTHelper(/*const char * serverIP, uint16_t serverPort,
                            const char *username, const char *password*/) :
-    m_wifiClient(),//m_wifiClientS(),
-    client(m_wifiClient)//,client(m_wifiClientS)
+    m_nonSecureWifiClient(),
+    m_wifiClient(),
+    nonSecureClient(m_nonSecureWifiClient),
+    client(m_wifiClient)
 {
     // setServer(serverIP, serverPort);
     // if (username != NULL && password != NULL) {
@@ -45,7 +47,12 @@ void IUMQTTHelper::setServer(const char * serverIP, uint16_t serverPort)
     strcpy(m_serverIP,serverIP);
     m_serverPort = serverPort;
     if (serverIP != NULL) {
-        client.setServer(serverIP, m_serverPort);
+        if(iuWiFiFlash.readMemory(CONNECTION_MODE) == UNSECURED){
+            nonSecureClient.setServer(serverIP,m_serverPort);
+        }else if(iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED){
+            client.setServer(serverIP,m_serverPort);
+        }
+
     }
 }
 
@@ -111,11 +118,12 @@ void IUMQTTHelper::reconnect()
     }
     uint32_t startTime = millis();
     uint32_t currentTime = startTime;
-    while (!client.connected() && currentTime - startTime < connectionTimeout) {
+    if(iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED){
+    while ( !client.connected()  && currentTime - startTime < connectionTimeout) {
         if (debugMode) {
-            debugPrint("Attempting MQTT connection... ", false);
+            debugPrint("Attempting Secured MQTT connection... ", false);
         }
-        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Attempting MQTT Connection");
+        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Attempting Secured MQTT Connection");
         if((m_serverPort == 8883 || m_serverPort == 8884)/* && TLS_ENABLE == true */){
             // m_wifiClient.setCACert(client_ca);
             hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Setting the MQTT TLS Certificates");
@@ -123,11 +131,13 @@ void IUMQTTHelper::reconnect()
             m_wifiClient.setPrivateKey(conductor.mqtt_client_key);
         }
         // Attempt to connect
-        if (client.connect(m_deviceMAC.toString().c_str(), m_username,
+        bool connect = client.connect(m_deviceMAC.toString().c_str(), m_username,
                            m_password, DIAGNOSTIC_TOPIC, WILL_QOS, WILL_RETAIN,
-                           m_willMessage)) {
+                           m_willMessage);
+        if (connect) {
             mqttConnected = 0;
             onConnection();
+            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG :Secured client connecting");
             if (debugMode) {
                 debugPrint("Success");
             }
@@ -142,7 +152,45 @@ void IUMQTTHelper::reconnect()
             delay(connectionRetryDelay);
             break;
         }
+        }
+    nonSecureClient.disconnect();
+
     }
+    else if(iuWiFiFlash.readMemory(CONNECTION_MODE) == UNSECURED){
+        while ( !nonSecureClient.connected() && currentTime - startTime < connectionTimeout) {
+        if (debugMode) {
+            debugPrint("Attempting Un-Secured MQTT connection... ", false);
+        }
+        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Attempting Un-Secured MQTT Connection");
+        // Attempt to connect
+        bool connect = nonSecureClient.connect(m_deviceMAC.toString().c_str(), m_username,
+                           m_password, DIAGNOSTIC_TOPIC, WILL_QOS, WILL_RETAIN,
+                           m_willMessage);
+
+        if (connect) {
+            //mqttConnected = 0;
+            onConnection();
+            if (debugMode) {
+                debugPrint("Success");
+            }
+            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Un-Secured client connecting");
+
+            // if (m_onConnectionCallback) {
+            //     m_onConnectionCallback();
+            // }
+        } else {
+            //mqttConnected++;
+            if (debugMode) {
+                debugPrint("Failed");
+            }
+            delay(connectionRetryDelay);
+            break;
+        }
+     }
+    client.disconnect();
+
+    }
+
 }
 
 /**
@@ -160,7 +208,11 @@ bool IUMQTTHelper::publish(const char* topic, const char* payload)
         debugPrint("': ", false);
         debugPrint(payload);
     }
-    return client.publish(topic, payload);
+    if(iuWiFiFlash.readMemory(CONNECTION_MODE) == UNSECURED){
+        return nonSecureClient.publish(topic,payload);
+    }else if(iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED){
+        return client.publish(topic, payload);
+    }
 }
 
 /**
@@ -193,7 +245,12 @@ bool IUMQTTHelper::subscribe(const char* topic, bool deviceSpecific)
     {
         snprintf(subscription, subsLength, "%s/%s", DEVICE_TYPE, topic);
     }
-    bool result = client.subscribe(subscription,1);
+    bool result = false;
+    if(iuWiFiFlash.readMemory(CONNECTION_MODE) == UNSECURED){
+        result = nonSecureClient.subscribe(subscription,1);
+    }else if (iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED){ 
+        result = client.subscribe(subscription,1);
+    }
     if (result && debugMode)
     {
         debugPrint("Subscribed to ", false);

@@ -103,23 +103,23 @@ namespace IU_VERSION {
 //IPAddress MQTT_DEFAULT_SERVER_IP(35, 197, 32, 136);
 // ASIA-SOUTH1-A (Mumbai) server
 const char MQTT_DEFAULT_SERVER_IP[50] = "mqtt.infinite-uptime.com";
-const uint16_t MQTT_DEFAULT_SERVER_PORT = 8883;             //  IU-Default : 1883                  ,Indicus -Testing Port : 1883           , Indicus-India Port[Production] : 1883
+const uint16_t MQTT_DEFAULT_SERVER_PORT = 1883;             //  IU-Default : 1883                  ,Indicus -Testing Port : 1883           , Indicus-India Port[Production] : 1883
 
 const uint8_t MQTT_CREDENTIALS_MAX_LENGTH = 25;
-const char MQTT_DEFAULT_USERNAME[35] =  "";             // IU-Username : ide_plus              ,Inducus Username Testing : guest        , Indicus-India Username[Production] : ispl
-const char MQTT_DEFAULT_ASSWORD[35] =  "";           // IU-Password : nW$Pg81o@EJD          ,Password                 :cnxmq2016     , Indicus-India Password[Production] : indicus
-const bool MQTT_DEFAULT_TLS_FLAG = true;
+const char MQTT_DEFAULT_USERNAME[8] =  "iuprod";             // IU-Username : ide_plus              ,Inducus Username Testing : guest        , Indicus-India Username[Production] : ispl
+const char MQTT_DEFAULT_PASSWORD[8] =  "iuprod";           // IU-Password : nW$Pg81o@EJD          ,Password                 :cnxmq2016     , Indicus-India Password[Production] : indicus
+const bool MQTT_DEFAULT_TLS_FLAG = false;
 
 
 /* =============================================================================
     Default HTTP configuration values
 ============================================================================= */
 const char HTTP_DEFAULT_HOST[50] = "api-idap.infinite-uptime.com";
-const uint16_t HTTP_DEFAULT_PORT = 443;
+const uint16_t HTTP_DEFAULT_PORT = 80;
 const char HTTP_DEFAULT_PATH[256] = "/api/2.0/datalink/http_dump_v2";
-const char HTTP_DEFAULT_USERNAME[35] =  "";
-const char HTTP_DEFAULT_PASSWORD[35] =  "";
-const char HTTP_DEFAULT_OUTH[35] = ""; 
+const char HTTP_DEFAULT_USERNAME[2] =  "";
+const char HTTP_DEFAULT_PASSWORD[2] =  "";
+const char HTTP_DEFAULT_OUTH[2] = "";  
 
 
 /* =============================================================================
