@@ -407,8 +407,8 @@ char* DiagnosticEngine::m_specializedCompute (int m_direction, const q15_t *m_am
           upper_bound = FFTConfiguration::currentHighCutOffFrequency;        
         }
      
-        //float df = (float)FFTConfiguration::currentSamplingRate / (float)FFTConfiguration::currentBlockSize;
-        float df = FFTConfiguration::calculatedSamplingRate/ (float)FFTConfiguration::currentBlockSize;
+        float df = (float)FFTConfiguration::currentSamplingRate / (float)FFTConfiguration::currentBlockSize;
+        //float df = FFTConfiguration::calculatedSamplingRate/ (float)FFTConfiguration::currentBlockSize;
         int lower_index = (int)(lower_bound/df + 1); // ceiling(lower_bound/df)
         int upper_index = (int)(upper_bound/df); // floor(upper_bound/df)
         // ideally we need to start from lower_index = ceiling(lower_bound/df) to upper_index = floor(upper_bound/df)

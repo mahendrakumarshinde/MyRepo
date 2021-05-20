@@ -509,6 +509,7 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         float resolution = m_sources[0]->getResolution();         // using resolution of 2^15 
         uint16_t sampleCount = m_sources[0]->getSectionSize() * m_sectionCount[0];
         float df = (float) samplingRate / (float) sampleCount;
+        float newdf = (float) FFTConfiguration::currentSamplingRate/(float) sampleCount;
         T *values = (T*) m_sources[0]->getNextValuesToCompute(this);
         for (uint8_t i = 0; i < m_destinationCount; ++i) {
             m_destinations[i]->setSamplingRate(samplingRate);
@@ -563,10 +564,10 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         #if 1
         // compute RPM on Acceleration Spectrum 
         float accelRPM = RFFTFeatures::computeRPM(amplitudes,FFTConfiguration::currentLowRPMFrequency,
-                        FFTConfiguration::currentHighRPMFrequency,FFTConfiguration::currentRPMThreshold,df, resolution, 1,accFFT); // accel scalingfactor = 1 
+                        FFTConfiguration::currentHighRPMFrequency,FFTConfiguration::currentRPMThreshold,newdf, resolution, 1,accFFT); // accel scalingfactor = 1 
         
         //Todo freq_index = freq_index*2;  because of real & imag data on different index. (real&imag data on single index in jupyter)
-        uint16_t freq_index = phaseAngleComputer.getFFTIndex(accelRPM/60,df);
+        uint16_t freq_index = phaseAngleComputer.getFFTIndex(accelRPM/60,newdf);
         phaseAngleComputer.getComplexData(m_allocatedFFTSpace[2*freq_index],m_allocatedFFTSpace[2*freq_index + 1],m_id);
         
         // if(m_id == 32){
@@ -735,7 +736,7 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
             // RPM Computation across Z-direction
             // compute RPM on Velocity Spectrum 
                 float velRPM = RFFTFeatures::computeRPM(amplitudes,FFTConfiguration::currentLowRPMFrequency,
-                FFTConfiguration::currentHighRPMFrequency,FFTConfiguration::currentRPMThreshold,df,resolution,scaling1,velFFT);
+                FFTConfiguration::currentHighRPMFrequency,FFTConfiguration::currentRPMThreshold,newdf,resolution,scaling1,velFFT);
                 
                 // debugPrint("RPM Freq On velFFT : ",false );
                 // debugPrint(velRPM/60.0);
