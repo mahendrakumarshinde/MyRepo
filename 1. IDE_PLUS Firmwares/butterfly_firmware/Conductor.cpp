@@ -1115,15 +1115,28 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     if (subConfig.success()) {
         if (loopDebugMode){  debugPrint("Certificate Download Url:",false);
          subConfig.printTo(Serial); debugPrint("");
-         }
+        }
+        /* change for successful reception of CERT cred by ESP */
+        iuWiFi.clearSendWifiConfig(); // Turn ON WIFI if it was off, using DeactivateWIFI button from APP
         const char* url = root["certUrl"]["host"];
         int port = root["certUrl"]["port"];
         const char* path = root["certUrl"]["path"]; 
         const char* messageId = root["messageId"];
         strcpy(m_otaMsgId,messageId);
+        File cert = DOSFS.open("/iuconfig/cert.conf","w");
+        if(cert) {
+            if(debugMode) { debugPrint("Create /iuconfig/cert.conf ok,writing default config"); }
+            cert.print(jsonChar.c_str());
+            cert.close();
+        }
+        else
+            if(debugMode) { debugPrint("Create /iuconfig/cert.conf failed !"); }
+
         // Send URL to ESP32
         iuWiFi.sendMSPCommand(MSPCommand::SET_CERT_CONFIG_URL,jsonChar.c_str());
         char ack_config[70];
+        /* Clear autosleep wifi reset timer condition, to avoid wifi reset duing cert upgrade */
+        iuWiFi.setAwakeTimerStart();
         snprintf(ack_config, 70, "{\"messageId\":\"%s\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
             
         if(iuWiFi.isConnected() )
@@ -1144,6 +1157,14 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
          subConfig.printTo(Serial); debugPrint("");
          }
         const char* messageId = root["messageId"]  ;
+        File cert = DOSFS.open("/iuconfig/diagCert.conf","w");
+        if(cert) {
+            if(debugMode) { debugPrint("Create /iuconfig/diagCert.conf ok,writing default config"); }
+            cert.print(jsonChar.c_str());
+            cert.close();
+        }
+        else
+            if(debugMode) { debugPrint("Create /iuconfig/diagCert.conf failed !"); }
         // Send URL to ESP32
         iuWiFi.sendMSPCommand(MSPCommand::SET_DIAGNOSTIC_URL,jsonChar.c_str());
         char ack_config[70];
@@ -2586,6 +2607,8 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                 if (strcmp(buff,"REMOVE_ESP_FILES") == 0)
                 {
                     debugPrint("Deleting Files from ESP32");
+                    DOSFS.remove("cert.conf");
+                    DOSFS.remove("diagCert.conf");
                     iuWiFi.sendMSPCommand(MSPCommand::DELETE_CERT_FILES);
                     DOSFS.remove("iuconfig/wifi0.conf");
                 }
@@ -2722,7 +2745,20 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     {
                         debugPrint(F("device.conf file does not exists."));
                     }
-                    
+                    }
+                if (strcmp(buff,"IUGET_DEVICE_INFO") == 0)
+                {
+                    // Read the device.conf file
+                    if(DOSFS.exists("devInfo.conf")) {
+                        File devInfoFile = DOSFS.open("devInfo.conf","r");
+                        String jsonstr = devInfoFile.readString();                        
+                        devInfoFile.close();
+                        iuUSB.port->println(jsonstr.c_str()); 
+                    }
+                    else {
+                        iuUSB.port->println("No devInfo file!");
+                        debugPrint(F("devInfo.conf file does not exists."));
+                    }                    
                 }
                 if (strcmp(buff, "IUSET_ERASE_EXT_FLASH") == 0)
                 {
@@ -3793,7 +3829,38 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 }
                 break;
            }
-            
+        case MSPCommand::GET_CERT_CONNECTION_INFO:
+            if (loopDebugMode) { debugPrint(F("GET_CERT_CONNECTION_INFO")); }            
+            if (DOSFS.exists("/iuconfig/cert.conf"))
+            {
+                JsonObject& config = configureJsonFromFlash("/iuconfig/cert.conf",1);
+                String jsonChar;
+                config.printTo(jsonChar);
+                if(debugMode){
+                    debugPrint("Sending CERT:",false);
+                    debugPrint(jsonChar);
+                }
+                iuWiFi.sendMSPCommand(MSPCommand::SET_CERT_CONFIG_URL,jsonChar.c_str());
+                delay(1);
+            }            
+            break;   
+
+        case MSPCommand::GET_DIAG_CERT_CONNECTION_INFO:
+            if (loopDebugMode) { debugPrint(F("GET_DIAG_CERT_CONNECTION_INFO")); }
+            if (DOSFS.exists("/iuconfig/diagCert.conf"))
+            {
+                JsonObject& config = configureJsonFromFlash("/iuconfig/diagCert.conf",1);
+                String jsonChar;
+                config.printTo(jsonChar);
+                if(debugMode){
+                    debugPrint("Sending DIAG CERT:",false);
+                    debugPrint(jsonChar);
+                }
+                iuWiFi.sendMSPCommand(MSPCommand::SET_DIAGNOSTIC_URL,jsonChar.c_str());
+                delay(1);
+            }            
+            break; 
+
         case MSPCommand::GET_MQTT_CONNECTION_INFO:
             if (loopDebugMode) { debugPrint(F("GET_MQTT_CONNECTION_INFO")); }
             {
@@ -7430,10 +7497,30 @@ bool Conductor::updateModbusStatus(){
     return connected;
 }
 
+void Conductor::updateCertHash()
+{
+    char certHash[34];  
+    if(iuOta.otaGetMD5(IUFSFlash::CONFIG_SUBDIR,"cert.conf",certHash)) {        
+        if (debugMode) { debugPrint("CERT Hash:",false);debugPrint(certHash); }
+        iuWiFi.sendMSPCommand(MSPCommand::SEND_CERT_HASH,certHash);
+    }
+}
+
+void Conductor::updateDiagCertHash()
+{
+    char diagCertHash[34];  
+    if(iuOta.otaGetMD5(IUFSFlash::CONFIG_SUBDIR,"diagCert.conf",diagCertHash)) {
+        if (debugMode) { debugPrint("DIAG CERT Hash:",false);debugPrint(diagCertHash); }
+        iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAG_CERT_HASH,diagCertHash);
+    }
+}
+
+
 void Conductor::updateWiFiHash()
 {
     char wifiHash[34];  
     iuOta.otaGetMD5(IUFSFlash::CONFIG_SUBDIR,"wifi0.conf",wifiHash);
+    if (debugMode) { debugPrint("WIFI Hash:",false);debugPrint(wifiHash); }
     iuWiFi.sendMSPCommand(MSPCommand::SEND_WIFI_HASH,wifiHash);
 }
 
@@ -7441,6 +7528,7 @@ void Conductor::updateMQTTHash()
 {
     char mqttHash[34];  
     if(iuOta.otaGetMD5("","MQTT.conf",mqttHash)){
+        if (debugMode) { debugPrint("MQTT Hash:",false);debugPrint(mqttHash); }
         iuWiFi.sendMSPCommand(MSPCommand::SEND_MQTT_HASH,mqttHash);
     }
 }
@@ -7449,6 +7537,7 @@ void Conductor::updateHTTPHash()
 {
     char httpHash[34];  
     if(iuOta.otaGetMD5("","httpConfig.conf",httpHash)){
+        if (debugMode) { debugPrint("HTTP Hash:",false);debugPrint(httpHash); }
         iuWiFi.sendMSPCommand(MSPCommand::SEND_HTTP_HASH,httpHash);
     }
 }
