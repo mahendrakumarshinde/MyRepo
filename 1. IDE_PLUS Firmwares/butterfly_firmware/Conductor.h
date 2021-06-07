@@ -298,7 +298,8 @@ class Conductor
         uint32_t RawDataTotalTimeout = 0;
         double rawDataRecordedAt, lastPacketSentToESP;
         IUMessageFormat::rawDataPacket rawData;
-
+        void prepareFFTMetaData();      //prepareFFTMetadata()
+        int gRange_metaData;      //currentgRange_metaData
         //Send Sensor error codes
         void setSensorStatus(SensorStatusCode errorCode);
         void sendSensorStatus();

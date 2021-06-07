@@ -649,6 +649,45 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
               // publish the diagnostic fingerprints results
               mqttHelper.publish(FINGERPRINT_DATA_PUBLISH_TOPIC,buffer);
            break; 
+        case MSPCommand::PUBLISH_METADATA:
+            //mqttHelper.publishDiagnostic(buffer);
+            {
+                memset(ssl_rootca_cert,0x00,sizeof(ssl_rootca_cert));
+                //Apply the rootCA cert
+                if(activeCertificates == 0){
+                //Serial.println("\nUsing ROOTCA 0");
+                iuWiFiFlash.readFile(IUESPFlash::CFG_HTTPS_ROOTCA0,ssl_rootca_cert,sizeof(ssl_rootca_cert));
+                }else
+                {   //Serial.println("\nUsing rootCA 1");
+                iuWiFiFlash.readFile(IUESPFlash::CFG_HTTPS_ROOTCA1,ssl_rootca_cert,sizeof(ssl_rootca_cert));
+                }
+
+                char metaData_ack_config[150];
+                static int httpStatusCode = 0;
+                strcpy(accelRawDataHelper.m_metadata_path, accelRawDataHelper.m_endpointRoute);
+                strcat(accelRawDataHelper.m_metadata_path,"/metadata");          //add in micro's
+
+                strcpy(metaDataBuffer,buffer);
+                int httpBufferPointer = sizeof(metaDataBuffer);
+                //using jsonParse take timestamp and add in ack_config
+                DynamicJsonBuffer jsonBuffer;
+                JsonObject& root = jsonBuffer.parseObject(buffer);
+                JsonVariant config = root;
+                double timeStamp = config["timestamp"];
+
+
+                //memcpy(metaDataBuffer, buffer, sizeof(buffer));
+
+                httpStatusCode = httpsPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_metadata_path,
+                                                accelRawDataHelper.m_endpointPort,(uint8_t*) &metaDataBuffer, 
+                                                httpBufferPointer,"", ssl_rootca_cert, HttpContentType::applicationJSON);
+
+                snprintf(metaData_ack_config, 150, "{\"messageType\":\"meta-data-ack\",\"mac\":\"%s\",\"httpCode\":\"%d\",\"timestamp\":%.2f}",
+                         m_bleMAC.toString().c_str(),httpStatusCode,timeStamp);
+                mqttHelper.publish(COMMAND_RESPONSE_TOPIC, metaData_ack_config);
+                //iuSerial->sendMSPCommand(MSPCommand::RECEIVE_METADATA_ACK, metaData_ack_config); 
+            }
+            break;    
         case MSPCommand::SEND_RAW_DATA:
           {
             memset(ssl_rootca_cert,0x00,sizeof(ssl_rootca_cert));

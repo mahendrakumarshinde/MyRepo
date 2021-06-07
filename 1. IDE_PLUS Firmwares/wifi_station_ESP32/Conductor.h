@@ -275,6 +275,7 @@ class Conductor
         char m_mqttServerIP[IUMQTTHelper::credentialMaxLength];
         uint16_t m_mqttServerPort;
         char httpBuffer[16427];              //maximum possible buffer size (when blockSize = 8192) //8235 for BS 4096
+        char metaDataBuffer[200];
         // bool m_tls_enabled;
         MultiMessageValidator<2> m_mqttCredentialsValidator;
         char m_mqttUsername[IUMQTTHelper::credentialMaxLength];
