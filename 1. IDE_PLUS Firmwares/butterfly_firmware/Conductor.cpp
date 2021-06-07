@@ -5476,7 +5476,7 @@ void Conductor::prepareFFTMetaData()
     // root.printTo(Serial);
     // root.printTo(jsonChar);
      char metaData[200];
-     snprintf(metaData, 200, "{\"deviceIdentifier\":\"%s\",\"timestamp\":%.2f,\"rpm\":%f,\"gRange\":%d}",m_macAddress.toString().c_str(),rawDataRecordedAt,
+     snprintf(metaData, 200, "{\"deviceIdentifier\":\"%s\",\"timestamp\":%.3f,\"rpm\":%f,\"gRange\":%d}",m_macAddress.toString().c_str(),rawDataRecordedAt,
                                     featureDestinations::buff[featureDestinations::basicfeatures::rpm],gRange_metaData);
     iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_METADATA,metaData);      //replace timestamp variable
     if(loopDebugMode){

@@ -682,7 +682,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                                                 accelRawDataHelper.m_endpointPort,(uint8_t*) &metaDataBuffer, 
                                                 httpBufferPointer,"", ssl_rootca_cert, HttpContentType::applicationJSON);
 
-                snprintf(metaData_ack_config, 150, "{\"messageType\":\"meta-data-ack\",\"mac\":\"%s\",\"httpCode\":\"%d\",\"timestamp\":%.2f}",
+                snprintf(metaData_ack_config, 150, "{\"messageType\":\"meta-data-ack\",\"mac\":\"%s\",\"httpCode\":\"%d\",\"timestamp\":%.3f}",
                          m_bleMAC.toString().c_str(),httpStatusCode,timeStamp);
                 mqttHelper.publish(COMMAND_RESPONSE_TOPIC, metaData_ack_config);
                 //iuSerial->sendMSPCommand(MSPCommand::RECEIVE_METADATA_ACK, metaData_ack_config); 
@@ -769,7 +769,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                         iuSerial->sendMSPCommand(MSPCommand::HTTPS_ACK, httpAckBuffer);
 
                         // send HTTP status code to MQTT
-                        snprintf(ack_config, 150, "{\"messageType\":\"raw-data-ack\",\"mac\":\"%s\",\"httpCode\":\"%d\",\"axis\":\"%c\",\"timestamp\":%.2f}",
+                        snprintf(ack_config, 150, "{\"messageType\":\"raw-data-ack\",\"mac\":\"%s\",\"httpCode\":\"%d\",\"axis\":\"%c\",\"timestamp\":%.3f}",
                         m_bleMAC.toString().c_str(),httpStatusCode, rawData->axis, timestamp);
                         mqttHelper.publish(COMMAND_RESPONSE_TOPIC, ack_config);
                         if((httpStatusCode == 200)){
@@ -794,7 +794,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                         iuSerial->sendMSPCommand(MSPCommand::HTTPS_OEM_ACK, httpOEMAckBuffer);
 
                         // send HTTP status code to MQTT
-                        snprintf(ack_config, 150, "{\"messageType\":\"raw-data-oem-ack\",\"mac\":\"%s\",\"httpCode\":\"%d\",\"axis\":\"%c\",\"timestamp\":%.2f}",
+                        snprintf(ack_config, 150, "{\"messageType\":\"raw-data-oem-ack\",\"mac\":\"%s\",\"httpCode\":\"%d\",\"axis\":\"%c\",\"timestamp\":%.3f}",
                         m_bleMAC.toString().c_str(),httpOEMStatusCode, rawData->axis, timestamp);
                         mqttHelper.publish(COMMAND_RESPONSE_TOPIC, ack_config);
                         RawdataHTTPretryCount++;
