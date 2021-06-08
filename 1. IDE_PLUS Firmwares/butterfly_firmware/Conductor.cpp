@@ -4047,6 +4047,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             }
             break;
         case MSPCommand::WIFI_ALERT_CONNECTED:
+            m_wifiConnected = true;
             if (loopDebugMode) { debugPrint(F("WIFI-CONNECTED;")); }
             if(getDatetime() < 1590000000.00){iuWiFi.sendMSPCommand(MSPCommand::GOOGLE_TIME_QUERY);}
             if (isBLEConnected()) {
@@ -4059,6 +4060,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             // }
             break;
         case MSPCommand::WIFI_ALERT_DISCONNECTED:
+            m_wifiConnected = false;
             certDownloadInProgress = false;
             if (isBLEConnected()) {
                 iuBluetooth.write("WIFI-DISCONNECTED;");

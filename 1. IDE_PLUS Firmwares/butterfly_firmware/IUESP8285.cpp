@@ -260,9 +260,10 @@ bool IUESP8285::readMessages()
     if (now - m_lastConnectedStatusTime > connectedStatusTimeout) {
         m_setConnectedStatus(false);
     }
-    if(((now - m_retryDefWifiConfTime) > 40000 ) /*&& (conductor.isWifiConnected() == false)*/)   //isWifiConnected not available
+    if(((now - m_retryDefWifiConfTime) > 40000 ) && (conductor.isWifiConnected() == false))   //isWifiConnected not available
     {
         m_retryDefWifiConfTime = millis();
+        m_awakeTimerStart = m_retryDefWifiConfTime;
         m_lastResponseTime = m_retryDefWifiConfTime; // Reset irresponsive timeout to avoid hardreset during wifi attempts
         if(m_defUserWifi == false) {
             setWiFiConfig(credentials::AUTH_TYPE, WIFI_DEFAULT_AUTH,strlen(WIFI_DEFAULT_AUTH));

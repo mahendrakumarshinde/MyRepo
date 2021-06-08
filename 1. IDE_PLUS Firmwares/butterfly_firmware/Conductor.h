@@ -393,6 +393,7 @@ class Conductor
         void checkPhaseConfig();
         void computeAdvanceFeature();
         void addAdvanceFeature(JsonObject& destJson, uint8_t index , String* id, float* value);
+        bool isWifiConnected() { return m_wifiConnected; }
         static const uint8_t max_IDs = 10;
         String m_phase_ids[max_IDs];
         uint32_t m_devDiagErrCode = 0;        
@@ -500,7 +501,7 @@ class Conductor
         char m_keyType[15];
         char m_certHash[34];
         char m_keyHash[34];
-        
+        bool m_wifiConnected = false;
         uint32_t last_active[maxDiagnosticStates];
         uint32_t first_active[maxDiagnosticStates];
         uint32_t last_alert[maxDiagnosticStates];
