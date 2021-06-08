@@ -1886,7 +1886,8 @@ void Conductor::autoReconncetWifi()
     uint32_t now = millis();
     if (now - m_lastWifiStatusCheck > (wifiStatusUpdateDelay))
     {
-        connectToWiFi();
+        setWiFiConfig();
+        //connectToWiFi();
         m_lastWifiStatusCheck = now;
     }
 }

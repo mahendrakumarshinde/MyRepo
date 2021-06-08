@@ -142,10 +142,9 @@ JsonObject& DiagnosticEngine::configureFingerPrintsFromFlash(String filename,boo
  else {
   // close file
  // Serial.println("Closing the fingerprints.conf file.....");
-  myFile.close();
-
+  
  }
-    
+  myFile.close();  
  return root;     // JSON Object
 }
 

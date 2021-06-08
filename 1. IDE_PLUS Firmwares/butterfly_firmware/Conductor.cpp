@@ -252,6 +252,8 @@ String Conductor::sendConfigChecksum(IUFlash::storedConfig configType, JsonObjec
         return fullStr;
     }
     else{
+        free(md5hash);
+        free(md5str);
         return "NULL";
     }
     // if (written > 0 && written < fullStrLen) {
@@ -2155,34 +2157,30 @@ bool Conductor::readHTTPendpoints(){
  */
 JsonObject& Conductor:: configureJsonFromFlash(String filename,bool isSet){
 
-  if(isSet != true){
-
-    //return false;
-  }
-  
- // Open the configuration file
- 
-  File myFile = DOSFS.open(filename,"r");
-  
-  //StaticJsonBuffer<1024> jsonBuffer;
-  //const size_t bufferSize = JSON_ARRAY_SIZE(8) + JSON_OBJECT_SIZE(300) + 60;        // dynamically allociated memory
-  const size_t bufferSize = JSON_OBJECT_SIZE(2) + 2*JSON_OBJECT_SIZE(4) + 11*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(13) + 1396;
-  DynamicJsonBuffer jsonBuffer(bufferSize);
- // Parse the root object 
-  JsonObject &root = jsonBuffer.parseObject(myFile);
-  //JsonObject& root2 = root["fingerprints"];
-  
-  if (!root.success()){
-    debugPrint(F("Failed to read file, using default configuration"));
-   
-  }
- else {
-  // close file
-  myFile.close();
-
- }
+    if(isSet != true){
+        //return false;
+    }
     
- return root;     // JSON Object
+    // Open the configuration file
+    
+    File myFile = DOSFS.open(filename,"r");
+    
+    //StaticJsonBuffer<1024> jsonBuffer;
+    //const size_t bufferSize = JSON_ARRAY_SIZE(8) + JSON_OBJECT_SIZE(300) + 60;        // dynamically allociated memory
+    const size_t bufferSize = JSON_OBJECT_SIZE(2) + 2*JSON_OBJECT_SIZE(4) + 11*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(13) + 1396;
+    DynamicJsonBuffer jsonBuffer(bufferSize);
+    // Parse the root object 
+    JsonObject &root = jsonBuffer.parseObject(myFile);
+    //JsonObject& root2 = root["fingerprints"];
+    
+    if (!root.success()){
+        //debugPrint(F("Failed to read file, using default configuration"));    
+    }
+    else {
+    // close file
+    }
+    myFile.close();  
+    return root;     // JSON Object
 }
 
 /**
@@ -6503,8 +6501,12 @@ void Conductor::compileSegmentedMessage(int messageID) {
 void Conductor::computeSegmentedMessageHash(int messageID) {
     // message has to be successfully compiled before calling this method
     unsigned char* md5hash = MD5::make_hash(segmentedMessages[messageID].message, strlen(segmentedMessages[messageID].message));
-    memcpy(segmentedMessages[messageID].computedHash, MD5::make_digest(md5hash, 16), PAYLOAD_LENGTH);
+    char *md5str = MD5::make_digest(md5hash, 16);
+    //memcpy(segmentedMessages[messageID].computedHash, MD5::make_digest(md5hash, 16), PAYLOAD_LENGTH);
+    memcpy(segmentedMessages[messageID].computedHash, md5str, PAYLOAD_LENGTH);
     segmentedMessages[messageID].computedHash[PAYLOAD_LENGTH] = '\0';
+    free(md5hash);
+    free(md5str);
     #ifdef IU_DEBUG_SEGMENTED_MESSAGES
     debugPrint("DEBUG: in computeSegmentedMessageHash(): message: ", false); debugPrint(segmentedMessages[messageID].message);
     debugPrint("DEBUG: in computeSegmentedMessageHash(): computedHash: ", false); debugPrint(segmentedMessages[messageID].computedHash);
@@ -8176,8 +8178,9 @@ bool Conductor::updateModbusStatus(){
 void Conductor::updateWiFiHash()
 {
     char wifiHash[34];  
-    iuOta.otaGetMD5(IUFSFlash::CONFIG_SUBDIR,"wifi0.conf",wifiHash);
-    iuWiFi.sendMSPCommand(MSPCommand::SEND_WIFI_HASH,wifiHash);
+    if(iuOta.otaGetMD5(IUFSFlash::CONFIG_SUBDIR,"wifi0.conf",wifiHash)) {
+        iuWiFi.sendMSPCommand(MSPCommand::SEND_WIFI_HASH,wifiHash);
+    }
 }
 
 void Conductor::updateMQTTHash()
@@ -8529,7 +8532,7 @@ void Conductor::configureAlertPolicy()
     // }
     }
     else{
-        if(debugMode){debugPrint("failed to read diagnostic conf file ");}
+        //if(debugMode){debugPrint("failed to read diagnostic conf file ");} 
         conductor.m_devDiagErrCode |= DEVICE_DIAG_DIAG_ERR1; 
     }
 }
