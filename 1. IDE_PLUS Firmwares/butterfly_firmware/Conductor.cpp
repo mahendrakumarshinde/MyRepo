@@ -5917,6 +5917,7 @@ void Conductor::sendDiagnosticFingerPrints() {
         //getFingerprintsforModbus(); // Only to flush the fingerprint buffer used for modbus
         ready_to_publish_to_modbus = false;
         iuModbusSlave.clearHoldingRegister(modbusGroups::MODBUS_STREAMING_SPECTRAL_FEATURES,FINGERPRINT_KEY_1_L,FINGERPRINT_13_H);
+        m_spectralFeatureResult = "";
     }   
 }
 

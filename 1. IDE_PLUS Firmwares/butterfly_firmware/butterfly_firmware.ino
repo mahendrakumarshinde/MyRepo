@@ -919,7 +919,7 @@ void loop()
             // Send accel raw data
             conductor.periodicSendAccelRawData();
             // Send config checksum
-            conductor.periodicSendConfigChecksum();
+            //conductor.periodicSendConfigChecksum();
             ledManager.updateColors();
         }
         uint32_t now = millis();
