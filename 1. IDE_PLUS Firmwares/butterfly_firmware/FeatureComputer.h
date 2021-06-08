@@ -755,20 +755,20 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
            */           
     
              if(m_id == 30) {
-                fingerprintResult_X =  DiagnosticEngine::m_specializedCompute (direction,(const q15_t*)amplitudes,amplitudeCount,resolution,scaling1,velRPM/60);  // resolution
+                fingerprintResult_X =  DiagnosticEngine::m_specializedCompute (m_id,(const q15_t*)amplitudes,amplitudeCount,resolution,scaling1,velRPM/60);  // resolution
                 // debugPrint("X", false);debugPrint(fingerprintResult_X, true);
              }
              if(m_id == 31){
-                fingerprintResult_Y = DiagnosticEngine::m_specializedCompute (direction, (const q15_t*)amplitudes,amplitudeCount,resolution, scaling1,velRPM/60);
+                fingerprintResult_Y = DiagnosticEngine::m_specializedCompute (m_id, (const q15_t*)amplitudes,amplitudeCount,resolution, scaling1,velRPM/60);
                 // debugPrint("Y", false);debugPrint(fingerprintResult_Y, true);
 
              }
              if(m_id == 32){
-                fingerprintResult_Z = DiagnosticEngine::m_specializedCompute (direction, (const q15_t*)amplitudes,amplitudeCount,resolution,scaling1,velRPM/60);
+                fingerprintResult_Z = DiagnosticEngine::m_specializedCompute (m_id, (const q15_t*)amplitudes,amplitudeCount,resolution,scaling1,velRPM/60);
                 // debugPrint("Z", false);debugPrint(fingerprintResult_Z, true);
              }
             
-            direction++; 
+            //direction++; 
                 
       
             if( m_useCalibrationMethod == false ) {// || UsageMode::CALIBRATION == 0) {
