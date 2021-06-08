@@ -298,7 +298,14 @@ bool IUOTA::otaGetMD5(char *folderName,char *fileName, char *md5HashRet)
                 strcpy(md5HashRet,md5hash.c_str());
             }
             fwFile.close();
-            return true;
+            if(fileSize > 0) /* Send true only when hash is computed */
+                return true;
+        }
+        else {
+            if (debugMode) {
+                debugPrint(F("File open error: "),false);
+                debugPrint(filepath);
+            }            
         }
     }
     return false;
