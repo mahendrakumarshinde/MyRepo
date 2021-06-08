@@ -6,6 +6,12 @@
 #include <IUSerial.h>
 #include "Component.h"
 
+#define DEV_DIAG_MSG_RTRY   1
+
+#define DEVID_MODE1         1  // Device ID:BMD,APP:BMD
+#define DEVID_MODE2         2  // Device ID:WIFI,APP:NO
+#define DEVID_MODE3         3  // Device ID:WIFI,APP:BMD
+
 
 /**
  * BLE chip
@@ -67,6 +73,7 @@ class IUBMD350 : public IUSerial, public Component
         // Device name
         void setDeviceName(char *deviceName);
         void queryDeviceName();
+        bool checkBmdComm();
         char* getDeviceName() { return m_deviceName; }
         /* TODO Need to set / use password? If yes, see BMDWare datasheet
         Set Password AT Command (1 to 19 byte alphanumeric): at$password */
@@ -90,6 +97,10 @@ class IUBMD350 : public IUSerial, public Component
                             uint8_t len3 = 3, uint8_t len4 = 13);
         //Bluetooth Available
         bool isBLEAvailable = true;
+         uint8_t deviceIdMode = 0; // 1=DeviceID:BMD MAC,APP:BMD OK,2=DeviceID:WIFI MAC,APP:BMD Fail,3=DeviceID:WIFI MAC,APP:BMD OK  /* BLE_FAIL Issue:If BLE MAC read is failed, set this flag true */
+        uint8_t deviceIdInfoRetry = 0;        
+        uint8_t bmdCommErrCode = 0;
+        uint8_t bmdCommErrMsgRetry = 0;
     protected:
         /***** Pin definition *****/
         uint8_t m_resetPin;  // BMD-350 reset pin active LOW
