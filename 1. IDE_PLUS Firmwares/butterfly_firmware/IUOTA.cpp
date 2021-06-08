@@ -298,7 +298,14 @@ bool IUOTA::otaGetMD5(char *folderName,char *fileName, char *md5HashRet)
                 strcpy(md5HashRet,md5hash.c_str());
             }
             fwFile.close();
-            return true;
+            if(fileSize > 0) /* Send true only when hash is computed */
+                return true;
+        }
+        else {
+            if (debugMode) {
+                debugPrint(F("File open error: "),false);
+                debugPrint(filepath);
+            }            
         }
     }
     return false;
@@ -493,6 +500,8 @@ String IUOTA::getOtaRca(int error)
         return F("OTA-RCA-0011");
     case OTA_INVALID_FIRMWARE:
         return F("OTA-RCA-0044");
+    case OTA_INVALID_DEVICEID:
+        return F("OTA-RCA-0045");
     case CERT_DOWNLOAD_INIT_REQ_ACK:
         return F("CERT-RCA-0042");
     case CERT_DOWNLOAD_START:
@@ -541,7 +550,7 @@ void IUOTA::updateOtaFlag(uint8_t flag_addr , uint8_t flag_data)
 
     for(int i=0;i<retry;i++){
         stm32l4_flash_unlock();
-        stm32l4_flash_erase((uint32_t)FLAG_ADDRESS, 2048);
+        stm32l4_flash_erase((uint32_t)FLAG_ADDRESS, STM_SECT_SIZE);
         stm32l4_flash_program((uint32_t)FLAG_ADDRESS, OtaStatusFlag, sizeof(OtaStatusFlag));
         stm32l4_flash_lock();
     }

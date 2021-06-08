@@ -17,7 +17,7 @@
 #define FFT_CONFIGURATION_H
 
 #define FMAX_FACTOR 2.56
-
+#define UIN32_FULL_SCALE 4294967296
 namespace FFTConfiguration {
     // The number of possible configurations for samplingRate and blockSize
     // const int samplingRateConfigurations = 4;

@@ -1,5 +1,5 @@
 #include "IUBMD350.h"
-
+#include "Conductor.h"
 
 /* =============================================================================
     Constructor & desctructors
@@ -117,7 +117,7 @@ void IUBMD350::setupHardware()
     pinMode(m_atCmdPin, OUTPUT);
     pinMode(m_resetPin, OUTPUT);
     doFullConfig();
-    if(setupDebugMode){
+    if(isBLEAvailable == true && setupDebugMode){
         char BMDVersion[20],bootVersion[20],protocolversion[20],hardwareinfo[20];
         enterATCommandInterface();
         getBMDwareInfo(BMDVersion,bootVersion,protocolversion,hardwareinfo,20,20,20,20);
@@ -269,10 +269,17 @@ int IUBMD350::sendATCommand(String cmd, char *response, uint8_t responseLength)
         }
         return -1;
     }
-    port->write("at$");
-    int charCount = cmd.length();
-    for (int i = 0; i < charCount; ++i) {
-        port->write(cmd[i]);
+    if(cmd == "AT")
+    {
+        port->write("at");
+    }
+    else
+    {
+        port->write("at$");
+        int charCount = cmd.length();
+        for (int i = 0; i < charCount; ++i) {
+            port->write(cmd[i]);
+        }
     }
     port->write('\r');
     port->flush();
@@ -291,6 +298,8 @@ int IUBMD350::sendATCommand(String cmd, char *response, uint8_t responseLength)
     int respCount = 0;
     for (uint8_t j = 0; j < responseLength; ++j) {
         if (!port->available()) {
+            debugPrint("No data from BMD, exiting sendATCommand() !");
+            delay(100);
             break;
         }
         response[j] = port->read();
@@ -298,6 +307,13 @@ int IUBMD350::sendATCommand(String cmd, char *response, uint8_t responseLength)
         // end of response is carriage or line return
         if (response[j] == '\r' || response[j] == '\n') {
             response[j] = 0; // Replace with end of string
+            if (setupDebugMode) {
+                debugPrint("AT Command '" + cmd + "' Ok");
+                debugPrint("AT Response ",false); debugPrint(response,true);
+            }
+            // Serial.println("AT Command '" + cmd + "' Ok");
+            // Serial.print("AT Response "); Serial.println(response);
+            // Serial.print("response Len:");Serial.print(responseLength);Serial.print("response Rx L:");Serial.println(j);
             break;
         }
     }
@@ -318,18 +334,22 @@ void IUBMD350::doFullConfig()
     port->flush();
     delay(1000);
     enterATCommandInterface();
+    checkBmdComm();
     queryDeviceName();
     if(isBLEAvailable == true){
         //configureBeacon(m_beaconEnabled, m_beaconAdInterval);
         configureBeacon(false, m_beaconAdInterval); //beacon off during setup on at last
         configureUARTPassthrough();
         setPowerMode(PowerMode::REGULAR);
-        exitATCommandInterface();
+        
     }
     else
     {
-        debugPrint("BLE Hardware is not present",true);
+        if (setupDebugMode) {
+            debugPrint("BLE Hardware is not present",true);
+        }
     }
+    exitATCommandInterface();
     
 }
 
@@ -345,12 +365,93 @@ void IUBMD350::setDeviceName(char *deviceName)
 {
     strcpy(m_deviceName, deviceName);
     char response[3];
+    memset(response,'\0',sizeof(response));
     String cmd = "name ";
     sendATCommand((String) (cmd + m_deviceName), response, 3);
-    if (strcmp(response, "OK") != 0 && setupDebugMode)
+    if(strcmp(response, "OK") != 0)
     {
-        debugPrint(F("Failed to set device name, response was: "), false);
+        if (setupDebugMode)
+        {
+            debugPrint(F("Failed to set device name, response was: "), false);
+            debugPrint(response);
+        }
+        bmdCommErrCode |= 0x01;
+        bmdCommErrMsgRetry = DEV_DIAG_MSG_RTRY;  // Send message multipple time, so its not missed
+        memset(m_deviceName,'\0',sizeof(m_deviceName));
+        strncpy(m_deviceName, deviceName,8);
+        m_deviceName[8] = '\0';
+        sendATCommand((String) (cmd + m_deviceName), response, 3);    
+        if (strcmp(response, "OK") != 0 && setupDebugMode)
+        {
+            debugPrint(F("Failed to re-set device name, response was: "), false);
+            debugPrint(response);
+        }
+    }
+    else if (strcmp(response, "OK") == 0 && setupDebugMode)
+    {
+        debugPrint(F("set device name, response was: "), false);
         debugPrint(response);
+    }
+}
+
+/**
+ * Check BLE communication with basic commands
+ *
+ */
+bool IUBMD350::checkBmdComm()
+{
+    char response[20];
+    memset(response,'\0',sizeof(response));
+    int retries = 4;
+    char current_attempt[5];
+    int respLen;
+    for(int i=0; i<retries; i++) {
+        respLen = sendATCommand("AT", response, 3);
+        if(respLen > 0 && (!strcmp(response,"OK")))
+        {
+            if (setupDebugMode)  { 
+                debugPrint("AT ", false); debugPrint(response, true); 
+            }
+            respLen = sendATCommand("name?", response, 9);
+            if (respLen > 0) {
+                if (setupDebugMode)  { 
+                    debugPrint("bmd name", false); debugPrint(response, true); 
+                }
+            }
+            else
+            {
+                bmdCommErrCode |= 0x10;
+                bmdCommErrMsgRetry = DEV_DIAG_MSG_RTRY; // Send message 3 times
+            }
+            respLen = sendATCommand("mac?", response, 20);
+            if (respLen > 0) {
+                if (setupDebugMode)  { 
+                    debugPrint("mac add", false); debugPrint(response, true); 
+                }
+            }
+            else
+            {
+                bmdCommErrCode |= 0x20;
+                bmdCommErrMsgRetry = DEV_DIAG_MSG_RTRY; // Send message 3 times
+            }
+            return true;
+        }
+        else {
+            if (setupDebugMode)  {
+                debugPrint("BMD Fails-Restarting BMD with AT Command"); 
+            }
+            if(i >= (retries-1)) { // All retries completed and failed for AT command
+                bmdCommErrCode |= 0x08;
+                bmdCommErrMsgRetry = DEV_DIAG_MSG_RTRY; // Send message multiple times
+                return false;
+            }
+            else {
+                respLen = sendATCommand("devrst", response, 3);
+                delay(3000);
+                respLen = sendATCommand("restart", response, 3);
+                delay(3000);
+            }
+        }        
     }
 }
 
@@ -362,32 +463,100 @@ void IUBMD350::setDeviceName(char *deviceName)
  */
 void IUBMD350::queryDeviceName()
 {
-    char response[9];
-    
+    char response[32];
+    memset(response,'\0',sizeof(response));
     //int retries = 5;
     int retries = 7;
     char current_attempt[5];
     int respLen;
+    int respLen_mac;
+    char deviceInfo[256];
+ #ifdef DEVIDFIX_TESTSTUB
+    /*** For testing Mode 2: DeviceID:WIFI, APP-NO ***/ 
+    uint8_t flagval1 = *(uint8_t*)(CONFIG_DEV_ID_ADDRESS);
+    conductor.flagval2 = *(uint8_t*)(CONFIG_DEV_ID_ADDRESS+6);
+    //Serial.print("Flag1: ");Serial.print(flagval1);Serial.print(" Flag2: ");Serial.println((char)flagval2);
+    if(conductor.flagval2 == 5)
+        conductor.flagval2 = 4;
+ #endif
     for(int i=0; i<retries; i++) {
         respLen = sendATCommand("name?", response, 9);
+#ifdef DEVIDFIX_TESTSTUB
+        if (respLen > 0 && (conductor.flagval2 == '1' || conductor.flagval2 == '3' || conductor.flagval2 == 'F')) {
+#else
         if (respLen > 0) {
+#endif
             strcpy(m_deviceName, response);
-            debugPrint("Device name", false); debugPrint(m_deviceName, true);
+            if (setupDebugMode)  { debugPrint("Device name", false); debugPrint(m_deviceName, true); }
+            int mac_Response = iuBluetooth.sendATCommand("mac?", response, 20);
+            if(debugMode){ debugPrint("BLE MAC ID:",false);debugPrint(response,true); }
+            if( mac_Response < 0 || (response[0] == '0' && response[1] == '0')){
+                conductor.setDeviceIdMode(false);
+            }
+            else {
+#ifdef DEVIDFIX_TESTSTUB
+                if(conductor.flagval2 == '1' || conductor.flagval2 == 'F')
+                    conductor.setDeviceIdMode(true);
+                /*************   TEST STUB CODE ******************************/
+                else if(conductor.flagval2 == '3') // Mode 3 testing
+                {
+                    conductor.setDeviceIdMode(false);
+                }
+#else
+                conductor.setDeviceIdMode(true);
+#endif
+            }
             break;
         } else {
             if (setupDebugMode)  {
                 debugPrint("Attempt ", false); debugPrint(itoa(i, current_attempt, 10));
                 debugPrint(F(" - Failed to query device name: no response"));
             }
-            //if (i >= 2) // check till 2 retries
-            if (i >= 3)
+            if(respLen == -1)
+            {
+                if (setupDebugMode)  { debugPrint("NOT AT Command Mode !"); }                    
+                //Serial.println("NOT AT Command Mode !");
+            }
+            if (i >= 5)
             {   
                 if (setupDebugMode)
                 {
                     debugPrint("All Attemps failed, No BLE chip present");
                 }
                 
-                isBLEAvailable = false;
+                #if 0
+                respLen = sendATCommand("devrst", response, 3);
+                delay(3000);
+                respLen = sendATCommand("restart", response, 3);
+                delay(3000);
+                respLen = sendATCommand("name?", response, 9);
+                delay(100);
+                respLen_mac = sendATCommand("mac?", response, 20);
+                if ((respLen > 0 || respLen_mac > 0) && conductor.flagval2 == '5') {
+                    strcpy(m_deviceName, response);
+                    if (setupDebugMode)  { 
+                        debugPrint("Device name", false); debugPrint(m_deviceName, true); 
+                        debugPrint("Mode 1 : BMD Ok on restart-Device ID:BMD APP:BMD");
+                    }
+                    Serial.println("DEV RESTART READ OK !");
+                    bmdCommErrCode |= 0x04; // Send debug/diag message for informing after reset BMD worked
+                    bmdCommErrMsgRetry = DEV_DIAG_MSG_RTRY; // Send message multiple time, not to miss on mqtt
+                    conductor.setDeviceIdMode(true);
+                }
+                else 
+                #endif
+
+                #ifdef DEVIDFIX_TESTSTUB
+                { // get bmd mac failed...
+                    if(conductor.flagval2 == '2')
+                        conductor.setDeviceIdMode(false);
+                    /*************   TEST STUB CODE ******************************/
+                    else if(conductor.flagval2 == '4') // Mode 3 testing
+                        conductor.setDeviceIdMode(true);
+                }
+                #else
+                conductor.setDeviceIdMode(false);
+                #endif
                 break;
                 /* code */
             }
@@ -411,6 +580,7 @@ void IUBMD350::configureUARTPassthrough()
     char current_attempt[5];
 
     char response[3];
+    memset(response,'\0',sizeof(response));
     // Baud Rate
     String cmd = String("ubr ") + String(baudRate);
 
@@ -505,6 +675,7 @@ void IUBMD350::configureUARTPassthrough()
 void IUBMD350::configureBeacon(bool enabled, uint16_t adInterval)
 {
     char response[3];
+    memset(response,'\0',sizeof(response));
     String cmd;
     // Set attributes
     m_beaconEnabled = enabled;
@@ -583,6 +754,7 @@ void IUBMD350::setBeaconUUID(char *UUID, char *major, char *minor)
 {
     bool success = true;
     char response[3];
+    memset(response,'\0',sizeof(response));
     String cmd;
     // Set UUID
     cmd = "buuid ";
@@ -625,7 +797,7 @@ void IUBMD350::setTxPowers(txPowerOption txPower)
     m_connectedTxPower = txPower;
     m_beaconTxPower = txPower;
     char response[3];
-
+    memset(response,'\0',sizeof(response));
     //int retries = 5;
     int retries = 7;
     char current_attempt[5];
