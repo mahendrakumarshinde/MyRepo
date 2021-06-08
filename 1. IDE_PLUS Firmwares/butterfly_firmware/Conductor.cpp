@@ -1990,6 +1990,7 @@ void Conductor::configureMainOptions(JsonVariant &config)
     value = config["DSP"];
     if(value.success()){
         m_mainFeatureGroup->setDataSendPeriod(value.as<uint16_t>());
+        dataSendingPeriod =  (uint32_t) (value.as<int>());
         // NOTE: Older firmware device will not set this parameter even if configJson contains it.
     }
     value = config["DDSP"];
@@ -1998,7 +1999,8 @@ void Conductor::configureMainOptions(JsonVariant &config)
     }
     value = config["FDSP"];
     if(value.success()){
-        fresPublishPeriod = (uint32_t) (value.as<int>()) * 1000;
+        //fresPublishPeriod = (uint32_t) (value.as<int>()) * 1000;
+        fresPublishPeriod = dataSendingPeriod ;
     }
     value = config["DIG"];
     if(value.success()){
@@ -5475,8 +5477,8 @@ void Conductor::prepareFFTMetaData()
     // root["gRange"] = currentgRange;
     // root.printTo(Serial);
     // root.printTo(jsonChar);
-     char metaData[200];
-     snprintf(metaData, 200, "{\"deviceIdentifier\":\"%s\",\"timestamp\":%.3f,\"rpm\":%f,\"gRange\":%d}",m_macAddress.toString().c_str(),rawDataRecordedAt,
+    char metaData[200];
+    snprintf(metaData, 200, "{\"deviceIdentifier\":\"%s\",\"timestamp\":%.3f,\"rpm\":%f,\"gRange\":%d}",m_macAddress.toString().c_str(),rawDataRecordedAt,
                                     featureDestinations::buff[featureDestinations::basicfeatures::rpm],gRange_metaData);
     iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_METADATA,metaData);      //replace timestamp variable
     if(loopDebugMode){

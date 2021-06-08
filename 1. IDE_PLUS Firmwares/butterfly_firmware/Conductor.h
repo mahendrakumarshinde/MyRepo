@@ -444,6 +444,7 @@ class Conductor
         bool m_downloadSuccess = false;
         bool m_upgradeSuccess = false;
         bool m_mqttConnected = false;
+        uint32_t dataSendingPeriod;
         // Certificates buffers
         char m_certType[15];
         char m_keyType[15];
