@@ -454,54 +454,70 @@ char* DiagnosticEngine::m_specializedCompute (int m_direction, const q15_t *m_am
    const int messageSize = sizeof(tempData) + 1024;
    
   char return_fingerprints[messageSize];
-  memmove(return_fingerprints, tempData, strlen(tempData));
+  memmove(return_fingerprints, tempData, strlen(tempData) +1);
+  for (size_t i = strlen(tempData) +1; i < messageSize; i++)
+  {
+    return_fingerprints[i] = '\0';
+  }
   DynamicJsonBuffer tempjBuffer;
   JsonObject& json = tempjBuffer.parseObject(return_fingerprints);
   char fingerprints_json[512];
-  json.printTo(fingerprints_json);
-   
-   static char tempX[messageSize];
-   static char tempY[messageSize];
-   static char tempZ[messageSize];  // need to set dynamically
-  
-     
-   if(m_direction == 0){
-    value_X = tempData;//fingerprintData;
-    memmove(tempX,tempData,strlen(tempData));
-   // Serial.print("X Fingerprints :");Serial.println(tempX);
-   }
-
-   if(m_direction == 1){
-    value_Y = tempData ;//fingerprintData;
-    memmove(tempY,tempData,strlen(tempData));
-
-   // Serial.print("Y Fingerprints :");Serial.println(tempY);
-   }
-
-   if(m_direction == 2){  
-    value_Z = tempData; //fingerprintData;
-    memmove(tempZ,tempData,strlen(tempData));
+  if(json.success()){
+    json.printTo(fingerprints_json);
     
-   // Serial.print("Z Fingerprints :");Serial.println(tempZ);
-    // merg the 3 json strings to json objects
-   DynamicJsonBuffer jBuffer;
-   JsonObject& object1 =jBuffer.parseObject(tempX);
-   JsonObject& object2 =jBuffer.parseObject(tempY);
-   JsonObject& object3 =jBuffer.parseObject(tempZ);
+    static char tempX[messageSize];
+    static char tempY[messageSize];
+    static char tempZ[messageSize];  // need to set dynamically
+    
+      
+    if(m_direction == 30){
+      value_X = tempData;//fingerprintData;
+      memmove(tempX,tempData,strlen(tempData) +1);
+    // Serial.print("X Fingerprints :");Serial.println(tempX);
+    }
 
-   mergeJOSN( object1,object2);
-   iuFingerprintOutput = mergeJOSN( object1,object3);  
- 
-   memset(tempX, 0, sizeof(tempX)); // flush the buffers
-   memset(tempY, 0, sizeof(tempY));
-   memset(tempZ, 0, sizeof(tempZ));
+    if(m_direction == 31){
+      value_Y = tempData ;//fingerprintData;
+      memmove(tempY,tempData,strlen(tempData) +1);
 
-    fingerprintData = iuFingerprintOutput;     // fingerprints result
-    //debugPrint(F("fingerprintData"), false); debugPrint(F(iuFingerprintOutput), true); 
+    // Serial.print("Y Fingerprints :");Serial.println(tempY);
+    }
 
-    conductor.sendDiagnosticFingerPrints(); // function sends only if time diff is > 512
-   }  
+    if(m_direction == 32){  
+      value_Z = tempData; //fingerprintData;
+      memmove(tempZ,tempData,strlen(tempData) +1);
+      
+    // Serial.print("Z Fingerprints :");Serial.println(tempZ);
+      // merg the 3 json strings to json objects
+    DynamicJsonBuffer jBuffer;
+    JsonObject& object1 =jBuffer.parseObject(tempX);
+    JsonObject& object2 =jBuffer.parseObject(tempY);
+    JsonObject& object3 =jBuffer.parseObject(tempZ);
+    if(object1.success() && object2.success() && object3.success() ){
+        mergeJOSN( object1,object2);
+        iuFingerprintOutput = mergeJOSN( object1,object3);  
+      
+        memset(tempX, 0, sizeof(tempX)); // flush the buffers
+        memset(tempY, 0, sizeof(tempY));
+        memset(tempZ, 0, sizeof(tempZ));
 
+          fingerprintData = iuFingerprintOutput;     // fingerprints result
+          //debugPrint(F("fingerprintData"), false); debugPrint(F(iuFingerprintOutput), true); 
+
+          conductor.sendDiagnosticFingerPrints(); // function sends only if time diff is > 512
+      }else{
+        if(debugMode){
+          debugPrint("Invalid Fingerprint Output Json to merge");
+        }
+      }
+
+    }
+  }else
+  {
+    if(debugMode){
+      debugPrint("Invalid Fingerprint JSON generated");
+    }
+  }
    
    //Serial.print("Final JSON :");Serial.println(fingerprintData);
   
