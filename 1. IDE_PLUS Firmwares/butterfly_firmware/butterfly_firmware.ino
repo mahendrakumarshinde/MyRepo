@@ -928,6 +928,8 @@ void loop()
             /* === Place your code to excute at fixed interval here ===*/
             conductor.streamMCUUInfo(iuWiFi.port);
             //iuWiFi.sendMSPCommand(MSPCommand::GET_ESP_RSSI);
+            conductor.updateCertHash();
+            conductor.updateDiagCertHash();
             conductor.updateWiFiHash();
             conductor.updateMQTTHash();
             conductor.updateHTTPHash();

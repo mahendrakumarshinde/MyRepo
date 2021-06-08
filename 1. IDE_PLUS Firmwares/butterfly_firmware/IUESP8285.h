@@ -125,6 +125,8 @@ class IUESP8285 : public IUSerial, public Component
         // Reset last publication confirmation timer on establishing connection.
         void m_setLastConfirmedPublication(void) { m_lastConfirmedPublication = millis();} 
         bool getConnectionStatus(){return m_wifiConfirmPublication;}
+        void setAwakeTimerStart() { m_awakeTimerStart = millis(); }
+        void clearSendWifiConfig();
     private:
         /**** Confirm Publication Timeout ****/
         uint32_t m_lastConfirmedPublication = 0;

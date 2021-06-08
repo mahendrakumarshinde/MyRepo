@@ -375,6 +375,8 @@ class Conductor
         void updateWiFiHash();
         void updateMQTTHash();
         void updateHTTPHash();
+        void updateCertHash();
+        void updateDiagCertHash();
         void sendConfigRequest();
         /**** Diagnostic Rule Engine *****/
         void computeDiagnoticState(String *diagInput, int totalConfiguredDiag);

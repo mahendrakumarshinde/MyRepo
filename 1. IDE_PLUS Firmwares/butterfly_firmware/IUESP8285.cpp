@@ -136,6 +136,27 @@ void IUESP8285::hardReset()
     resetBuffer();
     turnOn();
 }
+/**
+ * Clear Wifi Send config and turn ON WIFI, without sending cred.
+ */
+void IUESP8285::clearSendWifiConfig() {
+    m_credentialValidator.reset();
+    m_credentialSent = false;
+    if( m_powerMode == PowerMode::SLEEP ||
+        m_powerMode == PowerMode::DEEP_SLEEP ||
+        m_powerMode == PowerMode::SUSPEND ) {
+        digitalWrite(ESP32_ENABLE_PIN, HIGH);
+        m_powerMode = PowerMode::REGULAR;
+        m_on = true;
+        m_awakeTimerStart = millis();
+        delay(2000); // To turn on WIFI and able to receive MSP messages
+        sendMSPCommand(MSPCommand::WIFI_DISCONNECT);
+        delay(1000);
+        sendMSPCommand(MSPCommand::WIFI_DISCONNECT);
+        delay(10);
+        delay(2000); // To turn on WIFI and able to receive MSP messages
+    }
+}
 
 /**
  * Manage component power modes
@@ -226,6 +247,8 @@ bool IUESP8285::readMessages()
         }
     } else if (m_on && m_lastResponseTime > 0 &&
                now - m_lastResponseTime > noResponseTimeout) {
+                m_retryDefWifiConfTime = millis();
+               m_awakeTimerStart = m_retryDefWifiConfTime; // Need to be added after alternate MAC ID 
         // Ensure your ESP8266 library version is 2.5.0 in .arduino15 folder 
         if (debugMode) {
             debugPrint("WiFi irresponsive: hard resetting now");
