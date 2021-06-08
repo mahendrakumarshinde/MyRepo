@@ -164,6 +164,9 @@ class IUESP8285 : public IUSerial, public Component
         void (*m_onConnect)() = NULL;
         void (*m_onDisconnect)() = NULL;
         void clearStaticIPBuffers();
+         /***** Use Default WIFI Config option *****/
+        uint32_t m_retryDefWifiConfTime = 0;
+        bool m_defUserWifi = false; // False- use default conf. True use user conf
 };
 
 #endif // IUESP8285_H

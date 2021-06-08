@@ -87,7 +87,7 @@ extern char iuWiFiBuffer[2048];   //500
     extern IUESP8285 iuWiFi;
 #endif
 
-extern char iuEthernetBuffer[2048];
+extern char iuEthernetBuffer[128];
 
 extern Usr2Eth iuEthernet;
 
