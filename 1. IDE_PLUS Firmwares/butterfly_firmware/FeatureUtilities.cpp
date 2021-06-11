@@ -707,9 +707,6 @@ q15_t findMaxAscent(q15_t *batch, uint16_t batchSize, uint16_t maxCount)
 float RFFTFeatures::computeRPM(q15_t *amplitudes,int m_lowRPMFrequency,int m_highRPMFrequency,float rpm_threshold,float df,
                                 float resolution,float scalingFactor,uint8_t bufferType, uint32_t amplitudeCount)
 {   
-    if(FeatureStates::opStateStatusFlag == 0){ 
-        return 0;           //return 0 for device is in ideal condition
-    }
     uint32_t MAX_PEAK_COUNT = 128 ;
     float amplitudesCopy[MAX_PEAK_COUNT];
     float peakAmp[64];
@@ -728,8 +725,12 @@ float RFFTFeatures::computeRPM(q15_t *amplitudes,int m_lowRPMFrequency,int m_hig
     int sectionCount1;
     int sectionCount2;
     int sectionIdx = 0;
-
     int dCount = 0;
+
+    if(FeatureStates::opStateStatusFlag == 0){ 
+        return 0;           //return 0 for device is in ideal condition
+    }
+
     if(upper_index < lower_index) {
         return 0;           //return 0 invalid condition
     }
