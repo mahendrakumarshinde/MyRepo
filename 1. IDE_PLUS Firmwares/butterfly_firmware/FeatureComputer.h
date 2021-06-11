@@ -735,12 +735,16 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
             // RPM Computation across Z-direction
             // compute RPM on Velocity Spectrum 
                 float velRPM = RFFTFeatures::computeRPM(amplitudes,FFTConfiguration::currentLowRPMFrequency,
-                FFTConfiguration::currentHighRPMFrequency,FFTConfiguration::currentRPMThreshold,df,resolution,scaling1,velFFT);
+                FFTConfiguration::currentHighRPMFrequency,FFTConfiguration::currentRPMThreshold,df,resolution,scaling1,velFFT,amplitudeCount);
                 
                 // debugPrint("RPM Freq On velFFT : ",false );
                 // debugPrint(velRPM/60.0);
             if(m_id == 32){
-                featureDestinations::buff[featureDestinations::basicfeatures::rpm] = velRPM;
+                featureDestinations::buff[featureDestinations::basicfeatures::rpm] = (int)velRPM;
+                if(loopDebugMode){
+                    debugPrint("RPM Freq On velFFT Z: ",false );
+                    debugPrint(velRPM);
+                }
             }
             /***************************** Applying Diagnostic fingerprints on computated velocity fft amplitude *************************/ 
             //  Serial.print("Axis ID :");Serial.println(direction);
