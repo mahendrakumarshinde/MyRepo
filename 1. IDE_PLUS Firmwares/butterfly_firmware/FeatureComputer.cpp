@@ -6,7 +6,8 @@ extern float modbusFeaturesDestinations[8];
 ===============================================================================*/
 
 extern float audioHigherCutoff;
-extern int m_audioOffset;
+extern float m_audioOffset_current;
+extern float m_audioScaling_current;
 bool computationDone = false;
 /* =============================================================================
     Feature Computer Base Class
@@ -649,7 +650,8 @@ void AudioDBComputer::m_specializedCompute()
     float result = 20.0 * audioDB / (float) length;
     //result = 2.8 * result - 10;  // Empirical formula
     result = 1.3076 * result + 21.41;  // Empirical formula
-    result = result * m_calibrationScaling + m_calibrationOffset + 30.0 + m_audioOffset;
+    //result = result * m_calibrationScaling + m_calibrationOffset + 30.0 + m_audioOffset;
+    result = result * m_audioScaling_current + m_audioOffset_current + 30.0;
     //Serial.print("Audio Before :");Serial.println(result);
     //int  audioValue = result <= 60 ? 60 : 60;
 

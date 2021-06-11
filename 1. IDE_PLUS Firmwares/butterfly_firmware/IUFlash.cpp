@@ -34,6 +34,7 @@ char IUFSFlash::FNAME_HASH[11] = "configHash";
 char IUFSFlash::FNAME_DIG[11] = "diagnostic";
 char IUFSFlash::FNAME_RPM[4] = "rpm";
 char IUFSFlash::FNAME_PHASE[6] = "phase";
+char IUFSFlash::FNAME_SENSOR_CONFIG[13] = "sensorConfig";
 /***** Core *****/
 
 void IUFSFlash::begin()
@@ -492,6 +493,49 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
             }
             break;
         }
+
+        case CFG_SENSOR_CONFIG:{
+            validConfig = true;
+            validationResult["messageType"] = "sensor-config-ack";
+            float m_audioScaling, m_audioOffset ; 
+            if(config.containsKey("SND_OFFSET")){ 
+            m_audioOffset = config["SND_OFFSET"];
+            debugPrint("SND _OFFSET recieved in JSON");
+            if ( m_audioOffset > SENSORConfiguration::DEFAULT_HIGH_CUT_OFF_AUDIO_OFFSET  ) {
+                validConfig = false;
+                errorMessages.add("Audio Offset value greater than Default High Cut Off");
+            }
+            else if (m_audioOffset < SENSORConfiguration::DEFAULT_LOW_CUT_OFF_AUDIO_OFFSET  ){
+                validConfig = false;
+                errorMessages.add("Audio Offset value  less than Default Low Cut Off");
+            }
+            }
+            if(config.containsKey("SND_SCALING")){
+            m_audioScaling = config["SND_SCALING"];
+            debugPrint("SND _SCALING recieved in JSON");
+            if(m_audioScaling <= 0 ){
+                validConfig = false;
+                errorMessages.add("Audio Scaling cannot be negative or zero");
+            }
+            else if ( m_audioScaling > SENSORConfiguration::DEFAULT_HIGH_CUT_OFF_AUDIO_SCALING) {
+                validConfig = false;
+                errorMessages.add("Audio Scaling value greater than Default High Cut Off");
+
+            }
+            else if (m_audioScaling < SENSORConfiguration::DEFAULT_LOW_CUT_OFF_AUDIO_SCALING  ){
+                validConfig = false;
+                errorMessages.add("Audio Scaling value is less than Default Low Cut Off");
+                } 
+            }
+            if(config.containsKey("SND_OFFSET") && config.containsKey("SND_SCALING")){
+                if(m_audioOffset > 100 || m_audioOffset < -100 || m_audioScaling > 100 || m_audioScaling <=0){
+                    validConfig = false;
+                    errorMessages.add("Audio Offset or Audio Scaling is Out of range");
+                }
+            }    
+            break;
+        }
+
         case CFG_RPM: {
             validConfig = true;
             validationResult["messageType"] = "rpm-config-ack";
@@ -723,6 +767,9 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
         case CFG_PHASE:
             fname = FNAME_PHASE;
             break;
+        case CFG_SENSOR_CONFIG:
+            fname = FNAME_SENSOR_CONFIG;
+            break;    
         default:
             if (debugMode)
             {
