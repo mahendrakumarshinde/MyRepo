@@ -33,8 +33,8 @@ bool IUOTA::otaMD5Write(char *folderName,char *fileName, char *md5)
         } 
         return false;
     }
-    char filepath[40];
-    snprintf(filepath, 40, "%s/%s", folderName, fileName);
+    char filepath[64];
+    snprintf(filepath, 64, "%s/%s", folderName, fileName);
     if (debugMode) {
         debugPrint(filepath);
     }
@@ -56,6 +56,41 @@ bool IUOTA::otaMD5Write(char *folderName,char *fileName, char *md5)
     }
 }
 
+bool IUOTA::otaMD5Read(char *folderName,char *fileName, char *md5)
+{
+    if(fileName == NULL)
+    {
+        if (debugMode) {
+            debugPrint(F("fw md5 file write param error !"));
+            if(fileName)
+                debugPrint(fileName);
+        } 
+        return false;
+    }
+    char filepath[64];
+    snprintf(filepath, 64, "%s/%s", folderName, fileName);
+    if (debugMode) {
+        debugPrint(filepath);
+    }
+    File md5File;
+    md5File = DOSFS.open(filepath,"r");
+    if(md5File)
+    {
+        md5File.read((uint8_t *)md5,32);
+        md5[32] = '\0';
+        md5File.close();
+        return true;
+    }
+    else
+    {
+        if (debugMode) {
+            debugPrint(F("Error reading MD5 file:"),false);
+            debugPrint(filepath);
+        }
+        return false;
+    }
+}
+
 
 /**
  * Write OTA FW binary data in to external flash as .bin
@@ -71,8 +106,8 @@ bool IUOTA::otaFwBinWrite(char *folderName,char *fileName, char *buff, uint16_t 
         }
         return false;
     }
-    char filepath[40];
-    snprintf(filepath, 40, "%s/%s", folderName, fileName);
+    char filepath[64];
+    snprintf(filepath, 64, "%s/%s", folderName, fileName);
     if (debugMode) {
         debugPrint(filepath);
     }
@@ -137,8 +172,8 @@ bool IUOTA::otaFwBinRead(char *folderName,char *fileName)
         }
         return false;
     }
-    char filepath[40];
-    snprintf(filepath, 40, "%s/%s", folderName, fileName);
+    char filepath[64];
+    snprintf(filepath, 64, "%s/%s", folderName, fileName);
     if (debugMode) {
         debugPrint(filepath);
     }
@@ -265,11 +300,11 @@ return String();
 #if 1
 bool IUOTA::otaGetMD5(char *folderName,char *fileName, char *md5HashRet)
 {
-    char filepath[40];
+    char filepath[64];
     uint32_t fileSize = 0;
     String md5hash = "";
     File fwFile;
-    snprintf(filepath, 40, "%s/%s", folderName, fileName);
+    snprintf(filepath, 64, "%s/%s", folderName, fileName);
     // if (debugMode) {
     //     debugPrint(F("Get MD5 of file:"),false);
     //     debugPrint(filepath);
@@ -317,8 +352,8 @@ bool IUOTA::otaGetMD5(char *folderName,char *fileName, char *md5HashRet)
  */
 bool IUOTA::otaFileRemove(char *folderName,char *fileName)
 {
-    char filepath[40];
-    snprintf(filepath, 40, "%s/%s", folderName, fileName);
+    char filepath[64];
+    snprintf(filepath, 64, "%s/%s", folderName, fileName);
     if (debugMode) {
         debugPrint(F("Remove file:"),false);
         debugPrint(filepath);
@@ -329,14 +364,33 @@ bool IUOTA::otaFileRemove(char *folderName,char *fileName)
     }
 }
 
+/**
+ *  Check file exists in OTA Folder
+ */
+bool IUOTA::otaFileExists(char *folderName,char *fileName)
+{
+    char filepath[64];
+    snprintf(filepath, 64, "%s/%s", folderName, fileName);
+    if (debugMode) {
+        debugPrint(F("file path:"),false);
+        debugPrint(filepath);
+    }
+    if(DOSFS.exists(filepath))
+    { // Remove existing file
+        return true;
+    }
+    else
+        return false;
+}
+
 
 /**
  * Copy bin files to actual OTA folder
  */
 bool IUOTA::otaFileCopy(char *dstFolderPath,char *srcFolderPath, char *filename)
 {
-    char dstFilePath[40];
-    char srcFilePath[40];
+    char dstFilePath[64];
+    char srcFilePath[64];
 
     // Check Source and Destination directories are present
     if(DOSFS.exists(dstFolderPath) && DOSFS.exists(srcFolderPath))
@@ -344,8 +398,8 @@ bool IUOTA::otaFileCopy(char *dstFolderPath,char *srcFolderPath, char *filename)
         File fwSrcFile;
         File fwDstFile;
         otaFileRemove(dstFolderPath,filename);
-        snprintf(dstFilePath, 40, "%s/%s", dstFolderPath, filename);
-        snprintf(srcFilePath, 40, "%s/%s", srcFolderPath, filename);
+        snprintf(dstFilePath, 64, "%s/%s", dstFolderPath, filename);
+        snprintf(srcFilePath, 64, "%s/%s", srcFolderPath, filename);
         if (debugMode) {
             debugPrint(F("File Copy Dest FilePath:"),false);
             debugPrint(dstFilePath);

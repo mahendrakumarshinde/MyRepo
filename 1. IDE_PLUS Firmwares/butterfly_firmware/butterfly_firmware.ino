@@ -16,6 +16,7 @@ Type - Standard vEdge Firmware Release
 #include <FS.h>
 #include "RawDataState.h"
 //#include"IUTimer.h"
+#define UIN32_FULL_SCALE 4294967296
 
 const uint8_t ESP32_IO0  =  7;  // IDE1.5_PORT_CHANGE
 bool sensorStatus = true;
@@ -123,6 +124,8 @@ int EXCELLENT_SIGNAL_STRENGTH_TH = -40;
 bool doOnce = true;
 uint32_t interval = 30000;
 uint32_t lastDone = 0;
+uint32_t lastSync = 0;
+uint32_t syncInterval = 60000;
 uint32_t devStsTime = 0;
 /**Flash Check Timer variable**/
 uint32_t flashCheckInterval = 300000;
@@ -923,6 +926,33 @@ void loop()
             ledManager.updateColors();
         }
         uint32_t now = millis();
+        if(conductor.getUsageMode() != UsageMode::OTA) {
+            uint32_t tempSync = 0;
+            if(now < lastSync) {
+                tempSync = (uint32_t) UIN32_FULL_SCALE - lastSync;
+                tempSync = tempSync + now;
+            }
+            else
+                tempSync = now - lastSync;
+            if (tempSync > syncInterval) {
+                lastSync = now;
+                if(loopDebugMode){
+                    debugPrint("STM <-> ESP Sync Count:",false);
+                    debugPrint(conductor.syncLostCount);
+                }
+                if (conductor.syncLostCount >= MAX_SYNC_COUNT)
+                {
+                    conductor.syncLostCount = 0;
+                    if(loopDebugMode){ debugPrint("No Response from ESP, initiate self upgrade !"); }
+                    conductor.selfFwUpgradeInit();
+                }
+                else {
+                    iuWiFi.sendMSPCommand(MSPCommand::SEND_ESP_SYNC_REQ);
+                    conductor.syncLostCount++;
+                    delay(1);
+                }
+            }
+        }
         if (now - lastDone > interval) {
             lastDone = now;
             /* === Place your code to excute at fixed interval here ===*/

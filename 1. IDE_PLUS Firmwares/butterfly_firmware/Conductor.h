@@ -53,6 +53,8 @@
 #define DEVICE_DIAG_BMD_ERR7      7
 #define DEVICE_DIAG_SETUP_ERR1    8
 #define DEVICE_DIAG_STMMEM_ERR    9
+#define MAX_SYNC_COUNT            20
+
 /* =============================================================================
     Operation Mode
 ============================================================================= */
@@ -398,6 +400,8 @@ class Conductor
         String m_phase_ids[max_IDs];
         uint32_t m_devDiagErrCode = 0;        
         bool devIdbmdWifi = false;
+        uint8_t syncLostCount = 0;
+        void selfFwUpgradeInit();
     #ifdef DEVIDFIX_TESTSTUB
         uint8_t flagval2 = 0;
     #endif

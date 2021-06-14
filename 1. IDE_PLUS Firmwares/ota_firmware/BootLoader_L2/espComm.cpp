@@ -20,74 +20,82 @@ uint16_t espComm::flash_esp32_verify(char* folderPath,char* fileName)
     espFlashLog = DOSFS.open("esp32Response.log", "w");
     if (espFlashLog)
     {
-        DEBUG_SERIAL.println("Opened ESP32 debug log file.");
+        bl2DebugPrint("Opened ESP32 debug log file.");
         espFlashLog.println("ESP32 ROM command Logs :");
     }
     else
     {
-        DEBUG_SERIAL.println("Failed to Open ESP32 debug log File !");
+        bl2DebugPrint("Failed to Open ESP32 debug log File !");
         return FILE_OPEN_FAILED;
     }
-    DEBUG_SERIAL.println("Setting ESP32 in Downloand mode...");
+    bl2DebugPrint("Setting ESP32 in Downloand mode...");
     pinMode(ESP32_ENABLE_PIN, OUTPUT); // IDE1.5_PORT_CHANGE
     pinMode(ESP32_IO0,OUTPUT); // IDE1.5_PORT_CHANGE
     espReboot();
-    DEBUG_SERIAL.println("Setting ESP32 Downloand mode...OK");
+    bl2DebugPrint("Setting ESP32 Downloand mode...OK");
     for(int i=1;i<=20;++i)
     { 
         delay(100);
-        DEBUG_SERIAL.print(i*5);
-        DEBUG_SERIAL.print("%...");
+        bl2DebugPrint(i*5);
+        bl2DebugPrint("%...");
     }
-    DEBUG_SERIAL.println("\nSending SYNC command to ESP32...");
+    bl2DebugPrint("\nSending SYNC command to ESP32...");
     ret = esp_SendSyncCmd(10,10);
     if(ret)  
     {
-        DEBUG_SERIAL.println("Sending SYNC command to ESP32...OK");
+        bl2DebugPrint("Sending SYNC command to ESP32...OK");
         delay(1000);
         ret = espDetect();
         if(ret == false)
         {
+            espFlashLog.println("ESP32 detect failed !");
             espFlashLog.close();
             return RETURN_FAILED;
         }
         ret = espGetFeature();
         if(ret == false)
         {
+            espFlashLog.println("ESP32 get feature failed !");
             espFlashLog.close();
             return RETURN_FAILED;
         }
         ret = espGetMacId();
         if(ret == false)
         {
+            espFlashLog.println("ESP32 get MAC ID failed !");
             espFlashLog.close();
             return RETURN_FAILED;
         }
         ret = espUploadStub();
         if(ret == false)
         {
+            espFlashLog.println("ESP32 uploadStub failed !");
             espFlashLog.close();
             return RETURN_FAILED;
         }
         ret = espConfigureFlash();
         if(ret == false)
         {
+            espFlashLog.println("ESP32 configFlash failed !");
             espFlashLog.close();
             return RETURN_FAILED;
         }
         espFlashLog.close();
         delay(100);
         espFlashLog = DOSFS.open("esp32Response.log", "a");
+        espFlashLog.println("WiFi FW Flashing..:");
         ret= espBinWrite(folderPath,fileName);
         delay(100);
         if(ret == false)
         {
+            bl2DebugPrint("WiFi FW flash Failed !");
+            espFlashLog.println("ESP32 wifi fw flash failed !");
             espFlashLog.close();
             return RETURN_FAILED;
         }
-        espFlashLog = DOSFS.open("esp32Response.log", "a");
+        //espFlashLog = DOSFS.open("esp32Response.log", "a");
         delay(100);
-        // DEBUG_SERIAL.println(fwhash);
+        // bl2DebugPrint(fwhash);
         String fwhash = espGetMD5Hash();
         char *WIFI_MD5File;
         if(strcmp(ESP_MAIN_FIRMWARE,folderPath)==0)
@@ -98,30 +106,160 @@ uint16_t espComm::flash_esp32_verify(char* folderPath,char* fileName)
             WIFI_MD5File = ESP_MFW_3_SUM;        
 
         espReadMD5(WIFI_MD5File, receivedMD5Sum);
-        DEBUG_SERIAL.print("WiFi FW MD5 Received: ");
-        DEBUG_SERIAL.println(receivedMD5Sum);
-        DEBUG_SERIAL.print("WiFi FW MD5 RD from ESP:");
-        DEBUG_SERIAL.println(fwhash.c_str());
+        bl2DebugPrint("WiFi FW MD5 Received: ",false);
+        bl2DebugPrint(receivedMD5Sum);
+        bl2DebugPrint("WiFi FW MD5 RD from ESP:",false);
+        bl2DebugPrint(fwhash.c_str());
 
         if (strcmp(receivedMD5Sum, fwhash.c_str()) != 0) 
         {
-            DEBUG_SERIAL.println("WiFi FW File MD5 Hash Failed !");
+            bl2DebugPrint("WiFi FW File MD5 Hash Failed !");
+            espFlashLog.println("WiFi FW File MD5 Hash Failed !");
+            espFlashLog.close();
             return RETURN_FAILED;
         }
-        DEBUG_SERIAL.println("WiFi FW File MD5 Hash Ok");
+        bl2DebugPrint("WiFi FW File MD5 Hash Ok");
+        espFlashLog.println("WiFi FW File MD5 Hash Ok");
+#if 1
+        if(strcmp(ESP_MAIN_FIRMWARE,folderPath) !=0) { // flash additional wifi binaries only in case of Internal or forced rollback
+        // Write Boot app table  
+            espFlashLog.println("WiFi Boot app Flashing..:");
+            bl2DebugPrint("WiFi Boot app Flashing...");
+            ret= espBinWrite(folderPath,ESP_BOOT_APP_FILENAME);
+            delay(100);
+            if(ret == false)
+            {
+                bl2DebugPrint("WiFi Boot app flashing failed !");
+                espFlashLog.println("WiFi Boot app flashing failed !");
+                espFlashLog.close();
+                return RETURN_FAILED;
+            }
+            //espFlashLog = DOSFS.open("esp32Response.log", "a");
+            delay(100);
+            // bl2DebugPrint(fwhash);
+            String fwhash1 = espGetMD5Hash();
+            char *WIFI_BOOT_MD5File;
+            if(strcmp(ESP_MAIN_FIRMWARE,folderPath)==0)
+                WIFI_BOOT_MD5File = ESP_TEMP_BOOT_APP_SUM;
+            else if(strcmp(ESP_ROLLBACK_FIRMWARE,folderPath)==0)
+                WIFI_BOOT_MD5File = ESP_RLBK_BOOT_APP_SUM;
+            else if(strcmp(ESP_FORCED_ROLLBACK_FIRMWARE,folderPath)==0)
+                WIFI_BOOT_MD5File = ESP_BKUP_BOOT_APP_SUM;        
+
+            espReadMD5(WIFI_BOOT_MD5File, receivedMD5Sum);
+            bl2DebugPrint("WiFi Boot app FW MD5 Received: ",false);
+            bl2DebugPrint(receivedMD5Sum);
+            bl2DebugPrint("WiFi Boot app FW MD5 RD from ESP:",false);
+            bl2DebugPrint(fwhash1.c_str());
+
+            if (strcmp(receivedMD5Sum, fwhash1.c_str()) != 0) 
+            {
+                bl2DebugPrint("WiFi Boot app FW File MD5 Hash Failed !");
+                espFlashLog.println("WiFi Boot app FW File MD5 Hash Failed !");
+                espFlashLog.close();
+                return RETURN_FAILED;
+            }
+            bl2DebugPrint("WiFi Boot app FW File MD5 Hash Ok");
+            espFlashLog.println("WiFi Boot app FW File MD5 Hash Ok");
+
+            // Write Bootloader bin
+            espFlashLog.println("WiFi Bootloader FW Flashing..:");
+            bl2DebugPrint("WiFi Bootloader FW Flashing...");
+            ret= espBinWrite(folderPath,ESP_BOOT_LDR_FILENAME);
+            delay(100);
+            if(ret == false)
+            {
+                bl2DebugPrint("WiFi Bootloader FW Flashing failed !");
+                espFlashLog.println("WiFi Bootloader FW Flashing failed !");
+                espFlashLog.close();
+                return RETURN_FAILED;
+            }
+            //espFlashLog = DOSFS.open("esp32Response.log", "a");
+            delay(100);
+            // bl2DebugPrint(fwhash);
+            String fwhash2 = espGetMD5Hash();
+            char *WIFI_BTLODR_MD5File;
+            if(strcmp(ESP_MAIN_FIRMWARE,folderPath)==0)
+                WIFI_BTLODR_MD5File = ESP_TEMP_BOOT_LODR_SUM;
+            else if(strcmp(ESP_ROLLBACK_FIRMWARE,folderPath)==0)
+                WIFI_BTLODR_MD5File = ESP_RLBK_BOOT_LODR_SUM;
+            else if(strcmp(ESP_FORCED_ROLLBACK_FIRMWARE,folderPath)==0)
+                WIFI_BTLODR_MD5File = ESP_BKUP_BOOT_LODR_SUM;        
+
+            espReadMD5(WIFI_BTLODR_MD5File, receivedMD5Sum);
+            bl2DebugPrint("WiFi Bootloader FW MD5 Received: ",false);
+            bl2DebugPrint(receivedMD5Sum);
+            bl2DebugPrint("WiFi Bootloader FW MD5 RD from ESP:",false);
+            bl2DebugPrint(fwhash2.c_str());
+
+            if (strcmp(receivedMD5Sum, fwhash2.c_str()) != 0) 
+            {
+                bl2DebugPrint("WiFi Bootloader FW File MD5 Hash Failed !");
+                espFlashLog.println("WiFi Bootloader FW File MD5 Hash Failed !");
+                espFlashLog.close();
+                return RETURN_FAILED;
+            }
+            bl2DebugPrint("WiFi Bootloader FW File MD5 Hash Ok");
+            espFlashLog.println("WiFi Bootloader FW File MD5 Hash Ok");
+
+        // Write partition table
+            espFlashLog.println("WiFi PARTITION FW Flashing..:");
+            bl2DebugPrint("WiFi PARTITION FW Flashing...");
+            ret= espBinWrite(folderPath,ESP_PART_TBL_FILENAME);
+            delay(100);
+            if(ret == false)
+            {
+                bl2DebugPrint("WiFi PARTITION FW Flashing failed !");
+                espFlashLog.println("WiFi PARTITION FW Flashing failed !");
+                espFlashLog.close();
+                return RETURN_FAILED;
+            }
+            //espFlashLog = DOSFS.open("esp32Response.log", "a");
+            delay(100);
+            // bl2DebugPrint(fwhash);
+            String fwhash3 = espGetMD5Hash();
+            char *WIFI_PART_MD5File;
+            if(strcmp(ESP_MAIN_FIRMWARE,folderPath)==0)
+                WIFI_PART_MD5File = ESP_TEMP_PART_SUM;
+            else if(strcmp(ESP_ROLLBACK_FIRMWARE,folderPath)==0)
+                WIFI_PART_MD5File = ESP_RLBK_PART_SUM;
+            else if(strcmp(ESP_FORCED_ROLLBACK_FIRMWARE,folderPath)==0)
+                WIFI_PART_MD5File = ESP_BKUP_PART_SUM;        
+
+            espReadMD5(WIFI_PART_MD5File, receivedMD5Sum);
+            bl2DebugPrint("WiFi PARTITION FW MD5 Received: ",false);
+            bl2DebugPrint(receivedMD5Sum);
+            bl2DebugPrint("WiFi PARTITION FW MD5 RD from ESP:",false);
+            bl2DebugPrint(fwhash3.c_str());
+
+            if (strcmp(receivedMD5Sum, fwhash3.c_str()) != 0) 
+            {
+                bl2DebugPrint("WiFi PARTITION FW File MD5 Hash Failed !");
+                espFlashLog.println("WiFi PARTITION FW File MD5 Hash Failed !");
+                espFlashLog.close();
+                return RETURN_FAILED;
+            }
+            bl2DebugPrint("WiFi PARTITION FW File MD5 Hash Ok");
+            espFlashLog.println("WiFi PARTITION FW File MD5 Hash Ok");
+        }
+#endif
         ret = espExitFlash();
         if(ret == false)
         {
+            bl2DebugPrint("Exit flash Failed !");
+            espFlashLog.println("Exit flash Failed !");
             espFlashLog.close();
             //return RETURN_FAILED;
         }
     }
     else
     {
-        DEBUG_SERIAL.println("SYNC failed, aborting ESP32 FW download !!!");
+        bl2DebugPrint("SYNC failed, aborting ESP32 FW download !!!");
+        espFlashLog.println("SYNC failed, aborting ESP32 FW download !!!");
         espFlashLog.close();
         return RETURN_FAILED;
     }  
+    espFlashLog.println("ESP32 flashing success");
     espFlashLog.close();
     return RETURN_SUCESS;
 }
@@ -136,12 +274,14 @@ bool espComm::espBinWrite(char *folderName,char *fileName)
     bool ret = false;
     if(folderName == NULL || fileName == NULL)
     {
-        DEBUG_SERIAL.println(F("fw bin file read param error !"));
+        bl2DebugPrint(F("fw bin file read param error !"));
         return false;
     }
-    char filepath[40];
-    snprintf(filepath, 40, "%s/%s", folderName, fileName);
-    DEBUG_SERIAL.println("File path:" + String(filepath));
+    char filepath[64];
+    snprintf(filepath, 64, "%s/%s", folderName, fileName);
+    if(espFlashLog)
+        espFlashLog.println(filepath);
+    bl2DebugPrint("File path:" + String(filepath));
     File fwFile;    
     if(DOSFS.exists(filepath))
     {
@@ -153,8 +293,8 @@ bool espComm::espBinWrite(char *folderName,char *fileName)
             espTotBlock = fileSize/FLASH_BLOCK_SIZE;
             if(fileSize%FLASH_BLOCK_SIZE)
                 espTotBlock = espTotBlock + 1; 
-            DEBUG_SERIAL.print(F("File Size:"));
-            DEBUG_SERIAL.println(fileSize);
+            bl2DebugPrint(F("File Size:"),false);
+            bl2DebugPrint(fileSize);
             readIdx = 0;
             if(fileSize > 0)
             {
@@ -162,6 +302,45 @@ bool espComm::espBinWrite(char *folderName,char *fileName)
                 FlashAdd[10] = (uint8_t)((fileSize & 0x0000FF00) >> 8);
                 FlashAdd[11] = (uint8_t)((fileSize & 0x00FF0000) >> 16);
                 FlashAdd[12] = (uint8_t)((fileSize & 0xFF000000) >> 24);
+                if(!strcmp(fileName,ESP_BOOT_APP_FILENAME))
+                { // Flash Add of bin 
+                    bl2DebugPrint("Writing WIFI Boot App Bin... ");
+                    FlashAdd[21] = (uint8_t)0x00;
+                    FlashAdd[22] = (uint8_t)0xe0;
+                    FlashAdd[23] = (uint8_t)0x00;
+                    FlashAdd[24] = (uint8_t)0x00;
+
+                    md5Hash[9] = (uint8_t)0x00;
+                    md5Hash[10] = (uint8_t)0xe0;
+                    md5Hash[11] = (uint8_t)0x00;
+                    md5Hash[12] = (uint8_t)0x00;
+                }
+                else if(!strcmp(fileName,ESP_BOOT_LDR_FILENAME))
+                { // Flash Add of bin 
+                    bl2DebugPrint("Writing WIFI Bootloader Bin... ");
+                    FlashAdd[21] = (uint8_t)0x00;
+                    FlashAdd[22] = (uint8_t)0x10;
+                    FlashAdd[23] = (uint8_t)0x00;
+                    FlashAdd[24] = (uint8_t)0x00;
+
+                    md5Hash[9] = (uint8_t)0x00;
+                    md5Hash[10] = (uint8_t)0x10;
+                    md5Hash[11] = (uint8_t)0x00;
+                    md5Hash[12] = (uint8_t)0x00;
+                }
+                else if(!strcmp(fileName,ESP_PART_TBL_FILENAME))
+                { // Flash Add of bin 
+                    bl2DebugPrint("Writing WIFI Parition Bin... ");
+                    FlashAdd[21] = (uint8_t)0x00;
+                    FlashAdd[22] = (uint8_t)0x80;
+                    FlashAdd[23] = (uint8_t)0x00;
+                    FlashAdd[24] = (uint8_t)0x00;
+                    md5Hash[9] = (uint8_t)0x00;
+                    md5Hash[10] = (uint8_t)0x80;
+                    md5Hash[11] = (uint8_t)0x00;
+                    md5Hash[12] = (uint8_t)0x00;
+                }    
+
 
                 md5Hash[13] = (uint8_t)(fileSize & 0x000000FF);
                 md5Hash[14] = (uint8_t)((fileSize & 0x0000FF00) >> 8);
@@ -191,10 +370,10 @@ bool espComm::espBinWrite(char *folderName,char *fileName)
                             readIdx = readIdx + MAX_FILE_RW_SIZE;
                             fileSize = fileSize - MAX_FILE_RW_SIZE;                                           
                         }                        
-                       // DEBUG_SERIAL.print(F("File Read Size:"));
-                       // DEBUG_SERIAL.println(readIdx);
+                       // bl2DebugPrint(F("File Read Size:"));
+                       // bl2DebugPrint(readIdx);
                         // for(int i = 0; i < FLASH_BLOCK_SIZE; i++)
-                        //     DEBUG_SERIAL.print(readBuf[i]);  
+                        //     bl2DebugPrint(readBuf[i]);  
                         ret = preparePkt(readBuf,pktSeqNo,readIdx);
                         if(ret == false)
                         {
@@ -235,12 +414,12 @@ bool espComm::espBinWrite(char *folderName,char *fileName)
                         } while(fileSize);
                         for(int i = readIdx; i < FLASH_BLOCK_SIZE; i++)
                             readBuf[i] = 0xff;
-                      //  DEBUG_SERIAL.print(F("File Read Size:"));
-                       // DEBUG_SERIAL.println(readIdx);
+                      //  bl2DebugPrint(F("File Read Size:"));
+                       // bl2DebugPrint(readIdx);
                         // for(int i = 0; i < FLASH_BLOCK_SIZE; i++)
-                        //     DEBUG_SERIAL.print(readBuf[i]);
+                        //     bl2DebugPrint(readBuf[i]);
                         fileSize = 0;
-                        //DEBUG_SERIAL.println("Preparing packet for writing to ESP32..");
+                        //bl2DebugPrint("Preparing packet for writing to ESP32..");
                         ret = preparePkt(readBuf,pktSeqNo,FLASH_BLOCK_SIZE);        
                         if(ret == false)
                         {
@@ -254,23 +433,29 @@ bool espComm::espBinWrite(char *folderName,char *fileName)
             }
             else
             {
-                DEBUG_SERIAL.print(F("File size error, size = 0"));
-                DEBUG_SERIAL.println(filepath);
+                bl2DebugPrint(F("File size error, size = 0"),false);
+                bl2DebugPrint(filepath);
+                if(espFlashLog)
+                    espFlashLog.println("file size error ");
                 fwFile.close();
                 return false;
             }
         }
         else
         {
-            DEBUG_SERIAL.print(F("Error opening FW download file:"));
-            DEBUG_SERIAL.println(filepath);
+            if(espFlashLog)
+                espFlashLog.println("Error opening FW download file:");
+            bl2DebugPrint(F("Error opening FW download file:"),false);
+            bl2DebugPrint(filepath);
             return false;
         }
     }
     else
     {
-        DEBUG_SERIAL.print(F("FW download file doesn't exists !"));
-        DEBUG_SERIAL.println(filepath);
+        if(espFlashLog)
+            espFlashLog.println("FW download file doesn't exists !");
+        bl2DebugPrint(F("FW download file doesn't exists !"),false);
+        bl2DebugPrint(filepath);
         return false;
     }    
 }
@@ -307,8 +492,8 @@ bool espComm::preparePkt(unsigned char* buff,uint16_t pktSeqNo, uint32_t pktsize
     
     /* CRC (4 byte) - (LSB First) */
     pktCrc = espcomm_calc_checksum(buff,pktsize);
-//    DEBUG_SERIAL.print("Packet CRC: 0x");
-//    DEBUG_SERIAL.println(pktCrc, HEX);
+//    bl2DebugPrint("Packet CRC: 0x");
+//    bl2DebugPrint(pktCrc, HEX);
     if(pktCrc == 0xDB)
     {
         PktBuf[writeIdx++] = 0xDB;
@@ -335,7 +520,7 @@ bool espComm::preparePkt(unsigned char* buff,uint16_t pktSeqNo, uint32_t pktsize
     memcpy(&PktBuf[writeIdx],header2,4);
     writeIdx = writeIdx + 4; // Size of header2
     
-    DEBUG_SERIAL.println("WiFi FW Flash Sector: " + String(pktSeqNo+1) + "/" + String(espTotBlock));
+    bl2DebugPrint("WiFi FW Flash Sector: " + String(pktSeqNo+1) + "/" + String(espTotBlock));
     /* Write Sequence No in 4 byte (LSB First) */
     if(pktSeqNo == 0xDB)
     {
@@ -364,14 +549,14 @@ bool espComm::preparePkt(unsigned char* buff,uint16_t pktSeqNo, uint32_t pktsize
     writeIdx = writeIdx + 8; // Size of header2
     
     uint32_t pktSize1 = update_C0_DB(&PktBuf[writeIdx], buff , pktsize);
-  //  DEBUG_SERIAL.println("Modified packet size:" + String(pktSize1));
+  //  bl2DebugPrint("Modified packet size:" + String(pktSize1));
     writeIdx = writeIdx + pktSize1;
     PktBuf[writeIdx++] = 0xc0;
-   // DEBUG_SERIAL.println("Total packet size:" + String(writeIdx));
+   // bl2DebugPrint("Total packet size:" + String(writeIdx));
     // if(pktSeqNo > 150) {
     //  for(int i = 0; i < writeIdx; i++) {
-    //      DEBUG_SERIAL.print(PktBuf[i],HEX);
-    //      DEBUG_SERIAL.print(" ");
+    //      bl2DebugPrint(PktBuf[i],HEX);
+    //      bl2DebugPrint(" ");
     //  }
     // }
    ret = espSendDataPkt(PktBuf, writeIdx, ESP_CMD_RETRY,pktSeqNo);
@@ -406,7 +591,7 @@ void espComm:: espReadMD5(char* TEST_FILE, char *md5Result)
     if (MD5_value) {
       memset(md5Result, 0x00, 64);
       int readLen=MD5_value.readBytesUntil('\0', md5Result, 64);
-      DEBUG_SERIAL.print("Received MD5 value: ");DEBUG_SERIAL.println(md5Result);
+      bl2DebugPrint("Received MD5 value: ");bl2DebugPrint(md5Result);
       byte lastChar = strlen(md5Result);
       md5Result[lastChar] = '\0'; 
       MD5_value.close(); 
@@ -429,7 +614,7 @@ bool espComm::espEraseFlash()
 bool espComm::espDetect()
 {
     bool ret = false;
-    DEBUG_SERIAL.println("Sending ESP32 Detect command...");
+    bl2DebugPrint("Sending ESP32 Detect command...");
     ret = espSendCmd(deviceType, sizeof(deviceType), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
@@ -446,7 +631,7 @@ bool espComm::espDetect()
 bool espComm::espGetFeature()
 {
     bool ret = false;
-    DEBUG_SERIAL.println("Sending ESP32 GetFeature command...");
+    bl2DebugPrint("Sending ESP32 GetFeature command...");
     ret = espSendCmd(readReg1, sizeof(readReg1), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
@@ -464,7 +649,7 @@ bool espComm::espGetFeature()
 bool espComm::espGetMacId()
 {
     bool ret = false;
-    DEBUG_SERIAL.println("Sending ESP32 Get MAC command...");
+    bl2DebugPrint("Sending ESP32 Get MAC command...");
     ret = espSendCmd(MacIDreg1, sizeof(MacIDreg1), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
@@ -481,7 +666,7 @@ bool espComm::espGetMacId()
 bool espComm::espUploadStub()
 {
     bool ret = false;
-    DEBUG_SERIAL.println("Sending ESP32 Upload Stub command...");
+    bl2DebugPrint("Sending ESP32 Upload Stub command...");
     ret = espSendCmd(uploadStub, sizeof(uploadStub), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
@@ -513,7 +698,7 @@ bool espComm::espUploadStub()
 bool espComm::espConfigureFlash()
 {
     bool ret = false;
-    DEBUG_SERIAL.println("Sending ESP32 Configure Flash command...");
+    bl2DebugPrint("Sending ESP32 Configure Flash command...");
     ret = espSendCmd(configFlash1, sizeof(configFlash1), ESP_CMD_RETRY);
     delay(100);
     if(ret == false)
@@ -596,13 +781,13 @@ unsigned int espComm::update_C0_DB(unsigned char *destPkt,unsigned char *srcBuf,
         unsigned char cur = srcBuf[i];
         if (cur == 0xC0)
         {
-           // DEBUG_SERIAL.println("Found 0xC0");
+           // bl2DebugPrint("Found 0xC0");
             destPkt[out_pos++] = subst_C0[0];
             destPkt[out_pos++] = subst_C0[1];
         }
         else if (cur == 0xDB)
         {
-           // DEBUG_SERIAL.println("Found 0xDB");
+           // bl2DebugPrint("Found 0xDB");
             destPkt[out_pos++] = subst_DB[0];
             destPkt[out_pos++] = subst_DB[1];
         }
@@ -627,9 +812,9 @@ void espComm::espCleanup()
  */
 bool espComm:: esp_SendSyncCmd(uint8_t rebootCount, uint8_t retrySync)
 {
-  //  DEBUG_SERIAL.println("Sending SYNC command...");
+  //  bl2DebugPrint("Sending SYNC command...");
 	int cnt = SYNC_RESP_LEN;
-  //	DEBUG_SERIAL.println(sizeof(syncCommand));
+  //	bl2DebugPrint(sizeof(syncCommand));
     unsigned long timeout = ESP_SYNC_TIMEOUT; 
     unsigned long now = millis();
 	int index = 0;
@@ -659,7 +844,7 @@ bool espComm:: esp_SendSyncCmd(uint8_t rebootCount, uint8_t retrySync)
             {
                 if((millis()-now) > timeout)
                 {
-                    DEBUG_SERIAL.print("SYNC Packet Response Wait Timeout !");
+                    bl2DebugPrint("SYNC Packet Response Wait Timeout !");
                     delay(100);
                     return false;
                 }
@@ -674,16 +859,16 @@ bool espComm:: esp_SendSyncCmd(uint8_t rebootCount, uint8_t retrySync)
                 --cnt;
                 if (cnt <= 0)
                 {
-                    //DEBUG_SERIAL.println("Found C0");
+                    //bl2DebugPrint("Found C0");
                     espFlashLog.println();
                     if (compareResponse(expectedResponse, responseCmd, sizeof(expectedResponse), sizeof(responseCmd)) == true)
                     {
-                        DEBUG_SERIAL.println("SYNC Response Matched");
+                        bl2DebugPrint("SYNC Response Matched");
                         return true;
                     }
                     else
                     {
-                        DEBUG_SERIAL.println("SYNC Response Mismatch");
+                        bl2DebugPrint("SYNC Response Mismatch");
                         espReboot();
                         m_retrySync = retrySync;
                         cnt = 112;
@@ -714,12 +899,12 @@ bool espComm::espSendCmd(byte command[], int size, int retry,uint8_t countC0)
 	int cnt = countC0;
     unsigned long timeout = ESP_SEND_CMD_TIMEOUT; 
     unsigned long now = millis();
-//	DEBUG_SERIAL.println(size);
+//	bl2DebugPrint(size);
 	espFlashLog.print("Command  : ");
 	for (int i = 0; i < size; i++)
 	{
-//    DEBUG_SERIAL.print(command[i],HEX);
-//    DEBUG_SERIAL.print(" ");
+//    bl2DebugPrint(command[i],HEX);
+//    bl2DebugPrint(" ");
 		espFlashLog.print(command[i], HEX);
 		espFlashLog.print(" ");
 	}
@@ -735,7 +920,7 @@ bool espComm::espSendCmd(byte command[], int size, int retry,uint8_t countC0)
 		}
         if(command[2] == 0xD0) //  for erase command
         {
-            DEBUG_SERIAL.println("Erasing Flash");
+            bl2DebugPrint("Erasing Flash");
             delay(3000);
         }
         else
@@ -745,7 +930,7 @@ bool espComm::espSendCmd(byte command[], int size, int retry,uint8_t countC0)
         {
             if((millis()-now) > timeout)
             {
-                DEBUG_SERIAL.print("Send Command Response Wait Timeout !");
+                bl2DebugPrint("Send Command Response Wait Timeout !");
                 delay(100);
                 return false;
             }
@@ -758,7 +943,7 @@ bool espComm::espSendCmd(byte command[], int size, int retry,uint8_t countC0)
 				--cnt;
 				if (cnt <= 0)
 				{
-					//DEBUG_SERIAL.println("Found C0");
+					//bl2DebugPrint("Found C0");
 					espFlashLog.println();
 					ESP_SERIAL.flush();
 					return true;
@@ -766,7 +951,7 @@ bool espComm::espSendCmd(byte command[], int size, int retry,uint8_t countC0)
 			}
 		}
 		espFlashLog.println();
-		DEBUG_SERIAL.println();
+		bl2DebugPrint("\n");
 		delay(100);
 	}
 	return false;
@@ -785,7 +970,7 @@ String espComm:: espGetMD5Hash()
 	int index = 0;
 //	ESP_SERIAL.flush();
     delay(2000);
-	// DEBUG_SERIAL.println(sizeof(md5Hash));
+	// bl2DebugPrint(sizeof(md5Hash));
 	espFlashLog.print("MD5 Command  : ");
 	for (int i = 0; i < sizeof(md5Hash); i++)
 	{
@@ -798,14 +983,14 @@ String espComm:: espGetMD5Hash()
 	}
 	espFlashLog.println();
 	espFlashLog.print("MD5 Response : ");
-    DEBUG_SERIAL.print("\nMD5 Response : ");
+    bl2DebugPrint("\nMD5 Response : ");
 	delay(MD5_RESP_WAIT_DEL);   // Increase delay if required
     now = millis();
     while (ESP_SERIAL.available() > 0 || ((millis()-now) > timeout))
     {
         if((millis()-now) > timeout)
         {
-            DEBUG_SERIAL.print("ESP Hash Response Wait Timeout !");
+            bl2DebugPrint("ESP Hash Response Wait Timeout !");
             delay(100);
             return String("");
         }
@@ -868,7 +1053,7 @@ bool espComm:: compareResponse(byte *a, byte *b, int len_a, int len_b)
  */
 void espComm:: espReboot()
 {
-	DEBUG_SERIAL.println("Rebooting esp32");
+	bl2DebugPrint("Rebooting esp32");
 	digitalWrite(ESP32_IO0, HIGH);
 	delay(500);
 	digitalWrite(ESP32_IO0, LOW);		 // IDE1.5_PORT_CHANGE
@@ -878,7 +1063,7 @@ void espComm:: espReboot()
 	delay(100);
 	// ESP_SERIAL.flush();
 	espCleanup();
-	DEBUG_SERIAL.println("Download Mode");
+	bl2DebugPrint("Download Mode");
 }
 
 /* This function is used to send FW binary Data packets to ESP32
@@ -891,7 +1076,7 @@ bool espComm::espSendDataPkt(unsigned char *command, uint32_t size, int retry, u
     int index = 0;
     byte expectedResponse[] = {0x01, 0x03, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     byte responseCmd[10];
-   // DEBUG_SERIAL.println(size);
+   // bl2DebugPrint(size);
     // espFlashLog.print("Data Packet, Seq:");
     // espFlashLog.print(seq);
     // espFlashLog.print(" Size:");
@@ -919,13 +1104,13 @@ bool espComm::espSendDataPkt(unsigned char *command, uint32_t size, int retry, u
         {
             if((millis()-now) > timeout)
             {
-                DEBUG_SERIAL.print("Data Packet Response Wait Timeout !");
+                bl2DebugPrint("Data Packet Response Wait Timeout !");
                 delay(100);
                 return false;
             }
             byte a = ESP_SERIAL.read();
-            // DEBUG_SERIAL.print(a,HEX);
-            //  DEBUG_SERIAL.print(" ");
+            // bl2DebugPrint(a,HEX);
+            //  bl2DebugPrint(" ");
             // espFlashLog.print(a, HEX);
             // espFlashLog.print(" ");
             if (a != 0xc0)
@@ -938,23 +1123,23 @@ bool espComm::espSendDataPkt(unsigned char *command, uint32_t size, int retry, u
             --cnt;
             if (cnt <= 0)
             {
-             //   DEBUG_SERIAL.println("Found C0");
+             //   bl2DebugPrint("Found C0");
                // espFlashLog.println();
                 if (compareResponse(expectedResponse, responseCmd, sizeof(expectedResponse), sizeof(responseCmd)) == true)
                 {
-                    //DEBUG_SERIAL.println("Response Matched");
+                    //bl2DebugPrint("Response Matched");
                     return true;
                 }
                 else
                 {
-                    DEBUG_SERIAL.println("Response Mismatch, Flash write failed !!");
+                    bl2DebugPrint("Response Mismatch, Flash write failed !!");
                     ESP_SERIAL.flush();
                     return false;
                 }
             }
         }
       //  espFlashLog.println();
-      //  DEBUG_SERIAL.println("");
+      //  bl2DebugPrint("");
         delay(100);
     }
     return false;
