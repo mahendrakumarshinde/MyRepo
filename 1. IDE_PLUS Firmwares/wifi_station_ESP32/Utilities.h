@@ -383,7 +383,11 @@ inline int httpsPostBigRequest(
     // Use WiFiClient class to create TCP connections
     //WiFiClient client;
     WiFiClientSecure client;
-    if(ssl_rootCA != NULL){
+    //if(ssl_rootCA != NULL){
+    if(ssl_rootCA == NULL){
+        //device should auto verify cert
+    }
+    else{
         client.setCACert(ssl_rootCA);
     }
     int connectResult = client.connect(endpointHost, endpointPort);

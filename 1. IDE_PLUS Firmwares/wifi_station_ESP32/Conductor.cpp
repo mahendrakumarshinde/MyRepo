@@ -744,13 +744,13 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                     }
                 }
             }
-            if((rawData->axis == 'X' || httpOEMStatusCode == 200) && accelRawDataHelper.httpsOEMConfigPresent && oemRootCAPresent){
+            if((rawData->axis == 'X' || httpOEMStatusCode == 200) && accelRawDataHelper.httpsOEMConfigPresent /*&& oemRootCAPresent*/){
                 while(RawdataHTTPretryCount < 3 ){
                     if((millis() - HTTPRawDataTimeout) > HTTPRawDataRetryTimeout){
                         HTTPRawDataTimeout = millis();
                         httpOEMStatusCode = httpsPostBigRequest(accelRawDataHelper.m_endpointHost_oem, accelRawDataHelper.m_endpointRoute_oem,
                                                         accelRawDataHelper.m_endpointPort_oem, (uint8_t*) &httpBuffer, 
-                                                        httpBufferPointer,"", ssl_oem_rootca_cert, HttpContentType::octetStream);            
+                                                        httpBufferPointer,"", NULL, HttpContentType::octetStream);            //Need to change here if OEM provides root certificate
 
                         // send HTTP status code back to the MCU
                         char httpOEMAckBuffer[1 + 4];      // axis + 3 digit HTTP status code + null terminator
