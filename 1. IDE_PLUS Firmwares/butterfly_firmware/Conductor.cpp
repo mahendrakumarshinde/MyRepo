@@ -7076,42 +7076,173 @@ void Conductor::otaFWValidation()
                 /*  Initialize OTA FW Validation retry count */
                 doOnceFWValid = false;
                 iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);
+
+                bool connectionMode = false;
+                char mqttConfig[510];
+                char httpConfig[510];
+
                 if(DOSFS.exists("MQTT.conf")){
                     JsonObject& config = configureJsonFromFlash("MQTT.conf",1);
+                    JsonVariant subConfig = config["mqtt"];
                     if(config.success()){
-                        int serverPort = config["mqtt"]["port"];
-                        bool connectionMode = config["mqtt"]["tls"];
-                        if(connectionMode == true){
-                            if(serverPort != 8883 && serverPort != 8884){
-                                char mqttConfig[510];
-                                sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\"}}",MQTT_DEFAULT_SERVER_IP,MQTT_DEFAULT_SERVER_PORT,MQTT_DEFAULT_USERNAME,MQTT_DEFAULT_PASSWORD);
+                        //char mqttConfig[510];
+                        m_mqttServerIp =  config["mqtt"]["mqttServerIP"].as<char*>();
+                        m_mqttServerPort = config["mqtt"]["port"].as<uint16_t>();
+                        m_mqttUserName =  config["mqtt"]["username"].as<char*>();
+                        m_mqttPassword =  config["mqtt"]["password"].as<char*>();
+
+                        //int serverPort = config["mqtt"]["port"];
+                        if(isJsonKeyPresent(subConfig,"tls") ){     
+                            connectionMode = config["mqtt"]["tls"];
+                            if(connectionMode == true){
+                                if(m_mqttServerPort != 8883 && m_mqttServerPort != 8884){
+                                    //char mqttConfig[510];
+                                    sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\",\"tls\":0}}",MQTT_DEFAULT_SERVER_IP,MQTT_DEFAULT_SERVER_PORT,MQTT_DEFAULT_USERNAME,MQTT_DEFAULT_PASSWORD);
+                                    if(debugMode){
+                                        debugPrint("Loading Un-Secured MQTT Config : ",false);debugPrint(mqttConfig);
+                                    }
+                                    processConfiguration(mqttConfig,true);
+                                    connectionMode = false;
+                                }
+                            }else if (connectionMode == false)
+                            {
+                                if(m_mqttServerPort == MQTT_DEFAULT_SERVER_PORT ){
+                                    //char mqttConfig[510];
+                                    sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\",\"tls\":0}}",MQTT_DEFAULT_SERVER_IP,MQTT_DEFAULT_SERVER_PORT,MQTT_DEFAULT_USERNAME,MQTT_DEFAULT_PASSWORD);
+                                    if(debugMode){
+                                        debugPrint("Loading Un-Secured Default MQTT Config : ",false);debugPrint(mqttConfig);
+                                    }
+                                    processConfiguration(mqttConfig,true);
+                                }else if(m_mqttServerPort == 8883 || m_mqttServerPort == 8884 ){
+                                    //char mqttConfig[510];
+                                    sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\",\"tls\":1}}",m_mqttServerIp,m_mqttServerPort,m_mqttUserName,m_mqttPassword);
+                                    if(debugMode){
+                                        debugPrint("Loading Un-Secured Default MQTT Config : ",false);debugPrint(mqttConfig);
+                                    }
+                                    processConfiguration(mqttConfig,true);
+                                    connectionMode = true;
+                                }
+                            }
+
+                        }
+                        else    // "tls" key not present in configurations
+                        {   
+                            // char mqttConfig[510];
+                            if(m_mqttServerPort == 8883 || m_mqttServerPort == 8884) {
+                                sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\",\"tls\":1}}",m_mqttServerIp,m_mqttServerPort,m_mqttUserName,m_mqttPassword);
                                 if(debugMode){
                                     debugPrint("Loading Secured MQTT Config : ",false);debugPrint(mqttConfig);
                                 }
                                 processConfiguration(mqttConfig,true);
-                            }
-                        }else if (connectionMode == false)
-                        {
-                            if(serverPort != MQTT_DEFAULT_SERVER_PORT ){
-                                char mqttConfig[510];
-                                sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\"}}",MQTT_DEFAULT_SERVER_IP,MQTT_DEFAULT_SERVER_PORT,MQTT_DEFAULT_USERNAME,MQTT_DEFAULT_PASSWORD);
+                            connectionMode = true;
+                            }else{
+                                sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\",\"tls\":0}}",m_mqttServerIp,m_mqttServerPort,m_mqttUserName,m_mqttPassword);
                                 if(debugMode){
-                                    debugPrint("Loading Un-Secured Default MQTT Config : ",false);debugPrint(mqttConfig);
+                                    debugPrint("Loading Un-Secured MQTT Config : ",false);debugPrint(mqttConfig);
                                 }
                                 processConfiguration(mqttConfig,true);
+                                connectionMode = false;
                             }
                         }
+                        }else {
+                        if(debugMode){
+                            debugPrint("Invalid MQTT.conf Json,using defaults ");
+                        }
+                        sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\",\"tls\":0}}",MQTT_DEFAULT_SERVER_IP,MQTT_DEFAULT_SERVER_PORT,MQTT_DEFAULT_USERNAME,MQTT_DEFAULT_PASSWORD);
+                        if(debugMode){
+                            debugPrint("Loading Un-Secured MQTT Config : ",false);debugPrint(mqttConfig);
+                        }
+                        processConfiguration(mqttConfig,true);
+
                     }
+                 }else if(! DOSFS.exists("MQTT.conf")){
+                    if(debugMode){
+                        debugPrint("MQTT.conf file not present,using defaults");
+                    }
+                    connectionMode = false;
                 }
-                if(DOSFS.exists("httpConfig.conf")){
-                    JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
-                    if(config.success()){
-                        int httpPort = config["httpConfig"]["port"];
+                if(!DOSFS.exists("httpConfig.conf")){
+                    //JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
+                    //if(config.success()){
+                        //int httpPort = config["httpConfig"]["port"];
                         // NOTE: If in future HTTPS port changes then need to update here. This impacts only during the validation
-                        if(httpPort != HTTP_DEFAULT_PORT){
-                            char httpConfig[510];
+                        //if(httpPort != HTTP_DEFAULT_PORT){
+                        //char httpConfig[510];
+                        if(connectionMode == true){
+                            //char httpConfig[510];
+                            sprintf(httpConfig,"{\"httpConfig\":{\"host\":\"%s\",\"port\":%d,\"path\":\"%s\",\"username\":\"%s\",\"password\":\"%s\",\"oauth\":\"%s\"}}",HTTP_DEFAULT_HOST,/*HTTP_DEFAULT_PORT*/443,HTTP_DEFAULT_PATH,HTTP_DEFAULT_USERNAME,HTTP_DEFAULT_PASSWORD,HTTP_DEFAULT_OUTH);
+                            debugPrint("Loading Secure Http Config : ",false);debugPrint(httpConfig);
+                            httpOtaValidation = true; // To avoid Reboot
+                            processConfiguration(httpConfig,true);
+                        }else if (connectionMode == false){
+                            //char httpConfig[510];
                             sprintf(httpConfig,"{\"httpConfig\":{\"host\":\"%s\",\"port\":%d,\"path\":\"%s\",\"username\":\"%s\",\"password\":\"%s\",\"oauth\":\"%s\"}}",HTTP_DEFAULT_HOST,HTTP_DEFAULT_PORT,HTTP_DEFAULT_PATH,HTTP_DEFAULT_USERNAME,HTTP_DEFAULT_PASSWORD,HTTP_DEFAULT_OUTH);
-                            debugPrint("Loading Default Secure Http Config : ",false);debugPrint(httpConfig);
+                            debugPrint("Loading Un-Secure Default Http Config : ",false);debugPrint(httpConfig);
+                            httpOtaValidation = true; // To avoid Reboot
+                            processConfiguration(httpConfig,true);
+                        }
+                   // }
+                }else if(DOSFS.exists("httpConfig.conf") ) {
+                    JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
+                    // if(config.success()){
+                    //     int httpPort = config["httpConfig"]["port"];
+                    //     // NOTE: If in future HTTPS port changes then need to update here. This impacts only during the validation
+                    //     if(otaConnectionMode == false){
+                    //         if(httpPort != HTTP_DEFAULT_PORT){
+                    //             char httpConfig[510];
+                    //             sprintf(httpConfig,"{\"httpConfig\":{\"host\":\"%s\",\"port\":%d,\"path\":\"%s\",\"username\":\"%s\",\"password\":\"%s\",\"oauth\":\"%s\"}}",HTTP_DEFAULT_HOST,HTTP_DEFAULT_PORT,HTTP_DEFAULT_PATH,HTTP_DEFAULT_USERNAME,HTTP_DEFAULT_PASSWORD,HTTP_DEFAULT_OUTH);
+                    //             debugPrint("Loading Default Secure Http Config : ",false);debugPrint(httpConfig);
+                    //             httpOtaValidation = true; // To avoid Reboot
+                    //             processConfiguration(httpConfig,true);
+                    //         }
+                    //     }else if(otaConnectionMode == true){
+                    //         //not implemented due to httpsPort is not fixed
+                    //        // if(httpPort != 443){  }
+                    //     }
+
+                    // }
+
+                    //char httpConfig[510];
+                    if(config.success()){
+                        m_httpHost =  config["httpConfig"]["host"].as<char*>();
+                        m_httpPort = config["httpConfig"]["port"].as<uint16_t>();
+                        m_httpPath = config["httpConfig"]["path"].as<char*>();
+                        m_httpUsername = config["httpConfig"]["username"].as<char*>();
+                        m_httpPassword = config["httpConfig"]["password"].as<char*>();
+                        m_httpOauth = config["httpConfig"]["oauth"].as<char*>();
+
+                        if(connectionMode == true){
+                            // if(m_httpPort == 443) {
+                            //     sprintf(httpConfig,"{\"httpConfig\":{\"host\":\"%s\",\"port\":%d,\"path\":\"%s\",\"username\":\"%s\",\"password\":\"%s\",\"oauth\":\"%s\"}}",m_httpHost,m_httpPort,m_httpPath,m_httpUsername,m_httpPassword,m_httpOauth);
+                            //     debugPrint("Loading Secure Http Config : ",false);debugPrint(httpConfig);
+                            //     httpOtaValidation = true; // To avoid Reboot
+                            //     processConfiguration(httpConfig,true);
+                            // }else {
+                                sprintf(httpConfig,"{\"httpConfig\":{\"host\":\"%s\",\"port\":%d,\"path\":\"%s\",\"username\":\"%s\",\"password\":\"%s\",\"oauth\":\"%s\"}}",m_httpHost,443,m_httpPath,m_httpUsername,m_httpPassword,m_httpOauth);
+                                debugPrint("Loading Secure Http Config : ",false);debugPrint(httpConfig);
+                                httpOtaValidation = true; // To avoid Reboot
+                                processConfiguration(httpConfig,true);
+                            //}
+                        }else if (connectionMode == false){
+                            //char httpConfig[510];
+                            sprintf(httpConfig,"{\"httpConfig\":{\"host\":\"%s\",\"port\":%d,\"path\":\"%s\",\"username\":\"%s\",\"password\":\"%s\",\"oauth\":\"%s\"}}",HTTP_DEFAULT_HOST,HTTP_DEFAULT_PORT,HTTP_DEFAULT_PATH,HTTP_DEFAULT_USERNAME,HTTP_DEFAULT_PASSWORD,HTTP_DEFAULT_OUTH);
+                            debugPrint("Loading Un-Secure Default Http Config : ",false);debugPrint(httpConfig);
+                            httpOtaValidation = true; // To avoid Reboot
+                            processConfiguration(httpConfig,true);
+                        }
+                    }else
+                    {
+                        if(debugMode){
+                            debugPrint("Invalid HTTP config json, using defaults");
+                        }
+                        if(connectionMode == true){
+                            sprintf(httpConfig,"{\"httpConfig\":{\"host\":\"%s\",\"port\":%d,\"path\":\"%s\",\"username\":\"%s\",\"password\":\"%s\",\"oauth\":\"%s\"}}",HTTP_DEFAULT_HOST,443,HTTP_DEFAULT_PATH,HTTP_DEFAULT_USERNAME,HTTP_DEFAULT_PASSWORD,HTTP_DEFAULT_OUTH);
+                            debugPrint("Loading Secure Default Http Config : ",false);debugPrint(httpConfig);
+                            httpOtaValidation = true; // To avoid Reboot
+                            processConfiguration(httpConfig,true);
+                        }else if (connectionMode == false){
+                            sprintf(httpConfig,"{\"httpConfig\":{\"host\":\"%s\",\"port\":%d,\"path\":\"%s\",\"username\":\"%s\",\"password\":\"%s\",\"oauth\":\"%s\"}}",HTTP_DEFAULT_HOST,HTTP_DEFAULT_PORT,HTTP_DEFAULT_PATH,HTTP_DEFAULT_USERNAME,HTTP_DEFAULT_PASSWORD,HTTP_DEFAULT_OUTH);
+                            debugPrint("Loading Un-Secure Default Http Config : ",false);debugPrint(httpConfig);
                             httpOtaValidation = true; // To avoid Reboot
                             processConfiguration(httpConfig,true);
                         }
@@ -7924,3 +8055,10 @@ void Conductor::addAdvanceFeature(JsonObject& destJson, uint8_t index , String* 
         destJson[id[i]] = value[i];
     }        
 }
+
+bool Conductor::isJsonKeyPresent(JsonObject &config,char* key){
+
+   if(config.containsKey(key)){ return true; }
+   else{ return false; 
+   }
+}   

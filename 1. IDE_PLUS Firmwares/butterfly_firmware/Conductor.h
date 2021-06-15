@@ -350,6 +350,7 @@ class Conductor
         void addAdvanceFeature(JsonObject& destJson, uint8_t index , String* id, float* value);
         static const uint8_t max_IDs = 10;
         String m_phase_ids[max_IDs];
+        bool isJsonKeyPresent(JsonObject &config,char* key);
     protected:
         MacAddress m_macAddress;
         /***** Hardware & power management *****/
@@ -430,6 +431,7 @@ class Conductor
         bool m_rlbkDowngrade = false;
         bool otaSendMsg = false;
         bool doOnceFWValid = false;
+        bool otaConnectionMode = false;
         int FWValidCnt = 0;
         char FW_Valid_State = 0;
         uint32_t otaInitWaitTimeout = 0;
