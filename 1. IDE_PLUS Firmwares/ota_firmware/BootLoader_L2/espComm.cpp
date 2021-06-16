@@ -36,8 +36,8 @@ uint16_t espComm::flash_esp32_verify(char* folderPath,char* fileName)
     for(int i=1;i<=20;++i)
     { 
         delay(100);
-        bl2DebugPrint(i*5);
-        bl2DebugPrint("%...");
+        bl2DebugPrint(i*5,false);
+        bl2DebugPrint("%...",false);
     }
     bl2DebugPrint("\nSending SYNC command to ESP32...");
     ret = esp_SendSyncCmd(10,10);
@@ -335,13 +335,12 @@ bool espComm::espBinWrite(char *folderName,char *fileName)
                     FlashAdd[22] = (uint8_t)0x80;
                     FlashAdd[23] = (uint8_t)0x00;
                     FlashAdd[24] = (uint8_t)0x00;
+
                     md5Hash[9] = (uint8_t)0x00;
                     md5Hash[10] = (uint8_t)0x80;
                     md5Hash[11] = (uint8_t)0x00;
                     md5Hash[12] = (uint8_t)0x00;
-                }    
-
-
+                }
                 md5Hash[13] = (uint8_t)(fileSize & 0x000000FF);
                 md5Hash[14] = (uint8_t)((fileSize & 0x0000FF00) >> 8);
                 md5Hash[15] = (uint8_t)((fileSize & 0x00FF0000) >> 16);
@@ -591,7 +590,7 @@ void espComm:: espReadMD5(char* TEST_FILE, char *md5Result)
     if (MD5_value) {
       memset(md5Result, 0x00, 64);
       int readLen=MD5_value.readBytesUntil('\0', md5Result, 64);
-      bl2DebugPrint("Received MD5 value: ");bl2DebugPrint(md5Result);
+      bl2DebugPrint("Received MD5 value: ",false);bl2DebugPrint(md5Result);
       byte lastChar = strlen(md5Result);
       md5Result[lastChar] = '\0'; 
       MD5_value.close(); 

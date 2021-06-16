@@ -61,9 +61,9 @@ void setup()
   ledManager.stopColorOverride();
 
   ESP_SERIAL.begin(115200);
-  #if DEBUG_ENABLE == 1
+#if DEBUG_ENABLE == 1
 	DEBUG_SERIAL.begin(115200);
-  #endif
+#endif
 
 	bl2DebugPrint("=================================");
 	bl2DebugPrint("     IU Bootloader-2             ");
@@ -77,7 +77,7 @@ void setup()
 		bl2DebugPrint("Memory access failed, or not present");
     // don't do anything more:
 	}
-    //bl2DebugPrint("Memory initialized.");
+//	bl2DebugPrint("Memory initialized.");
   ledManager.stopColorOverride();
    
   ledManager.showStatus(&STATUS_OTA_UPGRADE);
@@ -89,7 +89,6 @@ void setup()
   bl2DebugPrint("Flag OTAPEND_STS_3 : ",false);bl2DebugPrint(iu_all_flags[MFW_VER*8]);
   bl2DebugPrint("Flag SELF_UPGRDE_4 : ",false);bl2DebugPrint(iu_all_flags[SELF_UPGRD_STATUS_MSG_LOC*8]);
   delay(100);
-  
 }
 
 
@@ -205,7 +204,6 @@ void loop()
                 update_flag(MFW_FLASH_FLAG,OTA_FW_FILE_CHKSUM_ERROR); // File error
                 break;
               }
-
               retVal3 = esp32.flash_esp32_verify(ESP_ROLLBACK_FIRMWARE,ESP_FIRMWARE_FILENAME);
               delay(2000);
               if(retVal3 == RETURN_SUCESS)
@@ -223,7 +221,7 @@ void loop()
                 bl2DebugPrint("Rollback of WiFi FW Flashing Failed !!");
               }
               //delay(2000);
-              bl2DebugPrint("Setting MFW Flag");
+//              bl2DebugPrint("Setting MFW Flag");
               if(retVal3 == RETURN_SUCESS){
                 update_flag(MFW_FLASH_FLAG,OTA_FW_SUCCESS);
                 // while reading, flag loc x 8 is performed, because all flags are stored at 8 byte interval in memory
@@ -265,7 +263,6 @@ void loop()
               if(checkWifiFWMD5Hash(ESP_FORCED_ROLLBACK_FIRMWARE1,ESP_MFW_3_SUM) == false)
               {
                 bl2DebugPrint("Error : WiFi FW File check failed !!");
-                bl2DebugPrint("Error : WiFi FW File check failed !!");
                 update_flag(MFW_FLASH_FLAG,OTA_FW_FILE_CHKSUM_ERROR); // File error
                 break;
               }
@@ -287,7 +284,6 @@ void loop()
                 update_flag(MFW_FLASH_FLAG,OTA_FW_FILE_CHKSUM_ERROR); // File error
                 break;
               }
-            
               retVal3 = esp32.flash_esp32_verify(ESP_FORCED_ROLLBACK_FIRMWARE,ESP_FIRMWARE_FILENAME);
               delay(2000);
               if(retVal3 == RETURN_SUCESS)
@@ -312,7 +308,7 @@ void loop()
                 if(iu_all_flags[SELF_UPGRD_STATUS_MSG_LOC*8] == OTA_FW_DOWNLOAD_SUCCESS) {
                   bl2DebugPrint("Self upgrade success - backupfolder ");  
                   update_flag(SELF_UPGRD_STATUS_MSG_LOC,SELF_FW_UPGRADE_SUCCESS); //SELF_FW_UPGRADE_SUCCESS
-                } 
+                }
               } else if (retVal3 == 2) {
                 bl2DebugPrint("Error : File Checksum mismatch! Download file(s) again!!");
                 update_flag(MFW_FLASH_FLAG,OTA_FW_FILE_CHKSUM_ERROR); // File error
@@ -358,12 +354,12 @@ bool checkWifiFWMD5Hash(char *ESP_FW_FILE,char *ESP_MD5_FILE)
       bl2DebugPrint("WiFi FW MD5 Check Fail: ");
       return false;
     }    
-    bl2DebugPrint("WiFi FW MD5 Calculated value: ");
+    bl2DebugPrint("WiFi FW MD5 Calculated value: ",false);
     bl2DebugPrint(calculatedMD5Sum);
     //bl2DebugPrint ("Length = "); bl2DebugPrint(strlen(calculatedMD5Sum));
 
     Read_MD5(ESP_MD5_FILE, receivedMD5Sum);
-    bl2DebugPrint("WiFi FW MD5 Read value: ");
+    bl2DebugPrint("WiFi FW MD5 Read value: ",false);
     bl2DebugPrint(receivedMD5Sum);
     //bl2DebugPrint ("Length = "); bl2DebugPrint(strlen(receivedMD5Sum));
     if (strcmp(receivedMD5Sum, calculatedMD5Sum) == 0) 
@@ -392,12 +388,12 @@ bool checkMainFWMD5Hash(char *STM_FW_FILE,char *STM_MD5_FILE)
       return false;
     }
     
-    bl2DebugPrint("Main FW MD5 Calculated value: ");
+    bl2DebugPrint("Main FW MD5 Calculated value: ",false);
     bl2DebugPrint(calculatedMD5Sum);
     //bl2DebugPrint ("Length = "); bl2DebugPrint(strlen(calculatedMD5Sum));
 
     Read_MD5(STM_MD5_FILE, receivedMD5Sum);
-    bl2DebugPrint("Main FW MD5 Read value: ");
+    bl2DebugPrint("Main FW MD5 Read value: ",false);
     bl2DebugPrint(receivedMD5Sum);
     //bl2DebugPrint ("Length = "); bl2DebugPrint(strlen(receivedMD5Sum));
     if (strcmp(receivedMD5Sum, calculatedMD5Sum) == 0) 
@@ -508,7 +504,7 @@ uint16_t Flash_STM_File(char* readFileName)
     return FILE_OPEN_FAILED;
     
   }
-  bl2DebugPrint("File Size is ="); bl2DebugPrint(dataFileSize);
+  bl2DebugPrint("File Size is =",false); bl2DebugPrint(dataFileSize);
   if(!stm32l4_flash_unlock() ){
     //  bl2DebugPrint("FLASH STM32_FLASH_UNLOCK_FAILED !!!");
       //return STM32_FLASH_UNLOCK_FAILED; 
@@ -534,8 +530,8 @@ uint16_t Flash_STM_File(char* readFileName)
     for (int i=1; i <= sectorCnt; i++) {
     ledManager.updateColors();
     if ((bytesRead=iu_flash_read_file_chunk(&dataFileFP, dataBuffer, TEST_CHUNK_SIZE, i)) > 0) {
-      bl2DebugPrint("Main FW Sector Write: "); 
-      bl2DebugPrint(i);bl2DebugPrint("/");bl2DebugPrint(sectorCnt);
+      bl2DebugPrint("Main FW Sector Write: ",false); 
+      bl2DebugPrint(i,false);bl2DebugPrint("/",false);bl2DebugPrint(sectorCnt);
       //bl2DebugPrint((char*)dataBuffer);
       if(!stm32l4_flash_program((uint32_t)(MFW_ADDRESS + ((i-1)*TEST_CHUNK_SIZE)), dataBuffer, bytesRead) ){
           // Retry could be required ?
@@ -580,9 +576,9 @@ uint16_t Flash_Verify_STM_File(char* INPUT_BIN_FILE,char* INPUT_MD5_FILE)
  */
 void update_flag(uint8_t flag_addr , uint8_t flag_data)
 {
-    bl2DebugPrint("Updating flag:");
-    bl2DebugPrint(flag_addr);
-    bl2DebugPrint(" Val:");
+    bl2DebugPrint("Updating flag:",false);
+    bl2DebugPrint(flag_addr,false);
+    bl2DebugPrint(" Val:",false);
     bl2DebugPrint(flag_data); 
  
     uint8_t flag_addr_temp = flag_addr * 8;
@@ -613,7 +609,7 @@ uint8_t MD5_sum_file(char* readFileName, char *md5Result)
     bl2DebugPrint("Error Opening file.");
     return  FILE_OPEN_FAILED;
   }
-  bl2DebugPrint("File Size is ="); bl2DebugPrint(dataFileSize);
+  bl2DebugPrint("File Size is =",false); bl2DebugPrint(dataFileSize);
 
   iuMD5 myMD5inst;
   MD5_CTX iuCtx;
@@ -649,7 +645,7 @@ void Read_MD5(char* TEST_FILE, char *md5Result)
     if (MD5_value) {
       memset(md5Result, 0x00, 64);
       int readLen=MD5_value.readBytesUntil('\0', md5Result, 64);
-      bl2DebugPrint("Received MD5 value: ");bl2DebugPrint(md5Result);
+      bl2DebugPrint("Received MD5 value: ",false);bl2DebugPrint(md5Result);
       byte lastChar = strlen(md5Result);
       md5Result[lastChar] = '\0'; 
       MD5_value.close(); 
@@ -672,7 +668,7 @@ uint8_t Flash_MD5_Sum(char* readFileName, char *md5Result)
     return FILE_OPEN_FAILED;
   }
 //  iu_flash_close_file(&dataFileFP);
-  bl2DebugPrint("File Size is ="); bl2DebugPrint(dataFileSize);
+  bl2DebugPrint("File Size is =",false); bl2DebugPrint(dataFileSize);
   delay(1000);
 
   uint8_t *bytes = (uint8_t *)MFW_ADDRESS;
@@ -686,7 +682,7 @@ uint8_t Flash_MD5_Sum(char* readFileName, char *md5Result)
 
   memset(md5Result, 0x00, 64);
   strcpy(md5Result, md5str);
-  bl2DebugPrint("MD5 sum of Flash : "); bl2DebugPrint(md5str);
+  bl2DebugPrint("MD5 sum of Flash : ",false); bl2DebugPrint(md5str);
   iu_flash_close_file(&dataFileFP);
 //  Need to free the md5str that was allocated by make_digest()
   free(md5str);

@@ -24,6 +24,7 @@ const char BOOTLOADER2_VERSION[8] = "2.1.0";
 #define ESP_MFW_1_SUM                   "iuTempFirmware/vEdge_wifi.md5"
 #define ESP_MFW_2_SUM                   "iuRollbackFirmware/vEdge_wifi.md5"
 #define ESP_MFW_3_SUM                   "iuBackupFirmware/vEdge_wifi.md5"
+
 #define ESP_TEMP_BOOT_APP_BIN           "iuTempFirmware/vEdge_wifi_boot.bin"
 #define ESP_TEMP_BOOT_LODR_BIN          "iuTempFirmware/vEdge_wifi_bootloader.bin"
 #define ESP_TEMP_PART_BIN               "iuTempFirmware/vEdge_wifi_partition.bin"
@@ -44,7 +45,6 @@ const char BOOTLOADER2_VERSION[8] = "2.1.0";
 #define ESP_BKUP_BOOT_APP_SUM           "iuBackupFirmware/vEdge_wifi_boot.md5"
 #define ESP_BKUP_BOOT_LODR_SUM          "iuBackupFirmware/vEdge_wifi_bootloader.md5"
 #define ESP_BKUP_PART_SUM               "iuBackupFirmware/vEdge_wifi_partition.md5"
-
 
 #define ESP_MAIN_FIRMWARE               "iuTempFirmware"
 #define ESP_ROLLBACK_FIRMWARE           "iuRollbackFirmware"
@@ -86,13 +86,12 @@ const char BOOTLOADER2_VERSION[8] = "2.1.0";
 #define OTA_PEND_STATUS_MSG_LOC         3  // (0x080FF810)  reuse of // #define MFW_VER                 3
 #define SELF_UPGRD_STATUS_MSG_LOC       4  // (0x080FF820)  reuse of // #define FW_VALIDATION           4
 
-
 // ESP Status Codes
 
-#define ESP_FW_VER          7
-#define ESP_FW_UPGRAD       8
-#define ESP_RUNNING_VER     9
-#define ESP_ROLLBACK        10
+#define ESP_FW_VER      7
+#define ESP_FW_UPGRAD   8
+#define ESP_RUNNING_VER 9
+#define ESP_ROLLBACK    10
 
 
 // File Read Write Return Codes
