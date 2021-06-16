@@ -18,7 +18,7 @@ const char* fingerprints_Z;
 
 // Modbus Streaming Features buffer
 float modbusFeaturesDestinations[8];
-
+uint8_t velMaxSampleCount = 0;
 int m_temperatureOffset;
 int m_audioOffset;
         
