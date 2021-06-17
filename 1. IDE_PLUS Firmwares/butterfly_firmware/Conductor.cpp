@@ -7076,28 +7076,28 @@ void Conductor::otaFWValidation()
                 /*  Initialize OTA FW Validation retry count */
                 doOnceFWValid = false;
                 iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);
-
+               
                 bool connectionMode = false;
                 char mqttConfig[510];
                 char httpConfig[510];
-
+                                
                 if(DOSFS.exists("MQTT.conf")){
                     JsonObject& config = configureJsonFromFlash("MQTT.conf",1);
                     JsonVariant subConfig = config["mqtt"];
+                    
                     if(config.success()){
-                        //char mqttConfig[510];
                         m_mqttServerIp =  config["mqtt"]["mqttServerIP"].as<char*>();
                         m_mqttServerPort = config["mqtt"]["port"].as<uint16_t>();
                         m_mqttUserName =  config["mqtt"]["username"].as<char*>();
                         m_mqttPassword =  config["mqtt"]["password"].as<char*>();
-
+                    
                         //int serverPort = config["mqtt"]["port"];
                         if(isJsonKeyPresent(subConfig,"tls") ){     
                             connectionMode = config["mqtt"]["tls"];
                             if(connectionMode == true){
                                 if(m_mqttServerPort != 8883 && m_mqttServerPort != 8884){
                                     //char mqttConfig[510];
-                                    sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\",\"tls\":0}}",MQTT_DEFAULT_SERVER_IP,MQTT_DEFAULT_SERVER_PORT,MQTT_DEFAULT_USERNAME,MQTT_DEFAULT_PASSWORD);
+                                    sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\",\"tls\":0}}",m_mqttServerIp,m_mqttServerPort,m_mqttUserName,m_mqttPassword);
                                     if(debugMode){
                                         debugPrint("Loading Un-Secured MQTT Config : ",false);debugPrint(mqttConfig);
                                     }
@@ -7112,7 +7112,7 @@ void Conductor::otaFWValidation()
                                     }
                                     processConfiguration(mqttConfig,true);
                                     connectionMode = true;
-                                }    
+                                }
                             }else if (connectionMode == false)
                             {
                                 if(m_mqttServerPort == MQTT_DEFAULT_SERVER_PORT ){
@@ -7132,18 +7132,18 @@ void Conductor::otaFWValidation()
                                     connectionMode = true;
                                 }
                             }
-
+                            
                         }
                         else    // "tls" key not present in configurations
                         {   
-                            // char mqttConfig[510];
+                            //char mqttConfig[510];
                             if(m_mqttServerPort == 8883 || m_mqttServerPort == 8884) {
                                 sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\",\"tls\":1}}",m_mqttServerIp,m_mqttServerPort,m_mqttUserName,m_mqttPassword);
                                 if(debugMode){
                                     debugPrint("Loading Secured MQTT Config : ",false);debugPrint(mqttConfig);
                                 }
                                 processConfiguration(mqttConfig,true);
-                            connectionMode = true;
+                                connectionMode = true;
                             }else{
                                 sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\",\"tls\":0}}",m_mqttServerIp,m_mqttServerPort,m_mqttUserName,m_mqttPassword);
                                 if(debugMode){
@@ -7153,18 +7153,19 @@ void Conductor::otaFWValidation()
                                 connectionMode = false;
                             }
                         }
-                        }else {
+                        
+                    }else {
                         if(debugMode){
                             debugPrint("Invalid MQTT.conf Json,using defaults ");
                         }
                         sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\",\"tls\":0}}",MQTT_DEFAULT_SERVER_IP,MQTT_DEFAULT_SERVER_PORT,MQTT_DEFAULT_USERNAME,MQTT_DEFAULT_PASSWORD);
                         if(debugMode){
-                                debugPrint("Loading Default Un-Secured MQTT Config : ",false);debugPrint(mqttConfig);
-                            }
+                            debugPrint("Loading Default Un-Secured MQTT Config : ",false);debugPrint(mqttConfig);
+                        }
                         processConfiguration(mqttConfig,true);
-
+                        
                     }
-                 }else if(! DOSFS.exists("MQTT.conf")){
+                }else if(! DOSFS.exists("MQTT.conf")){
                     if(debugMode){
                         debugPrint("MQTT.conf file not present,using defaults");
                     }
@@ -7212,7 +7213,7 @@ void Conductor::otaFWValidation()
                     //         //not implemented due to httpsPort is not fixed
                     //        // if(httpPort != 443){  }
                     //     }
-
+                
                     // }
 
                     //char httpConfig[510];
@@ -7233,7 +7234,7 @@ void Conductor::otaFWValidation()
                             // }else {
                                 sprintf(httpConfig,"{\"httpConfig\":{\"host\":\"%s\",\"port\":%d,\"path\":\"%s\",\"username\":\"%s\",\"password\":\"%s\",\"oauth\":\"%s\"}}",m_httpHost,m_httpPort,m_httpPath,m_httpUsername,m_httpPassword,m_httpOauth);
                                 if(debugMode){
-                                    debugPrint("Loading Secure Http Config : ",false);debugPrint(httpConfig);
+                                    debugPrint("Loading Secure Http Config from file : ",false);debugPrint(httpConfig);
                                 }
                                 httpOtaValidation = true; // To avoid Reboot
                                 processConfiguration(httpConfig,true);
@@ -7242,7 +7243,7 @@ void Conductor::otaFWValidation()
                             //char httpConfig[510];
                             sprintf(httpConfig,"{\"httpConfig\":{\"host\":\"%s\",\"port\":%d,\"path\":\"%s\",\"username\":\"%s\",\"password\":\"%s\",\"oauth\":\"%s\"}}",m_httpHost,m_httpPort,m_httpPath,m_httpUsername,m_httpPassword,m_httpOauth);
                             if(debugMode){
-                                debugPrint("Loading Un-Secure Default Http Config : ",false);debugPrint(httpConfig);
+                                debugPrint("Loading Un-secure Http Config from file : ",false);debugPrint(httpConfig);
                             }
                             httpOtaValidation = true; // To avoid Reboot
                             processConfiguration(httpConfig,true);
@@ -7268,6 +7269,7 @@ void Conductor::otaFWValidation()
                             //processConfiguration(httpConfig,true);
                         }
                     }
+                    
                 }
                 if (loopDebugMode) debugPrint("OTA FW Validation Successful. Rebooting device....");
                 delay(2000);

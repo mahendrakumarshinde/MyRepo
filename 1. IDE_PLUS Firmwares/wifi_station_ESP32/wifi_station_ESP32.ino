@@ -91,14 +91,13 @@ void setup()
     mqttConnectionMode = iuWiFiFlash.readMemory(CONNECTION_MODE);
     //Serial.print("connection Mode After : ");Serial.println(mqttConnectionMode);
     conductor.m_secure = mqttConnectionMode;
-
+    
     // Prepare to receive MQTT messages
-        if(mqttConnectionMode == UNSECURED){
+    if(mqttConnectionMode == UNSECURED){
         mqttHelper.nonSecureClient.setCallback(mqttNewMessageCallback);
     }else if (mqttConnectionMode == SECURED){
         mqttHelper.client.setCallback(mqttNewMessageCallback);
     }
-
     // mqttHelper.setOnConnectionCallback(onMQTTConnection);
     mqttHelper.setOnConnectionCallback(getAllConfig);           // Once the MQTT client connected 
     delay(100);
@@ -110,8 +109,6 @@ void setup()
     // Set the common url json if file not present
     conductor.setMQTTConfig();
     conductor.setHTTPConfig();
-    conductor.setCertificateManagerHttpEndpoint();
-    //Configure the Diagnostic HTTP/HTTPS Endpoint
     // TODO : Use unsecure flag here condition check required based on EEPROM flag
     if(iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED) {
         conductor.setCertificateManagerHttpEndpoint();
@@ -122,13 +119,12 @@ void setup()
         (conductor.activeCertificates == 1 && iuWiFiFlash.isFilePresent(IUESPFlash::CFG_HTTPS_OEM_ROOTCA1))){
                 conductor.oemRootCAPresent = true;
         }
+        conductor.espResetCount = iuWiFiFlash.readMemory(ESP_RESET_ADDRESS);
+        conductor.certificateDownloadStatus = iuWiFiFlash.readMemory(CERT_DOWNLOAD_STATUS);
     }
-    conductor.espResetCount = iuWiFiFlash.readMemory(ESP_RESET_ADDRESS);
-    conductor.certificateDownloadStatus = iuWiFiFlash.readMemory(CERT_DOWNLOAD_STATUS);
     conductor.setWiFiConfig();
     conductor.sendWiFiConfig();
 }
-
 /**
  * Unless there is a connection attempt going on, the loop typically takes
  * ~ 1ms to complete, without accounting for the delay at the end.

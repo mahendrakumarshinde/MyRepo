@@ -669,7 +669,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             if(iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED ){
 
             //Apply the OEM rootCA cert
-            memset(ssl_rootca_cert,0x00,sizeof(ssl_rootca_cert));
+                memset(ssl_rootca_cert,0x00,sizeof(ssl_rootca_cert));
                 memset(ssl_oem_rootca_cert,0x00,sizeof(ssl_oem_rootca_cert));
                 //Apply the rootCA cert
                 if(activeCertificates == 0){
@@ -1015,14 +1015,15 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             StaticJsonBuffer<512> JsonBuffer;
             JsonObject& certConfig = iuWiFiFlash.loadConfigJson(IUESPFlash::CFG_STATIC_CERT_ENDPOINT,JsonBuffer);
             bool validConfig = certConfig.success();
-            //String certConfigChar;
-            //certConfig.printTo(certConfigChar);
+            // String certConfigChar;
+            // certConfig.printTo(certConfigChar);
             //config.prettyPrintTo(Serial);
             if (validConfig)
-            {
+            {   
                 char certUrlConfig[256];
                 sprintf(certUrlConfig,"CERT URL : %s:%d%s",certConfig["certUrl"]["host"].as<char*>(),certConfig["certUrl"]["port"].as<int>(),certConfig["certUrl"]["path"].as<char*>()  );//certConfigChar.c_str());
                 hostSerial.sendMSPCommand(MSPCommand::SEND_CERT_DWL_CFG,certUrlConfig);
+                publishDiagnostic(certUrlConfig,sizeof(certUrlConfig));
             }
             JsonObject& diagConfig = iuWiFiFlash.loadConfigJson(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT,JsonBuffer);
             bool validDigConfig = diagConfig.success();
@@ -1035,6 +1036,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 hostSerial.sendMSPCommand(MSPCommand::SEND_CERT_DIG_CFG,diagUrlConfig);
                 publishDiagnostic(diagUrlConfig,sizeof(diagUrlConfig));
             }
+            
             break;
         }
         case MSPCommand::READ_CERTS:
