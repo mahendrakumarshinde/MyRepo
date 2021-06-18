@@ -2287,6 +2287,7 @@ void Conductor::configureMainOptions(JsonVariant &config)
     value = config["DSP"];
     if(value.success()){
         m_mainFeatureGroup->setDataSendPeriod(value.as<uint16_t>());
+        dataSendingPeriod =  (uint32_t) (value.as<int>());
         // NOTE: Older firmware device will not set this parameter even if configJson contains it.
     }
     value = config["DDSP"];
@@ -2295,7 +2296,8 @@ void Conductor::configureMainOptions(JsonVariant &config)
     }
     value = config["FDSP"];
     if(value.success()){
-        fresPublishPeriod = (uint32_t) (value.as<int>()) * 1000;
+        //fresPublishPeriod = (uint32_t) (value.as<int>()) * 1000;
+        fresPublishPeriod = dataSendingPeriod ;
     }
     value = config["DIG"];
     if(value.success()){
@@ -2527,6 +2529,7 @@ void Conductor::processCommand(char *buff)
                 delay(500);
                 if (m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE) {
                     rawDataRequest();
+                    prepareFFTMetaData();
                     // startRawDataSendingSession(); // Will be handled in the main loop
                 } else if (m_streamingMode == StreamingMode::ETHERNET) {
                     sendAccelRawData(0);  // Axis X
@@ -5829,6 +5832,7 @@ void Conductor::periodicSendAccelRawData()
         delay(500);
         if (m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE) {
             rawDataRequest();
+            prepareFFTMetaData();
             // startRawDataSendingSession();
         } else if (m_streamingMode == StreamingMode::ETHERNET) {
             sendAccelRawData(0);
@@ -6103,6 +6107,7 @@ bool Conductor::setFFTParams() {
                 FFTConfiguration::currentLSMgRange = FFTConfiguration::DEFAULT_LSM_G_RANGE;
             }
             iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
+            gRange_metaData = FFTConfiguration::currentLSMgRange;
             if(config.containsKey("lowCutOffFreq")){
                 FFTConfiguration::currentLowCutOffFrequency = config["lowCutOffFreq"];
             }else{
@@ -6126,6 +6131,7 @@ bool Conductor::setFFTParams() {
                 FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_KNX_G_RANGE;
             }
             iuAccelerometerKX222.setGrange(FFTConfiguration::currentKNXgRange);
+            gRange_metaData = FFTConfiguration::currentKNXgRange;
             if(config.containsKey("lowCutOffFreq")){
                 FFTConfiguration::currentLowCutOffFrequency = config["lowCutOffFreq"];
             }else{
@@ -6147,6 +6153,7 @@ bool Conductor::setFFTParams() {
             setSensorStatus(SensorStatusCode::LSM_ABS);
             FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_KNX_G_RANGE;
             iuAccelerometerKX222.setGrange(FFTConfiguration::currentKNXgRange);
+            gRange_metaData = FFTConfiguration::currentKNXgRange;
         }else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (!iuAccelerometerKX222.kionixPresence) && (iuAccelerometer.lsmPresence)){
             debugPrint(F("KIONIX Absent & LSM set"));
             iuAccelerometer.setSamplingRate(iuAccelerometer.defaultSamplingRate);
@@ -6157,6 +6164,7 @@ bool Conductor::setFFTParams() {
             FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
             setSensorStatus(SensorStatusCode::KNX_ABS);
             FFTConfiguration::currentLSMgRange = FFTConfiguration::DEFAULT_LSM_G_RANGE;
+            gRange_metaData = FFTConfiguration::currentLSMgRange;
             iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
         }
         else{
@@ -6194,6 +6202,7 @@ bool Conductor::setFFTParams() {
                 FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
                 FFTConfiguration::currentLSMgRange = FFTConfiguration::DEFAULT_LSM_G_RANGE;
                 iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
+                gRange_metaData = FFTConfiguration::currentLSMgRange;
             }else if(iuAccelerometerKX222.kionixPresence){
                 conductor.setSensorStatus(conductor.SensorStatusCode::KNX_DEFAULT); // TO DO based on hardware identifier
                 FFTConfiguration::currentSamplingRate = iuAccelerometerKX222.defaultSamplingRate;
@@ -6202,6 +6211,7 @@ bool Conductor::setFFTParams() {
                 FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
                 FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_KNX_G_RANGE;
                 iuAccelerometerKX222.setGrange(FFTConfiguration::currentKNXgRange);
+                gRange_metaData = FFTConfiguration::currentKNXgRange;
             }else{
                 conductor.setSensorStatus(conductor.SensorStatusCode::SEN_ABS);
             }
@@ -6267,6 +6277,34 @@ bool Conductor::configureRPM(JsonVariant &config){
   return success;
 
 }
+
+/*
+*Prepare the json of RPM when the getFFT request is received
+*
+*/
+
+void Conductor::prepareFFTMetaData()
+{
+    // String jsonChar;
+    // StaticJsonBuffer<300> outputJSONbuffer;
+    // JsonObject& root = outputJSONbuffer.createObject(); 
+    // root["deviceIdentifier"] = m_macAddress.toString().c_str();
+    // double timeStamp = getDatetime();
+    // root["timestamp"] = timeStamp;
+    // root["rpm"] = featureDestinations::buff[featureDestinations::basicfeatures::rpm];
+    // root["gRange"] = currentgRange;
+    // root.printTo(Serial);
+    // root.printTo(jsonChar);
+    char metaData[200];
+    snprintf(metaData, 200, "{\"deviceIdentifier\":\"%s\",\"timestamp\":%.3f,\"rpm\":%f,\"gRange\":%d}",m_macAddress.toString().c_str(),rawDataRecordedAt,
+                                    featureDestinations::buff[featureDestinations::basicfeatures::rpm],gRange_metaData);
+    iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_METADATA,metaData);      //replace timestamp variable
+    if(loopDebugMode){
+    debugPrint("metaData : ",false);   //add in debugmode
+    debugPrint(metaData);
+    }
+}    
+
 
 /* =============================================================================
     Debugging
