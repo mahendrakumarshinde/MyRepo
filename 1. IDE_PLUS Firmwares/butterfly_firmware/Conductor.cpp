@@ -5345,7 +5345,7 @@ int Conductor::checkFingerprintsState(){
     }
     }
     else{
-        if(debugMode){debugPrint(" Failed to read spectThresh.conf file");}
+        //if(debugMode){debugPrint(" Failed to read spectThresh.conf file");}
         }    
 }
 
