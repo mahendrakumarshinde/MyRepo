@@ -659,9 +659,9 @@ void AudioDBComputer::m_specializedCompute()
     //result = map(result, 30, 120, 60, 120);   // mapped audio between 60 - 120 dB
     //Serial.print("Audio dB :");Serial.println(result);
      
-    if(result <= 58.0){     // Lower Cutoff
-      result = 58.0 + random(1,4);
-    }
+    // if(result <= 58.0){     // Lower Cutoff
+    //   result = 58.0 + random(1,4);
+    // }
     if(result >= audioHigherCutoff){    //Higher Cutoff
       result = audioHigherCutoff  + random(1,4) ;
     }

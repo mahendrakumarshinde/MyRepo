@@ -660,8 +660,9 @@ void setup()
             // if(DOSFS.exists("sensorConfig.conf")){
         bool sensorStatus = conductor.configureFromFlash(IUFlash::CFG_SENSOR_CONFIG) ;
         if(sensorStatus){ 
-            debugPrint("sensorConfig.conf file exists");
-            } 
+            if(debugMode){
+            debugPrint("sensorConfig.conf file exists");}
+        } 
         else
         {
             conductor.m_devDiagErrCode |= DEVICE_DIAG_SENS_ERR1;
