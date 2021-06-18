@@ -187,6 +187,9 @@ class Conductor
         static const int MAX_SPECTRAL_FEATURE_COUNT = 10;
         char* spectralFeaturesKeys[MAX_SPECTRAL_FEATURE_COUNT];
         String m_spectralFeatureResult;
+        int spectralState;
+        int checkFingerprintsState();
+        bool spectralStateSuccess;
         uint32_t lastUpdated = 0;
         uint32_t digLastPublish = 0;
         uint32_t fresLastPublish = 0;
@@ -316,7 +319,8 @@ class Conductor
         void cleanFailedSegmentedMessage(int messageID);
         void sendSegmentedMessageResponse(int messageID);
 
-        bool setSensorConfig(char* filename);
+        //bool setSensorConfig(char* filename);
+        bool setSensorConfig(JsonVariant &config);
         bool setEthernetConfig(char* filename);
         uint8_t processWiFiRadioModes(char* buff);
         /***** HTTP raw data sending 
@@ -341,7 +345,8 @@ class Conductor
         uint32_t RawDataTotalTimeout = 0;
         double rawDataRecordedAt, lastPacketSentToESP;
         IUMessageFormat::rawDataPacket rawData;
-
+        void prepareFFTMetaData();      //prepareFFTMetadata()
+        int gRange_metaData;      //currentgRange_metaData
         //Send Sensor error codes
         void setSensorStatus(SensorStatusCode errorCode);
         void sendSensorStatus();
@@ -394,6 +399,7 @@ class Conductor
         void computeAdvanceFeature();
         void addAdvanceFeature(JsonObject& destJson, uint8_t index , String* id, float* value);
         bool isWifiConnected() { return m_wifiConnected; }
+        bool isJsonKeyPresent(JsonObject &config,char* key);
         static const uint8_t max_IDs = 10;
         String m_phase_ids[max_IDs];
         uint32_t m_devDiagErrCode = 0;        
@@ -401,6 +407,7 @@ class Conductor
     #ifdef DEVIDFIX_TESTSTUB
         uint8_t flagval2 = 0;
     #endif
+    
     protected:
         MacAddress m_macAddress;
         MacAddress m_macAddressBle;
@@ -439,7 +446,8 @@ class Conductor
         const char* m_mqttServerIp = MQTT_DEFAULT_SERVER_IP;
         uint16_t m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
         const char* m_mqttUserName = MQTT_DEFAULT_USERNAME;
-        const char* m_mqttPassword = MQTT_DEFAULT_ASSWORD;
+        const char* m_mqttPassword = MQTT_DEFAULT_PASSWORD;
+        bool m_connectionType = false;
         // bool m_tls_enabled = MQTT_DEFAULT_TLS_FLAG;
         //httpendpoint configuration
         const char* m_httpHost  = HTTP_DEFAULT_HOST;
@@ -482,6 +490,7 @@ class Conductor
         bool m_rlbkDowngrade = false;
         bool otaSendMsg = false;
         bool doOnceFWValid = false;
+        bool otaConnectionMode = false;
         int FWValidCnt = 0;
         char FW_Valid_State = 0;
         uint32_t otaInitWaitTimeout = 0;
@@ -496,6 +505,7 @@ class Conductor
         bool m_downloadSuccess = false;
         bool m_upgradeSuccess = false;
         bool m_mqttConnected = false;
+        uint32_t dataSendingPeriod;
         // Certificates buffers
         char m_certType[15];
         char m_keyType[15];

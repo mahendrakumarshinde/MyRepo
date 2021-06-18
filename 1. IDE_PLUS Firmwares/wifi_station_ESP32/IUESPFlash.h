@@ -19,6 +19,9 @@
 #define CERT_ADDRESS        0   // address to read write // Address 1 is not Used 1 byte offset is added to the address
 #define ESP_RESET_ADDRESS   2   // address to store ESP restart count
 #define CERT_DOWNLOAD_STATUS        4
+#define CONNECTION_MODE     5   // secure / non-secure flag address
+#define UNSECURED   0
+#define SECURED     1
 class IUESPFlash
 {
     public:

@@ -48,8 +48,8 @@ class IUMQTTHelper
         uint8_t mqttConnected = 0;
         /***** Core *****/
         IUMQTTHelper(/*const char * serverIP, uint16_t serverPort,
-                     const char *username, const char *password*/);
-        // IUMQTTHelper() : IUMQTTHelper("mqtt.infinite-uptime.com", 8883, "", "") {}
+                     const char *username, const char *password*/ );
+        //IUMQTTHelper() : IUMQTTHelper("mqtt.infinite-uptime.com", 1883, "iuprod", "iuprod") {}
         virtual ~IUMQTTHelper() { }
         void setServer(const char * serverIP, uint16_t serverPort);
         void setCredentials(const char *username, const char *password);
@@ -76,12 +76,13 @@ class IUMQTTHelper
         void onConnection();
         /***** Public Client for convenience *****/
         PubSubClient client;
+        PubSubClient nonSecureClient;
 
     protected:
         /***** Core *****/
         //WiFiClient m_wifiClient;
+        WiFiClient m_nonSecureWifiClient;
         WiFiClientSecure m_wifiClient;
-
         MacAddress m_deviceMAC;
         /***** MQTT server address and credentials *****/
         /***** Settable parameters (addresses, credentials, etc) *****/
