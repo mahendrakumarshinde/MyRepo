@@ -296,10 +296,12 @@ void onNewUSBMessage(IUSerial *iuSerial) {
 
 void onNewBLEMessage(IUSerial *iuSerial) {
     conductor.processBLEMessage(iuSerial);
+    conductor.processUSBMessage(iuSerial);
 }
 
 void onNewWiFiMessage(IUSerial *iuSerial) {
     conductor.processWiFiMessage(iuSerial);
+    conductor.processUSBMessage(iuSerial);
 }
 
 void onNewEthernetMessage(IUSerial *iuSerial){
