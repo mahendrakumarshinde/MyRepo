@@ -5291,7 +5291,7 @@ int Conductor::checkFingerprintsState(){
         // debugPrint("\nNew Spectral Buffer backup Copy:",false);debugPrint(fingerprintData);
         DynamicJsonBuffer object(strlen(fingerprintData));
         JsonObject& root = object.parseObject(fingerprintData);
-        if (!root.success()) {
+        if (root.success()) {
         for (auto jsonKeyValue : root) {
             char* key = (char*)jsonKeyValue.key;
             float value = jsonKeyValue.value.as<float>();                   
