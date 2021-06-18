@@ -51,9 +51,9 @@ DiagnosticEngine iuDiagnosticEngine = DiagnosticEngine();
  * @brief  IUEthernet object
  * 
  */
-char iuEthernetBuffer[2048];
+char iuEthernetBuffer[128];
 //IUEthernet iuEthernet = IUEthernet();
-Usr2Eth iuEthernet(&Serial1, iuEthernetBuffer, 2048, IUSerial::LEGACY_PROTOCOL,
+Usr2Eth iuEthernet(&Serial1, iuEthernetBuffer, 128, IUSerial::LEGACY_PROTOCOL,
                      115200, '\n', 250);
 /* =============================================================================
     Modbus Instance 

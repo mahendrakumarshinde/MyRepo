@@ -110,12 +110,12 @@ void IUTMP116::setPowerMode(PowerMode::option pMode)
         case PowerMode::REGULAR:                      // AVG  0: no_avg (15.5ms), 1: 8 avg(125ms), 2: 32 avg(500ms), 3: 64 avg(1000ms)
         case PowerMode::LOW_1:
         case PowerMode::LOW_2:
-            setWorkingMode( CONTINOUS_CONVERSION1, CONV_4, AVG_0 ); 
+            setWorkingMode( CONTINOUS_CONVERSION1, CONV_4, AVG_1 ); 
             break;
         case PowerMode::SLEEP:
         case PowerMode::DEEP_SLEEP:
         case PowerMode::SUSPEND:
-            setWorkingMode( SHUTDOWN, CONV_4, AVG_0 );
+            setWorkingMode( SHUTDOWN, CONV_4, AVG_1 );
             // TODO: Implement
             break;
         default:
@@ -132,18 +132,13 @@ void IUTMP116::setWorkingMode(uint8_t mod, uint8_t conv, uint8_t avg)
 {
     m_iuI2C1->readBytes(ADDRESS, CFGR, 2, &m_rawConfigBytes[0]);
     uint16_t config_value =  ((uint16_t) (m_rawConfigBytes[0]) << 8 | m_rawConfigBytes[1]);
-    uint8_t data[3];
-
+    //uint8_t data[3];
+    config_value = config_value & 0xF003;
     config_value = config_value | (mod & 0x03 ) << 10; //2 bits of mod go to position 11:10
     config_value = config_value | (conv & 0x07) << 7;  //3 of conv go to 9:7
     config_value = config_value | (avg & 0x03 ) << 5;  //2 of avg go to 6:5
     config_value = config_value | 1 << 3;              //always in make alert pin active high
    
-    data[0] = (uint8_t) (config_value >> 8 ) & 0x0F;
-    data[1] = (uint8_t) (data[0] & 0xFF);
-    data[2] = (uint8_t)( config_value & 0xFF);
-
-    config_value = (data[1]) << 8 | data[2];
     if (!m_iuI2C1->writeWord(ADDRESS, CFGR, config_value))
     {
         if (asyncDebugMode) {

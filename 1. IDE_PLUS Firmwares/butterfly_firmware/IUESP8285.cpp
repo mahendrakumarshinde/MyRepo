@@ -1,6 +1,6 @@
 #include "IUESP8285.h"
 #include "RawDataState.h"
-
+#include "Conductor.h"
 /* =============================================================================
     Constructor & desctructors
 ============================================================================= */
@@ -70,6 +70,7 @@ void IUESP8285::setupHardware()
 //    }
     // IDE1.5_PORT_CHANGE - Dont send WiFi Credentials (hardReset->turnOn->sendWiFiCredentials()) 
     // as MQTT resets ESP during MQTT Config.
+    m_retryDefWifiConfTime = millis();
     m_credentialSent = true;
     pinMode(ESP32_ENABLE_PIN, OUTPUT);
     hardReset();
@@ -134,6 +135,27 @@ void IUESP8285::hardReset()
     delay(100);
     resetBuffer();
     turnOn();
+}
+/**
+ * Clear Wifi Send config and turn ON WIFI, without sending cred.
+ */
+void IUESP8285::clearSendWifiConfig() {
+    m_credentialValidator.reset();
+    m_credentialSent = false;
+    if( m_powerMode == PowerMode::SLEEP ||
+        m_powerMode == PowerMode::DEEP_SLEEP ||
+        m_powerMode == PowerMode::SUSPEND ) {
+        digitalWrite(ESP32_ENABLE_PIN, HIGH);
+        m_powerMode = PowerMode::REGULAR;
+        m_on = true;
+        m_awakeTimerStart = millis();
+        delay(2000); // To turn on WIFI and able to receive MSP messages
+        sendMSPCommand(MSPCommand::WIFI_DISCONNECT);
+        delay(1000);
+        sendMSPCommand(MSPCommand::WIFI_DISCONNECT);
+        delay(10);
+        delay(2000); // To turn on WIFI and able to receive MSP messages
+    }
 }
 
 /**
@@ -225,6 +247,8 @@ bool IUESP8285::readMessages()
         }
     } else if (m_on && m_lastResponseTime > 0 &&
                now - m_lastResponseTime > noResponseTimeout) {
+                m_retryDefWifiConfTime = millis();
+               m_awakeTimerStart = m_retryDefWifiConfTime; // Need to be added after alternate MAC ID 
         // Ensure your ESP8266 library version is 2.5.0 in .arduino15 folder 
         if (debugMode) {
             debugPrint("WiFi irresponsive: hard resetting now");
@@ -235,6 +259,26 @@ bool IUESP8285::readMessages()
     }
     if (now - m_lastConnectedStatusTime > connectedStatusTimeout) {
         m_setConnectedStatus(false);
+    }
+    if(((now - m_retryDefWifiConfTime) > 40000 ) && (conductor.isWifiConnected() == false))   //isWifiConnected not available
+    {
+        m_retryDefWifiConfTime = millis();
+        m_awakeTimerStart = m_retryDefWifiConfTime;
+        m_lastResponseTime = m_retryDefWifiConfTime; // Reset irresponsive timeout to avoid hardreset during wifi attempts
+        if(m_defUserWifi == false) {
+            setWiFiConfig(credentials::AUTH_TYPE, WIFI_DEFAULT_AUTH,strlen(WIFI_DEFAULT_AUTH));
+            setWiFiConfig(credentials::SSID, WIFI_DEFAULT_SSID,strlen(WIFI_DEFAULT_SSID));
+            setWiFiConfig(credentials::PASSWORD, WIFI_DEFAULT_PSWD,strlen(WIFI_DEFAULT_PSWD));
+            setWiFiConfig(credentials::USERNAME, NULL,NULL);
+            if (debugMode) { debugPrint("Switch to Default WIFI config. if last was not connected Ok "); }
+            m_defUserWifi = true;
+            //sendWiFiCredentials(); not required to send, in regular loop it sends out
+        }
+        else {
+            if (debugMode) { debugPrint("Switch to User WIFI config. if last was not connected Ok "); }
+            conductor.configureFromFlash(IUFlash::CFG_WIFI0);
+            m_defUserWifi = false;
+        }
     }
     return atLeastOneNewMessage;
 }
@@ -621,6 +665,19 @@ bool IUESP8285::processChipMessage()
     {
         case MSPCommand::RECEIVE_WIFI_MAC:
             m_macAddress = mspReadMacAddress();
+            if((iuBluetooth.isBLEAvailable == false && iuBluetooth.deviceIdMode == DEVID_MODE2) ||
+               /*(iuBluetooth.isBLEAvailable == true  && iuBluetooth.deviceIdMode == DEVID_MODE3) ||*/
+               (conductor.devIdbmdWifi == false  && iuBluetooth.deviceIdMode == DEVID_MODE2)) {
+                /* BLE_FAIL Issue: If BLE MAC read is failed and ETH is not there, use WIFI MAC as device ID */
+                conductor.setMacAddress(m_macAddress);
+                if (loopDebugMode)
+                {
+                    debugPrint("BLE_MAC_FAIL_DEVICEID_IS_WIFI_MAC: ", false);
+                    debugPrint(m_macAddress);
+                }
+            }
+            /* Update Internal and External Flash with device Info (deviceID, BMD MAC, WIFI MAC details) */
+            conductor.updateDeviceInfo(iuBluetooth.deviceIdMode);
             if (loopDebugMode)
             {
                 debugPrint("RECEIVE_WIFI_MAC: ", false);
@@ -647,6 +704,7 @@ bool IUESP8285::processChipMessage()
             if (loopDebugMode) { debugPrint("WIFI_ALERT_CONNECTED"); }
             m_awakeTimerStart = millis();
             m_lastConnectedStatusTime = m_awakeTimerStart;
+            m_retryDefWifiConfTime = millis(); // Reset retry time on connection
             //m_setConnectedStatus(true);         // uncommented temporarily
             m_working = false;
             break;
@@ -715,7 +773,13 @@ void IUESP8285::sendWiFiCredentials()
 {
     if (m_credentialValidator.completed() && !m_credentialSent)
     {
-        if (loopDebugMode) { debugPrint(F("Sending WiFi Credentials")); }
+        m_retryDefWifiConfTime = millis(); // Get time at which last credentials were sent.
+        if (loopDebugMode) {
+            debugPrint(F("Sending WiFi Credentials")); 
+            debugPrint("sendWiFiCredentials() SSID: ",false);debugPrint(m_ssid,false);
+            debugPrint(" PASSWORD: ",false);debugPrint(m_psk);
+            debugPrint(" AUTHTYPE: ",false);debugPrint(m_wifiAuthType);        
+        }
         sendMSPCommand(MSPCommand::WIFI_RECEIVE_AUTH_TYPE, m_wifiAuthType);
         sendMSPCommand(MSPCommand::WIFI_RECEIVE_SSID, m_ssid);
         sendMSPCommand(MSPCommand::WIFI_RECEIVE_PASSWORD, m_psk);

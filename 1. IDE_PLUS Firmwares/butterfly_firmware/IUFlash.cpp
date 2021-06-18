@@ -1,6 +1,7 @@
 #include "IUFlash.h"
 #include "FFTConfiguration.h"
 #include "InstancesDragonfly.h"
+#include "Conductor.h"
 /* =============================================================================
     IUFSFlash - Flash with file system
 ============================================================================= */
@@ -33,6 +34,9 @@ char IUFSFlash::FNAME_HASH[11] = "configHash";
 char IUFSFlash::FNAME_DIG[11] = "diagnostic";
 char IUFSFlash::FNAME_RPM[4] = "rpm";
 char IUFSFlash::FNAME_PHASE[6] = "phase";
+char IUFSFlash::FNAME_FINGERPRINT_STATE[12] = "spectThresh";
+char IUFSFlash::FNAME_SENSOR_CONFIG[13] = "sensorConfig";
+
 /***** Core *****/
 
 void IUFSFlash::begin()
@@ -43,15 +47,19 @@ void IUFSFlash::begin()
         {
             debugPrint("Failed to start DOSFS (DOSFS.begin returned false)");
         }
+        conductor.m_devDiagErrCode |= DEVICE_DIAG_DOSFS_ERR1;
     }
     m_begun = DOSFS.exists(CONFIG_SUBDIR);
     if (!m_begun)
     {
         DOSFS.mkdir(CONFIG_SUBDIR);
         m_begun = DOSFS.exists(CONFIG_SUBDIR);
-        if (!m_begun && setupDebugMode)
-        {
-            debugPrint("Unable to find or create the config directory");
+        if (!m_begun) {
+            conductor.m_devDiagErrCode |= DEVICE_DIAG_DOSFS_ERR2;
+            if(setupDebugMode)
+            {
+                debugPrint("Unable to find or create the config directory");            
+            }
         }
     }
     m_otaDir = DOSFS.exists(IUFWBACKUP_SUBDIR);
@@ -59,9 +67,12 @@ void IUFSFlash::begin()
     {
         DOSFS.mkdir(IUFWBACKUP_SUBDIR);
         m_otaDir = DOSFS.exists(IUFWBACKUP_SUBDIR);
-        if (!m_otaDir && setupDebugMode)
-        {
-            debugPrint("Unable to find/create the ota_mainbkup directory");
+        if (!m_otaDir) {
+            conductor.m_devDiagErrCode |= DEVICE_DIAG_DOSFS_ERR3;
+            if(setupDebugMode)
+            {
+                debugPrint("Unable to find/create the ota_mainbkup directory");
+            }
         }
     }
     m_otaDir = DOSFS.exists(IUFWTMPIMG_SUBDIR);
@@ -69,9 +80,12 @@ void IUFSFlash::begin()
     {
         DOSFS.mkdir(IUFWTMPIMG_SUBDIR);
         m_otaDir = DOSFS.exists(IUFWTMPIMG_SUBDIR);
-        if (!m_otaDir && setupDebugMode)
-        {
-            debugPrint("Unable to find or create the ota_mainimage directory");
+        if (!m_otaDir) {
+            conductor.m_devDiagErrCode |= DEVICE_DIAG_DOSFS_ERR4;
+            if(setupDebugMode)
+            {
+                debugPrint("Unable to find or create the ota_mainimage directory");
+            }
         }
     }
     m_otaDir = DOSFS.exists(IUFWROLLBACK_SUBDIR);
@@ -79,18 +93,23 @@ void IUFSFlash::begin()
     {
         DOSFS.mkdir(IUFWROLLBACK_SUBDIR);
         m_otaDir = DOSFS.exists(IUFWROLLBACK_SUBDIR);
-        if (!m_otaDir && setupDebugMode)
-        {
-            debugPrint("Unable to find or create the ota_rollback directory");
+       if (!m_otaDir) {
+            conductor.m_devDiagErrCode |= DEVICE_DIAG_DOSFS_ERR4;
+            if(setupDebugMode)
+            {
+                debugPrint("Unable to find or create the ota_rollback directory");
+            }
         }
     }
     m_digDir = DOSFS.exists(RULE_SUBDIR);
     if(!m_digDir){
         DOSFS.mkdir(RULE_SUBDIR);
         m_digDir = DOSFS.exists(RULE_SUBDIR);
-        if (!m_digDir && setupDebugMode)
-        {
-            debugPrint("Unable to find or create the iuRule directory");
+        if (!m_digDir) {
+            conductor.m_devDiagErrCode |= DEVICE_DIAG_DOSFS_ERR5;
+            if(setupDebugMode) {
+                debugPrint("Unable to find or create the iuRule directory");            
+            }
         }
 
     }
@@ -163,17 +182,27 @@ bool IUFSFlash::saveConfigJson(storedConfig configType, JsonVariant &config)
         return false;
     }
     File file = openConfigFile(configType, "w");
-    if (config.printTo(file) == 0)
-    {
-        return false;
+    if(file) {
+        if (config.printTo(file) == 0)
+        {
+            return false;
+        }
+        file.close();
+        if (debugMode)
+        {
+            debugPrint("Successfully saved config type #", false);
+            debugPrint((uint8_t) configType);
+        }
+        return true;
     }
-    file.close();
-    if (debugMode)
-    {
-        debugPrint("Successfully saved config type #", false);
-        debugPrint((uint8_t) configType);
+    else {
+        if (debugMode)
+        {
+            debugPrint("Error opening config type #", false);
+            debugPrint((uint8_t) configType);
+        }
     }
-    return true;
+
 }
 /*
     Following method only updates the fields received in the config message.
@@ -297,6 +326,10 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
             bool notSupportedSamplingRate = false;
             bool samegRange = false;
             bool grangepresent = true;
+            bool sameLowCutOffFreq = false;
+            bool sameHighCutOffFreq = false;
+            int configHighCutOffFreq;
+            int configLowCutOffFreq;
             //Validation for samplingRate field
             if(config.containsKey("samplingRate")) {
                 uint16_t samplingRate = config["samplingRate"];
@@ -454,18 +487,110 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                 errorMessages.add("Key missing: blockSize"); 
             }
             
-
+            
             // If the received config matches the current config, report an error
             if(sameBlockSize && sameSamplingRate && grangepresent) {      //if same SR & BS received and gRange is present then false this condition
                 validConfig = false;
                 errorMessages.add("Same SR & BS received without gRange ");
             }
-            else if(sameBlockSize && sameSamplingRate && samegRange){
+            
+            if(config.containsKey("lowCutOffFreq")){                                       
+            validConfig = true;
+            //validationResult["messageType"] = "lowCutFreq-config-ack";
+            configLowCutOffFreq = config["lowCutOffFreq"];
+            //configLowCutOffFreqPresent = false;
+                if(debugMode){debugPrint(" Low Cut Off Freq received in JSON");}
+            
+            if(configLowCutOffFreq <= 0){  
+                validConfig = false;
+                errorMessages.add("Low Cut Off Frequency is less than or equal to 0");
+            } else if(configLowCutOffFreq >= FFTConfiguration::currentSamplingRate/FMAX_FACTOR){
+                validConfig = false;
+                errorMessages.add("Low Cut off Frequency is greater or equal to than FMAX");
+            }else if(configLowCutOffFreq == FFTConfiguration::currentLowCutOffFrequency){
+                sameLowCutOffFreq = true;
+                validConfig = false;
+                //debugPrint("Same Low Cut Off frequency recieved");
+                //errorMessages.add("Same Low Cut Off Frequency recieved");
+                }
+            }           
+
+            if(config.containsKey("highCutOffFreq")){                                       
+            validConfig = true;
+            //validationResult["messageType"] = "highCutFreq-config-ack";
+            configHighCutOffFreq = config["highCutOffFreq"];
+            //configHighCutOffFreqPresent = false;
+                if(debugMode){debugPrint("High Cut Off Freq recieved in JSON");}
+        
+            if(configHighCutOffFreq <= 0){  
+                validConfig = false;
+                errorMessages.add("High Cut Off Frequency is less than or equal to 0");
+            } else if(configHighCutOffFreq > FFTConfiguration::currentSamplingRate/FMAX_FACTOR){
+                validConfig = false;
+                errorMessages.add("High Cut off Frequency is greater than FMAX");
+            } else if(configHighCutOffFreq == FFTConfiguration::currentHighCutOffFrequency){
+                sameHighCutOffFreq = true;
+                validConfig = false;
+                //debugPrint("Same High Cut Off frequency recieved");
+                //errorMessages.add("Same High Cut Off Frequency recieved");
+                }          
+            }   
+            if(configHighCutOffFreq - configLowCutOffFreq == 0){
+                validConfig = false;
+                errorMessages.add("Low and High Cut Off values cannot be same");
+            }
+            else if(configHighCutOffFreq < configLowCutOffFreq){
+                validConfig = false;
+                errorMessages.add("High Cut Off cannot be smaller than Low Cut Off Frequency");
+            }
+             else if(sameBlockSize && sameSamplingRate && samegRange && sameLowCutOffFreq && sameHighCutOffFreq){
                 validConfig = false;
                 errorMessages.add("Same configuration received");
             }
+        break;
+        }
+       case CFG_SENSOR_CONFIG:{
+            validConfig = true;
+            validationResult["messageType"] = "sensor-config-ack";
+            float m_audioScaling, m_audioOffset ; 
+            if(config.containsKey("SND_OFFSET")){ 
+            m_audioOffset = config["SND_OFFSET"];
+            debugPrint("SND _OFFSET recieved in JSON");
+            if ( m_audioOffset > SENSORConfiguration::DEFAULT_HIGH_CUT_OFF_AUDIO_OFFSET  ) {
+                validConfig = false;
+                errorMessages.add("Audio Offset value greater than Default High Cut Off");
+            }
+            else if (m_audioOffset < SENSORConfiguration::DEFAULT_LOW_CUT_OFF_AUDIO_OFFSET  ){
+                validConfig = false;
+                errorMessages.add("Audio Offset value  less than Default Low Cut Off");
+            }
+            }
+            if(config.containsKey("SND_SCALING")){
+            m_audioScaling = config["SND_SCALING"];
+            debugPrint("SND _SCALING recieved in JSON");
+            if(m_audioScaling <= 0 ){
+                validConfig = false;
+                errorMessages.add("Audio Scaling cannot be negative or zero");
+            }
+            else if ( m_audioScaling > SENSORConfiguration::DEFAULT_HIGH_CUT_OFF_AUDIO_SCALING) {
+                validConfig = false;
+                errorMessages.add("Audio Scaling value greater than Default High Cut Off");
+
+            }
+            else if (m_audioScaling < SENSORConfiguration::DEFAULT_LOW_CUT_OFF_AUDIO_SCALING  ){
+                validConfig = false;
+                errorMessages.add("Audio Scaling value is less than Default Low Cut Off");
+                } 
+            }
+            if(config.containsKey("SND_OFFSET") && config.containsKey("SND_SCALING")){
+                if(m_audioOffset > 100 || m_audioOffset < -100 || m_audioScaling > 100 || m_audioScaling <=0){
+                    validConfig = false;
+                    errorMessages.add("Audio Offset or Audio Scaling is Out of range");
+                }
+            }    
             break;
         }
+
         case CFG_RPM: {
             validConfig = true;
             validationResult["messageType"] = "rpm-config-ack";
@@ -697,6 +822,12 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
         case CFG_PHASE:
             fname = FNAME_PHASE;
             break;
+        case CFG_FINGERPRINT_STATE:
+            fname = FNAME_FINGERPRINT_STATE ;
+            break;      
+        case CFG_SENSOR_CONFIG:
+            fname = FNAME_SENSOR_CONFIG;
+            break;    
         default:
             if (debugMode)
             {
@@ -745,17 +876,17 @@ File IUFSFlash::openConfigFile(storedConfig configType,
 
 String IUFSFlash::readInternalFlash(uint32_t address)
 {
-    uint16_t MaxConfigLenth = 512;
+    //uint16_t MaxConfigLenth = 512;
     uint8_t type;
     uint16_t length;
-    uint8_t result[MaxConfigLenth];
-    char resultConfig[MaxConfigLenth];
+    uint8_t result[512] = {0};
+    char resultConfig[512] = {0};
     stm32l4_flash_unlock();
     memset(result,'\0',sizeof(result));
     type = *(uint8_t*)(address );
     length = *(uint8_t*)(address + 1) + *(uint8_t*)(address + 2);
     delay(1000);
-    if(length < MaxConfigLenth && length > 0 )
+    if(length < 512 && length > 0 )
     {
         for (int i = 0 ; i < length; i++){
             result[i] = *(uint8_t*)(address + i + 3);
@@ -772,7 +903,7 @@ void IUFSFlash::writeInternalFlash(uint8_t type, uint32_t address, uint16_t data
 {
   const uint8_t maxDataperByte = 255;
   uint16_t dataSize;
-  char allData[2048];
+  char allData[STM_SECT_SIZE];
   dataSize = sizeof(type)+sizeof(dataLength)+dataLength;
 
   allData[0] = type;
@@ -784,10 +915,10 @@ void IUFSFlash::writeInternalFlash(uint8_t type, uint32_t address, uint16_t data
     allData[2] = dataLength - maxDataperByte;
   }
   sprintf(&allData[3],"%s",data);
-  for(int i=dataSize;i < 4;i++){
+  for(int i=dataSize;i <dataSize + 4;i++){
     allData[i] = 0x00;   // Fill next 4 bytes with 00
   }
-  for(int i=dataSize + 4;i<sizeof(allData);i++){
+  for(int i=dataSize + 4;i<STM_SECT_SIZE;i++){
     allData[i] = 0xFF;   // Fill remaining data with FF
   }
     if(loopDebugMode){
@@ -796,7 +927,7 @@ void IUFSFlash::writeInternalFlash(uint8_t type, uint32_t address, uint16_t data
     }   
   for(int i=0; i<2 ;i++){  
     stm32l4_flash_unlock();
-    stm32l4_flash_erase(address, 2048);
+    stm32l4_flash_erase(address, STM_SECT_SIZE);
     stm32l4_flash_program(address, (const uint8_t*)allData,sizeof(allData));
     stm32l4_flash_lock();
   }
@@ -818,7 +949,7 @@ bool IUFSFlash::checkConfig(uint32_t address)
 void IUFSFlash::clearInternalFlash(uint32_t address)
 {
     stm32l4_flash_unlock();
-    stm32l4_flash_erase(address, 2048);
+    stm32l4_flash_erase(address, STM_SECT_SIZE);
     stm32l4_flash_lock();
 }
 /* =============================================================================
