@@ -47,13 +47,33 @@ void LedManager::updateColors()
 ============================================================================= */
 
 void LedManager::showOperationState(uint8_t state)
-{
-    m_operationState = state;
+{   
+    showSpectralState();                // returns spectral state
+    if (state >= m_spectralState){
+        m_operationState = state;
+        // debugPrint("OP STATE : ",false);debugPrint(m_operationState);
+    }
+    else if(state < m_spectralState) {
+        m_operationState = m_spectralState;
+        // debugPrint("SPECTRAL STATE : ",false);debugPrint(m_operationState);
+    }
+    
     RGBColor col = m_getOpStateColor();
     m_led->replaceColor(0, col);
     if (m_ledStrip) {
         m_ledStrip->replaceColor(0, col);
     }
+}
+
+int LedManager::showSpectralState(){
+
+    conductor.checkFingerprintsState();
+    if(conductor.spectralStateSuccess == true){
+    m_spectralState = conductor.checkFingerprintsState();
+    // debugPrint("SPECTRAL STATE in show function : ",false);debugPrint(m_spectralState);
+    return m_spectralState;
+    }
+
 }
 
 RGBColor LedManager::m_getOpStateColor()

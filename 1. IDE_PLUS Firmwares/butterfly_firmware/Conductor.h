@@ -187,6 +187,9 @@ class Conductor
         static const int MAX_SPECTRAL_FEATURE_COUNT = 10;
         char* spectralFeaturesKeys[MAX_SPECTRAL_FEATURE_COUNT];
         String m_spectralFeatureResult;
+        int spectralState;
+        int checkFingerprintsState();
+        bool spectralStateSuccess;
         uint32_t lastUpdated = 0;
         uint32_t digLastPublish = 0;
         uint32_t fresLastPublish = 0;

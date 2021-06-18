@@ -426,29 +426,31 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // Diagnostic Thresholds configuration
     subConfig = root["thresholds"];
     if (subConfig.success()) {
-        configureAllFeatures(subConfig);
-        if (saveToFlash) {
-            //iuFlash.saveConfigJson(IUFlash::CFG_FEATURE, subConfig);
-            //send ACK on ide_pluse/command_response/
+             if (saveToFlash) {
+            //DOSFS.begin();
+            iuFlash.saveConfigJson(IUFlash::CFG_FINGERPRINT_STATE, variant);
+            if(loopDebugMode) {
+            debugPrint("configs saved successfully ");
+            }
             const char* messageId;
             messageId = root["messageId"]  ;
-            snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"messageTye\":\"thresholds-config-ack\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+            snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"messageTye\":\"spectral-thresholds-config-ack\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
             
-            //Serial.println(ack_config);
             if(iuWiFi.isConnected()){
-                 iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config);
-            }else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
-            {       debugPrint("Sending Fingerpritns Threshold ACK over Ethernet");
-                    snprintf(ack_config, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
-                      m_macAddress.toString().c_str(),0, 2, m_macAddress.toString().c_str(),messageId);
-                   
-                    debugPrint(ack_config,true);
-                    iuEthernet.write(ack_config); 
-                    iuEthernet.write("\n");
-                   
-            } 
+                 iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, ack_config);
+            }
+            if(StreamingMode::BLE && isBLEConnected()){// Send ACK to BLE
+            if(loopDebugMode){ debugPrint("SPECTRAL-THRESHOLD-SUCCESS");}
+                }
+                delay(500);
+                DOSFS.end();
+            }
+        // else{
+        //     debugPrint("Failed to save spectThresh.conf file");
+        // }
         }
-    }
+
+
      // MQTT Server configuration
     subConfig = root["mqtt"];
     if (subConfig.success()) {
@@ -5966,6 +5968,87 @@ void Conductor::sendDiagnosticFingerPrints() {
         iuModbusSlave.clearHoldingRegister(modbusGroups::MODBUS_STREAMING_SPECTRAL_FEATURES,FINGERPRINT_KEY_1_L,FINGERPRINT_13_H);
         m_spectralFeatureResult = "";
     }   
+}
+
+int Conductor::checkFingerprintsState(){
+    JsonObject& config = configureJsonFromFlash("/iuconfig/spectThresh.conf", 1);
+    if(config.success()){
+        float fingerprintsStateBuffer[MAX_SPECTRAL_FEATURE_COUNT];
+        int fingerprintsState;
+        spectralStateSuccess = false;
+        float maxVal;
+        uint32_t maxIdx=0; 
+        int i = 1; 
+        int spectralCount = 0;   
+        //debugPrint("spectThresh.conf read successfully");
+        if (strlen(fingerprintData)<5 || spectralFeatures_ready_to_publish == false){
+        if (debugMode){   
+            spectralStateSuccess = false;
+            //debugPrint("Empty Fingerprint data buffer or spectral Features are not ready");
+        }
+        for (size_t i = 0; i < spectralCount; i++){
+            fingerprintsStateBuffer[i]= 0;
+        }  
+        }else if(m_spectralFeatureBackupComsumed == true){
+        // debugPrint("\nNew Spectral Buffer backup Copy:",false);debugPrint(fingerprintData);
+        DynamicJsonBuffer object(strlen(fingerprintData));
+        JsonObject& root = object.parseObject(fingerprintData);
+        if (root.success()) {
+        for (auto jsonKeyValue : root) {
+            char* key = (char*)jsonKeyValue.key;
+            float value = jsonKeyValue.value.as<float>();                   
+            float low, med, high;
+            low = config["thresholds"][key]["TRH"][0];
+            med = config["thresholds"][key]["TRH"][1];
+            high = config["thresholds"][key]["TRH"][2];
+        // debugPrint("\nKey : ",false);debugPrint(key);
+        // debugPrint("Value: ",false);debugPrint(value);
+        // debugPrint("low : ",false);debugPrint(low);
+        // debugPrint("med: ",false);debugPrint(med);
+        // debugPrint("High:",false);debugPrint(high);
+        if (value > low){
+            //debugPrint(" Spectral value is greater Low Threshold ",value );
+            fingerprintsState = 1;     
+        }     
+        else if (value > med){
+            //debugPrint(" Spectral value is greater Med Threshold" );
+            fingerprintsState = 2;
+        }
+        else if (value >= high){
+            //debugPrint(" Spectral value is > or  equal to High Threshold" );
+            fingerprintsState = 3;
+        }
+        else {
+            fingerprintsState = 0;
+        }
+        // debugPrint("Fingerprint State : ",false);debugPrint(fingerprintsState);
+        fingerprintsStateBuffer[i] = fingerprintsState;
+            if(i > MAX_SPECTRAL_FEATURE_COUNT){
+            if(debugMode){
+                debugPrint("Spectral Feature Keys Index Out of Bound,Spectral Feature Limit exceeded !!!");   
+                }
+            }   
+                i++; 
+                spectralCount++;  
+            }
+        //debugPrint("fingerprintsStateBuffer : [ ",false);
+        //for (i = 1;i <= spectralCount; i++){
+            getMax(fingerprintsStateBuffer,spectralCount,&maxVal,&maxIdx);
+            // debugPrint(fingerprintsStateBuffer[i],false);debugPrint(",",false);
+            // }
+        //debugPrint(" ] ");
+            spectralState = maxVal;
+        // debugPrint("Spectral State : ",false);debugPrint(spectralState);
+            spectralStateSuccess = true;
+            return spectralState;
+        } else{
+            if(debugMode){debugPrint("parseObject Failed");}
+        }  
+    }
+    }
+    else{
+        //if(debugMode){debugPrint(" Failed to read spectThresh.conf file");}
+        }    
 }
 
 bool Conductor::setFFTParams() {
