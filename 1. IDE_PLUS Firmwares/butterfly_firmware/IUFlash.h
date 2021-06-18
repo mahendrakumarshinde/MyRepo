@@ -8,11 +8,17 @@
 
 #include <IUDebugger.h>
 #include "stm32l4_flash.h"
+#define STM_SECT_SIZE 2048
 #define CONFIG_MQTT_FLASH_ADDRESS    (uint32_t)0x080FE800    /* Start address of MQTT Config location*/
 #define CONFIG_HTTP_FLASH_ADDRESS    (uint32_t)0x080FE000    /* Start address of HTTP Config location*/
 #define CONFIG_MODBUS_SLAVE_CONFIG_FLASH_ADDRESS    (uint32_t)0x80FD800    /* Start address of MODBUS slave Config location*/
 #define CONFIG_WIFI_CONFIG_FLASH_ADDRESS    (uint32_t)0x80FD000    /* Start address of MODBUS slave Config location*/
-
+#define CONFIG_DEV_INFO_ADDRESS       (uint32_t)0x080FC800    /* Start address Device Information location */
+#ifdef DEVIDFIX_TESTSTUB
+#define CONFIG_DEV_ID_ADDRESS         (uint32_t)0x080FC000
+#endif
+/* BMD Valid Status flag location in memory */
+//#define BMD_STATUS_FLAG_LOC         0  // (0x080FC800)
 class IUFlash
 {
     public:
@@ -40,6 +46,7 @@ class IUFlash
                                      CFG_RPM,
                                      CFG_PHASE,
                                      CFG_FINGERPRINT_STATE,
+                                     CFG_SENSOR_CONFIG,
                                      CFG_COUNT};
         /***** Core *****/
         IUFlash() {}
@@ -101,6 +108,7 @@ class IUFSFlash : public IUFlash
         static char FNAME_RPM[4]; 
         static char FNAME_PHASE[6];
         static char FNAME_FINGERPRINT_STATE[12];
+        static char FNAME_SENSOR_CONFIG[13];
         static const uint8_t MAX_FULL_CONFIG_FPATH_LEN = 28;
         
         /***** Core *****/

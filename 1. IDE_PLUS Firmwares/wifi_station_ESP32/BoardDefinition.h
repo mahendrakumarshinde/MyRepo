@@ -9,7 +9,7 @@
 ============================================================================= */
 
 /***** Firmware version *****/
-const char FIRMWARE_VERSION[6] = "3.0.5";
+const char FIRMWARE_VERSION[6] = "3.0.6";
 
 
 /***** Device Type *****/
@@ -42,7 +42,7 @@ const char DEVICE_TYPE[DEVICE_TYPE_LENGTH] = "ide_plus";
 const uint16_t MAX_HOST_LENGTH = 100;
 const uint16_t MAX_ROUTE_LENGTH = 100;
 const char DATA_DEFAULT_ENDPOINT_HOST[45] =    "api-idap.infinite-uptime.com";              //"ideplus-dot-infinite-uptime-1232.appspot.com";                                                           //                              
-const uint16_t DATA_DEFAULT_ENDPOINT_PORT = 443;                                   //80;                                                              
+const uint16_t DATA_DEFAULT_ENDPOINT_PORT = 80;                                   //80;                                                              
 // Raw data
 const char RAW_DATA_DEFAULT_ENDPOINT_ROUTE[70] =  "/api/2.0/datalink/http_dump_v2";                  //"/raw_data?mac=";                                            
 // Feature data
@@ -60,10 +60,10 @@ const char CUSTOMER_PLACEHOLDER[CUSTOMER_PLACEHOLDER_LENGTH] = "XXXAdmin";
 ============================================================================= */
 const uint8_t MQTT_CREDENTIALS_MAX_LENGTH = 50;
 const char MQTT_DEFAULT_SERVER_IP[MQTT_CREDENTIALS_MAX_LENGTH] = "mqtt.infinite-uptime.com";
-const uint16_t MQTT_DEFAULT_SERVER_PORT = 8883;             
-const char MQTT_DEFAULT_USERNAME[MQTT_CREDENTIALS_MAX_LENGTH] =  "";         
-const char MQTT_DEFAULT_PASSWORD[MQTT_CREDENTIALS_MAX_LENGTH] =  "";         
-const bool MQTT_DEFAULT_TLS_FLAG = true;
+const uint16_t MQTT_DEFAULT_SERVER_PORT = 1883;             
+const char MQTT_DEFAULT_USERNAME[MQTT_CREDENTIALS_MAX_LENGTH] =  "iuprod";         
+const char MQTT_DEFAULT_PASSWORD[MQTT_CREDENTIALS_MAX_LENGTH] =  "iuprod";         
+const bool MQTT_DEFAULT_TLS_FLAG = false;
 /* =============================================================================
     Diagnostic HTTP/HTTPS Endpoints
 ============================================================================= */

@@ -212,13 +212,24 @@ void Feature::incrementFillingIndex()
                     }
                     //isr_detached_startTime = micros();
                     FeatureStates::isr_stopTime = micros();
-                    if(RawDataState::startRawDataCollection == false){
-                    FeatureStates::elapsedTime = (FeatureStates::isr_stopTime-FeatureStates::isr_startTime)/1000000;
-                    if(FFTConfiguration::currentSamplingRate == 208 || FFTConfiguration::currentSamplingRate == 416 ){ // TODO : Temp. using current SR for FFT computation , ideally we should use the calculated SR.
-                       FFTConfiguration::calculatedSamplingRate = FFTConfiguration::currentSamplingRate;
-                    }else {    
-                       FFTConfiguration::calculatedSamplingRate = round(FFTConfiguration::currentBlockSize/FeatureStates::elapsedTime);
-                    }
+                    if(RawDataState::startRawDataCollection == false) {
+                        if(FeatureStates::isr_stopTime > FeatureStates::isr_startTime) {
+                            FeatureStates::elapsedTime = (FeatureStates::isr_stopTime-FeatureStates::isr_startTime)/1000000;
+                        }
+                        else if(FeatureStates::isr_stopTime < FeatureStates::isr_startTime) {
+                            /* For stop overflowing the uint32_t returned from micros() */
+                            double elapsedTimeTemp = ((double)UIN32_FULL_SCALE - FeatureStates::isr_startTime);
+                            FeatureStates::elapsedTime = (elapsedTimeTemp + FeatureStates::isr_stopTime)/1000000;
+                        }
+						else if(FeatureStates::isr_stopTime == FeatureStates::isr_startTime) {
+							FFTConfiguration::calculatedSamplingRate = FFTConfiguration::currentSamplingRate;
+						}                        
+
+                        if(FFTConfiguration::currentSamplingRate == 208 || FFTConfiguration::currentSamplingRate == 416 ) { // TODO : Temp. using current SR for FFT computation , ideally we should use the calculated SR.
+                            FFTConfiguration::calculatedSamplingRate = FFTConfiguration::currentSamplingRate;
+                        } else if(FeatureStates::isr_stopTime != FeatureStates::isr_startTime) {
+                            FFTConfiguration::calculatedSamplingRate = round(FFTConfiguration::currentBlockSize/FeatureStates::elapsedTime);
+                        }
                     }
                     // if(loopDebugMode){
                     //     debugPrint("Elapsed Time in sec : ",false);

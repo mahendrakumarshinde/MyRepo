@@ -6,6 +6,9 @@
 
 #define UART_TX_FIFO_SIZE 0x80
 #define OTA_PACKET_SIZE 1024
+extern "C" {
+extern uint32_t lastReqHash;
+}
 /* =============================================================================
     Instanciation
 ============================================================================= */
@@ -221,7 +224,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 break;
             }
         case MSPCommand::SET_DIAGNOSTIC_URL:
-            updateDiagnosticEndpoint(buffer,bufferLength);
+            updateDiagnosticEndpoint(buffer,bufferLength-1);
             break;
         case MSPCommand::SEND_WIFI_CONFIG:
             updateConfig(IUESPFlash::CFG_WIFI, buffer,bufferLength-1);  // Removed extra byte
@@ -369,8 +372,8 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             break;
         case MSPCommand::WIFI_RECEIVE_AUTH_TYPE:       
             strcpy(m_wifiAuthType,buffer);
-            hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, m_wifiAuthType);
-            delay(1);
+            //hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST, m_wifiAuthType);
+            //delay(1);
             break;
         case MSPCommand::WIFI_FORGET_CREDENTIALS:
             forgetWiFiCredentials();
@@ -396,6 +399,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         case MSPCommand::WIFI_CONNECT:
             // Reset disconnection timer
             m_disconnectionTimerStart = millis();
+            wifiConnectTryFlag = true;
             reconnect();
             break;
         case MSPCommand::WIFI_DISCONNECT:
@@ -584,9 +588,24 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 delay(50);
                 hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_DISCONNECTED);
                 delay(50);
-                hostSerial.sendMSPCommand(MSPCommand::MQTT_ALERT_DISCONNECTED);
-                delay(50);
-                ESP.restart();
+                hostSerial.sendMSPCommand(MSPCommand::MQTT_ALERT_DISCONNECTED);                // Read mqttConfig Json
+                StaticJsonBuffer<512> JsonBuffer;
+                JsonObject& config = iuWiFiFlash.loadConfigJson(IUESPFlash::CFG_MQTT,JsonBuffer);
+                bool validConfig = config.success();
+                //config.prettyPrintTo(Serial);
+                if (validConfig)
+                {
+                    m_secure = config["mqtt"]["tls"];
+                    if(m_secure != iuWiFiFlash.readMemory(CONNECTION_MODE)){
+                        iuWiFiFlash.updateValue(CONNECTION_MODE,m_secure);
+                        //Serial.println("Changed in Connection Mode found , Updating and reset ESP32 ");
+                        //ESP.restart();
+                     }
+                     ESP.restart();
+                }else
+                {
+                    hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"EMPTY, Invalid MQTT Config JSON");
+                }
             }
             break;
         case MSPCommand::SET_MQTT_SERVER_IP:
@@ -651,24 +670,28 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
            break; 
         case MSPCommand::SEND_RAW_DATA:
           {
-            memset(ssl_rootca_cert,0x00,sizeof(ssl_rootca_cert));
-            memset(ssl_oem_rootca_cert,0x00,sizeof(ssl_oem_rootca_cert));
-            //Apply the rootCA cert
-            if(activeCertificates == 0){
-                //Serial.println("\nUsing ROOTCA 0");
-                iuWiFiFlash.readFile(IUESPFlash::CFG_HTTPS_ROOTCA0,ssl_rootca_cert,sizeof(ssl_rootca_cert));
-            }else
-            {   //Serial.println("\nUsing rootCA 1");
-                iuWiFiFlash.readFile(IUESPFlash::CFG_HTTPS_ROOTCA1,ssl_rootca_cert,sizeof(ssl_rootca_cert));
-            }
+            if(iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED ){
 
             //Apply the OEM rootCA cert
-            if(activeCertificates == 0){
-                //Serial.println("\nUsing ROOTCA 0");
-                iuWiFiFlash.readFile(IUESPFlash::CFG_HTTPS_OEM_ROOTCA0,ssl_oem_rootca_cert,sizeof(ssl_oem_rootca_cert));
-            }else
-            {   //Serial.println("\nUsing rootCA 1");
-                iuWiFiFlash.readFile(IUESPFlash::CFG_HTTPS_OEM_ROOTCA1,ssl_oem_rootca_cert,sizeof(ssl_oem_rootca_cert));
+                memset(ssl_rootca_cert,0x00,sizeof(ssl_rootca_cert));
+                memset(ssl_oem_rootca_cert,0x00,sizeof(ssl_oem_rootca_cert));
+                //Apply the rootCA cert
+                if(activeCertificates == 0){
+                    //Serial.println("\nUsing ROOTCA 0");
+                    iuWiFiFlash.readFile(IUESPFlash::CFG_HTTPS_ROOTCA0,ssl_rootca_cert,sizeof(ssl_rootca_cert));
+                }else
+                {   //Serial.println("\nUsing rootCA 1");
+                    iuWiFiFlash.readFile(IUESPFlash::CFG_HTTPS_ROOTCA1,ssl_rootca_cert,sizeof(ssl_rootca_cert));
+                }
+
+                //Apply the OEM rootCA cert
+                if(activeCertificates == 0){
+                    //Serial.println("\nUsing ROOTCA 0");
+                    iuWiFiFlash.readFile(IUESPFlash::CFG_HTTPS_OEM_ROOTCA0,ssl_oem_rootca_cert,sizeof(ssl_oem_rootca_cert));
+                }else
+                {   //Serial.println("\nUsing rootCA 1");
+                    iuWiFiFlash.readFile(IUESPFlash::CFG_HTTPS_OEM_ROOTCA1,ssl_oem_rootca_cert,sizeof(ssl_oem_rootca_cert));
+                }
             }
            IUMessageFormat::rawDataPacket* rawData = (IUMessageFormat::rawDataPacket*) buffer;
             char ack_config[150];
@@ -719,9 +742,15 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 while(RawdataHTTPSretryCount < 3 ){
                     if((millis() - HTTPSRawDataTimeout) > HTTPSRawDataRetryTimeout){
                         HTTPSRawDataTimeout = millis();
-                        httpStatusCode = httpsPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_endpointRoute,
-                                                accelRawDataHelper.m_endpointPort, (uint8_t*) &httpBuffer, 
-                                                httpBufferPointer,"", ssl_rootca_cert, HttpContentType::octetStream);            
+                        if(iuWiFiFlash.readMemory(CONNECTION_MODE) == UNSECURED ){
+                            httpStatusCode = httpPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_endpointRoute,
+                                                    accelRawDataHelper.m_endpointPort, (uint8_t*) &httpBuffer, 
+                                                    httpBufferPointer,"", NULL, HttpContentType::octetStream);
+                        }else{    
+                            httpStatusCode = httpsPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_endpointRoute,
+                                                    accelRawDataHelper.m_endpointPort, (uint8_t*) &httpBuffer, 
+                                                    httpBufferPointer,"", ssl_rootca_cert, HttpContentType::octetStream);            
+                        }            
 
                         // send HTTP status code back to the MCU
                         char httpAckBuffer[1 + 4];      // axis + 3 digit HTTP status code + null terminator
@@ -740,13 +769,19 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                     }
                 }
             }
-            if((rawData->axis == 'X' || httpOEMStatusCode == 200) && accelRawDataHelper.httpsOEMConfigPresent && oemRootCAPresent){
+            if((rawData->axis == 'X' || httpOEMStatusCode == 200) && accelRawDataHelper.httpsOEMConfigPresent && (oemRootCAPresent & iuWiFiFlash.readMemory(CONNECTION_MODE) == true )){
                 while(RawdataHTTPretryCount < 3 ){
                     if((millis() - HTTPRawDataTimeout) > HTTPRawDataRetryTimeout){
                         HTTPRawDataTimeout = millis();
-                        httpOEMStatusCode = httpsPostBigRequest(accelRawDataHelper.m_endpointHost_oem, accelRawDataHelper.m_endpointRoute_oem,
+                        if(iuWiFiFlash.readMemory(CONNECTION_MODE) == UNSECURED ){      // Not Required
+                            httpOEMStatusCode = httpPostBigRequest(accelRawDataHelper.m_endpointHost_oem, accelRawDataHelper.m_endpointRoute_oem,
+                                                            accelRawDataHelper.m_endpointPort_oem, (uint8_t*) &httpBuffer, 
+                                                            httpBufferPointer,"", NULL, HttpContentType::octetStream);            
+                        }else{
+                            httpOEMStatusCode = httpsPostBigRequest(accelRawDataHelper.m_endpointHost_oem, accelRawDataHelper.m_endpointRoute_oem,
                                                         accelRawDataHelper.m_endpointPort_oem, (uint8_t*) &httpBuffer, 
-                                                        httpBufferPointer,"", ssl_oem_rootca_cert, HttpContentType::octetStream);            
+                                                        httpBufferPointer,"", ssl_oem_rootca_cert, HttpContentType::octetStream);          
+                        }            
 
                         // send HTTP status code back to the MCU
                         char httpOEMAckBuffer[1 + 4];      // axis + 3 digit HTTP status code + null terminator
@@ -808,6 +843,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                            activeCertificates = iuWiFiFlash.updateValue(CERT_ADDRESS,1);
                         }
                         //Serial.println("\nESP32 DEBUG : DOWNLOADING SUCCESSFULLY COMPLETED....");
+                        delay(10);
                         ESP.restart();
                     }
                 }else
@@ -837,12 +873,13 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
         case MSPCommand::SET_CERT_CONFIG_URL:
           {
             // Store the URL into .conf file
-            bool written = iuWiFiFlash.writeFile(IUESPFlash::CFG_STATIC_CERT_ENDPOINT,buffer,bufferLength);  
+            lastReqHash = millis(); // Reset check hash time to avoid sending req during reception of CERT Confg
+            bool written = iuWiFiFlash.writeFile(IUESPFlash::CFG_STATIC_CERT_ENDPOINT,buffer,bufferLength-1);   
             if(written && buffer != NULL){
                 // Serial.println("\nESP32 DEBUG : static url config type success"); 
                  //downloadInitTimer = true;  
                  if(debugMode){
-                     debugPrint("HTTP Certificate Manager Endpoint configured successfully");
+                     debugPrint("MQTT Certificate Manager Endpoint configured successfully");
                  }
             }else
             {
@@ -958,60 +995,103 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 delay(1);
             }
             iuWiFiFlash.updateValue(CERT_ADDRESS,0);
+            iuWiFiFlash.updateValue(CONNECTION_MODE,UNSECURED);
             hostSerial.sendMSPCommand(MSPCommand::DELETE_CERT_FILES,"succefully Deleted, Rebooting ESP");
+            delay(10);
             ESP.restart();
             break;
         case MSPCommand::GET_CERT_CONFIG:
         {
+            bool isConfigPresent = iuWiFiFlash.isFilePresent(IUESPFlash::CFG_STATIC_CERT_ENDPOINT);
+            if(!isConfigPresent){
+                if(debugMode){
+                    debugPrint("Using Default cert Config Urls");
+                }
+                String certURL = CERT_CONFIG_DEFAULT_ENDPOINT_HOST + String(":") +String( CERT_CONFIG_DEFAULT_ENDPOINT_PORT) +
+                                 CERT_CONFIG_DEFAULT_ENDPOINT_PATH;
+                String digURL =  CERT_CONFIG_DEFAULT_ENDPOINT_HOST + String(":") + String(DIAGNOSTIC_DEFAULT_ENDPOINT_PORT) +
+                                 DIAGNOSTIC_DEFAULT_ENDPOINT_PATH;
+                hostSerial.sendMSPCommand(MSPCommand::SEND_CERT_DWL_CFG,certURL.c_str());
+                hostSerial.sendMSPCommand(MSPCommand::SEND_CERT_DIG_CFG,digURL.c_str());
+
+                // publish to mqtt
+                publishDiagnostic(certURL.c_str(),256);
+                publishDiagnostic(digURL.c_str(),256);
+                break;
+            }
             StaticJsonBuffer<512> JsonBuffer;
             JsonObject& certConfig = iuWiFiFlash.loadConfigJson(IUESPFlash::CFG_STATIC_CERT_ENDPOINT,JsonBuffer);
             bool validConfig = certConfig.success();
-            String certConfigChar;
-            certConfig.printTo(certConfigChar);
-            char certUrlConfig[256];
-            sprintf(certUrlConfig,"%s%s","CERT URL CONFIG : ",certConfigChar.c_str());
+            // String certConfigChar;
+            // certConfig.printTo(certConfigChar);
             //config.prettyPrintTo(Serial);
             if (validConfig)
-            {
+            {   
+                char certUrlConfig[256];
+                sprintf(certUrlConfig,"CERT URL : %s:%d%s",certConfig["certUrl"]["host"].as<char*>(),certConfig["certUrl"]["port"].as<int>(),certConfig["certUrl"]["path"].as<char*>()  );//certConfigChar.c_str());
                 hostSerial.sendMSPCommand(MSPCommand::SEND_CERT_DWL_CFG,certUrlConfig);
+                publishDiagnostic(certUrlConfig,sizeof(certUrlConfig));
             }
             JsonObject& diagConfig = iuWiFiFlash.loadConfigJson(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT,JsonBuffer);
-            validConfig = diagConfig.success();
-            String diagConfigChar;
-            diagConfig.printTo(diagConfigChar);
-            char diagUrlConfig[256];
-            sprintf(diagUrlConfig,"%s%s","DIAGNOSTIC URL CONFIG : ",diagConfigChar.c_str());
-            if (validConfig)
+            bool validDigConfig = diagConfig.success();
+            // String diagConfigChar;
+            // diagConfig.printTo(diagConfigChar);
+            if (validDigConfig)
             {
+                char diagUrlConfig[256];
+                sprintf(diagUrlConfig,"DIAG URL : %s:%d%s",diagConfig["diagnosticUrl"]["host"].as<char*>() ,diagConfig["diagnosticUrl"]["port"].as<int>(),diagConfig["diagnosticUrl"]["path"].as<char*>()  );
                 hostSerial.sendMSPCommand(MSPCommand::SEND_CERT_DIG_CFG,diagUrlConfig);
+                publishDiagnostic(diagUrlConfig,sizeof(diagUrlConfig));
             }
+            
             break;
         }
         case MSPCommand::READ_CERTS:
             {
-                int size1 = iuWiFiFlash.getFileSize(IUESPFlash::CFG_MQTT_CLIENT0);
-                int size2 = iuWiFiFlash.getFileSize(IUESPFlash::CFG_MQTT_KEY0);
-                int size3 = iuWiFiFlash.getFileSize(IUESPFlash::CFG_CERT_UPGRADE_CONFIG);
-                int size4 = iuWiFiFlash.getFileSize(IUESPFlash::CFG_EAP_CLIENT0);
-                int size5 = iuWiFiFlash.getFileSize(IUESPFlash::CFG_EAP_KEY0);
+            //     int size1 = iuWiFiFlash.getFileSize(IUESPFlash::CFG_MQTT_CLIENT0);
+            //     int size2 = iuWiFiFlash.getFileSize(IUESPFlash::CFG_MQTT_KEY0);
+            //     int size3 = iuWiFiFlash.getFileSize(IUESPFlash::CFG_CERT_UPGRADE_CONFIG);
+            //     int size4 = iuWiFiFlash.getFileSize(IUESPFlash::CFG_EAP_CLIENT0);
+            //     int size5 = iuWiFiFlash.getFileSize(IUESPFlash::CFG_EAP_KEY0);
+
+            //     int size6 = iuWiFiFlash.getFileSize(IUESPFlash::CFG_MQTT_CLIENT1);
+            //     int size7 = iuWiFiFlash.getFileSize(IUESPFlash::CFG_MQTT_KEY1);
+            //     int size8 = iuWiFiFlash.getFileSize(IUESPFlash::CFG_EAP_CLIENT1);
+            //     int size9 = iuWiFiFlash.getFileSize(IUESPFlash::CFG_EAP_KEY1);
+                //const char* filename;
+                // for(int i = 0; i < IUESPFlash::CFG_COUNT;i++){
+                //    Serial.print(iuWiFiFlash.getConfigFilename((IUESPFlash::storedConfig)i),filename, );
+                //    Serial.print("\t File Size : \t")
+
+                //     delay(2);
+                //     Serial.println( iuWiFiFlash.getFileSize((IUESPFlash::storedConfig)i) );
+                //     delay(1);
+                // }
+                iuWiFiFlash.listAllAvailableFiles(IUESPFlash::CONFIG_SUBDIR);
                 //int size6 = iuWiFiFlash.getConfigFilename(IUESPFlash::CFG_STATIC_CERT_ENDPOINT);
-                char cert[size1],eapcert[size3];
-                char key[size2] ,eapkey[size5] ;
-                char url[200];
-                char configdata[size3];
-                iuWiFiFlash.readFile(IUESPFlash::CFG_STATIC_CERT_ENDPOINT,url,200);
+                // char cert[size1],eapcert[size3];
+                // char key[size2] ,eapkey[size5] ;
+                // char url[200];
+                // char configdata[size3];
+                // iuWiFiFlash.readFile(IUESPFlash::CFG_STATIC_CERT_ENDPOINT,url,200);
             
-                Serial.println("Static CONFIG :");
-                for (size_t i = 0; i < 200; i++)
-                {
-                    Serial.print(url[i]);
-                }
-                Serial.println("static config READ COMPLETED");
+                // Serial.println("Static CONFIG :");
+                // for (size_t i = 0; i < 200; i++)
+                // {
+                //     Serial.print(url[i]);
+                // }
+                // Serial.println("static config READ COMPLETED");
                 break;
             }
       case MSPCommand::SEND_WIFI_HASH:
             strcpy(wifiHash,buffer);
             break;
+       case MSPCommand::SEND_CERT_HASH:
+            strcpy(certHash,buffer);
+            break;
+      case MSPCommand::SEND_DIAG_CERT_HASH:
+            strcpy(diagCertHash,buffer);
+            break;      
       case MSPCommand::SEND_MQTT_HASH:
             strcpy(mqttHash,buffer);
             break;
@@ -1131,6 +1211,7 @@ void Conductor::receiveNewCredentials(char *newSSID, char *newPSK)
         // Reset disconnection timer before reconnection attempt
         m_disconnectionTimerStart = millis();
         m_disconnectionMqttTimerStart = millis();
+        wifiConnectTryFlag = true;
         reconnect(true);
     }
 }
@@ -1173,6 +1254,7 @@ void Conductor::receiveNewStaticConfig(IPAddress ip, uint8_t idx)
         hostSerial.sendMSPCommand(MSPCommand::WIFI_CONFIRM_NEW_STATIC_CONFIG);
         // Reset disconnection timer before reconnection attempt
         m_disconnectionTimerStart = millis();
+        wifiConnectTryFlag = true;
         reconnect(true);
     }
 }
@@ -1225,10 +1307,17 @@ void Conductor::disconnectWifi(bool wifiOff)
     /***** End NTP server connection *****/
     timeHelper.end();
     /***** Disconnect MQTT client *****/
-    if (mqttHelper.client.connected())
-    {
-        mqttHelper.client.disconnect();
-    }
+    if(m_secure == false){
+        if (mqttHelper.nonSecureClient.connected())
+        {
+            mqttHelper.nonSecureClient.disconnect();
+        }
+    }else{
+        if (mqttHelper.client.connected())
+        {
+            mqttHelper.client.disconnect();
+        }
+    }    
     /***** Turn off Wifi *****/
     if (WiFi.isConnected())
     {
@@ -1313,7 +1402,10 @@ bool Conductor::reconnect(bool forceNewCredentials)
             return false;
         }
 
-        connectToWiFi();
+        if(wifiConnectTryFlag == true) {
+            wifiConnectTryFlag = false;
+            connectToWiFi();
+        }
 
         m_lastConnectionAttempt = current;
         wifiConnected = (waitForConnectResult() == WL_CONNECTED);
@@ -1406,9 +1498,9 @@ uint8_t Conductor::waitForConnectResult()
             status = WiFi.status();
             current = millis();
         }
-        if (debugMode && current - startT > connectionTimeout)
+        if(status == WL_CONNECT_FAILED)
         {
-            debugPrint("WiFi connection time-out");
+            wifiConnectTryFlag = false;
         }
         return status;
     }
@@ -1470,7 +1562,7 @@ void Conductor::checkWiFiDisconnectionTimeout()
 void Conductor::checkMqttDisconnectionTimeout()
 {
     uint32_t now = millis();
-    if ( mqttHelper.client.connected())
+    if ( mqttHelper.client.connected() || mqttHelper.nonSecureClient.connected() )
     {
         m_disconnectionMqttTimerStart = now;
         //Serial.println("\nSet the m_disconnectionTimerStart");
@@ -1481,6 +1573,7 @@ void Conductor::checkMqttDisconnectionTimeout()
         {
             debugPrint("Exceeded mqtt disconnection time-out");
         }
+        delay(1);
     //    certificateDownloadInProgress = false;    
     //    certDownloadInitAck = false;
     //    downloadInitTimer = true;
@@ -1503,11 +1596,16 @@ void Conductor::checkMqttDisconnectionTimeout()
         {
             espResetCount--;
             espResetCount = iuWiFiFlash.updateValue(ESP_RESET_ADDRESS,espResetCount);
+            delay(10);
             ESP.restart();
         }
         //loopMQTT();
     }
-    mqttHelper.client.loop();
+    if(iuWiFiFlash.readMemory(CONNECTION_MODE) == UNSECURED){
+        mqttHelper.nonSecureClient.loop();
+    }else if(iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED){
+        mqttHelper.client.loop();
+    }
 }
 /* =============================================================================
     MQTT
@@ -1522,14 +1620,14 @@ void Conductor::checkMqttDisconnectionTimeout()
 void Conductor::loopMQTT()
 {   
     if (mqttHelper.hasConnectionInformations()) {
-        if (!mqttHelper.client.connected())
+        if(!mqttHelper.nonSecureClient.connected())
         {
             mqttHelper.reconnect();
         }
-        if(mqttHelper.client.connected()){
+        if(mqttHelper.nonSecureClient.connected()){
           m_disconnectionMqttTimerStart = millis();  
         }
-        mqttHelper.client.loop();
+        mqttHelper.nonSecureClient.loop();
     } else {
         uint32_t now = millis();
         if (now - m_lastMQTTInfoRequest > mqttInfoRequestDelay) {
@@ -1807,7 +1905,12 @@ void Conductor::getWifiInfo(char *destination, uint16_t len, bool mqttOn)
  */
 void Conductor::publishWifiInfo()
 {
-    if (WiFi.isConnected() && mqttHelper.client.connected())
+    if (WiFi.isConnected() && mqttHelper.nonSecureClient.connected() && iuWiFiFlash.readMemory(CONNECTION_MODE) == UNSECURED)
+    {
+        char message[256];
+        getWifiInfo(message, 256, true);
+        publishDiagnostic(message, strlen(message));
+    }else if (WiFi.isConnected() && mqttHelper.client.connected() && iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED)
     {
         char message[256];
         getWifiInfo(message, 256, true);
@@ -1820,7 +1923,15 @@ void Conductor::publishWifiInfo()
  */
 void Conductor::publishWifiInfoCycle()
 {
-    if (WiFi.isConnected() && mqttHelper.client.connected())
+    if (WiFi.isConnected() && mqttHelper.nonSecureClient.connected() && iuWiFiFlash.readMemory(CONNECTION_MODE) == UNSECURED)
+    {
+        uint32_t now = millis();
+        if (now - m_lastWifiInfoPublication > wifiInfoPublicationDelay)
+        {
+            publishWifiInfo();
+            m_lastWifiInfoPublication = now;
+        }
+    }else if (WiFi.isConnected() && mqttHelper.client.connected() && iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED)
     {
         uint32_t now = millis();
         if (now - m_lastWifiInfoPublication > wifiInfoPublicationDelay)
@@ -1853,7 +1964,7 @@ void Conductor::updateWiFiStatus()
  */
 void Conductor::updateMQTTStatus()
 {
-    if (mqttHelper.client.connected())
+    if (mqttHelper.client.connected() || mqttHelper.nonSecureClient.connected() )
     {
         hostSerial.sendMSPCommand(MSPCommand::MQTT_ALERT_CONNECTED);
         //Serial.println("MQTT CONNECTED");
@@ -1886,7 +1997,8 @@ void Conductor::autoReconncetWifi()
     uint32_t now = millis();
     if (now - m_lastWifiStatusCheck > (wifiStatusUpdateDelay))
     {
-        connectToWiFi();
+        setWiFiConfig();
+        //connectToWiFi();
         m_lastWifiStatusCheck = now;
     }
 }
@@ -2339,10 +2451,9 @@ void Conductor::mqttSecureConnect(){
    
     //static uint8_t newDownloadConnectonAttempt;
     uint32_t now = millis();
-    if(!mqttHelper.client.connected() && (now - m_disconnectionMqttTimerStart > 3000 ) && WiFi.isConnected() || upgradeReceived == true){
-          if( certificateDownloadInProgress == false && certDownloadInitAck == false && downloadInitTimer == true && Ping.ping("www.google.com" , 1)){
-             if (!mqttHelper.hasConnectionInformations())
-             {  
+    if(!mqttHelper.client.connected() && (now - m_disconnectionMqttTimerStart > 3000 ) && WiFi.isConnected() || upgradeReceived == true) {
+        if( certificateDownloadInProgress == false && certDownloadInitAck == false && downloadInitTimer == true && Ping.ping("www.google.com" , 1)) {
+            if (!mqttHelper.hasConnectionInformations()) {
                 setMQTTConfig();
                 return;
              }else
@@ -2352,11 +2463,11 @@ void Conductor::mqttSecureConnect(){
                      iuWiFiFlash.isFilePresent(IUESPFlash::CFG_MQTT_CLIENT1) && iuWiFiFlash.isFilePresent(IUESPFlash::CFG_MQTT_KEY1) )
                  {
                    //Serial.println("ESP32 DEBUG : APPYING THE CERTIFICATES*********");
-                   hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Applying MQTT-TLS Certificates");
+                   //hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Applying MQTT-TLS Certificates");
                    int certSize,keySize;
                    if( upgradeReceived  && (activeCertificates == 1 && initialFileDownload == false) || activeCertificates == 1 ){
                         //Serial.println("Using Client 1 Certificates");
-                        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Applying Client1 Certificates");
+                        //hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Applying Client1 Certificates");
                         certSize = iuWiFiFlash.getFileSize(IUESPFlash::CFG_MQTT_CLIENT1);
                         keySize  = iuWiFiFlash.getFileSize(IUESPFlash::CFG_MQTT_KEY1);
                         iuWiFiFlash.readFile(IUESPFlash::CFG_MQTT_CLIENT1,mqtt_client_cert,certSize);
@@ -2364,18 +2475,16 @@ void Conductor::mqttSecureConnect(){
                         iuWiFiFlash.readFile(IUESPFlash::CFG_MQTT_KEY1,mqtt_client_key,keySize);
                    }else{
                         //Serial.println("Using Client 0 Certificates");
-                        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Applying Client0 Certificates");
+                        //hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Applying Client0 Certificates");
                         certSize = iuWiFiFlash.getFileSize(IUESPFlash::CFG_MQTT_CLIENT0);
                         keySize  = iuWiFiFlash.getFileSize(IUESPFlash::CFG_MQTT_KEY0);
                         iuWiFiFlash.readFile(IUESPFlash::CFG_MQTT_CLIENT0,mqtt_client_cert,certSize);
                         delay(1);
                         iuWiFiFlash.readFile(IUESPFlash::CFG_MQTT_KEY0,mqtt_client_key,keySize);
                    }
-                   
-                    if ((certificateDownloadStatus == 1 && ( mqttHelper.mqttConnected == 0 && !mqttHelper.client.connected())) || upgradeReceived == true )
-                    {
+                    if ((certificateDownloadStatus == 1 && ( mqttHelper.mqttConnected == 0 && !mqttHelper.client.connected())) || upgradeReceived == true ){
                         // first connection attempt,upgrade Init
-                        hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Certificate Upgrade Init");
+                        //hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"ESP32 DEBUG : Certificate Upgrade Init");
                     }
                     // Retry 3 time connection then download new certificates
                     mqttHelper.reconnect();  
@@ -2385,8 +2494,7 @@ void Conductor::mqttSecureConnect(){
                     upgradeSuccess();
                     upgradeFailed();
                     //Retry attempt overflow
-                    if (mqttHelper.mqttConnected >= maxMqttClientConnectionCount )
-                    {   
+                    if (mqttHelper.mqttConnected >= maxMqttClientConnectionCount ){   
                         newDownloadConnectonAttempt++;
                         mqttHelper.mqttConnected = 0;
                         // re-initiate the certifiates download process
@@ -2400,8 +2508,8 @@ void Conductor::mqttSecureConnect(){
                             upgradeReceived = false;
                             downloadInitTimer  = false;
                             //newDownloadConnectonAttempt = 0;
-                            
-                        }else {
+                            }
+                            else {
                             //Serial.println("\nESP32 DEBUG : Download Init trigger.......");
                             upgradeReceived = false;
                             downloadInitTimer = false;
@@ -2409,9 +2517,9 @@ void Conductor::mqttSecureConnect(){
                             hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_INIT,CERT_DOWNLOAD_DEFAULT_MESSAGEID);
                         }    
                     }
-                    
-                 }else
-                 {
+                }
+                else
+                {
                      // TODO : .crt and .key files not Present
                      // Show Visuals
                      //Serial.println("\nESP32 DEBUG : Files not available to Initiate Certificates Download");
@@ -2423,12 +2531,11 @@ void Conductor::mqttSecureConnect(){
                      activeCertificates = iuWiFiFlash.updateValue(CERT_ADDRESS,1);   // Update for first attempt only
                      espResetCount = iuWiFiFlash.updateValue(ESP_RESET_ADDRESS,espResetAttempt);
                      hostSerial.sendMSPCommand(MSPCommand::CERT_DOWNLOAD_INIT,CERT_DOWNLOAD_DEFAULT_MESSAGEID);
-                }
-                 
-                 
-             }
-          }else
-          { 
+                }     
+            }
+        }
+        else
+        { 
               // Certificate Download In-progress or all certificates download and connection attempt failed
             //  if (newDownloadConnectonAttempt >= maxMqttCertificateDownloadCount)
             //  {  Serial.println("\nESP32 DEBUG : CERT DOWNLOAD ALL Attempt failed, re-downloading the certificates");
@@ -2888,6 +2995,7 @@ void Conductor::resetDownloadInitTimer(uint16_t downloadTriggerTime,uint16_t loo
 
 void Conductor::updateDiagnosticEndpoint(char* diagnosticEndpoint,int length){
     // Update the file with the latest Diagnostic http/https endpoint
+    lastReqHash = millis(); // Reset check hash time to avoid sending req during reception of CERT Confg
     bool success = iuWiFiFlash.writeFile(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT,diagnosticEndpoint,length);
     if (success)
     {
@@ -2964,10 +3072,16 @@ void Conductor::setMQTTConfig(){
             m_mqttServerPort = config["mqtt"]["port"];
             strcpy(m_mqttUsername, config["mqtt"]["username"]);
             strcpy(m_mqttPassword, config["mqtt"]["password"]);
-
+            bool m_connectionFlag = config["mqtt"]["tls"];
             mqttHelper.setServer(m_mqttServerIP, m_mqttServerPort);
             mqttHelper.setCredentials(m_mqttUsername, m_mqttPassword);
-        }
+            // RESET on change in previous and current mqttConnection mode read from mqtt.conf
+            if(m_connectionFlag != iuWiFiFlash.readMemory(CONNECTION_MODE)){
+                iuWiFiFlash.updateValue(CONNECTION_MODE,m_connectionFlag);
+                delay(10);
+                ESP.restart();
+            }
+            
     }else{
         strcpy(m_mqttServerIP, MQTT_DEFAULT_SERVER_IP);
         m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
@@ -2975,7 +3089,22 @@ void Conductor::setMQTTConfig(){
         strcpy(m_mqttPassword, MQTT_DEFAULT_PASSWORD);
         mqttHelper.setServer(m_mqttServerIP, m_mqttServerPort);
         mqttHelper.setCredentials(m_mqttUsername, m_mqttPassword);
+        m_secure = false;
     }
+ }else{
+        if(debugMode){
+            debugPrint("Using Default MQTT configuration");
+        }
+        strcpy(m_mqttServerIP, MQTT_DEFAULT_SERVER_IP);
+        m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
+        strcpy(m_mqttUsername, MQTT_DEFAULT_USERNAME);
+        strcpy(m_mqttPassword, MQTT_DEFAULT_PASSWORD);
+        mqttHelper.setServer(m_mqttServerIP, m_mqttServerPort);
+        mqttHelper.setCredentials(m_mqttUsername, m_mqttPassword);
+        m_secure = false;
+    }
+
+
 }
 
 void Conductor::setHTTPConfig(){
@@ -3397,7 +3526,7 @@ bool Conductor:: setCertificateManagerHttpEndpoint(){
     if (configAvailable)
     {   
         if(debugMode){
-            debugPrint("HTTP Common Endpoint present.");
+            debugPrint("CERT Common Endpoint present.");
         }
         //Serial.println("Common endpoint file is present");
         return true;

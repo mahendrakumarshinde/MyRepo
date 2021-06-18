@@ -15,8 +15,44 @@
 
 #include "SegmentedMessage.h"
 #define MAX_SEGMENTED_MESSAGES 5
-#define FLASH_ERROR 1
-#define FLASH_SUCCESS 0
+#define FLASH_ERROR        1
+#define FLASH_SUCCESS      0
+
+#define DEVICE_DIAG_DOSFS_ERR1    0x0001
+#define DEVICE_DIAG_DOSFS_ERR2    0x0002
+#define DEVICE_DIAG_DOSFS_ERR3    0x0004
+#define DEVICE_DIAG_DOSFS_ERR4    0x0008
+#define DEVICE_DIAG_DOSFS_ERR5    0x0010
+#define DEVICE_DIAG_DOSFS_ERR6    0x0020
+#define DEVICE_DIAG_DOSFS_ERR7    0x0040
+#define DEVICE_DIAG_MQTT_ERR1     0x0080
+#define DEVICE_DIAG_MQTT_ERR2     0x0100
+#define DEVICE_DIAG_HTTP_ERR1     0x0200
+#define DEVICE_DIAG_HTTP_ERR2     0x0400
+#define DEVICE_DIAG_PHASE_ERR1    0x0800
+#define DEVICE_DIAG_SENS_ERR1     0x1000
+#define DEVICE_DIAG_FING_ERR1     0x2000
+#define DEVICE_DIAG_DIAG_ERR1     0x4000
+#define DEVICE_DIAG_VIBR_ERR1     0x8000
+
+//#define DEV_DIAG_MSG_RTRY   3
+
+// #define DEVID_MODE1         1  // Device ID:BMD,APP:BMD
+// #define DEVID_MODE2         2  // Device ID:WIFI,APP:NO
+// #define DEVID_MODE3         3  // Device ID:WIFI,APP:BMD
+
+#define DEVICE_DIAG_BMD_OK        0
+#define DEVICE_DIAG_GET_OK        100
+
+#define DEVICE_DIAG_BMD_ERR1      1
+#define DEVICE_DIAG_BMD_ERR2      2
+#define DEVICE_DIAG_BMD_ERR3      3
+#define DEVICE_DIAG_BMD_ERR4      4
+#define DEVICE_DIAG_BMD_ERR5      5
+#define DEVICE_DIAG_BMD_ERR6      6
+#define DEVICE_DIAG_BMD_ERR7      7
+#define DEVICE_DIAG_SETUP_ERR1    8
+#define DEVICE_DIAG_STMMEM_ERR    9
 /* =============================================================================
     Operation Mode
 ============================================================================= */
@@ -179,6 +215,7 @@ class Conductor
             { m_macAddress.fromString(macAddress); }
         virtual ~Conductor() {}
         MacAddress getMacAddress() { return m_macAddress; }
+        void setMacAddress(MacAddress macAddress) { m_macAddress = macAddress; }
         /***** Hardware & power management *****/
         void sleep(uint32_t duration);
         void suspend(uint32_t duration);
@@ -253,6 +290,12 @@ class Conductor
         void exposeAllConfigurations();
         // mqtt / http configuration
         // void fastSwap (const char **i, const char **d);
+        void updateDeviceInfo(uint8_t devIdMode);
+        bool checkdeviceIdFlash();
+        bool getdeviceIdFlash(uint8_t *idMode);
+        void setDeviceIdMode(bool status);
+        void checkDeviceDiagMsg();
+        void sendDeviceDiagMsg(int diagErrCode, char *statusMsg);
         void readMQTTendpoints();
         bool readHTTPendpoints();
         // void configureMQTTServer(String filename);
@@ -276,7 +319,8 @@ class Conductor
         void cleanFailedSegmentedMessage(int messageID);
         void sendSegmentedMessageResponse(int messageID);
 
-        bool setSensorConfig(char* filename);
+        //bool setSensorConfig(char* filename);
+        bool setSensorConfig(JsonVariant &config);
         bool setEthernetConfig(char* filename);
         uint8_t processWiFiRadioModes(char* buff);
         /***** HTTP raw data sending 
@@ -335,6 +379,8 @@ class Conductor
         void updateWiFiHash();
         void updateMQTTHash();
         void updateHTTPHash();
+        void updateCertHash();
+        void updateDiagCertHash();
         void sendConfigRequest();
         /**** Diagnostic Rule Engine *****/
         void computeDiagnoticState(String *diagInput, int totalConfiguredDiag);
@@ -351,10 +397,19 @@ class Conductor
         void checkPhaseConfig();
         void computeAdvanceFeature();
         void addAdvanceFeature(JsonObject& destJson, uint8_t index , String* id, float* value);
+        bool isWifiConnected() { return m_wifiConnected; }
+        bool isJsonKeyPresent(JsonObject &config,char* key);
         static const uint8_t max_IDs = 10;
         String m_phase_ids[max_IDs];
+        uint32_t m_devDiagErrCode = 0;        
+        bool devIdbmdWifi = false;
+    #ifdef DEVIDFIX_TESTSTUB
+        uint8_t flagval2 = 0;
+    #endif
+    
     protected:
         MacAddress m_macAddress;
+        MacAddress m_macAddressBle;
         /***** Hardware & power management *****/
         sleepMode m_sleepMode = sleepMode::NONE;
         // Timestamp at which idle phase (or cycle) started for AUTO (or
@@ -390,7 +445,8 @@ class Conductor
         const char* m_mqttServerIp = MQTT_DEFAULT_SERVER_IP;
         uint16_t m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
         const char* m_mqttUserName = MQTT_DEFAULT_USERNAME;
-        const char* m_mqttPassword = MQTT_DEFAULT_ASSWORD;
+        const char* m_mqttPassword = MQTT_DEFAULT_PASSWORD;
+        bool m_connectionType = false;
         // bool m_tls_enabled = MQTT_DEFAULT_TLS_FLAG;
         //httpendpoint configuration
         const char* m_httpHost  = HTTP_DEFAULT_HOST;
@@ -425,6 +481,7 @@ class Conductor
         char m_otaMsgType[16];
         char m_otaFwVer[16];
         char m_deviceType[16];
+        char m_deviceId[32];
         char m_rlbkMsgId[32];
         char m_rlbkFwVer[16];
         char fwBinFileName[32];
@@ -432,6 +489,7 @@ class Conductor
         bool m_rlbkDowngrade = false;
         bool otaSendMsg = false;
         bool doOnceFWValid = false;
+        bool otaConnectionMode = false;
         int FWValidCnt = 0;
         char FW_Valid_State = 0;
         uint32_t otaInitWaitTimeout = 0;
@@ -451,7 +509,7 @@ class Conductor
         char m_keyType[15];
         char m_certHash[34];
         char m_keyHash[34];
-        
+        bool m_wifiConnected = false;
         uint32_t last_active[maxDiagnosticStates];
         uint32_t first_active[maxDiagnosticStates];
         uint32_t last_alert[maxDiagnosticStates];

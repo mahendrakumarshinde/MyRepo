@@ -1,6 +1,6 @@
 /*
 Infinite Uptime vEdge Firmware
-Update 15-03-2021
+Update 08-06-2021
 Type - Standard vEdge Firmware Release
 */
 
@@ -123,10 +123,12 @@ int EXCELLENT_SIGNAL_STRENGTH_TH = -40;
 bool doOnce = true;
 uint32_t interval = 30000;
 uint32_t lastDone = 0;
-
+uint32_t devStsTime = 0;
 /**Flash Check Timer variable**/
 uint32_t flashCheckInterval = 300000;
 uint32_t flashCheckLastDone = 0;
+extern float m_audioOffset_current;
+extern float m_audioScaling_current;
 
 /***** Main operator *****/
 
@@ -296,10 +298,12 @@ void onNewUSBMessage(IUSerial *iuSerial) {
 
 void onNewBLEMessage(IUSerial *iuSerial) {
     conductor.processBLEMessage(iuSerial);
+    conductor.processUSBMessage(iuSerial);
 }
 
 void onNewWiFiMessage(IUSerial *iuSerial) {
     conductor.processWiFiMessage(iuSerial);
+    conductor.processUSBMessage(iuSerial);
 }
 
 void onNewEthernetMessage(IUSerial *iuSerial){
@@ -403,7 +407,8 @@ void setup()
   pinMode(ESP32_IO0,OUTPUT);
 //   pinMode(A3,OUTPUT);  // ISR (ODR checked from pin 50)
   digitalWrite(ESP32_IO0,LOW); // IDE1.5_PORT_CHANGE
-  DOSFS.begin();
+  if(DOSFS.begin() == false)
+        conductor.m_devDiagErrCode |= DEVICE_DIAG_DOSFS_ERR1;
   #if 1
     iuUSB.begin();
     iuUSB.setOnNewMessageCallback(onNewUSBMessage);
@@ -447,8 +452,21 @@ void setup()
              // set the BLE address for conductor
             conductor.setConductorMacAddress();          
         }
+        else
+        { /* BLE_FAIL Issue: Show LED indication on BLE Failure */
+            for (size_t i = 0; i < 3; i++)
+            {
+                ledManager.overrideColor(RGB_RED);
+                delay(1000);
+                ledManager.overrideColor(RGB_PURPLE);
+                delay(1000);
+            }
+            ledManager.stopColorOverride();
+            delay(10);            
+        }
         //iuBluetooth.bleButton(false);
-        if(!iuBluetooth.isBLEAvailable) {   // BLE Hardware is Not available
+        // Added "iuBluetooth.deviceIdMode >= 3" to not allow to go into ETH code
+        if(!iuBluetooth.isBLEAvailable && iuBluetooth.deviceIdMode > DEVID_MODE3) { // BLE Hardware is Not available
             // Read the configurations over httpClient
             String availableOnpremConfigs = iuEthernet.getServerConfiguration();
             debugPrint("Available On-Prem Configs:",true);
@@ -640,15 +658,22 @@ void setup()
         //AdvanceFeatures configurations 
         conductor.checkPhaseConfig();
         
-        if(DOSFS.exists("sensorConfig.conf")){
-            conductor.setSensorConfig("sensorConfig.conf"); 
-        }else
+        //if(DOSFS.exists("sensorConfig.conf")){
+            // if(DOSFS.exists("sensorConfig.conf")){
+        bool sensorStatus = conductor.configureFromFlash(IUFlash::CFG_SENSOR_CONFIG) ;
+        if(sensorStatus){ 
+            if(debugMode){
+            debugPrint("sensorConfig.conf file exists");}
+        } 
+        else
         {
+            conductor.m_devDiagErrCode |= DEVICE_DIAG_SENS_ERR1;
+            m_audioOffset_current = SENSORConfiguration::DEFAULT_AUDIO_OFFSET;
+            m_audioScaling_current = SENSORConfiguration::DEFAULT_AUDIO_SCALING;
             if (debugMode)
             {
-                debugPrint("File does not exists,skip sensorConfig");
-            }
-            
+                debugPrint("File does not exists,skip sensorConfig");   
+            }           
         }
         // Fingerprints config and appy 
         if(DOSFS.exists("finterprints.conf") ){
@@ -657,6 +682,7 @@ void setup()
             fingerprintsConfig.printTo(conductor.availableFingerprints);  
         }else
         {
+            conductor.m_devDiagErrCode |= DEVICE_DIAG_FING_ERR1;
             if(debugMode){
                 debugPrint("Fingerprints.conf does not exists");
             }
@@ -696,6 +722,7 @@ void setup()
         }
         else
         {
+            conductor.m_devDiagErrCode |= DEVICE_DIAG_VIBR_ERR1;
             debugPrint(F("LSM and kionix Not found"));
         }
         
@@ -710,8 +737,10 @@ void setup()
         // Timer Init
         //timerInit();
         // Turn ON BLE module and the BLE beacon
-        iuBluetooth.bleButton(true);
-        iuBluetooth.bleBeaconSetting(true);
+        if (iuBluetooth.isBLEAvailable) { /* BLE_FAIL Issue: Start BLE Beacon only when BLE is present */
+            iuBluetooth.bleButton(true);
+            iuBluetooth.bleBeaconSetting(true);
+        }
         // WIFI SETUP BEGIN
         digitalWrite(ESP32_IO0,HIGH);
         iuWiFi.setupHardware();
@@ -720,7 +749,8 @@ void setup()
         iuWiFi.setOnDisconnect(onWiFiDisconnect);
         FeatureStates::isISRActive = true;
         if(setupDebugMode){
-            debugPrint(F("*********Setup Completed*********"));
+            debugPrint("DEVICE DIAG DATA: ",false); debugPrint(conductor.m_devDiagErrCode);
+            debugPrint(F("*********Setup Completed*********")); 
         }
     #endif
  #endif   
@@ -764,6 +794,21 @@ void loop()
             conductor.sendFlashStatusMsg(FLASH_SUCCESS,"Flash Recovery Successfull..Send the configuration");
             conductor.flashStatusFlag = false;
         }
+        if (iuWiFi.isConnected() == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
+        {
+            uint32_t nowTime = millis();
+            if( (iuBluetooth.bmdCommErrMsgRetry > 0) || (iuBluetooth.deviceIdInfoRetry > 0) ) {
+                conductor.checkDeviceDiagMsg();
+            }
+            if((nowTime - devStsTime) > 300000) { // Every 5 Minute
+                if((int)(freeMemory()/1024) < (int)25) { // < 25 KBytes
+                    debugPrint(String(freeMemory(), DEC));
+                    conductor.updateDeviceInfo(iuBluetooth.deviceIdMode);
+                    conductor.sendDeviceDiagMsg(DEVICE_DIAG_STMMEM_ERR,(char *)(String(freeMemory(),DEC).c_str()));
+                }
+                devStsTime = nowTime;
+            }            
+        }
         if (iuWiFi.isConnected() == true && sensorStatus == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
         {
             conductor.sendSensorStatus();
@@ -783,8 +828,10 @@ void loop()
             iuUSB.readMessages();
             iuBluetooth.readMessages();
         }
-        if (iuBluetooth.isBLEAvailable) //  iuEthernet.isEthernetConnected :0 -> connected, 1-> not connected
-        {
+        if (iuBluetooth.isBLEAvailable ||
+           (iuBluetooth.isBLEAvailable == false && iuBluetooth.deviceIdMode == DEVID_MODE2) ||
+           (iuBluetooth.isBLEAvailable == false && iuBluetooth.deviceIdMode == DEVID_MODE3) ) //  iuEthernet.isEthernetConnected :0 -> connected, 1-> not connected
+        { 
             iuWiFi.readMessages();
         }else {
             iuEthernet.readMessages();
@@ -882,7 +929,7 @@ void loop()
             // Send accel raw data
             conductor.periodicSendAccelRawData();
             // Send config checksum
-            conductor.periodicSendConfigChecksum();
+            //conductor.periodicSendConfigChecksum();
             ledManager.updateColors();
         }
         uint32_t now = millis();
@@ -891,6 +938,8 @@ void loop()
             /* === Place your code to excute at fixed interval here ===*/
             conductor.streamMCUUInfo(iuWiFi.port);
             //iuWiFi.sendMSPCommand(MSPCommand::GET_ESP_RSSI);
+            conductor.updateCertHash();
+            conductor.updateDiagCertHash();
             conductor.updateWiFiHash();
             conductor.updateMQTTHash();
             conductor.updateHTTPHash();
