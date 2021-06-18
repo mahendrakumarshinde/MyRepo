@@ -5291,10 +5291,7 @@ int Conductor::checkFingerprintsState(){
         // debugPrint("\nNew Spectral Buffer backup Copy:",false);debugPrint(fingerprintData);
         DynamicJsonBuffer object(strlen(fingerprintData));
         JsonObject& root = object.parseObject(fingerprintData);
-        // if (!root.success()) {
-        // Serial.println("parseObject() failed");
-        // }else 
-        // debugPrint("Paarsing DOne ");
+        if (!root.success()) {
         for (auto jsonKeyValue : root) {
             char* key = (char*)jsonKeyValue.key;
             float value = jsonKeyValue.value.as<float>();                   
@@ -5307,7 +5304,6 @@ int Conductor::checkFingerprintsState(){
         // debugPrint("low : ",false);debugPrint(low);
         // debugPrint("med: ",false);debugPrint(med);
         // debugPrint("High:",false);debugPrint(high);
-         
         if (value > low){
             //debugPrint(" Spectral value is greater Low Threshold ",value );
             fingerprintsState = 1;     
@@ -5343,10 +5339,13 @@ int Conductor::checkFingerprintsState(){
         // debugPrint("Spectral State : ",false);debugPrint(spectralState);
             spectralStateSuccess = true;
             return spectralState;
-        }   
+        } else{
+            if(debugMode){debugPrint("parseObject Failed");}
+        }  
+    }
     }
     else{
-        debugPrint(" Failed to read spectThresh.conf file");
+        if(debugMode){debugPrint(" Failed to read spectThresh.conf file");}
         }    
 }
 
