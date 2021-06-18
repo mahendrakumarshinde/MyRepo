@@ -316,7 +316,8 @@ class Conductor
         void cleanFailedSegmentedMessage(int messageID);
         void sendSegmentedMessageResponse(int messageID);
 
-        bool setSensorConfig(char* filename);
+        //bool setSensorConfig(char* filename);
+        bool setSensorConfig(JsonVariant &config);
         bool setEthernetConfig(char* filename);
         uint8_t processWiFiRadioModes(char* buff);
         /***** HTTP raw data sending 

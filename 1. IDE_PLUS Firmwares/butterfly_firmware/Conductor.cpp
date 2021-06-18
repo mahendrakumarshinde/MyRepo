@@ -20,7 +20,8 @@ const char* fingerprints_Z;
 float modbusFeaturesDestinations[8];
 
 int m_temperatureOffset;
-int m_audioOffset;
+float m_audioOffset_current;
+float m_audioScaling_current;
         
 char Conductor::START_CONFIRM[11] = "IUOK_START";
 char Conductor::END_CONFIRM[9] = "IUOK_END";
@@ -149,6 +150,9 @@ bool Conductor::configureFromFlash(IUFlash::storedConfig configType)
             case IUFlash::CFG_RPM:
                 configureRPM(config);
                 break;
+            case IUFlash::CFG_SENSOR_CONFIG:
+                setSensorConfig(config);
+                break;     
             default:
                 if (debugMode) {
                     debugPrint("Unhandled config type: ", false);
@@ -669,47 +673,47 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // SET Sensor Configuration and its OFFSET value
     subConfig = root["sensorConfig"];
     if (subConfig.success()) {
-        //configureAllFeatures(subConfig);
-        bool dataWritten = false;
-        
-        if (saveToFlash) {
-            //DOSFS.begin();
-            File sensorConfigFile = DOSFS.open("sensorConfig.conf", "w");
-            if (sensorConfigFile)
-            {
-                
-                if (loopDebugMode) {
-                 debugPrint(F("Writting into file: "), true);
-                }
-                sensorConfigFile.print(jsonChar);
-                sensorConfigFile.close();
-                dataWritten = true;
-            }
-            else if (loopDebugMode) {
-                 debugPrint("Failed to write into file: sensorConfig.conf ");
-                
-            }  
-        
+        bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_SENSOR_CONFIG, subConfig, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime(), messageId);
+        if(loopDebugMode) { 
+            debugPrint("Validation: ", false);
+            debugPrint(validationResultString); 
+            debugPrint("Sensor configuration validation result: ", false); 
+            debugPrint(validConfiguration);
         }
-        if(dataWritten == true){
-          
-          JsonObject& config = configureJsonFromFlash("sensorConfig.conf",1);      // get the accountID
-          JsonVariant variant = config;
-          
-          m_temperatureOffset = config["sensorConfig"]["TMP_OFFSET"];
-          m_audioOffset = config["sensorConfig"]["SND_OFFSET"];
-        
-          if(loopDebugMode){
 
-            debugPrint("Temperature Offset is: ",false);debugPrint(m_temperatureOffset);
-            debugPrint("Audio Offset is:",false); debugPrint(m_audioOffset);
-            //debugPrint("File content");  
-           // variant.prettyPrintTo(Serial);
-          }
-          
+        if(validConfiguration) {
+            if(loopDebugMode) debugPrint("Received valid sensor configuration");
+            if (saveToFlash) {
+            //DOSFS.begin();
+			iuFlash.saveConfigJson(IUFlash::CFG_SENSOR_CONFIG, subConfig);
+            if(loopDebugMode) debugPrint("Saved sensor configuration file");
+            m_temperatureOffset = root["sensorConfig"]["TMP_OFFSET"];
+            m_audioOffset_current = root["sensorConfig"]["SND_OFFSET"];
+            m_audioScaling_current = root["sensorConfig"]["SND_SCALING"];
+            if(loopDebugMode){
+                debugPrint("Tempearature Offset: ",false);
+                debugPrint(m_temperatureOffset);
+                debugPrint("Audio Offset:",false);
+                debugPrint(m_audioOffset_current);
+                debugPrint("Audio Scaling:",false);
+                debugPrint(m_audioScaling_current);
+            }
+        snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"macId\":\"%s\",\"configType\":\"sensor_ack\"}",messageId,m_macAddress.toString().c_str());        
+        iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
+            if(StreamingMode::BLE && isBLEConnected()) { iuBluetooth.write("SENSOR_CFG_SUCCESS;"); delay(100); }
+                delay(3000);  // wait for MQTT message to be published
+                DOSFS.end();
+            }  
         }
-        
-    }
+         else {
+            if(loopDebugMode) debugPrint("Received invalid sensor configuration");
+            iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
+            if(StreamingMode::BLE && isBLEConnected()) { iuBluetooth.write("SENSOR_CFG_FAILURE;"); delay(100); }
+        }
+    
+    return true;
+    } 
+
     // SET the relayAgentConfig on Ethernet
     subConfig = root["relayAgentConfig"];
     if (subConfig.success()) {
@@ -2536,7 +2540,7 @@ void Conductor::processCommand(char *buff)
                 int id; 
                 char temperatureJSON[60];
                 sscanf(buff,"%d:%d",&id,&m_temperatureOffset);
-                snprintf(temperatureJSON, 60, "{\"sensorConfig\":{\"TMP_OFFSET\":%d,\"SND_OFFSET\":%d } }",m_temperatureOffset,m_audioOffset);
+                snprintf(temperatureJSON, 60, "{\"sensorConfig\":{\"TMP_OFFSET\":%d,\"SND_OFFSET\":%d } }",m_temperatureOffset,m_audioOffset_current);
                  
                 processConfiguration(temperatureJSON,true);    
                 
@@ -2547,8 +2551,8 @@ void Conductor::processCommand(char *buff)
                 
                 int id; 
                 char audioOffsetJSON[60];
-                sscanf(buff,"%d:%d",&id,&m_audioOffset);
-                snprintf(audioOffsetJSON,60,"{\"sensorConfig\":{\"SND_OFFSET\":%d,\"TMP_OFFSET\":%d }} ",m_audioOffset,m_temperatureOffset);
+                sscanf(buff,"%d:%d",&id,&m_audioOffset_current);
+                snprintf(audioOffsetJSON,60,"{\"sensorConfig\":{\"SND_OFFSET\":%d,\"SND_SCALING\":%d,\"TMP_OFFSET\":%d }} ",m_audioOffset_current,m_audioScaling_current,m_temperatureOffset);
                 processConfiguration(audioOffsetJSON,true); 
                 
                 }
@@ -6795,33 +6799,41 @@ bool Conductor::setThresholdsFromFile()
 }
 //set the sensor Configuration
 
-bool Conductor::setSensorConfig(char* filename){
-    
-    JsonObject& config = configureJsonFromFlash(filename,1);      
-    JsonVariant variant = config;
-
+bool Conductor::setSensorConfig(JsonVariant &config){
+    bool success = false;
     if (!config.success()) {
-        if (debugMode) {
-            debugPrint("parseObject() failed");
-        }
-        return false;
+        m_audioOffset_current = SENSORConfiguration::DEFAULT_AUDIO_OFFSET;
+        m_audioScaling_current = SENSORConfiguration::DEFAULT_AUDIO_SCALING;  
+        success = false;
     }
     else{
-
-        m_temperatureOffset = config["sensorConfig"]["TMP_OFFSET"];
-        m_audioOffset = config["sensorConfig"]["SND_OFFSET"];
+        int m_temperatureOffset = config["TMP_OFFSET"];
+        float m_audioOffset = config["SND_OFFSET"];
+        float m_audioScaling = config["SND_SCALING"];
         if(loopDebugMode){
-            debugPrint("Tempearature Offset: ",false);
+            debugPrint("Temperature Offset_1: ",false);
             debugPrint(m_temperatureOffset);
-            debugPrint("Audio Offset:",false);
+            debugPrint("Audio Offset_1:",false);
             debugPrint(m_audioOffset);
-        }    
+            debugPrint("Audio Scaling_1:",false);
+            debugPrint(m_audioScaling);
+        }
+        if(m_audioScaling < SENSORConfiguration::DEFAULT_LOW_CUT_OFF_AUDIO_SCALING || m_audioScaling > SENSORConfiguration::DEFAULT_HIGH_CUT_OFF_AUDIO_SCALING){
+            m_audioScaling_current = SENSORConfiguration::DEFAULT_AUDIO_SCALING;
+        }
+        m_audioScaling_current = m_audioScaling;
+
+        if (m_audioOffset < SENSORConfiguration::DEFAULT_LOW_CUT_OFF_AUDIO_OFFSET || m_audioOffset > SENSORConfiguration::DEFAULT_HIGH_CUT_OFF_AUDIO_OFFSET)
+        { 
+            m_audioOffset_current = SENSORConfiguration::DEFAULT_AUDIO_OFFSET;
+        }
+        m_audioOffset_current = m_audioOffset;
         //variant.prettyPrintTo(Serial);
         
-        return true;
+        success = true;
     }
+     return success;
 }
-
 /**
  * @brief 
  * 
