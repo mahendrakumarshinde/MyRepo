@@ -470,49 +470,42 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
             //validationResult["messageType"] = "lowCutFreq-config-ack";
             configLowCutOffFreq = config["lowCutOffFreq"];
             //configLowCutOffFreqPresent = false;
-                debugPrint(" Low Cut Off Freq received in JSON");
+                if(debugMode){debugPrint(" Low Cut Off Freq received in JSON");}
             
             if(configLowCutOffFreq <= 0){  
                 validConfig = false;
                 errorMessages.add("Low Cut Off Frequency is less than or equal to 0");
-            }
-
-            else if(configLowCutOffFreq >= FFTConfiguration::currentSamplingRate/FMAX_FACTOR){
+            } else if(configLowCutOffFreq >= FFTConfiguration::currentSamplingRate/FMAX_FACTOR){
                 validConfig = false;
                 errorMessages.add("Low Cut off Frequency is greater or equal to than FMAX");
-            }    
-            
-            else if(configLowCutOffFreq == FFTConfiguration::currentLowCutOffFrequency){
+            }else if(configLowCutOffFreq == FFTConfiguration::currentLowCutOffFrequency){
                 sameLowCutOffFreq = true;
                 validConfig = false;
                 //debugPrint("Same Low Cut Off frequency recieved");
                 //errorMessages.add("Same Low Cut Off Frequency recieved");
-            }
-        }           
+                }
+            }           
+
             if(config.containsKey("highCutOffFreq")){                                       
             validConfig = true;
             //validationResult["messageType"] = "highCutFreq-config-ack";
             configHighCutOffFreq = config["highCutOffFreq"];
             //configHighCutOffFreqPresent = false;
-                    debugPrint("High Cut Off Freq recieved in JSON");
+                if(debugMode){debugPrint("High Cut Off Freq recieved in JSON");}
         
             if(configHighCutOffFreq <= 0){  
                 validConfig = false;
                 errorMessages.add("High Cut Off Frequency is less than or equal to 0");
-            }
-
-            else if(configHighCutOffFreq > FFTConfiguration::currentSamplingRate/FMAX_FACTOR){
+            } else if(configHighCutOffFreq > FFTConfiguration::currentSamplingRate/FMAX_FACTOR){
                 validConfig = false;
                 errorMessages.add("High Cut off Frequency is greater than FMAX");
-            }    
-            
-            else if(configHighCutOffFreq == FFTConfiguration::currentHighCutOffFrequency){
+            } else if(configHighCutOffFreq == FFTConfiguration::currentHighCutOffFrequency){
                 sameHighCutOffFreq = true;
                 validConfig = false;
                 //debugPrint("Same High Cut Off frequency recieved");
                 //errorMessages.add("Same High Cut Off Frequency recieved");
-            }          
-        }   
+                }          
+            }   
             if(configHighCutOffFreq - configLowCutOffFreq == 0){
                 validConfig = false;
                 errorMessages.add("Low and High Cut Off values cannot be same");
