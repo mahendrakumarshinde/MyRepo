@@ -2201,6 +2201,7 @@ JsonObject& Conductor:: configureJsonFromFlash(String filename,bool isSet){
     // close file
     }
     myFile.close();  
+    return root;     // JSON Object
 }
 
 /**
@@ -4053,6 +4054,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             }
             break;
         case MSPCommand::WIFI_ALERT_CONNECTED:
+            syncLostCount = 0;
             m_wifiConnected = true;
             if (loopDebugMode) { debugPrint(F("WIFI-CONNECTED;")); }
             if(getDatetime() < 1590000000.00){iuWiFi.sendMSPCommand(MSPCommand::GOOGLE_TIME_QUERY);}
@@ -4066,7 +4068,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             // }
             break;
         case MSPCommand::WIFI_ALERT_DISCONNECTED:
-            conductor.syncLostCount = 0;
+            syncLostCount = 0;
             m_wifiConnected = false;
             certDownloadInProgress = false;
             if (isBLEConnected()) {
@@ -7545,7 +7547,7 @@ void Conductor::sendOtaStatus()
                 delay(1000);
                 break;
             case OTA_FW_FILE_SYS_ERROR:
-                                if (setupDebugMode) debugPrint("Sendotasts: Unknown OTA Status code !");
+                if (setupDebugMode) debugPrint("Sendotasts: Unknown OTA Status code !");
                 sendOtaStatusMsg(MSPCommand::OTA_FUG_ABORT,OTA_UPGRADE_ERR,String(iuOta.getOtaRca(OTA_FILE_MISSING)).c_str());
                 delay(1000);
                 break;
@@ -7596,7 +7598,7 @@ void Conductor::sendOtaStatus()
         otaSendMsg = false;
         /* Send Error message only once. Not to send on every bootup */
         iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,OTA_FW_VALIDATION_SUCCESS);
-                otaStatus = iuOta.getOtaFlagValue(SELF_UPGRD_STATUS_MSG_LOC);
+        otaStatus = iuOta.getOtaFlagValue(SELF_UPGRD_STATUS_MSG_LOC);
         if (setupDebugMode) {
             debugPrint("Main FW:Self Upgrade Status Code: ",false);
             debugPrint(otaStatus);
@@ -7672,7 +7674,7 @@ void Conductor::sendOtaStatusMsg(MSPCommand::command type, char *msg, const char
             delay(10); 
         }
     }
-        if(MSPCommand::OTA_FDW_ABORT == type || MSPCommand::OTA_FUG_ABORT == type)
+    if(MSPCommand::OTA_FDW_ABORT == type || MSPCommand::OTA_FUG_ABORT == type)
     { // delete tempFolder downloaded bin and hash file. to cleanup failed OTA
         if (loopDebugMode) {
             debugPrint(F("OTA failed: "),false);
