@@ -605,13 +605,13 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
 
       // Serial.print("ARMS :");Serial.println(arms*resolution);
       // Serial.print("Resolution Value :");Serial.println(resolution,6); 
-       static int direction = 0;
-       static bool fingerprintSet = false; 
+       //static int direction = 0;
+       //static bool fingerprintSet = false; 
         
-       if(direction >2){
-        direction = 0;
+    //    if(direction >2){
+    //     direction = 0;
           
-       }
+    //    }
       // Serial.print("Axis ID :");Serial.println(direction);
     
        //Serial.println("********************** Dingerprint On Acceleration Amplitude ***************************************");     
@@ -755,21 +755,21 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
               Serial.println("]"); 
            */           
     
-             if(direction == 0) {
-                fingerprintResult_X =  DiagnosticEngine::m_specializedCompute (direction,(const q15_t*)amplitudes,amplitudeCount,resolution,scaling1,velRPM/60);  // resolution
+             if(m_id == 30) {
+                fingerprintResult_X =  DiagnosticEngine::m_specializedCompute (m_id,(const q15_t*)amplitudes,amplitudeCount,resolution,scaling1,velRPM/60);  // resolution
                 // debugPrint("X", false);debugPrint(fingerprintResult_X, true);
              }
-             if(direction ==1){
-                fingerprintResult_Y = DiagnosticEngine::m_specializedCompute (direction, (const q15_t*)amplitudes,amplitudeCount,resolution, scaling1,velRPM/60);
+             if(m_id == 31){
+                fingerprintResult_Y = DiagnosticEngine::m_specializedCompute (m_id, (const q15_t*)amplitudes,amplitudeCount,resolution, scaling1,velRPM/60);
                 // debugPrint("Y", false);debugPrint(fingerprintResult_Y, true);
 
              }
-             if(direction == 2){
-                fingerprintResult_Z = DiagnosticEngine::m_specializedCompute (direction, (const q15_t*)amplitudes,amplitudeCount,resolution,scaling1,velRPM/60);
+             if(m_id == 32){
+                fingerprintResult_Z = DiagnosticEngine::m_specializedCompute (m_id, (const q15_t*)amplitudes,amplitudeCount,resolution,scaling1,velRPM/60);
                 // debugPrint("Z", false);debugPrint(fingerprintResult_Z, true);
              }
             
-            direction++; 
+            //direction++; 
                 
       
             if( m_useCalibrationMethod == false ) {// || UsageMode::CALIBRATION == 0) {

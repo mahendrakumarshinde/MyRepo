@@ -10,7 +10,7 @@
 ============================================================================= */
 
 /***** Firmware version *****/
-const char FIRMWARE_VERSION[8] = "3.0.5";
+const char FIRMWARE_VERSION[8] = "3.0.6";
 
 
 /***** Device Type *****/  
@@ -31,6 +31,8 @@ const char DEVICE_TYPE[DEVICE_TYPE_LENGTH] = "ide_plus";
 #define DRAGONFLY_V03
 
 #define USE_LED_STRIP
+/* Teststub flag for testing deviceid fix and default wifi conf */
+//#define DEVIDFIX_TESTSTUB
 
 /***** WiFi Options *****/
 //#define USE_EXTERNAL_WIFI
@@ -93,6 +95,12 @@ namespace IU_VERSION {
     }
 };  // IU_VERSION
 
+/* =============================================================================
+    Default WIFI configuration values
+============================================================================= */
+const char WIFI_DEFAULT_SSID[16] = "Administrator";
+const char WIFI_DEFAULT_PSWD[16] = "Admin@121";
+const char WIFI_DEFAULT_AUTH[8]  = "WPA-PSK";
 
 /* =============================================================================
     Default MQTT configuration values

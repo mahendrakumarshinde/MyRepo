@@ -39,7 +39,7 @@
 #define  OTA_FILE_MISSING       10
 #define  OTA_MQTT_DISCONNECT    11
 #define  OTA_INVALID_FIRMWARE   44
-
+#define OTA_INVALID_DEVICEID    45
 
 #define CERT_DOWNLOAD_INIT_REQ_ACK      12
 #define CERT_DOWNLOAD_START             13
@@ -58,6 +58,8 @@
 #define FLAG_ADDRESS    (uint32_t)0x080FF800    /* Start address of FLAG location*/
 // #define CONFIG_MQTT_FLASH_ADDRESS    (uint32_t)0x080FE800    /* Start address of MQTT Config location*/
 // #define CONFIG_HTTP_FLASH_ADDRESS    (uint32_t)0x080FE000    /* Start address of HTTP Config location*/
+//#define CONFIG_DEV_ID_ADDRESS         (uint32_t)0x080FC000    /* Start address BMD MAC location */
+//#define CONFIG_DEV_INFO_ADDRESS       (uint32_t)0x080FC800    /* Start address Device Information location */
 
 #define OTA_MAX_VALIDATION_RETRY    2
 

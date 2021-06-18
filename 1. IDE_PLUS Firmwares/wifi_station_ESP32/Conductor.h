@@ -90,7 +90,7 @@ class Conductor
         static const uint32_t mqttInfoRequestDelay = 1000;  // ms
         /** Connection retry constants **/
         // Single connection attempt timeout
-        static const uint32_t connectionTimeout = 30000;  // ms
+        static const uint32_t connectionTimeout = 300; //30000;  // ms
         // Delay between 2 connection attemps
         static const uint32_t reconnectionInterval = 1000;  // ms
         //ESP32 will deep-sleep after being disconnected for more than:
@@ -237,9 +237,12 @@ class Conductor
         void sendWiFiConfig();
         IUESPFlash::storedConfig getStoredConfigType(const char* certType,bool partation);
         bool validateCertType(const char* type);
+        char certHash[34];
+        char diagCertHash[34];
         char wifiHash[34];
         char mqttHash[34];
         char httpHash[34];
+        bool wifiConnectTryFlag = false;
     protected:
         /***** Config from Host *****/      
         char HOST_FIRMWARE_VERSION[8];      //filled when the ESP starts or when it connects to MQTT broker
