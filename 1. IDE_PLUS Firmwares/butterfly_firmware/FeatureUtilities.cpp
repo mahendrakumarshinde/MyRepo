@@ -734,6 +734,10 @@ float RFFTFeatures::computeRPM(q15_t *amplitudes,int m_lowRPMFrequency,int m_hig
     if(upper_index < lower_index) {
         return 0;           //return 0 invalid condition
     }
+    if(upper_index > amplitudeCount){
+        upper_index = amplitudeCount;
+        if(debugMode){debugPrint("upper_index Out of bound");}
+    }
     dCount = (upper_index - lower_index)+1;
     sectionCount1 = dCount/MAX_PEAK_COUNT;     //for devision
     sectionCount2 = dCount%MAX_PEAK_COUNT;      //for less than 128 count
