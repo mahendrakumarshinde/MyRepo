@@ -852,3 +852,14 @@ void IUESP8285::disconnect()
     sendMSPCommand(MSPCommand::MQTT_DISCONNECT);
     m_working = true;
 }
+
+void IUESP8285::sendVelRMSStatus(char *msg)
+{
+    if(conductor.validTimeStamp()) {
+        char SensorResponse[256];
+        double TimeStamp = conductor.getDatetime();            
+        snprintf(SensorResponse, 256, "{\"deviceIdentifier\":\"%s\",\"type\":\"%s\",\"status\":\"%s\",\"timestamp\":%.2f}",
+        conductor.getMacAddress().toString().c_str(), "vEdge",  msg ,TimeStamp);
+        iuWiFi.sendMSPCommand(MSPCommand::SEND_FLASH_STATUS,SensorResponse);
+    }
+} 

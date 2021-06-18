@@ -1,10 +1,10 @@
 #include "FeatureComputer.h"
-#include "LedManager.h"
+//#include "LedManager.h"
 
 extern float modbusFeaturesDestinations[8];
-extern uint8_t velMaxSampleCount;
-#define MAX_ACCELRMS512TOTAL        1500
-#define MAX_ACCELRMS512_LOOP_COUNT  20
+// extern uint8_t velMaxSampleCount;
+// #define MAX_ACCELRMS512TOTAL        1500
+// #define MAX_ACCELRMS512_LOOP_COUNT  20
 /* =============================================================================
     Audio Scaling Global Variable
 ===============================================================================*/
@@ -523,7 +523,7 @@ void SectionSumComputer::m_specializedCompute()
             debugPrint(": ", false);
             debugPrint(total * m_sources[i]->getResolution());
         }
-#if 1
+#if 0
            // JIRA1918 - Workaround solution,when device shows max value of Velocity RMS for N consecutive samples, reset device
             if(m_id == 23) {
                 if(featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Total] > MAX_ACCELRMS512TOTAL) {

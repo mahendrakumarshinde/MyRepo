@@ -806,11 +806,11 @@ void loop()
             sensorStatus = false;
         }
         
-        if (iuWiFi.isConnected() == true && conductor.requestConfig == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
-        {
-            conductor.sendConfigRequest();
-            conductor.requestConfig = false;
-        }
+        // if (iuWiFi.isConnected() == true && conductor.requestConfig == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
+        // {
+        //     conductor.sendConfigRequest();
+        //     conductor.requestConfig = false;
+        // }
         conductor.manageSleepCycles();
         // Receive messages & configurations
         if(conductor.getUsageMode() != UsageMode::OTA) {
@@ -965,7 +965,13 @@ void loop()
             }
         }
         if(conductor.getUsageMode() != UsageMode::OTA) { /* Block BLE messages, raw data during OTA download */
-
+            if ((millis() - conductor.lastConfigRequest > conductor.configRequestTimeout) || conductor.sendConfigReqOnBoot) {
+                if((iuWiFi.isConnected() && conductor.getDatetime() > 1600000000.00) ){
+                    conductor.sendConfigRequest();
+                    conductor.sendConfigReqOnBoot = false;
+                    conductor.lastConfigRequest = millis();
+                }
+            }
             uint32_t current = millis();
             if (current - flashCheckLastDone > flashCheckInterval) {
                 flashCheckLastDone = current;

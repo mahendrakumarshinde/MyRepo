@@ -127,6 +127,7 @@ class IUESP8285 : public IUSerial, public Component
         bool getConnectionStatus(){return m_wifiConfirmPublication;}
         void setAwakeTimerStart() { m_awakeTimerStart = millis(); }
         void clearSendWifiConfig();
+        void sendVelRMSStatus(char *msg);
     private:
         /**** Confirm Publication Timeout ****/
         uint32_t m_lastConfirmedPublication = 0;
