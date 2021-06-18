@@ -17,7 +17,7 @@
 #define FFT_CONFIGURATION_H
 
 #define FMAX_FACTOR 2.56
-
+#define UIN32_FULL_SCALE 4294967296
 namespace FFTConfiguration {
     // The number of possible configurations for samplingRate and blockSize
     // const int samplingRateConfigurations = 4;
@@ -61,6 +61,16 @@ namespace FFTConfiguration {
     const bool kionixSensor = 1;
     extern int currentLSMgRange;
     extern int currentKNXgRange;
+}
+
+namespace SENSORConfiguration{
+
+    const float DEFAULT_AUDIO_OFFSET = 0;
+    const float DEFAULT_AUDIO_SCALING = 1;
+    const float DEFAULT_LOW_CUT_OFF_AUDIO_OFFSET = -100;
+    const float DEFAULT_HIGH_CUT_OFF_AUDIO_OFFSET = 100;
+    const float DEFAULT_LOW_CUT_OFF_AUDIO_SCALING = 0.005;
+    const float DEFAULT_HIGH_CUT_OFF_AUDIO_SCALING = 10;
 }
 
 #endif // FFT_CONFIGURATION_H

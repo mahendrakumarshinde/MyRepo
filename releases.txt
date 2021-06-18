@@ -1,4 +1,87 @@
 #################################################################################################################################################################################
+Date: 08 JUNE 2021
+Contributed By : Vikas Gaikwad,Sanketa Patil,Sidramayya Swami,Mahendrakumar Shinde 
+Product Name : vEdge
+Release Name : Porting firmware vEdge2.1 v3.3.0,3.3.1,3.2.0,3.4.0 to vEdge1.6 3.0.6 
+Firmware Versions :
+		1. vEdge_main(STM32) : 3.0.6
+		2. vEdge_wifi (ESP32): 3.0.6
+		3. Bootloader L1     : 2.0.0
+		4. Bootloader L2     : 2.0.0
+		5. Factory Firmware  : 2.0.0 
+################################################################################################################################################################################
+
+Release Description :
+
+   1.Device gets stuck after 71 minutes of operation for certain configuration, WIFI/ESP is active but STM is stuck.
+   2.Added support for use alternate deviceID in case BMD detection fails.
+   3.Use of default WiFi configurations if user config fails and switch between two config
+   4.Added device diag information over mqtt message
+   5.Resolved the device migration in secured mode from one server to other when credentials are sent from APP. Secured mode credentials (Cert, Diag, MQTT, HTTP, WIFI) are sent with single selection or after Sent credentials after WIFI De-Activate from APP.
+   6.wiping the spectral feature result buffer when no fingerprints or empty
+   7.Spectral feature RMS value fluctuates from zero to actual
+   8.BSF compared with overall vertical (spectral feature more than the Vrms)
+   9.Added the JSON validation checks for fingerprint output data
+   10.Using m_id in-place of direction flag for spectral features computations
+   11.Disabled periodic hash publication
+
+Features Requirements
+
+    1.Device to use alternate ID in case BMD detection fails
+    2.Device to use default WIFI config in case user config wifi fails
+    3.Added diagnostic error codes
+    4.Added getMQTT command to retrieve diag information
+    5.Block OTA, if OTA request device ID is not matching with existing/current deviceId stored on flash
+    6.Fix temp. value shown as constant across reboot cycle, corrected memory leaks, file close on fail/success case
+
+Feature Description
+
+   - Device to use alternate ID in case BMD detection fails
+   - Device to use default WIFI config in case user config wifi fails
+   - Added diagnostic error codes
+   - Added getMQTT command to retrieve diag information
+   - Block OTA, if OTA request device ID is not matching with existing/current deviceId stored on flash
+
+Feature Description
+
+Device to use alternate ID in case BMD detection fails
+
+   - Mode1- BMD detected (On first/regular bootup), deviceID:BMD, APP working
+   - Mode2- BMD Failed on first bootup after FW flashing,deviceID:WIFI, APP Not working
+   - Mode2- BMD Failed, deviceID:WIFI, APP Not working (deviceID stored in flash when in Mode1 not matching)
+   - Mode3- BMD Failed, deviceID:BMD, APP Not working (Use already stored deviceID from flash when in Mode1)
+
+Added default wifi configurations connection
+
+   - On first bootup and FW flashing, create and send default WIFI configuration
+   - When user configuration are entered from APP, overwrite config file
+   - Switch between Default and User configuration if connection fails
+
+Added diagnostic error codes
+
+   - diagnostic error code for setup operation
+   - diagnostic error code for BMD fail case scenarios
+   - diagnostic error code for OTA fail case scenarios
+   - Block OTA, if OTA request device ID is not matching with existing/current deviceId stored on flash
+
+Issue Resolved
+
+   - wiping the spectralfeature result buffer when no fingerprints or empty
+   - spectral feature RMS value fluctuates from zero to actual
+   - BSF compared with overall vertical (spectral feature more than the Vrms)
+   - Added the JSON validation checks for fingerprint output data
+   - Using m_id in-place of direction flag for spectral features computations
+   - Disabled periodic hash publication
+
+JIRA No
+
+   - IUINTERNAL 1906,IUINTERNAL 1868,IUINTERNAL- 1359,IUINTERNAL- 1700
+
+TODO
+
+Limitations
+
+#################################################################################################################################################################################
 Date: 15 MARCH 2021
 Contributed By : Vikas Gaikwad,Sanketa Patil,Sidramayya Swami 
 Product Name : vEdge
