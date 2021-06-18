@@ -277,7 +277,7 @@ char* DiagnosticEngine::m_specializedCompute (int m_direction, const q15_t *m_am
     
      //fingerprintsIdBuffer[i] = fingerprintsKeyValues.key;
          
-     if(m_direction == 0 && root3["dir"] =="VX" || root3["dir"] == "AX"){                             // seperate all the directions 
+     if(m_direction == 30 && root3["dir"] =="VX" || root3["dir"] == "AX"){                             // seperate all the directions 
           // VX
         //  float  speedX = root3["speed"]; 
          float speedX = speed;
@@ -308,7 +308,7 @@ char* DiagnosticEngine::m_specializedCompute (int m_direction, const q15_t *m_am
         KeyCount++;
         dirFlag_X = true;        
        }
-       if(m_direction == 1 && root3["dir"] =="VY" || root3["dir"] == "AY"){                             // seperate all the directions 
+       if(m_direction == 31 && root3["dir"] =="VY" || root3["dir"] == "AY"){                             // seperate all the directions 
           // VY
         //  float  speedY = root3["speed"]; 
          float  speedY = speed;
@@ -339,7 +339,7 @@ char* DiagnosticEngine::m_specializedCompute (int m_direction, const q15_t *m_am
         KeyCount++;
         dirFlag_Y = true;
        }
-       if(m_direction == 2 && root3["dir"] =="VZ"  || root3["dir"] == "AZ"){                             // seperate all the directions 
+       if(m_direction == 32 && root3["dir"] =="VZ"  || root3["dir"] == "AZ"){                             // seperate all the directions 
           // VZ
         //  float  speedZ     =  root3["speed"]; 
          float speedZ = speed; 

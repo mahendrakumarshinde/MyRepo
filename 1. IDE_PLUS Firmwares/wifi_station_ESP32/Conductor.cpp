@@ -808,7 +808,9 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                     }
                 }
             }
-            if((rawData->axis == 'X' || httpOEMStatusCode == 200) && accelRawDataHelper.httpsOEMConfigPresent && (oemRootCAPresent & iuWiFiFlash.readMemory(CONNECTION_MODE) == true )){
+
+            if((rawData->axis == 'X' || httpOEMStatusCode == 200) && accelRawDataHelper.httpsOEMConfigPresent && (iuWiFiFlash.readMemory(CONNECTION_MODE) == true )){
+
                 while(RawdataHTTPretryCount < 3 ){
                     if((millis() - HTTPRawDataTimeout) > HTTPRawDataRetryTimeout){
                         HTTPRawDataTimeout = millis();
@@ -819,7 +821,8 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                         }else{
                             httpOEMStatusCode = httpsPostBigRequest(accelRawDataHelper.m_endpointHost_oem, accelRawDataHelper.m_endpointRoute_oem,
                                                         accelRawDataHelper.m_endpointPort_oem, (uint8_t*) &httpBuffer, 
-                                                        httpBufferPointer,"", ssl_oem_rootca_cert, HttpContentType::octetStream);          
+                                                        httpBufferPointer,"", NULL, HttpContentType::octetStream);            //Need to change here if OEM provides root certificate
+          
                         }            
 
                         // send HTTP status code back to the MCU
