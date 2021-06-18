@@ -3017,10 +3017,19 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     if(FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor){
                         iuUSB.port->print("FFT: LSMgRange : ");
                         iuUSB.port->println(FFTConfiguration::currentLSMgRange);
+                        iuUSB.port->print("FFT: LowCutOffFrequency_LSM : ");
+                        iuUSB.port->println(FFTConfiguration::currentLowCutOffFrequency);
+                        iuUSB.port->print("FFT: HighCutOffFrequency_LSM : ");
+                        iuUSB.port->println(FFTConfiguration::currentHighCutOffFrequency);
                     }
+        
                     if(FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor){
                         iuUSB.port->print("FFT: KNXgRange : ");
                         iuUSB.port->println(FFTConfiguration::currentKNXgRange);
+                        iuUSB.port->print("FFT: LowCutOffFrequency_KNX : ");
+                        iuUSB.port->println(FFTConfiguration::currentLowCutOffFrequency);
+                        iuUSB.port->print("FFT: HighCutOffFrequency_KNX : ");
+                        iuUSB.port->println(FFTConfiguration::currentHighCutOffFrequency);
                     }
                 }
                 if (strcmp(buff,"IUGET_DEVICE_CONF") == 0)
@@ -6086,7 +6095,7 @@ bool Conductor::setFFTParams() {
         {
             debugPrint(F("LSM Present & LSM set"));
             iuAccelerometer.setSamplingRate(FFTConfiguration::currentSamplingRate);
-            FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_LSM;
+            //FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_LSM;
             setSensorStatus(SensorStatusCode::LSM_SET);
             if(config.containsKey("grange")){
                 FFTConfiguration::currentLSMgRange = config["grange"];
@@ -6094,12 +6103,22 @@ bool Conductor::setFFTParams() {
                 FFTConfiguration::currentLSMgRange = FFTConfiguration::DEFAULT_LSM_G_RANGE;
             }
             iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
+            if(config.containsKey("lowCutOffFreq")){
+                FFTConfiguration::currentLowCutOffFrequency = config["lowCutOffFreq"];
+            }else{
+                FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_LSM;
+            }
+            if(config.containsKey("highCutOffFreq")){
+                FFTConfiguration::currentHighCutOffFrequency = config["highCutOffFreq"];
+            }else{
+                FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate/FMAX_FACTOR;
+            }
         }
         else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (iuAccelerometerKX222.kionixPresence))
         {
             debugPrint(F("KIONIX Present & KIONIX set"));
             iuAccelerometerKX222.setSamplingRate(FFTConfiguration::currentSamplingRate); // will set the ODR for the sensor
-            FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
+            //FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
             setSensorStatus(SensorStatusCode::KNX_SET);
             if(config.containsKey("grange")){
                 FFTConfiguration::currentKNXgRange = config["grange"];
@@ -6107,6 +6126,16 @@ bool Conductor::setFFTParams() {
                 FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_KNX_G_RANGE;
             }
             iuAccelerometerKX222.setGrange(FFTConfiguration::currentKNXgRange);
+            if(config.containsKey("lowCutOffFreq")){
+                FFTConfiguration::currentLowCutOffFrequency = config["lowCutOffFreq"];
+            }else{
+                FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
+            }
+            if(config.containsKey("highCutOffFreq")){
+                FFTConfiguration::currentHighCutOffFrequency = config["highCutOffFreq"];
+            }else{
+                FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate/FMAX_FACTOR;           
+                }
         }else if((FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor) && (!iuAccelerometer.lsmPresence) && (iuAccelerometerKX222.kionixPresence)){
             debugPrint(F("LSM absent & KIONIX set"));
             iuAccelerometerKX222.setSamplingRate(iuAccelerometerKX222.defaultSamplingRate);
@@ -6114,6 +6143,7 @@ bool Conductor::setFFTParams() {
             FFTConfiguration::currentSensor = FFTConfiguration::kionixSensor;
             FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
             FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
+            FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
             setSensorStatus(SensorStatusCode::LSM_ABS);
             FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_KNX_G_RANGE;
             iuAccelerometerKX222.setGrange(FFTConfiguration::currentKNXgRange);
@@ -6124,6 +6154,7 @@ bool Conductor::setFFTParams() {
             FFTConfiguration::currentSensor = FFTConfiguration::lsmSensor;
             FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
             FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_LSM;
+            FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
             setSensorStatus(SensorStatusCode::KNX_ABS);
             FFTConfiguration::currentLSMgRange = FFTConfiguration::DEFAULT_LSM_G_RANGE;
             iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
@@ -6160,6 +6191,7 @@ bool Conductor::setFFTParams() {
                 FFTConfiguration::currentSamplingRate = iuAccelerometer.defaultSamplingRate;
                 FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
                 FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_LSM;
+                FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
                 FFTConfiguration::currentLSMgRange = FFTConfiguration::DEFAULT_LSM_G_RANGE;
                 iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
             }else if(iuAccelerometerKX222.kionixPresence){
@@ -6167,6 +6199,7 @@ bool Conductor::setFFTParams() {
                 FFTConfiguration::currentSamplingRate = iuAccelerometerKX222.defaultSamplingRate;
                 FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
                 FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
+                FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
                 FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_KNX_G_RANGE;
                 iuAccelerometerKX222.setGrange(FFTConfiguration::currentKNXgRange);
             }else{
@@ -6177,7 +6210,7 @@ bool Conductor::setFFTParams() {
     }
     // TODO: The following can be configurable in the future
         // FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY;
-        FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
+        //FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
         FFTConfiguration::calculatedSamplingRate = FFTConfiguration::currentSamplingRate;
         FFTConfiguration::currentMinAgitation = FFTConfiguration::DEFAULT_MIN_AGITATION;
         
@@ -6316,7 +6349,15 @@ void Conductor::setConductorMacAddress() {
         char New_BLE_MAC_Address[13];
         uint8_t retryCount = 5;
         int mac_Response = iuBluetooth.sendATCommand("mac?", BLE_MAC_Address, 20);
-        if( mac_Response < 0 || /*(BLE_MAC_Address[0] != '9' || BLE_MAC_Address[0] != '6 &&*/ BLE_MAC_Address[0] == '0'&& BLE_MAC_Address[1] == '0' ){
+
+        debugPrint("BLE MAC ID:",false);debugPrint(BLE_MAC_Address,true);
+        strncpy(New_BLE_MAC_Address, BLE_MAC_Address + 6,11);
+        removeChar(New_BLE_MAC_Address, ':');
+        iuBluetooth.setDeviceName(New_BLE_MAC_Address);
+        iuBluetooth.queryDeviceName();
+        //debugPrint("SET MAC RESPONSE :",false);
+        //debugPrint(mac_Response);
+        if( mac_Response < 0 || /*(BLE_MAC_Address[0] != '9' || BLE_MAC_Address[0] != '6 &&*/ BLE_MAC_Address[0] == '0'&& BLE_MAC_Address[1] == '0' ){            
             // Retry to get BLE MAC
             for (size_t i = 0; i < retryCount; i++)
             {
@@ -6329,6 +6370,7 @@ void Conductor::setConductorMacAddress() {
                     debugPrint("BLE MAC ID IN RETRY : ",false);
                     debugPrint(BLE_MAC_Address);
                 }                    
+
                 if(mac_Response > 0 && (strncmp(BLE_MAC_Address,"00",2))) {
                 //if(mac_Response > 0 && BLE_MAC_Address[0] != '0'&& BLE_MAC_Address[1] != '0'/*&& (( BLE_MAC_Address[0] == '9') || ( BLE_MAC_Address[0] == '6'))*/ ){
                     if(debugMode){

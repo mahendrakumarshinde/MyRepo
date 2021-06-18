@@ -326,6 +326,10 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
             bool notSupportedSamplingRate = false;
             bool samegRange = false;
             bool grangepresent = true;
+            bool sameLowCutOffFreq = false;
+            bool sameHighCutOffFreq = false;
+            int configHighCutOffFreq;
+            int configLowCutOffFreq;
             //Validation for samplingRate field
             if(config.containsKey("samplingRate")) {
                 uint16_t samplingRate = config["samplingRate"];
@@ -483,20 +487,69 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                 errorMessages.add("Key missing: blockSize"); 
             }
             
-
+            
             // If the received config matches the current config, report an error
             if(sameBlockSize && sameSamplingRate && grangepresent) {      //if same SR & BS received and gRange is present then false this condition
                 validConfig = false;
                 errorMessages.add("Same SR & BS received without gRange ");
             }
-            else if(sameBlockSize && sameSamplingRate && samegRange){
+            
+            if(config.containsKey("lowCutOffFreq")){                                       
+            validConfig = true;
+            //validationResult["messageType"] = "lowCutFreq-config-ack";
+            configLowCutOffFreq = config["lowCutOffFreq"];
+            //configLowCutOffFreqPresent = false;
+                if(debugMode){debugPrint(" Low Cut Off Freq received in JSON");}
+            
+            if(configLowCutOffFreq <= 0){  
+                validConfig = false;
+                errorMessages.add("Low Cut Off Frequency is less than or equal to 0");
+            } else if(configLowCutOffFreq >= FFTConfiguration::currentSamplingRate/FMAX_FACTOR){
+                validConfig = false;
+                errorMessages.add("Low Cut off Frequency is greater or equal to than FMAX");
+            }else if(configLowCutOffFreq == FFTConfiguration::currentLowCutOffFrequency){
+                sameLowCutOffFreq = true;
+                validConfig = false;
+                //debugPrint("Same Low Cut Off frequency recieved");
+                //errorMessages.add("Same Low Cut Off Frequency recieved");
+                }
+            }           
+
+            if(config.containsKey("highCutOffFreq")){                                       
+            validConfig = true;
+            //validationResult["messageType"] = "highCutFreq-config-ack";
+            configHighCutOffFreq = config["highCutOffFreq"];
+            //configHighCutOffFreqPresent = false;
+                if(debugMode){debugPrint("High Cut Off Freq recieved in JSON");}
+        
+            if(configHighCutOffFreq <= 0){  
+                validConfig = false;
+                errorMessages.add("High Cut Off Frequency is less than or equal to 0");
+            } else if(configHighCutOffFreq > FFTConfiguration::currentSamplingRate/FMAX_FACTOR){
+                validConfig = false;
+                errorMessages.add("High Cut off Frequency is greater than FMAX");
+            } else if(configHighCutOffFreq == FFTConfiguration::currentHighCutOffFrequency){
+                sameHighCutOffFreq = true;
+                validConfig = false;
+                //debugPrint("Same High Cut Off frequency recieved");
+                //errorMessages.add("Same High Cut Off Frequency recieved");
+                }          
+            }   
+            if(configHighCutOffFreq - configLowCutOffFreq == 0){
+                validConfig = false;
+                errorMessages.add("Low and High Cut Off values cannot be same");
+            }
+            else if(configHighCutOffFreq < configLowCutOffFreq){
+                validConfig = false;
+                errorMessages.add("High Cut Off cannot be smaller than Low Cut Off Frequency");
+            }
+             else if(sameBlockSize && sameSamplingRate && samegRange && sameLowCutOffFreq && sameHighCutOffFreq){
                 validConfig = false;
                 errorMessages.add("Same configuration received");
             }
-            break;
+        break;
         }
-
-        case CFG_SENSOR_CONFIG:{
+       case CFG_SENSOR_CONFIG:{
             validConfig = true;
             validationResult["messageType"] = "sensor-config-ack";
             float m_audioScaling, m_audioOffset ; 
