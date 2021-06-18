@@ -696,10 +696,16 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
 
 
                 //memcpy(metaDataBuffer, buffer, sizeof(buffer));
+                if(iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED){
+                    httpStatusCode = httpsPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_metadata_path,
+                                                    accelRawDataHelper.m_endpointPort,(uint8_t*) &metaDataBuffer, 
+                                                    httpBufferPointer,"", ssl_rootca_cert, HttpContentType::applicationJSON);
+                }else if(iuWiFiFlash.readMemory(CONNECTION_MODE) == UNSECURED){
+                    httpStatusCode = httpPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_metadata_path,
+                                         accelRawDataHelper.m_endpointPort, (uint8_t*) &metaDataBuffer, 
+                                         httpBufferPointer,"", NULL, HttpContentType::applicationJSON);
+                }
 
-                httpStatusCode = httpsPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_metadata_path,
-                                                accelRawDataHelper.m_endpointPort,(uint8_t*) &metaDataBuffer, 
-                                                httpBufferPointer,"", ssl_rootca_cert, HttpContentType::applicationJSON);
 
                 snprintf(metaData_ack_config, 150, "{\"messageType\":\"meta-data-ack\",\"mac\":\"%s\",\"httpCode\":\"%d\",\"timestamp\":%.3f}",
                          m_bleMAC.toString().c_str(),httpStatusCode,timeStamp);

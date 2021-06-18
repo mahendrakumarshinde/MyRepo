@@ -186,14 +186,14 @@ void loop()
 
     if (now - lastReqHash > 30000 &&  (conductor.otaInProgress == false && conductor.certificateDownloadInProgress == false )  )
     {
-        //if(iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED) {
+        if(iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED) {
             if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_STATIC_CERT_ENDPOINT) || strcmp(conductor.certHash,conductor.getConfigChecksum(IUESPFlash::CFG_STATIC_CERT_ENDPOINT)) != 0){
                 hostSerial.sendMSPCommand(MSPCommand::GET_CERT_CONNECTION_INFO);
             }
             if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT) || strcmp(conductor.diagCertHash,conductor.getConfigChecksum(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT)) != 0){
                 hostSerial.sendMSPCommand(MSPCommand::GET_DIAG_CERT_CONNECTION_INFO);
             }
-        //}
+        }
         if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_MQTT) || strcmp(conductor.mqttHash,conductor.getConfigChecksum(IUESPFlash::CFG_MQTT)) != 0){
             hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);
         }

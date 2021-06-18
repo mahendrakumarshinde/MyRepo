@@ -5945,10 +5945,12 @@ void Conductor::sendDiagnosticFingerPrints() {
                     // {    
                     //     iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );    
                     // }
-                    if(StreamingMode::BLE && isBLEConnected()){    
-                    iuBluetooth.write("Fingerprints Data : ");
-                    iuBluetooth.write(FingerPrintResult);
-                    }
+                    
+                    // Remove fingerprints on APP
+                    // if(StreamingMode::BLE && isBLEConnected()){    
+                    // iuBluetooth.write("Fingerprints Data : ");
+                    // iuBluetooth.write(FingerPrintResult);
+                    // }
                 }
             }
             else { // not published as time_diff < 500 ms
