@@ -1,6 +1,6 @@
 /*
   Infinite Uptime WiFi Module Firmware
-  Update 08-06-2021
+  Update 21-06-2021
 */
 
 #include "Conductor.h"
@@ -75,8 +75,29 @@ void setup()
     #endif
     // If this point is reached, tell host that WiFi is waking up
     hostSerial.sendMSPCommand(MSPCommand::WIFI_ALERT_AWAKE);
+    iuWiFiFlash.begin();
+
+    byte mqttConnectionMode = iuWiFiFlash.readMemory(CONNECTION_MODE);
+    //Serial.print("connection Mode Before : ");Serial.println(mqttConnectionMode);
+    if(mqttConnectionMode != UNSECURED && mqttConnectionMode != SECURED){
+        iuWiFiFlash.updateValue(CONNECTION_MODE,UNSECURED); // Default Un-Secured connectionMode
+        //Serial.println("Using Default, Connection CONNECTION_MODE");
+        if(debugMode){
+            debugPrint("Using Default , if invalid connectionMode found");
+        }
+        conductor.m_secure = false;
+    }
+
+    mqttConnectionMode = iuWiFiFlash.readMemory(CONNECTION_MODE);
+    //Serial.print("connection Mode After : ");Serial.println(mqttConnectionMode);
+    conductor.m_secure = mqttConnectionMode;
+    
     // Prepare to receive MQTT messages
-    mqttHelper.client.setCallback(mqttNewMessageCallback);
+    if(mqttConnectionMode == UNSECURED){
+        mqttHelper.nonSecureClient.setCallback(mqttNewMessageCallback);
+    }else if (mqttConnectionMode == SECURED){
+        mqttHelper.client.setCallback(mqttNewMessageCallback);
+    }
     // mqttHelper.setOnConnectionCallback(onMQTTConnection);
     mqttHelper.setOnConnectionCallback(getAllConfig);           // Once the MQTT client connected 
     delay(100);
@@ -84,25 +105,27 @@ void setup()
         conductor.reconnect(true);
     #endif
      
-    iuWiFiFlash.begin();
+    //iuWiFiFlash.begin();
     // Set the common url json if file not present
     conductor.setMQTTConfig();
     conductor.setHTTPConfig();
-    conductor.setCertificateManagerHttpEndpoint();
-    //Configure the Diagnostic HTTP/HTTPS Endpoint
-    conductor.configureDiagnosticEndpointFromFlash(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT);
-    conductor.activeCertificates = iuWiFiFlash.readMemory(CERT_ADDRESS);
-    if((conductor.activeCertificates == 0 && iuWiFiFlash.isFilePresent(IUESPFlash::CFG_HTTPS_OEM_ROOTCA0)) ||
-       (conductor.activeCertificates == 1 && iuWiFiFlash.isFilePresent(IUESPFlash::CFG_HTTPS_OEM_ROOTCA1))){
-            conductor.oemRootCAPresent = true;
+    // TODO : Use unsecure flag here condition check required based on EEPROM flag
+    if(iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED) {
+        conductor.setCertificateManagerHttpEndpoint();
+        //Configure the Diagnostic HTTP/HTTPS Endpoint
+        conductor.configureDiagnosticEndpointFromFlash(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT);
+        conductor.activeCertificates = iuWiFiFlash.readMemory(CERT_ADDRESS);
+        if((conductor.activeCertificates == 0 && iuWiFiFlash.isFilePresent(IUESPFlash::CFG_HTTPS_OEM_ROOTCA0)) ||
+        (conductor.activeCertificates == 1 && iuWiFiFlash.isFilePresent(IUESPFlash::CFG_HTTPS_OEM_ROOTCA1))){
+                conductor.oemRootCAPresent = true;
+        }
+        conductor.espResetCount = iuWiFiFlash.readMemory(ESP_RESET_ADDRESS);
+        conductor.certificateDownloadStatus = iuWiFiFlash.readMemory(CERT_DOWNLOAD_STATUS);
     }
-    conductor.espResetCount = iuWiFiFlash.readMemory(ESP_RESET_ADDRESS);
-    conductor.certificateDownloadStatus = iuWiFiFlash.readMemory(CERT_DOWNLOAD_STATUS);
     conductor.setWiFiConfig();
     conductor.sendWiFiConfig();
     conductor.wifiConnectTryFlag = true;
 }
-
 /**
  * Unless there is a connection attempt going on, the loop typically takes
  * ~ 1ms to complete, without accounting for the delay at the end.
@@ -122,9 +145,16 @@ void loop()
         // Update time reference from NTP server if not yet received
         // from IU server
         timeHelper.updateTimeReferenceFromNTP();
+        // TODO : MQTT connection / message reception loop
+        if(iuWiFiFlash.readMemory(CONNECTION_MODE) == UNSECURED){
+            conductor.loopMQTT(); // use for non-secure version
+        }
         conductor.publishWifiInfoCycle();
     }
-    conductor.mqttSecureConnect();
+    // TODO : use the conection Type flag 
+    if(iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED){
+        conductor.mqttSecureConnect();
+    }
     conductor.updateWiFiStatusCycle();
     conductor.checkWiFiDisconnectionTimeout();
     conductor.checkMqttDisconnectionTimeout();
@@ -156,14 +186,14 @@ void loop()
 
     if (now - lastReqHash > 30000 &&  (conductor.otaInProgress == false && conductor.certificateDownloadInProgress == false )  )
     {
-        //if(iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED) {
+        if(iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED) {
             if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_STATIC_CERT_ENDPOINT) || strcmp(conductor.certHash,conductor.getConfigChecksum(IUESPFlash::CFG_STATIC_CERT_ENDPOINT)) != 0){
                 hostSerial.sendMSPCommand(MSPCommand::GET_CERT_CONNECTION_INFO);
             }
             if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT) || strcmp(conductor.diagCertHash,conductor.getConfigChecksum(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT)) != 0){
                 hostSerial.sendMSPCommand(MSPCommand::GET_DIAG_CERT_CONNECTION_INFO);
             }
-        //}
+        }
         if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_MQTT) || strcmp(conductor.mqttHash,conductor.getConfigChecksum(IUESPFlash::CFG_MQTT)) != 0){
             hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);
         }

@@ -222,6 +222,8 @@ namespace RFFTFeatures {
 
     float computeRPM(q15_t *amplitudes, int m_lowRPMFrequency,int m_highRPMFrequency,float rpm_threshold,
     float df,float resolution,float scalingFactor,uint8_t bufferType);
+    float computeRPM(q15_t *amplitudes, int m_lowRPMFrequency,int m_highRPMFrequency,float rpm_threshold,
+    float df,float resolution,float scalingFactor,uint8_t bufferType,uint32_t amplitudeCount);
 }
 
 /*==============================================================================

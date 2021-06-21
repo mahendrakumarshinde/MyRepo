@@ -65,11 +65,24 @@
 
 /* OTA Status flag location in memory @FLAG_ADDRESS */
 #define OTA_STATUS_FLAG_LOC     0  // (0x080FF800)
-#define OTA_RETRY_FLAG_LOC      1  // (0x080FF804)
-#define OTA_VLDN_RETRY_FLAG_LOC 2  // (0x080FF808)
+#define OTA_RETRY_FLAG_LOC      1  // (0x080FF808)
+#define OTA_VLDN_RETRY_FLAG_LOC 2  // (0x080FF810)
 
-#define OTA_PEND_STATUS_MSG_LOC 3  // (0x080FF80C)
+#define OTA_PEND_STATUS_MSG_LOC   3  // (0x080FF810)  reuse of // #define MFW_VER                 3
+#define SELF_UPGRD_STATUS_MSG_LOC 4  // (0x080FF820)  reuse of // #define FW_VALIDATION           4
+/* Flag location values in BL1, Bl2 */
+// #define MFW_FLASH_FLAG          0 (0x080FF800)
+// #define RETRY_FLAG              1
+// #define RETRY_VALIDATION        2
+// #define MFW_VER                 3
+// #define FW_VALIDATION           4
+// #define FW_ROLLBACK             5
+// #define STABLE_FW               6
 
+// #define ESP_FW_VER              7
+// #define ESP_FW_UPGRAD           8
+// #define ESP_RUNNING_VER         9
+// #define ESP_ROLLBACK            10
 #define OTA_DEVICE_TYPE         "vEdge"
 #define OTA_RESPONE_OK          "OTA-RCA-0000"
 #define OTA_REQ_ACK             "OTA-INIT-ACK"
@@ -81,6 +94,7 @@
 #define OTA_UPGRADE_START       "OTA-FUG-START"
 #define OTA_UPGRADE_ERR         "OTA-ERR-FUG-ABORT"
 #define OTA_UPGRADE_OK          "OTA-FUG-SUCCESS"
+#define SELF_UPGRADE_OK         "SELF-FUG-SUCCESS"
 
 /**** CERTS MACROS *****/
 #define CERT_RESPONE_OK          "CERT-RCA-0000"
@@ -99,6 +113,13 @@
 #define vEdge_Main_FW_MD5           "vEdge_main.md5"
 #define vEdge_Wifi_FW_BIN           "vEdge_wifi.bin"
 #define vEdge_Wifi_FW_MD5           "vEdge_wifi.md5"
+#define vEdge_Wifi_BOOT_APP_BIN     "vEdge_wifi_boot.bin"
+#define vEdge_Wifi_BOOT_APP_MD5     "vEdge_wifi_boot.md5"
+#define vEdge_Wifi_BOOT_LODR_BIN    "vEdge_wifi_bootloader.bin"
+#define vEdge_Wifi_BOOT_LODR_MD5    "vEdge_wifi_bootloader.md5"
+#define vEdge_Wifi_PARTITION_BIN    "vEdge_wifi_partition.bin"
+#define vEdge_Wifi_PARTITION_MD5    "vEdge_wifi_partition.md5"
+
 
 /* OTA Status flag Values */
 #define OTA_FW_VALIDATION_SUCCESS   0  // OTA FW Validation Success, continue with new OTA FW
@@ -126,9 +147,10 @@ class IUOTA
 
         bool otaFwBinWrite(char *folderName,char *fileName, char *buff, uint16_t size);
         bool otaMD5Write(char *folderName,char *fileName, char *md5);
+        bool otaMD5Read(char *folderName,char *fileName, char *md5);
         bool otaFwBinRead(char *folderName,char *fileName);//), char *readBuff, uint16_t *readSize);
         bool otaFileRemove(char *folderName,char *fileName);
-        
+        bool otaFileExists(char *folderName,char *fileName);  
         bool otaFileCopy(char *destFilePath,char *srcFilePath, char *filename);
         bool otaSendResponse(MSPCommand::command resp, const char *otaResponse);
         String file_md5 (File & f);

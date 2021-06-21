@@ -23,6 +23,7 @@ class IURawDataHelper
         char m_endpointHost[MAX_HOST_LENGTH];
         char m_endpointRoute[MAX_ROUTE_LENGTH];
         uint16_t m_endpointPort;
+        char m_metadata_path[MAX_ROUTE_LENGTH];
 
         char m_endpointHost_oem[MAX_HOST_LENGTH];
         char m_endpointRoute_oem[MAX_ROUTE_LENGTH];

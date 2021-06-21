@@ -53,6 +53,11 @@
 #define DEVICE_DIAG_BMD_ERR7      7
 #define DEVICE_DIAG_SETUP_ERR1    8
 #define DEVICE_DIAG_STMMEM_ERR    9
+
+#define MAX_SYNC_COUNT            20
+
+#define CONFIG_REQUEST_TIMEOUT   14400000      // 4 Hrs
+
 /* =============================================================================
     Operation Mode
 ============================================================================= */
@@ -134,6 +139,7 @@ class Conductor
 {
     public:
         uint32_t lastTimeSync = 0;
+        uint32_t lastConfigRequest = 0;
         /***** Preset values and default settings *****/
         enum sleepMode : uint8_t {NONE     = 0,
                                   AUTO     = 1,
@@ -173,6 +179,7 @@ class Conductor
         static const uint32_t BLEconnectionTimeout = 15000;
         static const uint32_t connectedStatusTimeout = 60000;   // 1 min for ETHERNET connectedStatusTimeout
         uint32_t m_connectionTimeout = 150000;   // 2 min 30s
+        uint32_t configRequestTimeout = CONFIG_REQUEST_TIMEOUT;//1800000;   //timeout 30min
         uint32_t m_upgradeMessageTimeout = 30*1000;
         uint32_t m_certDownloadInitTimeout = 60*1000;
         uint32_t m_certDownloadConfigTimeout = 30*1000;
@@ -187,6 +194,9 @@ class Conductor
         static const int MAX_SPECTRAL_FEATURE_COUNT = 10;
         char* spectralFeaturesKeys[MAX_SPECTRAL_FEATURE_COUNT];
         String m_spectralFeatureResult;
+        int spectralState;
+        int checkFingerprintsState();
+        bool spectralStateSuccess;
         uint32_t lastUpdated = 0;
         uint32_t digLastPublish = 0;
         uint32_t fresLastPublish = 0;
@@ -194,6 +204,7 @@ class Conductor
         //timer ISR period
         uint16_t timerISRPeriod = 300; // default 3.3KHz
         String availableFingerprints;
+        bool sendConfigReqOnBoot = true;
         bool modbusStreamingMode =false;
         bool ready_to_publish_to_modbus = false;
         bool certDownloadInProgress = false;
@@ -316,7 +327,8 @@ class Conductor
         void cleanFailedSegmentedMessage(int messageID);
         void sendSegmentedMessageResponse(int messageID);
 
-        bool setSensorConfig(char* filename);
+        //bool setSensorConfig(char* filename);
+        bool setSensorConfig(JsonVariant &config);
         bool setEthernetConfig(char* filename);
         uint8_t processWiFiRadioModes(char* buff);
         /***** HTTP raw data sending 
@@ -341,7 +353,8 @@ class Conductor
         uint32_t RawDataTotalTimeout = 0;
         double rawDataRecordedAt, lastPacketSentToESP;
         IUMessageFormat::rawDataPacket rawData;
-
+        void prepareFFTMetaData();      //prepareFFTMetadata()
+        int gRange_metaData;      //currentgRange_metaData
         //Send Sensor error codes
         void setSensorStatus(SensorStatusCode errorCode);
         void sendSensorStatus();
@@ -394,13 +407,17 @@ class Conductor
         void computeAdvanceFeature();
         void addAdvanceFeature(JsonObject& destJson, uint8_t index , String* id, float* value);
         bool isWifiConnected() { return m_wifiConnected; }
+        bool isJsonKeyPresent(JsonObject &config,char* key);
         static const uint8_t max_IDs = 10;
         String m_phase_ids[max_IDs];
         uint32_t m_devDiagErrCode = 0;        
         bool devIdbmdWifi = false;
+        uint8_t syncLostCount = 0;
+        void selfFwUpgradeInit();
     #ifdef DEVIDFIX_TESTSTUB
         uint8_t flagval2 = 0;
     #endif
+    
     protected:
         MacAddress m_macAddress;
         MacAddress m_macAddressBle;
@@ -439,7 +456,8 @@ class Conductor
         const char* m_mqttServerIp = MQTT_DEFAULT_SERVER_IP;
         uint16_t m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
         const char* m_mqttUserName = MQTT_DEFAULT_USERNAME;
-        const char* m_mqttPassword = MQTT_DEFAULT_ASSWORD;
+        const char* m_mqttPassword = MQTT_DEFAULT_PASSWORD;
+        bool m_connectionType = false;
         // bool m_tls_enabled = MQTT_DEFAULT_TLS_FLAG;
         //httpendpoint configuration
         const char* m_httpHost  = HTTP_DEFAULT_HOST;
@@ -482,6 +500,7 @@ class Conductor
         bool m_rlbkDowngrade = false;
         bool otaSendMsg = false;
         bool doOnceFWValid = false;
+        bool otaConnectionMode = false;
         int FWValidCnt = 0;
         char FW_Valid_State = 0;
         uint32_t otaInitWaitTimeout = 0;
@@ -496,6 +515,7 @@ class Conductor
         bool m_downloadSuccess = false;
         bool m_upgradeSuccess = false;
         bool m_mqttConnected = false;
+        uint32_t dataSendingPeriod;
         // Certificates buffers
         char m_certType[15];
         char m_keyType[15];

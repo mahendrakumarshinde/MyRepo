@@ -1,0 +1,3 @@
+pywin32==223
+pyserial==3.4
+pyinstaller

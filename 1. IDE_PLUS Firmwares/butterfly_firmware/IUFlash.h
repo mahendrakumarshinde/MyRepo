@@ -45,6 +45,8 @@ class IUFlash
                                      CFG_DIG,
                                      CFG_RPM,
                                      CFG_PHASE,
+                                     CFG_FINGERPRINT_STATE,
+                                     CFG_SENSOR_CONFIG,
                                      CFG_COUNT};
         /***** Core *****/
         IUFlash() {}
@@ -105,6 +107,8 @@ class IUFSFlash : public IUFlash
         static char FNAME_DIG[11];
         static char FNAME_RPM[4]; 
         static char FNAME_PHASE[6];
+        static char FNAME_FINGERPRINT_STATE[12];
+        static char FNAME_SENSOR_CONFIG[13];
         static const uint8_t MAX_FULL_CONFIG_FPATH_LEN = 28;
         
         /***** Core *****/
