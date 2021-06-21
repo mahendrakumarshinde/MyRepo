@@ -16,6 +16,7 @@ Type - Standard vEdge Firmware Release
 #include <FS.h>
 #include "RawDataState.h"
 //#include"IUTimer.h"
+#define UIN32_FULL_SCALE 4294967296
 
 const uint8_t ESP32_IO0  =  7;  // IDE1.5_PORT_CHANGE
 bool sensorStatus = true;
@@ -123,10 +124,14 @@ int EXCELLENT_SIGNAL_STRENGTH_TH = -40;
 bool doOnce = true;
 uint32_t interval = 30000;
 uint32_t lastDone = 0;
+uint32_t lastSync = 0;
+uint32_t syncInterval = 60000;
 uint32_t devStsTime = 0;
 /**Flash Check Timer variable**/
 uint32_t flashCheckInterval = 300000;
 uint32_t flashCheckLastDone = 0;
+extern float m_audioOffset_current;
+extern float m_audioScaling_current;
 
 /***** Main operator *****/
 
@@ -296,10 +301,12 @@ void onNewUSBMessage(IUSerial *iuSerial) {
 
 void onNewBLEMessage(IUSerial *iuSerial) {
     conductor.processBLEMessage(iuSerial);
+    conductor.processUSBMessage(iuSerial);
 }
 
 void onNewWiFiMessage(IUSerial *iuSerial) {
     conductor.processWiFiMessage(iuSerial);
+    conductor.processUSBMessage(iuSerial);
 }
 
 void onNewEthernetMessage(IUSerial *iuSerial){
@@ -654,16 +661,22 @@ void setup()
         //AdvanceFeatures configurations 
         conductor.checkPhaseConfig();
         
-        if(DOSFS.exists("sensorConfig.conf")){
-            conductor.setSensorConfig("sensorConfig.conf"); 
-        }else
+        //if(DOSFS.exists("sensorConfig.conf")){
+            // if(DOSFS.exists("sensorConfig.conf")){
+        bool sensorStatus = conductor.configureFromFlash(IUFlash::CFG_SENSOR_CONFIG) ;
+        if(sensorStatus){ 
+            if(debugMode){
+            debugPrint("sensorConfig.conf file exists");}
+        } 
+        else
         {
             conductor.m_devDiagErrCode |= DEVICE_DIAG_SENS_ERR1;
+            m_audioOffset_current = SENSORConfiguration::DEFAULT_AUDIO_OFFSET;
+            m_audioScaling_current = SENSORConfiguration::DEFAULT_AUDIO_SCALING;
             if (debugMode)
             {
-                debugPrint("File does not exists,skip sensorConfig");
-            }
-            
+                debugPrint("File does not exists,skip sensorConfig");   
+            }           
         }
         // Fingerprints config and appy 
         if(DOSFS.exists("finterprints.conf") ){
@@ -806,15 +819,22 @@ void loop()
             sensorStatus = false;
         }
         
-        if (iuWiFi.isConnected() == true && conductor.requestConfig == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
-        {
-            conductor.sendConfigRequest();
-            conductor.requestConfig = false;
-        }
+        // if (iuWiFi.isConnected() == true && conductor.requestConfig == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
+        // {
+        //     conductor.sendConfigRequest();
+        //     conductor.requestConfig = false;
+        // }
         conductor.manageSleepCycles();
         // Receive messages & configurations
         if(conductor.getUsageMode() != UsageMode::OTA) {
             /* Block BLE messages during OTA download */
+            if ((millis() - conductor.lastConfigRequest > conductor.configRequestTimeout) || conductor.sendConfigReqOnBoot) {
+                if((iuWiFi.isConnected() && conductor.getDatetime() > 1600000000.00) ){
+                    conductor.sendConfigRequest();
+                    conductor.sendConfigReqOnBoot = false;
+                    conductor.lastConfigRequest = millis();
+                }
+            }
             iuUSB.readMessages();
             iuBluetooth.readMessages();
         }
@@ -923,6 +943,33 @@ void loop()
             ledManager.updateColors();
         }
         uint32_t now = millis();
+        if(conductor.getUsageMode() != UsageMode::OTA) {
+            uint32_t tempSync = 0;
+            if(now < lastSync) {
+                tempSync = (uint32_t) UIN32_FULL_SCALE - lastSync;
+                tempSync = tempSync + now;
+            }
+            else
+                tempSync = now - lastSync;
+            if (tempSync > syncInterval) {
+                lastSync = now;
+                if(loopDebugMode){
+                    debugPrint("STM <-> ESP Sync Count:",false);
+                    debugPrint(conductor.syncLostCount);
+                }
+                if (conductor.syncLostCount >= MAX_SYNC_COUNT)
+                {
+                    conductor.syncLostCount = 0;
+                    if(loopDebugMode){ debugPrint("No Response from ESP, initiate self upgrade !"); }
+                    conductor.selfFwUpgradeInit();
+                }
+                else {
+                    iuWiFi.sendMSPCommand(MSPCommand::SEND_ESP_SYNC_REQ);
+                    conductor.syncLostCount++;
+                    delay(1);
+                }
+            }
+        }
         if (now - lastDone > interval) {
             lastDone = now;
             /* === Place your code to excute at fixed interval here ===*/
