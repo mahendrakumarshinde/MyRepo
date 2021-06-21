@@ -130,6 +130,8 @@ uint32_t devStsTime = 0;
 /**Flash Check Timer variable**/
 uint32_t flashCheckInterval = 300000;
 uint32_t flashCheckLastDone = 0;
+extern float m_audioOffset_current;
+extern float m_audioScaling_current;
 
 /***** Main operator *****/
 
@@ -299,10 +301,12 @@ void onNewUSBMessage(IUSerial *iuSerial) {
 
 void onNewBLEMessage(IUSerial *iuSerial) {
     conductor.processBLEMessage(iuSerial);
+    conductor.processUSBMessage(iuSerial);
 }
 
 void onNewWiFiMessage(IUSerial *iuSerial) {
     conductor.processWiFiMessage(iuSerial);
+    conductor.processUSBMessage(iuSerial);
 }
 
 void onNewEthernetMessage(IUSerial *iuSerial){
@@ -657,16 +661,22 @@ void setup()
         //AdvanceFeatures configurations 
         conductor.checkPhaseConfig();
         
-        if(DOSFS.exists("sensorConfig.conf")){
-            conductor.setSensorConfig("sensorConfig.conf"); 
-        }else
+        //if(DOSFS.exists("sensorConfig.conf")){
+            // if(DOSFS.exists("sensorConfig.conf")){
+        bool sensorStatus = conductor.configureFromFlash(IUFlash::CFG_SENSOR_CONFIG) ;
+        if(sensorStatus){ 
+            if(debugMode){
+            debugPrint("sensorConfig.conf file exists");}
+        } 
+        else
         {
             conductor.m_devDiagErrCode |= DEVICE_DIAG_SENS_ERR1;
+            m_audioOffset_current = SENSORConfiguration::DEFAULT_AUDIO_OFFSET;
+            m_audioScaling_current = SENSORConfiguration::DEFAULT_AUDIO_SCALING;
             if (debugMode)
             {
-                debugPrint("File does not exists,skip sensorConfig");
-            }
-            
+                debugPrint("File does not exists,skip sensorConfig");   
+            }           
         }
         // Fingerprints config and appy 
         if(DOSFS.exists("finterprints.conf") ){
@@ -809,15 +819,22 @@ void loop()
             sensorStatus = false;
         }
         
-        if (iuWiFi.isConnected() == true && conductor.requestConfig == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
-        {
-            conductor.sendConfigRequest();
-            conductor.requestConfig = false;
-        }
+        // if (iuWiFi.isConnected() == true && conductor.requestConfig == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
+        // {
+        //     conductor.sendConfigRequest();
+        //     conductor.requestConfig = false;
+        // }
         conductor.manageSleepCycles();
         // Receive messages & configurations
         if(conductor.getUsageMode() != UsageMode::OTA) {
             /* Block BLE messages during OTA download */
+            if ((millis() - conductor.lastConfigRequest > conductor.configRequestTimeout) || conductor.sendConfigReqOnBoot) {
+                if((iuWiFi.isConnected() && conductor.getDatetime() > 1600000000.00) ){
+                    conductor.sendConfigRequest();
+                    conductor.sendConfigReqOnBoot = false;
+                    conductor.lastConfigRequest = millis();
+                }
+            }
             iuUSB.readMessages();
             iuBluetooth.readMessages();
         }
