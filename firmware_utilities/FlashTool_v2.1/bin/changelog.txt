@@ -1,0 +1,4 @@
+2021/06/21:
+2. Updated Flashtool for BL2, for device self upgrade with STM,WIFI FW binaries and WIFI supporting binaries
+2019/12/31:
+1. Updated Flashtool from IDE_PLUS to vEdge devices

@@ -1,0 +1,14 @@
+2019/06/08:
+1. Using python logging module instead of print function.
+2. Add troubleshootings to README.md.
+3. Other improves.
+2019/06/18:
+1. Add multiple IDE support.
+2019/06/28:
+1. Add the message " disable your antivirus during flashing" to the utility to be displayed at startup.
+2019/07/06:
+1. Bug fixed
+2019/09/05:
+1. Increasing the number of attempts to detect devices.
+2019/09/21:
+1. Add MQTT and HTTP endpoints configuration.
