@@ -114,6 +114,12 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
     resp[1] = 0;
     char message[256];
     switch(cmd) {
+        case MSPCommand::SEND_ESP_SYNC_REQ:
+            /* Sync message between STM and ESP, if no response from ESP for certain duration then 
+                STM, ESP are reflashed with Self OTA operation   */
+            hostSerial.sendMSPCommand(MSPCommand::RECEIVE_ESP_SYNC_RSP);
+            delay(1);
+            break;
         case MSPCommand::OTA_INIT_ACK:
             if(otaInProgress == true) {
                 mqttHelper.publish(OTA_TOPIC,buffer);

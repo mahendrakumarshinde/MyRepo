@@ -3570,6 +3570,12 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             // Serial.write(buff);
             // Serial.println();
             break;
+
+        case MSPCommand::RECEIVE_ESP_SYNC_RSP:
+            syncLostCount = 0;
+            if(loopDebugMode) { debugPrint("STM <-> ESP Sync received "); }
+            break;   
+
         case MSPCommand::OTA_INIT_REQUEST:
             if(doOnceFWValid == true)
             { // Don't accept new OTA request during Validation of Last OTA
@@ -3673,6 +3679,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 doOnceFWValid = false;
                 FW_Valid_State = 0;
                 iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_DOWNLOAD_SUCCESS);
+                iuOta.updateOtaFlag(SELF_UPGRD_STATUS_MSG_LOC,OTA_FW_VALIDATION_SUCCESS);
                 iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);
                 delay(1000);
                 if (loopDebugMode) { debugPrint(F("OTA FW hash Success, Sending OTA-FUG-START")); }
@@ -4106,6 +4113,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             }
             break;
         case MSPCommand::WIFI_ALERT_CONNECTED:
+            syncLostCount = 0;
             m_wifiConnected = true;
             if (loopDebugMode) { debugPrint(F("WIFI-CONNECTED;")); }
             if(getDatetime() < 1590000000.00){iuWiFi.sendMSPCommand(MSPCommand::GOOGLE_TIME_QUERY);}
@@ -4119,6 +4127,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             // }
             break;
         case MSPCommand::WIFI_ALERT_DISCONNECTED:
+            syncLostCount = 0;
             m_wifiConnected = false;
             certDownloadInProgress = false;
             if (isBLEConnected()) {
@@ -7671,7 +7680,7 @@ void Conductor::getOtaStatus()
             otaSendMsg = true;
             break;
         default:
-            if (setupDebugMode) debugPrint("Main FW:Unknown OTA Status code !",false);
+            if (setupDebugMode) debugPrint("getOtaStatus:Unknown OTA Status code !");
             break;
     }
 
@@ -7685,7 +7694,7 @@ void Conductor::getOtaStatus()
         case OTA_FW_DNLD_FAIL_PENDING:
             strcpy(WiFiDisconnect_OTAErr,"OTA-RCA-0003");
             /* Send this message in case WiFi Disconnection during last OTA FW Download */
-            if (setupDebugMode) debugPrint("FW OTA download Failed ! Message pending. ");
+            if (setupDebugMode) debugPrint("getOtaStatus:Unknown OTA Status code !");
             otaSendMsg = true;
             break;
         case OTA_FW_UPGRD_OK_PENDING:
@@ -7704,9 +7713,18 @@ void Conductor::getOtaStatus()
             otaSendMsg = true;
             break;
         default:
-            if (setupDebugMode) debugPrint("Main FW:Unknown OTA Status code !",false);
+            if (setupDebugMode) debugPrint("getOtaStatus:Unknown OTA Status code !");
             break;            
     }
+            otaStatus = iuOta.getOtaFlagValue(SELF_UPGRD_STATUS_MSG_LOC);
+            if (setupDebugMode) {
+                debugPrint("Main FW:Self Upgrade Pending Status Code: ",false);
+                debugPrint(otaStatus);
+            }
+            if(otaStatus == OTA_FW_UPGRD_OK_PENDING) {
+                if (setupDebugMode) debugPrint("Self Upgrade Upgrade Ok ! Message pending. ");
+                otaSendMsg = true;
+            }
 }
 
 /**
@@ -7748,7 +7766,7 @@ void Conductor::sendOtaStatus()
                 delay(1000);
                 break;
             case OTA_FW_FILE_SYS_ERROR:
-                if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Missing or Invalid File(s) ");
+                if (setupDebugMode) debugPrint("Sendotasts: Unknown OTA Status code !");
                 sendOtaStatusMsg(MSPCommand::OTA_FUG_ABORT,OTA_UPGRADE_ERR,String(iuOta.getOtaRca(OTA_FILE_MISSING)).c_str());
                 delay(1000);
                 break;
@@ -7793,12 +7811,26 @@ void Conductor::sendOtaStatus()
                 delay(1000);
                 break;
             default:
-                if (setupDebugMode) debugPrint("Main FW:Unknown OTA Status code !",false);
+                if (setupDebugMode) debugPrint("Sendotasts:Unknown OTA Status code !");
                 break;            
         }
         otaSendMsg = false;
         /* Send Error message only once. Not to send on every bootup */
         iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,OTA_FW_VALIDATION_SUCCESS);
+        otaStatus = iuOta.getOtaFlagValue(SELF_UPGRD_STATUS_MSG_LOC);
+        if (setupDebugMode) {
+            debugPrint("Main FW:Self Upgrade Status Code: ",false);
+            debugPrint(otaStatus);
+        }
+        if(otaStatus == OTA_FW_UPGRD_OK_PENDING) {
+            if (setupDebugMode) debugPrint("FW Self Upgrade Ok ");
+            strncpy(m_otaMsgId,"12345678",8);
+            m_otaMsgId[8] = '\0';
+            sendOtaStatusMsg(MSPCommand::OTA_FUG_SUCCESS,SELF_UPGRADE_OK,OTA_RESPONE_OK);
+        }
+        otaSendMsg = false;
+        iuOta.updateOtaFlag(SELF_UPGRD_STATUS_MSG_LOC,OTA_FW_VALIDATION_SUCCESS);
+
     }
 }
 
@@ -7848,12 +7880,40 @@ void Conductor::sendOtaStatusMsg(MSPCommand::command type, char *msg, const char
             }
             else if(MSPCommand::OTA_FUG_SUCCESS == type)
             {
-                iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,OTA_FW_UPGRD_OK_PENDING);
+                if(!strcmp(msg,SELF_UPGRADE_OK))
+                { // SELF Upgrade case
+                    strncpy(m_otaMsgId,"12345678",8);
+                    m_otaMsgId[8] = '\0';
+                    iuOta.updateOtaFlag(SELF_UPGRD_STATUS_MSG_LOC,OTA_FW_UPGRD_OK_PENDING);
+                }
+                else
+                    iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,OTA_FW_UPGRD_OK_PENDING);
             }
             otaSendMsg = true;
             delay(10); 
         }
     }
+    if(MSPCommand::OTA_FDW_ABORT == type || MSPCommand::OTA_FUG_ABORT == type)
+    { // delete tempFolder downloaded bin and hash file. to cleanup failed OTA
+        if (loopDebugMode) {
+            debugPrint(F("OTA failed: "),false);
+            debugPrint(type);
+            debugPrint(F("Cleaning up tempfolder downloaded images..."));
+        }
+        if(iuOta.otaFileExists(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Main_FW_BIN)) {
+            iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Main_FW_BIN);
+        } 
+        if(iuOta.otaFileExists(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Main_FW_MD5)) {
+            iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Main_FW_MD5);
+        }
+        if( iuOta.otaFileExists(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Wifi_FW_BIN)) {
+            iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Wifi_FW_BIN);
+        }
+        if(iuOta.otaFileExists(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Wifi_FW_MD5)) {
+            iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Wifi_FW_MD5);
+        }
+    }
+
 }
 
 /**
@@ -9097,9 +9157,219 @@ void Conductor::addAdvanceFeature(JsonObject& destJson, uint8_t index , String* 
     }        
 }
 
+
+/*
+ * With no response from ESP, initiate self upgrade to recover ESP flash issues
+ */
+void Conductor::selfFwUpgradeInit()
+{
+    uint8_t fwCopy = 0;
+    //iuWiFi.turnOff();
+    delay(100);
+    changeUsageMode(UsageMode::OTA);
+	  delay(1);
+    char stmHashMD5[34];
+    char stmCalcMD5[34];
+    char espHashMD5[34];
+    char espCalcMD5[34];
+    char espBtHashMD5[34];
+    char espBtCalcMD5[34];
+    char espBtLdrHashMD5[34];
+    char espBtLdrCalcMD5[34];
+    char espPartHashMD5[34];
+    char espPartCalcMD5[34];
+
+    bool hashCheck = false;
+    memset(stmHashMD5,'\0', 34);
+    memset(stmCalcMD5,'\0', 34);
+    memset(espHashMD5,'\0', 34);
+    memset(espCalcMD5,'\0', 34);
+    memset(espBtHashMD5,'\0', 34);
+    memset(espBtCalcMD5,'\0', 34);
+    memset(espBtLdrHashMD5,'\0', 34);
+    memset(espBtLdrCalcMD5,'\0', 34);
+    memset(espPartHashMD5,'\0', 34);
+    memset(espPartCalcMD5,'\0', 34);        
+    if(iuOta.otaFileExists(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Main_FW_BIN) && 
+        iuOta.otaFileExists(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Main_FW_MD5) &&
+        iuOta.otaFileExists(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_FW_BIN) &&
+        iuOta.otaFileExists(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_FW_MD5) &&
+        iuOta.otaFileExists(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_BOOT_APP_BIN) &&
+        iuOta.otaFileExists(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_BOOT_APP_MD5) &&
+        iuOta.otaFileExists(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_BOOT_LODR_BIN) &&
+        iuOta.otaFileExists(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_BOOT_LODR_MD5) &&
+        iuOta.otaFileExists(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_PARTITION_BIN) &&
+        iuOta.otaFileExists(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_PARTITION_MD5) ) {
+        if (loopDebugMode) { debugPrint(F("Using Rollbackfolder FW binaries..")); }
+        fwCopy = 1;
+        iuOta.otaMD5Read(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Main_FW_MD5,stmHashMD5);
+        iuOta.otaGetMD5(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Main_FW_BIN,stmCalcMD5);
+        if (loopDebugMode) {
+            debugPrint(F("Rollback Main FW hash received:"),false);
+            debugPrint(stmHashMD5);
+            debugPrint(F("Rollback Main FW hash computed:"),false);
+            debugPrint(stmCalcMD5);
+        }
+        iuOta.otaMD5Read(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_FW_MD5,espHashMD5);
+        iuOta.otaGetMD5(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_FW_BIN,espCalcMD5);
+        if (loopDebugMode) {                    
+            debugPrint(F("Rollback WiFi FW hash received:"),false);
+            debugPrint(espHashMD5);
+            debugPrint(F("Rollback WiFi FW hash computed:"),false);
+            debugPrint(espCalcMD5);
+        }
+        iuOta.otaMD5Read(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_BOOT_APP_MD5,espBtHashMD5);
+        iuOta.otaGetMD5(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_BOOT_APP_BIN,espBtCalcMD5);
+        if (loopDebugMode) {                    
+            debugPrint(F("Rollback WiFi Boot FW hash received:"),false);
+            debugPrint(espBtHashMD5);
+            debugPrint(F("Rollback WiFi Boot FW hash computed:"),false);
+            debugPrint(espBtCalcMD5);
+        }
+        iuOta.otaMD5Read(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_BOOT_LODR_MD5,espBtLdrHashMD5);
+        iuOta.otaGetMD5(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_BOOT_LODR_BIN,espBtLdrCalcMD5);
+        if (loopDebugMode) {                    
+            debugPrint(F("Rollback WiFi Bootloader FW hash received:"),false);
+            debugPrint(espBtLdrHashMD5);
+            debugPrint(F("Rollback WiFi Bootloader FW hash computed:"),false);
+            debugPrint(espBtLdrCalcMD5);
+        }
+        iuOta.otaMD5Read(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_PARTITION_MD5,espPartHashMD5);
+        iuOta.otaGetMD5(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_PARTITION_BIN,espPartCalcMD5);
+        if (loopDebugMode) {                    
+            debugPrint(F("Rollback WiFi Partition FW hash received:"),false);
+            debugPrint(espPartHashMD5);
+            debugPrint(F("Rollback WiFi Partition FW hash computed:"),false);
+            debugPrint(espPartCalcMD5);
+        }
+    }
+    else if(iuOta.otaFileExists(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Main_FW_BIN) && 
+        iuOta.otaFileExists(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Main_FW_MD5) &&
+        iuOta.otaFileExists(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_FW_BIN) &&
+        iuOta.otaFileExists(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_FW_MD5) &&
+        iuOta.otaFileExists(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_BOOT_APP_BIN) &&
+        iuOta.otaFileExists(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_BOOT_APP_MD5) &&
+        iuOta.otaFileExists(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_BOOT_LODR_BIN) &&
+        iuOta.otaFileExists(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_BOOT_LODR_MD5) &&
+        iuOta.otaFileExists(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_PARTITION_BIN) &&
+        iuOta.otaFileExists(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_PARTITION_MD5) ) {
+        if (loopDebugMode) { debugPrint(F("Using Backupfolder FW binaries..")); }
+        fwCopy = 2;
+        iuOta.otaMD5Read(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Main_FW_MD5,stmHashMD5);
+        iuOta.otaGetMD5(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Main_FW_BIN,stmCalcMD5);
+        if (loopDebugMode) {
+            debugPrint(F("Backup Main FW hash received:"),false);
+            debugPrint(stmHashMD5);
+            debugPrint(F("Backup Main FW hash computed:"),false);
+            debugPrint(stmCalcMD5);
+        }
+        iuOta.otaMD5Read(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_FW_MD5,espHashMD5);
+        iuOta.otaGetMD5(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_FW_BIN,espCalcMD5);
+        if (loopDebugMode) {                    
+            debugPrint(F("Backup WiFi FW hash received:"),false);
+            debugPrint(espHashMD5);
+            debugPrint(F("Backup WiFi FW hash computed:"),false);
+            debugPrint(espCalcMD5);
+        }
+        iuOta.otaMD5Read(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_BOOT_APP_MD5,espBtHashMD5);
+        iuOta.otaGetMD5(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_BOOT_APP_BIN,espBtCalcMD5);
+        if (loopDebugMode) {                    
+            debugPrint(F("Rollback WiFi Boot FW hash received:"),false);
+            debugPrint(espBtHashMD5);
+            debugPrint(F("Rollback WiFi Boot FW hash computed:"),false);
+            debugPrint(espBtCalcMD5);
+        }
+        iuOta.otaMD5Read(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_BOOT_LODR_MD5,espBtLdrHashMD5);
+        iuOta.otaGetMD5(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_BOOT_LODR_BIN,espBtLdrCalcMD5);
+        if (loopDebugMode) {                    
+            debugPrint(F("Rollback WiFi Bootloader FW hash received:"),false);
+            debugPrint(espBtLdrHashMD5);
+            debugPrint(F("Rollback WiFi Bootloader FW hash computed:"),false);
+            debugPrint(espBtLdrCalcMD5);
+        }
+        iuOta.otaMD5Read(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_PARTITION_MD5,espPartHashMD5);
+        iuOta.otaGetMD5(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_PARTITION_BIN,espPartCalcMD5);
+        if (loopDebugMode) {                    
+            debugPrint(F("Rollback WiFi Partition FW hash received:"),false);
+            debugPrint(espPartHashMD5);
+            debugPrint(F("Rollback WiFi Partition FW hash computed:"),false);
+            debugPrint(espPartCalcMD5);
+        }
+    }
+    if(!(strncmp(stmCalcMD5,stmHashMD5,32)) && !(strncmp(espHashMD5,espCalcMD5,32)) &&
+       !(strncmp(espBtHashMD5,espBtCalcMD5,32)) && !(strncmp(espBtLdrHashMD5,espBtLdrCalcMD5,32)) &&
+       !(strncmp(espPartHashMD5,espPartCalcMD5,32))) {
+        if (loopDebugMode) { debugPrint(F("Main FW,WiFi FW Hash match Ok")); }
+        hashCheck = true;
+    }
+    else {
+        if (loopDebugMode) { debugPrint(F("Main FW Hash match Fail !")); }
+        hashCheck = false;
+    }    
+#if 1
+    if(hashCheck == true && fwCopy != 0) {
+        if (loopDebugMode) { debugPrint(F("OTA File read Success, Initiating self upgrade")); }
+        ledManager.overrideColor(RGB_PURPLE);
+        doOnceFWValid = false;
+        FW_Valid_State = 0;
+        if(fwCopy == 1) { // Use rollbackfolder bin , current running image
+            //else if((all_flags[MFW_FLASH_FLAG]== OTA_FW_UPGRADE_FAILED) && (all_flags[RETRY_FLAG]>= MAX_RETRY_FLAG))
+            /* Above is condition in BL1 to trigger/initiate Internal Rollback,
+               so set flag accordingly to initiate self-upgrade with internal rollback condition */
+            iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_UPGRADE_FAILED);
+            iuOta.updateOtaFlag(OTA_RETRY_FLAG_LOC,OTA_MAX_VALIDATION_RETRY+1);
+
+        }
+        else if(fwCopy == 2) { // Use backupfolder bin , last ver running image
+            // else if(all_flags[MFW_FLASH_FLAG]== OTA_FW_FORCED_ROLLBACK  && (all_flags[RETRY_FLAG] < MAX_RETRY_FLAG) )
+            /* Above is condition in BL1 to trigger/initiate Forced Rollback,
+               so set flag accordingly to initiate self-upgrade with forced rollback condition */
+            iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_FORCED_ROLLBACK);
+            iuOta.updateOtaFlag(OTA_RETRY_FLAG_LOC,0);
+        }
+        iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0); // Perform validation after self upgrade
+        delay(500);
+        /* Added separate flag location to self upgrade status send */
+        iuOta.updateOtaFlag(SELF_UPGRD_STATUS_MSG_LOC,OTA_FW_DOWNLOAD_SUCCESS);//OTA_FW_UPGRD_OK_PENDING);
+        delay(500);
+        iuOta.readOtaFlag();
+        if(loopDebugMode) { 
+            debugPrint("OTA Status Flag:",false);
+            debugPrint(iuOta.getOtaFlagValue(OTA_STATUS_FLAG_LOC));
+            debugPrint("OTA retry Flag:",false);
+            debugPrint(iuOta.getOtaFlagValue(OTA_RETRY_FLAG_LOC));
+            debugPrint("OTA val retry Flag:",false);
+            debugPrint(iuOta.getOtaFlagValue(OTA_VLDN_RETRY_FLAG_LOC));
+            debugPrint("Self Upgrade Pending flag:",false);
+            debugPrint(iuOta.getOtaFlagValue(SELF_UPGRD_STATUS_MSG_LOC));
+        }
+        if (loopDebugMode) { debugPrint(F("Rebooting device for FW Upgrade......")); }
+        delay(500);
+        DOSFS.end();
+        delay(10);
+        STM32.reset();
+    }
+    else {
+        if (loopDebugMode) { debugPrint(F("OTA File read Failed, device self upgrade failed !")); }
+        for(int i = 0 ; i < 7; i++) {
+            ledManager.overrideColor(RGB_RED);
+            delay(300);
+            ledManager.stopColorOverride();
+            delay(300);
+        }
+    }
+#endif
+    delay(1000);
+    if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
+    iuWiFi.m_setLastConfirmedPublication();
+    changeUsageMode(UsageMode::OPERATION);
+    delay(100);
+}    
+
 bool Conductor::isJsonKeyPresent(JsonObject &config,char* key){
 
    if(config.containsKey(key)){ return true; }
    else{ return false; 
    }
 }   
+
