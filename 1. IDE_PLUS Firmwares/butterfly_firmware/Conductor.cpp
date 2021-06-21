@@ -8685,7 +8685,7 @@ void Conductor::sendConfigRequest()
     char response[128];
     double TimeStamp = conductor.getDatetime();
           
-    sprintf(response,"%s%s%s%s","{\"DEVICEID\":\"", m_macAddress.toString().c_str(),"\"",",\"CONFIGTYPE\":\"features\"}");
+    sprintf(response,"%s%s%s%s","{\"DEVICEID\":\"", m_macAddress.toString().c_str(),"\"",",\"CONFIGTYPE\":[\"all\"]}");
     iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_CONFIG_CHECKSUM, response);
 }
 #if 0

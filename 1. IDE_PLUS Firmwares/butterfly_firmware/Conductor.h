@@ -53,6 +53,8 @@
 #define DEVICE_DIAG_BMD_ERR7      7
 #define DEVICE_DIAG_SETUP_ERR1    8
 #define DEVICE_DIAG_STMMEM_ERR    9
+
+#define CONFIG_REQUEST_TIMEOUT   14400000      // 4 Hrs
 /* =============================================================================
     Operation Mode
 ============================================================================= */
@@ -134,6 +136,7 @@ class Conductor
 {
     public:
         uint32_t lastTimeSync = 0;
+        uint32_t lastConfigRequest = 0;
         /***** Preset values and default settings *****/
         enum sleepMode : uint8_t {NONE     = 0,
                                   AUTO     = 1,
@@ -173,6 +176,7 @@ class Conductor
         static const uint32_t BLEconnectionTimeout = 15000;
         static const uint32_t connectedStatusTimeout = 60000;   // 1 min for ETHERNET connectedStatusTimeout
         uint32_t m_connectionTimeout = 150000;   // 2 min 30s
+        uint32_t configRequestTimeout = CONFIG_REQUEST_TIMEOUT;//1800000;   //timeout 30min
         uint32_t m_upgradeMessageTimeout = 30*1000;
         uint32_t m_certDownloadInitTimeout = 60*1000;
         uint32_t m_certDownloadConfigTimeout = 30*1000;
@@ -197,6 +201,7 @@ class Conductor
         //timer ISR period
         uint16_t timerISRPeriod = 300; // default 3.3KHz
         String availableFingerprints;
+        bool sendConfigReqOnBoot = true;
         bool modbusStreamingMode =false;
         bool ready_to_publish_to_modbus = false;
         bool certDownloadInProgress = false;
