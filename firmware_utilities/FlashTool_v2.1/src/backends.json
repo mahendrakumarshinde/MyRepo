@@ -1,0 +1,24 @@
+[
+  {
+    "key": "local",
+    "backend": "Local development laptop setup",
+    "mqtt": {
+      "mqtt": {
+        "mqttServerIP": "192.168.21.116",
+        "port": 1883,
+        "username": "",
+        "password": ""
+      }
+    },
+    "http": {
+      "httpConfig": {
+        "host": "192.168.21.116",
+        "port": 1234,
+        "path": "/testendpoint",
+        "username": "",
+        "password": "",
+        "oauth": ""
+      }
+    }
+  }
+]
