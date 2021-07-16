@@ -4168,6 +4168,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 ledManager.stopColorOverride();
                 ledManager.showStatus(&STATUS_OTA_DOWNLOAD);
             }
+            mqttReset(false);
             break;
         case MSPCommand::MQTT_ALERT_DISCONNECTED:
             if (isBLEConnected()) {
@@ -4195,6 +4196,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 delay(100);
             #endif
             }
+            mqttReset(true);
             break;
         case MSPCommand::ASK_WIFI_CONFIG:
             if (DOSFS.exists("/iuconfig/wifi0.conf"))
@@ -9372,4 +9374,40 @@ bool Conductor::isJsonKeyPresent(JsonObject &config,char* key){
    else{ return false; 
    }
 }   
+
+/**
+ * @brief : Device will restart when MQTT_DISCONNECTED for 15min
+ * 
+ * @param timerflag : true- MQTT_DISCONNCTED, FALSE-MQTT_CONNECTED
+ * @return null 
+ */
+void Conductor::mqttReset(bool timerflag){
+
+    if(timerflag == true && getUsageMode() != UsageMode::OTA ){        
+        uint32_t nowTime = millis();
+        if(devResetTime ==0){
+            devResetTime = nowTime;
+        }
+        if(nowTime - devResetTime > MQTT_DISCONNECTION_TIMEOUT){      //15min timeout for device restart
+            //Serial.print("device is restarting");
+            devResetTime = nowTime;
+            if(loopDebugMode){
+                debugPrint("devresetTime : ",false);
+                debugPrint(devResetTime);
+                debugPrint("restarting device on MQTT_DISCONNECTION_TIMEOUT: ");
+            }
+            delay(1000);
+            DOSFS.end();
+            delay(10);
+            STM32.reset();
+        }
+
+    }
+    if(timerflag == false){
+        devResetTime =0;
+        //debugPrint("MQTT_Connected_timer_reset : ");
+
+    }
+}
+
 
