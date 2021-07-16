@@ -57,7 +57,7 @@
 #define MAX_SYNC_COUNT            20
 
 /* Timeout for MQTT_DISCONNECTED */
-#define MQTT_DISCONNECTION_TIMEOUT 180000               //900000 //15min
+#define MQTT_DISCONNECTION_TIMEOUT 900000               //900000 //15min
 
 #define CONFIG_REQUEST_TIMEOUT   14400000      // 4 Hrs
 
