@@ -143,6 +143,8 @@ class Conductor
     public:
         uint32_t lastTimeSync = 0;
         uint32_t lastConfigRequest = 0;
+        char ack_config[200];
+        MacAddress m_macAddress;
         /***** Preset values and default settings *****/
         enum sleepMode : uint8_t {NONE     = 0,
                                   AUTO     = 1,
@@ -154,7 +156,9 @@ class Conductor
                                         KNX_ABS = 3,
                                         KNX_DEFAULT = 4,
                                         LSM_DEFAULT = 5,
-                                        SEN_ABS = 6
+                                        SEN_ABS = 6,
+                                        LSM_AUTO_GRANGE = 7,
+                                        KNX_AUTO_GRANGE = 8
                                         };
 
 
@@ -424,7 +428,7 @@ class Conductor
     #endif
     
     protected:
-        MacAddress m_macAddress;
+        //MacAddress m_macAddress;
         MacAddress m_macAddressBle;
         /***** Hardware & power management *****/
         sleepMode m_sleepMode = sleepMode::NONE;
@@ -511,7 +515,7 @@ class Conductor
         uint32_t otaInitWaitTimeout = 0;
         bool otaInitTimeoutFlag = false;
         char WiFiDisconnect_OTAErr[16];
-        char ack_config[200];
+        //char ack_config[200];
         uint32_t certDownloadInitWaitTimeout =0;
         uint32_t certDownloadConfigTimeout = 0;
         uint32_t m_downloadSuccessStartTime = 0;

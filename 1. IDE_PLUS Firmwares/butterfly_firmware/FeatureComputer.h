@@ -6,7 +6,13 @@
 #include "DiagnosticFingerPrint.h"
 #include "RawDataState.h"
 #include "AdvanceFeatureComputer.h"
-extern float modbusFeaturesDestinations[8]; 
+#include "IULSM6DSM.h"
+#include "IUKX222.h"
+extern float modbusFeaturesDestinations[8];
+extern IULSM6DSM iuAccelerometer;
+extern IUKX222 iuAccelerometerKX222;
+#define MAXCYCLECOUNT 5
+#define MAXPEAKCOUNT 10 
 /* =============================================================================
  *  Motor Scaling Global Variable
  *  
@@ -478,6 +484,7 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
     protected:
         T *m_allocatedFFTSpace;
         T *velocityFFT;
+        int currentGrange;
         bool m_useCalibrationMethod;
         uint16_t m_lowCutFrequency;
         uint16_t m_highCutFrequency;
@@ -546,6 +553,82 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
             }
             RawDataState::ZCollected = true;
         }
+
+        //start of checking auto g range
+        //static uint16_t cycleCountbuff[20];
+        static uint8_t cycleCountX =0,cycleCountY =0,cycleCountZ =0;
+        bool gRangeNewStatusFlag = false;
+        uint16_t peakCount;
+        if(FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor){
+            peakCount = RFFTFeatures::autoGrange(values,sampleCount,FFTConfiguration::currentKNXgRange,resolution);
+            currentGrange = FFTConfiguration::currentKNXgRange;
+        }else if(FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor){
+            peakCount = RFFTFeatures::autoGrange(values,sampleCount,FFTConfiguration::currentLSMgRange,resolution);
+            currentGrange = FFTConfiguration::currentLSMgRange;
+        }
+
+        if(peakCount > MAXPEAKCOUNT){
+            if(m_id == 30){
+                if(cycleCountX >= MAXCYCLECOUNT){
+                    gRangeNewStatusFlag = true;
+                }
+                cycleCountX++;
+            }
+            if(m_id == 31){
+                if(cycleCountY >= MAXCYCLECOUNT){
+                    gRangeNewStatusFlag = true;
+                }
+                cycleCountY++;
+            }
+            if(m_id == 32){
+                if(cycleCountZ >= MAXCYCLECOUNT){
+                    gRangeNewStatusFlag = true;
+                }
+                cycleCountZ++;
+            }
+        }else{
+            //debugPrint("cycleCount = 0 ");
+            if(m_id ==30){ cycleCountX =0;}
+            if(m_id ==31){ cycleCountY =0;}
+            if(m_id ==32){ cycleCountZ =0;}
+
+        }
+
+        // Apply and store new g range
+        if(gRangeNewStatusFlag == true){
+            //debugPrint("gRangeNewStatusFlag true ");
+            if(FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor){ 
+                for (uint8_t i = 0;i<FFTConfiguration::KNXgRangeOption;i++){
+                    //debugPrint(FFTConfiguration::KNXgRanges[i],false);debugPrint(",",false);
+                    if(FFTConfiguration::KNXgRanges[i] == currentGrange && FFTConfiguration::KNXgRanges[i]!=0
+                        && FFTConfiguration::currentKNXgRange != FFTConfiguration::KNXgRanges[FFTConfiguration::KNXgRangeOption -1]){           
+                        FFTConfiguration::currentKNXgRange = FFTConfiguration::KNXgRanges[i+1];
+                        FFTConfiguration::newKNXgRange = FFTConfiguration::currentKNXgRange;
+                        iuAccelerometerKX222.setGrange(FFTConfiguration::newKNXgRange);
+                        FFTConfiguration::setNewgrangeFlag = true;
+                        RFFTFeatures::updateFFTFile();
+                        gRangeNewStatusFlag == false;
+                        cycleCountX = cycleCountY = cycleCountZ = 0;
+                    }
+                }
+            }else if(FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor) {
+                //debugPrint("lsmSensor g Range setting ");
+                for (uint8_t i = 0;i< FFTConfiguration::LSMgRangeOption;i++){
+                    //debugPrint(FFTConfiguration::LSMgRanges[i],false);debugPrint(",",false);
+                    if(FFTConfiguration::LSMgRanges[i] == currentGrange && FFTConfiguration::LSMgRanges[i]!=0 && 
+                        FFTConfiguration::currentLSMgRange != FFTConfiguration::LSMgRanges[FFTConfiguration::LSMgRangeOption -1]){
+                        FFTConfiguration::currentLSMgRange = FFTConfiguration::LSMgRanges[i+1];
+                        FFTConfiguration::newLSMgRange = FFTConfiguration::currentLSMgRange;
+                        iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange); // softreset 
+                        FFTConfiguration::setNewgrangeFlag = true;
+                        RFFTFeatures::updateFFTFile();
+                        gRangeNewStatusFlag == false;
+                        cycleCountX = cycleCountY = cycleCountZ = 0;
+                    } 
+                }
+            }
+        }
+
 
         // 1. Compute FFT and get amplitudes
         uint32_t amplitudeCount = sampleCount / 2 + 1;

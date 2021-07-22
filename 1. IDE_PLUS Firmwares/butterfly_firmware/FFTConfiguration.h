@@ -61,6 +61,9 @@ namespace FFTConfiguration {
     const bool kionixSensor = 1;
     extern int currentLSMgRange;
     extern int currentKNXgRange;
+    extern int newLSMgRange;
+    extern int newKNXgRange;
+    extern bool setNewgrangeFlag;
 }
 
 namespace SENSORConfiguration{
