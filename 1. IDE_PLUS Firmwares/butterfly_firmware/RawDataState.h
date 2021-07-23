@@ -31,6 +31,7 @@ namespace FeatureStates {
     extern double elapsedTime;
     extern int isrCount;
     extern int opStateStatusFlag; 
+    extern int m_currentStreamingMode;
 }
 
 namespace featureDestinations {

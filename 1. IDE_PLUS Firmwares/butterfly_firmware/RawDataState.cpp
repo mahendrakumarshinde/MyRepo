@@ -22,7 +22,7 @@ namespace FeatureStates {
     double elapsedTime;
     int isrCount =0;
     int opStateStatusFlag =0; 
-
+    int m_currentStreamingMode = 0;
 
 }
 

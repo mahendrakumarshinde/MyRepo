@@ -5279,6 +5279,7 @@ void Conductor::streamFeatures()
                 debugPrint(m_streamingMode);
             }
     }
+    FeatureStates::m_currentStreamingMode = m_streamingMode;
     double timestamp = getDatetime();
     float batteryLoad = iuBattery.getBatteryLoad();
     for (uint8_t i = 0; i < FeatureGroup::instanceCount; ++i) {                       // instanceCount =  [0:7]

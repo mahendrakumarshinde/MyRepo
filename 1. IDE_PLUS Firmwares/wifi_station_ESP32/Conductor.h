@@ -270,6 +270,7 @@ class Conductor
         IPAddress m_dns1;
         IPAddress m_dns2;
         /***** Cyclic Update *****/
+        uint32_t m_lastWifiHearbeatUpdate;
         uint32_t m_lastWifiStatusUpdate;
         uint32_t m_lastWifiStatusCheck;
         uint32_t m_lastWifiInfoPublication;

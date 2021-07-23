@@ -1,5 +1,6 @@
 #include "FeatureGroup.h"
 #include "RawDataState.h"
+#include "Conductor.h"
 //#include "IULSM6DSM.h"
 
 //extern Feature feature;
@@ -116,6 +117,13 @@ bool FeatureGroup::isDataSendTime(uint8_t idx)
     if (now - m_lastSentTime[idx] > m_dataSendPeriod)
     {
         m_lastSentTime[idx] = now;
+        if( (FeatureStates::m_currentStreamingMode == StreamingMode::WIFI  ||  FeatureStates::m_currentStreamingMode == StreamingMode::BLE )
+                                                                        && idx == 0  ){
+            FeatureStates::isISRActive = true;
+        }
+        if(FeatureStates::m_currentStreamingMode == StreamingMode::WIFI_AND_BLE && idx == 1){
+            FeatureStates::isISRActive = true;
+        }
         return true;
     }
     return false;
@@ -214,6 +222,9 @@ void FeatureGroup::legacyStream(IUSerial *iuSerial, MacAddress mac,
                                 double timestamp, bool sendName,
                                 uint8_t portIdx)
 {
+    if (!isDataSendTime(portIdx)) {
+        return;
+    }
     if (!isReadyToStream(portIdx)) {
         return;  // Not ready to stream
     }

@@ -8,11 +8,16 @@
 #include "AdvanceFeatureComputer.h"
 #include "IULSM6DSM.h"
 #include "IUKX222.h"
+#include "LedManager.h"
 extern float modbusFeaturesDestinations[8];
 extern IULSM6DSM iuAccelerometer;
 extern IUKX222 iuAccelerometerKX222;
 #define MAXCYCLECOUNT 5
-#define MAXPEAKCOUNT 10 
+#define MAXPEAKCOUNT 10
+
+#define X_OFFSET    0
+#define Y_OFFSET    0
+#define Z_OFFSET    0
 /* =============================================================================
  *  Motor Scaling Global Variable
  *  
@@ -877,7 +882,13 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
               //Serial.print("Integrated RMS calibration Scaling:");Serial.println(m_calibrationScaling1);
             }
             
-            m_destinations[2]->addValue(integratedRMS1);
+            if(FeatureStates::opStateStatusFlag == OperationState::IDLE){
+                if(m_id == 30){m_destinations[2]->addValue(integratedRMS1 + X_OFFSET); }
+                if(m_id == 31){m_destinations[2]->addValue(integratedRMS1 + Y_OFFSET); }
+                if(m_id == 32){m_destinations[2]->addValue(integratedRMS1 + Z_OFFSET); }
+            }else{
+                m_destinations[2]->addValue(integratedRMS1);
+            }  
             
             logFFTOutput(&FFTOuput[fft_direction], velRMS, (void*) &integratedRMS1, 1, false);
 

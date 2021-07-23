@@ -2041,6 +2041,49 @@ void Conductor::updateWiFiStatusCycle()
         updateMQTTStatus();
         m_lastWifiStatusUpdate = now;
     }
+    if ( (WiFi.isConnected()) && (now - m_lastWifiHearbeatUpdate > (wifiStatusUpdateDelay*6))) {
+        char message[256];
+        if ( (mqttHelper.client.connected() && iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED) ||
+             (mqttHelper.nonSecureClient.connected() && iuWiFiFlash.readMemory(CONNECTION_MODE) == UNSECURED) )
+        {
+            getWifiInfo(message, 256, true);
+        }
+        else if ( (!mqttHelper.client.connected() && iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED) ||
+                  (!mqttHelper.nonSecureClient.connected() && iuWiFiFlash.readMemory(CONNECTION_MODE) == UNSECURED) )
+        {
+            getWifiInfo(message, 256, false);
+        }
+
+        char stringDT[25];  // Remove the newline at the end of ctime
+        time_t datetime = timeHelper.getCurrentTime();
+        strncpy(stringDT, ctime(&datetime), 25);
+        stringDT[24] = 0;
+
+        uint16_t totalMsgLength = strlen(message) + 128;
+        char heartBeatMsg[totalMsgLength];
+        snprintf(heartBeatMsg, totalMsgLength,
+                "{\"heartbeat\":{\"deviceId\":\"%s\",\"data\":%s,\"time\":\"%s\"}}",m_bleMAC.toString().c_str(), message,stringDT);
+        // hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,heartBeatMsg);
+        // delay(1); 
+        int httpStatusCode = 0;
+        if(iuWiFiFlash.readMemory(CONNECTION_MODE) == UNSECURED ){
+            httpStatusCode = httpPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_endpointRoute,
+                                    accelRawDataHelper.m_endpointPort, (uint8_t*) heartBeatMsg, strlen(heartBeatMsg),"",
+                                    NULL, HttpContentType::applicationJSON);
+        }else if(iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED ){    
+            httpStatusCode = httpsPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_endpointRoute,
+                                    accelRawDataHelper.m_endpointPort, (uint8_t*) heartBeatMsg, strlen(heartBeatMsg),"",
+                                    ssl_rootca_cert, HttpContentType::applicationJSON);            
+        }
+
+        // int iRet = httpPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_endpointRoute,
+        //                              accelRawDataHelper.m_endpointPort, (uint8_t*) heartBeatMsg, strlen(heartBeatMsg),"", NULL, HttpContentType::octetStream);
+        if(httpStatusCode == HTTP_CODE_OK) {
+            //hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"Heartbeat Send OK");
+            //delay(1);
+        }
+        m_lastWifiHearbeatUpdate = now;
+    }
 }
 
 /**
