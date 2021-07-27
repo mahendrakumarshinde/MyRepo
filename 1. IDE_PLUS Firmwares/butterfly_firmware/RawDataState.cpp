@@ -7,6 +7,7 @@ namespace RawDataState {
     bool ZCollected = false;
     bool startRawDataTransmission = false;
     bool rawDataTransmissionInProgress = false;
+    bool fftCommandReceived  = false;
     char rawAccelerationX[16400];
     char rawAccelerationY[16400];
     char rawAccelerationZ[16400];
@@ -22,7 +23,7 @@ namespace FeatureStates {
     double elapsedTime;
     int isrCount =0;
     int opStateStatusFlag =0; 
-
+    int m_currentStreamingMode = 0;
 
 }
 

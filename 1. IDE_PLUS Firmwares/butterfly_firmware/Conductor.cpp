@@ -2537,6 +2537,13 @@ void Conductor::processCommand(char *buff)
                     sendAccelRawData(2);  // Axis Z
                 }
                 resetDataAcquisition();
+                if(!FeatureStates::isISRActive ){
+                    FeatureStates::isISRActive = true;
+                    if(debugMode){
+                        debugPrint("FORCED-ENABLE ISR on GET_FFT");
+                    }
+                }
+                
             }
             break;
         case '4':              // Set temperature Offset value  [4000:12 < command-value>]
@@ -2724,6 +2731,13 @@ void Conductor::processLegacyCommand(char *buff)
  */
 void Conductor::processUSBMessage(IUSerial *iuSerial)
 {
+    if(RawDataState::fftCommandReceived){
+        if(debugMode){
+            debugPrint("GET-FFT Command Received from MQTT");
+        }
+        RawDataState::fftCommandReceived = false;
+        return;
+    }
     char *buff = iuSerial->getBuffer();
     processCommand(buff);
     
@@ -3552,7 +3566,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
         if((buff[0] == '3' && buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
                     buff[13] == '0' && buff[15] == '0' && buff[17] == '0') ){
             processCommand(buff);
-
+            RawDataState::fftCommandReceived = true;
         }else
         {
             processLegacyCommand(buff);
@@ -4225,7 +4239,9 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             break;
         case MSPCommand::CONFIG_FORWARD_CMD:
             if (loopDebugMode) { debugPrint(F("CONFIG_FORWARD_CMD")); }
-            processCommand(buff);
+            if(RawDataState::fftCommandReceived == false ){
+                processCommand(buff);
+            }
             break;
         case MSPCommand::CONFIG_FORWARD_LEGACY_CMD:
             if (loopDebugMode) { debugPrint(F("CONFIG_FORWARD_LEGACY_CMD")); }
@@ -5279,6 +5295,7 @@ void Conductor::streamFeatures()
                 debugPrint(m_streamingMode);
             }
     }
+    FeatureStates::m_currentStreamingMode = m_streamingMode;
     double timestamp = getDatetime();
     float batteryLoad = iuBattery.getBatteryLoad();
     for (uint8_t i = 0; i < FeatureGroup::instanceCount; ++i) {                       // instanceCount =  [0:7]
@@ -5313,12 +5330,12 @@ void Conductor::streamFeatures()
 //            &sendingQueue, IUSerial::MS_PROTOCOL, m_macAddress,
 //            ledManager.getOperationState(), batteryLoad, timestamp,
 //            true);
-        if (FeatureStates::isISRActive != true && FeatureStates::isISRDisabled && computationDone == true){   
-                FeatureStates::isFeatureStreamComplete = true;   // publication completed
-                FeatureStates::isISRActive = true;
+        // if (FeatureStates::isISRActive != true && FeatureStates::isISRDisabled && computationDone == true){   
+        //         FeatureStates::isFeatureStreamComplete = true;   // publication completed
+        //         FeatureStates::isISRActive = true;
                 //debugPrint("Published to WiFi Complete !!!");
                 // createFeatureGroupjson();
-            }
+       //     }
     }
    #if 0
    CharBufferNode *nodeToSend = sendingQueue.getNextBufferToSend();
