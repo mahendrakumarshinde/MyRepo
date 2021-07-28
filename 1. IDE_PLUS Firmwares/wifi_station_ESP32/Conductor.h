@@ -188,6 +188,7 @@ class Conductor
         void messageValidation(char* json);
         /***************************/
         char cert_config[MAX_SSL_CERT_SIZE];
+        char getConfigHash[34];
         char mqtt_client_cert[2048];
         char mqtt_client_key[2048];
         char ssl_rootca_cert[MAX_SSL_CERT_SIZE];

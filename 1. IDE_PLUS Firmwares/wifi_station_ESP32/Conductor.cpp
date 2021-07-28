@@ -120,6 +120,15 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             hostSerial.sendMSPCommand(MSPCommand::RECEIVE_ESP_SYNC_RSP);
             delay(1);
             break;
+        case MSPCommand::ASK_WIFI_CREDENTIALS:
+            if(WiFi.isConnected()) {
+                char wifiInfo[128];
+                memset(wifiInfo,0x00,128);
+                sprintf(wifiInfo,"%s %s",WiFi.SSID().c_str(),WiFi.psk().c_str());
+                hostSerial.sendMSPCommand(MSPCommand::RECEIVE_WIFI_CREDENTIALS,wifiInfo);
+                delay(1);
+            }
+            break;
         case MSPCommand::OTA_INIT_ACK:
             if(otaInProgress == true) {
                 mqttHelper.publish(OTA_TOPIC,buffer);
@@ -2926,6 +2935,7 @@ bool Conductor::getDeviceCertificates(IUESPFlash::storedConfig configType, const
         upgradeReceived = false;
         return false;       
     }
+    return true;
 }
 
 /**
@@ -3056,10 +3066,13 @@ char* Conductor::getConfigChecksum(IUESPFlash::storedConfig configType)
     // empty string will be sent, and that will trigger a config refresh
     unsigned char* md5hash = MD5::make_hash(cert_config, charCount);
     char *md5str = MD5::make_digest(md5hash, 16);
+    memset(getConfigHash,'\0',sizeof(getConfigHash));
+    strncpy(getConfigHash,md5str,32);
+    getConfigHash[32] = '\0';
     //free memory
     free(md5hash);
     free(md5str);
-    return md5str;
+    return getConfigHash; //md5str;
 }
 
 

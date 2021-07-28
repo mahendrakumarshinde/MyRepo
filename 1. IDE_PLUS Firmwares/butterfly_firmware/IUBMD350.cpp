@@ -539,7 +539,7 @@ void IUBMD350::queryDeviceName()
                         debugPrint("Mode 1 : BMD Ok on restart-Device ID:BMD APP:BMD");
                     }
                     Serial.println("DEV RESTART READ OK !");
-                    bmdCommErrCode |= 0x04; // Send debug/diag message for informing after reset BMD worked
+                    bmdCommErrCode |= 0x40; // Send debug/diag message for informing after reset BMD worked
                     bmdCommErrMsgRetry = DEV_DIAG_MSG_RTRY; // Send message multiple time, not to miss on mqtt
                     conductor.setDeviceIdMode(true);
                 }
@@ -586,17 +586,20 @@ void IUBMD350::configureUARTPassthrough()
 
     for (int i = 0; i < retries; i++) {
         sendATCommand(cmd, response, 3);
-        if (setupDebugMode && strcmp(response, "OK") != 0)
-        {
-            debugPrint("Attempt ", false); debugPrint(itoa(i, current_attempt, 10), true);
-            debugPrint(F("Failed to set UART baud rate:\n  Command was: "),false);
-            debugPrint(cmd);
-            debugPrint(F("  Response was: "), false);
-            debugPrint(response);
+        if (strcmp(response, "OK") != 0) {
+            bmdCommErrCode |= 0x100;
+            if (setupDebugMode) {
+                debugPrint("Attempt ", false); debugPrint(itoa(i, current_attempt, 10), true);
+                debugPrint(F("Failed to set UART baud rate:\n  Command was: "),false);
+                debugPrint(cmd);
+                debugPrint(F("  Response was: "), false);
+                debugPrint(response);
+            }
         }
         else 
         {
-            debugPrint("Set UART baud rate");
+            bmdCommErrCode &= 0xEFF;
+            if (setupDebugMode) { debugPrint("Set UART baud rate"); }
             break;
         }
     }
@@ -606,17 +609,20 @@ void IUBMD350::configureUARTPassthrough()
     else { cmd = "ufc 00"; }
     for (int i = 0; i < retries; i++) {
         sendATCommand(cmd, response, 3);
-        if (setupDebugMode && strcmp(response, "OK") != 0)
-        {
-            debugPrint("Attempt ", false); debugPrint(itoa(i, current_attempt, 10), true);
-            debugPrint(F("Failed to configure UART flow control:\n  Command was: "),false);
-            debugPrint(cmd);
-            debugPrint(F("  Response was: "), false);
-            debugPrint(response);
+        if (strcmp(response, "OK") != 0) {
+            bmdCommErrCode |= 0x200;
+            if (setupDebugMode) {
+                debugPrint("Attempt ", false); debugPrint(itoa(i, current_attempt, 10), true);
+                debugPrint(F("Failed to configure UART flow control:\n  Command was: "),false);
+                debugPrint(cmd);
+                debugPrint(F("  Response was: "), false);
+                debugPrint(response);
+            }
         }
         else 
         {
-            debugPrint("Configured UART flow control");
+            bmdCommErrCode &= 0xDFF;
+            if (setupDebugMode) { debugPrint("Configured UART flow control");}
             break;
         }
     }
@@ -626,17 +632,20 @@ void IUBMD350::configureUARTPassthrough()
     else { cmd = "upar 00"; }
     for (int i = 0; i < retries; i++) {
         sendATCommand(cmd, response, 3);
-        if (setupDebugMode && strcmp(response, "OK") != 0)
-        {
-            debugPrint("Attempt ", false); debugPrint(itoa(i, current_attempt, 10), true);
-            debugPrint(F("Failed to configure UART parity:\n  Command was: "),false);
-            debugPrint(cmd);
-            debugPrint(F("  Response was: "), false);
-            debugPrint(response);
+        if (strcmp(response, "OK") != 0) {
+            bmdCommErrCode |= 0x400;
+            if (setupDebugMode) {
+                debugPrint("Attempt ", false); debugPrint(itoa(i, current_attempt, 10), true);
+                debugPrint(F("Failed to configure UART parity:\n  Command was: "),false);
+                debugPrint(cmd);
+                debugPrint(F("  Response was: "), false);
+                debugPrint(response);
+            }
         }
         else 
         {
-            debugPrint("Configured UART parity", true);
+            bmdCommErrCode &= 0xBFF;
+            if (setupDebugMode) { debugPrint("Configured UART parity", true); }
             break;
         }
     }
@@ -646,17 +655,20 @@ void IUBMD350::configureUARTPassthrough()
     else { cmd = "uen 00"; }
     for (int i = 0; i < retries; i++) {
         sendATCommand(cmd, response, 3);
-        if (setupDebugMode && strcmp(response, "OK") != 0)
-        {
-            debugPrint("Attempt ", false); debugPrint(itoa(i, current_attempt, 10), true);
-            debugPrint(F("Failed to enable UART:\n  Command was: "), false);
-            debugPrint(cmd);
-            debugPrint(F("  Response was: "), false);
-            debugPrint(response);
+        if (strcmp(response, "OK") != 0) {
+            bmdCommErrCode |= 0x800;
+            if (setupDebugMode) {
+                debugPrint("Attempt ", false); debugPrint(itoa(i, current_attempt, 10), true);
+                debugPrint(F("Failed to enable UART:\n  Command was: "), false);
+                debugPrint(cmd);
+                debugPrint(F("  Response was: "), false);
+                debugPrint(response);
+            }
         }
         else 
         {
-            debugPrint("Enabled UART");
+            bmdCommErrCode &= 0x7FF;
+            if (setupDebugMode) { debugPrint("Enabled UART"); }
             break;
         }
     }

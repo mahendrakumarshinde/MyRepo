@@ -54,6 +54,24 @@
 #define DEVICE_DIAG_SETUP_ERR1    8
 #define DEVICE_DIAG_STMMEM_ERR    9
 
+#define DEVICE_DIAG_WIFI_ERR1      0x0001
+#define DEVICE_DIAG_WIFI_ERR2      0x0002
+#define DEVICE_DIAG_WIFI_ERR3      0x0004
+#define DEVICE_DIAG_WIFI_ERR4      0x0008
+#define DEVICE_DIAG_WIFI_ERR5      0x0010
+#define DEVICE_DIAG_WIFI_ERR6      0x0020
+#define DEVICE_DIAG_WIFI_ERR7      0x0040
+#define DEVICE_DIAG_WIFI_ERR8      0x0080
+
+#define DEVICE_DIAG_WIFI_STS1      0x0100
+#define DEVICE_DIAG_WIFI_STS2      0x0200
+#define DEVICE_DIAG_WIFI_STS3      0x0400
+#define DEVICE_DIAG_WIFI_STS4      0x0800
+#define DEVICE_DIAG_WIFI_STS5      0x1000
+#define DEVICE_DIAG_WIFI_STS6      0x2000
+#define DEVICE_DIAG_WIFI_STS7      0x4000
+#define DEVICE_DIAG_WIFI_STS8      0x8000
+
 #define MAX_SYNC_COUNT            20
 
 /* Timeout for MQTT_DISCONNECTED */
@@ -423,6 +441,7 @@ class Conductor
         void selfFwUpgradeInit();
         void mqttReset(bool timerflag);
         uint32_t devResetTime;
+        uint16_t m_wifiDiagErrCode = 0;
     #ifdef DEVIDFIX_TESTSTUB
         uint8_t flagval2 = 0;
     #endif

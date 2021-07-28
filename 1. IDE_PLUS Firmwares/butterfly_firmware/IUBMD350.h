@@ -99,7 +99,7 @@ class IUBMD350 : public IUSerial, public Component
         bool isBLEAvailable = true;
          uint8_t deviceIdMode = 0; // 1=DeviceID:BMD MAC,APP:BMD OK,2=DeviceID:WIFI MAC,APP:BMD Fail,3=DeviceID:WIFI MAC,APP:BMD OK  /* BLE_FAIL Issue:If BLE MAC read is failed, set this flag true */
         uint8_t deviceIdInfoRetry = 0;        
-        uint8_t bmdCommErrCode = 0;
+        uint16_t bmdCommErrCode = 0;
         uint8_t bmdCommErrMsgRetry = 0;
     protected:
         /***** Pin definition *****/
