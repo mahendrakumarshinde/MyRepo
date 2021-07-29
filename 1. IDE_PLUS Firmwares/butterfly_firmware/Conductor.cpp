@@ -344,7 +344,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     JsonVariant variant = root;
     
     // variant.prettyPrintTo(Serial);
-    bool unknownConfig = false;       
+    bool unknownConfig = true;       
     char messageId[60];
     if(root.success()) {
         // Get the message id, to be used in acknowledgements
@@ -371,7 +371,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     JsonVariant subConfig = root["main"];
     subConfig.printTo(jsonChar);
     if (subConfig.success()) {
-        unknownConfig = true;
+        unknownConfig = false;
         // This subconfig has to be validated for the provided fields, note the that subconfig may contain only a subset of all the fields present in device config
         // i.e. Complete device conf: {"main":{"GRP":["MOTSTD"],"RAW":1800,"POW":0,"TSL":60,"TOFF":10,"TCY":20,"DSP":512}}
         // the received config may contain only DSP or RAW or any subset of the fields.
@@ -391,7 +391,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // Component configuration
     subConfig = root["components"];
     if (subConfig.success()) {
-        unknownConfig = true;
+        unknownConfig = false;
         configureAllSensors(subConfig);
         if (saveToFlash) {
             iuFlash.saveConfigJson(IUFlash::CFG_COMPONENT, subConfig);
@@ -400,7 +400,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // Feature configuration
     subConfig = root["features"];
     if (subConfig.success()) {
-        unknownConfig = true;
+        unknownConfig = false;
         configureAllFeatures(subConfig);
         if (saveToFlash) {
             iuFlash.saveConfigJson(IUFlash::CFG_FEATURE, subConfig);
@@ -428,7 +428,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // Feature configuration
     subConfig = root["opState"];
     if (subConfig.success()) {
-        unknownConfig = true;
+        unknownConfig = false;
         opStateComputer.configure(subConfig);
         activateFeature(&opStateFeature);
         if (saveToFlash) {
@@ -438,7 +438,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // Diagnostic Thresholds configuration
     subConfig = root["thresholds"];
     if (subConfig.success()) {
-            unknownConfig = true;
+            unknownConfig = false;
              if (saveToFlash) {
             //DOSFS.begin();
             iuFlash.saveConfigJson(IUFlash::CFG_FINGERPRINT_STATE, variant);
@@ -467,7 +467,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
      // MQTT Server configuration
     subConfig = root["mqtt"];
     if (subConfig.success()) {
-        unknownConfig = true; 
+        unknownConfig = false; 
         //configureAllFeatures(subConfig);
         // bool tlsStatus = root["mqtt"]["tls"];
         // bool rebootESP = false;
@@ -524,7 +524,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
      // MQTT Server configuration
     subConfig = root["getDevDiag"];
     if (subConfig.success()) {
-        unknownConfig = true; 
+        unknownConfig = false; 
         bool sendFlag = false;
         char devInfoConfig[256];
         memset(devInfoConfig,0x00,256);
@@ -574,7 +574,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     //Diagostic Fingerprint configurations
     subConfig = root["fingerprints"];
     if (subConfig.success()) {
-        unknownConfig = true; 
+        unknownConfig = false; 
         //opStateComputer.configure(subConfig);
         //activateFeature(&opStateFeature);
         bool dataWritten = false;
@@ -629,7 +629,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // http endpoint configuration
     subConfig = root["httpConfig"];
     if (subConfig.success()) {
-        unknownConfig = true; 
+        unknownConfig = false; 
         //configureAllFeatures(subConfig);
         bool dataWritten = false;
         bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_HTTP, root, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime(), messageId);
@@ -692,7 +692,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     //SET Sensor Configuration and its OFFSET value
     subConfig = root["sensorConfig"];
     if (subConfig.success()) {
-        unknownConfig = true;
+        unknownConfig = false;
         bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_SENSOR_CONFIG, subConfig, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime(), messageId);
         if(loopDebugMode) { 
             debugPrint("Validation: ", false);
@@ -737,7 +737,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // SET the relayAgentConfig on Ethernet
     subConfig = root["relayAgentConfig"];
     if (subConfig.success()) {
-        unknownConfig = true; 
+        unknownConfig = false; 
         bool dataWritten = false;
         
         if (saveToFlash) {
@@ -860,7 +860,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // Message is always saved to file, after which STM resets
     subConfig = root["fft"];
     if (subConfig.success()) {
-        unknownConfig = true; 
+        unknownConfig = false; 
         // Validate if the received parameters are correct
         if(loopDebugMode) {
             debugPrint("FFT configuration received: ", false);
@@ -907,7 +907,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 
     subConfig = root["messageType"];
     if (subConfig.success()) {
-        unknownConfig = true; 
+        unknownConfig = false; 
         String msgType = root["messageType"];
         strcpy(m_otaMsgType,msgType.c_str());
         if(!(strcmp((const char *)m_otaMsgType,(const char *)"initiateota")))
@@ -1160,7 +1160,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // Message is always saved to file, after which STM resets
     subConfig = root["modbusSlaveConfig"];
     if (subConfig.success()) {
-        unknownConfig = true; 
+        unknownConfig = false; 
         // Validate if the received parameters are correct
         if(loopDebugMode) {
             debugPrint("modbusSlave configuration received: ", false);
@@ -1216,7 +1216,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     //Certificates download URL Configuration
     subConfig = root["certUrl"];
     if (subConfig.success()) {
-        unknownConfig = true; 
+        unknownConfig = false; 
         if (loopDebugMode){  debugPrint("Certificate Download Url:",false);
          subConfig.printTo(Serial); debugPrint("");
         }
@@ -1257,7 +1257,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // Configure Diagnostic URL in ESP32
     subConfig = root["diagnosticUrl"];
     if (subConfig.success()) {
-        unknownConfig = true; 
+        unknownConfig = false; 
         if (loopDebugMode){  debugPrint("Diagnostic Url:",false);
          subConfig.printTo(Serial); debugPrint("");
          }
@@ -1289,7 +1289,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 
     subConfig = root["auth_type"];
     if (subConfig.success()) {
-        unknownConfig = true; 
+        unknownConfig = false; 
         //configureAllFeatures(subConfig);
         bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_WIFI0, variant, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime(), messageId);
         if(loopDebugMode) { 
@@ -1323,7 +1323,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 
     subConfig = root["CONFIG_HASH"];
     if (subConfig.success()){
-        unknownConfig = true; 
+        unknownConfig = false; 
         const char *messageId = root["messageId"];
         snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"macId\":\"%s\",\"configType\":\"hash_ack\"}", messageId, m_macAddress.toString().c_str());
         bool dataWritten = false;
@@ -1342,7 +1342,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // store the DIG configurations 
     subConfig = root["CONFIG"]["DIG"];
     if(subConfig.success()){
-        unknownConfig = true; 
+        unknownConfig = false; 
         if(loopDebugMode) {
             debugPrint("Triggers configuration received: ", false);
             subConfig.printTo(Serial); debugPrint("");
@@ -1370,7 +1370,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 
     subConfig = root["CONFIG"]["PHASE"];
     if(subConfig.success()){
-        unknownConfig = true; 
+        unknownConfig = false; 
         if(loopDebugMode) {
             debugPrint("Phase configuration received: ", false);
             subConfig.printTo(Serial); debugPrint("");
@@ -1397,7 +1397,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // TEMP : store the feature output JOSN  
     subConfig = root["FRES"];
     if (subConfig.success()) {
-        unknownConfig = true; 
+        unknownConfig = false; 
         const char* msgType = root["MSGTYPE"];
 
         if(strcmp(msgType,"FRES") == 0 ){
@@ -1415,7 +1415,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // RPM Configs
     subConfig = root["CONFIG"]["RPM"];
     if (subConfig.success()) {
-        unknownConfig = true; 
+        unknownConfig = false; 
         if (loopDebugMode){  debugPrint("RPM Configs Received :",false);
          subConfig.printTo(Serial); debugPrint("");
          }
@@ -1465,8 +1465,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     }
     
     // Check for unknown configurations
-    if(unknownConfig == false){
-        snprintf(ack_config, 200, "{\"macId\":\"%s\",\"configType\":\"Unknown Config Received for this firmware\"}", m_macAddress.toString().c_str());
+    if(unknownConfig == true){
+        snprintf(ack_config, 200, "{\"macId\":\"%s\",\"configType\":\"Unknown Config Received\"}", m_macAddress.toString().c_str());
         if(iuWiFi.isConnected())
         {  
             if(loopDebugMode){debugPrint("Response : ",false);debugPrint(ack_config);}
