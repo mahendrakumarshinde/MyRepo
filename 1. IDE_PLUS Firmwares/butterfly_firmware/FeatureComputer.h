@@ -15,9 +15,13 @@ extern IUKX222 iuAccelerometerKX222;
 #define MAXCYCLECOUNT 5
 #define MAXPEAKCOUNT 10
 
-#define X_OFFSET    0
-#define Y_OFFSET    0
-#define Z_OFFSET    0
+// LSM RMS OFFSET 
+#define LSM_RMS_OFFSET              0.3028
+
+// Kionix RMS OFFSET
+#define KX222_RMS_OFFSET            0.0
+#define KX222_8KHZ_FMAX_RMS_OFFSET  0.0      // Apply to Z-axis when Fmax > 8 KHz (i.e SR = 25600 Hz)
+
 /* =============================================================================
  *  Motor Scaling Global Variable
  *  
@@ -530,7 +534,7 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         
         m_destinations[0]->setResolution(resolution);
         m_destinations[1]->setResolution(1);
-        m_destinations[2]->setResolution(resolution);
+        //m_destinations[2]->setResolution(resolution);
         m_destinations[3]->setResolution(resolution);
 
         logFFTParams(&FFTInput[fft_direction], samplingRate, sampleCount, df);
@@ -882,12 +886,95 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
               //Serial.print("Integrated RMS calibration Scaling:");Serial.println(m_calibrationScaling1);
             }
             
-            if(FeatureStates::opStateStatusFlag == OperationState::IDLE){
-                if(m_id == 30){m_destinations[2]->addValue(integratedRMS1 + X_OFFSET); }
-                if(m_id == 31){m_destinations[2]->addValue(integratedRMS1 + Y_OFFSET); }
-                if(m_id == 32){m_destinations[2]->addValue(integratedRMS1 + Z_OFFSET); }
-            }else{
-                m_destinations[2]->addValue(integratedRMS1);
+            if(FeatureStates::opStateStatusFlag == OperationState::IDLE && FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor ){
+                integratedRMS1 = integratedRMS1*resolution - LSM_RMS_OFFSET;
+                if(integratedRMS1 < 0){
+                    integratedRMS1 = 0;
+                }
+                if(m_id == 30){
+                    m_destinations[2]->addValue(integratedRMS1 /*- LSM_RMS_OFFSET*/ );
+                    modbusFeaturesDestinations[2] = integratedRMS1;
+                    featureDestinations::buff[featureDestinations::basicfeatures::velRMS512X] = integratedRMS1;
+                 }
+                if(m_id == 31){
+                    m_destinations[2]->addValue(integratedRMS1 /*- LSM_RMS_OFFSET*/ );
+                    modbusFeaturesDestinations[3] = integratedRMS1;
+                    featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Y] = integratedRMS1;
+                }
+                if(m_id == 32){
+                    m_destinations[2]->addValue(integratedRMS1 /*- LSM_RMS_OFFSET*/ ); 
+                    modbusFeaturesDestinations[4] = integratedRMS1;
+                    featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Z] = integratedRMS1;
+                }
+                // fres and modbus update
+                /*
+                    if(m_id == 30 ){ modbusFeaturesDestinations[2] = integratedRMS1; }
+                    if(m_id == 31 ){ modbusFeaturesDestinations[3] = integratedRMS1; }
+                    if(m_id == 32 ){ modbusFeaturesDestinations[4] = integratedRMS1; }
+                    if(m_id == 30 ){ featureDestinations::buff[featureDestinations::basicfeatures::velRMS512X] = integratedRMS1; } //velRMS512X 
+                    if(m_id == 31 ){ featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Y] = integratedRMS1; } //velRMS512Y
+                    if(m_id == 32 ){ featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Z] = integratedRMS1; } //velRMS512Z
+                */
+
+            }else if(FeatureStates::opStateStatusFlag == OperationState::IDLE && FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor ){
+                if(FFTConfiguration::currentSamplingRate <= 25600 && (m_id == 30 || m_id == 31 )){
+                    integratedRMS1 = integratedRMS1*resolution - KX222_RMS_OFFSET;
+                    if(integratedRMS1 < 0){
+                            integratedRMS1 = 0;
+                        }
+                    m_destinations[2]->addValue(integratedRMS1);
+
+                    // if(m_id == 30){m_destinations[2]->addValue(integratedRMS1 /*- KX222_RMS_OFFSET*/ ); }
+                    // if(m_id == 31){m_destinations[2]->addValue(integratedRMS1 /*- KX222_RMS_OFFSET*/ ); }
+                } 
+                if(m_id == 32 && FFTConfiguration::currentSamplingRate < 25600 )
+                {
+                    integratedRMS1 = integratedRMS1*resolution - KX222_RMS_OFFSET;
+                    if(integratedRMS1 < 0){
+                        integratedRMS1 = 0;
+                    }
+                    m_destinations[2]->addValue(integratedRMS1 );
+                    modbusFeaturesDestinations[4] = integratedRMS1;
+                    featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Z] = integratedRMS1;
+                }else if(m_id == 32 && FFTConfiguration::currentSamplingRate >= 25600 ){
+                    integratedRMS1 =  (integratedRMS1*resolution - KX222_8KHZ_FMAX_RMS_OFFSET) < 0 ? 0: (integratedRMS1*resolution - KX222_8KHZ_FMAX_RMS_OFFSET) ;
+                    if(integratedRMS1 < 0){
+                        integratedRMS1 = 0;
+                    }
+                    m_destinations[2]->addValue(integratedRMS1); 
+                    modbusFeaturesDestinations[4] = integratedRMS1;
+                    featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Z] = integratedRMS1;
+                }
+
+                // fres and modbus update
+                if(m_id == 30 ){
+                     modbusFeaturesDestinations[2] = integratedRMS1; 
+                    featureDestinations::buff[featureDestinations::basicfeatures::velRMS512X] = integratedRMS1;
+                }
+                if(m_id == 31 ){
+                     modbusFeaturesDestinations[3] = integratedRMS1; 
+                    featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Y] = integratedRMS1;
+                }
+             
+            }
+            else{
+
+                if(FeatureStates::opStateStatusFlag != OperationState::IDLE){
+                    m_destinations[2]->addValue(integratedRMS1*resolution);
+                    if(m_id == 30 ){ 
+                        modbusFeaturesDestinations[2] = integratedRMS1*resolution; 
+                        featureDestinations::buff[featureDestinations::basicfeatures::velRMS512X] = integratedRMS1*resolution;
+                    }
+                    if(m_id == 31 ){ 
+                        modbusFeaturesDestinations[3] = integratedRMS1*resolution; 
+                        featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Y] = integratedRMS1*resolution;
+                    }
+                    if(m_id == 32 ){ 
+                        modbusFeaturesDestinations[4] = integratedRMS1*resolution; 
+                        featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Z] = integratedRMS1*resolution;
+                    }
+                }
+
             }  
             
             logFFTOutput(&FFTOuput[fft_direction], velRMS, (void*) &integratedRMS1, 1, false);
