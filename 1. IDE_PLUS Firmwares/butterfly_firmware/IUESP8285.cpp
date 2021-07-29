@@ -233,6 +233,57 @@ void IUESP8285::manageAutoSleep(bool wakeUpNow)
     }
 }
 
+/* IF WIFI Credentials are not present in STM, get it from ESP if WIFI is connected 
+   using its internal stored memory (NVS) */
+void IUESP8285::getWifiCredentials()
+{
+    if((iuFlash.checkConfig(CONFIG_WIFI_CONFIG_FLASH_ADDRESS) == false) && 
+        !DOSFS.exists("/iuconfig/wifi0.conf")) {
+        iuWiFi.sendMSPCommand(MSPCommand::ASK_WIFI_CREDENTIALS);
+        delay(1);
+    }
+}
+
+bool IUESP8285::updateWifiCredentials(char *wifiCred)
+{
+    if((iuFlash.checkConfig(CONFIG_WIFI_CONFIG_FLASH_ADDRESS) == false) && !(DOSFS.exists("/iuconfig/wifi0.conf"))) {
+        char wifiInfo[128]; // size need to adjust based on devDiag json size, prepared in this function
+        memset(wifiInfo,0x00,128);
+        char ssid[64];
+        char pswd[64];
+        conductor.m_wifiDiagErrCode |= DEVICE_DIAG_WIFI_STS6;
+        if(debugMode){
+            debugPrint("Updating WIFI Confing: ",false);
+            debugPrint(wifiCred);
+        }
+        sscanf(wifiCred,"%s %s",&ssid[0],&pswd[0]);
+        strcat(wifiInfo, "{\"ssid\":\"");
+        strcat(wifiInfo,ssid);
+        strcat(wifiInfo, "\",\"password\":\"");
+        strcat(wifiInfo,pswd);
+        strcat(wifiInfo, "\",\"auth_type\":\"");
+        strcat(wifiInfo,WIFI_DEFAULT_AUTH);
+        strcat(wifiInfo, "\"}");        
+        if(!(DOSFS.exists("/iuconfig/wifi0.conf")))
+        {
+            File wifi0 = DOSFS.open("/iuconfig/wifi0.conf","w");
+            if(wifi0) {
+                if(debugMode) { debugPrint("Create /iuconfig/wifi0.conf ok,writing default config"); }
+                wifi0.print(wifiInfo);
+                wifi0.close();
+            }
+            else {
+                conductor.m_wifiDiagErrCode |= DEVICE_DIAG_WIFI_ERR5;
+                if(debugMode) { debugPrint("Create /iuconfig/wifi0.conf failed !"); }
+            }
+        }
+        if((iuFlash.checkConfig(CONFIG_WIFI_CONFIG_FLASH_ADDRESS) == false)) {
+            iuFlash.writeInternalFlash(1,CONFIG_WIFI_CONFIG_FLASH_ADDRESS,strlen(wifiCred),(const uint8_t*)wifiCred);
+        }
+        conductor.updateDeviceInfo(iuBluetooth.deviceIdMode);
+    }
+}
+
 bool IUESP8285::readMessages()
 {
     bool atLeastOneNewMessage = IUSerial::readMessages();
@@ -275,8 +326,44 @@ bool IUESP8285::readMessages()
             //sendWiFiCredentials(); not required to send, in regular loop it sends out
         }
         else {
-            if (debugMode) { debugPrint("Switch to User WIFI config. if last was not connected Ok "); }
-            conductor.configureFromFlash(IUFlash::CFG_WIFI0);
+            if (debugMode) { debugPrint("Switch to User WIFI config. If last wifi connection failed ! "); }
+            if (DOSFS.exists("/iuconfig/wifi0.conf")) {
+                if (debugMode) { debugPrint("Switch to User WIFI External config. "); }
+                conductor.configureFromFlash(IUFlash::CFG_WIFI0);
+            }
+            else if (iuFlash.checkConfig(CONFIG_WIFI_CONFIG_FLASH_ADDRESS) && ! DOSFS.exists("/iuconfig/wifi0.conf") )
+            {
+                if (debugMode) { debugPrint("Switch to User WIFI Internal config. "); }
+                // Read the configurations
+                String devconfig = iuFlash.readInternalFlash(CONFIG_WIFI_CONFIG_FLASH_ADDRESS);
+                if(debugMode){
+                    debugPrint("WIFI DEBUG : INTERNAL CONFIG # ",false);
+                    debugPrint("Intarnal Flash content #:");
+                    debugPrint(devconfig);
+                }
+                File wifi0 = DOSFS.open("/iuconfig/wifi0.conf","w");
+                if(wifi0) {
+                    if(debugMode) { debugPrint("Create /iuconfig/wifi0.conf ok,writing config"); }
+                    wifi0.print(devconfig.c_str());
+                    wifi0.close();
+                    conductor.m_wifiDiagErrCode |= DEVICE_DIAG_WIFI_STS7;
+                    conductor.updateDeviceInfo(iuBluetooth.deviceIdMode);
+                }
+                else {
+                    conductor.m_wifiDiagErrCode |= DEVICE_DIAG_WIFI_ERR6;
+                    conductor.updateDeviceInfo(iuBluetooth.deviceIdMode);
+                    if(debugMode) { debugPrint("Create /iuconfig/wifi0.conf failed !"); }
+                }
+                DynamicJsonBuffer jsonBuffer;
+                JsonObject& root = jsonBuffer.parseObject(devconfig.c_str());
+                JsonVariant variant = root;
+                iuWiFi.configure(variant);
+            }
+            else
+            {
+                if (debugMode) { debugPrint("NO User WIFI in device !! "); }
+                conductor.m_wifiDiagErrCode |= DEVICE_DIAG_WIFI_ERR4;
+            }
             m_defUserWifi = false;
         }
     }
@@ -707,6 +794,7 @@ bool IUESP8285::processChipMessage()
             m_retryDefWifiConfTime = millis(); // Reset retry time on connection
             //m_setConnectedStatus(true);         // uncommented temporarily
             m_working = false;
+            m_stopWiFiWorking = false;
             break;
         case MSPCommand::WIFI_ALERT_DISCONNECTED:
             if (loopDebugMode) { debugPrint("WIFI_ALERT_DISCONNECTED"); }
@@ -716,7 +804,10 @@ bool IUESP8285::processChipMessage()
             {
                 m_working = false;
                 m_displayConnectAttemptStart = 0;
+                m_stopWiFiWorking = true;
             }
+            else
+                m_stopWiFiWorking = false;
             break;
         case MSPCommand::MQTT_ALERT_CONNECTED:
             if (loopDebugMode) { debugPrint("MQTT_ALERT_CONNECTED"); }

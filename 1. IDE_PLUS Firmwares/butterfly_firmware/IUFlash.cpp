@@ -782,6 +782,10 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                     validConfig = false;
                 }
             }
+            else {
+                errorMessages.add("No wifi-Authentication Type");
+                validConfig = false;
+            }
            break; 
         }
     }

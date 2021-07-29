@@ -118,7 +118,7 @@ bool FeatureGroup::isDataSendTime(uint8_t idx)
     {
         m_lastSentTime[idx] = now;
         if( (FeatureStates::m_currentStreamingMode == StreamingMode::WIFI  || 
-             FeatureStates::m_currentStreamingMode == StreamingMode::BLE ) && idx == 0  ){
+            FeatureStates::m_currentStreamingMode == StreamingMode::BLE ) && idx == 0  ){
             FeatureStates::isISRActive = true;
         }
         if(FeatureStates::m_currentStreamingMode == StreamingMode::WIFI_AND_BLE && idx == 1){

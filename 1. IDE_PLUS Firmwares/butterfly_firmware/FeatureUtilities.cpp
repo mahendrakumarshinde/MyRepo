@@ -1,6 +1,11 @@
 #include "FeatureUtilities.h"
 #include "RawDataState.h"
-
+#include "FFTConfiguration.h"
+#include "Conductor.h"
+#include "IUFlash.h"
+#include <MemoryFree.h>
+extern Conductor conductor;
+extern IUFSFlash iuFlash;
 
 /*==============================================================================
     Conversion
@@ -914,3 +919,94 @@ float RFFTFeatures::computeRPM(q15_t *amplitudes,int m_lowRPMFrequency,int m_hig
         return 0;
     }
 }
+
+
+uint16_t RFFTFeatures::autoGrange(q15_t *amplitudes, uint32_t amplitudeCount,int currentGrange,float resolution){
+
+    int count = 0;
+    float val;
+    float max_accel_threshold = currentGrange*G_VALUE;                           
+        //if(loopDebugMode){debugPrint("Max Accel threshold :", false);debugPrint(max_accel_threshold);}
+        for (uint32_t i = 0; i < amplitudeCount ; i++)
+        {
+            val = amplitudes[i]*resolution;              //(m/s2)
+
+            if(abs(val) >= max_accel_threshold)
+            {   
+                count++;                
+            }
+        }
+    return count;           //return count
+
+}
+
+void RFFTFeatures::updateFFTFile(){
+
+    File fftFile = DOSFS.open("/iuconfig/fft.conf","r");
+    if(fftFile){    
+        String jsonChar ;
+        //const size_t bufferSize = JSON_OBJECT_SIZE(2) + 2*JSON_OBJECT_SIZE(4) + 11*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(13) + 1396;    //
+        const size_t bufferSize = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(5) + 128;
+        DynamicJsonBuffer jsonBuffer(bufferSize);
+        JsonObject &root = jsonBuffer.parseObject(fftFile);
+        if(root.success()){
+            //debugPrint("Parsing success :",false);
+            if(FFTConfiguration::setNewgrangeFlag == true){
+                if(FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor){    
+                    if(root.containsKey("grange")){
+                        FFTConfiguration::currentLSMgRange = FFTConfiguration::newLSMgRange;
+                        root["grange"] = FFTConfiguration::currentLSMgRange;
+                    }
+                    else{
+                        FFTConfiguration::currentLSMgRange = FFTConfiguration::newLSMgRange;
+                        root["grange"] = FFTConfiguration::currentLSMgRange;
+                    }
+                    conductor.setSensorStatus(conductor.SensorStatusCode::LSM_AUTO_GRANGE);
+                    snprintf(conductor.ack_config, 200, "{\"macId\":\"%s\",\"configType\":\"LSM_Grange is updated to : %d\"}",conductor.m_macAddress.toString().c_str(),FFTConfiguration::currentLSMgRange/*,jsonChar.c_str()*/);
+                } else if(FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor){    
+                    if(root.containsKey("grange")){
+                        FFTConfiguration::currentKNXgRange = FFTConfiguration::newKNXgRange;
+                        root["grange"] = FFTConfiguration::currentKNXgRange;
+                        }
+                    else{
+                        FFTConfiguration::currentKNXgRange = FFTConfiguration::newKNXgRange;
+                        root["grange"] = FFTConfiguration::currentKNXgRange;
+                    }
+                    conductor.setSensorStatus(conductor.SensorStatusCode::KNX_AUTO_GRANGE);
+                    snprintf(conductor.ack_config, 200, "{\"macId\":\"%s\",\"configType\":\"KNX_Grange is updated to : %d\"}",conductor.m_macAddress.toString().c_str(),FFTConfiguration::currentKNXgRange/*,jsonChar.c_str()*/);
+                }
+
+            }
+
+            root.printTo(jsonChar);
+            //debugPrint("Root JSON ");debugPrint(jsonChar.c_str());
+            fftFile.close();
+            fftFile = DOSFS.open("/iuconfig/fft.conf","w");
+
+            if(fftFile){
+
+                fftFile.print(jsonChar.c_str());
+                fftFile.close();
+                if(loopDebugMode) {debugPrint("Saved FFT configuration to file");}
+
+                if(iuWiFi.isConnected())
+                {  
+                    conductor.sendSensorStatus();
+                    iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,conductor.ack_config);
+                }
+                if(StreamingMode::BLE && conductor.isBLEConnected()){// Send ACK to BLE
+                    iuBluetooth.write("FFT_AUTO_GRANGE;");
+                }
+            }
+            else{
+                if(loopDebugMode){debugPrint("Failed to save FFT File");}
+            }
+        }
+        else{
+            fftFile.close();
+            if(loopDebugMode){debugPrint("Parsing failed :",false);}
+        }
+    }
+
+
+}    

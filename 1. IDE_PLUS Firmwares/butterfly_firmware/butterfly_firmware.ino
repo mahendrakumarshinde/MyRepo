@@ -127,6 +127,7 @@ uint32_t lastDone = 0;
 uint32_t lastSync = 0;
 uint32_t syncInterval = 60000;
 uint32_t devStsTime = 0;
+uint32_t getWifiCred = 0;
 /**Flash Check Timer variable**/
 uint32_t flashCheckInterval = 300000;
 uint32_t flashCheckLastDone = 0;
@@ -799,7 +800,15 @@ void loop()
             }
         // }
         if(conductor.getUsageMode() != UsageMode::OTA) {
-
+            if (iuWiFi.isConnected() == true && ((millis() - getWifiCred) > 1000) ) {
+                  getWifiCred = millis();
+                  iuWiFi.getWifiCredentials();
+            }
+            if(iuWiFi.isConnected() == true && conductor.certUpgradeStsPending == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus()) {
+                      if(loopDebugMode){ debugPrint("Sending CERT_UPGRADE_SUCCESS"); }
+                      conductor.certUpgradeStsPending = false;
+                      conductor.sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_SUCCESS,CERT_UPGRADE_COMPLETE,"CERT-RCA-0000");
+            } 
             if (iuWiFi.isConnected() == true && conductor.flashStatusFlag == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
             {
                 conductor.sendFlashStatusMsg(FLASH_SUCCESS,"Flash Recovery Successfull..Send the configuration");
@@ -807,18 +816,22 @@ void loop()
             }
             if (iuWiFi.isConnected() == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
             {
-                uint32_t nowTime = millis();
-                if( (iuBluetooth.bmdCommErrMsgRetry > 0) || (iuBluetooth.deviceIdInfoRetry > 0) ) {
-                    conductor.checkDeviceDiagMsg();
-                }
-                if((nowTime - devStsTime) > 300000) { // Every 5 Minute
-                    if((int)(freeMemory()/1024) < (int)25) { // < 25 KBytes
-                        debugPrint(String(freeMemory(), DEC));
-                        conductor.updateDeviceInfo(iuBluetooth.deviceIdMode);
-                        conductor.sendDeviceDiagMsg(DEVICE_DIAG_STMMEM_ERR,(char *)(String(freeMemory(),DEC).c_str()));
-                    }
-                    devStsTime = nowTime;
-                }            
+              uint32_t nowTime = millis();
+              if( (iuBluetooth.bmdCommErrMsgRetry > 0) || (iuBluetooth.deviceIdInfoRetry > 0) ) {
+                   conductor.checkDeviceDiagMsg();                    
+                  }
+                  if(devStsTime == 0) { // Send first on wifi connection, then every 5 mins check and send
+                      conductor.updateDeviceInfo(iuBluetooth.deviceIdMode);
+                      devStsTime = nowTime;
+              }
+              if((nowTime - devStsTime) > 600000) { // Every 10 Minute
+                  if((int)(freeMemory()/1024) < (int)25) { // < 25 KBytes
+                      debugPrint(String(freeMemory(), DEC));
+                      conductor.updateDeviceInfo(iuBluetooth.deviceIdMode);
+                      conductor.sendDeviceDiagMsg(DEVICE_DIAG_STMMEM_ERR,(char *)(String(freeMemory(),DEC).c_str()));
+                  }
+                  devStsTime = nowTime;
+              }            
             }
             if (iuWiFi.isConnected() == true && sensorStatus == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
             {

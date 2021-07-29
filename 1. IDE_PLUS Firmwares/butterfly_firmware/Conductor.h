@@ -54,6 +54,24 @@
 #define DEVICE_DIAG_SETUP_ERR1    8
 #define DEVICE_DIAG_STMMEM_ERR    9
 
+#define DEVICE_DIAG_WIFI_ERR1      0x0001
+#define DEVICE_DIAG_WIFI_ERR2      0x0002
+#define DEVICE_DIAG_WIFI_ERR3      0x0004
+#define DEVICE_DIAG_WIFI_ERR4      0x0008
+#define DEVICE_DIAG_WIFI_ERR5      0x0010
+#define DEVICE_DIAG_WIFI_ERR6      0x0020
+#define DEVICE_DIAG_WIFI_ERR7      0x0040
+#define DEVICE_DIAG_WIFI_ERR8      0x0080
+
+#define DEVICE_DIAG_WIFI_STS1      0x0100
+#define DEVICE_DIAG_WIFI_STS2      0x0200
+#define DEVICE_DIAG_WIFI_STS3      0x0400
+#define DEVICE_DIAG_WIFI_STS4      0x0800
+#define DEVICE_DIAG_WIFI_STS5      0x1000
+#define DEVICE_DIAG_WIFI_STS6      0x2000
+#define DEVICE_DIAG_WIFI_STS7      0x4000
+#define DEVICE_DIAG_WIFI_STS8      0x8000
+
 #define MAX_SYNC_COUNT            20
 
 /* Timeout for MQTT_DISCONNECTED */
@@ -143,6 +161,8 @@ class Conductor
     public:
         uint32_t lastTimeSync = 0;
         uint32_t lastConfigRequest = 0;
+        char ack_config[200];
+        MacAddress m_macAddress;
         /***** Preset values and default settings *****/
         enum sleepMode : uint8_t {NONE     = 0,
                                   AUTO     = 1,
@@ -154,7 +174,9 @@ class Conductor
                                         KNX_ABS = 3,
                                         KNX_DEFAULT = 4,
                                         LSM_DEFAULT = 5,
-                                        SEN_ABS = 6
+                                        SEN_ABS = 6,
+                                        LSM_AUTO_GRANGE = 7,
+                                        KNX_AUTO_GRANGE = 8
                                         };
 
 
@@ -419,12 +441,14 @@ class Conductor
         void selfFwUpgradeInit();
         void mqttReset(bool timerflag);
         uint32_t devResetTime;
+        uint16_t m_wifiDiagErrCode = 0;
+        bool certUpgradeStsPending = false;
     #ifdef DEVIDFIX_TESTSTUB
         uint8_t flagval2 = 0;
     #endif
     
     protected:
-        MacAddress m_macAddress;
+        //MacAddress m_macAddress;
         MacAddress m_macAddressBle;
         /***** Hardware & power management *****/
         sleepMode m_sleepMode = sleepMode::NONE;
@@ -511,7 +535,7 @@ class Conductor
         uint32_t otaInitWaitTimeout = 0;
         bool otaInitTimeoutFlag = false;
         char WiFiDisconnect_OTAErr[16];
-        char ack_config[200];
+        //char ack_config[200];
         uint32_t certDownloadInitWaitTimeout =0;
         uint32_t certDownloadConfigTimeout = 0;
         uint32_t m_downloadSuccessStartTime = 0;
