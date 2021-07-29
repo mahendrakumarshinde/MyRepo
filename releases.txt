@@ -1,4 +1,42 @@
 #################################################################################################################################################################################
+Date: 16 JULY 2021
+Contributed By : Vikas Gaikwad,Sidramayya Swami,Mahendrakumar Shinde 
+Product Name : vEdge
+Release Name :  hotfix : v3.0.8 device softreset on mqtt disconnection  
+Firmware Versions :
+		1. vEdge_main(STM32) : 3.0.8
+		2. vEdge_wifi (ESP32): 3.0.8
+		3. Bootloader L1     : 2.0.0
+		4. Bootloader L2     : 2.1.0
+		5. Factory Firmware  : 2.0.0 
+################################################################################################################################################################################
+
+# Release Description :
+
+   1. Workaround for device not getting connected to network for long duration.
+   2. Added mechanism to reset device if device is not connected to network in 15min.
+
+# Features Requirements
+   - NA
+# Feature Description
+   - NA
+# Feature Description
+   - NA
+# Issue Resolved
+
+    1.Device is not reconnecting to the WI-FI after get disconnected from WI-FI
+
+JIRA No
+
+    - IUINTERNAL-1947
+
+TODO
+   - NA
+Limitations
+   - NA
+
+
+#################################################################################################################################################################################
 Date: 21 JUNE 2021
 Contributed By : Vikas Gaikwad,Sanketa Patil,Sidramayya Swami,Mahendrakumar Shinde 
 Product Name : vEdge

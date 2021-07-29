@@ -1,6 +1,6 @@
 /*
   Infinite Uptime WiFi Module Firmware
-  Update 21-06-2021
+  Update 16-07-2021
 */
 
 #include "Conductor.h"
@@ -159,10 +159,13 @@ void loop()
     conductor.checkWiFiDisconnectionTimeout();
     conductor.checkMqttDisconnectionTimeout();
     conductor.checkOtaPacketTimeout();
-    if(WiFi.isConnected() == false)         
-    {   
-        conductor.autoReconncetWifi();
-    } 
+    /* Commented autoreconnect, as STM periodically sends User defined WIFI config and Administrator NW config,
+       so need to have this at ESP. Also because this autoreconnect(), existing wifi connection req. from STM
+       which is in progress is retried with this function, causing delay in connection */
+    // if(WiFi.isConnected() == false)         
+    // {   
+    //     conductor.autoReconncetWifi();
+    // } 
     uint32_t now = millis();
     static uint8_t rssiPublishedCounter;
     if (now - lastDone > 5000 )
