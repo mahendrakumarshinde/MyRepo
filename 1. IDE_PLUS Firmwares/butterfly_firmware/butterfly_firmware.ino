@@ -877,7 +877,7 @@ void loop()
                 }
                 // Stream features
                 conductor.streamFeatures();
-               if(conductor.modbusStreamingMode ) { 
+                if(conductor.modbusStreamingMode ) { 
                     // Update Modbus Registers
                     uint32_t now =millis();
                     if(now - iuModbusSlave.lastModbusUpdateTime >= iuModbusSlave.modbusUpdateInterval) {    
@@ -950,35 +950,33 @@ void loop()
             // Send config checksum
             //conductor.periodicSendConfigChecksum();
             ledManager.updateColors();
-        }
-        uint32_t now = millis();
-        if(conductor.getUsageMode() != UsageMode::OTA) {
-                uint32_t tempSync = 0;
-                if(now < lastSync) {
-                    tempSync = (uint32_t) UIN32_FULL_SCALE - lastSync;
-                    tempSync = tempSync + now;
+       
+            uint32_t now = millis();
+            uint32_t tempSync = 0;
+            if(now < lastSync) {
+                tempSync = (uint32_t) UIN32_FULL_SCALE - lastSync;
+                tempSync = tempSync + now;
+            }
+            else
+                tempSync = now - lastSync;
+            if (tempSync > syncInterval) {
+                lastSync = now;
+                if(loopDebugMode){
+                    debugPrint("STM <-> ESP Sync Count:",false);
+                    debugPrint(conductor.syncLostCount);
                 }
-                else
-                    tempSync = now - lastSync;
-                if (tempSync > syncInterval) {
-                    lastSync = now;
-                    if(loopDebugMode){
-                        debugPrint("STM <-> ESP Sync Count:",false);
-                        debugPrint(conductor.syncLostCount);
-                    }
-                    if (conductor.syncLostCount >= MAX_SYNC_COUNT)
-                    {
-                        conductor.syncLostCount = 0;
-                        if(loopDebugMode){ debugPrint("No Response from ESP, initiate self upgrade !"); }
-                        conductor.selfFwUpgradeInit();
-                    }
-                    else {
-                        iuWiFi.sendMSPCommand(MSPCommand::SEND_ESP_SYNC_REQ);
-                        conductor.syncLostCount++;
-                        delay(1);
-                    }
+                if (conductor.syncLostCount >= MAX_SYNC_COUNT)
+                {
+                    conductor.syncLostCount = 0;
+                    if(loopDebugMode){ debugPrint("No Response from ESP, initiate self upgrade !"); }
+                    conductor.selfFwUpgradeInit();
                 }
-            //}
+                else {
+                    iuWiFi.sendMSPCommand(MSPCommand::SEND_ESP_SYNC_REQ);
+                    conductor.syncLostCount++;
+                    delay(1);
+                }
+            }
             if (now - lastDone > interval) {
                 lastDone = now;
                 /* === Place your code to excute at fixed interval here ===*/
@@ -1020,9 +1018,6 @@ void loop()
                     ledManager.showStatus(&STATUS_NO_STATUS);
                 }
             }
-        }
-        if(conductor.getUsageMode() != UsageMode::OTA) { /* Block BLE messages, raw data during OTA download */
-
             uint32_t current = millis();
             if (current - flashCheckLastDone > flashCheckInterval) {
                 flashCheckLastDone = current;
