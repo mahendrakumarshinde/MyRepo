@@ -442,6 +442,7 @@ class Conductor
         void mqttReset(bool timerflag);
         uint32_t devResetTime;
         uint16_t m_wifiDiagErrCode = 0;
+        bool certUpgradeStsPending = false;
     #ifdef DEVIDFIX_TESTSTUB
         uint8_t flagval2 = 0;
     #endif

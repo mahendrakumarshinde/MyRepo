@@ -239,10 +239,15 @@ class Conductor
         IUESPFlash::storedConfig getStoredConfigType(const char* certType,bool partation);
         bool validateCertType(const char* type);
         char certHash[34];
+        bool certHashReceived = false;
         char diagCertHash[34];
+        bool diagCertHashReceived = false;
         char wifiHash[34];
+        bool wifiHashReceived = false;
         char mqttHash[34];
+        char mqttHashReceived = false;
         char httpHash[34];
+        char httpHashReceived = false;
         bool wifiConnectTryFlag = false;
     protected:
         /***** Config from Host *****/      

@@ -187,20 +187,20 @@ void loop()
     if (now - lastReqHash > 30000 &&  (conductor.otaInProgress == false && conductor.certificateDownloadInProgress == false )  )
     {
         if(iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED) {
-            if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_STATIC_CERT_ENDPOINT) || strcmp(conductor.certHash,conductor.getConfigChecksum(IUESPFlash::CFG_STATIC_CERT_ENDPOINT)) != 0){
+            if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_STATIC_CERT_ENDPOINT) || (conductor.certHashReceived == true && strcmp(conductor.certHash,conductor.getConfigChecksum(IUESPFlash::CFG_STATIC_CERT_ENDPOINT)) != 0)) {
                 hostSerial.sendMSPCommand(MSPCommand::GET_CERT_CONNECTION_INFO);
             }
-            if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT) || strcmp(conductor.diagCertHash,conductor.getConfigChecksum(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT)) != 0){
+            if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT) || (conductor.diagCertHashReceived == true && strcmp(conductor.diagCertHash,conductor.getConfigChecksum(IUESPFlash::CFG_DIAGNOSTIC_ENDPOINT)) != 0)) {
                 hostSerial.sendMSPCommand(MSPCommand::GET_DIAG_CERT_CONNECTION_INFO);
             }
         }
-        if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_MQTT) || strcmp(conductor.mqttHash,conductor.getConfigChecksum(IUESPFlash::CFG_MQTT)) != 0){
+        if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_MQTT) || (conductor.mqttHashReceived == true  && strcmp(conductor.mqttHash,conductor.getConfigChecksum(IUESPFlash::CFG_MQTT)) != 0)) {
             hostSerial.sendMSPCommand(MSPCommand::GET_MQTT_CONNECTION_INFO);
         }
-        if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_HTTP) || strcmp(conductor.httpHash,conductor.getConfigChecksum(IUESPFlash::CFG_HTTP)) != 0){
+        if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_HTTP) || (conductor.httpHashReceived == true && strcmp(conductor.httpHash,conductor.getConfigChecksum(IUESPFlash::CFG_HTTP)) != 0)) {
             hostSerial.sendMSPCommand(MSPCommand::GET_RAW_DATA_ENDPOINT_INFO);
         }
-        if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_WIFI) || strcmp(conductor.wifiHash,conductor.getConfigChecksum(IUESPFlash::CFG_WIFI)) != 0){
+         if(!iuWiFiFlash.isFilePresent(IUESPFlash::CFG_WIFI) || (conductor.wifiHashReceived == true && strcmp(conductor.wifiHash,conductor.getConfigChecksum(IUESPFlash::CFG_WIFI)) != 0)) {
             hostSerial.sendMSPCommand(MSPCommand::ASK_WIFI_CONFIG);
         }
         lastReqHash = now;

@@ -1148,18 +1148,23 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             }
       case MSPCommand::SEND_WIFI_HASH:
             strcpy(wifiHash,buffer);
+            wifiHashReceived = true;
             break;
        case MSPCommand::SEND_CERT_HASH:
             strcpy(certHash,buffer);
+            certHashReceived = true;
             break;
       case MSPCommand::SEND_DIAG_CERT_HASH:
             strcpy(diagCertHash,buffer);
+            diagCertHashReceived = true;
             break;      
       case MSPCommand::SEND_MQTT_HASH:
             strcpy(mqttHash,buffer);
+            mqttHashReceived = true;
             break;
       case MSPCommand::SEND_HTTP_HASH:
             strcpy(httpHash,buffer);
+            httpHashReceived = true;
             break;
       case MSPCommand::GET_PENDING_HTTP_CONFIG:
           // Get all the pending configuration messages over http

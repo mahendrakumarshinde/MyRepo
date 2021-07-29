@@ -796,7 +796,12 @@ void loop()
         if (iuWiFi.isConnected() == true && ((millis() - getWifiCred) > 1000) ) {
                 getWifiCred = millis();
                 iuWiFi.getWifiCredentials();
-            } 
+            }
+        if(iuWiFi.isConnected() == true && conductor.certUpgradeStsPending == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus()) {
+                if(loopDebugMode){ debugPrint("Sending CERT_UPGRADE_SUCCESS"); }
+                conductor.certUpgradeStsPending = false;
+                conductor.sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_SUCCESS,CERT_UPGRADE_COMPLETE,"CERT-RCA-0000");
+        } 
         if (iuWiFi.isConnected() == true && conductor.flashStatusFlag == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
         {
             conductor.sendFlashStatusMsg(FLASH_SUCCESS,"Flash Recovery Successfull..Send the configuration");

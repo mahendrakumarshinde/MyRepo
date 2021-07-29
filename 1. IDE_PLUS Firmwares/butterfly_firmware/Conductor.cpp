@@ -3814,6 +3814,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                     debugPrint(F("Switching Device mode:OPERATION -> OTA/Certificate Download"));
                     debugPrint(buff);
                 }
+                certUpgradeStsPending = false;
                 certDownloadInProgress = true; 
                 m_getDownloadConfig = false;
                 m_certDownloadStarted = false;
@@ -3952,7 +3953,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
              }
 
             ledManager.overrideColor(RGB_PURPLE);
-             sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_SUCCESS,CERT_UPGRADE_COMPLETE,buff);
+            // sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_SUCCESS,CERT_UPGRADE_COMPLETE,buff);
              certDownloadInProgress = false;
              m_certDownloadStarted = false;
              m_getDownloadConfig = false;
@@ -3970,6 +3971,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             if (loopDebugMode) { debugPrint(F("Switching Device mode:CERT DOWNLOAD Mode -> OPERATION")); }
              iuWiFi.m_setLastConfirmedPublication();
              changeUsageMode(UsageMode::OPERATION);
+             certUpgradeStsPending = true;
              delay(100);
              iuWiFi.hardReset();
              break;
@@ -7296,7 +7298,7 @@ void Conductor::otaChkFwdnldTmout()
                 if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA/CERT -> OPERATION")); }
                 iuWiFi.m_setLastConfirmedPublication();
                 conductor.changeUsageMode(UsageMode::OPERATION);
-
+                delay(100);
                 iuWiFi.hardReset();
 
             }
@@ -7324,6 +7326,7 @@ void Conductor::otaChkFwdnldTmout()
             iuWiFi.m_setLastConfirmedPublication();
             conductor.changeUsageMode(UsageMode::OPERATION);
             if(!otaSendMsg){
+                delay(100);
                 iuWiFi.hardReset();
             }
         }
