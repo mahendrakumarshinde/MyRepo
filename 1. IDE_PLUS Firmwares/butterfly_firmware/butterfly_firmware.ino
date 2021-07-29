@@ -297,17 +297,23 @@ void dataAcquisitionISR()
 ============================================================================= */
 
 void onNewUSBMessage(IUSerial *iuSerial) {
-    conductor.processUSBMessage(iuSerial);
+    if(conductor.getUsageMode() != UsageMode::OTA){
+        conductor.processUSBMessage(iuSerial);
+    }
 }
 
 void onNewBLEMessage(IUSerial *iuSerial) {
-    conductor.processBLEMessage(iuSerial);
-    conductor.processUSBMessage(iuSerial);
+    if(conductor.getUsageMode() != UsageMode::OTA){
+        conductor.processBLEMessage(iuSerial);
+        //conductor.processUSBMessage(iuSerial);
+    }
 }
 
 void onNewWiFiMessage(IUSerial *iuSerial) {
     conductor.processWiFiMessage(iuSerial);
-    conductor.processUSBMessage(iuSerial);
+    if(conductor.getUsageMode() != UsageMode::OTA){
+        conductor.processUSBMessage(iuSerial);
+    }
 }
 
 void onNewEthernetMessage(IUSerial *iuSerial){
@@ -793,62 +799,64 @@ void loop()
                 debugPrint(F("Sensor:"),false);debugPrint(FFTConfiguration::currentSensor);
             }
         // }
-        if (iuWiFi.isConnected() == true && ((millis() - getWifiCred) > 1000) ) {
-                getWifiCred = millis();
-                iuWiFi.getWifiCredentials();
-            }
-        if(iuWiFi.isConnected() == true && conductor.certUpgradeStsPending == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus()) {
-                if(loopDebugMode){ debugPrint("Sending CERT_UPGRADE_SUCCESS"); }
-                conductor.certUpgradeStsPending = false;
-                conductor.sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_SUCCESS,CERT_UPGRADE_COMPLETE,"CERT-RCA-0000");
-        } 
-        if (iuWiFi.isConnected() == true && conductor.flashStatusFlag == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
-        {
-            conductor.sendFlashStatusMsg(FLASH_SUCCESS,"Flash Recovery Successfull..Send the configuration");
-            conductor.flashStatusFlag = false;
-        }
-        if (iuWiFi.isConnected() == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
-        {
-            uint32_t nowTime = millis();
-            if( (iuBluetooth.bmdCommErrMsgRetry > 0) || (iuBluetooth.deviceIdInfoRetry > 0) ) {
-                 conductor.checkDeviceDiagMsg();                    
-                }
-                if(devStsTime == 0) { // Send first on wifi connection, then every 5 mins check and send
-                    conductor.updateDeviceInfo(iuBluetooth.deviceIdMode);
-                    devStsTime = nowTime;
-            }
-            if((nowTime - devStsTime) > 600000) { // Every 10 Minute
-                if((int)(freeMemory()/1024) < (int)25) { // < 25 KBytes
-                    debugPrint(String(freeMemory(), DEC));
-                    conductor.updateDeviceInfo(iuBluetooth.deviceIdMode);
-                    conductor.sendDeviceDiagMsg(DEVICE_DIAG_STMMEM_ERR,(char *)(String(freeMemory(),DEC).c_str()));
-                }
-                devStsTime = nowTime;
-            }            
-        }
-        if (iuWiFi.isConnected() == true && sensorStatus == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
-        {
-            conductor.sendSensorStatus();
-            iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HOST_FIRMWARE_VERSION,FIRMWARE_VERSION);
-            sensorStatus = false;
-        }
-        
-        // if (iuWiFi.isConnected() == true && conductor.requestConfig == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
-        // {
-        //     conductor.sendConfigRequest();
-        //     conductor.requestConfig = false;
-        // }
-        conductor.manageSleepCycles();
-        // Receive messages & configurations
         if(conductor.getUsageMode() != UsageMode::OTA) {
-            /* Block BLE messages during OTA download */
-            if ((millis() - conductor.lastConfigRequest > conductor.configRequestTimeout) || conductor.sendConfigReqOnBoot) {
-                if((iuWiFi.isConnected() && conductor.getDatetime() > 1600000000.00) ){
-                    conductor.sendConfigRequest();
-                    conductor.sendConfigReqOnBoot = false;
-                    conductor.lastConfigRequest = millis();
-                }
+            if (iuWiFi.isConnected() == true && ((millis() - getWifiCred) > 1000) ) {
+                  getWifiCred = millis();
+                  iuWiFi.getWifiCredentials();
             }
+            if(iuWiFi.isConnected() == true && conductor.certUpgradeStsPending == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus()) {
+                      if(loopDebugMode){ debugPrint("Sending CERT_UPGRADE_SUCCESS"); }
+                      conductor.certUpgradeStsPending = false;
+                      conductor.sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_SUCCESS,CERT_UPGRADE_COMPLETE,"CERT-RCA-0000");
+            } 
+            if (iuWiFi.isConnected() == true && conductor.flashStatusFlag == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
+            {
+                conductor.sendFlashStatusMsg(FLASH_SUCCESS,"Flash Recovery Successfull..Send the configuration");
+                conductor.flashStatusFlag = false;
+            }
+            if (iuWiFi.isConnected() == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
+            {
+              uint32_t nowTime = millis();
+              if( (iuBluetooth.bmdCommErrMsgRetry > 0) || (iuBluetooth.deviceIdInfoRetry > 0) ) {
+                   conductor.checkDeviceDiagMsg();                    
+                  }
+                  if(devStsTime == 0) { // Send first on wifi connection, then every 5 mins check and send
+                      conductor.updateDeviceInfo(iuBluetooth.deviceIdMode);
+                      devStsTime = nowTime;
+              }
+              if((nowTime - devStsTime) > 600000) { // Every 10 Minute
+                  if((int)(freeMemory()/1024) < (int)25) { // < 25 KBytes
+                      debugPrint(String(freeMemory(), DEC));
+                      conductor.updateDeviceInfo(iuBluetooth.deviceIdMode);
+                      conductor.sendDeviceDiagMsg(DEVICE_DIAG_STMMEM_ERR,(char *)(String(freeMemory(),DEC).c_str()));
+                  }
+                  devStsTime = nowTime;
+              }            
+            }
+            if (iuWiFi.isConnected() == true && sensorStatus == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
+            {
+                conductor.sendSensorStatus();
+                iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HOST_FIRMWARE_VERSION,FIRMWARE_VERSION);
+                sensorStatus = false;
+            }
+            
+            // if (iuWiFi.isConnected() == true && conductor.requestConfig == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
+            // {
+            //     conductor.sendConfigRequest();
+            //     conductor.requestConfig = false;
+            // }
+            conductor.manageSleepCycles();
+            // Receive messages & configurations
+            //if(conductor.getUsageMode() != UsageMode::OTA) {
+                /* Block BLE messages during OTA download */
+                if ((millis() - conductor.lastConfigRequest > conductor.configRequestTimeout) || conductor.sendConfigReqOnBoot) {
+                    if((iuWiFi.isConnected() && conductor.getDatetime() > 1600000000.00) ){
+                        conductor.sendConfigRequest();
+                        conductor.sendConfigReqOnBoot = false;
+                        conductor.lastConfigRequest = millis();
+                    }
+                }
+            
             iuUSB.readMessages();
             iuBluetooth.readMessages();
         }
@@ -882,7 +890,7 @@ void loop()
                 }
                 // Stream features
                 conductor.streamFeatures();
-               if(conductor.modbusStreamingMode ) { 
+                if(conductor.modbusStreamingMode ) { 
                     // Update Modbus Registers
                     uint32_t now =millis();
                     if(now - iuModbusSlave.lastModbusUpdateTime >= iuModbusSlave.modbusUpdateInterval) {    
@@ -955,9 +963,8 @@ void loop()
             // Send config checksum
             //conductor.periodicSendConfigChecksum();
             ledManager.updateColors();
-        }
-        uint32_t now = millis();
-        if(conductor.getUsageMode() != UsageMode::OTA) {
+       
+            uint32_t now = millis();
             uint32_t tempSync = 0;
             if(now < lastSync) {
                 tempSync = (uint32_t) UIN32_FULL_SCALE - lastSync;
@@ -983,50 +990,47 @@ void loop()
                     delay(1);
                 }
             }
-        }
-        if (now - lastDone > interval) {
-            lastDone = now;
-            /* === Place your code to excute at fixed interval here ===*/
-            conductor.streamMCUUInfo(iuWiFi.port);
-            //iuWiFi.sendMSPCommand(MSPCommand::GET_ESP_RSSI);
-            conductor.updateCertHash();
-            conductor.updateDiagCertHash();
-            conductor.updateWiFiHash();
-            conductor.updateMQTTHash();
-            conductor.updateHTTPHash();
-            if(iuWiFi.current_rssi < WEAK_SIGNAL_STRENGTH_TH ){
-                 ledManager.overrideColor(RGB_PURPLE);
-                 delay(3000);
-                 ledManager.stopColorOverride();
-                 if(loopDebugMode){
-                    debugPrint("Current WiFi RSSI : ",false);
-                    debugPrint(iuWiFi.current_rssi,true);
+            if (now - lastDone > interval) {
+                lastDone = now;
+                /* === Place your code to excute at fixed interval here ===*/
+                conductor.streamMCUUInfo(iuWiFi.port);
+                //iuWiFi.sendMSPCommand(MSPCommand::GET_ESP_RSSI);
+                conductor.updateCertHash();
+                conductor.updateDiagCertHash();
+                conductor.updateWiFiHash();
+                conductor.updateMQTTHash();
+                conductor.updateHTTPHash();
+                if(iuWiFi.current_rssi < WEAK_SIGNAL_STRENGTH_TH ){
+                    ledManager.overrideColor(RGB_PURPLE);
+                    delay(3000);
+                    ledManager.stopColorOverride();
+                    if(loopDebugMode){
+                        debugPrint("Current WiFi RSSI : ",false);
+                        debugPrint(iuWiFi.current_rssi,true);
+                    }
                 }
-            }
-            else
-            {
-                if (loopDebugMode)
+                else
                 {
-                    debugPrint("Current WiFi RSSI is :",false);
-                    debugPrint(iuWiFi.current_rssi,true);
+                    if (loopDebugMode)
+                    {
+                        debugPrint("Current WiFi RSSI is :",false);
+                        debugPrint(iuWiFi.current_rssi,true);
+                    }
+
                 }
 
+
+                /*======*/
+                //    Serial.println("Usage Mode:" + String(conductor.getUsageMode()));
             }
 
+            if (millis() - conductor.lastTimeSync > conductor.m_connectionTimeout ) {
 
-            /*======*/
-            //    Serial.println("Usage Mode:" + String(conductor.getUsageMode()));
-        }
-
-        if (millis() - conductor.lastTimeSync > conductor.m_connectionTimeout ) {
-
-            if(iuEthernet.isEthernetConnected == 0) {
-                iuEthernet.isEthernetConnected = 1;
-                ledManager.showStatus(&STATUS_NO_STATUS);
+                if(iuEthernet.isEthernetConnected == 0) {
+                    iuEthernet.isEthernetConnected = 1;
+                    ledManager.showStatus(&STATUS_NO_STATUS);
+                }
             }
-        }
-        if(conductor.getUsageMode() != UsageMode::OTA) { /* Block BLE messages, raw data during OTA download */
-
             uint32_t current = millis();
             if (current - flashCheckLastDone > flashCheckInterval) {
                 flashCheckLastDone = current;

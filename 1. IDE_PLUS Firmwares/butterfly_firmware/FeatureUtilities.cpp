@@ -775,13 +775,13 @@ float RFFTFeatures::computeRPM(q15_t *amplitudes,int m_lowRPMFrequency,int m_hig
                 // debugPrint(sectionCount1);
                 // debugPrint("sectionCount2 : ",false);
                 // debugPrint(sectionCount2);
-                debugPrint("amplitudeCount : ",false);debugPrint(amplitudeCount);
-                debugPrint("lower_bound : ",false);debugPrint(lower_index);
-                debugPrint("upper_bound : ",false);debugPrint(upper_index);
-                debugPrint("scalingFactor : ",false);debugPrint(scalingFactor);
-                debugPrint("Factor : ",false);debugPrint(factor);
-                debugPrint("df : ",false);debugPrint(df);
-                debugPrint("resolution : ",false);debugPrint(resolution);
+                // debugPrint("amplitudeCount : ",false);debugPrint(amplitudeCount);
+                // debugPrint("lower_bound : ",false);debugPrint(lower_index);
+                // debugPrint("upper_bound : ",false);debugPrint(upper_index);
+                // debugPrint("scalingFactor : ",false);debugPrint(scalingFactor);
+                // debugPrint("Factor : ",false);debugPrint(factor);
+                // debugPrint("df : ",false);debugPrint(df);
+                // debugPrint("resolution : ",false);debugPrint(resolution);
                 // debugPrint("dCount : ",false);
                 // debugPrint(dCount);                
                 // debugPrint("Block[",false);
@@ -908,10 +908,10 @@ float RFFTFeatures::computeRPM(q15_t *amplitudes,int m_lowRPMFrequency,int m_hig
             // debugPrint(peakFreqIndex[finalIdx]);
             // debugPrint("peakIndex : ",false);
             // debugPrint(peakIndex);
-            debugPrint("Peak freq : ",false);
-            debugPrint(freq);
-            debugPrint("(round((float) (freq*60))): ",false);
-            debugPrint((round((float) (freq*60))));
+            // debugPrint("Peak freq : ",false);
+            // debugPrint(freq);
+            // debugPrint("(round((float) (freq*60))): ",false);
+            // debugPrint((round((float) (freq*60))));
         }
         return (round((float) (freq*60))) ;
     }

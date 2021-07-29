@@ -355,25 +355,34 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     JsonVariant variant = root;
     
     // variant.prettyPrintTo(Serial);
-            
+    bool unknownConfig = true;       
     char messageId[60];
     if(root.success()) {
         // Get the message id, to be used in acknowledgements
         strcpy(messageId, ((JsonObject&)root)["messageId"].as<char*>());
         if(debugMode) {
             debugPrint("Config message received with messageID: ", false); debugPrint(messageId);
-        }
-    } else {
-        if (debugMode) {
-            debugPrint("parseObject() failed");
-        }
-        return false;
-    }
+        }    
+    }else{
+            if (debugMode) {debugPrint("parseObject() failed");}
+            snprintf(ack_config, 200, "{\"macId\":\"%s\",\"configType\":\"Parsing Failed\"}", m_macAddress.toString().c_str());
+            if(iuWiFi.isConnected())
+            {     
+                if(loopDebugMode){debugPrint("Response : ",false);debugPrint(ack_config);}
+                iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,ack_config );
+            }
+            if(StreamingMode::BLE && isBLEConnected()){// Send ACK to BLE
+                if(loopDebugMode){ debugPrint("PARSING-FAILED");}
+                iuBluetooth.write("PARSING-FAILED");
+            }
+            
+            return false;
+        }    
     // Device level configuration
     JsonVariant subConfig = root["main"];
     subConfig.printTo(jsonChar);
-    
     if (subConfig.success()) {
+        unknownConfig = false;
         // This subconfig has to be validated for the provided fields, note the that subconfig may contain only a subset of all the fields present in device config
         // i.e. Complete device conf: {"main":{"GRP":["MOTSTD"],"RAW":1800,"POW":0,"TSL":60,"TOFF":10,"TCY":20,"DSP":512}}
         // the received config may contain only DSP or RAW or any subset of the fields.
@@ -393,6 +402,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // Component configuration
     subConfig = root["components"];
     if (subConfig.success()) {
+        unknownConfig = false;
         configureAllSensors(subConfig);
         if (saveToFlash) {
             iuFlash.saveConfigJson(IUFlash::CFG_COMPONENT, subConfig);
@@ -401,6 +411,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // Feature configuration
     subConfig = root["features"];
     if (subConfig.success()) {
+        unknownConfig = false;
         configureAllFeatures(subConfig);
         if (saveToFlash) {
             iuFlash.saveConfigJson(IUFlash::CFG_FEATURE, subConfig);
@@ -428,6 +439,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // Feature configuration
     subConfig = root["opState"];
     if (subConfig.success()) {
+        unknownConfig = false;
         opStateComputer.configure(subConfig);
         activateFeature(&opStateFeature);
         if (saveToFlash) {
@@ -437,6 +449,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // Diagnostic Thresholds configuration
     subConfig = root["thresholds"];
     if (subConfig.success()) {
+            unknownConfig = false;
              if (saveToFlash) {
             //DOSFS.begin();
             iuFlash.saveConfigJson(IUFlash::CFG_FINGERPRINT_STATE, variant);
@@ -465,6 +478,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
      // MQTT Server configuration
     subConfig = root["mqtt"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         //configureAllFeatures(subConfig);
         // bool tlsStatus = root["mqtt"]["tls"];
         // bool rebootESP = false;
@@ -521,6 +535,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
      // MQTT Server configuration
     subConfig = root["getDevDiag"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         bool sendFlag = false;
         char devInfoConfig[300];        
         memset(devInfoConfig,0x00,300);
@@ -572,6 +587,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     //Diagostic Fingerprint configurations
     subConfig = root["fingerprints"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         //opStateComputer.configure(subConfig);
         //activateFeature(&opStateFeature);
         bool dataWritten = false;
@@ -626,6 +642,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // http endpoint configuration
     subConfig = root["httpConfig"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         //configureAllFeatures(subConfig);
         bool dataWritten = false;
         bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_HTTP, root, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime(), messageId);
@@ -685,9 +702,10 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
         
     } 
-    // SET Sensor Configuration and its OFFSET value
+    //SET Sensor Configuration and its OFFSET value
     subConfig = root["sensorConfig"];
     if (subConfig.success()) {
+        unknownConfig = false;
         bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_SENSOR_CONFIG, subConfig, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime(), messageId);
         if(loopDebugMode) { 
             debugPrint("Validation: ", false);
@@ -732,6 +750,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // SET the relayAgentConfig on Ethernet
     subConfig = root["relayAgentConfig"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         bool dataWritten = false;
         
         if (saveToFlash) {
@@ -854,6 +873,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // Message is always saved to file, after which STM resets
     subConfig = root["fft"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         // Validate if the received parameters are correct
         if(loopDebugMode) {
             debugPrint("FFT configuration received: ", false);
@@ -890,7 +910,6 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             }
         } else {
             if(loopDebugMode) debugPrint("Received invalid FFT configuration");
-
             // Acknowledge incorrect configuration, send the errors on /ide_plus/command_response topic
             // If streaming mode is BLE, send an acknowledgement on BLE as well
             iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
@@ -901,6 +920,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 
     subConfig = root["messageType"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         String msgType = root["messageType"];
         strcpy(m_otaMsgType,msgType.c_str());
         if(!(strcmp((const char *)m_otaMsgType,(const char *)"initiateota")))
@@ -1153,6 +1173,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // Message is always saved to file, after which STM resets
     subConfig = root["modbusSlaveConfig"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         // Validate if the received parameters are correct
         if(loopDebugMode) {
             debugPrint("modbusSlave configuration received: ", false);
@@ -1208,6 +1229,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     //Certificates download URL Configuration
     subConfig = root["certUrl"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         if (loopDebugMode){  debugPrint("Certificate Download Url:",false);
          subConfig.printTo(Serial); debugPrint("");
         }
@@ -1248,6 +1270,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // Configure Diagnostic URL in ESP32
     subConfig = root["diagnosticUrl"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         if (loopDebugMode){  debugPrint("Diagnostic Url:",false);
          subConfig.printTo(Serial); debugPrint("");
          }
@@ -1279,6 +1302,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 
     subConfig = root["auth_type"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         //configureAllFeatures(subConfig);
         bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_WIFI0, variant, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime(), messageId);
         if(loopDebugMode) { 
@@ -1313,8 +1337,8 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     }
 
     subConfig = root["CONFIG_HASH"];
-    if (subConfig.success())
-    {
+    if (subConfig.success()){
+        unknownConfig = false; 
         const char *messageId = root["messageId"];
         snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"macId\":\"%s\",\"configType\":\"hash_ack\"}", messageId, m_macAddress.toString().c_str());
         bool dataWritten = false;
@@ -1333,6 +1357,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // store the DIG configurations 
     subConfig = root["CONFIG"]["DIG"];
     if(subConfig.success()){
+        unknownConfig = false; 
         if(loopDebugMode) {
             debugPrint("Triggers configuration received: ", false);
             subConfig.printTo(Serial); debugPrint("");
@@ -1360,6 +1385,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 
     subConfig = root["CONFIG"]["PHASE"];
     if(subConfig.success()){
+        unknownConfig = false; 
         if(loopDebugMode) {
             debugPrint("Phase configuration received: ", false);
             subConfig.printTo(Serial); debugPrint("");
@@ -1386,6 +1412,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // TEMP : store the feature output JOSN  
     subConfig = root["FRES"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         const char* msgType = root["MSGTYPE"];
 
         if(strcmp(msgType,"FRES") == 0 ){
@@ -1403,6 +1430,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // RPM Configs
     subConfig = root["CONFIG"]["RPM"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         if (loopDebugMode){  debugPrint("RPM Configs Received :",false);
          subConfig.printTo(Serial); debugPrint("");
          }
@@ -1450,11 +1478,23 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
         }
     }
-
     
+    // Check for unknown configurations
+    if(unknownConfig == true){
+        snprintf(ack_config, 200, "{\"macId\":\"%s\",\"configType\":\"Unknown Config Received\"}", m_macAddress.toString().c_str());
+        if(iuWiFi.isConnected())
+        {  
+            if(loopDebugMode){debugPrint("Response : ",false);debugPrint(ack_config);}
+            iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,ack_config );
+        }
+        if(StreamingMode::BLE && isBLEConnected()){// Send ACK to BLE
+            if(loopDebugMode){ debugPrint("Unknown Config Received");}
+            iuBluetooth.write("UNKNOWN-CONFIG-RECEIVED");
+        }
+    }
     return true;
+    
 }
-
 
 JsonObject& Conductor::createFeatureGroupjson(){
    
@@ -2552,6 +2592,13 @@ void Conductor::processCommand(char *buff)
                     sendAccelRawData(2);  // Axis Z
                 }
                 resetDataAcquisition();
+                if(!FeatureStates::isISRActive ){
+                    FeatureStates::isISRActive = true;
+                    if(debugMode){
+                        debugPrint("FORCED-ENABLE ISR on GET_FFT");
+                    }
+                }
+                
             }
             break;
         case '4':              // Set temperature Offset value  [4000:12 < command-value>]
@@ -2747,6 +2794,13 @@ void Conductor::processLegacyCommand(char *buff)
  */
 void Conductor::processUSBMessage(IUSerial *iuSerial)
 {
+    if(RawDataState::fftCommandReceived){
+        if(debugMode){
+            debugPrint("GET-FFT Command Received from MQTT");
+        }
+        RawDataState::fftCommandReceived = false;
+        return;
+    }
     char *buff = iuSerial->getBuffer();
     processCommand(buff);
     
@@ -3592,7 +3646,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
         if((buff[0] == '3' && buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
                     buff[13] == '0' && buff[15] == '0' && buff[17] == '0') ){
             processCommand(buff);
-
+            RawDataState::fftCommandReceived = true;
         }else
         {
             processLegacyCommand(buff);
@@ -4285,7 +4339,9 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             break;
         case MSPCommand::CONFIG_FORWARD_CMD:
             if (loopDebugMode) { debugPrint(F("CONFIG_FORWARD_CMD")); }
-            processCommand(buff);
+            if(RawDataState::fftCommandReceived == false ){
+                processCommand(buff);
+            }
             break;
         case MSPCommand::CONFIG_FORWARD_LEGACY_CMD:
             if (loopDebugMode) { debugPrint(F("CONFIG_FORWARD_LEGACY_CMD")); }
@@ -5392,12 +5448,12 @@ void Conductor::streamFeatures()
 //            &sendingQueue, IUSerial::MS_PROTOCOL, m_macAddress,
 //            ledManager.getOperationState(), batteryLoad, timestamp,
 //            true);
-        if (FeatureStates::isISRActive != true && FeatureStates::isISRDisabled && computationDone == true){   
-                FeatureStates::isFeatureStreamComplete = true;   // publication completed
-                FeatureStates::isISRActive = true;
+        // if (FeatureStates::isISRActive != true && FeatureStates::isISRDisabled && computationDone == true){   
+        //         FeatureStates::isFeatureStreamComplete = true;   // publication completed
+        //         FeatureStates::isISRActive = true;
                 //debugPrint("Published to WiFi Complete !!!");
                 // createFeatureGroupjson();
-            }
+       //     }
     }
    #if 0
    CharBufferNode *nodeToSend = sendingQueue.getNextBufferToSend();
