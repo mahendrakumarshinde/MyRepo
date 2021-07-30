@@ -549,6 +549,8 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                     debugPrint("LOW CUT-OFF FREQ : ",false);debugPrint(FFTConfiguration::currentLowCutOffFrequency);
                 }
                 configLowCutOffFreq = FFTConfiguration::currentLowCutOffFrequency;
+                sameLowCutOffFreq = true;
+
         }           
             if(config.containsKey("highCutOffFreq")){                                       
             validConfig = true;
@@ -572,6 +574,7 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
         }else{
                 //configLowCutOffFreq = FFTConfiguration::currentLowCutOffFrequency;
                 configHighCutOffFreq = samplingRate/FMAX_FACTOR;
+                sameHighCutOffFreq = true;
             }  
 
             //if(config.containsKey("highCutOffFreq") && config.containsKey("lowCutOffFreq")){   
@@ -587,6 +590,14 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                 validConfig = false;
                 errorMessages.add("Same configuration received");
             }
+            // debugPrint("All Flags : ",false);
+            // debugPrint(validConfig,false);debugPrint("-->",false);
+            // debugPrint(sameBlockSize,false);debugPrint(":",false);
+            // debugPrint(sameSamplingRate,false);debugPrint(":",false);
+            // debugPrint(samegRange,false);debugPrint(":",false);
+            // debugPrint(grangepresent,false);debugPrint(":",false);
+            // debugPrint(sameLowCutOffFreq,false);debugPrint(":",false);
+            // debugPrint(sameHighCutOffFreq,true);
             // If the received config matches the current config, report an error
             if(sameBlockSize && sameSamplingRate && grangepresent && sameLowCutOffFreq && sameHighCutOffFreq ) {      //if same SR & BS received and gRange is present then false this condition
                 validConfig = false;
