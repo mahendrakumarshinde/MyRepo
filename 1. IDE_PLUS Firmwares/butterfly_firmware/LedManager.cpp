@@ -61,7 +61,7 @@ void LedManager::showOperationState(uint8_t state)
         m_operationState = m_spectralState;
         // debugPrint("SPECTRAL STATE : ",false);debugPrint(m_operationState);
     }
-    
+    FeatureStates::opStateStatusFlag = m_operationState;
     RGBColor col = m_getOpStateColor();
     m_led->replaceColor(0, col);
     if (m_ledStrip) {

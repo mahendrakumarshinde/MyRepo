@@ -388,7 +388,7 @@ void FeatureStateComputer::m_specializedCompute()
     m_destinations[0]->addValue(newState);
     //Append the new Operation State
     modbusFeaturesDestinations[0]= newState;
-    FeatureStates::opStateStatusFlag = newState;
+    //FeatureStates::opStateStatusFlag = newState;
 }
 
 
