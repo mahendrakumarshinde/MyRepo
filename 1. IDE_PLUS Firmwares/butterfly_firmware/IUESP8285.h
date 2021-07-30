@@ -67,6 +67,7 @@ class IUESP8285 : public IUSerial, public Component
         bool isConnected() { return m_connected; }
         bool isAvailable() { return (m_on && !m_sleeping); }
         bool isWorking() { return m_working; }
+        bool isStopWifiWorking() { return m_stopWiFiWorking; }
         bool arePublicationsFailing();
         MacAddress getMacAddress() { return m_macAddress; }
         void setOnConnect(void (*callback)()) { m_onConnect = callback; }
@@ -128,6 +129,9 @@ class IUESP8285 : public IUSerial, public Component
         void setAwakeTimerStart() { m_awakeTimerStart = millis(); }
         void clearSendWifiConfig();
         void sendVelRMSStatus(char *msg);
+        char * getWiFiSsid() {return m_ssid;}
+        void getWifiCredentials();
+        bool updateWifiCredentials(char *wifiCred);
     private:
         /**** Confirm Publication Timeout ****/
         uint32_t m_lastConfirmedPublication = 0;
@@ -163,6 +167,7 @@ class IUESP8285 : public IUSerial, public Component
         MacAddress m_macAddress;
         bool m_working = false;
         uint32_t m_displayConnectAttemptStart = 0;
+        bool m_stopWiFiWorking = false;
         /***** Callbacks *****/
         void (*m_onConnect)() = NULL;
         void (*m_onDisconnect)() = NULL;

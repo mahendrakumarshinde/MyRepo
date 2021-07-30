@@ -4,6 +4,8 @@
 #include "FS.h"
 #include "bootloaderCodes.h"
 
+#define DEBUG_ENABLE    0
+
 #define FLASH_BLOCK_SIZE  4096  //16384
 #define MAX_FILE_RW_SIZE  512
 #define ESP32_ENABLE_PIN  A2
@@ -21,7 +23,7 @@
 #define MD5_RESP_WAIT_DEL   2000  // May need to adjust based on FW binary size written to ESP flash
 
 /* Serial - for USB-UART, Serial1 - for UART3, Serail4 - for UART5 */
-#define DEBUG_SERIAL Serial4 
+#define DEBUG_SERIAL Serial 
 #define ESP_SERIAL Serial1
 
 /* ESP Command Timeout */
@@ -147,4 +149,17 @@ class espComm
         uint32_t espTotBlock;        
 };
 
+template <typename T>
+inline void bl2DebugPrint(T msg, bool endline = true)
+{
+#if DEBUG_ENABLE == 1
+    if (DEBUG_SERIAL.availableForWrite()) {
+        if (endline) {
+            DEBUG_SERIAL.println(msg);
+        } else {
+            DEBUG_SERIAL.print(msg);
+        }
+    }
+#endif
+}
 #endif

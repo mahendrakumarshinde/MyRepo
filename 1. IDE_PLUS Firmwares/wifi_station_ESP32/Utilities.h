@@ -192,7 +192,7 @@ inline int httpPostBigRequest(
     char* ssl_rootCA = NULL,
     char* contentType = HttpContentType::applicationJSON,
     size_t chunkSize=WIFICLIENT_MAX_PACKET_SIZE,
-    uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT + 3000)
+    uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT + 15000)
 {
      
     if (WiFi.status() != WL_CONNECTED)
@@ -354,7 +354,7 @@ inline int httpsPostBigRequest(
     char* ssl_rootCA = NULL,
     char* contentType = HttpContentType::applicationJSON,
     size_t chunkSize=WIFICLIENT_MAX_PACKET_SIZE,
-    uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT + 2000)
+    uint16_t tcpTimeout=HTTPCLIENT_DEFAULT_TCP_TIMEOUT + 15000)
 {
      
     if (WiFi.status() != WL_CONNECTED)
@@ -363,7 +363,7 @@ inline int httpsPostBigRequest(
         {
             debugPrint("WiFi disconnected: POST request failed");
         }
-         return 404; // 0
+         return 111; // 0
     }
     char type[12];
     if (strncmp(contentType,"plain",5) == 0){
@@ -383,7 +383,11 @@ inline int httpsPostBigRequest(
     // Use WiFiClient class to create TCP connections
     //WiFiClient client;
     WiFiClientSecure client;
-    if(ssl_rootCA != NULL){
+    //if(ssl_rootCA != NULL){
+    if(ssl_rootCA == NULL){
+        //device should auto verify cert
+    }
+    else{
         client.setCACert(ssl_rootCA);
     }
     int connectResult = client.connect(endpointHost, endpointPort);
@@ -398,7 +402,7 @@ inline int httpsPostBigRequest(
             debugPrint("\nHEADERS:");
             debugPrint(request);
         }
-        return 505; //connectResult;  // 0 means no connection
+        return 102; //connectResult;  // 0 means no connection
     }
     // This will send the request and headers to the server
     client.print(request);

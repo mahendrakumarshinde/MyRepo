@@ -7,6 +7,10 @@
 
 StatusVisual STATUS_NO_STATUS(RGB_BLACK, 0, 0, 1000);
 StatusVisual STATUS_WIFI_WORKING(RGB_PURPLE, 25, 50, 50);
+StatusVisual STATUS_WIFI_WORKING_ADMIN(RGB_PURPLE, 25, 85, 85);
+StatusVisual STATUS_MQTT_WORKING_SEC(RGB_ORANGE, 25, 50, 50);
+StatusVisual STATUS_MQTT_WORKING_UNSEC(RGB_ORANGE, 25, 85, 85);
+StatusVisual STATUS_MQTT_WORKING_INVALID(RGB_RED, 25, 100, 100);
 StatusVisual STATUS_WIFI_CONNECTED(RGB_WHITE, 0, 100, 3000);
 StatusVisual STATUS_IS_ALIVE(RGB_CYAN, 25, 50, 50);
 StatusVisual STATUS_OTA_DOWNLOAD(RGB_WHITE, 0, 100, 100);
@@ -47,13 +51,33 @@ void LedManager::updateColors()
 ============================================================================= */
 
 void LedManager::showOperationState(uint8_t state)
-{
-    m_operationState = state;
+{   
+    showSpectralState();                // returns spectral state
+    if (state >= m_spectralState){
+        m_operationState = state;
+        // debugPrint("OP STATE : ",false);debugPrint(m_operationState);
+    }
+    else if(state < m_spectralState) {
+        m_operationState = m_spectralState;
+        // debugPrint("SPECTRAL STATE : ",false);debugPrint(m_operationState);
+    }
+    
     RGBColor col = m_getOpStateColor();
     m_led->replaceColor(0, col);
     if (m_ledStrip) {
         m_ledStrip->replaceColor(0, col);
     }
+}
+
+int LedManager::showSpectralState(){
+
+    conductor.checkFingerprintsState();
+    if(conductor.spectralStateSuccess == true){
+    m_spectralState = conductor.checkFingerprintsState();
+    // debugPrint("SPECTRAL STATE in show function : ",false);debugPrint(m_spectralState);
+    return m_spectralState;
+    }
+
 }
 
 RGBColor LedManager::m_getOpStateColor()

@@ -20,7 +20,8 @@ const char* fingerprints_Z;
 float modbusFeaturesDestinations[8];
 uint8_t velMaxSampleCount = 0;
 int m_temperatureOffset;
-int m_audioOffset;
+float m_audioOffset_current;
+float m_audioScaling_current;
         
 char Conductor::START_CONFIRM[11] = "IUOK_START";
 char Conductor::END_CONFIRM[9] = "IUOK_END";
@@ -135,8 +136,19 @@ bool Conductor::configureFromFlash(IUFlash::storedConfig configType)
             case IUFlash::CFG_WIFI2:
             case IUFlash::CFG_WIFI3:
             case IUFlash::CFG_WIFI4:
+                if (iuFlash.checkConfig(CONFIG_WIFI_CONFIG_FLASH_ADDRESS) == false) {
+                    String jsonChar;
+                    config.printTo(jsonChar);
+                    if (debugMode) {
+                        debugPrint("Write wifi internal config: ",false);
+                        debugPrint(jsonChar.c_str());
+                    }
+                    iuFlash.writeInternalFlash(1,CONFIG_WIFI_CONFIG_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());    
+                    conductor.m_wifiDiagErrCode |= DEVICE_DIAG_WIFI_ERR3;
+                    conductor.updateDeviceInfo(iuBluetooth.deviceIdMode);
+                }
                 iuWiFi.configure(config);
-                        break;
+                break;
             case IUFlash::CFG_MODBUS_SLAVE:
                 debugPrint("CONFIGURING THE MODBUS SLAVE");
                 iuModbusSlave.setupModbusDevice(config);
@@ -149,6 +161,9 @@ bool Conductor::configureFromFlash(IUFlash::storedConfig configType)
             case IUFlash::CFG_RPM:
                 configureRPM(config);
                 break;
+            case IUFlash::CFG_SENSOR_CONFIG:
+                setSensorConfig(config);
+                break;     
             default:
                 if (debugMode) {
                     debugPrint("Unhandled config type: ", false);
@@ -340,25 +355,34 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     JsonVariant variant = root;
     
     // variant.prettyPrintTo(Serial);
-            
+    bool unknownConfig = true;       
     char messageId[60];
     if(root.success()) {
         // Get the message id, to be used in acknowledgements
         strcpy(messageId, ((JsonObject&)root)["messageId"].as<char*>());
         if(debugMode) {
             debugPrint("Config message received with messageID: ", false); debugPrint(messageId);
-        }
-    } else {
-        if (debugMode) {
-            debugPrint("parseObject() failed");
-        }
-        return false;
-    }
+        }    
+    }else{
+            if (debugMode) {debugPrint("parseObject() failed");}
+            snprintf(ack_config, 200, "{\"macId\":\"%s\",\"configType\":\"Parsing Failed\"}", m_macAddress.toString().c_str());
+            if(iuWiFi.isConnected())
+            {     
+                if(loopDebugMode){debugPrint("Response : ",false);debugPrint(ack_config);}
+                iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,ack_config );
+            }
+            if(StreamingMode::BLE && isBLEConnected()){// Send ACK to BLE
+                if(loopDebugMode){ debugPrint("PARSING-FAILED");}
+                iuBluetooth.write("PARSING-FAILED");
+            }
+            
+            return false;
+        }    
     // Device level configuration
     JsonVariant subConfig = root["main"];
     subConfig.printTo(jsonChar);
-    
     if (subConfig.success()) {
+        unknownConfig = false;
         // This subconfig has to be validated for the provided fields, note the that subconfig may contain only a subset of all the fields present in device config
         // i.e. Complete device conf: {"main":{"GRP":["MOTSTD"],"RAW":1800,"POW":0,"TSL":60,"TOFF":10,"TCY":20,"DSP":512}}
         // the received config may contain only DSP or RAW or any subset of the fields.
@@ -378,6 +402,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // Component configuration
     subConfig = root["components"];
     if (subConfig.success()) {
+        unknownConfig = false;
         configureAllSensors(subConfig);
         if (saveToFlash) {
             iuFlash.saveConfigJson(IUFlash::CFG_COMPONENT, subConfig);
@@ -386,6 +411,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // Feature configuration
     subConfig = root["features"];
     if (subConfig.success()) {
+        unknownConfig = false;
         configureAllFeatures(subConfig);
         if (saveToFlash) {
             iuFlash.saveConfigJson(IUFlash::CFG_FEATURE, subConfig);
@@ -413,6 +439,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // Feature configuration
     subConfig = root["opState"];
     if (subConfig.success()) {
+        unknownConfig = false;
         opStateComputer.configure(subConfig);
         activateFeature(&opStateFeature);
         if (saveToFlash) {
@@ -422,33 +449,44 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // Diagnostic Thresholds configuration
     subConfig = root["thresholds"];
     if (subConfig.success()) {
-        configureAllFeatures(subConfig);
-        if (saveToFlash) {
-            //iuFlash.saveConfigJson(IUFlash::CFG_FEATURE, subConfig);
-            //send ACK on ide_pluse/command_response/
+            unknownConfig = false;
+             if (saveToFlash) {
+            //DOSFS.begin();
+            iuFlash.saveConfigJson(IUFlash::CFG_FINGERPRINT_STATE, variant);
+            if(loopDebugMode) {
+            debugPrint("configs saved successfully ");
+            }
             const char* messageId;
             messageId = root["messageId"]  ;
-            snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"messageTye\":\"thresholds-config-ack\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
+            snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"messageTye\":\"spectral-thresholds-config-ack\",\"macId\":\"%s\"}", messageId,m_macAddress.toString().c_str());
             
-            //Serial.println(ack_config);
             if(iuWiFi.isConnected()){
-                 iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_DIAGNOSTIC_ACK, ack_config);
-            }else if (!iuEthernet.isEthernetConnected && StreamingMode::ETHERNET)    // Ethernet is connected
-            {       debugPrint("Sending Fingerpritns Threshold ACK over Ethernet");
-                    snprintf(ack_config, 200, "{\"deviceId\":\"%s\",\"transport\":%d,\"messageType\":%d,\"payload\": \"{\\\"macId\\\":\\\"%s\\\",\\\"messageId\\\":\\\"%s\\\"}\"}",
-                      m_macAddress.toString().c_str(),0, 2, m_macAddress.toString().c_str(),messageId);
-                   
-                    debugPrint(ack_config,true);
-                    iuEthernet.write(ack_config); 
-                    iuEthernet.write("\n");
-                   
-            } 
+                 iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, ack_config);
+            }
+            if(StreamingMode::BLE && isBLEConnected()){// Send ACK to BLE
+            if(loopDebugMode){ debugPrint("SPECTRAL-THRESHOLD-SUCCESS");}
+                }
+                delay(500);
+                DOSFS.end();
+            }
+        // else{
+        //     debugPrint("Failed to save spectThresh.conf file");
+        // }
         }
-    }
+
+
      // MQTT Server configuration
     subConfig = root["mqtt"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         //configureAllFeatures(subConfig);
+        // bool tlsStatus = root["mqtt"]["tls"];
+        // bool rebootESP = false;
+        // debugPrint("Previous ConnectionType : ",false);debugPrint(m_connectionType);
+        // debugPrint("New Connection Type : ",false);debugPrint(tlsStatus);
+        // if(tlsStatus != m_connectionType ){
+        //     rebootESP = true;
+        //   }
         bool dataWritten = false;
         // iuFlash.writeInternalFlash(1,CONFIG_MQTT_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
         if (saveToFlash) {
@@ -485,15 +523,23 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
           Serial.print("READING ACCOUNTID :");Serial.println(  m_accountId );
          */ 
         }
+        // if(rebootESP == true){
+        //     if(debugMode){
+        //         debugPrint("Rebooting ESP, Previous and current connectionMode found different ...");
+        //     }
+        //     //iuWiFi.hardReset();
+        // }
         
     }
 #if 1
      // MQTT Server configuration
     subConfig = root["getDevDiag"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         bool sendFlag = false;
-        char devInfoConfig[256];
-        memset(devInfoConfig,0x00,256);
+        char devInfoConfig[300];        
+        memset(devInfoConfig,0x00,300);
+        const char *msgId = subConfig["messageId"];
         const char *devId = subConfig["deviceId"];
         if(!strcmp((const char *)m_macAddress.toString().c_str(),devId))
         {
@@ -526,11 +572,12 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
         if(sendFlag == true) 
         {
-            char devStatusResponse[256];
-            memset(devStatusResponse,0x00,256);
+            char devStatusResponse[300];
+            memset(devStatusResponse,0x00,300);
             double timeStamp = conductor.getDatetime();
-            snprintf(devStatusResponse, 256, "{\"devDiag\":{\"DiagMsg\":\"%s\",\"timestamp\":%.2f}}",
-                (char *)devInfoConfig ,timeStamp);
+             snprintf(devStatusResponse, 300, "{\"msgId\":\"%s\",\"devDiag\":%s,\"timestamp\":%.2f}",msgId,(char *)devInfoConfig ,timeStamp);
+            if (loopDebugMode) { debugPrint(F("Diag Response: "), false); debugPrint(devStatusResponse);}
+            //snprintf(devStatusResponse, 256, "{\"devDiag\":{\"DiagMsg\":\"%s\",\"timestamp\":%.2f}}", (char *)devInfoConfig ,timeStamp);
             iuWiFi.sendMSPCommand(MSPCommand::SEND_FLASH_STATUS,devStatusResponse);
             delay(2);
         }
@@ -540,6 +587,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     //Diagostic Fingerprint configurations
     subConfig = root["fingerprints"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         //opStateComputer.configure(subConfig);
         //activateFeature(&opStateFeature);
         bool dataWritten = false;
@@ -594,6 +642,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // http endpoint configuration
     subConfig = root["httpConfig"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         //configureAllFeatures(subConfig);
         bool dataWritten = false;
         bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_HTTP, root, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime(), messageId);
@@ -653,53 +702,55 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
         
     } 
-    // SET Sensor Configuration and its OFFSET value
+    //SET Sensor Configuration and its OFFSET value
     subConfig = root["sensorConfig"];
     if (subConfig.success()) {
-        //configureAllFeatures(subConfig);
-        bool dataWritten = false;
-        
-        if (saveToFlash) {
-            //DOSFS.begin();
-            File sensorConfigFile = DOSFS.open("sensorConfig.conf", "w");
-            if (sensorConfigFile)
-            {
-                
-                if (loopDebugMode) {
-                 debugPrint(F("Writting into file: "), true);
-                }
-                sensorConfigFile.print(jsonChar);
-                sensorConfigFile.close();
-                dataWritten = true;
-            }
-            else if (loopDebugMode) {
-                 debugPrint("Failed to write into file: sensorConfig.conf ");
-                
-            }  
-        
+        unknownConfig = false;
+        bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_SENSOR_CONFIG, subConfig, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime(), messageId);
+        if(loopDebugMode) { 
+            debugPrint("Validation: ", false);
+            debugPrint(validationResultString); 
+            debugPrint("Sensor configuration validation result: ", false); 
+            debugPrint(validConfiguration);
         }
-        if(dataWritten == true){
-          
-          JsonObject& config = configureJsonFromFlash("sensorConfig.conf",1);      // get the accountID
-          JsonVariant variant = config;
-          
-          m_temperatureOffset = config["sensorConfig"]["TMP_OFFSET"];
-          m_audioOffset = config["sensorConfig"]["SND_OFFSET"];
-        
-          if(loopDebugMode){
 
-            debugPrint("Temperature Offset is: ",false);debugPrint(m_temperatureOffset);
-            debugPrint("Audio Offset is:",false); debugPrint(m_audioOffset);
-            //debugPrint("File content");  
-           // variant.prettyPrintTo(Serial);
-          }
-          
+        if(validConfiguration) {
+            if(loopDebugMode) debugPrint("Received valid sensor configuration");
+            if (saveToFlash) {
+            //DOSFS.begin();
+			iuFlash.saveConfigJson(IUFlash::CFG_SENSOR_CONFIG, subConfig);
+            if(loopDebugMode) debugPrint("Saved sensor configuration file");
+            m_temperatureOffset = root["sensorConfig"]["TMP_OFFSET"];
+            m_audioOffset_current = root["sensorConfig"]["SND_OFFSET"];
+            m_audioScaling_current = root["sensorConfig"]["SND_SCALING"];
+            if(loopDebugMode){
+                debugPrint("Tempearature Offset: ",false);
+                debugPrint(m_temperatureOffset);
+                debugPrint("Audio Offset:",false);
+                debugPrint(m_audioOffset_current);
+                debugPrint("Audio Scaling:",false);
+                debugPrint(m_audioScaling_current);
+            }
+        snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"macId\":\"%s\",\"configType\":\"sensor_ack\"}",messageId,m_macAddress.toString().c_str());        
+        iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
+            if(StreamingMode::BLE && isBLEConnected()) { iuBluetooth.write("SENSOR_CFG_SUCCESS;"); delay(100); }
+                delay(3000);  // wait for MQTT message to be published
+                DOSFS.end();
+            }  
         }
-        
-    }
+         else {
+            if(loopDebugMode) debugPrint("Received invalid sensor configuration");
+            iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
+            if(StreamingMode::BLE && isBLEConnected()) { iuBluetooth.write("SENSOR_CFG_FAILURE;"); delay(100); }
+        }
+    
+    return true;
+    } 
+
     // SET the relayAgentConfig on Ethernet
     subConfig = root["relayAgentConfig"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         bool dataWritten = false;
         
         if (saveToFlash) {
@@ -822,6 +873,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // Message is always saved to file, after which STM resets
     subConfig = root["fft"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         // Validate if the received parameters are correct
         if(loopDebugMode) {
             debugPrint("FFT configuration received: ", false);
@@ -858,7 +910,6 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             }
         } else {
             if(loopDebugMode) debugPrint("Received invalid FFT configuration");
-
             // Acknowledge incorrect configuration, send the errors on /ide_plus/command_response topic
             // If streaming mode is BLE, send an acknowledgement on BLE as well
             iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
@@ -869,6 +920,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 
     subConfig = root["messageType"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         String msgType = root["messageType"];
         strcpy(m_otaMsgType,msgType.c_str());
         if(!(strcmp((const char *)m_otaMsgType,(const char *)"initiateota")))
@@ -1121,6 +1173,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // Message is always saved to file, after which STM resets
     subConfig = root["modbusSlaveConfig"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         // Validate if the received parameters are correct
         if(loopDebugMode) {
             debugPrint("modbusSlave configuration received: ", false);
@@ -1176,6 +1229,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     //Certificates download URL Configuration
     subConfig = root["certUrl"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         if (loopDebugMode){  debugPrint("Certificate Download Url:",false);
          subConfig.printTo(Serial); debugPrint("");
         }
@@ -1216,6 +1270,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // Configure Diagnostic URL in ESP32
     subConfig = root["diagnosticUrl"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         if (loopDebugMode){  debugPrint("Diagnostic Url:",false);
          subConfig.printTo(Serial); debugPrint("");
          }
@@ -1247,6 +1302,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 
     subConfig = root["auth_type"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         //configureAllFeatures(subConfig);
         bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_WIFI0, variant, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime(), messageId);
         if(loopDebugMode) { 
@@ -1274,13 +1330,15 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }else {
             if(loopDebugMode) debugPrint("Received invalid WiFi configuration");
             iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
+            conductor.m_wifiDiagErrCode |= DEVICE_DIAG_WIFI_ERR2;
+            conductor.updateDeviceInfo(iuBluetooth.deviceIdMode);
         }
 
     }
 
     subConfig = root["CONFIG_HASH"];
-    if (subConfig.success())
-    {
+    if (subConfig.success()){
+        unknownConfig = false; 
         const char *messageId = root["messageId"];
         snprintf(ack_config, 200, "{\"messageId\":\"%s\",\"macId\":\"%s\",\"configType\":\"hash_ack\"}", messageId, m_macAddress.toString().c_str());
         bool dataWritten = false;
@@ -1299,6 +1357,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // store the DIG configurations 
     subConfig = root["CONFIG"]["DIG"];
     if(subConfig.success()){
+        unknownConfig = false; 
         if(loopDebugMode) {
             debugPrint("Triggers configuration received: ", false);
             subConfig.printTo(Serial); debugPrint("");
@@ -1326,6 +1385,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
 
     subConfig = root["CONFIG"]["PHASE"];
     if(subConfig.success()){
+        unknownConfig = false; 
         if(loopDebugMode) {
             debugPrint("Phase configuration received: ", false);
             subConfig.printTo(Serial); debugPrint("");
@@ -1352,6 +1412,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // TEMP : store the feature output JOSN  
     subConfig = root["FRES"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         const char* msgType = root["MSGTYPE"];
 
         if(strcmp(msgType,"FRES") == 0 ){
@@ -1369,6 +1430,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     // RPM Configs
     subConfig = root["CONFIG"]["RPM"];
     if (subConfig.success()) {
+        unknownConfig = false; 
         if (loopDebugMode){  debugPrint("RPM Configs Received :",false);
          subConfig.printTo(Serial); debugPrint("");
          }
@@ -1416,11 +1478,23 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK, validationResultString);
         }
     }
-
     
+    // Check for unknown configurations
+    if(unknownConfig == true){
+        snprintf(ack_config, 200, "{\"macId\":\"%s\",\"configType\":\"Unknown Config Received\"}", m_macAddress.toString().c_str());
+        if(iuWiFi.isConnected())
+        {  
+            if(loopDebugMode){debugPrint("Response : ",false);debugPrint(ack_config);}
+            iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,ack_config );
+        }
+        if(StreamingMode::BLE && isBLEConnected()){// Send ACK to BLE
+            if(loopDebugMode){ debugPrint("Unknown Config Received");}
+            iuBluetooth.write("UNKNOWN-CONFIG-RECEIVED");
+        }
+    }
     return true;
+    
 }
-
 
 JsonObject& Conductor::createFeatureGroupjson(){
    
@@ -1835,7 +1909,8 @@ void Conductor::readMQTTendpoints(){
             int mqttport = config["mqtt"]["port"];
             m_mqttServerPort = mqttport;
             m_mqttUserName = config["mqtt"]["username"]; //MQTT_DEFAULT_USERNAME;
-            m_mqttPassword = config["mqtt"]["password"]; //MQTT_DEFAULT_ASSWORD;
+            m_mqttPassword = config["mqtt"]["password"]; //MQTT_DEFAULT_PASSWORD;
+            m_connectionType = config["mqtt"]["tls"];
         }
         else
             conductor.m_devDiagErrCode |= DEVICE_DIAG_MQTT_ERR1;
@@ -1853,6 +1928,7 @@ void Conductor::readMQTTendpoints(){
             m_mqttServerPort = mqttport;
             m_mqttUserName = config["mqtt"]["username"];
             m_mqttPassword = config["mqtt"]["password"];
+            m_connectionType = config["mqtt"]["tls"];
             File mqttFile = DOSFS.open("MQTT.conf","w");
             if(mqttFile)
             {
@@ -1992,7 +2068,8 @@ bool Conductor::readHTTPendpoints(){
         {
             debugPrint("HTTP Config Found");
             m_httpHost = config["httpConfig"]["host"];
-            int m_httpPort = config["httpConfig"]["port"];
+            int PORT = config["httpConfig"]["port"];
+            m_httpPort = PORT;
             m_httpPath = config["httpConfig"]["path"];
             m_httpUsername = config["httpConfig"]["username"];
             m_httpPassword = config["httpConfig"]["password"];
@@ -2265,6 +2342,7 @@ void Conductor::configureMainOptions(JsonVariant &config)
     value = config["DSP"];
     if(value.success()){
         m_mainFeatureGroup->setDataSendPeriod(value.as<uint16_t>());
+        dataSendingPeriod =  (uint32_t) (value.as<int>());
         // NOTE: Older firmware device will not set this parameter even if configJson contains it.
     }
     value = config["DDSP"];
@@ -2273,7 +2351,8 @@ void Conductor::configureMainOptions(JsonVariant &config)
     }
     value = config["FDSP"];
     if(value.success()){
-        fresPublishPeriod = (uint32_t) (value.as<int>()) * 1000;
+        //fresPublishPeriod = (uint32_t) (value.as<int>()) * 1000;
+        fresPublishPeriod = dataSendingPeriod ;
     }
     value = config["DIG"];
     if(value.success()){
@@ -2505,6 +2584,7 @@ void Conductor::processCommand(char *buff)
                 delay(500);
                 if (m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE) {
                     rawDataRequest();
+                    prepareFFTMetaData();
                     // startRawDataSendingSession(); // Will be handled in the main loop
                 } else if (m_streamingMode == StreamingMode::ETHERNET) {
                     sendAccelRawData(0);  // Axis X
@@ -2512,6 +2592,13 @@ void Conductor::processCommand(char *buff)
                     sendAccelRawData(2);  // Axis Z
                 }
                 resetDataAcquisition();
+                if(!FeatureStates::isISRActive ){
+                    FeatureStates::isISRActive = true;
+                    if(debugMode){
+                        debugPrint("FORCED-ENABLE ISR on GET_FFT");
+                    }
+                }
+                
             }
             break;
         case '4':              // Set temperature Offset value  [4000:12 < command-value>]
@@ -2520,7 +2607,7 @@ void Conductor::processCommand(char *buff)
                 int id; 
                 char temperatureJSON[60];
                 sscanf(buff,"%d:%d",&id,&m_temperatureOffset);
-                snprintf(temperatureJSON, 60, "{\"sensorConfig\":{\"TMP_OFFSET\":%d,\"SND_OFFSET\":%d } }",m_temperatureOffset,m_audioOffset);
+                snprintf(temperatureJSON, 60, "{\"sensorConfig\":{\"TMP_OFFSET\":%d,\"SND_OFFSET\":%d } }",m_temperatureOffset,m_audioOffset_current);
                  
                 processConfiguration(temperatureJSON,true);    
                 
@@ -2531,8 +2618,8 @@ void Conductor::processCommand(char *buff)
                 
                 int id; 
                 char audioOffsetJSON[60];
-                sscanf(buff,"%d:%d",&id,&m_audioOffset);
-                snprintf(audioOffsetJSON,60,"{\"sensorConfig\":{\"SND_OFFSET\":%d,\"TMP_OFFSET\":%d }} ",m_audioOffset,m_temperatureOffset);
+                sscanf(buff,"%d:%d",&id,&m_audioOffset_current);
+                snprintf(audioOffsetJSON,60,"{\"sensorConfig\":{\"SND_OFFSET\":%d,\"SND_SCALING\":%d,\"TMP_OFFSET\":%d }} ",m_audioOffset_current,m_audioScaling_current,m_temperatureOffset);
                 processConfiguration(audioOffsetJSON,true); 
                 
                 }
@@ -2606,7 +2693,11 @@ void Conductor::processUserCommandForWiFi(char *buff,
         // We want the WiFi to do something, so need to make sure it's available
         if (!iuWiFi.isAvailable()) {
             // Show the status to the user
-            ledManager.showStatus(&STATUS_WIFI_WORKING);
+            //ledManager.showStatus(&STATUS_WIFI_WORKING);
+            if(!strcmp(iuWiFi.getWiFiSsid(),WIFI_DEFAULT_SSID))
+                ledManager.showStatus(&STATUS_WIFI_WORKING_ADMIN);
+            else
+                ledManager.showStatus(&STATUS_WIFI_WORKING);
             uint32_t startT = millis();
             uint32_t current = startT;
             // Wait for up to 3sec the WiFi wake up
@@ -2621,7 +2712,11 @@ void Conductor::processUserCommandForWiFi(char *buff,
         iuWiFi.processUserMessage(buff, &iuFlash);
         // Show status
         if (iuWiFi.isAvailable() && iuWiFi.isWorking()) {
-            ledManager.showStatus(&STATUS_WIFI_WORKING);
+            //ledManager.showStatus(&STATUS_WIFI_WORKING);
+            if(!strcmp(iuWiFi.getWiFiSsid(),WIFI_DEFAULT_SSID))
+                ledManager.showStatus(&STATUS_WIFI_WORKING_ADMIN);
+            else
+                ledManager.showStatus(&STATUS_WIFI_WORKING);
         }
     }
 }
@@ -2699,6 +2794,13 @@ void Conductor::processLegacyCommand(char *buff)
  */
 void Conductor::processUSBMessage(IUSerial *iuSerial)
 {
+    if(RawDataState::fftCommandReceived){
+        if(debugMode){
+            debugPrint("GET-FFT Command Received from MQTT");
+        }
+        RawDataState::fftCommandReceived = false;
+        return;
+    }
     char *buff = iuSerial->getBuffer();
     processCommand(buff);
     
@@ -2859,12 +2961,29 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuUSB.port->println(DEVICE_TYPE);
                 }
                 if (strcmp(buff,"REMOVE_ESP_FILES") == 0)
-                {
+                {   
+                    if(debugMode){
+                        debugPrint("Deleting mqtt/http configs from STM external / internal flash");
+                    }
+                    DOSFS.remove("MQTT.conf");
+                    DOSFS.remove("httpConfig.conf");
+                    if(iuFlash.checkConfig(CONFIG_MQTT_FLASH_ADDRESS)){
+                        iuFlash.clearInternalFlash(CONFIG_MQTT_FLASH_ADDRESS);
+                        debugPrint(F("MQTT config removed from internal Flash"));
+                    }
+                    if(iuFlash.checkConfig(CONFIG_HTTP_FLASH_ADDRESS)){
+                        iuFlash.clearInternalFlash(CONFIG_HTTP_FLASH_ADDRESS);
+                        debugPrint(F("HTTP config removed from internal Flash"));
+                    }
+                    if(debugMode){
+                        debugPrint("Deleting Files from ESP32");
+                    }
                     debugPrint("Deleting Files from ESP32");
-                    DOSFS.remove("cert.conf");
-                    DOSFS.remove("diagCert.conf");
+                    DOSFS.remove("/iuconfig/cert.conf");
+                    DOSFS.remove("/iuconfig/diagCert.conf");
+
                     iuWiFi.sendMSPCommand(MSPCommand::DELETE_CERT_FILES);
-                    DOSFS.remove("iuconfig/wifi0.conf");
+                    //DOSFS.remove("iuconfig/wifi0.conf");
                 }
                 if (strcmp(buff,"IUGET_WIFI_CONFIG") == 0)
                 {
@@ -2966,6 +3085,8 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuUSB.port->println(m_mqttUserName);
                     iuUSB.port->print("MQTT_PASSWORD : ");
                     iuUSB.port->println(m_mqttPassword);
+                    iuUSB.port->print("MQTT CONNECTION TYPE :");
+                    iuUSB.port->println(m_connectionType);
                   
                 }  
                 if (strcmp(buff, "IUGET_FFT_CONFIG") == 0) {
@@ -2976,10 +3097,19 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     if(FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor){
                         iuUSB.port->print("FFT: LSMgRange : ");
                         iuUSB.port->println(FFTConfiguration::currentLSMgRange);
+                        iuUSB.port->print("FFT: LowCutOffFrequency_LSM : ");
+                        iuUSB.port->println(FFTConfiguration::currentLowCutOffFrequency);
+                        iuUSB.port->print("FFT: HighCutOffFrequency_LSM : ");
+                        iuUSB.port->println(FFTConfiguration::currentHighCutOffFrequency);
                     }
+        
                     if(FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor){
                         iuUSB.port->print("FFT: KNXgRange : ");
                         iuUSB.port->println(FFTConfiguration::currentKNXgRange);
+                        iuUSB.port->print("FFT: LowCutOffFrequency_KNX : ");
+                        iuUSB.port->println(FFTConfiguration::currentLowCutOffFrequency);
+                        iuUSB.port->print("FFT: HighCutOffFrequency_KNX : ");
+                        iuUSB.port->println(FFTConfiguration::currentHighCutOffFrequency);
                     }
                 }
                 if (strcmp(buff,"IUGET_DEVICE_CONF") == 0)
@@ -3039,7 +3169,13 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                     iuUSB.port->println(iuOta.getOtaFlagValue(OTA_PEND_STATUS_MSG_LOC));
                 }
                 if (strcmp(buff, "IUGET_CERT_CONFIG") == 0) {
+                    if(debugMode){
+                        debugPrint("CERT MANAGER CONFIG : " );
+                     }
                     iuWiFi.sendMSPCommand(MSPCommand::GET_CERT_CONFIG);
+                }
+                if (strcmp(buff, "IUREAD_ESP_FILES") == 0) {
+                    iuWiFi.sendMSPCommand(MSPCommand::READ_CERTS);
                 }
                 if (strcmp(buff, "IUGET_DIG_CONFIG") == 0) {
                     JsonObject &diag =  configureJsonFromFlash("/iuRule/diagnostic.conf",1);
@@ -3380,7 +3516,7 @@ void Conductor::processUSBMessage(IUSerial *iuSerial)
                 break;
             case UsageMode::OTA:
                 if (loopDebugMode) {
-                    debugPrint("Usage Mode: OTA");
+                    debugPrint("Usage Mode: OTA || CertManager");
                 }
                 break;
             default:
@@ -3473,9 +3609,26 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             return;       // this functon should process only one command in one call, all if conditions should be mutually exclusive
         }
         if (iuWiFi.processChipMessage()) {
-            if (iuWiFi.isWorking()) {
-                ledManager.showStatus(&STATUS_WIFI_WORKING);
-            } else {
+            if (iuWiFi.isWorking() || (iuWiFi.isConnected()==false)) {
+                if(iuWiFi.isWorking() || (iuWiFi.isStopWifiWorking() == true && iuWiFi.isWorking() == false)) {
+                    //ledManager.showStatus(&STATUS_WIFI_WORKING);
+                    if(!strcmp(iuWiFi.getWiFiSsid(),WIFI_DEFAULT_SSID))
+                        ledManager.showStatus(&STATUS_WIFI_WORKING_ADMIN);
+                    else
+                        ledManager.showStatus(&STATUS_WIFI_WORKING);
+                }
+                else if(iuWiFi.isConnected()==false) {
+                    if((m_mqttServerPort == 8883 || m_mqttServerPort == 8884) && m_connectionType == 1) {
+                        ledManager.showStatus(&STATUS_MQTT_WORKING_SEC);
+                    }
+                    else if(m_mqttServerPort == 1883 && m_connectionType == 0) {
+                        //ledManager.stopColorOverride();
+                        ledManager.showStatus(&STATUS_MQTT_WORKING_UNSEC);
+                    }
+                    else
+                        ledManager.showStatus(&STATUS_MQTT_WORKING_INVALID);
+                }
+            }else {
                 ledManager.resetStatus();
             }
             updateStreamingMode();
@@ -3493,7 +3646,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
         if((buff[0] == '3' && buff[7] == '0' && buff[9] == '0' && buff[11] == '0' &&
                     buff[13] == '0' && buff[15] == '0' && buff[17] == '0') ){
             processCommand(buff);
-
+            RawDataState::fftCommandReceived = true;
         }else
         {
             processLegacyCommand(buff);
@@ -3511,6 +3664,14 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             // Serial.write(buff);
             // Serial.println();
             break;
+        case MSPCommand::RECEIVE_WIFI_CREDENTIALS:
+            iuWiFi.updateWifiCredentials(buff);
+            break;
+        case MSPCommand::RECEIVE_ESP_SYNC_RSP:
+            syncLostCount = 0;
+            if(loopDebugMode) { debugPrint("STM <-> ESP Sync received "); }
+            break;   
+
         case MSPCommand::OTA_INIT_REQUEST:
             if(doOnceFWValid == true)
             { // Don't accept new OTA request during Validation of Last OTA
@@ -3614,6 +3775,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 doOnceFWValid = false;
                 FW_Valid_State = 0;
                 iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_DOWNLOAD_SUCCESS);
+                iuOta.updateOtaFlag(SELF_UPGRD_STATUS_MSG_LOC,OTA_FW_VALIDATION_SUCCESS);
                 iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);
                 delay(1000);
                 if (loopDebugMode) { debugPrint(F("OTA FW hash Success, Sending OTA-FUG-START")); }
@@ -3706,6 +3868,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                     debugPrint(F("Switching Device mode:OPERATION -> OTA/Certificate Download"));
                     debugPrint(buff);
                 }
+                certUpgradeStsPending = false;
                 certDownloadInProgress = true; 
                 m_getDownloadConfig = false;
                 m_certDownloadStarted = false;
@@ -3844,7 +4007,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
              }
 
             ledManager.overrideColor(RGB_PURPLE);
-             sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_SUCCESS,CERT_UPGRADE_COMPLETE,buff);
+            // sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_SUCCESS,CERT_UPGRADE_COMPLETE,buff);
              certDownloadInProgress = false;
              m_certDownloadStarted = false;
              m_getDownloadConfig = false;
@@ -3862,6 +4025,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             if (loopDebugMode) { debugPrint(F("Switching Device mode:CERT DOWNLOAD Mode -> OPERATION")); }
              iuWiFi.m_setLastConfirmedPublication();
              changeUsageMode(UsageMode::OPERATION);
+             certUpgradeStsPending = true;
              delay(100);
              iuWiFi.hardReset();
              break;
@@ -4047,6 +4211,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             }
             break;
         case MSPCommand::WIFI_ALERT_CONNECTED:
+            syncLostCount = 0;
             m_wifiConnected = true;
             if (loopDebugMode) { debugPrint(F("WIFI-CONNECTED;")); }
             if(getDatetime() < 1590000000.00){iuWiFi.sendMSPCommand(MSPCommand::GOOGLE_TIME_QUERY);}
@@ -4060,6 +4225,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             // }
             break;
         case MSPCommand::WIFI_ALERT_DISCONNECTED:
+            syncLostCount = 0;
             m_wifiConnected = false;
             certDownloadInProgress = false;
             if (isBLEConnected()) {
@@ -4100,6 +4266,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 ledManager.stopColorOverride();
                 ledManager.showStatus(&STATUS_OTA_DOWNLOAD);
             }
+            mqttReset(false);
             break;
         case MSPCommand::MQTT_ALERT_DISCONNECTED:
             if (isBLEConnected()) {
@@ -4127,14 +4294,31 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 delay(100);
             #endif
             }
+            mqttReset(true);
             break;
         case MSPCommand::ASK_WIFI_CONFIG:
             if (DOSFS.exists("/iuconfig/wifi0.conf"))
             {
+                if (loopDebugMode) { debugPrint(F("Sending wifi Info from external Flash: ")); }
                 JsonObject& config = configureJsonFromFlash("/iuconfig/wifi0.conf",1);
                 String jsonChar;
                 config.printTo(jsonChar);
                 iuWiFi.sendMSPCommand(MSPCommand::SEND_WIFI_CONFIG,jsonChar.c_str());
+            }else {   // Send from internal flash if present
+                if((iuFlash.checkConfig(CONFIG_WIFI_CONFIG_FLASH_ADDRESS) == true)) {
+                if (loopDebugMode) { debugPrint(F("Sending wifi Info from ixternal Flash: ")); }
+                    String wifiInfo = iuFlash.readInternalFlash(CONFIG_WIFI_CONFIG_FLASH_ADDRESS);
+                    if(!(DOSFS.exists("/iuconfig/wifi0.conf"))) {
+                        File wifi0 = DOSFS.open("/iuconfig/wifi0.conf","w");
+                        if(wifi0) {
+                            if(debugMode) { debugPrint("Create1 /iuconfig/wifi0.conf ok"); }
+                            wifi0.print(wifiInfo);
+                            wifi0.close();
+                        }
+                    }
+                    iuWiFi.sendMSPCommand(MSPCommand::SEND_WIFI_CONFIG,wifiInfo.c_str());
+                    delay(1);
+                }
             }
             break;
         case MSPCommand::WIFI_ALERT_NO_SAVED_CREDENTIALS:
@@ -4155,7 +4339,9 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             break;
         case MSPCommand::CONFIG_FORWARD_CMD:
             if (loopDebugMode) { debugPrint(F("CONFIG_FORWARD_CMD")); }
-            processCommand(buff);
+            if(RawDataState::fftCommandReceived == false ){
+                processCommand(buff);
+            }
             break;
         case MSPCommand::CONFIG_FORWARD_LEGACY_CMD:
             if (loopDebugMode) { debugPrint(F("CONFIG_FORWARD_LEGACY_CMD")); }
@@ -4446,9 +4632,9 @@ void Conductor::setDeviceIdMode(bool status)
 
 void Conductor::updateDeviceInfo(uint8_t devIdMode)
 {
-    char devInfo[256]; // size need to adjust based on devDiag json size, prepared in this function
+    char devInfo[300]; // size need to adjust based on devDiag json size, prepared in this function
     char bmdMac[32];
-    memset(devInfo,0x00,255);
+    memset(devInfo,0x00,300);
     memset(bmdMac,0x00,32);
     iuOta.readOtaFlag();
     uint8_t otaStatus  = iuOta.getOtaFlagValue(OTA_STATUS_FLAG_LOC);
@@ -4488,7 +4674,12 @@ void Conductor::updateDeviceInfo(uint8_t devIdMode)
             debugPrint("BLE MAC ID   :",false); debugPrint(m_macAddressBle.toString().c_str());
         }
     }
-    // else {
+    else {
+        if(debugMode) { debugPrint("Invalid device ID   :",false);debugPrint(devIdMode); }
+        iuBluetooth.bmdCommErrCode |= 0x04; // Send debug/diag message for informing after reset BMD worked
+        iuBluetooth.bmdCommErrMsgRetry = DEV_DIAG_MSG_RTRY; // Send message multiple time, not to miss on mqtt
+        return;
+    }
     //     strcat(devInfo, m_macAddress.toString().c_str());
     //     strcat(devInfo, "\",\"bmdMac\":\"");
     //     strcat(devInfo, DEFAULT MAC);
@@ -4497,12 +4688,18 @@ void Conductor::updateDeviceInfo(uint8_t devIdMode)
     //}
     strcat(devInfo, "\",\"wifiMac\":\"");
     strcat(devInfo, iuWiFi.getMacAddress().toString().c_str());
-    strcat(devInfo, "\",\"devDiagCode\":\"0x");
+    strcat(devInfo, "\"},\"DiagCode\":");
+    strcat(devInfo, "{\"device\":\"0x");
+    //strcat(devInfo, "\",\"devDiagCode\":\"0x");
     strcat(devInfo, String(m_devDiagErrCode,HEX).c_str());
     strcat(devInfo, "\",\"bmdDiag\":\"0x");
     strcat(devInfo, String(iuBluetooth.bmdCommErrCode,HEX).c_str());
+    strcat(devInfo, "\",\"wifiDiag\":\"0x");
+    strcat(devInfo, String(m_wifiDiagErrCode,HEX).c_str());
     strcat(devInfo, "\",\"otaDiag\":\"0x");
     strcat(devInfo, String(otaStatus,HEX).c_str());
+    strcat(devInfo, "\",\"connType\":\"");
+    strcat(devInfo, String(m_connectionType,HEX).c_str());
     strcat(devInfo, "\",\"STMMem\":\"");
     strcat(devInfo, String((freeMemory()/1024),DEC).c_str());
     strcat(devInfo, "KByte(s)\"}}");
@@ -4525,6 +4722,13 @@ void Conductor::updateDeviceInfo(uint8_t devIdMode)
         if(debugMode) { debugPrint("device info on external flash, Writing....SUCCESS"); }
         devInfoFile.close();
     }
+    char devStatusResponse[300];
+    double timeStamp = conductor.getDatetime();
+    memset(devStatusResponse,0x00,300);
+    snprintf(devStatusResponse, 300, "{\"msgId\":\"%s\",\"devDiag\":%s,\"timestamp\":%.2f}","12345678",(char *)devInfo,timeStamp);
+    if (loopDebugMode) { debugPrint(F("Diag Response: "), false); debugPrint(devStatusResponse);}
+    iuWiFi.sendMSPCommand(MSPCommand::SEND_FLASH_STATUS,devStatusResponse);
+    delay(1);
 }
 
 /* =============================================================================
@@ -4967,7 +5171,7 @@ void Conductor::changeUsageMode(UsageMode::option usage)
             break;        
         case UsageMode::OTA:
             ledManager.overrideColor(RGB_CYAN);
-            msg = "ota";
+            msg = "ota || CertManager";
             break;
         default:
             if (loopDebugMode) {
@@ -5209,6 +5413,7 @@ void Conductor::streamFeatures()
                 debugPrint(m_streamingMode);
             }
     }
+    FeatureStates::m_currentStreamingMode = m_streamingMode;
     double timestamp = getDatetime();
     float batteryLoad = iuBattery.getBatteryLoad();
     for (uint8_t i = 0; i < FeatureGroup::instanceCount; ++i) {                       // instanceCount =  [0:7]
@@ -5243,12 +5448,12 @@ void Conductor::streamFeatures()
 //            &sendingQueue, IUSerial::MS_PROTOCOL, m_macAddress,
 //            ledManager.getOperationState(), batteryLoad, timestamp,
 //            true);
-        if (FeatureStates::isISRActive != true && FeatureStates::isISRDisabled && computationDone == true){   
-                FeatureStates::isFeatureStreamComplete = true;   // publication completed
-                FeatureStates::isISRActive = true;
+        // if (FeatureStates::isISRActive != true && FeatureStates::isISRDisabled && computationDone == true){   
+        //         FeatureStates::isFeatureStreamComplete = true;   // publication completed
+        //         FeatureStates::isISRActive = true;
                 //debugPrint("Published to WiFi Complete !!!");
                 // createFeatureGroupjson();
-            }
+       //     }
     }
    #if 0
    CharBufferNode *nodeToSend = sendingQueue.getNextBufferToSend();
@@ -5773,6 +5978,7 @@ void Conductor::periodicSendAccelRawData()
         delay(500);
         if (m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE) {
             rawDataRequest();
+            prepareFFTMetaData();
             // startRawDataSendingSession();
         } else if (m_streamingMode == StreamingMode::ETHERNET) {
             sendAccelRawData(0);
@@ -5885,10 +6091,12 @@ void Conductor::sendDiagnosticFingerPrints() {
                     // {    
                     //     iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAGNOSTIC_RESULTS,FingerPrintResult );    
                     // }
-                    if(StreamingMode::BLE && isBLEConnected()){    
-                    iuBluetooth.write("Fingerprints Data : ");
-                    iuBluetooth.write(FingerPrintResult);
-                    }
+                    
+                    // Remove fingerprints on APP
+                    // if(StreamingMode::BLE && isBLEConnected()){    
+                    // iuBluetooth.write("Fingerprints Data : ");
+                    // iuBluetooth.write(FingerPrintResult);
+                    // }
                 }
             }
             else { // not published as time_diff < 500 ms
@@ -5921,6 +6129,87 @@ void Conductor::sendDiagnosticFingerPrints() {
         iuModbusSlave.clearHoldingRegister(modbusGroups::MODBUS_STREAMING_SPECTRAL_FEATURES,FINGERPRINT_KEY_1_L,FINGERPRINT_13_H);
         m_spectralFeatureResult = "";
     }   
+}
+
+int Conductor::checkFingerprintsState(){
+    JsonObject& config = configureJsonFromFlash("/iuconfig/spectThresh.conf", 1);
+    if(config.success()){
+        float fingerprintsStateBuffer[MAX_SPECTRAL_FEATURE_COUNT];
+        int fingerprintsState;
+        spectralStateSuccess = false;
+        float maxVal;
+        uint32_t maxIdx=0; 
+        int i = 1; 
+        int spectralCount = 0;   
+        //debugPrint("spectThresh.conf read successfully");
+        if (strlen(fingerprintData)<5 || spectralFeatures_ready_to_publish == false){
+        if (debugMode){   
+            spectralStateSuccess = false;
+            //debugPrint("Empty Fingerprint data buffer or spectral Features are not ready");
+        }
+        for (size_t i = 0; i < spectralCount; i++){
+            fingerprintsStateBuffer[i]= 0;
+        }  
+        }else if(m_spectralFeatureBackupComsumed == true){
+        // debugPrint("\nNew Spectral Buffer backup Copy:",false);debugPrint(fingerprintData);
+        DynamicJsonBuffer object(strlen(fingerprintData));
+        JsonObject& root = object.parseObject(fingerprintData);
+        if (root.success()) {
+        for (auto jsonKeyValue : root) {
+            char* key = (char*)jsonKeyValue.key;
+            float value = jsonKeyValue.value.as<float>();                   
+            float low, med, high;
+            low = config["thresholds"][key]["TRH"][0];
+            med = config["thresholds"][key]["TRH"][1];
+            high = config["thresholds"][key]["TRH"][2];
+        // debugPrint("\nKey : ",false);debugPrint(key);
+        // debugPrint("Value: ",false);debugPrint(value);
+        // debugPrint("low : ",false);debugPrint(low);
+        // debugPrint("med: ",false);debugPrint(med);
+        // debugPrint("High:",false);debugPrint(high);
+        if (value > low){
+            //debugPrint(" Spectral value is greater Low Threshold ",value );
+            fingerprintsState = 1;     
+        }     
+        else if (value > med){
+            //debugPrint(" Spectral value is greater Med Threshold" );
+            fingerprintsState = 2;
+        }
+        else if (value >= high){
+            //debugPrint(" Spectral value is > or  equal to High Threshold" );
+            fingerprintsState = 3;
+        }
+        else {
+            fingerprintsState = 0;
+        }
+        // debugPrint("Fingerprint State : ",false);debugPrint(fingerprintsState);
+        fingerprintsStateBuffer[i] = fingerprintsState;
+            if(i > MAX_SPECTRAL_FEATURE_COUNT){
+            if(debugMode){
+                debugPrint("Spectral Feature Keys Index Out of Bound,Spectral Feature Limit exceeded !!!");   
+                }
+            }   
+                i++; 
+                spectralCount++;  
+            }
+        //debugPrint("fingerprintsStateBuffer : [ ",false);
+        //for (i = 1;i <= spectralCount; i++){
+            getMax(fingerprintsStateBuffer,spectralCount,&maxVal,&maxIdx);
+            // debugPrint(fingerprintsStateBuffer[i],false);debugPrint(",",false);
+            // }
+        //debugPrint(" ] ");
+            spectralState = maxVal;
+        // debugPrint("Spectral State : ",false);debugPrint(spectralState);
+            spectralStateSuccess = true;
+            return spectralState;
+        } else{
+            if(debugMode){debugPrint("parseObject Failed");}
+        }  
+    }
+    }
+    else{
+        //if(debugMode){debugPrint(" Failed to read spectThresh.conf file");}
+        }    
 }
 
 bool Conductor::setFFTParams() {
@@ -5958,7 +6247,7 @@ bool Conductor::setFFTParams() {
         {
             debugPrint(F("LSM Present & LSM set"));
             iuAccelerometer.setSamplingRate(FFTConfiguration::currentSamplingRate);
-            FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_LSM;
+            //FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_LSM;
             setSensorStatus(SensorStatusCode::LSM_SET);
             if(config.containsKey("grange")){
                 FFTConfiguration::currentLSMgRange = config["grange"];
@@ -5966,12 +6255,23 @@ bool Conductor::setFFTParams() {
                 FFTConfiguration::currentLSMgRange = FFTConfiguration::DEFAULT_LSM_G_RANGE;
             }
             iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
+            gRange_metaData = FFTConfiguration::currentLSMgRange;
+            if(config.containsKey("lowCutOffFreq")){
+                FFTConfiguration::currentLowCutOffFrequency = config["lowCutOffFreq"];
+            }else{
+                FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_LSM;
+            }
+            if(config.containsKey("highCutOffFreq")){
+                FFTConfiguration::currentHighCutOffFrequency = config["highCutOffFreq"];
+            }else{
+                FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate/FMAX_FACTOR;
+            }
         }
         else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (iuAccelerometerKX222.kionixPresence))
         {
             debugPrint(F("KIONIX Present & KIONIX set"));
             iuAccelerometerKX222.setSamplingRate(FFTConfiguration::currentSamplingRate); // will set the ODR for the sensor
-            FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
+            //FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
             setSensorStatus(SensorStatusCode::KNX_SET);
             if(config.containsKey("grange")){
                 FFTConfiguration::currentKNXgRange = config["grange"];
@@ -5979,6 +6279,17 @@ bool Conductor::setFFTParams() {
                 FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_KNX_G_RANGE;
             }
             iuAccelerometerKX222.setGrange(FFTConfiguration::currentKNXgRange);
+            gRange_metaData = FFTConfiguration::currentKNXgRange;
+            if(config.containsKey("lowCutOffFreq")){
+                FFTConfiguration::currentLowCutOffFrequency = config["lowCutOffFreq"];
+            }else{
+                FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
+            }
+            if(config.containsKey("highCutOffFreq")){
+                FFTConfiguration::currentHighCutOffFrequency = config["highCutOffFreq"];
+            }else{
+                FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate/FMAX_FACTOR;           
+                }
         }else if((FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor) && (!iuAccelerometer.lsmPresence) && (iuAccelerometerKX222.kionixPresence)){
             debugPrint(F("LSM absent & KIONIX set"));
             iuAccelerometerKX222.setSamplingRate(iuAccelerometerKX222.defaultSamplingRate);
@@ -5986,9 +6297,11 @@ bool Conductor::setFFTParams() {
             FFTConfiguration::currentSensor = FFTConfiguration::kionixSensor;
             FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
             FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
+            FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
             setSensorStatus(SensorStatusCode::LSM_ABS);
             FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_KNX_G_RANGE;
             iuAccelerometerKX222.setGrange(FFTConfiguration::currentKNXgRange);
+            gRange_metaData = FFTConfiguration::currentKNXgRange;
         }else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (!iuAccelerometerKX222.kionixPresence) && (iuAccelerometer.lsmPresence)){
             debugPrint(F("KIONIX Absent & LSM set"));
             iuAccelerometer.setSamplingRate(iuAccelerometer.defaultSamplingRate);
@@ -5996,8 +6309,10 @@ bool Conductor::setFFTParams() {
             FFTConfiguration::currentSensor = FFTConfiguration::lsmSensor;
             FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
             FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_LSM;
+            FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
             setSensorStatus(SensorStatusCode::KNX_ABS);
             FFTConfiguration::currentLSMgRange = FFTConfiguration::DEFAULT_LSM_G_RANGE;
+            gRange_metaData = FFTConfiguration::currentLSMgRange;
             iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
         }
         else{
@@ -6032,15 +6347,19 @@ bool Conductor::setFFTParams() {
                 FFTConfiguration::currentSamplingRate = iuAccelerometer.defaultSamplingRate;
                 FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
                 FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_LSM;
+                FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
                 FFTConfiguration::currentLSMgRange = FFTConfiguration::DEFAULT_LSM_G_RANGE;
                 iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange);
+                gRange_metaData = FFTConfiguration::currentLSMgRange;
             }else if(iuAccelerometerKX222.kionixPresence){
                 conductor.setSensorStatus(conductor.SensorStatusCode::KNX_DEFAULT); // TO DO based on hardware identifier
                 FFTConfiguration::currentSamplingRate = iuAccelerometerKX222.defaultSamplingRate;
                 FFTConfiguration::currentBlockSize = FFTConfiguration::DEFAULT_BLOCK_SIZE;
                 FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX;
+                FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
                 FFTConfiguration::currentKNXgRange = FFTConfiguration::DEFAULT_KNX_G_RANGE;
                 iuAccelerometerKX222.setGrange(FFTConfiguration::currentKNXgRange);
+                gRange_metaData = FFTConfiguration::currentKNXgRange;
             }else{
                 conductor.setSensorStatus(conductor.SensorStatusCode::SEN_ABS);
             }
@@ -6049,7 +6368,7 @@ bool Conductor::setFFTParams() {
     }
     // TODO: The following can be configurable in the future
         // FFTConfiguration::currentLowCutOffFrequency = FFTConfiguration::DEFALUT_LOW_CUT_OFF_FREQUENCY;
-        FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
+        //FFTConfiguration::currentHighCutOffFrequency = FFTConfiguration::currentSamplingRate / FMAX_FACTOR;
         FFTConfiguration::calculatedSamplingRate = FFTConfiguration::currentSamplingRate;
         FFTConfiguration::currentMinAgitation = FFTConfiguration::DEFAULT_MIN_AGITATION;
         
@@ -6106,6 +6425,34 @@ bool Conductor::configureRPM(JsonVariant &config){
   return success;
 
 }
+
+/*
+*Prepare the json of RPM when the getFFT request is received
+*
+*/
+
+void Conductor::prepareFFTMetaData()
+{
+    // String jsonChar;
+    // StaticJsonBuffer<300> outputJSONbuffer;
+    // JsonObject& root = outputJSONbuffer.createObject(); 
+    // root["deviceIdentifier"] = m_macAddress.toString().c_str();
+    // double timeStamp = getDatetime();
+    // root["timestamp"] = timeStamp;
+    // root["rpm"] = featureDestinations::buff[featureDestinations::basicfeatures::rpm];
+    // root["gRange"] = currentgRange;
+    // root.printTo(Serial);
+    // root.printTo(jsonChar);
+    char metaData[200];
+    snprintf(metaData, 200, "{\"deviceIdentifier\":\"%s\",\"timestamp\":%.3f,\"rpm\":%f,\"gRange\":%d}",m_macAddress.toString().c_str(),rawDataRecordedAt,
+                                    featureDestinations::buff[featureDestinations::basicfeatures::rpm],gRange_metaData);
+    iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_METADATA,metaData);      //replace timestamp variable
+    if(loopDebugMode){
+    debugPrint("metaData : ",false);   //add in debugmode
+    debugPrint(metaData);
+    }
+}    
+
 
 /* =============================================================================
     Debugging
@@ -6188,7 +6535,15 @@ void Conductor::setConductorMacAddress() {
         char New_BLE_MAC_Address[13];
         uint8_t retryCount = 5;
         int mac_Response = iuBluetooth.sendATCommand("mac?", BLE_MAC_Address, 20);
-        if( mac_Response < 0 || /*(BLE_MAC_Address[0] != '9' || BLE_MAC_Address[0] != '6 &&*/ BLE_MAC_Address[0] == '0'&& BLE_MAC_Address[1] == '0' ){
+
+        debugPrint("BLE MAC ID:",false);debugPrint(BLE_MAC_Address,true);
+        strncpy(New_BLE_MAC_Address, BLE_MAC_Address + 6,11);
+        removeChar(New_BLE_MAC_Address, ':');
+        iuBluetooth.setDeviceName(New_BLE_MAC_Address);
+        iuBluetooth.queryDeviceName();
+        //debugPrint("SET MAC RESPONSE :",false);
+        //debugPrint(mac_Response);
+        if( mac_Response < 0 || /*(BLE_MAC_Address[0] != '9' || BLE_MAC_Address[0] != '6 &&*/ BLE_MAC_Address[0] == '0'&& BLE_MAC_Address[1] == '0' ){            
             // Retry to get BLE MAC
             for (size_t i = 0; i < retryCount; i++)
             {
@@ -6201,6 +6556,7 @@ void Conductor::setConductorMacAddress() {
                     debugPrint("BLE MAC ID IN RETRY : ",false);
                     debugPrint(BLE_MAC_Address);
                 }                    
+
                 if(mac_Response > 0 && (strncmp(BLE_MAC_Address,"00",2))) {
                 //if(mac_Response > 0 && BLE_MAC_Address[0] != '0'&& BLE_MAC_Address[1] != '0'/*&& (( BLE_MAC_Address[0] == '9') || ( BLE_MAC_Address[0] == '6'))*/ ){
                     if(debugMode){
@@ -6754,33 +7110,41 @@ bool Conductor::setThresholdsFromFile()
 }
 //set the sensor Configuration
 
-bool Conductor::setSensorConfig(char* filename){
-    
-    JsonObject& config = configureJsonFromFlash(filename,1);      
-    JsonVariant variant = config;
-
+bool Conductor::setSensorConfig(JsonVariant &config){
+    bool success = false;
     if (!config.success()) {
-        if (debugMode) {
-            debugPrint("parseObject() failed");
-        }
-        return false;
+        m_audioOffset_current = SENSORConfiguration::DEFAULT_AUDIO_OFFSET;
+        m_audioScaling_current = SENSORConfiguration::DEFAULT_AUDIO_SCALING;  
+        success = false;
     }
     else{
-
-        m_temperatureOffset = config["sensorConfig"]["TMP_OFFSET"];
-        m_audioOffset = config["sensorConfig"]["SND_OFFSET"];
+        int m_temperatureOffset = config["TMP_OFFSET"];
+        float m_audioOffset = config["SND_OFFSET"];
+        float m_audioScaling = config["SND_SCALING"];
         if(loopDebugMode){
-            debugPrint("Tempearature Offset: ",false);
+            debugPrint("Temperature Offset_1: ",false);
             debugPrint(m_temperatureOffset);
-            debugPrint("Audio Offset:",false);
+            debugPrint("Audio Offset_1:",false);
             debugPrint(m_audioOffset);
-        }    
+            debugPrint("Audio Scaling_1:",false);
+            debugPrint(m_audioScaling);
+        }
+        if(m_audioScaling < SENSORConfiguration::DEFAULT_LOW_CUT_OFF_AUDIO_SCALING || m_audioScaling > SENSORConfiguration::DEFAULT_HIGH_CUT_OFF_AUDIO_SCALING){
+            m_audioScaling_current = SENSORConfiguration::DEFAULT_AUDIO_SCALING;
+        }
+        m_audioScaling_current = m_audioScaling;
+
+        if (m_audioOffset < SENSORConfiguration::DEFAULT_LOW_CUT_OFF_AUDIO_OFFSET || m_audioOffset > SENSORConfiguration::DEFAULT_HIGH_CUT_OFF_AUDIO_OFFSET)
+        { 
+            m_audioOffset_current = SENSORConfiguration::DEFAULT_AUDIO_OFFSET;
+        }
+        m_audioOffset_current = m_audioOffset;
         //variant.prettyPrintTo(Serial);
         
-        return true;
+        success = true;
     }
+     return success;
 }
-
 /**
  * @brief 
  * 
@@ -6990,7 +7354,7 @@ void Conductor::otaChkFwdnldTmout()
                 if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA/CERT -> OPERATION")); }
                 iuWiFi.m_setLastConfirmedPublication();
                 conductor.changeUsageMode(UsageMode::OPERATION);
-
+                delay(100);
                 iuWiFi.hardReset();
 
             }
@@ -7018,6 +7382,7 @@ void Conductor::otaChkFwdnldTmout()
             iuWiFi.m_setLastConfirmedPublication();
             conductor.changeUsageMode(UsageMode::OPERATION);
             if(!otaSendMsg){
+                delay(100);
                 iuWiFi.hardReset();
             }
         }
@@ -7153,14 +7518,15 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
     // 1. Check default parameter setting
     ValidationFile->print(F(" - MQTT DEFAULT SERVER IP:"));
     ValidationFile->println(MQTT_DEFAULT_SERVER_IP);
-    if(strcmp(MQTT_DEFAULT_SERVER_IP,"mqtt.infinite-uptime.com") != 0)
+    if(strcmp(m_mqttServerIp,MQTT_DEFAULT_SERVER_IP) == 0 && m_mqttServerPort == MQTT_DEFAULT_SERVER_PORT &&
+      (strcmp(m_mqttUserName,MQTT_DEFAULT_USERNAME) == 0) && (strcmp(m_mqttPassword,MQTT_DEFAULT_PASSWORD) == 0))
     {
         ValidationFile->println(F("   Validation [MQTT]-Default IP Add: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Default IP Add: Fail !")); }
     }
     ValidationFile->print(F(" - MQTT DEFAULT SERVER PORT:"));
     ValidationFile->println(MQTT_DEFAULT_SERVER_PORT);
-    if(MQTT_DEFAULT_SERVER_PORT != 8883)
+    if(MQTT_DEFAULT_SERVER_PORT != MQTT_DEFAULT_SERVER_PORT)
     {
         ValidationFile->println(F("   Validation [MQTT]-Default Port: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [MQTT]-Default Port: Fail !")); }
@@ -7193,14 +7559,14 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
         }
         ValidationFile->print(F(" - HTTP DEFAULT HOST PORT:"));
         ValidationFile->println(m_httpPort);
-        if(m_httpPort != 443)
+        if(m_httpPort != HTTP_DEFAULT_PORT)
         {
             ValidationFile->println(F("   Validation [HTTP]-Default HOST PORT: Fail !"));
             if(loopDebugMode){ debugPrint(F("Validation [HTTP]-Default HOST PORT: Fail !")); }    
         }
         ValidationFile->print(F(" - HTTP DEFAULT HOST END POINT:"));
         ValidationFile->println(m_httpPath);
-        if(strcmp(m_httpPath,"/api/2.0/datalink/http_dump_v2"))
+        if(strcmp(m_httpPath, HTTP_DEFAULT_PATH)) //"/api/2.0/datalink/http_dump_v2"))
         {
             ValidationFile->println(F("   Validation [HTTP]-Default HOST END Point: Fail !"));
             if(loopDebugMode){ debugPrint(F("Validation [HTTP]-Default HOST END Point: Fail !")); }
@@ -7452,7 +7818,7 @@ void Conductor::getOtaStatus()
             otaSendMsg = true;
             break;
         default:
-            if (setupDebugMode) debugPrint("Main FW:Unknown OTA Status code !",false);
+            if (setupDebugMode) debugPrint("getOtaStatus:Unknown OTA Status code !");
             break;
     }
 
@@ -7466,7 +7832,7 @@ void Conductor::getOtaStatus()
         case OTA_FW_DNLD_FAIL_PENDING:
             strcpy(WiFiDisconnect_OTAErr,"OTA-RCA-0003");
             /* Send this message in case WiFi Disconnection during last OTA FW Download */
-            if (setupDebugMode) debugPrint("FW OTA download Failed ! Message pending. ");
+            if (setupDebugMode) debugPrint("getOtaStatus:Unknown OTA Status code !");
             otaSendMsg = true;
             break;
         case OTA_FW_UPGRD_OK_PENDING:
@@ -7485,9 +7851,18 @@ void Conductor::getOtaStatus()
             otaSendMsg = true;
             break;
         default:
-            if (setupDebugMode) debugPrint("Main FW:Unknown OTA Status code !",false);
+            if (setupDebugMode) debugPrint("getOtaStatus:Unknown OTA Status code !");
             break;            
     }
+            otaStatus = iuOta.getOtaFlagValue(SELF_UPGRD_STATUS_MSG_LOC);
+            if (setupDebugMode) {
+                debugPrint("Main FW:Self Upgrade Pending Status Code: ",false);
+                debugPrint(otaStatus);
+            }
+            if(otaStatus == OTA_FW_UPGRD_OK_PENDING) {
+                if (setupDebugMode) debugPrint("Self Upgrade Upgrade Ok ! Message pending. ");
+                otaSendMsg = true;
+            }
 }
 
 /**
@@ -7529,7 +7904,7 @@ void Conductor::sendOtaStatus()
                 delay(1000);
                 break;
             case OTA_FW_FILE_SYS_ERROR:
-                if (setupDebugMode) debugPrint("FW OTA Upgrade Failed ! Missing or Invalid File(s) ");
+                if (setupDebugMode) debugPrint("Sendotasts: Unknown OTA Status code !");
                 sendOtaStatusMsg(MSPCommand::OTA_FUG_ABORT,OTA_UPGRADE_ERR,String(iuOta.getOtaRca(OTA_FILE_MISSING)).c_str());
                 delay(1000);
                 break;
@@ -7574,12 +7949,26 @@ void Conductor::sendOtaStatus()
                 delay(1000);
                 break;
             default:
-                if (setupDebugMode) debugPrint("Main FW:Unknown OTA Status code !",false);
+                if (setupDebugMode) debugPrint("Sendotasts:Unknown OTA Status code !");
                 break;            
         }
         otaSendMsg = false;
         /* Send Error message only once. Not to send on every bootup */
         iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,OTA_FW_VALIDATION_SUCCESS);
+        otaStatus = iuOta.getOtaFlagValue(SELF_UPGRD_STATUS_MSG_LOC);
+        if (setupDebugMode) {
+            debugPrint("Main FW:Self Upgrade Status Code: ",false);
+            debugPrint(otaStatus);
+        }
+        if(otaStatus == OTA_FW_UPGRD_OK_PENDING) {
+            if (setupDebugMode) debugPrint("FW Self Upgrade Ok ");
+            strncpy(m_otaMsgId,"12345678",8);
+            m_otaMsgId[8] = '\0';
+            sendOtaStatusMsg(MSPCommand::OTA_FUG_SUCCESS,SELF_UPGRADE_OK,OTA_RESPONE_OK);
+        }
+        otaSendMsg = false;
+        iuOta.updateOtaFlag(SELF_UPGRD_STATUS_MSG_LOC,OTA_FW_VALIDATION_SUCCESS);
+
     }
 }
 
@@ -7629,12 +8018,40 @@ void Conductor::sendOtaStatusMsg(MSPCommand::command type, char *msg, const char
             }
             else if(MSPCommand::OTA_FUG_SUCCESS == type)
             {
-                iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,OTA_FW_UPGRD_OK_PENDING);
+                if(!strcmp(msg,SELF_UPGRADE_OK))
+                { // SELF Upgrade case
+                    strncpy(m_otaMsgId,"12345678",8);
+                    m_otaMsgId[8] = '\0';
+                    iuOta.updateOtaFlag(SELF_UPGRD_STATUS_MSG_LOC,OTA_FW_UPGRD_OK_PENDING);
+                }
+                else
+                    iuOta.updateOtaFlag(OTA_PEND_STATUS_MSG_LOC,OTA_FW_UPGRD_OK_PENDING);
             }
             otaSendMsg = true;
             delay(10); 
         }
     }
+    if(MSPCommand::OTA_FDW_ABORT == type || MSPCommand::OTA_FUG_ABORT == type)
+    { // delete tempFolder downloaded bin and hash file. to cleanup failed OTA
+        if (loopDebugMode) {
+            debugPrint(F("OTA failed: "),false);
+            debugPrint(type);
+            debugPrint(F("Cleaning up tempfolder downloaded images..."));
+        }
+        if(iuOta.otaFileExists(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Main_FW_BIN)) {
+            iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Main_FW_BIN);
+        } 
+        if(iuOta.otaFileExists(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Main_FW_MD5)) {
+            iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Main_FW_MD5);
+        }
+        if( iuOta.otaFileExists(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Wifi_FW_BIN)) {
+            iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Wifi_FW_BIN);
+        }
+        if(iuOta.otaFileExists(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Wifi_FW_MD5)) {
+            iuOta.otaFileRemove(iuFlash.IUFWTMPIMG_SUBDIR,vEdge_Wifi_FW_MD5);
+        }
+    }
+
 }
 
 /**
@@ -7711,31 +8128,200 @@ void Conductor::otaFWValidation()
                 /*  Initialize OTA FW Validation retry count */
                 doOnceFWValid = false;
                 iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0);
+               
+                bool connectionMode = false;
+                char mqttConfig[510];
+                char httpConfig[510];
+                                
                 if(DOSFS.exists("MQTT.conf")){
                     JsonObject& config = configureJsonFromFlash("MQTT.conf",1);
+                    JsonVariant subConfig = config["mqtt"];
+                    
                     if(config.success()){
-                        int serverPort = config["mqtt"]["port"];
-                        if(serverPort != 8883 && serverPort != 8884){
-                            char mqttConfig[510];
-                            sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\"}}",MQTT_DEFAULT_SERVER_IP,MQTT_DEFAULT_SERVER_PORT,MQTT_DEFAULT_USERNAME,MQTT_DEFAULT_ASSWORD);
-                            debugPrint("Loading Default Secure MQTT Config : ",false);debugPrint(mqttConfig);
-                            processConfiguration(mqttConfig,true);
+                        m_mqttServerIp =  config["mqtt"]["mqttServerIP"].as<char*>();
+                        m_mqttServerPort = config["mqtt"]["port"].as<uint16_t>();
+                        m_mqttUserName =  config["mqtt"]["username"].as<char*>();
+                        m_mqttPassword =  config["mqtt"]["password"].as<char*>();
+                    
+                        //int serverPort = config["mqtt"]["port"];
+                        if(isJsonKeyPresent(subConfig,"tls") ){     
+                            connectionMode = config["mqtt"]["tls"];
+                            if(connectionMode == true){
+                                if(m_mqttServerPort != 8883 && m_mqttServerPort != 8884){
+                                    //char mqttConfig[510];
+                                    sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\",\"tls\":0}}",m_mqttServerIp,m_mqttServerPort,m_mqttUserName,m_mqttPassword);
+                                    if(debugMode){
+                                        debugPrint("Loading Un-Secured MQTT Config : ",false);debugPrint(mqttConfig);
+                                    }
+                                    processConfiguration(mqttConfig,true);
+                                    connectionMode = false;
+                                }
+                            if(m_mqttServerPort == 8883 || m_mqttServerPort == 8884){
+                                    //char mqttConfig[510];
+                                    sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\",\"tls\":1}}",m_mqttServerIp,m_mqttServerPort,m_mqttUserName,m_mqttPassword);
+                                    if(debugMode){
+                                        debugPrint("Loading Secured MQTT Config : ",false);debugPrint(mqttConfig);
+                                    }
+                                    processConfiguration(mqttConfig,true);
+                                    connectionMode = true;
+                                }
+                            }else if (connectionMode == false)
+                            {
+                                if(m_mqttServerPort == MQTT_DEFAULT_SERVER_PORT ){
+                                    //char mqttConfig[510];
+                                    sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\",\"tls\":0}}",m_mqttServerIp,m_mqttServerPort,m_mqttUserName,m_mqttPassword);
+                                    if(debugMode){
+                                        debugPrint("Loading Un-Secured MQTT Config : ",false);debugPrint(mqttConfig);
+                                    }
+                                    processConfiguration(mqttConfig,true);
+                                }else if(m_mqttServerPort == 8883 || m_mqttServerPort == 8884 ){
+                                    //char mqttConfig[510];
+                                    sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\",\"tls\":1}}",m_mqttServerIp,m_mqttServerPort,m_mqttUserName,m_mqttPassword);
+                                    if(debugMode){
+                                        debugPrint("Loading Secured MQTT Config : ",false);debugPrint(mqttConfig);
+                                    }
+                                    processConfiguration(mqttConfig,true);
+                                    connectionMode = true;
+                                }
+                            }
+                            
                         }
+                        else    // "tls" key not present in configurations
+                        {   
+                            //char mqttConfig[510];
+                            if(m_mqttServerPort == 8883 || m_mqttServerPort == 8884) {
+                                sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\",\"tls\":1}}",m_mqttServerIp,m_mqttServerPort,m_mqttUserName,m_mqttPassword);
+                                if(debugMode){
+                                    debugPrint("Loading Secured MQTT Config : ",false);debugPrint(mqttConfig);
+                                }
+                                processConfiguration(mqttConfig,true);
+                                connectionMode = true;
+                            }else{
+                                sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\",\"tls\":0}}",m_mqttServerIp,m_mqttServerPort,m_mqttUserName,m_mqttPassword);
+                                if(debugMode){
+                                    debugPrint("Loading Un-Secured MQTT Config : ",false);debugPrint(mqttConfig);
+                                }
+                                processConfiguration(mqttConfig,true);
+                                connectionMode = false;
+                            }
+                        }
+                        
+                    }else {
+                        if(debugMode){
+                            debugPrint("Invalid MQTT.conf Json,using defaults ");
+                        }
+                        sprintf(mqttConfig,"{\"mqtt\":{\"mqttServerIP\":\"%s\",\"port\":%d,\"username\":\"%s\",\"password\":\"%s\",\"tls\":0}}",MQTT_DEFAULT_SERVER_IP,MQTT_DEFAULT_SERVER_PORT,MQTT_DEFAULT_USERNAME,MQTT_DEFAULT_PASSWORD);
+                        if(debugMode){
+                            debugPrint("Loading Default Un-Secured MQTT Config : ",false);debugPrint(mqttConfig);
+                        }
+                        processConfiguration(mqttConfig,true);
+                        
                     }
+                }else if(! DOSFS.exists("MQTT.conf")){
+                    if(debugMode){
+                        debugPrint("MQTT.conf file not present,using defaults");
+                    }
+                    connectionMode = false;
                 }
-                if(DOSFS.exists("httpConfig.conf")){
-                    JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
-                    if(config.success()){
-                        int httpPort = config["httpConfig"]["port"];
+                if(!DOSFS.exists("httpConfig.conf")){
+                    //JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
+                    //if(config.success()){
+                        //int httpPort = config["httpConfig"]["port"];
                         // NOTE: If in future HTTPS port changes then need to update here. This impacts only during the validation
-                        if(httpPort != 443){
-                            char httpConfig[510];
+                        //if(httpPort != HTTP_DEFAULT_PORT){
+                        //char httpConfig[510];
+                        if(connectionMode == true){
+                            //char httpConfig[510];
+                            sprintf(httpConfig,"{\"httpConfig\":{\"host\":\"%s\",\"port\":%d,\"path\":\"%s\",\"username\":\"%s\",\"password\":\"%s\",\"oauth\":\"%s\"}}",HTTP_DEFAULT_HOST,/*HTTP_DEFAULT_PORT*/443,HTTP_DEFAULT_PATH,HTTP_DEFAULT_USERNAME,HTTP_DEFAULT_PASSWORD,HTTP_DEFAULT_OUTH);
+                            if(debugMode){
+                                debugPrint("Loading Secure Http Config : ",false);debugPrint(httpConfig);
+                            }
+                            httpOtaValidation = true; // To avoid Reboot
+                            processConfiguration(httpConfig,true);
+                        }else if (connectionMode == false){
+                            //char httpConfig[510];
                             sprintf(httpConfig,"{\"httpConfig\":{\"host\":\"%s\",\"port\":%d,\"path\":\"%s\",\"username\":\"%s\",\"password\":\"%s\",\"oauth\":\"%s\"}}",HTTP_DEFAULT_HOST,HTTP_DEFAULT_PORT,HTTP_DEFAULT_PATH,HTTP_DEFAULT_USERNAME,HTTP_DEFAULT_PASSWORD,HTTP_DEFAULT_OUTH);
-                            debugPrint("Loading Default Secure Http Config : ",false);debugPrint(httpConfig);
+                            if(debugMode){
+                                debugPrint("Loading Un-Secure Default Http Config : ",false);debugPrint(httpConfig);
+                            }
                             httpOtaValidation = true; // To avoid Reboot
                             processConfiguration(httpConfig,true);
                         }
+                   // }
+                }else if(DOSFS.exists("httpConfig.conf") ) {
+                    JsonObject& config = configureJsonFromFlash("httpConfig.conf",1);
+                    // if(config.success()){
+                    //     int httpPort = config["httpConfig"]["port"];
+                    //     // NOTE: If in future HTTPS port changes then need to update here. This impacts only during the validation
+                    //     if(otaConnectionMode == false){
+                    //         if(httpPort != HTTP_DEFAULT_PORT){
+                    //             char httpConfig[510];
+                    //             sprintf(httpConfig,"{\"httpConfig\":{\"host\":\"%s\",\"port\":%d,\"path\":\"%s\",\"username\":\"%s\",\"password\":\"%s\",\"oauth\":\"%s\"}}",HTTP_DEFAULT_HOST,HTTP_DEFAULT_PORT,HTTP_DEFAULT_PATH,HTTP_DEFAULT_USERNAME,HTTP_DEFAULT_PASSWORD,HTTP_DEFAULT_OUTH);
+                    //             debugPrint("Loading Default Secure Http Config : ",false);debugPrint(httpConfig);
+                    //             httpOtaValidation = true; // To avoid Reboot
+                    //             processConfiguration(httpConfig,true);
+                    //         }
+                    //     }else if(otaConnectionMode == true){
+                    //         //not implemented due to httpsPort is not fixed
+                    //        // if(httpPort != 443){  }
+                    //     }
+                
+                    // }
+
+                    //char httpConfig[510];
+                    if(config.success()){
+                        m_httpHost =  config["httpConfig"]["host"].as<char*>();
+                        m_httpPort = config["httpConfig"]["port"].as<uint16_t>();
+                        m_httpPath = config["httpConfig"]["path"].as<char*>();
+                        m_httpUsername = config["httpConfig"]["username"].as<char*>();
+                        m_httpPassword = config["httpConfig"]["password"].as<char*>();
+                        m_httpOauth = config["httpConfig"]["oauth"].as<char*>();
+
+                        if(connectionMode == true){
+                            // if(m_httpPort == 443) {
+                            //     sprintf(httpConfig,"{\"httpConfig\":{\"host\":\"%s\",\"port\":%d,\"path\":\"%s\",\"username\":\"%s\",\"password\":\"%s\",\"oauth\":\"%s\"}}",m_httpHost,m_httpPort,m_httpPath,m_httpUsername,m_httpPassword,m_httpOauth);
+                            //     debugPrint("Loading Secure Http Config : ",false);debugPrint(httpConfig);
+                            //     httpOtaValidation = true; // To avoid Reboot
+                            //     processConfiguration(httpConfig,true);
+                            // }else {
+                                sprintf(httpConfig,"{\"httpConfig\":{\"host\":\"%s\",\"port\":%d,\"path\":\"%s\",\"username\":\"%s\",\"password\":\"%s\",\"oauth\":\"%s\"}}",m_httpHost,m_httpPort,m_httpPath,m_httpUsername,m_httpPassword,m_httpOauth);
+                                if(debugMode){
+                                    debugPrint("Loading Secure Http Config from file : ",false);debugPrint(httpConfig);
+                                }
+                                httpOtaValidation = true; // To avoid Reboot
+                                processConfiguration(httpConfig,true);
+                            //}
+                        }else if (connectionMode == false){
+                            //char httpConfig[510];
+                            sprintf(httpConfig,"{\"httpConfig\":{\"host\":\"%s\",\"port\":%d,\"path\":\"%s\",\"username\":\"%s\",\"password\":\"%s\",\"oauth\":\"%s\"}}",m_httpHost,m_httpPort,m_httpPath,m_httpUsername,m_httpPassword,m_httpOauth);
+                            if(debugMode){
+                                debugPrint("Loading Un-secure Http Config from file : ",false);debugPrint(httpConfig);
+                            }
+                            httpOtaValidation = true; // To avoid Reboot
+                            processConfiguration(httpConfig,true);
+                        }
+                    }else
+                    {
+                        if(debugMode){
+                            debugPrint("Invalid HTTP config json, using defaults");
+                        }
+                        if(connectionMode == true){
+                            sprintf(httpConfig,"{\"httpConfig\":{\"host\":\"%s\",\"port\":%d,\"path\":\"%s\",\"username\":\"%s\",\"password\":\"%s\",\"oauth\":\"%s\"}}",HTTP_DEFAULT_HOST,443,HTTP_DEFAULT_PATH,HTTP_DEFAULT_USERNAME,HTTP_DEFAULT_PASSWORD,HTTP_DEFAULT_OUTH);
+                            if(debugMode){
+                                debugPrint("Loading Secure Default Http Config : ",false);debugPrint(httpConfig);
+                            }
+                            httpOtaValidation = true; // To avoid Reboot
+                            processConfiguration(httpConfig,true);
+                        }else if (connectionMode == false){
+                            //sprintf(httpConfig,"{\"httpConfig\":{\"host\":\"%s\",\"port\":%d,\"path\":\"%s\",\"username\":\"%s\",\"password\":\"%s\",\"oauth\":\"%s\"}}",HTTP_DEFAULT_HOST,HTTP_DEFAULT_PORT,HTTP_DEFAULT_PATH,HTTP_DEFAULT_USERNAME,HTTP_DEFAULT_PASSWORD,HTTP_DEFAULT_OUTH);
+                            if(debugMode){
+                                debugPrint("Loading Un-Secure Default Http Config : ",false);debugPrint(httpConfig);
+                            }
+                            httpOtaValidation = true; // To avoid Reboot
+                            //processConfiguration(httpConfig,true);
+                        }
                     }
+                    
                 }
                 if (loopDebugMode) debugPrint("OTA FW Validation Successful. Rebooting device....");
                 delay(2000);
@@ -7905,16 +8491,16 @@ void Conductor::sendFlashStatusMsg(int flashStatus, char *deviceStatus)
 void Conductor::checkDeviceDiagMsg()
 {
     if(iuBluetooth.bmdCommErrMsgRetry > 0) {
-        //Serial.print("iuBluetooth.bmdCommErrCode:");Serial.println(iuBluetooth.bmdCommErrCode);
+        
         if((iuBluetooth.bmdCommErrCode & 0x01) == 0x01) {
             sendDeviceDiagMsg(DEVICE_DIAG_BMD_ERR1,"BMD SET Device Name Fail !");
         }
         if((iuBluetooth.bmdCommErrCode & 0x02) == 0x02) {
             sendDeviceDiagMsg(DEVICE_DIAG_BMD_ERR4,"BMD Read Invalid MAC !");
         }
-        // if((iuBluetooth.bmdCommErrCode & 0x04) == 0x04) {
-        //     sendDeviceDiagMsg(DEVICE_DIAG_BMD_OK,"BMD Restart Read OK");
-        // }
+        if((iuBluetooth.bmdCommErrCode & 0x04) == 0x04) {
+            sendDeviceDiagMsg(DEVICE_DIAG_BMD_OK,"BMD device Id Invalid !");
+        }
         if((iuBluetooth.bmdCommErrCode & 0x08) == 0x08) {
             sendDeviceDiagMsg(DEVICE_DIAG_BMD_ERR5,"BMD AT? Comm Fail");
         }
@@ -8166,12 +8752,34 @@ void Conductor::checkforWiFiConfigurations(){
             debugPrint("Intarnal Flash content #:");
             debugPrint(config);
         }
+        conductor.m_wifiDiagErrCode |= DEVICE_DIAG_WIFI_STS1;
+        File wifi0 = DOSFS.open("/iuconfig/wifi0.conf","w");
+        if(wifi0) {
+            if(debugMode) { debugPrint("Create /iuconfig/wifi0.conf ok,writing default config"); }
+            wifi0.print(config.c_str());
+            wifi0.close();
+        }
+        else {
+            conductor.m_wifiDiagErrCode |= DEVICE_DIAG_WIFI_ERR7;
+            if(debugMode) { debugPrint("Create /iuconfig/wifi0.conf failed !"); }
+        }
         validJson = processConfiguration((char*)config.c_str(),true);
     }else if (DOSFS.exists("/iuconfig/wifi0.conf"))
     {
+        conductor.m_wifiDiagErrCode |= DEVICE_DIAG_WIFI_STS2;
         configureFromFlash(IUFlash::CFG_WIFI0);
     }else
     { // Create CFG_WIFI0 and  internal flash with default WIFI credentails for first time after flash erase or factory
+        iuOta.readOtaFlag();
+        uint8_t otaStatus = iuOta.getOtaFlagValue(OTA_STATUS_FLAG_LOC);
+        if(otaStatus == OTA_FW_UPGRADE_SUCCESS)
+        {
+            conductor.m_wifiDiagErrCode |= DEVICE_DIAG_WIFI_STS3;
+            conductor.updateDeviceInfo(iuBluetooth.deviceIdMode);
+            if(debugMode){ debugPrint("Skip default WIFI Config for first boot after OTA "); }
+            return;
+        }
+        conductor.m_wifiDiagErrCode |= DEVICE_DIAG_WIFI_STS4;
         char wifiInfo[128]; // size need to adjust based on devDiag json size, prepared in this function
         //{"ssid":"Administrator","password":"Admin@121","auth_type":"WPA-PSK"}
         memset(wifiInfo,0x00,128);
@@ -8193,20 +8801,24 @@ void Conductor::checkforWiFiConfigurations(){
                 if(debugMode) { debugPrint("Create /iuconfig/wifi0.conf ok,writing default config"); }
                 wifi0.print(wifiInfo);
                 wifi0.close();
+                conductor.m_wifiDiagErrCode |= DEVICE_DIAG_WIFI_STS5;
             }
-            else
+            else{
+                conductor.m_wifiDiagErrCode |= DEVICE_DIAG_WIFI_ERR1;
                 if(debugMode) { debugPrint("Create /iuconfig/wifi0.conf failed !"); }
-
+            }
         }
         iuFlash.writeInternalFlash(1,CONFIG_WIFI_CONFIG_FLASH_ADDRESS,sizeof(wifiInfo),(const uint8_t*)wifiInfo);
     }
+    conductor.updateDeviceInfo(iuBluetooth.deviceIdMode);
 }
 
 void Conductor::setDefaultMQTT(){
     strcpy((char *)m_mqttServerIp,MQTT_DEFAULT_SERVER_IP);
     m_mqttServerPort = MQTT_DEFAULT_SERVER_PORT;
     strcpy((char *)m_mqttUserName,MQTT_DEFAULT_USERNAME);
-    strcpy((char *)m_mqttPassword,MQTT_DEFAULT_ASSWORD);
+    strcpy((char *)m_mqttPassword,MQTT_DEFAULT_PASSWORD);
+    m_connectionType = MQTT_DEFAULT_TLS_FLAG;
     // m_tls_enabled = true;
 }
 
@@ -8247,19 +8859,23 @@ bool Conductor::updateModbusStatus(){
 
 void Conductor::updateCertHash()
 {
-    char certHash[34];  
-    if(iuOta.otaGetMD5(IUFSFlash::CONFIG_SUBDIR,"cert.conf",certHash)) {        
-        if (debugMode) { debugPrint("CERT Hash:",false);debugPrint(certHash); }
-        iuWiFi.sendMSPCommand(MSPCommand::SEND_CERT_HASH,certHash);
+    if((m_mqttServerPort == 8883 || m_mqttServerPort == 8884) && m_connectionType == 1) {
+        char certHash[34];  
+        if(iuOta.otaGetMD5(IUFSFlash::CONFIG_SUBDIR,"cert.conf",certHash)) {        
+            if (debugMode) { debugPrint("CERT Hash:",false);debugPrint(certHash); }
+            iuWiFi.sendMSPCommand(MSPCommand::SEND_CERT_HASH,certHash);
+        }
     }
 }
 
 void Conductor::updateDiagCertHash()
 {
-    char diagCertHash[34];  
-    if(iuOta.otaGetMD5(IUFSFlash::CONFIG_SUBDIR,"diagCert.conf",diagCertHash)) {
-        if (debugMode) { debugPrint("DIAG CERT Hash:",false);debugPrint(diagCertHash); }
-        iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAG_CERT_HASH,diagCertHash);
+    if((m_mqttServerPort == 8883 || m_mqttServerPort == 8884) && m_connectionType == 1) {
+        char diagCertHash[34];  
+        if(iuOta.otaGetMD5(IUFSFlash::CONFIG_SUBDIR,"diagCert.conf",diagCertHash)) {
+            if (debugMode) { debugPrint("DIAG CERT Hash:",false);debugPrint(diagCertHash); }
+            iuWiFi.sendMSPCommand(MSPCommand::SEND_DIAG_CERT_HASH,diagCertHash);
+        }
     }
 }
 
@@ -8707,3 +9323,256 @@ void Conductor::addAdvanceFeature(JsonObject& destJson, uint8_t index , String* 
         destJson[id[i]] = value[i];
     }        
 }
+
+
+/*
+ * With no response from ESP, initiate self upgrade to recover ESP flash issues
+ */
+void Conductor::selfFwUpgradeInit()
+{
+    uint8_t fwCopy = 0;
+    //iuWiFi.turnOff();
+    delay(100);
+    changeUsageMode(UsageMode::OTA);
+	  delay(1);
+    char stmHashMD5[34];
+    char stmCalcMD5[34];
+    char espHashMD5[34];
+    char espCalcMD5[34];
+    char espBtHashMD5[34];
+    char espBtCalcMD5[34];
+    char espBtLdrHashMD5[34];
+    char espBtLdrCalcMD5[34];
+    char espPartHashMD5[34];
+    char espPartCalcMD5[34];
+
+    bool hashCheck = false;
+    memset(stmHashMD5,'\0', 34);
+    memset(stmCalcMD5,'\0', 34);
+    memset(espHashMD5,'\0', 34);
+    memset(espCalcMD5,'\0', 34);
+    memset(espBtHashMD5,'\0', 34);
+    memset(espBtCalcMD5,'\0', 34);
+    memset(espBtLdrHashMD5,'\0', 34);
+    memset(espBtLdrCalcMD5,'\0', 34);
+    memset(espPartHashMD5,'\0', 34);
+    memset(espPartCalcMD5,'\0', 34);        
+    if(iuOta.otaFileExists(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Main_FW_BIN) && 
+        iuOta.otaFileExists(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Main_FW_MD5) &&
+        iuOta.otaFileExists(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_FW_BIN) &&
+        iuOta.otaFileExists(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_FW_MD5) &&
+        iuOta.otaFileExists(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_BOOT_APP_BIN) &&
+        iuOta.otaFileExists(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_BOOT_APP_MD5) &&
+        iuOta.otaFileExists(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_BOOT_LODR_BIN) &&
+        iuOta.otaFileExists(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_BOOT_LODR_MD5) &&
+        iuOta.otaFileExists(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_PARTITION_BIN) &&
+        iuOta.otaFileExists(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_PARTITION_MD5) ) {
+        if (loopDebugMode) { debugPrint(F("Using Rollbackfolder FW binaries..")); }
+        fwCopy = 1;
+        iuOta.otaMD5Read(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Main_FW_MD5,stmHashMD5);
+        iuOta.otaGetMD5(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Main_FW_BIN,stmCalcMD5);
+        if (loopDebugMode) {
+            debugPrint(F("Rollback Main FW hash received:"),false);
+            debugPrint(stmHashMD5);
+            debugPrint(F("Rollback Main FW hash computed:"),false);
+            debugPrint(stmCalcMD5);
+        }
+        iuOta.otaMD5Read(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_FW_MD5,espHashMD5);
+        iuOta.otaGetMD5(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_FW_BIN,espCalcMD5);
+        if (loopDebugMode) {                    
+            debugPrint(F("Rollback WiFi FW hash received:"),false);
+            debugPrint(espHashMD5);
+            debugPrint(F("Rollback WiFi FW hash computed:"),false);
+            debugPrint(espCalcMD5);
+        }
+        iuOta.otaMD5Read(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_BOOT_APP_MD5,espBtHashMD5);
+        iuOta.otaGetMD5(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_BOOT_APP_BIN,espBtCalcMD5);
+        if (loopDebugMode) {                    
+            debugPrint(F("Rollback WiFi Boot FW hash received:"),false);
+            debugPrint(espBtHashMD5);
+            debugPrint(F("Rollback WiFi Boot FW hash computed:"),false);
+            debugPrint(espBtCalcMD5);
+        }
+        iuOta.otaMD5Read(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_BOOT_LODR_MD5,espBtLdrHashMD5);
+        iuOta.otaGetMD5(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_BOOT_LODR_BIN,espBtLdrCalcMD5);
+        if (loopDebugMode) {                    
+            debugPrint(F("Rollback WiFi Bootloader FW hash received:"),false);
+            debugPrint(espBtLdrHashMD5);
+            debugPrint(F("Rollback WiFi Bootloader FW hash computed:"),false);
+            debugPrint(espBtLdrCalcMD5);
+        }
+        iuOta.otaMD5Read(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_PARTITION_MD5,espPartHashMD5);
+        iuOta.otaGetMD5(iuFlash.IUFWROLLBACK_SUBDIR,vEdge_Wifi_PARTITION_BIN,espPartCalcMD5);
+        if (loopDebugMode) {                    
+            debugPrint(F("Rollback WiFi Partition FW hash received:"),false);
+            debugPrint(espPartHashMD5);
+            debugPrint(F("Rollback WiFi Partition FW hash computed:"),false);
+            debugPrint(espPartCalcMD5);
+        }
+    }
+    else if(iuOta.otaFileExists(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Main_FW_BIN) && 
+        iuOta.otaFileExists(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Main_FW_MD5) &&
+        iuOta.otaFileExists(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_FW_BIN) &&
+        iuOta.otaFileExists(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_FW_MD5) &&
+        iuOta.otaFileExists(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_BOOT_APP_BIN) &&
+        iuOta.otaFileExists(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_BOOT_APP_MD5) &&
+        iuOta.otaFileExists(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_BOOT_LODR_BIN) &&
+        iuOta.otaFileExists(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_BOOT_LODR_MD5) &&
+        iuOta.otaFileExists(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_PARTITION_BIN) &&
+        iuOta.otaFileExists(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_PARTITION_MD5) ) {
+        if (loopDebugMode) { debugPrint(F("Using Backupfolder FW binaries..")); }
+        fwCopy = 2;
+        iuOta.otaMD5Read(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Main_FW_MD5,stmHashMD5);
+        iuOta.otaGetMD5(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Main_FW_BIN,stmCalcMD5);
+        if (loopDebugMode) {
+            debugPrint(F("Backup Main FW hash received:"),false);
+            debugPrint(stmHashMD5);
+            debugPrint(F("Backup Main FW hash computed:"),false);
+            debugPrint(stmCalcMD5);
+        }
+        iuOta.otaMD5Read(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_FW_MD5,espHashMD5);
+        iuOta.otaGetMD5(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_FW_BIN,espCalcMD5);
+        if (loopDebugMode) {                    
+            debugPrint(F("Backup WiFi FW hash received:"),false);
+            debugPrint(espHashMD5);
+            debugPrint(F("Backup WiFi FW hash computed:"),false);
+            debugPrint(espCalcMD5);
+        }
+        iuOta.otaMD5Read(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_BOOT_APP_MD5,espBtHashMD5);
+        iuOta.otaGetMD5(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_BOOT_APP_BIN,espBtCalcMD5);
+        if (loopDebugMode) {                    
+            debugPrint(F("Rollback WiFi Boot FW hash received:"),false);
+            debugPrint(espBtHashMD5);
+            debugPrint(F("Rollback WiFi Boot FW hash computed:"),false);
+            debugPrint(espBtCalcMD5);
+        }
+        iuOta.otaMD5Read(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_BOOT_LODR_MD5,espBtLdrHashMD5);
+        iuOta.otaGetMD5(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_BOOT_LODR_BIN,espBtLdrCalcMD5);
+        if (loopDebugMode) {                    
+            debugPrint(F("Rollback WiFi Bootloader FW hash received:"),false);
+            debugPrint(espBtLdrHashMD5);
+            debugPrint(F("Rollback WiFi Bootloader FW hash computed:"),false);
+            debugPrint(espBtLdrCalcMD5);
+        }
+        iuOta.otaMD5Read(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_PARTITION_MD5,espPartHashMD5);
+        iuOta.otaGetMD5(iuFlash.IUFWBACKUP_SUBDIR,vEdge_Wifi_PARTITION_BIN,espPartCalcMD5);
+        if (loopDebugMode) {                    
+            debugPrint(F("Rollback WiFi Partition FW hash received:"),false);
+            debugPrint(espPartHashMD5);
+            debugPrint(F("Rollback WiFi Partition FW hash computed:"),false);
+            debugPrint(espPartCalcMD5);
+        }
+    }
+    if(!(strncmp(stmCalcMD5,stmHashMD5,32)) && !(strncmp(espHashMD5,espCalcMD5,32)) &&
+       !(strncmp(espBtHashMD5,espBtCalcMD5,32)) && !(strncmp(espBtLdrHashMD5,espBtLdrCalcMD5,32)) &&
+       !(strncmp(espPartHashMD5,espPartCalcMD5,32))) {
+        if (loopDebugMode) { debugPrint(F("Main FW,WiFi FW Hash match Ok")); }
+        hashCheck = true;
+    }
+    else {
+        if (loopDebugMode) { debugPrint(F("Main FW Hash match Fail !")); }
+        hashCheck = false;
+    }    
+#if 1
+    if(hashCheck == true && fwCopy != 0) {
+        if (loopDebugMode) { debugPrint(F("OTA File read Success, Initiating self upgrade")); }
+        ledManager.overrideColor(RGB_PURPLE);
+        doOnceFWValid = false;
+        FW_Valid_State = 0;
+        if(fwCopy == 1) { // Use rollbackfolder bin , current running image
+            //else if((all_flags[MFW_FLASH_FLAG]== OTA_FW_UPGRADE_FAILED) && (all_flags[RETRY_FLAG]>= MAX_RETRY_FLAG))
+            /* Above is condition in BL1 to trigger/initiate Internal Rollback,
+               so set flag accordingly to initiate self-upgrade with internal rollback condition */
+            iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_UPGRADE_FAILED);
+            iuOta.updateOtaFlag(OTA_RETRY_FLAG_LOC,OTA_MAX_VALIDATION_RETRY+1);
+
+        }
+        else if(fwCopy == 2) { // Use backupfolder bin , last ver running image
+            // else if(all_flags[MFW_FLASH_FLAG]== OTA_FW_FORCED_ROLLBACK  && (all_flags[RETRY_FLAG] < MAX_RETRY_FLAG) )
+            /* Above is condition in BL1 to trigger/initiate Forced Rollback,
+               so set flag accordingly to initiate self-upgrade with forced rollback condition */
+            iuOta.updateOtaFlag(OTA_STATUS_FLAG_LOC,OTA_FW_FORCED_ROLLBACK);
+            iuOta.updateOtaFlag(OTA_RETRY_FLAG_LOC,0);
+        }
+        iuOta.updateOtaFlag(OTA_VLDN_RETRY_FLAG_LOC,0); // Perform validation after self upgrade
+        delay(500);
+        /* Added separate flag location to self upgrade status send */
+        iuOta.updateOtaFlag(SELF_UPGRD_STATUS_MSG_LOC,OTA_FW_DOWNLOAD_SUCCESS);//OTA_FW_UPGRD_OK_PENDING);
+        delay(500);
+        iuOta.readOtaFlag();
+        if(loopDebugMode) { 
+            debugPrint("OTA Status Flag:",false);
+            debugPrint(iuOta.getOtaFlagValue(OTA_STATUS_FLAG_LOC));
+            debugPrint("OTA retry Flag:",false);
+            debugPrint(iuOta.getOtaFlagValue(OTA_RETRY_FLAG_LOC));
+            debugPrint("OTA val retry Flag:",false);
+            debugPrint(iuOta.getOtaFlagValue(OTA_VLDN_RETRY_FLAG_LOC));
+            debugPrint("Self Upgrade Pending flag:",false);
+            debugPrint(iuOta.getOtaFlagValue(SELF_UPGRD_STATUS_MSG_LOC));
+        }
+        if (loopDebugMode) { debugPrint(F("Rebooting device for FW Upgrade......")); }
+        delay(500);
+        DOSFS.end();
+        delay(10);
+        STM32.reset();
+    }
+    else {
+        if (loopDebugMode) { debugPrint(F("OTA File read Failed, device self upgrade failed !")); }
+        for(int i = 0 ; i < 7; i++) {
+            ledManager.overrideColor(RGB_RED);
+            delay(300);
+            ledManager.stopColorOverride();
+            delay(300);
+        }
+    }
+#endif
+    delay(1000);
+    if (loopDebugMode) { debugPrint(F("Switching Device mode:OTA -> OPERATION")); }
+    iuWiFi.m_setLastConfirmedPublication();
+    changeUsageMode(UsageMode::OPERATION);
+    delay(100);
+}    
+
+bool Conductor::isJsonKeyPresent(JsonObject &config,char* key){
+
+   if(config.containsKey(key)){ return true; }
+   else{ return false; 
+   }
+}   
+
+/**
+ * @brief : Device will restart when MQTT_DISCONNECTED for 15min
+ * 
+ * @param timerflag : true- MQTT_DISCONNCTED, FALSE-MQTT_CONNECTED
+ * @return null 
+ */
+void Conductor::mqttReset(bool timerflag){
+
+    if(timerflag == true && getUsageMode() != UsageMode::OTA ){        
+        uint32_t nowTime = millis();
+        if(devResetTime ==0){
+            devResetTime = nowTime;
+        }
+        if(nowTime - devResetTime > MQTT_DISCONNECTION_TIMEOUT){      //15min timeout for device restart
+            //Serial.print("device is restarting");
+            devResetTime = nowTime;
+            if(loopDebugMode){
+                debugPrint("devresetTime : ",false);
+                debugPrint(devResetTime);
+                debugPrint("restarting device on MQTT_DISCONNECTION_TIMEOUT: ");
+            }
+            delay(1000);
+            DOSFS.end();
+            delay(10);
+            STM32.reset();
+        }
+
+    }
+    if(timerflag == false){
+        devResetTime =0;
+        //debugPrint("MQTT_Connected_timer_reset : ");
+
+    }
+}
+
+

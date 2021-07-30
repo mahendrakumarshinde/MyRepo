@@ -188,6 +188,7 @@ class Conductor
         void messageValidation(char* json);
         /***************************/
         char cert_config[MAX_SSL_CERT_SIZE];
+        char getConfigHash[34];
         char mqtt_client_cert[2048];
         char mqtt_client_key[2048];
         char ssl_rootca_cert[MAX_SSL_CERT_SIZE];
@@ -225,6 +226,7 @@ class Conductor
         bool commomEndpointsuccess = false;
         bool oemRootCAPresent = false;
         bool otaInProgress = false;
+        bool m_secure = false;
         // Config handler
         const uint8_t CERT_COUNT = 5;
         const uint8_t OEM_CERT_COUNT = 1;
@@ -237,10 +239,15 @@ class Conductor
         IUESPFlash::storedConfig getStoredConfigType(const char* certType,bool partation);
         bool validateCertType(const char* type);
         char certHash[34];
+        bool certHashReceived = false;
         char diagCertHash[34];
+        bool diagCertHashReceived = false;
         char wifiHash[34];
+        bool wifiHashReceived = false;
         char mqttHash[34];
+        char mqttHashReceived = false;
         char httpHash[34];
+        char httpHashReceived = false;
         bool wifiConnectTryFlag = false;
     protected:
         /***** Config from Host *****/      
@@ -269,6 +276,7 @@ class Conductor
         IPAddress m_dns1;
         IPAddress m_dns2;
         /***** Cyclic Update *****/
+        uint32_t m_lastWifiHearbeatUpdate;
         uint32_t m_lastWifiStatusUpdate;
         uint32_t m_lastWifiStatusCheck;
         uint32_t m_lastWifiInfoPublication;
@@ -278,6 +286,7 @@ class Conductor
         char m_mqttServerIP[IUMQTTHelper::credentialMaxLength];
         uint16_t m_mqttServerPort;
         char httpBuffer[16427];              //maximum possible buffer size (when blockSize = 8192) //8235 for BS 4096
+        char metaDataBuffer[200];
         // bool m_tls_enabled;
         MultiMessageValidator<2> m_mqttCredentialsValidator;
         char m_mqttUsername[IUMQTTHelper::credentialMaxLength];

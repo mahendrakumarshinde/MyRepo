@@ -34,6 +34,9 @@ char IUFSFlash::FNAME_HASH[11] = "configHash";
 char IUFSFlash::FNAME_DIG[11] = "diagnostic";
 char IUFSFlash::FNAME_RPM[4] = "rpm";
 char IUFSFlash::FNAME_PHASE[6] = "phase";
+char IUFSFlash::FNAME_FINGERPRINT_STATE[12] = "spectThresh";
+char IUFSFlash::FNAME_SENSOR_CONFIG[13] = "sensorConfig";
+
 /***** Core *****/
 
 void IUFSFlash::begin()
@@ -323,9 +326,16 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
             bool notSupportedSamplingRate = false;
             bool samegRange = false;
             bool grangepresent = true;
+            bool sameLowCutOffFreq = false;
+            bool sameHighCutOffFreq = false;
+            uint16_t samplingRate;
+            uint16_t blockSize;
+            uint8_t grange;
+            int configHighCutOffFreq;
+            int configLowCutOffFreq;
             //Validation for samplingRate field
             if(config.containsKey("samplingRate")) {
-                uint16_t samplingRate = config["samplingRate"];
+                samplingRate = config["samplingRate"];
                 // Validation for samplingRate
                 bool validLSMSamplingRate = true;
                 bool validKionixSamplingRate = true;
@@ -347,12 +357,14 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                        }
                 }
                 if(config.containsKey("grange")){                                           // g range contains key is not cheked while saving the json because without grange also the jason is valid.
-                    uint8_t grange = config["grange"];
-                    uint16_t samplingrate = config["samplingRate"];                                   //same g range received validation check not done.
+                    grange = config["grange"];
+                    //uint16_t samplingrate = config["samplingRate"];                                   //same g range received validation check not done.
                     bool validLSMgRange = true;
                     bool validKNXgRange = true;
                     grangepresent = false;
-                    debugPrint("G_range_received in JSON");
+                    if(debugMode){
+                        debugPrint("G_range_received in JSON");
+                    }
                     if(validLSMSamplingRate){
                     for (int i = 0; i <FFTConfiguration::LSMgRangeOption - 1; ++i){
                         if( grange < FFTConfiguration::LSMgRanges[0] || 
@@ -364,7 +376,9 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                     }
                     if(FFTConfiguration::currentLSMgRange == grange ){
                         samegRange = true;
-                        debugPrint("LSM same gRange received");
+                        if(debugMode){
+                            debugPrint("LSM same gRange received");
+                        }
                     }
                     }
                     if(validKionixSamplingRate){
@@ -378,7 +392,9 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                         }
                         if(FFTConfiguration::currentKNXgRange == grange ){
                             samegRange = true;
-                            debugPrint("KNX same gRange received");
+                            if(debugMode){
+                                debugPrint("KNX same gRange received");
+                            }
                         }
 
                     }
@@ -396,7 +412,9 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                         errorMessages.add("Invalid Kionix G Range");
                     }
 
-                    debugPrint("valid G_range_json");debugPrint(validLSMgRange);
+                    if(debugMode){
+                        debugPrint("valid G_range_json");debugPrint(validLSMgRange);
+                    }
                 }
                 //debugPrint("G_range_NOT_received in JSON");
                 if(!iuAccelerometer.lsmPresence && validLSMSamplingRate) {
@@ -430,26 +448,38 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                         errorMessages.add("Invalid samplingRate");
                 // } else if (samplingRate == 416) {  // Temporary workaround
                 //     validConfig = false;
-                //     errorMessages.add("Sampling rate not supported");
+                //     errorMessages.add("Sam if ( FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor)
+                
+                //     {
+                //         extern IULSM6DSM iuAccelerometer;
+                //         iuAccelerometer.updateSamplingRate(FFTConfiguration::calculatedSamplingRate);
+                //     }                    
+                //    else if(FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor)
+                //     {
+                //         extern IUKX222 iuAccelerometerKX222;
+                //         iuAccelerometerKX222.updateSamplingRate(FFTConfiguration::calculatedSamplingRate);
+                //     }pling rate not supported");
                 } else if (FFTConfiguration::currentSamplingRate == samplingRate) {
                     sameSamplingRate = true;
                 }
                 if (samplingRate == 208)
                 {
                     notSupportedSamplingRate = true;
-                } 
+                }
+                 
                 // else if (!validSensor){
                 //     validConfig = false;
                 //     errorMessages.add("Invalid Sensor Selection");
                 // }
             } else {
                 validConfig = false;
+                samplingRate = FFTConfiguration::currentSamplingRate;
                 errorMessages.add("Key missing: samplingRate"); 
             }
          
             // Validation for blockSize field
             if(config.containsKey("blockSize")) {
-                uint16_t blockSize = config["blockSize"];
+                blockSize = config["blockSize"];
                 // Validation for samplingRate
                 bool validBlockSize = true;
                 for(int i=0; i<FFTConfiguration::blockSizeConfigurations; i++) {
@@ -475,23 +505,142 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                     validConfig = false;
                     errorMessages.add("SR:208 and BlockSize : 8192 not supported");
                 }
+                
             } else {
                 validConfig = false;
+                blockSize = FFTConfiguration::currentBlockSize;
                 errorMessages.add("Key missing: blockSize"); 
             }
             
-
             // If the received config matches the current config, report an error
-            if(sameBlockSize && sameSamplingRate && grangepresent) {      //if same SR & BS received and gRange is present then false this condition
+            // if(sameBlockSize && sameSamplingRate && grangepresent) {      //if same SR & BS received and gRange is present then false this condition
+            //     validConfig = false;
+            //     errorMessages.add("Same SR & BS received without gRange ");
+            // }
+            configLowCutOffFreq = FFTConfiguration::currentLowCutOffFrequency;
+            configHighCutOffFreq = FFTConfiguration::currentHighCutOffFrequency;    // samplingRate/FMAX_FACTOR; 
+            
+            if(config.containsKey("lowCutOffFreq")){                                       
+                validConfig = true;
+                //validationResult["messageType"] = "lowCutFreq-config-ack";
+                configLowCutOffFreq = config["lowCutOffFreq"];
+                //configLowCutOffFreqPresent = false;
+                    debugPrint(" Low Cut Off Freq received in JSON");
+                
+                if(configLowCutOffFreq <= 0){
+                    validConfig = false;
+                    errorMessages.add("Low Cut Off Frequency is less than or equal to 0");
+                }
+
+                else if(configLowCutOffFreq >= samplingRate/FMAX_FACTOR){
+                    validConfig = false;
+                    errorMessages.add("Low Cut off Frequency is greater or equal to than FMAX");
+                }    
+                
+                else if(configLowCutOffFreq == FFTConfiguration::currentLowCutOffFrequency){
+                    sameLowCutOffFreq = true;
+                    //validConfig = false;
+                    //debugPrint("Same Low Cut Off frequency recieved");
+                    //errorMessages.add("Same Low Cut Off Frequency recieved");
+                }
+            }else{
+                if(debugMode){
+                    debugPrint("low cut off frequency config not present, applying default");
+                    debugPrint("LOW CUT-OFF FREQ : ",false);debugPrint(FFTConfiguration::currentLowCutOffFrequency);
+                }
+                configLowCutOffFreq = FFTConfiguration::currentLowCutOffFrequency;
+        }           
+            if(config.containsKey("highCutOffFreq")){                                       
+            validConfig = true;
+                //validationResult["messageType"] = "highCutFreq-config-ack";
+                configHighCutOffFreq = config["highCutOffFreq"];    
+                //configHighCutOffFreqPresent = false;
+                    if(debugMode){debugPrint("High Cut Off Freq recieved in JSON");}
+            
+                if(configHighCutOffFreq <= 0){
+                    validConfig = false;
+                    errorMessages.add("High Cut Off Frequency is less than or equal to 0");
+                } else if(configHighCutOffFreq > /*FFTConfiguration::currentSamplingRate*/samplingRate/FMAX_FACTOR){    
+                    validConfig = false;
+                    errorMessages.add("High Cut off Frequency is greater than FMAX");
+                } else if(configHighCutOffFreq == FFTConfiguration::currentHighCutOffFrequency){
+                    sameHighCutOffFreq = true;
+                    //validConfig = false;
+                    //debugPrint("Same High Cut Off frequency recieved");
+                    //errorMessages.add("Same High Cut Off Frequency recieved");
+            }          
+        }else{
+                //configLowCutOffFreq = FFTConfiguration::currentLowCutOffFrequency;
+                configHighCutOffFreq = samplingRate/FMAX_FACTOR;
+            }  
+
+            //if(config.containsKey("highCutOffFreq") && config.containsKey("lowCutOffFreq")){   
+            if(configHighCutOffFreq - configLowCutOffFreq == 0){
                 validConfig = false;
-                errorMessages.add("Same SR & BS received without gRange ");
+                errorMessages.add("Low and High Cut Off values cannot be same");
             }
-            else if(sameBlockSize && sameSamplingRate && samegRange){
+            else if(configHighCutOffFreq < configLowCutOffFreq){
+                validConfig = false;
+                errorMessages.add("High Cut Off cannot be smaller than Low Cut Off Frequency");
+            }
+             else if(sameBlockSize && sameSamplingRate && samegRange && sameLowCutOffFreq && sameHighCutOffFreq){
                 validConfig = false;
                 errorMessages.add("Same configuration received");
             }
+            // If the received config matches the current config, report an error
+            if(sameBlockSize && sameSamplingRate && grangepresent && sameLowCutOffFreq && sameHighCutOffFreq ) {      //if same SR & BS received and gRange is present then false this condition
+                validConfig = false;
+                errorMessages.add("Same SR & BS with same low & high cutoff freq received without gRange ");
+            }
+            if(sameBlockSize && sameSamplingRate && grangepresent ) {      //if same SR & BS received and gRange is present then false this condition
+                validConfig = false;
+                errorMessages.add("Same SR & BS without gRange ");
+            }
+            //}
+        break;
+        }
+       case CFG_SENSOR_CONFIG:{
+            validConfig = true;
+            validationResult["messageType"] = "sensor-config-ack";
+            float m_audioScaling, m_audioOffset ; 
+            if(config.containsKey("SND_OFFSET")){ 
+            m_audioOffset = config["SND_OFFSET"];
+            debugPrint("SND _OFFSET recieved in JSON");
+            if ( m_audioOffset > SENSORConfiguration::DEFAULT_HIGH_CUT_OFF_AUDIO_OFFSET  ) {
+                validConfig = false;
+                errorMessages.add("Audio Offset value greater than Default High Cut Off");
+            }
+            else if (m_audioOffset < SENSORConfiguration::DEFAULT_LOW_CUT_OFF_AUDIO_OFFSET  ){
+                validConfig = false;
+                errorMessages.add("Audio Offset value  less than Default Low Cut Off");
+            }
+            }
+            if(config.containsKey("SND_SCALING")){
+            m_audioScaling = config["SND_SCALING"];
+            debugPrint("SND _SCALING recieved in JSON");
+            if(m_audioScaling <= 0 ){
+                validConfig = false;
+                errorMessages.add("Audio Scaling cannot be negative or zero");
+            }
+            else if ( m_audioScaling > SENSORConfiguration::DEFAULT_HIGH_CUT_OFF_AUDIO_SCALING) {
+                validConfig = false;
+                errorMessages.add("Audio Scaling value greater than Default High Cut Off");
+
+            }
+            else if (m_audioScaling < SENSORConfiguration::DEFAULT_LOW_CUT_OFF_AUDIO_SCALING  ){
+                validConfig = false;
+                errorMessages.add("Audio Scaling value is less than Default Low Cut Off");
+                } 
+            }
+            if(config.containsKey("SND_OFFSET") && config.containsKey("SND_SCALING")){
+                if(m_audioOffset > 100 || m_audioOffset < -100 || m_audioScaling > 100 || m_audioScaling <=0){
+                    validConfig = false;
+                    errorMessages.add("Audio Offset or Audio Scaling is Out of range");
+                }
+            }    
             break;
         }
+
         case CFG_RPM: {
             validConfig = true;
             validationResult["messageType"] = "rpm-config-ack";
@@ -633,6 +782,10 @@ bool IUFSFlash::validateConfig(storedConfig configType, JsonObject &config, char
                     validConfig = false;
                 }
             }
+            else {
+                errorMessages.add("No wifi-Authentication Type");
+                validConfig = false;
+            }
            break; 
         }
     }
@@ -723,6 +876,12 @@ size_t IUFSFlash::getConfigFilename(storedConfig configType, char *dest,
         case CFG_PHASE:
             fname = FNAME_PHASE;
             break;
+        case CFG_FINGERPRINT_STATE:
+            fname = FNAME_FINGERPRINT_STATE ;
+            break;      
+        case CFG_SENSOR_CONFIG:
+            fname = FNAME_SENSOR_CONFIG;
+            break;    
         default:
             if (debugMode)
             {

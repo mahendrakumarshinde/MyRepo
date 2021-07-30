@@ -1,6 +1,11 @@
 #include "FeatureUtilities.h"
 #include "RawDataState.h"
-
+#include "FFTConfiguration.h"
+#include "Conductor.h"
+#include "IUFlash.h"
+#include <MemoryFree.h>
+extern Conductor conductor;
+extern IUFSFlash iuFlash;
 
 /*==============================================================================
     Conversion
@@ -701,3 +706,307 @@ q15_t findMaxAscent(q15_t *batch, uint16_t batchSize, uint16_t maxCount)
   }
   return max_ascent;
 }
+
+//New RPM Algo
+
+float RFFTFeatures::computeRPM(q15_t *amplitudes,int m_lowRPMFrequency,int m_highRPMFrequency,float rpm_threshold,float df,
+                                float resolution,float scalingFactor,uint8_t bufferType, uint32_t amplitudeCount)
+{   
+    uint32_t MAX_PEAK_COUNT = 128 ;
+    float amplitudesCopy[MAX_PEAK_COUNT];
+    float peakAmp[64];
+    int peakFreqIndex[64];
+    uint16_t peakIndex = 0;
+    float tempVal=0;
+    float finalPeak = 0;
+    uint32_t finalIdx=0;    
+    uint32_t tempIdx=0;
+    int pCount=0;
+    float val,freq(0); 
+    uint32_t buffCount = 0;
+    int lower_index = (int)(m_lowRPMFrequency/df ); // ceiling(lower_bound/df)
+    int upper_index = (int)(m_highRPMFrequency/df - 1 ); // floor(upper_bound/df)
+    
+    int sectionCount1;
+    int sectionCount2;
+    int sectionIdx = 0;
+    int dCount = 0;
+
+    if(FeatureStates::opStateStatusFlag == 0){ 
+        return 0;           //return 0 for device is in ideal condition
+    }
+
+    if(upper_index < lower_index) {
+        return 0;           //return 0 invalid condition
+    }
+    if(upper_index > amplitudeCount){
+        upper_index = amplitudeCount;
+        if(debugMode){debugPrint("upper_index Out of bound");}
+    }
+    dCount = (upper_index - lower_index)+1;
+    sectionCount1 = dCount/MAX_PEAK_COUNT;     //for devision
+    sectionCount2 = dCount%MAX_PEAK_COUNT;      //for less than 128 count
+
+    switch (bufferType)
+    {
+   /* case 0: // acceleration
+        {
+           // debugPrint(" ACCEL : [ ",false);
+            for (uint16_t i = lower_index; i <= upper_index ; i++)
+            {
+                val = 2 * (uint32_t) sq((int32_t) (amplitudes[i]) ) ;
+                val = val*resolution;
+               // debugPrint(val,false);debugPrint(",",false);
+                if((val > 0) && (count < MAX_PEAK_COUNT) )
+                {
+                    peakfreq[count] = val;
+                    count++;
+                }   
+            }
+            //debugPrint( " ] ",true);
+        }
+        break;
+    */    
+    case 1: // Velocity 
+        {            
+            float factor = (1000*resolution/scalingFactor);
+            if(loopDebugMode) {
+                // debugPrint("sectionCount1 : ",false);
+                // debugPrint(sectionCount1);
+                // debugPrint("sectionCount2 : ",false);
+                // debugPrint(sectionCount2);
+                // debugPrint("amplitudeCount : ",false);debugPrint(amplitudeCount);
+                // debugPrint("lower_bound : ",false);debugPrint(lower_index);
+                // debugPrint("upper_bound : ",false);debugPrint(upper_index);
+                // debugPrint("scalingFactor : ",false);debugPrint(scalingFactor);
+                // debugPrint("Factor : ",false);debugPrint(factor);
+                // debugPrint("df : ",false);debugPrint(df);
+                // debugPrint("resolution : ",false);debugPrint(resolution);
+                // debugPrint("dCount : ",false);
+                // debugPrint(dCount);                
+                // debugPrint("Block[",false);
+                // debugPrint(pCount,false);
+                // debugPrint("] Vel Peaks {",false);
+            }
+            int iCnt = 0;
+            if(dCount >= MAX_PEAK_COUNT) {
+                for (uint16_t i = lower_index; i <= upper_index ; i++) {
+                    val = 2 * (uint32_t) sq((int32_t) (amplitudes[i]) ) ;
+                    val = val*factor;                
+                    amplitudesCopy[iCnt] = val;
+                    if(loopDebugMode) {                    
+                        //debugPrint(val,false);debugPrint(",",false);
+                    }
+                    buffCount++;
+                    iCnt++;
+                    if(iCnt >= MAX_PEAK_COUNT && sectionIdx < sectionCount1) {
+                        getMax(amplitudesCopy,(uint32_t)iCnt, &tempVal, &tempIdx);
+                        peakAmp[pCount] = tempVal;
+                        peakFreqIndex[pCount] = tempIdx;
+                        if(loopDebugMode) {
+                            // debugPrint(" } ",true);
+                            // debugPrint("peakFreqIndex_1 : ",false);
+                            // debugPrint(peakFreqIndex[pCount]);
+                            // debugPrint("PeakFreq : ",false);
+                            // debugPrint(peakAmp[pCount]);
+                            // debugPrint("Block[",false);
+                            // debugPrint(pCount+1,false);
+                            // debugPrint("] Vel Peaks {",false);                        
+                        }                    
+                        iCnt = 0;
+                        tempVal = 0;
+                        tempIdx = 0;
+                        pCount++;
+                        sectionIdx++;
+                    }
+                    else if(iCnt == sectionCount2 && sectionIdx >= sectionCount1) {
+                        getMax(amplitudesCopy,(uint32_t)iCnt, &tempVal, &tempIdx);
+                        peakAmp[pCount] = tempVal;               //memset tempArray need to clear temparray
+                        peakFreqIndex[pCount] = tempIdx;
+                        if(loopDebugMode) {
+                            // debugPrint("\nbuffCount : ",false);
+                            // debugPrint(buffCount);
+                            // debugPrint("peakFreqIndex_1 : ",false);
+                            // debugPrint(peakFreqIndex[pCount]);
+                            // debugPrint("PeakFreq : ",false);
+                            // debugPrint(peakAmp[pCount]);
+                        }
+                        tempVal = 0;
+                        tempIdx = 0;
+                        pCount++;
+                    }
+                }
+            }
+            else if(dCount >= 0 && dCount < MAX_PEAK_COUNT) {
+                for (uint16_t i = lower_index; i <= upper_index ; i++) {
+                    val = 2 * (uint32_t) sq((int32_t) (amplitudes[i]) ) ;
+                    val = val*factor;                
+                    amplitudesCopy[iCnt] = val;
+                    if(loopDebugMode) {                    
+                        //debugPrint(val,false);debugPrint(",",false);
+                    }
+                    buffCount++;
+                    iCnt++;
+                    if(iCnt >= dCount) {
+                        getMax(amplitudesCopy,(uint32_t)iCnt, &tempVal, &tempIdx);
+                        peakAmp[pCount] = tempVal;
+                        peakFreqIndex[pCount] = tempIdx;
+                        if(loopDebugMode) {
+                            // debugPrint(" } ",true);
+                            // debugPrint("peakFreqIndex_1 : ",false);
+                            // debugPrint(peakFreqIndex[pCount]);
+                            // debugPrint("PeakFreq : ",false);
+                            // debugPrint(peakAmp[pCount]);
+                        }
+                    }
+                }            
+            }
+        } 
+        break;
+    case 2: // Displacement
+        {
+            //debugPrint("Displacement");
+        }
+        break;
+    
+    default:
+        break;
+    }
+    
+    if(buffCount != 0) {
+        if(pCount > 0) {
+            if(loopDebugMode) {
+                // debugPrint("Top Peaks : [ ",false);
+                // for (size_t i = 0; i < pCount-1; i++) {
+                //     debugPrint(peakAmp[i],false);debugPrint(",",false);
+                // }
+                // debugPrint(" ] ");
+            }
+            getMax(peakAmp,(uint32_t)pCount,&finalPeak,&finalIdx);
+            //peakIndex = peakFreqIndex[finalIdx];
+            if(finalIdx == 0)
+                peakIndex = peakFreqIndex[finalIdx];
+            else
+                peakIndex = (MAX_PEAK_COUNT*finalIdx) + peakFreqIndex[finalIdx];
+        }
+        else {
+            if(loopDebugMode) {
+                // debugPrint("Top Peak : [ ",false);
+                // debugPrint(peakAmp[0],false);debugPrint(",",false);
+                // debugPrint(" ] ");
+            }
+            finalPeak = peakAmp[0];
+            peakIndex = peakFreqIndex[0];
+        }
+        freq = (peakIndex + lower_index)*df;
+        if(loopDebugMode) {
+            // debugPrint("finalPeak : ",false);
+            // debugPrint(finalPeak);
+            // debugPrint("finalIdx : ",false);
+            // debugPrint(finalIdx);
+            // debugPrint("peakFreqIndex[finalIdx] : ",false);            
+            // debugPrint(peakFreqIndex[finalIdx]);
+            // debugPrint("peakIndex : ",false);
+            // debugPrint(peakIndex);
+            // debugPrint("Peak freq : ",false);
+            // debugPrint(freq);
+            // debugPrint("(round((float) (freq*60))): ",false);
+            // debugPrint((round((float) (freq*60))));
+        }
+        return (round((float) (freq*60))) ;
+    }
+    else {
+        return 0;
+    }
+}
+
+
+uint16_t RFFTFeatures::autoGrange(q15_t *amplitudes, uint32_t amplitudeCount,int currentGrange,float resolution){
+
+    int count = 0;
+    float val;
+    float max_accel_threshold = currentGrange*G_VALUE;                           
+        //if(loopDebugMode){debugPrint("Max Accel threshold :", false);debugPrint(max_accel_threshold);}
+        for (uint32_t i = 0; i < amplitudeCount ; i++)
+        {
+            val = amplitudes[i]*resolution;              //(m/s2)
+
+            if(abs(val) >= max_accel_threshold)
+            {   
+                count++;                
+            }
+        }
+    return count;           //return count
+
+}
+
+void RFFTFeatures::updateFFTFile(){
+
+    File fftFile = DOSFS.open("/iuconfig/fft.conf","r");
+    if(fftFile){    
+        String jsonChar ;
+        //const size_t bufferSize = JSON_OBJECT_SIZE(2) + 2*JSON_OBJECT_SIZE(4) + 11*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(13) + 1396;    //
+        const size_t bufferSize = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(5) + 128;
+        DynamicJsonBuffer jsonBuffer(bufferSize);
+        JsonObject &root = jsonBuffer.parseObject(fftFile);
+        if(root.success()){
+            //debugPrint("Parsing success :",false);
+            if(FFTConfiguration::setNewgrangeFlag == true){
+                if(FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor){    
+                    if(root.containsKey("grange")){
+                        FFTConfiguration::currentLSMgRange = FFTConfiguration::newLSMgRange;
+                        root["grange"] = FFTConfiguration::currentLSMgRange;
+                    }
+                    else{
+                        FFTConfiguration::currentLSMgRange = FFTConfiguration::newLSMgRange;
+                        root["grange"] = FFTConfiguration::currentLSMgRange;
+                    }
+                    conductor.setSensorStatus(conductor.SensorStatusCode::LSM_AUTO_GRANGE);
+                    snprintf(conductor.ack_config, 200, "{\"macId\":\"%s\",\"configType\":\"LSM_Grange is updated to : %d\"}",conductor.m_macAddress.toString().c_str(),FFTConfiguration::currentLSMgRange/*,jsonChar.c_str()*/);
+                } else if(FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor){    
+                    if(root.containsKey("grange")){
+                        FFTConfiguration::currentKNXgRange = FFTConfiguration::newKNXgRange;
+                        root["grange"] = FFTConfiguration::currentKNXgRange;
+                        }
+                    else{
+                        FFTConfiguration::currentKNXgRange = FFTConfiguration::newKNXgRange;
+                        root["grange"] = FFTConfiguration::currentKNXgRange;
+                    }
+                    conductor.setSensorStatus(conductor.SensorStatusCode::KNX_AUTO_GRANGE);
+                    snprintf(conductor.ack_config, 200, "{\"macId\":\"%s\",\"configType\":\"KNX_Grange is updated to : %d\"}",conductor.m_macAddress.toString().c_str(),FFTConfiguration::currentKNXgRange/*,jsonChar.c_str()*/);
+                }
+
+            }
+
+            root.printTo(jsonChar);
+            //debugPrint("Root JSON ");debugPrint(jsonChar.c_str());
+            fftFile.close();
+            fftFile = DOSFS.open("/iuconfig/fft.conf","w");
+
+            if(fftFile){
+
+                fftFile.print(jsonChar.c_str());
+                fftFile.close();
+                if(loopDebugMode) {debugPrint("Saved FFT configuration to file");}
+
+                if(iuWiFi.isConnected())
+                {  
+                    conductor.sendSensorStatus();
+                    iuWiFi.sendMSPCommand(MSPCommand::CONFIG_ACK,conductor.ack_config);
+                }
+                if(StreamingMode::BLE && conductor.isBLEConnected()){// Send ACK to BLE
+                    iuBluetooth.write("FFT_AUTO_GRANGE;");
+                }
+            }
+            else{
+                if(loopDebugMode){debugPrint("Failed to save FFT File");}
+            }
+        }
+        else{
+            fftFile.close();
+            if(loopDebugMode){debugPrint("Parsing failed :",false);}
+        }
+    }
+
+
+}    

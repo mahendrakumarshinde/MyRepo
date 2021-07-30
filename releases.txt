@@ -1,4 +1,130 @@
 #################################################################################################################################################################################
+Date: 16 JULY 2021
+Contributed By : Vikas Gaikwad,Sidramayya Swami,Mahendrakumar Shinde 
+Product Name : vEdge
+Release Name :  hotfix : v3.0.8 device softreset on mqtt disconnection  
+Firmware Versions :
+		1. vEdge_main(STM32) : 3.0.8
+		2. vEdge_wifi (ESP32): 3.0.8
+		3. Bootloader L1     : 2.0.0
+		4. Bootloader L2     : 2.1.0
+		5. Factory Firmware  : 2.0.0 
+################################################################################################################################################################################
+
+# Release Description :
+
+   1. Workaround for device not getting connected to network for long duration.
+   2. Added mechanism to reset device if device is not connected to network in 15min.
+
+# Features Requirements
+   - NA
+# Feature Description
+   - NA
+# Feature Description
+   - NA
+# Issue Resolved
+
+    1.Device is not reconnecting to the WI-FI after get disconnected from WI-FI
+
+JIRA No
+
+    - IUINTERNAL-1947
+
+TODO
+   - NA
+Limitations
+   - NA
+
+
+#################################################################################################################################################################################
+Date: 21 JUNE 2021
+Contributed By : Vikas Gaikwad,Sanketa Patil,Sidramayya Swami,Mahendrakumar Shinde 
+Product Name : vEdge
+Release Name : Porting firmware vEdge2.1 v3.3.0,3.3.1,3.2.0,3.4.0 to vEdge1.6 3.0.7 
+Firmware Versions :
+		1. vEdge_main(STM32) : 3.0.7
+		2. vEdge_wifi (ESP32): 3.0.7
+		3. Bootloader L1     : 2.0.0
+		4. Bootloader L2     : 2.1.0
+		5. Factory Firmware  : 2.0.0 
+################################################################################################################################################################################
+
+# Release Descriptions : 
+
+   1. Resolved the device migration in secured mode from one server to other when credentials are sent from APP. Secured mode credentials (Cert, Diag, MQTT, HTTP, WIFI) are sent with single selection or after Sent credentials after WIFI De-Activate from APP.
+   2. Resolved the After OTA every 30 min interval FFTs are not getting recorded. During OTA validation process configured http endpoints are updating with default http endpoints.
+   3. After OTA firmware validation needs to be handled correctly as per connection Mode
+   4. Streaming metaData from FFT spectrum.(rpm and gRange)
+   5. DSP assigned to FDSP
+   6. Disabled all the Battery Operation functionalities
+   7. Disabled the write operation of spectral features on BMD serial
+   8. Disabled the periodic hash publication mechanism
+   9. When device (mainly ESP) memory gets corrupted, device will detect the no operation condition and perform self upgrade
+      by reflashing main and Wi-Fi firmware (from stored binaries in the device)
+   10. Configurable Audio Offset and Audio Scaling parameters for Audio calibration
+   11. Velocity RPM peak calculation logic changed, to reduce run time memory usage during computation
+   12. After OTA device changed his MQTT configs, moved from UAT to Production
+   13. Sending Config "all" request after every set CONFIG_REQUEST_TIMEOUT interval period(current 4Hrs)
+   14. Added logic for configuring both Low and High Cut Off Frequency
+   15. Added logic for applying thresholds on spectral features with device LED indication on LED.
+   16. Added Support of  Secured and non-secured MQTT and HTTP connections
+   17. Variation in Spectral features output (RPM correction )
+   18. Getting FFT response code -11 after GET-FFT (hotfix)
+   19. Used Auto certificate manage for OEM https endpoint. ( TATA)
+
+##### Features Requirements
+   1. Configurable Audio Offset and Audio Scaling.
+   2. Make sure the device mqtt and http available configs will remain unmodified
+   3. Configurable Low and High cut off frequency
+   4. Allow all series of BLE MAC ID
+   5. Thresholds on spectral features
+   6. Device Indication for spectral features state
+   7. Add support of secured and non-secured client connection for FFT and data streaming
+   8. Added RPM on FFT spectrum ( Metadata)
+   9. Added support for Auto certificate manage in case of OEM https endpoint. ( TATA)
+
+##### Feature Description
+   1. Added configuration for Low and High cut off frequency in FFT Json .
+   2. Its not mandatory config
+   3. The conditions for low and high cut off frequency will be checked on current SR.
+   4. Removed filters for BLE MAC ID, so that it can allow any series of MAC ID.
+   5. Starting BLE MAC ID series with '00' is not allowed.
+   6. Added Logic to apply thresholds on configured spectral features.
+   7. According to the thresholds , the spectral state will be computed.
+   8. The computed spectral state will be compared with opstate.
+   9. The state which is greater will be considered for LED indication in runtime.
+   10. Added Logic to send metaData Json on FFT spectrum
+   11. First metaData will send on HTTP/HTTPS and after that FFT data will stream
+   12. ACK and httpStatus Code is publish on command_response topic of MQTT 
+   13. FDSP assigned to DSP
+   14. Make sure the device mqtt and http available configs will remain unmodified.
+   15. Added the mechanism to get the configurations from the back-end on every boot-up and set periodic interval of 4 Hrs
+
+##### Issue Resolved
+   1. Blocking BLE MAC ID series starting with other than '9' or '6'.
+   2. V2.0: Spectral feature RMS value fluctuates from zero to actual
+   3. Metadata Timestamp Fix
+   4. Audio Calibration
+   5. Periodic FFT getting missed due to -11 http error code (increased the tcp timeout to 15 sec)
+   6. Certificate Migration fix
+   7. Regular FFT flag fixed due to secure -unsecure Mode.
+   8. Change in FFT configuration was causing device stuck due to memory failure in new rpm algorithm
+   9. Workaround of Self-OTA is provided for wifi not connecting issue.
+   10. Automatic switch to server after OTA.
+   11. BSF Spectral fix
+
+##### JIRA No
+   - IF 204,IF-205(3),IF-209
+   - IUINTERNAL 1868, IUINTERNAL-1919, IUINTERNAL 1750,IUINTERNAL-1906,IUINTERNAL-1736 (Workaround solution),IUINTERNAL - 1877,IUINTERNAL-1919,IUINTERNAL-1969,IUINTERNAL-1492, IUINTERNAL -1449, IUINTERNAL- 1428, IUINTERNAL - 1622,IUINTERNAL-1359,IUINTERNAL-1700, IUINTERNAL- 1453, 
+
+##### TODO
+   - If_ confusion persists, change the LED color indication for spectral state.
+##### Limitation
+   - Unable to differentiate the shown LED indication i.e its because of spectral state or opstate.
+   - Impact of auto certificate management is on dual destination.
+
+
+#################################################################################################################################################################################
 Date: 08 JUNE 2021
 Contributed By : Vikas Gaikwad,Sanketa Patil,Sidramayya Swami,Mahendrakumar Shinde 
 Product Name : vEdge

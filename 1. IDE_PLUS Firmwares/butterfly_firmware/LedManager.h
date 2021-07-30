@@ -52,7 +52,10 @@ extern StatusVisual STATUS_IS_ALIVE;
 extern StatusVisual STATUS_OTA_DOWNLOAD;
 extern StatusVisual STATUS_OTA_UPGRADE;
 extern StatusVisual STATUS_OTA_ROLLBACK;
-
+extern StatusVisual STATUS_WIFI_WORKING_ADMIN;
+extern StatusVisual STATUS_MQTT_WORKING_SEC;
+extern StatusVisual STATUS_MQTT_WORKING_UNSEC;
+extern StatusVisual STATUS_MQTT_WORKING_INVALID;
 /* =============================================================================
     Led Manager
 ============================================================================= */
@@ -80,6 +83,8 @@ class LedManager
         /***** Operation state *****/
         void showOperationState(uint8_t state);
         uint8_t getOperationState() { return m_operationState; }
+        int showSpectralState();
+        uint8_t m_spectralState;
         /***** Status management *****/
         void showStatus(StatusVisual *status);
         void setBaselineStatus(StatusVisual *status);
