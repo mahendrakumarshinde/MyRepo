@@ -1,4 +1,83 @@
 #################################################################################################################################################################################
+Date: 30 JULY 2021
+Contributed By : Vikas Gaikwad,Sidramayya Swami,Mahendrakumar Shinde 
+Product Name : vEdge
+Release Name : v3.0.9 Enhancement,issue fixes   
+Firmware Versions :
+		1. vEdge_main(STM32) : 3.0.9
+		2. vEdge_wifi (ESP32): 3.0.9
+		3. Bootloader L1     : 2.0.0
+		4. Bootloader L2     : 2.1.0
+		5. Factory Firmware  : 2.0.0 
+################################################################################################################################################################################
+
+Release Details :
+
+   -  Message on MQTT explorer for unknown configs or Parsing failed configs in that specific firmware.
+   -  Added fix for LOR and fmax configs not getting applied
+   -  Updated the TCP timeout to optimized the http -11 error code
+   -  Need to fix the issue of OTA files download getting failed at 70%
+   -  Enabled the Data acquisition as per the DSP interval
+   -  Need to fix Publication of meta-data multiple times on GET-FFT request
+   -  WIFI NW Administrator taking longer for connection(Device to connect automatically on default SSID and password )
+   -  Skip default Admin file creation for first boot after OTA, in case STM doesn't have WIFI cred (int/ext)
+   -  Send periodic user config , added to send from internal flash is external flash wifi config is not present
+   -  Corrected dev diag Json format, added devi diag code for wifi initialization and run time
+   -  LED blink pattern change for Administrator and user configured wifi credentials
+   -  LED blink pattern change for MQTT, Secured MQTT and Unsecured MQTT
+   -  If device is connected (using ESP internal), without any credentials present at STM (int/ext) then update wifi config on STM
+   -  Sending cert,diagcert hash from STM to ESP only when device is in secured mode
+   -  Need to subtract the RMS offset value from the basic feature RMS output when device is running in IDLE device state.
+   -  Added Auto Grange Logic
+   -  Corrected the logic to send the certificate upgrade success message after migrating to new server.
+   -  Corrected the req hash mechanism of WIFI FW, this was causing reset of WIFI FW and delay in mqtt reconnection
+   -  When device velocity RMS values are locked at greater than highest threshold values, reset the device
+
+Features Requirements
+
+   -  User should get message that the inputted configs is not supported or unknown for the firmware running on device.
+   -  User should get message that the inputted configs is having Parsing failed error.
+   -  Synchronized the sensor data acquisition cycle as per the DSP interval
+   -  Subtract RMS offset to feature RMS output
+   -  Added the conditions for checking the raw values exceeding the max accel thresholds w.r.t grange.
+   -  If count is greater than 10 for the above condition for consecutive 5 firmware cycles , the grange ( for LSM /KNX) is updated to next grange in the grange array.
+   -  The updated grange is saved in FFT configuration file.
+   -  If grange is already present , the value is replaced with new updated grange value, if not the key is added in the fft configs file.
+
+Feature Description
+
+   -  Added a message for both unknown configs and Parsing failed configs .
+   -  Perform the data acq, feature computation and feature streaming in every cycle and published the data at an interval of DSP ,avoid the extra data acquisition and computation cycle and free the CPU bandwidth
+   -  The grange is updated for both LSM/KNX w.r.t to conditions added for thresholds.
+   -  The updated grange is saved or written in the fft config file.
+   -  The status message for user is published on mqtt with new grange value for notification.
+   -  The metadata packet which has grange value is also updated and sent to server in runtime when GET-FFT is hit.
+
+Issue Resolved
+
+   -  No error message for configuration messages for un supported firmware
+   -  Manual and Configurable G range
+   -  LOR , Fmax settings not getting applied on device.
+   -  Data streaming in App is not continuous.
+   -  While doing OTA FW download get stopped after 70 % main FW.
+   -  Device was having( connected on secure port) After OTA device is not connecting to server.( tires to connect with unsecure port))
+   -  For Meta data observed 3 retries with 200 response while FFT data collection
+   -  CERT Upgrade Success message is not observed at MQTT Explorer
+   -  Increases in vibration amplitude on completion of OTA process
+
+JIRA No
+
+   -  IUINTERNAL - 1981,IUINTERNAL-2037,IUINTERNAL - 1096, IUINTERNAL-1918
+   -  IF-213,IF-215,IF-214,IF-208,IF-216
+
+TODO
+   - NA
+
+Limitation
+   - NA
+
+
+#################################################################################################################################################################################
 Date: 16 JULY 2021
 Contributed By : Vikas Gaikwad,Sidramayya Swami,Mahendrakumar Shinde 
 Product Name : vEdge
