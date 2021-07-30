@@ -2055,6 +2055,7 @@ void Conductor::updateWiFiStatusCycle()
         updateMQTTStatus();
         m_lastWifiStatusUpdate = now;
     }
+    #if 0   //TODO : Once the API is active 
     if ( (WiFi.isConnected()) && (now - m_lastWifiHearbeatUpdate > (wifiStatusUpdateDelay*6))) {
         char message[256];
         if ( (mqttHelper.client.connected() && iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED) ||
@@ -2098,6 +2099,7 @@ void Conductor::updateWiFiStatusCycle()
         }
         m_lastWifiHearbeatUpdate = now;
     }
+    #endif
 }
 
 /**
