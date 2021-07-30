@@ -128,6 +128,7 @@ class IUESP8285 : public IUSerial, public Component
         bool getConnectionStatus(){return m_wifiConfirmPublication;}
         void setAwakeTimerStart() { m_awakeTimerStart = millis(); }
         void clearSendWifiConfig();
+        void sendVelRMSStatus(char *msg);
         char * getWiFiSsid() {return m_ssid;}
         void getWifiCredentials();
         bool updateWifiCredentials(char *wifiCred);

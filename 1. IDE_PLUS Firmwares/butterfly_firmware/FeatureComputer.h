@@ -8,13 +8,18 @@
 #include "AdvanceFeatureComputer.h"
 #include "IULSM6DSM.h"
 #include "IUKX222.h"
+#include "IUESP8285.h"
 #include "LedManager.h"
-extern float modbusFeaturesDestinations[8];
+
+extern LedManager ledManager;
+extern IUESP8285 iuWiFi;
 extern IULSM6DSM iuAccelerometer;
 extern IUKX222 iuAccelerometerKX222;
-#define MAXCYCLECOUNT 5
-#define MAXPEAKCOUNT 10
-
+extern float modbusFeaturesDestinations[8];
+extern uint8_t velMaxSampleCount;
+#define MAX_VELRMS512_LOOP_COUNT  20
+#define MAXCYCLECOUNT             5
+#define MAXPEAKCOUNT              10
 // LSM RMS OFFSET 
 #define LSM_RMS_OFFSET              0.3028
 
@@ -994,7 +999,59 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
             if(m_id == 31 ){ featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Y] = integratedRMS1*resolution; } //velRMS512Y
             if(m_id == 32 ){ featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Z] = integratedRMS1*resolution; } //velRMS512Z
             //Serial.print(m_destinations[2]->getName());Serial.print("\t");Serial.println(integratedRMS1*resolution);
-            
+
+#if 1 // JIRA1918 - Velocity RMS values are constant and same all 3 axis after OTA
+            if(m_id == 32) {
+                if((modbusFeaturesDestinations[2] > 0 && modbusFeaturesDestinations[3] > 0 && modbusFeaturesDestinations[4] > 0) &&
+                (fabs(modbusFeaturesDestinations[2] - modbusFeaturesDestinations[3]) < 1e-9) &&
+                (fabs(modbusFeaturesDestinations[3] - modbusFeaturesDestinations[4]) < 1e-9) ) {
+                    velMaxSampleCount++;
+                    if(velMaxSampleCount > MAX_VELRMS512_LOOP_COUNT) {
+                        velMaxSampleCount = 0;
+                        if (featureDebugMode) {
+                            debugPrint("velRMS512 OVerflow !!!!, Reset device..");
+                            debugPrint(millis(), false);
+                            debugPrint(F(" -> "), false);
+                            debugPrint(m_destinations[2]->getName(), false);
+                            debugPrint(" velRMS512X=velRMS512Y=velRMS512Z: ", false);
+                            debugPrint(modbusFeaturesDestinations[2]);
+                        }
+                        char msg[64] = {0x00};
+                        if ((FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor) && (iuAccelerometer.lsmPresence)) {
+                            iuAccelerometer.softReset();    // softreset LSMSPI
+                            strcpy(msg, "LSM:Vel RMS of all 3 axis values constant");
+                        }
+                        else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (iuAccelerometerKX222.kionixPresence)) {
+                            iuAccelerometerKX222.softReset(); // softreset KX222
+                            strcpy(msg, "KX222:Vel RMS of all 3 axis values constant");
+                        }
+                        if (iuWiFi.isConnected() == true) {
+                            iuWiFi.sendVelRMSStatus(msg);
+                        } 
+                        for (size_t i = 0; i < 3; i++) {
+                            ledManager.overrideColor(RGB_RED);
+                            delay(300);
+                            ledManager.stopColorOverride();
+                            delay(300);
+                        }
+                        ledManager.stopColorOverride();
+                        for (size_t i = 0; i < 3; i++) {
+                            ledManager.overrideColor(RGB_BLUE);
+                            delay(300);
+                            ledManager.stopColorOverride();
+                            delay(300);
+                        }
+                        ledManager.stopColorOverride();
+                        delay(1000);
+                        STM32.reset();
+                    }
+                }
+                else {
+                    velMaxSampleCount = 0;            
+                }
+            }
+#endif
+
             // 4. 2nd integration in frequency domain
             T scaling2 = (T) RFFTAmplitudes::getRescalingFactorForIntegral(
                 amplitudes, sampleCount, samplingRate);
