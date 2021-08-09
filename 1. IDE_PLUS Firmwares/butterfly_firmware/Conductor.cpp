@@ -2681,6 +2681,7 @@ void Conductor::processUserCommandForWiFi(char *buff,
             feedbackSerial->write(';');
         }
     } else if (strcmp(buff, "WIFI-DISABLE") == 0) {
+        wifiDisableFlag = true;
         iuWiFi.setPowerMode(PowerMode::DEEP_SLEEP);
         updateStreamingMode();
         if (isBLEConnected()) {
@@ -4213,6 +4214,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
         case MSPCommand::WIFI_ALERT_CONNECTED:
             syncLostCount = 0;
             m_wifiConnected = true;
+            wifiDisableFlag = false;
             if (loopDebugMode) { debugPrint(F("WIFI-CONNECTED;")); }
             if(getDatetime() < 1590000000.00){iuWiFi.sendMSPCommand(MSPCommand::GOOGLE_TIME_QUERY);}
             if (isBLEConnected()) {
@@ -4227,6 +4229,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
         case MSPCommand::WIFI_ALERT_DISCONNECTED:
             syncLostCount = 0;
             m_wifiConnected = false;
+            wifiDisableFlag = false;
             certDownloadInProgress = false;
             if (isBLEConnected()) {
                 iuBluetooth.write("WIFI-DISCONNECTED;");
@@ -4261,17 +4264,19 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 iuBluetooth.write("MQTT-CONNECTED;");
             }
             m_mqttConnected = true;
+            mqttStatusFlag = true;
             if(conductor.getUsageMode() == UsageMode::OTA) {         // NOTE : Need to analyze the Impact on OTA 
                 if (loopDebugMode) { debugPrint(F("OTA DNLD MODE or Certificates Upgrade Mode")); }
                 ledManager.stopColorOverride();
                 ledManager.showStatus(&STATUS_OTA_DOWNLOAD);
             }
-            mqttReset(false);
+            //mqttReset(false);
             break;
         case MSPCommand::MQTT_ALERT_DISCONNECTED:
             if (isBLEConnected()) {
                 iuBluetooth.write("MQTT-DISCONNECTED;");
             }
+            mqttStatusFlag = false;
             if(conductor.getUsageMode() == UsageMode::OTA) {
                 if (loopDebugMode && !certDownloadMode) { 
                     debugPrint(F("OTA In Progress - MQTT-DISCONNECTED"));
@@ -4294,7 +4299,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 delay(100);
             #endif
             }
-            mqttReset(true);
+            //mqttReset(true);
             break;
         case MSPCommand::ASK_WIFI_CONFIG:
             if (DOSFS.exists("/iuconfig/wifi0.conf"))

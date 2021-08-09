@@ -84,6 +84,8 @@ void IUESP8285::setupHardware()
  */
 void IUESP8285::turnOn(bool forceTimerReset)
 {
+    conductor.wifiDisableFlag = false;
+    conductor.syncLostCount = 0;       //change after enabling auto flashing feature
     if (!m_on)
     {
         digitalWrite(ESP32_ENABLE_PIN, HIGH);
