@@ -839,6 +839,41 @@ void loop()
                 iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HOST_FIRMWARE_VERSION,FIRMWARE_VERSION);
                 sensorStatus = false;
             }
+            //device reset when mqtt is disconnected
+
+            if(conductor.mqttStatusFlag == false && conductor.wifiDisableFlag == false){                         
+                //debugPrint("MQTT_disconnected_loop : ");
+                uint32_t nowTime = millis();
+                if(conductor.devResetTime ==0){
+                    //debugPrint("*************************************************");
+                    //debugPrint("devResetTime = nowTime : ",false);
+                    // debugPrint(nowTime);
+                    conductor.devResetTime = nowTime;
+                }
+                if(nowTime - conductor.devResetTime > MQTT_DISCONNECTION_TIMEOUT ){      //trigger timeout and wifiDisable not received from app
+                    //Serial.print("device is restarting");
+                    conductor.devResetTime = nowTime;
+                    if(loopDebugMode){
+                        debugPrint("devresetTime : ",false);
+                        debugPrint(conductor.devResetTime);
+                        debugPrint("restarting device on MQTT_DISCONNECTION_TIMEOUT: ");    
+                    }
+                    delay(1000);
+                    DOSFS.end();
+                    delay(10);
+                    STM32.reset();
+                }
+            }else if(conductor.syncLostCount >= 3 && conductor.wifiDisableFlag == false){        //syncCount is 3 and wifiDisable is not received then restart
+                 if(loopDebugMode){debugPrint("syncLost count is equal to 3 so restarting device ");}
+                delay(1000);
+                DOSFS.end();
+                delay(10);
+                STM32.reset();
+
+            }else if(conductor.mqttStatusFlag == true){
+                conductor.devResetTime = 0;
+            }
+
             
             // if (iuWiFi.isConnected() == true && conductor.requestConfig == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
             // {
@@ -859,6 +894,8 @@ void loop()
             
             iuUSB.readMessages();
             iuBluetooth.readMessages();
+        }else if(conductor.getUsageMode() == UsageMode::OTA){
+            conductor.devResetTime = 0;
         }
         if (iuBluetooth.isBLEAvailable ||
            (iuBluetooth.isBLEAvailable == false && iuBluetooth.deviceIdMode == DEVID_MODE2) ||

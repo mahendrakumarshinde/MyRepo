@@ -75,7 +75,7 @@
 #define MAX_SYNC_COUNT            20
 
 /* Timeout for MQTT_DISCONNECTED */
-#define MQTT_DISCONNECTION_TIMEOUT 900000               //900000 //15min
+#define MQTT_DISCONNECTION_TIMEOUT 180000 //3min               //900000 //15min
 
 #define CONFIG_REQUEST_TIMEOUT   14400000      // 4 Hrs
 
@@ -440,9 +440,11 @@ class Conductor
         uint8_t syncLostCount = 0;
         void selfFwUpgradeInit();
         void mqttReset(bool timerflag);
-        uint32_t devResetTime;
+        uint32_t devResetTime =0;
         uint16_t m_wifiDiagErrCode = 0;
         bool certUpgradeStsPending = false;
+        bool mqttStatusFlag = false;
+        bool wifiDisableFlag = false;
     #ifdef DEVIDFIX_TESTSTUB
         uint8_t flagval2 = 0;
     #endif
