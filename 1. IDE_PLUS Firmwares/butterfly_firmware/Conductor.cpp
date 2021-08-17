@@ -2506,7 +2506,7 @@ void Conductor::processCommand(char *buff)
             else if (strcmp(buff, "IUGET_FIRMWARE_VERSION") == 0)
             {
                 if (iuWiFi.isConnected()) {
-                    char message[128];
+                    char message[160];
                     strcat(message, "{\"device_id\":\"");
                     strcat(message, m_macAddress.toString().c_str());
                     strcat(message, "\",\"wifi_macId\":\"");
@@ -2515,6 +2515,8 @@ void Conductor::processCommand(char *buff)
                     strcat(message, FIRMWARE_VERSION);
                     strcat(message, ",\"wifiFirmware_ver\":");
                     strcat(message, iuWiFi.espFirmwareVersion);
+                    strcat(message, ",\"device-type\":");
+                    strcat(message, "vEdge 1.6");
                     strcat(message, "}");
                     iuWiFi.sendMSPCommand(MSPCommand::PUBLISH_FIRMWARE_VER,message);
                 }
