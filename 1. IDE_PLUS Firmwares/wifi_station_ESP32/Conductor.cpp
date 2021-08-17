@@ -2183,6 +2183,8 @@ void Conductor::debugPrintWifiInfo()
     strcat(destination, m_bleMAC.toString().c_str());
     strcat(destination, "\",\"mqtt\":\"");
     strcat(destination, "on");
+    strcat(destination, "\",\"device-type\":\"");
+    strcat(destination, "vEdge 1.6");
     /*if (mqttOn)
     {
         strcat(destination, "on");
