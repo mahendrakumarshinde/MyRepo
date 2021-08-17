@@ -109,8 +109,10 @@ class Conductor
         static const uint32_t HTTPSRawDataRetryTimeout = 5000; //ms;
         uint32_t HTTPRawDataTimeout = 0;
         uint32_t HTTPSRawDataTimeout = 0;
+        uint32_t metaDataTimeout = 0;
         uint8_t RawdataHTTPretryCount = 0;
         uint8_t RawdataHTTPSretryCount = 0;
+        uint8_t metaDataRetryCount = 0;
         /***** Core *****/
         Conductor();
         virtual ~Conductor() {}

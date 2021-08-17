@@ -708,24 +708,35 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 JsonObject& root = jsonBuffer.parseObject(buffer);
                 JsonVariant config = root;
                 double timeStamp = config["timestamp"];
-
+                metaDataRetryCount = 0;
 
                 //memcpy(metaDataBuffer, buffer, sizeof(buffer));
-                if(iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED){
-                    httpStatusCode = httpsPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_metadata_path,
-                                                    accelRawDataHelper.m_endpointPort,(uint8_t*) &metaDataBuffer, 
-                                                    httpBufferPointer,"", ssl_rootca_cert, HttpContentType::applicationJSON);
-                }else if(iuWiFiFlash.readMemory(CONNECTION_MODE) == UNSECURED){
-                    httpStatusCode = httpPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_metadata_path,
+                while(metaDataRetryCount < 3 ){
+                    if((millis() - metaDataTimeout) > HTTPSRawDataRetryTimeout){
+                        metaDataTimeout = millis();
+                        if(iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED){
+                                    httpStatusCode = httpsPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_metadata_path,
+                                                            accelRawDataHelper.m_endpointPort,(uint8_t*) &metaDataBuffer, 
+                                                            httpBufferPointer,"", ssl_rootca_cert, HttpContentType::applicationJSON);
+                        }else if(iuWiFiFlash.readMemory(CONNECTION_MODE) == UNSECURED){
+                            httpStatusCode = httpPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_metadata_path,
                                          accelRawDataHelper.m_endpointPort, (uint8_t*) &metaDataBuffer, 
                                          httpBufferPointer,"", NULL, HttpContentType::applicationJSON);
+                        }
+                         char metaDataAckBuffer[1 + 4];      // axis + 3 digit HTTP status code + null terminator
+                        itoa(httpStatusCode, &metaDataAckBuffer[0], 10);
+                        iuSerial->sendMSPCommand(MSPCommand::METADATA_ACK, metaDataAckBuffer);
+
+                        snprintf(metaData_ack_config, 150, "{\"messageType\":\"meta-data-ack\",\"mac\":\"%s\",\"httpCode\":\"%d\",\"timestamp\":%.3f}",
+                                    m_bleMAC.toString().c_str(),httpStatusCode,timeStamp);
+                        mqttHelper.publish(COMMAND_RESPONSE_TOPIC, metaData_ack_config);
+                        //iuSerial->sendMSPCommand(MSPCommand::RECEIVE_METADATA_ACK, metaData_ack_config);
+                        if((httpStatusCode == 200)){
+                            break;
+                        }
+                        metaDataRetryCount++;
+                    } 
                 }
-
-
-                snprintf(metaData_ack_config, 150, "{\"messageType\":\"meta-data-ack\",\"mac\":\"%s\",\"httpCode\":\"%d\",\"timestamp\":%.3f}",
-                         m_bleMAC.toString().c_str(),httpStatusCode,timeStamp);
-                mqttHelper.publish(COMMAND_RESPONSE_TOPIC, metaData_ack_config);
-                //iuSerial->sendMSPCommand(MSPCommand::RECEIVE_METADATA_ACK, metaData_ack_config); 
             }
             break;    
         case MSPCommand::SEND_RAW_DATA:

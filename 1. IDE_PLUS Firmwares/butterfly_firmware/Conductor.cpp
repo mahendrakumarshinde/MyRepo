@@ -4142,14 +4142,34 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             if (loopDebugMode){ debugPrint(F("ASK_HOST_BLOCK_SIZE")); }
             iuWiFi.sendHostBlockSize(FFTConfiguration::currentBlockSize);
             break;
+        case MSPCommand:: METADATA_ACK:{
+            metadataStatusCode = atoi(&buff[0]);
+            debugPrint("meta Data Status code : ",false);
+            debugPrint(metadataStatusCode);
+            if(metadataStatusCode == 200){
+                metaDataSentSuccess = true;
+            }else{
+                metaDataSentSuccess = false;
+            }
+            break;
+        }
         case MSPCommand::HTTPS_ACK: {
             if (loopDebugMode){ debugPrint(F("HTTPS_ACK")); }
             if (buff[0] == 'X') {
                 httpsStatusCodeX = atoi(&buff[1]);
+                if(httpsStatusCodeX == 200){
+                    RawDataTotalTimeout = millis();
+                }
             } else if (buff[0] == 'Y') {
                 httpsStatusCodeY = atoi(&buff[1]);
+                if(httpsStatusCodeY == 200){
+                    RawDataTotalTimeout = millis();
+                }
             } else if (buff[0] == 'Z') {
                 httpsStatusCodeZ = atoi(&buff[1]);
+                if(httpsStatusCodeZ == 200){
+                    RawDataTotalTimeout = millis();
+                }
             }
             if (loopDebugMode) {
                 debugPrint("HTTPS status codes X | Y | Z ",false);
@@ -4175,10 +4195,19 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             if (loopDebugMode){ debugPrint(F("HTTPS_OEM_ACK")); }
             if (buff[0] == 'X') {
                 httpsOEMStatusCodeX = atoi(&buff[1]);
+                if(httpsOEMStatusCodeX == 200){
+                    RawDataTotalTimeout = millis();
+                }
             } else if (buff[0] == 'Y') {
                 httpsOEMStatusCodeY = atoi(&buff[1]);
+                if(httpsOEMStatusCodeY == 200){
+                    RawDataTotalTimeout = millis();
+                }
             } else if (buff[0] == 'Z') {
                 httpsOEMStatusCodeZ = atoi(&buff[1]);
+                if(httpsOEMStatusCodeZ == 200){
+                    RawDataTotalTimeout = millis();
+                }
             }
             if (loopDebugMode) {
                 debugPrint("HTTPS OEM status codes X | Y | Z ",false);
@@ -4358,6 +4387,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 debugPrint(F("WIFI_CONFIRM_ACTION: "), false);
                 debugPrint(buff);
             }
+            RawDataTotalTimeout = millis();
             if(strcmp(buff,"X") == 0){
                 XrecByWifi = true;
             }else if(strcmp(buff,"Y") == 0){
@@ -5840,7 +5870,7 @@ void Conductor::manageRawDataSending() {
     // Start raw data transmission session
     if(RawDataState::startRawDataCollection &&
        RawDataState::XCollected && RawDataState::YCollected && RawDataState::ZCollected &&
-       !RawDataState::rawDataTransmissionInProgress)
+       !RawDataState::rawDataTransmissionInProgress && metaDataSentSuccess == true)
     {
         if(loopDebugMode) {
             debugPrint("Raw data request: collected raw data, starting transmission");
@@ -5858,7 +5888,7 @@ void Conductor::manageRawDataSending() {
             prepareRawDataPacketAndSend('X');
             XSentToWifi = true; 
             RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
-            RawDataTotalTimeout = millis();
+            //RawDataTotalTimeout = millis();                 //need to disable
             iuWiFi.m_setLastConfirmedPublication();
             if(loopDebugMode) {
                 debugPrint("Raw data request: X sent to wifi");
@@ -5869,7 +5899,7 @@ void Conductor::manageRawDataSending() {
             YsentToWifi = true;
             sendNextAxis = false;
             RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
-            RawDataTotalTimeout = millis();
+            //RawDataTotalTimeout = millis();
             iuWiFi.m_setLastConfirmedPublication();
             if(loopDebugMode) {
                 debugPrint("Raw data request: X delivered, Y sent to wifi");
@@ -5880,7 +5910,7 @@ void Conductor::manageRawDataSending() {
             ZsentToWifi = true;
             sendNextAxis = false;
             RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
-            RawDataTotalTimeout = millis();
+            //RawDataTotalTimeout = millis();
             iuWiFi.m_setLastConfirmedPublication();
             if(loopDebugMode) {
                 debugPrint("Raw data request: Y delivered, Z sent to wifi");
@@ -5920,6 +5950,7 @@ void Conductor::manageRawDataSending() {
                 }
             RawDataState::startRawDataCollection = false;
             RawDataState::rawDataTransmissionInProgress = false;    
+            metaDataSentSuccess = false;    
             }
         }else{
             if (httpsStatusCodeX == 200 && httpsStatusCodeY == 200 && httpsStatusCodeZ == 200){
@@ -5928,15 +5959,35 @@ void Conductor::manageRawDataSending() {
                 }
                 RawDataState::startRawDataCollection = false;
                 RawDataState::rawDataTransmissionInProgress = false;
+                metaDataSentSuccess = false;
             }
         }
-        
-        if((millis() - RawDataTotalTimeout) > 30000)
-        { // IDE1.5_PORT_CHANGE -- On timeout of 4 Sec. if no response OK/FAIL then abort transmission
+
+            // if((millis() - rawDataAxisTimeout) > 45000 && rawDataAxisTimeoutFlag == true){
+            //     RawDataState::startRawDataCollection = false;
+            //     RawDataState::rawDataTransmissionInProgress = false;              
+            //     if(loopDebugMode){
+            //         debugPrint("Axis RawDataTimeout Exceeded,transmission Aborted");
+            //     }
+            // }
+        if(httpOEMConfigPresent){
+            if((millis() - RawDataTotalTimeout) > 120000){ // IDE1.5_PORT_CHANGE -- On timeout of 4 Sec. if no response OK/FAIL then abort transmission
             RawDataState::startRawDataCollection = false;
-            RawDataState::rawDataTransmissionInProgress = false;              
-            if(loopDebugMode){
-                debugPrint("RawDataTimeout Exceeded,transmission Aborted");
+            RawDataState::rawDataTransmissionInProgress = false;
+            metaDataSentSuccess = false;              
+                if(loopDebugMode){
+                    debugPrint("RawDataTimeout Exceeded,transmission Aborted httpOEMConfig Present");
+                }
+            }
+        }else 
+        { // IDE1.5_PORT_CHANGE -- On timeout of 4 Sec. if no response OK/FAIL then abort transmission
+            if((millis() - RawDataTotalTimeout) > 60000){
+                RawDataState::startRawDataCollection = false;
+                RawDataState::rawDataTransmissionInProgress = false;
+                metaDataSentSuccess = false;              
+                if(loopDebugMode){
+                    debugPrint("RawDataTimeout Exceeded,transmission Aborted");
+                }
             }
         }
     }

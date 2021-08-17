@@ -376,10 +376,14 @@ class Conductor
         bool XrecByWifi,YrecByWifi,ZrecByWifi;
         uint32_t RawDataTimeout = 0;
         uint32_t RawDataTotalTimeout = 0;
+        uint32_t rawDataAxisTimeout = 0;
         double rawDataRecordedAt, lastPacketSentToESP;
         IUMessageFormat::rawDataPacket rawData;
         void prepareFFTMetaData();      //prepareFFTMetadata()
         int gRange_metaData;      //currentgRange_metaData
+        int metadataStatusCode;
+        bool metaDataSentSuccess = false;
+        bool rawDataAxisTimeoutFlag = true;
         //Send Sensor error codes
         void setSensorStatus(SensorStatusCode errorCode);
         void sendSensorStatus();
