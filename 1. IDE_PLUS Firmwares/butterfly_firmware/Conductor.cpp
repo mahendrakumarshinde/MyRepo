@@ -4150,6 +4150,7 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 metaDataSentSuccess = true;
             }else{
                 metaDataSentSuccess = false;
+                RawDataState::startRawDataCollection = false;
             }
             break;
         }
