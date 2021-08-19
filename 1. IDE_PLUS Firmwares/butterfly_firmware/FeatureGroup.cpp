@@ -287,7 +287,7 @@ void FeatureGroup::bufferAndStream(
 //    Serial.print("maxBufferDelay :");Serial.println(now - m_bufferStartTime);
 //    Serial.print("maxBufferMargin :");Serial.println(maxBufferSize - m_bufferIndex);
    if (m_bufferStartTime == 0 ||
-       now - m_bufferStartTime > maxBufferDelay ||
+        now - m_bufferStartTime > conductor.dataSendingPeriod /*maxBufferDelay*/ ||
        maxBufferSize - m_bufferIndex < maxBufferMargin) {
        // Send current data
        m_featureBuffer[m_bufferIndex] = 0;

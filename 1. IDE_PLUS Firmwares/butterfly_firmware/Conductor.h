@@ -448,6 +448,7 @@ class Conductor
         bool certUpgradeStsPending = false;
         bool mqttStatusFlag = false;
         bool wifiDisableFlag = false;
+        uint32_t dataSendingPeriod;
     #ifdef DEVIDFIX_TESTSTUB
         uint8_t flagval2 = 0;
     #endif
@@ -549,7 +550,7 @@ class Conductor
         bool m_downloadSuccess = false;
         bool m_upgradeSuccess = false;
         bool m_mqttConnected = false;
-        uint32_t dataSendingPeriod;
+        //uint32_t dataSendingPeriod;
         // Certificates buffers
         char m_certType[15];
         char m_keyType[15];
