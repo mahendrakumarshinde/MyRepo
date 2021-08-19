@@ -695,7 +695,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 {   //Serial.println("\nUsing rootCA 1");
                 iuWiFiFlash.readFile(IUESPFlash::CFG_HTTPS_ROOTCA1,ssl_rootca_cert,sizeof(ssl_rootca_cert));
                 }
-
+                iuSerial->sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION, "M");
                 char metaData_ack_config[150];
                 static int httpStatusCode = 0;
                 strcpy(accelRawDataHelper.m_metadata_path, accelRawDataHelper.m_endpointRoute);
@@ -723,7 +723,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                                          accelRawDataHelper.m_endpointPort, (uint8_t*) &metaDataBuffer, 
                                          httpBufferPointer,"", NULL, HttpContentType::applicationJSON);
                         }
-                         char metaDataAckBuffer[1 + 4];      // axis + 3 digit HTTP status code + null terminator
+                         char metaDataAckBuffer[5];      // axis + 3 digit HTTP status code + null terminator
                         itoa(httpStatusCode, &metaDataAckBuffer[0], 10);
                         iuSerial->sendMSPCommand(MSPCommand::METADATA_ACK, metaDataAckBuffer);
 

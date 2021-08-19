@@ -2584,7 +2584,7 @@ void Conductor::processCommand(char *buff)
                 delay(500);
                 if (m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE) {
                     rawDataRequest();
-                    prepareFFTMetaData();
+                    //prepareFFTMetaData();
                     // startRawDataSendingSession(); // Will be handled in the main loop
                 } else if (m_streamingMode == StreamingMode::ETHERNET) {
                     sendAccelRawData(0);  // Axis X
@@ -4143,15 +4143,20 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             iuWiFi.sendHostBlockSize(FFTConfiguration::currentBlockSize);
             break;
         case MSPCommand:: METADATA_ACK:{
-            metadataStatusCode = atoi(&buff[0]);
-            debugPrint("meta Data Status code : ",false);
-            debugPrint(metadataStatusCode);
-            if(metadataStatusCode == 200){
-                metaDataSentSuccess = true;
-            }else{
-                metaDataSentSuccess = false;
-                RawDataState::startRawDataCollection = false;
-            }
+            httpsStatusCodemetaData = atoi(&buff[0]);
+            debugPrint("METADATA_ACK: ",false);
+            debugPrint(httpsStatusCodemetaData);
+            if(httpsStatusCodemetaData == 200){
+                    RawDataTotalTimeout = millis();
+            }//else {
+                //wificonfirmpublications should reset if MSP commands not received.
+            // }
+            // if(metadataStatusCode == 200){
+            //     metaDataSentSuccess = true;
+            // }else{
+            //     metaDataSentSuccess = false;
+            //     RawDataState::startRawDataCollection = false;
+            // }
             break;
         }
         case MSPCommand::HTTPS_ACK: {
@@ -4395,6 +4400,8 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 YrecByWifi = true;
             }else if(strcmp(buff,"Z") == 0){
                 ZrecByWifi = true;
+            } else if(strcmp(buff,"M") == 0){
+                metadatarecByWifi = true;
             }
             break;
         case MSPCommand::WIFI_CONFIRM_PUBLICATION:
@@ -5871,7 +5878,7 @@ void Conductor::manageRawDataSending() {
     // Start raw data transmission session
     if(RawDataState::startRawDataCollection &&
        RawDataState::XCollected && RawDataState::YCollected && RawDataState::ZCollected &&
-       !RawDataState::rawDataTransmissionInProgress && metaDataSentSuccess == true)
+       !RawDataState::rawDataTransmissionInProgress)
     {
         if(loopDebugMode) {
             debugPrint("Raw data request: collected raw data, starting transmission");
@@ -5880,12 +5887,28 @@ void Conductor::manageRawDataSending() {
         RawDataTotalTimeout = millis();
         httpsStatusCodeX = httpsStatusCodeY = httpsStatusCodeZ = 0;
         httpsOEMStatusCodeX = httpsOEMStatusCodeY = httpsOEMStatusCodeZ = 0;
+        httpsStatusCodemetaData = 0;
         sendNextAxis = false;
         XSentToWifi = YsentToWifi = ZsentToWifi = false; 
-        XrecByWifi = YrecByWifi = ZrecByWifi= false;   
+        XrecByWifi = YrecByWifi = ZrecByWifi= false;
+        metadatarecByWifi = false;
+        metadataSentToWifi = false;
     }
+
     if (RawDataState::rawDataTransmissionInProgress) {
-        if (((millis() - RawDataTimeout) > 8000 && !XrecByWifi) || (!XSentToWifi && !XrecByWifi)) {
+
+        if (((millis() - RawDataTimeout) > 8000 && !metadatarecByWifi) || (!metadataSentToWifi && !metadatarecByWifi)) {
+            prepareFFTMetaData();
+            metadataSentToWifi = true;
+            RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
+            //RawDataTotalTimeout = millis();                 //need to disable
+            iuWiFi.m_setLastConfirmedPublication();
+            if(loopDebugMode) {
+                debugPrint("Raw data request: metadata sent to wifi");
+            }
+
+        }
+        if (((millis() - RawDataTimeout) > 8000 && !XrecByWifi && httpsStatusCodemetaData == 200 ) || (!XSentToWifi && !XrecByWifi && httpsStatusCodemetaData == 200)) {
             prepareRawDataPacketAndSend('X');
             XSentToWifi = true; 
             RawDataTimeout = millis(); // IDE1.5_PORT_CHANGE
@@ -6035,7 +6058,7 @@ void Conductor::periodicSendAccelRawData()
         delay(500);
         if (m_streamingMode == StreamingMode::WIFI || m_streamingMode == StreamingMode::WIFI_AND_BLE) {
             rawDataRequest();
-            prepareFFTMetaData();
+            //prepareFFTMetaData();
             // startRawDataSendingSession();
         } else if (m_streamingMode == StreamingMode::ETHERNET) {
             sendAccelRawData(0);
