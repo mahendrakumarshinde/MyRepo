@@ -5973,8 +5973,7 @@ void Conductor::manageRawDataSending() {
                     debugPrint("Raw data request: Z delivered, ending transmission session");
                 }
             RawDataState::startRawDataCollection = false;
-            RawDataState::rawDataTransmissionInProgress = false;    
-            metaDataSentSuccess = false;    
+            RawDataState::rawDataTransmissionInProgress = false;      
             }
         }else{
             if (httpsStatusCodeX == 200 && httpsStatusCodeY == 200 && httpsStatusCodeZ == 200){
@@ -5983,7 +5982,6 @@ void Conductor::manageRawDataSending() {
                 }
                 RawDataState::startRawDataCollection = false;
                 RawDataState::rawDataTransmissionInProgress = false;
-                metaDataSentSuccess = false;
             }
         }
 
@@ -5994,21 +5992,20 @@ void Conductor::manageRawDataSending() {
             //         debugPrint("Axis RawDataTimeout Exceeded,transmission Aborted");
             //     }
             // }
+            //If OEM is present then timeout is 2min
         if(httpOEMConfigPresent){
             if((millis() - RawDataTotalTimeout) > 120000){ // IDE1.5_PORT_CHANGE -- On timeout of 4 Sec. if no response OK/FAIL then abort transmission
             RawDataState::startRawDataCollection = false;
-            RawDataState::rawDataTransmissionInProgress = false;
-            metaDataSentSuccess = false;              
+            RawDataState::rawDataTransmissionInProgress = false;              
                 if(loopDebugMode){
                     debugPrint("RawDataTimeout Exceeded,transmission Aborted httpOEMConfig Present");
                 }
             }
         }else 
-        { // IDE1.5_PORT_CHANGE -- On timeout of 4 Sec. if no response OK/FAIL then abort transmission
+        { // If iu server fails after 3 retries. if no response OK/FAIL then abort transmission
             if((millis() - RawDataTotalTimeout) > 60000){
                 RawDataState::startRawDataCollection = false;
-                RawDataState::rawDataTransmissionInProgress = false;
-                metaDataSentSuccess = false;              
+                RawDataState::rawDataTransmissionInProgress = false;              
                 if(loopDebugMode){
                     debugPrint("RawDataTimeout Exceeded,transmission Aborted");
                 }

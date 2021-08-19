@@ -723,7 +723,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                                          accelRawDataHelper.m_endpointPort, (uint8_t*) &metaDataBuffer, 
                                          httpBufferPointer,"", NULL, HttpContentType::applicationJSON);
                         }
-                         char metaDataAckBuffer[5];      // axis + 3 digit HTTP status code + null terminator
+                         char metaDataAckBuffer[5];      
                         itoa(httpStatusCode, &metaDataAckBuffer[0], 10);
                         iuSerial->sendMSPCommand(MSPCommand::METADATA_ACK, metaDataAckBuffer);
 

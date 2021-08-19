@@ -383,8 +383,6 @@ class Conductor
         void prepareFFTMetaData();      //prepareFFTMetadata()
         int gRange_metaData;      //currentgRange_metaData
         int metadataStatusCode;
-        bool metaDataSentSuccess = false;
-        bool rawDataAxisTimeoutFlag = true;
         //Send Sensor error codes
         void setSensorStatus(SensorStatusCode errorCode);
         void sendSensorStatus();
