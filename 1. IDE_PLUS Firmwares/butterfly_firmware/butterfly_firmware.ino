@@ -809,7 +809,7 @@ void loop()
                       conductor.certUpgradeStsPending = false;
                       conductor.sendOtaStatusMsg(MSPCommand::CERT_UPGRADE_SUCCESS,CERT_UPGRADE_COMPLETE,"CERT-RCA-0000");
             } 
-            if (iuWiFi.isConnected() == true && conductor.flashStatusFlag == true && conductor.validTimeStamp() && iuWiFi.getConnectionStatus())
+            if (iuWiFi.isConnected() == true && conductor.flashStatusFlag == true && conductor.validTimeStamp())
             {
                 conductor.sendFlashStatusMsg(FLASH_SUCCESS,"Flash Recovery Successfull..Send the configuration");
                 conductor.flashStatusFlag = false;
