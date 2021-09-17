@@ -23,19 +23,19 @@ namespace FFTConfiguration {
     // const int samplingRateConfigurations = 4;
     //const int samplingRateConfigurations = 6;
     const int LSMsamplingRateOption = 5 ;
-    const int KNXsamplingRateOption = 6 ;
+    const int KNXsamplingRateOption = 5 ;
     const int blockSizeConfigurations = 6;
     const int LSMgRangeOption = 4;
     const int KNXgRangeOption = 3;
     // Arrays which keep track of available configurations
     const int samplingRates[LSMsamplingRateOption] = { 208, 416, 833, 1660, 3330 };
-    const int samplingRates2[KNXsamplingRateOption] = { 800, 1600, 3200, 6400, 12800, 25600};
+    const int samplingRates2[KNXsamplingRateOption] = { 800, 1600, 3200, 6400, 12800};
     const int blockSizes[blockSizeConfigurations] = { 256, 512, 1024, 2048, 4096, 8192 };
     const int LSMgRanges[LSMgRangeOption] = {2, 4, 8, 16 };
     const int KNXgRanges[KNXgRangeOption] = {8, 16, 32};
 
     // Default parameter values
-    const int DEFAULT_SAMPLING_RATE = 25600;
+    const int DEFAULT_SAMPLING_RATE = 12800;
     const int DEFALUT_LOW_CUT_OFF_FREQUENCY_KNX = 10;
     const int DEFALUT_LOW_CUT_OFF_FREQUENCY_LSM = 10;
     const int DEFAULT_BLOCK_SIZE = 8192;

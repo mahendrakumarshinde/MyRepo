@@ -7694,7 +7694,7 @@ uint8_t Conductor::firmwareConfigValidation(File *ValidationFile)
     ValidationFile->println(F("DEVICE FFT CONFIG CHECK:-"));
     ValidationFile->print(F(" - FFT DEFAULT SAMPLING RATE:"));
     ValidationFile->println(FFTConfiguration::DEFAULT_SAMPLING_RATE);
-    if(FFTConfiguration::DEFAULT_SAMPLING_RATE != 25600)
+    if(FFTConfiguration::DEFAULT_SAMPLING_RATE != 12800)
     {
         ValidationFile->println(F("   Validation [FFT]-Default Sampling Rate: Fail !"));
         if(loopDebugMode){ debugPrint(F("Validation [FFT]-Default Sampling Rate: Fail !")); }
