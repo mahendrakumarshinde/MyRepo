@@ -2343,6 +2343,10 @@ void Conductor::configureMainOptions(JsonVariant &config)
     if(value.success()){
         m_mainFeatureGroup->setDataSendPeriod(value.as<uint16_t>());
         dataSendingPeriod =  (uint32_t) (value.as<int>());
+        if(dataSendingPeriod == 1000) {
+            dataSendingPeriod = 2000;
+            m_mainFeatureGroup->setDataSendPeriod(dataSendingPeriod); 
+        }
         // NOTE: Older firmware device will not set this parameter even if configJson contains it.
     }
     value = config["DDSP"];

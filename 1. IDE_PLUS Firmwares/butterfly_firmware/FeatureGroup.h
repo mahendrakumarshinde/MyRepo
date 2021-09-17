@@ -20,7 +20,7 @@ class FeatureGroup //: public Feature
     public:
         /***** Preset values and default settings *****/
         static const uint8_t maxFeatureCount = 15;
-        static const uint16_t maxBufferSize = 700;
+        static const uint16_t maxBufferSize = 512;
         static const uint16_t maxBufferMargin = 200;
         static const uint32_t maxBufferDelay = 3000;
         /***** Instance registry *****/

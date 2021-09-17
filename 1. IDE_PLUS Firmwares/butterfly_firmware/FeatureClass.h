@@ -56,7 +56,7 @@ class FeatureComputer;
 class Feature
 {
     public:
-        static const uint8_t nameLength = 3;
+        static const uint8_t nameLength = 4;
         /* TODO - For now, only slideOption::FIXED is implemented => need to
         implement slideOption::ROLLING */
         enum slideOption : uint8_t {FIXED,
