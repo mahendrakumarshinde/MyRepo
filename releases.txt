@@ -1,4 +1,43 @@
 #################################################################################################################################################################################
+Date: 17 SEPTEMBER 2021
+Contributed By : Vikas Gaikwad,Sidramayya Swami,Mahendrakumar Shinde 
+Product Name : vEdge
+Release Name :  hotfix : v3.0.10 DSP code changes and BMD error codes   
+Firmware Versions :
+		1. vEdge_main(STM32) : 3.0.10
+		2. vEdge_wifi (ESP32): 3.0.10
+		3. Bootloader L1     : 2.0.0
+		4. Bootloader L2     : 2.1.0
+		5. Factory Firmware  : 2.0.0 
+################################################################################################################################################################################
+
+# Release Description :
+
+   - Fix the issue for 1 sec DSP : when DSP = 1sec configured then device use DSP = 2sec for data streaming
+   - Added error code for BMD failure scenario
+   - Disable SR=25600 options for kionix sensor and default SR set for kionix is 12800
+   
+# Features Requirements
+   - NA
+# Feature Description
+   - NA
+# Feature Description
+   - NA
+# Issue Resolved
+
+    1.Spectral feature data not update
+
+JIRA No
+
+    - IUINTERNAL-2228
+
+TODO
+   - NA
+Limitations
+   - NA
+
+
+#################################################################################################################################################################################
 Date: 30 JULY 2021
 Contributed By : Vikas Gaikwad,Sidramayya Swami,Mahendrakumar Shinde 
 Product Name : vEdge
