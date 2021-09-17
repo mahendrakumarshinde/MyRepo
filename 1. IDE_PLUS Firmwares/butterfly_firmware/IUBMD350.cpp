@@ -267,6 +267,7 @@ int IUBMD350::sendATCommand(String cmd, char *response, uint8_t responseLength)
         if (setupDebugMode) {
             debugPrint("BLE: Cannot send AT commands when not in AT mode");
         }
+        bmdCommErrCode |= 0x10000000;
         return -1;
     }
     if(cmd == "AT")
@@ -293,6 +294,7 @@ int IUBMD350::sendATCommand(String cmd, char *response, uint8_t responseLength)
         if (setupDebugMode) {
             debugPrint("AT Command '" + cmd + "' failed");
         }
+        bmdCommErrCode |= 0x20000000;
         return -1;
     }
     int respCount = 0;
@@ -447,8 +449,14 @@ bool IUBMD350::checkBmdComm()
             }
             else {
                 respLen = sendATCommand("devrst", response, 3);
+                if(respLen < 0) {
+                    bmdCommErrCode |= 0x40000000;
+                }
                 delay(3000);
                 respLen = sendATCommand("restart", response, 3);
+                if(respLen < 0) {
+                    bmdCommErrCode |= 0x80000000;
+                }
                 delay(3000);
             }
         }        
@@ -491,6 +499,7 @@ void IUBMD350::queryDeviceName()
             int mac_Response = iuBluetooth.sendATCommand("mac?", response, 20);
             if(debugMode){ debugPrint("BLE MAC ID:",false);debugPrint(response,true); }
             if( mac_Response < 0 || (response[0] == '0' && response[1] == '0')){
+                bmdCommErrCode |= 0x20;
                 conductor.setDeviceIdMode(false);
             }
             else {
@@ -503,6 +512,7 @@ void IUBMD350::queryDeviceName()
                     conductor.setDeviceIdMode(false);
                 }
 #else
+                iuBluetooth.bmdCommErrCode |= 0x8000;
                 conductor.setDeviceIdMode(true);
 #endif
             }
@@ -555,6 +565,7 @@ void IUBMD350::queryDeviceName()
                         conductor.setDeviceIdMode(true);
                 }
                 #else
+                bmdCommErrCode |= 0x10;
                 conductor.setDeviceIdMode(false);
                 #endif
                 break;
