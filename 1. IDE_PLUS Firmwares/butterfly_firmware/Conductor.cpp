@@ -1889,6 +1889,13 @@ bool Conductor::getdeviceIdFlash(uint8_t *idMode) {
         }
         else {
             if(loopDebugMode) {debugPrint("deviceId not macthing !");}
+            if(!strcmp("00:00:00:00:00:00",bmdMacIntFlash))
+                iuBluetooth.bmdCommErrCode |= 0x1000;
+            if(!strcmp("00:00:00:00:00:00",bmdMacExtFlash))
+                iuBluetooth.bmdCommErrCode |= 0x2000;
+            if(strcmp(devIdIntFlash,"00:00:00:00:00:00"))
+                iuBluetooth.bmdCommErrCode |= 0x4000;
+            // Add BMD Diag error code.. 
             return false;
         }
     }
@@ -2532,6 +2539,19 @@ void Conductor::processCommand(char *buff)
                     delay(2000);
                     STM32.reset();
                 }
+            else if (strcmp(buff, "IUSET_REINIT_BMD") == 0)
+            {
+                if(loopDebugMode) { debugPrint("Erasing BMD Config information, please wait..."); }
+                if(DOSFS.exists("devInfo.conf"))
+                    DOSFS.remove("devInfo.conf");
+                if(iuFlash.checkConfig(CONFIG_DEV_INFO_ADDRESS)){
+                    iuFlash.clearInternalFlash(CONFIG_DEV_INFO_ADDRESS);
+                }
+                if(loopDebugMode) { debugPrint("Erased BMD Config information Successfully"); }
+                DOSFS.end();
+                delay(2000);
+                STM32.reset();
+            }
             break;
         case 'P': 
         {
@@ -3784,6 +3804,17 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
                 if (loopDebugMode) { debugPrint(F("OTA FW hash Success, Sending OTA-FUG-START")); }
                 sendOtaStatusMsg(MSPCommand::OTA_FUG_START,OTA_UPGRADE_START,OTA_RESPONE_OK);
                 delay(1000);
+                if(iuBluetooth.deviceIdMode == DEVID_MODE2) {
+                    /* Erase bmd information only when mode was streaming with WIFI
+                       So, after OTA if FW is able to detect BMD it can switch to BMD mode and connect to APP */
+                    if(loopDebugMode) { debugPrint("Erasing BMD Config information, please wait..."); }
+                    if(DOSFS.exists("devInfo.conf"))
+                        DOSFS.remove("devInfo.conf");
+                    if(iuFlash.checkConfig(CONFIG_DEV_INFO_ADDRESS)){
+                        iuFlash.clearInternalFlash(CONFIG_DEV_INFO_ADDRESS);
+                    }
+                    if(loopDebugMode) { debugPrint("Erased BMD Config information Successfully"); }
+                }
                 if (loopDebugMode) { debugPrint(F("Rebooting device for FW Upgrade......")); }
                 delay(500);
                 DOSFS.end();
