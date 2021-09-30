@@ -1,4 +1,37 @@
 #################################################################################################################################################################################
+Date: 30 SEPTEMBER 2021
+Contributed By : Vikas Gaikwad,Sidramayya Swami,Mahendrakumar Shinde 
+Product Name : vEdge
+Release Name :  hotfix : v3.0.11 BLE configs mechanism update   
+Firmware Versions :
+		1. vEdge_main(STM32) : 3.0.11
+		2. vEdge_wifi (ESP32): 3.0.11
+		3. Bootloader L1     : 2.0.0
+		4. Bootloader L2     : 2.1.0
+		5. Factory Firmware  : 2.0.0 
+################################################################################################################################################################################
+
+# Release Description :
+
+   - Implement a mechanism to store the configurations received over BLE to temp buffer and once all config received successfully, apply configurations.
+   - Supported configuration over BLE 1)certURL , 2)diagnosticURL, 3)MQTT configs , 4) HTTP configs 
+   - Disabled the wifi hard reset on after applying MQTT configurations into ESP32.
+
+# Features Requirements
+
+# Feature Description
+
+# Issue Resolved
+   - Unable to ACK the configuration from APK
+
+# JIRA No
+   - IUINTERNAL-2239
+# TODO
+   - NA 
+# Limitation
+   - NA
+
+#################################################################################################################################################################################
 Date: 17 SEPTEMBER 2021
 Contributed By : Vikas Gaikwad,Sidramayya Swami,Mahendrakumar Shinde 
 Product Name : vEdge
