@@ -479,6 +479,12 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     subConfig = root["mqtt"];
     if (subConfig.success()) {
         unknownConfig = false; 
+        if(isBLEConnected() && configReceivedFromBLE  == 2)
+        {
+            maintainConfigsReceivedOverBLE(jsonChar.c_str(),configType::MQTT_CONFIG);
+            iuBluetooth.write("MQTT-RECEVIED;");
+            return true;
+        }
         //configureAllFeatures(subConfig);
         // bool tlsStatus = root["mqtt"]["tls"];
         // bool rebootESP = false;
@@ -511,7 +517,9 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         if(dataWritten == true){
           iuFlash.writeInternalFlash(1,CONFIG_MQTT_FLASH_ADDRESS,jsonChar.length(),(const uint8_t*)jsonChar.c_str());
           //send Ack to BLE
-          iuBluetooth.write("MQTT-RECEVIED");
+          if(isBLEConnected()  && configReceivedFromBLE == 0){
+            iuBluetooth.write("MQTT-RECEVIED;");
+          }
           delay(100);
           iuWiFi.sendMSPCommand(MSPCommand::SEND_MQTT_CONNECTION_INFO, jsonChar.c_str());
           readMQTTendpoints();
@@ -644,6 +652,12 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     if (subConfig.success()) {
         unknownConfig = false; 
         //configureAllFeatures(subConfig);
+        if(isBLEConnected() &&  configReceivedFromBLE  == 3)
+        {
+            iuBluetooth.write("HTTP-RECEIVED;");
+            maintainConfigsReceivedOverBLE(jsonChar.c_str(),configType::HTTP_CONFIG);
+            return true;
+        }
         bool dataWritten = false;
         bool validConfiguration = iuFlash.validateConfig(IUFlash::CFG_HTTP, root, validationResultString, (char*) m_macAddress.toString().c_str(), getDatetime(), messageId);
         if(loopDebugMode) { 
@@ -673,6 +687,9 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
                 }  
             
             }
+            if(isBLEConnected()  && configReceivedFromBLE == 0){
+                iuBluetooth.write("HTTP-RECEVIED;");
+            }
             if (iuWiFi.isConnected() )
             {   
                 iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HTTP_CONFIG_ACK, validationResultString);
@@ -698,6 +715,9 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
             {   
                 iuWiFi.sendMSPCommand(MSPCommand::RECEIVE_HTTP_CONFIG_ACK, validationResultString);
             
+            }
+            if(isBLEConnected() && configReceivedFromBLE > 0){
+                iuBluetooth.write("BLE-CONFIGS-FAILED;");
             }
         }
         
@@ -1229,7 +1249,13 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
     //Certificates download URL Configuration
     subConfig = root["certUrl"];
     if (subConfig.success()) {
-        unknownConfig = false; 
+        unknownConfig = false;
+        bleConfigStartTime = millis(); 
+        if(isBLEConnected()  && configReceivedFromBLE  == 0){
+            maintainConfigsReceivedOverBLE(jsonChar.c_str(),configType::CERT_CONFIG);
+            iuBluetooth.write("CERT-URL-SUCCESS;");
+            return true;
+        }
         if (loopDebugMode){  debugPrint("Certificate Download Url:",false);
          subConfig.printTo(Serial); debugPrint("");
         }
@@ -1263,14 +1289,20 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
         if(StreamingMode::BLE && isBLEConnected()){// Send ACK to BLE
             if(loopDebugMode){ debugPrint("Common URL Config SUCCESS");}
-            iuBluetooth.write("CERT-URL-SUCCESS;");
+            //iuBluetooth.write("CERT-URL-SUCCESS;");
         }
-        debugPrint("Common Endpoint Config Success");
+        //debugPrint("Common Endpoint Config Success");
     }
     // Configure Diagnostic URL in ESP32
     subConfig = root["diagnosticUrl"];
     if (subConfig.success()) {
         unknownConfig = false; 
+        if(isBLEConnected() && configReceivedFromBLE  == 1)
+        {
+            maintainConfigsReceivedOverBLE(jsonChar.c_str(),configType::CERT_DIG_CONFIG);
+            iuBluetooth.write("DIAGNOSTIC-URL-SUCCESS;");
+            return true;
+        }
         if (loopDebugMode){  debugPrint("Diagnostic Url:",false);
          subConfig.printTo(Serial); debugPrint("");
          }
@@ -1295,9 +1327,9 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
         if(StreamingMode::BLE && isBLEConnected()){// Send ACK to BLE
             if(loopDebugMode){ debugPrint("Diagnostic URL Config SUCCESS");}
-            iuBluetooth.write("DIAGNOSTIC-URL-SUCCESS;");
+            //iuBluetooth.write("DIAGNOSTIC-URL-SUCCESS;");
         }
-        debugPrint("Diagnostic Endpoint Config Success"); 
+        //debugPrint("Diagnostic Endpoint Config Success"); 
      }
 
     subConfig = root["auth_type"];
@@ -1489,7 +1521,7 @@ bool Conductor::processConfiguration(char *json, bool saveToFlash)
         }
         if(StreamingMode::BLE && isBLEConnected()){// Send ACK to BLE
             if(loopDebugMode){ debugPrint("Unknown Config Received");}
-            iuBluetooth.write("UNKNOWN-CONFIG-RECEIVED");
+            iuBluetooth.write("UNKNOWN-CONFIG-RECEIVED;");
         }
     }
     return true;
@@ -9689,4 +9721,111 @@ void Conductor::mqttReset(bool timerflag){
     }
 }
 
+/**
+ * @brief method to temp. store the configurations reveived from  BLE
+ * Config Types : 
+ * 1. Cert URL           <max allowed len 256 bytes>
+ * 2. Cert Diagnostic URL<max allowed len 256 bytes>
+ * 3. MQTT configurations<max allowed len 256 bytes>
+ * 4. HTTP configurations<max allowed len 256 bytes>
+ * 
+ */
+void Conductor::maintainConfigsReceivedOverBLE(const char* configs,uint8_t configType){
+    uint16_t messageLength = strlen(configs);
+    switch (configType)
+    {
+        case configType::CERT_CONFIG : // certURL configs (index 0:255) 
+            configLength[0] = messageLength;
+            writeData(0,messageLength,config_buffer,configs);
+            configReceivedFromBLE = 1;
+            if(debugMode){
+                debugPrint("CertURL Write DONE");
+            }
+            break;
+        case configType::CERT_DIG_CONFIG: // cert Download configs (index 256:512)
+            configLength[1] = messageLength;
+            writeData(101,messageLength,config_buffer,configs);
+            configReceivedFromBLE = 2;
+            if(debugMode){
+                debugPrint("certDownlad URL write DONE");
+            }
+            break;
+        case configType::MQTT_CONFIG: //MQTT configs (index 513:768)
+            configLength[2] = messageLength;
+            writeData(201,messageLength,config_buffer,configs);
+            configReceivedFromBLE = 3;
+            if(debugMode){
+                debugPrint("MQTT Write DONE");
+            }
+            break;
+        case configType::HTTP_CONFIG: //http configs (index 769:1024)
+            configLength[3] = messageLength;
+            writeData(311,messageLength,config_buffer,configs);
+            configReceivedFromBLE = 4;
+            if(debugMode){
+                debugPrint("HTTP write DONE");
+            }
+            break;
+        case 4: 
+            /* code */
+            break;
+        
+        default:
+            break;
+    }
+    // display Buffer data
+    if(configType == configType::HTTP_CONFIG && configReceivedFromBLE == 4){
+       // char tempConfig[256];
+       #if 0 // method 1 - apply configurations 
+        readData(0,configLength[0],config_buffer,&tempConfig[0]);
+        processConfiguration(tempConfig,true);
+        memset(tempConfig,0x00,256);
+        delay(100);
+       
+        readData(101,configLength[1],config_buffer,&tempConfig[0]);
+        processConfiguration(tempConfig,true);
+        memset(tempConfig,0x00,256);
+        delay(100);
+       
+        readData(201,configLength[2],config_buffer,&tempConfig[0]);
+        processConfiguration(tempConfig,true);
+        memset(tempConfig,0x00,256);
+        delay(100);
+       
+        readData(311,configLength[3],config_buffer,&tempConfig[0]);
+        processConfiguration(tempConfig,true);
+        memset(tempConfig,0x00,256);
+        #endif
 
+        //method 2 apply configurations
+        processConfiguration(&config_buffer[0],true);
+        delay(100);
+        processConfiguration(&config_buffer[101],true);
+        delay(100);
+        processConfiguration(&config_buffer[201],true);
+        delay(100);
+        processConfiguration(&config_buffer[311],true);
+        configReceivedFromBLE = 0;
+        
+        iuBluetooth.write("BLE-CONFIGS-SUCCESS;");
+        if(debugMode){
+            debugPrint("CONFIG ALL DONE");
+        }
+    }
+
+}
+
+void Conductor::writeData(uint16_t start,uint16_t lenght,char* buffer,const char* data){
+    for (size_t i = start; i < start + lenght; i++)
+    {
+        buffer[i] =(char) data[i%start];
+    }
+    
+}
+
+void Conductor::readData(uint16_t start, uint16_t end,const char* input,char* output){
+        for (size_t i = start; i < start + end; i++)//101,101+93
+        {
+            output[i%start] = (char)input[i];
+        }
+}

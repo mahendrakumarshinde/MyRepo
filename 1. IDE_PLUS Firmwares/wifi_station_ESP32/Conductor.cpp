@@ -616,7 +616,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                         //Serial.println("Changed in Connection Mode found , Updating and reset ESP32 ");
                         //ESP.restart();
                      }
-                     ESP.restart();
+                     //ESP.restart();
                 }else
                 {
                     hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"EMPTY, Invalid MQTT Config JSON");

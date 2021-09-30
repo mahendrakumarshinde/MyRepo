@@ -95,6 +95,18 @@ namespace AcquisitionMode
 }
 
 /**
+ * @brief Define what all config types need to process from BLE
+ * 
+ */
+namespace configType 
+{
+    enum option : uint8_t {
+                CERT_CONFIG     = 0,
+                CERT_DIG_CONFIG = 1,
+                MQTT_CONFIG     = 2,
+                HTTP_CONFIG     = 3};
+}
+/**
  * Define the channel through which data will be sent
  */
 namespace StreamingMode
@@ -436,6 +448,16 @@ class Conductor
         void addAdvanceFeature(JsonObject& destJson, uint8_t index , String* id, float* value);
         bool isWifiConnected() { return m_wifiConnected; }
         bool isJsonKeyPresent(JsonObject &config,char* key);
+        // configs storage functions
+        void maintainConfigsReceivedOverBLE(const char* configs,uint8_t configType);
+        void writeData(uint16_t start,uint16_t length,char* buffer,const char* data);
+        void readData(uint16_t start, uint16_t end,const char* input,char* output);
+        char config_buffer[512+128];
+        uint16_t configLength[4];
+        uint8_t configReceivedFromBLE = 0;
+        uint32_t bleConfigStartTime;
+        uint16_t bleConfigRequestTimeout = 1000*30; // 30 Sec
+
         static const uint8_t max_IDs = 10;
         String m_phase_ids[max_IDs];
         uint32_t m_devDiagErrCode = 0;        
