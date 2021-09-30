@@ -1073,6 +1073,16 @@ void loop()
                 flashCheckLastDone = current;
                 conductor.periodicFlashTest();
             }
+            // Waiting for all the configurations to received Succesfully from BLE
+            if(millis() - conductor.bleConfigStartTime > conductor.bleConfigRequestTimeout && conductor.configReceivedFromBLE != 0){
+                conductor.configReceivedFromBLE = 0;
+                if(loopDebugMode){
+                    debugPrint("BLE configurations message timeout, resetting the flag to allow new configs over BLE");
+                }
+                if(iuBluetooth.isBLEAvailable){
+                    iuBluetooth.write("BLE-CONFIGS-FAILED;");
+                }
+            }
             // Consume ready segmented message
             char configMessageFromBLE[MESSAGE_LENGTH+1];
             if (conductor.consumeReadySegmentedMessage(configMessageFromBLE)) {
