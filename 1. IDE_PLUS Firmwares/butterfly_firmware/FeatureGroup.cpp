@@ -1,5 +1,6 @@
 #include "FeatureGroup.h"
 #include "RawDataState.h"
+#include "Conductor.h"
 //#include "IULSM6DSM.h"
 
 //extern Feature feature;
@@ -113,9 +114,16 @@ bool FeatureGroup::isDataSendTime(uint8_t idx)
 {
     // Timer to send data regularly
     uint32_t now = millis();
-    if (now - m_lastSentTime[idx] > m_dataSendPeriod)
+    if (now - m_lastSentTime[idx] > m_dataSendPeriod && m_active)
     {
         m_lastSentTime[idx] = now;
+        if( (FeatureStates::m_currentStreamingMode == StreamingMode::WIFI  || 
+            FeatureStates::m_currentStreamingMode == StreamingMode::BLE ) && idx == 0  ){
+            FeatureStates::isISRActive = true;
+        }
+        if(FeatureStates::m_currentStreamingMode == StreamingMode::WIFI_AND_BLE && idx == 1){
+            FeatureStates::isISRActive = true;
+        }
         return true;
     }
     return false;
@@ -156,9 +164,9 @@ bool FeatureGroup::isReadyToStream(uint8_t portIdx)
             return false;
         }
     }
-    if (!isDataSendTime(portIdx)) {
-        return false;
-    }
+    // if (!isDataSendTime(portIdx)) {
+    //     return false;
+    // }
     return true;
 
 }
@@ -214,6 +222,9 @@ void FeatureGroup::legacyStream(IUSerial *iuSerial, MacAddress mac,
                                 double timestamp, bool sendName,
                                 uint8_t portIdx)
 {
+    if (!isDataSendTime(portIdx)) {
+        return;
+    }
     if (!isReadyToStream(portIdx)) {
         return;  // Not ready to stream
     }
@@ -264,6 +275,9 @@ void FeatureGroup::bufferAndStream(
    uint8_t opState, float batteryLoad, double timestamp,
    bool sendName, uint8_t portIdx)
 {
+   if (!isDataSendTime(portIdx)) {
+        return;
+   }
    if (!isReadyToStream(portIdx)) {
        return;  // Not ready to stream
    }
@@ -273,7 +287,7 @@ void FeatureGroup::bufferAndStream(
 //    Serial.print("maxBufferDelay :");Serial.println(now - m_bufferStartTime);
 //    Serial.print("maxBufferMargin :");Serial.println(maxBufferSize - m_bufferIndex);
    if (m_bufferStartTime == 0 ||
-       now - m_bufferStartTime > maxBufferDelay ||
+        now - m_bufferStartTime > conductor.dataSendingPeriod /*maxBufferDelay*/ ||
        maxBufferSize - m_bufferIndex < maxBufferMargin) {
        // Send current data
        m_featureBuffer[m_bufferIndex] = 0;

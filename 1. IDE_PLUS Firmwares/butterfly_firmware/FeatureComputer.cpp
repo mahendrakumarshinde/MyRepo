@@ -1,10 +1,15 @@
 #include "FeatureComputer.h"
+//#include "LedManager.h"
 
 extern float modbusFeaturesDestinations[8];
+// extern uint8_t velMaxSampleCount;
+// #define MAX_ACCELRMS512TOTAL        1500
+// #define MAX_ACCELRMS512_LOOP_COUNT  20
 /* =============================================================================
     Audio Scaling Global Variable
 ===============================================================================*/
 
+extern LedManager ledManager;
 extern float audioHigherCutoff;
 extern float m_audioOffset_current;
 extern float m_audioScaling_current;
@@ -383,6 +388,7 @@ void FeatureStateComputer::m_specializedCompute()
     m_destinations[0]->addValue(newState);
     //Append the new Operation State
     modbusFeaturesDestinations[0]= newState;
+    //FeatureStates::opStateStatusFlag = newState;
 }
 
 
@@ -519,6 +525,43 @@ void SectionSumComputer::m_specializedCompute()
             debugPrint(": ", false);
             debugPrint(total * m_sources[i]->getResolution());
         }
+#if 0
+           // JIRA1918 - Workaround solution,when device shows max value of Velocity RMS for N consecutive samples, reset device
+            if(m_id == 23) {
+                if(featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Total] > MAX_ACCELRMS512TOTAL) {
+                    velMaxSampleCount++;
+                    if(velMaxSampleCount > MAX_ACCELRMS512_LOOP_COUNT) {
+                        velMaxSampleCount = 0;
+                        if (featureDebugMode) {
+                            debugPrint("accelRMS512Total OVerflow !!!!, Reset device..");
+                            debugPrint(millis(), false);
+                            debugPrint(F(" -> "), false);
+                            debugPrint(m_destinations[2]->getName(), false);
+                            debugPrint(" accelRMS512Total: ", false);
+                            debugPrint(featureDestinations::buff[featureDestinations::basicfeatures::accelRMS512Total]);
+                        }
+                        for (size_t i = 0; i < 3; i++) {
+                            ledManager.overrideColor(RGB_RED);
+                            delay(300);
+                            ledManager.stopColorOverride();
+                            delay(300);
+                        }
+                        ledManager.stopColorOverride();
+                        for (size_t i = 0; i < 3; i++) {
+                            ledManager.overrideColor(RGB_BLUE);
+                            delay(300);
+                            ledManager.stopColorOverride();
+                            delay(300);
+                        }
+                        ledManager.stopColorOverride();
+                        delay(1000);
+                        STM32.reset();
+                    }
+                }
+                else
+                    velMaxSampleCount = 0;
+            }
+#endif
     }
 }
 

@@ -54,10 +54,28 @@
 #define DEVICE_DIAG_SETUP_ERR1    8
 #define DEVICE_DIAG_STMMEM_ERR    9
 
+#define DEVICE_DIAG_WIFI_ERR1      0x0001
+#define DEVICE_DIAG_WIFI_ERR2      0x0002
+#define DEVICE_DIAG_WIFI_ERR3      0x0004
+#define DEVICE_DIAG_WIFI_ERR4      0x0008
+#define DEVICE_DIAG_WIFI_ERR5      0x0010
+#define DEVICE_DIAG_WIFI_ERR6      0x0020
+#define DEVICE_DIAG_WIFI_ERR7      0x0040
+#define DEVICE_DIAG_WIFI_ERR8      0x0080
+
+#define DEVICE_DIAG_WIFI_STS1      0x0100
+#define DEVICE_DIAG_WIFI_STS2      0x0200
+#define DEVICE_DIAG_WIFI_STS3      0x0400
+#define DEVICE_DIAG_WIFI_STS4      0x0800
+#define DEVICE_DIAG_WIFI_STS5      0x1000
+#define DEVICE_DIAG_WIFI_STS6      0x2000
+#define DEVICE_DIAG_WIFI_STS7      0x4000
+#define DEVICE_DIAG_WIFI_STS8      0x8000
+
 #define MAX_SYNC_COUNT            20
 
 /* Timeout for MQTT_DISCONNECTED */
-#define MQTT_DISCONNECTION_TIMEOUT 900000               //900000 //15min
+#define MQTT_DISCONNECTION_TIMEOUT 180000 //3min               //900000 //15min
 
 #define CONFIG_REQUEST_TIMEOUT   14400000      // 4 Hrs
 
@@ -76,6 +94,18 @@ namespace AcquisitionMode
                            COUNT   = 3};
 }
 
+/**
+ * @brief Define what all config types need to process from BLE
+ * 
+ */
+namespace configType 
+{
+    enum option : uint8_t {
+                CERT_CONFIG     = 0,
+                CERT_DIG_CONFIG = 1,
+                MQTT_CONFIG     = 2,
+                HTTP_CONFIG     = 3};
+}
 /**
  * Define the channel through which data will be sent
  */
@@ -143,6 +173,8 @@ class Conductor
     public:
         uint32_t lastTimeSync = 0;
         uint32_t lastConfigRequest = 0;
+        char ack_config[200];
+        MacAddress m_macAddress;
         /***** Preset values and default settings *****/
         enum sleepMode : uint8_t {NONE     = 0,
                                   AUTO     = 1,
@@ -154,7 +186,9 @@ class Conductor
                                         KNX_ABS = 3,
                                         KNX_DEFAULT = 4,
                                         LSM_DEFAULT = 5,
-                                        SEN_ABS = 6
+                                        SEN_ABS = 6,
+                                        LSM_AUTO_GRANGE = 7,
+                                        KNX_AUTO_GRANGE = 8
                                         };
 
 
@@ -347,17 +381,20 @@ class Conductor
         void manageRawDataSending();
         // void startRawDataSendingSession();
         void prepareRawDataPacketAndSend(char axis);       // to send to ESP
-        int httpsStatusCodeX, httpsStatusCodeY, httpsStatusCodeZ;   
+        int httpsStatusCodeX, httpsStatusCodeY, httpsStatusCodeZ,httpsStatusCodemetaData;   
         int httpsOEMStatusCodeX, httpsOEMStatusCodeY, httpsOEMStatusCodeZ;   
         bool sendNextAxis = false;      
         bool XSentToWifi, YsentToWifi, ZsentToWifi;     // TODO optimize using bit vector
         bool XrecByWifi,YrecByWifi,ZrecByWifi;
+        bool metadatarecByWifi,metadataSentToWifi;
         uint32_t RawDataTimeout = 0;
         uint32_t RawDataTotalTimeout = 0;
+        uint32_t rawDataAxisTimeout = 0;
         double rawDataRecordedAt, lastPacketSentToESP;
         IUMessageFormat::rawDataPacket rawData;
         void prepareFFTMetaData();      //prepareFFTMetadata()
         int gRange_metaData;      //currentgRange_metaData
+        int metadataStatusCode;
         //Send Sensor error codes
         void setSensorStatus(SensorStatusCode errorCode);
         void sendSensorStatus();
@@ -411,6 +448,16 @@ class Conductor
         void addAdvanceFeature(JsonObject& destJson, uint8_t index , String* id, float* value);
         bool isWifiConnected() { return m_wifiConnected; }
         bool isJsonKeyPresent(JsonObject &config,char* key);
+        // configs storage functions
+        void maintainConfigsReceivedOverBLE(const char* configs,uint8_t configType);
+        void writeData(uint16_t start,uint16_t length,char* buffer,const char* data);
+        void readData(uint16_t start, uint16_t end,const char* input,char* output);
+        char config_buffer[512+128];
+        uint16_t configLength[4];
+        uint8_t configReceivedFromBLE = 0;
+        uint32_t bleConfigStartTime;
+        uint16_t bleConfigRequestTimeout = 1000*30; // 30 Sec
+
         static const uint8_t max_IDs = 10;
         String m_phase_ids[max_IDs];
         uint32_t m_devDiagErrCode = 0;        
@@ -418,13 +465,18 @@ class Conductor
         uint8_t syncLostCount = 0;
         void selfFwUpgradeInit();
         void mqttReset(bool timerflag);
-        uint32_t devResetTime;
+        uint32_t devResetTime =0;
+        uint16_t m_wifiDiagErrCode = 0;
+        bool certUpgradeStsPending = false;
+        bool mqttStatusFlag = false;
+        bool wifiDisableFlag = false;
+        uint32_t dataSendingPeriod;
     #ifdef DEVIDFIX_TESTSTUB
         uint8_t flagval2 = 0;
     #endif
     
     protected:
-        MacAddress m_macAddress;
+        //MacAddress m_macAddress;
         MacAddress m_macAddressBle;
         /***** Hardware & power management *****/
         sleepMode m_sleepMode = sleepMode::NONE;
@@ -511,7 +563,7 @@ class Conductor
         uint32_t otaInitWaitTimeout = 0;
         bool otaInitTimeoutFlag = false;
         char WiFiDisconnect_OTAErr[16];
-        char ack_config[200];
+        //char ack_config[200];
         uint32_t certDownloadInitWaitTimeout =0;
         uint32_t certDownloadConfigTimeout = 0;
         uint32_t m_downloadSuccessStartTime = 0;
@@ -520,7 +572,7 @@ class Conductor
         bool m_downloadSuccess = false;
         bool m_upgradeSuccess = false;
         bool m_mqttConnected = false;
-        uint32_t dataSendingPeriod;
+        //uint32_t dataSendingPeriod;
         // Certificates buffers
         char m_certType[15];
         char m_keyType[15];

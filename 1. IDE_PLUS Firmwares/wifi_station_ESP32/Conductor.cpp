@@ -120,6 +120,15 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             hostSerial.sendMSPCommand(MSPCommand::RECEIVE_ESP_SYNC_RSP);
             delay(1);
             break;
+        case MSPCommand::ASK_WIFI_CREDENTIALS:
+            if(WiFi.isConnected()) {
+                char wifiInfo[128];
+                memset(wifiInfo,0x00,128);
+                sprintf(wifiInfo,"%s %s",WiFi.SSID().c_str(),WiFi.psk().c_str());
+                hostSerial.sendMSPCommand(MSPCommand::RECEIVE_WIFI_CREDENTIALS,wifiInfo);
+                delay(1);
+            }
+            break;
         case MSPCommand::OTA_INIT_ACK:
             if(otaInProgress == true) {
                 mqttHelper.publish(OTA_TOPIC,buffer);
@@ -607,7 +616,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                         //Serial.println("Changed in Connection Mode found , Updating and reset ESP32 ");
                         //ESP.restart();
                      }
-                     ESP.restart();
+                     //ESP.restart();
                 }else
                 {
                     hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"EMPTY, Invalid MQTT Config JSON");
@@ -686,7 +695,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 {   //Serial.println("\nUsing rootCA 1");
                 iuWiFiFlash.readFile(IUESPFlash::CFG_HTTPS_ROOTCA1,ssl_rootca_cert,sizeof(ssl_rootca_cert));
                 }
-
+                iuSerial->sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION, "M");
                 char metaData_ack_config[150];
                 static int httpStatusCode = 0;
                 strcpy(accelRawDataHelper.m_metadata_path, accelRawDataHelper.m_endpointRoute);
@@ -699,24 +708,35 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 JsonObject& root = jsonBuffer.parseObject(buffer);
                 JsonVariant config = root;
                 double timeStamp = config["timestamp"];
-
+                metaDataRetryCount = 0;
 
                 //memcpy(metaDataBuffer, buffer, sizeof(buffer));
-                if(iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED){
-                    httpStatusCode = httpsPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_metadata_path,
-                                                    accelRawDataHelper.m_endpointPort,(uint8_t*) &metaDataBuffer, 
-                                                    httpBufferPointer,"", ssl_rootca_cert, HttpContentType::applicationJSON);
-                }else if(iuWiFiFlash.readMemory(CONNECTION_MODE) == UNSECURED){
-                    httpStatusCode = httpPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_metadata_path,
+                while(metaDataRetryCount < 3 ){
+                    if((millis() - metaDataTimeout) > HTTPSRawDataRetryTimeout){
+                        metaDataTimeout = millis();
+                        if(iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED){
+                                    httpStatusCode = httpsPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_metadata_path,
+                                                            accelRawDataHelper.m_endpointPort,(uint8_t*) &metaDataBuffer, 
+                                                            httpBufferPointer,"", ssl_rootca_cert, HttpContentType::applicationJSON);
+                        }else if(iuWiFiFlash.readMemory(CONNECTION_MODE) == UNSECURED){
+                            httpStatusCode = httpPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_metadata_path,
                                          accelRawDataHelper.m_endpointPort, (uint8_t*) &metaDataBuffer, 
                                          httpBufferPointer,"", NULL, HttpContentType::applicationJSON);
+                        }
+                         char metaDataAckBuffer[5];      
+                        itoa(httpStatusCode, &metaDataAckBuffer[0], 10);
+                        iuSerial->sendMSPCommand(MSPCommand::METADATA_ACK, metaDataAckBuffer);
+
+                        snprintf(metaData_ack_config, 150, "{\"messageType\":\"meta-data-ack\",\"mac\":\"%s\",\"httpCode\":\"%d\",\"timestamp\":%.3f}",
+                                    m_bleMAC.toString().c_str(),httpStatusCode,timeStamp);
+                        mqttHelper.publish(COMMAND_RESPONSE_TOPIC, metaData_ack_config);
+                        //iuSerial->sendMSPCommand(MSPCommand::RECEIVE_METADATA_ACK, metaData_ack_config);
+                        if((httpStatusCode == 200)){
+                            break;
+                        }
+                        metaDataRetryCount++;
+                    } 
                 }
-
-
-                snprintf(metaData_ack_config, 150, "{\"messageType\":\"meta-data-ack\",\"mac\":\"%s\",\"httpCode\":\"%d\",\"timestamp\":%.3f}",
-                         m_bleMAC.toString().c_str(),httpStatusCode,timeStamp);
-                mqttHelper.publish(COMMAND_RESPONSE_TOPIC, metaData_ack_config);
-                //iuSerial->sendMSPCommand(MSPCommand::RECEIVE_METADATA_ACK, metaData_ack_config); 
             }
             break;    
         case MSPCommand::SEND_RAW_DATA:
@@ -1139,18 +1159,23 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
             }
       case MSPCommand::SEND_WIFI_HASH:
             strcpy(wifiHash,buffer);
+            wifiHashReceived = true;
             break;
        case MSPCommand::SEND_CERT_HASH:
             strcpy(certHash,buffer);
+            certHashReceived = true;
             break;
       case MSPCommand::SEND_DIAG_CERT_HASH:
             strcpy(diagCertHash,buffer);
+            diagCertHashReceived = true;
             break;      
       case MSPCommand::SEND_MQTT_HASH:
             strcpy(mqttHash,buffer);
+            mqttHashReceived = true;
             break;
       case MSPCommand::SEND_HTTP_HASH:
             strcpy(httpHash,buffer);
+            httpHashReceived = true;
             break;
       case MSPCommand::GET_PENDING_HTTP_CONFIG:
           // Get all the pending configuration messages over http
@@ -2041,6 +2066,51 @@ void Conductor::updateWiFiStatusCycle()
         updateMQTTStatus();
         m_lastWifiStatusUpdate = now;
     }
+    #if 0   //TODO : Once the API is active 
+    if ( (WiFi.isConnected()) && (now - m_lastWifiHearbeatUpdate > (wifiStatusUpdateDelay*6))) {
+        char message[256];
+        if ( (mqttHelper.client.connected() && iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED) ||
+             (mqttHelper.nonSecureClient.connected() && iuWiFiFlash.readMemory(CONNECTION_MODE) == UNSECURED) )
+        {
+            getWifiInfo(message, 256, true);
+        }
+        else if ( (!mqttHelper.client.connected() && iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED) ||
+                  (!mqttHelper.nonSecureClient.connected() && iuWiFiFlash.readMemory(CONNECTION_MODE) == UNSECURED) )
+        {
+            getWifiInfo(message, 256, false);
+        }
+
+        char stringDT[25];  // Remove the newline at the end of ctime
+        time_t datetime = timeHelper.getCurrentTime();
+        strncpy(stringDT, ctime(&datetime), 25);
+        stringDT[24] = 0;
+
+        uint16_t totalMsgLength = strlen(message) + 128;
+        char heartBeatMsg[totalMsgLength];
+        snprintf(heartBeatMsg, totalMsgLength,
+                "{\"heartbeat\":{\"deviceId\":\"%s\",\"data\":%s,\"time\":\"%s\"}}",m_bleMAC.toString().c_str(), message,stringDT);
+        // hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,heartBeatMsg);
+        // delay(1); 
+        int httpStatusCode = 0;
+        if(iuWiFiFlash.readMemory(CONNECTION_MODE) == UNSECURED ){
+            httpStatusCode = httpPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_endpointRoute,
+                                    accelRawDataHelper.m_endpointPort, (uint8_t*) heartBeatMsg, strlen(heartBeatMsg),"",
+                                    NULL, HttpContentType::applicationJSON);
+        }else if(iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED ){    
+            httpStatusCode = httpsPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_endpointRoute,
+                                    accelRawDataHelper.m_endpointPort, (uint8_t*) heartBeatMsg, strlen(heartBeatMsg),"",
+                                    ssl_rootca_cert, HttpContentType::applicationJSON);            
+        }
+
+        // int iRet = httpPostBigRequest(accelRawDataHelper.m_endpointHost, accelRawDataHelper.m_endpointRoute,
+        //                              accelRawDataHelper.m_endpointPort, (uint8_t*) heartBeatMsg, strlen(heartBeatMsg),"", NULL, HttpContentType::octetStream);
+        if(httpStatusCode == HTTP_CODE_OK) {
+            //hostSerial.sendMSPCommand(MSPCommand::ESP_DEBUG_TO_STM_HOST,"Heartbeat Send OK");
+            //delay(1);
+        }
+        m_lastWifiHearbeatUpdate = now;
+    }
+    #endif
 }
 
 /**
@@ -2124,6 +2194,8 @@ void Conductor::debugPrintWifiInfo()
     strcat(destination, m_bleMAC.toString().c_str());
     strcat(destination, "\",\"mqtt\":\"");
     strcat(destination, "on");
+    strcat(destination, "\",\"device-type\":\"");
+    strcat(destination, "vEdge 1.6");
     /*if (mqttOn)
     {
         strcat(destination, "on");
@@ -2883,6 +2955,7 @@ bool Conductor::getDeviceCertificates(IUESPFlash::storedConfig configType, const
         upgradeReceived = false;
         return false;       
     }
+    return true;
 }
 
 /**
@@ -3013,10 +3086,13 @@ char* Conductor::getConfigChecksum(IUESPFlash::storedConfig configType)
     // empty string will be sent, and that will trigger a config refresh
     unsigned char* md5hash = MD5::make_hash(cert_config, charCount);
     char *md5str = MD5::make_digest(md5hash, 16);
+    memset(getConfigHash,'\0',sizeof(getConfigHash));
+    strncpy(getConfigHash,md5str,32);
+    getConfigHash[32] = '\0';
     //free memory
     free(md5hash);
     free(md5str);
-    return md5str;
+    return getConfigHash; //md5str;
 }
 
 

@@ -6,7 +6,27 @@
 #include "DiagnosticFingerPrint.h"
 #include "RawDataState.h"
 #include "AdvanceFeatureComputer.h"
-extern float modbusFeaturesDestinations[8]; 
+#include "IULSM6DSM.h"
+#include "IUKX222.h"
+#include "IUESP8285.h"
+#include "LedManager.h"
+
+extern LedManager ledManager;
+extern IUESP8285 iuWiFi;
+extern IULSM6DSM iuAccelerometer;
+extern IUKX222 iuAccelerometerKX222;
+extern float modbusFeaturesDestinations[8];
+extern uint8_t velMaxSampleCount;
+#define MAX_VELRMS512_LOOP_COUNT  20
+#define MAXCYCLECOUNT             5
+#define MAXPEAKCOUNT              10
+// LSM RMS OFFSET 
+#define LSM_RMS_OFFSET              0.3028
+
+// Kionix RMS OFFSET
+#define KX222_RMS_OFFSET            0.0
+#define KX222_8KHZ_FMAX_RMS_OFFSET  0.0      // Apply to Z-axis when Fmax > 8 KHz (i.e SR = 25600 Hz)
+
 /* =============================================================================
  *  Motor Scaling Global Variable
  *  
@@ -478,6 +498,7 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
     protected:
         T *m_allocatedFFTSpace;
         T *velocityFFT;
+        int currentGrange;
         bool m_useCalibrationMethod;
         uint16_t m_lowCutFrequency;
         uint16_t m_highCutFrequency;
@@ -518,7 +539,7 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
         
         m_destinations[0]->setResolution(resolution);
         m_destinations[1]->setResolution(1);
-        m_destinations[2]->setResolution(resolution);
+        //m_destinations[2]->setResolution(resolution);
         m_destinations[3]->setResolution(resolution);
 
         logFFTParams(&FFTInput[fft_direction], samplingRate, sampleCount, df);
@@ -546,6 +567,82 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
             }
             RawDataState::ZCollected = true;
         }
+
+        //start of checking auto g range
+        //static uint16_t cycleCountbuff[20];
+        static uint8_t cycleCountX =0,cycleCountY =0,cycleCountZ =0;
+        bool gRangeNewStatusFlag = false;
+        uint16_t peakCount;
+        if(FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor){
+            peakCount = RFFTFeatures::autoGrange(values,sampleCount,FFTConfiguration::currentKNXgRange,resolution);
+            currentGrange = FFTConfiguration::currentKNXgRange;
+        }else if(FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor){
+            peakCount = RFFTFeatures::autoGrange(values,sampleCount,FFTConfiguration::currentLSMgRange,resolution);
+            currentGrange = FFTConfiguration::currentLSMgRange;
+        }
+
+        if(peakCount > MAXPEAKCOUNT){
+            if(m_id == 30){
+                if(cycleCountX >= MAXCYCLECOUNT){
+                    gRangeNewStatusFlag = true;
+                }
+                cycleCountX++;
+            }
+            if(m_id == 31){
+                if(cycleCountY >= MAXCYCLECOUNT){
+                    gRangeNewStatusFlag = true;
+                }
+                cycleCountY++;
+            }
+            if(m_id == 32){
+                if(cycleCountZ >= MAXCYCLECOUNT){
+                    gRangeNewStatusFlag = true;
+                }
+                cycleCountZ++;
+            }
+        }else{
+            //debugPrint("cycleCount = 0 ");
+            if(m_id ==30){ cycleCountX =0;}
+            if(m_id ==31){ cycleCountY =0;}
+            if(m_id ==32){ cycleCountZ =0;}
+
+        }
+
+        // Apply and store new g range
+        if(gRangeNewStatusFlag == true){
+            //debugPrint("gRangeNewStatusFlag true ");
+            if(FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor){ 
+                for (uint8_t i = 0;i<FFTConfiguration::KNXgRangeOption;i++){
+                    //debugPrint(FFTConfiguration::KNXgRanges[i],false);debugPrint(",",false);
+                    if(FFTConfiguration::KNXgRanges[i] == currentGrange && FFTConfiguration::KNXgRanges[i]!=0
+                        && FFTConfiguration::currentKNXgRange != FFTConfiguration::KNXgRanges[FFTConfiguration::KNXgRangeOption -1]){           
+                        FFTConfiguration::currentKNXgRange = FFTConfiguration::KNXgRanges[i+1];
+                        FFTConfiguration::newKNXgRange = FFTConfiguration::currentKNXgRange;
+                        iuAccelerometerKX222.setGrange(FFTConfiguration::newKNXgRange);
+                        FFTConfiguration::setNewgrangeFlag = true;
+                        RFFTFeatures::updateFFTFile();
+                        gRangeNewStatusFlag == false;
+                        cycleCountX = cycleCountY = cycleCountZ = 0;
+                    }
+                }
+            }else if(FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor) {
+                //debugPrint("lsmSensor g Range setting ");
+                for (uint8_t i = 0;i< FFTConfiguration::LSMgRangeOption;i++){
+                    //debugPrint(FFTConfiguration::LSMgRanges[i],false);debugPrint(",",false);
+                    if(FFTConfiguration::LSMgRanges[i] == currentGrange && FFTConfiguration::LSMgRanges[i]!=0 && 
+                        FFTConfiguration::currentLSMgRange != FFTConfiguration::LSMgRanges[FFTConfiguration::LSMgRangeOption -1]){
+                        FFTConfiguration::currentLSMgRange = FFTConfiguration::LSMgRanges[i+1];
+                        FFTConfiguration::newLSMgRange = FFTConfiguration::currentLSMgRange;
+                        iuAccelerometer.setGrange(FFTConfiguration::currentLSMgRange); // softreset 
+                        FFTConfiguration::setNewgrangeFlag = true;
+                        RFFTFeatures::updateFFTFile();
+                        gRangeNewStatusFlag == false;
+                        cycleCountX = cycleCountY = cycleCountZ = 0;
+                    } 
+                }
+            }
+        }
+
 
         // 1. Compute FFT and get amplitudes
         uint32_t amplitudeCount = sampleCount / 2 + 1;
@@ -794,7 +891,96 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
               //Serial.print("Integrated RMS calibration Scaling:");Serial.println(m_calibrationScaling1);
             }
             
-            m_destinations[2]->addValue(integratedRMS1);
+            if(FeatureStates::opStateStatusFlag == OperationState::IDLE && FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor ){
+                integratedRMS1 = integratedRMS1*resolution - LSM_RMS_OFFSET;
+                if(integratedRMS1 < 0){
+                    integratedRMS1 = 0;
+                }
+                if(m_id == 30){
+                    m_destinations[2]->addValue(integratedRMS1 /*- LSM_RMS_OFFSET*/ );
+                    modbusFeaturesDestinations[2] = integratedRMS1;
+                    featureDestinations::buff[featureDestinations::basicfeatures::velRMS512X] = integratedRMS1;
+                 }
+                if(m_id == 31){
+                    m_destinations[2]->addValue(integratedRMS1 /*- LSM_RMS_OFFSET*/ );
+                    modbusFeaturesDestinations[3] = integratedRMS1;
+                    featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Y] = integratedRMS1;
+                }
+                if(m_id == 32){
+                    m_destinations[2]->addValue(integratedRMS1 /*- LSM_RMS_OFFSET*/ ); 
+                    modbusFeaturesDestinations[4] = integratedRMS1;
+                    featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Z] = integratedRMS1;
+                }
+                // fres and modbus update
+                /*
+                    if(m_id == 30 ){ modbusFeaturesDestinations[2] = integratedRMS1; }
+                    if(m_id == 31 ){ modbusFeaturesDestinations[3] = integratedRMS1; }
+                    if(m_id == 32 ){ modbusFeaturesDestinations[4] = integratedRMS1; }
+                    if(m_id == 30 ){ featureDestinations::buff[featureDestinations::basicfeatures::velRMS512X] = integratedRMS1; } //velRMS512X 
+                    if(m_id == 31 ){ featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Y] = integratedRMS1; } //velRMS512Y
+                    if(m_id == 32 ){ featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Z] = integratedRMS1; } //velRMS512Z
+                */
+
+            }else if(FeatureStates::opStateStatusFlag == OperationState::IDLE && FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor ){
+                if(FFTConfiguration::currentSamplingRate <= 25600 && (m_id == 30 || m_id == 31 )){
+                    integratedRMS1 = integratedRMS1*resolution - KX222_RMS_OFFSET;
+                    if(integratedRMS1 < 0){
+                            integratedRMS1 = 0;
+                        }
+                    m_destinations[2]->addValue(integratedRMS1);
+
+                    // if(m_id == 30){m_destinations[2]->addValue(integratedRMS1 /*- KX222_RMS_OFFSET*/ ); }
+                    // if(m_id == 31){m_destinations[2]->addValue(integratedRMS1 /*- KX222_RMS_OFFSET*/ ); }
+                } 
+                if(m_id == 32 && FFTConfiguration::currentSamplingRate < 25600 )
+                {
+                    integratedRMS1 = integratedRMS1*resolution - KX222_RMS_OFFSET;
+                    if(integratedRMS1 < 0){
+                        integratedRMS1 = 0;
+                    }
+                    m_destinations[2]->addValue(integratedRMS1 );
+                    modbusFeaturesDestinations[4] = integratedRMS1;
+                    featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Z] = integratedRMS1;
+                }else if(m_id == 32 && FFTConfiguration::currentSamplingRate >= 25600 ){
+                    integratedRMS1 =  (integratedRMS1*resolution - KX222_8KHZ_FMAX_RMS_OFFSET) < 0 ? 0: (integratedRMS1*resolution - KX222_8KHZ_FMAX_RMS_OFFSET) ;
+                    if(integratedRMS1 < 0){
+                        integratedRMS1 = 0;
+                    }
+                    m_destinations[2]->addValue(integratedRMS1); 
+                    modbusFeaturesDestinations[4] = integratedRMS1;
+                    featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Z] = integratedRMS1;
+                }
+
+                // fres and modbus update
+                if(m_id == 30 ){
+                     modbusFeaturesDestinations[2] = integratedRMS1; 
+                    featureDestinations::buff[featureDestinations::basicfeatures::velRMS512X] = integratedRMS1;
+                }
+                if(m_id == 31 ){
+                     modbusFeaturesDestinations[3] = integratedRMS1; 
+                    featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Y] = integratedRMS1;
+                }
+             
+            }
+            else{
+
+                if(FeatureStates::opStateStatusFlag != OperationState::IDLE){
+                    m_destinations[2]->addValue(integratedRMS1*resolution);
+                    if(m_id == 30 ){ 
+                        modbusFeaturesDestinations[2] = integratedRMS1*resolution; 
+                        featureDestinations::buff[featureDestinations::basicfeatures::velRMS512X] = integratedRMS1*resolution;
+                    }
+                    if(m_id == 31 ){ 
+                        modbusFeaturesDestinations[3] = integratedRMS1*resolution; 
+                        featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Y] = integratedRMS1*resolution;
+                    }
+                    if(m_id == 32 ){ 
+                        modbusFeaturesDestinations[4] = integratedRMS1*resolution; 
+                        featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Z] = integratedRMS1*resolution;
+                    }
+                }
+
+            }  
             
             logFFTOutput(&FFTOuput[fft_direction], velRMS, (void*) &integratedRMS1, 1, false);
 
@@ -813,7 +999,59 @@ class FFTComputer: public FeatureComputer,public DiagnosticEngine
             if(m_id == 31 ){ featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Y] = integratedRMS1*resolution; } //velRMS512Y
             if(m_id == 32 ){ featureDestinations::buff[featureDestinations::basicfeatures::velRMS512Z] = integratedRMS1*resolution; } //velRMS512Z
             //Serial.print(m_destinations[2]->getName());Serial.print("\t");Serial.println(integratedRMS1*resolution);
-            
+
+#if 1 // JIRA1918 - Velocity RMS values are constant and same all 3 axis after OTA
+            if(m_id == 32) {
+                if((modbusFeaturesDestinations[2] > 0 && modbusFeaturesDestinations[3] > 0 && modbusFeaturesDestinations[4] > 0) &&
+                (fabs(modbusFeaturesDestinations[2] - modbusFeaturesDestinations[3]) < 1e-9) &&
+                (fabs(modbusFeaturesDestinations[3] - modbusFeaturesDestinations[4]) < 1e-9) ) {
+                    velMaxSampleCount++;
+                    if(velMaxSampleCount > MAX_VELRMS512_LOOP_COUNT) {
+                        velMaxSampleCount = 0;
+                        if (featureDebugMode) {
+                            debugPrint("velRMS512 OVerflow !!!!, Reset device..");
+                            debugPrint(millis(), false);
+                            debugPrint(F(" -> "), false);
+                            debugPrint(m_destinations[2]->getName(), false);
+                            debugPrint(" velRMS512X=velRMS512Y=velRMS512Z: ", false);
+                            debugPrint(modbusFeaturesDestinations[2]);
+                        }
+                        char msg[64] = {0x00};
+                        if ((FFTConfiguration::currentSensor == FFTConfiguration::lsmSensor) && (iuAccelerometer.lsmPresence)) {
+                            iuAccelerometer.softReset();    // softreset LSMSPI
+                            strcpy(msg, "LSM:Vel RMS of all 3 axis values constant");
+                        }
+                        else if((FFTConfiguration::currentSensor == FFTConfiguration::kionixSensor) && (iuAccelerometerKX222.kionixPresence)) {
+                            iuAccelerometerKX222.softReset(); // softreset KX222
+                            strcpy(msg, "KX222:Vel RMS of all 3 axis values constant");
+                        }
+                        if (iuWiFi.isConnected() == true) {
+                            iuWiFi.sendVelRMSStatus(msg);
+                        } 
+                        for (size_t i = 0; i < 3; i++) {
+                            ledManager.overrideColor(RGB_RED);
+                            delay(300);
+                            ledManager.stopColorOverride();
+                            delay(300);
+                        }
+                        ledManager.stopColorOverride();
+                        for (size_t i = 0; i < 3; i++) {
+                            ledManager.overrideColor(RGB_BLUE);
+                            delay(300);
+                            ledManager.stopColorOverride();
+                            delay(300);
+                        }
+                        ledManager.stopColorOverride();
+                        delay(1000);
+                        STM32.reset();
+                    }
+                }
+                else {
+                    velMaxSampleCount = 0;            
+                }
+            }
+#endif
+
             // 4. 2nd integration in frequency domain
             T scaling2 = (T) RFFTAmplitudes::getRescalingFactorForIntegral(
                 amplitudes, sampleCount, samplingRate);

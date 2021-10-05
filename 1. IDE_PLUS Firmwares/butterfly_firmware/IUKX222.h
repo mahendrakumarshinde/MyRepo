@@ -48,11 +48,11 @@ public:
 
     static const ScaleOption defaultScale = FSR_8G;
 
-    static const OdrSetting defaultODR = ODR_25600Hz;
+    static const OdrSetting defaultODR = ODR_12800Hz;
 
     static const LpfSetting defaultLPF = LPF_AVG16;
 
-    static const uint16_t defaultSamplingRate = 25600; // Hz
+    static const uint16_t defaultSamplingRate = 12800;        // 25600; // Hz
     uint16_t m_samplingRate = defaultSamplingRate;
     const int DEFAULT_BLOCK_SIZE = 8192;
 

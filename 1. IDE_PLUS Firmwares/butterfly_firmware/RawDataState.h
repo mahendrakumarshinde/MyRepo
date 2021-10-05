@@ -12,6 +12,7 @@ namespace RawDataState {
     extern bool ZCollected;
     extern bool startRawDataTransmission;
     extern bool rawDataTransmissionInProgress;
+    extern bool fftCommandReceived ;
     // Raw data storage buffers. TODO: This is temporary for v1.1.3,
     // sizes of these buffers should be optimized in later releases and 
     // the extra freed up space should be used to create dedicated raw data buffers
@@ -31,6 +32,7 @@ namespace FeatureStates {
     extern double elapsedTime;
     extern int isrCount;
     extern int opStateStatusFlag; 
+    extern int m_currentStreamingMode;
 }
 
 namespace featureDestinations {
