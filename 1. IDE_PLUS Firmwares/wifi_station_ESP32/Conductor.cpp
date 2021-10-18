@@ -697,10 +697,13 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 }
                 iuSerial->sendMSPCommand(MSPCommand::WIFI_CONFIRM_ACTION, "M");
                 char metaData_ack_config[150];
+                char metaData_OEM_ack_config[150];
+                static int httpOEMStatusCode = 0;
                 static int httpStatusCode = 0;
                 strcpy(accelRawDataHelper.m_metadata_path, accelRawDataHelper.m_endpointRoute);
                 strcat(accelRawDataHelper.m_metadata_path,"/metadata");          //add in micro's
-
+                strcpy(accelRawDataHelper.m_metadata_oem_path, accelRawDataHelper.m_endpointRoute_oem);
+                strcat(accelRawDataHelper.m_metadata_oem_path,"/metadata");
                 strcpy(metaDataBuffer,buffer);
                 int httpBufferPointer = sizeof(metaDataBuffer);
                 //using jsonParse take timestamp and add in ack_config
@@ -709,6 +712,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 JsonVariant config = root;
                 double timeStamp = config["timestamp"];
                 metaDataRetryCount = 0;
+                metaDataOEMretryCount = 0;
 
                 //memcpy(metaDataBuffer, buffer, sizeof(buffer));
                 while(metaDataRetryCount < 3 ){
@@ -736,6 +740,34 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                         }
                         metaDataRetryCount++;
                     } 
+                }
+                if((httpStatusCode == 200) && accelRawDataHelper.httpsOEMConfigPresent && (iuWiFiFlash.readMemory(CONNECTION_MODE) == true )){
+                    while(metaDataOEMretryCount < 3 ){
+                    if((millis() - metaDataTimeout) > HTTPSRawDataRetryTimeout){
+                        metaDataTimeout = millis();
+                        if(iuWiFiFlash.readMemory(CONNECTION_MODE) == SECURED){
+                                    httpOEMStatusCode = httpsPostBigRequest(accelRawDataHelper.m_endpointHost_oem, accelRawDataHelper.m_metadata_oem_path,
+                                                            accelRawDataHelper.m_endpointPort_oem,(uint8_t*) &metaDataBuffer, 
+                                                            httpBufferPointer,"", NULL, HttpContentType::applicationJSON);
+                        }else if(iuWiFiFlash.readMemory(CONNECTION_MODE) == UNSECURED){
+                            httpOEMStatusCode = httpPostBigRequest(accelRawDataHelper.m_endpointHost_oem, accelRawDataHelper.m_metadata_oem_path,
+                                         accelRawDataHelper.m_endpointPort_oem, (uint8_t*) &metaDataBuffer, 
+                                         httpBufferPointer,"", NULL, HttpContentType::applicationJSON);
+                        }
+                         char metaDataOEMAckBuffer[5];      
+                        itoa(httpOEMStatusCode, &metaDataOEMAckBuffer[0], 10);
+                        iuSerial->sendMSPCommand(MSPCommand::METADATA_OEM_ACK, metaDataOEMAckBuffer);
+
+                        snprintf(metaData_OEM_ack_config, 150, "{\"messageType\":\"meta-data-OEM-ack\",\"mac\":\"%s\",\"httpCode\":\"%d\",\"timestamp\":%.3f}",
+                                    m_bleMAC.toString().c_str(),httpOEMStatusCode,timeStamp);
+                        mqttHelper.publish(COMMAND_RESPONSE_TOPIC, metaData_OEM_ack_config);
+                        //iuSerial->sendMSPCommand(MSPCommand::RECEIVE_METADATA_ACK, metaData_OEM_ack_config);
+                        if((httpOEMStatusCode == 200)){
+                            break;
+                        }
+                        metaDataOEMretryCount++;
+                    } 
+                }
                 }
             }
             break;    
@@ -841,7 +873,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 }
             }
 
-            if((rawData->axis == 'X' || httpOEMStatusCode == 200) && accelRawDataHelper.httpsOEMConfigPresent && (iuWiFiFlash.readMemory(CONNECTION_MODE) == true )){
+            if((rawData->axis == 'X' || httpOEMStatusCode == 200) && accelRawDataHelper.httpsOEMConfigPresent && (iuWiFiFlash.readMemory(CONNECTION_MODE) == true ) && httpOEMStatusCode == 200){
 
                 while(RawdataHTTPretryCount < 3 ){
                     if((millis() - HTTPRawDataTimeout) > HTTPRawDataRetryTimeout){

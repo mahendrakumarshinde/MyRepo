@@ -113,6 +113,7 @@ class Conductor
         uint8_t RawdataHTTPretryCount = 0;
         uint8_t RawdataHTTPSretryCount = 0;
         uint8_t metaDataRetryCount = 0;
+        uint8_t metaDataOEMretryCount = 0;
         /***** Core *****/
         Conductor();
         virtual ~Conductor() {}
