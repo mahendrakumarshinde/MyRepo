@@ -713,6 +713,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 double timeStamp = config["timestamp"];
                 metaDataRetryCount = 0;
                 metaDataOEMretryCount = 0;
+                metaDataSentSuccessOEM = false;
 
                 //memcpy(metaDataBuffer, buffer, sizeof(buffer));
                 while(metaDataRetryCount < 3 ){
@@ -763,6 +764,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                         mqttHelper.publish(COMMAND_RESPONSE_TOPIC, metaData_OEM_ack_config);
                         //iuSerial->sendMSPCommand(MSPCommand::RECEIVE_METADATA_ACK, metaData_OEM_ack_config);
                         if((httpOEMStatusCode == 200)){
+                            metaDataSentSuccessOEM = true;
                             break;
                         }
                         metaDataOEMretryCount++;
@@ -873,7 +875,7 @@ void Conductor::processHostMessage(IUSerial *iuSerial)
                 }
             }
 
-            if((rawData->axis == 'X' || httpOEMStatusCode == 200) && accelRawDataHelper.httpsOEMConfigPresent && (iuWiFiFlash.readMemory(CONNECTION_MODE) == true ) && httpOEMStatusCode == 200){
+            if((rawData->axis == 'X' || httpOEMStatusCode == 200) && accelRawDataHelper.httpsOEMConfigPresent && (iuWiFiFlash.readMemory(CONNECTION_MODE) == true ) && (metaDataSentSuccessOEM == true)){
 
                 while(RawdataHTTPretryCount < 3 ){
                     if((millis() - HTTPRawDataTimeout) > HTTPRawDataRetryTimeout){
