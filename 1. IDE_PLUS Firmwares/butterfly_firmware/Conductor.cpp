@@ -4213,8 +4213,10 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             break;
         case MSPCommand:: METADATA_ACK:{
             httpsStatusCodemetaData = atoi(&buff[0]);
-            debugPrint("METADATA_ACK: ",false);
-            debugPrint(httpsStatusCodemetaData);
+            if (loopDebugMode) {
+                debugPrint("METADATA_ACK: ",false);
+                debugPrint(httpsStatusCodemetaData);
+            }
             if(httpsStatusCodemetaData == 200){
                     RawDataTotalTimeout = millis();
             }//else {
@@ -4226,6 +4228,17 @@ void Conductor::processWiFiMessage(IUSerial *iuSerial)
             //     metaDataSentSuccess = false;
             //     RawDataState::startRawDataCollection = false;
             // }
+            break;
+        }
+        case MSPCommand:: METADATA_OEM_ACK:{
+            httpsOEMStatusCodemetaData = atoi(&buff[0]);
+            if (loopDebugMode) {
+                debugPrint("METADATA_OEM_ACK: ",false);
+                debugPrint(httpsOEMStatusCodemetaData);
+            }
+            if(httpsOEMStatusCodemetaData == 200){
+                    RawDataTotalTimeout = millis();
+            }
             break;
         }
         case MSPCommand::HTTPS_ACK: {
@@ -5957,6 +5970,7 @@ void Conductor::manageRawDataSending() {
         httpsStatusCodeX = httpsStatusCodeY = httpsStatusCodeZ = 0;
         httpsOEMStatusCodeX = httpsOEMStatusCodeY = httpsOEMStatusCodeZ = 0;
         httpsStatusCodemetaData = 0;
+        httpsOEMStatusCodemetaData = 0;
         sendNextAxis = false;
         XSentToWifi = YsentToWifi = ZsentToWifi = false; 
         XrecByWifi = YrecByWifi = ZrecByWifi= false;
