@@ -1,4 +1,32 @@
 #################################################################################################################################################################################
+Date: 25 NOVEMBER 2021
+Contributed By : Sidramayya Swami 
+Product Name : vEdge1.6
+Release Name :  Enhancement : v3.0.12 Metadata published for OEM   
+Firmware Versions :
+		1. vEdge_main(STM32) : 3.0.12
+		2. vEdge_wifi (ESP32): 3.0.12
+		3. Bootloader L1     : 2.0.0
+		4. Bootloader L2     : 2.1.0
+		5. Factory Firmware  : 2.0.0 
+################################################################################################################################################################################
+
+#### Release Description :
+     1.Sending FFT Metadata packet to OEM server
+#### Features Requirements
+     1.Sending meta data to OEM server.(Tata OEM)
+
+#### Feature Description
+   - NA
+#### Issue Resolved
+   - NA
+#### JIRA No
+   - IF-235
+#### TODO
+    NA
+#### Limitation
+    NA
+#################################################################################################################################################################################
 Date: 30 SEPTEMBER 2021
 Contributed By : Vikas Gaikwad,Sidramayya Swami,Mahendrakumar Shinde 
 Product Name : vEdge
